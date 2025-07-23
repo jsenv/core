@@ -1,6 +1,6 @@
 import { resource } from "@jsenv/navi";
 import { render } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 
 const hardcodedUsers = [
   { id: "1", name: "Alice", age: 30 },
@@ -12,6 +12,9 @@ const hardcodedUsers = [
 const userStore = new Map(hardcodedUsers.map((user) => [user.name, user]));
 let nextId = 4;
 
+// Compteurs de chargement par utilisateur
+const loadCounters = new Map();
+
 const USER = resource("user", {
   idKey: "id",
   mutableIdKeys: ["name"],
@@ -21,8 +24,15 @@ const USER = resource("user", {
     return Array.from(userStore.values());
   },
 
-  GET: ({ name }) => {
+  GET: async ({ name }) => {
     console.log(`🔍 GET user: ${name}`);
+    // Incrémenter le compteur pour cet utilisateur
+    const currentCount = loadCounters.get(name) || 0;
+    loadCounters.set(name, currentCount + 1);
+    console.log(`📊 Load count for ${name}: ${currentCount + 1}`);
+
+    await new Promise((resolve) => setTimeout(resolve, 800)); // Simuler un délai de chargement
+
     const user = userStore.get(name);
     if (!user) {
       throw new Error(`User ${name} not found`);
@@ -84,6 +94,9 @@ const USER = resource("user", {
   },
 });
 
+// Fonction utilitaire pour obtenir le compteur d'un utilisateur
+const getLoadCount = (name) => loadCounters.get(name) || 0;
+
 // Actions préparées pour les tests
 const allUsersAction = USER.GET_MANY;
 const aliceAction = USER.GET.bindParams({ name: "Alice" });
@@ -98,19 +111,42 @@ const UserCard = ({ name, action }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editAge, setEditAge] = useState("");
+  const [loadCount, setLoadCount] = useState(0);
 
   const loadUser = async () => {
     setStatus("loading");
     setError(null);
-    // Utiliser la nouvelle syntaxe fonction directement
-    const result = await action.reload();
-    debugger;
-    setData(result);
-    setStatus("success");
-    // Initialiser les champs d'édition avec les données actuelles
-    setEditName(result.name);
-    setEditAge(result.age.toString());
+    try {
+      const result = await action.reload();
+      setData(result);
+      setStatus("success");
+      // Mettre à jour le compteur après le chargement
+      setLoadCount(getLoadCount(name));
+      // Initialiser les champs d'édition avec les données actuelles
+      setEditName(result.name);
+      setEditAge(result.age.toString());
+    } catch (err) {
+      setError(err.message);
+      setStatus("error");
+      // Mettre à jour le compteur même en cas d'erreur
+      setLoadCount(getLoadCount(name));
+    }
   };
+
+  // Charger automatiquement au démarrage pour Alice, Bob et Charlie
+  useEffect(() => {
+    if (name === "Alice" || name === "Bob" || name === "Charlie") {
+      loadUser();
+    }
+  }, []);
+
+  // Mettre à jour le compteur périodiquement pour refléter les changements
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLoadCount(getLoadCount(name));
+    }, 100);
+    return () => clearInterval(interval);
+  }, [name]);
 
   const deleteUser = async () => {
     if (!data) return;
@@ -214,18 +250,32 @@ const UserCard = ({ name, action }) => {
         }}
       >
         <h4 style={{ margin: 0, color: "#007bff" }}>{displayName}</h4>
-        <span
-          style={{
-            padding: "4px 8px",
-            borderRadius: "4px",
-            fontSize: "0.8em",
-            fontWeight: "bold",
-            backgroundColor: getStatusColor(),
-            color: "white",
-          }}
-        >
-          {getStatusText()}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span
+            style={{
+              padding: "2px 6px",
+              borderRadius: "4px",
+              fontSize: "0.7em",
+              fontWeight: "bold",
+              backgroundColor: "#6c757d",
+              color: "white",
+            }}
+          >
+            📊 {loadCount}x
+          </span>
+          <span
+            style={{
+              padding: "4px 8px",
+              borderRadius: "4px",
+              fontSize: "0.8em",
+              fontWeight: "bold",
+              backgroundColor: getStatusColor(),
+              color: "white",
+            }}
+          >
+            {getStatusText()}
+          </span>
+        </div>
       </div>
 
       {data && !isEditing && (
