@@ -35,6 +35,22 @@ let dispatchActions = (params) => {
   });
   return requestedResult;
 };
+
+const dispatchSingleAction = (action, method, options) => {
+  const { requestedResult } = dispatchActions({
+    preloadSet: method === "preload" ? new Set([action]) : undefined,
+    loadSet: method === "load" ? new Set([action]) : undefined,
+    reloadSet: method === "reload" ? new Set([action]) : undefined,
+    unloadSet: method === "unload" ? new Set([action]) : undefined,
+    ...options,
+  });
+  if (requestedResult && typeof requestedResult.then === "function") {
+    return requestedResult.then((resolvedResult) =>
+      resolvedResult ? resolvedResult[0] : undefined,
+    );
+  }
+  return requestedResult ? requestedResult[0] : undefined;
+};
 export const setActionDispatcher = (value) => {
   dispatchActions = value;
 };
@@ -575,27 +591,17 @@ export const createAction = (callback, rootOptions = {}) => {
         : computedData;
 
     const preload = (options) => {
-      return dispatchActions({
-        preloadSet: new Set([action]),
-        ...options,
-      });
+      return dispatchSingleAction(action, "preload", options);
     };
-    const load = (options) =>
-      dispatchActions({
-        loadSet: new Set([action]),
-        ...options,
-      });
+    const load = (options) => {
+      return dispatchSingleAction(action, "load", options);
+    };
     const reload = (options) => {
-      return dispatchActions({
-        reloadSet: new Set([action]),
-        ...options,
-      });
+      return dispatchSingleAction(action, "reload", options);
     };
-    const unload = (options) =>
-      dispatchActions({
-        unloadSet: new Set([action]),
-        ...options,
-      });
+    const unload = (options) => {
+      return dispatchSingleAction(action, "unload", options);
+    };
     const abort = (reason) => {
       if (loadingState !== LOADING) {
         return false;
