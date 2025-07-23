@@ -21,6 +21,7 @@ import {
 } from "./utils/stringify_for_display.js";
 import { weakEffect } from "./utils/weak_effect.js";
 
+const ACTION_AS_FUNCTION = true;
 let DEBUG = false;
 export const enableDebugActions = () => {
   DEBUG = true;
@@ -726,11 +727,25 @@ export const createAction = (callback, rootOptions = {}) => {
       return matches;
     };
 
-    action = {
+    if (ACTION_AS_FUNCTION) {
+      // Create the action as a function that can be called directly
+      action = function actionFunction(params) {
+        const boundAction = bindParams(params);
+        return boundAction.reload();
+      };
+      Object.defineProperty(action, "name", {
+        configurable: true,
+        value: generateActionName(name, params),
+      });
+    } else {
+      action = { name };
+    }
+
+    // Assign all the action properties and methods to the function
+    Object.assign(action, {
       callback,
       rootAction,
       parentAction,
-      name: generateActionName(name, params),
       params,
       loadRequested,
       loadingState,
@@ -771,7 +786,7 @@ export const createAction = (callback, rootOptions = {}) => {
       },
       toString: () => action.name,
       meta,
-    };
+    });
     Object.preventExtensions(action);
 
     // Effects pour synchroniser les propriétés

@@ -85,7 +85,7 @@ const USER = resource("user", {
 });
 
 // Actions préparées pour les tests
-const allUsersAction = USER.GET_MANY();
+const allUsersAction = USER.GET_MANY;
 const aliceAction = USER.GET.bindParams({ name: "Alice" });
 const bobAction = USER.GET.bindParams({ name: "Bob" });
 const charlieAction = USER.GET.bindParams({ name: "Charlie" });
