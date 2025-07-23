@@ -933,7 +933,9 @@ export const createAction = (callback, rootOptions = {}) => {
            * before the UI attempts to render the now-missing resource.
            */
           batch(() => {
-            dataSignal.value = dataEffect ? dataEffect(loadResult) : loadResult;
+            dataSignal.value = dataEffect
+              ? dataEffect(loadResult, action)
+              : loadResult;
             loadingStateSignal.value = LOADED;
             onLoad(action);
           });

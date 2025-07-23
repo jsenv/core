@@ -323,16 +323,18 @@ const createHttpHandlerForRootResource = (
       callerInfo.file && callerInfo.line && callerInfo.column
         ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
         : callerInfo.raw || "unknown location";
-    const actionLabel = `${name}.${httpVerb}`;
+    const originalActionName = `${name}.${httpVerb}`;
     const httpActionAffectingOneItem = createAction(callback, {
       meta: { httpVerb, httpMany: false, paramScope, resourceInstance, store },
       name: `${name}.${httpVerb}`,
-      dataEffect: (data) => {
+      dataEffect: (data, action) => {
+        const actionLabel = action.name;
+
         if (httpVerb === "DELETE") {
           if (!isProps(data) && !primitiveCanBeId(data)) {
             throw new TypeError(
               `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${data}.
-           ${actionLabel} source location: ${locationInfo}`,
+           ${originalActionName} source location: ${locationInfo}`,
             );
           }
           return applyDataEffect(data);
@@ -340,7 +342,7 @@ const createHttpHandlerForRootResource = (
         if (!isProps(data)) {
           throw new TypeError(
             `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${data}.
-           ${actionLabel} source location: ${locationInfo}`,
+           ${originalActionName} source location: ${locationInfo}`,
           );
         }
         return applyDataEffect(data);
@@ -493,10 +495,37 @@ const createHttpHandlerForRelationshipToOneResource = (
             return childItemId;
           };
 
+    const callerInfo = getCallerInfo(null, 2);
+    // Provide more fallback options for better debugging
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}`;
+
     const httpActionAffectingOneItem = createAction(callback, {
       meta: { httpVerb, httpMany: false, resourceInstance, store },
       name: `${name}.${httpVerb}`,
-      dataEffect: applyDataEffect,
+      dataEffect: (data, action) => {
+        const actionLabel = action.name;
+
+        if (httpVerb === "DELETE") {
+          if (!isProps(data) && !primitiveCanBeId(data)) {
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyDataEffect(data);
+        }
+        if (!isProps(data)) {
+          throw new TypeError(
+            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
+        }
+        return applyDataEffect(data);
+      },
       compute: (childItemId) => childStore.select(childItemId),
       onLoad: (loadedAction) =>
         autoreloadManager.onActionComplete(loadedAction),
@@ -580,10 +609,38 @@ const createHttpHandlerRelationshipToManyResource = (
             return childItemId;
           };
 
+    const callerInfo = getCallerInfo(null, 2);
+    // Provide more fallback options for better debugging
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}`;
+
     const httpActionAffectingOneItem = createAction(callback, {
       meta: { httpVerb, httpMany: false, resourceInstance, store: childStore },
       name: `${name}.${httpVerb}`,
-      dataEffect: applyDataEffect,
+      dataEffect: (data, action) => {
+        const actionLabel = action.name;
+
+        if (httpVerb === "DELETE") {
+          // For DELETE in many relationship, we expect [itemId, childItemId] array
+          if (!Array.isArray(data) || data.length !== 2) {
+            throw new TypeError(
+              `${actionLabel} must return an array [itemId, childItemId] (that will be used to remove relationship), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyDataEffect(data);
+        }
+        if (!isProps(data)) {
+          throw new TypeError(
+            `${actionLabel} must return an object (that will be used to upsert child item), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
+        }
+        return applyDataEffect(data);
+      },
       compute: (childItemId) => childStore.select(childItemId),
       onLoad: (loadedAction) =>
         autoreloadManager.onActionComplete(loadedAction),
@@ -682,11 +739,53 @@ const createHttpHandlerRelationshipToManyResource = (
               return childItemIdArray;
             };
 
+    const callerInfo = getCallerInfo(null, 2);
+    // Provide more fallback options for better debugging
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const originalActionName = `${name}.${httpVerb}[many]`;
+
     const httpActionAffectingManyItem = createAction(callback, {
       meta: { httpVerb, httpMany: true, resourceInstance, store: childStore },
       name: `${name}.${httpVerb}[many]`,
       data: [],
-      dataEffect: applyDataEffect,
+      dataEffect: (data, action) => {
+        const actionLabel = action.name;
+
+        if (httpVerb === "GET") {
+          if (!isProps(data)) {
+            throw new TypeError(
+              `${actionLabel} must return an object (that will be used to upsert "${name}" resource with many relationships), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyDataEffect(data);
+        }
+        if (httpVerb === "DELETE") {
+          // For DELETE_MANY in many relationship, we expect [itemId, childItemIdArray] array
+          if (
+            !Array.isArray(data) ||
+            data.length !== 2 ||
+            !Array.isArray(data[1])
+          ) {
+            throw new TypeError(
+              `${actionLabel} must return an array [itemId, childItemIdArray] (that will be used to remove relationships), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+            );
+          }
+          return applyDataEffect(data);
+        }
+        // For POST, PUT, PATCH - expect array of objects
+        if (!Array.isArray(data)) {
+          throw new TypeError(
+            `${actionLabel} must return an array of objects (that will be used to upsert child items), received ${data}.
+           ${originalActionName} source location: ${locationInfo}`,
+          );
+        }
+        return applyDataEffect(data);
+      },
       compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
       onLoad: (loadedAction) =>
         autoreloadManager.onActionComplete(loadedAction),
