@@ -769,6 +769,7 @@ export const createAction = (callback, rootOptions = {}) => {
       };
       Object.defineProperty(action, "name", {
         configurable: true,
+        writable: true,
         value: name,
       });
     } else {
@@ -951,11 +952,10 @@ export const createAction = (callback, rootOptions = {}) => {
               ? dataEffect(loadResult, action)
               : loadResult;
             loadingStateSignal.value = LOADED;
-            onLoad(action);
-            // Call onActionEnd BEFORE updating the data and UI state (just like onLoad)
             if (onEnd) {
               onEnd(computedDataSignal.peek(), action);
             }
+            onLoad(action);
           });
           if (DEBUG) {
             console.log(`"${action}": loaded (reason: ${reason})`);
