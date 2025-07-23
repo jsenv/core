@@ -22,7 +22,7 @@ import {
 import { weakEffect } from "./utils/weak_effect.js";
 
 const ACTION_AS_FUNCTION = true;
-let DEBUG = true;
+let DEBUG = false;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
@@ -962,7 +962,9 @@ export const createAction = (callback, rootOptions = {}) => {
             return e;
           }
           if (DEBUG) {
-            console.log(`"${action}": failed (error: ${e})`);
+            console.log(
+              `"${action}": failed (error: ${e}, handled by ui: ${ui.hasRenderers})`,
+            );
           }
           batch(() => {
             errorSignal.value = e;
@@ -1247,21 +1249,13 @@ const createActionProxyFromSignal = (
     computedDataSignal: proxyPrivateSignal("computedDataSignal"),
     performLoad: proxyPrivateMethod("performLoad"),
     performUnload: proxyPrivateMethod("performUnload"),
+    ui: currentAction.ui,
   };
 
   onActionTargetChange(() => {
-    const previousUI = proxyPrivateProperties.ui;
-    const previousHasRenderers = previousUI ? previousUI.hasRenderers : false;
-
     proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
     proxyPrivateProperties.childActionWeakSet =
       currentActionPrivateProperties.childActionWeakSet;
-
-    // If the proxy was previously marked as having renderers,
-    // ensure the new target action also gets this flag
-    if (previousHasRenderers && proxyPrivateProperties.ui) {
-      proxyPrivateProperties.ui.hasRenderers = true;
-    }
   });
   setActionPrivateProperties(actionProxy, proxyPrivateProperties);
 
