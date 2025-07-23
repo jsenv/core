@@ -1,4 +1,4 @@
-import { ActionRenderer, resource } from "@jsenv/navi";
+import { ActionRenderer, resource, useActionStatus } from "@jsenv/navi";
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 
@@ -110,6 +110,10 @@ const UserCard = ({ name, action }) => {
   const [editAge, setEditAge] = useState("");
   const [loadCount, setLoadCount] = useState(0);
 
+  // Get common data from action status
+  const { data } = useActionStatus(action);
+  const displayName = data ? `${data.name} (${data.age} ans)` : name;
+
   // Charger automatiquement au démarrage pour Alice, Bob et Charlie
   useEffect(() => {
     if (
@@ -174,28 +178,120 @@ const UserCard = ({ name, action }) => {
     }
   };
 
+  // Common UI wrapper component
+  const CardWrapper = ({ children, statusColor, statusText }) => (
+    <div
+      style={{
+        border: "1px solid #dee2e6",
+        borderRadius: "8px",
+        padding: "16px",
+        margin: "8px 0",
+        backgroundColor: "#f8f9fa",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "12px",
+        }}
+      >
+        <h4 style={{ margin: 0, color: "#007bff" }}>{displayName}</h4>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span
+            style={{
+              padding: "2px 6px",
+              borderRadius: "4px",
+              fontSize: "0.7em",
+              fontWeight: "bold",
+              backgroundColor: "#6c757d",
+              color: "white",
+            }}
+          >
+            📊 {loadCount}x
+          </span>
+          <span
+            style={{
+              padding: "4px 8px",
+              borderRadius: "4px",
+              fontSize: "0.8em",
+              fontWeight: "bold",
+              backgroundColor: statusColor,
+              color: "white",
+            }}
+          >
+            {statusText}
+          </span>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+
   return (
     <ActionRenderer action={action}>
       {{
-        always: ({ loading, error, data }) => {
-          const getStatusColor = () => {
-            if (loading) return "#ffc107";
-            if (error) return "#dc3545";
-            if (data) return "#28a745";
-            return "#6c757d";
-          };
+        loading: () => (
+          <CardWrapper statusColor="#ffc107" statusText="Chargement...">
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => action.reload()}
+                disabled={true}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor: "#17a2b8",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "not-allowed",
+                  opacity: 0.6,
+                }}
+              >
+                🔄 Recharger
+              </button>
+            </div>
+          </CardWrapper>
+        ),
 
-          const getStatusText = () => {
-            if (loading) return "Chargement...";
-            if (error && error.message && error.message.includes("not found"))
-              return "404 - Non trouvé";
-            if (error) return "Erreur";
-            if (data) return "Chargé";
-            return "Non chargé";
-          };
+        error: (error) => (
+          <CardWrapper
+            statusColor="#dc3545"
+            statusText={
+              error.message && error.message.includes("not found")
+                ? "404 - Non trouvé"
+                : "Erreur"
+            }
+          >
+            <div
+              style={{
+                color: "#dc3545",
+                backgroundColor: "#f8d7da",
+                padding: "8px",
+                borderRadius: "4px",
+                marginBottom: "8px",
+              }}
+            >
+              {error.message || error}
+            </div>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => action.reload()}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor: "#17a2b8",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                }}
+              >
+                🔄 Recharger
+              </button>
+            </div>
+          </CardWrapper>
+        ),
 
-          const displayName = data ? `${data.name} (${data.age} ans)` : name;
-
+        loaded: (data) => {
           // Initialiser les champs d'édition quand les données arrivent
           if (data && !isEditing && (!editName || !editAge)) {
             setEditName(data.name);
@@ -203,55 +299,8 @@ const UserCard = ({ name, action }) => {
           }
 
           return (
-            <div
-              style={{
-                border: "1px solid #dee2e6",
-                borderRadius: "8px",
-                padding: "16px",
-                margin: "8px 0",
-                backgroundColor: "#f8f9fa",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "12px",
-                }}
-              >
-                <h4 style={{ margin: 0, color: "#007bff" }}>{displayName}</h4>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  <span
-                    style={{
-                      padding: "2px 6px",
-                      borderRadius: "4px",
-                      fontSize: "0.7em",
-                      fontWeight: "bold",
-                      backgroundColor: "#6c757d",
-                      color: "white",
-                    }}
-                  >
-                    📊 {loadCount}x
-                  </span>
-                  <span
-                    style={{
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      fontSize: "0.8em",
-                      fontWeight: "bold",
-                      backgroundColor: getStatusColor(),
-                      color: "white",
-                    }}
-                  >
-                    {getStatusText()}
-                  </span>
-                </div>
-              </div>
-
-              {data && !isEditing && (
+            <CardWrapper statusColor="#28a745" statusText="Chargé">
+              {!isEditing && (
                 <div
                   style={{
                     fontFamily: "monospace",
@@ -269,7 +318,7 @@ const UserCard = ({ name, action }) => {
                 </div>
               )}
 
-              {data && isEditing && (
+              {isEditing && (
                 <div
                   style={{
                     backgroundColor: "white",
@@ -381,69 +430,66 @@ const UserCard = ({ name, action }) => {
                 </div>
               )}
 
-              {error && (
-                <div
-                  style={{
-                    color: "#dc3545",
-                    backgroundColor: "#f8d7da",
-                    padding: "8px",
-                    borderRadius: "4px",
-                    marginBottom: "8px",
-                  }}
-                >
-                  {error.message || error}
-                </div>
-              )}
-
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <button
                   onClick={() => action.reload()}
-                  disabled={loading}
                   style={{
                     padding: "6px 12px",
                     backgroundColor: "#17a2b8",
                     color: "white",
                     border: "none",
                     borderRadius: "4px",
-                    cursor: loading ? "not-allowed" : "pointer",
-                    opacity: loading ? 0.6 : 1,
                   }}
                 >
                   🔄 Recharger
                 </button>
-
-                {data && (
-                  <>
-                    <button
-                      onClick={() => setIsEditing(!isEditing)}
-                      style={{
-                        padding: "6px 12px",
-                        backgroundColor: "#007bff",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      ✏️ Modifier
-                    </button>
-                    <button
-                      onClick={() => deleteUser(data)}
-                      style={{
-                        padding: "6px 12px",
-                        backgroundColor: "#dc3545",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      🗑️ Supprimer
-                    </button>
-                  </>
-                )}
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  style={{
+                    padding: "6px 12px",
+                    backgroundColor: "#007bff",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                  }}
+                >
+                  ✏️ Modifier
+                </button>
+                <button
+                  onClick={() => deleteUser(data)}
+                  style={{
+                    padding: "6px 12px",
+                    backgroundColor: "#dc3545",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                  }}
+                >
+                  🗑️ Supprimer
+                </button>
               </div>
-            </div>
+            </CardWrapper>
           );
         },
+
+        otherwise: () => (
+          <CardWrapper statusColor="#6c757d" statusText="Non chargé">
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button
+                onClick={() => action.load()}
+                style={{
+                  padding: "6px 12px",
+                  backgroundColor: "#17a2b8",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                }}
+              >
+                � Charger
+              </button>
+            </div>
+          </CardWrapper>
+        ),
       }}
     </ActionRenderer>
   );
