@@ -52,6 +52,7 @@ export const ActionRenderer = ({ action, children }) => {
     aborted: renderAborted = renderAbortedDefault,
     error: renderError = renderErrorDefault,
     loaded: renderLoaded,
+    always: renderAlways,
   } = typeof children === "function" ? { loaded: children } : children || {};
   if (!action) {
     throw new Error(
@@ -72,6 +73,11 @@ export const ActionRenderer = ({ action, children }) => {
       actionUIRenderedPromiseWeakMap.delete(action);
     };
   }, []);
+
+  // If renderAlways is provided, it wins and handles all rendering
+  if (renderAlways) {
+    return renderAlways({ loading, idle, aborted, error, data });
+  }
 
   if (idle) {
     return renderOtherwise(action);
