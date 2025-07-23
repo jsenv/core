@@ -135,7 +135,13 @@ const UserCard = ({ name, action }) => {
 
   // Charger automatiquement au démarrage pour Alice, Bob et Charlie
   useEffect(() => {
-    if (name === "Alice" || name === "Bob" || name === "Charlie") {
+    if (
+      name === "Alice" ||
+      name === "Bob" ||
+      name === "Charlie" ||
+      name.includes("TestUser")
+    ) {
+      console.log(`🚀 Auto-loading ${name} on mount`);
       loadUser();
     }
   }, []);
@@ -786,7 +792,7 @@ const App = () => {
           <UserCard name="Alice" action={aliceAction} />
           <UserCard name="Bob" action={bobAction} />
           <UserCard name="Charlie" action={charlieAction} />
-          <UserCard name="TestUser (inexistant)" action={testUserAction} />
+          <UserCard name="TestUser" action={testUserAction} />
         </div>
       </div>
 
