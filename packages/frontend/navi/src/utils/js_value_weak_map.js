@@ -54,7 +54,8 @@ export const createJsValueWeakMap = () => {
     },
 
     get(key) {
-      const isObject = key && typeof key === "object";
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
       if (isObject) {
         // Fast path: exact key match
         if (keyToValue.has(key)) {
@@ -75,7 +76,8 @@ export const createJsValueWeakMap = () => {
     },
 
     set(key, value) {
-      const isObject = key && typeof key === "object";
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
       if (isObject) {
         cleanupKeyRegistry();
 
@@ -101,7 +103,8 @@ export const createJsValueWeakMap = () => {
     },
 
     delete(key) {
-      const isObject = key && typeof key === "object";
+      const isObject =
+        key && (typeof key === "object" || typeof key === "function");
       if (isObject) {
         cleanupKeyRegistry();
 
