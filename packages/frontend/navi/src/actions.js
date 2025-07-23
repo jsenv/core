@@ -359,7 +359,6 @@ ${lines.join("\n")}
     }
   }
   const allThenableArray = [];
-  const requestedThenableArray = [];
 
   // Step 3: Determine which actions will stay in their current state
   collect_actions_that_stay: {
@@ -431,6 +430,9 @@ ${lines.join("\n")}`);
     }
   }
 
+  const resultArray = []; // Store results with their execution order
+  let hasAsync = false;
+
   // Step 5: Execute preloads and loads
   execute_preloads_and_loads: {
     const onActionToLoadOrPreload = (actionToPreloadOrLoad, isPreload) => {
@@ -457,10 +459,19 @@ ${lines.join("\n")}`);
 
       if (performLoadResult && typeof performLoadResult.then === "function") {
         actionPromiseMap.set(actionToPreloadOrLoad, performLoadResult);
-        requestedThenableArray.push(performLoadResult);
         allThenableArray.push(performLoadResult);
+        hasAsync = true;
+        // Store async result with order info
+        resultArray.push({
+          type: "async",
+          promise: performLoadResult,
+        });
       } else {
-        // sync actions are already done, no need to wait
+        // Store sync result with order info
+        resultArray.push({
+          type: "sync",
+          result: performLoadResult,
+        });
       }
     };
 
@@ -485,11 +496,22 @@ ${lines.join("\n")}`);
     console.groupEnd();
   }
 
-  const requestedResult = requestedThenableArray.length
-    ? Promise.all(requestedThenableArray)
-    : null;
+  // Calculate requestedResult based on the execution results
+  let requestedResult;
+  if (resultArray.length === 0) {
+    requestedResult = null;
+  } else if (hasAsync) {
+    requestedResult = Promise.all(
+      resultArray.map((item) =>
+        item.type === "sync" ? item.result : item.promise,
+      ),
+    );
+  } else {
+    requestedResult = resultArray.map((item) => item.result);
+  }
+
   const allResult = allThenableArray.length
-    ? Promise.all(allThenableArray)
+    ? Promise.allSettled(allThenableArray)
     : null;
   const loadingActionSet = new Set([...willPreloadSet, ...willLoadSet]);
   return {
@@ -973,18 +995,19 @@ export const createAction = (callback, rootOptions = {}) => {
           }
           if (thenableArray.length === 0) {
             onLoadEnd();
-            return undefined;
+            return dataSignal.peek();
           }
           return Promise.all(thenableArray).then(() => {
             if (rejected) {
               onLoadError(rejectedValue);
-            } else {
-              onLoadEnd();
+              throw rejectedValue;
             }
+            onLoadEnd();
+            return dataSignal.peek();
           });
         } catch (e) {
           onLoadError(e);
-          return undefined;
+          throw e;
         }
       };
 

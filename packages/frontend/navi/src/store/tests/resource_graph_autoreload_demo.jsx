@@ -100,21 +100,16 @@ const UserCard = ({ name, action }) => {
   const [editAge, setEditAge] = useState("");
 
   const loadUser = async () => {
-    try {
-      setStatus("loading");
-      setError(null);
-      // Utiliser la nouvelle syntaxe fonction directement
-      const result = await action.reload();
-      setData(result);
-      setStatus("success");
-      // Initialiser les champs d'édition avec les données actuelles
-      setEditName(result.name);
-      setEditAge(result.age.toString());
-    } catch (err) {
-      setError(err.message);
-      setStatus("error");
-      setData(null);
-    }
+    setStatus("loading");
+    setError(null);
+    // Utiliser la nouvelle syntaxe fonction directement
+    const result = await action.reload();
+    debugger;
+    setData(result);
+    setStatus("success");
+    // Initialiser les champs d'édition avec les données actuelles
+    setEditName(result.name);
+    setEditAge(result.age.toString());
   };
 
   const deleteUser = async () => {
