@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 # AI Coding Agent Instructions for @jsenv/core
 
 ## Development Workflow and Communication Style
