@@ -37,7 +37,7 @@ let dispatchActions = (params) => {
 };
 
 const dispatchSingleAction = (action, method, options) => {
-  const { requestedResult } = dispatchActions({
+  const requestedResult = dispatchActions({
     preloadSet: method === "preload" ? new Set([action]) : undefined,
     loadSet: method === "load" ? new Set([action]) : undefined,
     reloadSet: method === "reload" ? new Set([action]) : undefined,
@@ -1001,7 +1001,7 @@ export const createAction = (callback, rootOptions = {}) => {
           }
           if (thenableArray.length === 0) {
             onLoadEnd();
-            return dataSignal.peek();
+            return computedDataSignal.peek();
           }
           return Promise.all(thenableArray).then(() => {
             if (rejected) {
@@ -1009,7 +1009,7 @@ export const createAction = (callback, rootOptions = {}) => {
               throw rejectedValue;
             }
             onLoadEnd();
-            return dataSignal.peek();
+            return computedDataSignal.peek();
           });
         } catch (e) {
           onLoadError(e);
