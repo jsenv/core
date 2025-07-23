@@ -53,6 +53,7 @@ export const requestAction = (
     requester = target,
     method = "reload",
     meta = {},
+    confirmMessage,
   } = {},
 ) => {
   let validationInterface = target.__validationInterface__;
@@ -144,9 +145,9 @@ export const requestAction = (
   }
 
   // Validation passed, check for confirmation
-  const confirmMessage = elementForConfirmation.getAttribute(
-    "data-confirm-message",
-  );
+  confirmMessage =
+    confirmMessage ||
+    elementForConfirmation.getAttribute("data-confirm-message");
   if (confirmMessage) {
     // eslint-disable-next-line no-alert
     if (!window.confirm(confirmMessage)) {

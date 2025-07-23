@@ -128,7 +128,6 @@ const ButtonBasic = forwardRef((props, ref) => {
 const ButtonWithAction = forwardRef((props, ref) => {
   const {
     action,
-    confirmMessage,
     loading,
     readOnly,
     children,
@@ -159,12 +158,6 @@ const ButtonWithAction = forwardRef((props, ref) => {
   });
 
   const handleClick = (event) => {
-    if (confirmMessage) {
-      // eslint-disable-next-line no-alert
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
-    }
     event.preventDefault();
     requestAction(boundAction, { event });
   };

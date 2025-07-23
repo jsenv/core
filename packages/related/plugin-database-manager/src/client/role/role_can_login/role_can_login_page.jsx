@@ -17,7 +17,7 @@ export const RoleCanLoginPage = ({ role }) => {
           {
             component: (
               <Button
-                confirmMessage={`Are you sure you want to delete ${rolname}?`}
+                data-confirm-message={`Are you sure you want to delete ${rolname}?`}
                 action={deleteRoleAction}
               >
                 Delete

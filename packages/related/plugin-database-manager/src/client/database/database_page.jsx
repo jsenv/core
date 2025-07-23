@@ -15,7 +15,7 @@ export const DatabasePage = ({ database }) => {
           {
             component: (
               <Button
-                confirmMessage={`Are you sure you want to delete ${datname}?`}
+                data-confirm-message={`Are you sure you want to delete ${datname}?`}
                 action={deleteDatabaseAction}
               >
                 Delete

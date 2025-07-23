@@ -35,7 +35,7 @@ export const TablePage = ({ table }) => {
           {
             component: (
               <Button
-                confirmMessage={`Are you sure you want to delete ${tablename}`}
+                data-confirm-message={`Are you sure you want to delete ${tablename}`}
                 action={deleteTableAction}
               >
                 Delete

@@ -41,15 +41,8 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
     event.stopPropagation();
 
     const { confirmMessage, action } = shortcutFound;
-    if (confirmMessage) {
-      // eslint-disable-next-line no-alert
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
-    }
-
     setAction(action);
-    requestAction(action, { event });
+    requestAction(action, { event, confirmMessage });
   }, []);
 
   return [action, onKeyDown];
