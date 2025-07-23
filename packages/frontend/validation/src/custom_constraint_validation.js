@@ -76,10 +76,16 @@ export const requestAction = (
     );
   }
 
+  // Determine what needs to be validated and how to handle the result
   const isForm = target.tagName === "FORM";
   const formToValidate = isForm ? target : target.form;
 
+  let isValid = false;
+  let elementForConfirmation = target;
+  let elementForDispatch = target;
+
   if (formToValidate) {
+    // Form validation case
     if (validationInProgressWeakSet.has(formToValidate)) {
       if (debug) {
         console.debug(`validation already in progress for`, formToValidate);
@@ -91,62 +97,78 @@ export const requestAction = (
       validationInProgressWeakSet.delete(formToValidate);
     });
 
-    // https://developer.mozilla.org/en-US/docs/Web/API/HTMLFormElement/elements
+    // Validate all form elements
     const formElements = formToValidate.elements;
+    isValid = true; // Assume valid until proven otherwise
     for (const formElement of formElements) {
-      const validationInterface = formElement.__validationInterface__;
-      if (!validationInterface) {
+      const elementValidationInterface = formElement.__validationInterface__;
+      if (!elementValidationInterface) {
         continue;
       }
 
-      const isValid = validationInterface.checkValidity({
+      const elementIsValid = elementValidationInterface.checkValidity({
         fromRequestAction: true,
         skipReadonly:
           formElement.tagName === "BUTTON" && formElement !== requester,
       });
-      if (isValid) {
-        continue;
+      if (!elementIsValid) {
+        elementValidationInterface.reportValidity();
+        isValid = false;
+        break;
+      }
+    }
+
+    elementForConfirmation = formToValidate;
+    elementForDispatch = target;
+  } else {
+    // Single element validation case
+    isValid = validationInterface.checkValidity({ fromRequestAction: true });
+    if (!isValid) {
+      if (event) {
+        event.preventDefault();
       }
       validationInterface.reportValidity();
-      const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
-        detail: customEventDetail,
-      });
-      target.dispatchEvent(actionPreventedCustomEvent);
-      return;
     }
 
-    const actionCustomEvent = new CustomEvent("action", {
-      detail: customEventDetail,
-    });
-    if (debug) {
-      console.debug(`element is valid -> dispatch "action" on`, target);
-    }
-    target.dispatchEvent(actionCustomEvent);
-    return;
+    elementForConfirmation = target;
+    elementForDispatch = target;
   }
 
-  const elementReceivingEvents = target;
-  if (!validationInterface.checkValidity({ fromRequestAction: true })) {
-    if (event) {
-      event.preventDefault();
-    }
-    validationInterface.reportValidity();
+  // If validation failed, dispatch actionprevented and return
+  if (!isValid) {
     const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
       detail: customEventDetail,
     });
-    elementReceivingEvents.dispatchEvent(actionPreventedCustomEvent);
+    elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
     return;
   }
-  // once we have validated the action can occur
-  // we are dispatching a custom event that can be used
-  // to actually perform the action or to set form action
+
+  // Validation passed, check for confirmation
+  const confirmMessage = elementForConfirmation.getAttribute(
+    "data-confirm-message",
+  );
+  if (confirmMessage) {
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(confirmMessage)) {
+      const actionPreventedCustomEvent = new CustomEvent("actionprevented", {
+        detail: customEventDetail,
+      });
+      elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
+      return;
+    }
+  }
+
+  // All good, dispatch the action
   const actionCustomEvent = new CustomEvent("action", {
     detail: customEventDetail,
   });
   if (debug) {
-    console.debug(`"action" dispatched on`, elementReceivingEvents);
+    console.debug(
+      `element is valid -> dispatch "action" on`,
+      elementForDispatch,
+    );
   }
-  elementReceivingEvents.dispatchEvent(actionCustomEvent);
+  elementForDispatch.dispatchEvent(actionCustomEvent);
 };
 
 export const closeValidationMessage = (element, reason) => {
