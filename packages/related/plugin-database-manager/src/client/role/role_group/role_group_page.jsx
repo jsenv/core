@@ -18,7 +18,7 @@ export const RoleGroupPage = ({ role }) => {
           {
             component: (
               <Button
-                data-confirm-message={`Are you sure you want to delete ${rolname}?`}
+                data-confirm-message={`Are you sure you want to delete the role "${rolname}"?`}
                 action={deleteRoleAction}
               >
                 Delete
