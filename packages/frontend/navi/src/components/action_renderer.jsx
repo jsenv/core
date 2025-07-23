@@ -63,6 +63,14 @@ export const ActionRenderer = ({ action, children }) => {
   const UIRenderedPromise = useUIRenderedPromise(action);
   const [errorBoundary, resetErrorBoundary] = useErrorBoundary();
 
+  // Mark this action as bound to UI components (has renderers)
+  // This tells the action system that errors should be caught and stored
+  // in the action's error state rather than bubbling up
+  useLayoutEffect(() => {
+    const { ui } = getActionPrivateProperties(action);
+    ui.hasRenderers = true;
+  }, [action]);
+
   useLayoutEffect(() => {
     resetErrorBoundary();
   }, [action, loading, idle, resetErrorBoundary]);

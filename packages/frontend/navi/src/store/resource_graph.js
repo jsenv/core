@@ -317,8 +317,13 @@ const createHttpHandlerForRootResource = (
             return itemId;
           };
 
-    const callerInfo = getCallerInfo(createActionAffectingOneItem, 1);
-    const actionTrace = `${name}.${httpVerb} (${callerInfo.file}:${callerInfo.line}:${callerInfo.column})`;
+    const callerInfo = getCallerInfo(null, 2);
+    // Provide more fallback options for better debugging
+    const locationInfo =
+      callerInfo.file && callerInfo.line && callerInfo.column
+        ? `${callerInfo.file}:${callerInfo.line}:${callerInfo.column}`
+        : callerInfo.raw || "unknown location";
+    const actionLabel = `${name}.${httpVerb}`;
     const httpActionAffectingOneItem = createAction(callback, {
       meta: { httpVerb, httpMany: false, paramScope, resourceInstance, store },
       name: `${name}.${httpVerb}`,
@@ -326,14 +331,16 @@ const createHttpHandlerForRootResource = (
         if (httpVerb === "DELETE") {
           if (!isProps(data) && !primitiveCanBeId(data)) {
             throw new TypeError(
-              `${actionTrace} must return an object (that will be used to drop "${name}" resource), received ${data}.`,
+              `${actionLabel} must return an object (that will be used to drop "${name}" resource), received ${data}.
+           ${actionLabel} source location: ${locationInfo}`,
             );
           }
           return applyDataEffect(data);
         }
         if (!isProps(data)) {
           throw new TypeError(
-            `${actionTrace} must return an object (that will be used to upsert "${name}" resource), received ${data}.`,
+            `${actionLabel} must return an object (that will be used to upsert "${name}" resource), received ${data}.
+           ${actionLabel} source location: ${locationInfo}`,
           );
         }
         return applyDataEffect(data);

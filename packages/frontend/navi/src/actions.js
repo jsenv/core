@@ -846,6 +846,7 @@ export const createAction = (callback, rootOptions = {}) => {
       const ui = {
         renderLoaded: null,
         renderLoadedAsync,
+        hasRenderers: false, // Flag to track if action is bound to UI components
       };
       let sideEffectCleanup;
 
@@ -969,7 +970,7 @@ export const createAction = (callback, rootOptions = {}) => {
 
         try {
           const thenableArray = [];
-          const callbackResult = callback(...args);
+          let callbackResult = callback(...args);
           if (callbackResult && typeof callbackResult.then === "function") {
             thenableArray.push(
               callbackResult.then(
@@ -1006,14 +1007,23 @@ export const createAction = (callback, rootOptions = {}) => {
           return Promise.all(thenableArray).then(() => {
             if (rejected) {
               onLoadError(rejectedValue);
-              throw rejectedValue;
+              if (!ui.hasRenderers) {
+                // Only re-throw if action is not bound to UI
+                // UI-bound actions handle errors through their error state
+                throw rejectedValue;
+              }
             }
             onLoadEnd();
             return computedDataSignal.peek();
           });
         } catch (e) {
           onLoadError(e);
-          throw e;
+          if (!ui.hasRenderers) {
+            // Only re-throw if action is not bound to UI
+            // UI-bound actions handle errors through their error state
+            throw e;
+          }
+          return computedDataSignal.peek();
         }
       };
 
