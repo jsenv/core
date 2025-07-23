@@ -24,12 +24,14 @@ const createAutoreloadManager = () => {
       autoreloadGetAfter = false,
       paramScope = null,
       dependencies = [],
+      mutableIdKeys = [],
     } = config;
 
     registeredResources.set(resourceInstance, {
       autoreloadGetManyAfter,
       autoreloadGetAfter,
       paramScope,
+      mutableIdKeys,
       httpActions: new Set(),
     });
 
@@ -87,10 +89,15 @@ const createAutoreloadManager = () => {
       );
 
       // Skip if no autoreload rules apply
+      const hasMutableIdPostAutoreload =
+        triggeringAction.meta.httpVerb === "POST" &&
+        config.mutableIdKeys.length > 0;
+
       if (
         !shouldReloadGetMany &&
         !shouldReloadGet &&
-        triggeringAction.meta.httpVerb !== "DELETE"
+        triggeringAction.meta.httpVerb !== "DELETE" &&
+        !hasMutableIdPostAutoreload
       ) {
         continue;
       }
@@ -109,22 +116,24 @@ const createAutoreloadManager = () => {
 
       for (const httpAction of config.httpActions) {
         // Find all instances of this action
-        const allInstances = httpAction.matchAllSelfOrDescendant(
-          (action) => action.loadRequested,
+        const actionCandidateArray = httpAction.matchAllSelfOrDescendant(
+          (action) => action.loadRequested && action !== triggeringAction,
         );
 
-        for (const instance of allInstances) {
+        for (const actionCandidate of actionCandidateArray) {
           // Check parameter scope compatibility
-          if (!paramScopePredicate(instance)) continue;
+          if (!paramScopePredicate(actionCandidate)) {
+            continue;
+          }
 
           // Same-resource autoreload rules
           if (resourceInstance === getResourceForAction(triggeringAction)) {
-            if (instance.meta.httpVerb === "GET") {
-              const shouldReload = instance.meta.httpMany
+            if (actionCandidate.meta.httpVerb === "GET") {
+              const shouldReload = actionCandidate.meta.httpMany
                 ? shouldReloadGetMany
                 : shouldReloadGet;
               if (shouldReload) {
-                actionsToReload.add(instance);
+                actionsToReload.add(actionCandidate);
                 reasonSet.add("same-resource autoreload");
               }
             }
@@ -138,10 +147,10 @@ const createAutoreloadManager = () => {
           ) {
             if (
               triggeringAction.meta.httpVerb !== "GET" &&
-              instance.meta.httpVerb === "GET" &&
-              instance.meta.httpMany
+              actionCandidate.meta.httpVerb === "GET" &&
+              actionCandidate.meta.httpMany
             ) {
-              actionsToReload.add(instance);
+              actionsToReload.add(actionCandidate);
               reasonSet.add("dependency autoreload");
             }
           }
@@ -149,7 +158,7 @@ const createAutoreloadManager = () => {
           // DELETE-specific autoreload
           if (
             triggeringAction.meta.httpVerb === "DELETE" &&
-            instance.meta.httpVerb === "GET"
+            actionCandidate.meta.httpVerb === "GET"
           ) {
             const { dataSignal } = getActionPrivateProperties(triggeringAction);
             const deletedIds = triggeringAction.meta.httpMany
@@ -162,14 +171,48 @@ const createAutoreloadManager = () => {
               deletedIds.every((id) => id !== undefined)
             ) {
               // Always reload GET_MANY
-              if (instance.meta.httpMany) {
-                actionsToReload.add(instance);
+              if (actionCandidate.meta.httpMany) {
+                actionsToReload.add(actionCandidate);
                 reasonSet.add("DELETE-affected GET actions");
               }
               // For single GET, check if data matches deleted IDs
-              else if (deletedIds.includes(instance.data)) {
-                actionsToReload.add(instance);
+              else if (deletedIds.includes(actionCandidate.data)) {
+                actionsToReload.add(actionCandidate);
                 reasonSet.add("DELETE-affected GET actions");
+              }
+            }
+          }
+
+          // POST-specific autoreload for mutableId actions
+          // When a POST action completes successfully, it means a new resource was created.
+          // If we have GET actions using mutableId that are currently in 404 (because the resource
+          // didn't exist), we should reload them since a resource with that mutableId now exists.
+          if (
+            triggeringAction.meta.httpVerb === "POST" &&
+            actionCandidate.meta.httpVerb === "GET" &&
+            !actionCandidate.meta.httpMany &&
+            resourceInstance === getResourceForAction(triggeringAction) &&
+            config.mutableIdKeys.length > 0
+          ) {
+            const { dataSignal } = getActionPrivateProperties(triggeringAction);
+            const createdData = dataSignal.peek();
+
+            if (createdData && typeof createdData === "object") {
+              // Check if any GET action uses a mutableId that matches the created resource
+              for (const mutableIdKey of config.mutableIdKeys) {
+                const createdMutableId = createdData[mutableIdKey];
+                const instanceData = actionCandidate.data;
+
+                // If instance.data matches the mutableId value, this GET was likely in 404
+                // and should be reloaded since a resource with this mutableId now exists
+                if (
+                  createdMutableId !== undefined &&
+                  instanceData === createdMutableId
+                ) {
+                  actionsToReload.add(actionCandidate);
+                  reasonSet.add("POST-mutableId autoreload");
+                  break; // No need to check other mutableIdKeys for this instance
+                }
               }
             }
           }
@@ -237,6 +280,7 @@ const createHttpHandlerForRootResource = (
     paramScope,
     dependencies = [],
     resourceInstance,
+    mutableIdKeys = [],
   },
 ) => {
   // Register this resource with the autoreload manager
@@ -245,6 +289,7 @@ const createHttpHandlerForRootResource = (
     autoreloadGetAfter,
     paramScope,
     dependencies,
+    mutableIdKeys,
   });
 
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
@@ -756,6 +801,7 @@ export const resource = (
       autoreloadGetManyAfter,
       autoreloadGetAfter,
       resourceInstance,
+      mutableIdKeys,
     });
   }
   resourceInstance.httpHandler = httpHandler;
@@ -1042,6 +1088,7 @@ export const resource = (
       paramScope: paramScopeObject,
       dependencies,
       resourceInstance,
+      mutableIdKeys,
     });
 
     // Create parameterized resource
