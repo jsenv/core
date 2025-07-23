@@ -1110,7 +1110,7 @@ const createActionProxyFromSignal = (
 
   let actionTarget = null;
   let currentAction = action;
-  let currentActionPrivateProperties;
+  let currentActionPrivateProperties = getActionPrivateProperties(action);
   let actionTargetPreviousWeakRef = null;
   let isFirstEffect = true;
 
@@ -1250,11 +1250,18 @@ const createActionProxyFromSignal = (
     computedDataSignal: proxyPrivateSignal("computedDataSignal"),
     performLoad: proxyPrivateMethod("performLoad"),
     performUnload: proxyPrivateMethod("performUnload"),
-    ui: currentAction.ui,
+    ui: currentActionPrivateProperties.ui,
   };
 
-  onActionTargetChange(() => {
+  onActionTargetChange((actionTarget, previousTarget) => {
     proxyPrivateProperties.ui = currentActionPrivateProperties.ui;
+    if (previousTarget && actionTarget) {
+      const previousPrivateProps = getActionPrivateProperties(previousTarget);
+      if (previousPrivateProps.ui.hasRenderers) {
+        const newPrivateProps = getActionPrivateProperties(actionTarget);
+        newPrivateProps.ui.hasRenderers = true;
+      }
+    }
     proxyPrivateProperties.childActionWeakSet =
       currentActionPrivateProperties.childActionWeakSet;
   });

@@ -69,7 +69,6 @@ export const ActionRenderer = ({ action, children }) => {
   useLayoutEffect(() => {
     const { ui } = getActionPrivateProperties(action);
     ui.hasRenderers = true;
-    console.log(`ActionRenderer: ${action.name} has renderers`);
   }, [action]);
 
   useLayoutEffect(() => {
