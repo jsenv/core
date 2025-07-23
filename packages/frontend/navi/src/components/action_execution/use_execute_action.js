@@ -91,8 +91,12 @@ export const useExecuteAction = (
         ) {
           dispatchCustomEvent("actionend", {
             detail: {
-              requestDetail: actionEvent.detail,
               data: action.data,
+
+              action,
+              requester,
+              event,
+              method,
             },
           });
         }
@@ -103,8 +107,12 @@ export const useExecuteAction = (
         ) {
           dispatchCustomEvent("actionabort", {
             detail: {
-              requestDetail: actionEvent.detail,
               reason,
+
+              action,
+              requester,
+              event,
+              method,
             },
           });
         }
@@ -115,8 +123,12 @@ export const useExecuteAction = (
         ) {
           dispatchCustomEvent("actionerror", {
             detail: {
-              requestDetail: actionEvent.detail,
               error,
+
+              action,
+              requester,
+              event,
+              method,
             },
           });
         }

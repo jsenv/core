@@ -40,7 +40,7 @@ export const ExplorerItemList = ({
               stopCreatingNew();
             }}
             onActionEnd={(e) => {
-              const eventCausingAction = e.detail.requestDetail.event;
+              const eventCausingAction = e.detail.event;
               if (
                 eventCausingAction &&
                 eventCausingAction.type === "keydown" &&
