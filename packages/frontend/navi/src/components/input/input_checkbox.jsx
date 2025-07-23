@@ -295,6 +295,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       name={name}
       value={value}
       checked={checked}
+      data-action={boundAction}
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
       onChange={(e) => {

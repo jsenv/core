@@ -184,6 +184,7 @@ const SelectWithAction = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       value={value}
+      data-action={boundAction}
       onChange={(event) => {
         const select = event.target;
         const selectedValue = select.value;

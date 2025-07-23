@@ -228,7 +228,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   return (
     <InputTextualBasic
       {...rest}
-      data-action={action}
+      data-action={boundAction}
       ref={innerRef}
       type={type}
       id={id}

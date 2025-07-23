@@ -189,6 +189,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       value={value}
+      data-action={boundAction}
       onChange={(event) => {
         const radio = event.target;
         const radioIsChecked = radio.checked;

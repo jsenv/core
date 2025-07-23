@@ -193,6 +193,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       {...rest}
       name={name}
       value={valueArray}
+      data-action={boundAction}
       ref={innerRef}
       onChange={(event) => {
         const checkbox = event.target;
