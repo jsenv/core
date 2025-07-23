@@ -39,9 +39,10 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
 
     event.preventDefault();
     event.stopPropagation();
-
     const { confirmMessage, action } = shortcutFound;
-    setAction(action);
+    // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
+    // otherwise setState would call that action immediately
+    setAction(() => action);
     requestAction(action, { event, confirmMessage });
   }, []);
 

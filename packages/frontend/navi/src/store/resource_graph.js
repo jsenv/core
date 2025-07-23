@@ -10,7 +10,7 @@ import { getCallerInfo } from "../utils/get_caller_info.js";
 import { createIterableWeakSet } from "../utils/iterable_weak_set.js";
 import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
-let DEBUG = true;
+let DEBUG = false;
 
 // Centralized Autoreload Manager
 // This handles ALL autoreload logic across all resources

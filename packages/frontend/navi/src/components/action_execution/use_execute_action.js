@@ -87,7 +87,10 @@ export const useExecuteAction = (
     return action[method]({
       onEnd: () => {
         if (
-          elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
+          // at this stage the action side effect might have removed the <element> from the DOM
+          // (in theory no because action side effect are batched to happen after)
+          // but other side effects might do this
+          elementRef.current
         ) {
           dispatchCustomEvent("actionend", {
             detail: {
@@ -103,7 +106,10 @@ export const useExecuteAction = (
       },
       onAbort: (reason) => {
         if (
-          elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
+          // at this stage the action side effect might have removed the <element> from the DOM
+          // (in theory no because action side effect are batched to happen after)
+          // but other side effects might do this
+          elementRef.current
         ) {
           dispatchCustomEvent("actionabort", {
             detail: {
@@ -119,7 +125,10 @@ export const useExecuteAction = (
       },
       onError: (error) => {
         if (
-          elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
+          // at this stage the action side effect might have removed the <element> from the DOM
+          // (in theory no because action side effect are batched to happen after)
+          // but other side effects might do this
+          elementRef.current
         ) {
           dispatchCustomEvent("actionerror", {
             detail: {
