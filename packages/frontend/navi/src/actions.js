@@ -942,9 +942,9 @@ export const createAction = (callback, rootOptions = {}) => {
           if (DEBUG) {
             console.log(`"${action}": loaded (reason: ${reason})`);
           }
+          return computedDataSignal.peek();
         };
         const onLoadError = (e) => {
-          console.error(e);
           if (abortSignal) {
             abortSignal.removeEventListener("abort", onAbortFromSpecific);
           }
@@ -958,7 +958,7 @@ export const createAction = (callback, rootOptions = {}) => {
             if (isPreload && abortSignal.aborted) {
               preloadedProtectionRegistry.unprotect(action);
             }
-            return;
+            return e;
           }
           if (DEBUG) {
             console.log(`"${action}": failed (error: ${e})`);
@@ -968,11 +968,21 @@ export const createAction = (callback, rootOptions = {}) => {
             loadingStateSignal.value = FAILED;
             onError(e);
           });
+
+          if (ui.hasRenderers) {
+            console.error(e);
+            // For UI-bound actions: error is properly handled by logging + UI display
+            // Return error instead of throwing to signal it's handled and prevent:
+            // - jsenv error overlay from appearing
+            // - error being treated as unhandled by runtime
+            return e;
+          }
+          throw e;
         };
 
         try {
           const thenableArray = [];
-          let callbackResult = callback(...args);
+          const callbackResult = callback(...args);
           if (callbackResult && typeof callbackResult.then === "function") {
             thenableArray.push(
               callbackResult.then(
@@ -1003,29 +1013,16 @@ export const createAction = (callback, rootOptions = {}) => {
             thenableArray.push(renderLoadedPromise);
           }
           if (thenableArray.length === 0) {
-            onLoadEnd();
-            return computedDataSignal.peek();
+            return onLoadEnd();
           }
           return Promise.all(thenableArray).then(() => {
             if (rejected) {
-              onLoadError(rejectedValue);
-              if (!ui.hasRenderers) {
-                // Only re-throw if action is not bound to UI
-                // UI-bound actions handle errors through their error state
-                throw rejectedValue;
-              }
+              return onLoadError(rejectedValue);
             }
-            onLoadEnd();
-            return computedDataSignal.peek();
+            return onLoadEnd();
           });
         } catch (e) {
-          onLoadError(e);
-          if (!ui.hasRenderers) {
-            // Only re-throw if action is not bound to UI
-            // UI-bound actions handle errors through their error state
-            throw e;
-          }
-          return computedDataSignal.peek();
+          return onLoadError(e);
         }
       };
 
