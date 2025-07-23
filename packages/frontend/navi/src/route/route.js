@@ -484,7 +484,9 @@ export const defineRoutes = (routeDefinition) => {
   for (const key of Object.keys(routeDefinition)) {
     const value = routeDefinition[key];
     const route = createRoute(key);
-    if (typeof value === "function") {
+    if (value && value.isAction) {
+      route.bindAction(value);
+    } else if (typeof value === "function") {
       const actionFromFunction = createAction(value);
       route.bindAction(actionFromFunction);
     } else if (value) {

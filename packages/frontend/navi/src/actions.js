@@ -21,7 +21,7 @@ import {
 } from "./utils/stringify_for_display.js";
 import { weakEffect } from "./utils/weak_effect.js";
 
-const ACTION_AS_FUNCTION = false;
+const ACTION_AS_FUNCTION = true;
 let DEBUG = true;
 export const enableDebugActions = () => {
   DEBUG = true;
