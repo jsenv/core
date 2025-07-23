@@ -95,18 +95,78 @@ const UserCard = ({ name, action }) => {
   const [status, setStatus] = useState("idle");
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editAge, setEditAge] = useState("");
 
   const loadUser = async () => {
     try {
       setStatus("loading");
       setError(null);
-      const result = await action.load();
+      // Utiliser la nouvelle syntaxe fonction directement
+      const result = await action.reload();
       setData(result);
       setStatus("success");
+      // Initialiser les champs d'édition avec les données actuelles
+      setEditName(result.name);
+      setEditAge(result.age.toString());
     } catch (err) {
       setError(err.message);
       setStatus("error");
       setData(null);
+    }
+  };
+
+  const deleteUser = async () => {
+    if (!data) return;
+
+    try {
+      await USER.DELETE({ name: data.name });
+      setData(null);
+      setStatus("idle");
+    } catch (err) {
+      setError(err.message);
+      setStatus("error");
+    }
+  };
+
+  const renameUser = async () => {
+    if (!data || !editName.trim()) return;
+
+    try {
+      await USER.PUT({ name: data.name, newName: editName.trim() });
+      setIsEditing(false);
+    } catch (err) {
+      setError(err.message);
+      setStatus("error");
+    }
+  };
+
+  const updateAge = async () => {
+    if (!data || !editAge.trim()) return;
+
+    try {
+      await USER.PATCH({ name: data.name, age: parseInt(editAge) });
+      setIsEditing(false);
+    } catch (err) {
+      setError(err.message);
+      setStatus("error");
+    }
+  };
+
+  const updateNameAndAge = async () => {
+    if (!data || !editName.trim() || !editAge.trim()) return;
+
+    try {
+      await USER.PUT({
+        name: data.name,
+        newName: editName.trim(),
+        age: parseInt(editAge),
+      });
+      setIsEditing(false);
+    } catch (err) {
+      setError(err.message);
+      setStatus("error");
     }
   };
 
@@ -130,11 +190,15 @@ const UserCard = ({ name, action }) => {
       case "success":
         return "Chargé";
       case "error":
-        return "Erreur";
+        return error && error.includes("not found")
+          ? "404 - Non trouvé"
+          : "Erreur";
       default:
         return "Non chargé";
     }
   };
+
+  const displayName = data ? `${data.name} (${data.age} ans)` : name;
 
   return (
     <div
@@ -154,7 +218,7 @@ const UserCard = ({ name, action }) => {
           marginBottom: "12px",
         }}
       >
-        <h4 style={{ margin: 0, color: "#007bff" }}>{name}</h4>
+        <h4 style={{ margin: 0, color: "#007bff" }}>{displayName}</h4>
         <span
           style={{
             padding: "4px 8px",
@@ -169,7 +233,7 @@ const UserCard = ({ name, action }) => {
         </span>
       </div>
 
-      {data && (
+      {data && !isEditing && (
         <div
           style={{
             fontFamily: "monospace",
@@ -183,7 +247,117 @@ const UserCard = ({ name, action }) => {
           <br />
           Nom: {data.name}
           <br />
-          Âge: {data.age}
+          Âge: {data.age} ans
+        </div>
+      )}
+
+      {data && isEditing && (
+        <div
+          style={{
+            backgroundColor: "white",
+            padding: "12px",
+            borderRadius: "4px",
+            marginBottom: "8px",
+          }}
+        >
+          <div style={{ marginBottom: "8px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "4px",
+                fontWeight: "bold",
+              }}
+            >
+              Nom:
+            </label>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "6px",
+                border: "1px solid #ced4da",
+                borderRadius: "4px",
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: "8px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "4px",
+                fontWeight: "bold",
+              }}
+            >
+              Âge:
+            </label>
+            <input
+              type="number"
+              value={editAge}
+              onChange={(e) => setEditAge(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "6px",
+                border: "1px solid #ced4da",
+                borderRadius: "4px",
+              }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            <button
+              onClick={renameUser}
+              style={{
+                padding: "4px 8px",
+                backgroundColor: "#ffc107",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                fontSize: "0.8em",
+              }}
+            >
+              Renommer
+            </button>
+            <button
+              onClick={updateAge}
+              style={{
+                padding: "4px 8px",
+                backgroundColor: "#17a2b8",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                fontSize: "0.8em",
+              }}
+            >
+              Changer âge
+            </button>
+            <button
+              onClick={updateNameAndAge}
+              style={{
+                padding: "4px 8px",
+                backgroundColor: "#6f42c1",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                fontSize: "0.8em",
+              }}
+            >
+              Tout modifier
+            </button>
+            <button
+              onClick={() => setIsEditing(false)}
+              style={{
+                padding: "4px 8px",
+                backgroundColor: "#6c757d",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                fontSize: "0.8em",
+              }}
+            >
+              Annuler
+            </button>
+          </div>
         </div>
       )}
 
@@ -201,37 +375,70 @@ const UserCard = ({ name, action }) => {
         </div>
       )}
 
-      <button
-        onClick={loadUser}
-        disabled={status === "loading"}
-        style={{
-          padding: "6px 12px",
-          backgroundColor: "#17a2b8",
-          color: "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: status === "loading" ? "not-allowed" : "pointer",
-          opacity: status === "loading" ? 0.6 : 1,
-        }}
-      >
-        🔄 Recharger
-      </button>
+      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+        <button
+          onClick={loadUser}
+          disabled={status === "loading"}
+          style={{
+            padding: "6px 12px",
+            backgroundColor: "#17a2b8",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: status === "loading" ? "not-allowed" : "pointer",
+            opacity: status === "loading" ? 0.6 : 1,
+          }}
+        >
+          🔄 Recharger
+        </button>
+
+        {data && (
+          <>
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              style={{
+                padding: "6px 12px",
+                backgroundColor: "#007bff",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+              }}
+            >
+              ✏️ Modifier
+            </button>
+            <button
+              onClick={deleteUser}
+              style={{
+                padding: "6px 12px",
+                backgroundColor: "#dc3545",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+              }}
+            >
+              🗑️ Supprimer
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 };
 
 const UsersList = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState([]); // Initialiser avec un tableau vide au lieu de []
   const [status, setStatus] = useState("idle");
 
   const loadAllUsers = async () => {
     try {
       setStatus("loading");
-      const result = await allUsersAction.load();
-      setUsers(result);
+      // Utiliser la nouvelle syntaxe fonction directement
+      const result = await allUsersAction();
+      setUsers(result || []); // S'assurer qu'on a toujours un tableau
       setStatus("success");
     } catch (err) {
       console.error("Erreur lors du chargement des utilisateurs:", err);
+      setUsers([]); // Réinitialiser avec un tableau vide en cas d'erreur
       setStatus("error");
     }
   };
@@ -277,7 +484,7 @@ const UsersList = () => {
         <div style={{ color: "#dc3545" }}>Erreur lors du chargement</div>
       )}
 
-      {users.length > 0 && (
+      {users && users.length > 0 && (
         <div
           style={{
             backgroundColor: "white",
@@ -381,30 +588,9 @@ const ActionForm = ({
 const App = () => {
   const [newUserName, setNewUserName] = useState("TestUser");
   const [newUserAge, setNewUserAge] = useState("28");
-  const [deleteUserName, setDeleteUserName] = useState("TestUser");
-  const [renameOldName, setRenameOldName] = useState("Alice");
-  const [renameNewName, setRenameNewName] = useState("Alice2");
-  const [patchUserName, setPatchUserName] = useState("Bob");
-  const [patchUserAge, setPatchUserAge] = useState("30");
 
   const createUser = async () => {
     await USER.POST({ name: newUserName, age: parseInt(newUserAge) });
-  };
-
-  const deleteUser = async () => {
-    await USER.DELETE({ name: deleteUserName });
-  };
-
-  const renameUser = async () => {
-    await USER.PUT({
-      name: renameOldName,
-      newName: renameNewName,
-      age: undefined,
-    });
-  };
-
-  const patchUser = async () => {
-    await USER.PATCH({ name: patchUserName, age: parseInt(patchUserAge) });
   };
 
   const runDeleteRecreateScenario = async () => {
@@ -538,10 +724,11 @@ const App = () => {
           margin: "16px 0",
         }}
       >
-        <h2>👥 Actions GET individuelles</h2>
+        <h2>👥 Actions GET individuelles avec CRUD</h2>
         <p style={{ color: "#6c757d", fontSize: "0.9em" }}>
           Ces actions GET devraient se recharger automatiquement quand les
-          ressources correspondantes sont modifiées.
+          ressources correspondantes sont modifiées. Chaque carte permet aussi
+          de modifier ou supprimer l&apos;utilisateur.
         </p>
 
         <div
@@ -558,7 +745,7 @@ const App = () => {
         </div>
       </div>
 
-      {/* Actions CRUD manuelles */}
+      {/* Création d'utilisateurs */}
       <div
         style={{
           backgroundColor: "#f8f9fa",
@@ -567,102 +754,31 @@ const App = () => {
           margin: "16px 0",
         }}
       >
-        <h2>🛠️ Actions CRUD manuelles</h2>
+        <h2>➕ Créer un nouvel utilisateur</h2>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-            gap: "16px",
-          }}
+        <ActionForm
+          title="Créer un utilisateur"
+          onSubmit={createUser}
+          buttonText="Créer"
+          buttonColor="#28a745"
         >
-          <ActionForm
-            title="➕ Créer un utilisateur"
-            onSubmit={createUser}
-            buttonText="Créer"
-            buttonColor="#28a745"
-          >
-            <div>
-              <input
-                type="text"
-                placeholder="Nom"
-                value={newUserName}
-                onChange={(e) => setNewUserName(e.target.value)}
-                style={inputStyle}
-              />
-              <input
-                type="number"
-                placeholder="Âge"
-                value={newUserAge}
-                onChange={(e) => setNewUserAge(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-          </ActionForm>
-
-          <ActionForm
-            title="🗑️ Supprimer un utilisateur"
-            onSubmit={deleteUser}
-            buttonText="Supprimer"
-            buttonColor="#dc3545"
-          >
+          <div>
             <input
               type="text"
-              placeholder="Nom à supprimer"
-              value={deleteUserName}
-              onChange={(e) => setDeleteUserName(e.target.value)}
+              placeholder="Nom"
+              value={newUserName}
+              onChange={(e) => setNewUserName(e.target.value)}
               style={inputStyle}
             />
-          </ActionForm>
-
-          <ActionForm
-            title="✏️ Renommer un utilisateur"
-            onSubmit={renameUser}
-            buttonText="Renommer"
-            buttonColor="#ffc107"
-          >
-            <div>
-              <input
-                type="text"
-                placeholder="Ancien nom"
-                value={renameOldName}
-                onChange={(e) => setRenameOldName(e.target.value)}
-                style={inputStyle}
-              />
-              <input
-                type="text"
-                placeholder="Nouveau nom"
-                value={renameNewName}
-                onChange={(e) => setRenameNewName(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-          </ActionForm>
-
-          <ActionForm
-            title="📝 Modifier l'âge"
-            onSubmit={patchUser}
-            buttonText="Modifier"
-            buttonColor="#17a2b8"
-          >
-            <div>
-              <input
-                type="text"
-                placeholder="Nom"
-                value={patchUserName}
-                onChange={(e) => setPatchUserName(e.target.value)}
-                style={inputStyle}
-              />
-              <input
-                type="number"
-                placeholder="Nouvel âge"
-                value={patchUserAge}
-                onChange={(e) => setPatchUserAge(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-          </ActionForm>
-        </div>
+            <input
+              type="number"
+              placeholder="Âge"
+              value={newUserAge}
+              onChange={(e) => setNewUserAge(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
+        </ActionForm>
       </div>
 
       <div
@@ -682,14 +798,14 @@ const App = () => {
           </li>
           <li>
             <strong>Observez les statuts</strong> : Vert = chargé, Jaune =
-            chargement, Rouge = erreur
+            chargement, Rouge avec 404 = utilisateur inexistant
           </li>
           <li>
             <strong>Testez l&apos;autoreload</strong> :
             <ul>
               <li>
                 Créez &quot;TestUser&quot; → l&apos;action GET
-                &quot;TestUser&quot; devrait passer de rouge à vert
+                &quot;TestUser&quot; devrait passer de 404 à vert
                 automatiquement
               </li>
               <li>
@@ -697,10 +813,15 @@ const App = () => {
                 &quot;Alice&quot; devrait se recharger
               </li>
               <li>
-                Renommez un utilisateur → les actions liées devraient se mettre
-                à jour
+                Modifiez un utilisateur directement depuis sa carte →
+                l&apos;affichage devrait se mettre à jour automatiquement
               </li>
             </ul>
+          </li>
+          <li>
+            <strong>Actions dans les cartes</strong> : Chaque utilisateur a des
+            boutons Modifier et Supprimer. Le mode édition permet de changer le
+            nom, l&apos;âge, ou les deux.
           </li>
           <li>
             <strong>Vérifiez les logs</strong> dans la console pour voir les
