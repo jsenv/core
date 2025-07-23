@@ -89,21 +89,36 @@ export const useExecuteAction = (
         if (
           elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
         ) {
-          dispatchCustomEvent("actionend", { detail: { data: action.data } });
+          dispatchCustomEvent("actionend", {
+            detail: {
+              requestDetail: actionEvent.detail,
+              data: action.data,
+            },
+          });
         }
       },
       onAbort: (reason) => {
         if (
           elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
         ) {
-          dispatchCustomEvent("actionabort", { detail: { reason } });
+          dispatchCustomEvent("actionabort", {
+            detail: {
+              requestDetail: actionEvent.detail,
+              reason,
+            },
+          });
         }
       },
       onError: (error) => {
         if (
           elementRef.current // at this stage the action side effect might have removed the <element> from the DOM
         ) {
-          dispatchCustomEvent("actionerror", { detail: { error } });
+          dispatchCustomEvent("actionerror", {
+            detail: {
+              requestDetail: actionEvent.detail,
+              error,
+            },
+          });
         }
         if (errorEffect === "show_validation_message") {
           addErrorMessage(error);

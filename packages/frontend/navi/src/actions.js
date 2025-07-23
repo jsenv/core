@@ -954,7 +954,7 @@ export const createAction = (callback, rootOptions = {}) => {
             onLoad(action);
             // Call onActionEnd BEFORE updating the data and UI state (just like onLoad)
             if (onEnd) {
-              onEnd();
+              onEnd(computedDataSignal.peek(), action);
             }
           });
           if (DEBUG) {
@@ -976,7 +976,7 @@ export const createAction = (callback, rootOptions = {}) => {
             if (isPreload && abortSignal.aborted) {
               preloadedProtectionRegistry.unprotect(action);
             }
-            onAbort(e);
+            onAbort(e, action);
             return e;
           }
           if (e.name === "AbortError") {
@@ -992,7 +992,9 @@ export const createAction = (callback, rootOptions = {}) => {
           batch(() => {
             errorSignal.value = e;
             loadingStateSignal.value = FAILED;
-            onError(e);
+            if (onError) {
+              onError(e, action);
+            }
           });
 
           if (ui.hasRenderers) {
