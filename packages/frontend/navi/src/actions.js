@@ -79,8 +79,8 @@ export const unloadActions = async (
 export const abortPendingActions = (
   reason = "abortPendingActions was called",
 ) => {
-  const { loadingSet } = getActivationInfo();
-  for (const runningAction of loadingSet) {
+  const { runningSet } = getActivationInfo();
+  for (const runningAction of runningSet) {
     runningAction.abort(reason);
   }
 };
@@ -97,7 +97,7 @@ export const abortPendingActions = (
  * - The protection duration expires (default: 5 minutes)
  * - The action is explicitly stopped via .stop()
  */
-const preloadedProtectionRegistry = (() => {
+const prerunProtectionRegistry = (() => {
   const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
   const PROTECTION_DURATION = 5 * 60 * 1000; // 5 minutes en millisecondes
 
@@ -178,7 +178,7 @@ const actionPromiseMap = new Map();
 const activationWeakSet = createIterableWeakSet("activation");
 
 const getActivationInfo = () => {
-  const loadingSet = new Set();
+  const runningSet = new Set();
   const settledSet = new Set();
 
   for (const action of activationWeakSet) {
@@ -186,7 +186,7 @@ const getActivationInfo = () => {
     const runningState = privateProps.runningStateSignal.peek();
 
     if (runningState === RUNNING) {
-      loadingSet.add(action);
+      runningSet.add(action);
     } else if (
       runningState === COMPLETED ||
       runningState === FAILED ||
@@ -201,7 +201,7 @@ const getActivationInfo = () => {
   }
 
   return {
-    loadingSet,
+    runningSet,
     settledSet,
   };
 };
@@ -243,11 +243,6 @@ export const updateActions = ({
   runSet = new Set(),
   rerunSet = new Set(),
   stopSet = new Set(),
-  // Legacy compatibility
-  preloadSet = new Set(),
-  loadSet = new Set(),
-  reloadSet = new Set(),
-  unloadSet = new Set(),
   abortSignalMap = new Map(),
   onEnd,
   onAbort,
@@ -275,21 +270,15 @@ export const updateActions = ({
    * - stays*Set: actions that remain in their current state
    */
 
-  // Merge legacy parameters with new ones
-  const finalPrerunSet = new Set([...prerunSet, ...preloadSet]);
-  const finalRunSet = new Set([...runSet, ...loadSet]);
-  const finalRerunSet = new Set([...rerunSet, ...reloadSet]);
-  const finalStopSet = new Set([...stopSet, ...unloadSet]);
-
-  const { loadingSet, settledSet } = getActivationInfo();
+  const { runningSet, settledSet } = getActivationInfo();
 
   // Warn about overlapping sets in development
   if (import.meta.dev) {
     const allSets = [
-      { name: "prerun", set: finalPrerunSet },
-      { name: "run", set: finalRunSet },
-      { name: "rerun", set: finalRerunSet },
-      { name: "stop", set: finalStopSet },
+      { name: "prerun", set: prerunSet },
+      { name: "run", set: runSet },
+      { name: "rerun", set: rerunSet },
+      { name: "stop", set: stopSet },
     ];
 
     for (let i = 0; i < allSets.length; i++) {
@@ -310,14 +299,10 @@ export const updateActions = ({
   if (DEBUG) {
     console.group(`updateActions()`);
     const lines = [
-      ...(finalPrerunSet.size
-        ? [formatActionSet(finalPrerunSet, "- prerun:")]
-        : []),
-      ...(finalRunSet.size ? [formatActionSet(finalRunSet, "- run:")] : []),
-      ...(finalRerunSet.size
-        ? [formatActionSet(finalRerunSet, "- rerun:")]
-        : []),
-      ...(finalStopSet.size ? [formatActionSet(finalStopSet, "- stop:")] : []),
+      ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
+      ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),
+      ...(rerunSet.size ? [formatActionSet(rerunSet, "- rerun:")] : []),
+      ...(stopSet.size ? [formatActionSet(stopSet, "- stop:")] : []),
     ];
     console.debug(
       `requested operations:
@@ -331,14 +316,14 @@ ${lines.join("\n")}
   const willPrerunSet = new Set();
   const willRunSet = new Set();
   const willPromoteSet = new Set(); // prerun -> run requested
-  const staysLoadingSet = new Set();
+  const staysRunningSet = new Set();
   const staysAbortedSet = new Set();
   const staysFailedSet = new Set();
-  const staysLoadedSet = new Set();
+  const staysCompletedSet = new Set();
 
   // Step 1: Determine which actions will be stopped
   collect_actions_to_stop: {
-    for (const actionToStop of finalStopSet) {
+    for (const actionToStop of stopSet) {
       if (actionToStop.runningState !== IDLE) {
         willStopSet.add(actionToStop);
       }
@@ -379,11 +364,8 @@ ${lines.join("\n")}
     };
 
     // Process prerunSet (lowest priority)
-    for (const actionToPrerun of finalPrerunSet) {
-      if (
-        finalRunSet.has(actionToPrerun) ||
-        finalRerunSet.has(actionToPrerun)
-      ) {
+    for (const actionToPrerun of prerunSet) {
+      if (runSet.has(actionToPrerun) || rerunSet.has(actionToPrerun)) {
         // run/rerun wins over prerun - skip prerun
         continue;
       }
@@ -391,8 +373,8 @@ ${lines.join("\n")}
     }
 
     // Process runSet (medium priority)
-    for (const actionToRun of finalRunSet) {
-      if (finalRerunSet.has(actionToRun)) {
+    for (const actionToRun of runSet) {
+      if (rerunSet.has(actionToRun)) {
         // rerun wins over run - skip run
         continue;
       }
@@ -406,7 +388,7 @@ ${lines.join("\n")}
     }
 
     // Process rerunSet (highest priority)
-    for (const actionToRerun of finalRerunSet) {
+    for (const actionToRerun of rerunSet) {
       handleActionRequest(actionToRerun, "rerun");
     }
   }
@@ -414,30 +396,30 @@ ${lines.join("\n")}
 
   // Step 3: Determine which actions will stay in their current state
   collect_actions_that_stay: {
-    for (const actionLoading of loadingSet) {
-      if (willStopSet.has(actionLoading)) {
+    for (const actionRunning of runningSet) {
+      if (willStopSet.has(actionRunning)) {
         // will be stopped (aborted), we don't want to wait
       } else if (
-        willRunSet.has(actionLoading) ||
-        willPrerunSet.has(actionLoading)
+        willRunSet.has(actionRunning) ||
+        willPrerunSet.has(actionRunning)
       ) {
         // will be run, we'll wait for the new run promise
       } else {
-        // an action that was loading and not affected by this update
-        const actionPromise = actionPromiseMap.get(actionLoading);
+        // an action that was running and not affected by this update
+        const actionPromise = actionPromiseMap.get(actionRunning);
         allThenableArray.push(actionPromise);
-        staysLoadingSet.add(actionLoading);
+        staysRunningSet.add(actionRunning);
       }
     }
-    for (const actionLoaded of settledSet) {
-      if (willStopSet.has(actionLoaded)) {
+    for (const actionSettled of settledSet) {
+      if (willStopSet.has(actionSettled)) {
         // will be stopped
-      } else if (actionLoaded.runningState === ABORTED) {
-        staysAbortedSet.add(actionLoaded);
-      } else if (actionLoaded.runningState === FAILED) {
-        staysFailedSet.add(actionLoaded);
+      } else if (actionSettled.runningState === ABORTED) {
+        staysAbortedSet.add(actionSettled);
+      } else if (actionSettled.runningState === FAILED) {
+        staysFailedSet.add(actionSettled);
       } else {
-        staysLoadedSet.add(actionLoaded);
+        staysCompletedSet.add(actionSettled);
       }
     }
   }
@@ -453,8 +435,8 @@ ${lines.join("\n")}
         ? [formatActionSet(willPromoteSet, "- will promote:")]
         : []),
       ...(willRunSet.size ? [formatActionSet(willRunSet, "- will run:")] : []),
-      ...(staysLoadingSet.size
-        ? [formatActionSet(staysLoadingSet, "- stays loading:")]
+      ...(staysRunningSet.size
+        ? [formatActionSet(staysRunningSet, "- stays running:")]
         : []),
       ...(staysAbortedSet.size
         ? [formatActionSet(staysAbortedSet, "- stays aborted:")]
@@ -462,8 +444,8 @@ ${lines.join("\n")}
       ...(staysFailedSet.size
         ? [formatActionSet(staysFailedSet, "- stays failed:")]
         : []),
-      ...(staysLoadedSet.size
-        ? [formatActionSet(staysLoadedSet, "- stays loaded:")]
+      ...(staysCompletedSet.size
+        ? [formatActionSet(staysCompletedSet, "- stays completed:")]
         : []),
     ];
     console.debug(`operations that will be performed:
@@ -475,7 +457,7 @@ ${lines.join("\n")}`);
     for (const actionToStop of willStopSet) {
       const actionToStopPrivateProperties =
         getActionPrivateProperties(actionToStop);
-      actionToStopPrivateProperties.performUnload({ reason });
+      actionToStopPrivateProperties.performStop({ reason });
       activationWeakSet.delete(actionToStop);
     }
   }
@@ -498,7 +480,7 @@ ${lines.join("\n")}`);
 
       const actionToRunPrivateProperties =
         getActionPrivateProperties(actionToPrerunOrRun);
-      const performLoadResult = actionToRunPrivateProperties.performLoad({
+      const performRunResult = actionToRunPrivateProperties.performRun({
         globalAbortSignal,
         abortSignal: effectiveSignal,
         reason,
@@ -509,20 +491,20 @@ ${lines.join("\n")}`);
       });
       activationWeakSet.add(actionToPrerunOrRun);
 
-      if (performLoadResult && typeof performLoadResult.then === "function") {
-        actionPromiseMap.set(actionToPrerunOrRun, performLoadResult);
-        allThenableArray.push(performLoadResult);
+      if (performRunResult && typeof performRunResult.then === "function") {
+        actionPromiseMap.set(actionToPrerunOrRun, performRunResult);
+        allThenableArray.push(performRunResult);
         hasAsync = true;
         // Store async result with order info
         resultArray.push({
           type: "async",
-          promise: performLoadResult,
+          promise: performRunResult,
         });
       } else {
         // Store sync result with order info
         resultArray.push({
           type: "sync",
-          result: performLoadResult,
+          result: performRunResult,
         });
       }
     };
@@ -565,11 +547,11 @@ ${lines.join("\n")}`);
   const allResult = allThenableArray.length
     ? Promise.allSettled(allThenableArray)
     : null;
-  const loadingActionSet = new Set([...willPrerunSet, ...willRunSet]);
+  const runningActionSet = new Set([...willPrerunSet, ...willRunSet]);
   return {
     requestedResult,
     allResult,
-    loadingActionSet,
+    runningActionSet,
   };
 };
 
@@ -644,11 +626,6 @@ export const createAction = (callback, rootOptions = {}) => {
     const stop = (options) => {
       return dispatchSingleAction(action, "stop", options);
     };
-    // Legacy compatibility
-    const preload = prerun;
-    const load = run;
-    const reload = rerun;
-    const unload = stop;
     const abort = (reason) => {
       if (runningState !== RUNNING) {
         return false;
@@ -835,11 +812,6 @@ export const createAction = (callback, rootOptions = {}) => {
       run,
       rerun,
       stop,
-      // Legacy compatibility
-      preload,
-      load,
-      reload,
-      unload,
       abort,
       bindParams,
       matchAllSelfOrDescendant, // ✅ Add the new method
@@ -905,7 +877,7 @@ export const createAction = (callback, rootOptions = {}) => {
       };
       let sideEffectCleanup;
 
-      const performLoad = (loadParams) => {
+      const performRun = (runParams) => {
         const {
           globalAbortSignal,
           abortSignal,
@@ -914,10 +886,10 @@ export const createAction = (callback, rootOptions = {}) => {
           onEnd,
           onAbort,
           onError,
-        } = loadParams;
+        } = runParams;
 
         if (isPreload) {
-          preloadedProtectionRegistry.protect(action);
+          prerunProtectionRegistry.protect(action);
         }
 
         const internalAbortController = new AbortController();
@@ -927,7 +899,7 @@ export const createAction = (callback, rootOptions = {}) => {
           internalAbortController.abort(abortReason);
           actionAbortMap.delete(action);
           if (isPreload && (globalAbortSignal.aborted || abortSignal.aborted)) {
-            preloadedProtectionRegistry.unprotect(action);
+            prerunProtectionRegistry.unprotect(action);
           }
           if (DEBUG) {
             console.log(`"${action}": aborted (reason: ${abortReason})`);
@@ -966,17 +938,17 @@ export const createAction = (callback, rootOptions = {}) => {
           sideEffectCleanup = returnValue;
         }
 
-        let loadResult;
+        let runResult;
         let rejected = false;
         let rejectedValue;
-        const onLoadEnd = () => {
+        const onRunEnd = () => {
           if (abortSignal) {
             abortSignal.removeEventListener("abort", onAbortFromSpecific);
           }
           if (globalAbortSignal) {
             globalAbortSignal.removeEventListener("abort", onAbortFromGlobal);
           }
-          preloadedProtectionRegistry.unprotect(action);
+          prerunProtectionRegistry.unprotect(action);
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
           /*
@@ -996,8 +968,8 @@ export const createAction = (callback, rootOptions = {}) => {
            */
           batch(() => {
             dataSignal.value = dataEffect
-              ? dataEffect(loadResult, action)
-              : loadResult;
+              ? dataEffect(runResult, action)
+              : runResult;
             runningStateSignal.value = COMPLETED;
             if (onEnd) {
               onEnd(computedDataSignal.peek(), action);
@@ -1009,7 +981,7 @@ export const createAction = (callback, rootOptions = {}) => {
           }
           return computedDataSignal.peek();
         };
-        const onLoadError = (e) => {
+        const onRunError = (e) => {
           if (abortSignal) {
             abortSignal.removeEventListener("abort", onAbortFromSpecific);
           }
@@ -1021,7 +993,7 @@ export const createAction = (callback, rootOptions = {}) => {
           if (internalAbortSignal.aborted && e === internalAbortSignal.reason) {
             runningStateSignal.value = ABORTED;
             if (isPreload && abortSignal.aborted) {
-              preloadedProtectionRegistry.unprotect(action);
+              prerunProtectionRegistry.unprotect(action);
             }
             onAbort(e, action);
             return e;
@@ -1062,7 +1034,7 @@ export const createAction = (callback, rootOptions = {}) => {
             thenableArray.push(
               callbackResult.then(
                 (value) => {
-                  loadResult = value;
+                  runResult = value;
                 },
                 (e) => {
                   rejected = true;
@@ -1071,7 +1043,7 @@ export const createAction = (callback, rootOptions = {}) => {
               ),
             );
           } else {
-            loadResult = callbackResult;
+            runResult = callbackResult;
           }
           if (ui.renderLoadedAsync && !ui.renderLoaded) {
             const renderLoadedPromise = ui.renderLoadedAsync(...args).then(
@@ -1088,26 +1060,26 @@ export const createAction = (callback, rootOptions = {}) => {
             thenableArray.push(renderLoadedPromise);
           }
           if (thenableArray.length === 0) {
-            return onLoadEnd();
+            return onRunEnd();
           }
           return Promise.all(thenableArray).then(() => {
             if (rejected) {
-              return onLoadError(rejectedValue);
+              return onRunError(rejectedValue);
             }
-            return onLoadEnd();
+            return onRunEnd();
           });
         } catch (e) {
-          return onLoadError(e);
+          return onRunError(e);
         }
       };
 
-      const performUnload = ({ reason }) => {
+      const performStop = ({ reason }) => {
         abort(reason);
         if (DEBUG) {
-          console.log(`"${action}": unloading (reason: ${reason})`);
+          console.log(`"${action}": stopping (reason: ${reason})`);
         }
 
-        preloadedProtectionRegistry.unprotect(action);
+        prerunProtectionRegistry.unprotect(action);
 
         if (sideEffectCleanup) {
           sideEffectCleanup(reason);
@@ -1135,8 +1107,8 @@ export const createAction = (callback, rootOptions = {}) => {
         computedDataSignal,
         errorSignal,
 
-        performLoad,
-        performUnload,
+        performRun,
+        performStop,
         ui,
 
         childActionWeakSet,
@@ -1156,7 +1128,7 @@ export const createAction = (callback, rootOptions = {}) => {
 const createActionProxyFromSignal = (
   action,
   paramsSignal,
-  { reloadOnChange = false, onChange } = {},
+  { rerunOnChange = false, onChange } = {},
 ) => {
   const actionTargetChangeCallbackSet = new Set();
   const onActionTargetChange = (callback) => {
@@ -1241,11 +1213,6 @@ const createActionProxyFromSignal = (
     run: proxyMethod("run"),
     rerun: proxyMethod("rerun"),
     stop: proxyMethod("stop"),
-    // Legacy compatibility
-    preload: proxyMethod("preload"),
-    load: proxyMethod("load"),
-    reload: proxyMethod("reload"),
-    unload: proxyMethod("unload"),
     abort: proxyMethod("abort"),
     matchAllSelfOrDescendant: proxyMethod("matchAllSelfOrDescendant"),
     getCurrentAction: () => {
@@ -1321,8 +1288,8 @@ const createActionProxyFromSignal = (
     errorSignal: proxyPrivateSignal("errorSignal", "error"),
     dataSignal: proxyPrivateSignal("dataSignal", "data"),
     computedDataSignal: proxyPrivateSignal("computedDataSignal"),
-    performLoad: proxyPrivateMethod("performLoad"),
-    performUnload: proxyPrivateMethod("performUnload"),
+    performRun: proxyPrivateMethod("performRun"),
+    performStop: proxyPrivateMethod("performStop"),
     ui: currentActionPrivateProperties.ui,
   };
 
@@ -1365,14 +1332,14 @@ const createActionProxyFromSignal = (
     return true;
   };
 
-  if (reloadOnChange) {
+  if (rerunOnChange) {
     onActionTargetChange((actionTarget, actionTargetPrevious) => {
       if (
         actionTarget &&
         actionTargetPrevious &&
         !actionTargetPrevious.isPrerun
       ) {
-        actionTarget.reload();
+        actionTarget.rerun();
       }
     });
   }
