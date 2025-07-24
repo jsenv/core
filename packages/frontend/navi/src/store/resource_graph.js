@@ -13,7 +13,7 @@ import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 let DEBUG = false;
 
 // Resource Lifecycle Manager
-// This handles ALL resource lifecycle logic (rerun/stop) across all resources
+// This handles ALL resource lifecycle logic (rerun/reset) across all resources
 const createResourceLifecycleManager = () => {
   const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
   const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
@@ -65,8 +65,8 @@ const createResourceLifecycleManager = () => {
     return false;
   };
 
-  const shouldStopAfter = (rerunConfig, httpVerb) => {
-    // Stop logic: if rerunOn is false and httpVerb is DELETE, then stop
+  const shouldResetAfter = (rerunConfig, httpVerb) => {
+    // Reset logic: if rerunOn is false and httpVerb is DELETE, then reset
     return rerunConfig === false && httpVerb === "DELETE";
   };
 
@@ -83,9 +83,9 @@ const createResourceLifecycleManager = () => {
     return true;
   };
 
-  const findActionsToRerunOrStop = (triggeringAction) => {
+  const findActionsToRerunOrReset = (triggeringAction) => {
     const actionsToRerun = new Set();
-    const actionsToStop = new Set();
+    const actionsToReset = new Set();
     const reasonSet = new Set();
 
     for (const [resourceInstance, config] of registeredResources) {
@@ -98,17 +98,17 @@ const createResourceLifecycleManager = () => {
         triggeringAction.meta.httpVerb,
       );
 
-      // Check if we should stop instead of rerun
-      const shouldStopGetMany = shouldStopAfter(
+      // Check if we should reset instead of rerun
+      const shouldResetGetMany = shouldResetAfter(
         config.rerunOn.GET_MANY,
         triggeringAction.meta.httpVerb,
       );
-      const shouldStopGet = shouldStopAfter(
+      const shouldResetGet = shouldResetAfter(
         config.rerunOn.GET,
         triggeringAction.meta.httpVerb,
       );
 
-      // Skip if no rerun or stop rules apply
+      // Skip if no rerun or reset rules apply
       const hasMutableIdAutorerun =
         (triggeringAction.meta.httpVerb === "POST" ||
           triggeringAction.meta.httpVerb === "PUT" ||
@@ -118,8 +118,8 @@ const createResourceLifecycleManager = () => {
       if (
         !shouldRerunGetMany &&
         !shouldRerunGet &&
-        !shouldStopGetMany &&
-        !shouldStopGet &&
+        !shouldResetGetMany &&
+        !shouldResetGet &&
         triggeringAction.meta.httpVerb !== "DELETE" &&
         !hasMutableIdAutorerun
       ) {
@@ -141,7 +141,8 @@ const createResourceLifecycleManager = () => {
       for (const httpAction of config.httpActions) {
         // Find all instances of this action
         const actionCandidateArray = httpAction.matchAllSelfOrDescendant(
-          (action) => !action.isPrerun && action !== triggeringAction,
+          (action) =>
+            !action.isPrerun && action.completed && action !== triggeringAction,
         );
 
         for (const actionCandidate of actionCandidateArray) {
@@ -159,16 +160,16 @@ const createResourceLifecycleManager = () => {
               const shouldRerun = actionCandidate.meta.httpMany
                 ? shouldRerunGetMany
                 : shouldRerunGet;
-              const shouldStop = actionCandidate.meta.httpMany
-                ? shouldStopGetMany
-                : shouldStopGet;
+              const shouldReset = actionCandidate.meta.httpMany
+                ? shouldResetGetMany
+                : shouldResetGet;
 
               if (shouldRerun) {
                 actionsToRerun.add(actionCandidate);
                 reasonSet.add("same-resource autorerun");
-              } else if (shouldStop) {
-                actionsToStop.add(actionCandidate);
-                reasonSet.add("same-resource stop");
+              } else if (shouldReset) {
+                actionsToReset.add(actionCandidate);
+                reasonSet.add("same-resource reset");
               }
             }
           }
@@ -189,19 +190,19 @@ const createResourceLifecycleManager = () => {
               deletedIds.length > 0 &&
               deletedIds.every((id) => id !== undefined)
             ) {
-              // For GET_MANY: only rerun if explicitly configured, never stop
+              // For GET_MANY: only rerun if explicitly configured, never reset
               if (actionCandidate.meta.httpMany) {
                 const shouldRerun = shouldRerunGetMany;
                 if (shouldRerun) {
                   actionsToRerun.add(actionCandidate);
                   reasonSet.add("same-resource DELETE rerun GET_MANY");
                 }
-                // Never stop GET_MANY - they contain other resources
+                // Never reset GET_MANY - they contain other resources
               }
-              // For single GET: stop if it corresponds to a deleted resource
+              // For single GET: reset if it corresponds to a deleted resource
               else if (deletedIds.includes(actionCandidate.data)) {
-                actionsToStop.add(actionCandidate);
-                reasonSet.add("same-resource DELETE stop GET");
+                actionsToReset.add(actionCandidate);
+                reasonSet.add("same-resource DELETE reset GET");
               }
             }
           }
@@ -267,21 +268,21 @@ const createResourceLifecycleManager = () => {
 
     return {
       actionsToRerun,
-      actionsToStop,
+      actionsToReset,
       reasons: Array.from(reasonSet),
     };
   };
 
   const onActionComplete = (httpAction) => {
-    const { actionsToRerun, actionsToStop, reasons } =
-      findActionsToRerunOrStop(httpAction);
+    const { actionsToRerun, actionsToReset, reasons } =
+      findActionsToRerunOrReset(httpAction);
 
-    if (actionsToRerun.size > 0 || actionsToStop.size > 0) {
+    if (actionsToRerun.size > 0 || actionsToReset.size > 0) {
       const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
       const dispatchActions = getActionDispatcher();
       dispatchActions({
         rerunSet: actionsToRerun,
-        stopSet: actionsToStop,
+        resetSet: actionsToReset,
         reason,
       });
     }
@@ -1176,15 +1177,15 @@ export const resource = (
   /**
    * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
    *
-   * Actions from parameterized resources only trigger rerun/stop for other actions with
+   * Actions from parameterized resources only trigger rerun/reset for other actions with
    * identical parameters, preventing cross-contamination between different parameter sets.
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
    * @param {Object} options - Additional options for the parameterized resource
    * @param {Array} options.dependencies - Array of resources that should trigger autorerun when modified
    * @param {Object} options.rerunOn - Configuration for when to rerun GET/GET_MANY actions
-   * @param {false|Array|string} options.rerunOn.GET - HTTP verbs that trigger GET rerun (false = stop on DELETE)
-   * @param {false|Array|string} options.rerunOn.GET_MANY - HTTP verbs that trigger GET_MANY rerun (false = stop on DELETE)
+   * @param {false|Array|string} options.rerunOn.GET - HTTP verbs that trigger GET rerun (false = reset on DELETE)
+   * @param {false|Array|string} options.rerunOn.GET_MANY - HTTP verbs that trigger GET_MANY rerun (false = reset on DELETE)
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
    * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
    *

@@ -41,7 +41,7 @@ const dispatchSingleAction = (action, method, options) => {
     prerunSet: method === "prerun" ? new Set([action]) : undefined,
     runSet: method === "run" ? new Set([action]) : undefined,
     rerunSet: method === "rerun" ? new Set([action]) : undefined,
-    stopSet: method === "stop" ? new Set([action]) : undefined,
+    resetSet: method === "reset" ? new Set([action]) : undefined,
     ...options,
   });
   if (requestedResult && typeof requestedResult.then === "function") {
@@ -67,17 +67,17 @@ export const rerunActions = async (
   });
 };
 
-export const stopActions = async (
+export const resetActions = async (
   actionSet,
-  { reason = "stopActions was called" } = {},
+  { reason = "resetActions was called" } = {},
 ) => {
   return dispatchActions({
-    stopSet: actionSet,
+    resetSet: actionSet,
     reason,
   });
 };
-export const abortPendingActions = (
-  reason = "abortPendingActions was called",
+export const abortRunningActions = (
+  reason = "abortRunningActions was called",
 ) => {
   const { runningSet } = getActivationInfo();
   for (const runningAction of runningSet) {
@@ -242,7 +242,7 @@ export const updateActions = ({
   prerunSet = new Set(),
   runSet = new Set(),
   rerunSet = new Set(),
-  stopSet = new Set(),
+  resetSet = new Set(),
   abortSignalMap = new Map(),
   onComplete,
   onAbort,
@@ -255,15 +255,15 @@ export const updateActions = ({
    * - prerunSet: actions to prerun (background, low priority)
    * - runSet: actions to run (user-visible, medium priority)
    * - rerunSet: actions to force rerun (highest priority)
-   * - stopSet: actions to stop/abort
+   * - resetSet: actions to reset/clear
    *
    * Priority resolution:
-   * - stop always wins (explicit cleanup)
+   * - reset always wins (explicit cleanup)
    * - rerun > run > prerun (rerun forces refresh even if already running)
    * - An action in multiple sets triggers warnings in dev mode
    *
    * Output: Internal operation sets that track what will actually happen
-   * - willStopSet: actions that will be stopped/aborted
+   * - willResetSet: actions that will be reset/cleared
    * - willPrerunSet: actions that will be prerun
    * - willRunSet: actions that will be run
    * - willPromoteSet: prerun actions that become run-requested
@@ -278,7 +278,7 @@ export const updateActions = ({
       { name: "prerun", set: prerunSet },
       { name: "run", set: runSet },
       { name: "rerun", set: rerunSet },
-      { name: "stop", set: stopSet },
+      { name: "reset", set: resetSet },
     ];
 
     for (let i = 0; i < allSets.length; i++) {
@@ -302,7 +302,7 @@ export const updateActions = ({
       ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
       ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),
       ...(rerunSet.size ? [formatActionSet(rerunSet, "- rerun:")] : []),
-      ...(stopSet.size ? [formatActionSet(stopSet, "- stop:")] : []),
+      ...(resetSet.size ? [formatActionSet(resetSet, "- reset:")] : []),
     ];
     console.debug(
       `requested operations:
@@ -312,7 +312,7 @@ ${lines.join("\n")}
   }
 
   // Internal sets that track what operations will actually be performed
-  const willStopSet = new Set();
+  const willResetSet = new Set();
   const willPrerunSet = new Set();
   const willRunSet = new Set();
   const willPromoteSet = new Set(); // prerun -> run requested
@@ -321,11 +321,11 @@ ${lines.join("\n")}
   const staysFailedSet = new Set();
   const staysCompletedSet = new Set();
 
-  // Step 1: Determine which actions will be stopped
-  collect_actions_to_stop: {
-    for (const actionToStop of stopSet) {
-      if (actionToStop.runningState !== IDLE) {
-        willStopSet.add(actionToStop);
+  // Step 1: Determine which actions will be reset
+  collect_actions_to_reset: {
+    for (const actionToReset of resetSet) {
+      if (actionToReset.runningState !== IDLE) {
+        willResetSet.add(actionToReset);
       }
     }
   }
@@ -345,10 +345,10 @@ ${lines.join("\n")}
       ) {
         // Action is already running/completed
         // By default, we don't interfere with already active actions
-        // Unless it's a rerun or the action is also being stopped
-        if (isRerun || willStopSet.has(action)) {
-          // Force stop first, then rerun/run
-          willStopSet.add(action);
+        // Unless it's a rerun or the action is also being reset
+        if (isRerun || willResetSet.has(action)) {
+          // Force reset first, then rerun/run
+          willResetSet.add(action);
           if (isPrerun) {
             willPrerunSet.add(action);
           } else {
@@ -397,8 +397,8 @@ ${lines.join("\n")}
   // Step 3: Determine which actions will stay in their current state
   collect_actions_that_stay: {
     for (const actionRunning of runningSet) {
-      if (willStopSet.has(actionRunning)) {
-        // will be stopped (aborted), we don't want to wait
+      if (willResetSet.has(actionRunning)) {
+        // will be reset (aborted), we don't want to wait
       } else if (
         willRunSet.has(actionRunning) ||
         willPrerunSet.has(actionRunning)
@@ -412,8 +412,8 @@ ${lines.join("\n")}
       }
     }
     for (const actionSettled of settledSet) {
-      if (willStopSet.has(actionSettled)) {
-        // will be stopped
+      if (willResetSet.has(actionSettled)) {
+        // will be reset
       } else if (actionSettled.runningState === ABORTED) {
         staysAbortedSet.add(actionSettled);
       } else if (actionSettled.runningState === FAILED) {
@@ -425,8 +425,8 @@ ${lines.join("\n")}
   }
   if (DEBUG) {
     const lines = [
-      ...(willStopSet.size
-        ? [formatActionSet(willStopSet, "- will stop:")]
+      ...(willResetSet.size
+        ? [formatActionSet(willResetSet, "- will reset:")]
         : []),
       ...(willPrerunSet.size
         ? [formatActionSet(willPrerunSet, "- will prerun:")]
@@ -452,13 +452,13 @@ ${lines.join("\n")}
 ${lines.join("\n")}`);
   }
 
-  // Step 4: Execute stops
-  execute_stops: {
-    for (const actionToStop of willStopSet) {
-      const actionToStopPrivateProperties =
-        getActionPrivateProperties(actionToStop);
-      actionToStopPrivateProperties.performStop({ reason });
-      activationWeakSet.delete(actionToStop);
+  // Step 4: Execute resets
+  execute_resets: {
+    for (const actionToReset of willResetSet) {
+      const actionToResetPrivateProperties =
+        getActionPrivateProperties(actionToReset);
+      actionToResetPrivateProperties.performStop({ reason });
+      activationWeakSet.delete(actionToReset);
     }
   }
 
@@ -1365,6 +1365,6 @@ const generateActionName = (name, params) => {
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    abortPendingActions();
+    abortRunningActions();
   });
 }

@@ -1,5 +1,5 @@
 // actions
-export { createAction, reloadActions, updateActions } from "./src/actions.js";
+export { createAction, rerunActions, updateActions } from "./src/actions.js";
 export { useActionData } from "./src/use_action_data.js";
 export { useActionStatus } from "./src/use_action_status.js";
 
