@@ -13,14 +13,14 @@ import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 let DEBUG = false;
 
 // Resource Lifecycle Manager
-// This handles ALL resource lifecycle logic (reload/unload) across all resources
+// This handles ALL resource lifecycle logic (rerun/stop) across all resources
 const createResourceLifecycleManager = () => {
   const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
   const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
 
   const registerResource = (resourceInstance, config) => {
     const {
-      reloadOn = {
+      rerunOn = {
         GET: false,
         GET_MANY: false,
       },
@@ -30,7 +30,7 @@ const createResourceLifecycleManager = () => {
     } = config;
 
     registeredResources.set(resourceInstance, {
-      reloadOn,
+      rerunOn,
       paramScope,
       mutableIdKeys,
       httpActions: new Set(),
@@ -54,20 +54,20 @@ const createResourceLifecycleManager = () => {
     }
   };
 
-  const shouldReloadAfter = (reloadConfig, httpVerb) => {
-    if (reloadConfig === false) return false;
-    if (reloadConfig === "*") return true;
-    if (Array.isArray(reloadConfig)) {
-      const verbSet = new Set(reloadConfig.map((v) => v.toUpperCase()));
+  const shouldRerunAfter = (rerunConfig, httpVerb) => {
+    if (rerunConfig === false) return false;
+    if (rerunConfig === "*") return true;
+    if (Array.isArray(rerunConfig)) {
+      const verbSet = new Set(rerunConfig.map((v) => v.toUpperCase()));
       if (verbSet.has("*")) return true;
       return verbSet.has(httpVerb.toUpperCase());
     }
     return false;
   };
 
-  const shouldUnloadAfter = (reloadConfig, httpVerb) => {
-    // Unload logic: if reloadOn is false and httpVerb is DELETE, then unload
-    return reloadConfig === false && httpVerb === "DELETE";
+  const shouldStopAfter = (rerunConfig, httpVerb) => {
+    // Stop logic: if rerunOn is false and httpVerb is DELETE, then stop
+    return rerunConfig === false && httpVerb === "DELETE";
   };
 
   const isParamSubset = (parentParams, childParams) => {
@@ -83,45 +83,45 @@ const createResourceLifecycleManager = () => {
     return true;
   };
 
-  const findActionsToReloadOrUnload = (triggeringAction) => {
-    const actionsToReload = new Set();
-    const actionsToUnload = new Set();
+  const findActionsToRerunOrStop = (triggeringAction) => {
+    const actionsToRerun = new Set();
+    const actionsToStop = new Set();
     const reasonSet = new Set();
 
     for (const [resourceInstance, config] of registeredResources) {
-      const shouldReloadGetMany = shouldReloadAfter(
-        config.reloadOn.GET_MANY,
+      const shouldRerunGetMany = shouldRerunAfter(
+        config.rerunOn.GET_MANY,
         triggeringAction.meta.httpVerb,
       );
-      const shouldReloadGet = shouldReloadAfter(
-        config.reloadOn.GET,
-        triggeringAction.meta.httpVerb,
-      );
-
-      // Check if we should unload instead of reload
-      const shouldUnloadGetMany = shouldUnloadAfter(
-        config.reloadOn.GET_MANY,
-        triggeringAction.meta.httpVerb,
-      );
-      const shouldUnloadGet = shouldUnloadAfter(
-        config.reloadOn.GET,
+      const shouldRerunGet = shouldRerunAfter(
+        config.rerunOn.GET,
         triggeringAction.meta.httpVerb,
       );
 
-      // Skip if no reload or unload rules apply
-      const hasMutableIdAutoreload =
+      // Check if we should stop instead of rerun
+      const shouldStopGetMany = shouldStopAfter(
+        config.rerunOn.GET_MANY,
+        triggeringAction.meta.httpVerb,
+      );
+      const shouldStopGet = shouldStopAfter(
+        config.rerunOn.GET,
+        triggeringAction.meta.httpVerb,
+      );
+
+      // Skip if no rerun or stop rules apply
+      const hasMutableIdAutorerun =
         (triggeringAction.meta.httpVerb === "POST" ||
           triggeringAction.meta.httpVerb === "PUT" ||
           triggeringAction.meta.httpVerb === "PATCH") &&
         config.mutableIdKeys.length > 0;
 
       if (
-        !shouldReloadGetMany &&
-        !shouldReloadGet &&
-        !shouldUnloadGetMany &&
-        !shouldUnloadGet &&
+        !shouldRerunGetMany &&
+        !shouldRerunGet &&
+        !shouldStopGetMany &&
+        !shouldStopGet &&
         triggeringAction.meta.httpVerb !== "DELETE" &&
-        !hasMutableIdAutoreload
+        !hasMutableIdAutorerun
       ) {
         continue;
       }
@@ -141,7 +141,7 @@ const createResourceLifecycleManager = () => {
       for (const httpAction of config.httpActions) {
         // Find all instances of this action
         const actionCandidateArray = httpAction.matchAllSelfOrDescendant(
-          (action) => action.loadRequested && action !== triggeringAction,
+          (action) => !action.isPrerun && action !== triggeringAction,
         );
 
         for (const actionCandidate of actionCandidateArray) {
@@ -150,25 +150,25 @@ const createResourceLifecycleManager = () => {
             continue;
           }
 
-          // Same-resource autoreload rules (non-DELETE verbs)
+          // Same-resource autorerun rules (non-DELETE verbs)
           if (
             resourceInstance === getResourceForAction(triggeringAction) &&
             triggeringAction.meta.httpVerb !== "DELETE"
           ) {
             if (actionCandidate.meta.httpVerb === "GET") {
-              const shouldReload = actionCandidate.meta.httpMany
-                ? shouldReloadGetMany
-                : shouldReloadGet;
-              const shouldUnload = actionCandidate.meta.httpMany
-                ? shouldUnloadGetMany
-                : shouldUnloadGet;
+              const shouldRerun = actionCandidate.meta.httpMany
+                ? shouldRerunGetMany
+                : shouldRerunGet;
+              const shouldStop = actionCandidate.meta.httpMany
+                ? shouldStopGetMany
+                : shouldStopGet;
 
-              if (shouldReload) {
-                actionsToReload.add(actionCandidate);
-                reasonSet.add("same-resource autoreload");
-              } else if (shouldUnload) {
-                actionsToUnload.add(actionCandidate);
-                reasonSet.add("same-resource unload");
+              if (shouldRerun) {
+                actionsToRerun.add(actionCandidate);
+                reasonSet.add("same-resource autorerun");
+              } else if (shouldStop) {
+                actionsToStop.add(actionCandidate);
+                reasonSet.add("same-resource stop");
               }
             }
           }
@@ -189,24 +189,24 @@ const createResourceLifecycleManager = () => {
               deletedIds.length > 0 &&
               deletedIds.every((id) => id !== undefined)
             ) {
-              // For GET_MANY: only reload if explicitly configured, never unload
+              // For GET_MANY: only rerun if explicitly configured, never stop
               if (actionCandidate.meta.httpMany) {
-                const shouldReload = shouldReloadGetMany;
-                if (shouldReload) {
-                  actionsToReload.add(actionCandidate);
-                  reasonSet.add("same-resource DELETE reload GET_MANY");
+                const shouldRerun = shouldRerunGetMany;
+                if (shouldRerun) {
+                  actionsToRerun.add(actionCandidate);
+                  reasonSet.add("same-resource DELETE rerun GET_MANY");
                 }
-                // Never unload GET_MANY - they contain other resources
+                // Never stop GET_MANY - they contain other resources
               }
-              // For single GET: unload if it corresponds to a deleted resource
+              // For single GET: stop if it corresponds to a deleted resource
               else if (deletedIds.includes(actionCandidate.data)) {
-                actionsToUnload.add(actionCandidate);
-                reasonSet.add("same-resource DELETE unload GET");
+                actionsToStop.add(actionCandidate);
+                reasonSet.add("same-resource DELETE stop GET");
               }
             }
           }
 
-          // Cross-resource dependency autoreload
+          // Cross-resource dependency autorerun
           const triggeringResource = getResourceForAction(triggeringAction);
           if (
             triggeringResource &&
@@ -217,18 +217,18 @@ const createResourceLifecycleManager = () => {
               actionCandidate.meta.httpVerb === "GET" &&
               actionCandidate.meta.httpMany
             ) {
-              actionsToReload.add(actionCandidate);
-              reasonSet.add("dependency autoreload");
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("dependency autorerun");
             }
           }
 
-          // POST/PUT/PATCH-specific autoreload for mutableId actions
+          // POST/PUT/PATCH-specific autorerun for mutableId actions
           // When a POST/PUT/PATCH action completes successfully, it means a resource was created/updated.
           // If we have GET actions using mutableId that are currently in 404 (because the resource
-          // didn't exist), we should reload them since a resource with that mutableId now exists.
+          // didn't exist), we should rerun them since a resource with that mutableId now exists.
           // For PUT/PATCH, we also need to handle mutableId changes (e.g., renaming).
           if (
-            hasMutableIdAutoreload &&
+            hasMutableIdAutorerun &&
             actionCandidate.meta.httpVerb === "GET" &&
             !actionCandidate.meta.httpMany &&
             resourceInstance === getResourceForAction(triggeringAction)
@@ -239,22 +239,22 @@ const createResourceLifecycleManager = () => {
 
             if (modifiedData && typeof modifiedData === "object") {
               // Check if any GET action uses a mutableId that matches the created/modified resource
-              // we'll use the action params since the GET might be reloaded, hence in 404
+              // we'll use the action params since the GET might be rerun, hence in 404
               for (const mutableIdKey of config.mutableIdKeys) {
                 const modifiedMutableId = modifiedData[mutableIdKey];
                 const candidateParams = actionCandidate.params;
 
                 // If instance.data matches the mutableId value, this GET was likely in 404
-                // and should be reloaded since a resource with this mutableId now exists
+                // and should be rerun since a resource with this mutableId now exists
                 if (
                   modifiedMutableId !== undefined &&
                   candidateParams &&
                   typeof candidateParams === "object" &&
                   candidateParams[mutableIdKey] === modifiedMutableId
                 ) {
-                  actionsToReload.add(actionCandidate);
+                  actionsToRerun.add(actionCandidate);
                   reasonSet.add(
-                    `${triggeringAction.meta.httpVerb}-mutableId autoreload`,
+                    `${triggeringAction.meta.httpVerb}-mutableId autorerun`,
                   );
                   break; // No need to check other mutableIdKeys for this instance
                 }
@@ -266,22 +266,22 @@ const createResourceLifecycleManager = () => {
     }
 
     return {
-      actionsToReload,
-      actionsToUnload,
+      actionsToRerun,
+      actionsToStop,
       reasons: Array.from(reasonSet),
     };
   };
 
   const onActionComplete = (httpAction) => {
-    const { actionsToReload, actionsToUnload, reasons } =
-      findActionsToReloadOrUnload(httpAction);
+    const { actionsToRerun, actionsToStop, reasons } =
+      findActionsToRerunOrStop(httpAction);
 
-    if (actionsToReload.size > 0 || actionsToUnload.size > 0) {
+    if (actionsToRerun.size > 0 || actionsToStop.size > 0) {
       const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
-      const dispatcher = getActionDispatcher();
-      dispatcher({
-        reloadSet: actionsToReload,
-        unloadSet: actionsToUnload,
+      const dispatchActions = getActionDispatcher();
+      dispatchActions({
+        rerunSet: actionsToRerun,
+        stopSet: actionsToStop,
         reason,
       });
     }
@@ -325,7 +325,7 @@ const createHttpHandlerForRootResource = (
   {
     idKey,
     store,
-    reloadOn = {
+    rerunOn = {
       GET: false,
       GET_MANY: false,
     },
@@ -337,7 +337,7 @@ const createHttpHandlerForRootResource = (
 ) => {
   // Register this resource with the resource lifecycle manager
   resourceLifecycleManager.registerResource(resourceInstance, {
-    reloadOn,
+    rerunOn,
     paramScope,
     dependencies,
     mutableIdKeys,
@@ -396,8 +396,8 @@ const createHttpHandlerForRootResource = (
         return applyDataEffect(data);
       },
       compute: (itemId) => store.select(itemId),
-      completeSideEffect: (loadedAction) =>
-        resourceLifecycleManager.onActionComplete(loadedAction),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
       ...options,
     });
     resourceLifecycleManager.registerAction(
@@ -466,8 +466,8 @@ const createHttpHandlerForRootResource = (
       data: [],
       dataEffect: applyDataEffect,
       compute: (idArray) => store.selectAll(idArray),
-      completeSideEffect: (loadedAction) =>
-        resourceLifecycleManager.onActionComplete(loadedAction),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
       ...options,
     });
     resourceLifecycleManager.registerAction(
@@ -575,8 +575,8 @@ const createHttpHandlerForRelationshipToOneResource = (
         return applyDataEffect(data);
       },
       compute: (childItemId) => childStore.select(childItemId),
-      completeSideEffect: (loadedAction) =>
-        resourceLifecycleManager.onActionComplete(loadedAction),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
       ...options,
     });
     resourceLifecycleManager.registerAction(
@@ -690,8 +690,8 @@ const createHttpHandlerRelationshipToManyResource = (
         return applyDataEffect(data);
       },
       compute: (childItemId) => childStore.select(childItemId),
-      onLoad: (loadedAction) =>
-        resourceLifecycleManager.onActionComplete(loadedAction),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
       ...options,
     });
     resourceLifecycleManager.registerAction(
@@ -835,8 +835,8 @@ const createHttpHandlerRelationshipToManyResource = (
         return applyDataEffect(data);
       },
       compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
-      onLoad: (loadedAction) =>
-        resourceLifecycleManager.onActionComplete(loadedAction),
+      completeSideEffect: (actionCompleted) =>
+        resourceLifecycleManager.onActionComplete(actionCompleted),
       ...options,
     });
     resourceLifecycleManager.registerAction(
@@ -873,7 +873,7 @@ const createHttpHandlerRelationshipToManyResource = (
 
 export const resource = (
   name,
-  { idKey, mutableIdKeys = [], reloadOn, httpHandler, ...rest } = {},
+  { idKey, mutableIdKeys = [], rerunOn, httpHandler, ...rest } = {},
 ) => {
   if (idKey === undefined) {
     idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
@@ -948,7 +948,7 @@ export const resource = (
     httpHandler = createHttpHandlerForRootResource(name, {
       idKey,
       store,
-      reloadOn,
+      rerunOn,
       resourceInstance,
       mutableIdKeys,
     });
@@ -1176,15 +1176,15 @@ export const resource = (
   /**
    * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
    *
-   * Actions from parameterized resources only trigger reload/unload for other actions with
+   * Actions from parameterized resources only trigger rerun/stop for other actions with
    * identical parameters, preventing cross-contamination between different parameter sets.
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
    * @param {Object} options - Additional options for the parameterized resource
-   * @param {Array} options.dependencies - Array of resources that should trigger autoreload when modified
-   * @param {Object} options.reloadOn - Configuration for when to reload GET/GET_MANY actions
-   * @param {false|Array|string} options.reloadOn.GET - HTTP verbs that trigger GET reload (false = unload on DELETE)
-   * @param {false|Array|string} options.reloadOn.GET_MANY - HTTP verbs that trigger GET_MANY reload (false = unload on DELETE)
+   * @param {Array} options.dependencies - Array of resources that should trigger autorerun when modified
+   * @param {Object} options.rerunOn - Configuration for when to rerun GET/GET_MANY actions
+   * @param {false|Array|string} options.rerunOn.GET - HTTP verbs that trigger GET rerun (false = stop on DELETE)
+   * @param {false|Array|string} options.rerunOn.GET_MANY - HTTP verbs that trigger GET_MANY rerun (false = stop on DELETE)
    * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
    * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
    *
@@ -1192,7 +1192,7 @@ export const resource = (
    * const ROLE = resource("role", { GET: (params) => fetchRole(params) });
    * const adminRoles = ROLE.withParams({ canlogin: true });
    * const guestRoles = ROLE.withParams({ canlogin: false });
-   * // adminRoles and guestRoles have isolated autoreload behavior
+   * // adminRoles and guestRoles have isolated autorerun behavior
    *
    * @example
    * // Cross-resource dependencies
@@ -1202,7 +1202,7 @@ export const resource = (
    * const ROLE_WITH_OWNERSHIP = role.withParams({ owners: true }, {
    *   dependencies: [role, database, tables],
    * });
-   * // ROLE_WITH_OWNERSHIP.GET_MANY will autoreload when any table/database/role is POST/DELETE
+   * // ROLE_WITH_OWNERSHIP.GET_MANY will autorerun when any table/database/role is POST/DELETE
    */
   const withParams = (params, options = {}) => {
     // Require parameters
@@ -1210,19 +1210,19 @@ export const resource = (
       throw new Error(`resource(${name}).withParams() requires parameters`);
     }
 
-    const { dependencies = [], reloadOn: customReloadOn } = options;
+    const { dependencies = [], rerunOn: customRerunOn } = options;
 
     // Generate unique param scope for these parameters
     const paramScopeObject = getParamScope(params);
 
-    // Use custom reloadOn settings if provided, otherwise use resource defaults
-    const finalReloadOn = customReloadOn || reloadOn;
+    // Use custom rerunOn settings if provided, otherwise use resource defaults
+    const finalRerunOn = customRerunOn || rerunOn;
 
-    // Create a new httpHandler with the param scope for isolated autoreload
+    // Create a new httpHandler with the param scope for isolated autorerun
     const parameterizedHttpHandler = createHttpHandlerForRootResource(name, {
       idKey,
       store: resourceInstance.store,
-      reloadOn: finalReloadOn,
+      rerunOn: finalRerunOn,
       paramScope: paramScopeObject,
       dependencies,
       resourceInstance,
@@ -1265,7 +1265,7 @@ export const resource = (
       // Merge options, with new options taking precedence
       const mergedOptions = {
         dependencies,
-        reloadOn: finalReloadOn,
+        rerunOn: finalRerunOn,
         ...newOptions,
       };
       return withParams(mergedParams, mergedOptions);
