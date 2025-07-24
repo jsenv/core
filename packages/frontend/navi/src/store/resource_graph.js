@@ -162,64 +162,69 @@ const createResourceLifecycleManager = () => {
           // Config-driven same-resource effects (respects param scope)
           config_effect: {
             if (
-              isSameResource &&
-              triggerVerb !== "GET" &&
-              candidateVerb === "GET"
+              !isSameResource ||
+              triggerVerb === "GET" ||
+              candidateVerb !== "GET"
             ) {
-              const shouldRerun = candidateIsPlural
-                ? shouldRerunGetMany
-                : shouldRerunGet;
-              const shouldReset = candidateIsPlural
-                ? shouldResetGetMany
-                : shouldResetGet;
-
-              // Apply only if configured AND param scope is compatible
-              if (
-                (shouldRerun || shouldReset) &&
-                paramScopePredicate(actionCandidate)
-              ) {
-                if (shouldRerun) {
-                  actionsToRerun.add(actionCandidate);
-                  reasonSet.add("same-resource autorerun");
-                  continue;
-                }
-                if (shouldReset) {
-                  actionsToReset.add(actionCandidate);
-                  reasonSet.add("same-resource reset");
-                  continue;
-                }
+              break config_effect;
+            }
+            const shouldRerun = candidateIsPlural
+              ? shouldRerunGetMany
+              : shouldRerunGet;
+            if (shouldRerun) {
+              if (!paramScopePredicate(actionCandidate)) {
+                break config_effect;
               }
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("same-resource autorerun");
+              continue;
+            }
+            const shouldReset = candidateIsPlural
+              ? shouldResetGetMany
+              : shouldResetGet;
+            if (shouldReset) {
+              if (!paramScopePredicate(actionCandidate)) {
+                break config_effect;
+              }
+              actionsToReset.add(actionCandidate);
+              reasonSet.add("same-resource reset");
+              continue;
             }
           }
 
           // DELETE effects on same resource (ignores param scope)
           delete_effect: {
-            if (isSameResource && triggerVerb === "DELETE") {
-              if (candidateVerb === "GET") {
-                const shouldRerun = candidateIsPlural
-                  ? shouldRerunGetMany
-                  : shouldRerunGet;
-
-                if (shouldRerun) {
-                  actionsToRerun.add(actionCandidate);
-                  reasonSet.add("same-resource DELETE rerun GET");
-                  continue;
-                }
-                // Default: reset single GET (resource deleted), protect GET_MANY
-                if (!candidateIsPlural) {
-                  actionsToReset.add(actionCandidate);
-                  reasonSet.add("same-resource DELETE reset GET");
-                  continue;
-                }
-              }
-
-              // Reset single non-GET actions, protect MANY actions
-              if (candidateVerb !== "GET" && !candidateIsPlural) {
-                actionsToReset.add(actionCandidate);
-                reasonSet.add("same-resource DELETE reset");
-                continue;
-              }
+            if (!isSameResource || triggerVerb !== "DELETE") {
+              break delete_effect;
             }
+            if (candidateIsPlural) {
+              if (!shouldRerunGetMany) {
+                break delete_effect;
+              }
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("same-resource DELETE rerun GET_MANY");
+              continue;
+            }
+            // Get the ID(s) that were deleted
+            const { dataSignal } = getActionPrivateProperties(triggeringAction);
+            const deleteIdSet = triggeringAction.meta.httpMany
+              ? new Set(dataSignal.peek())
+              : new Set([dataSignal.peek()]);
+
+            const candidateId = actionCandidate.data;
+            const isAffected = deleteIdSet.has(candidateId);
+            debugger;
+            if (!isAffected) {
+              break delete_effect;
+            }
+            if (candidateVerb === "GET" && shouldRerunGet) {
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("same-resource DELETE rerun GET");
+              continue;
+            }
+            actionsToReset.add(actionCandidate);
+            reasonSet.add("same-resource DELETE reset");
+            continue;
           }
 
           // MutableId effects: rerun GET when matching resource created/updated
@@ -351,6 +356,7 @@ const createHttpHandlerForRootResource = (
     rerunOn,
     paramScope,
     dependencies,
+    idKey,
     mutableIdKeys,
   });
 
