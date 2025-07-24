@@ -1,16 +1,16 @@
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { batch, computed, effect, signal } from "@preact/signals";
 import {
+  getActionPrivateProperties,
+  setActionPrivateProperties,
+} from "./action_private_properties.js";
+import {
   ABORTED,
   COMPLETED,
   FAILED,
   IDLE,
   RUNNING,
-} from "./action_loading_states.js";
-import {
-  getActionPrivateProperties,
-  setActionPrivateProperties,
-} from "./action_private_properties.js";
+} from "./action_run_states.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
 import { createIterableWeakSet } from "./utils/iterable_weak_set.js";
 import { createJsValueWeakMap } from "./utils/js_value_weak_map.js";
@@ -57,9 +57,9 @@ export const setActionDispatcher = (value) => {
 
 export const getActionDispatcher = () => dispatchActions;
 
-export const reloadActions = async (
+export const rerunActions = async (
   actionSet,
-  { reason = "reloadActions was called" } = {},
+  { reason = "rerunActions was called" } = {},
 ) => {
   return dispatchActions({
     rerunSet: actionSet,
@@ -67,9 +67,9 @@ export const reloadActions = async (
   });
 };
 
-export const unloadActions = async (
+export const stopActions = async (
   actionSet,
-  { reason = "unloadActions was called" } = {},
+  { reason = "stopActions was called" } = {},
 ) => {
   return dispatchActions({
     stopSet: actionSet,
@@ -126,7 +126,7 @@ const prerunProtectionRegistry = (() => {
         unprotect(action);
         if (DEBUG) {
           console.debug(
-            `"${action}": preload protection expired after ${PROTECTION_DURATION}ms`,
+            `"${action}": prerun protection expired after ${PROTECTION_DURATION}ms`,
           );
         }
       }, PROTECTION_DURATION);
@@ -244,7 +244,7 @@ export const updateActions = ({
   rerunSet = new Set(),
   stopSet = new Set(),
   abortSignalMap = new Map(),
-  onEnd,
+  onComplete,
   onAbort,
   onError,
 } = {}) => {
@@ -484,8 +484,8 @@ ${lines.join("\n")}`);
         globalAbortSignal,
         abortSignal: effectiveSignal,
         reason,
-        isPreload: isPrerun,
-        onEnd,
+        isPrerun,
+        onComplete,
         onAbort,
         onError,
       });
@@ -584,7 +584,7 @@ export const createAction = (callback, rootOptions = {}) => {
       keepOldData = false,
       meta = metaDefault,
       dataEffect,
-      onLoad = () => {},
+      completeSideEffect,
     },
     { parentAction } = {},
   ) => {
@@ -882,13 +882,13 @@ export const createAction = (callback, rootOptions = {}) => {
           globalAbortSignal,
           abortSignal,
           reason,
-          isPreload,
-          onEnd,
+          isPrerun,
+          onComplete,
           onAbort,
           onError,
         } = runParams;
 
-        if (isPreload) {
+        if (isPrerun) {
           prerunProtectionRegistry.protect(action);
         }
 
@@ -898,7 +898,7 @@ export const createAction = (callback, rootOptions = {}) => {
           runningStateSignal.value = ABORTED;
           internalAbortController.abort(abortReason);
           actionAbortMap.delete(action);
-          if (isPreload && (globalAbortSignal.aborted || abortSignal.aborted)) {
+          if (isPrerun && (globalAbortSignal.aborted || abortSignal.aborted)) {
             prerunProtectionRegistry.unprotect(action);
           }
           if (DEBUG) {
@@ -925,14 +925,14 @@ export const createAction = (callback, rootOptions = {}) => {
         batch(() => {
           errorSignal.value = null;
           runningStateSignal.value = RUNNING;
-          if (!isPreload) {
+          if (!isPrerun) {
             isPrerunSignal.value = false;
           }
         });
 
         const args = [];
         args.push(params);
-        args.push({ signal: internalAbortSignal, reason, isPreload });
+        args.push({ signal: internalAbortSignal, reason, isPrerun });
         const returnValue = sideEffect(...args);
         if (typeof returnValue === "function") {
           sideEffectCleanup = returnValue;
@@ -971,10 +971,10 @@ export const createAction = (callback, rootOptions = {}) => {
               ? dataEffect(runResult, action)
               : runResult;
             runningStateSignal.value = COMPLETED;
-            if (onEnd) {
-              onEnd(computedDataSignal.peek(), action);
+            if (onComplete) {
+              onComplete(computedDataSignal.peek(), action);
             }
-            onLoad(action);
+            completeSideEffect(action);
           });
           if (DEBUG) {
             console.log(`"${action}": completed (reason: ${reason})`);
@@ -992,7 +992,7 @@ export const createAction = (callback, rootOptions = {}) => {
           actionPromiseMap.delete(action);
           if (internalAbortSignal.aborted && e === internalAbortSignal.reason) {
             runningStateSignal.value = ABORTED;
-            if (isPreload && abortSignal.aborted) {
+            if (isPrerun && abortSignal.aborted) {
               prerunProtectionRegistry.unprotect(action);
             }
             onAbort(e, action);

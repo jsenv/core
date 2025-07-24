@@ -396,7 +396,7 @@ const createHttpHandlerForRootResource = (
         return applyDataEffect(data);
       },
       compute: (itemId) => store.select(itemId),
-      onLoad: (loadedAction) =>
+      completeSideEffect: (loadedAction) =>
         resourceLifecycleManager.onActionComplete(loadedAction),
       ...options,
     });
@@ -466,7 +466,7 @@ const createHttpHandlerForRootResource = (
       data: [],
       dataEffect: applyDataEffect,
       compute: (idArray) => store.selectAll(idArray),
-      onLoad: (loadedAction) =>
+      completeSideEffect: (loadedAction) =>
         resourceLifecycleManager.onActionComplete(loadedAction),
       ...options,
     });
@@ -575,7 +575,7 @@ const createHttpHandlerForRelationshipToOneResource = (
         return applyDataEffect(data);
       },
       compute: (childItemId) => childStore.select(childItemId),
-      onLoad: (loadedAction) =>
+      completeSideEffect: (loadedAction) =>
         resourceLifecycleManager.onActionComplete(loadedAction),
       ...options,
     });
