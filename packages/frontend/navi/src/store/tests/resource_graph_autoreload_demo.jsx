@@ -132,8 +132,8 @@ const UserCard = ({ name, action }) => {
       name === "Charlie" ||
       name === "TestUser"
     ) {
-      console.log(`🚀 Auto-loading ${name} on mount`);
-      action.load();
+      console.log(`🚀 Auto-run ${name} on mount`);
+      action.run();
     }
   }, [name, action]);
 
@@ -246,7 +246,7 @@ const UserCard = ({ name, action }) => {
           <CardWrapper statusColor="#ffc107" statusText="Chargement...">
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <button
-                onClick={() => action.reload()}
+                onClick={() => action.rerun()}
                 disabled={true}
                 style={{
                   padding: "6px 12px",
@@ -286,7 +286,7 @@ const UserCard = ({ name, action }) => {
             </div>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <button
-                onClick={() => action.reload()}
+                onClick={() => action.rerun()}
                 style={{
                   padding: "6px 12px",
                   backgroundColor: "#17a2b8",
@@ -301,7 +301,7 @@ const UserCard = ({ name, action }) => {
           </CardWrapper>
         ),
 
-        loaded: (data) => {
+        completed: (data) => {
           // Initialiser les champs d'édition quand les données arrivent
           if (data && !isEditing && (!editName || !editAge)) {
             setEditName(data.name);
@@ -442,7 +442,7 @@ const UserCard = ({ name, action }) => {
 
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <button
-                  onClick={() => action.reload()}
+                  onClick={() => action.rerun()}
                   style={{
                     padding: "6px 12px",
                     backgroundColor: "#17a2b8",
@@ -486,7 +486,7 @@ const UserCard = ({ name, action }) => {
           <CardWrapper statusColor="#6c757d" statusText="Non chargé">
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <button
-                onClick={() => action.load()}
+                onClick={() => action.rerun()}
                 style={{
                   padding: "6px 12px",
                   backgroundColor: "#17a2b8",
