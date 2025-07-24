@@ -12,24 +12,25 @@ import { arraySignalStore, primitiveCanBeId } from "./array_signal_store.js";
 
 let DEBUG = false;
 
-// Centralized Autoreload Manager
-// This handles ALL autoreload logic across all resources
-const createAutoreloadManager = () => {
-  const registeredResources = new Map(); // Map<resourceInstance, autoreloadConfig>
+// Resource Lifecycle Manager
+// This handles ALL resource lifecycle logic (reload/unload) across all resources
+const createResourceLifecycleManager = () => {
+  const registeredResources = new Map(); // Map<resourceInstance, lifecycleConfig>
   const resourceDependencies = new Map(); // Map<resourceInstance, Set<dependentResources>>
 
   const registerResource = (resourceInstance, config) => {
     const {
-      autoreloadGetManyAfter = ["POST", "DELETE"],
-      autoreloadGetAfter = false,
+      reloadOn = {
+        GET: false,
+        GET_MANY: false,
+      },
       paramScope = null,
       dependencies = [],
       mutableIdKeys = [],
     } = config;
 
     registeredResources.set(resourceInstance, {
-      autoreloadGetManyAfter,
-      autoreloadGetAfter,
+      reloadOn,
       paramScope,
       mutableIdKeys,
       httpActions: new Set(),
@@ -53,14 +54,20 @@ const createAutoreloadManager = () => {
     }
   };
 
-  const shouldAutoreloadAfter = (autoreloadAfter) => {
-    if (autoreloadAfter === "*") return () => true;
-    if (Array.isArray(autoreloadAfter)) {
-      const verbSet = new Set(autoreloadAfter.map((v) => v.toUpperCase()));
-      if (verbSet.has("*")) return () => true;
-      return (httpVerb) => verbSet.has(httpVerb.toUpperCase());
+  const shouldReloadAfter = (reloadConfig, httpVerb) => {
+    if (reloadConfig === false) return false;
+    if (reloadConfig === "*") return true;
+    if (Array.isArray(reloadConfig)) {
+      const verbSet = new Set(reloadConfig.map((v) => v.toUpperCase()));
+      if (verbSet.has("*")) return true;
+      return verbSet.has(httpVerb.toUpperCase());
     }
-    return () => false;
+    return false;
+  };
+
+  const shouldUnloadAfter = (reloadConfig, httpVerb) => {
+    // Unload logic: if reloadOn is false and httpVerb is DELETE, then unload
+    return reloadConfig === false && httpVerb === "DELETE";
   };
 
   const isParamSubset = (parentParams, childParams) => {
@@ -81,14 +88,26 @@ const createAutoreloadManager = () => {
     const reasonSet = new Set();
 
     for (const [resourceInstance, config] of registeredResources) {
-      const shouldReloadGetMany = shouldAutoreloadAfter(
-        config.autoreloadGetManyAfter,
-      )(triggeringAction.meta.httpVerb);
-      const shouldReloadGet = shouldAutoreloadAfter(config.autoreloadGetAfter)(
+      const shouldReloadGetMany = shouldReloadAfter(
+        config.reloadOn.GET_MANY,
+        triggeringAction.meta.httpVerb,
+      );
+      const shouldReloadGet = shouldReloadAfter(
+        config.reloadOn.GET,
         triggeringAction.meta.httpVerb,
       );
 
-      // Skip if no autoreload rules apply
+      // Check if we should unload instead of reload
+      const shouldUnloadGetMany = shouldUnloadAfter(
+        config.reloadOn.GET_MANY,
+        triggeringAction.meta.httpVerb,
+      );
+      const shouldUnloadGet = shouldUnloadAfter(
+        config.reloadOn.GET,
+        triggeringAction.meta.httpVerb,
+      );
+
+      // Skip if no reload or unload rules apply
       const hasMutableIdAutoreload =
         (triggeringAction.meta.httpVerb === "POST" ||
           triggeringAction.meta.httpVerb === "PUT" ||
@@ -98,6 +117,8 @@ const createAutoreloadManager = () => {
       if (
         !shouldReloadGetMany &&
         !shouldReloadGet &&
+        !shouldUnloadGetMany &&
+        !shouldUnloadGet &&
         triggeringAction.meta.httpVerb !== "DELETE" &&
         !hasMutableIdAutoreload
       ) {
@@ -252,8 +273,8 @@ const createAutoreloadManager = () => {
   };
 };
 
-// Global autoreload manager instance
-const autoreloadManager = createAutoreloadManager();
+// Global resource lifecycle manager instance
+const resourceLifecycleManager = createResourceLifecycleManager();
 
 // Cache for parameter scope identifiers
 const paramScopeWeakSet = createIterableWeakSet();
@@ -278,18 +299,19 @@ const createHttpHandlerForRootResource = (
   {
     idKey,
     store,
-    autoreloadGetManyAfter = ["POST", "DELETE"],
-    autoreloadGetAfter = false,
+    reloadOn = {
+      GET: false,
+      GET_MANY: false,
+    },
     paramScope,
     dependencies = [],
     resourceInstance,
     mutableIdKeys = [],
   },
 ) => {
-  // Register this resource with the autoreload manager
-  autoreloadManager.registerResource(resourceInstance, {
-    autoreloadGetManyAfter,
-    autoreloadGetAfter,
+  // Register this resource with the resource lifecycle manager
+  resourceLifecycleManager.registerResource(resourceInstance, {
+    reloadOn,
     paramScope,
     dependencies,
     mutableIdKeys,
@@ -349,10 +371,10 @@ const createHttpHandlerForRootResource = (
       },
       compute: (itemId) => store.select(itemId),
       onLoad: (loadedAction) =>
-        autoreloadManager.onActionComplete(loadedAction),
+        resourceLifecycleManager.onActionComplete(loadedAction),
       ...options,
     });
-    autoreloadManager.registerAction(
+    resourceLifecycleManager.registerAction(
       resourceInstance,
       httpActionAffectingOneItem,
     );
@@ -419,10 +441,10 @@ const createHttpHandlerForRootResource = (
       dataEffect: applyDataEffect,
       compute: (idArray) => store.selectAll(idArray),
       onLoad: (loadedAction) =>
-        autoreloadManager.onActionComplete(loadedAction),
+        resourceLifecycleManager.onActionComplete(loadedAction),
       ...options,
     });
-    autoreloadManager.registerAction(
+    resourceLifecycleManager.registerAction(
       resourceInstance,
       httpActionAffectingManyItems,
     );
@@ -461,7 +483,7 @@ const createHttpHandlerForRelationshipToOneResource = (
     childIdKey,
     childStore,
     resourceInstance,
-    autoreloadManager,
+    resourceLifecycleManager,
   },
 ) => {
   const createActionAffectingOneItem = (httpVerb, { callback, ...options }) => {
@@ -528,10 +550,10 @@ const createHttpHandlerForRelationshipToOneResource = (
       },
       compute: (childItemId) => childStore.select(childItemId),
       onLoad: (loadedAction) =>
-        autoreloadManager.onActionComplete(loadedAction),
+        resourceLifecycleManager.onActionComplete(loadedAction),
       ...options,
     });
-    autoreloadManager.registerAction(
+    resourceLifecycleManager.registerAction(
       resourceInstance,
       httpActionAffectingOneItem,
     );
@@ -571,7 +593,7 @@ const createHttpHandlerRelationshipToManyResource = (
     childIdKey,
     childStore,
     resourceInstance,
-    autoreloadManager,
+    resourceLifecycleManager,
   } = {},
 ) => {
   // idéalement s'il y a un GET sur le store originel on voudrait ptet le reload
@@ -643,10 +665,10 @@ const createHttpHandlerRelationshipToManyResource = (
       },
       compute: (childItemId) => childStore.select(childItemId),
       onLoad: (loadedAction) =>
-        autoreloadManager.onActionComplete(loadedAction),
+        resourceLifecycleManager.onActionComplete(loadedAction),
       ...options,
     });
-    autoreloadManager.registerAction(
+    resourceLifecycleManager.registerAction(
       resourceInstance,
       httpActionAffectingOneItem,
     );
@@ -788,10 +810,10 @@ const createHttpHandlerRelationshipToManyResource = (
       },
       compute: (childItemIdArray) => childStore.selectAll(childItemIdArray),
       onLoad: (loadedAction) =>
-        autoreloadManager.onActionComplete(loadedAction),
+        resourceLifecycleManager.onActionComplete(loadedAction),
       ...options,
     });
-    autoreloadManager.registerAction(
+    resourceLifecycleManager.registerAction(
       resourceInstance,
       httpActionAffectingManyItem,
     );
@@ -825,14 +847,7 @@ const createHttpHandlerRelationshipToManyResource = (
 
 export const resource = (
   name,
-  {
-    idKey,
-    mutableIdKeys = [],
-    autoreloadGetManyAfter,
-    autoreloadGetAfter,
-    httpHandler,
-    ...rest
-  } = {},
+  { idKey, mutableIdKeys = [], reloadOn, httpHandler, ...rest } = {},
 ) => {
   if (idKey === undefined) {
     idKey = mutableIdKeys.length === 0 ? "id" : mutableIdKeys[0];
@@ -907,8 +922,7 @@ export const resource = (
     httpHandler = createHttpHandlerForRootResource(name, {
       idKey,
       store,
-      autoreloadGetManyAfter,
-      autoreloadGetAfter,
+      reloadOn,
       resourceInstance,
       mutableIdKeys,
     });
@@ -1020,7 +1034,7 @@ export const resource = (
         childIdKey,
         childStore: childResource.store,
         resourceInstance,
-        autoreloadManager,
+        resourceLifecycleManager,
       });
     return resource(childName, {
       idKey: childIdKey,
@@ -1124,7 +1138,7 @@ export const resource = (
         childIdKey,
         childStore: childResource.store,
         resourceInstance,
-        autoreloadManager,
+        resourceLifecycleManager,
       });
     return resource(childName, {
       idKey: childIdKey,
@@ -1134,17 +1148,18 @@ export const resource = (
   };
 
   /**
-   * Creates a parameterized version of the resource with isolated autoreload behavior.
+   * Creates a parameterized version of the resource with isolated resource lifecycle behavior.
    *
-   * Actions from parameterized resources only trigger autoreload for other actions with
+   * Actions from parameterized resources only trigger reload/unload for other actions with
    * identical parameters, preventing cross-contamination between different parameter sets.
    *
    * @param {Object} params - Parameters to bind to all actions of this resource (required)
    * @param {Object} options - Additional options for the parameterized resource
    * @param {Array} options.dependencies - Array of resources that should trigger autoreload when modified
-   * @param {Array|string} options.autoreloadGetManyAfter - HTTP verbs that trigger GET_MANY autoreload
-   * @param {Array|string|boolean} options.autoreloadGetAfter - HTTP verbs that trigger GET autoreload
-   * @returns {Object} A new resource instance with parameter-bound actions and isolated autoreload
+   * @param {Object} options.reloadOn - Configuration for when to reload GET/GET_MANY actions
+   * @param {false|Array|string} options.reloadOn.GET - HTTP verbs that trigger GET reload (false = unload on DELETE)
+   * @param {false|Array|string} options.reloadOn.GET_MANY - HTTP verbs that trigger GET_MANY reload (false = unload on DELETE)
+   * @returns {Object} A new resource instance with parameter-bound actions and isolated lifecycle
    * @see {@link ./docs/resource_with_params.md} for detailed documentation and examples
    *
    * @example
@@ -1169,31 +1184,19 @@ export const resource = (
       throw new Error(`resource(${name}).withParams() requires parameters`);
     }
 
-    const {
-      dependencies = [],
-      autoreloadGetManyAfter: customAutoreloadGetManyAfter,
-      autoreloadGetAfter: customAutoreloadGetAfter,
-    } = options;
+    const { dependencies = [], reloadOn: customReloadOn } = options;
 
     // Generate unique param scope for these parameters
     const paramScopeObject = getParamScope(params);
 
-    // Use custom autoreload settings if provided, otherwise use resource defaults
-    const finalAutoreloadGetManyAfter =
-      customAutoreloadGetManyAfter !== undefined
-        ? customAutoreloadGetManyAfter
-        : autoreloadGetManyAfter;
-    const finalAutoreloadGetAfter =
-      customAutoreloadGetAfter !== undefined
-        ? customAutoreloadGetAfter
-        : autoreloadGetAfter;
+    // Use custom reloadOn settings if provided, otherwise use resource defaults
+    const finalReloadOn = customReloadOn || reloadOn;
 
     // Create a new httpHandler with the param scope for isolated autoreload
     const parameterizedHttpHandler = createHttpHandlerForRootResource(name, {
       idKey,
       store: resourceInstance.store,
-      autoreloadGetManyAfter: finalAutoreloadGetManyAfter,
-      autoreloadGetAfter: finalAutoreloadGetAfter,
+      reloadOn: finalReloadOn,
       paramScope: paramScopeObject,
       dependencies,
       resourceInstance,
@@ -1236,8 +1239,7 @@ export const resource = (
       // Merge options, with new options taking precedence
       const mergedOptions = {
         dependencies,
-        autoreloadGetManyAfter: finalAutoreloadGetManyAfter,
-        autoreloadGetAfter: finalAutoreloadGetAfter,
+        reloadOn: finalReloadOn,
         ...newOptions,
       };
       return withParams(mergedParams, mergedOptions);
