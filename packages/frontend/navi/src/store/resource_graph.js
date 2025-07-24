@@ -84,6 +84,19 @@ const createResourceLifecycleManager = () => {
   };
 
   const findActionsToRerunOrReset = (triggeringAction) => {
+    // This function implements the core autoreload logic for the resource lifecycle system.
+    // It determines which actions should be rerun or reset when a triggering action completes.
+    //
+    // The function applies 4 distinct rules in this order:
+    // 1. Same-resource configuration-driven (respects parameter scope isolation)
+    // 2. Same-resource DELETE-driven (ignores parameter scope, comprehensive invalidation)
+    // 3. Cross-resource dependency-driven (ignores parameter scope, cross-resource relationships)
+    // 4. MutableId-driven (ignores parameter scope, handles resource creation/updates by mutableId)
+    //
+    // Parameter scope behavior:
+    // - Configuration-driven: Only affects actions with compatible parameter scopes
+    // - Data-driven (DELETE, dependencies, mutableId): Ignores parameter scopes for broader invalidation
+
     const actionsToRerun = new Set();
     const actionsToReset = new Set();
     const reasonSet = new Set();
@@ -126,7 +139,11 @@ const createResourceLifecycleManager = () => {
         continue;
       }
 
-      // Build parameter scope predicate
+      // Build parameter scope predicate for configuration-driven rules
+      // This ensures parameterized resources only affect actions with compatible parameter scopes:
+      // - Same scope ID: Always compatible (same parameterized resource instance)
+      // - No candidate scope: Always compatible (non-parameterized action)
+      // - Subset check: Candidate params must be a subset of current params
       const paramScopePredicate = config.paramScope
         ? (candidateAction) => {
             if (candidateAction.meta.paramScope?.id === config.paramScope.id)
@@ -153,20 +170,31 @@ const createResourceLifecycleManager = () => {
             continue;
           }
 
-          // Same-resource autorerun rules (non-GET verbs) - REQUIRES parameter scope compatibility
-          if (
-            resourceInstance === getResourceForAction(triggeringAction) &&
-            triggerVerb !== "GET" &&
-            candidateVerb === "GET"
-          ) {
-            const shouldRerun = candidateIsPlural
-              ? shouldRerunGetMany
-              : shouldRerunGet;
-            const shouldReset = candidateIsPlural
-              ? shouldResetGetMany
-              : shouldResetGet;
-            if (shouldRerun || shouldReset) {
-              if (paramScopePredicate(actionCandidate)) {
+          const triggeringResource = getResourceForAction(triggeringAction);
+          const isSameResource = triggeringResource === resourceInstance;
+
+          // Same-resource configuration-driven rules - REQUIRES parameter scope compatibility
+          // When a non-GET action completes, check if GET actions should rerun/reset based on configuration
+          // This respects parameter scope isolation (parameterized resources only affect compatible scopes)
+          non_get_effect_on_same_resource_get: {
+            if (
+              isSameResource &&
+              triggerVerb !== "GET" &&
+              candidateVerb === "GET"
+            ) {
+              // Determine action based on configuration and candidate type
+              const shouldRerun = candidateIsPlural
+                ? shouldRerunGetMany
+                : shouldRerunGet;
+              const shouldReset = candidateIsPlural
+                ? shouldResetGetMany
+                : shouldResetGet;
+
+              // Only apply if configuration says to rerun/reset AND parameter scope is compatible
+              if (
+                (shouldRerun || shouldReset) &&
+                paramScopePredicate(actionCandidate)
+              ) {
                 if (shouldRerun) {
                   actionsToRerun.add(actionCandidate);
                   reasonSet.add("same-resource autorerun");
@@ -182,91 +210,97 @@ const createResourceLifecycleManager = () => {
           }
 
           // Same-resource DELETE rules - IGNORES parameter scope (data-driven)
-          if (
-            resourceInstance === getResourceForAction(triggeringAction) &&
-            triggerVerb === "DELETE"
-          ) {
-            // For GET actions, check if explicitly configured to rerun on DELETE
-            if (candidateVerb === "GET") {
-              const shouldRerun = candidateIsPlural
-                ? shouldRerunGetMany
-                : shouldRerunGet;
+          // When a DELETE completes, it invalidates all related actions for the same resource
+          delete_effect_on_same_resource: {
+            if (isSameResource && triggerVerb === "DELETE") {
+              // For GET actions, check if explicitly configured to rerun on DELETE
+              if (candidateVerb === "GET") {
+                const shouldRerun = candidateIsPlural
+                  ? shouldRerunGetMany
+                  : shouldRerunGet;
 
-              if (shouldRerun) {
-                actionsToRerun.add(actionCandidate);
-                reasonSet.add("same-resource DELETE rerun GET");
-                continue;
+                if (shouldRerun) {
+                  actionsToRerun.add(actionCandidate);
+                  reasonSet.add("same-resource DELETE rerun GET");
+                  continue;
+                }
+                // Default behavior for single GET: reset (resource was deleted)
+                // GET_MANY is protected from reset (list may still be valid)
+                if (!candidateIsPlural) {
+                  actionsToReset.add(actionCandidate);
+                  reasonSet.add("same-resource DELETE reset GET");
+                  continue;
+                }
               }
-              if (!candidateIsPlural) {
-                // Default behavior for GET: reset single GET,
+
+              // For all other HTTP verbs (POST, PUT, PATCH), reset them if they're single-resource actions
+              // GET_MANY and other MANY actions are protected from reset
+              if (candidateVerb !== "GET" && !candidateIsPlural) {
                 actionsToReset.add(actionCandidate);
-                reasonSet.add("same-resource DELETE reset GET");
+                reasonSet.add("same-resource DELETE reset");
                 continue;
               }
             }
+          }
 
-            // never reset MANY
-            if (!candidateIsPlural) {
-              // For all other HTTP verbs (POST, PUT, PATCH), reset them
-              actionsToReset.add(actionCandidate);
-              reasonSet.add("same-resource DELETE reset");
-              continue;
+          // MutableId autorerun rules - IGNORES parameter scope (data-driven)
+          // When POST/PUT/PATCH completes successfully, it creates/updates a resource.
+          // If we have GET actions using mutableId that are currently in 404 state
+          // (because the resource didn't exist), we should rerun them since a resource
+          // with that mutableId now exists. For PUT/PATCH, we also handle mutableId changes.
+          update_effect_on_same_resource: {
+            if (
+              hasMutableIdAutorerun &&
+              candidateVerb === "GET" &&
+              !candidateIsPlural &&
+              isSameResource
+            ) {
+              const { computedDataSignal } =
+                getActionPrivateProperties(triggeringAction);
+              const modifiedData = computedDataSignal.peek();
+
+              if (modifiedData && typeof modifiedData === "object") {
+                // Check if any GET action uses a mutableId that matches the created/modified resource
+                // We use the action params since the GET might be in 404 state
+                for (const mutableIdKey of config.mutableIdKeys) {
+                  const modifiedMutableId = modifiedData[mutableIdKey];
+                  const candidateParams = actionCandidate.params;
+
+                  // If candidate params match the mutableId value, this GET was likely in 404
+                  // and should be rerun since a resource with this mutableId now exists
+                  if (
+                    modifiedMutableId !== undefined &&
+                    candidateParams &&
+                    typeof candidateParams === "object" &&
+                    candidateParams[mutableIdKey] === modifiedMutableId
+                  ) {
+                    actionsToRerun.add(actionCandidate);
+                    reasonSet.add(
+                      `${triggeringAction.meta.httpVerb}-mutableId autorerun`,
+                    );
+                    break; // Found match, no need to check other mutableIdKeys for this candidate
+                  }
+                }
+              }
             }
           }
 
           // Cross-resource dependency autorerun - IGNORES parameter scope (cross-resource relationships)
-          const triggeringResource = getResourceForAction(triggeringAction);
-          if (
-            triggeringResource &&
-            resourceDependencies
-              .get(triggeringResource)
-              ?.has(resourceInstance) &&
-            triggerVerb !== "GET" &&
-            candidateVerb === "GET" &&
-            candidateIsPlural
-          ) {
-            actionsToRerun.add(actionCandidate);
-            reasonSet.add("dependency autorerun");
-            continue;
-          }
-
-          // POST/PUT/PATCH-specific autorerun for mutableId actions - IGNORES parameter scope (data-driven)
-          // When a POST/PUT/PATCH action completes successfully, it means a resource was created/updated.
-          // If we have GET actions using mutableId that are currently in 404 (because the resource
-          // didn't exist), we should rerun them since a resource with that mutableId now exists.
-          // For PUT/PATCH, we also need to handle mutableId changes (e.g., renaming).
-          if (
-            hasMutableIdAutorerun &&
-            candidateVerb === "GET" &&
-            !candidateIsPlural &&
-            resourceInstance === getResourceForAction(triggeringAction)
-          ) {
-            const { computedDataSignal } =
-              getActionPrivateProperties(triggeringAction);
-            const modifiedData = computedDataSignal.peek();
-
-            if (modifiedData && typeof modifiedData === "object") {
-              // Check if any GET action uses a mutableId that matches the created/modified resource
-              // we'll use the action params since the GET might be rerun, hence in 404
-              for (const mutableIdKey of config.mutableIdKeys) {
-                const modifiedMutableId = modifiedData[mutableIdKey];
-                const candidateParams = actionCandidate.params;
-
-                // If instance.data matches the mutableId value, this GET was likely in 404
-                // and should be rerun since a resource with this mutableId now exists
-                if (
-                  modifiedMutableId !== undefined &&
-                  candidateParams &&
-                  typeof candidateParams === "object" &&
-                  candidateParams[mutableIdKey] === modifiedMutableId
-                ) {
-                  actionsToRerun.add(actionCandidate);
-                  reasonSet.add(
-                    `${triggeringAction.meta.httpVerb}-mutableId autorerun`,
-                  );
-                  continue; // Found match, no need to check other mutableIdKeys for this instance
-                }
-              }
+          // When a resource that other resources depend on is modified (non-GET verbs),
+          // trigger autorerun for GET_MANY actions of dependent resources
+          cross_resource_dependency_effect: {
+            if (
+              triggeringResource &&
+              resourceDependencies
+                .get(triggeringResource)
+                ?.has(resourceInstance) &&
+              triggerVerb !== "GET" &&
+              candidateVerb === "GET" &&
+              candidateIsPlural
+            ) {
+              actionsToRerun.add(actionCandidate);
+              reasonSet.add("dependency autorerun");
+              continue;
             }
           }
         }
