@@ -51,7 +51,7 @@ export const requestAction = (
     event,
     target = event.target,
     requester = target,
-    method = "reload",
+    method = "rerun",
     meta = {},
     confirmMessage,
   } = {},

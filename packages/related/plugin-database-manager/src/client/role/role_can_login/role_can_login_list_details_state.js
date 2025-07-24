@@ -13,7 +13,7 @@ export const roleCanLoginListDetailsOpenAtStart =
   readRoleCanLoginListDetailsOpened();
 
 if (roleCanLoginListDetailsOpenAtStart) {
-  ROLE_CAN_LOGIN.GET_MANY.preload(); // et encore c'est seulement si on est sur la bonne page sinon c'est con
+  ROLE_CAN_LOGIN.GET_MANY.prerun(); // et encore c'est seulement si on est sur la bonne page sinon c'est con
 }
 
 export const roleCanLoginListDetailsOnToggle = (detailsOpen) => {
