@@ -1,5 +1,5 @@
 export const IDLE = { id: "idle" };
-export const LOADING = { id: "loading" };
+export const RUNNING = { id: "running" };
 export const ABORTED = { id: "aborted" };
 export const FAILED = { id: "failed" };
-export const LOADED = { id: "loaded" };
+export const COMPLETED = { id: "completed" };

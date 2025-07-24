@@ -2,10 +2,10 @@ import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { batch, computed, effect, signal } from "@preact/signals";
 import {
   ABORTED,
+  COMPLETED,
   FAILED,
   IDLE,
-  LOADED,
-  LOADING,
+  RUNNING,
 } from "./action_loading_states.js";
 import {
   getActionPrivateProperties,
@@ -38,10 +38,10 @@ let dispatchActions = (params) => {
 
 const dispatchSingleAction = (action, method, options) => {
   const requestedResult = dispatchActions({
-    preloadSet: method === "preload" ? new Set([action]) : undefined,
-    loadSet: method === "load" ? new Set([action]) : undefined,
-    reloadSet: method === "reload" ? new Set([action]) : undefined,
-    unloadSet: method === "unload" ? new Set([action]) : undefined,
+    prerunSet: method === "prerun" ? new Set([action]) : undefined,
+    runSet: method === "run" ? new Set([action]) : undefined,
+    rerunSet: method === "rerun" ? new Set([action]) : undefined,
+    stopSet: method === "stop" ? new Set([action]) : undefined,
     ...options,
   });
   if (requestedResult && typeof requestedResult.then === "function") {
@@ -62,7 +62,7 @@ export const reloadActions = async (
   { reason = "reloadActions was called" } = {},
 ) => {
   return dispatchActions({
-    reloadSet: actionSet,
+    rerunSet: actionSet,
     reason,
   });
 };
@@ -72,7 +72,7 @@ export const unloadActions = async (
   { reason = "unloadActions was called" } = {},
 ) => {
   return dispatchActions({
-    unloadSet: actionSet,
+    stopSet: actionSet,
     reason,
   });
 };
@@ -80,22 +80,22 @@ export const abortPendingActions = (
   reason = "abortPendingActions was called",
 ) => {
   const { loadingSet } = getActivationInfo();
-  for (const loadingAction of loadingSet) {
-    loadingAction.abort(reason);
+  for (const runningAction of loadingSet) {
+    runningAction.abort(reason);
   }
 };
 
 /**
- * Registry that prevents preloaded actions from being garbage collected.
+ * Registry that prevents prerun actions from being garbage collected.
  *
- * When an action is preloaded, it might not have any active references yet
+ * When an action is prerun, it might not have any active references yet
  * (e.g., the component that will use it hasn't loaded yet due to dynamic imports).
- * This registry keeps a reference to preloaded actions for a configurable duration
+ * This registry keeps a reference to prerun actions for a configurable duration
  * to ensure they remain available when needed.
  *
  * Actions are automatically unprotected when:
  * - The protection duration expires (default: 5 minutes)
- * - The action is explicitly unloaded via .unload()
+ * - The action is explicitly stopped via .stop()
  */
 const preloadedProtectionRegistry = (() => {
   const protectedActionMap = new Map(); // action -> { timeoutId, timestamp }
@@ -183,19 +183,19 @@ const getActivationInfo = () => {
 
   for (const action of activationWeakSet) {
     const privateProps = getActionPrivateProperties(action);
-    const loadingState = privateProps.loadingStateSignal.peek();
+    const runningState = privateProps.runningStateSignal.peek();
 
-    if (loadingState === LOADING) {
+    if (runningState === RUNNING) {
       loadingSet.add(action);
     } else if (
-      loadingState === LOADED ||
-      loadingState === FAILED ||
-      loadingState === ABORTED
+      runningState === COMPLETED ||
+      runningState === FAILED ||
+      runningState === ABORTED
     ) {
       settledSet.add(action);
     } else {
       throw new Error(
-        `An action in the activation weak set must be LOADING, ABORTED, FAILED or LOADED, found "${loadingState.id}" for action "${action}"`,
+        `An action in the activation weak set must be RUNNING, ABORTED, FAILED or COMPLETED, found "${runningState.id}" for action "${action}"`,
       );
     }
   }
@@ -215,7 +215,7 @@ if (import.meta.dev) {
       for (const action of activationWeakSet) {
         activations.push({
           name: action.name,
-          loadingState: action.loadingState.id,
+          runningState: action.runningState.id,
           error: action.error,
           params: action.params,
           isProxy: action.isProxy || false,
@@ -239,6 +239,11 @@ export const updateActions = ({
   abortSignal,
   isReplace = false,
   reason,
+  prerunSet = new Set(),
+  runSet = new Set(),
+  rerunSet = new Set(),
+  stopSet = new Set(),
+  // Legacy compatibility
   preloadSet = new Set(),
   loadSet = new Set(),
   reloadSet = new Set(),
@@ -252,33 +257,39 @@ export const updateActions = ({
    * Action update flow:
    *
    * Input: 4 sets of requested operations
-   * - preloadSet: actions to preload (background, low priority)
-   * - loadSet: actions to load (user-visible, medium priority)
-   * - reloadSet: actions to force reload (highest priority)
-   * - unloadSet: actions to unload/abort
+   * - prerunSet: actions to prerun (background, low priority)
+   * - runSet: actions to run (user-visible, medium priority)
+   * - rerunSet: actions to force rerun (highest priority)
+   * - stopSet: actions to stop/abort
    *
    * Priority resolution:
-   * - unload always wins (explicit cleanup)
-   * - reload > load > preload (reload forces refresh even if already loaded)
+   * - stop always wins (explicit cleanup)
+   * - rerun > run > prerun (rerun forces refresh even if already running)
    * - An action in multiple sets triggers warnings in dev mode
    *
    * Output: Internal operation sets that track what will actually happen
-   * - willUnloadSet: actions that will be unloaded/aborted
-   * - willPreloadSet: actions that will be preloaded
-   * - willLoadSet: actions that will be loaded
-   * - willPromoteSet: preloaded actions that become load-requested
+   * - willStopSet: actions that will be stopped/aborted
+   * - willPrerunSet: actions that will be prerun
+   * - willRunSet: actions that will be run
+   * - willPromoteSet: prerun actions that become run-requested
    * - stays*Set: actions that remain in their current state
    */
+
+  // Merge legacy parameters with new ones
+  const finalPrerunSet = new Set([...prerunSet, ...preloadSet]);
+  const finalRunSet = new Set([...runSet, ...loadSet]);
+  const finalRerunSet = new Set([...rerunSet, ...reloadSet]);
+  const finalStopSet = new Set([...stopSet, ...unloadSet]);
 
   const { loadingSet, settledSet } = getActivationInfo();
 
   // Warn about overlapping sets in development
   if (import.meta.dev) {
     const allSets = [
-      { name: "preload", set: preloadSet },
-      { name: "load", set: loadSet },
-      { name: "reload", set: reloadSet },
-      { name: "unload", set: unloadSet },
+      { name: "prerun", set: finalPrerunSet },
+      { name: "run", set: finalRunSet },
+      { name: "rerun", set: finalRerunSet },
+      { name: "stop", set: finalStopSet },
     ];
 
     for (let i = 0; i < allSets.length; i++) {
@@ -299,10 +310,14 @@ export const updateActions = ({
   if (DEBUG) {
     console.group(`updateActions()`);
     const lines = [
-      ...(preloadSet.size ? [formatActionSet(preloadSet, "- preload:")] : []),
-      ...(loadSet.size ? [formatActionSet(loadSet, "- load:")] : []),
-      ...(reloadSet.size ? [formatActionSet(reloadSet, "- reload:")] : []),
-      ...(unloadSet.size ? [formatActionSet(unloadSet, "- unload:")] : []),
+      ...(finalPrerunSet.size
+        ? [formatActionSet(finalPrerunSet, "- prerun:")]
+        : []),
+      ...(finalRunSet.size ? [formatActionSet(finalRunSet, "- run:")] : []),
+      ...(finalRerunSet.size
+        ? [formatActionSet(finalRerunSet, "- rerun:")]
+        : []),
+      ...(finalStopSet.size ? [formatActionSet(finalStopSet, "- stop:")] : []),
     ];
     console.debug(
       `requested operations:
@@ -312,81 +327,87 @@ ${lines.join("\n")}
   }
 
   // Internal sets that track what operations will actually be performed
-  const willUnloadSet = new Set();
-  const willPreloadSet = new Set();
-  const willLoadSet = new Set();
-  const willPromoteSet = new Set(); // preloaded -> load requested
+  const willStopSet = new Set();
+  const willPrerunSet = new Set();
+  const willRunSet = new Set();
+  const willPromoteSet = new Set(); // prerun -> run requested
   const staysLoadingSet = new Set();
   const staysAbortedSet = new Set();
   const staysFailedSet = new Set();
   const staysLoadedSet = new Set();
 
-  // Step 1: Determine which actions will be unloaded
-  collect_actions_to_unload: {
-    for (const actionToUnload of unloadSet) {
-      if (actionToUnload.loadingState !== IDLE) {
-        willUnloadSet.add(actionToUnload);
+  // Step 1: Determine which actions will be stopped
+  collect_actions_to_stop: {
+    for (const actionToStop of finalStopSet) {
+      if (actionToStop.runningState !== IDLE) {
+        willStopSet.add(actionToStop);
       }
     }
   }
 
-  // Step 2: Process preload, load, and reload sets
-  collect_actions_to_preload_and_load: {
+  // Step 2: Process prerun, run, and rerun sets
+  collect_actions_to_prerun_and_run: {
     const handleActionRequest = (
       action,
-      requestType, // "preload", "load", or "reload"
+      requestType, // "prerun", "run", or "rerun"
     ) => {
-      const isPreload = requestType === "preload";
-      const isReload = requestType === "reload";
+      const isPrerun = requestType === "prerun";
+      const isRerun = requestType === "rerun";
 
-      if (action.loadingState === LOADING || action.loadingState === LOADED) {
-        // Action is already loading/loaded
+      if (
+        action.runningState === RUNNING ||
+        action.runningState === COMPLETED
+      ) {
+        // Action is already running/completed
         // By default, we don't interfere with already active actions
-        // Unless it's a reload or the action is also being unloaded
-        if (isReload || willUnloadSet.has(action)) {
-          // Force unload first, then reload/load
-          willUnloadSet.add(action);
-          if (isPreload) {
-            willPreloadSet.add(action);
+        // Unless it's a rerun or the action is also being stopped
+        if (isRerun || willStopSet.has(action)) {
+          // Force stop first, then rerun/run
+          willStopSet.add(action);
+          if (isPrerun) {
+            willPrerunSet.add(action);
           } else {
-            willLoadSet.add(action);
+            willRunSet.add(action);
           }
         }
         // Otherwise, ignore the request (action stays as-is)
-      } else if (isPreload) {
-        willPreloadSet.add(action);
+      } else if (isPrerun) {
+        willPrerunSet.add(action);
       } else {
-        willLoadSet.add(action);
+        willRunSet.add(action);
       }
     };
 
-    // Process preloadSet (lowest priority)
-    for (const actionToPreload of preloadSet) {
-      if (loadSet.has(actionToPreload) || reloadSet.has(actionToPreload)) {
-        // load/reload wins over preload - skip preload
+    // Process prerunSet (lowest priority)
+    for (const actionToPrerun of finalPrerunSet) {
+      if (
+        finalRunSet.has(actionToPrerun) ||
+        finalRerunSet.has(actionToPrerun)
+      ) {
+        // run/rerun wins over prerun - skip prerun
         continue;
       }
-      handleActionRequest(actionToPreload, "preload");
+      handleActionRequest(actionToPrerun, "prerun");
     }
 
-    // Process loadSet (medium priority)
-    for (const actionToLoad of loadSet) {
-      if (reloadSet.has(actionToLoad)) {
-        // reload wins over load - skip load
+    // Process runSet (medium priority)
+    for (const actionToRun of finalRunSet) {
+      if (finalRerunSet.has(actionToRun)) {
+        // rerun wins over run - skip run
         continue;
       }
-      if (!actionToLoad.loadRequested && actionToLoad.loadingState !== IDLE) {
-        // Special case: action was preloaded but not yet requested to load
-        // Just promote it to "load requested" without reloading
-        willPromoteSet.add(actionToLoad);
+      if (actionToRun.isPrerun && actionToRun.runningState !== IDLE) {
+        // Special case: action was prerun but not yet requested to run
+        // Just promote it to "run requested" without rerunning
+        willPromoteSet.add(actionToRun);
         continue;
       }
-      handleActionRequest(actionToLoad, "load");
+      handleActionRequest(actionToRun, "run");
     }
 
-    // Process reloadSet (highest priority)
-    for (const actionToReload of reloadSet) {
-      handleActionRequest(actionToReload, "reload");
+    // Process rerunSet (highest priority)
+    for (const actionToRerun of finalRerunSet) {
+      handleActionRequest(actionToRerun, "rerun");
     }
   }
   const allThenableArray = [];
@@ -394,13 +415,13 @@ ${lines.join("\n")}
   // Step 3: Determine which actions will stay in their current state
   collect_actions_that_stay: {
     for (const actionLoading of loadingSet) {
-      if (willUnloadSet.has(actionLoading)) {
-        // will be unloaded (aborted), we don't want to wait
+      if (willStopSet.has(actionLoading)) {
+        // will be stopped (aborted), we don't want to wait
       } else if (
-        willLoadSet.has(actionLoading) ||
-        willPreloadSet.has(actionLoading)
+        willRunSet.has(actionLoading) ||
+        willPrerunSet.has(actionLoading)
       ) {
-        // will be loaded, we'll wait for the new load promise
+        // will be run, we'll wait for the new run promise
       } else {
         // an action that was loading and not affected by this update
         const actionPromise = actionPromiseMap.get(actionLoading);
@@ -409,11 +430,11 @@ ${lines.join("\n")}
       }
     }
     for (const actionLoaded of settledSet) {
-      if (willUnloadSet.has(actionLoaded)) {
-        // will be unloaded
-      } else if (actionLoaded.loadingState === ABORTED) {
+      if (willStopSet.has(actionLoaded)) {
+        // will be stopped
+      } else if (actionLoaded.runningState === ABORTED) {
         staysAbortedSet.add(actionLoaded);
-      } else if (actionLoaded.loadingState === FAILED) {
+      } else if (actionLoaded.runningState === FAILED) {
         staysFailedSet.add(actionLoaded);
       } else {
         staysLoadedSet.add(actionLoaded);
@@ -422,18 +443,16 @@ ${lines.join("\n")}
   }
   if (DEBUG) {
     const lines = [
-      ...(willUnloadSet.size
-        ? [formatActionSet(willUnloadSet, "- will unload:")]
+      ...(willStopSet.size
+        ? [formatActionSet(willStopSet, "- will stop:")]
         : []),
-      ...(willPreloadSet.size
-        ? [formatActionSet(willPreloadSet, "- will preload:")]
+      ...(willPrerunSet.size
+        ? [formatActionSet(willPrerunSet, "- will prerun:")]
         : []),
       ...(willPromoteSet.size
         ? [formatActionSet(willPromoteSet, "- will promote:")]
         : []),
-      ...(willLoadSet.size
-        ? [formatActionSet(willLoadSet, "- will load:")]
-        : []),
+      ...(willRunSet.size ? [formatActionSet(willRunSet, "- will run:")] : []),
       ...(staysLoadingSet.size
         ? [formatActionSet(staysLoadingSet, "- stays loading:")]
         : []),
@@ -451,48 +470,47 @@ ${lines.join("\n")}
 ${lines.join("\n")}`);
   }
 
-  // Step 4: Execute unloads
-  execute_unloads: {
-    for (const actionToUnload of willUnloadSet) {
-      const actionToUnloadPrivateProperties =
-        getActionPrivateProperties(actionToUnload);
-      actionToUnloadPrivateProperties.performUnload({ reason });
-      activationWeakSet.delete(actionToUnload);
+  // Step 4: Execute stops
+  execute_stops: {
+    for (const actionToStop of willStopSet) {
+      const actionToStopPrivateProperties =
+        getActionPrivateProperties(actionToStop);
+      actionToStopPrivateProperties.performUnload({ reason });
+      activationWeakSet.delete(actionToStop);
     }
   }
 
   const resultArray = []; // Store results with their execution order
   let hasAsync = false;
 
-  // Step 5: Execute preloads and loads
-  execute_preloads_and_loads: {
-    const onActionToLoadOrPreload = (actionToPreloadOrLoad, isPreload) => {
-      if (import.meta.dev && actionToPreloadOrLoad.isProxy) {
+  // Step 5: Execute preruns and runs
+  execute_preruns_and_runs: {
+    const onActionToRunOrPrerun = (actionToPrerunOrRun, isPrerun) => {
+      if (import.meta.dev && actionToPrerunOrRun.isProxy) {
         // maybe remove this check one the API is stable because
         // nothing in the API should allow this to happen
         throw new Error(
           `Proxy should not be reach this point, use the underlying action instead`,
         );
       }
-      const actionSpecificSignal = abortSignalMap.get(actionToPreloadOrLoad);
+      const actionSpecificSignal = abortSignalMap.get(actionToPrerunOrRun);
       const effectiveSignal = actionSpecificSignal || abortSignal;
 
-      const actionToLoadPrivateProperties = getActionPrivateProperties(
-        actionToPreloadOrLoad,
-      );
-      const performLoadResult = actionToLoadPrivateProperties.performLoad({
+      const actionToRunPrivateProperties =
+        getActionPrivateProperties(actionToPrerunOrRun);
+      const performLoadResult = actionToRunPrivateProperties.performLoad({
         globalAbortSignal,
         abortSignal: effectiveSignal,
         reason,
-        isPreload,
+        isPreload: isPrerun,
         onEnd,
         onAbort,
         onError,
       });
-      activationWeakSet.add(actionToPreloadOrLoad);
+      activationWeakSet.add(actionToPrerunOrRun);
 
       if (performLoadResult && typeof performLoadResult.then === "function") {
-        actionPromiseMap.set(actionToPreloadOrLoad, performLoadResult);
+        actionPromiseMap.set(actionToPrerunOrRun, performLoadResult);
         allThenableArray.push(performLoadResult);
         hasAsync = true;
         // Store async result with order info
@@ -509,21 +527,21 @@ ${lines.join("\n")}`);
       }
     };
 
-    // Execute preloads
-    for (const actionToPreload of willPreloadSet) {
-      onActionToLoadOrPreload(actionToPreload, true);
+    // Execute preruns
+    for (const actionToPrerun of willPrerunSet) {
+      onActionToRunOrPrerun(actionToPrerun, true);
     }
 
-    // Execute loads
-    for (const actionToLoad of willLoadSet) {
-      onActionToLoadOrPreload(actionToLoad, false);
+    // Execute runs
+    for (const actionToRun of willRunSet) {
+      onActionToRunOrPrerun(actionToRun, false);
     }
 
-    // Execute promotions (preload -> load requested)
+    // Execute promotions (prerun -> run requested)
     for (const actionToPromote of willPromoteSet) {
       const actionToPromotePrivateProperties =
         getActionPrivateProperties(actionToPromote);
-      actionToPromotePrivateProperties.loadRequestedSignal.value = true;
+      actionToPromotePrivateProperties.isPrerunSignal.value = false;
     }
   }
   if (DEBUG) {
@@ -547,7 +565,7 @@ ${lines.join("\n")}`);
   const allResult = allThenableArray.length
     ? Promise.allSettled(allThenableArray)
     : null;
-  const loadingActionSet = new Set([...willPreloadSet, ...willLoadSet]);
+  const loadingActionSet = new Set([...willPrerunSet, ...willRunSet]);
   return {
     requestedResult,
     allResult,
@@ -572,8 +590,8 @@ export const createAction = (callback, rootOptions = {}) => {
     {
       name = callback.name || "anonymous",
       params = initialParamsDefault,
-      loadRequested = false,
-      loadingState = IDLE,
+      isPrerun = true,
+      runningState = IDLE,
       aborted = false,
       error = null,
       data,
@@ -590,8 +608,8 @@ export const createAction = (callback, rootOptions = {}) => {
   ) => {
     const initialData = data;
     const paramsSignal = signal(params);
-    const loadRequestedSignal = signal(loadRequested);
-    const loadingStateSignal = signal(loadingState);
+    const isPrerunSignal = signal(isPrerun);
+    const runningStateSignal = signal(runningState);
     const errorSignal = signal(error);
     const dataSignal = signal(initialData);
     const computedDataSignal = compute
@@ -607,20 +625,32 @@ export const createAction = (callback, rootOptions = {}) => {
           : data
         : computedData;
 
-    const preload = (options) => {
-      return dispatchSingleAction(action, "preload", options);
+    const prerun = (options) => {
+      return dispatchSingleAction(action, "prerun", options);
     };
-    const load = (options) => {
-      return dispatchSingleAction(action, "load", options);
+    const run = (options) => {
+      return dispatchSingleAction(action, "run", options);
     };
-    const reload = (options) => {
-      return dispatchSingleAction(action, "reload", options);
+    const rerun = (options) => {
+      return dispatchSingleAction(action, "rerun", options);
     };
-    const unload = (options) => {
-      return dispatchSingleAction(action, "unload", options);
+    /**
+     * Stop the action completely - this will:
+     * 1. Abort the action if it's currently running
+     * 2. Reset the action to IDLE state
+     * 3. Clean up any resources and side effects
+     * 4. Reset data to initial value (unless keepOldData is true)
+     */
+    const stop = (options) => {
+      return dispatchSingleAction(action, "stop", options);
     };
+    // Legacy compatibility
+    const preload = prerun;
+    const load = run;
+    const reload = rerun;
+    const unload = stop;
     const abort = (reason) => {
-      if (loadingState !== LOADING) {
+      if (runningState !== RUNNING) {
         return false;
       }
       const actionAbort = actionAbortMap.get(action);
@@ -777,7 +807,7 @@ export const createAction = (callback, rootOptions = {}) => {
       // Create the action as a function that can be called directly
       action = function actionFunction(params) {
         const boundAction = bindParams(params);
-        return boundAction.reload();
+        return boundAction.rerun();
       };
       Object.defineProperty(action, "name", {
         configurable: true,
@@ -795,12 +825,17 @@ export const createAction = (callback, rootOptions = {}) => {
       rootAction,
       parentAction,
       params,
-      loadRequested,
-      loadingState,
+      isPrerun,
+      runningState,
       aborted,
       error,
       data,
       computedData,
+      prerun,
+      run,
+      rerun,
+      stop,
+      // Legacy compatibility
       preload,
       load,
       reload,
@@ -840,13 +875,13 @@ export const createAction = (callback, rootOptions = {}) => {
     // Effects pour synchroniser les propriétés
     effects: {
       weakEffect([action], (actionRef) => {
-        loadRequested = loadRequestedSignal.value;
-        actionRef.loadRequested = loadRequested;
+        isPrerun = isPrerunSignal.value;
+        actionRef.isPrerun = isPrerun;
       });
       weakEffect([action], (actionRef) => {
-        loadingState = loadingStateSignal.value;
-        actionRef.loadingState = loadingState;
-        aborted = loadingState === ABORTED;
+        runningState = runningStateSignal.value;
+        actionRef.runningState = runningState;
+        aborted = runningState === ABORTED;
         actionRef.aborted = aborted;
       });
       weakEffect([action], (actionRef) => {
@@ -888,7 +923,7 @@ export const createAction = (callback, rootOptions = {}) => {
         const internalAbortController = new AbortController();
         const internalAbortSignal = internalAbortController.signal;
         const abort = (abortReason) => {
-          loadingStateSignal.value = ABORTED;
+          runningStateSignal.value = ABORTED;
           internalAbortController.abort(abortReason);
           actionAbortMap.delete(action);
           if (isPreload && (globalAbortSignal.aborted || abortSignal.aborted)) {
@@ -917,9 +952,9 @@ export const createAction = (callback, rootOptions = {}) => {
 
         batch(() => {
           errorSignal.value = null;
-          loadingStateSignal.value = LOADING;
+          runningStateSignal.value = RUNNING;
           if (!isPreload) {
-            loadRequestedSignal.value = true;
+            isPrerunSignal.value = false;
           }
         });
 
@@ -963,14 +998,14 @@ export const createAction = (callback, rootOptions = {}) => {
             dataSignal.value = dataEffect
               ? dataEffect(loadResult, action)
               : loadResult;
-            loadingStateSignal.value = LOADED;
+            runningStateSignal.value = COMPLETED;
             if (onEnd) {
               onEnd(computedDataSignal.peek(), action);
             }
             onLoad(action);
           });
           if (DEBUG) {
-            console.log(`"${action}": loaded (reason: ${reason})`);
+            console.log(`"${action}": completed (reason: ${reason})`);
           }
           return computedDataSignal.peek();
         };
@@ -984,7 +1019,7 @@ export const createAction = (callback, rootOptions = {}) => {
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
           if (internalAbortSignal.aborted && e === internalAbortSignal.reason) {
-            loadingStateSignal.value = ABORTED;
+            runningStateSignal.value = ABORTED;
             if (isPreload && abortSignal.aborted) {
               preloadedProtectionRegistry.unprotect(action);
             }
@@ -1003,7 +1038,7 @@ export const createAction = (callback, rootOptions = {}) => {
           }
           batch(() => {
             errorSignal.value = e;
-            loadingStateSignal.value = FAILED;
+            runningStateSignal.value = FAILED;
             if (onError) {
               onError(e, action);
             }
@@ -1085,8 +1120,8 @@ export const createAction = (callback, rootOptions = {}) => {
           if (!keepOldData) {
             dataSignal.value = initialData;
           }
-          loadRequestedSignal.value = false;
-          loadingStateSignal.value = IDLE;
+          isPrerunSignal.value = true;
+          runningStateSignal.value = IDLE;
         });
       };
 
@@ -1094,8 +1129,8 @@ export const createAction = (callback, rootOptions = {}) => {
         initialData,
 
         paramsSignal,
-        loadingStateSignal,
-        loadRequestedSignal,
+        runningStateSignal,
+        isPrerunSignal,
         dataSignal,
         computedDataSignal,
         errorSignal,
@@ -1196,12 +1231,17 @@ const createActionProxyFromSignal = (
       return nameSignal.value;
     },
     params: undefined,
-    loadRequested: undefined,
-    loadingState: undefined,
+    isPrerun: undefined,
+    runningState: undefined,
     aborted: undefined,
     error: undefined,
     data: undefined,
     computedData: undefined,
+    prerun: proxyMethod("prerun"),
+    run: proxyMethod("run"),
+    rerun: proxyMethod("rerun"),
+    stop: proxyMethod("stop"),
+    // Legacy compatibility
     preload: proxyMethod("preload"),
     load: proxyMethod("load"),
     reload: proxyMethod("reload"),
@@ -1223,8 +1263,8 @@ const createActionProxyFromSignal = (
     nameSignal.value = `[Proxy] ${currentAction.name}`;
     actionProxy.callback = currentAction.callback;
     actionProxy.params = currentAction.params;
-    actionProxy.loadRequested = currentAction.loadRequested;
-    actionProxy.loadingState = currentAction.loadingState;
+    actionProxy.isPrerun = currentAction.isPrerun;
+    actionProxy.runningState = currentAction.runningState;
     actionProxy.aborted = currentAction.aborted;
     actionProxy.error = currentAction.error;
     actionProxy.data = currentAction.data;
@@ -1273,13 +1313,10 @@ const createActionProxyFromSignal = (
       return currentAction;
     },
     paramsSignal: proxyParamsSignal,
-    loadRequestedSignal: proxyPrivateSignal(
-      "loadRequestedSignal",
-      "loadRequested",
-    ),
-    loadingStateSignal: proxyPrivateSignal(
-      "loadingStateSignal",
-      "loadingState",
+    isPrerunSignal: proxyPrivateSignal("isPrerunSignal", "isPrerun"),
+    runningStateSignal: proxyPrivateSignal(
+      "runningStateSignal",
+      "runningState",
     ),
     errorSignal: proxyPrivateSignal("errorSignal", "error"),
     dataSignal: proxyPrivateSignal("dataSignal", "data"),
@@ -1333,7 +1370,7 @@ const createActionProxyFromSignal = (
       if (
         actionTarget &&
         actionTargetPrevious &&
-        actionTargetPrevious.loadRequested
+        !actionTargetPrevious.isPrerun
       ) {
         actionTarget.reload();
       }
