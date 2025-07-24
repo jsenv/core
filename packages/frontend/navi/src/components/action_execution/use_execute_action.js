@@ -92,25 +92,6 @@ export const useExecuteAction = (
     });
 
     return action[method]({
-      onEnd: () => {
-        if (
-          // at this stage the action side effect might have removed the <element> from the DOM
-          // (in theory no because action side effect are batched to happen after)
-          // but other side effects might do this
-          elementRef.current
-        ) {
-          dispatchCustomEvent("actionend", {
-            detail: {
-              data: action.data,
-
-              action,
-              requester,
-              event,
-              method,
-            },
-          });
-        }
-      },
       onAbort: (reason) => {
         if (
           // at this stage the action side effect might have removed the <element> from the DOM
@@ -152,6 +133,25 @@ export const useExecuteAction = (
           addErrorMessage(error);
         } else if (errorEffect === "throw") {
           setError(error);
+        }
+      },
+      onComplete: () => {
+        if (
+          // at this stage the action side effect might have removed the <element> from the DOM
+          // (in theory no because action side effect are batched to happen after)
+          // but other side effects might do this
+          elementRef.current
+        ) {
+          dispatchCustomEvent("actionend", {
+            detail: {
+              data: action.data,
+
+              action,
+              requester,
+              event,
+              method,
+            },
+          });
         }
       },
     });

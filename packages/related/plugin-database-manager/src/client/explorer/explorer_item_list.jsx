@@ -39,15 +39,7 @@ export const ExplorerItemList = ({
             onCancel={() => {
               stopCreatingNew();
             }}
-            onActionEnd={(e) => {
-              const eventCausingAction = e.detail.event;
-              if (
-                eventCausingAction &&
-                eventCausingAction.type === "keydown" &&
-                eventCausingAction.key === "Enter"
-              ) {
-                return;
-              }
+            onActionEnd={() => {
               stopCreatingNew();
             }}
           />

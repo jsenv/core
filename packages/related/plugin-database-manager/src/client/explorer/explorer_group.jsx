@@ -79,10 +79,12 @@ export const ExplorerGroup = forwardRef((props, ref) => {
     setIsCreatingNew(true);
   }, [setIsCreatingNew]);
   const stopCreatingNew = useCallback(() => {
+    createButtonRef.current.focus();
     setIsCreatingNew(false);
   }, [setIsCreatingNew]);
 
   const heightSetting = controller.useHeightSetting();
+  const createButtonRef = useRef(null);
 
   return (
     <>
@@ -119,6 +121,7 @@ export const ExplorerGroup = forwardRef((props, ref) => {
               <>
                 <span style="display: flex; flex: 1"></span>
                 <Button
+                  ref={createButtonRef}
                   className="summary_action_icon"
                   discrete
                   style={{

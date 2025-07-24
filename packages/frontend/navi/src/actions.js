@@ -956,7 +956,7 @@ export const createAction = (callback, rootOptions = {}) => {
           actionAbortMap.delete(action);
           actionPromiseMap.delete(action);
           /*
-           * Critical: dataEffect and onLoad must be batched together to prevent
+           * Critical: dataEffect, onComplete and completeSideEffect must be batched together to prevent
            * UI inconsistencies. The dataEffect might modify shared state (e.g.,
            * deleting items from a store), and onLoad callbacks might trigger
            * dependent action state changes.
