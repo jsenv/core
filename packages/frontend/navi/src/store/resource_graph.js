@@ -186,7 +186,6 @@ const createResourceLifecycleManager = () => {
 
             const candidateId = actionCandidate.data;
             const isAffected = deleteIdSet.has(candidateId);
-            debugger;
             if (!isAffected) {
               break delete_effect;
             }

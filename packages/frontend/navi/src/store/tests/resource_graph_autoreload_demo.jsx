@@ -482,7 +482,7 @@ const UserCard = ({ name, action }) => {
           );
         },
 
-        otherwise: () => (
+        idle: () => (
           <CardWrapper statusColor="#6c757d" statusText="Non chargé">
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <button
