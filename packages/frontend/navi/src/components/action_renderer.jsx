@@ -43,7 +43,7 @@ const renderErrorDefault = (error) => {
   let routeErrorText = error && error.message ? error.message : error;
   return <p className="action_error">An error occured: {routeErrorText}</p>;
 };
-const renderLoadedDefault = () => null;
+const renderCompletedDefault = () => null;
 
 export const ActionRenderer = ({ action, children }) => {
   const {
@@ -51,9 +51,9 @@ export const ActionRenderer = ({ action, children }) => {
     loading: renderLoading = renderLoadingDefault,
     aborted: renderAborted = renderAbortedDefault,
     error: renderError = renderErrorDefault,
-    loaded: renderLoaded,
+    completed: renderCompleted,
     always: renderAlways,
-  } = typeof children === "function" ? { loaded: children } : children || {};
+  } = typeof children === "function" ? { completed: children } : children || {};
   if (!action) {
     throw new Error(
       "ActionRenderer requires an action to render, but none was provided.",
@@ -84,7 +84,7 @@ export const ActionRenderer = ({ action, children }) => {
 
   // If renderAlways is provided, it wins and handles all rendering
   if (renderAlways) {
-    return renderAlways({ loading, idle, aborted, error, data });
+    return renderAlways({ idle, loading, aborted, error, data });
   }
 
   if (idle) {
@@ -99,25 +99,25 @@ export const ActionRenderer = ({ action, children }) => {
   if (aborted) {
     return renderAborted(action);
   }
-  let renderLoadedSafe;
-  if (renderLoaded) {
-    renderLoadedSafe = renderLoaded;
+  let renderCompletedSafe;
+  if (renderCompleted) {
+    renderCompletedSafe = renderCompleted;
   } else {
     const { ui } = getActionPrivateProperties(action);
-    if (ui.renderLoaded) {
-      renderLoadedSafe = ui.renderLoaded;
+    if (ui.renderCompleted) {
+      renderCompletedSafe = ui.renderCompleted;
     } else {
-      renderLoadedSafe = renderLoadedDefault;
+      renderCompletedSafe = renderCompletedDefault;
     }
   }
   if (loading) {
     if (action.canDisplayOldData && data !== undefined) {
-      return renderLoadedSafe(data, action);
+      return renderCompletedSafe(data, action);
     }
     return renderLoading(action);
   }
 
-  return renderLoadedSafe(data, action);
+  return renderCompletedSafe(data, action);
 };
 
 const actionUIRenderedPromiseWeakMap = new WeakMap();

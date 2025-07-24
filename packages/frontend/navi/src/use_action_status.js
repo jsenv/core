@@ -8,11 +8,9 @@ export const useActionStatus = (action) => {
       runningState: IDLE,
       isPrerun: false,
       idle: true,
-      prerunning: false,
-      running: false,
+      loading: false,
       aborted: false,
       error: null,
-      precompleted: false,
       completed: false,
       data: undefined,
     };
@@ -31,10 +29,8 @@ export const useActionStatus = (action) => {
   const idle = runningState === IDLE;
   const aborted = runningState === ABORTED;
   const error = errorSignal.value;
-  const running = runningState === RUNNING && !isPrerun;
-  const prerunning = runningState === RUNNING && isPrerun;
-  const completed = runningState === COMPLETED && !isPrerun;
-  const precompleted = runningState === COMPLETED && isPrerun;
+  const loading = runningState === RUNNING;
+  const completed = runningState === COMPLETED;
   const data = computedDataSignal.value;
 
   return {
@@ -42,11 +38,9 @@ export const useActionStatus = (action) => {
     runningState,
     isPrerun,
     idle,
-    prerunning,
-    running,
+    loading,
     aborted,
     error,
-    precompleted,
     completed,
     data,
   };
