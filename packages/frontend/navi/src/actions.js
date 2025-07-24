@@ -579,6 +579,7 @@ export const createAction = (callback, rootOptions = {}) => {
       data,
       computedData,
       compute,
+      completed = false,
       renderLoadedAsync,
       sideEffect = () => {},
       keepOldData = false,
@@ -808,6 +809,7 @@ export const createAction = (callback, rootOptions = {}) => {
       error,
       data,
       computedData,
+      completed,
       prerun,
       run,
       rerun,
@@ -855,6 +857,8 @@ export const createAction = (callback, rootOptions = {}) => {
         actionRef.runningState = runningState;
         aborted = runningState === ABORTED;
         actionRef.aborted = aborted;
+        completed = runningState === COMPLETED;
+        actionRef.completed = completed;
       });
       weakEffect([action], (actionRef) => {
         error = errorSignal.value;
@@ -1209,6 +1213,7 @@ const createActionProxyFromSignal = (
     error: undefined,
     data: undefined,
     computedData: undefined,
+    completed: undefined,
     prerun: proxyMethod("prerun"),
     run: proxyMethod("run"),
     rerun: proxyMethod("rerun"),
@@ -1236,6 +1241,7 @@ const createActionProxyFromSignal = (
     actionProxy.error = currentAction.error;
     actionProxy.data = currentAction.data;
     actionProxy.computedData = currentAction.computedData;
+    actionProxy.completed = currentAction.completed;
   });
 
   const proxyPrivateSignal = (signalPropertyName, propertyName) => {
