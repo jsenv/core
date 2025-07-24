@@ -157,7 +157,7 @@ const DetailsWithAction = forwardRef((props, ref) => {
         if (isOpen) {
           requestAction(effectiveAction, {
             event: toggleEvent,
-            method: "load",
+            method: "run",
           });
         } else {
           effectiveAction.abort();

@@ -503,7 +503,7 @@ export const installCustomConstraintValidation = (
         detail: {
           action: null,
           event: e,
-          method: "reload",
+          method: "rerun",
           requester: form,
           meta: {},
         },

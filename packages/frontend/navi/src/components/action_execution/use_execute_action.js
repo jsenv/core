@@ -82,7 +82,14 @@ export const useExecuteAction = (
     const validationMessageTarget = requester || elementRef.current;
     validationMessageTargetRef.current = validationMessageTarget;
 
-    dispatchCustomEvent("actionstart");
+    dispatchCustomEvent("actionstart", {
+      detail: {
+        action,
+        requester,
+        event,
+        method,
+      },
+    });
 
     return action[method]({
       onEnd: () => {
