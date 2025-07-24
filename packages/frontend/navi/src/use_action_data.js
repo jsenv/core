@@ -5,8 +5,6 @@ export const useActionData = (action) => {
     return undefined;
   }
   const { computedDataSignal } = getActionPrivateProperties(action);
-
   const data = computedDataSignal.value;
-
   return data;
 };

@@ -36,7 +36,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-const renderOtherwiseDefault = () => null;
+const renderIdleDefault = () => null;
 const renderLoadingDefault = () => null;
 const renderAbortedDefault = () => null;
 const renderErrorDefault = (error) => {
@@ -47,7 +47,7 @@ const renderLoadedDefault = () => null;
 
 export const ActionRenderer = ({ action, children }) => {
   const {
-    otherwise: renderOtherwise = renderOtherwiseDefault,
+    idle: renderIdle = renderIdleDefault,
     loading: renderLoading = renderLoadingDefault,
     aborted: renderAborted = renderAbortedDefault,
     error: renderError = renderErrorDefault,
@@ -88,7 +88,7 @@ export const ActionRenderer = ({ action, children }) => {
   }
 
   if (idle) {
-    return renderOtherwise(action);
+    return renderIdle(action);
   }
   if (errorBoundary) {
     return renderError(errorBoundary, "ui_error", action);

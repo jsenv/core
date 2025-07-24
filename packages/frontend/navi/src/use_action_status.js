@@ -1,53 +1,53 @@
-import { ABORTED, IDLE, LOADED, LOADING } from "./action_loading_states.js";
 import { getActionPrivateProperties } from "./action_private_properties.js";
+import { ABORTED, COMPLETED, IDLE, RUNNING } from "./action_run_states.js";
 
 export const useActionStatus = (action) => {
   if (!action) {
     return {
       params: undefined,
-      loadingState: IDLE,
-      loadRequested: false,
+      runningState: IDLE,
+      isPrerun: false,
       idle: true,
-      preloading: false,
-      loading: false,
+      prerunning: false,
+      running: false,
       aborted: false,
       error: null,
-      preloaded: false,
-      loaded: false,
+      precompleted: false,
+      completed: false,
       data: undefined,
     };
   }
   const {
     paramsSignal,
-    loadingStateSignal,
-    loadRequestedSignal,
+    runningStateSignal,
+    isPrerunSignal,
     errorSignal,
     computedDataSignal,
   } = getActionPrivateProperties(action);
 
   const params = paramsSignal.value;
-  const loadRequested = loadRequestedSignal.value;
-  const loadingState = loadingStateSignal.value;
-  const idle = loadingState === IDLE;
-  const aborted = loadingState === ABORTED;
+  const isPrerun = isPrerunSignal.value;
+  const runningState = runningStateSignal.value;
+  const idle = runningState === IDLE;
+  const aborted = runningState === ABORTED;
   const error = errorSignal.value;
-  const loading = loadingState === LOADING;
-  const preloading = loading && !loadRequested;
-  const loaded = loadingState === LOADED;
-  const preloaded = loaded && !loadRequested;
+  const running = runningState === RUNNING && !isPrerun;
+  const prerunning = runningState === RUNNING && isPrerun;
+  const completed = runningState === COMPLETED && !isPrerun;
+  const precompleted = runningState === COMPLETED && isPrerun;
   const data = computedDataSignal.value;
 
   return {
     params,
-    loadingState,
-    loadRequested,
+    runningState,
+    isPrerun,
     idle,
-    preloading,
-    loading,
+    prerunning,
+    running,
     aborted,
     error,
-    preloaded,
-    loaded,
+    precompleted,
+    completed,
     data,
   };
 };
