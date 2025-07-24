@@ -55,12 +55,24 @@ export const setActionDispatcher = (value) => {
   dispatchActions = value;
 };
 
+export const getActionDispatcher = () => dispatchActions;
+
 export const reloadActions = async (
   actionSet,
   { reason = "reloadActions was called" } = {},
 ) => {
   return dispatchActions({
     reloadSet: actionSet,
+    reason,
+  });
+};
+
+export const unloadActions = async (
+  actionSet,
+  { reason = "unloadActions was called" } = {},
+) => {
+  return dispatchActions({
+    unloadSet: actionSet,
     reason,
   });
 };

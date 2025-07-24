@@ -1,6 +1,6 @@
 import { computed, signal } from "@preact/signals";
 import { getActionPrivateProperties } from "../action_private_properties.js";
-import { createAction, reloadActions } from "../actions.js";
+import { createAction, getActionDispatcher } from "../actions.js";
 import { SYMBOL_OBJECT_SIGNAL } from "../symbol_object_signal.js";
 import {
   SYMBOL_IDENTITY,
@@ -83,8 +83,9 @@ const createResourceLifecycleManager = () => {
     return true;
   };
 
-  const findActionsToReload = (triggeringAction) => {
+  const findActionsToReloadOrUnload = (triggeringAction) => {
     const actionsToReload = new Set();
+    const actionsToUnload = new Set();
     const reasonSet = new Set();
 
     for (const [resourceInstance, config] of registeredResources) {
@@ -155,9 +156,16 @@ const createResourceLifecycleManager = () => {
               const shouldReload = actionCandidate.meta.httpMany
                 ? shouldReloadGetMany
                 : shouldReloadGet;
+              const shouldUnload = actionCandidate.meta.httpMany
+                ? shouldUnloadGetMany
+                : shouldUnloadGet;
+
               if (shouldReload) {
                 actionsToReload.add(actionCandidate);
                 reasonSet.add("same-resource autoreload");
+              } else if (shouldUnload) {
+                actionsToUnload.add(actionCandidate);
+                reasonSet.add("same-resource unload");
               }
             }
           }
@@ -193,15 +201,15 @@ const createResourceLifecycleManager = () => {
               deletedIds.length > 0 &&
               deletedIds.every((id) => id !== undefined)
             ) {
-              // Always reload GET_MANY
+              // Always reload GET_MANY to update the list
               if (actionCandidate.meta.httpMany) {
                 actionsToReload.add(actionCandidate);
                 reasonSet.add("DELETE-affected GET actions");
               }
-              // For single GET, check if data matches deleted IDs
+              // For single GET, unload if it corresponds to a deleted resource
               else if (deletedIds.includes(actionCandidate.data)) {
-                actionsToReload.add(actionCandidate);
-                reasonSet.add("DELETE-affected GET actions");
+                actionsToUnload.add(actionCandidate);
+                reasonSet.add("DELETE-affected GET actions (unload)");
               }
             }
           }
@@ -249,15 +257,25 @@ const createResourceLifecycleManager = () => {
       }
     }
 
-    return { actionsToReload, reasons: Array.from(reasonSet) };
+    return {
+      actionsToReload,
+      actionsToUnload,
+      reasons: Array.from(reasonSet),
+    };
   };
 
   const onActionComplete = (httpAction) => {
-    const { actionsToReload, reasons } = findActionsToReload(httpAction);
+    const { actionsToReload, actionsToUnload, reasons } =
+      findActionsToReloadOrUnload(httpAction);
 
-    if (actionsToReload.size > 0) {
+    if (actionsToReload.size > 0 || actionsToUnload.size > 0) {
       const reason = `${httpAction} triggered ${reasons.join(" and ")}`;
-      reloadActions(actionsToReload, { reason });
+      const dispatcher = getActionDispatcher();
+      dispatcher({
+        reloadSet: actionsToReload,
+        unloadSet: actionsToUnload,
+        reason,
+      });
     }
   };
 
