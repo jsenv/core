@@ -15,12 +15,12 @@ import { setupBrowserIntegrationViaHistory } from "./via_history.js";
 
 const applyActions = (params) => {
   const updateActionsResult = updateActions(params);
-  const { allResult, loadingActionSet } = updateActionsResult;
-  const loadingTaskNames = [];
-  for (const loadingAction of loadingActionSet) {
-    loadingTaskNames.push(loadingAction.name);
+  const { allResult, runningActionSet } = updateActionsResult;
+  const pendingTaskNameArray = [];
+  for (const runningAction of runningActionSet) {
+    pendingTaskNameArray.push(runningAction.name);
   }
-  workingWhile(() => allResult, loadingTaskNames);
+  workingWhile(() => allResult, pendingTaskNameArray);
   return updateActionsResult;
 };
 
@@ -36,19 +36,19 @@ const applyRouting = (
   const updateActionsResult = updateActions({
     globalAbortSignal,
     abortSignal,
-    loadSet,
-    reloadSet,
+    runSet: loadSet,
+    rerunSet: reloadSet,
     abortSignalMap,
     reason: `Document navigating to ${url}`,
   });
-  const { allResult, loadingActionSet } = updateActionsResult;
-  const loadingTaskNames = [];
+  const { allResult, runningActionSet } = updateActionsResult;
+  const pendingTaskNameArray = [];
   for (const [route, routeAction] of routeLoadRequestedMap) {
-    if (loadingActionSet.has(routeAction)) {
-      loadingTaskNames.push(`${route.relativeUrl} -> ${routeAction.name}`);
+    if (runningActionSet.has(routeAction)) {
+      pendingTaskNameArray.push(`${route.relativeUrl} -> ${routeAction.name}`);
     }
   }
-  routingWhile(() => allResult, loadingTaskNames);
+  routingWhile(() => allResult, pendingTaskNameArray);
   return updateActionsResult;
 };
 
