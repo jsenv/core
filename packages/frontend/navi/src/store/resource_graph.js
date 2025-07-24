@@ -65,11 +65,6 @@ const createResourceLifecycleManager = () => {
     return false;
   };
 
-  const shouldResetAfter = (rerunConfig, httpVerb) => {
-    // Reset logic: if rerunOn is false and httpVerb is DELETE, then reset
-    return rerunConfig === false && httpVerb === "DELETE";
-  };
-
   const isParamSubset = (parentParams, childParams) => {
     if (!parentParams || !childParams) return false;
     for (const [key, value] of Object.entries(parentParams)) {
@@ -100,16 +95,6 @@ const createResourceLifecycleManager = () => {
         triggeringAction.meta.httpVerb,
       );
 
-      // Check if we should reset instead of rerun
-      const shouldResetGetMany = shouldResetAfter(
-        config.rerunOn.GET_MANY,
-        triggeringAction.meta.httpVerb,
-      );
-      const shouldResetGet = shouldResetAfter(
-        config.rerunOn.GET,
-        triggeringAction.meta.httpVerb,
-      );
-
       // Skip if no rerun or reset rules apply
       const hasMutableIdAutorerun =
         (triggeringAction.meta.httpVerb === "POST" ||
@@ -120,8 +105,6 @@ const createResourceLifecycleManager = () => {
       if (
         !shouldRerunGetMany &&
         !shouldRerunGet &&
-        !shouldResetGetMany &&
-        !shouldResetGet &&
         triggeringAction.meta.httpVerb !== "DELETE" &&
         !hasMutableIdAutorerun
       ) {
@@ -171,25 +154,15 @@ const createResourceLifecycleManager = () => {
             const shouldRerun = candidateIsPlural
               ? shouldRerunGetMany
               : shouldRerunGet;
-            if (shouldRerun) {
-              if (!paramScopePredicate(actionCandidate)) {
-                break config_effect;
-              }
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("same-resource autorerun");
-              continue;
+            if (!shouldRerun) {
+              break config_effect;
             }
-            const shouldReset = candidateIsPlural
-              ? shouldResetGetMany
-              : shouldResetGet;
-            if (shouldReset) {
-              if (!paramScopePredicate(actionCandidate)) {
-                break config_effect;
-              }
-              actionsToReset.add(actionCandidate);
-              reasonSet.add("same-resource reset");
-              continue;
+            if (!paramScopePredicate(actionCandidate)) {
+              break config_effect;
             }
+            actionsToRerun.add(actionCandidate);
+            reasonSet.add("same-resource autorerun");
+            continue;
           }
 
           // DELETE effects on same resource (ignores param scope)
