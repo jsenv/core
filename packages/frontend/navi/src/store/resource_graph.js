@@ -146,92 +146,99 @@ const createResourceLifecycleManager = () => {
         );
 
         for (const actionCandidate of actionCandidateArray) {
-          // Check parameter scope compatibility
-          if (!paramScopePredicate(actionCandidate)) {
+          const triggerVerb = triggeringAction.meta.httpVerb;
+          const candidateVerb = actionCandidate.meta.httpVerb;
+          const candidateIsPlural = actionCandidate.meta.httpMany;
+          if (triggerVerb === candidateVerb) {
             continue;
           }
 
-          // Same-resource autorerun rules (non-DELETE verbs)
+          // Same-resource autorerun rules (non-GET verbs) - REQUIRES parameter scope compatibility
           if (
             resourceInstance === getResourceForAction(triggeringAction) &&
-            triggeringAction.meta.httpVerb !== "DELETE"
+            triggerVerb !== "GET" &&
+            candidateVerb === "GET"
           ) {
-            if (actionCandidate.meta.httpVerb === "GET") {
-              const shouldRerun = actionCandidate.meta.httpMany
+            const shouldRerun = candidateIsPlural
+              ? shouldRerunGetMany
+              : shouldRerunGet;
+            const shouldReset = candidateIsPlural
+              ? shouldResetGetMany
+              : shouldResetGet;
+            if (shouldRerun || shouldReset) {
+              if (paramScopePredicate(actionCandidate)) {
+                if (shouldRerun) {
+                  actionsToRerun.add(actionCandidate);
+                  reasonSet.add("same-resource autorerun");
+                  continue;
+                }
+                if (shouldReset) {
+                  actionsToReset.add(actionCandidate);
+                  reasonSet.add("same-resource reset");
+                  continue;
+                }
+              }
+            }
+          }
+
+          // Same-resource DELETE rules - IGNORES parameter scope (data-driven)
+          if (
+            resourceInstance === getResourceForAction(triggeringAction) &&
+            triggerVerb === "DELETE"
+          ) {
+            // For GET actions, check if explicitly configured to rerun on DELETE
+            if (candidateVerb === "GET") {
+              const shouldRerun = candidateIsPlural
                 ? shouldRerunGetMany
                 : shouldRerunGet;
-              const shouldReset = actionCandidate.meta.httpMany
-                ? shouldResetGetMany
-                : shouldResetGet;
 
               if (shouldRerun) {
                 actionsToRerun.add(actionCandidate);
-                reasonSet.add("same-resource autorerun");
-              } else if (shouldReset) {
-                actionsToReset.add(actionCandidate);
-                reasonSet.add("same-resource reset");
+                reasonSet.add("same-resource DELETE rerun GET");
+                continue;
               }
-            }
-          }
-
-          // Same-resource DELETE rules
-          if (
-            resourceInstance === getResourceForAction(triggeringAction) &&
-            triggeringAction.meta.httpVerb === "DELETE" &&
-            actionCandidate.meta.httpVerb === "GET"
-          ) {
-            const { dataSignal } = getActionPrivateProperties(triggeringAction);
-            const deletedIds = triggeringAction.meta.httpMany
-              ? dataSignal.peek()
-              : [dataSignal.peek()];
-
-            if (
-              deletedIds &&
-              deletedIds.length > 0 &&
-              deletedIds.every((id) => id !== undefined)
-            ) {
-              // For GET_MANY: only rerun if explicitly configured, never reset
-              if (actionCandidate.meta.httpMany) {
-                const shouldRerun = shouldRerunGetMany;
-                if (shouldRerun) {
-                  actionsToRerun.add(actionCandidate);
-                  reasonSet.add("same-resource DELETE rerun GET_MANY");
-                }
-                // Never reset GET_MANY - they contain other resources
-              }
-              // For single GET: reset if it corresponds to a deleted resource
-              else if (deletedIds.includes(actionCandidate.data)) {
+              if (!candidateIsPlural) {
+                // Default behavior for GET: reset single GET,
                 actionsToReset.add(actionCandidate);
                 reasonSet.add("same-resource DELETE reset GET");
+                continue;
               }
+            }
+
+            // never reset MANY
+            if (!candidateIsPlural) {
+              // For all other HTTP verbs (POST, PUT, PATCH), reset them
+              actionsToReset.add(actionCandidate);
+              reasonSet.add("same-resource DELETE reset");
+              continue;
             }
           }
 
-          // Cross-resource dependency autorerun
+          // Cross-resource dependency autorerun - IGNORES parameter scope (cross-resource relationships)
           const triggeringResource = getResourceForAction(triggeringAction);
           if (
             triggeringResource &&
-            resourceDependencies.get(triggeringResource)?.has(resourceInstance)
+            resourceDependencies
+              .get(triggeringResource)
+              ?.has(resourceInstance) &&
+            triggerVerb !== "GET" &&
+            candidateVerb === "GET" &&
+            candidateIsPlural
           ) {
-            if (
-              triggeringAction.meta.httpVerb !== "GET" &&
-              actionCandidate.meta.httpVerb === "GET" &&
-              actionCandidate.meta.httpMany
-            ) {
-              actionsToRerun.add(actionCandidate);
-              reasonSet.add("dependency autorerun");
-            }
+            actionsToRerun.add(actionCandidate);
+            reasonSet.add("dependency autorerun");
+            continue;
           }
 
-          // POST/PUT/PATCH-specific autorerun for mutableId actions
+          // POST/PUT/PATCH-specific autorerun for mutableId actions - IGNORES parameter scope (data-driven)
           // When a POST/PUT/PATCH action completes successfully, it means a resource was created/updated.
           // If we have GET actions using mutableId that are currently in 404 (because the resource
           // didn't exist), we should rerun them since a resource with that mutableId now exists.
           // For PUT/PATCH, we also need to handle mutableId changes (e.g., renaming).
           if (
             hasMutableIdAutorerun &&
-            actionCandidate.meta.httpVerb === "GET" &&
-            !actionCandidate.meta.httpMany &&
+            candidateVerb === "GET" &&
+            !candidateIsPlural &&
             resourceInstance === getResourceForAction(triggeringAction)
           ) {
             const { computedDataSignal } =
@@ -257,7 +264,7 @@ const createResourceLifecycleManager = () => {
                   reasonSet.add(
                     `${triggeringAction.meta.httpVerb}-mutableId autorerun`,
                   );
-                  break; // No need to check other mutableIdKeys for this instance
+                  continue; // Found match, no need to check other mutableIdKeys for this instance
                 }
               }
             }
