@@ -150,8 +150,11 @@ const createResourceLifecycleManager = () => {
             continue;
           }
 
-          // Same-resource autoreload rules
-          if (resourceInstance === getResourceForAction(triggeringAction)) {
+          // Same-resource autoreload rules (non-DELETE verbs)
+          if (
+            resourceInstance === getResourceForAction(triggeringAction) &&
+            triggeringAction.meta.httpVerb !== "DELETE"
+          ) {
             if (actionCandidate.meta.httpVerb === "GET") {
               const shouldReload = actionCandidate.meta.httpMany
                 ? shouldReloadGetMany
@@ -170,24 +173,9 @@ const createResourceLifecycleManager = () => {
             }
           }
 
-          // Cross-resource dependency autoreload
-          const triggeringResource = getResourceForAction(triggeringAction);
+          // Same-resource DELETE rules
           if (
-            triggeringResource &&
-            resourceDependencies.get(triggeringResource)?.has(resourceInstance)
-          ) {
-            if (
-              triggeringAction.meta.httpVerb !== "GET" &&
-              actionCandidate.meta.httpVerb === "GET" &&
-              actionCandidate.meta.httpMany
-            ) {
-              actionsToReload.add(actionCandidate);
-              reasonSet.add("dependency autoreload");
-            }
-          }
-
-          // DELETE-specific autoreload
-          if (
+            resourceInstance === getResourceForAction(triggeringAction) &&
             triggeringAction.meta.httpVerb === "DELETE" &&
             actionCandidate.meta.httpVerb === "GET"
           ) {
@@ -201,16 +189,36 @@ const createResourceLifecycleManager = () => {
               deletedIds.length > 0 &&
               deletedIds.every((id) => id !== undefined)
             ) {
-              // Always reload GET_MANY to update the list
+              // For GET_MANY: only reload if explicitly configured, never unload
               if (actionCandidate.meta.httpMany) {
-                actionsToReload.add(actionCandidate);
-                reasonSet.add("DELETE-affected GET actions");
+                const shouldReload = shouldReloadGetMany;
+                if (shouldReload) {
+                  actionsToReload.add(actionCandidate);
+                  reasonSet.add("same-resource DELETE reload GET_MANY");
+                }
+                // Never unload GET_MANY - they contain other resources
               }
-              // For single GET, unload if it corresponds to a deleted resource
+              // For single GET: unload if it corresponds to a deleted resource
               else if (deletedIds.includes(actionCandidate.data)) {
                 actionsToUnload.add(actionCandidate);
-                reasonSet.add("DELETE-affected GET actions (unload)");
+                reasonSet.add("same-resource DELETE unload GET");
               }
+            }
+          }
+
+          // Cross-resource dependency autoreload
+          const triggeringResource = getResourceForAction(triggeringAction);
+          if (
+            triggeringResource &&
+            resourceDependencies.get(triggeringResource)?.has(resourceInstance)
+          ) {
+            if (
+              triggeringAction.meta.httpVerb !== "GET" &&
+              actionCandidate.meta.httpVerb === "GET" &&
+              actionCandidate.meta.httpMany
+            ) {
+              actionsToReload.add(actionCandidate);
+              reasonSet.add("dependency autoreload");
             }
           }
 
