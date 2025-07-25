@@ -8,6 +8,7 @@ import.meta.css = /* css */ `
   [name="element_with_loader_wrapper"] {
     display: inline-flex;
     position: relative;
+    width: fit-content;
   }
 
   [name="loading_rectangle_wrapper"] {

@@ -11,6 +11,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
         Link,
@@ -18,41 +19,184 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        const [selectedItems, setSelectedItems] = useState(new Set());
+
+        const handleSelectionChange = (checked, { value }) => {
+          const newSelection = new Set(selectedItems);
+          if (checked) {
+            newSelection.add(value);
+          } else {
+            newSelection.delete(value);
+          }
+          setSelectedItems(newSelection);
+        };
+
         return (
-          <div>
-            <Link href="#">Default link</Link>
-            <br />
-            <Link href="#" readOnly>
-              This link is readonly
-            </Link>
-            <br />
-            <Link href="#" disabled>
-              This link is disabled
-            </Link>
-            <br />
-            <Link href="#" loading readOnly>
-              This link is loading and readOnly
-            </Link>
-            <br />
-            <br />
-            <div style="border: 1px solid red;">
-              <Link href="#" style="background: lightblue">
-                This link has background
-              </Link>
-              <br />
-              <Link href="#" style="background: lightblue">
-                This link has background
-              </Link>
-              <br />
-              <Link
-                href="#"
-                style="background: lightblue;"
-                data-outline-inset
-                loading
-              >
-                This link has background and is loading
-              </Link>
-            </div>
+          <div style="padding: 20px; font-family: system-ui, sans-serif; max-width: 800px;">
+            <h1>Link Component Demo</h1>
+
+            <section style="margin-bottom: 40px;">
+              <h2>Basic Links</h2>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <Link
+                  href="#"
+                  style="text-decoration: none; color: #0066cc; padding: 8px 12px; border-radius: 4px; display: inline-block; transition: background-color 0.2s;"
+                >
+                  Default link
+                </Link>
+
+                <Link
+                  href="#"
+                  readOnly
+                  style="text-decoration: none; color: #666; padding: 8px 12px; border-radius: 4px; display: inline-block;"
+                >
+                  Read-only link
+                </Link>
+
+                <Link
+                  href="#"
+                  disabled
+                  style="text-decoration: none; color: #999; padding: 8px 12px; border-radius: 4px; display: inline-block;"
+                >
+                  Disabled link
+                </Link>
+
+                <Link
+                  href="#"
+                  loading
+                  readOnly
+                  style="text-decoration: none; color: #666; padding: 8px 12px; border-radius: 4px; display: inline-block;"
+                >
+                  Loading link
+                </Link>
+              </div>
+            </section>
+
+            <section style="margin-bottom: 40px;">
+              <h2>Styled Links</h2>
+              <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: #f8f9fa;">
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <Link
+                    href="#"
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
+                  >
+                    Gradient button link
+                  </Link>
+
+                  <Link
+                    href="#"
+                    style="background: #28a745; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
+                  >
+                    Success button link
+                  </Link>
+
+                  <Link
+                    href="#"
+                    style="background: #dc3545; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
+                    data-outline-inset
+                    loading
+                  >
+                    Loading button link
+                  </Link>
+                </div>
+              </div>
+            </section>
+
+            <section style="margin-bottom: 40px;">
+              <h2>Selectable Links</h2>
+              <p style="color: #666; margin-bottom: 16px;">
+                Hold{" "}
+                <kbd style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">
+                  Cmd/Ctrl
+                </kbd>{" "}
+                + Click to select multiple items
+              </p>
+
+              <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: white;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <Link
+                    href="#"
+                    selectable
+                    selected={selectedItems.has("item-1")}
+                    onSelectionChange={handleSelectionChange}
+                    name="items"
+                    value="item-1"
+                    style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
+                  >
+                    📄 Document 1 - Important Report
+                  </Link>
+
+                  <Link
+                    href="#"
+                    selectable
+                    selected={selectedItems.has("item-2")}
+                    onSelectionChange={handleSelectionChange}
+                    name="items"
+                    value="item-2"
+                    style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
+                  >
+                    📊 Spreadsheet - Q4 Data
+                  </Link>
+
+                  <Link
+                    href="#"
+                    selectable
+                    selected={selectedItems.has("item-3")}
+                    onSelectionChange={handleSelectionChange}
+                    name="items"
+                    value="item-3"
+                    style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
+                  >
+                    🖼️ Image Gallery - Team Photos
+                  </Link>
+
+                  <Link
+                    href="#"
+                    selectable
+                    selected={selectedItems.has("item-4")}
+                    onSelectionChange={handleSelectionChange}
+                    name="items"
+                    value="item-4"
+                    style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
+                  >
+                    🎥 Video - Product Demo
+                  </Link>
+                </div>
+
+                {selectedItems.size > 0 && (
+                  <div style="margin-top: 16px; padding: 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #1976d2;">
+                    <strong>Selected items:</strong>{" "}
+                    {Array.from(selectedItems).join(", ")}
+                    <br />
+                    <button
+                      onClick={() => setSelectedItems(new Set())}
+                      style="margin-top: 8px; padding: 4px 12px; background: #1976d2; color: white; border: none; border-radius: 4px; font-size: 0.9em; cursor: pointer;"
+                    >
+                      Clear selection
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section>
+              <h2>Navigation Instructions</h2>
+              <div style="background: #f8f9fa; padding: 16px; border-radius: 6px; color: #666;">
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li>
+                    <strong>Normal click:</strong> Navigate to the link
+                  </li>
+                  <li>
+                    <strong>Cmd/Ctrl + click:</strong> Toggle selection (for
+                    selectable links)
+                  </li>
+                  <li>
+                    <strong>Shift + click:</strong> Range selection (for
+                    selectable links)
+                  </li>
+                </ul>
+              </div>
+            </section>
           </div>
         );
       };

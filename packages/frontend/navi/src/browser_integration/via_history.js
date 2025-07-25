@@ -70,6 +70,9 @@ export const setupBrowserIntegrationViaHistory = ({
       if (!href || !href.startsWith(window.location.origin)) {
         return;
       }
+      if (linkElement.hasAttribute("data-readonly")) {
+        return;
+      }
       // TODO: ignore anchor navigation
       e.preventDefault();
       const state = null;
