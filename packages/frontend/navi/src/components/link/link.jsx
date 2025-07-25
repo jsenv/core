@@ -163,15 +163,14 @@ const LinkWithSelection = forwardRef((props, ref) => {
   return (
     <div className="navi_link_container">
       <input
+        className="navi_link_checkbox"
         type="checkbox"
         name={name}
         value={value}
         checked={isSelected}
-        // Prevent direct checkbox interaction - only via link clicks
+        // Prevent direct checkbox interaction - only via link clicks or keyboard nav (arrows)
         disabled
-        className="navi_link_checkbox"
-        aria-label={`Select ${typeof children === "string" ? children : "item"}`}
-        tabIndex={-1} // Don't interfere with link tab order
+        tabIndex={-1} // Don't interfere with link tab order (might be overkill because there is already [disabled])
       />
       <LinkPlain
         ref={ref}
