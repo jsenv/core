@@ -26,35 +26,25 @@
             <section style="margin-bottom: 40px;">
               <h2>Basic Links</h2>
               <div style="display: flex; flex-direction: column; gap: 12px;">
-                <Link
-                  href="#"
-                  style="text-decoration: none; color: #0066cc; padding: 8px 12px; border-radius: 4px; display: inline-block; transition: background-color 0.2s;"
-                >
-                  Default link
+                <Link href="#default">Default link</Link>
+
+                <Link href="#active" data-active>
+                  Active link
                 </Link>
 
-                <Link
-                  href="#"
-                  readOnly
-                  style="text-decoration: none; color: #666; padding: 8px 12px; border-radius: 4px; display: inline-block;"
-                >
+                <Link href="#visited" data-visited>
+                  Visited link
+                </Link>
+
+                <Link href="#readonly" readOnly>
                   Read-only link
                 </Link>
 
-                <Link
-                  href="#"
-                  disabled
-                  style="text-decoration: none; color: #999; padding: 8px 12px; border-radius: 4px; display: inline-block;"
-                >
+                <Link href="#disabled" disabled>
                   Disabled link
                 </Link>
 
-                <Link
-                  href="#"
-                  loading
-                  readOnly
-                  style="text-decoration: none; color: #666; padding: 8px 12px; border-radius: 4px; display: inline-block;"
-                >
+                <Link href="#loading" loading readOnly>
                   Loading link
                 </Link>
               </div>

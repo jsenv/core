@@ -56,6 +56,14 @@ import.meta.css = /* css */ `
   .navi_link[data-selected] {
     background-color: light-dark(#bbdefb, #2563eb);
   }
+
+  .navi_link[data-active] {
+    font-weight: bold;
+  }
+
+  .navi_link[data-visited] {
+    color: light-dark(#6a1b9a, #ab47bc);
+  }
 `;
 
 export const Link = forwardRef((props, ref) => {
@@ -112,7 +120,7 @@ const LinkPlain = forwardRef((props, ref) => {
         className={["navi_link", ...className.split(" ")].join(" ")}
         aria-busy={loading}
         inert={disabled}
-        data-field
+        data-field=""
         data-readonly={readOnly ? "" : undefined}
         onClick={(e) => {
           closeValidationMessage(e.target, "click");
