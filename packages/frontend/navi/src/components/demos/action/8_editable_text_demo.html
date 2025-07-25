@@ -381,6 +381,7 @@
       // eslint-disable-next-line no-unused-vars
       const SignalControlDemo = () => {
         const [result, setResult] = useState("");
+        const { editable, startEditing, stopEditing } = useEditableController();
 
         return (
           <div className="demo-card">
@@ -390,7 +391,9 @@
               <div className="editable-container">
                 <EditableText
                   valueSignal={valueSignal}
+                  editable={editable}
                   onEditEnd={() => {
+                    stopEditing();
                     setResult("");
                   }}
                   onActionStart={() => {
@@ -398,8 +401,18 @@
                   }}
                   name="coucou"
                   action={boundAction}
+                  cancelOnEscape
+                  cancelOnBlurInvalid
                   constraints={[SINGLE_SPACE_CONSTRAINT]}
-                />
+                >
+                  <span
+                    onClick={() => {
+                      startEditing();
+                    }}
+                  >
+                    {valueSignal.value}
+                  </span>
+                </EditableText>
               </div>
             </div>
             <div className="button-group">

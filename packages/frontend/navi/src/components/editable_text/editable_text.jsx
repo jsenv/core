@@ -26,13 +26,27 @@ export const useEditableController = () => {
 };
 
 export const EditableText = forwardRef((props, ref) => {
-  const { children, action, editable, value, onEditEnd, ...rest } = props;
+  let { children, action, editable, value, valueSignal, onEditEnd, ...rest } =
+    props;
   if (import.meta.DEV && !action) {
     console.warn(`EditableText requires an action prop`);
   }
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+
+  if (valueSignal) {
+    value = valueSignal.value;
+  }
+
+  const editablePreviousRef = useRef(editable);
+  const valueWhenEditStartRef = useRef(editable ? value : undefined);
+  if (editablePreviousRef.current !== editable) {
+    if (editable) {
+      valueWhenEditStartRef.current = value;
+    }
+    editablePreviousRef.current = editable;
+  }
 
   return (
     <>
@@ -48,13 +62,16 @@ export const EditableText = forwardRef((props, ref) => {
           cancelOnEscape
           cancelOnBlurInvalid
           onCancel={(e) => {
+            if (valueSignal) {
+              valueSignal.value = valueWhenEditStartRef.current;
+            }
             onEditEnd({
               cancelled: true,
               event: e,
             });
           }}
           onBlur={(e) => {
-            if (e.target.value === value) {
+            if (e.target.value === valueWhenEditStartRef.current) {
               onEditEnd({
                 cancelled: true,
                 event: e,
@@ -70,6 +87,7 @@ export const EditableText = forwardRef((props, ref) => {
           }}
           ref={innerRef}
           value={value}
+          valueSignal={valueSignal}
           {...rest}
         />
       )}
