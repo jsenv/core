@@ -3,40 +3,46 @@ import { useContext } from "preact/hooks";
 
 const SelectionContext = createContext(null);
 
-export const Selection = ({ value, onChange, children }) => {
+export const Selection = ({ value = [], onChange, children }) => {
+  const selection = value || [];
+
   const contextValue = {
-    selectedValues: new Set(value || []),
-    onSelectionChange: (
-      checked,
-      { value: itemValue, shiftKey, metaKey, ctrlKey },
-    ) => {
-      const newSelection = new Set(value || []);
+    selection,
 
-      const isMultiSelect = metaKey || ctrlKey;
-      const isShiftSelect = shiftKey;
-      const isSingleSelect = !isMultiSelect && !isShiftSelect;
-
-      if (isSingleSelect) {
-        // Single select - only this item
-        newSelection.clear();
-        if (checked) {
-          newSelection.add(itemValue);
+    add: (...arrayOfValueToAddToSelection) => {
+      const selectionWithValues = [];
+      for (const value of selection) {
+        selectionWithValues.push(value);
+      }
+      let modified = false;
+      for (const valueToAdd of arrayOfValueToAddToSelection) {
+        if (selectionWithValues.includes(valueToAdd)) {
+          continue;
         }
-      } else if (isMultiSelect) {
-        // Multi-select - toggle this item
-        if (checked) {
-          newSelection.add(itemValue);
+        modified = true;
+        selectionWithValues.push(valueToAdd);
+      }
+      if (modified) {
+        onChange?.(selectionWithValues);
+      }
+    },
+
+    remove: (...arrayOfValueToRemoveFromSelection) => {
+      let modified = false;
+      const selectionWithoutValues = [];
+      for (const value of selection) {
+        if (arrayOfValueToRemoveFromSelection.includes(value)) {
+          modified = true;
         } else {
-          newSelection.delete(itemValue);
+          selectionWithoutValues.push(value);
         }
-      } else if (isShiftSelect) {
-        // Range select - would need additional context for range logic
-        // For now, just add this item
-        newSelection.add(itemValue);
       }
 
-      onChange?.(Array.from(newSelection));
+      if (modified) {
+        onChange?.(selectionWithoutValues);
+      }
     },
+
     isSelected: (itemValue) => {
       return (value || []).includes(itemValue);
     },
