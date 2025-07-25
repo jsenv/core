@@ -152,6 +152,11 @@ const LinkWithSelection = forwardRef((props, ref) => {
     onClick,
     ...rest
   } = props;
+  if (!name) {
+    throw new Error(
+      "LinkWithSelection requires a 'name' prop for selection context.",
+    );
+  }
 
   const checkboxRef = useRef();
   const isSelected = selectionContext.isSelected(value);
@@ -208,7 +213,7 @@ const LinkWithSelection = forwardRef((props, ref) => {
           }
         }
 
-        selectionContext.add(valuesToSelect, []);
+        selectionContext.add(...valuesToSelect);
       } else {
         // No previous selection, just select this one
         selectionContext.add(value);
@@ -227,7 +232,8 @@ const LinkWithSelection = forwardRef((props, ref) => {
         name={name}
         value={value}
         checked={isSelected}
-        disabled // Prevent direct checkbox interaction - only via link clicks
+        // Prevent direct checkbox interaction - only via link clicks
+        disabled
         className="navi_link_checkbox"
         aria-label={`Select ${typeof children === "string" ? children : "item"}`}
         tabIndex={-1} // Don't interfere with link tab order
