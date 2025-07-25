@@ -48,16 +48,25 @@ export const EditableText = forwardRef((props, ref) => {
           cancelOnEscape
           cancelOnBlurInvalid
           onCancel={(e) => {
-            onEditEnd(e);
+            onEditEnd({
+              cancelled: true,
+              event: e,
+            });
           }}
           onBlur={(e) => {
             if (e.target.value === value) {
-              onEditEnd(e);
+              onEditEnd({
+                cancelled: true,
+                event: e,
+              });
             }
           }}
           action={action}
           onActionEnd={(e) => {
-            onEditEnd(e);
+            onEditEnd({
+              success: true,
+              event: e,
+            });
           }}
           ref={innerRef}
           value={value}

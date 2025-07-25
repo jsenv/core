@@ -192,7 +192,7 @@
                   editable={editable}
                   onEditEnd={() => {
                     stopEditing();
-                    setResult(`✅ Text updated successfully`);
+                    setResult(``);
                   }}
                   name="test"
                   action={({ test }) => {
@@ -238,7 +238,7 @@
                   onEditEnd={() => {
                     stopEditing();
                     setIsLoading(false);
-                    setResult(`✅ Text saved after delay`);
+                    setResult();
                   }}
                   name="test"
                   action={async ({ test }) => {
@@ -290,15 +290,9 @@
               <div className="editable-container">
                 <EditableText
                   editable={editable}
-                  onEditEnd={(editResult) => {
+                  onEditEnd={() => {
                     stopEditing();
-                    if (editResult.success) {
-                      setResult(`✅ Unexpected success!`);
-                    } else {
-                      setResult(
-                        `❌ Edit failed as expected: ${editResult.error?.message || "Unknown error"}`,
-                      );
-                    }
+                    setResult("");
                   }}
                   name="test"
                   action={async ({ test }) => {
@@ -341,13 +335,9 @@
               <div className="editable-container">
                 <EditableText
                   editable={editable}
-                  onEditEnd={(editResult) => {
+                  onEditEnd={() => {
                     stopEditing();
-                    if (editResult.success) {
-                      setResult(`✅ Styled text updated`);
-                    } else {
-                      setResult(`❌ Edit cancelled or failed`);
-                    }
+                    setResult("");
                   }}
                   name="test"
                   action={({ test }) => {
@@ -395,12 +385,8 @@
               <div className="editable-container">
                 <EditableText
                   editableSignal={editableSignal}
-                  onEditEnd={(editResult) => {
-                    if (editResult.success) {
-                      setResult(`✅ Signal-controlled text updated`);
-                    } else {
-                      setResult(`❌ Edit cancelled or failed`);
-                    }
+                  onEditEnd={() => {
+                    setResult("");
                   }}
                   name="test"
                   action={async ({ test }) => {

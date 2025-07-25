@@ -1013,12 +1013,10 @@ export const createAction = (callback, rootOptions = {}) => {
           batch(() => {
             errorSignal.value = e;
             runningStateSignal.value = FAILED;
-            if (onError) {
-              onError(e, action);
-            }
+            onError?.(e, action);
           });
 
-          if (ui.hasRenderers) {
+          if (ui.hasRenderers || onError) {
             console.error(e);
             // For UI-bound actions: error is properly handled by logging + UI display
             // Return error instead of throwing to signal it's handled and prevent:
