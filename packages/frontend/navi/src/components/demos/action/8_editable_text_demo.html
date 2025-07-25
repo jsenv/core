@@ -161,6 +161,7 @@
         useEditableController,
         // eslint-disable-next-line no-unused-vars
         EditableText,
+        createAction,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -370,11 +371,15 @@
       };
 
       // Create signal outside component to persist across renders
-      const editableSignal = signal(false);
+      const valueSignal = signal("Signal-controlled editable text");
+      const action = createAction(async ({ test }) => {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        return `Signal update: "${test}"`;
+      });
+      const boundAction = action.bindParams({ test: valueSignal });
 
       // eslint-disable-next-line no-unused-vars
       const SignalControlDemo = () => {
-        const [value, setValue] = useState("Signal-controlled editable text");
         const [result, setResult] = useState("");
 
         return (
@@ -384,18 +389,15 @@
               <label>Signal-Controlled Content:</label>
               <div className="editable-container">
                 <EditableText
-                  editableSignal={editableSignal}
+                  valueSignal={valueSignal}
                   onEditEnd={() => {
                     setResult("");
                   }}
-                  name="test"
-                  action={async ({ test }) => {
+                  onActionStart={() => {
                     setResult("Saving via signal...");
-                    await new Promise((resolve) => setTimeout(resolve, 800));
-                    setValue(test);
-                    return `Signal update: "${test}"`;
                   }}
-                  value={value}
+                  name="coucou"
+                  action={boundAction}
                   constraints={[SINGLE_SPACE_CONSTRAINT]}
                 />
               </div>
@@ -404,39 +406,16 @@
               <button
                 onClick={() => {
                   console.log("Setting editable signal to true");
-                  editableSignal.value = true;
-                }}
-                disabled={editableSignal.value}
-              >
-                Start Editing via Signal
-              </button>
-              <button
-                onClick={() => {
-                  console.log("Setting editable signal to false");
-                  editableSignal.value = false;
-                }}
-                disabled={!editableSignal.value}
-              >
-                Stop Editing via Signal
-              </button>
-              <button
-                onClick={() => {
-                  console.log(
-                    "Toggling editable signal, current:",
-                    editableSignal.value,
-                  );
-                  editableSignal.value = !editableSignal.value;
+                  valueSignal.value = "toto";
                 }}
               >
-                Toggle Edit Mode
+                Set signal value to "toto"
               </button>
             </div>
             <div
               className={`result-display ${result === "Saving via signal..." ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
             >
-              Signal value: {editableSignal.value ? "editing" : "read-only"}
-              <br />
-              Current value: "{value}"
+              Signal value: {valueSignal.value}
               <br />
               {result || "Use buttons to control edit mode via signal..."}
             </div>
