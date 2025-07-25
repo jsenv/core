@@ -6,21 +6,22 @@ const SelectionContext = createContext(null);
 export const Selection = ({ value = [], onChange, children }) => {
   const selection = value || [];
   const registryRef = useRef([]); // Array<value>
+  const lastSelectedValueRef = useRef(value[value.length - 1]);
 
   const contextValue = {
     selection,
 
-    // Registry methods for tracking selectable items
     register: (value) => {
       const registry = registryRef.current;
       const existingIndex = registry.includes(value);
       if (existingIndex >= 0) {
-        // already exists, no need to update
+        console.warn(
+          `SelectionContext: Attempted to register an already registered value: ${value}. All values must be unique.`,
+        );
         return;
       }
       registry.push(value);
     },
-
     unregister: (value) => {
       const registry = registryRef.current;
       const index = registry.indexOf(value);
@@ -28,11 +29,18 @@ export const Selection = ({ value = [], onChange, children }) => {
         registry.splice(index, 1);
       }
     },
-
     getAllItems: () => {
       return registryRef.current;
     },
 
+    isSelected: (itemValue) => {
+      return selection.includes(itemValue);
+    },
+
+    // basic methods to manipulate selection
+    set: (newSelection, event = null) => {
+      onChange?.(newSelection, event);
+    },
     add: (arrayOfValueToAddToSelection, event = null) => {
       const selectionWithValues = [];
       for (const value of selection) {
@@ -45,12 +53,27 @@ export const Selection = ({ value = [], onChange, children }) => {
         }
         modified = true;
         selectionWithValues.push(valueToAdd);
+        lastSelectedValueRef.current = valueToAdd;
       }
       if (modified) {
         onChange?.(selectionWithValues, event);
       }
     },
+    remove: (arrayOfValueToRemoveFromSelection, event = null) => {
+      let modified = false;
+      const selectionWithoutValues = [];
+      for (const value of selection) {
+        if (arrayOfValueToRemoveFromSelection.includes(value)) {
+          modified = true;
+        } else {
+          selectionWithoutValues.push(value);
+        }
+      }
 
+      if (modified) {
+        onChange?.(selectionWithoutValues, event);
+      }
+    },
     addRange: (fromValue, toValue, event = null) => {
       const registry = registryRef.current;
 
@@ -73,33 +96,8 @@ export const Selection = ({ value = [], onChange, children }) => {
         const valuesToSelect = registry.slice(start, end + 1);
         contextValue.add(valuesToSelect, event);
       }
-    }, // Helper method to find the last selected item (useful for shift-click)
-    getLastSelectedValue: (excludeValue) => {
-      const registry = registryRef.current;
-      let lastSelected = null;
-
-      registry.forEach((value) => {
-        if (value !== excludeValue && selection.includes(value)) {
-          lastSelected = value;
-        }
-      });
-
-      return lastSelected;
     },
-
-    // Convenience method for shift-click: add range from last selected to target value
-    addFromLastSelectedTo: (value, event = null) => {
-      const lastSelectedValue = contextValue.getLastSelectedValue(value);
-
-      if (lastSelectedValue) {
-        contextValue.addRange(lastSelectedValue, value, event);
-      } else {
-        // No previous selection, just select this one
-        contextValue.add([value], event);
-      }
-    },
-
-    // Convenience method for multi-select: toggle selection state
+    // Convenience method for multi-select: toggle, addFromLastSelectedTo
     toggle: (value, event = null) => {
       if (selection.includes(value)) {
         contextValue.remove([value], event);
@@ -107,28 +105,16 @@ export const Selection = ({ value = [], onChange, children }) => {
         contextValue.add([value], event);
       }
     },
-    remove: (arrayOfValueToRemoveFromSelection, event = null) => {
-      let modified = false;
-      const selectionWithoutValues = [];
-      for (const value of selection) {
-        if (arrayOfValueToRemoveFromSelection.includes(value)) {
-          modified = true;
-        } else {
-          selectionWithoutValues.push(value);
-        }
+    // Convenience method for shift-click: add range from last selected to target value
+    addFromLastSelectedTo: (value, event = null) => {
+      const lastSelectedValue = lastSelectedValueRef.current;
+
+      if (lastSelectedValue) {
+        contextValue.addRange(lastSelectedValue, value, event);
+      } else {
+        // No previous selection, just select this one
+        contextValue.add([value], event);
       }
-
-      if (modified) {
-        onChange?.(selectionWithoutValues, event);
-      }
-    },
-
-    set: (newSelection, event = null) => {
-      onChange?.(newSelection, event);
-    },
-
-    isSelected: (itemValue) => {
-      return selection.includes(itemValue);
     },
   };
 
