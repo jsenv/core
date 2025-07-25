@@ -15,6 +15,9 @@ import.meta.css = /* css */ `
   .link_with_icon[data-active] {
     background-color: lightgrey;
   }
+  .link_with_icon[data-active][data-selected] {
+    background-color: light-dark(#bbdefb, #2563eb);
+  }
 `;
 
 export const LinkWithIcon = ({
