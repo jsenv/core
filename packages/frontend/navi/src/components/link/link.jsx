@@ -5,7 +5,10 @@ import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useSelectionContext } from "../selection/selection_context.jsx";
+import {
+  useRegisterSelectionValue,
+  useSelectionContext,
+} from "../selection/selection_context.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useKeyboardShortcuts } from "../use_keyboard_shortcuts.js";
@@ -161,15 +164,8 @@ const LinkWithSelection = forwardRef((props, ref) => {
   const checkboxRef = useRef();
   const isSelected = selectionContext.isSelected(value);
 
-  // Register this link with the selection context
-  useLayoutEffect(() => {
-    const checkbox = checkboxRef.current;
-    if (checkbox) {
-      selectionContext.register(value);
-      return () => selectionContext.unregister(value);
-    }
-    return undefined;
-  }, [selectionContext, value]);
+  // Register this link with the selection context using the custom hook
+  useRegisterSelectionValue(value);
 
   const handleLinkClick = (e) => {
     const isMultiSelect = e.metaKey || e.ctrlKey;

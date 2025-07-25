@@ -1,5 +1,5 @@
 import { createContext } from "preact";
-import { useContext, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 const SelectionContext = createContext(null);
 
@@ -149,4 +149,16 @@ export const Selection = ({ value = [], onChange, children }) => {
 
 export const useSelectionContext = () => {
   return useContext(SelectionContext);
+};
+
+export const useRegisterSelectionValue = (value) => {
+  const selectionContext = useSelectionContext();
+
+  useLayoutEffect(() => {
+    if (selectionContext) {
+      selectionContext.register(value);
+      return () => selectionContext.unregister(value);
+    }
+    return undefined;
+  }, [selectionContext, value]);
 };
