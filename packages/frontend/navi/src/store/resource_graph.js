@@ -465,8 +465,8 @@ const createHttpHandlerForRootResource = (
   ) => {
     const applyDataEffect =
       httpVerb === "DELETE"
-        ? (idArray) => {
-            store.drop(idArray);
+        ? (idOrMutableIdArray) => {
+            const idArray = store.drop(idOrMutableIdArray);
             return idArray;
           }
         : (dataArray) => {
@@ -771,26 +771,30 @@ const createHttpHandlerRelationshipToManyResource = (
             return childItemIdArray;
           }
         : httpVerb === "DELETE"
-          ? ([itemId, childItemIdArray]) => {
-              const item = store.select(itemId);
+          ? ([itemIdOrMutableId, childItemIdOrMutableIdArray]) => {
+              const item = store.select(itemIdOrMutableId);
               const childItemArray = item[propertyName];
+              const deletedChildItemIdArray = [];
               const childItemArrayWithoutThoose = [];
               let someFound = false;
+              const deletedChildItemArray = childStore.select(
+                childItemIdOrMutableIdArray,
+              );
               for (const childItemCandidate of childItemArray) {
-                const childItemCandidateId = childItemCandidate[childIdKey];
-                if (childItemIdArray.includes(childItemCandidateId)) {
+                if (deletedChildItemArray.includes(childItemCandidate)) {
                   someFound = true;
+                  deletedChildItemIdArray.push(childItemCandidate[childIdKey]);
                 } else {
                   childItemArrayWithoutThoose.push(childItemCandidate);
                 }
               }
               if (someFound) {
                 store.upsert({
-                  [idKey]: itemId,
+                  [idKey]: item[idKey],
                   [propertyName]: childItemArrayWithoutThoose,
                 });
               }
-              return childItemIdArray;
+              return deletedChildItemIdArray;
             }
           : (childDataArray) => {
               // hum ici aussi on voudra reload "user" pour POST
