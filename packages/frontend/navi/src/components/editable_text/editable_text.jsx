@@ -41,27 +41,27 @@ export const EditableText = forwardRef((props, ref) => {
       </div>
       {editable && (
         <Input
-          {...rest}
-          onCancel={() => {
-            onEditEnd();
-          }}
-          onBlur={(e) => {
-            if (e.target.value === value) {
-              onEditEnd();
-            }
-          }}
-          action={action}
-          onActionEnd={() => {
-            onEditEnd();
-          }}
-          ref={innerRef}
-          value={value}
           autoFocus
           autoFocusVisible
           autoSelect
           required
           cancelOnEscape
           cancelOnBlurInvalid
+          onCancel={(e) => {
+            onEditEnd(e);
+          }}
+          onBlur={(e) => {
+            if (e.target.value === value) {
+              onEditEnd(e);
+            }
+          }}
+          action={action}
+          onActionEnd={(e) => {
+            onEditEnd(e);
+          }}
+          ref={innerRef}
+          value={value}
+          {...rest}
         />
       )}
     </>

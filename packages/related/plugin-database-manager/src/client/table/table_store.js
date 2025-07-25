@@ -89,6 +89,25 @@ export const TABLE = resource("table", {
     }
     return ["tablename", tablename, { [columnName]: columnValue }];
   },
+
+  DELETE_MANY: async ({ tablenames }, { signal }) => {
+    const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/tables/`, {
+      signal,
+      method: "DELETE",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ tablenames }),
+    });
+    if (!response.ok) {
+      throw await errorFromResponse(response, `Failed to delete table`);
+    }
+    const { meta } = await response.json();
+    const { count } = meta;
+    setTableCount(count);
+    return tablenames;
+  },
 });
 
 export const useTableArrayInStore = TABLE.useArray;

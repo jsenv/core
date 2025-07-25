@@ -59,6 +59,7 @@ export const ExplorerGroup = forwardRef((props, ref) => {
     useRenameItemAction,
     useCreateItemAction,
     useDeleteItemAction,
+    useDeleteManyItemAction,
     onOpen,
     onClose,
     resizable,
@@ -164,6 +165,7 @@ export const ExplorerGroup = forwardRef((props, ref) => {
                 useRenameItemAction={useRenameItemAction}
                 useCreateItemAction={useCreateItemAction}
                 useDeleteItemAction={useDeleteItemAction}
+                useDeleteManyItemAction={useDeleteManyItemAction}
                 isCreatingNew={isCreatingNew}
                 stopCreatingNew={stopCreatingNew}
               />

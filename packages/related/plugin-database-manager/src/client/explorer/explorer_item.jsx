@@ -3,6 +3,7 @@ import {
   createUniqueValueConstraint,
   SINGLE_SPACE_CONSTRAINT,
 } from "@jsenv/validation";
+import { useSignal } from "@preact/signals";
 import { Overflow } from "../layout/overflow.jsx";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
@@ -11,14 +12,16 @@ export const ExplorerItem = ({
   item,
   renderItem,
   useItemArrayInStore,
-  useRenameItemAction = () => undefined,
-  useDeleteItemAction = () => undefined,
+  useRenameItemAction,
+  useDeleteItemAction,
+  deleteManyAction,
 }) => {
   const itemName = item[nameKey];
-  const deleteAction = useDeleteItemAction(item);
 
-  const renameAction = useRenameItemAction(item);
   const { editable, startEditing, stopEditing } = useEditableController();
+  const deleteItemAction = useDeleteItemAction
+    ? useDeleteItemAction(item)
+    : null;
 
   const itemRendered = renderItem(item, {
     className: "explorer_item_content",
@@ -29,20 +32,34 @@ export const ExplorerItem = ({
         description: "Edit item name",
         enabled: !editable,
       },
-      {
-        key: "Backspace",
-        needsMetaKey: true,
-        action: deleteAction,
-        description: `Delete "${itemName}"`,
-        confirmMessage: `Are you sure you want to delete "${itemName}"?`,
-      },
+      ...(deleteManyAction
+        ? [
+            {
+              key: "Backspace",
+              needsMetaKey: true,
+              action: deleteManyAction || deleteItemAction,
+              description: `Delete "${itemName}"`, // I need to know the select items
+              confirmMessage: `Are you sure you want to delete "${itemName}"?`,
+            },
+          ]
+        : deleteItemAction
+          ? [
+              {
+                key: "Backspace",
+                needsMetaKey: true,
+                action: deleteManyAction || deleteItemAction,
+                description: `Delete "${itemName}"`,
+                confirmMessage: `Are you sure you want to delete "${itemName}"?`,
+              },
+            ]
+          : []),
     ],
-    children: renameAction ? (
+    children: useRenameItemAction ? (
       <RenameInputOrName
         nameKey={nameKey}
         item={item}
         useItemArrayInStore={useItemArrayInStore}
-        renameAction={renameAction}
+        useRenameItemAction={useRenameItemAction}
         editable={editable}
         stopEditing={stopEditing}
       />
@@ -57,11 +74,14 @@ const RenameInputOrName = ({
   nameKey,
   item,
   useItemArrayInStore,
-  renameAction,
+  useRenameAction,
   editable,
   stopEditing,
 }) => {
   const itemName = item[nameKey];
+  const nameSignal = useSignal(itemName);
+  const renameAction = useRenameAction(item, nameSignal);
+
   const itemArrayInStore = useItemArrayInStore();
   const otherValueSet = new Set();
   for (const itemCandidate of itemArrayInStore) {
@@ -77,8 +97,8 @@ const RenameInputOrName = ({
 
   return (
     <EditableText
-      name={renameAction.meta.valueParamName}
       action={renameAction}
+      signal={nameSignal}
       editable={editable}
       onEditEnd={stopEditing}
       value={itemName}
@@ -97,7 +117,8 @@ export const ExplorerNewItem = ({
   onCancel,
   onActionEnd,
 }) => {
-  const createItemAction = useCreateItemAction();
+  const nameSignal = useSignal("");
+  const createItemAction = useCreateItemAction(nameSignal);
   const itemArrayInStore = useItemArrayInStore();
   const valueSet = new Set();
   for (const item of itemArrayInStore) {
@@ -115,7 +136,6 @@ export const ExplorerNewItem = ({
       </FontSizedSvg>
 
       <Input
-        name={nameKey}
         action={createItemAction}
         cancelOnEscape
         cancelOnBlurInvalid={cancelOnBlurInvalid}

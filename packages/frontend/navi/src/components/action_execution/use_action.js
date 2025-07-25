@@ -32,10 +32,7 @@ const useComponentActionCacheKey = () => {
 export const useFormActionBoundToFormParams = (action) => {
   const actionCacheKey = useComponentActionCacheKey();
   const cacheKey = typeof action === "function" ? actionCacheKey : action;
-  const [formParamsSignal, updateFormParams] = useActionParamsSignal(
-    cacheKey,
-    {},
-  );
+  const [formParamsSignal, updateFormParams] = useActionParamsSignal(cacheKey);
   const formActionBoundActionToFormParams = useBoundAction(
     action,
     formParamsSignal,
@@ -99,10 +96,14 @@ export const useActionBoundToOneParam = (
   externalValue,
   fallbackValue,
   defaultValue,
+  valueSignal,
 ) => {
   const actionCacheKey = useComponentActionCacheKey();
   const cacheKey = typeof action === "function" ? actionCacheKey : action;
-  const [paramsSignal, updateParams] = useActionParamsSignal(cacheKey, {});
+  const [paramsSignal, updateParams] = useActionParamsSignal(
+    cacheKey,
+    valueSignal,
+  );
   const previousParamsSignalRef = useRef(null);
   const actionChanged =
     previousParamsSignalRef.current !== null &&
@@ -210,24 +211,30 @@ export const useAction = (action, paramsSignal) => {
 };
 
 const sharedSignalCache = new WeakMap();
-const useActionParamsSignal = (cacheKey, initialParams = {}) => {
+const useActionParamsSignal = (cacheKey, valueSignal) => {
+  if (valueSignal) {
+    return [
+      valueSignal,
+      (value) => {
+        valueSignal.value = value;
+      },
+    ];
+  }
+
   // ✅ cacheKey peut être componentId (Symbol) ou action (objet)
   const fromCache = sharedSignalCache.get(cacheKey);
   if (fromCache) {
     return fromCache;
   }
 
-  const paramsSignal = signal(initialParams);
+  const paramsSignal = signal({});
   const result = [
     paramsSignal,
     (value) => updateParamsSignal(paramsSignal, value, cacheKey),
   ];
   sharedSignalCache.set(cacheKey, result);
   if (debug) {
-    console.debug(
-      `Created params signal for ${cacheKey} with params:`,
-      initialParams,
-    );
+    console.debug(`Created params signal for ${cacheKey} with params:`, {});
   }
   return result;
 };
