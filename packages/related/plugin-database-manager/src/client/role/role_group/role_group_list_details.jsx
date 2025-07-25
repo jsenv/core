@@ -45,18 +45,21 @@ export const RoleGroupListDetails = (props) => {
         </RoleLink>
       )}
       useItemArrayInStore={useRoleArrayInStore}
-      useRenameItemAction={(role) => {
-        const renameAction = ROLE_CANNOT_LOGIN.PUT.bindParams({
-          rolname: role.rolname,
-          columnName: "rolname",
-        });
-        renameAction.meta.valueParamName = "columnValue";
-        return renameAction;
-      }}
-      useCreateItemAction={() => ROLE_CANNOT_LOGIN.POST}
+      useCreateItemAction={(valueSignal) =>
+        ROLE_CANNOT_LOGIN.POST.bindParams({
+          rolname: valueSignal,
+        })
+      }
       useDeleteItemAction={(role) =>
         ROLE_CANNOT_LOGIN.DELETE.bindParams({
           rolname: role.rolname,
+        })
+      }
+      useRenameItemAction={(role, valueSignal) =>
+        ROLE_CANNOT_LOGIN.PUT.bindParams({
+          rolname: role.rolname,
+          columnName: "rolname",
+          columnValue: valueSignal,
         })
       }
     >

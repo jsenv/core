@@ -37,27 +37,31 @@ export const DatabasesDetails = (props) => {
       nameKey="datname"
       labelChildren={<TextAndCount text={"DATABASES"} count={databaseCount} />}
       renderNewButtonChildren={() => <DatabaseWithPlusSvg />}
-      renderItem={(item, props) => (
+      renderItem={(database, props) => (
         <DatabaseLink
           draggable={false}
-          key={item.oid}
-          database={item}
+          key={database.oid}
+          value={database.datname}
+          database={database}
           {...props}
         />
       )}
       useItemArrayInStore={useDatabaseArrayInStore}
-      useRenameItemAction={(database) => {
-        const renameAction = DATABASE.PUT.bindParams({
-          datname: database.datname,
-          columnName: "datname",
-        });
-        renameAction.meta.valueParamName = "columnValue";
-        return renameAction;
-      }}
-      useCreateItemAction={() => DATABASE.POST}
+      useCreateItemAction={(valueSignal) =>
+        DATABASE.POST({
+          datname: valueSignal,
+        })
+      }
       useDeleteItemAction={(database) =>
         DATABASE.DELETE.bindParams({
           datname: database.datname,
+        })
+      }
+      useRenameItemAction={(database, valueSignal) =>
+        DATABASE.PUT.bindParams({
+          datname: database.datname,
+          columnName: "datname",
+          columnValue: valueSignal,
         })
       }
     >
