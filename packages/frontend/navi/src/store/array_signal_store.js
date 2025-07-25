@@ -425,6 +425,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       const arrayWithoutDroppedItems = [];
       let hasFound = false;
       const idToRemoveSet = new Set();
+      const idRemovedArray = [];
 
       for (const value of firstArg) {
         if (typeof value === "object" && value !== null) {
@@ -440,7 +441,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
         if (idToRemoveSet.has(existingItemId)) {
           hasFound = true;
           idToRemoveSet.delete(existingItemId);
-          removedItemArray.push(existingItem);
+          idRemovedArray.push(existingItemId);
         } else {
           arrayWithoutDroppedItems.push(existingItem);
         }
@@ -448,7 +449,7 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
       if (hasFound) {
         arraySignal.value = arrayWithoutDroppedItems;
         triggerRemovedMutations();
-        return Array.from(idToRemoveSet);
+        return idRemovedArray;
       }
       return [];
     }

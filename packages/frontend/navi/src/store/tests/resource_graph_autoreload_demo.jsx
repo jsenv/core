@@ -60,6 +60,17 @@ const USER = resource("user", {
     return user;
   },
 
+  DELETE_MANY: ({ names }) => {
+    for (const name of names) {
+      const user = userStore.get(name);
+      if (!user) {
+        throw new Error(`User ${name} not found`);
+      }
+      userStore.delete(name);
+    }
+    return names.map((name) => ({ name }));
+  },
+
   PUT: ({ name, newName, age }) => {
     console.log(`✏️ PUT user: ${name} -> ${newName || name}, age: ${age}`);
     const user = userStore.get(name);
@@ -523,6 +534,10 @@ const UsersList = () => {
     }
   };
 
+  const deleteAliceAndBob = () => {
+    USER.DELETE_MANY({ names: ["Alice", "Bob"] });
+  };
+
   return (
     <div
       style={{
@@ -556,6 +571,21 @@ const UsersList = () => {
           }}
         >
           🔄 Recharger la liste
+        </button>
+        <button
+          onClick={deleteAliceAndBob}
+          disabled={status === "loading"}
+          style={{
+            padding: "6px 12px",
+            backgroundColor: "#007bff",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: status === "loading" ? "not-allowed" : "pointer",
+            opacity: status === "loading" ? 0.6 : 1,
+          }}
+        >
+          Supprimer Alice et Bob
         </button>
       </div>
 

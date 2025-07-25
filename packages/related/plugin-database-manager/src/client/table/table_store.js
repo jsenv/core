@@ -106,7 +106,7 @@ export const TABLE = resource("table", {
     const { meta } = await response.json();
     const { count } = meta;
     setTableCount(count);
-    return tablenames;
+    return tablenames.map((tablename) => ({ tablename }));
   },
 });
 
