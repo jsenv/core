@@ -193,6 +193,31 @@ export const jsenvPluginDatabaseManager = ({
             },
           };
         },
+        "DELETE": async (request) => {
+          const tablenames = await request.json();
+          if (!Array.isArray(tablenames)) {
+            return Response.json(
+              { message: "Expected an array of tablenames" },
+              { status: 400 },
+            );
+          }
+          if (tablenames.length === 0) {
+            return Response.json(
+              { message: "No tablename provided to delete" },
+              { status: 400 },
+            );
+          }
+          const tableIdentifiers = tablenames.map((tablename) =>
+            sql(tablename),
+          );
+          await sql`DROP TABLE ${sql.unsafe(tableIdentifiers.join(", "))}`;
+          return {
+            data: null,
+            meta: {
+              count: await countRows(sql, "pg_tables"),
+            },
+          };
+        },
         "PUT /:tablename/:colname": async (request) => {
           const { tablename, colname } = request.params;
           const value = await request.json();
