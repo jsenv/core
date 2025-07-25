@@ -346,8 +346,7 @@
       // Create an action that's bound to the signal
       const toggleAction = createAction(async ({ notifications }) => {
         await delay(600);
-        const response = `✅ Notifications ${notifications ? "enabled" : "disabled"} (via signal)`;
-        return response;
+        return `✅ Notifications ${notifications ? "enabled" : "disabled"}`;
       });
       // Create a signal to control the checkbox state
       const checkedSignal = signal(false);

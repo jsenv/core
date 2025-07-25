@@ -135,7 +135,7 @@ export const useExecuteAction = (
           setError(error);
         }
       },
-      onComplete: () => {
+      onComplete: (data) => {
         if (
           // at this stage the action side effect might have removed the <element> from the DOM
           // (in theory no because action side effect are batched to happen after)
@@ -144,7 +144,7 @@ export const useExecuteAction = (
         ) {
           dispatchCustomEvent("actionend", {
             detail: {
-              data: action.data,
+              data,
 
               action,
               requester,
