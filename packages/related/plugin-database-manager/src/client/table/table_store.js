@@ -91,14 +91,14 @@ export const TABLE = resource("table", {
   },
 
   DELETE_MANY: async ({ tablenames }, { signal }) => {
-    const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/tables/`, {
+    const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/tables`, {
       signal,
       method: "DELETE",
       headers: {
         "accept": "application/json",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ tablenames }),
+      body: JSON.stringify(tablenames),
     });
     if (!response.ok) {
       throw await errorFromResponse(response, `Failed to delete table`);

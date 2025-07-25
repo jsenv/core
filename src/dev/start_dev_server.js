@@ -68,6 +68,7 @@ export const startDevServer = async ({
   http2 = false,
   logLevel = EXECUTED_BY_TEST_PLAN ? "warn" : "info",
   serverLogLevel = "warn",
+  serverRouterLogLevel = "warn",
   services = [],
 
   signal = new AbortController().signal,
@@ -676,6 +677,7 @@ export const startDevServer = async ({
     stopOnInternalError: false,
     keepProcessAlive,
     logLevel: serverLogLevel,
+    routerLogLevel: serverRouterLogLevel,
     startLog: false,
 
     https,

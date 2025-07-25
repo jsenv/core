@@ -196,21 +196,16 @@ export const jsenvPluginDatabaseManager = ({
         "DELETE": async (request) => {
           const tablenames = await request.json();
           if (!Array.isArray(tablenames)) {
-            return Response.json(
-              { message: "Expected an array of tablenames" },
-              { status: 400 },
-            );
+            throw new Error("expected an array of tablenames");
           }
           if (tablenames.length === 0) {
-            return Response.json(
-              { message: "No tablename provided to delete" },
-              { status: 400 },
-            );
+            throw new Error("No tablename provided to deletes");
           }
-          const tableIdentifiers = tablenames.map((tablename) =>
-            sql(tablename),
-          );
-          await sql`DROP TABLE ${sql.unsafe(tableIdentifiers.join(", "))}`;
+          await sql.begin(async (sql) => {
+            for (const tablename of tablenames) {
+              await sql`DROP TABLE ${sql(tablename)}`;
+            }
+          });
           return {
             data: null,
             meta: {
