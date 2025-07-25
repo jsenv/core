@@ -110,6 +110,7 @@ import.meta.css = /*css*/ `
   cursor: pointer;
   border-radius: 0.2em;
   align-self: center;
+  color: currentColor;
 }
 .validation_message_close_button:hover {
   background: rgba(0, 0, 0, 0.1);
