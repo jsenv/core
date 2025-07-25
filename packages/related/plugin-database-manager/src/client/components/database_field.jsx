@@ -1,5 +1,4 @@
-import { Button, Field, Form, Input, Select } from "@jsenv/navi";
-import { useSignal } from "@preact/signals";
+import { Button, Field, Form, Input, Select, useSignalSync } from "@jsenv/navi";
 import { useCallback, useState } from "preact/hooks";
 import { RoleLink } from "../role/role_link.jsx";
 
@@ -83,7 +82,7 @@ export const RoleField = ({ role }) => {
 const DatabaseFieldWrapper = ({ item, column, usePutAction }) => {
   const columnName = column.column_name;
   const value = item ? item[columnName] : "";
-  const valueSignal = useSignal(value);
+  const valueSignal = useSignalSync(value);
   const putAction = usePutAction(columnName, valueSignal);
 
   return (

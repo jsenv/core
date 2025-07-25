@@ -1,4 +1,9 @@
-import { EditableText, Input, useEditableController } from "@jsenv/navi";
+import {
+  EditableText,
+  Input,
+  useEditableController,
+  useSignalSync,
+} from "@jsenv/navi";
 import {
   createUniqueValueConstraint,
   SINGLE_SPACE_CONSTRAINT,
@@ -78,7 +83,8 @@ const RenameInputOrName = ({
   stopEditing,
 }) => {
   const itemName = item[nameKey];
-  const nameSignal = useSignal(itemName);
+  const nameSignal = useSignalSync(itemName);
+
   const renameAction = useRenameItemAction(item, nameSignal);
 
   const itemArrayInStore = useItemArrayInStore();
