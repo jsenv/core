@@ -36,11 +36,23 @@ export const ExplorerItemList = ({
             useItemArrayInStore={useItemArrayInStore}
             useCreateItemAction={useCreateItemAction}
             cancelOnBlurInvalid
-            onCancel={() => {
-              stopCreatingNew();
+            onCancel={(e, reason) => {
+              stopCreatingNew({
+                shouldRestoreFocus: reason === "escape_key",
+              });
             }}
-            onActionEnd={() => {
-              stopCreatingNew();
+            onActionEnd={(e) => {
+              const input = e.target;
+              const eventCausingAction = e.detail.event;
+              const actionRequestedByKeyboard =
+                eventCausingAction &&
+                eventCausingAction.type === "keydown" &&
+                eventCausingAction.key === "Enter";
+              const shouldRestoreFocus =
+                actionRequestedByKeyboard &&
+                // If user focuses something else while action is running, respect it
+                document.activeElement === input;
+              stopCreatingNew({ shouldRestoreFocus });
             }}
           />
         </li>

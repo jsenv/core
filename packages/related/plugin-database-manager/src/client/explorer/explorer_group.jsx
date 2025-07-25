@@ -78,10 +78,15 @@ export const ExplorerGroup = forwardRef((props, ref) => {
   const startCreatingNew = useCallback(() => {
     setIsCreatingNew(true);
   }, [setIsCreatingNew]);
-  const stopCreatingNew = useCallback(() => {
-    createButtonRef.current.focus();
-    setIsCreatingNew(false);
-  }, [setIsCreatingNew]);
+  const stopCreatingNew = useCallback(
+    ({ shouldRestoreFocus }) => {
+      if (shouldRestoreFocus) {
+        createButtonRef.current.focus();
+      }
+      setIsCreatingNew(false);
+    },
+    [setIsCreatingNew],
+  );
 
   const heightSetting = controller.useHeightSetting();
   const createButtonRef = useRef(null);

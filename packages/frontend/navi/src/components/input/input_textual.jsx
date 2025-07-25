@@ -181,13 +181,13 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     setNavState(value);
   }, [value]);
 
-  const valueAtEnterRef = useRef(null);
+  const valueAtInteractionRef = useRef(null);
   useOnChange(innerRef, (e) => {
     if (
-      valueAtEnterRef.current !== null &&
-      e.target.value === valueAtEnterRef.current
+      valueAtInteractionRef.current !== null &&
+      e.target.value === valueAtInteractionRef.current
     ) {
-      valueAtEnterRef.current = null;
+      valueAtInteractionRef.current = null;
       return;
     }
     requestAction(boundAction, { event: e });
@@ -207,8 +207,17 @@ const InputTextualWithAction = forwardRef((props, ref) => {
           return;
         }
       }
-      if (reason === "escape_key" && !cancelOnEscape) {
-        return;
+      if (reason === "escape_key") {
+        if (!cancelOnEscape) {
+          return;
+        }
+        /**
+         * Browser trigger a "change" event right after the escape is pressed
+         * if the input value has changed.
+         * We need to prevent the next change event otherwise we would request action when
+         * we actually want to cancel
+         */
+        valueAtInteractionRef.current = e.target.value;
       }
       resetValue();
       onCancel?.(e, reason);
@@ -240,7 +249,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
       onInput={(e) => {
-        valueAtEnterRef.current = null;
+        valueAtInteractionRef.current = null;
         const inputValue =
           type === "number" ? e.target.valueAsNumber : e.target.value;
         setValue(
@@ -260,7 +269,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          * if the input value has changed.
          * We need to prevent the next change event otherwise we would request action twice
          */
-        valueAtEnterRef.current = e.target.value;
+        valueAtInteractionRef.current = e.target.value;
         requestAction(boundAction, { event: e });
       }}
     />
