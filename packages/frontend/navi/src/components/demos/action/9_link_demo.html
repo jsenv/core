@@ -12,24 +12,12 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Link,
-      } from "@jsenv/navi";
+      // eslint-disable-next-line no-unused-vars
+      import { Link, Selection } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const [selectedItems, setSelectedItems] = useState(new Set());
-
-        const handleSelectionChange = (checked, { value }) => {
-          const newSelection = new Set(selectedItems);
-          if (checked) {
-            newSelection.add(value);
-          } else {
-            newSelection.delete(value);
-          }
-          setSelectedItems(newSelection);
-        };
+        const [contextSelectedItems, setContextSelectedItems] = useState([]);
 
         return (
           <div style="padding: 20px; font-family: system-ui, sans-serif; max-width: 800px;">
@@ -105,78 +93,71 @@
             <section style="margin-bottom: 40px;">
               <h2>Selectable Links</h2>
               <p style="color: #666; margin-bottom: 16px;">
-                Hold{" "}
+                Using Selection context for centralized state management.{" "}
                 <kbd style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">
-                  Cmd/Ctrl
+                  Cmd/Ctrl + Click
                 </kbd>{" "}
-                + Click to select multiple items
+                to multi-select, normal click to navigate.
               </p>
 
-              <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: white;">
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                  <Link
-                    href="#"
-                    selectable
-                    selected={selectedItems.has("item-1")}
-                    onSelectionChange={handleSelectionChange}
-                    name="items"
-                    value="item-1"
-                    style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
-                  >
-                    📄 Document 1 - Important Report
-                  </Link>
-
-                  <Link
-                    href="#"
-                    selectable
-                    selected={selectedItems.has("item-2")}
-                    onSelectionChange={handleSelectionChange}
-                    name="items"
-                    value="item-2"
-                    style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
-                  >
-                    📊 Spreadsheet - Q4 Data
-                  </Link>
-
-                  <Link
-                    href="#"
-                    selectable
-                    selected={selectedItems.has("item-3")}
-                    onSelectionChange={handleSelectionChange}
-                    name="items"
-                    value="item-3"
-                    style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
-                  >
-                    🖼️ Image Gallery - Team Photos
-                  </Link>
-
-                  <Link
-                    href="#"
-                    selectable
-                    selected={selectedItems.has("item-4")}
-                    onSelectionChange={handleSelectionChange}
-                    name="items"
-                    value="item-4"
-                    style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
-                  >
-                    🎥 Video - Product Demo
-                  </Link>
-                </div>
-
-                {selectedItems.size > 0 && (
-                  <div style="margin-top: 16px; padding: 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #1976d2;">
-                    <strong>Selected items:</strong>{" "}
-                    {Array.from(selectedItems).join(", ")}
-                    <br />
-                    <button
-                      onClick={() => setSelectedItems(new Set())}
-                      style="margin-top: 8px; padding: 4px 12px; background: #1976d2; color: white; border: none; border-radius: 4px; font-size: 0.9em; cursor: pointer;"
+              <Selection
+                value={contextSelectedItems}
+                onChange={setContextSelectedItems}
+              >
+                <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: white;">
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <Link
+                      href="/doc/report"
+                      selectable
+                      value="doc-1"
+                      style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
                     >
-                      Clear selection
-                    </button>
+                      📋 Annual Report 2024
+                    </Link>
+
+                    <Link
+                      href="/doc/budget"
+                      selectable
+                      value="doc-2"
+                      style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
+                    >
+                      💰 Budget Proposal
+                    </Link>
+
+                    <Link
+                      href="/doc/presentation"
+                      selectable
+                      value="doc-3"
+                      style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
+                    >
+                      🎯 Marketing Presentation
+                    </Link>
+
+                    <Link
+                      href="/doc/manual"
+                      selectable
+                      value="doc-4"
+                      style="text-decoration: none; color: #333; padding: 12px 16px; border-radius: 6px; display: block; transition: all 0.2s; border: 1px solid transparent;"
+                    >
+                      📖 User Manual v2.0
+                    </Link>
                   </div>
-                )}
-              </div>
+
+                  {contextSelectedItems.length > 0 && (
+                    <div style="margin-top: 16px; padding: 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #1976d2;">
+                      <strong>Selected items:</strong>{" "}
+                      {contextSelectedItems.join(", ")}
+                      <br />
+                      <button
+                        onClick={() => setContextSelectedItems([])}
+                        style="margin-top: 8px; padding: 4px 12px; background: #1976d2; color: white; border: none; border-radius: 4px; font-size: 0.9em; cursor: pointer;"
+                      >
+                        Clear selection
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </Selection>
             </section>
 
             <section>

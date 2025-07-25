@@ -39,6 +39,7 @@ export { RadioList } from "./src/components/input/radio_list.jsx";
 export { Select } from "./src/components/input/select.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
+export { Selection } from "./src/components/selection/selection.js";
 
 // for debbugging testing purposes
 export { enableDebugActions } from "./src/actions.js";

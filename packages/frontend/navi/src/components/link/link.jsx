@@ -5,6 +5,7 @@ import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
+import { useSelectionContext } from "../selection/selection_context.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useKeyboardShortcuts } from "../use_keyboard_shortcuts.js";
@@ -57,7 +58,7 @@ import.meta.css = /* css */ `
   /* Visual feedback for selected state */
   .navi_link_container:has(.navi_link_checkbox:checked) .navi_link {
     background-color: light-dark(#e3f2fd, #1e3a8a);
-    outline: 2px solid light-dark(#1976d2, #3b82f6);
+    /* outline: 2px solid light-dark(#1976d2, #3b82f6); */
   }
 `;
 
@@ -69,35 +70,18 @@ export const Link = forwardRef((props, ref) => {
 });
 
 const LinkBasic = forwardRef((props, ref) => {
-  const {
-    // Selection props
-    selectable,
-    selected,
-    onSelectionChange,
-    name,
-    value,
-    ...restProps
-  } = props;
+  const selectionContext = useSelectionContext();
 
-  // Check if any selection props are provided
-  const hasSelectionProps =
-    selectable || selected !== undefined || onSelectionChange || name || value;
-
-  if (hasSelectionProps) {
+  if (selectionContext) {
     return (
       <LinkWithSelection
         ref={ref}
-        selectable={selectable}
-        selected={selected}
-        onSelectionChange={onSelectionChange}
-        name={name}
-        value={value}
-        {...restProps}
+        selectionContext={selectionContext}
+        {...props}
       />
     );
   }
-
-  return <LinkPlain ref={ref} {...restProps} />;
+  return <LinkPlain ref={ref} {...props} />;
 });
 
 const LinkPlain = forwardRef((props, ref) => {
@@ -161,8 +145,7 @@ const LinkPlain = forwardRef((props, ref) => {
 const LinkWithSelection = forwardRef((props, ref) => {
   const {
     // Selection props
-    selected = false,
-    onSelectionChange,
+    selectionContext,
     name,
     value,
     children,
@@ -171,6 +154,8 @@ const LinkWithSelection = forwardRef((props, ref) => {
   } = props;
 
   const checkboxRef = useRef();
+  const isSelected = selectionContext.isSelected(value);
+  const handleSelectionChange = selectionContext.onSelectionChange;
 
   const handleLinkClick = (e) => {
     const isMultiSelect = e.metaKey || e.ctrlKey;
@@ -178,29 +163,42 @@ const LinkWithSelection = forwardRef((props, ref) => {
     const isSingleSelect = !isMultiSelect && !isShiftSelect;
     const checkbox = checkboxRef.current;
 
-    if (isSingleSelect) {
-      // select only this item and unselect all others
-      checkbox.checked = true;
-      // TODO: unselect others
-    } else if (isMultiSelect) {
-      e.preventDefault(); // Prevent navigation
-      checkbox.checked = true;
-    } else if (isShiftSelect) {
-      e.preventDefault(); // Prevent navigation
-      // select this one and all the checkboxes in between
+    if (selectionContext) {
+      // Use context-based selection
+      if (isSingleSelect) {
+        // Normal click - navigate to the link
+        onClick?.(e);
+        return;
+      }
+
+      if (isMultiSelect) {
+        e.preventDefault(); // Prevent navigation
+        const newChecked = !checkbox.checked;
+        checkbox.checked = newChecked;
+        handleSelectionChange?.(newChecked, {
+          shiftKey: e.shiftKey,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey,
+          value,
+        });
+        return;
+      }
+
+      if (isShiftSelect) {
+        e.preventDefault(); // Prevent navigation
+        checkbox.checked = true;
+        handleSelectionChange?.(true, {
+          shiftKey: e.shiftKey,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey,
+          value,
+        });
+        return;
+      }
     }
 
     // Fall back to original onClick
     onClick?.(e);
-  };
-
-  const handleCheckboxChange = (e) => {
-    onSelectionChange?.(e.target.checked, {
-      shiftKey: e.shiftKey,
-      metaKey: e.metaKey,
-      ctrlKey: e.ctrlKey,
-      value,
-    });
   };
 
   return (
@@ -210,8 +208,7 @@ const LinkWithSelection = forwardRef((props, ref) => {
         type="checkbox"
         name={name}
         value={value}
-        checked={selected}
-        onChange={handleCheckboxChange}
+        checked={isSelected}
         className="navi_link_checkbox"
         aria-label={`Select ${typeof children === "string" ? children : "item"}`}
         tabIndex={-1} // Don't interfere with link tab order
