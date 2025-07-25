@@ -150,6 +150,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
       import {
         createAction,
         // eslint-disable-next-line no-unused-vars
@@ -172,6 +173,7 @@
               <BasicCheckboxDemo />
               <CheckboxWithInitialValueDemo />
               <CheckboxWithExternalControlDemo />
+              <CheckboxWithSignalControlDemo />
               <CheckboxErrorDemo />
               <FormCheckboxDemo />
               <SharedActionDemo />
@@ -336,6 +338,86 @@
               <br />
               {result ||
                 "Use buttons to control checkbox, then it will trigger action..."}
+            </div>
+          </div>
+        );
+      };
+
+      // Create an action that's bound to the signal
+      const toggleAction = createAction(async ({ notifications }) => {
+        await delay(600);
+        const response = `✅ Notifications ${notifications ? "enabled" : "disabled"} (via signal)`;
+        return response;
+      });
+      // Create a signal to control the checkbox state
+      const checkedSignal = signal(false);
+      const toggleActionBound = toggleAction.bindParams({
+        notifications: checkedSignal,
+      });
+
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxWithSignalControlDemo = () => {
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Checkbox with Signal Control</h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <Input
+                  id="signal-controlled-checkbox"
+                  type="checkbox"
+                  name="notifications"
+                  checkedSignal={checkedSignal}
+                  action={toggleActionBound}
+                  onActionStart={() => {
+                    setResult("Processing...");
+                  }}
+                  onActionEnd={(e) => {
+                    setResult(e.detail.data);
+                  }}
+                />
+                <label htmlFor="signal-controlled-checkbox">
+                  Enable notifications (signal controlled)
+                </label>
+              </div>
+            </div>
+            <div className="button-group">
+              <button
+                onClick={() => {
+                  console.log("Setting signal to true");
+                  checkedSignal.value = true;
+                }}
+              >
+                Enable via Signal
+              </button>
+              <button
+                onClick={() => {
+                  console.log("Setting signal to false");
+                  checkedSignal.value = false;
+                }}
+              >
+                Disable via Signal
+              </button>
+              <button
+                onClick={() => {
+                  console.log(
+                    "Toggling signal, current value:",
+                    checkedSignal.value,
+                  );
+                  checkedSignal.value = !checkedSignal.value;
+                }}
+              >
+                Toggle Signal
+              </button>
+            </div>
+            <div
+              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
+            >
+              Signal value: {checkedSignal.value ? "true" : "false"}
+              <br />
+              {result ||
+                "Use buttons to control checkbox via signal, action will trigger automatically..."}
             </div>
           </div>
         );
