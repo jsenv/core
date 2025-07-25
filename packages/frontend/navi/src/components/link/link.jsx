@@ -161,63 +161,30 @@ const LinkWithSelection = forwardRef((props, ref) => {
   const checkboxRef = useRef();
   const isSelected = selectionContext.isSelected(value);
 
+  // Register this link with the selection context
+  useLayoutEffect(() => {
+    const checkbox = checkboxRef.current;
+    if (checkbox) {
+      selectionContext.register(value);
+      return () => selectionContext.unregister(value);
+    }
+    return undefined;
+  }, [selectionContext, value]);
+
   const handleLinkClick = (e) => {
     const isMultiSelect = e.metaKey || e.ctrlKey;
     const isShiftSelect = e.shiftKey;
     const isSingleSelect = !isMultiSelect && !isShiftSelect;
-    const checkbox = checkboxRef.current;
 
     if (isSingleSelect) {
       // Single select - replace entire selection with just this item
-      selectionContext.set(value);
+      selectionContext.set([value], e);
     } else if (isMultiSelect) {
       e.preventDefault(); // Prevent navigation
-      if (isSelected) {
-        selectionContext.remove(value);
-      } else {
-        selectionContext.add(value);
-      }
+      selectionContext.toggle(value, e);
     } else if (isShiftSelect) {
       e.preventDefault(); // Prevent navigation
-
-      // Find all checkboxes with the same name using DOM query
-      const container =
-        checkbox.closest("form") || checkbox.closest("fieldset") || document;
-      const allCheckboxes = Array.from(
-        container.querySelectorAll(`input[type="checkbox"][name="${name}"]`),
-      );
-
-      // Find the last checked checkbox and current checkbox positions
-      let lastCheckedIndex = -1;
-      let currentIndex = -1;
-
-      allCheckboxes.forEach((cb, index) => {
-        if (cb === checkbox) {
-          currentIndex = index;
-        }
-        if (cb.checked && cb !== checkbox) {
-          lastCheckedIndex = index;
-        }
-      });
-
-      if (lastCheckedIndex >= 0) {
-        // Select all checkboxes between lastChecked and current
-        const start = Math.min(lastCheckedIndex, currentIndex);
-        const end = Math.max(lastCheckedIndex, currentIndex);
-
-        const valuesToSelect = [];
-        for (let i = start; i <= end; i++) {
-          const cbValue = allCheckboxes[i].value;
-          if (cbValue) {
-            valuesToSelect.push(cbValue);
-          }
-        }
-
-        selectionContext.add(...valuesToSelect);
-      } else {
-        // No previous selection, just select this one
-        selectionContext.add(value);
-      }
+      selectionContext.addFromLastSelectedTo(value, e);
     }
 
     // Fall back to original onClick
