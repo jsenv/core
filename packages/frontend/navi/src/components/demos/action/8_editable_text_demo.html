@@ -190,13 +190,9 @@
               <div className="editable-container">
                 <EditableText
                   editable={editable}
-                  onEditEnd={(editResult) => {
+                  onEditEnd={() => {
                     stopEditing();
-                    if (editResult.success) {
-                      setResult(`✅ Text updated successfully`);
-                    } else {
-                      setResult(`❌ Edit cancelled or failed`);
-                    }
+                    setResult(`✅ Text updated successfully`);
                   }}
                   name="test"
                   action={({ test }) => {
@@ -239,14 +235,10 @@
               <div className="editable-container">
                 <EditableText
                   editable={editable}
-                  onEditEnd={(editResult) => {
+                  onEditEnd={() => {
                     stopEditing();
                     setIsLoading(false);
-                    if (editResult.success) {
-                      setResult(`✅ Text saved after delay`);
-                    } else {
-                      setResult(`❌ Edit cancelled or failed`);
-                    }
+                    setResult(`✅ Text saved after delay`);
                   }}
                   name="test"
                   action={async ({ test }) => {
