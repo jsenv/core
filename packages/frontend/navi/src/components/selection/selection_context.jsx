@@ -43,8 +43,12 @@ export const Selection = ({ value = [], onChange, children }) => {
       }
     },
 
+    set: (...newSelection) => {
+      onChange?.(newSelection);
+    },
+
     isSelected: (itemValue) => {
-      return (value || []).includes(itemValue);
+      return selection.includes(itemValue);
     },
   };
 

@@ -163,7 +163,8 @@ const LinkWithSelection = forwardRef((props, ref) => {
     const checkbox = checkboxRef.current;
 
     if (isSingleSelect) {
-      selectionContext.add(value);
+      // Single select - replace entire selection with just this item
+      selectionContext.set(value);
     } else if (isMultiSelect) {
       e.preventDefault(); // Prevent navigation
       if (isSelected) {
