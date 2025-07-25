@@ -32,7 +32,7 @@ export const ExplorerItemList = ({
               useRenameItemAction={useRenameItemAction}
               useDeleteItemAction={useDeleteItemAction}
               deleteManyAction={deleteManyAction}
-              deleteManyConfirmMessage={`Are you sure you want to delete "${itemSelectionSignal.length} items"?`}
+              deleteManyConfirmMessage={`Are you sure you want to delete ${itemSelectionSignal.value.length} items?`}
             />
           </li>
         );
