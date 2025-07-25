@@ -15,6 +15,7 @@ export const ExplorerItem = ({
   useRenameItemAction,
   useDeleteItemAction,
   deleteManyAction,
+  deleteManyConfirmMessage,
 }) => {
   const itemName = item[nameKey];
 
@@ -38,8 +39,7 @@ export const ExplorerItem = ({
               key: "Backspace",
               needsMetaKey: true,
               action: deleteManyAction || deleteItemAction,
-              description: `Delete "${itemName}"`, // I need to know the select items
-              confirmMessage: `Are you sure you want to delete "${itemName}"?`,
+              confirmMessage: deleteManyConfirmMessage,
             },
           ]
         : deleteItemAction
@@ -47,8 +47,7 @@ export const ExplorerItem = ({
               {
                 key: "Backspace",
                 needsMetaKey: true,
-                action: deleteManyAction || deleteItemAction,
-                description: `Delete "${itemName}"`,
+                action: deleteItemAction,
                 confirmMessage: `Are you sure you want to delete "${itemName}"?`,
               },
             ]
