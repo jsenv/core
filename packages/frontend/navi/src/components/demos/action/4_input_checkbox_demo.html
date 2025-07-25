@@ -14,7 +14,14 @@
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
-        background: #f5f5f5;
+                 <div
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
+            >
+              Signal value: {checkedSignal.value ? "true" : "false"}
+              <br />
+              {result ||
+                "Use buttons to control checkbox via signal, action will trigger automatically..."}
+            </div>round: #f5f5f5;
       }
       .demo-grid {
         display: grid;
@@ -201,7 +208,7 @@
                     setResult("Processing...");
                     try {
                       await delay(1000);
-                      const response = `✅ Checkbox ${enabled ? "checked" : "unchecked"}`;
+                      const response = `${enabled ? "✅" : "☐"} Checkbox ${enabled ? "checked" : "unchecked"}`;
                       setResult(response);
                       setStatus("success");
                       return response;
@@ -244,7 +251,7 @@
                   action={async ({ agreed }) => {
                     setResult("Processing...");
                     await delay(800);
-                    const response = `✅ Agreement: ${agreed ? "accepted" : "declined"}`;
+                    const response = `${agreed ? "✅" : "☐"} Agreement: ${agreed ? "accepted" : "declined"}`;
                     setResult(response);
                     return response;
                   }}
@@ -255,7 +262,7 @@
               </div>
             </div>
             <div
-              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
             >
               {result || "Change checkbox to see action..."}
             </div>
@@ -287,7 +294,7 @@
                   action={async ({ notifications }) => {
                     setResult("Processing...");
                     await delay(600);
-                    const response = `✅ Notifications ${notifications ? "enabled" : "disabled"}`;
+                    const response = `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
                     setResult(response);
                     return response;
                   }}
@@ -327,7 +334,7 @@
               </button>
             </div>
             <div
-              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
             >
               Current state:{" "}
               {isChecked === undefined
@@ -346,7 +353,7 @@
       // Create an action that's bound to the signal
       const toggleAction = createAction(async ({ notifications }) => {
         await delay(600);
-        return `✅ Notifications ${notifications ? "enabled" : "disabled"}`;
+        return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
       });
       // Create a signal to control the checkbox state
       const checkedSignal = signal(false);
@@ -411,7 +418,7 @@
               </button>
             </div>
             <div
-              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
             >
               Signal value: {checkedSignal.value ? "true" : "false"}
               <br />
@@ -588,7 +595,7 @@
               </div>
             </div>
             <div
-              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
             >
               {result || "Toggle either checkbox to see shared action..."}
             </div>
@@ -602,7 +609,7 @@
           key.startsWith("feature"),
         );
         const isEnabled = params[featureName];
-        const response = `✅ ${featureName} ${isEnabled ? "enabled" : "disabled"} (from shared action)`;
+        const response = `${isEnabled ? "✅" : "☐"} ${featureName} ${isEnabled ? "enabled" : "disabled"} (from shared action)`;
         return response;
       });
 
