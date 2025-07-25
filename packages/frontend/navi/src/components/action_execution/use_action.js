@@ -98,6 +98,12 @@ export const useActionBoundToOneParam = (
   defaultValue,
   valueSignal,
 ) => {
+  if (action.isProxy && !valueSignal) {
+    throw new Error(
+      `useActionBoundToOneParam(${name}) action is a proxy but no valueSignal provided`,
+    );
+  }
+
   const actionCacheKey = useComponentActionCacheKey();
   const cacheKey = typeof action === "function" ? actionCacheKey : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(

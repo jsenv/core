@@ -158,7 +158,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
-
   if (import.meta.dev && !name && !valueSignal) {
     console.warn(`InputTextual with action requires a name prop to be set.`);
   }

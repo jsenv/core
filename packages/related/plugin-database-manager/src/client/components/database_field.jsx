@@ -95,16 +95,21 @@ const DatabaseFieldWrapper = ({ item, column, usePutAction }) => {
     />
   );
 };
-const DatabaseField = ({ column, label, ...rest }) => {
+const DatabaseField = ({ column, label, value, ...rest }) => {
   const columnName = column.column_name;
-  const { value } = rest;
+  const { valueSignal } = rest;
 
   if (column.data_type === "boolean") {
     return (
       <Field
         label={label}
         input={
-          <Input type="checkbox" name={columnName} checked={value} {...rest} />
+          <Input
+            type="checkbox"
+            name={columnName}
+            checkedSignal={valueSignal}
+            {...rest}
+          />
         }
       />
     );
