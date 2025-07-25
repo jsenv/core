@@ -139,46 +139,13 @@ const LinkPlain = forwardRef((props, ref) => {
 });
 
 const LinkWithSelection = forwardRef((props, ref) => {
-  const {
-    // Selection props
-    selectionContext,
-    name,
-    value,
-    children,
-    onClick,
-    ...rest
-  } = props;
-
-  const checkboxRef = useRef();
+  const { selectionContext, name, value, children, onClick, ...rest } = props;
   const isSelected = selectionContext.isSelected(value);
-
-  // Register this link with the selection context using the custom hook
   useRegisterSelectionValue(value);
-
-  const handleLinkClick = (e) => {
-    const isMultiSelect = e.metaKey || e.ctrlKey;
-    const isShiftSelect = e.shiftKey;
-    const isSingleSelect = !isMultiSelect && !isShiftSelect;
-
-    if (isSingleSelect) {
-      // Single select - replace entire selection with just this item
-      selectionContext.set([value], e);
-    } else if (isMultiSelect) {
-      e.preventDefault(); // Prevent navigation
-      selectionContext.toggle(value, e);
-    } else if (isShiftSelect) {
-      e.preventDefault(); // Prevent navigation
-      selectionContext.addFromLastSelectedTo(value, e);
-    }
-
-    // Fall back to original onClick
-    onClick?.(e);
-  };
 
   return (
     <div className="navi_link_container">
       <input
-        ref={checkboxRef}
         type="checkbox"
         name={name}
         value={value}
@@ -192,7 +159,22 @@ const LinkWithSelection = forwardRef((props, ref) => {
       <LinkPlain
         ref={ref}
         {...rest}
-        onClick={handleLinkClick}
+        onClick={(e) => {
+          const isMultiSelect = e.metaKey || e.ctrlKey;
+          const isShiftSelect = e.shiftKey;
+          const isSingleSelect = !isMultiSelect && !isShiftSelect;
+          if (isSingleSelect) {
+            // Single select - replace entire selection with just this item
+            selectionContext.set([value], e);
+          } else if (isMultiSelect) {
+            e.preventDefault(); // Prevent navigation
+            selectionContext.toggle(value, e);
+          } else if (isShiftSelect) {
+            e.preventDefault(); // Prevent navigation
+            selectionContext.addFromLastSelectedTo(value, e);
+          }
+          onClick?.(e);
+        }}
         data-selected={isSelected ? "" : undefined}
       >
         {children}
