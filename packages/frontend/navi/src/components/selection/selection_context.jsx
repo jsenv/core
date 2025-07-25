@@ -5,7 +5,7 @@ const SelectionContext = createContext(null);
 
 export const Selection = ({ value = [], onChange, children }) => {
   const selection = value || [];
-  const registryRef = useRef([]); // Array<{ value }>
+  const registryRef = useRef([]); // Array<value>
 
   const contextValue = {
     selection,
@@ -13,17 +13,17 @@ export const Selection = ({ value = [], onChange, children }) => {
     // Registry methods for tracking selectable items
     register: (value) => {
       const registry = registryRef.current;
-      const existingIndex = registry.findIndex((item) => item.value === value);
+      const existingIndex = registry.includes(value);
       if (existingIndex >= 0) {
-        // Item already exists, no need to update
+        // already exists, no need to update
         return;
       }
-      registry.push({ value });
+      registry.push(value);
     },
 
     unregister: (value) => {
       const registry = registryRef.current;
-      const index = registry.findIndex((item) => item.value === value);
+      const index = registry.indexOf(value);
       if (index >= 0) {
         registry.splice(index, 1);
       }
@@ -57,12 +57,11 @@ export const Selection = ({ value = [], onChange, children }) => {
       // Find indices of fromValue and toValue
       let fromIndex = -1;
       let toIndex = -1;
-
-      registry.forEach((item, index) => {
-        if (item.value === fromValue) {
+      registry.forEach((valueCandidate, index) => {
+        if (valueCandidate === fromValue) {
           fromIndex = index;
         }
-        if (item.value === toValue) {
+        if (valueCandidate === toValue) {
           toIndex = index;
         }
       });
@@ -71,14 +70,7 @@ export const Selection = ({ value = [], onChange, children }) => {
         // Select all items between fromIndex and toIndex (inclusive)
         const start = Math.min(fromIndex, toIndex);
         const end = Math.max(fromIndex, toIndex);
-
-        const valuesToSelect = [];
-        for (let i = start; i <= end; i++) {
-          if (registry[i] && registry[i].value) {
-            valuesToSelect.push(registry[i].value);
-          }
-        }
-
+        const valuesToSelect = registry.slice(start, end + 1);
         contextValue.add(valuesToSelect, event);
       }
     }, // Helper method to find the last selected item (useful for shift-click)
@@ -86,9 +78,9 @@ export const Selection = ({ value = [], onChange, children }) => {
       const registry = registryRef.current;
       let lastSelected = null;
 
-      registry.forEach((item) => {
-        if (item.value !== excludeValue && selection.includes(item.value)) {
-          lastSelected = item.value;
+      registry.forEach((value) => {
+        if (value !== excludeValue && selection.includes(value)) {
+          lastSelected = value;
         }
       });
 
