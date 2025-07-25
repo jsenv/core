@@ -6,7 +6,9 @@ const SelectionContext = createContext(null);
 export const Selection = ({ value = [], onChange, children }) => {
   const selection = value || [];
   const registryRef = useRef([]); // Array<value>
-  const lastSelectedValueRef = useRef(value[value.length - 1]);
+  const lastSelectedValueRef = useRef(
+    selection.length > 0 ? selection[selection.length - 1] : null,
+  );
 
   const contextValue = {
     selection,
@@ -39,6 +41,18 @@ export const Selection = ({ value = [], onChange, children }) => {
 
     // basic methods to manipulate selection
     set: (newSelection, event = null) => {
+      if (
+        newSelection.length === selection.length &&
+        newSelection.every((value, index) => value === selection[index])
+      ) {
+        return;
+      }
+      // Update the last selected value to the last item in the new selection
+      if (newSelection.length > 0) {
+        lastSelectedValueRef.current = newSelection[newSelection.length - 1];
+      } else {
+        lastSelectedValueRef.current = null;
+      }
       onChange?.(newSelection, event);
     },
     add: (arrayOfValueToAddToSelection, event = null) => {
@@ -65,9 +79,24 @@ export const Selection = ({ value = [], onChange, children }) => {
       for (const value of selection) {
         if (arrayOfValueToRemoveFromSelection.includes(value)) {
           modified = true;
+          // If we're removing the last selected value, clear it
+          if (value === lastSelectedValueRef.current) {
+            lastSelectedValueRef.current = null;
+          }
         } else {
           selectionWithoutValues.push(value);
         }
+      }
+
+      // If we cleared the last selected value but still have items selected,
+      // set the last selected to the last remaining item
+      if (
+        modified &&
+        lastSelectedValueRef.current === null &&
+        selectionWithoutValues.length > 0
+      ) {
+        lastSelectedValueRef.current =
+          selectionWithoutValues[selectionWithoutValues.length - 1];
       }
 
       if (modified) {
@@ -109,10 +138,11 @@ export const Selection = ({ value = [], onChange, children }) => {
     addFromLastSelectedTo: (value, event = null) => {
       const lastSelectedValue = lastSelectedValueRef.current;
 
-      if (lastSelectedValue) {
+      // Make sure the last selected value is still in the current selection
+      if (lastSelectedValue && selection.includes(lastSelectedValue)) {
         contextValue.addRange(lastSelectedValue, value, event);
       } else {
-        // No previous selection, just select this one
+        // No valid previous selection, just select this one
         contextValue.add([value], event);
       }
     },
