@@ -1,6 +1,7 @@
 import { closeValidationMessage, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
+import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
@@ -96,10 +97,13 @@ const LinkPlain = forwardRef((props, ref) => {
     disabled,
     children,
     autoFocus,
+    active,
+    visited,
     spaceToClick = true,
     constraints = [],
     onClick,
     onKeyDown,
+    href,
     ...rest
   } = props;
 
@@ -112,16 +116,22 @@ const LinkPlain = forwardRef((props, ref) => {
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(innerRef, shouldDimColor);
 
+  // Check if this URL is visited reactively
+  const isVisited = useIsVisited(href);
+
   return (
     <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
       <a
         {...rest}
+        href={href}
         ref={innerRef}
         className={["navi_link", ...className.split(" ")].join(" ")}
         aria-busy={loading}
         inert={disabled}
         data-field=""
         data-readonly={readOnly ? "" : undefined}
+        data-active={active ? "" : undefined}
+        data-visited={visited || isVisited ? "" : undefined}
         onClick={(e) => {
           closeValidationMessage(e.target, "click");
           if (readOnly) {

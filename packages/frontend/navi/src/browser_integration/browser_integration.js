@@ -87,6 +87,7 @@ export const reload = browserIntegration.reload;
 export const goBack = browserIntegration.goBack;
 export const goForward = browserIntegration.goForward;
 export const isVisited = browserIntegration.isVisited;
+export const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 export const handleActionTask = browserIntegration.handleActionTask;
 
 const idUsageMap = new Map();

@@ -1,3 +1,4 @@
+import { signal } from "@preact/signals";
 import { setActionDispatcher } from "../actions.js";
 import { executeWithCleanup } from "../utils/execute_with_cleanup.js";
 import { updateDocumentState } from "./document_state_signal.js";
@@ -39,6 +40,12 @@ export const setupBrowserIntegrationViaHistory = ({
   const visitedUrlSet = historyStartAtStart
     ? new Set(historyStartAtStart.jsenv_visited_urls || [])
     : new Set();
+
+  // Create a signal that tracks visited URLs for reactive updates
+  // Using a counter instead of the Set directly for better performance
+  // Links will check isVisited() when this signal changes
+  const visitedUrlsSignal = signal(0);
+
   const isVisited = (url) => {
     return visitedUrlSet.has(url);
   };
@@ -47,6 +54,10 @@ export const setupBrowserIntegrationViaHistory = ({
       return;
     }
     visitedUrlSet.add(url);
+
+    // Increment signal to notify subscribers that visited URLs changed
+    visitedUrlsSignal.value++;
+
     const historyState = getDocumentState() || {};
     const hsitoryStateWithVisitedUrls = {
       ...historyState,
@@ -184,5 +195,6 @@ export const setupBrowserIntegrationViaHistory = ({
     getDocumentState,
     replaceDocumentState,
     isVisited,
+    visitedUrlsSignal,
   };
 };
