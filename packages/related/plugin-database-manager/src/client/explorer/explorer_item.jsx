@@ -136,6 +136,7 @@ export const ExplorerNewItem = ({
 
       <Input
         action={createItemAction}
+        valueSignal={nameSignal}
         cancelOnEscape
         cancelOnBlurInvalid={cancelOnBlurInvalid}
         onCancel={onCancel}
