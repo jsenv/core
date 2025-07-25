@@ -166,31 +166,32 @@ const LinkWithSelection = forwardRef((props, ref) => {
     name,
     value,
     children,
+    onClick,
     ...rest
   } = props;
 
   const checkboxRef = useRef();
 
   const handleLinkClick = (e) => {
-    // Handle selection on modifier clicks
-    if (e.metaKey || e.ctrlKey || e.shiftKey) {
+    const isMultiSelect = e.metaKey || e.ctrlKey;
+    const isShiftSelect = e.shiftKey;
+    const isSingleSelect = !isMultiSelect && !isShiftSelect;
+    const checkbox = checkboxRef.current;
+
+    if (isSingleSelect) {
+      // select only this item and unselect all others
+      checkbox.checked = true;
+      // TODO: unselect others
+    } else if (isMultiSelect) {
       e.preventDefault(); // Prevent navigation
-      // Toggle selection via checkbox
-      if (checkboxRef.current) {
-        const newChecked = !checkboxRef.current.checked;
-        checkboxRef.current.checked = newChecked;
-        onSelectionChange?.(newChecked, {
-          shiftKey: e.shiftKey,
-          metaKey: e.metaKey,
-          ctrlKey: e.ctrlKey,
-          value,
-        });
-      }
-      return;
+      checkbox.checked = true;
+    } else if (isShiftSelect) {
+      e.preventDefault(); // Prevent navigation
+      // select this one and all the checkboxes in between
     }
 
     // Fall back to original onClick
-    rest.onClick?.(e);
+    onClick?.(e);
   };
 
   const handleCheckboxChange = (e) => {
