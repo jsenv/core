@@ -446,6 +446,11 @@ ${[idKey, ...mutableIdKeys].join(", ")}`,
           arrayWithoutDroppedItems.push(existingItem);
         }
       }
+      if (idToRemoveSet.size > 0) {
+        console.warn(
+          `arraySignalStore.drop: Some ids were not found in the array: ${Array.from(idToRemoveSet).join(", ")}`,
+        );
+      }
       if (hasFound) {
         arraySignal.value = arrayWithoutDroppedItems;
         triggerRemovedMutations();
