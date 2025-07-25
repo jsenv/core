@@ -30,8 +30,14 @@ export const TablesDetails = (props) => {
       nameKey="tablename"
       labelChildren={<TextAndCount text={"TABLES"} count={tableCount} />}
       renderNewButtonChildren={() => <TableWithPlusSvg />}
-      renderItem={(item, props) => (
-        <TableLink draggable={false} key={item.oid} table={item} {...props} />
+      renderItem={(table, props) => (
+        <TableLink
+          key={table.oid}
+          value={table.tablename}
+          table={table}
+          draggable={false}
+          {...props}
+        />
       )}
       useItemArrayInStore={useTableArrayInStore}
       useCreateItemAction={(nameSignal) =>

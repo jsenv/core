@@ -49,20 +49,12 @@ import.meta.css = /* css */ `
 
   .navi_link_checkbox {
     position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+    opacity: 0;
   }
 
   /* Visual feedback for selected state */
-  .navi_link_container:has(.navi_link_checkbox:checked) .navi_link {
-    background-color: light-dark(#e3f2fd, #1e3a8a);
-    /* outline: 2px solid light-dark(#1976d2, #3b82f6); */
+  .navi_link[data-selected] {
+    background-color: light-dark(#bbdefb, #2563eb);
   }
 `;
 
@@ -197,7 +189,12 @@ const LinkWithSelection = forwardRef((props, ref) => {
         aria-label={`Select ${typeof children === "string" ? children : "item"}`}
         tabIndex={-1} // Don't interfere with link tab order
       />
-      <LinkPlain ref={ref} {...rest} onClick={handleLinkClick}>
+      <LinkPlain
+        ref={ref}
+        {...rest}
+        onClick={handleLinkClick}
+        data-selected={isSelected ? "" : undefined}
+      >
         {children}
       </LinkPlain>
     </div>
