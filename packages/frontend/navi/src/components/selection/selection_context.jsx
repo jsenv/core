@@ -15,7 +15,7 @@ export const Selection = ({ value = [], onChange, children }) => {
 
     register: (value) => {
       const registry = registryRef.current;
-      const existingIndex = registry.includes(value);
+      const existingIndex = registry.indexOf(value);
       if (existingIndex >= 0) {
         console.warn(
           `SelectionContext: Attempted to register an already registered value: ${value}. All values must be unique.`,
@@ -109,20 +109,23 @@ export const Selection = ({ value = [], onChange, children }) => {
       // Find indices of fromValue and toValue
       let fromIndex = -1;
       let toIndex = -1;
-      registry.forEach((valueCandidate, index) => {
+      let index = 0;
+      for (const valueCandidate of registry) {
         if (valueCandidate === fromValue) {
           fromIndex = index;
         }
         if (valueCandidate === toValue) {
           toIndex = index;
         }
-      });
+        index++;
+      }
 
       if (fromIndex >= 0 && toIndex >= 0) {
         // Select all items between fromIndex and toIndex (inclusive)
         const start = Math.min(fromIndex, toIndex);
         const end = Math.max(fromIndex, toIndex);
         const valuesToSelect = registry.slice(start, end + 1);
+
         contextValue.add(valuesToSelect, event);
       }
     },

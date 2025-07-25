@@ -163,6 +163,7 @@ const LinkWithSelection = forwardRef((props, ref) => {
           const isMultiSelect = e.metaKey || e.ctrlKey;
           const isShiftSelect = e.shiftKey;
           const isSingleSelect = !isMultiSelect && !isShiftSelect;
+
           if (isSingleSelect) {
             // Single select - replace entire selection with just this item
             selectionContext.set([value], e);
