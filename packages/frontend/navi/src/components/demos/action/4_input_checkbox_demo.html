@@ -365,7 +365,7 @@
                 <Input
                   id="signal-controlled-checkbox"
                   type="checkbox"
-                  name="notifications"
+                  name="notifications_signal"
                   valueSignal={valueSignal}
                   action={toggleActionBound}
                   onActionStart={() => {
@@ -403,7 +403,7 @@
                     "Toggling signal, current value:",
                     valueSignal.value,
                   );
-                  valueSignal.value = !valueSignal.value;
+                  valueSignal.value = valueSignal.value === "on" ? false : "on";
                 }}
               >
                 Toggle Signal

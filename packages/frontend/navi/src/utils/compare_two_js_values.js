@@ -111,8 +111,10 @@ export const compareTwoJsValues = (a, b, seenSet = new Set()) => {
   if (aType !== bType) {
     return false;
   }
-  const aIsPrimitive = aType !== "object" && aType !== "function";
-  const bIsPrimitive = bType !== "object" && bType !== "function";
+  const aIsPrimitive =
+    a === null || (aType !== "object" && aType !== "function");
+  const bIsPrimitive =
+    b === null || (bType !== "object" && bType !== "function");
   if (aIsPrimitive !== bIsPrimitive) {
     return false;
   }

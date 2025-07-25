@@ -125,6 +125,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
     id,
     name,
     value: externalValue,
+    valueSignal,
     action,
     children,
     onCancel,
@@ -144,7 +145,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
   const [boundAction, value, setValue, resetValue] = useActionBoundToOneParam(
     action,
     name,
-    externalValue,
+    valueSignal ? valueSignal : externalValue,
     navState,
   );
   const { loading: actionLoading } = useActionStatus(boundAction);

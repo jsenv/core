@@ -169,10 +169,9 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   const [boundAction, value, setValue, resetValue] = useActionBoundToOneParam(
     action,
     name,
-    externalValue,
+    valueSignal ? valueSignal : externalValue,
     navState,
     "",
-    valueSignal,
   );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {

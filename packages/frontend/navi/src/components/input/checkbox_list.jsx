@@ -133,6 +133,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     id,
     name,
     value: externalValue,
+    valueSignal,
     action,
     children,
     actionErrorEffect,
@@ -150,7 +151,13 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
 
   const [navState, setNavState, resetNavState] = useNavState(id);
   const [boundAction, valueArray, addValue, removeValue, resetValueArray] =
-    useActionBoundToOneArrayParam(action, name, externalValue, navState, []);
+    useActionBoundToOneArrayParam(
+      action,
+      name,
+      valueSignal ? valueSignal : externalValue,
+      navState,
+      [],
+    );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,

@@ -248,7 +248,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     useActionBoundToOneParam(
       action,
       name,
-      valueSignal || checkedExternal ? value : undefined,
+      valueSignal ? valueSignal : checkedExternal ? value : undefined,
       navState ? value : undefined,
     );
   const checked = checkedValue === value;
