@@ -1,1 +1,5 @@
-export { Selection, useSelectionContext } from "./selection_context.jsx";
+export {
+  Selection,
+  useRegisterSelectionValue,
+  useSelectionContext,
+} from "./selection_context.jsx";
