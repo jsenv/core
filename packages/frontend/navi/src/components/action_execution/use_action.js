@@ -110,19 +110,28 @@ export const useActionBoundToOneParam = (
     previousParamsSignalRef.current !== paramsSignal;
   previousParamsSignalRef.current = paramsSignal;
 
-  const boundAction = useBoundAction(action, paramsSignal);
-  const getValue = useCallback(() => paramsSignal.value[name], [paramsSignal]);
-  const setValue = useCallback(
-    (value) => {
-      if (debug) {
-        console.debug(
-          `useActionBoundToOneParam(${name}) set value to ${value} (old value is ${getValue()} )`,
-        );
-      }
-      return updateParams({ [name]: value });
-    },
-    [updateParams],
-  );
+  const boundAction = useBoundAction(action, valueSignal ? null : paramsSignal);
+  const getValue = valueSignal
+    ? useCallback(() => paramsSignal.value, [paramsSignal])
+    : useCallback(() => paramsSignal.value[name], [paramsSignal]);
+  const setValue = valueSignal
+    ? useCallback(
+        (value) => {
+          paramsSignal.value = value;
+        },
+        [paramsSignal],
+      )
+    : useCallback(
+        (value) => {
+          if (debug) {
+            console.debug(
+              `useActionBoundToOneParam(${name}) set value to ${value} (old value is ${getValue()} )`,
+            );
+          }
+          return updateParams({ [name]: value });
+        },
+        [updateParams],
+      );
 
   const initialValue = useInitialValue(
     name,

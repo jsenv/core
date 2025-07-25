@@ -975,10 +975,8 @@ export const createAction = (callback, rootOptions = {}) => {
               ? dataEffect(runResult, action)
               : runResult;
             runningStateSignal.value = COMPLETED;
-            if (onComplete) {
-              onComplete(computedDataSignal.peek(), action);
-            }
-            completeSideEffect(action);
+            onComplete?.(computedDataSignal.peek(), action);
+            completeSideEffect?.(action);
           });
           if (DEBUG) {
             console.log(`"${action}": completed (reason: ${reason})`);
@@ -1223,6 +1221,11 @@ const createActionProxyFromSignal = (
     getCurrentAction: () => {
       _updateTarget(proxyParamsSignal.peek());
       return currentAction;
+    },
+    bindParams: () => {
+      throw new Error(
+        `bindParams() is not supported on action proxies, use the underlying action instead`,
+      );
     },
     replaceParams: null, // Will be set below
     toString: () => actionProxy.name,

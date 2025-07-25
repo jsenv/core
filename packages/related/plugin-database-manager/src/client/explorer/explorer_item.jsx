@@ -73,13 +73,13 @@ const RenameInputOrName = ({
   nameKey,
   item,
   useItemArrayInStore,
-  useRenameAction,
+  useRenameItemAction,
   editable,
   stopEditing,
 }) => {
   const itemName = item[nameKey];
   const nameSignal = useSignal(itemName);
-  const renameAction = useRenameAction(item, nameSignal);
+  const renameAction = useRenameItemAction(item, nameSignal);
 
   const itemArrayInStore = useItemArrayInStore();
   const otherValueSet = new Set();
@@ -97,10 +97,10 @@ const RenameInputOrName = ({
   return (
     <EditableText
       action={renameAction}
-      signal={nameSignal}
       editable={editable}
       onEditEnd={stopEditing}
       value={itemName}
+      valueSignal={nameSignal}
       constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
     >
       <Overflow>{itemName}</Overflow>
