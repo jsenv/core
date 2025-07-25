@@ -54,6 +54,14 @@ export const setupBrowserIntegrationViaHistory = ({
   window.addEventListener(
     "click",
     (e) => {
+      if (e.button !== 0) {
+        // Ignore non-left clicks
+        return;
+      }
+      if (e.metaKey) {
+        // Ignore clicks with meta key (e.g. open in new tab)
+        return;
+      }
       const linkElement = e.target.closest("a");
       if (!linkElement) {
         return;
