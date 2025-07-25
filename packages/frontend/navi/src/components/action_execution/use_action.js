@@ -2,6 +2,7 @@ import { signal } from "@preact/signals";
 import { useCallback, useRef } from "preact/hooks";
 import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
+import { isSignal } from "../../utils/stringify_for_display.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useFormContext } from "./form_context.js";
 
@@ -96,9 +97,15 @@ export const useActionBoundToOneParam = (
   externalValue,
   fallbackValue,
   defaultValue,
-  valueSignal,
 ) => {
-  if (action.isProxy && !valueSignal) {
+  const externalValueIsSignal = isSignal(externalValue);
+  let externalValueSignal;
+  if (externalValueIsSignal) {
+    externalValueSignal = externalValue;
+    externalValue = externalValueSignal.peek();
+  }
+
+  if (action.isProxy && !externalValueSignal) {
     throw new Error(
       `useActionBoundToOneParam(${name}) action is a proxy but no valueSignal provided`,
     );
@@ -108,7 +115,7 @@ export const useActionBoundToOneParam = (
   const cacheKey = typeof action === "function" ? actionCacheKey : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(
     cacheKey,
-    valueSignal,
+    externalValueSignal,
   );
   const previousParamsSignalRef = useRef(null);
   const actionChanged =
@@ -116,11 +123,14 @@ export const useActionBoundToOneParam = (
     previousParamsSignalRef.current !== paramsSignal;
   previousParamsSignalRef.current = paramsSignal;
 
-  const boundAction = useBoundAction(action, valueSignal ? null : paramsSignal);
-  const getValue = valueSignal
+  const boundAction = useBoundAction(
+    action,
+    externalValueSignal ? null : paramsSignal,
+  );
+  const getValue = externalValueSignal
     ? useCallback(() => paramsSignal.value, [paramsSignal])
     : useCallback(() => paramsSignal.value[name], [paramsSignal]);
-  const setValue = valueSignal
+  const setValue = externalValueSignal
     ? useCallback(
         (value) => {
           paramsSignal.value = value;
@@ -138,10 +148,6 @@ export const useActionBoundToOneParam = (
         },
         [updateParams],
       );
-
-  if (externalValue === undefined && valueSignal) {
-    externalValue = valueSignal.peek();
-  }
 
   const initialValue = useInitialValue(
     name,

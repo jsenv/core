@@ -222,7 +222,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     name,
     value = "on",
     checked: checkedExternal,
-    checkedSignal,
+    valueSignal,
     action,
     readOnly,
     loading,
@@ -236,7 +236,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
-  if (import.meta.dev && !name && !checkedSignal) {
+  if (import.meta.dev && !name && !valueSignal) {
     console.warn(`InputCheckboxWithAction requires a name prop to be set.`);
   }
 
@@ -248,10 +248,8 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     useActionBoundToOneParam(
       action,
       name,
-      checkedExternal ? value : undefined,
+      valueSignal || checkedExternal ? value : undefined,
       navState ? value : undefined,
-      undefined,
-      checkedSignal,
     );
   const checked = checkedValue === value;
   useEffect(() => {
