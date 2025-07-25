@@ -116,7 +116,6 @@ const LinkPlain = forwardRef((props, ref) => {
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(innerRef, shouldDimColor);
 
-  // Check if this URL is visited reactively
   const isVisited = useIsVisited(href);
 
   return (

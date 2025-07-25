@@ -47,6 +47,7 @@ export const setupBrowserIntegrationViaHistory = ({
   const visitedUrlsSignal = signal(0);
 
   const isVisited = (url) => {
+    url = new URL(url, window.location.href).href;
     return visitedUrlSet.has(url);
   };
   const markUrlAsVisited = (url) => {
@@ -73,6 +74,7 @@ export const setupBrowserIntegrationViaHistory = ({
 
   let abortController = null;
   const handleRoutingTask = (url, { state, replace }) => {
+    markUrlAsVisited(url);
     updateDocumentUrl(url);
     updateDocumentState(state);
     if (abortController) {
@@ -80,16 +82,13 @@ export const setupBrowserIntegrationViaHistory = ({
     }
     abortController = new AbortController();
 
-    const { allResult, requestedResult, activeRouteSet } = applyRouting(url, {
+    const { allResult, requestedResult } = applyRouting(url, {
       globalAbortSignal: globalAbortController.signal,
       abortSignal: abortController.signal,
       state,
       replace,
       isVisited,
     });
-    for (const activeRoute of activeRouteSet) {
-      markUrlAsVisited(activeRoute.url);
-    }
 
     executeWithCleanup(
       () => allResult,
