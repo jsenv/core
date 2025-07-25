@@ -36,6 +36,29 @@ import.meta.css = /* css */ `
   .navi_link[inert] {
     pointer-events: none;
   }
+
+  .navi_link_container {
+    position: relative;
+    display: inline-block;
+  }
+
+  .navi_link_checkbox {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Visual feedback for selected state */
+  .navi_link_container:has(.navi_link_checkbox:checked) .navi_link {
+    background-color: light-dark(#e3f2fd, #1e3a8a);
+    outline: 2px solid light-dark(#1976d2, #3b82f6);
+  }
 `;
 
 export const Link = forwardRef((props, ref) => {
@@ -46,6 +69,38 @@ export const Link = forwardRef((props, ref) => {
 });
 
 const LinkBasic = forwardRef((props, ref) => {
+  const {
+    // Selection props
+    selectable,
+    selected,
+    onSelectionChange,
+    name,
+    value,
+    ...restProps
+  } = props;
+
+  // Check if any selection props are provided
+  const hasSelectionProps =
+    selectable || selected !== undefined || onSelectionChange || name || value;
+
+  if (hasSelectionProps) {
+    return (
+      <LinkWithSelection
+        ref={ref}
+        selectable={selectable}
+        selected={selected}
+        onSelectionChange={onSelectionChange}
+        name={name}
+        value={value}
+        {...restProps}
+      />
+    );
+  }
+
+  return <LinkPlain ref={ref} {...restProps} />;
+});
+
+const LinkPlain = forwardRef((props, ref) => {
   const {
     className = "",
     loading,
@@ -100,6 +155,70 @@ const LinkBasic = forwardRef((props, ref) => {
         {children}
       </a>
     </LoaderBackground>
+  );
+});
+
+const LinkWithSelection = forwardRef((props, ref) => {
+  const {
+    // Selection props
+    selected = false,
+    onSelectionChange,
+    name,
+    value,
+    children,
+    ...rest
+  } = props;
+
+  const checkboxRef = useRef();
+
+  const handleLinkClick = (e) => {
+    // Handle selection on modifier clicks
+    if (e.metaKey || e.ctrlKey || e.shiftKey) {
+      e.preventDefault(); // Prevent navigation
+      // Toggle selection via checkbox
+      if (checkboxRef.current) {
+        const newChecked = !checkboxRef.current.checked;
+        checkboxRef.current.checked = newChecked;
+        onSelectionChange?.(newChecked, {
+          shiftKey: e.shiftKey,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey,
+          value,
+        });
+      }
+      return;
+    }
+
+    // Fall back to original onClick
+    rest.onClick?.(e);
+  };
+
+  const handleCheckboxChange = (e) => {
+    onSelectionChange?.(e.target.checked, {
+      shiftKey: e.shiftKey,
+      metaKey: e.metaKey,
+      ctrlKey: e.ctrlKey,
+      value,
+    });
+  };
+
+  return (
+    <div className="navi_link_container">
+      <input
+        ref={checkboxRef}
+        type="checkbox"
+        name={name}
+        value={value}
+        checked={selected}
+        onChange={handleCheckboxChange}
+        className="navi_link_checkbox"
+        aria-label={`Select ${typeof children === "string" ? children : "item"}`}
+        tabIndex={-1} // Don't interfere with link tab order
+      />
+      <LinkPlain ref={ref} {...rest} onClick={handleLinkClick}>
+        {children}
+      </LinkPlain>
+    </div>
   );
 });
 

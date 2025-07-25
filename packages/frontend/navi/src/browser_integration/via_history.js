@@ -70,6 +70,7 @@ export const setupBrowserIntegrationViaHistory = ({
       if (!href || !href.startsWith(window.location.origin)) {
         return;
       }
+      // TODO: ignore anchor navigation
       e.preventDefault();
       const state = null;
       history.pushState(state, null, href);
