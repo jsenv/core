@@ -25,8 +25,42 @@ export const setupBrowserIntegrationViaHistory = ({
   };
   setActionDispatcher(dispatchActions);
 
-  let abortController = null;
+  const getDocumentState = () => {
+    return window.history.state ? { ...window.history.state } : null;
+  };
 
+  const replaceDocumentState = (newState) => {
+    const url = window.location.href;
+    window.history.replaceState(newState, null, url);
+    handleRoutingTask(url, { state: newState });
+  };
+
+  const historyStartAtStart = getDocumentState();
+  const visitedUrlSet = historyStartAtStart
+    ? new Set(historyStartAtStart.jsenv_visited_urls || [])
+    : new Set();
+  const isVisited = (url) => {
+    return visitedUrlSet.has(url);
+  };
+  const markUrlAsVisited = (url) => {
+    if (visitedUrlSet.has(url)) {
+      return;
+    }
+    visitedUrlSet.add(url);
+    const historyState = getDocumentState() || {};
+    const hsitoryStateWithVisitedUrls = {
+      ...historyState,
+      jsenv_visited_urls: Array.from(visitedUrlSet),
+    };
+    window.history.replaceState(
+      hsitoryStateWithVisitedUrls,
+      null,
+      window.location.href,
+    );
+    updateDocumentState(hsitoryStateWithVisitedUrls);
+  };
+
+  let abortController = null;
   const handleRoutingTask = (url, { state, replace }) => {
     updateDocumentUrl(url);
     updateDocumentState(state);
@@ -35,12 +69,17 @@ export const setupBrowserIntegrationViaHistory = ({
     }
     abortController = new AbortController();
 
-    const { allResult, requestedResult } = applyRouting(url, {
+    const { allResult, requestedResult, activeRouteSet } = applyRouting(url, {
       globalAbortSignal: globalAbortController.signal,
       abortSignal: abortController.signal,
       state,
       replace,
+      isVisited,
     });
+    for (const activeRoute of activeRouteSet) {
+      markUrlAsVisited(activeRoute.url);
+    }
+
     executeWithCleanup(
       () => allResult,
       () => {
@@ -127,16 +166,6 @@ export const setupBrowserIntegrationViaHistory = ({
     window.history.forward();
   };
 
-  const getDocumentState = () => {
-    return window.history.state ? { ...window.history.state } : null;
-  };
-
-  const replaceDocumentState = (newState) => {
-    const url = window.location.href;
-    window.history.replaceState(newState, null, url);
-    handleRoutingTask(url, { state: newState });
-  };
-
   const init = () => {
     const url = window.location.href;
     const state = history.state;
@@ -154,5 +183,6 @@ export const setupBrowserIntegrationViaHistory = ({
     goForward,
     getDocumentState,
     replaceDocumentState,
+    isVisited,
   };
 };

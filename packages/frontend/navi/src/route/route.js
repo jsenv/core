@@ -34,6 +34,7 @@ export const updateRoutes = (
   {
     // state
     replace,
+    isVisited,
   },
 ) => {
   const routeMatchInfoSet = new Set();
@@ -81,6 +82,7 @@ export const updateRoutes = (
   }
 
   // Apply all signal updates in a batch
+  const activeRouteSet = new Set();
   batch(() => {
     for (const {
       route,
@@ -88,11 +90,18 @@ export const updateRoutes = (
       newActive,
       newParams,
     } of routeMatchInfoSet) {
-      const { activeSignal, paramsSignal } = routePrivateProperties;
+      const { activeSignal, paramsSignal, visitedSignal } =
+        routePrivateProperties;
+      const visited = isVisited(route.url);
       activeSignal.value = newActive;
       paramsSignal.value = newParams;
+      visitedSignal.value = visited;
       route.active = newActive;
       route.params = newParams;
+      route.visited = visited;
+      if (newActive) {
+        activeRouteSet.add(route);
+      }
     }
   });
 
@@ -183,6 +192,7 @@ export const updateRoutes = (
     reloadSet: toReloadSet,
     abortSignalMap,
     routeLoadRequestedMap,
+    activeRouteSet,
   };
 };
 const extractParams = (urlPattern, url) => {

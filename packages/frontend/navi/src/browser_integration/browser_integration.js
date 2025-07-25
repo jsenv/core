@@ -26,12 +26,21 @@ const applyActions = (params) => {
 
 const applyRouting = (
   url,
-  { globalAbortSignal, abortSignal, state, replace },
+  { globalAbortSignal, abortSignal, state, replace, isVisited },
 ) => {
-  const { loadSet, reloadSet, abortSignalMap, routeLoadRequestedMap } =
-    updateRoutes(url, { state, replace });
+  const {
+    loadSet,
+    reloadSet,
+    abortSignalMap,
+    routeLoadRequestedMap,
+    activeRouteSet,
+  } = updateRoutes(url, { state, replace, isVisited });
   if (loadSet.size === 0 && reloadSet.size === 0) {
-    return { allResult: undefined, requestedResult: undefined };
+    return {
+      allResult: undefined,
+      requestedResult: undefined,
+      activeRouteSet: new Set(),
+    };
   }
   const updateActionsResult = updateActions({
     globalAbortSignal,
@@ -49,7 +58,7 @@ const applyRouting = (
     }
   }
   routingWhile(() => allResult, pendingTaskNameArray);
-  return updateActionsResult;
+  return { ...updateActionsResult, activeRouteSet };
 };
 
 const browserIntegration = setupBrowserIntegrationViaHistory({
@@ -77,6 +86,7 @@ export const stopLoad = (reason = "stopLoad() called") => {
 export const reload = browserIntegration.reload;
 export const goBack = browserIntegration.goBack;
 export const goForward = browserIntegration.goForward;
+export const isVisited = browserIntegration.isVisited;
 export const handleActionTask = browserIntegration.handleActionTask;
 
 const idUsageMap = new Map();
