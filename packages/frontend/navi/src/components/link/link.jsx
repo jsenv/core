@@ -43,7 +43,8 @@ import.meta.css = /* css */ `
 
   .navi_link_container {
     position: relative;
-    display: inline-block;
+    display: inline-flex;
+    flex: 1;
   }
 
   .navi_link_checkbox {
@@ -155,11 +156,6 @@ const LinkWithSelection = forwardRef((props, ref) => {
     onClick,
     ...rest
   } = props;
-  if (!name) {
-    throw new Error(
-      "LinkWithSelection requires a 'name' prop for selection context.",
-    );
-  }
 
   const checkboxRef = useRef();
   const isSelected = selectionContext.isSelected(value);
