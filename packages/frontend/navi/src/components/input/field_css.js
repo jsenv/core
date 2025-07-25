@@ -76,21 +76,25 @@ import.meta.css = /* css */ `
     outline-color: var(--field-hover-border-color);
   }
 
-  [data-field][data-field-with-border]:active,
+  [data-field-with-border]:active,
   [data-field][data-field-with-border][data-active] {
     outline-color: var(--field-active-border-color);
     background-color: none;
   }
 
-  [data-field][readonly][data-field-with-border],
-  [data-field][data-readonly][data-field-with-border] {
+  [data-field-with-border][readonly],
+  [data-field-with-border][data-readonly] {
     outline-color: var(--field-readonly-border-color);
   }
 
   [data-field][readonly],
   [data-field][data-readonly] {
-    background-color: var(--field-readonly-background-color);
     color: var(--field-readonly-text-color);
+  }
+
+  [data-field-with-background][readonly],
+  [data-field-with-background][data-readonly] {
+    background-color: var(--field-readonly-background-color);
   }
 
   [data-field]:focus-visible,
