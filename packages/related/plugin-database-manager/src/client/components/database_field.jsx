@@ -1,4 +1,5 @@
 import { Button, Field, Form, Input, Select } from "@jsenv/navi";
+import { useSignal } from "@preact/signals";
 import { useCallback, useState } from "preact/hooks";
 import { RoleLink } from "../role/role_link.jsx";
 
@@ -7,6 +8,7 @@ export const DatabaseFieldset = ({
   columns,
   usePutAction,
   customFields = {},
+  ignoredFields = [],
 }) => {
   columns.sort((a, b) => {
     return a.ordinal_position - b.ordinal_position;
@@ -15,6 +17,9 @@ export const DatabaseFieldset = ({
     <ul>
       {columns.map((column) => {
         const columnName = column.column_name;
+        if (ignoredFields.includes(columnName)) {
+          return null;
+        }
         const customField = customFields?.[columnName];
         const dbField = customField ? (
           customField(item)
@@ -77,60 +82,57 @@ export const RoleField = ({ role }) => {
 
 const DatabaseFieldWrapper = ({ item, column, usePutAction }) => {
   const columnName = column.column_name;
-  const putAction = usePutAction(columnName);
   const value = item ? item[columnName] : "";
+  const valueSignal = useSignal(value);
+  const putAction = usePutAction(columnName, valueSignal);
 
   return (
     <DatabaseField
       label={<span>{columnName}:</span>}
       column={column}
-      value={value}
       action={putAction}
+      valueSignal={valueSignal}
     />
   );
 };
-export const DatabaseField = ({ column, label, ...rest }) => {
+const DatabaseField = ({ column, label, ...rest }) => {
   const columnName = column.column_name;
+  const { value } = rest;
 
-  if (column.name === "tablename") {
-    const { value } = rest;
-    return <Field label={label} input={<span>{value}</span>} />;
-  }
   if (column.data_type === "boolean") {
-    const { value, ...props } = rest;
     return (
       <Field
         label={label}
         input={
-          <Input type="checkbox" name={columnName} checked={value} {...props} />
+          <Input type="checkbox" name={columnName} checked={value} {...rest} />
         }
       />
     );
   }
   if (column.data_type === "timestamp with time zone") {
-    const props = rest;
     return (
       <Field
         label={label}
-        input={<Input type="datetime-local" name={columnName} {...props} />}
+        input={<Input type="datetime-local" name={columnName} {...rest} />}
       />
     );
   }
   if (column.data_type === "integer") {
-    const props = rest;
     return (
       <Field
         label={label}
         input={
-          <Input type="number" min="0" step="1" name={columnName} {...props} />
+          <Input type="number" min="0" step="1" name={columnName} {...rest} />
         }
       />
     );
   }
   if (column.data_type === "name") {
-    const props = rest;
     return (
-      <Field label={label} input={<Input type="text" required {...props} />} />
+      <Field
+        label={label}
+        input={<Input type="text" name={columnName} required {...rest} />}
+      />
     );
   }
   if (column.data_type === "oid") {
@@ -177,7 +179,6 @@ export const DatabaseField = ({ column, label, ...rest }) => {
       />
     );
   }
-  const { value } = rest;
   return (
     <Field
       label={<span>{column.column_name}: </span>}

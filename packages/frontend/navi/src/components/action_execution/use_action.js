@@ -133,6 +133,10 @@ export const useActionBoundToOneParam = (
         [updateParams],
       );
 
+  if (externalValue === undefined && valueSignal) {
+    externalValue = valueSignal.peek();
+  }
+
   const initialValue = useInitialValue(
     name,
     externalValue,

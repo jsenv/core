@@ -53,14 +53,13 @@ export const TablePage = ({ table }) => {
           <DatabaseFieldset
             item={table}
             columns={table.meta.columns}
-            usePutAction={(columnName) => {
-              const putAction = TABLE.PUT.bindParams({
+            usePutAction={(columnName, valueSignal) =>
+              TABLE.PUT.bindParams({
                 tablename: table.tablename,
                 columnName,
-              });
-              putAction.meta.valueParamName = "columnValue";
-              return putAction;
-            }}
+                columnValue: valueSignal,
+              })
+            }
             customFields={{
               tableowner: () => {
                 const ownerRole = table.ownerRole;

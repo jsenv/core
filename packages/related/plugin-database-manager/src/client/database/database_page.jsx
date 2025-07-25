@@ -32,10 +32,11 @@ export const DatabasePage = ({ database }) => {
         <DatabaseFieldset
           item={database}
           columns={database.meta.columns}
-          usePutAction={(columnName) =>
+          usePutAction={(columnName, valueSignal) =>
             DATABASE.PUT.bindParams({
               datname: database.datname,
               columnName,
+              columnValue: valueSignal,
             })
           }
           customFields={{
