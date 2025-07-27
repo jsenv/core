@@ -32,18 +32,24 @@ export const performTabNavigation = (
     return;
   }
 
-  const elementToFocus = activeElementIsBody
-    ? getFirstTabbable(rootElement, predicate)
-    : getNextTabbableOrFirst(activeElement, predicate);
+  let elementToFocus;
+  if (activeElementIsBody) {
+    elementToFocus = findFirstDescendant(rootElement, predicate);
+  } else {
+    const nextTabbableOrFirst = findAfter({
+      from: activeElement,
+      root: rootElement,
+      predicate,
+    });
+    elementToFocus =
+      nextTabbableOrFirst || findFirstDescendant(activeElement, predicate);
+  }
   if (elementToFocus) {
     elementToFocus.focus();
   }
 };
 
 export const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
-
-const getFirstTabbable = (element, predicate = isDiscoverableWithKeyboard) =>
-  findFirstDescendant(element, predicate);
 
 const getLastTabbable = (element, predicate = isDiscoverableWithKeyboard) =>
   findLastDescendant(element, predicate);
@@ -58,16 +64,4 @@ const getPreviousTabbableOrLast = (
     predicate,
   });
   return previous || getLastTabbable(element);
-};
-
-const getNextTabbableOrFirst = (
-  element,
-  predicate = isDiscoverableWithKeyboard,
-) => {
-  const next = findAfter({
-    from: document.activeElement,
-    root: element,
-    predicate,
-  });
-  return next || getFirstTabbable(element);
 };
