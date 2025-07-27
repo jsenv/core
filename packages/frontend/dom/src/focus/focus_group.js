@@ -16,9 +16,6 @@ export const initFocusGroup = (
   } = {},
 ) => {
   if (skipTab) {
-    // lorsqu ele focus arrive dans ce groupe, on peut choisir de skip-tab
-    // c'est a dire
-    // que le prochain tab focus en dehors de ce groupe
     element.addEventListener(
       "keydown",
       (event) => {
