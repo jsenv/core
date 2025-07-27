@@ -8,10 +8,6 @@ import { isDiscoverableWithKeyboard } from "./element_is_focusable.js";
 
 const DEBUG = true;
 
-const getElementDebugInfo = (element) => {
-  return element;
-};
-
 export const performTabNavigation = (
   event,
   { rootElement = document.body, outsideOfElement = null } = {},
@@ -21,16 +17,15 @@ export const performTabNavigation = (
 
   if (DEBUG) {
     console.debug(
-      `Tab navigation: ${isForward ? "forward" : "backward"} from ${getElementDebugInfo(activeElement)}`,
+      `Tab navigation: ${isForward ? "forward" : "backward"} from,`,
+      activeElement,
     );
   }
 
   const predicate = (candidate) => {
     const isDiscoverable = isDiscoverableWithKeyboard(candidate);
     if (DEBUG) {
-      console.debug(
-        `Testing ${getElementDebugInfo(candidate)}: ${isDiscoverable ? "✓" : "✗"}`,
-      );
+      console.debug(`Testing`, candidate, `${isDiscoverable ? "✓" : "✗"}`);
     }
     return isDiscoverable;
   };
@@ -83,7 +78,7 @@ export const performTabNavigation = (
 
   if (elementToFocus) {
     if (DEBUG) {
-      console.debug(`Focusing: ${getElementDebugInfo(elementToFocus)}`);
+      console.debug(`Focusing`, elementToFocus);
     }
     elementToFocus.focus();
   } else if (DEBUG) {
