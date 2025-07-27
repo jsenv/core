@@ -29,10 +29,14 @@ export const findFirstDescendant = (rootNode, fn, { skipRoot } = {}) => {
   return null;
 };
 
-export const findLastDescendant = (rootNode, fn) => {
-  const deepestNode = getDeepestNode(rootNode);
+export const findLastDescendant = (rootNode, fn, { skipRoot } = {}) => {
+  const deepestNode = getDeepestNode(rootNode, skipRoot);
   if (deepestNode) {
-    const iterator = createPreviousNodeIterator(deepestNode, rootNode);
+    const iterator = createPreviousNodeIterator(
+      deepestNode,
+      rootNode,
+      skipRoot,
+    );
     let { done, value: node } = iterator.next();
     while (done === false) {
       if (fn(node)) {
@@ -160,9 +164,23 @@ const createAfterNodeIterator = (
   return { next };
 };
 
-const getDeepestNode = (node) => {
+const getDeepestNode = (node, skipRoot = null) => {
   let deepestNode = node.lastChild;
   while (deepestNode) {
+    // If we hit skipRoot or enter its subtree, stop going deeper
+    if (
+      skipRoot &&
+      (deepestNode === skipRoot || skipRoot.contains(deepestNode))
+    ) {
+      // Try the previous sibling instead
+      const previousSibling = deepestNode.previousSibling;
+      if (previousSibling) {
+        return getDeepestNode(previousSibling, skipRoot);
+      }
+      // If no previous sibling, return the parent (which should be safe)
+      return deepestNode.parentNode === node ? null : deepestNode.parentNode;
+    }
+
     const lastChild = deepestNode.lastChild;
     if (lastChild) {
       deepestNode = lastChild;
@@ -181,14 +199,15 @@ const getPreviousNode = (node, rootNode, skipRoot = null) => {
       return getPreviousNode(previousSibling, rootNode, skipRoot);
     }
 
-    const deepestChild = getDeepestNode(previousSibling);
+    const deepestChild = getDeepestNode(previousSibling, skipRoot);
 
-    // Check if deepest child is inside skipRoot
+    // Check if deepest child is inside skipRoot (shouldn't happen with updated getDeepestNode, but safe check)
     if (
       skipRoot &&
       deepestChild &&
       (deepestChild === skipRoot || skipRoot.contains(deepestChild))
     ) {
+      // Skip this sibling entirely and try the next one
       return getPreviousNode(previousSibling, rootNode, skipRoot);
     }
 
