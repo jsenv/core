@@ -13,6 +13,11 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
   }
 
   const onKeyDown = useCallback((event) => {
+    if (event.defaultPrevented) {
+      // If the keydown was prevented by another handler, do not interfere
+      return;
+    }
+
     let shortcutFound;
     for (const shortcutCandidate of shortcutsRef.current) {
       const { enabled = true, needsMetaKey = false, key } = shortcutCandidate;

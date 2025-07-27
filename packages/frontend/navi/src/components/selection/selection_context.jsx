@@ -149,6 +149,23 @@ export const Selection = ({ value = [], onChange, children }) => {
         contextValue.add([value], event);
       }
     },
+
+    getValueAfter: (value) => {
+      const registry = registryRef.current;
+      const index = registry.indexOf(value);
+      if (index < 0 || index >= registry.length - 1) {
+        return null; // No next value
+      }
+      return registry[index + 1];
+    },
+    getValueBefore: (value) => {
+      const registry = registryRef.current;
+      const index = registry.indexOf(value);
+      if (index <= 0) {
+        return null; // No previous value
+      }
+      return registry[index - 1];
+    },
   };
 
   return (
@@ -172,4 +189,67 @@ export const useRegisterSelectionValue = (value) => {
     }
     return undefined;
   }, [selectionContext, value]);
+};
+
+export const clickToSelect = (clickEvent, { selectionContext, value }) => {
+  if (clickEvent.defaultPrevented) {
+    // If the click was prevented by another handler, do not interfere
+    return;
+  }
+
+  const isMultiSelect = clickEvent.metaKey || clickEvent.ctrlKey;
+  const isShiftSelect = clickEvent.shiftKey;
+  const isSingleSelect = !isMultiSelect && !isShiftSelect;
+
+  if (isSingleSelect) {
+    // Single select - replace entire selection with just this item
+    selectionContext.set([value], clickEvent);
+    return;
+  }
+  if (isMultiSelect) {
+    clickEvent.preventDefault(); // Prevent navigation
+    selectionContext.toggle(value, clickEvent);
+    return;
+  }
+  if (isShiftSelect) {
+    clickEvent.preventDefault(); // Prevent navigation
+    selectionContext.addFromLastSelectedTo(value, clickEvent);
+    return;
+  }
+};
+
+export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
+  if (keydownEvent.defaultPrevented) {
+    // If the keydown was prevented by another handler, do not interfere
+    return;
+  }
+
+  const isMultiSelect = keydownEvent.metaKey || keydownEvent.ctrlKey;
+  const { key } = keydownEvent;
+  if (key === "ArrowDown") {
+    const nextValue = selectionContext.getValueAfter(value);
+    if (!nextValue) {
+      return; // No next value to select
+    }
+    keydownEvent.preventDefault(); // Prevent default scrolling behavior
+    if (isMultiSelect) {
+      selectionContext.add([nextValue], keydownEvent);
+      return;
+    }
+    selectionContext.set([nextValue], keydownEvent);
+    return;
+  }
+  if (key === "ArrowUp") {
+    const previousValue = selectionContext.getValueBefore(value);
+    if (!previousValue) {
+      return; // No previous value to select
+    }
+    keydownEvent.preventDefault(); // Prevent default scrolling behavior
+    if (isMultiSelect) {
+      selectionContext.add([previousValue], keydownEvent);
+      return;
+    }
+    selectionContext.set([previousValue], keydownEvent);
+    return;
+  }
 };

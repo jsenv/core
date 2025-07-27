@@ -7,6 +7,8 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import {
+  clickToSelect,
+  keydownToSelect,
   useRegisterSelectionValue,
   useSelectionContext,
 } from "../selection/selection_context.jsx";
@@ -156,7 +158,15 @@ const LinkPlain = forwardRef((props, ref) => {
 });
 
 const LinkWithSelection = forwardRef((props, ref) => {
-  const { selectionContext, name, value, children, onClick, ...rest } = props;
+  const {
+    selectionContext,
+    name,
+    value,
+    children,
+    onClick,
+    onKeyDown,
+    ...rest
+  } = props;
   const isSelected = selectionContext.isSelected(value);
   useRegisterSelectionValue(value);
 
@@ -176,21 +186,12 @@ const LinkWithSelection = forwardRef((props, ref) => {
         ref={ref}
         {...rest}
         onClick={(e) => {
-          const isMultiSelect = e.metaKey || e.ctrlKey;
-          const isShiftSelect = e.shiftKey;
-          const isSingleSelect = !isMultiSelect && !isShiftSelect;
-
-          if (isSingleSelect) {
-            // Single select - replace entire selection with just this item
-            selectionContext.set([value], e);
-          } else if (isMultiSelect) {
-            e.preventDefault(); // Prevent navigation
-            selectionContext.toggle(value, e);
-          } else if (isShiftSelect) {
-            e.preventDefault(); // Prevent navigation
-            selectionContext.addFromLastSelectedTo(value, e);
-          }
+          clickToSelect(e, { selectionContext, value });
           onClick?.(e);
+        }}
+        onKeyDown={(e) => {
+          keydownToSelect(e, { selectionContext, value });
+          onKeyDown?.(e);
         }}
         data-selected={isSelected ? "" : undefined}
       >
