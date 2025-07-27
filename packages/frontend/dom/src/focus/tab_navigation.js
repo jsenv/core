@@ -16,9 +16,6 @@ export const performTabNavigation = (
     if (!isDiscoverableWithKeyboard(candidate)) {
       return false;
     }
-    if (outsideOfElement && outsideOfElement.contains(candidate)) {
-      return false;
-    }
     return true;
   };
 
@@ -33,16 +30,23 @@ export const performTabNavigation = (
   }
 
   let elementToFocus;
-  if (activeElementIsBody) {
-    elementToFocus = findFirstDescendant(rootElement, predicate);
-  } else {
-    const nextTabbableOrFirst = findAfter({
-      from: activeElement,
-      root: rootElement,
+  if (activeElement === rootElement) {
+    elementToFocus = findFirstDescendant(
+      rootElement,
       predicate,
+      outsideOfElement,
+    );
+  } else {
+    const nextTabbable = findAfter(activeElement, predicate, {
+      root: rootElement,
+      skipRoot: outsideOfElement,
     });
-    elementToFocus =
-      nextTabbableOrFirst || findFirstDescendant(activeElement, predicate);
+    if (nextTabbable) {
+      elementToFocus = nextTabbable;
+    } else {
+      const firstTabbable = findFirstDescendant(activeElement, predicate);
+      elementToFocus = firstTabbable;
+    }
   }
   if (elementToFocus) {
     elementToFocus.focus();
