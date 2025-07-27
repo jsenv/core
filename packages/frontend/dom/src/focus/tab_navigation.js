@@ -8,90 +8,86 @@ import { isDiscoverableWithKeyboard } from "./element_is_focusable.js";
 
 const DEBUG = true;
 
+const getElementDebugInfo = (element) => {
+  return element;
+};
+
 export const performTabNavigation = (
   event,
   { rootElement = document.body, outsideOfElement = null } = {},
 ) => {
   const activeElement = document.activeElement;
+  const isForward = !event.shiftKey;
 
   if (DEBUG) {
-    console.debug("performTabNavigation:", {
-      activeElement,
-      shiftKey: event.shiftKey,
-      rootElement,
-      outsideOfElement,
-    });
+    console.debug(
+      `Tab navigation: ${isForward ? "forward" : "backward"} from ${getElementDebugInfo(activeElement)}`,
+    );
   }
 
   const predicate = (candidate) => {
     const isDiscoverable = isDiscoverableWithKeyboard(candidate);
     if (DEBUG) {
-      console.debug("Testing element:", {
-        element: candidate,
-        isDiscoverable,
-      });
+      console.debug(
+        `Testing ${getElementDebugInfo(candidate)}: ${isDiscoverable ? "✓" : "✗"}`,
+      );
     }
     return isDiscoverable;
   };
 
-  if (event.shiftKey) {
-    let elementToFocus;
-    if (DEBUG) console.debug("Shift+Tab navigation");
-    if (activeElement === rootElement) {
-      elementToFocus = findLastDescendant(activeElement, predicate, {
-        skipRoot: outsideOfElement,
-      });
-    } else {
-      const prevTabbable = findBefore(activeElement, predicate, {
-        root: rootElement,
-        skipRoot: outsideOfElement,
-      });
-      if (prevTabbable) {
-        elementToFocus = prevTabbable;
-      } else {
-        if (DEBUG)
-          console.debug("No previous tabbable found, wrapping to last");
-        elementToFocus = findLastDescendant(activeElement, predicate, {
+  let elementToFocus;
+
+  if (activeElement === rootElement) {
+    // Starting from root element
+    if (DEBUG) {
+      console.debug("Starting from root element");
+    }
+    elementToFocus = isForward
+      ? findFirstDescendant(rootElement, predicate, {
+          skipRoot: outsideOfElement,
+        })
+      : findLastDescendant(rootElement, predicate, {
           skipRoot: outsideOfElement,
         });
-      }
-    }
-    if (elementToFocus) {
-      if (DEBUG) console.debug("Focusing element (shift):", elementToFocus);
-      elementToFocus.focus();
-    }
-    return;
-  }
-
-  if (DEBUG) console.debug("Forward Tab navigation");
-  let elementToFocus;
-  if (activeElement === rootElement) {
-    if (DEBUG)
-      console.debug("Active element is root, finding first descendant");
-    elementToFocus = findFirstDescendant(rootElement, predicate, {
-      skipRoot: outsideOfElement,
-    });
   } else {
-    if (DEBUG) console.debug("Finding next tabbable after current element");
-    const nextTabbable = findAfter(activeElement, predicate, {
+    // Starting from a specific element
+    const searchFunction = isForward ? findAfter : findBefore;
+    const fallbackFunction = isForward
+      ? findFirstDescendant
+      : findLastDescendant;
+
+    if (DEBUG) {
+      console.debug(
+        `Searching ${isForward ? "after" : "before"} current element`,
+      );
+    }
+
+    const nextElement = searchFunction(activeElement, predicate, {
       root: rootElement,
       skipRoot: outsideOfElement,
     });
-    if (nextTabbable) {
-      elementToFocus = nextTabbable;
+
+    if (nextElement) {
+      elementToFocus = nextElement;
     } else {
-      if (DEBUG) console.debug("No next tabbable found, wrapping to first");
-      const firstTabbable = findFirstDescendant(rootElement, predicate, {
+      if (DEBUG) {
+        console.debug(
+          `No ${isForward ? "next" : "previous"} element found, wrapping to ${isForward ? "first" : "last"}`,
+        );
+      }
+      elementToFocus = fallbackFunction(rootElement, predicate, {
         skipRoot: outsideOfElement,
       });
-      elementToFocus = firstTabbable;
     }
   }
+
   if (elementToFocus) {
-    if (DEBUG) console.debug("Focusing element:", elementToFocus);
+    if (DEBUG) {
+      console.debug(`Focusing: ${getElementDebugInfo(elementToFocus)}`);
+    }
     elementToFocus.focus();
   } else if (DEBUG) {
-    console.debug("No element to focus found");
+    console.debug("No focusable element found");
   }
 };
 
