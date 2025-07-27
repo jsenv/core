@@ -6,14 +6,26 @@ import {
 } from "../traversal.js";
 import { isDiscoverableWithKeyboard } from "./element_is_focusable.js";
 
-export const performTabNavigation = (event, rootElement = document.body) => {
+export const performTabNavigation = (
+  event,
+  { rootElement = document.body, outsideOfElement = null } = {},
+) => {
   const activeElement = document.activeElement;
   const activeElementIsBody = activeElement === document.body;
+  const predicate = (candidate) => {
+    if (!isDiscoverableWithKeyboard(candidate)) {
+      return false;
+    }
+    if (outsideOfElement && outsideOfElement.contains(candidate)) {
+      return false;
+    }
+    return true;
+  };
 
   if (event.shiftKey) {
     const elementToFocus = activeElementIsBody
-      ? getLastTabbable(rootElement)
-      : getPreviousTabbableOrLast(activeElement);
+      ? getLastTabbable(rootElement, predicate)
+      : getPreviousTabbableOrLast(activeElement, predicate);
     if (elementToFocus) {
       elementToFocus.focus();
     }
@@ -21,33 +33,41 @@ export const performTabNavigation = (event, rootElement = document.body) => {
   }
 
   const elementToFocus = activeElementIsBody
-    ? getFirstTabbable(rootElement)
-    : getNextTabbableOrFirst(activeElement);
+    ? getFirstTabbable(rootElement, predicate)
+    : getNextTabbableOrFirst(activeElement, predicate);
   if (elementToFocus) {
     elementToFocus.focus();
   }
 };
 
-const getFirstTabbable = (element) =>
-  findFirstDescendant(element, isDiscoverableWithKeyboard);
+export const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
 
-const getLastTabbable = (element) =>
-  findLastDescendant(element, isDiscoverableWithKeyboard);
+const getFirstTabbable = (element, predicate = isDiscoverableWithKeyboard) =>
+  findFirstDescendant(element, predicate);
 
-const getPreviousTabbableOrLast = (element) => {
+const getLastTabbable = (element, predicate = isDiscoverableWithKeyboard) =>
+  findLastDescendant(element, predicate);
+
+const getPreviousTabbableOrLast = (
+  element,
+  predicate = isDiscoverableWithKeyboard,
+) => {
   const previous = findBefore({
     from: document.activeElement,
     root: element,
-    predicate: isDiscoverableWithKeyboard,
+    predicate,
   });
   return previous || getLastTabbable(element);
 };
 
-const getNextTabbableOrFirst = (element) => {
+const getNextTabbableOrFirst = (
+  element,
+  predicate = isDiscoverableWithKeyboard,
+) => {
   const next = findAfter({
     from: document.activeElement,
     root: element,
-    predicate: isDiscoverableWithKeyboard,
+    predicate,
   });
   return next || getFirstTabbable(element);
 };
