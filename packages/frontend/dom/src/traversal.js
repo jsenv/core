@@ -60,9 +60,6 @@ export const findAfter = (
   return null;
 };
 
-export const findAfterSkippingChildren = (param) =>
-  findAfter({ ...param, skipChildren: true });
-
 export const findBefore = (
   from,
   predicate,

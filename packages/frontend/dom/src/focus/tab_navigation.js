@@ -13,7 +13,6 @@ export const performTabNavigation = (
   { rootElement = document.body, outsideOfElement = null } = {},
 ) => {
   const activeElement = document.activeElement;
-  const activeElementIsBody = activeElement === document.body;
 
   if (DEBUG) {
     console.debug("performTabNavigation:", {
@@ -36,15 +35,27 @@ export const performTabNavigation = (
   };
 
   if (event.shiftKey) {
+    let elementToFocus;
     if (DEBUG) console.debug("Shift+Tab navigation");
-    const elementToFocus = activeElementIsBody
-      ? getLastTabbable(rootElement, predicate)
-      : getPreviousTabbableOrLast(
-          activeElement,
-          predicate,
-          rootElement,
-          outsideOfElement,
-        );
+    if (activeElement === rootElement) {
+      elementToFocus = findLastDescendant(activeElement, predicate, {
+        skipRoot: outsideOfElement,
+      });
+    } else {
+      const prevTabbable = findBefore(activeElement, predicate, {
+        root: rootElement,
+        skipRoot: outsideOfElement,
+      });
+      if (prevTabbable) {
+        elementToFocus = prevTabbable;
+      } else {
+        if (DEBUG)
+          console.debug("No previous tabbable found, wrapping to last");
+        elementToFocus = findLastDescendant(activeElement, predicate, {
+          skipRoot: outsideOfElement,
+        });
+      }
+    }
     if (elementToFocus) {
       if (DEBUG) console.debug("Focusing element (shift):", elementToFocus);
       elementToFocus.focus();
@@ -85,19 +96,3 @@ export const performTabNavigation = (
 };
 
 export const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
-
-const getLastTabbable = (element, predicate = isDiscoverableWithKeyboard) =>
-  findLastDescendant(element, predicate);
-
-const getPreviousTabbableOrLast = (
-  element,
-  predicate = isDiscoverableWithKeyboard,
-  rootElement = document.body,
-  outsideOfElement = null,
-) => {
-  const previous = findBefore(document.activeElement, predicate, {
-    root: rootElement,
-    skipRoot: outsideOfElement,
-  });
-  return previous || getLastTabbable(element, predicate);
-};
