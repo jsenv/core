@@ -194,10 +194,10 @@
       document.addEventListener("keydown", (e) => {
         if (e.key === "Tab") {
           console.log("Global tab event:", {
-            target: e.target.tagName,
+            target: e.target,
             shiftKey: e.shiftKey,
             defaultPrevented: e.defaultPrevented,
-            activeElement: document.activeElement.tagName,
+            activeElement: document.activeElement,
           });
         }
       });

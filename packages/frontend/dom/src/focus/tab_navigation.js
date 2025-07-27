@@ -6,35 +6,57 @@ import {
 } from "../traversal.js";
 import { isDiscoverableWithKeyboard } from "./element_is_focusable.js";
 
+const DEBUG = true;
+
 export const performTabNavigation = (
   event,
   { rootElement = document.body, outsideOfElement = null } = {},
 ) => {
   const activeElement = document.activeElement;
   const activeElementIsBody = activeElement === document.body;
+
+  if (DEBUG) {
+    console.debug("performTabNavigation:", {
+      activeElement,
+      shiftKey: event.shiftKey,
+      rootElement,
+      outsideOfElement,
+    });
+  }
+
   const predicate = (candidate) => {
-    if (!isDiscoverableWithKeyboard(candidate)) {
-      return false;
+    const isDiscoverable = isDiscoverableWithKeyboard(candidate);
+    if (DEBUG) {
+      console.debug("Testing element:", {
+        element: candidate,
+        isDiscoverable,
+      });
     }
-    return true;
+    return isDiscoverable;
   };
 
   if (event.shiftKey) {
+    if (DEBUG) console.debug("Shift+Tab navigation");
     const elementToFocus = activeElementIsBody
       ? getLastTabbable(rootElement, predicate)
       : getPreviousTabbableOrLast(activeElement, predicate);
     if (elementToFocus) {
+      if (DEBUG) console.debug("Focusing element (shift):", elementToFocus);
       elementToFocus.focus();
     }
     return;
   }
 
+  if (DEBUG) console.debug("Forward Tab navigation");
   let elementToFocus;
   if (activeElement === rootElement) {
+    if (DEBUG)
+      console.debug("Active element is root, finding first descendant");
     elementToFocus = findFirstDescendant(rootElement, predicate, {
       skipRoot: outsideOfElement,
     });
   } else {
+    if (DEBUG) console.debug("Finding next tabbable after current element");
     const nextTabbable = findAfter(activeElement, predicate, {
       root: rootElement,
       skipRoot: outsideOfElement,
@@ -42,14 +64,18 @@ export const performTabNavigation = (
     if (nextTabbable) {
       elementToFocus = nextTabbable;
     } else {
-      const firstTabbable = findFirstDescendant(activeElement, predicate, {
+      if (DEBUG) console.debug("No next tabbable found, wrapping to first");
+      const firstTabbable = findFirstDescendant(rootElement, predicate, {
         skipRoot: outsideOfElement,
       });
       elementToFocus = firstTabbable;
     }
   }
   if (elementToFocus) {
+    if (DEBUG) console.debug("Focusing element:", elementToFocus);
     elementToFocus.focus();
+  } else if (DEBUG) {
+    console.debug("No element to focus found");
   }
 };
 
