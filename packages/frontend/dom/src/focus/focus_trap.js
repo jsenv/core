@@ -30,7 +30,6 @@ export const trapFocusInside = (element) => {
 
     const onkeydown = (event) => {
       if (isTabEvent(event)) {
-        event.preventDefault();
         performTabNavigation(event, { rootElement: element });
       }
     };

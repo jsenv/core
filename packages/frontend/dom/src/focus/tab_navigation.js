@@ -12,6 +12,7 @@ export const performTabNavigation = (
   event,
   { rootElement = document.body, outsideOfElement = null } = {},
 ) => {
+  event.preventDefault();
   const activeElement = document.activeElement;
   const isForward = !event.shiftKey;
 
