@@ -139,6 +139,7 @@ const createAfterNodeIterator = (
   // If we're inside skipRoot, we need to start searching after skipRoot entirely
   if (skipRoot && (fromNode === skipRoot || skipRoot.contains(fromNode))) {
     current = skipRoot;
+    childrenSkipped = true; // Mark that we've already "processed" this node
     skipChildren = true; // Force skip children to exit the skipRoot subtree
   }
 
