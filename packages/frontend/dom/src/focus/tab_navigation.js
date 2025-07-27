@@ -31,11 +31,9 @@ export const performTabNavigation = (
 
   let elementToFocus;
   if (activeElement === rootElement) {
-    elementToFocus = findFirstDescendant(
-      rootElement,
-      predicate,
-      outsideOfElement,
-    );
+    elementToFocus = findFirstDescendant(rootElement, predicate, {
+      skipRoot: outsideOfElement,
+    });
   } else {
     const nextTabbable = findAfter(activeElement, predicate, {
       root: rootElement,
@@ -44,7 +42,9 @@ export const performTabNavigation = (
     if (nextTabbable) {
       elementToFocus = nextTabbable;
     } else {
-      const firstTabbable = findFirstDescendant(activeElement, predicate);
+      const firstTabbable = findFirstDescendant(activeElement, predicate, {
+        skipRoot: outsideOfElement,
+      });
       elementToFocus = firstTabbable;
     }
   }

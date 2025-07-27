@@ -9,8 +9,8 @@ export const findFirstAncestor = (node, predicate) => {
   return null;
 };
 
-export const findFirstDescendant = (rootNode, fn, skipRoot) => {
-  const iterator = createNextNodeIterator(rootNode, rootNode);
+export const findFirstDescendant = (rootNode, fn, { skipRoot } = {}) => {
+  const iterator = createNextNodeIterator(rootNode, rootNode, skipRoot);
   let { done, value: node } = iterator.next();
   while (done === false) {
     let skipChildren = false;
@@ -49,16 +49,13 @@ export const findAfter = (
   predicate,
   { root = null, skipRoot = null, skipChildren = false } = {},
 ) => {
-  const iterator = createAfterNodeIterator(from, root, skipChildren);
+  const iterator = createAfterNodeIterator(from, root, skipChildren, skipRoot);
   let { done, value: node } = iterator.next();
   while (done === false) {
-    let innerSkipChildren = false;
-    if (node === skipRoot) {
-      innerSkipChildren = true;
-    } else if (predicate(node)) {
+    if (predicate(node)) {
       return node;
     }
-    ({ done, value: node } = iterator.next(innerSkipChildren));
+    ({ done, value: node } = iterator.next());
   }
   return null;
 };
@@ -78,31 +75,48 @@ export const findBefore = (from, predicate, { root = null } = {}) => {
   return null;
 };
 
-const getNextNode = (node, rootNode, skipChild = false) => {
+const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
   if (!skipChild) {
     const firstChild = node.firstChild;
     if (firstChild) {
+      // If the first child is skipRoot or inside skipRoot, skip it
+      if (
+        skipRoot &&
+        (firstChild === skipRoot || skipRoot.contains(firstChild))
+      ) {
+        // Skip this entire subtree by going to next sibling or up
+        return getNextNode(node, rootNode, true, skipRoot);
+      }
       return firstChild;
     }
   }
 
   const nextSibling = node.nextSibling;
   if (nextSibling) {
+    // If next sibling is skipRoot, skip it entirely
+    if (skipRoot && nextSibling === skipRoot) {
+      return getNextNode(nextSibling, rootNode, true, skipRoot);
+    }
     return nextSibling;
   }
 
   const parentNode = node.parentNode;
   if (parentNode && parentNode !== rootNode) {
-    return getNextNode(parentNode, rootNode, true);
+    return getNextNode(parentNode, rootNode, true, skipRoot);
   }
 
   return null;
 };
 
-const createNextNodeIterator = (node, rootNode) => {
+const createNextNodeIterator = (node, rootNode, skipRoot = null) => {
   let current = node;
   const next = (innerSkipChildren = false) => {
-    const nextNode = getNextNode(current, rootNode, innerSkipChildren);
+    const nextNode = getNextNode(
+      current,
+      rootNode,
+      innerSkipChildren,
+      skipRoot,
+    );
     current = nextNode;
     return {
       done: Boolean(nextNode) === false,
@@ -112,7 +126,12 @@ const createNextNodeIterator = (node, rootNode) => {
   return { next };
 };
 
-const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false) => {
+const createAfterNodeIterator = (
+  fromNode,
+  rootNode,
+  skipChildren = false,
+  skipRoot = null,
+) => {
   let current = fromNode;
   let childrenSkipped = false;
   const next = (innerSkipChildren = false) => {
@@ -120,6 +139,7 @@ const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false) => {
       current,
       rootNode,
       (skipChildren && childrenSkipped === false) || innerSkipChildren,
+      skipRoot,
     );
     childrenSkipped = true;
     current = nextNode;
