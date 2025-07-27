@@ -225,6 +225,7 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
   }
 
   const isMultiSelect = keydownEvent.metaKey || keydownEvent.ctrlKey;
+  const isShiftSelect = keydownEvent.shiftKey;
   const { key } = keydownEvent;
   if (key === "ArrowDown") {
     const nextValue = selectionContext.getValueAfter(value);
@@ -232,6 +233,10 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
       return; // No next value to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
+    if (isShiftSelect) {
+      selectionContext.addFromLastSelectedTo(nextValue, keydownEvent);
+      return;
+    }
     if (isMultiSelect) {
       selectionContext.add([nextValue], keydownEvent);
       return;
@@ -245,6 +250,10 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
       return; // No previous value to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
+    if (isShiftSelect) {
+      selectionContext.addFromLastSelectedTo(previousValue, keydownEvent);
+      return;
+    }
     if (isMultiSelect) {
       selectionContext.add([previousValue], keydownEvent);
       return;

@@ -1,10 +1,4 @@
-import {
-  findAfter,
-  findBefore,
-  findFirstDescendant,
-  findLastDescendant,
-} from "../traversal.js";
-import { elementIsFocusable } from "./element_is_focusable.js";
+import { performTabNavigation } from "./tab_navigation.js";
 
 export const trapFocusInside = (element) => {
   if (element.nodeType === 3) {
@@ -26,51 +20,6 @@ export const trapFocusInside = (element) => {
     return true;
   };
 
-  const getFirstTabbable = () =>
-    findFirstDescendant(element, isDiscoverableWithKeyboard);
-
-  const getLastTabbable = () =>
-    findLastDescendant(element, isDiscoverableWithKeyboard);
-
-  const getPreviousTabbableOrLast = () => {
-    const previous = findBefore({
-      from: document.activeElement,
-      root: element,
-      predicate: isDiscoverableWithKeyboard,
-    });
-    return previous || getLastTabbable();
-  };
-
-  const getNextTabbableOrFirst = () => {
-    const next = findAfter({
-      from: document.activeElement,
-      root: element,
-      predicate: isDiscoverableWithKeyboard,
-    });
-    return next || getFirstTabbable();
-  };
-
-  const performTabEventNavigation = (event) => {
-    const activeElement = document.activeElement;
-    const activeElementIsBody = activeElement === document.body;
-
-    if (event.shiftKey) {
-      const elementToFocus = activeElementIsBody
-        ? getLastTabbable()
-        : getPreviousTabbableOrLast(activeElement);
-      if (elementToFocus) {
-        elementToFocus.focus();
-      }
-    } else {
-      const elementToFocus = activeElementIsBody
-        ? getFirstTabbable()
-        : getNextTabbableOrFirst(activeElement);
-      if (elementToFocus) {
-        elementToFocus.focus();
-      }
-    }
-  };
-
   const lock = () => {
     const onmousedown = (event) => {
       if (isEventOutside(event)) {
@@ -82,7 +31,7 @@ export const trapFocusInside = (element) => {
     const onkeydown = (event) => {
       if (isTabEvent(event)) {
         event.preventDefault();
-        performTabEventNavigation(event);
+        performTabNavigation(event, element);
       }
     };
 
@@ -114,21 +63,6 @@ export const trapFocusInside = (element) => {
   };
 
   return untrap;
-};
-
-const hasNegativeTabIndex = (element) => {
-  return (
-    element.hasAttribute &&
-    element.hasAttribute("tabIndex") &&
-    Number(element.getAttribute("tabindex")) < 0
-  );
-};
-
-const isDiscoverableWithKeyboard = (element) => {
-  if (hasNegativeTabIndex(element)) {
-    return false;
-  }
-  return elementIsFocusable(element);
 };
 
 const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
