@@ -39,7 +39,12 @@ export const performTabNavigation = (
     if (DEBUG) console.debug("Shift+Tab navigation");
     const elementToFocus = activeElementIsBody
       ? getLastTabbable(rootElement, predicate)
-      : getPreviousTabbableOrLast(activeElement, predicate);
+      : getPreviousTabbableOrLast(
+          activeElement,
+          predicate,
+          rootElement,
+          outsideOfElement,
+        );
     if (elementToFocus) {
       if (DEBUG) console.debug("Focusing element (shift):", elementToFocus);
       elementToFocus.focus();
@@ -87,11 +92,12 @@ const getLastTabbable = (element, predicate = isDiscoverableWithKeyboard) =>
 const getPreviousTabbableOrLast = (
   element,
   predicate = isDiscoverableWithKeyboard,
+  rootElement = document.body,
+  outsideOfElement = null,
 ) => {
-  const previous = findBefore({
-    from: document.activeElement,
-    root: element,
-    predicate,
+  const previous = findBefore(document.activeElement, predicate, {
+    root: rootElement,
+    skipRoot: outsideOfElement,
   });
-  return previous || getLastTabbable(element);
+  return previous || getLastTabbable(element, predicate);
 };

@@ -63,8 +63,12 @@ export const findAfter = (
 export const findAfterSkippingChildren = (param) =>
   findAfter({ ...param, skipChildren: true });
 
-export const findBefore = (from, predicate, { root = null } = {}) => {
-  const iterator = createPreviousNodeIterator(from, root);
+export const findBefore = (
+  from,
+  predicate,
+  { root = null, skipRoot = null } = {},
+) => {
+  const iterator = createPreviousNodeIterator(from, root, skipRoot);
   let { done, value: node } = iterator.next();
   while (done === false) {
     if (predicate(node)) {
@@ -171,10 +175,24 @@ const getDeepestNode = (node) => {
   return deepestNode;
 };
 
-const getPreviousNode = (node, rootNode) => {
+const getPreviousNode = (node, rootNode, skipRoot = null) => {
   const previousSibling = node.previousSibling;
   if (previousSibling) {
+    // If previous sibling is skipRoot, skip it entirely
+    if (skipRoot && previousSibling === skipRoot) {
+      return getPreviousNode(previousSibling, rootNode, skipRoot);
+    }
+
     const deepestChild = getDeepestNode(previousSibling);
+
+    // Check if deepest child is inside skipRoot
+    if (
+      skipRoot &&
+      deepestChild &&
+      (deepestChild === skipRoot || skipRoot.contains(deepestChild))
+    ) {
+      return getPreviousNode(previousSibling, rootNode, skipRoot);
+    }
 
     if (deepestChild) {
       return deepestChild;
@@ -190,10 +208,16 @@ const getPreviousNode = (node, rootNode) => {
   return null;
 };
 
-const createPreviousNodeIterator = (fromNode, rootNode) => {
+const createPreviousNodeIterator = (fromNode, rootNode, skipRoot = null) => {
   let current = fromNode;
+
+  // If we're inside skipRoot, we need to start searching before skipRoot entirely
+  if (skipRoot && (fromNode === skipRoot || skipRoot.contains(fromNode))) {
+    current = skipRoot;
+  }
+
   const next = () => {
-    const previousNode = getPreviousNode(current, rootNode);
+    const previousNode = getPreviousNode(current, rootNode, skipRoot);
     current = previousNode;
     return {
       done: Boolean(previousNode) === false,
