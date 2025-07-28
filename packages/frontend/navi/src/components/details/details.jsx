@@ -8,6 +8,7 @@ import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { ActionRenderer } from "../action_renderer.jsx";
 import { useActionEvents } from "../use_action_events.js";
+import { useFocusGroup } from "../use_focus_group.js";
 import { SummaryMarker } from "./summary_marker.jsx";
 
 import.meta.css = /* css */ `
@@ -58,11 +59,23 @@ const DetailsBasic = forwardRef((props, ref) => {
     loading,
     className,
     onToggle,
+    focusGroup,
+    focusGroupDirection,
+    arrowKeyShortcuts = true,
+    openKeyShortcut = arrowKeyShortcuts ? "ArrowLeft" : undefined,
+    closeKeyShortcut = arrowKeyShortcuts ? "ArrowRight" : undefined,
     ...rest
   } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
   const [innerOpen, innerOpenSetter] = useState(open || navState);
+  useFocusGroup(innerRef, {
+    enabled: focusGroup,
+    name: typeof focusGroup === "string" ? focusGroup : undefined,
+    direction: focusGroupDirection,
+  });
 
   /**
    * Browser will dispatch "toggle" event even if we set open={true}
@@ -91,7 +104,7 @@ const DetailsBasic = forwardRef((props, ref) => {
         "navi_details",
         ...(className ? className.split(" ") : []),
       ].join(" ")}
-      ref={ref}
+      ref={innerRef}
       onToggle={(e) => {
         const isOpen = e.newState === "open";
         if (mountedRef.current) {
@@ -107,7 +120,24 @@ const DetailsBasic = forwardRef((props, ref) => {
       }}
       open={innerOpen}
     >
-      <summary>
+      <summary
+        onKeyDown={(e) => {
+          if (e.key === openKeyShortcut) {
+            if (e.target.open) {
+              // move focus to first focusable element inside
+              return;
+            }
+            e.preventDefault();
+            e.target.open = true;
+            return;
+          }
+          if (e.key === closeKeyShortcut) {
+            e.preventDefault();
+            e.target.open = false;
+            return;
+          }
+        }}
+      >
         <div className="summary_body">
           <SummaryMarker open={innerOpen} loading={loading} />
           <div className="summary_label">{label}</div>
@@ -130,7 +160,6 @@ const DetailsWithAction = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 

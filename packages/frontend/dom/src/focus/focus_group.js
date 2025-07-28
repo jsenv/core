@@ -1,7 +1,7 @@
 /**
  * 
+- https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/Focusgroup/explainer.md
  - https://open-ui.org/components/focusgroup.explainer/
- - https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/Focusgroup/explainer.md
  - https://github.com/openui/open-ui/issues/990
  */
 
@@ -152,10 +152,6 @@ export const initFocusGroup = (
     name, // Can be undefined for implicit ancestor-descendant grouping
   } = {},
 ) => {
-  if (!elementIsFocusable(element)) {
-    console.warn("initFocusGroup: element is not focusable", element);
-  }
-
   // Store focus group data in registry
   focusGroupRegistry.set(element, {
     direction,

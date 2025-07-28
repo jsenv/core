@@ -105,6 +105,7 @@ export const ExplorerGroup = forwardRef((props, ref) => {
         ref={innerRef}
         id={controller.id}
         open={controller.detailsOpenAtStart}
+        focusGroup
         className="explorer_group"
         onToggle={(toggleEvent) => {
           controller.detailsOnToggle(toggleEvent.newState === "open");

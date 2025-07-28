@@ -4,6 +4,7 @@ export {
   useActiveElement,
 } from "./focus/active_element.js";
 export { elementIsFocusable } from "./focus/element_is_focusable.js";
+export { initFocusGroup } from "./focus/focus_group.js";
 export { trapFocusInside } from "./focus/focus_trap.js";
 export {
   getAncestorScrolls,
