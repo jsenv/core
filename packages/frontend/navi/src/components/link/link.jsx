@@ -271,8 +271,6 @@ const LinkWithShortcuts = forwardRef((props, ref) => {
   const { loading: actionLoading } = useActionStatus(shortcutAction);
   const innerLoading = Boolean(loading || actionLoading);
 
-  console.log(shortcutAction, loading);
-
   return (
     <>
       <LinkBasic
