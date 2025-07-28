@@ -211,6 +211,14 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
   const isMultiSelect = keydownEvent.metaKey || keydownEvent.ctrlKey;
   const isShiftSelect = keydownEvent.shiftKey;
   const { key } = keydownEvent;
+  if (key === "a") {
+    if (!isMultiSelect) {
+      return;
+    }
+    keydownEvent.preventDefault(); // prevent default select all text behavior
+    selectionContext.set(selectionContext.getAllItems(), keydownEvent);
+    return;
+  }
   if (key === "ArrowDown") {
     const nextValue = selectionContext.getValueAfter(value);
     if (!nextValue) {
