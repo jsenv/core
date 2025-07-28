@@ -4,6 +4,9 @@ import { useCallback, useContext, useRef, useState } from "preact/hooks";
 import { useAction } from "./action_execution/use_action.js";
 
 import.meta.css = /* css */ `
+  .navi_shortcut_container {
+  }
+
   .navi_shortcut_button {
     /* Visually hidden but accessible to screen readers */
     position: absolute;
@@ -27,9 +30,15 @@ export const useShortcutContext = () => {
   return useContext(ShortcutContext);
 };
 
-export const ShortcutProvider = ({ children, shortcuts }) => {
-  const [shortcutAction, onKeyDownForShortcuts] =
-    useKeyboardShortcuts(shortcuts);
+export const ShortcutProvider = ({
+  children,
+  shortcuts,
+  allowConcurrentActions,
+}) => {
+  const [shortcutAction, onKeyDownForShortcuts] = useKeyboardShortcuts(
+    shortcuts,
+    { allowConcurrentActions },
+  );
 
   const shortcutHiddenElement = useShortcutHiddenElement(shortcuts);
 
@@ -145,7 +154,7 @@ const useShortcutHiddenElement = (shortcuts) => {
       </button>,
     );
   });
-  return shortcutElements;
+  return <div className="navi_shortcut_container">{shortcutElements}</div>;
 };
 // http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
 const useAriaKeyShortcuts = (combinations) => {
