@@ -39,18 +39,14 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
 
     let shortcutFound;
     for (const shortcutCandidate of shortcutsRef.current) {
-      const { enabled = true, needsMetaKey = false, key } = shortcutCandidate;
+      const { enabled = true, keyCombinations } = shortcutCandidate;
       if (!enabled) {
         continue;
       }
-      if (needsMetaKey && !event.metaKey) {
-        continue;
-      }
-      let eventKey = event.key;
-      if (eventKey === " ") {
-        eventKey = "Space";
-      }
-      if (key !== eventKey) {
+      const someMatch = keyCombinations.some((keyCombination) =>
+        eventIsMatchingKeyCombination(event, keyCombination),
+      );
+      if (!someMatch) {
         continue;
       }
       shortcutFound = shortcutCandidate;
@@ -62,7 +58,6 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
     }
 
     event.preventDefault();
-    event.stopPropagation();
     const { confirmMessage, action } = shortcutFound;
     // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
     // otherwise setState would call that action immediately
@@ -71,6 +66,44 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
   }, []);
 
   return [action, onKeyDown];
+};
+
+const eventIsMatchingKeyCombination = (event, keyCombination) => {
+  const keys = keyCombination.toLowerCase().split("+");
+  for (const key of keys) {
+    if (key === "meta" || key === "command") {
+      if (!event.metaKey) {
+        return false;
+      }
+      continue;
+    }
+    if (key === "control") {
+      if (!event.ctrlKey) {
+        return false;
+      }
+      continue;
+    }
+    if (key === "shift") {
+      if (!event.shiftKey) {
+        return false;
+      }
+      continue;
+    }
+    if (key === "option" || key === "alt") {
+      if (!event.altKey) {
+        return false;
+      }
+      continue;
+    }
+    if (event.key !== key) {
+      if (key === "space" && event.key === " ") {
+        continue;
+      }
+      return false;
+    }
+    continue;
+  }
+  return true;
 };
 
 export const useShortcutHiddenElement = (shortcuts) => {
@@ -106,7 +139,7 @@ export const useAriaKeyShortcuts = (combinations) => {
     for (; i < keys.length; i++) {
       const key = keys[i];
       if (key === "option") {
-        keys[i] = "AltGraph";
+        keys[i] = "altgraph";
       }
       if (key === "command") {
         keys[i] = "meta";
