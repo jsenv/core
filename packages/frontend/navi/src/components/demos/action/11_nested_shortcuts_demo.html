@@ -197,11 +197,15 @@
         Link,
         // eslint-disable-next-line no-unused-vars
         ShortcutProvider,
+        // eslint-disable-next-line no-unused-vars
+        SelectionProvider,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [status, setStatus] = useState("Ready - Try the shortcuts!");
+        const [selection, setSelection] = useState([]);
+        const [deletedFiles, setDeletedFiles] = useState([]);
 
         const containerShortcuts = [
           {
@@ -214,8 +218,12 @@
           {
             keyCombinations: ["Delete"],
             description: "Delete selected files",
-            action: () => {
-              setStatus("🗑️ Deleted selected files (container shortcut)");
+            action: async () => {
+              setStatus("🗑️ Start deleting files (container shortcut)");
+              await new Promise((resolve) => setTimeout(resolve, 2_000));
+              setStatus(
+                "🗑️ Selected files deletion done! (container shortcut)",
+              );
             },
             confirmMessage: "Are you sure you want to delete selected files?",
           },
@@ -299,53 +307,69 @@
             <div className="file-explorer">
               <h2 className="explorer-title">📁 File Explorer</h2>
 
-              <ShortcutProvider
-                elementRef={elementRef}
-                shortcuts={containerShortcuts}
+              <SelectionProvider
+                value={selection}
+                onChange={(value) => {
+                  setSelection(value);
+                }}
               >
-                <ul className="file-list" ref={elementRef}>
-                  {files.map((file) => (
-                    <li key={file.name} className="file-item">
-                      <Link
-                        className="file-link"
-                        href="#"
-                        shortcuts={[
-                          {
-                            keyCombinations: ["Enter"],
-                            description: `Open ${file.name}`,
-                            action: () => {
-                              setStatus(
-                                `📂 Opening ${file.name} (link shortcut)`,
-                              );
+                <ShortcutProvider
+                  elementRef={elementRef}
+                  shortcuts={containerShortcuts}
+                  onActionStart={() => {
+                    setDeletedFiles(selection);
+                  }}
+                  onActionEnd={() => {
+                    setDeletedFiles([]);
+                  }}
+                >
+                  <ul className="file-list" ref={elementRef}>
+                    {files.map((file) => (
+                      <li key={file.name} className="file-item">
+                        <Link
+                          className="file-link"
+                          href="#"
+                          value={file.name}
+                          readOnly={deletedFiles.includes(file.name)}
+                          loading={deletedFiles.includes(file.name)}
+                          shortcuts={[
+                            {
+                              keyCombinations: ["Enter"],
+                              description: `Open ${file.name}`,
+                              action: () => {
+                                setStatus(
+                                  `📂 Opening ${file.name} (link shortcut)`,
+                                );
+                              },
                             },
-                          },
-                          {
-                            keyCombinations: ["Space"],
-                            description: `Preview ${file.name}`,
-                            action: () => {
-                              setStatus(
-                                `👁️ Previewing ${file.name} (link shortcut)`,
-                              );
+                            {
+                              keyCombinations: ["Space"],
+                              description: `Preview ${file.name}`,
+                              action: () => {
+                                setStatus(
+                                  `👁️ Previewing ${file.name} (link shortcut)`,
+                                );
+                              },
                             },
-                          },
-                          {
-                            keyCombinations: ["i"],
-                            description: `Info for ${file.name}`,
-                            action: () => {
-                              setStatus(
-                                `ℹ️ Info: ${file.name} - ${file.type} (link shortcut)`,
-                              );
+                            {
+                              keyCombinations: ["i"],
+                              description: `Info for ${file.name}`,
+                              action: () => {
+                                setStatus(
+                                  `ℹ️ Info: ${file.name} - ${file.type} (link shortcut)`,
+                                );
+                              },
                             },
-                          },
-                        ]}
-                      >
-                        <span className="file-icon">{file.icon}</span>
-                        {file.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </ShortcutProvider>
+                          ]}
+                        >
+                          <span className="file-icon">{file.icon}</span>
+                          {file.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </ShortcutProvider>
+              </SelectionProvider>
             </div>
 
             <div className="instructions">

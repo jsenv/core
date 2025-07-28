@@ -1,4 +1,4 @@
-import { Selection, ShortcutProvider } from "@jsenv/navi";
+import { SelectionProvider, ShortcutProvider } from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
@@ -113,7 +113,7 @@ const ExplorerItemListWithShortcuts = ({
   children,
 }) => {
   return (
-    <Selection
+    <SelectionProvider
       value={itemSelectionSignal.value}
       onChange={(value) => {
         itemSelectionSignal.value = value;
@@ -122,6 +122,6 @@ const ExplorerItemListWithShortcuts = ({
       <ShortcutProvider shortcuts={shortcuts} elementRef={elementRef}>
         {children}
       </ShortcutProvider>
-    </Selection>
+    </SelectionProvider>
   );
 };

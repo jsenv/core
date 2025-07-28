@@ -13,7 +13,7 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       // eslint-disable-next-line no-unused-vars
-      import { Link, Selection, defineRoutes } from "@jsenv/navi";
+      import { Link, SelectionProvider, defineRoutes } from "@jsenv/navi";
 
       defineRoutes({});
 
@@ -100,7 +100,7 @@
                 to show selected items.
               </p>
 
-              <Selection
+              <SelectionProvider
                 value={contextSelectedItems}
                 onChange={setContextSelectedItems}
               >
@@ -137,7 +137,7 @@
                     </div>
                   )}
                 </div>
-              </Selection>
+              </SelectionProvider>
             </section>
 
             <section>

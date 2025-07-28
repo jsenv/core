@@ -263,13 +263,14 @@ const LinkWithAction = forwardRef((props, ref) => {
 
 const LinkWithShortcuts = forwardRef((props, ref) => {
   const { children, readOnly, loading, ...rest } = props;
-  const { shortcutAction } = useShortcutContext();
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+  const { shortcutAction } = useShortcutContext();
 
   const { loading: actionLoading } = useActionStatus(shortcutAction);
   const innerLoading = Boolean(loading || actionLoading);
+
+  console.log({ children, loading, actionLoading });
 
   return (
     <>

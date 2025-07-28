@@ -40,7 +40,7 @@ export { RadioList } from "./src/components/input/radio_list.jsx";
 export { Select } from "./src/components/input/select.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
-export { Selection } from "./src/components/selection/selection.js";
+export { SelectionProvider } from "./src/components/selection/selection.js";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
 
 // for debbugging testing purposes

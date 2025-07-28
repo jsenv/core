@@ -103,7 +103,7 @@ export const ShortcutProvider = ({
       // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
       // otherwise setState would call that action immediately
       setAction(() => actionEvent.detail.action);
-      executeAction(actionEvent);
+      executeAction(actionEvent, { requester: elementRef.current });
     },
     onStart: (e) => {
       if (!allowConcurrentActions) {

@@ -3,7 +3,7 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 const SelectionContext = createContext(null);
 
-export const Selection = ({ value = [], onChange, children }) => {
+export const SelectionProvider = ({ value = [], onChange, children }) => {
   const selection = value || [];
   const registryRef = useRef([]); // Array<value>
   const anchorRef = useRef(null);
