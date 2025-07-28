@@ -147,6 +147,8 @@ export const ShortcutProvider = ({
         const someMatch = keyCombinations.some((keyCombination) => {
           // Handle platform-specific combination objects
           let actualCombination;
+          let crossPlatformCombination;
+
           if (
             typeof keyCombination === "object" &&
             keyCombination !== null &&
@@ -157,12 +159,24 @@ export const ShortcutProvider = ({
               : keyCombination.other;
           } else {
             actualCombination = keyCombination;
+
+            // Auto-generate cross-platform combination if needed
+            if (containsPlatformSpecificKeys(keyCombination)) {
+              crossPlatformCombination =
+                generateCrossPlatformCombination(keyCombination);
+            }
           }
 
-          return (
+          // Check both the actual combination and cross-platform combination
+          const matchesActual =
             actualCombination &&
-            eventIsMatchingKeyCombination(event, actualCombination)
-          );
+            eventIsMatchingKeyCombination(event, actualCombination);
+          const matchesCrossPlatform =
+            crossPlatformCombination &&
+            crossPlatformCombination !== actualCombination &&
+            eventIsMatchingKeyCombination(event, crossPlatformCombination);
+
+          return matchesActual || matchesCrossPlatform;
         });
         if (!someMatch) {
           continue;
@@ -209,7 +223,7 @@ export const ShortcutProvider = ({
 const eventIsMatchingKeyCombination = (event, keyCombination) => {
   const keys = keyCombination.toLowerCase().split("+");
   for (const key of keys) {
-    if (key === "meta" || key === "command") {
+    if (key === "meta" || key === "command" || key === "cmd") {
       if (!event.metaKey) {
         return false;
       }
@@ -259,7 +273,15 @@ const isSameKey = (browserEventKey, key) => {
   return false;
 };
 
-const isMac = window.navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+const detectMac = () => {
+  // Modern way using User-Agent Client Hints API
+  if (window.navigator.userAgentData) {
+    return window.navigator.userAgentData.platform === "macOS";
+  }
+  // Fallback to userAgent string parsing
+  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
+};
+const isMac = detectMac();
 
 const keySynonyms = [
   ["space", " "],
@@ -335,6 +357,21 @@ const useAriaKeyShortcuts = (combinations) => {
       actualCombination = isMac ? combination.mac : combination.other;
     } else {
       actualCombination = combination;
+
+      // Auto-generate cross-platform combination if needed
+      if (containsPlatformSpecificKeys(combination)) {
+        const crossPlatformCombination =
+          generateCrossPlatformCombination(combination);
+        if (
+          crossPlatformCombination &&
+          crossPlatformCombination !== combination
+        ) {
+          const normalizedCrossPlatform = normalizeKeyCombination(
+            crossPlatformCombination,
+          );
+          combinationSet.add(normalizedCrossPlatform);
+        }
+      }
     }
 
     if (actualCombination) {
@@ -351,4 +388,26 @@ const useAriaKeyShortcuts = (combinations) => {
     combinationString += combination;
   }
   return combinationString;
+};
+
+const containsPlatformSpecificKeys = (combination) => {
+  const lowerCombination = combination.toLowerCase();
+  const macSpecificKeys = ["command", "cmd"];
+
+  return macSpecificKeys.some((key) => lowerCombination.includes(key));
+};
+
+const generateCrossPlatformCombination = (combination) => {
+  let crossPlatform = combination;
+
+  if (isMac) {
+    // No need to convert anything TO Windows/Linux-specific format since we're on Mac
+    return null;
+  }
+
+  // If not on Mac but combination contains Mac-specific keys, generate Windows equivalent
+  crossPlatform = crossPlatform.replace(/\bcommand\b/gi, "control");
+  crossPlatform = crossPlatform.replace(/\bcmd\b/gi, "control");
+
+  return crossPlatform;
 };
