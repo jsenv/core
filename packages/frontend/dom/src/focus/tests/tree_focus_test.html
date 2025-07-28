@@ -84,10 +84,6 @@
         background: #e6f3ff;
       }
 
-      .nested {
-        margin-left: 20px;
-      }
-
       .debug {
         position: fixed;
         top: 10px;
@@ -173,22 +169,16 @@
         <div class="content">
           <div class="focus-group" id="projects-group">
             <h4>Root Level Items (Vertical Navigation)</h4>
-            <div tabindex="0" class="focusable-item">📄 README.md</div>
-            <div tabindex="-1" class="focusable-item">📄 package.json</div>
-            <div tabindex="-1" class="focusable-item">📄 .gitignore</div>
 
             <!-- Nested details level 1 -->
-            <details class="nested" data-focus-group="level-1">
+            <details data-focus-group="level-1">
               <summary tabindex="-1">📁 src</summary>
               <div class="content">
                 <div class="focus-group" id="src-group">
                   <h4>Source Files (Vertical Navigation)</h4>
-                  <div tabindex="-1" class="focusable-item">📄 main.js</div>
-                  <div tabindex="-1" class="focusable-item">📄 utils.js</div>
-                  <div tabindex="-1" class="focusable-item">📄 config.js</div>
 
                   <!-- Nested details level 2 -->
-                  <details class="nested" data-focus-group="level-2">
+                  <details data-focus-group="level-2">
                     <summary tabindex="-1">📁 components</summary>
                     <div class="content">
                       <div class="focus-group" id="components-group">
@@ -199,26 +189,20 @@
                         <div tabindex="-1" class="focusable-item">
                           📄 Modal.jsx
                         </div>
-                        <div tabindex="-1" class="focusable-item">
-                          📄 Form.jsx
-                        </div>
                       </div>
                     </div>
                   </details>
 
-                  <details class="nested" data-focus-group="level-2">
-                    <summary tabindex="-1">📁 hooks</summary>
+                  <details data-focus-group="level-2">
+                    <summary tabindex="-1">📁 utils</summary>
                     <div class="content">
-                      <div class="focus-group" id="hooks-group">
-                        <h4>Custom Hooks (Vertical Navigation)</h4>
+                      <div class="focus-group" id="utils-group">
+                        <h4>Utility Files (Vertical Navigation)</h4>
                         <div tabindex="-1" class="focusable-item">
-                          📄 useSignal.js
+                          📄 helpers.js
                         </div>
                         <div tabindex="-1" class="focusable-item">
-                          📄 useLocalStorage.js
-                        </div>
-                        <div tabindex="-1" class="focusable-item">
-                          📄 useDebounce.js
+                          📄 config.js
                         </div>
                       </div>
                     </div>
@@ -227,68 +211,9 @@
               </div>
             </details>
 
-            <details class="nested" data-focus-group="level-1">
-              <summary tabindex="-1">📁 tests</summary>
-              <div class="content">
-                <div class="focus-group" id="tests-group">
-                  <h4>Test Files (Vertical Navigation)</h4>
-                  <div tabindex="-1" class="focusable-item">
-                    📄 main.test.js
-                  </div>
-                  <div tabindex="-1" class="focusable-item">
-                    📄 utils.test.js
-                  </div>
-
-                  <details class="nested" data-focus-group="level-2">
-                    <summary tabindex="-1">📁 integration</summary>
-                    <div class="content">
-                      <div class="focus-group" id="integration-group">
-                        <h4>Integration Tests (Vertical Navigation)</h4>
-                        <div tabindex="-1" class="focusable-item">
-                          📄 api.test.js
-                        </div>
-                        <div tabindex="-1" class="focusable-item">
-                          📄 workflow.test.js
-                        </div>
-                        <div tabindex="-1" class="focusable-item">
-                          📄 e2e.test.js
-                        </div>
-                      </div>
-                    </div>
-                  </details>
-                </div>
-              </div>
-            </details>
-
-            <details class="nested" data-focus-group="level-1">
-              <summary tabindex="-1">📁 docs</summary>
-              <div class="content">
-                <div class="focus-group" id="docs-group">
-                  <h4>Documentation (Vertical Navigation)</h4>
-                  <div tabindex="-1" class="focusable-item">📄 api.md</div>
-                  <div tabindex="-1" class="focusable-item">📄 guide.md</div>
-                  <div tabindex="-1" class="focusable-item">📄 examples.md</div>
-
-                  <details class="nested" data-focus-group="level-2">
-                    <summary tabindex="-1">📁 images</summary>
-                    <div class="content">
-                      <div class="focus-group" id="images-group">
-                        <h4>Image Assets (Vertical Navigation)</h4>
-                        <div tabindex="-1" class="focusable-item">
-                          🖼️ screenshot1.png
-                        </div>
-                        <div tabindex="-1" class="focusable-item">
-                          🖼️ diagram.svg
-                        </div>
-                        <div tabindex="-1" class="focusable-item">
-                          🖼️ logo.png
-                        </div>
-                      </div>
-                    </div>
-                  </details>
-                </div>
-              </div>
-            </details>
+            <div tabindex="-1" class="focusable-item">📄 README.md</div>
+            <div tabindex="-1" class="focusable-item">📄 package.json</div>
+            <div tabindex="-1" class="focusable-item">� .gitignore</div>
           </div>
         </div>
       </details>
