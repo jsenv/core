@@ -176,6 +176,11 @@ export const initFocusGroup = (
     element.addEventListener(
       "keydown",
       (event) => {
+        if (event.defaultPrevented) {
+          // If the keydown was prevented by another handler, do not interfere
+          // Also prevent tab withing nested focus group to be handled twice
+          return;
+        }
         if (isTabEvent(event)) {
           performTabNavigation(event, {
             outsideOfElement: element,
