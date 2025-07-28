@@ -65,8 +65,8 @@ const DetailsBasic = forwardRef((props, ref) => {
     focusGroup,
     focusGroupDirection,
     arrowKeyShortcuts = true,
-    openKeyShortcut = arrowKeyShortcuts ? "ArrowLeft" : undefined,
-    closeKeyShortcut = arrowKeyShortcuts ? "ArrowRight" : undefined,
+    openKeyShortcut = arrowKeyShortcuts ? "ArrowRight" : undefined,
+    closeKeyShortcut = arrowKeyShortcuts ? "ArrowLeft" : undefined,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -127,18 +127,22 @@ const DetailsBasic = forwardRef((props, ref) => {
       <summary
         onKeyDown={(e) => {
           if (e.key === openKeyShortcut) {
-            if (e.target.open) {
+            const details = innerRef.current;
+            if (details.open) {
               // TODO: move focus to first focusable element inside
               return;
             }
             e.preventDefault();
-            e.target.open = true;
+            details.open = true;
             return;
           }
           if (e.key === closeKeyShortcut) {
-            e.preventDefault();
-            e.target.open = false;
-            return;
+            const details = innerRef.current;
+            if (details.open) {
+              e.preventDefault();
+              details.open = false;
+              return;
+            }
           }
         }}
       >

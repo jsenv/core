@@ -141,13 +141,22 @@ const TreeFocusTest = () => {
         <h2>File System Tree</h2>
 
         {/* Root level details */}
-        <Details focusGroup open label={"📁 Projects"}>
+        <Details
+          focusGroup
+          focusGroupDirection="vertical"
+          open
+          label={"📁 Projects"}
+        >
           <div className="content">
             {/* Nested details level 1 */}
-            <Details focusGroup label="📁 src">
+            <Details focusGroup focusGroupDirection="vertical" label="📁 src">
               <div className="content">
                 {/* Nested details level 2 */}
-                <Details focusGroup label="📁 components">
+                <Details
+                  focusGroup
+                  focusGroupDirection="vertical"
+                  label="📁 components"
+                >
                   <div className="content">
                     <div tabIndex="-1" className="focusable-item">
                       📄 Button.jsx
@@ -160,7 +169,7 @@ const TreeFocusTest = () => {
               </div>
             </Details>
 
-            <Details focusGroup label="📁 utils">
+            <Details focusGroup focusGroupDirection="vertical" label="📁 utils">
               <div className="content">
                 <div tabIndex="-1" className="focusable-item">
                   📄 helpers.js
