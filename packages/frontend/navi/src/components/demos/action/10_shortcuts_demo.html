@@ -4,10 +4,141 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Link demo</title>
+    <title>Keyboard Shortcuts Demo</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        line-height: 1.6;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
+      }
+
+      .demo-container {
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .demo-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 30px 0;
+        color: #2d3748;
+        text-align: center;
+      }
+
+      .demo-description {
+        background: #f7fafc;
+        border-left: 4px solid #4299e1;
+        padding: 20px;
+        margin: 0 0 30px 0;
+        border-radius: 0 8px 8px 0;
+      }
+
+      .demo-description h3 {
+        margin: 0 0 15px 0;
+        color: #2d3748;
+        font-size: 1.2rem;
+      }
+
+      .shortcut-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .shortcut-item {
+        display: flex;
+        align-items: center;
+        margin: 10px 0;
+        padding: 8px 0;
+      }
+
+      .shortcut-key {
+        background: #2d3748;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-family: "Monaco", "Menlo", monospace;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-right: 15px;
+        min-width: 60px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .shortcut-description {
+        color: #4a5568;
+        flex: 1;
+      }
+
+      .demo-link-container {
+        text-align: center;
+        margin: 40px 0;
+        padding: 30px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-link {
+        display: inline-block;
+        background: white;
+        color: #667eea;
+        text-decoration: none;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border: 2px solid transparent;
+      }
+
+      .demo-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        border-color: #667eea;
+      }
+
+      .demo-link:focus {
+        outline: none;
+        border-color: #4299e1;
+        box-shadow:
+          0 0 0 3px rgba(66, 153, 225, 0.3),
+          0 6px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .instructions {
+        background: #fff5f5;
+        border: 1px solid #fed7d7;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 30px;
+      }
+
+      .instructions h4 {
+        color: #c53030;
+        margin: 0 0 10px 0;
+        font-size: 1rem;
+      }
+
+      .instructions p {
+        margin: 0;
+        color: #744210;
+        font-size: 0.9rem;
+      }
+    </style>
   </head>
   <body>
-    <div id="root" style="position: relative"></div>
+    <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
@@ -19,14 +150,30 @@
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div>
-            <p>
-              Focus this link and
-              <br />- press enter -> loading 0.5s, then alert
-              <br />- press space ->loading 1.5s, then throw
-            </p>
-            <div style="color: yellow">
+          <div className="demo-container">
+            <h1 className="demo-title">⌨️ Keyboard Shortcuts Demo</h1>
+
+            <div className="demo-description">
+              <h3>How to test:</h3>
+              <ul className="shortcut-list">
+                <li className="shortcut-item">
+                  <span className="shortcut-key">Enter</span>
+                  <span className="shortcut-description">
+                    Shows loading (0.5s), then displays alert
+                  </span>
+                </li>
+                <li className="shortcut-item">
+                  <span className="shortcut-key">Space</span>
+                  <span className="shortcut-description">
+                    Shows loading (1.5s), then throws error
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="demo-link-container">
               <Link
+                className="demo-link"
                 href="#"
                 shortcuts={[
                   {
@@ -34,27 +181,37 @@
                     action: async () => {
                       await new Promise((resolve) => setTimeout(resolve, 500));
                       // eslint-disable-next-line no-alert
-                      window.alert("Enter key pressed on link A");
+                      window.alert("✅ Enter key pressed successfully!");
                     },
                   },
                   {
                     keyCombinations: ["Space"],
                     action: async () => {
                       await new Promise((resolve) => setTimeout(resolve, 1500));
-                      throw new Error("toto");
+                      throw new Error(
+                        "💥 Space key triggered an error (this is expected)",
+                      );
                     },
                   },
                 ]}
               >
-                The link
+                🎯 Click or Focus Me and Try Shortcuts
               </Link>
             </div>
-            <br />
+
+            <div className="instructions">
+              <h4>📋 Instructions</h4>
+              <p>
+                Click on the link above or press Tab to focus it, then try the
+                keyboard shortcuts. You'll see loading states and different
+                outcomes for each key.
+              </p>
+            </div>
           </div>
         );
       };
 
-      render(<App />, document.querySelector("#root"));
+      render(<App />, document.getElementById("root"));
     </script>
   </body>
 </html>
