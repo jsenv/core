@@ -34,6 +34,8 @@ export const TablesDetails = (props) => {
         <TableLink
           key={table.oid}
           value={table.tablename}
+          readOnly={props.deletedItems.includes(table.tablename)}
+          loading={props.deletedItems.includes(table.tablename)}
           table={table}
           draggable={false}
           {...props}

@@ -1,7 +1,7 @@
 import { SelectionProvider, ShortcutProvider } from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { ExplorerItem, ExplorerNewItem } from "./explorer_item.jsx";
 
 export const ExplorerItemList = forwardRef((props, ref) => {
@@ -22,6 +22,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const itemSelectionSignal = useSignal([]);
+  const [deletedItems, setDeletedItems] = useState([]);
   const deleteManyAction = useDeleteManyItemAction?.(itemSelectionSignal);
   const listChildren = (
     <>
@@ -32,6 +33,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
               idKey={idKey}
               nameKey={nameKey}
               item={item}
+              deletedItems={deletedItems}
               renderItem={renderItem}
               useItemArrayInStore={useItemArrayInStore}
               useRenameItemAction={useRenameItemAction}
@@ -86,6 +88,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
       <ExplorerItemListWithShortcuts
         elementRef={innerRef}
         itemSelectionSignal={itemSelectionSignal}
+        setDeletedItems={setDeletedItems}
         shortcuts={[
           {
             enabled: selectionLength > 0,
@@ -109,6 +112,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
 const ExplorerItemListWithShortcuts = ({
   elementRef,
   itemSelectionSignal,
+  setDeletedItems,
   shortcuts,
   children,
 }) => {
@@ -117,6 +121,18 @@ const ExplorerItemListWithShortcuts = ({
       value={itemSelectionSignal.value}
       onChange={(value) => {
         itemSelectionSignal.value = value;
+      }}
+      onActionStart={() => {
+        setDeletedItems(itemSelectionSignal.value);
+      }}
+      onActionAbort={() => {
+        setDeletedItems([]);
+      }}
+      onActionError={() => {
+        setDeletedItems([]);
+      }}
+      onActionEnd={() => {
+        setDeletedItems([]);
       }}
     >
       <ShortcutProvider shortcuts={shortcuts} elementRef={elementRef}>
