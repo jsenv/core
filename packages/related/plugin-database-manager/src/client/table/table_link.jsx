@@ -8,13 +8,12 @@ export const TableLink = ({ table, children, ...rest }) => {
   const tableUrl = TABLE_ROUTE.buildUrl({ tablename });
   const { params } = useRouteStatus(TABLE_ROUTE);
   const activeTablename = params.tablename;
-  const isActive = activeTablename === tablename;
 
   return (
     <LinkWithIcon
       icon={<TableSvg color="#333" />}
       href={tableUrl}
-      data-active={isActive ? "" : undefined}
+      active={activeTablename === tablename}
       {...rest}
     >
       {children}

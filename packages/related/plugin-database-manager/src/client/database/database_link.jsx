@@ -9,7 +9,6 @@ export const DatabaseLink = ({ database, children, ...rest }) => {
   const databaseUrl = DATABASE_ROUTE.buildUrl({ datname });
   const { params } = useRouteStatus(DATABASE_ROUTE);
   const activeDatname = params.datname;
-  const isActive = activeDatname === datname;
   const currentDatabase = useCurrentDatabase();
   const isCurrent = currentDatabase && datname === currentDatabase.datname;
 
@@ -18,7 +17,7 @@ export const DatabaseLink = ({ database, children, ...rest }) => {
       icon={<DatabaseSvg color="#333" />}
       isCurrent={isCurrent}
       href={databaseUrl}
-      data-active={isActive ? "" : undefined}
+      active={activeDatname === datname}
       {...rest}
     >
       {children}
