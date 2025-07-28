@@ -48,19 +48,6 @@
         padding: 16px;
       }
 
-      .focus-group {
-        outline: 1px dashed #999;
-        margin: 8px 0;
-        padding: 8px;
-        background: #fafafa;
-      }
-
-      .focus-group h4 {
-        margin: 0 0 12px 0;
-        color: #666;
-        font-size: 14px;
-      }
-
       .focusable-item {
         display: block;
         padding: 8px 12px;
@@ -167,22 +154,17 @@
       <details open data-focus-group="root">
         <summary tabindex="0">📁 Projects</summary>
         <div class="content">
-          <div class="focus-group" id="projects-group">
-            <h4>Root Level Items (Vertical Navigation)</h4>
-
+          <div class="content" id="projects-group">
             <!-- Nested details level 1 -->
             <details data-focus-group="level-1">
               <summary tabindex="-1">📁 src</summary>
               <div class="content">
-                <div class="focus-group" id="src-group">
-                  <h4>Source Files (Vertical Navigation)</h4>
-
+                <div class="content" id="src-group">
                   <!-- Nested details level 2 -->
                   <details data-focus-group="level-2">
                     <summary tabindex="-1">📁 components</summary>
                     <div class="content">
-                      <div class="focus-group" id="components-group">
-                        <h4>Component Files (Vertical Navigation)</h4>
+                      <div class="content" id="components-group">
                         <div tabindex="-1" class="focusable-item">
                           📄 Button.jsx
                         </div>
@@ -196,8 +178,7 @@
                   <details data-focus-group="level-2">
                     <summary tabindex="-1">📁 utils</summary>
                     <div class="content">
-                      <div class="focus-group" id="utils-group">
-                        <h4>Utility Files (Vertical Navigation)</h4>
+                      <div class="content" id="utils-group">
                         <div tabindex="-1" class="focusable-item">
                           📄 helpers.js
                         </div>
@@ -271,7 +252,7 @@
       </ol>
 
       <h3>Focus Group Configuration</h3>
-      <p>Each <code>.focus-group</code> would be initialized as:</p>
+      <p>Each <code>.content</code> element would be initialized as:</p>
       <pre><code>initFocusGroup(element, {
   direction: "vertical",  // Only up/down arrows
   loop: false,           // Stay at boundaries
@@ -283,7 +264,7 @@
       import { initFocusGroup } from "../focus_group.js";
 
       // Initialize all focus groups
-      const focusGroups = document.querySelectorAll(".focus-group");
+      const focusGroups = document.querySelectorAll(".content");
       focusGroups.forEach((group) => {
         initFocusGroup(group, {
           direction: "vertical", // Only allow up/down navigation within each group
@@ -310,7 +291,7 @@
       // Track focus changes
       document.addEventListener("focusin", (event) => {
         const element = event.target;
-        const groupId = element.closest(".focus-group")?.id || "none";
+        const groupId = element.closest(".content")?.id || "none";
         const elementType = element.tagName.toLowerCase();
         const elementText = element.textContent.trim().substring(0, 20);
 
@@ -325,7 +306,7 @@
           )
         ) {
           const activeGroup =
-            document.activeElement?.closest(".focus-group")?.id || "none";
+            document.activeElement?.closest(".content")?.id || "none";
           log(`Key: ${event.key} in ${activeGroup}`);
         }
       });
