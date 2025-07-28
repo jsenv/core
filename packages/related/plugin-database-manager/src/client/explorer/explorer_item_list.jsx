@@ -89,7 +89,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
         shortcuts={[
           {
             enabled: selectionLength > 0,
-            keyCombinations: ["command+backspace"],
+            keyCombinations: ["command+delete"],
             action: deleteManyAction,
             confirmMessage:
               selectionLength === 1

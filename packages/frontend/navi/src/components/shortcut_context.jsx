@@ -254,46 +254,41 @@ const keySynonyms = [
   ["end", "finish"],
 ];
 
+const normalizeKeyCombination = (combination) => {
+  const lowerCaseCombination = combination.toLowerCase();
+  const keys = lowerCaseCombination.split("+");
+
+  // Normalize modifiers and keys
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    if (key === "option") {
+      keys[i] = "altgraph";
+    }
+    if (key === "command") {
+      keys[i] = "meta";
+    }
+
+    // Normalize key synonyms to canonical form
+    for (const synonymGroup of keySynonyms) {
+      if (synonymGroup.includes(key)) {
+        keys[i] = synonymGroup[0];
+        break;
+      }
+    }
+  }
+
+  return keys.join("+");
+};
+
 // http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
 const useAriaKeyShortcuts = (combinations) => {
   const combinationSet = new Set();
-  for (const combination of combinations) {
-    const lowerCaseCombination = combination.toLowerCase();
-    const keys = lowerCaseCombination.split("+");
-    let i = 0;
-    let useMeta = false;
-    let useControl = false;
-    for (; i < keys.length; i++) {
-      const key = keys[i];
-      if (key === "option") {
-        keys[i] = "altgraph";
-      }
-      if (key === "command") {
-        keys[i] = "meta";
-        useMeta = true;
-      }
-      if (key === "meta") {
-        useMeta = true;
-      }
-      if (key === "control") {
-        useControl = true;
-      }
-    }
-    const normalizedCombination = keys.join("+");
-    combinationSet.add(normalizedCombination);
 
-    if (useMeta) {
-      const controlCombination = normalizedCombination.replace(
-        "meta",
-        "control",
-      );
-      combinationSet.add(controlCombination);
-    }
-    if (useControl) {
-      const metaCombination = normalizedCombination.replace("control", "meta");
-      combinationSet.add(metaCombination);
-    }
+  for (const combination of combinations) {
+    const normalizedCombination = normalizeKeyCombination(combination);
+    combinationSet.add(normalizedCombination);
   }
+
   let combinationString = "";
   for (const combination of combinationSet) {
     if (combinationString) {

@@ -39,7 +39,7 @@ export const ExplorerItem = ({
       ...(deleteItemAction
         ? [
             {
-              keyCombinations: ["Meta+Backspace"],
+              keyCombinations: ["command+delete"],
               action: deleteItemAction,
               confirmMessage: `Are you sure you want to delete "${itemName}"?`,
             },
