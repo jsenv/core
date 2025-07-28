@@ -12,6 +12,15 @@ export const performTabNavigation = (
   event,
   { rootElement = document.body, outsideOfElement = null } = {},
 ) => {
+  if (event.defaultPrevented) {
+    // If the keydown was prevented by another handler, do not interfere
+    // Also prevent tab within nested focus group to be handled twice
+    return;
+  }
+  if (!isTabEvent(event)) {
+    return;
+  }
+
   const activeElement = document.activeElement;
   const isForward = !event.shiftKey;
 

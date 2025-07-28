@@ -12,19 +12,10 @@ import {
   findLastDescendant,
 } from "../traversal.js";
 import { elementIsFocusable } from "./element_is_focusable.js";
-import { isTabEvent, performTabNavigation } from "./tab_navigation.js";
+import { performTabNavigation } from "./tab_navigation.js";
 
 // WeakMap to store focus group metadata
 const focusGroupRegistry = new WeakMap();
-
-const isArrowEvent = (event, direction = "both") => {
-  const arrowKeys = {
-    both: ["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"],
-    vertical: ["ArrowUp", "ArrowDown"],
-    horizontal: ["ArrowLeft", "ArrowRight"],
-  };
-  return arrowKeys[direction]?.includes(event.key) ?? false;
-};
 
 const isBackwardArrow = (event, direction = "both") => {
   const backwardKeys = {
@@ -90,7 +81,9 @@ const performArrowKeyNavigation = (
   element,
   { direction = "both", loop, name } = {},
 ) => {
-  if (!isArrowEvent(event, direction)) {
+  if (event.defaultPrevented) {
+    // If the keydown was prevented by another handler, do not interfere
+    // Also arrow key withing nested focus group to be handled twice
     return false;
   }
 
@@ -143,7 +136,6 @@ const performArrowKeyNavigation = (
   if (elementToFocus) {
     elementToFocus.focus();
     event.preventDefault();
-    event.stopPropagation(); // Prevent parent focus groups from handling this event
     return true;
   }
 
@@ -176,16 +168,7 @@ export const initFocusGroup = (
     element.addEventListener(
       "keydown",
       (event) => {
-        if (event.defaultPrevented) {
-          // If the keydown was prevented by another handler, do not interfere
-          // Also prevent tab withing nested focus group to be handled twice
-          return;
-        }
-        if (isTabEvent(event)) {
-          performTabNavigation(event, {
-            outsideOfElement: element,
-          });
-        }
+        performTabNavigation(event, { outsideOfElement: element });
       },
       {
         capture: true,
