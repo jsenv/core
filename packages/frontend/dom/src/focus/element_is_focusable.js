@@ -5,6 +5,9 @@ export const elementIsFocusable = (node) => {
   if (node.nodeType !== 1) {
     return false;
   }
+  if (!canInteract(node)) {
+    return false;
+  }
   const nodeName = node.nodeName.toLowerCase();
   if (nodeName === "input") {
     if (node.type === "hidden") {
@@ -54,4 +57,15 @@ const hasNegativeTabIndex = (element) => {
     element.hasAttribute("tabIndex") &&
     Number(element.getAttribute("tabindex")) < 0
   );
+};
+
+const canInteract = (element) => {
+  if (element.disabled) {
+    return false;
+  }
+  if (element.hasAttribute("inert")) {
+    // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert
+    return false;
+  }
+  return true;
 };

@@ -14,6 +14,8 @@ import {
 import { elementIsFocusable } from "./element_is_focusable.js";
 import { performTabNavigation } from "./tab_navigation.js";
 
+const DEBUG = false;
+
 // WeakMap to store focus group metadata
 const focusGroupRegistry = new WeakMap();
 
@@ -34,8 +36,6 @@ const isForwardArrow = (event, direction = "both") => {
   };
   return forwardKeys[direction]?.includes(event.key) ?? false;
 };
-
-const DEBUG = true;
 
 // Find parent focus group with the same name and try delegation
 const tryDelegate = (event, currentElement, { name }) => {

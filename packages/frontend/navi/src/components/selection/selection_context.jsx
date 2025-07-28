@@ -6,9 +6,7 @@ const SelectionContext = createContext(null);
 export const Selection = ({ value = [], onChange, children }) => {
   const selection = value || [];
   const registryRef = useRef([]); // Array<value>
-  const lastSelectedValueRef = useRef(
-    selection.length > 0 ? selection[selection.length - 1] : null,
-  );
+  const anchorRef = useRef(null);
 
   const contextValue = {
     selection,
@@ -31,12 +29,11 @@ export const Selection = ({ value = [], onChange, children }) => {
         registry.splice(index, 1);
       }
     },
-    getAllItems: () => {
-      return registryRef.current;
-    },
-
     isSelected: (itemValue) => {
       return selection.includes(itemValue);
+    },
+    getAllItems: () => {
+      return registryRef.current;
     },
 
     // basic methods to manipulate selection
@@ -46,12 +43,6 @@ export const Selection = ({ value = [], onChange, children }) => {
         newSelection.every((value, index) => value === selection[index])
       ) {
         return;
-      }
-      // Update the last selected value to the last item in the new selection
-      if (newSelection.length > 0) {
-        lastSelectedValueRef.current = newSelection[newSelection.length - 1];
-      } else {
-        lastSelectedValueRef.current = null;
       }
       onChange?.(newSelection, event);
     },
@@ -67,7 +58,6 @@ export const Selection = ({ value = [], onChange, children }) => {
         }
         modified = true;
         selectionWithValues.push(valueToAdd);
-        lastSelectedValueRef.current = valueToAdd;
       }
       if (modified) {
         onChange?.(selectionWithValues, event);
@@ -80,23 +70,12 @@ export const Selection = ({ value = [], onChange, children }) => {
         if (arrayOfValueToRemoveFromSelection.includes(value)) {
           modified = true;
           // If we're removing the last selected value, clear it
-          if (value === lastSelectedValueRef.current) {
-            lastSelectedValueRef.current = null;
+          if (value === anchorRef.current) {
+            anchorRef.current = null;
           }
         } else {
           selectionWithoutValues.push(value);
         }
-      }
-
-      // If we cleared the last selected value but still have items selected,
-      // set the last selected to the last remaining item
-      if (
-        modified &&
-        lastSelectedValueRef.current === null &&
-        selectionWithoutValues.length > 0
-      ) {
-        lastSelectedValueRef.current =
-          selectionWithoutValues[selectionWithoutValues.length - 1];
       }
 
       if (modified) {
@@ -129,6 +108,7 @@ export const Selection = ({ value = [], onChange, children }) => {
         contextValue.add(valuesToSelect, event);
       }
     },
+
     // Convenience method for multi-select: toggle, addFromLastSelectedTo
     toggle: (value, event = null) => {
       if (selection.includes(value)) {
@@ -138,12 +118,12 @@ export const Selection = ({ value = [], onChange, children }) => {
       }
     },
     // Convenience method for shift-click: add range from last selected to target value
-    addFromLastSelectedTo: (value, event = null) => {
-      const lastSelectedValue = lastSelectedValueRef.current;
+    addFromAnchorTo: (value, event = null) => {
+      const anchorValue = anchorRef.current;
 
       // Make sure the last selected value is still in the current selection
-      if (lastSelectedValue && selection.includes(lastSelectedValue)) {
-        contextValue.addRange(lastSelectedValue, value, event);
+      if (anchorValue && selection.includes(anchorValue)) {
+        contextValue.addRange(anchorValue, value, event);
       } else {
         // No valid previous selection, just select this one
         contextValue.add([value], event);
@@ -213,7 +193,7 @@ export const clickToSelect = (clickEvent, { selectionContext, value }) => {
   }
   if (isShiftSelect) {
     clickEvent.preventDefault(); // Prevent navigation
-    selectionContext.addFromLastSelectedTo(value, clickEvent);
+    selectionContext.addFromAnchorTo(value, clickEvent);
     return;
   }
 };
@@ -221,6 +201,11 @@ export const clickToSelect = (clickEvent, { selectionContext, value }) => {
 export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
   if (keydownEvent.defaultPrevented) {
     // If the keydown was prevented by another handler, do not interfere
+    return;
+  }
+
+  if (keydownEvent.key === "Shift") {
+    selectionContext.setAnchor(value);
     return;
   }
 
@@ -234,7 +219,7 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.addFromLastSelectedTo(nextValue, keydownEvent);
+      selectionContext.addFromAnchorTo(nextValue, keydownEvent);
       return;
     }
     if (isMultiSelect) {
@@ -251,7 +236,7 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.addFromLastSelectedTo(previousValue, keydownEvent);
+      selectionContext.addFromAnchorTo(previousValue, keydownEvent);
       return;
     }
     if (isMultiSelect) {
