@@ -44,13 +44,11 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  .navi_link_container {
+  .navi_link[data-with-selection] {
     position: relative;
-    display: inline-flex;
-    flex: 1;
   }
 
-  .navi_link_checkbox {
+  .navi_link[data-with-selection] input[type="checkbox"] {
     position: absolute;
     opacity: 0;
   }
@@ -171,7 +169,20 @@ const LinkWithSelection = forwardRef((props, ref) => {
   useRegisterSelectionValue(value);
 
   return (
-    <div className="navi_link_container">
+    <LinkPlain
+      ref={ref}
+      {...rest}
+      onClick={(e) => {
+        clickToSelect(e, { selectionContext, value });
+        onClick?.(e);
+      }}
+      onKeyDown={(e) => {
+        keydownToSelect(e, { selectionContext, value });
+        onKeyDown?.(e);
+      }}
+      data-with-selection=""
+      data-selected={isSelected ? "" : undefined}
+    >
       <input
         className="navi_link_checkbox"
         type="checkbox"
@@ -182,22 +193,8 @@ const LinkWithSelection = forwardRef((props, ref) => {
         disabled
         tabIndex={-1} // Don't interfere with link tab order (might be overkill because there is already [disabled])
       />
-      <LinkPlain
-        ref={ref}
-        {...rest}
-        onClick={(e) => {
-          clickToSelect(e, { selectionContext, value });
-          onClick?.(e);
-        }}
-        onKeyDown={(e) => {
-          keydownToSelect(e, { selectionContext, value });
-          onKeyDown?.(e);
-        }}
-        data-selected={isSelected ? "" : undefined}
-      >
-        {children}
-      </LinkPlain>
-    </div>
+      {children}
+    </LinkPlain>
   );
 });
 
