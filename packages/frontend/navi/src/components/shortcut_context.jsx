@@ -220,6 +220,16 @@ export const ShortcutProvider = ({
   );
 };
 
+const detectMac = () => {
+  // Modern way using User-Agent Client Hints API
+  if (window.navigator.userAgentData) {
+    return window.navigator.userAgentData.platform === "macOS";
+  }
+  // Fallback to userAgent string parsing
+  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
+};
+const isMac = detectMac();
+
 // Configuration for mapping shortcut key names to browser event properties
 const modifierKeyMapping = {
   metaKey: {
@@ -236,6 +246,53 @@ const modifierKeyMapping = {
     names: ["alt"],
     macNames: ["option"],
   },
+};
+const keySynonyms = [
+  ["space", " "],
+  ["escape", "esc"],
+  ["arrowup", "up"],
+  ["arrowdown", "down"],
+  ["arrowleft", "left"],
+  ["arrowright", "right"],
+  ["home", "start"],
+  ["end", "finish"],
+  // Platform-specific synonyms for event matching
+  ...(isMac ? [["delete", "backspace"]] : [["backspace", "delete"]]),
+];
+const keyToAriaKeyMapping = {
+  // Modifier keys - platform-specific ARIA names
+  "command": "meta",
+  "cmd": "meta",
+  "option": "altgraph", // Mac option key uses "altgraph" in ARIA spec
+  "control": "control",
+  "ctrl": "control",
+  "shift": "shift",
+  "alt": "alt",
+  "meta": "meta",
+
+  // Regular keys - platform-specific normalization
+  "delete": isMac ? "backspace" : "delete", // Mac delete key is backspace semantically
+  "backspace": isMac ? "backspace" : "delete",
+
+  // Arrow keys
+  "arrowup": "arrowup",
+  "up": "arrowup",
+  "arrowdown": "arrowdown",
+  "down": "arrowdown",
+  "arrowleft": "arrowleft",
+  "left": "arrowleft",
+  "arrowright": "arrowright",
+  "right": "arrowright",
+
+  // Other keys
+  "space": "space",
+  " ": "space",
+  "escape": "escape",
+  "esc": "escape",
+  "home": "home",
+  "start": "home",
+  "end": "end",
+  "finish": "end",
 };
 
 const eventIsMatchingKeyCombination = (event, keyCombination) => {
@@ -290,66 +347,6 @@ const isSameKey = (browserEventKey, key) => {
   }
 
   return false;
-};
-
-const detectMac = () => {
-  // Modern way using User-Agent Client Hints API
-  if (window.navigator.userAgentData) {
-    return window.navigator.userAgentData.platform === "macOS";
-  }
-  // Fallback to userAgent string parsing
-  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
-};
-const isMac = detectMac();
-
-const keySynonyms = [
-  ["space", " "],
-  ["escape", "esc"],
-  ["arrowup", "up"],
-  ["arrowdown", "down"],
-  ["arrowleft", "left"],
-  ["arrowright", "right"],
-  ["home", "start"],
-  ["end", "finish"],
-  // Platform-specific synonyms for event matching
-  ...(isMac ? [["delete", "backspace"]] : [["backspace", "delete"]]),
-];
-
-// Mapping from shortcut key names to ARIA keyshortcuts attribute values
-const keyToAriaKeyMapping = {
-  // Modifier keys - platform-specific ARIA names
-  "command": "meta",
-  "cmd": "meta",
-  "option": "altgraph", // Mac option key uses "altgraph" in ARIA spec
-  "control": "control",
-  "ctrl": "control",
-  "shift": "shift",
-  "alt": "alt",
-  "meta": "meta",
-
-  // Regular keys - platform-specific normalization
-  "delete": isMac ? "backspace" : "delete", // Mac delete key is backspace semantically
-  "backspace": isMac ? "backspace" : "delete",
-
-  // Arrow keys
-  "arrowup": "arrowup",
-  "up": "arrowup",
-  "arrowdown": "arrowdown",
-  "down": "arrowdown",
-  "arrowleft": "arrowleft",
-  "left": "arrowleft",
-  "arrowright": "arrowright",
-  "right": "arrowright",
-
-  // Other keys
-  "space": "space",
-  " ": "space",
-  "escape": "escape",
-  "esc": "escape",
-  "home": "home",
-  "start": "home",
-  "end": "end",
-  "finish": "end",
 };
 
 const normalizeKeyCombination = (combination) => {
