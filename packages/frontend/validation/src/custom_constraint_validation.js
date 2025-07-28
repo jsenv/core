@@ -56,9 +56,11 @@ export const requestAction = (
     confirmMessage,
   } = {},
 ) => {
-  let validationInterface = target.__validationInterface__;
+  let elementToValidate = requester;
+
+  let validationInterface = elementToValidate.__validationInterface__;
   if (!validationInterface) {
-    validationInterface = installCustomConstraintValidation(target);
+    validationInterface = installCustomConstraintValidation(elementToValidate);
   }
 
   const customEventDetail = {
@@ -78,12 +80,12 @@ export const requestAction = (
   }
 
   // Determine what needs to be validated and how to handle the result
-  const isForm = target.tagName === "FORM";
-  const formToValidate = isForm ? target : target.form;
+  const isForm = elementToValidate.tagName === "FORM";
+  const formToValidate = isForm ? elementToValidate : elementToValidate.form;
 
   let isValid = false;
-  let elementForConfirmation = target;
-  let elementForDispatch = target;
+  let elementForConfirmation = elementToValidate;
+  let elementForDispatch = elementToValidate;
 
   if (formToValidate) {
     // Form validation case

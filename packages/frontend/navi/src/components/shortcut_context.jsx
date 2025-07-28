@@ -88,6 +88,9 @@ export const ShortcutProvider = ({
   useActionEvents(shortcutElementRef, {
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
+      // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
+      // otherwise setState would call that action immediately
+      setAction(() => action);
       executeAction(actionEvent);
     },
     onStart: (e) => {
@@ -143,11 +146,12 @@ export const ShortcutProvider = ({
         return;
       }
       event.preventDefault();
-      const { confirmMessage, action } = shortcutFound;
-      // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
-      // otherwise setState would call that action immediately
-      setAction(() => action);
-      requestAction(action, { event, confirmMessage });
+      const { action } = shortcutFound;
+      requestAction(action, {
+        event,
+        target: shortcutElementRef.current,
+        requester: elementRef.current,
+      });
     },
     [shortcutActionIsBusy],
   );
