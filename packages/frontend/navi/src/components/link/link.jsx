@@ -273,7 +273,7 @@ const LinkWithAction = forwardRef((props, ref) => {
   const shortcutHiddenElement = useShortcutHiddenElement(shortcuts);
 
   return (
-    <form>
+    <>
       <LinkBasic
         ref={innerRef}
         {...rest}
@@ -288,8 +288,8 @@ const LinkWithAction = forwardRef((props, ref) => {
         }}
       >
         {children}
+        {shortcutHiddenElement}
       </LinkBasic>
-      {shortcutHiddenElement}
-    </form>
+    </>
   );
 });

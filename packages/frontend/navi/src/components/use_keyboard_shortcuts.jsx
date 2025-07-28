@@ -122,9 +122,8 @@ export const useShortcutHiddenElement = (shortcuts) => {
   });
   return shortcutElements;
 };
-
 // http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
-export const useAriaKeyShortcuts = (combinations) => {
+const useAriaKeyShortcuts = (combinations) => {
   const combinationSet = new Set();
   for (const combination of combinations) {
     const lowerCaseCombination = combination.toLowerCase();
