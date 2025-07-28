@@ -84,7 +84,7 @@ export const ExplorerItemList = forwardRef((props, ref) => {
         itemSelectionSignal={itemSelectionSignal}
         shortcuts={[
           {
-            keyCombinations: ["Meta+Backspace"],
+            keyCombinations: ["command+backspace"],
             action: deleteManyAction,
             confirmMessage: `Are you sure you want to delete ${itemSelectionSignal.value.length} items?`,
           },
