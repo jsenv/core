@@ -220,37 +220,56 @@ export const ShortcutProvider = ({
   );
 };
 
+// Configuration for mapping shortcut key names to browser event properties
+const modifierKeyMapping = {
+  metaKey: {
+    names: ["meta"],
+    macNames: ["command", "cmd"],
+  },
+  ctrlKey: {
+    names: ["control", "ctrl"],
+  },
+  shiftKey: {
+    names: ["shift"],
+  },
+  altKey: {
+    names: ["alt"],
+    macNames: ["option"],
+  },
+};
+
 const eventIsMatchingKeyCombination = (event, keyCombination) => {
   const keys = keyCombination.toLowerCase().split("+");
+
   for (const key of keys) {
-    if (key === "meta" || key === "command" || key === "cmd") {
-      if (!event.metaKey) {
+    let modifierFound = false;
+
+    // Check if this key is a modifier
+    for (const [eventProperty, config] of Object.entries(modifierKeyMapping)) {
+      const allNames = [...config.names];
+
+      // Add Mac-specific names only if we're on Mac and they exist
+      if (isMac && config.macNames) {
+        allNames.push(...config.macNames);
+      }
+
+      if (allNames.includes(key)) {
+        // Check if the corresponding event property is pressed
+        if (!event[eventProperty]) {
+          return false;
+        }
+
+        modifierFound = true;
+        break;
+      }
+    }
+
+    // If it's not a modifier, check if it matches the actual key
+    if (!modifierFound) {
+      if (!isSameKey(event.key, key)) {
         return false;
       }
-      continue;
     }
-    if (key === "control") {
-      if (!event.ctrlKey) {
-        return false;
-      }
-      continue;
-    }
-    if (key === "shift") {
-      if (!event.shiftKey) {
-        return false;
-      }
-      continue;
-    }
-    if (key === "option" || key === "alt") {
-      if (!event.altKey) {
-        return false;
-      }
-      continue;
-    }
-    if (!isSameKey(event.key, key)) {
-      return false;
-    }
-    continue;
   }
   return true;
 };
