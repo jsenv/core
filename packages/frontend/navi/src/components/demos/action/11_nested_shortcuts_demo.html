@@ -191,7 +191,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useState, useRef } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
         Link,
@@ -233,6 +233,8 @@
           { name: "video.mp4", icon: "🎥", type: "MP4 Video" },
           { name: "archive.zip", icon: "📦", type: "ZIP Archive" },
         ];
+
+        const elementRef = useRef();
 
         return (
           <div className="demo-container">
@@ -296,8 +298,11 @@
             <div className="file-explorer">
               <h2 className="explorer-title">📁 File Explorer</h2>
 
-              <ShortcutProvider shortcuts={containerShortcuts}>
-                <ul className="file-list">
+              <ShortcutProvider
+                elementRef={elementRef}
+                shortcuts={containerShortcuts}
+              >
+                <ul className="file-list" ref={elementRef}>
                   {files.map((file) => (
                     <li key={file.name} className="file-item">
                       <Link

@@ -57,6 +57,12 @@ export const ShortcutProvider = ({
   allowConcurrentActions,
   children,
 }) => {
+  if (!elementRef) {
+    throw new Error(
+      "ShortcutProvider requires an elementRef to attach shortcuts to.",
+    );
+  }
+
   const shortcutElements = [];
   shortcuts.forEach((shortcut) => {
     const combinationString = useAriaKeyShortcuts(shortcut.keyCombinations);
