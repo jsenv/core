@@ -11,11 +11,8 @@ import {
   useRegisterSelectionValue,
   useSelectionContext,
 } from "../selection/selection_context.jsx";
+import { ShortcutProvider, useShortcutContext } from "../shortcut_context.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import {
-  ShortcutProvider,
-  useShortcutContext,
-} from "../use_keyboard_shortcuts.jsx";
 
 /*
  * Apply opacity to child content, not the link element itself.

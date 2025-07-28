@@ -91,7 +91,9 @@ export const ShortcutProvider = ({
       executeAction(actionEvent);
     },
     onStart: (e) => {
-      setShortcutActionIsBusy(true);
+      if (!allowConcurrentActions) {
+        setShortcutActionIsBusy(true);
+      }
       onActionStart?.(e);
     },
     onAbort: (e) => {
