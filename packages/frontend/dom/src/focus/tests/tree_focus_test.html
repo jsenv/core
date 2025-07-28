@@ -146,6 +146,24 @@
       <div id="debug-output"></div>
     </div>
 
+    <!-- Test element before the tree -->
+    <div
+      style="
+        margin: 20px 0;
+        padding: 10px;
+        border: 2px solid #0066cc;
+        background: #f0f8ff;
+      "
+    >
+      <label for="before-input">Input before tree (Tab test):</label>
+      <input
+        id="before-input"
+        type="text"
+        placeholder="Focus me, then press Tab"
+        style="margin-left: 10px; padding: 5px"
+      />
+    </div>
+
     <div class="tree-container">
       <h2>File System Tree</h2>
 
@@ -276,12 +294,33 @@
       </details>
     </div>
 
+    <!-- Test element after the tree -->
+    <div
+      style="
+        margin: 20px 0;
+        padding: 10px;
+        border: 2px solid #cc6600;
+        background: #fff8f0;
+      "
+    >
+      <label for="after-input">Input after tree (Tab test):</label>
+      <input
+        id="after-input"
+        type="text"
+        placeholder="Should receive focus after tree"
+        style="margin-left: 10px; padding: 5px"
+      />
+      <button style="margin-left: 10px; padding: 5px 10px">
+        Button after tree
+      </button>
+    </div>
+
     <div class="tree-container">
       <h2>Expected Focus Group Behavior</h2>
       <ul>
         <li>
-          <strong>Tab Navigation:</strong> Moves between focus groups (exits
-          current group)
+          <strong>Tab Navigation:</strong> Should skip over focus groups
+          entirely - from "Input before tree" directly to "Input after tree"
         </li>
         <li>
           <strong>Arrow Up/Down:</strong> Navigates within the current focus
@@ -292,6 +331,19 @@
           collapse/expand or move between sibling groups
         </li>
       </ul>
+
+      <h3>Tab Navigation Test</h3>
+      <ol>
+        <li>Click on "Input before tree" field above</li>
+        <li>
+          Press Tab - should jump directly to "Input after tree" (skipping all
+          focus groups)
+        </li>
+        <li>Press Shift+Tab - should jump back to "Input before tree"</li>
+        <li>
+          To enter a focus group: click on any file/folder item, then use arrows
+        </li>
+      </ol>
 
       <h3>Focus Group Configuration</h3>
       <p>Each <code>.focus-group</code> would be initialized as:</p>
