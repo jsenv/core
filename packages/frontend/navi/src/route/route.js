@@ -272,6 +272,7 @@ const createRoute = (urlPatternInput) => {
     urlPattern: undefined,
     activeSignal: null,
     paramsSignal: null,
+    visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
   };
@@ -310,6 +311,7 @@ const createRoute = (urlPatternInput) => {
 
   const activeSignal = signal(false);
   const paramsSignal = signal(NO_PARAMS);
+  const visitedSignal = signal(false);
   const relativeUrlSignal = computed(() => {
     const params = paramsSignal.value;
     const relativeUrl = buildRelativeUrl(params);
@@ -423,6 +425,7 @@ const createRoute = (urlPatternInput) => {
     routePrivateProperties.urlPattern = urlPattern;
     routePrivateProperties.activeSignal = activeSignal;
     routePrivateProperties.paramsSignal = paramsSignal;
+    routePrivateProperties.visitedSignal = visitedSignal;
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
     routePrivateProperties.urlSignal = urlSignal;
     routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;

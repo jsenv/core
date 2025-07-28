@@ -33,6 +33,7 @@ import.meta.css = /* css */ `
     flex-direction: row;
     align-items: center;
     width: 100%;
+    gap: 0.2em;
   }
   .summary_label {
     display: flex;
