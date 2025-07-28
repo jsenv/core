@@ -32,11 +32,6 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
   }
 
   const onKeyDown = useCallback((event) => {
-    if (event.defaultPrevented) {
-      // If the keydown was prevented by another handler, do not interfere
-      return;
-    }
-
     let shortcutFound;
     for (const shortcutCandidate of shortcutsRef.current) {
       const { enabled = true, keyCombinations } = shortcutCandidate;
@@ -52,11 +47,9 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
       shortcutFound = shortcutCandidate;
       break;
     }
-
     if (!shortcutFound) {
       return;
     }
-
     event.preventDefault();
     const { confirmMessage, action } = shortcutFound;
     // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
@@ -95,8 +88,9 @@ const eventIsMatchingKeyCombination = (event, keyCombination) => {
       }
       continue;
     }
-    if (event.key !== key) {
-      if (key === "space" && event.key === " ") {
+    const eventKey = event.key.toLowerCase();
+    if (eventKey !== key) {
+      if (key === "space" && eventKey === " ") {
         continue;
       }
       return false;
@@ -121,7 +115,9 @@ export const useShortcutHiddenElement = (shortcuts) => {
         action={shortcut.action}
         data-action={shortcut.action.name}
         data-confirm-message={shortcut.confirmMessage}
-      ></button>,
+      >
+        {shortcut.description}
+      </button>,
     );
   });
   return shortcutElements;
