@@ -247,22 +247,32 @@ const modifierKeyMapping = {
     macNames: ["option"],
   },
 };
-const keySynonyms = [
-  ["space", " "],
-  ["escape", "esc"],
-  ["arrowup", "up"],
-  ["arrowdown", "down"],
-  ["arrowleft", "left"],
-  ["arrowright", "right"],
-  ["home", "start"],
-  ["end", "finish"],
-  ["delete", "del"], // legacy firefox support
-  ["contextmenu", "apps"], // legacy firefox support
-  [" ", "spacebar"], // legacy browser support
-  ["command", "cmd"], // cmd is short for command
-  // Platform-specific synonyms for event matching
-  ...(isMac ? [["delete", "backspace"]] : [["backspace", "delete"]]),
-];
+// Maps canonical browser key names to their user-friendly aliases.
+// Used for both event matching and ARIA normalization.
+const keyMapping = {
+  " ": { alias: ["space"] },
+  "escape": { alias: ["esc"] },
+  "arrowup": { alias: ["up"] },
+  "arrowdown": { alias: ["down"] },
+  "arrowleft": { alias: ["left"] },
+  "arrowright": { alias: ["right"] },
+  "delete": {
+    alias: [
+      // (legacy firefox support)
+      "del",
+    ],
+  },
+  "contextmenu": {
+    alias: [
+      // (legacy firefox support)
+      "apps",
+    ],
+  },
+  // Platform-specific mappings
+  ...(isMac
+    ? { delete: { alias: ["backspace"] } }
+    : { backspace: { alias: ["delete"] } }),
+};
 const keyToAriaKeyMapping = {
   // Platform-specific ARIA names
   command: "meta",
@@ -317,9 +327,10 @@ const isSameKey = (browserEventKey, key) => {
     return true;
   }
 
-  // Check key synonyms
-  for (const synonymGroup of keySynonyms) {
-    if (synonymGroup.includes(browserEventKey) && synonymGroup.includes(key)) {
+  // Check if either key is an alias for the other
+  for (const [canonicalKey, config] of Object.entries(keyMapping)) {
+    const allKeys = [canonicalKey, ...config.alias];
+    if (allKeys.includes(browserEventKey) && allKeys.includes(key)) {
       return true;
     }
   }
@@ -330,11 +341,11 @@ const isSameKey = (browserEventKey, key) => {
 const normalizeKey = (key) => {
   key = key.toLowerCase();
 
-  // Normalize key synonyms to their canonical form
-  for (const synonymGroup of keySynonyms) {
-    if (synonymGroup.includes(key)) {
-      // Return the first item as the canonical form
-      return synonymGroup[0];
+  // Find the canonical form for this key
+  for (const [canonicalKey, config] of Object.entries(keyMapping)) {
+    const allKeys = [canonicalKey, ...config.alias];
+    if (allKeys.includes(key)) {
+      return canonicalKey;
     }
   }
 
