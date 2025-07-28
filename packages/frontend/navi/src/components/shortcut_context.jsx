@@ -256,6 +256,9 @@ const keySynonyms = [
   ["arrowright", "right"],
   ["home", "start"],
   ["end", "finish"],
+  ["delete", "del"], // legacy firefox support
+  ["contextmenu", "apps"], // legacy firefox support
+  [" ", "spacebar"], // legacy browser support
   // Platform-specific synonyms for event matching
   ...(isMac ? [["delete", "backspace"]] : [["backspace", "delete"]]),
 ];
@@ -264,35 +267,26 @@ const keyToAriaKeyMapping = {
   "command": "meta",
   "cmd": "meta",
   "option": "altgraph", // Mac option key uses "altgraph" in ARIA spec
-  "control": "control",
   "ctrl": "control",
-  "shift": "shift",
-  "alt": "alt",
-  "meta": "meta",
 
   // Regular keys - platform-specific normalization
   "delete": isMac ? "backspace" : "delete", // Mac delete key is backspace semantically
   "backspace": isMac ? "backspace" : "delete",
 
-  // Arrow keys
-  "arrowup": "arrowup",
+  // Arrow key synonyms
   "up": "arrowup",
-  "arrowdown": "arrowdown",
   "down": "arrowdown",
-  "arrowleft": "arrowleft",
   "left": "arrowleft",
-  "arrowright": "arrowright",
   "right": "arrowright",
 
-  // Other keys
-  "space": "space",
+  // Other key synonyms
   " ": "space",
-  "escape": "escape",
   "esc": "escape",
-  "home": "home",
   "start": "home",
-  "end": "end",
   "finish": "end",
+  "del": "delete",
+  "spacebar": "space",
+  "apps": "contextmenu",
 };
 
 const eventIsMatchingKeyCombination = (event, keyCombination) => {
