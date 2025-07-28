@@ -311,6 +311,8 @@ const keySynonyms = [
   ["arrowright", "right"],
   ["home", "start"],
   ["end", "finish"],
+  // Platform-specific synonyms for event matching
+  ...(isMac ? [["delete", "backspace"]] : [["backspace", "delete"]]),
 ];
 
 // Mapping from shortcut key names to ARIA keyshortcuts attribute values
