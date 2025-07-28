@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tree Focus Group Test</title>
+    <title>Tree Focus Group</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -153,49 +153,32 @@
       <!-- Root level details -->
       <details open data-focus-group="root">
         <summary tabindex="0">📁 Projects</summary>
-        <div class="content">
-          <div class="content" id="projects-group">
-            <!-- Nested details level 1 -->
-            <details data-focus-group="level-1">
-              <summary tabindex="-1">📁 src</summary>
-              <div class="content">
-                <div class="content" id="src-group">
-                  <!-- Nested details level 2 -->
-                  <details data-focus-group="level-2">
-                    <summary tabindex="-1">📁 components</summary>
-                    <div class="content">
-                      <div class="content" id="components-group">
-                        <div tabindex="-1" class="focusable-item">
-                          📄 Button.jsx
-                        </div>
-                        <div tabindex="-1" class="focusable-item">
-                          📄 Modal.jsx
-                        </div>
-                      </div>
-                    </div>
-                  </details>
 
-                  <details data-focus-group="level-2">
-                    <summary tabindex="-1">📁 utils</summary>
-                    <div class="content">
-                      <div class="content" id="utils-group">
-                        <div tabindex="-1" class="focusable-item">
-                          📄 helpers.js
-                        </div>
-                        <div tabindex="-1" class="focusable-item">
-                          📄 config.js
-                        </div>
-                      </div>
-                    </div>
-                  </details>
+        <div class="content" id="projects-group">
+          <!-- Nested details level 1 -->
+          <details data-focus-group="level-1">
+            <summary tabindex="-1">📁 src</summary>
+            <div class="content" id="src-group">
+              <!-- Nested details level 2 -->
+              <details data-focus-group="level-2">
+                <summary tabindex="-1">📁 components</summary>
+                <div class="content" id="components-group">
+                  <div tabindex="-1" class="focusable-item">📄 Button.jsx</div>
+                  <div tabindex="-1" class="focusable-item">📄 Modal.jsx</div>
                 </div>
-              </div>
-            </details>
-
-            <div tabindex="-1" class="focusable-item">📄 README.md</div>
-            <div tabindex="-1" class="focusable-item">📄 package.json</div>
-            <div tabindex="-1" class="focusable-item">� .gitignore</div>
-          </div>
+              </details>
+            </div>
+          </details>
+          <details data-focus-group="level-2">
+            <summary tabindex="-1">📁 utils</summary>
+            <div class="content" id="utils-group">
+              <div tabindex="-1" class="focusable-item">📄 helpers.js</div>
+              <div tabindex="-1" class="focusable-item">📄 config.js</div>
+            </div>
+          </details>
+          <div tabindex="-1" class="focusable-item">📄 README.md</div>
+          <div tabindex="-1" class="focusable-item">📄 package.json</div>
+          <div tabindex="-1" class="focusable-item">� .gitignore</div>
         </div>
       </details>
     </div>
@@ -263,8 +246,8 @@
     <script type="module">
       import { initFocusGroup } from "../focus_group.js";
 
-      // Initialize all focus groups
-      const focusGroups = document.querySelectorAll(".content");
+      // Initialize focus groups more selectively
+      const focusGroups = document.querySelectorAll(".content[id]");
       focusGroups.forEach((group) => {
         initFocusGroup(group, {
           direction: "vertical", // Only allow up/down navigation within each group
