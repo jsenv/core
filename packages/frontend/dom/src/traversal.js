@@ -1,4 +1,4 @@
-export const findFirstAncestor = (node, predicate) => {
+export const findAncestor = (node, predicate) => {
   let ancestor = node.parentNode;
   while (ancestor) {
     if (predicate(ancestor)) {
@@ -9,7 +9,7 @@ export const findFirstAncestor = (node, predicate) => {
   return null;
 };
 
-export const findFirstDescendant = (rootNode, fn, { skipRoot } = {}) => {
+export const findDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const iterator = createNextNodeIterator(rootNode, rootNode, skipRoot);
   let { done, value: node } = iterator.next();
   while (done === false) {

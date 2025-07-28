@@ -40,4 +40,9 @@ export { useResizeStatus } from "./size/hooks/use_resize_status.js";
 
 export { initPositionSticky } from "./position_sticky.js";
 export { getStyle, setAttributes, setStyles } from "./style_and_attributes.js";
-export { findFirstDescendant } from "./traversal.js";
+export {
+  findAfter,
+  findAncestor,
+  findBefore,
+  findDescendant,
+} from "./traversal.js";

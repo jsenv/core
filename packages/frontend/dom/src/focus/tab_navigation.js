@@ -1,7 +1,7 @@
 import {
   findAfter,
   findBefore,
-  findFirstDescendant,
+  findDescendant,
   findLastDescendant,
 } from "../traversal.js";
 import { isDiscoverableWithKeyboard } from "./element_is_focusable.js";
@@ -47,7 +47,7 @@ export const performTabNavigation = (
       console.debug("Starting from root element");
     }
     elementToFocus = isForward
-      ? findFirstDescendant(rootElement, predicate, {
+      ? findDescendant(rootElement, predicate, {
           skipRoot: outsideOfElement,
         })
       : findLastDescendant(rootElement, predicate, {
@@ -56,9 +56,7 @@ export const performTabNavigation = (
   } else {
     // Starting from a specific element
     const searchFunction = isForward ? findAfter : findBefore;
-    const fallbackFunction = isForward
-      ? findFirstDescendant
-      : findLastDescendant;
+    const fallbackFunction = isForward ? findDescendant : findLastDescendant;
 
     if (DEBUG) {
       console.debug(

@@ -8,7 +8,7 @@
 import {
   findAfter,
   findBefore,
-  findFirstDescendant,
+  findDescendant,
   findLastDescendant,
 } from "../traversal.js";
 import { elementIsFocusable } from "./element_is_focusable.js";
@@ -143,7 +143,7 @@ const performArrowKeyNavigation = (
       if (tryDelegate(event, element, { direction, loop, name })) {
       } else if (loop) {
         // No next element, wrap to first focusable in group
-        elementToFocus = findFirstDescendant(element, elementIsFocusable);
+        elementToFocus = findDescendant(element, elementIsFocusable);
         if (DEBUG) {
           console.debug(
             `Arrow navigation: "forward" looping to`,

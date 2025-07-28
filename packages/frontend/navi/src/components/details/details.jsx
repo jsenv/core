@@ -1,3 +1,4 @@
+import { elementIsFocusable, findAfter } from "@jsenv/dom";
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
@@ -129,7 +130,16 @@ const DetailsBasic = forwardRef((props, ref) => {
           if (e.key === openKeyShortcut) {
             const details = innerRef.current;
             if (details.open) {
-              // TODO: move focus to first focusable element inside
+              const summary = e.target.closest("summary");
+              const firstFocusableElementInDetails = findAfter(
+                summary,
+                elementIsFocusable,
+                { root: details },
+              );
+              if (firstFocusableElementInDetails) {
+                e.preventDefault();
+                firstFocusableElementInDetails.focus();
+              }
               return;
             }
             e.preventDefault();
