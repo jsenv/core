@@ -262,8 +262,8 @@ const LinkWithAction = forwardRef((props, ref) => {
 });
 
 const LinkWithShortcuts = forwardRef((props, ref) => {
-  const { children, onKeyDown, readOnly, loading, ...rest } = props;
-  const { shortcutAction, onKeyDownForShortcuts } = useShortcutContext();
+  const { children, readOnly, loading, ...rest } = props;
+  const { shortcutAction } = useShortcutContext();
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -281,10 +281,6 @@ const LinkWithShortcuts = forwardRef((props, ref) => {
         data-readonly-silent={actionLoading && !readOnly ? "" : undefined}
         /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
         data-focus-visible=""
-        onKeyDown={(e) => {
-          onKeyDownForShortcuts(e);
-          onKeyDown?.(e);
-        }}
       >
         {children}
       </LinkBasic>

@@ -1,6 +1,12 @@
 import { requestAction } from "@jsenv/validation";
 import { createContext } from "preact";
-import { useCallback, useContext, useRef, useState } from "preact/hooks";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { useAction } from "./action_execution/use_action.js";
 import { useExecuteAction } from "./action_execution/use_execute_action.js";
 import { useActionEvents } from "./use_action_events.js";
@@ -161,12 +167,19 @@ export const ShortcutProvider = ({
     [shortcutActionIsBusy],
   );
 
+  useEffect(() => {
+    const element = elementRef.current;
+    element.addEventListener("keydown", onKeyDownForShortcuts);
+    return () => {
+      element.removeEventListener("keydown", onKeyDownForShortcuts);
+    };
+  }, [onKeyDownForShortcuts]);
+
   return (
     <ShortcutContext.Provider
       value={{
         shortcutAction: action,
         shortcutActionIsBusy,
-        onKeyDownForShortcuts,
       }}
     >
       {children}
