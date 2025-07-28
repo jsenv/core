@@ -2,9 +2,25 @@ import { requestAction } from "@jsenv/validation";
 import { createContext } from "preact";
 import { useCallback, useContext, useRef, useState } from "preact/hooks";
 import { useAction } from "./action_execution/use_action.js";
+import { useExecuteAction } from "./action_execution/use_execute_action.js";
+import { useActionEvents } from "./use_action_events.js";
 
 import.meta.css = /* css */ `
   .navi_shortcut_container {
+    /* Visually hidden container - doesn't affect layout */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+
+    /* Ensure it's not interactable */
+    opacity: 0;
+    pointer-events: none;
   }
 
   .navi_shortcut_button {
@@ -31,31 +47,67 @@ export const useShortcutContext = () => {
 };
 
 export const ShortcutProvider = ({
-  children,
   shortcuts,
+  elementRef,
+  onActionPrevented,
+  onActionStart,
+  onActionAbort,
+  onActionError,
+  onActionEnd,
   allowConcurrentActions,
+  children,
 }) => {
-  const [shortcutAction, onKeyDownForShortcuts] = useKeyboardShortcuts(
-    shortcuts,
-    { allowConcurrentActions },
+  const shortcutElements = [];
+  shortcuts.forEach((shortcut) => {
+    const combinationString = useAriaKeyShortcuts(shortcut.keyCombinations);
+    shortcutElements.push(
+      <button
+        className="navi_shortcut_button"
+        key={combinationString}
+        aria-keyshortcuts={combinationString}
+        aria-hidden="true"
+        tabIndex="-1"
+        disabled
+        action={shortcut.action}
+        data-action={shortcut.action.name}
+        data-confirm-message={shortcut.confirmMessage}
+      >
+        {shortcut.description}
+      </button>,
+    );
+  });
+  const shortcutElementRef = useRef();
+  const shortcutHiddenElement = (
+    <div ref={shortcutElementRef} className="navi_shortcut_container">
+      {shortcutElements}
+    </div>
   );
 
-  const shortcutHiddenElement = useShortcutHiddenElement(shortcuts);
+  const executeAction = useExecuteAction(elementRef);
+  const [shortcutActionIsBusy, setShortcutActionIsBusy] = useState(false);
+  useActionEvents(shortcutElementRef, {
+    onPrevented: onActionPrevented,
+    onAction: (actionEvent) => {
+      executeAction(actionEvent);
+    },
+    onStart: (e) => {
+      setShortcutActionIsBusy(true);
+      onActionStart?.(e);
+    },
+    onAbort: (e) => {
+      setShortcutActionIsBusy(false);
+      onActionAbort?.(e);
+    },
+    onError: (e) => {
+      setShortcutActionIsBusy(false);
+      onActionError?.(e);
+    },
+    onEnd: (e) => {
+      setShortcutActionIsBusy(false);
+      onActionEnd?.(e);
+    },
+  });
 
-  return (
-    <ShortcutContext.Provider
-      value={{
-        shortcutAction,
-        onKeyDownForShortcuts,
-      }}
-    >
-      {children}
-      {shortcutHiddenElement}
-    </ShortcutContext.Provider>
-  );
-};
-
-const useKeyboardShortcuts = (shortcuts = []) => {
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;
 
@@ -65,34 +117,51 @@ const useKeyboardShortcuts = (shortcuts = []) => {
     shortcut.action = useAction(shortcut.action);
   }
 
-  const onKeyDown = useCallback((event) => {
-    let shortcutFound;
-    for (const shortcutCandidate of shortcutsRef.current) {
-      const { enabled = true, keyCombinations } = shortcutCandidate;
-      if (!enabled) {
-        continue;
+  const onKeyDownForShortcuts = useCallback(
+    (event) => {
+      if (shortcutActionIsBusy) {
+        return;
       }
-      const someMatch = keyCombinations.some((keyCombination) =>
-        eventIsMatchingKeyCombination(event, keyCombination),
-      );
-      if (!someMatch) {
-        continue;
+      let shortcutFound;
+      for (const shortcutCandidate of shortcutsRef.current) {
+        const { enabled = true, keyCombinations } = shortcutCandidate;
+        if (!enabled) {
+          continue;
+        }
+        const someMatch = keyCombinations.some((keyCombination) =>
+          eventIsMatchingKeyCombination(event, keyCombination),
+        );
+        if (!someMatch) {
+          continue;
+        }
+        shortcutFound = shortcutCandidate;
+        break;
       }
-      shortcutFound = shortcutCandidate;
-      break;
-    }
-    if (!shortcutFound) {
-      return;
-    }
-    event.preventDefault();
-    const { confirmMessage, action } = shortcutFound;
-    // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
-    // otherwise setState would call that action immediately
-    setAction(() => action);
-    requestAction(action, { event, confirmMessage });
-  }, []);
+      if (!shortcutFound) {
+        return;
+      }
+      event.preventDefault();
+      const { confirmMessage, action } = shortcutFound;
+      // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
+      // otherwise setState would call that action immediately
+      setAction(() => action);
+      requestAction(action, { event, confirmMessage });
+    },
+    [shortcutActionIsBusy],
+  );
 
-  return [action, onKeyDown];
+  return (
+    <ShortcutContext.Provider
+      value={{
+        shortcutAction: action,
+        shortcutActionIsBusy,
+        onKeyDownForShortcuts,
+      }}
+    >
+      {children}
+      {shortcutHiddenElement}
+    </ShortcutContext.Provider>
+  );
 };
 
 const eventIsMatchingKeyCombination = (event, keyCombination) => {
@@ -134,28 +203,6 @@ const eventIsMatchingKeyCombination = (event, keyCombination) => {
   return true;
 };
 
-const useShortcutHiddenElement = (shortcuts) => {
-  const shortcutElements = [];
-  shortcuts.forEach((shortcut) => {
-    const combinationString = useAriaKeyShortcuts(shortcut.keyCombinations);
-    shortcutElements.push(
-      <button
-        className="navi_shortcut_button"
-        key={combinationString}
-        aria-keyshortcuts={combinationString}
-        aria-hidden="true"
-        tabIndex="-1"
-        disabled
-        action={shortcut.action}
-        data-action={shortcut.action.name}
-        data-confirm-message={shortcut.confirmMessage}
-      >
-        {shortcut.description}
-      </button>,
-    );
-  });
-  return <div className="navi_shortcut_container">{shortcutElements}</div>;
-};
 // http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
 const useAriaKeyShortcuts = (combinations) => {
   const combinationSet = new Set();

@@ -4,7 +4,6 @@ import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import {
   clickToSelect,
@@ -12,7 +11,6 @@ import {
   useRegisterSelectionValue,
   useSelectionContext,
 } from "../selection/selection_context.jsx";
-import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import {
   ShortcutProvider,
@@ -239,21 +237,8 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 };
 
 const LinkWithAction = forwardRef((props, ref) => {
-  const { shortcuts = [], ...rest } = props;
-
-  return (
-    <ShortcutProvider shortcuts={shortcuts}>
-      <LinkWithShortcuts ref={ref} {...rest} />
-    </ShortcutProvider>
-  );
-});
-
-const LinkWithShortcuts = forwardRef((props, ref) => {
   const {
-    children,
-    onKeyDown,
-    readOnly,
-    loading,
+    shortcuts = [],
     onActionPrevented,
     onActionStart,
     onActionAbort,
@@ -261,6 +246,26 @@ const LinkWithShortcuts = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  return (
+    <ShortcutProvider
+      shortcuts={shortcuts}
+      elementRef={innerRef}
+      onActionPrevented={onActionPrevented}
+      onActionStart={onActionStart}
+      onActionAbort={onActionAbort}
+      onActionError={onActionError}
+      onActionEnd={onActionEnd}
+    >
+      <LinkWithShortcuts ref={innerRef} {...rest} />
+    </ShortcutProvider>
+  );
+});
+
+const LinkWithShortcuts = forwardRef((props, ref) => {
+  const { children, onKeyDown, readOnly, loading, ...rest } = props;
   const { shortcutAction, onKeyDownForShortcuts } = useShortcutContext();
 
   const innerRef = useRef();
@@ -268,15 +273,6 @@ const LinkWithShortcuts = forwardRef((props, ref) => {
 
   const { loading: actionLoading } = useActionStatus(shortcutAction);
   const innerLoading = Boolean(loading || actionLoading);
-  const executeAction = useExecuteAction(innerRef);
-  useActionEvents(innerRef, {
-    onAction: executeAction,
-    onPrevented: onActionPrevented,
-    onAbort: onActionAbort,
-    onStart: onActionStart,
-    onError: onActionError,
-    onEnd: onActionEnd,
-  });
 
   return (
     <>
@@ -287,7 +283,7 @@ const LinkWithShortcuts = forwardRef((props, ref) => {
         readOnly={readOnly || actionLoading}
         data-readonly-silent={actionLoading && !readOnly ? "" : undefined}
         /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
-        data-focus-visible={""}
+        data-focus-visible=""
         onKeyDown={(e) => {
           onKeyDownForShortcuts(e);
           onKeyDown?.(e);
