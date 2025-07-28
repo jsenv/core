@@ -24,10 +24,7 @@ export const elementIsVisible = (node) => {
     if (elementIsDetails(nodeOrAncestor) && !nodeOrAncestor.open) {
       // Special case: summary elements are visible even when their parent details is closed
       // But only if this details element is the direct parent of the summary
-      if (
-        elementIsSummary(nodeOrAncestor) &&
-        node.parentElement === nodeOrAncestor
-      ) {
+      if (elementIsSummary(node) && node.parentElement === nodeOrAncestor) {
         // Continue checking ancestors, don't return false yet
       } else {
         return false;
