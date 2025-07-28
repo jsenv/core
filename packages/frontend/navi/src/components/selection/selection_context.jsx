@@ -29,11 +29,40 @@ export const Selection = ({ value = [], onChange, children }) => {
         registry.splice(index, 1);
       }
     },
+    setAnchor: (value) => {
+      anchorRef.current = value;
+    },
     isSelected: (itemValue) => {
       return selection.includes(itemValue);
     },
     getAllItems: () => {
       return registryRef.current;
+    },
+    getRange: (fromValue, toValue) => {
+      const registry = registryRef.current;
+
+      // Find indices of fromValue and toValue
+      let fromIndex = -1;
+      let toIndex = -1;
+      let index = 0;
+      for (const valueCandidate of registry) {
+        if (valueCandidate === fromValue) {
+          fromIndex = index;
+        }
+        if (valueCandidate === toValue) {
+          toIndex = index;
+        }
+        index++;
+      }
+
+      if (fromIndex >= 0 && toIndex >= 0) {
+        // Select all items between fromIndex and toIndex (inclusive)
+        const start = Math.min(fromIndex, toIndex);
+        const end = Math.max(fromIndex, toIndex);
+        const valueInRangeArray = registry.slice(start, end + 1);
+        return valueInRangeArray;
+      }
+      return [];
     },
 
     // basic methods to manipulate selection
@@ -82,32 +111,6 @@ export const Selection = ({ value = [], onChange, children }) => {
         onChange?.(selectionWithoutValues, event);
       }
     },
-    addRange: (fromValue, toValue, event = null) => {
-      const registry = registryRef.current;
-
-      // Find indices of fromValue and toValue
-      let fromIndex = -1;
-      let toIndex = -1;
-      let index = 0;
-      for (const valueCandidate of registry) {
-        if (valueCandidate === fromValue) {
-          fromIndex = index;
-        }
-        if (valueCandidate === toValue) {
-          toIndex = index;
-        }
-        index++;
-      }
-
-      if (fromIndex >= 0 && toIndex >= 0) {
-        // Select all items between fromIndex and toIndex (inclusive)
-        const start = Math.min(fromIndex, toIndex);
-        const end = Math.max(fromIndex, toIndex);
-        const valuesToSelect = registry.slice(start, end + 1);
-
-        contextValue.add(valuesToSelect, event);
-      }
-    },
 
     // Convenience method for multi-select: toggle, addFromLastSelectedTo
     toggle: (value, event = null) => {
@@ -118,15 +121,16 @@ export const Selection = ({ value = [], onChange, children }) => {
       }
     },
     // Convenience method for shift-click: add range from last selected to target value
-    addFromAnchorTo: (value, event = null) => {
+    setFromAnchorTo: (value, event = null) => {
       const anchorValue = anchorRef.current;
 
       // Make sure the last selected value is still in the current selection
       if (anchorValue && selection.includes(anchorValue)) {
-        contextValue.addRange(anchorValue, value, event);
+        const range = contextValue.getRange(anchorValue, value);
+        contextValue.set(range, event);
       } else {
         // No valid previous selection, just select this one
-        contextValue.add([value], event);
+        contextValue.set([value], event);
       }
     },
 
@@ -193,17 +197,12 @@ export const clickToSelect = (clickEvent, { selectionContext, value }) => {
   }
   if (isShiftSelect) {
     clickEvent.preventDefault(); // Prevent navigation
-    selectionContext.addFromAnchorTo(value, clickEvent);
+    selectionContext.setFromAnchorTo(value, clickEvent);
     return;
   }
 };
 
 export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
-  if (keydownEvent.defaultPrevented) {
-    // If the keydown was prevented by another handler, do not interfere
-    return;
-  }
-
   if (keydownEvent.key === "Shift") {
     selectionContext.setAnchor(value);
     return;
@@ -219,7 +218,7 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.addFromAnchorTo(nextValue, keydownEvent);
+      selectionContext.setFromAnchorTo(nextValue, keydownEvent);
       return;
     }
     if (isMultiSelect) {
@@ -236,7 +235,7 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.addFromAnchorTo(previousValue, keydownEvent);
+      selectionContext.setFromAnchorTo(previousValue, keydownEvent);
       return;
     }
     if (isMultiSelect) {
