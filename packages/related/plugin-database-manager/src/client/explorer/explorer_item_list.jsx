@@ -35,7 +35,9 @@ export const ExplorerItemList = forwardRef((props, ref) => {
               renderItem={renderItem}
               useItemArrayInStore={useItemArrayInStore}
               useRenameItemAction={useRenameItemAction}
-              useDeleteItemAction={useDeleteItemAction}
+              useDeleteItemAction={
+                deleteManyAction ? () => null : useDeleteItemAction
+              }
             />
           </li>
         );
@@ -78,15 +80,21 @@ export const ExplorerItemList = forwardRef((props, ref) => {
   );
 
   if (deleteManyAction) {
+    const selectionLength = itemSelectionSignal.value.length;
+
     return (
       <ExplorerItemListWithShortcuts
         elementRef={innerRef}
         itemSelectionSignal={itemSelectionSignal}
         shortcuts={[
           {
+            enabled: selectionLength > 0,
             keyCombinations: ["command+backspace"],
             action: deleteManyAction,
-            confirmMessage: `Are you sure you want to delete ${itemSelectionSignal.value.length} items?`,
+            confirmMessage:
+              selectionLength === 1
+                ? `Are you sure you want to delete "${itemSelectionSignal.value[0]}"?`
+                : `Are you sure you want to delete the ${selectionLength} selected items?`,
           },
         ]}
       >
