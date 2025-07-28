@@ -53,8 +53,8 @@ export const useShortcutContext = () => {
 };
 
 export const ShortcutProvider = ({
-  shortcuts,
   elementRef,
+  shortcuts,
   onActionPrevented,
   onActionStart,
   onActionAbort,
@@ -215,17 +215,43 @@ const eventIsMatchingKeyCombination = (event, keyCombination) => {
       }
       continue;
     }
-    const eventKey = event.key.toLowerCase();
-    if (eventKey !== key) {
-      if (key === "space" && eventKey === " ") {
-        continue;
-      }
+    if (!isSameKey(event.key, key)) {
       return false;
     }
     continue;
   }
   return true;
 };
+
+const isSameKey = (browserEventKey, key) => {
+  browserEventKey = browserEventKey.toLowerCase();
+  key = key.toLowerCase();
+
+  if (browserEventKey === key) {
+    return true;
+  }
+
+  // Check key synonyms
+  for (const synonymGroup of keySynonyms) {
+    if (synonymGroup.includes(browserEventKey) && synonymGroup.includes(key)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const keySynonyms = [
+  ["backspace", "delete"],
+  ["space", " "],
+  ["escape", "esc"],
+  ["arrowup", "up"],
+  ["arrowdown", "down"],
+  ["arrowleft", "left"],
+  ["arrowright", "right"],
+  ["home", "start"],
+  ["end", "finish"],
+];
 
 // http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
 const useAriaKeyShortcuts = (combinations) => {
