@@ -12,7 +12,6 @@ export const performTabNavigation = (
   event,
   { rootElement = document.body, outsideOfElement = null } = {},
 ) => {
-  event.preventDefault();
   const activeElement = document.activeElement;
   const isForward = !event.shiftKey;
 
@@ -81,6 +80,7 @@ export const performTabNavigation = (
     if (DEBUG) {
       console.debug(`Focusing`, elementToFocus);
     }
+    event.preventDefault();
     elementToFocus.focus();
   } else if (DEBUG) {
     console.debug("No focusable element found");

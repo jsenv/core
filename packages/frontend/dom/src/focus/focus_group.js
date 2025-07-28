@@ -97,6 +97,10 @@ export const initFocusGroup = (
     loop = false,
   } = {},
 ) => {
+  if (!elementIsFocusable(element)) {
+    console.warn("initFocusGroup: element is not focusable", element);
+  }
+
   if (skipTab) {
     // Handle Tab navigation (exit group)
     element.addEventListener(
@@ -106,7 +110,6 @@ export const initFocusGroup = (
           performTabNavigation(event, {
             outsideOfElement: element,
           });
-          event.preventDefault();
         }
       },
       {
@@ -114,17 +117,17 @@ export const initFocusGroup = (
         passive: false,
       },
     );
-
-    // Handle Arrow key navigation (within group)
-    element.addEventListener(
-      "keydown",
-      (event) => {
-        performArrowKeyNavigation(event, element, { direction, loop });
-      },
-      {
-        capture: true,
-        passive: false,
-      },
-    );
   }
+
+  // Handle Arrow key navigation (within group)
+  element.addEventListener(
+    "keydown",
+    (event) => {
+      performArrowKeyNavigation(event, element, { direction, loop });
+    },
+    {
+      capture: true,
+      passive: false,
+    },
+  );
 };

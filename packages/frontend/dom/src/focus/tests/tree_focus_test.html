@@ -176,9 +176,9 @@
               <div tabindex="-1" class="focusable-item">📄 config.js</div>
             </div>
           </details>
-          <div tabindex="-1" class="focusable-item">📄 README.md</div>
-          <div tabindex="-1" class="focusable-item">📄 package.json</div>
-          <div tabindex="-1" class="focusable-item">� .gitignore</div>
+          <div tabindex="0" class="focusable-item">📄 README.md</div>
+          <div tabindex="0" class="focusable-item">📄 package.json</div>
+          <div tabindex="0" class="focusable-item">� .gitignore</div>
         </div>
       </details>
     </div>
@@ -235,7 +235,7 @@
       </ol>
 
       <h3>Focus Group Configuration</h3>
-      <p>Each <code>.content</code> element would be initialized as:</p>
+      <p>Each <code>details</code> element would be initialized as:</p>
       <pre><code>initFocusGroup(element, {
   direction: "vertical",  // Only up/down arrows
   loop: false,           // Stay at boundaries
@@ -246,8 +246,8 @@
     <script type="module">
       import { initFocusGroup } from "../focus_group.js";
 
-      // Initialize focus groups more selectively
-      const focusGroups = document.querySelectorAll(".content[id]");
+      // Initialize focus groups on details elements
+      const focusGroups = document.querySelectorAll("details");
       focusGroups.forEach((group) => {
         initFocusGroup(group, {
           direction: "vertical", // Only allow up/down navigation within each group
@@ -274,7 +274,9 @@
       // Track focus changes
       document.addEventListener("focusin", (event) => {
         const element = event.target;
-        const groupId = element.closest(".content")?.id || "none";
+        const groupId =
+          element.closest("details")?.getAttribute("data-focus-group") ||
+          "none";
         const elementType = element.tagName.toLowerCase();
         const elementText = element.textContent.trim().substring(0, 20);
 
@@ -289,7 +291,9 @@
           )
         ) {
           const activeGroup =
-            document.activeElement?.closest(".content")?.id || "none";
+            document.activeElement
+              ?.closest("details")
+              ?.getAttribute("data-focus-group") || "none";
           log(`Key: ${event.key} in ${activeGroup}`);
         }
       });
