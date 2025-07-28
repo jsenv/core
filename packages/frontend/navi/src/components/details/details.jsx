@@ -102,6 +102,8 @@ const DetailsBasic = forwardRef((props, ref) => {
     mountedRef.current = true;
   }, []);
 
+  const summaryRef = useRef(null);
+
   return (
     <details
       {...rest}
@@ -144,6 +146,7 @@ const DetailsBasic = forwardRef((props, ref) => {
       open={innerOpen}
     >
       <summary
+        ref={summaryRef}
         onKeyDown={(e) => {
           if (e.defaultPrevented) {
             return;
@@ -151,7 +154,7 @@ const DetailsBasic = forwardRef((props, ref) => {
           if (e.key === openKeyShortcut) {
             const details = innerRef.current;
             if (details.open) {
-              const summary = e.target.closest("summary");
+              const summary = summaryRef.current;
               const firstFocusableElementInDetails = findAfter(
                 summary,
                 elementIsFocusable,
@@ -169,8 +172,10 @@ const DetailsBasic = forwardRef((props, ref) => {
           }
           if (e.key === closeKeyShortcut) {
             const details = innerRef.current;
+            const summary = summaryRef.current;
             if (details.open) {
               e.preventDefault();
+              summary.focus();
               details.open = false;
               return;
             }
