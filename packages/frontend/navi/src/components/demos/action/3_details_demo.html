@@ -33,8 +33,9 @@
                   action={() => {
                     return "Hello";
                   }}
-                  actionRenderer={(message) => <span>{message}</span>}
-                ></Details>
+                >
+                  {(message) => <span>{message}</span>}
+                </Details>
               </div>
 
               <div>
@@ -49,9 +50,9 @@
                     });
                     return "Hello";
                   }}
-                  actionRenderer={(content) => content}
+                  label="Custom summary"
                 >
-                  Custom summary
+                  {(content) => content}
                 </Details>
               </div>
 
@@ -64,10 +65,13 @@
                   action={() => {
                     throw new Error("error");
                   }}
-                >
-                  <span>A</span>
-                  <span style="font-weight: bold">mixed summary</span>
-                </Details>
+                  label={
+                    <>
+                      <span>A</span>
+                      <span style="font-weight: bold">mixed summary</span>
+                    </>
+                  }
+                ></Details>
               </div>
             </div>
 
@@ -86,7 +90,8 @@
                   });
                   return "Hello";
                 }}
-                actionRenderer={{
+              >
+                {{
                   loading: (action) => {
                     return (
                       <span>
@@ -113,7 +118,7 @@
                       </button>
                     </>
                   ),
-                  loaded: (message, action) => (
+                  completed: (message, action) => (
                     <>
                       <span>{message}</span>
                       <button
@@ -126,8 +131,6 @@
                     </>
                   ),
                 }}
-              >
-                Custom summary
               </Details>
             </div>
 
@@ -139,9 +142,9 @@
               <Details
                 id="bound"
                 action={rootAction}
-                actionRenderer={(content) => content}
+                label="Action using bind params"
               >
-                Action using bind params
+                {(content) => content}
               </Details>
             </div>
           </>
@@ -161,7 +164,7 @@
       // const boundAction = rootAction.bindParams({
       //   name: "dam",
       // });
-      rootAction.preload();
+      rootAction.prerun();
 
       render(<App />, document.querySelector("#root"));
     </script>

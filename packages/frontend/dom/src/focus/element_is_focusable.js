@@ -18,12 +18,6 @@ export const elementIsFocusable = (node) => {
   ) {
     return elementIsVisible(node);
   }
-  if (node.hasAttribute("tabindex") || node.hasAttribute("tabIndex")) {
-    return elementIsVisible(node);
-  }
-  if (node.hasAttribute("draggable")) {
-    return elementIsVisible(node);
-  }
   if (["a", "area"].indexOf(nodeName) > -1) {
     if (node.hasAttribute("href") === false) {
       return false;
@@ -34,6 +28,15 @@ export const elementIsFocusable = (node) => {
     if (node.hasAttribute("controls") === false) {
       return false;
     }
+    return elementIsVisible(node);
+  }
+  if (nodeName === "summary") {
+    return elementIsVisible(node);
+  }
+  if (node.hasAttribute("tabindex") || node.hasAttribute("tabIndex")) {
+    return elementIsVisible(node);
+  }
+  if (node.hasAttribute("draggable")) {
     return elementIsVisible(node);
   }
   return false;
