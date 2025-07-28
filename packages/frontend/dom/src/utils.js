@@ -40,3 +40,5 @@ export const elementToOwnerDocument = (element) => {
 export const elementIsWindow = (a) => a.window === a;
 export const elementIsDocument = (a) => a.nodeType === 9;
 export const elementIsIframe = ({ nodeName }) => nodeName === "IFRAME";
+export const elementIsDetails = ({ nodeName }) => nodeName === "DETAILS";
+export const elementIsSummary = ({ nodeName }) => nodeName === "SUMMARY";

@@ -41,6 +41,8 @@ const isForwardArrow = (event, direction = "both") => {
   return forwardKeys[direction]?.includes(event.key) ?? false;
 };
 
+const DEBUG = true;
+
 const performArrowKeyNavigation = (
   event,
   element,
@@ -73,9 +75,20 @@ const performArrowKeyNavigation = (
 
     if (nextElement) {
       elementToFocus = nextElement;
+      if (DEBUG) {
+        console.debug(
+          `Arrow navigation: "forward" from`,
+          activeElement,
+          "to",
+          nextElement,
+        );
+      }
     } else if (loop) {
       // No next element, wrap to first focusable in group
       elementToFocus = findFirstDescendant(element, elementIsFocusable);
+      if (DEBUG) {
+        console.debug(`Arrow navigation: "forward" looping to`, elementToFocus);
+      }
     }
   }
 
