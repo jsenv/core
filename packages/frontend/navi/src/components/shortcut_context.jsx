@@ -144,9 +144,26 @@ export const ShortcutProvider = ({
         if (!enabled) {
           continue;
         }
-        const someMatch = keyCombinations.some((keyCombination) =>
-          eventIsMatchingKeyCombination(event, keyCombination),
-        );
+        const someMatch = keyCombinations.some((keyCombination) => {
+          // Handle platform-specific combination objects
+          let actualCombination;
+          if (
+            typeof keyCombination === "object" &&
+            keyCombination !== null &&
+            !Array.isArray(keyCombination)
+          ) {
+            actualCombination = isMac
+              ? keyCombination.mac
+              : keyCombination.other;
+          } else {
+            actualCombination = keyCombination;
+          }
+
+          return (
+            actualCombination &&
+            eventIsMatchingKeyCombination(event, actualCombination)
+          );
+        });
         if (!someMatch) {
           continue;
         }
@@ -242,8 +259,9 @@ const isSameKey = (browserEventKey, key) => {
   return false;
 };
 
+const isMac = window.navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+
 const keySynonyms = [
-  ["backspace", "delete"],
   ["space", " "],
   ["escape", "esc"],
   ["arrowup", "up"],
@@ -253,6 +271,16 @@ const keySynonyms = [
   ["home", "start"],
   ["end", "finish"],
 ];
+
+// Platform-specific synonyms
+const platformSpecificSynonyms = {
+  mac: [
+    ["delete", "backspace"], // On Mac, "delete" key should be normalized to "backspace"
+  ],
+  other: [
+    ["backspace", "delete"], // On other platforms, "backspace" could be "delete"
+  ],
+};
 
 const normalizeKeyCombination = (combination) => {
   const lowerCaseCombination = combination.toLowerCase();
@@ -275,6 +303,17 @@ const normalizeKeyCombination = (combination) => {
         break;
       }
     }
+
+    // Normalize platform-specific synonyms
+    const platformSynonyms = isMac
+      ? platformSpecificSynonyms.mac
+      : platformSpecificSynonyms.other;
+    for (const synonymGroup of platformSynonyms) {
+      if (synonymGroup.includes(key)) {
+        keys[i] = synonymGroup[0];
+        break;
+      }
+    }
   }
 
   return keys.join("+");
@@ -285,8 +324,23 @@ const useAriaKeyShortcuts = (combinations) => {
   const combinationSet = new Set();
 
   for (const combination of combinations) {
-    const normalizedCombination = normalizeKeyCombination(combination);
-    combinationSet.add(normalizedCombination);
+    let actualCombination;
+
+    // Handle platform-specific combination objects
+    if (
+      typeof combination === "object" &&
+      combination !== null &&
+      !Array.isArray(combination)
+    ) {
+      actualCombination = isMac ? combination.mac : combination.other;
+    } else {
+      actualCombination = combination;
+    }
+
+    if (actualCombination) {
+      const normalizedCombination = normalizeKeyCombination(actualCombination);
+      combinationSet.add(normalizedCombination);
+    }
   }
 
   let combinationString = "";
