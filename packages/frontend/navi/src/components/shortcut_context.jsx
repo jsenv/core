@@ -95,7 +95,7 @@ export const ShortcutProvider = ({
     </div>
   );
 
-  const executeAction = useExecuteAction(elementRef);
+  const executeAction = useExecuteAction(shortcutElementRef);
   const [shortcutActionIsBusy, setShortcutActionIsBusy] = useState(false);
   useActionEvents(shortcutElementRef, {
     onPrevented: onActionPrevented,
