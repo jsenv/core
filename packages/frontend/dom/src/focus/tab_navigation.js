@@ -4,25 +4,38 @@ import {
   findDescendant,
   findLastDescendant,
 } from "../traversal.js";
-import { isDiscoverableWithKeyboard } from "./element_is_focusable.js";
+import { elementIsFocusable } from "./element_is_focusable.js";
+import { createEventMarker } from "./event_marker.js";
 
 const DEBUG = true;
 
+const tabFocusNavEventMarker = createEventMarker("tab_focus_nav");
 export const performTabNavigation = (
   event,
   { rootElement = document.body, outsideOfElement = null } = {},
 ) => {
-  if (event.defaultPrevented) {
-    // If the keydown was prevented by another handler, do not interfere
+  if (tabFocusNavEventMarker.isMarked(event)) {
     // Also prevent tab within nested focus group to be handled twice
-    return;
+    return false;
   }
+
   if (!isTabEvent(event)) {
-    return;
+    return false;
   }
 
   const activeElement = document.activeElement;
   const isForward = !event.shiftKey;
+  const onTargetToFocus = (targetToFocus) => {
+    console.debug(
+      `Tab navigation: ${isForward ? "forward" : "backward"} from`,
+      activeElement,
+      "to",
+      targetToFocus,
+    );
+    event.preventDefault();
+    tabFocusNavEventMarker.mark(event);
+    targetToFocus.focus();
+  };
 
   if (DEBUG) {
     console.debug(
@@ -32,66 +45,87 @@ export const performTabNavigation = (
   }
 
   const predicate = (candidate) => {
-    const isDiscoverable = isDiscoverableWithKeyboard(candidate);
+    const canBeFocusedByTab = isFocusableByTab(candidate);
     if (DEBUG) {
-      console.debug(`Testing`, candidate, `${isDiscoverable ? "✓" : "✗"}`);
+      console.debug(`Testing`, candidate, `${canBeFocusedByTab ? "✓" : "✗"}`);
     }
-    return isDiscoverable;
+    return canBeFocusedByTab;
   };
 
-  let elementToFocus;
-
-  if (activeElement === rootElement) {
-    // Starting from root element
-    if (DEBUG) {
-      console.debug("Starting from root element");
+  const activeElementIsRoot = activeElement === rootElement;
+  forward: {
+    if (!isForward) {
+      break forward;
     }
-    elementToFocus = isForward
-      ? findDescendant(rootElement, predicate, {
-          skipRoot: outsideOfElement,
-        })
-      : findLastDescendant(rootElement, predicate, {
-          skipRoot: outsideOfElement,
-        });
-  } else {
-    // Starting from a specific element
-    const searchFunction = isForward ? findAfter : findBefore;
-    const fallbackFunction = isForward ? findDescendant : findLastDescendant;
-
-    if (DEBUG) {
-      console.debug(
-        `Searching ${isForward ? "after" : "before"} current element`,
-      );
+    if (activeElementIsRoot) {
+      const firstFocusableElement = findDescendant(activeElement, predicate, {
+        skipRoot: outsideOfElement,
+      });
+      if (firstFocusableElement) {
+        return onTargetToFocus(firstFocusableElement);
+      }
+      return false;
     }
-
-    const nextElement = searchFunction(activeElement, predicate, {
+    const nextFocusableElement = findAfter(activeElement, predicate, {
       root: rootElement,
       skipRoot: outsideOfElement,
     });
-
-    if (nextElement) {
-      elementToFocus = nextElement;
-    } else {
-      if (DEBUG) {
-        console.debug(
-          `No ${isForward ? "next" : "previous"} element found, wrapping to ${isForward ? "first" : "last"}`,
-        );
-      }
-      elementToFocus = fallbackFunction(rootElement, predicate, {
-        skipRoot: outsideOfElement,
-      });
+    if (nextFocusableElement) {
+      return onTargetToFocus(nextFocusableElement);
     }
+    const firstFocusableElement = findDescendant(activeElement, predicate, {
+      skipRoot: outsideOfElement,
+    });
+    if (firstFocusableElement) {
+      return onTargetToFocus(firstFocusableElement);
+    }
+    return false;
   }
 
-  if (elementToFocus) {
-    if (DEBUG) {
-      console.debug(`Focusing`, elementToFocus);
+  backward: {
+    if (activeElementIsRoot) {
+      const lastFocusableElement = findLastDescendant(
+        activeElement,
+        predicate,
+        {
+          skipRoot: outsideOfElement,
+        },
+      );
+      if (lastFocusableElement) {
+        return onTargetToFocus(lastFocusableElement);
+      }
+      return false;
     }
-    event.preventDefault();
-    elementToFocus.focus();
-  } else if (DEBUG) {
-    console.debug("No focusable element found");
+
+    const previousFocusableElement = findBefore(activeElement, predicate, {
+      root: rootElement,
+      skipRoot: outsideOfElement,
+    });
+    if (previousFocusableElement) {
+      return onTargetToFocus(previousFocusableElement);
+    }
+    const lastFocusableElement = findLastDescendant(activeElement, predicate, {
+      skipRoot: outsideOfElement,
+    });
+    if (lastFocusableElement) {
+      return onTargetToFocus(lastFocusableElement);
+    }
+    return false;
   }
 };
 
 export const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;
+
+const isFocusableByTab = (element) => {
+  if (hasNegativeTabIndex(element)) {
+    return false;
+  }
+  return elementIsFocusable(element);
+};
+const hasNegativeTabIndex = (element) => {
+  return (
+    element.hasAttribute &&
+    element.hasAttribute("tabIndex") &&
+    Number(element.getAttribute("tabindex")) < 0
+  );
+};

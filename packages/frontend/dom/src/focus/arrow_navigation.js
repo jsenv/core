@@ -22,9 +22,10 @@ export const performArrowNavigation = (
   }
 
   const activeElement = document.activeElement;
+  const isForward = isForwardArrow(event, direction);
   const onTargetToFocus = (targetToFocus) => {
     console.debug(
-      `Arrow navigation: "forward" from`,
+      `Arrow navigation: ${isForward ? "forward" : "backward"} from`,
       activeElement,
       "to",
       targetToFocus,
@@ -62,7 +63,7 @@ export const performArrowNavigation = (
 
   // Arrow Right/Down: move to next focusable element in group
   forward: {
-    if (!isForwardArrow(event, direction)) {
+    if (!isForward) {
       break forward;
     }
     const nextElement = findAfter(activeElement, elementIsFocusable, {

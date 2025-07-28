@@ -45,20 +45,6 @@ export const elementIsFocusable = (node) => {
   return false;
 };
 
-export const isDiscoverableWithKeyboard = (element) => {
-  if (hasNegativeTabIndex(element)) {
-    return false;
-  }
-  return elementIsFocusable(element);
-};
-const hasNegativeTabIndex = (element) => {
-  return (
-    element.hasAttribute &&
-    element.hasAttribute("tabIndex") &&
-    Number(element.getAttribute("tabindex")) < 0
-  );
-};
-
 const canInteract = (element) => {
   if (element.disabled) {
     return false;
