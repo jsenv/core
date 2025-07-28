@@ -53,3 +53,32 @@ export const useKeyboardShortcuts = (shortcuts = []) => {
 
   return [action, onKeyDown];
 };
+
+// http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
+export const useAriaKeyShortcuts = (combinations) => {
+  const combinationSet = new Set();
+  for (const combination of combinations) {
+    const lowerCaseCombination = combination.toLowerCase();
+    const keys = lowerCaseCombination.split("+");
+    if (keys.includes("meta")) {
+      const controlCombination = lowerCaseCombination.replace(
+        "meta",
+        "control",
+      );
+      combinationSet.add(controlCombination);
+    }
+    if (keys.includes("control")) {
+      const metaCombination = lowerCaseCombination.replace("control", "meta");
+      combinationSet.add(metaCombination);
+    }
+    combinationSet.add(lowerCaseCombination);
+  }
+  let combinationString = "";
+  for (const combination of combinationSet) {
+    if (combinationString) {
+      combinationString += " ";
+    }
+    combinationString += combination;
+  }
+  return combinationString;
+};

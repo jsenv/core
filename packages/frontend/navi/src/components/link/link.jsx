@@ -14,7 +14,10 @@ import {
 } from "../selection/selection_context.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { useKeyboardShortcuts } from "../use_keyboard_shortcuts.js";
+import {
+  useAriaKeyShortcuts,
+  useKeyboardShortcuts,
+} from "../use_keyboard_shortcuts.js";
 
 /*
  * Apply opacity to child content, not the link element itself.
@@ -267,21 +270,37 @@ const LinkWithAction = forwardRef((props, ref) => {
     onEnd: onActionEnd,
   });
 
+  const shortcutElements = [];
+  shortcuts.forEach((shortcut) => {
+    const combinationString = useAriaKeyShortcuts(shortcuts.keyCombinations);
+    shortcutElements.push(
+      <button
+        key={combinationString}
+        aria-keyshortcuts={combinationString}
+        action={shortcut.action}
+        data-confirm-message={shortcut.confirmMessage}
+      ></button>,
+    );
+  });
+
   return (
-    <LinkBasic
-      ref={innerRef}
-      {...rest}
-      loading={innerLoading}
-      readOnly={readOnly || actionLoading}
-      data-readonly-silent={actionLoading && !readOnly ? "" : undefined}
-      /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
-      data-focus-visible={shortcuts.length > 0 ? "" : undefined}
-      onKeyDown={(e) => {
-        onKeyDownForShortcuts(e);
-        onKeyDown?.(e);
-      }}
-    >
-      {children}
-    </LinkBasic>
+    <form>
+      <LinkBasic
+        ref={innerRef}
+        {...rest}
+        loading={innerLoading}
+        readOnly={readOnly || actionLoading}
+        data-readonly-silent={actionLoading && !readOnly ? "" : undefined}
+        /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
+        data-focus-visible={shortcuts.length > 0 ? "" : undefined}
+        onKeyDown={(e) => {
+          onKeyDownForShortcuts(e);
+          onKeyDown?.(e);
+        }}
+      >
+        {children}
+      </LinkBasic>
+      {shortcutElements}
+    </form>
   );
 });

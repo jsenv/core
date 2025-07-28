@@ -33,7 +33,7 @@ export const ExplorerItem = ({
     className: "explorer_item_content",
     shortcuts: [
       {
-        key: "Enter",
+        keyCombinations: ["Enter"],
         action: startEditing,
         description: "Edit item name",
         enabled: !editable,
@@ -41,8 +41,7 @@ export const ExplorerItem = ({
       ...(deleteManyAction
         ? [
             {
-              key: "Backspace",
-              needsMetaKey: true,
+              keyCombinations: ["Meta+Backspace"],
               action: deleteManyAction || deleteItemAction,
               confirmMessage: deleteManyConfirmMessage,
             },
@@ -50,8 +49,7 @@ export const ExplorerItem = ({
         : deleteItemAction
           ? [
               {
-                key: "Backspace",
-                needsMetaKey: true,
+                keyCombinations: ["Meta+Backspace"],
                 action: deleteItemAction,
                 confirmMessage: `Are you sure you want to delete "${itemName}"?`,
               },
