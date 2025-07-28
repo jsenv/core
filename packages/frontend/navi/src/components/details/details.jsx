@@ -62,12 +62,13 @@ const DetailsBasic = forwardRef((props, ref) => {
     open,
     loading,
     className,
-    onToggle,
     focusGroup,
     focusGroupDirection,
     arrowKeyShortcuts = true,
     openKeyShortcut = arrowKeyShortcuts ? "ArrowRight" : undefined,
     closeKeyShortcut = arrowKeyShortcuts ? "ArrowLeft" : undefined,
+    onToggle,
+    onKeyDown,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -122,11 +123,30 @@ const DetailsBasic = forwardRef((props, ref) => {
         }
         onToggle?.(e);
       }}
-      // TODO: a keydown for left arrow to move focus to summary when opened
+      onKeyDown={(e) => {
+        if (
+          // avoid handling ArrowLeft twice when ArrowLeft occurs inside nested details
+          !e.defaultPrevented &&
+          e.key === closeKeyShortcut
+        ) {
+          const details = innerRef.current;
+          if (details.open) {
+            const summary = details.querySelector("summary");
+            if (document.activeElement !== summary) {
+              e.preventDefault();
+              summary.focus();
+            }
+          }
+        }
+        onKeyDown?.(e);
+      }}
       open={innerOpen}
     >
       <summary
         onKeyDown={(e) => {
+          if (e.defaultPrevented) {
+            return;
+          }
           if (e.key === openKeyShortcut) {
             const details = innerRef.current;
             if (details.open) {
