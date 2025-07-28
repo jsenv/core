@@ -259,34 +259,18 @@ const keySynonyms = [
   ["delete", "del"], // legacy firefox support
   ["contextmenu", "apps"], // legacy firefox support
   [" ", "spacebar"], // legacy browser support
+  ["command", "cmd"], // cmd is short for command
   // Platform-specific synonyms for event matching
   ...(isMac ? [["delete", "backspace"]] : [["backspace", "delete"]]),
 ];
 const keyToAriaKeyMapping = {
-  // Modifier keys - platform-specific ARIA names
-  "command": "meta",
-  "cmd": "meta",
-  "option": "altgraph", // Mac option key uses "altgraph" in ARIA spec
-  "ctrl": "control",
+  // Platform-specific ARIA names
+  command: "meta",
+  option: "altgraph", // Mac option key uses "altgraph" in ARIA spec
 
   // Regular keys - platform-specific normalization
-  "delete": isMac ? "backspace" : "delete", // Mac delete key is backspace semantically
-  "backspace": isMac ? "backspace" : "delete",
-
-  // Arrow key synonyms
-  "up": "arrowup",
-  "down": "arrowdown",
-  "left": "arrowleft",
-  "right": "arrowright",
-
-  // Other key synonyms
-  " ": "space",
-  "esc": "escape",
-  "start": "home",
-  "finish": "end",
-  "del": "delete",
-  "spacebar": "space",
-  "apps": "contextmenu",
+  delete: isMac ? "backspace" : "delete", // Mac delete key is backspace semantically
+  backspace: isMac ? "backspace" : "delete",
 };
 
 const eventIsMatchingKeyCombination = (event, keyCombination) => {
@@ -343,15 +327,29 @@ const isSameKey = (browserEventKey, key) => {
   return false;
 };
 
+const normalizeKey = (key) => {
+  key = key.toLowerCase();
+
+  // Normalize key synonyms to their canonical form
+  for (const synonymGroup of keySynonyms) {
+    if (synonymGroup.includes(key)) {
+      // Return the first item as the canonical form
+      return synonymGroup[0];
+    }
+  }
+
+  return key;
+};
+
 const normalizeKeyCombination = (combination) => {
   const lowerCaseCombination = combination.toLowerCase();
   const keys = lowerCaseCombination.split("+");
 
-  // Normalize keys using the ARIA mapping
+  // First normalize keys to their canonical form, then apply ARIA mapping
   for (let i = 0; i < keys.length; i++) {
-    let key = keys[i];
+    let key = normalizeKey(keys[i]);
 
-    // Use the keyToAriaKeyMapping for consistent normalization
+    // Then apply ARIA-specific mappings if they exist
     if (keyToAriaKeyMapping[key]) {
       key = keyToAriaKeyMapping[key];
     }
