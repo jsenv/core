@@ -15,9 +15,9 @@ import {
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import {
-  useAriaKeyShortcuts,
   useKeyboardShortcuts,
-} from "../use_keyboard_shortcuts.js";
+  useShortcutHiddenElement,
+} from "../use_keyboard_shortcuts.jsx";
 
 /*
  * Apply opacity to child content, not the link element itself.
@@ -270,18 +270,7 @@ const LinkWithAction = forwardRef((props, ref) => {
     onEnd: onActionEnd,
   });
 
-  const shortcutElements = [];
-  shortcuts.forEach((shortcut) => {
-    const combinationString = useAriaKeyShortcuts(shortcuts.keyCombinations);
-    shortcutElements.push(
-      <button
-        key={combinationString}
-        aria-keyshortcuts={combinationString}
-        action={shortcut.action}
-        data-confirm-message={shortcut.confirmMessage}
-      ></button>,
-    );
-  });
+  const shortcutHiddenElement = useShortcutHiddenElement(shortcuts);
 
   return (
     <form>
@@ -300,7 +289,7 @@ const LinkWithAction = forwardRef((props, ref) => {
       >
         {children}
       </LinkBasic>
-      {shortcutElements}
+      {shortcutHiddenElement}
     </form>
   );
 });
