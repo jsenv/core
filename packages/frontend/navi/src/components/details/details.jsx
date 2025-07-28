@@ -15,7 +15,6 @@ import.meta.css = /* css */ `
   .navi_details {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     position: relative;
     z-index: 1;
     flex-shrink: 0;
@@ -40,6 +39,10 @@ import.meta.css = /* css */ `
     gap: 0.2em;
     align-items: center;
     padding-right: 10px;
+  }
+
+  summary:focus {
+    z-index: 1;
   }
 `;
 

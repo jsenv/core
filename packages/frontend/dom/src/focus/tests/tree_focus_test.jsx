@@ -37,11 +37,6 @@ import.meta.css = /* css */ `
     background: #d8d8d8;
   }
 
-  summary:focus {
-    outline: 2px solid #0066cc;
-    outline-offset: 2px;
-  }
-
   .content {
     padding-left: 16px;
   }
