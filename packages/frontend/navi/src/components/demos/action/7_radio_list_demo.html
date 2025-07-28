@@ -50,11 +50,13 @@
 
                 <RadioList
                   id="action_alert"
-                  name="color"
+                  name="color_alert"
                   label="Select your favorite color:"
-                  action={async ({ color }) => {
+                  action={async ({ color_alert }) => {
                     await new Promise((resolve) => setTimeout(resolve, 1_000));
-                    console.log(`Color selected: ${JSON.stringify(color)}`);
+                    console.log(
+                      `Color selected: ${JSON.stringify(color_alert)}`,
+                    );
                   }}
                 >
                   {[
@@ -100,11 +102,13 @@
 
               <RadioList
                 id="color_action_throw"
+                name="color_action_throw"
                 label="Select your favorite color:"
-                name="color"
-                action={async ({ color }) => {
+                action={async ({ color_action_throw }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`Color selected: ${JSON.stringify(color)}`);
+                  throw new Error(
+                    `Color selected: ${JSON.stringify(color_action_throw)}`,
+                  );
                 }}
               >
                 {[
@@ -121,15 +125,17 @@
                   <strong>Form + throw after 1s</strong>
                 </p>
                 <Form
-                  action={async ({ color }) => {
+                  action={async ({ color_form_throw }) => {
                     await new Promise((resolve) => setTimeout(resolve, 1_000));
-                    throw new Error(`Color selected: ${JSON.stringify(color)}`);
+                    throw new Error(
+                      `Color selected: ${JSON.stringify(color_form_throw)}`,
+                    );
                   }}
                 >
                   <RadioList
                     id="color_form_throw"
+                    name="color_form_throw"
                     label="Select your favorite color:"
-                    name="color"
                   >
                     {[
                       { label: "Red", id: "red", value: "red" },
@@ -149,15 +155,17 @@
                 <strong>Form + ref checked throw after 1s</strong>
               </p>
               <Form
-                action={async ({ color }) => {
+                action={async ({ color_form_checked_throw }) => {
                   await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`Color selected: ${JSON.stringify(color)}`);
+                  throw new Error(
+                    `Color selected: ${JSON.stringify(color_form_checked_throw)}`,
+                  );
                 }}
               >
                 <RadioList
                   id="color_form_checked_throw"
+                  name="color_form_checked_throw"
                   label="Select your favorite color:"
-                  name="color"
                   value="red"
                 >
                   {[

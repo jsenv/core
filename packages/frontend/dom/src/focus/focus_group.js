@@ -5,7 +5,12 @@
  - https://github.com/openui/open-ui/issues/990
  */
 
-import { findAfter, findBefore } from "../traversal.js";
+import {
+  findAfter,
+  findBefore,
+  findFirstDescendant,
+  findLastDescendant,
+} from "../traversal.js";
 import { isDiscoverableWithKeyboard } from "./element_is_focusable.js";
 import { isTabEvent, performTabNavigation } from "./tab_navigation.js";
 
@@ -36,7 +41,11 @@ const isForwardArrow = (event, direction = "both") => {
   return forwardKeys[direction]?.includes(event.key) ?? false;
 };
 
-const performArrowKeyNavigation = (event, element, direction = "both") => {
+const performArrowKeyNavigation = (
+  event,
+  element,
+  { direction = "both", loop } = {},
+) => {
   if (!isArrowEvent(event, direction)) {
     return false;
   }
@@ -56,8 +65,10 @@ const performArrowKeyNavigation = (event, element, direction = "both") => {
 
     if (previousElement) {
       elementToFocus = previousElement;
+    } else if (loop) {
+      // No previous element, wrap to last focusable in group
+      elementToFocus = findLastDescendant(element, isDiscoverableWithKeyboard);
     }
-    // No previous element, stay on current (first) element
   } else if (isForwardArrow(event, direction)) {
     // Arrow Right/Down: move to next focusable element in group
     const nextElement = findAfter(activeElement, isDiscoverableWithKeyboard, {
@@ -66,8 +77,10 @@ const performArrowKeyNavigation = (event, element, direction = "both") => {
 
     if (nextElement) {
       elementToFocus = nextElement;
+    } else if (loop) {
+      // No next element, wrap to first focusable in group
+      elementToFocus = findFirstDescendant(element, isDiscoverableWithKeyboard);
     }
-    // No next element, stay on current (last) element
   }
 
   if (elementToFocus) {
@@ -85,6 +98,7 @@ export const initFocusGroup = (
     direction = "both",
     // extend = true,
     skipTab = true,
+    loop = false,
   } = {},
 ) => {
   if (skipTab) {
@@ -109,7 +123,7 @@ export const initFocusGroup = (
     element.addEventListener(
       "keydown",
       (event) => {
-        performArrowKeyNavigation(event, element, direction);
+        performArrowKeyNavigation(event, element, { direction, loop });
       },
       {
         capture: true,
