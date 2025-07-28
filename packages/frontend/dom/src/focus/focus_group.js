@@ -11,7 +11,7 @@ import {
   findFirstDescendant,
   findLastDescendant,
 } from "../traversal.js";
-import { isDiscoverableWithKeyboard } from "./element_is_focusable.js";
+import { elementIsFocusable } from "./element_is_focusable.js";
 import { isTabEvent, performTabNavigation } from "./tab_navigation.js";
 
 const isArrowEvent = (event, direction = "both") => {
@@ -55,23 +55,19 @@ const performArrowKeyNavigation = (
 
   if (isBackwardArrow(event, direction)) {
     // Arrow Left/Up: move to previous focusable element in group
-    const previousElement = findBefore(
-      activeElement,
-      isDiscoverableWithKeyboard,
-      {
-        root: element,
-      },
-    );
+    const previousElement = findBefore(activeElement, elementIsFocusable, {
+      root: element,
+    });
 
     if (previousElement) {
       elementToFocus = previousElement;
     } else if (loop) {
       // No previous element, wrap to last focusable in group
-      elementToFocus = findLastDescendant(element, isDiscoverableWithKeyboard);
+      elementToFocus = findLastDescendant(element, elementIsFocusable);
     }
   } else if (isForwardArrow(event, direction)) {
     // Arrow Right/Down: move to next focusable element in group
-    const nextElement = findAfter(activeElement, isDiscoverableWithKeyboard, {
+    const nextElement = findAfter(activeElement, elementIsFocusable, {
       root: element,
     });
 
@@ -79,7 +75,7 @@ const performArrowKeyNavigation = (
       elementToFocus = nextElement;
     } else if (loop) {
       // No next element, wrap to first focusable in group
-      elementToFocus = findFirstDescendant(element, isDiscoverableWithKeyboard);
+      elementToFocus = findFirstDescendant(element, elementIsFocusable);
     }
   }
 
