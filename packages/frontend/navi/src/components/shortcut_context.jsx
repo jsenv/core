@@ -90,7 +90,7 @@ export const ShortcutProvider = ({
     onAction: (actionEvent) => {
       // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
       // otherwise setState would call that action immediately
-      setAction(() => action);
+      setAction(() => actionEvent.detail.action);
       executeAction(actionEvent);
     },
     onStart: (e) => {
@@ -117,7 +117,6 @@ export const ShortcutProvider = ({
   shortcutsRef.current = shortcuts;
 
   const [action, setAction] = useState(null);
-
   for (const shortcut of shortcuts) {
     shortcut.action = useAction(shortcut.action);
   }
