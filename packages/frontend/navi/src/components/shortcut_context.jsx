@@ -162,6 +162,7 @@ export const ShortcutProvider = ({
         event,
         target: shortcutElementRef.current,
         requester: elementRef.current,
+        confirmMessage: shortcutFound.confirmMessage,
       });
     },
     [shortcutActionIsBusy],
