@@ -1,4 +1,8 @@
-import { Selection } from "@jsenv/navi";
+import {
+  Selection,
+  useKeyboardShortcuts,
+  useShortcutHiddenElement,
+} from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
 import { ExplorerItem, ExplorerNewItem } from "./explorer_item.jsx";
 
@@ -18,8 +22,22 @@ export const ExplorerItemList = ({
   const itemSelectionSignal = useSignal([]);
   const deleteManyAction = useDeleteManyItemAction?.(itemSelectionSignal);
 
+  const shortcuts = [
+    ...(deleteManyAction
+      ? [
+          {
+            keyCombinations: ["Meta+Backspace"],
+            action: deleteManyAction,
+            confirmMessage: `Are you sure you want to delete ${itemSelectionSignal.value.length} items?`,
+          },
+        ]
+      : []),
+  ];
+  const [action] = useKeyboardShortcuts(shortcuts);
+  const shortcutHiddenElement = useShortcutHiddenElement(shortcuts);
+
   const listContent = (
-    <ul className="explorer_item_list">
+    <ul className="explorer_item_list" data-action={action.name}>
       {itemArray.map((item) => {
         return (
           <li className="explorer_item" key={item[idKey]}>
@@ -30,9 +48,9 @@ export const ExplorerItemList = ({
               renderItem={renderItem}
               useItemArrayInStore={useItemArrayInStore}
               useRenameItemAction={useRenameItemAction}
-              useDeleteItemAction={useDeleteItemAction}
-              deleteManyAction={deleteManyAction}
-              deleteManyConfirmMessage={`Are you sure you want to delete ${itemSelectionSignal.value.length} items?`}
+              useDeleteItemAction={
+                deleteManyAction ? () => null : useDeleteItemAction
+              }
             />
           </li>
         );
@@ -77,6 +95,7 @@ export const ExplorerItemList = ({
         }}
       >
         {listContent}
+        {shortcutHiddenElement}
       </Selection>
     );
   }

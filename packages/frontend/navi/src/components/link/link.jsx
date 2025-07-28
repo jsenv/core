@@ -15,8 +15,8 @@ import {
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import {
-  useKeyboardShortcuts,
-  useShortcutHiddenElement,
+  ShortcutProvider,
+  useShortcutContext,
 } from "../use_keyboard_shortcuts.jsx";
 
 /*
@@ -239,9 +239,18 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 };
 
 const LinkWithAction = forwardRef((props, ref) => {
+  const { shortcuts = [], ...rest } = props;
+
+  return (
+    <ShortcutProvider shortcuts={shortcuts}>
+      <LinkWithShortcuts ref={ref} {...rest} />
+    </ShortcutProvider>
+  );
+});
+
+const LinkWithShortcuts = forwardRef((props, ref) => {
   const {
     children,
-    shortcuts = [],
     onKeyDown,
     readOnly,
     loading,
@@ -252,12 +261,11 @@ const LinkWithAction = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
+  const { shortcutAction, onKeyDownForShortcuts } = useShortcutContext();
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const [shortcutAction, onKeyDownForShortcuts] =
-    useKeyboardShortcuts(shortcuts);
   const { loading: actionLoading } = useActionStatus(shortcutAction);
   const innerLoading = Boolean(loading || actionLoading);
   const executeAction = useExecuteAction(innerRef);
@@ -270,8 +278,6 @@ const LinkWithAction = forwardRef((props, ref) => {
     onEnd: onActionEnd,
   });
 
-  const shortcutHiddenElement = useShortcutHiddenElement(shortcuts);
-
   return (
     <>
       <LinkBasic
@@ -281,14 +287,13 @@ const LinkWithAction = forwardRef((props, ref) => {
         readOnly={readOnly || actionLoading}
         data-readonly-silent={actionLoading && !readOnly ? "" : undefined}
         /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
-        data-focus-visible={shortcuts.length > 0 ? "" : undefined}
+        data-focus-visible={""}
         onKeyDown={(e) => {
           onKeyDownForShortcuts(e);
           onKeyDown?.(e);
         }}
       >
         {children}
-        {shortcutHiddenElement}
       </LinkBasic>
     </>
   );

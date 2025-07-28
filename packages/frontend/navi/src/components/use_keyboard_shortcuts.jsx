@@ -1,5 +1,6 @@
 import { requestAction } from "@jsenv/validation";
-import { useCallback, useRef, useState } from "preact/hooks";
+import { createContext } from "preact";
+import { useCallback, useContext, useRef, useState } from "preact/hooks";
 import { useAction } from "./action_execution/use_action.js";
 
 import.meta.css = /* css */ `
@@ -21,7 +22,31 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const useKeyboardShortcuts = (shortcuts = []) => {
+const ShortcutContext = createContext();
+export const useShortcutContext = () => {
+  return useContext(ShortcutContext);
+};
+
+export const ShortcutProvider = ({ children, shortcuts }) => {
+  const [shortcutAction, onKeyDownForShortcuts] =
+    useKeyboardShortcuts(shortcuts);
+
+  const shortcutHiddenElement = useShortcutHiddenElement(shortcuts);
+
+  return (
+    <ShortcutContext.Provider
+      value={{
+        shortcutAction,
+        onKeyDownForShortcuts,
+      }}
+    >
+      {children}
+      {shortcutHiddenElement}
+    </ShortcutContext.Provider>
+  );
+};
+
+const useKeyboardShortcuts = (shortcuts = []) => {
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;
 
@@ -100,7 +125,7 @@ const eventIsMatchingKeyCombination = (event, keyCombination) => {
   return true;
 };
 
-export const useShortcutHiddenElement = (shortcuts) => {
+const useShortcutHiddenElement = (shortcuts) => {
   const shortcutElements = [];
   shortcuts.forEach((shortcut) => {
     const combinationString = useAriaKeyShortcuts(shortcut.keyCombinations);

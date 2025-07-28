@@ -19,8 +19,6 @@ export const ExplorerItem = ({
   useItemArrayInStore,
   useRenameItemAction,
   useDeleteItemAction,
-  deleteManyAction,
-  deleteManyConfirmMessage,
 }) => {
   const itemName = item[nameKey];
 
@@ -38,23 +36,15 @@ export const ExplorerItem = ({
         description: "Edit item name",
         enabled: !editable,
       },
-      ...(deleteManyAction
+      ...(deleteItemAction
         ? [
             {
               keyCombinations: ["Meta+Backspace"],
-              action: deleteManyAction || deleteItemAction,
-              confirmMessage: deleteManyConfirmMessage,
+              action: deleteItemAction,
+              confirmMessage: `Are you sure you want to delete "${itemName}"?`,
             },
           ]
-        : deleteItemAction
-          ? [
-              {
-                keyCombinations: ["Meta+Backspace"],
-                action: deleteItemAction,
-                confirmMessage: `Are you sure you want to delete "${itemName}"?`,
-              },
-            ]
-          : []),
+        : []),
     ],
     children: useRenameItemAction ? (
       <RenameInputOrName
