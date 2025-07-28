@@ -256,18 +256,7 @@ const keyMapping = {
   "arrowdown": { alias: ["down"] },
   "arrowleft": { alias: ["left"] },
   "arrowright": { alias: ["right"] },
-  "delete": {
-    alias: [
-      // (legacy firefox support)
-      "del",
-    ],
-  },
-  "contextmenu": {
-    alias: [
-      // (legacy firefox support)
-      "apps",
-    ],
-  },
+  "delete": { alias: ["del"] },
   // Platform-specific mappings
   ...(isMac
     ? { delete: { alias: ["backspace"] } }
