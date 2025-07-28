@@ -47,37 +47,39 @@ const isForwardArrow = (event, direction = "both") => {
 const DEBUG = true;
 
 // Find parent focus group with the same name and try delegation
-const tryDelegateToParent = (
-  event,
-  currentElement,
-  { direction, loop, name },
-) => {
-  let parentElement = currentElement.parentElement;
+const tryDelegate = (event, currentElement, { name }) => {
+  let ancestorElement = currentElement.parentElement;
+  while (ancestorElement) {
+    const ancestorFocusGroup = focusGroupRegistry.get(ancestorElement);
+    if (!ancestorFocusGroup) {
+      ancestorElement = ancestorElement.parentElement;
+      continue;
+    }
 
-  while (parentElement) {
-    const parentGroupData = focusGroupRegistry.get(parentElement);
+    // Check if groups should delegate to each other
+    const shouldDelegate =
+      name === undefined && ancestorFocusGroup.name === undefined
+        ? true // Both unnamed - delegate based on ancestor relationship
+        : ancestorFocusGroup.name === name; // Both have same explicit name
 
-    if (parentGroupData && parentGroupData.name === name) {
+    if (shouldDelegate) {
       if (DEBUG) {
         console.debug(
           `Delegating navigation to parent focus group:`,
-          parentElement,
+          ancestorElement,
+          name === undefined ? "(unnamed group)" : `(name: ${name})`,
         );
       }
-
       // Try navigation in parent focus group
-      const handled = performArrowKeyNavigation(event, parentElement, {
-        direction: parentGroupData.direction,
-        loop: parentGroupData.loop,
-        name: parentGroupData.name,
+      const handled = performArrowKeyNavigation(event, ancestorElement, {
+        direction: ancestorFocusGroup.direction,
+        loop: ancestorFocusGroup.loop,
+        name: ancestorFocusGroup.name,
       });
-
       if (handled) {
         return true;
       }
     }
-
-    parentElement = parentElement.parentElement;
   }
 
   return false;
@@ -106,9 +108,9 @@ const performArrowKeyNavigation = (
     } else if (loop) {
       // No previous element, wrap to last focusable in group
       elementToFocus = findLastDescendant(element, elementIsFocusable);
-    } else if (name) {
-      // Try to delegate to parent focus group with same name
-      return tryDelegateToParent(event, element, { direction, loop, name });
+    } else {
+      // Try to delegate to parent focus group (works for named or unnamed groups)
+      return tryDelegate(event, element, { direction, loop, name });
     }
   } else if (isForwardArrow(event, direction)) {
     // Arrow Right/Down: move to next focusable element in group
@@ -132,9 +134,9 @@ const performArrowKeyNavigation = (
       if (DEBUG) {
         console.debug(`Arrow navigation: "forward" looping to`, elementToFocus);
       }
-    } else if (name) {
-      // Try to delegate to parent focus group with same name
-      return tryDelegateToParent(event, element, { direction, loop, name });
+    } else {
+      // Try to delegate to parent focus group (works for named or unnamed groups)
+      return tryDelegate(event, element, { direction, loop, name });
     }
   }
 
@@ -154,7 +156,7 @@ export const initFocusGroup = (
     // extend = true,
     skipTab = true,
     loop = false,
-    name = "default",
+    name, // Can be undefined for implicit ancestor-descendant grouping
   } = {},
 ) => {
   if (!elementIsFocusable(element)) {
@@ -165,7 +167,7 @@ export const initFocusGroup = (
   focusGroupRegistry.set(element, {
     direction,
     loop,
-    name,
+    name, // Store undefined as-is for implicit grouping
   });
 
   if (skipTab) {
