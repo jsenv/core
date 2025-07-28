@@ -152,36 +152,60 @@ export const initFocusGroup = (
     name, // Can be undefined for implicit ancestor-descendant grouping
   } = {},
 ) => {
+  const cleanupCallbackSet = new Set();
+  const cleanup = () => {
+    for (const callback of cleanupCallbackSet) {
+      callback();
+    }
+    cleanupCallbackSet.clear();
+  };
+
   // Store focus group data in registry
   focusGroupRegistry.set(element, {
     direction,
     loop,
     name, // Store undefined as-is for implicit grouping
   });
+  cleanupCallbackSet.add(() => {
+    focusGroupRegistry.delete(element);
+  });
 
-  if (skipTab) {
+  tab: {
+    if (!skipTab) {
+      break tab;
+    }
+    const handleTabKeyDown = (event) => {
+      performTabNavigation(event, { outsideOfElement: element });
+    };
     // Handle Tab navigation (exit group)
-    element.addEventListener(
-      "keydown",
-      (event) => {
-        performTabNavigation(event, { outsideOfElement: element });
-      },
-      {
+    element.addEventListener("keydown", handleTabKeyDown, {
+      capture: true,
+      passive: false,
+    });
+    cleanupCallbackSet.add(() => {
+      element.removeEventListener("keydown", handleTabKeyDown, {
         capture: true,
         passive: false,
-      },
-    );
+      });
+    });
   }
 
   // Handle Arrow key navigation (within group)
-  element.addEventListener(
-    "keydown",
-    (event) => {
+  arrow_keys: {
+    const handleArrowKeyDown = (event) => {
       performArrowKeyNavigation(event, element, { direction, loop, name });
-    },
-    {
+    };
+    element.addEventListener("keydown", handleArrowKeyDown, {
       capture: true,
       passive: false,
-    },
-  );
+    });
+    cleanupCallbackSet.add(() => {
+      element.removeEventListener("keydown", handleArrowKeyDown, {
+        capture: true,
+        passive: false,
+      });
+    });
+  }
+
+  return { cleanup };
 };
