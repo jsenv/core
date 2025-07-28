@@ -143,6 +143,7 @@ const performArrowKeyNavigation = (
   if (elementToFocus) {
     elementToFocus.focus();
     event.preventDefault();
+    event.stopPropagation(); // Prevent parent focus groups from handling this event
     return true;
   }
 
