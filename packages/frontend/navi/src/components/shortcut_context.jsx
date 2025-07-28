@@ -313,48 +313,57 @@ const keySynonyms = [
   ["end", "finish"],
 ];
 
-// Platform-specific synonyms
-const platformSpecificSynonyms = {
-  mac: [
-    ["delete", "backspace"], // On Mac, "delete" key should be normalized to "backspace"
-  ],
-  other: [
-    ["backspace", "delete"], // On other platforms, "backspace" could be "delete"
-  ],
+// Mapping from shortcut key names to ARIA keyshortcuts attribute values
+const keyToAriaKeyMapping = {
+  // Modifier keys - platform-specific ARIA names
+  "command": "meta",
+  "cmd": "meta",
+  "option": "altgraph", // Mac option key uses "altgraph" in ARIA spec
+  "control": "control",
+  "ctrl": "control",
+  "shift": "shift",
+  "alt": "alt",
+  "meta": "meta",
+
+  // Regular keys - platform-specific normalization
+  "delete": isMac ? "backspace" : "delete", // Mac delete key is backspace semantically
+  "backspace": isMac ? "backspace" : "delete",
+
+  // Arrow keys
+  "arrowup": "arrowup",
+  "up": "arrowup",
+  "arrowdown": "arrowdown",
+  "down": "arrowdown",
+  "arrowleft": "arrowleft",
+  "left": "arrowleft",
+  "arrowright": "arrowright",
+  "right": "arrowright",
+
+  // Other keys
+  "space": "space",
+  " ": "space",
+  "escape": "escape",
+  "esc": "escape",
+  "home": "home",
+  "start": "home",
+  "end": "end",
+  "finish": "end",
 };
 
 const normalizeKeyCombination = (combination) => {
   const lowerCaseCombination = combination.toLowerCase();
   const keys = lowerCaseCombination.split("+");
 
-  // Normalize modifiers and keys
+  // Normalize keys using the ARIA mapping
   for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    if (key === "option") {
-      keys[i] = "altgraph";
-    }
-    if (key === "command") {
-      keys[i] = "meta";
+    let key = keys[i];
+
+    // Use the keyToAriaKeyMapping for consistent normalization
+    if (keyToAriaKeyMapping[key]) {
+      key = keyToAriaKeyMapping[key];
     }
 
-    // Normalize key synonyms to canonical form
-    for (const synonymGroup of keySynonyms) {
-      if (synonymGroup.includes(key)) {
-        keys[i] = synonymGroup[0];
-        break;
-      }
-    }
-
-    // Normalize platform-specific synonyms
-    const platformSynonyms = isMac
-      ? platformSpecificSynonyms.mac
-      : platformSpecificSynonyms.other;
-    for (const synonymGroup of platformSynonyms) {
-      if (synonymGroup.includes(key)) {
-        keys[i] = synonymGroup[0];
-        break;
-      }
-    }
+    keys[i] = key;
   }
 
   return keys.join("+");
