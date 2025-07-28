@@ -98,12 +98,22 @@ const performArrowKeyNavigation = (
 
     if (previousElement) {
       elementToFocus = previousElement;
-    } else if (loop) {
-      // No previous element, wrap to last focusable in group
-      elementToFocus = findLastDescendant(element, elementIsFocusable);
     } else {
-      // Try to delegate to parent focus group (works for named or unnamed groups)
-      return tryDelegate(event, element, { direction, loop, name });
+      if (DEBUG) {
+        console.debug(
+          `Arrow navigation: "backward" from`,
+          activeElement,
+          ": try to delegate to parent group or loop to last focusable`,",
+        );
+      }
+      if (
+        // Try to delegate to parent focus group (works for named or unnamed groups)
+        tryDelegate(event, element, { direction, loop, name })
+      ) {
+      } else if (loop) {
+        // No previous element, wrap to last focusable in group
+        elementToFocus = findLastDescendant(element, elementIsFocusable);
+      }
     }
   } else if (isForwardArrow(event, direction)) {
     // Arrow Right/Down: move to next focusable element in group
@@ -121,15 +131,26 @@ const performArrowKeyNavigation = (
           nextElement,
         );
       }
-    } else if (loop) {
-      // No next element, wrap to first focusable in group
-      elementToFocus = findFirstDescendant(element, elementIsFocusable);
+    } // Try to delegate to parent focus group (works for named or unnamed groups)
+    else {
       if (DEBUG) {
-        console.debug(`Arrow navigation: "forward" looping to`, elementToFocus);
+        console.debug(
+          `Arrow navigation: "forward" from`,
+          activeElement,
+          ": try to delegate to parent group or loop to first focusable",
+        );
       }
-    } else {
-      // Try to delegate to parent focus group (works for named or unnamed groups)
-      return tryDelegate(event, element, { direction, loop, name });
+      if (tryDelegate(event, element, { direction, loop, name })) {
+      } else if (loop) {
+        // No next element, wrap to first focusable in group
+        elementToFocus = findFirstDescendant(element, elementIsFocusable);
+        if (DEBUG) {
+          console.debug(
+            `Arrow navigation: "forward" looping to`,
+            elementToFocus,
+          );
+        }
+      }
     }
   }
 

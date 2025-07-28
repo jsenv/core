@@ -141,39 +141,13 @@ const TreeFocusTest = () => {
         <h2>File System Tree</h2>
 
         {/* Root level details */}
-        <Details
-          focusGroup={{
-            direction: "vertical",
-            loop: false,
-            skipTab: true,
-          }}
-          open
-          data-focus-group="root"
-        >
-          <summary tabIndex="0">📁 Projects</summary>
-
+        <Details focusGroup open label={"📁 Projects"}>
           <div className="content">
             {/* Nested details level 1 */}
-            <Details
-              focusGroup={{
-                direction: "vertical",
-                loop: false,
-                skipTab: true,
-              }}
-              data-focus-group="level-1"
-            >
-              <summary tabIndex="-1">📁 src</summary>
+            <Details focusGroup label="📁 src">
               <div className="content">
                 {/* Nested details level 2 */}
-                <Details
-                  focusGroup={{
-                    direction: "vertical",
-                    loop: false,
-                    skipTab: true,
-                  }}
-                  data-focus-group="level-2"
-                >
-                  <summary tabIndex="-1">📁 components</summary>
+                <Details focusGroup label="📁 components">
                   <div className="content">
                     <div tabIndex="-1" className="focusable-item">
                       📄 Button.jsx
@@ -186,15 +160,7 @@ const TreeFocusTest = () => {
               </div>
             </Details>
 
-            <Details
-              focusGroup={{
-                direction: "vertical",
-                loop: false,
-                skipTab: true,
-              }}
-              data-focus-group="level-2"
-            >
-              <summary tabIndex="-1">📁 utils</summary>
+            <Details focusGroup label="📁 utils">
               <div className="content">
                 <div tabIndex="-1" className="focusable-item">
                   📄 helpers.js
@@ -269,13 +235,9 @@ const TreeFocusTest = () => {
         </p>
         <pre>
           <code>{`<Details
-  focusGroup={{
-    direction: "vertical",  // Only up/down arrows
-    loop: false,           // Stay at boundaries
-    skipTab: true          // Tab exits the group
-  }}
+  focusGroup
+  label="📁 Folder"
 >
-  <summary>📁 Folder</summary>
   <div className="content">
     {/* Content */}
   </div>

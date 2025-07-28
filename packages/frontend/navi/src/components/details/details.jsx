@@ -41,7 +41,7 @@ import.meta.css = /* css */ `
     padding-right: 10px;
   }
 
-  summary:focus {
+  .navi_details > summary:focus {
     z-index: 1;
   }
 `;
@@ -121,13 +121,14 @@ const DetailsBasic = forwardRef((props, ref) => {
         }
         onToggle?.(e);
       }}
+      // TODO: a keydown for left arrow to move focus to summary when opened
       open={innerOpen}
     >
       <summary
         onKeyDown={(e) => {
           if (e.key === openKeyShortcut) {
             if (e.target.open) {
-              // move focus to first focusable element inside
+              // TODO: move focus to first focusable element inside
               return;
             }
             e.preventDefault();
