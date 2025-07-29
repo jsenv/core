@@ -4681,9 +4681,11 @@ function requireWebsocketServer () {
 	      return;
 	    }
 
-	    if (version !== 8 && version !== 13) {
+	    if (version !== 13 && version !== 8) {
 	      const message = 'Missing or invalid Sec-WebSocket-Version header';
-	      abortHandshakeOrEmitwsClientError(this, req, socket, 400, message);
+	      abortHandshakeOrEmitwsClientError(this, req, socket, 400, message, {
+	        'Sec-WebSocket-Version': '13, 8'
+	      });
 	      return;
 	    }
 
@@ -4951,16 +4953,24 @@ function requireWebsocketServer () {
 	 * @param {Duplex} socket The socket of the upgrade request
 	 * @param {Number} code The HTTP response status code
 	 * @param {String} message The HTTP response body
+	 * @param {Object} [headers] The HTTP response headers
 	 * @private
 	 */
-	function abortHandshakeOrEmitwsClientError(server, req, socket, code, message) {
+	function abortHandshakeOrEmitwsClientError(
+	  server,
+	  req,
+	  socket,
+	  code,
+	  message,
+	  headers
+	) {
 	  if (server.listenerCount('wsClientError')) {
 	    const err = new Error(message);
 	    Error.captureStackTrace(err, abortHandshakeOrEmitwsClientError);
 
 	    server.emit('wsClientError', err, socket, req);
 	  } else {
-	    abortHandshake(socket, code, message);
+	    abortHandshake(socket, code, message, headers);
 	  }
 	}
 	return websocketServer$1;

@@ -1,5 +1,5 @@
 import { Link, resource, useActionData, setBaseUrl, defineRoutes, useRouteStatus, Form, Select, Button, Field, useSignalSync, Input, ErrorBoundaryContext, useEditableController, EditableText, ShortcutProvider, SelectionProvider, Details, valueInLocalStorage, useNavState, Route } from "@jsenv/navi";
-import { u, d, J, d$1, q, k, A, _, b, useSignal, D, F, E, E$1 } from "../jsenv_plugin_database_manager_node_modules.js";
+import { u, d, K, d$1, q, k, A, _, b, useSignal, D, F, E, G } from "../jsenv_plugin_database_manager_node_modules.js";
 import { initPositionSticky, initFlexDetailsSet, startResizeGesture, getInnerWidth, getWidth } from "@jsenv/dom";
 import { createUniqueValueConstraint, SINGLE_SPACE_CONSTRAINT } from "@jsenv/validation";
 
@@ -1064,7 +1064,7 @@ const SVGMaskOverlay = ({
             width: "100%",
             height: "100%",
             fill: "white"
-          }), J(overlaySvg, {
+          }), K(overlaySvg, {
             className: "svg_mask_content" // Apply styling to make it black
           })]
         }, maskId);
@@ -3161,4 +3161,4 @@ const App = () => {
     })]
   });
 };
-E$1(u(App, {}), document.querySelector("#root"));
+G(u(App, {}), document.querySelector("#root"));
