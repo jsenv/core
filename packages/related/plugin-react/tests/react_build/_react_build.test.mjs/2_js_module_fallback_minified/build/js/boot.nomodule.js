@@ -1,1 +1,1 @@
-System.register([],(function(t,e){"use strict";return{setters:[],execute:function(){e.import(__v__("/js/app.nomodule.js"))}}}));
+System.register([],function(t,e){"use strict";return{setters:[],execute:function(){e.import(__v__("/js/app.nomodule.js"))}}});

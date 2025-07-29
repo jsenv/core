@@ -16,10 +16,7 @@ Error: here
       <property name="runtimeVersion" value="137.0"></property>
     </properties>
   </testcase>
-  <error type="Error">1 | throw new Error("here");
-          ^
-Error: here
-@base/client/error_in_js_module.spec.js:1:7</error>
+  <error type="Error">Error: here</error>
   <testcase file="error_in_js_classic.spec.html" name="webkit" time="[time]" timestamp="[timestamp]" tests="1" errors="1">
     <properties>
       <property name="runtimeName" value="webkit"></property>

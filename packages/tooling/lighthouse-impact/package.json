@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/lighthouse-impact",
-  "version": "4.2.37",
+  "version": "4.2.38",
   "description": "Package description",
   "repository": {
     "type": "git",
@@ -28,13 +28,13 @@
     "@jsenv/filesystem": "4.15.6",
     "@jsenv/github-pull-request-impact": "1.8.33",
     "@jsenv/humanize": "1.6.0",
-    "lighthouse": "12.6.0"
+    "lighthouse": "12.8.0"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
     "@jsenv/lighthouse-impact": "./",
     "@jsenv/server": "../../backend/server",
-    "playwright": "1.52.0"
+    "playwright": "1.54.1"
   },
   "engines": {
     "node": ">=20.0.0"

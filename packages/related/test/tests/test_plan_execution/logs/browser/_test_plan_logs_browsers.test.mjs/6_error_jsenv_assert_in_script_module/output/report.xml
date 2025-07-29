@@ -21,15 +21,10 @@ expect: "1"
       <property name="runtimeVersion" value="137.0"></property>
     </properties>
   </testcase>
-  <failure type="AssertionError">11 |       import { assert } from "@jsenv/assert";
-12 | 
-13 |       assert({ actual: 1, expect: "1" });
-                 ^
-AssertionError: actual and expect are different
+  <failure type="AssertionError">AssertionError: actual and expect are different
 
 actual: 1
-expect: "1"
-@base/client/error_jsenv_assert_in_script_module.spec.html:13:13</failure>
+expect: "1"</failure>
   <testcase file="error_jsenv_assert_in_script_module.spec.html" name="webkit" time="[time]" timestamp="[timestamp]" tests="1" failures="1">
     <properties>
       <property name="runtimeName" value="webkit"></property>

@@ -39,7 +39,6 @@ AssertionError: actual and expect are different
 
 actual: "foo"
 expect: "bar"
-@base/client/main.html:13:13
 ```
 
 </details>

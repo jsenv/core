@@ -1,4 +1,4 @@
-import { E, u, C, k } from "../jsenv_core_node_modules.js";
+import { G, u, C, k } from "../jsenv_core_node_modules.js";
 
 const directoryIconUrl = new URL("../other/dir.png", import.meta.url).href;
 const fileIconUrl = new URL("../other/file.png", import.meta.url).href;
@@ -275,4 +275,4 @@ if (autoreload) {
     }
   };
 }
-E(u(DirectoryListing, {}), document.querySelector("#root"));
+G(u(DirectoryListing, {}), document.querySelector("#root"));

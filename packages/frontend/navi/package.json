@@ -29,8 +29,8 @@
   "devDependencies": {
     "@jsenv/assert": "4.5.3",
     "@jsenv/validation": "0.0.1",
-    "@preact/signals": "2.2.0",
-    "preact": "10.26.9"
+    "@preact/signals": "2.2.1",
+    "preact": "10.27.0"
   },
   "publishConfig": {
     "access": "public"

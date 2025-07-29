@@ -277,11 +277,11 @@ const groupDigits = (digits, {
   if (digitCount < minimumDigits) {
     return digits;
   }
-  let digitsWithSeparator = digits.slice(-3);
-  let remainingDigits = digits.slice(0, -3);
+  let digitsWithSeparator = digits.slice(-groupLength);
+  let remainingDigits = digits.slice(0, -groupLength);
   while (remainingDigits.length) {
-    const group = remainingDigits.slice(-3);
-    remainingDigits = remainingDigits.slice(0, -3);
+    const group = remainingDigits.slice(-groupLength);
+    remainingDigits = remainingDigits.slice(0, -groupLength);
     digitsWithSeparator = "".concat(group, "_").concat(digitsWithSeparator);
   }
   return digitsWithSeparator;

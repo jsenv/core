@@ -51,45 +51,45 @@ console.log(
 );
 
 // Test the autoreload mechanism
-async function testAutoreload() {
-  console.log("\n🧪 Testing autoreload mechanism...");
+async function testAutorerun() {
+  console.log("\n🧪 Testing autorerun mechanism...");
 
   try {
     // Load the parameterized resource
-    const ownershipData = await ROLE_WITH_OWNERSHIP.GET_MANY.load();
+    const ownershipData = await ROLE_WITH_OWNERSHIP.GET_MANY.run();
     console.log(
-      "✅ ROLE_WITH_OWNERSHIP.GET_MANY.load() executed:",
+      "✅ ROLE_WITH_OWNERSHIP.GET_MANY.run() executed:",
       ownershipData.length,
       "items",
     );
 
-    // Trigger dependency changes that should cause autoreload
+    // Trigger dependency changes that should cause autorerun
     console.log("\n📝 Triggering dependency changes...");
 
-    await tables.POST.load({ name: "new_table", database_id: 1 });
+    await tables.POST.run({ name: "new_table", database_id: 1 });
     console.log(
-      "✅ tables.POST.load() - should trigger ROLE_WITH_OWNERSHIP autoreload",
+      "✅ tables.POST.run() - should trigger ROLE_WITH_OWNERSHIP autorerun",
     );
 
-    await database.POST.load({ name: "new_database" });
+    await database.POST.run({ name: "new_database" });
     console.log(
-      "✅ database.POST.load() - should trigger ROLE_WITH_OWNERSHIP autoreload",
+      "✅ database.POST.run() - should trigger ROLE_WITH_OWNERSHIP autorerun",
     );
 
-    await role.POST.load({ name: "new_role" });
+    await role.POST.run({ name: "new_role" });
     console.log(
-      "✅ role.POST.load() - should trigger ROLE_WITH_OWNERSHIP autoreload",
+      "✅ role.POST.run() - should trigger ROLE_WITH_OWNERSHIP autorerun",
     );
 
     console.log("\n✅ Dependency system test completed successfully!");
     console.log(
-      "💡 In a real application, these would automatically reload ROLE_WITH_OWNERSHIP.GET_MANY",
+      "💡 In a real application, these would automatically rerun ROLE_WITH_OWNERSHIP.GET_MANY",
     );
   } catch (error) {
     console.error("❌ Test failed:", error);
   }
 }
 
-testAutoreload();
+testAutorerun();
 
 export { database, role, ROLE_WITH_OWNERSHIP, tables };
