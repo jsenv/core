@@ -7,9 +7,10 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { useAction } from "./action_execution/use_action.js";
-import { useExecuteAction } from "./action_execution/use_execute_action.js";
-import { useActionEvents } from "./use_action_events.js";
+import { useAction } from "../action_execution/use_action.js";
+import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import { useActionEvents } from "../use_action_events.js";
+import { isMac } from "./os.js";
 
 import.meta.css = /* css */ `
   .navi_shortcut_container {
@@ -207,16 +208,6 @@ export const ShortcutProvider = ({
     </ShortcutContext.Provider>
   );
 };
-
-const detectMac = () => {
-  // Modern way using User-Agent Client Hints API
-  if (window.navigator.userAgentData) {
-    return window.navigator.userAgentData.platform === "macOS";
-  }
-  // Fallback to userAgent string parsing
-  return /Mac|iPhone|iPad|iPod/.test(window.navigator.userAgent);
-};
-const isMac = detectMac();
 
 // Configuration for mapping shortcut key names to browser event properties
 const modifierKeyMapping = {
