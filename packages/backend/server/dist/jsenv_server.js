@@ -4516,8 +4516,9 @@ const HTTP_METHODS = [
 
 const createRouter = (
   routeDescriptionArray,
-  { optionsFallback } = {},
+  { optionsFallback, logLevel } = {},
 ) => {
+  const logger = createLogger({ logLevel });
   const routeSet = new Set();
 
   const constructAvailableEndpoints = () => {
@@ -4695,6 +4696,7 @@ const createRouter = (
       }
     };
     const onRouteMatch = (route) => {
+      logger.debug(`Matched route: ${route}`);
       onRouteGroupEnd();
     };
 
@@ -4906,7 +4908,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       if (fetchReturnValue === null || fetchReturnValue === undefined) {
         continue;
       }
-      onRouteMatch();
+      onRouteMatch(route);
       if (fetchReturnValue instanceof Response) {
         const headers = Object.fromEntries(fetchReturnValue.headers);
         onResponseHeaders(request, route, headers);
@@ -6488,6 +6490,7 @@ const TIMING_NOOP = () => {
 const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
+  routerLogLevel,
   startLog = true,
   serverName = "server",
 
@@ -6611,6 +6614,7 @@ const startServer = async ({
 
   const router = createRouter(allRouteArray, {
     optionsFallback: true,
+    logLevel: routerLogLevel,
   });
 
   const server = {};

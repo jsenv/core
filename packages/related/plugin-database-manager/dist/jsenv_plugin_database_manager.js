@@ -13,38 +13,108 @@ function _taggedTemplateLiteral (strings, raw) {
   }));
 }
 
-var _templateObject$2;
+var _templateObject$4;
 // https://www.postgresql.org/docs/14/sql-alterdatabase.html
 
 const alterDatabaseQuery = async (sql, datname, colname, value) => {
   if (colname === "datdba") {
-    await sql(_templateObject$2 || (_templateObject$2 = _taggedTemplateLiteral(["ALTER DATABASE ", " OWNER TO ", ""])), sql(datname), sql(value));
+    await sql(_templateObject$4 || (_templateObject$4 = _taggedTemplateLiteral(["ALTER DATABASE ", " OWNER TO ", ""])), sql(datname), sql(value));
   }
 };
 
-var _templateObject$1, _templateObject2$1, _templateObject3$1, _templateObject4$1, _templateObject5$1, _templateObject6$1;
+var _templateObject$3, _templateObject2$3, _templateObject3$3, _templateObject4$3, _templateObject5$3, _templateObject6$3, _templateObject7$3, _templateObject8$3;
+const selectCurrentInfo = async sql => {
+  const currentRoleResult = await sql(_templateObject$3 || (_templateObject$3 = _taggedTemplateLiteral(["\n    SELECT\n      current_user\n  "])));
+  const currentRoleName = currentRoleResult[0].current_user;
+  const [currentRole] = await sql(_templateObject2$3 || (_templateObject2$3 = _taggedTemplateLiteral(["\n    SELECT\n      *\n    FROM\n      pg_roles\n    WHERE\n      rolname = ", "\n  "])), currentRoleName);
+  const [currentDatabase] = await sql(_templateObject3$3 || (_templateObject3$3 = _taggedTemplateLiteral(["\n    SELECT\n      *\n    FROM\n      pg_database\n    WHERE\n      datname = current_database()\n  "])));
+  return {
+    currentRole,
+    currentDatabase
+  };
+};
+const countRoles = async sql => {
+  const [roleStats] = await sql(_templateObject4$3 || (_templateObject4$3 = _taggedTemplateLiteral(["\n    SELECT\n      COUNT(*) AS total_roles,\n      COUNT(\n        CASE\n          WHEN rolcanlogin = TRUE THEN 1\n        END\n      ) AS can_login_count,\n      COUNT(\n        CASE\n          WHEN rolcanlogin = FALSE THEN 1\n        END\n      ) AS group_count,\n      COUNT(\n        CASE\n          WHEN (\n            table_owners.tableowner IS NOT NULL\n            OR database_owners.database_owner IS NOT NULL\n          ) THEN 1\n        END\n      ) AS with_ownership_count\n    FROM\n      pg_roles\n      LEFT JOIN (\n        SELECT DISTINCT\n          tableowner\n        FROM\n          pg_tables\n        WHERE\n          schemaname NOT IN ('pg_catalog', 'information_schema')\n      ) table_owners ON pg_roles.rolname = table_owners.tableowner\n      LEFT JOIN (\n        SELECT DISTINCT\n          pg_roles.rolname AS database_owner\n        FROM\n          pg_database\n          JOIN pg_roles ON pg_roles.oid = pg_database.datdba\n      ) database_owners ON pg_roles.rolname = database_owners.database_owner\n  "])));
+  const {
+    total_roles,
+    can_login_count,
+    group_count,
+    with_ownership_count
+  } = roleStats;
+  return {
+    total: parseInt(total_roles),
+    canLoginCount: parseInt(can_login_count),
+    groupCount: parseInt(group_count),
+    withOwnershipCount: parseInt(with_ownership_count)
+  };
+};
+const countRows = async (sql, tableName, {
+  whereClause
+} = {}) => {
+  if (tableName === "pg_tables") {
+    const [tableCountResult] = await sql(_templateObject5$3 || (_templateObject5$3 = _taggedTemplateLiteral(["\n      SELECT\n        COUNT(*)\n      FROM\n        pg_tables\n      WHERE\n        schemaname NOT IN ('pg_catalog', 'information_schema')\n    "])));
+    return parseInt(tableCountResult.count);
+  }
+  const [countResult] = await sql(_templateObject6$3 || (_templateObject6$3 = _taggedTemplateLiteral(["\n    SELECT\n      COUNT(*)\n    FROM\n      ", " ", "\n  "])), sql(tableName), whereClause || sql(_templateObject7$3 || (_templateObject7$3 = _taggedTemplateLiteral([""]))));
+  return parseInt(countResult.count);
+};
+const getTableColumns = async (sql, tableName) => {
+  const columns = await sql(_templateObject8$3 || (_templateObject8$3 = _taggedTemplateLiteral(["\n    SELECT\n      *\n    FROM\n      information_schema.columns\n    WHERE\n      table_name = ", "\n  "])), tableName);
+  return columns;
+};
+
+var _templateObject$2, _templateObject2$2, _templateObject3$2, _templateObject4$2, _templateObject5$2, _templateObject6$2, _templateObject7$2, _templateObject8$2, _templateObject9$1, _templateObject0$1;
+const selectRoleByName = async (sql, rolname) => {
+  const results = await sql(_templateObject$2 || (_templateObject$2 = _taggedTemplateLiteral(["\n    SELECT\n      *\n    FROM\n      pg_roles\n    WHERE\n      rolname = ", "\n  "])), rolname);
+  if (results.length === 0) {
+    return null;
+  }
+  const columns = await getTableColumns(sql, "pg_roles");
+  const role = results[0];
+  //  const privileges = await sql`
+  //     SELECT
+  //       grantor,
+  //       table_schema,
+  //       table_name,
+  //       privilege_type
+  //     FROM
+  //       information_schema.table_privileges
+  //     WHERE
+  //       grantee = ${rolname}
+  //   `;
+  const objects = await sql(_templateObject2$2 || (_templateObject2$2 = _taggedTemplateLiteral(["\n    SELECT\n      pg_class.relname AS object_name,\n      pg_class.relkind AS object_type,\n      pg_namespace.nspname AS schema_name\n    FROM\n      pg_class\n      JOIN pg_roles ON pg_roles.oid = pg_class.relowner\n      LEFT JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid\n    WHERE\n      pg_roles.rolname = ", "\n      AND pg_class.relkind IN ('r', 'v', 'm', 'S', 'f')\n    ORDER BY\n      pg_namespace.nspname,\n      pg_class.relname\n  "])), rolname);
+  const databases = await sql(_templateObject3$2 || (_templateObject3$2 = _taggedTemplateLiteral(["\n    SELECT\n      pg_database.*\n    FROM\n      pg_database\n      JOIN pg_roles ON pg_roles.oid = pg_database.datdba\n    WHERE\n      pg_roles.rolname = ", "\n  "])), rolname);
+  const members = await sql(_templateObject4$2 || (_templateObject4$2 = _taggedTemplateLiteral(["\n    SELECT\n      member_role.*,\n      grantor_role.rolname AS grantor_rolname,\n      pg_auth_members.admin_option\n    FROM\n      pg_auth_members\n      JOIN pg_roles AS parent_role ON pg_auth_members.roleid = parent_role.oid\n      JOIN pg_roles AS member_role ON pg_auth_members.member = member_role.oid\n      LEFT JOIN pg_roles AS grantor_role ON pg_auth_members.grantor = grantor_role.oid\n    WHERE\n      parent_role.rolname = ", "\n  "])), rolname);
+  return {
+    role,
+    objects,
+    databases,
+    members,
+    columns
+  };
+};
 const alterRoleQuery = async (sql, rolname, columnName, value) => {
   if (columnName === "rolname") {
     if (rolname === value) {
       return null;
     }
-    return sql(_templateObject$1 || (_templateObject$1 = _taggedTemplateLiteral(["\n      ALTER ROLE ", "\n      RENAME TO ", "\n    "])), sql(rolname), sql(value));
+    return sql(_templateObject5$2 || (_templateObject5$2 = _taggedTemplateLiteral(["\n      ALTER ROLE ", "\n      RENAME TO ", "\n    "])), sql(rolname), sql(value));
   }
   const keywords = booleanOptionKeywords[columnName];
   if (keywords) {
-    return sql(_templateObject2$1 || (_templateObject2$1 = _taggedTemplateLiteral(["\n      ALTER ROLE ", " ", "\n    "])), sql(rolname), sql.unsafe(keywords[value ? 0 : 1]));
+    return sql(_templateObject6$2 || (_templateObject6$2 = _taggedTemplateLiteral(["\n      ALTER ROLE ", " ", "\n    "])), sql(rolname), sql.unsafe(keywords[value ? 0 : 1]));
   }
   if (columnName === "rolvaliduntil") {
-    return sql(_templateObject3$1 || (_templateObject3$1 = _taggedTemplateLiteral(["ALTER ROLE ", " VALID UNTIL '", "'"])), sql(rolname), sql.unsafe(value));
+    return sql(_templateObject7$2 || (_templateObject7$2 = _taggedTemplateLiteral(["ALTER ROLE ", " VALID UNTIL '", "'"])), sql(rolname), sql.unsafe(value));
   }
   if (columnName === "rolconnlimit") {
-    return sql(_templateObject4$1 || (_templateObject4$1 = _taggedTemplateLiteral(["\n      ALTER ROLE ", " CONNECTION\n      LIMIT\n        ", "\n    "])), sql(rolname), sql.unsafe(value));
+    return sql(_templateObject8$2 || (_templateObject8$2 = _taggedTemplateLiteral(["\n      ALTER ROLE ", " CONNECTION\n      LIMIT\n        ", "\n    "])), sql(rolname), sql.unsafe(value));
   }
   if (columnName === "rolpassword") {
     if (value) {
-      return sql(_templateObject5$1 || (_templateObject5$1 = _taggedTemplateLiteral(["ALTER ROLE ", " PASSWORD '", "' "])), sql(rolname), sql.unsafe(value));
+      return sql(_templateObject9$1 || (_templateObject9$1 = _taggedTemplateLiteral(["ALTER ROLE ", " PASSWORD '", "' "])), sql(rolname), sql.unsafe(value));
     }
-    return sql(_templateObject6$1 || (_templateObject6$1 = _taggedTemplateLiteral(["ALTER ROLE ", " PASSWORD NULL"])), sql(rolname));
+    return sql(_templateObject0$1 || (_templateObject0$1 = _taggedTemplateLiteral(["ALTER ROLE ", " PASSWORD NULL"])), sql(rolname));
   }
   return null;
 };
@@ -58,9 +128,41 @@ const booleanOptionKeywords = {
   rolbypassrls: ["BYPASSRLS", "NOBYPASSRLS"]
 };
 
-const alterTableQuery = () => {};
+var _templateObject$1, _templateObject2$1, _templateObject3$1, _templateObject4$1, _templateObject5$1, _templateObject6$1, _templateObject7$1, _templateObject8$1;
+const createTable = async (sql, tablename) => {
+  await sql(_templateObject$1 || (_templateObject$1 = _taggedTemplateLiteral(["CREATE TABLE ", " (id SERIAL PRIMARY KEY)"])), sql(tablename));
+};
+const selectTable = async (sql, tablename) => {
+  const [table] = await sql(_templateObject2$1 || (_templateObject2$1 = _taggedTemplateLiteral(["\n    SELECT\n      pg_tables.*,\n      pg_class.oid AS tableoid\n    FROM\n      pg_tables\n      LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename\n      AND pg_class.relnamespace = (\n        SELECT\n          oid\n        FROM\n          pg_namespace\n        WHERE\n          nspname = pg_tables.schemaname\n      )\n    WHERE\n      pg_tables.tablename = ", "\n  "])), tablename);
+  return table;
+};
+const selectTables = async (sql, {
+  publicFilter,
+  rolname
+}) => {
+  let whereConditions = [];
+  if (publicFilter) {
+    whereConditions.push(sql(_templateObject3$1 || (_templateObject3$1 = _taggedTemplateLiteral(["pg_tables.schemaname = 'public'"]))));
+  } else {
+    whereConditions.push(sql(_templateObject4$1 || (_templateObject4$1 = _taggedTemplateLiteral(["\n      pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')\n    "]))));
+  }
+  if (rolname) {
+    whereConditions.push(sql(_templateObject5$1 || (_templateObject5$1 = _taggedTemplateLiteral(["pg_tables.tableowner = ", ""])), rolname));
+  }
+  const data = await sql(_templateObject6$1 || (_templateObject6$1 = _taggedTemplateLiteral(["\n    SELECT\n      pg_tables.*,\n      pg_class.oid AS tableoid\n    FROM\n      pg_tables\n      LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename\n      AND pg_class.relnamespace = (\n        SELECT\n          oid\n        FROM\n          pg_namespace\n        WHERE\n          nspname = pg_tables.schemaname\n      )\n    WHERE\n      ", "\n    ORDER BY\n      pg_class.oid ASC\n  "])), whereConditions.flatMap((x, i) => i ? [sql(_templateObject7$1 || (_templateObject7$1 = _taggedTemplateLiteral(["AND"]))), x] : x));
+  return data;
+};
+const alterTableQuery = async (sql, tablename, columnName, value) => {
+  if (columnName === "tablename") {
+    await sql(_templateObject8$1 || (_templateObject8$1 = _taggedTemplateLiteral(["\n      ALTER TABLE ", "\n      RENAME TO ", "\n    "])), sql(tablename), sql(value));
+    return;
+  }
 
-var _templateObject, _templateObject2, _templateObject3, _templateObject4, _templateObject5, _templateObject6, _templateObject7, _templateObject8, _templateObject9, _templateObject0, _templateObject1, _templateObject10, _templateObject11, _templateObject12, _templateObject13, _templateObject14, _templateObject15, _templateObject16, _templateObject17, _templateObject18, _templateObject19, _templateObject20, _templateObject21, _templateObject22, _templateObject23, _templateObject24, _templateObject25, _templateObject26, _templateObject27, _templateObject28, _templateObject29, _templateObject30, _templateObject31, _templateObject32, _templateObject33, _templateObject34, _templateObject35, _templateObject36, _templateObject37, _templateObject38, _templateObject39, _templateObject40, _templateObject41, _templateObject42, _templateObject43;
+  // TODO: Handle other column alterations
+  throw new Error("Altering column \"".concat(columnName, "\" is not yet implemented"));
+};
+
+var _templateObject, _templateObject2, _templateObject3, _templateObject4, _templateObject5, _templateObject6, _templateObject7, _templateObject8, _templateObject9, _templateObject0, _templateObject1, _templateObject10, _templateObject11, _templateObject12, _templateObject13, _templateObject14, _templateObject15, _templateObject16, _templateObject17, _templateObject18, _templateObject19, _templateObject20, _templateObject21, _templateObject22, _templateObject23, _templateObject24, _templateObject25, _templateObject26, _templateObject27;
 const databaseManagerHtmlFileUrl = new URL("./html/database_manager.html", import.meta.url).href;
 const jsenvPluginDatabaseManager = ({
   pathname = "/.internal/database/"
@@ -68,35 +170,6 @@ const jsenvPluginDatabaseManager = ({
   let databaseManagerRootDirectoryUrl;
   let defaultUsername;
   let sql;
-  const getRoleByName = async rolname => {
-    const results = await sql(_templateObject || (_templateObject = _taggedTemplateLiteral(["\n      SELECT\n        *\n      FROM\n        pg_roles\n      WHERE\n        rolname = ", "\n    "])), rolname);
-    if (results.length === 0) {
-      return null;
-    }
-    const columns = await getTableColumns(sql, "pg_roles");
-    const role = results[0];
-    //  const privileges = await sql`
-    //     SELECT
-    //       grantor,
-    //       table_schema,
-    //       table_name,
-    //       privilege_type
-    //     FROM
-    //       information_schema.table_privileges
-    //     WHERE
-    //       grantee = ${rolname}
-    //   `;
-    const objects = await sql(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["\n      SELECT\n        pg_class.relname AS object_name,\n        pg_class.relkind AS object_type,\n        pg_namespace.nspname AS schema_name\n      FROM\n        pg_class\n        JOIN pg_roles ON pg_roles.oid = pg_class.relowner\n        LEFT JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid\n      WHERE\n        pg_roles.rolname = ", "\n        AND pg_class.relkind IN ('r', 'v', 'm', 'S', 'f')\n      ORDER BY\n        pg_namespace.nspname,\n        pg_class.relname\n    "])), rolname);
-    const databases = await sql(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["\n      SELECT\n        pg_database.*\n      FROM\n        pg_database\n        JOIN pg_roles ON pg_roles.oid = pg_database.datdba\n      WHERE\n        pg_roles.rolname = ", "\n    "])), rolname);
-    const members = await sql(_templateObject4 || (_templateObject4 = _taggedTemplateLiteral(["\n      SELECT\n        member_role.*,\n        grantor_role.rolname AS grantor_rolname,\n        pg_auth_members.admin_option\n      FROM\n        pg_auth_members\n        JOIN pg_roles AS parent_role ON pg_auth_members.roleid = parent_role.oid\n        JOIN pg_roles AS member_role ON pg_auth_members.member = member_role.oid\n        LEFT JOIN pg_roles AS grantor_role ON pg_auth_members.grantor = grantor_role.oid\n      WHERE\n        parent_role.rolname = ", "\n    "])), rolname);
-    return {
-      role,
-      objects,
-      databases,
-      members,
-      columns
-    };
-  };
   return {
     name: "jsenv:database_manager",
     init: async ({
@@ -116,12 +189,10 @@ const jsenvPluginDatabaseManager = ({
         if (urlWithoutSearch !== String(databaseManagerHtmlFileUrl)) {
           return null;
         }
-
-        // we might want to use any available cookie used to auth
-        const currentRoleResult = await sql(_templateObject5 || (_templateObject5 = _taggedTemplateLiteral(["\n          SELECT\n            current_user\n        "])));
-        const currentRoleName = currentRoleResult[0].current_user;
-        const [currentRole] = await sql(_templateObject6 || (_templateObject6 = _taggedTemplateLiteral(["\n          SELECT\n            *\n          FROM\n            pg_roles\n          WHERE\n            rolname = ", "\n        "])), currentRoleName);
-        const [currentDatabase] = await sql(_templateObject7 || (_templateObject7 = _taggedTemplateLiteral(["\n          SELECT\n            *\n          FROM\n            pg_database\n          WHERE\n            datname = current_database()\n        "])));
+        const {
+          currentRole,
+          currentDatabase
+        } = await selectCurrentInfo(sql);
         return {
           contentInjections: {
             __DB_MANAGER_CONFIG__: {
@@ -171,10 +242,12 @@ const jsenvPluginDatabaseManager = ({
     }, ...createRESTRoutes("".concat(pathname, "api/tables"), {
       "GET": async request => {
         const publicFilter = request.searchParams.has("public");
-        const data = await sql(_templateObject8 || (_templateObject8 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_tables\n            WHERE\n              ", "\n          "])), publicFilter ? sql(_templateObject9 || (_templateObject9 = _taggedTemplateLiteral(["schemaname = 'public'"]))) : sql(_templateObject0 || (_templateObject0 = _taggedTemplateLiteral(["schemaname NOT IN ('pg_catalog', 'information_schema')"]))));
+        const tables = await selectTables(sql, {
+          publicFilter
+        });
         const columns = await getTableColumns(sql, "pg_tables");
         return {
-          data,
+          data: tables,
           meta: {
             columns
           }
@@ -184,8 +257,8 @@ const jsenvPluginDatabaseManager = ({
         const {
           tablename
         } = await request.json();
-        await sql(_templateObject1 || (_templateObject1 = _taggedTemplateLiteral(["CREATE TABLE ", ""])), sql(tablename));
-        const [table] = await sql(_templateObject10 || (_templateObject10 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_tables\n            WHERE\n              tablename = ", "\n          "])), tablename);
+        await createTable(sql, tablename);
+        const table = await selectTable(sql, tablename);
         return {
           data: table,
           meta: {
@@ -197,7 +270,7 @@ const jsenvPluginDatabaseManager = ({
         const {
           tablename
         } = request.params;
-        const results = await sql(_templateObject11 || (_templateObject11 = _taggedTemplateLiteral(["\n            SELECT\n              pg_tables.*,\n              role.rolname AS owner_rolname,\n              role.oid AS owner_oid\n            FROM\n              pg_tables\n              LEFT JOIN pg_roles role ON pg_tables.tableowner = role.rolname\n            WHERE\n              pg_tables.tablename = ", "\n          "])), tablename);
+        const results = await sql(_templateObject || (_templateObject = _taggedTemplateLiteral(["\n            SELECT\n              pg_tables.*,\n              role.rolname AS owner_rolname,\n              role.oid AS owner_oid,\n              pg_class.oid AS tableoid\n            FROM\n              pg_tables\n              LEFT JOIN pg_roles role ON pg_tables.tableowner = role.rolname\n              LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename\n              AND pg_class.relnamespace = (\n                SELECT\n                  oid\n                FROM\n                  pg_namespace\n                WHERE\n                  nspname = pg_tables.schemaname\n              )\n            WHERE\n              pg_tables.tablename = ", "\n          "])), tablename);
         if (results.length === 0) {
           return null;
         }
@@ -217,27 +290,47 @@ const jsenvPluginDatabaseManager = ({
           }
         };
       },
+      "DELETE /:tablename": async request => {
+        const {
+          tablename
+        } = request.params;
+        await sql(_templateObject2 || (_templateObject2 = _taggedTemplateLiteral(["DROP TABLE ", ""])), sql(tablename));
+        return {
+          data: null,
+          meta: {
+            count: await countRows(sql, "pg_tables")
+          }
+        };
+      },
+      "DELETE": async request => {
+        const tablenames = await request.json();
+        if (!Array.isArray(tablenames)) {
+          throw new Error("expected an array of tablenames");
+        }
+        if (tablenames.length === 0) {
+          throw new Error("No tablename provided to deletes");
+        }
+        await sql.begin(async sql => {
+          for (const tablename of tablenames) {
+            await sql(_templateObject3 || (_templateObject3 = _taggedTemplateLiteral(["DROP TABLE ", ""])), sql(tablename));
+          }
+        });
+        return {
+          data: null,
+          meta: {
+            count: await countRows(sql, "pg_tables")
+          }
+        };
+      },
       "PUT /:tablename/:colname": async request => {
         const {
           tablename,
           colname
         } = request.params;
         const value = await request.json();
-        await alterTableQuery();
+        await alterTableQuery(sql, tablename, colname, value);
         return {
           [colname]: value
-        };
-      },
-      "DELETE /:tablename": async request => {
-        const {
-          tablename
-        } = request.params;
-        await sql(_templateObject12 || (_templateObject12 = _taggedTemplateLiteral(["DROP TABLE ", ""])), sql(tablename));
-        return {
-          data: null,
-          meta: {
-            count: await countRows(sql, "pg_tables")
-          }
         };
       }
     }), ...createRESTRoutes("".concat(pathname, "api/roles"), {
@@ -247,21 +340,28 @@ const jsenvPluginDatabaseManager = ({
         if (canLogin !== null) {
           const canLoginValue = canLogin.toLowerCase();
           if (canLoginValue === "" || canLoginValue === "1" || canLoginValue === "true") {
-            whereClause = sql(_templateObject13 || (_templateObject13 = _taggedTemplateLiteral(["\n                WHERE\n                  pg_roles.rolcanlogin = TRUE\n              "])));
+            whereClause = sql(_templateObject4 || (_templateObject4 = _taggedTemplateLiteral(["\n                WHERE\n                  pg_roles.rolcanlogin = TRUE\n              "])));
           } else if (canLoginValue === "0" || canLoginValue === "false") {
-            whereClause = sql(_templateObject14 || (_templateObject14 = _taggedTemplateLiteral(["\n                WHERE\n                  pg_roles.rolcanlogin = FALSE\n              "])));
+            whereClause = sql(_templateObject5 || (_templateObject5 = _taggedTemplateLiteral(["\n                WHERE\n                  pg_roles.rolcanlogin = FALSE\n              "])));
           }
         }
         const ownersFlag = request.searchParams.has("owners");
-        const roles = await sql(_templateObject15 || (_templateObject15 = _taggedTemplateLiteral(["\n            SELECT\n              pg_roles.*,\n              COALESCE(table_count_result.table_count, 0) AS table_count,\n              COALESCE(database_count_result.database_count, 0) AS database_count\n            FROM\n              pg_roles\n              LEFT JOIN (\n                SELECT\n                  tableowner,\n                  COUNT(*) AS table_count\n                FROM\n                  pg_tables\n                WHERE\n                  schemaname NOT IN ('pg_catalog', 'information_schema')\n                GROUP BY\n                  tableowner\n              ) table_count_result ON pg_roles.rolname = table_count_result.tableowner\n              LEFT JOIN (\n                SELECT\n                  pg_roles.rolname AS database_owner,\n                  COUNT(*) AS database_count\n                FROM\n                  pg_database\n                  JOIN pg_roles ON pg_roles.oid = pg_database.datdba\n                GROUP BY\n                  pg_roles.rolname\n              ) database_count_result ON pg_roles.rolname = database_count_result.database_owner ", "\n          "])), whereClause || sql(_templateObject16 || (_templateObject16 = _taggedTemplateLiteral([""]))));
+        const roles = await sql(_templateObject6 || (_templateObject6 = _taggedTemplateLiteral(["\n            SELECT\n              pg_roles.*,\n              COALESCE(table_count_result.table_count, 0) AS table_count,\n              COALESCE(database_count_result.database_count, 0) AS database_count\n            FROM\n              pg_roles\n              LEFT JOIN (\n                SELECT\n                  tableowner,\n                  COUNT(*) AS table_count\n                FROM\n                  pg_tables\n                WHERE\n                  schemaname NOT IN ('pg_catalog', 'information_schema')\n                GROUP BY\n                  tableowner\n              ) table_count_result ON pg_roles.rolname = table_count_result.tableowner\n              LEFT JOIN (\n                SELECT\n                  pg_roles.rolname AS database_owner,\n                  COUNT(*) AS database_count\n                FROM\n                  pg_database\n                  JOIN pg_roles ON pg_roles.oid = pg_database.datdba\n                GROUP BY\n                  pg_roles.rolname\n              ) database_count_result ON pg_roles.rolname = database_count_result.database_owner ", "\n            ORDER BY\n              pg_roles.oid ASC\n          "])), whereClause || sql(_templateObject7 || (_templateObject7 = _taggedTemplateLiteral([""]))));
+        // I prefer order by "pg_roles.oid" over "pg_roles.rolname"
+        // because it gives an important information:
+        // the role created first has the lowest oid and is likely more important to see
+        // either because it's old so it's important or it's old so it should be deleted
+        // it does not help to find role by name which would be nice
+        // but it helps to see role creation order which matters a lot
+        // especially considering it's a database manager human that uses this
         for (const role of roles) {
           role.table_count = parseInt(role.table_count) || 0;
           role.database_count = parseInt(role.database_count) || 0;
           role.object_count = role.table_count + role.database_count;
         }
-        const currentRoleResult = await sql(_templateObject17 || (_templateObject17 = _taggedTemplateLiteral(["\n            SELECT\n              current_user\n          "])));
+        const currentRoleResult = await sql(_templateObject8 || (_templateObject8 = _taggedTemplateLiteral(["\n            SELECT\n              current_user\n          "])));
         const currentRoleName = currentRoleResult[0].current_user;
-        const [currentRole] = await sql(_templateObject18 || (_templateObject18 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_roles\n            WHERE\n              rolname = ", "\n          "])), currentRoleName);
+        const [currentRole] = await sql(_templateObject9 || (_templateObject9 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_roles\n            WHERE\n              rolname = ", "\n          "])), currentRoleName);
         if (ownersFlag) {
           const owners = [];
           for (const role of roles) {
@@ -283,30 +383,11 @@ const jsenvPluginDatabaseManager = ({
           }
         };
       },
-      "POST": async request => {
-        const {
-          rolname,
-          rolcanlogin
-        } = await request.json();
-        // https://www.postgresql.org/docs/current/sql-createrole.html
-        if (rolcanlogin) {
-          await sql(_templateObject19 || (_templateObject19 = _taggedTemplateLiteral(["CREATE ROLE ", " LOGIN"])), sql(rolname));
-        } else {
-          await sql(_templateObject20 || (_templateObject20 = _taggedTemplateLiteral(["CREATE ROLE ", ""])), sql(rolname));
-        }
-        const [role] = await sql(_templateObject21 || (_templateObject21 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_roles\n            WHERE\n              rolname = ", "\n          "])), rolname);
-        return {
-          data: role,
-          meta: {
-            roleCounts: await countRoles(sql)
-          }
-        };
-      },
       "GET /:rolname": async request => {
         const {
           rolname
         } = request.params;
-        const result = await getRoleByName(rolname);
+        const result = await selectRoleByName(rolname);
         if (!result) {
           return null;
         }
@@ -317,6 +398,38 @@ const jsenvPluginDatabaseManager = ({
         return {
           data: role,
           meta
+        };
+      },
+      "POST": async request => {
+        const {
+          rolname,
+          rolcanlogin
+        } = await request.json();
+        // https://www.postgresql.org/docs/current/sql-createrole.html
+        if (rolcanlogin) {
+          await sql(_templateObject0 || (_templateObject0 = _taggedTemplateLiteral(["CREATE ROLE ", " LOGIN"])), sql(rolname));
+        } else {
+          await sql(_templateObject1 || (_templateObject1 = _taggedTemplateLiteral(["CREATE ROLE ", ""])), sql(rolname));
+        }
+        const [role] = await sql(_templateObject10 || (_templateObject10 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_roles\n            WHERE\n              rolname = ", "\n          "])), rolname);
+        return {
+          data: role,
+          meta: {
+            roleCounts: await countRoles(sql)
+          }
+        };
+      },
+      // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
+      "DELETE /:rolname": async request => {
+        const {
+          rolname
+        } = request.params;
+        await sql(_templateObject11 || (_templateObject11 = _taggedTemplateLiteral(["DROP ROLE ", ""])), sql(rolname));
+        return {
+          data: null,
+          meta: {
+            roleCounts: await countRoles(sql)
+          }
         };
       },
       "PUT /:rolname/:colname": async request => {
@@ -330,56 +443,22 @@ const jsenvPluginDatabaseManager = ({
           [colname]: value
         };
       },
-      // when dropping roles, consider this: https://neon.tech/postgresql/postgresql-administration/postgresql-drop-role
-      "DELETE /:rolname": async request => {
+      "GET /:rolname/members": async request => {
         const {
           rolname
         } = request.params;
-        await sql(_templateObject22 || (_templateObject22 = _taggedTemplateLiteral(["DROP ROLE ", ""])), sql(rolname));
+        const members = await sql(_templateObject12 || (_templateObject12 = _taggedTemplateLiteral(["\n            SELECT\n              member_role.*,\n              grantor_role.rolname AS grantor_rolname,\n              pg_auth_members.admin_option\n            FROM\n              pg_auth_members\n              JOIN pg_roles AS parent_role ON pg_auth_members.roleid = parent_role.oid\n              JOIN pg_roles AS member_role ON pg_auth_members.member = member_role.oid\n              LEFT JOIN pg_roles AS grantor_role ON pg_auth_members.grantor = grantor_role.oid\n            WHERE\n              parent_role.rolname = ", "\n          "])), rolname);
         return {
-          data: null,
-          meta: {
-            roleCounts: await countRoles(sql)
-          }
+          data: members
         };
       },
-      "GET /:rolname/tables": async request => {
-        const {
-          rolname
-        } = request.params;
-        const tables = await sql(_templateObject23 || (_templateObject23 = _taggedTemplateLiteral(["\n            SELECT\n              pg_tables.*\n            FROM\n              pg_tables\n              JOIN pg_roles ON pg_roles.rolname = pg_tables.tableowner\n            WHERE\n              pg_roles.rolname = ", "\n              AND pg_tables.schemaname NOT IN ('pg_catalog', 'information_schema')\n          "])), rolname);
-        if (tables.length === 0) {
-          return {
-            data: []
-          };
-        }
-        return {
-          data: tables,
-          meta: {}
-        };
-      },
-      "GET /:rolname/databases": async request => {
-        const {
-          rolname
-        } = request.params;
-        const databases = await sql(_templateObject24 || (_templateObject24 = _taggedTemplateLiteral(["\n            SELECT\n              pg_database.*\n            FROM\n              pg_database\n              JOIN pg_roles ON pg_roles.oid = pg_database.datdba\n            WHERE\n              pg_roles.rolname = ", "\n          "])), rolname);
-        if (databases.length === 0) {
-          return {
-            data: []
-          };
-        }
-        return {
-          data: databases,
-          meta: {}
-        };
-      },
-      "PUT /:rolname/members/:memberRolname": async request => {
+      "POST /:rolname/members/:memberRolname": async request => {
         const {
           rolname,
           memberRolname
         } = request.params;
-        await sql(_templateObject25 || (_templateObject25 = _taggedTemplateLiteral(["GRANT ", " TO ", ""])), sql(rolname), sql(memberRolname));
-        const [memberRole] = await sql(_templateObject26 || (_templateObject26 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_roles\n            WHERE\n              rolname = ", "\n          "])), memberRolname);
+        await sql(_templateObject13 || (_templateObject13 = _taggedTemplateLiteral(["GRANT ", " TO ", ""])), sql(rolname), sql(memberRolname));
+        const [memberRole] = await sql(_templateObject14 || (_templateObject14 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_roles\n            WHERE\n              rolname = ", "\n          "])), memberRolname);
         return {
           data: memberRole
         };
@@ -389,17 +468,44 @@ const jsenvPluginDatabaseManager = ({
           rolname,
           memberRolname
         } = request.params;
-        await sql(_templateObject27 || (_templateObject27 = _taggedTemplateLiteral(["\n            REVOKE ", "\n            FROM\n              ", "\n          "])), sql(rolname), sql(memberRolname));
+        await sql(_templateObject15 || (_templateObject15 = _taggedTemplateLiteral(["\n            REVOKE ", "\n            FROM\n              ", "\n          "])), sql(rolname), sql(memberRolname));
         return {
           data: null
+        };
+      },
+      "GET /:rolname/tables": async request => {
+        const {
+          rolname
+        } = request.params;
+        const tables = await selectTables(sql, {
+          rolname
+        });
+        return {
+          data: tables,
+          meta: {}
+        };
+      },
+      "GET /:rolname/databases": async request => {
+        const {
+          rolname
+        } = request.params;
+        const databases = await sql(_templateObject16 || (_templateObject16 = _taggedTemplateLiteral(["\n            SELECT\n              pg_database.*\n            FROM\n              pg_database\n              JOIN pg_roles ON pg_roles.oid = pg_database.datdba\n            WHERE\n              pg_roles.rolname = ", "\n          "])), rolname);
+        if (databases.length === 0) {
+          return {
+            data: []
+          };
+        }
+        return {
+          data: databases,
+          meta: {}
         };
       }
     }), ...createRESTRoutes("".concat(pathname, "api/databases"), {
       "GET": async () => {
-        const [currentDatabaseResult] = await sql(_templateObject28 || (_templateObject28 = _taggedTemplateLiteral(["\n            SELECT\n              current_database()\n          "])));
+        const [currentDatabaseResult] = await sql(_templateObject17 || (_templateObject17 = _taggedTemplateLiteral(["\n            SELECT\n              current_database()\n          "])));
         const currentDatname = currentDatabaseResult.current_database;
-        const [currentDatabase] = await sql(_templateObject29 || (_templateObject29 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_database\n            WHERE\n              datname = ", "\n          "])), currentDatname);
-        const databases = await sql(_templateObject30 || (_templateObject30 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_database\n          "])));
+        const [currentDatabase] = await sql(_templateObject18 || (_templateObject18 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_database\n            WHERE\n              datname = ", "\n          "])), currentDatname);
+        const databases = await sql(_templateObject19 || (_templateObject19 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_database\n            ORDER BY\n              pg_database.oid ASC\n          "])));
         const countTables = async database => {
           if (database === currentDatname) {
             return countRows(sql, "pg_tables");
@@ -435,24 +541,11 @@ const jsenvPluginDatabaseManager = ({
           }
         };
       },
-      "POST": async request => {
-        const {
-          datname
-        } = await request.json();
-        await sql(_templateObject31 || (_templateObject31 = _taggedTemplateLiteral(["CREATE DATABASE ", ""])), sql(datname));
-        const [database] = await sql(_templateObject32 || (_templateObject32 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_database\n            WHERE\n              datname = ", "\n          "])), datname);
-        return {
-          data: database,
-          meta: {
-            count: await countRows(sql, "pg_database")
-          }
-        };
-      },
       "GET /:datname": async request => {
         const {
           datname
         } = request.params;
-        const results = await sql(_templateObject33 || (_templateObject33 = _taggedTemplateLiteral(["\n            SELECT\n              pg_database.*,\n              role.rolname AS owner_rolname,\n              role.oid AS owner_oid\n            FROM\n              pg_database\n              LEFT JOIN pg_roles role ON role.oid = pg_database.datdba\n            WHERE\n              pg_database.datname = ", "\n          "])), datname);
+        const results = await sql(_templateObject20 || (_templateObject20 = _taggedTemplateLiteral(["\n            SELECT\n              pg_database.*,\n              role.rolname AS owner_rolname,\n              role.oid AS owner_oid\n            FROM\n              pg_database\n              LEFT JOIN pg_roles role ON role.oid = pg_database.datdba\n            WHERE\n              pg_database.datname = ", "\n          "])), datname);
         if (results.length === 0) {
           return null;
         }
@@ -472,6 +565,31 @@ const jsenvPluginDatabaseManager = ({
           }
         };
       },
+      "POST": async request => {
+        const {
+          datname
+        } = await request.json();
+        await sql(_templateObject21 || (_templateObject21 = _taggedTemplateLiteral(["CREATE DATABASE ", ""])), sql(datname));
+        const [database] = await sql(_templateObject22 || (_templateObject22 = _taggedTemplateLiteral(["\n            SELECT\n              *\n            FROM\n              pg_database\n            WHERE\n              datname = ", "\n          "])), datname);
+        return {
+          data: database,
+          meta: {
+            count: await countRows(sql, "pg_database")
+          }
+        };
+      },
+      "DELETE /:datname": async request => {
+        const {
+          datname
+        } = request.params;
+        await sql(_templateObject23 || (_templateObject23 = _taggedTemplateLiteral(["DROP DATABASE ", ""])), sql(datname));
+        return {
+          data: null,
+          meta: {
+            count: await countRows(sql, "pg_database")
+          }
+        };
+      },
       "PUT /:datname/:colname": async request => {
         const {
           datname,
@@ -482,49 +600,37 @@ const jsenvPluginDatabaseManager = ({
         return {
           [colname]: value
         };
-      },
-      "DELETE /:datname": async request => {
-        const {
-          datname
-        } = request.params;
-        await sql(_templateObject34 || (_templateObject34 = _taggedTemplateLiteral(["DROP DATABASE ", ""])), sql(datname));
-        return {
-          data: null,
-          meta: {
-            count: await countRows(sql, "pg_database")
-          }
-        };
       }
     }), {
-      endpoint: "PUT ".concat(pathname, "/api/tables/:tableName/columns/name"),
+      endpoint: "PUT ".concat(pathname, "api/tables/:tableName/columns/name"),
       declarationSource: import.meta.url,
       acceptedMediaTypes: ["application/json"],
       fetch: async request => {
         const tableName = request.params.tableName;
         const tableNewName = await request.json();
-        await sql(_templateObject35 || (_templateObject35 = _taggedTemplateLiteral(["\n            ALTER TABLE ", "\n            RENAME TO ", ";\n          "])), sql(tableName), sql(tableNewName));
+        await sql(_templateObject24 || (_templateObject24 = _taggedTemplateLiteral(["\n            ALTER TABLE ", "\n            RENAME TO ", ";\n          "])), sql(tableName), sql(tableNewName));
         return Response.json({
           name: tableNewName
         });
       }
     }, {
-      endpoint: "PUT ".concat(pathname, "/api/tables/:tableName/columns/rowsecurity"),
+      endpoint: "PUT ".concat(pathname, "api/tables/:tableName/columns/rowsecurity"),
       declarationSource: import.meta.url,
       acceptedMediaTypes: ["application/json"],
       fetch: async request => {
         const tableName = request.params.tableName;
         const value = await request.json();
         if (value === "on") {
-          await sql(_templateObject36 || (_templateObject36 = _taggedTemplateLiteral(["\n              ALTER TABLE ", " ENABLE ROW LEVEL SECURITY;\n            "])), sql(tableName));
+          await sql(_templateObject25 || (_templateObject25 = _taggedTemplateLiteral(["\n              ALTER TABLE ", " ENABLE ROW LEVEL SECURITY;\n            "])), sql(tableName));
         } else {
-          await sql(_templateObject37 || (_templateObject37 = _taggedTemplateLiteral(["\n              ALTER TABLE ", " DISABLE ROW LEVEL SECURITY;\n            "])), sql(tableName));
+          await sql(_templateObject26 || (_templateObject26 = _taggedTemplateLiteral(["\n              ALTER TABLE ", " DISABLE ROW LEVEL SECURITY;\n            "])), sql(tableName));
         }
         return Response.json({
           rowsecurity: value === "on"
         });
       }
     }, {
-      endpoint: "PUT ".concat(pathname, "/api/tables/:tableName/columns/:columnName/rows/:rowId"),
+      endpoint: "PUT ".concat(pathname, "api/tables/:tableName/columns/:columnName/rows/:rowId"),
       declarationSource: import.meta.url,
       acceptedMediaTypes: ["application/json"],
       fetch: async () => {
@@ -547,7 +653,7 @@ const jsenvPluginDatabaseManager = ({
             status: 400
           });
         }
-        const columns = await sql(_templateObject38 || (_templateObject38 = _taggedTemplateLiteral(["\n            SELECT\n              ordinal_position,\n              data_type\n            FROM\n              information_schema.columns\n            WHERE\n              table_name = ", "\n              AND column_name = ", "\n          "])), sql(tableName), sql(columnName));
+        const columns = await sql(_templateObject27 || (_templateObject27 = _taggedTemplateLiteral(["\n            SELECT\n              ordinal_position,\n              data_type\n            FROM\n              information_schema.columns\n            WHERE\n              table_name = ", "\n              AND column_name = ", "\n          "])), sql(tableName), sql(columnName));
         let columnIndex;
         let beforeColumnIndex;
         {
@@ -666,6 +772,29 @@ const jsenvPluginDatabaseManager = ({
           status: 204
         });
       }
+    }, {
+      endpoint: "GET ".concat(pathname, "api"),
+      description: "Get info about the database manager API.",
+      declarationSource: import.meta.url,
+      fetch: () => {
+        return Response.json({
+          data: {
+            pathname,
+            apiUrl: new URL("".concat(pathname, "api"), import.meta.url).href
+          }
+        });
+      }
+    }, {
+      endpoint: "GET ".concat(pathname, "api/*"),
+      description: "Fallback for api endpoints (404).",
+      declarationSource: import.meta.url,
+      fetch: request => {
+        return Response.json({
+          message: "API endpoint not found: ".concat(request.url)
+        }, {
+          status: 404
+        });
+      }
     }],
     devServerServices: [{
       name: "postgres_sql_error_handler",
@@ -697,6 +826,21 @@ const jsenvPluginDatabaseManager = ({
           status: 500,
           statusText: message
         });
+      }
+    }, {
+      name: "uncaught_json_parse_error_handler",
+      handleError: e => {
+        // we assume the error originates from client here
+        // but if some JSON.parse fails on the server application code unrelated to the client
+        // we would also return 400 while it should be 500
+        // ideally every JSON.parse related to the client should be catched
+        if (e.name === "SyntaxError" && e.message === "Unexpected end of JSON input") {
+          return new Response(null, {
+            status: 400,
+            statusText: "Invalid JSON input"
+          });
+        }
+        return null;
       }
     }]
   };
@@ -792,35 +936,6 @@ const createRESTRoutes = (resource, endpoints) => {
     }
   }
   return routes;
-};
-const countRoles = async sql => {
-  const [roleStats] = await sql(_templateObject39 || (_templateObject39 = _taggedTemplateLiteral(["\n    SELECT\n      COUNT(*) AS total_roles,\n      COUNT(\n        CASE\n          WHEN rolcanlogin = TRUE THEN 1\n        END\n      ) AS can_login_count,\n      COUNT(\n        CASE\n          WHEN rolcanlogin = FALSE THEN 1\n        END\n      ) AS group_count,\n      COUNT(\n        CASE\n          WHEN (\n            table_owners.tableowner IS NOT NULL\n            OR database_owners.database_owner IS NOT NULL\n          ) THEN 1\n        END\n      ) AS with_ownership_count\n    FROM\n      pg_roles\n      LEFT JOIN (\n        SELECT DISTINCT\n          tableowner\n        FROM\n          pg_tables\n        WHERE\n          schemaname NOT IN ('pg_catalog', 'information_schema')\n      ) table_owners ON pg_roles.rolname = table_owners.tableowner\n      LEFT JOIN (\n        SELECT DISTINCT\n          pg_roles.rolname AS database_owner\n        FROM\n          pg_database\n          JOIN pg_roles ON pg_roles.oid = pg_database.datdba\n      ) database_owners ON pg_roles.rolname = database_owners.database_owner\n  "])));
-  const {
-    total_roles,
-    can_login_count,
-    group_count,
-    with_ownership_count
-  } = roleStats;
-  return {
-    total: parseInt(total_roles),
-    canLoginCount: parseInt(can_login_count),
-    groupCount: parseInt(group_count),
-    withOwnershipCount: parseInt(with_ownership_count)
-  };
-};
-const countRows = async (sql, tableName, {
-  whereClause
-} = {}) => {
-  if (tableName === "pg_tables") {
-    const [tableCountResult] = await sql(_templateObject40 || (_templateObject40 = _taggedTemplateLiteral(["\n      SELECT\n        COUNT(*)\n      FROM\n        pg_tables\n      WHERE\n        schemaname NOT IN ('pg_catalog', 'information_schema')\n    "])));
-    return parseInt(tableCountResult.count);
-  }
-  const [countResult] = await sql(_templateObject41 || (_templateObject41 = _taggedTemplateLiteral(["\n    SELECT\n      COUNT(*)\n    FROM\n      ", " ", "\n  "])), sql(tableName), whereClause || sql(_templateObject42 || (_templateObject42 = _taggedTemplateLiteral([""]))));
-  return parseInt(countResult.count);
-};
-const getTableColumns = async (sql, tableName) => {
-  const columns = await sql(_templateObject43 || (_templateObject43 = _taggedTemplateLiteral(["\n    SELECT\n      *\n    FROM\n      information_schema.columns\n    WHERE\n      table_name = ", "\n  "])), tableName);
-  return columns;
 };
 
 export { jsenvPluginDatabaseManager };
