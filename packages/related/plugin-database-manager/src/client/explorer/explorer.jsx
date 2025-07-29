@@ -62,7 +62,7 @@ const ExplorerBody = () => {
   useLayoutEffect(() => {
     const flexDetailsSet = initFlexDetailsSet(flexDetailsSetRef.current, {
       onResizableDetailsChange: (resizableDetailsIdSet) => {
-        setResizableDetailsIdSet(resizableDetailsIdSet);
+        setResizableDetailsIdSet(new Set(resizableDetailsIdSet));
       },
       onRequestedSizeChange: (element, requestedHeight) => {
         if (element.id === tablesDetailsController.id) {
