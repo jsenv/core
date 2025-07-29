@@ -219,7 +219,7 @@ export const useKeyboardShortcuts = (elementRef, shortcuts, onShortcut) => {
         if (!matchesActual && !matchesCrossPlatform) {
           continue;
         }
-        if (!shortcutCandidate.when?.(event)) {
+        if (shortcutCandidate.when && !shortcutCandidate.when(event)) {
           continue;
         }
         shortcutFound = shortcutCandidate;
@@ -300,17 +300,17 @@ const eventIsMatchingKeyCombination = (event, keyCombination) => {
         if (!event[eventProperty]) {
           return false;
         }
-
         modifierFound = true;
         break;
       }
     }
+    if (modifierFound) {
+      continue;
+    }
 
     // If it's not a modifier, check if it matches the actual key
-    if (!modifierFound) {
-      if (!isSameKey(event.key, key)) {
-        return false;
-      }
+    if (!isSameKey(event.key, key)) {
+      return false;
     }
   }
   return true;
