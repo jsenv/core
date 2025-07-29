@@ -1,5 +1,6 @@
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import { canInterceptKeys } from "../shortcut/shortcut_context.jsx";
 
 const SelectionContext = createContext(null);
 
@@ -203,6 +204,10 @@ export const clickToSelect = (clickEvent, { selectionContext, value }) => {
 };
 
 export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
+  if (!canInterceptKeys(keydownEvent)) {
+    return;
+  }
+
   if (keydownEvent.key === "Shift") {
     selectionContext.setAnchor(value);
     return;
