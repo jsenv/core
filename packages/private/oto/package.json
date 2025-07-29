@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@jsenv/dom": "./packages/dom",
-    "@jsenv/router": "./packages/router",
+    "@jsenv/navi": "./packages/navi",
     "@preact/signals": "2.0.4",
     "dom": "./packages/dom",
     "hooks": "./packages/hooks",

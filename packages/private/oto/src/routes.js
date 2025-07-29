@@ -1,8 +1,6 @@
-// TO BE FIXED
-// eslint-disable-next-line import-x/named
-import { registerRoutes } from "@jsenv/router";
+import { defineRoutes } from "@jsenv/navi";
 
-const { paused } = registerRoutes({
+const { paused } = defineRoutes({
   paused: {
     urlTemplate: "?paused",
   },

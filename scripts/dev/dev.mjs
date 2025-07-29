@@ -63,8 +63,8 @@ await startDevServer({
         errors: {
           "./tests/dev_server/errors/stories/**/*.html": true,
         },
-        router: {
-          "./packages/tooling/**/router/**/*.html": true,
+        navi: {
+          "./packages/frontend/**/navi/**/*.html": true,
         },
         tests: {
           "./tests/**/client/main.html": true,
