@@ -4,9 +4,9 @@
 run({ browserLauncher: firefox })
 ```
 
-# 1/2 write 10 files into "../../../../"
+# 1/2 write 22 files into "../../../../../"
 
-see [./@jsenv/core/packages/](./@jsenv/core/packages/)
+see [./@jsenv/core/](./@jsenv/core/)
 
 # 2/2 resolve
 
