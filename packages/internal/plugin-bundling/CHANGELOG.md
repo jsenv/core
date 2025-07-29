@@ -31,7 +31,6 @@
 # 1.3.0
 
 - Introduce `js_module.customChunks`
-
   - By default will generate a file named `vendors.js` for all files inside node_modules
   - Can be configured as follows
 

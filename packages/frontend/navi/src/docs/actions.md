@@ -13,6 +13,7 @@
 - ```js
 
   ```
+
 - const getUserTemplate = createActionTemplate(async ({ userId }) => {
 - const response = await fetch(`/api/users/${userId}`);
 - return response.json();
@@ -20,6 +21,7 @@
 - ```
 
   ```
+
 -
 - ### 🎯 **Action Instances**
 - Stateful objects created from templates with specific parameters. Each unique parameter set
@@ -27,17 +29,20 @@
 - ```js
 
   ```
+
 - const userAction = getUserTemplate.instantiate({ userId: 123 });
 - const status = useActionStatus(userAction); // { pending, data, error, ... }
 - ```
 
   ```
+
 -
 - ### 🔄 **Action Proxies**
 - Dynamic actions that react to signal changes, automatically reloading when parameters change.
 - ```js
 
   ```
+
 - const userProxy = createActionProxy(getUserTemplate, {
 - userId: userIdSignal, // Signal - reactive
 - includeProfile: true // Static - not reactive
@@ -46,6 +51,7 @@
 - ```
 
   ```
+
 -
 - ## Loading States & Lifecycle
 -
@@ -77,6 +83,7 @@
 - ```js
 
   ```
+
 - const baseAction = getUserTemplate.instantiate({ userId: 123 });
 - const enrichedAction = baseAction.bindParams({ includeProfile: true });
 - // Result: { userId: 123, includeProfile: true }
@@ -86,6 +93,7 @@
 - ```
 
   ```
+
 -
 - ### 🎮 **Concurrent Loading Control**
 - - Prevents duplicate requests for same resource
@@ -96,6 +104,7 @@
 - ```js
 
   ```
+
 - const actionTemplate = createActionTemplate(callback, {
 - sideEffect: (params, loadParams) => {
 -     // Setup logic (analytics, subscriptions, etc.)
@@ -107,6 +116,7 @@
 - ```
 
   ```
+
 -
 - ## Usage Patterns
 -
@@ -114,6 +124,7 @@
 - ```js
 
   ```
+
 - const getUserAction = createActionTemplate(async ({ userId }) => {
 - return await api.getUser(userId);
 - });
@@ -128,11 +139,13 @@
 - ```
 
   ```
+
 -
 - ### 🔄 **Reactive Data Loading**
 - ```js
 
   ```
+
 - const searchProxy = createActionProxy(searchTemplate, {
 - query: searchSignal,
 - filters: filtersSignal
@@ -141,11 +154,13 @@
 - ```
 
   ```
+
 -
 - ### 📋 **Master-Detail Pattern**
 - ```js
 
   ```
+
 - const usersAction = getUsersTemplate.instantiate();
 - const selectedUser = signal(null);
 -
@@ -155,11 +170,13 @@
 - ```
 
   ```
+
 -
 - ### 🏃 **Progressive Loading**
 - ```js
 
   ```
+
 - // Preload on hover, load on click
 - <button
 - onMouseEnter={() => action.preload()}
@@ -170,6 +187,7 @@
 - ```
 
   ```
+
 -
 - ## Advanced Features
 -
@@ -177,6 +195,7 @@
 - ```js
 
   ```
+
 - const actionTemplate = createActionTemplate(fetchUser, {
 - computedDataSignal: computed(() => {
 -     const rawData = dataSignal.value;
@@ -186,11 +205,13 @@
 - ```
 
   ```
+
 -
 - ### 🎨 **Async Rendering Support**
 - ```js
 
   ```
+
 - const actionTemplate = createActionTemplate(fetchData, {
 - renderLoadedAsync: async () => {
 -     const { UserComponent } = await import('./UserComponent.js');
@@ -200,6 +221,7 @@
 - ```
 
   ```
+
 -
 - ### 🛠️ **Debugging & Observability**
 - Built-in debug mode with detailed logging of state transitions, loading coordination,
