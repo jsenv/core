@@ -60,7 +60,9 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       var f = r.attr(e, t);
       if ("string" == typeof f) return f;
     }
-    if ("ref" === e || "key" === e) return "";
+    if (t = function (r) {
+      return null !== r && "object" == typeof r && "function" == typeof r.valueOf ? r.valueOf() : r;
+    }(t), "ref" === e || "key" === e) return "";
     if ("style" === e && "object" == typeof t) {
       var i = "";
       for (var u in t) {
@@ -71,9 +73,9 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
           "number" != typeof a || l.startsWith("--") || o.test(l) || (s = "px;"), i = i + l + ":" + a + s;
         }
       }
-      return e + '="' + i + '"';
+      return e + '="' + n(i) + '"';
     }
-    return null == t || !1 === t || "function" == typeof t || "object" == typeof t ? "" : !0 === t ? e : e + '="' + n(t) + '"';
+    return null == t || !1 === t || "function" == typeof t || "object" == typeof t ? "" : !0 === t ? e : e + '="' + n("" + t) + '"';
   }
   function s(r) {
     if (null == r || "boolean" == typeof r || "function" == typeof r) return null;

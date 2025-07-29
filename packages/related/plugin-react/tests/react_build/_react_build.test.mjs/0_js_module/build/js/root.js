@@ -1,1 +1,1 @@
-import{useEffect as o}from"/js/react.js";import{jsx as r}from"/js/react/jsx-runtime.js";export const Root=({onRender:e})=>(o((()=>{e()}),[]),r("span",{children:"Hello world"}));
+import{useEffect as o}from"/js/react.js";import{jsx as r}from"/js/react/jsx-runtime.js";export const Root=({onRender:e})=>(o(()=>{e()},[]),r("span",{children:"Hello world"}));

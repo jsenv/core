@@ -124,7 +124,7 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       r = function () {
         clearTimeout(u), k && cancelAnimationFrame(t), setTimeout(n);
       },
-      u = setTimeout(r, 100);
+      u = setTimeout(r, 35);
     k && (t = requestAnimationFrame(r));
   }
   function z(n) {

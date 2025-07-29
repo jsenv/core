@@ -13,30 +13,28 @@
   <foreignObject id="body" y="40" width="100%" height="459.45" overflow="hidden">
     <svg width="608.1" height="459.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
-        <text x="10" y="14.55" style="white-space:pre">  at </text>
-        <text x="52.01" y="14.55" font-weight="bold">[mock]/error_in_script_module.spec.html</text>
-        <text x="379.66" y="14.55">:11:13</text>
-        <text x="10" y="33.55" fill="#7f7f7f">--------------------------------------</text>
-        <text x="10" y="52.55" fill="#cd5555">✖ 2/3</text>
-        <text x="60.41" y="52.55" fill="#cd5555">error_in_script_module.spec.html</text>
-        <text x="337.65" y="52.55" fill="#7f7f7f">[firefox/&lt;mock&gt;ms]</text>
-        <text x="488.88" y="52.55" style="white-space:pre"> (all </text>
-        <text x="539.29" y="52.55" fill="#cd5555">failed</text>
-        <text x="589.69" y="52.55">)</text>
-        <text x="10" y="71.55" fill="#7f7f7f">---------------</text>
-        <text x="136.02" y="71.55" style="white-space:pre"> error </text>
-        <text x="194.83" y="71.55" fill="#7f7f7f">----------------</text>
-        <text x="10" y="90.55" style="white-space:pre" fill="#7f7f7f"> 9 |</text>
-        <text x="43.61" y="90.55" style="white-space:pre">   &lt;body&gt;</text>
-        <text x="10" y="109.55" fill="#7f7f7f">10 |</text>
-        <text x="43.61" y="109.55" style="white-space:pre">     &lt;script type="module"&gt;</text>
-        <text x="10" y="128.55" fill="#7f7f7f">11 |</text>
-        <text x="43.61" y="128.55" style="white-space:pre">       throw new Error("here");</text>
-        <text x="152.82" y="147.55" fill="#cd5555">^</text>
-        <text x="10" y="166.55">Error: here</text>
-        <text x="10" y="185.55">@</text>
-        <text x="18.4" y="185.55" font-weight="bold">[mock]/error_in_script_module.spec.html</text>
-        <text x="346.05" y="185.55">:11:13</text>
+        <text x="10" y="14.55" style="white-space:pre" fill="#7f7f7f"> 9 |</text>
+        <text x="43.61" y="14.55" style="white-space:pre">   &lt;body&gt;</text>
+        <text x="10" y="33.55" fill="#7f7f7f">10 |</text>
+        <text x="43.61" y="33.55" style="white-space:pre">     &lt;script type="module"&gt;</text>
+        <text x="10" y="52.55" fill="#7f7f7f">11 |</text>
+        <text x="43.61" y="52.55" style="white-space:pre">       throw new Error("here");</text>
+        <text x="152.82" y="71.55" fill="#cd5555">^</text>
+        <text x="10" y="90.55">Error: here</text>
+        <text x="10" y="109.55" style="white-space:pre">  at </text>
+        <text x="52.01" y="109.55" font-weight="bold">[mock]/error_in_script_module.spec.html</text>
+        <text x="379.66" y="109.55">:11:13</text>
+        <text x="10" y="128.55" fill="#7f7f7f">--------------------------------------</text>
+        <text x="10" y="147.55" fill="#cd5555">✖ 2/3</text>
+        <text x="60.41" y="147.55" fill="#cd5555">error_in_script_module.spec.html</text>
+        <text x="337.65" y="147.55" fill="#7f7f7f">[firefox/&lt;mock&gt;ms]</text>
+        <text x="488.88" y="147.55" style="white-space:pre"> (all </text>
+        <text x="539.29" y="147.55" fill="#cd5555">failed</text>
+        <text x="589.69" y="147.55">)</text>
+        <text x="10" y="166.55" fill="#7f7f7f">---------------</text>
+        <text x="136.02" y="166.55" style="white-space:pre"> error </text>
+        <text x="194.83" y="166.55" fill="#7f7f7f">----------------</text>
+        <text x="10" y="185.55">Error: here</text>
         <text x="10" y="204.55" fill="#7f7f7f">--------------------------------------</text>
         <text x="10" y="223.55" fill="#cd5555">✖ 3/3</text>
         <text x="60.41" y="223.55" fill="#cd5555">error_in_script_module.spec.html</text>
