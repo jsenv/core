@@ -137,6 +137,30 @@ export const ShortcutProvider = ({
       if (shortcutActionIsBusy) {
         return;
       }
+      const target = event.target;
+      // Don't handle shortcuts when user is typing
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.contentEditable === "true" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+      // Don't handle shortcuts when select dropdown is open
+      if (target.tagName === "SELECT") {
+        return;
+      }
+      // Don't handle shortcuts when target or container is disabled
+      if (
+        target.disabled ||
+        target.closest("[disabled]") ||
+        target.inert ||
+        target.closest("[inert]")
+      ) {
+        return;
+      }
+
       let shortcutFound;
       for (const shortcutCandidate of shortcutsRef.current) {
         const { enabled = true, key } = shortcutCandidate;

@@ -11,7 +11,10 @@ import {
   useRegisterSelectionValue,
   useSelectionContext,
 } from "../selection/selection_context.jsx";
-import { ShortcutProvider, useShortcutContext } from "../shortcut_context.jsx";
+import {
+  ShortcutProvider,
+  useShortcutContext,
+} from "../shortcut/shortcut_context.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 /*
