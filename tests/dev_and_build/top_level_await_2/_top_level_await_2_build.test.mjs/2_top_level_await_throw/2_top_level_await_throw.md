@@ -19,7 +19,7 @@ TypeError: base/client/a.js: Cannot export after a top-level await when using to
   3 | window.executionOrder.push("a_after_timeout");
 > 4 | export const answer = 42;
     | ^^^^^^^^^^^^^^^^^^^^^^^^^
-    at File.buildCodeFrameError (@jsenv/core/node_modules/@babel/core/lib/transformation/file/file.js:193:12)
+    at File.buildCodeFrameError (@jsenv/core/node_modules/@babel/core/lib/transformation/file/file.js:200:12)
     at NodePath.buildCodeFrameError (@jsenv/core/node_modules/@babel/traverse/lib/path/index.js:118:21)
     at PluginPass.exit (@jsenv/core/node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js:3597:36)
     at newFn (@jsenv/core/node_modules/@babel/traverse/lib/visitors.js:172:14)
