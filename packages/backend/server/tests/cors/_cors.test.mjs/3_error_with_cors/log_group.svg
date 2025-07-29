@@ -12,9 +12,9 @@
         <text x="10" y="100.55" style="white-space:pre">    at redirectRequest (base/cors.test.mjs:28:19)</text>
         <text x="10" y="119.55" style="white-space:pre">    at callHook (@jsenv/core/packages/backend/server/src/service_controller.js:62:25)</text>
         <text x="10" y="138.55" style="white-space:pre">    at Object.callHooks (@jsenv/core/packages/backend/server/src/service_controller.js:86:27)</text>
-        <text x="10" y="157.55" style="white-space:pre">    at applyRequestInternalRedirection (@jsenv/core/packages/backend/server/src/start_server.js:397:23)</text>
-        <text x="10" y="176.55" style="white-space:pre">    at getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:530:17)</text>
-        <text x="10" y="195.55" style="white-space:pre">    at Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:696:42)</text>
+        <text x="10" y="157.55" style="white-space:pre">    at applyRequestInternalRedirection (@jsenv/core/packages/backend/server/src/start_server.js:399:23)</text>
+        <text x="10" y="176.55" style="white-space:pre">    at getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:532:17)</text>
+        <text x="10" y="195.55" style="white-space:pre">    at Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:698:42)</text>
         <text x="10" y="214.55" style="white-space:pre">    at Server.emit (node:events:519:35)</text>
         <text x="10" y="233.55" style="white-space:pre">    at parserOnIncoming (node:_http_server:1155:12)</text>
         <text x="10" y="252.55" style="white-space:pre">    at HTTPParser.parserOnHeadersComplete (node:_http_common:117:17)</text>
