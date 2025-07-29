@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Input Textual Demo</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+      }
+
+      h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 30px;
+      }
+
+      .demo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+      }
+
+      .demo-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e1e8ed;
+      }
+
+      .demo-title {
+        color: #2c3e50;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-size: 18px;
+        font-weight: 600;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 8px;
+      }
+
+      .native-comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin: 15px 0;
+      }
+
+      .native-demo {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+      }
+
+      .native-demo h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #495057;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      input[type="number"],
+      input[type="tel"],
+      input[type="url"],
+      input[type="search"],
+      textarea {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+      }
+
+      .control-group {
+        margin-bottom: 15px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: #555;
+      }
+
+      .result-display {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 12px;
+        margin-top: 15px;
+        font-family:
+          "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Fira Mono",
+          "Droid Sans Mono", "Courier New", monospace;
+        font-size: 13px;
+        color: #495057;
+        min-height: 20px;
+        white-space: pre-wrap;
+      }
+
+      .result-success {
+        background: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+      }
+
+      .result-error {
+        background: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+      }
+
+      .result-loading {
+        background: #d1ecf1;
+        border-color: #bee5eb;
+        color: #0c5460;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      .button-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 6px 12px;
+        border: 1px solid #3498db;
+        background: #3498db;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+      }
+
+      button:hover {
+        background: #2980b9;
+        border-color: #2980b9;
+      }
+
+      button:disabled {
+        background: #95a5a6;
+        border-color: #95a5a6;
+        cursor: not-allowed;
+      }
+
+      @media (max-width: 768px) {
+        .demo-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .native-comparison {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Input Textual Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Input,
+        // eslint-disable-next-line no-unused-vars
+        Field,
+      } from "@jsenv/navi";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [loading, setLoading] = useState(false);
+        const [loadingB, setLoadingB] = useState(false);
+        const [loadingC, setLoadingC] = useState(false);
+        const [loadingD, setLoadingD] = useState(false);
+
+        return (
+          <div className="demo-grid">
+            <div className="demo-card">
+              <h3 className="demo-title">💫 Loading State</h3>
+              <div className="control-group">
+                <Field
+                  input={
+                    <Input loading={loading} placeholder="Enter some text..." />
+                  }
+                  label="Basic Input"
+                />
+              </div>
+              <div className="native-comparison">
+                <div className="native-demo">
+                  <h4>@jsenv/navi Input</h4>
+                  <Input loading={loading} placeholder="Enter some text..." />
+                </div>
+                <div className="native-demo">
+                  <h4>Native HTML Input</h4>
+                  <input placeholder="Native comparison" />
+                </div>
+              </div>
+              <div className="button-group">
+                <button onClick={() => setLoading(!loading)}>
+                  {loading ? "Stop Loading" : "Start Loading"}
+                </button>
+              </div>
+            </div>
+
+            <div className="demo-card">
+              <h3 className="demo-title">⚡ Action Input</h3>
+              <div className="control-group">
+                <Field
+                  input={
+                    <Input
+                      name="action-input"
+                      action={() => {}}
+                      loading={loadingB}
+                      placeholder="Input with action..."
+                    />
+                  }
+                  label="Action Input"
+                />
+              </div>
+              <div className="native-comparison">
+                <div className="native-demo">
+                  <h4>@jsenv/navi Input with Action</h4>
+                  <Input
+                    name="action-input"
+                    action={() => {}}
+                    loading={loadingB}
+                    placeholder="Input with action..."
+                  />
+                </div>
+                <div className="native-demo">
+                  <h4>Native HTML Input</h4>
+                  <input placeholder="Native has no built-in action" />
+                </div>
+              </div>
+              <div className="button-group">
+                <button onClick={() => setLoadingB(!loadingB)}>
+                  {loadingB ? "Stop Loading" : "Start Loading"}
+                </button>
+              </div>
+            </div>
+
+            <div className="demo-card">
+              <h3 className="demo-title">🔒 Read-only State</h3>
+              <div className="control-group">
+                <Field
+                  input={
+                    <Input
+                      value="This is read-only content"
+                      readonly
+                      loading={loadingC}
+                    />
+                  }
+                  label="Read-only Input"
+                  readonly
+                />
+              </div>
+              <div className="native-comparison">
+                <div className="native-demo">
+                  <h4>@jsenv/navi Read-only</h4>
+                  <Input
+                    value="This is read-only content"
+                    readonly
+                    loading={loadingC}
+                  />
+                </div>
+                <div className="native-demo">
+                  <h4>Native Read-only</h4>
+                  <input readonly value="Native read-only" />
+                </div>
+              </div>
+              <div className="button-group">
+                <button onClick={() => setLoadingC(!loadingC)}>
+                  {loadingC ? "Stop Loading" : "Start Loading"}
+                </button>
+              </div>
+            </div>
+
+            <div className="demo-card">
+              <h3 className="demo-title">🚫 Disabled State</h3>
+              <div className="control-group">
+                <Field
+                  input={
+                    <Input
+                      disabled
+                      loading={loadingD}
+                      placeholder="Disabled input..."
+                    />
+                  }
+                  label="Disabled Input"
+                />
+              </div>
+              <div className="native-comparison">
+                <div className="native-demo">
+                  <h4>@jsenv/navi Disabled</h4>
+                  <Input
+                    disabled
+                    loading={loadingD}
+                    placeholder="Disabled input..."
+                  />
+                </div>
+                <div className="native-demo">
+                  <h4>Native Disabled</h4>
+                  <input disabled placeholder="Native disabled" />
+                </div>
+              </div>
+              <div className="button-group">
+                <button onClick={() => setLoadingD(!loadingD)}>
+                  {loadingD ? "Stop Loading" : "Start Loading"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

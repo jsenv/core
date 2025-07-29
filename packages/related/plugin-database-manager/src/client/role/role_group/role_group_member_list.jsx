@@ -1,19 +1,13 @@
-import {
-  InputText,
-  SPADeleteButton,
-  SPAForm,
-  useNavState,
-} from "@jsenv/router";
+import { Button, Form, Input, useNavState } from "@jsenv/navi";
+import { useState } from "preact/hooks";
+import { ROLE_MEMBERS } from "../../store.js";
 import { RoleLink } from "../role_link.jsx";
-import { ADD_MEMBER_ACTION, REMOVE_MEMBER_ACTION } from "../role_routes.js";
-import { useRoleMemberList } from "../role_signals.js";
 
 export const RoleGroupMemberList = ({ role }) => {
-  const memberList = useRoleMemberList(role);
-  const [isAdding, isAddingSetter] = useNavState(
-    `group_member_list_opened`,
-    false,
-  );
+  const memberList = role.members;
+
+  const [navState] = useNavState(`group_member_list_opened`);
+  const [isAdding, isAddingSetter] = useState(navState);
 
   return (
     <div>
@@ -48,15 +42,16 @@ export const RoleGroupMemberList = ({ role }) => {
           >
             Adding member
           </h3>
-          <SPAForm
-            action={ADD_MEMBER_ACTION.bindParams({
+          <Form
+            action={ROLE_MEMBERS.POST.bindParams({
               rolname: role.rolname,
             })}
             errorTarget="input"
           >
             <label>
               <span>Role name: </span>
-              <InputText
+              <Input
+                type="text"
                 id="membername"
                 name="membername"
                 autoFocus
@@ -64,8 +59,8 @@ export const RoleGroupMemberList = ({ role }) => {
               />
             </label>
 
-            <SPAForm.Button>Submit</SPAForm.Button>
-          </SPAForm>
+            <Button type="submit">Submit</Button>
+          </Form>
         </div>
       )}
       {memberList.length === 0 ? (
@@ -76,14 +71,14 @@ export const RoleGroupMemberList = ({ role }) => {
             return (
               <li key={memberRole.oid} style="display: flex; gap: 10px;">
                 <RoleLink role={memberRole}>{memberRole.rolname}</RoleLink>
-                <SPADeleteButton
-                  action={REMOVE_MEMBER_ACTION.bindParams({
+                <Button
+                  action={ROLE_MEMBERS.DELETE.bindParams({
                     rolname: role.rolname,
                     memberRolname: memberRole.rolname,
                   })}
                 >
                   Remove
-                </SPADeleteButton>
+                </Button>
               </li>
             );
           })}

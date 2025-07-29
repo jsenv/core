@@ -18,137 +18,6 @@ import { getBorderSizes, getScrollableParentSet } from "@jsenv/dom";
  * @returns {Function} - Function to hide and remove the validation message
  */
 
-export const openValidationMessage = (
-  targetElement,
-  innerHtml,
-  { level = "warning", onClose, debug = false } = {},
-) => {
-  let opened = true;
-  const closeCallbackSet = new Set();
-  const close = (reason) => {
-    if (!opened) {
-      return;
-    }
-    if (debug) {
-      console.debug(`validation message closed (reason: ${reason})`);
-    }
-    opened = false;
-    for (const closeCallback of closeCallbackSet) {
-      closeCallback();
-    }
-    closeCallbackSet.clear();
-  };
-
-  // Create and add validation message to document
-  const jsenvValidationMessage = createValidationMessage();
-  const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
-    ".validation_message_content",
-  );
-
-  const update = (newInnerHTML, { level = "warning" } = {}) => {
-    const borderColor = level === "warning" ? "grey" : "red";
-    const backgroundColor = "white";
-
-    jsenvValidationMessage.style.setProperty("--border-color", borderColor);
-    jsenvValidationMessage.style.setProperty(
-      "--background-color",
-      backgroundColor,
-    );
-    jsenvValidationMessage.setAttribute("data-level", level);
-    jsenvValidationMessageContent.innerHTML = newInnerHTML;
-  };
-  update(innerHtml, { level });
-
-  jsenvValidationMessage.style.opacity = "0";
-
-  // Connect validation message with target element for accessibility
-  const validationMessageId = `validation_message-${Date.now()}`;
-  jsenvValidationMessage.id = validationMessageId;
-  targetElement.setAttribute("aria-invalid", "true");
-  targetElement.setAttribute("aria-errormessage", validationMessageId);
-  closeCallbackSet.add(() => {
-    targetElement.removeAttribute("aria-invalid");
-    targetElement.removeAttribute("aria-errormessage");
-  });
-
-  document.body.appendChild(jsenvValidationMessage);
-  closeCallbackSet.add(() => {
-    if (document.body.contains(jsenvValidationMessage)) {
-      document.body.removeChild(jsenvValidationMessage);
-    }
-  });
-
-  const stopFollowingPosition = followPosition(
-    jsenvValidationMessage,
-    targetElement,
-  );
-  closeCallbackSet.add(() => {
-    stopFollowingPosition();
-  });
-
-  if (onClose) {
-    closeCallbackSet.add(onClose);
-  }
-  close_on_target_focus: {
-    const onfocus = () => {
-      if (targetElement.hasAttribute("data-validation-message-stay-on-focus")) {
-        return;
-      }
-      close("target_element_focus");
-    };
-    targetElement.addEventListener("focus", onfocus);
-    closeCallbackSet.add(() => {
-      targetElement.removeEventListener("focus", onfocus);
-    });
-  }
-  close_on_target_blur: {
-    // for multiple elements this hides element too quickly
-    const onblur = () => {
-      if (targetElement.hasAttribute("data-validation-message-stay-on-blur")) {
-        return;
-      }
-      close("target_element_blur");
-    };
-    // we use setTimeout in case the validation message is opened during a "change" event
-    // (that will likely be followed by a "blur")
-    // otherwise the message is opened and immediately closed
-    const timeout = setTimeout(() => {
-      targetElement.addEventListener("blur", onblur);
-    });
-    closeCallbackSet.add(() => {
-      clearTimeout(timeout);
-      targetElement.removeEventListener("blur", onblur);
-    });
-  }
-
-  close_click_outside: {
-    // it's allowed to open this message on non focusable elements
-    // (like <span>)
-    // in that case we need something else than blur to decide when to close
-    if (document.activeElement !== targetElement) {
-      const onDocumentClick = (event) => {
-        if (
-          event.target !== jsenvValidationMessage &&
-          !jsenvValidationMessage.contains(event.target)
-        ) {
-          close("click_outside");
-        }
-      };
-      document.addEventListener("click", onDocumentClick);
-      closeCallbackSet.add(() => {
-        document.removeEventListener("click", onDocumentClick);
-      });
-    }
-  }
-
-  const validationMessage = {
-    jsenvValidationMessage,
-    update,
-    close,
-  };
-  return validationMessage;
-};
-
 import.meta.css = /*css*/ `
 .validation_message {
   display: block;
@@ -158,7 +27,6 @@ import.meta.css = /*css*/ `
   z-index: 1;
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
-  pointer-events: none; 
 }
 
 .validation_message_border {
@@ -190,6 +58,7 @@ import.meta.css = /*css*/ `
   width: 22px;
   height: 22px;
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
 .validation_message_exclamation_svg {
@@ -198,6 +67,9 @@ import.meta.css = /*css*/ `
   color: white;
 }
 
+.validation_message[data-level="info"] .validation_message_icon { 
+  background-color: #2196f3;
+}
 .validation_message[data-level="warning"] .validation_message_icon { 
   background-color: #ff9800;
 }
@@ -207,6 +79,7 @@ import.meta.css = /*css*/ `
 
 .validation_message_content {
   align-self: center;
+  word-break: break-word;  
 }
 
 .validation_message_border svg {
@@ -221,6 +94,30 @@ import.meta.css = /*css*/ `
 
 .background_path {  
   fill: var(--background-color);
+}
+
+.validation_message_close_button_column {
+  display: flex;
+  height: 22px;
+}
+.validation_message_close_button {
+  border: none;
+  background: none;
+  padding: 0;
+  width: 1em;
+  height: 1em;
+  font-size: inherit;
+  cursor: pointer;
+  border-radius: 0.2em;
+  align-self: center;
+  color: currentColor;
+}
+.validation_message_close_button:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+.close_svg {
+  width: 100%;
+  height: 100%;
 }
 `;
 
@@ -247,10 +144,192 @@ const validationMessageTemplate = /* html */ `
           </svg>
         </div>
         <div class="validation_message_content">Default message</div>
+        <div class="validation_message_close_button_column">
+          <button class="validation_message_close_button">
+            <svg
+              class="close_svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill-rule="evenodd"
+                clip-rule="evenodd"
+                d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
+                fill="currentColor"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 `;
+
+export const openValidationMessage = (
+  targetElement,
+  innerHtml,
+  {
+    level = "warning",
+    onClose,
+    closeOnClickOutside = level === "info",
+    canClickThrough = level === "info",
+    debug = false,
+  } = {},
+) => {
+  let _closeOnClickOutside = closeOnClickOutside;
+
+  if (debug) {
+    console.debug("open validation message on", targetElement, {
+      message: innerHtml,
+      level,
+    });
+  }
+
+  let opened = true;
+  const closeCallbackSet = new Set();
+  const close = (reason) => {
+    if (!opened) {
+      return;
+    }
+    if (debug) {
+      console.debug(`validation message closed (reason: ${reason})`);
+    }
+    opened = false;
+    for (const closeCallback of closeCallbackSet) {
+      closeCallback();
+    }
+    closeCallbackSet.clear();
+  };
+
+  // Create and add validation message to document
+  const jsenvValidationMessage = createValidationMessage();
+  const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
+    ".validation_message_content",
+  );
+  const jsenvValidationMessageCloseButton =
+    jsenvValidationMessage.querySelector(".validation_message_close_button");
+  jsenvValidationMessageCloseButton.onclick = () => {
+    close("click_close_button");
+  };
+
+  const update = (
+    newInnerHTML,
+    {
+      level = "warning",
+      closeOnClickOutside = level === "info",
+      canClickThrough = level === "info",
+    } = {},
+  ) => {
+    _closeOnClickOutside = closeOnClickOutside;
+    const borderColor =
+      level === "info" ? "blue" : level === "warning" ? "grey" : "red";
+    const backgroundColor = "white";
+
+    jsenvValidationMessage.style.pointerEvents = canClickThrough
+      ? "none"
+      : "auto";
+    jsenvValidationMessage.style.setProperty("--border-color", borderColor);
+    jsenvValidationMessage.style.setProperty(
+      "--background-color",
+      backgroundColor,
+    );
+    jsenvValidationMessage.setAttribute("data-level", level);
+    jsenvValidationMessageContent.innerHTML = newInnerHTML;
+  };
+  update(innerHtml, { level });
+
+  jsenvValidationMessage.style.opacity = "0";
+
+  jsenvValidationMessage.style.pointerEvents = canClickThrough
+    ? "none"
+    : "auto";
+
+  // Connect validation message with target element for accessibility
+  const validationMessageId = `validation_message-${Date.now()}`;
+  jsenvValidationMessage.id = validationMessageId;
+  targetElement.setAttribute("aria-invalid", "true");
+  targetElement.setAttribute("aria-errormessage", validationMessageId);
+  closeCallbackSet.add(() => {
+    targetElement.removeAttribute("aria-invalid");
+    targetElement.removeAttribute("aria-errormessage");
+  });
+
+  document.body.appendChild(jsenvValidationMessage);
+  closeCallbackSet.add(() => {
+    if (document.body.contains(jsenvValidationMessage)) {
+      document.body.removeChild(jsenvValidationMessage);
+    }
+  });
+
+  const positionFollower = followPosition(
+    jsenvValidationMessage,
+    targetElement,
+    { debug },
+  );
+  closeCallbackSet.add(() => {
+    positionFollower.stop();
+  });
+
+  if (onClose) {
+    closeCallbackSet.add(onClose);
+  }
+  close_on_target_focus: {
+    const onfocus = () => {
+      if (level === "error") {
+        // error messages must be explicitely closed by the user
+        return;
+      }
+      if (targetElement.hasAttribute("data-validation-message-stay-on-focus")) {
+        return;
+      }
+      close("target_element_focus");
+    };
+    targetElement.addEventListener("focus", onfocus);
+    closeCallbackSet.add(() => {
+      targetElement.removeEventListener("focus", onfocus);
+    });
+  }
+
+  close_on_click_outside: {
+    const handleClickOutside = (event) => {
+      if (!_closeOnClickOutside) {
+        return;
+      }
+
+      const clickTarget = event.target;
+      if (
+        clickTarget === jsenvValidationMessage ||
+        jsenvValidationMessage.contains(clickTarget)
+      ) {
+        return;
+      }
+      // if (
+      //   clickTarget === targetElement ||
+      //   targetElement.contains(clickTarget)
+      // ) {
+      //   return;
+      // }
+      close("click_outside");
+    };
+    document.addEventListener("click", handleClickOutside, true);
+    closeCallbackSet.add(() => {
+      document.removeEventListener("click", handleClickOutside, true);
+    });
+  }
+
+  const validationMessage = {
+    jsenvValidationMessage,
+    update,
+    close,
+    updatePosition: positionFollower.updatePosition,
+  };
+  targetElement.jsenvValidationMessage = validationMessage;
+  closeCallbackSet.add(() => {
+    delete targetElement.jsenvValidationMessage;
+  });
+  return validationMessage;
+};
 
 // Configuration parameters for validation message appearance
 const ARROW_WIDTH = 16;
@@ -427,7 +506,7 @@ const createValidationMessage = () => {
  * @param {HTMLElement} targetElement - The element the validation message should follow
  * @returns {Function} - Cleanup function to stop position tracking
  */
-const followPosition = (validationMessage, targetElement) => {
+const followPosition = (validationMessage, targetElement, { debug }) => {
   const cleanupCallbackSet = new Set();
   const stop = () => {
     for (const cleanupCallback of cleanupCallbackSet) {
@@ -627,24 +706,114 @@ const followPosition = (validationMessage, targetElement) => {
 
   // Initial position calculation
   updatePosition();
+  if (debug) {
+    console.debug("initial validation message position updated");
+  }
 
   // Request animation frame mechanism for efficient updates
   let rafId = null;
-  const schedulePositionUpdate = () => {
+  let resizeObserverContent = null; // Declare at scope level for disconnect/reconnect
+
+  const schedulePositionUpdate = (reason) => {
     cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(updatePosition);
+    rafId = requestAnimationFrame(() => {
+      // Temporarily disconnect ResizeObserver to prevent feedback loops
+      if (resizeObserverContent) {
+        resizeObserverContent.disconnect();
+      }
+
+      updatePosition();
+
+      // Reconnect ResizeObserver after position updates are complete
+      if (resizeObserverContent) {
+        resizeObserverContent.observe(validationMessageContent);
+      }
+
+      if (debug) {
+        console.debug(
+          `validation message position updated (reason: ${reason})`,
+        );
+      }
+    });
   };
   cleanupCallbackSet.add(() => {
     cancelAnimationFrame(rafId);
   });
 
   update_on_content_change: {
-    const resizeObserverContent = new ResizeObserver(() => {
-      schedulePositionUpdate();
+    let lastContentSize = null;
+    resizeObserverContent = new ResizeObserver((entries) => {
+      const [entry] = entries;
+      const { width, height } = entry.contentRect;
+
+      // Debounce tiny changes that are likely sub-pixel rounding
+      if (lastContentSize) {
+        const widthDiff = Math.abs(width - lastContentSize.width);
+        const heightDiff = Math.abs(height - lastContentSize.height);
+        const threshold = 1; // Ignore changes smaller than 1px
+
+        if (widthDiff < threshold && heightDiff < threshold) {
+          if (debug) {
+            console.debug(
+              `content_size_change ignored - too small: ${widthDiff.toFixed(3)}px width, ${heightDiff.toFixed(3)}px height`,
+            );
+          }
+          return;
+        }
+      }
+
+      lastContentSize = { width, height };
+      schedulePositionUpdate(`content_size_change (${width}x${height})`);
     });
     resizeObserverContent.observe(validationMessageContent);
     cleanupCallbackSet.add(() => {
       resizeObserverContent.disconnect();
+    });
+  }
+
+  const positionCheck = {};
+  update_on_target_position_change: {
+    let lastBoundingRect = null;
+    let positionCheckInterval = null;
+    const startPositionChecking = () => {
+      if (positionCheckInterval) return;
+      positionCheckInterval = setInterval(checkPosition, 100); // Check every 100ms
+    };
+
+    const stopPositionChecking = () => {
+      if (positionCheckInterval) {
+        clearInterval(positionCheckInterval);
+        positionCheckInterval = null;
+      }
+    };
+
+    const checkPosition = () => {
+      const currentRect = targetElement.getBoundingClientRect();
+      const positionChanged =
+        !lastBoundingRect ||
+        Math.abs(lastBoundingRect.left - currentRect.left) > 0.5 ||
+        Math.abs(lastBoundingRect.top - currentRect.top) > 0.5 ||
+        Math.abs(lastBoundingRect.width - currentRect.width) > 0.5 ||
+        Math.abs(lastBoundingRect.height - currentRect.height) > 0.5;
+
+      if (positionChanged) {
+        lastBoundingRect = {
+          left: currentRect.left,
+          top: currentRect.top,
+          width: currentRect.width,
+          height: currentRect.height,
+        };
+        schedulePositionUpdate("position_change");
+      }
+    };
+
+    Object.assign(positionCheck, {
+      start: startPositionChecking,
+      stop: stopPositionChecking,
+    });
+
+    cleanupCallbackSet.add(() => {
+      stopPositionChecking();
     });
   }
 
@@ -659,9 +828,11 @@ const followPosition = (validationMessage, targetElement) => {
       const [entry] = entries;
       if (entry.isIntersecting) {
         validationMessage.style.opacity = 1;
-        schedulePositionUpdate();
+        schedulePositionUpdate("becomes_intersecting");
+        positionCheck.start();
       } else {
         validationMessage.style.opacity = 0;
+        positionCheck.stop();
       }
     }, options);
     intersectionObserver.observe(targetElement);
@@ -673,7 +844,7 @@ const followPosition = (validationMessage, targetElement) => {
   // Update position on scroll events
   update_on_scroll: {
     const handleScroll = () => {
-      schedulePositionUpdate();
+      schedulePositionUpdate("parent_scroll");
     };
 
     const scrollableParentSet = getScrollableParentSet(targetElement);
@@ -692,7 +863,7 @@ const followPosition = (validationMessage, targetElement) => {
   // Update position when target element size changes
   update_on_target_size_change: {
     const resizeObserver = new ResizeObserver(() => {
-      schedulePositionUpdate();
+      schedulePositionUpdate("target_size_change");
     });
     resizeObserver.observe(targetElement);
     cleanupCallbackSet.add(() => {
@@ -700,5 +871,16 @@ const followPosition = (validationMessage, targetElement) => {
     });
   }
 
-  return stop;
+  update_on_window_resize: {
+    const handleResize = () => {
+      schedulePositionUpdate("window_resize");
+    };
+
+    window.addEventListener("resize", handleResize);
+    cleanupCallbackSet.add(() => {
+      window.removeEventListener("resize", handleResize);
+    });
+  }
+
+  return { updatePosition, stop };
 };

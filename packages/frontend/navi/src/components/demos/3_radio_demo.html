@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Radio loading demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Input,
+        // eslint-disable-next-line no-unused-vars
+        Field,
+      } from "@jsenv/navi";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [loading, setLoading] = useState(false);
+        const [loadingC, setLoadingC] = useState(false);
+        const [loadingD, setLoadingD] = useState(false);
+        const [loadingE, setLoadingE] = useState(false);
+        const [loadingF, setLoadingF] = useState(false);
+
+        return (
+          <div>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <div>
+                <p>
+                  <strong>Loading</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input type="radio" name="loading" loading={loading} />
+                  }
+                  label="Coucou"
+                ></Field>
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoading(!loading);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input type="radio" name="loading_native" />
+                    Coucou
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <p>
+                  <strong>Read only</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      readOnly
+                      type="radio"
+                      name="readonly"
+                      loading={loadingE}
+                    />
+                  }
+                  label="C"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingC(!loadingC);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input type="radio" name="readonly_native" readonly />C
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <p>
+                  <strong>Read only + checked</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      readOnly
+                      checked
+                      type="radio"
+                      name="readonly_checked"
+                      loading={loadingD}
+                    />
+                  }
+                  label="D"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingD(!loadingD);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input type="radio" name="readonly_native" readonly />D
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <p>
+                  <strong>Disabled</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      disabled
+                      type="radio"
+                      name="disabled"
+                      loading={loadingE}
+                    />
+                  }
+                  label="E"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingE(!loadingE);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input type="radio" name="disabled_native" disabled />E
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <p>
+                  <strong>Disabled checked</strong>
+                </p>
+
+                <Field
+                  input={
+                    <Input
+                      disabled
+                      checked
+                      type="radio"
+                      name="disabled_checked"
+                      loading={loadingF}
+                    />
+                  }
+                  label="F"
+                />
+
+                <button>
+                  <span
+                    onClick={() => {
+                      setLoadingF(!loadingF);
+                    }}
+                  >
+                    Toggle
+                  </span>
+                </button>
+
+                <div>
+                  <label>
+                    <input
+                      type="radio"
+                      name="disabled_checked_native"
+                      disabled
+                      checked
+                    />
+                    F
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

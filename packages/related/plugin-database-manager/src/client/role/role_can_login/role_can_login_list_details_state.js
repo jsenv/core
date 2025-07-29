@@ -1,5 +1,5 @@
 import { valueInLocalStorage } from "@jsenv/navi";
-import { ROLE } from "../role_store.js";
+import { ROLE_CAN_LOGIN } from "../role_store.js";
 
 const [
   readRoleCanLoginListDetailsOpened,
@@ -13,7 +13,7 @@ export const roleCanLoginListDetailsOpenAtStart =
   readRoleCanLoginListDetailsOpened();
 
 if (roleCanLoginListDetailsOpenAtStart) {
-  ROLE.GET_MANY_CAN_LOGIN.preload(); // et encore c'est seulement si on est sur la bonne page sinon c'est con
+  ROLE_CAN_LOGIN.GET_MANY.prerun(); // et encore c'est seulement si on est sur la bonne page sinon c'est con
 }
 
 export const roleCanLoginListDetailsOnToggle = (detailsOpen) => {

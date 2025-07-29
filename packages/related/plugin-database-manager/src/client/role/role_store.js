@@ -1,15 +1,18 @@
 import { resource, useActionData } from "@jsenv/navi";
 import { signal } from "@preact/signals";
-import { setRoleCounts } from "../database_signals.js";
+import { setRoleCounts } from "../database_manager_signals.js";
 import { errorFromResponse } from "../error_from_response.js";
 
 export const ROLE = resource("role", {
   idKey: "oid",
   mutableIdKeys: ["rolname"],
-  GET_MANY: async ({ canlogin }, { signal }) => {
+  GET_MANY: async ({ canlogin, owners }, { signal }) => {
     const getManyRoleUrl = new URL(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`);
-    if (canlogin) {
-      getManyRoleUrl.searchParams.set("can_login", "");
+    if (canlogin !== undefined) {
+      getManyRoleUrl.searchParams.set("can_login", canlogin);
+    }
+    if (owners) {
+      getManyRoleUrl.searchParams.set("owners", owners);
     }
     const response = await fetch(getManyRoleUrl, { signal });
     if (!response.ok) {
@@ -30,17 +33,18 @@ export const ROLE = resource("role", {
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to get role");
     }
-    const {
-      data,
-      // { databases, columns, members }
-      meta,
-    } = await response.json();
+    const { data, meta } = await response.json();
+    const { databases, members, columns } = meta;
     return {
       ...data,
-      ...meta,
+      databases,
+      members,
+      meta: {
+        columns,
+      },
     };
   },
-  POST: async ({ rolcanlogin, rolname }, { signal }) => {
+  POST: async ({ canlogin, rolname }, { signal }) => {
     const response = await fetch(`${window.DB_MANAGER_CONFIG.apiUrl}/roles`, {
       signal,
       method: "POST",
@@ -48,7 +52,7 @@ export const ROLE = resource("role", {
         "accept": "application/json",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ rolname, rolcanlogin }),
+      body: JSON.stringify({ rolname, rolcanlogin: canlogin }),
     });
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to create role");
@@ -79,9 +83,6 @@ export const ROLE = resource("role", {
     return { rolname };
   },
   PUT: async ({ rolname, columnName, columnValue }, { signal }) => {
-    if (columnName === "rolconnlimit") {
-      columnValue = parseInt(columnValue, 10);
-    }
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/${columnName}`,
       {
@@ -97,19 +98,21 @@ export const ROLE = resource("role", {
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to update role");
     }
-    return {
-      rolname,
-      [columnName]: columnValue,
-    };
+    return ["rolname", rolname, { [columnName]: columnValue }];
   },
 });
 
-export const useRoleArray = ROLE.useArray;
+export const useRoleArrayInStore = ROLE.useArray;
 
-ROLE.GET_MANY_CAN_LOGIN = ROLE.GET_MANY.bindParams({ canlogin: true });
+export const ROLE_CAN_LOGIN = ROLE.withParams({ canlogin: true });
+export const ROLE_CANNOT_LOGIN = ROLE.withParams({ canlogin: false });
 export const useRoleCanLoginArray = () => {
-  const roleCanLoginArray = useActionData(ROLE.GET_MANY_CAN_LOGIN);
+  const roleCanLoginArray = useActionData(ROLE_CAN_LOGIN.GET_MANY);
   return roleCanLoginArray;
+};
+export const useRoleCannotLoginArray = () => {
+  const roleCannotLoginArray = useActionData(ROLE_CANNOT_LOGIN.GET_MANY);
+  return roleCannotLoginArray;
 };
 
 const currentRoleIdSignal = signal(window.DB_MANAGER_CONFIG.currentRole.oid);
@@ -121,42 +124,3 @@ export const useCurrentRole = () => {
   const currentRole = ROLE.store.select(currentRoleId);
   return currentRole;
 };
-
-export const ROLE_MEMBERS = ROLE.many("members", ROLE, {
-  POST: async ({ rolname, memberRolname }, { signal }) => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/members/${memberRolname}`,
-      {
-        signal,
-        method: "PUT",
-      },
-    );
-    if (!response.ok) {
-      throw await errorFromResponse(
-        response,
-        `Failed to add ${memberRolname} to ${rolname}`,
-      );
-    }
-    const { data } = await response.json();
-    const member = data;
-    return [{ rolname }, member];
-  },
-  DELETE: async ({ rolname, memberRolname }, { signal }) => {
-    const response = await fetch(
-      `${window.DB_MANAGER_CONFIG.apiUrl}/roles/${rolname}/members/${memberRolname}`,
-      {
-        signal,
-        method: "DELETE",
-      },
-    );
-    if (!response.ok) {
-      throw await errorFromResponse(
-        response,
-        `Failed to remove ${memberRolname} from ${rolname}`,
-      );
-    }
-    return [{ rolname }, { rolname: memberRolname }];
-  },
-});
-
-ROLE.store.upsert(window.DB_MANAGER_CONFIG.currentRole);

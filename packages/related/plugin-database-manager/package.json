@@ -1,7 +1,6 @@
 {
   "name": "@jsenv/plugin-database-manager",
-  "version": "0.0.2",
-  "private": true,
+  "version": "0.1.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
@@ -31,7 +30,6 @@
     "@jsenv/database": "0.0.1",
     "@jsenv/dom": "0.0.1",
     "@jsenv/navi": "0.0.1",
-    "@jsenv/router": "0.0.9",
     "@jsenv/sigi": "0.1.1",
     "@jsenv/urls": "2.9.1",
     "@jsenv/validation": "0.0.1",

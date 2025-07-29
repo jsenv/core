@@ -1,12 +1,16 @@
 import { TextAndCount } from "../../components/text_and_count.jsx";
-import { useRoleCanLoginCount } from "../../database_signals.js";
+import { useRoleCanLoginCount } from "../../database_manager_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../../explorer/explorer_group.jsx";
 import { RoleCanLoginWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
-import { ROLE, useRoleArray, useRoleCanLoginArray } from "../role_store.js";
+import {
+  ROLE_CAN_LOGIN,
+  useRoleArrayInStore,
+  useRoleCanLoginArray,
+} from "../role_store.js";
 import {
   roleCanLoginListDetailsOnToggle,
   roleCanLoginListDetailsOpenAtStart,
@@ -28,33 +32,32 @@ export const RoleCanLoginListDetails = (props) => {
     <ExplorerGroup
       {...props}
       controller={roleCanLoginListDetailsController}
-      detailsAction={ROLE.GET_MANY_CAN_LOGIN}
+      detailsAction={ROLE_CAN_LOGIN.GET_MANY}
       idKey="oid"
       nameKey="rolname"
       labelChildren={
         <TextAndCount text={"ROLE LOGINS"} count={roleCanLoginCount} />
       }
       renderNewButtonChildren={() => <RoleCanLoginWithPlusSvg />}
-      renderItem={(role, { children, ...props }) => (
-        <RoleLink role={role} {...props}>
-          {children}
-        </RoleLink>
+      renderItem={(role, props) => (
+        <RoleLink draggable={false} role={role} {...props} />
       )}
-      useItemList={useRoleArray}
-      useRenameItemAction={(role) =>
-        ROLE.PUT.bindParams({
-          rolname: role.rolname,
-          columnName: "rolname",
-        })
-      }
-      useCreateItemAction={() =>
-        ROLE.POST.bindParams({
-          rolcanlogin: true,
+      useItemArrayInStore={useRoleArrayInStore}
+      useCreateItemAction={(valueSignal) =>
+        ROLE_CAN_LOGIN.POST.bindParams({
+          rolname: valueSignal,
         })
       }
       useDeleteItemAction={(role) =>
-        ROLE.DELETE.bindParams({
+        ROLE_CAN_LOGIN.DELETE.bindParams({
           rolname: role.rolname,
+        })
+      }
+      useRenameItemAction={(role, valueSignal) =>
+        ROLE_CAN_LOGIN.PUT.bindParams({
+          rolname: role.rolname,
+          columnName: "rolname",
+          columnValue: valueSignal,
         })
       }
     >

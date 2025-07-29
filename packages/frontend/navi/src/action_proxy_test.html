@@ -1,0 +1,353 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Action Proxy Test</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 10px;
+      }
+      .section {
+        border: 1px solid #ccc;
+        margin: 10px 0;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .section h3 {
+        margin-top: 0;
+      }
+      .controls {
+        margin: 10px 0;
+      }
+      .controls button {
+        margin: 5px;
+        padding: 8px 16px;
+        border: 1px solid #007acc;
+        background: #007acc;
+        color: white;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .controls button:hover {
+        background: #005999;
+      }
+      .controls button:disabled {
+        background: #ccc;
+        border-color: #ccc;
+        cursor: not-allowed;
+      }
+      .status {
+        background: #f5f5f5;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 3px;
+        font-family: monospace;
+      }
+      .input-group {
+        margin: 10px 0;
+      }
+      .input-group label {
+        display: inline-block;
+        width: 100px;
+        font-weight: bold;
+      }
+      .input-group input {
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+      .execution-count {
+        font-size: 18px;
+        font-weight: bold;
+        color: #007acc;
+      }
+      .log {
+        background: #f9f9f9;
+        border: 1px solid #ddd;
+        padding: 10px;
+        height: 200px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Action Proxy with Signal Parameters Test</h1>
+
+    <div class="section">
+      <h3>Signal Control</h3>
+      <div class="input-group">
+        <label>User ID:</label>
+        <input type="number" id="userIdInput" value="123" />
+        <button onclick="updateSignal()">Update Signal</button>
+        <button onclick="replaceParams()">Replace Params</button>
+      </div>
+      <div class="status">
+        Current Signal Value: <span id="signalValue">123</span>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; flex: 1; width: 100%">
+      <div class="section" style="flex: 1">
+        <h3>Action Proxy Status</h3>
+        <div class="status">
+          <div>Name: <span id="proxyName">-</span></div>
+          <div>Params: <span id="proxyParams">-</span></div>
+          <div>Loading State: <span id="proxyLoadingState">-</span></div>
+          <div>Load Requested: <span id="proxyLoadRequested">-</span></div>
+          <div>Data: <span id="proxyData">-</span></div>
+          <div>Error: <span id="proxyError">-</span></div>
+        </div>
+      </div>
+
+      <div class="section" style="flex: 1">
+        <h3>All Actions & Proxy Target</h3>
+        <div class="status">
+          <div id="actionsList" style="margin-top: 5px; font-size: 11px">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Execution Counter</h3>
+      <div class="status">
+        <div class="execution-count">
+          Action executed: <span id="executionCount">0</span> times
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Controls</h3>
+      <div class="controls">
+        <button onclick="loadAction()">Load</button>
+        <button onclick="reloadAction()">Reload</button>
+        <button onclick="unloadAction()">Unload</button>
+        <button onclick="abortAction()">Abort</button>
+        <button onclick="preloadAction()">Preload</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Log</h3>
+      <div id="log" class="log"></div>
+      <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script type="module">
+      import { signal, effect } from "@preact/signals";
+      import { createAction } from "./actions.js";
+      import { getActionPrivateProperties } from "./action_private_properties.js";
+
+      // Global state
+      let executionCount = 0;
+      let userAction;
+      let userActionProxy;
+      let userIdSignal;
+
+      // DOM elements
+      const elements = {
+        signalValue: document.getElementById("signalValue"),
+        proxyName: document.getElementById("proxyName"),
+        proxyParams: document.getElementById("proxyParams"),
+        proxyLoadingState: document.getElementById("proxyLoadingState"),
+        proxyLoadRequested: document.getElementById("proxyLoadRequested"),
+        proxyData: document.getElementById("proxyData"),
+        proxyError: document.getElementById("proxyError"),
+        actionsList: document.getElementById("actionsList"),
+        executionCount: document.getElementById("executionCount"),
+        userIdInput: document.getElementById("userIdInput"),
+        log: document.getElementById("log"),
+      };
+
+      // Logging utility
+      function log(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logElement = elements.log;
+        logElement.innerHTML += `[${timestamp}] ${message}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+      }
+
+      // Create the action that simulates fetching user data
+      userAction = createAction(
+        async (userId, { signal, reason, isPreload }) => {
+          executionCount++;
+          elements.executionCount.textContent = executionCount;
+
+          log(
+            `🚀 Action executing with userId: ${userId} (reason: ${reason}, isPreload: ${isPreload})`,
+          );
+
+          // Simulate async work
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          // Check if aborted
+          if (signal.aborted) {
+            log(`❌ Action aborted: ${signal.reason}`);
+            throw new Error(`Aborted: ${signal.reason}`);
+          }
+
+          const userData = {
+            id: userId,
+            loadedAt: new Date().toISOString(),
+          };
+
+          log(`✅ Action completed with data: ${JSON.stringify(userData)}`);
+          return userData;
+        },
+        {
+          name: "fetchUser",
+        },
+      );
+
+      // Create signal for user ID
+      userIdSignal = signal("123");
+
+      // Create proxy action bound to the signal
+      userActionProxy = userAction.bindParams(userIdSignal);
+
+      // Update UI functions
+      function updateSignalDisplay() {
+        elements.signalValue.textContent = userIdSignal.value;
+      }
+
+      function updateProxyDisplay() {
+        // Watch proxy properties through private properties signals
+        const {
+          paramsSignal,
+          loadingStateSignal,
+          loadRequestedSignal,
+          dataSignal,
+          errorSignal,
+        } = getActionPrivateProperties(userActionProxy);
+
+        elements.proxyName.textContent = userActionProxy.name;
+        elements.proxyParams.textContent = JSON.stringify(paramsSignal.value);
+        elements.proxyLoadingState.textContent = loadingStateSignal.value.id;
+        elements.proxyLoadRequested.textContent = loadRequestedSignal.value;
+        elements.proxyData.textContent = JSON.stringify(dataSignal.value);
+        elements.proxyError.textContent = errorSignal.value || "null";
+      }
+
+      function updateActionsDisplay() {
+        // Get all actions (exclude proxies)
+        const allActions = userAction.matchAllSelfOrDescendant(() => true);
+
+        // Get the current action the proxy is pointing at
+        const currentProxyTarget =
+          getActionPrivateProperties(userActionProxy).currentAction;
+
+        // Create actions list
+        if (allActions.length === 0) {
+          elements.actionsList.innerHTML = "No actions exist";
+        } else {
+          const actionsHtml = allActions
+            .map((action) => {
+              const isCurrentTarget = action === currentProxyTarget;
+              const actionData = action.data
+                ? JSON.stringify(action.data).substring(0, 50) +
+                  (JSON.stringify(action.data).length > 50 ? "..." : "")
+                : "null";
+              const style = isCurrentTarget
+                ? "background: #ffffcc; font-weight: bold;"
+                : "";
+              const indicator = isCurrentTarget ? "👉 " : "   ";
+
+              return `<div style="${style}; padding: 2px; margin: 1px 0; border-radius: 2px;">
+                ${indicator}<strong>${action.name}</strong> | Data: ${actionData} | State: ${action.loadingState.id}
+              </div>`;
+            })
+            .join("");
+
+          elements.actionsList.innerHTML = actionsHtml;
+        }
+      }
+
+      // Set up reactive updates
+      effect(() => {
+        // Watch the signal value
+        updateSignalDisplay();
+
+        updateProxyDisplay();
+
+        // Watch underlying action properties
+        const currentAction = userActionProxy.matchAllSelfOrDescendant(
+          () => true,
+          { includeProxies: false },
+        )[0];
+        if (currentAction) {
+          const actionPrivateProps = getActionPrivateProperties(currentAction);
+          // Subscribe to action state changes by accessing signal values
+          /* eslint-disable-next-line no-unused-expressions */
+          actionPrivateProps.loadingStateSignal.value;
+          /* eslint-disable-next-line no-unused-expressions */
+          actionPrivateProps.loadRequestedSignal.value;
+          /* eslint-disable-next-line no-unused-expressions */
+          actionPrivateProps.dataSignal.value;
+          /* eslint-disable-next-line no-unused-expressions */
+          actionPrivateProps.errorSignal.value;
+        }
+        updateActionsDisplay();
+      });
+
+      // Global functions for buttons
+      window.updateSignal = function () {
+        const newValue = elements.userIdInput.valueAsNumber;
+        log(`📡 Updating signal from "${userIdSignal.value}" to "${newValue}"`);
+        userIdSignal.value = newValue;
+      };
+
+      window.replaceParams = function () {
+        const newValue = elements.userIdInput.valueAsNumber;
+        log(
+          `🔄 Replacing params from "${JSON.stringify(userActionProxy.params)}" to "{userId: ${newValue}}"`,
+        );
+        userActionProxy.replaceParams(newValue);
+      };
+
+      window.loadAction = function () {
+        log(`🔄 Loading action proxy`);
+        userActionProxy.load({ reason: "Manual load button clicked" });
+      };
+
+      window.reloadAction = function () {
+        log(`🔄 Reloading action proxy`);
+        userActionProxy.reload({ reason: "Manual reload button clicked" });
+      };
+
+      window.unloadAction = function () {
+        log(`🛑 Unloading action proxy`);
+        userActionProxy.unload();
+      };
+
+      window.abortAction = function () {
+        log(`⚠️ Aborting action proxy`);
+        userActionProxy.abort("Manual abort button clicked");
+      };
+
+      window.preloadAction = function () {
+        log(`⏳ Preloading action proxy`);
+        userActionProxy.preload({ reason: "Manual preload button clicked" });
+      };
+
+      window.clearLog = function () {
+        elements.log.innerHTML = "";
+      };
+
+      // Initial update
+      updateSignalDisplay();
+      updateProxyDisplay();
+      updateActionsDisplay();
+
+      log(
+        `🎯 Test setup complete. Action proxy bound to signal with initial value: ${userIdSignal.value}`,
+      );
+    </script>
+  </body>
+</html>

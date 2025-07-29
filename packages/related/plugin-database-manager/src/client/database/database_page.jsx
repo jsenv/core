@@ -1,53 +1,25 @@
-import {
-  ErrorBoundaryContext,
-  Route,
-  SPADeleteButton,
-  useRouteParam,
-} from "@jsenv/router";
-import { useErrorBoundary } from "preact/hooks";
-import { DatabaseValue } from "../components/database_value.jsx";
-import { PageBody, PageHead } from "../layout/page.jsx";
-import { RoleLink } from "../role/role_link.jsx";
+import { Button } from "@jsenv/navi";
+import { DatabaseFieldset, RoleField } from "../components/database_field.jsx";
+import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { DatabaseSvg } from "./database_icons.jsx";
-import {
-  DELETE_DATABASE_ACTION,
-  GET_DATABASE_ROUTE,
-  PUT_DATABASE_ACTION,
-} from "./database_routes.js";
-import {
-  useActiveDatabase,
-  useActiveDatabaseColumns,
-  useActiveDatabaseOwnerRole,
-} from "./database_signals.js";
+import { DATABASE } from "./database_store.js";
 
-export const DatabaseRoutes = () => {
-  return (
-    <Route
-      route={GET_DATABASE_ROUTE}
-      renderLoaded={() => <DatabasePage />}
-      renderError={({ error }) => <DatabasePage routeError={error} />}
-    />
-  );
-};
-
-const DatabasePage = ({ routeError }) => {
-  const [error, resetError] = useErrorBoundary();
-  const datname = useRouteParam(GET_DATABASE_ROUTE, "datname");
-  const deleteDatabaseAction = DELETE_DATABASE_ACTION.bindParams({ datname });
-  const database = useActiveDatabase();
+export const DatabasePage = ({ database }) => {
+  const datname = database.datname;
+  const deleteDatabaseAction = DATABASE.DELETE.bindParams({ datname });
 
   return (
-    <ErrorBoundaryContext.Provider value={resetError}>
+    <Page>
       <PageHead
         actions={[
           {
             component: (
-              <SPADeleteButton
+              <Button
+                data-confirm-message={`Are you sure you want to delete the database "${datname}"?`}
                 action={deleteDatabaseAction}
-                disabled={error || routeError}
               >
                 Delete
-              </SPADeleteButton>
+              </Button>
             ),
           },
         ]}
@@ -57,73 +29,30 @@ const DatabasePage = ({ routeError }) => {
         </PageHead.Label>
       </PageHead>
       <PageBody>
-        {routeError ? (
-          <ErrorDetails error={routeError} />
-        ) : (
-          <>
-            <DatabaseFields database={database} />
-            <a
-              href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
-              target="_blank"
-            >
-              ALTER DATABASE documentation
-            </a>
-          </>
-        )}
+        <DatabaseFieldset
+          item={database}
+          columns={database.meta.columns}
+          usePutAction={(columnName, valueSignal) =>
+            DATABASE.PUT.bindParams({
+              datname: database.datname,
+              columnName,
+              columnValue: valueSignal,
+            })
+          }
+          customFields={{
+            datdba: () => {
+              const ownerRole = database.ownerRole;
+              return <RoleField role={ownerRole} />;
+            },
+          }}
+        />
+        <a
+          href="https://www.postgresql.org/docs/14/sql-alterdatabase.html"
+          target="_blank"
+        >
+          ALTER DATABASE documentation
+        </a>
       </PageBody>
-    </ErrorBoundaryContext.Provider>
-  );
-};
-
-const ErrorDetails = ({ error }) => {
-  return (
-    <details className="route_error">
-      <summary>{error.message}</summary>
-      <pre>
-        <code>{error.stack}</code>
-      </pre>
-    </details>
-  );
-};
-
-const DatabaseFields = ({ database }) => {
-  const columns = useActiveDatabaseColumns();
-  const ownerRole = useActiveDatabaseOwnerRole();
-
-  columns.sort((a, b) => {
-    return a.ordinal_position - b.ordinal_position;
-  });
-
-  return (
-    <ul>
-      {columns.map((column) => {
-        const columnName = column.column_name;
-        const value = database ? database[columnName] : "";
-        const action = PUT_DATABASE_ACTION.bindParams({
-          datname: database.datname,
-          columnName,
-        });
-
-        if (columnName === "datdba") {
-          // we will display this elswhere
-          return (
-            <li key={columnName}>
-              Owner:
-              <RoleLink role={ownerRole}>{ownerRole.rolname}</RoleLink>
-            </li>
-          );
-        }
-        return (
-          <li key={columnName}>
-            <DatabaseValue
-              label={<span>{columnName}:</span>}
-              column={column}
-              value={value}
-              action={action}
-            />
-          </li>
-        );
-      })}
-    </ul>
+    </Page>
   );
 };

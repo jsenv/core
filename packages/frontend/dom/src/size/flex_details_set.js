@@ -13,7 +13,58 @@ import { createSizeAnimationGroupController } from "./size_animation_group_contr
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
+const ANIMATE_TOGGLE = true;
+const ANIMATE_RESIZE_AFTER_MUTATION = true;
+const ANIMATION_THRESHOLD_PX = 10; // Don't animate changes smaller than this
 const DEBUG = false;
+
+// Helper to create scroll state capture/restore function for an element
+const captureScrollState = (element) => {
+  const scrollLeft = element.scrollLeft;
+  const scrollTop = element.scrollTop;
+  const scrollWidth = element.scrollWidth;
+  const scrollHeight = element.scrollHeight;
+  const clientWidth = element.clientWidth;
+  const clientHeight = element.clientHeight;
+
+  // Calculate scroll percentages to preserve relative position
+  const scrollLeftPercent =
+    scrollWidth > clientWidth ? scrollLeft / (scrollWidth - clientWidth) : 0;
+  const scrollTopPercent =
+    scrollHeight > clientHeight ? scrollTop / (scrollHeight - clientHeight) : 0;
+
+  // Return preserve function that maintains scroll position relative to content
+  return () => {
+    // Get current dimensions after DOM changes
+    const newScrollWidth = element.scrollWidth;
+    const newScrollHeight = element.scrollHeight;
+    const newClientWidth = element.clientWidth;
+    const newClientHeight = element.clientHeight;
+
+    // If content dimensions changed significantly, use percentage-based positioning
+    if (
+      Math.abs(newScrollWidth - scrollWidth) > 1 ||
+      Math.abs(newScrollHeight - scrollHeight) > 1 ||
+      Math.abs(newClientWidth - clientWidth) > 1 ||
+      Math.abs(newClientHeight - clientHeight) > 1
+    ) {
+      if (newScrollWidth > newClientWidth) {
+        const newScrollLeft =
+          scrollLeftPercent * (newScrollWidth - newClientWidth);
+        element.scrollLeft = newScrollLeft;
+      }
+
+      if (newScrollHeight > newClientHeight) {
+        const newScrollTop =
+          scrollTopPercent * (newScrollHeight - newClientHeight);
+        element.scrollTop = newScrollTop;
+      }
+    } else {
+      element.scrollLeft = scrollLeft;
+      element.scrollTop = scrollTop;
+    }
+  };
+};
 
 export const initFlexDetailsSet = (
   container,
@@ -70,7 +121,7 @@ export const initFlexDetailsSet = (
     openedDetailsArray.length = 0;
     lastChild = null;
     if (debug) {
-      console.debug(`availableSpace: ${availableSpace}px`);
+      console.debug(`📐 Container space: ${availableSpace}px`);
     }
 
     for (const child of container.children) {
@@ -103,11 +154,14 @@ export const initFlexDetailsSet = (
         const detailsContent = summary.nextElementSibling;
         let detailsHeight;
         if (detailsContent) {
+          const preserveScroll = captureScrollState(detailsContent);
           const restoreSizeStyle = forceStyles(detailsContent, {
             height: "auto",
           });
           const detailsContentHeight = getHeight(detailsContent);
           restoreSizeStyle();
+          // Preserve scroll position after height manipulation
+          preserveScroll();
           detailsHeight = summaryHeight + detailsContentHeight;
         } else {
           // empty details content like
@@ -148,8 +202,14 @@ export const initFlexDetailsSet = (
       requestedSpaceMap.set(details, requestedSize + marginSize);
       minSpaceMap.set(details, minSize + marginSize);
       if (debug) {
+        const currentSizeFormatted = spaceToSize(size + marginSize, details);
+        const requestedSizeFormatted = spaceToSize(
+          requestedSize + marginSize,
+          details,
+        );
+        const minSizeFormatted = spaceToSize(minSize + marginSize, details);
         console.debug(
-          `details ${details.id} space: ${spaceMap.get(details)}px, min space: ${minSpaceMap.get(details)}px, requested space: ${requestedSpaceMap.get(details)}px (${requestedSizeSource})`,
+          `  ${details.id}: ${currentSizeFormatted}px → wants ${requestedSizeFormatted}px (min: ${minSizeFormatted}px) [${requestedSizeSource}]`,
         );
       }
     }
@@ -160,19 +220,24 @@ export const initFlexDetailsSet = (
   });
   const applyAllocatedSpaces = (resizeDetails) => {
     const changeSet = new Set();
+    let maxChange = 0;
+
     for (const child of container.children) {
       const allocatedSpace = allocatedSpaceMap.get(child);
       const allocatedSize = spaceToSize(allocatedSpace, child);
       const space = spaceMap.get(child);
       const size = spaceToSize(space, child);
+      const sizeChange = Math.abs(size - allocatedSize);
+
       if (size === allocatedSize) {
         continue;
       }
+
+      // Track the maximum change to decide if animation is worth it
+      maxChange = Math.max(maxChange, sizeChange);
+
       if (isDetailsElement(child) && child.open) {
-        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(
-          child,
-          { animated: true },
-        );
+        const syncDetailsContentHeight = prepareSyncDetailsContentHeight(child);
         changeSet.add({
           element: child,
           target: allocatedSize,
@@ -196,7 +261,17 @@ export const initFlexDetailsSet = (
       return;
     }
 
-    if (!resizeDetails.animated) {
+    // Don't animate if changes are too small (avoids imperceptible animations that hide scrollbars)
+    const shouldAnimate =
+      resizeDetails.animated && maxChange >= ANIMATION_THRESHOLD_PX;
+
+    if (debug && resizeDetails.animated && !shouldAnimate) {
+      console.debug(
+        `🚫 Skipping animation: max change ${maxChange.toFixed(2)}px < ${ANIMATION_THRESHOLD_PX}px threshold`,
+      );
+    }
+
+    if (!shouldAnimate) {
       const sizeChangeEntries = [];
       for (const { element, target, sideEffect } of changeSet) {
         element.style.height = `${target}px`;
@@ -273,13 +348,19 @@ export const initFlexDetailsSet = (
 
     remainingSpace -= allocatedSpace;
     if (debug) {
+      const allocatedSize = spaceToSize(allocatedSpace, child);
+      const sourceInfo =
+        allocatedSpaceSource === requestSource
+          ? ""
+          : ` (${allocatedSpaceSource})`;
       if (allocatedSpace === spaceToAllocate) {
         console.debug(
-          `${allocatedSpace}px allocated to ${child.id} (${allocatedSpaceSource}), remaining space: ${remainingSpace}px`,
+          `  → ${allocatedSize}px to "${child.id}"${sourceInfo} | ${remainingSpace}px remaining`,
         );
       } else {
+        const requestedSize = spaceToSize(spaceToAllocate, child);
         console.debug(
-          `${allocatedSpace}px allocated to ${child.id} out of ${spaceToAllocate}px (${allocatedSpaceSource}), remaining space: ${remainingSpace}px`,
+          `  → ${allocatedSize}px -out of ${requestedSize}px wanted- to "${child.id}"${sourceInfo} | ${remainingSpace}px remaining`,
         );
       }
     }
@@ -297,7 +378,7 @@ export const initFlexDetailsSet = (
     const spaceToAllocate = allocatedSpace + diff;
     if (debug) {
       console.debug(
-        `applying diff on allocated space for ${child.id} (${source}), diff: ${diff}px, current allocated space: ${allocatedSpace}px, new space to allocate: ${spaceToAllocate}px, remaining space: ${remainingSpace}px`,
+        `🔄 ${child.id}: ${allocatedSpace}px + ${diff}px = ${spaceToAllocate}px (${source})`,
       );
     }
     allocateSpace(child, spaceToAllocate, source);
@@ -305,8 +386,16 @@ export const initFlexDetailsSet = (
     return reallocatedSpace - allocatedSpace;
   };
   const distributeAvailableSpace = (source) => {
+    if (debug) {
+      console.debug(
+        `📦 Distributing ${availableSpace}px among ${container.children.length} children:`,
+      );
+    }
     for (const child of container.children) {
       allocateSpace(child, requestedSpaceMap.get(child), source);
+    }
+    if (debug) {
+      console.debug(`📦 After distribution: ${remainingSpace}px remaining`);
     }
   };
   const distributeRemainingSpace = ({ childToGrow, childToShrinkFrom }) => {
@@ -314,20 +403,25 @@ export const initFlexDetailsSet = (
       return;
     }
     if (remainingSpace < 0) {
-      const spaceToSleal = -remainingSpace;
+      const spaceToSteal = -remainingSpace;
       if (debug) {
         console.debug(
-          `remaining space is negative: ${remainingSpace}px, stealing ${spaceToSleal}px from child before ${childToShrinkFrom.id}`,
+          `⚠️  Deficit: ${remainingSpace}px, stealing ${spaceToSteal}px from elements before ${childToShrinkFrom.id}`,
         );
       }
       updatePreviousSiblingsAllocatedSpace(
         childToShrinkFrom,
-        -spaceToSleal,
+        -spaceToSteal,
         `remaining space is negative: ${remainingSpace}px`,
       );
       return;
     }
     if (childToGrow) {
+      if (debug) {
+        console.debug(
+          `✨ Bonus: giving ${remainingSpace}px to ${childToGrow.id}`,
+        );
+      }
       applyDiffOnAllocatedSpace(
         childToGrow,
         remainingSpace,
@@ -585,7 +679,7 @@ export const initFlexDetailsSet = (
         distributeSpaceAfterToggle(details);
         applyAllocatedSpaces({
           reason: details.open ? "details_opened" : "details_closed",
-          animated: true,
+          animated: ANIMATE_TOGGLE,
         });
         updateResizableDetails();
       };
@@ -799,14 +893,14 @@ export const initFlexDetailsSet = (
         if (mutation.type === "childList") {
           updateSpaceDistribution({
             reason: "content_change",
-            animated: true,
+            animated: ANIMATE_RESIZE_AFTER_MUTATION,
           });
           return;
         }
         if (mutation.type === "characterData") {
           updateSpaceDistribution({
             reason: "content_change",
-            animated: true,
+            animated: ANIMATE_RESIZE_AFTER_MUTATION,
           });
           return;
         }
@@ -850,6 +944,9 @@ const prepareSyncDetailsContentHeight = (details) => {
       );
     };
   }
+
+  // Capture scroll state at the beginning before any DOM manipulation
+  const preserveScroll = captureScrollState(content);
   content.style.height = "var(--content-height)";
 
   const contentComputedStyle = getComputedStyle(content);
@@ -888,6 +985,10 @@ const prepareSyncDetailsContentHeight = (details) => {
         restoreOverflow();
       }
     }
+
+    // Preserve scroll position at the end after all DOM manipulations
+    // The captureScrollState function is smart enough to handle new dimensions
+    preserveScroll();
   };
 };
 

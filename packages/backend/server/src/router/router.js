@@ -1,5 +1,6 @@
 import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 import { lookupPackageDirectory } from "@jsenv/filesystem";
+import { createLogger } from "@jsenv/humanize";
 import {
   createHeadersPattern,
   createResourcePattern,
@@ -27,8 +28,9 @@ const HTTP_METHODS = [
 
 export const createRouter = (
   routeDescriptionArray,
-  { optionsFallback } = {},
+  { optionsFallback, logLevel } = {},
 ) => {
+  const logger = createLogger({ logLevel });
   const routeSet = new Set();
 
   const constructAvailableEndpoints = () => {
@@ -206,6 +208,7 @@ export const createRouter = (
       }
     };
     const onRouteMatch = (route) => {
+      logger.debug(`Matched route: ${route}`);
       onRouteGroupEnd(route);
     };
 

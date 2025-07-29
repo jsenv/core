@@ -37,7 +37,7 @@ import {
 } from "@jsenv/urls";
 import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { getDirectoryWatchPatterns } from "../../helpers/watch_source_files.js";
-import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
+import { FILE_AND_SERVER_URLS_CONVERTER } from "../../kitchen/file_and_server_urls_converter.js";
 
 const htmlFileUrlForDirectory = import.meta.resolve(
   "./client/directory_listing.html",

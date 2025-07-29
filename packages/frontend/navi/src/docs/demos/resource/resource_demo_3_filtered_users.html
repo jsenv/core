@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resource Demo 3 - Filtered Users</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .filters {
+        background: #f5f5f5;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+      }
+      .user-list {
+        margin: 20px 0;
+      }
+      .user-item {
+        padding: 10px;
+        margin: 5px 0;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        background: white;
+      }
+      .user-item.loaded {
+        border-color: #28a745;
+        background: #f8fff8;
+      }
+      .button-group {
+        margin: 10px 0;
+      }
+      button {
+        margin: 2px;
+        padding: 5px 10px;
+      }
+      .create-user {
+        background: #e9ecef;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      input,
+      select {
+        margin: 5px;
+        padding: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal } from "@preact/signals";
+      import { useState } from "preact/hooks";
+      import {
+        useActionStatus,
+        resource,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        ActionStatus,
+      } from "./action_status.jsx";
+
+      // Base de données simulée
+      const allUsers = [
+        {
+          id: 1,
+          name: "Alice",
+          gender: "female",
+          age: 25,
+          department: "Engineering",
+        },
+        {
+          id: 2,
+          name: "Bob",
+          gender: "male",
+          age: 30,
+          department: "Marketing",
+        },
+        {
+          id: 3,
+          name: "Charlie",
+          gender: "male",
+          age: 35,
+          department: "Engineering",
+        },
+        {
+          id: 4,
+          name: "Diana",
+          gender: "female",
+          age: 28,
+          department: "Sales",
+        },
+        {
+          id: 5,
+          name: "Eve",
+          gender: "female",
+          age: 32,
+          department: "Marketing",
+        },
+      ];
+      const USER = resource("user", {
+        idKey: "id",
+        mutableIdKey: "name",
+        GET_MANY: async (filters) => {
+          console.log("Loading users", filters);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return allUsers.filter((user) => {
+            if (
+              filters.gender !== undefined &&
+              user.gender !== filters.gender
+            ) {
+              return false;
+            }
+            if (
+              filters.department !== undefined &&
+              user.department !== filters.department
+            ) {
+              return false;
+            }
+            return true;
+          });
+        },
+        GET: async ({ id }) => {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          const foundUser = allUsers.find((u) => u.id === id);
+          if (!foundUser) {
+            throw new Error(`User ${id} not found`);
+          }
+          return {
+            ...foundUser,
+            loadedAt: new Date().toLocaleTimeString(),
+          };
+        },
+        POST: async (newUser) => {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return newUser;
+        },
+        PUT: async ({ id, field, value }) => {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return { id, [field]: value };
+        },
+      });
+      USER.RENAME = USER.PUT.bindParams({
+        field: "name",
+      });
+      // Signal pour les filtres
+      const filtersSignal = signal({
+        gender: undefined,
+        department: undefined,
+      });
+      USER.GET_MANY_FILTERED = USER.GET_MANY.bindParams(filtersSignal);
+      USER.GET_MANY_FILTERED.load();
+      USER.store.observeProperties((mutations) => {
+        const nameMutation = mutations.name;
+        if (nameMutation) {
+          const { target, oldValue, newValue } = nameMutation;
+          console.log(
+            `user ${target.id} name changed from "${oldValue}" to "${newValue}"`,
+          );
+        }
+      });
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const { data: serverUsers, pending: loadingUsers } = useActionStatus(
+          USER.GET_MANY_FILTERED,
+        );
+
+        const [newUserName, setNewUserName] = useState("");
+        const [newUserGender, setNewUserGender] = useState("male");
+        const [newUserAge, setNewUserAge] = useState(25);
+        const [newUserDept, setNewUserDept] = useState("Engineering");
+
+        const createUser = () => {
+          if (!newUserName.trim()) {
+            return;
+          }
+          const newUser = {
+            id: Math.max(...allUsers.map((u) => u.id)) + 1,
+            name: newUserName,
+            gender: newUserGender,
+            age: parseInt(newUserAge),
+            department: newUserDept,
+          };
+          setNewUserName("");
+          allUsers.push(newUser);
+          const createUser = USER.POST.bindParams(newUser);
+          createUser.load();
+        };
+
+        return (
+          <div>
+            <h1>Users Management Demo</h1>
+
+            <button
+              onClick={() => {
+                USER.GET_MANY_FILTERED.reload();
+              }}
+            >
+              Reload
+            </button>
+
+            <div className="filters">
+              <h3>Filters</h3>
+              <fieldset>
+                <legend>Gender</legend>
+
+                <label>
+                  All:
+                  <input
+                    name="gender"
+                    type="radio"
+                    value="all"
+                    checked={filtersSignal.value.gender === undefined}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        filtersSignal.value = {
+                          ...filtersSignal.value,
+                          gender: undefined,
+                        };
+                      }
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Male:
+                  <input
+                    name="gender"
+                    type="radio"
+                    value="male"
+                    checked={filtersSignal.value.gender === "male"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        filtersSignal.value = {
+                          ...filtersSignal.value,
+                          gender: e.target.value,
+                        };
+                      }
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Female:
+                  <input
+                    name="gender"
+                    type="radio"
+                    value="female"
+                    checked={filtersSignal.value.gender === "female"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        filtersSignal.value = {
+                          ...filtersSignal.value,
+                          gender: e.target.value,
+                        };
+                      }
+                    }}
+                  />
+                </label>
+              </fieldset>
+
+              <label>
+                Department:
+                <select
+                  value={filtersSignal.value.department}
+                  onChange={(e) => {
+                    filtersSignal.value = {
+                      ...filtersSignal.value,
+                      department: e.target.value,
+                    };
+                  }}
+                >
+                  <option value="all">All</option>
+                  <option value="Engineering">Engineering</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Sales">Sales</option>
+                </select>
+              </label>
+            </div>
+
+            {/* Liste des utilisateurs du serveur - LA SEULE LISTE */}
+            <div className="user-list">
+              <h3>
+                Filtered Users from Server {loadingUsers && "- Loading..."}
+              </h3>
+              <p>Count: {serverUsers.length}</p>
+              {serverUsers.map((user) => {
+                return (
+                  <UserItem
+                    key={user}
+                    user={user}
+                    onUpdateName={async (name) => {
+                      const renameAction = USER.RENAME.bindParams({
+                        id: user.id,
+                        value: name,
+                      });
+                      await renameAction.load();
+                      const harcodedUser = allUsers.find(
+                        (u) => u.id === user.id,
+                      );
+                      harcodedUser.name = name;
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Création d'utilisateur */}
+            <div className="create-user">
+              <h3>Create New User</h3>
+              <p>
+                <em>
+                  Note: Les nouveaux utilisateurs n'apparaîtront que s'ils
+                  matchent les filtres actuels
+                </em>
+              </p>
+              <input
+                type="text"
+                placeholder="Name"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+              />
+              <select
+                value={newUserGender}
+                onChange={(e) => setNewUserGender(e.target.value)}
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+              <input
+                type="number"
+                placeholder="Age"
+                value={newUserAge}
+                onChange={(e) => setNewUserAge(e.target.value)}
+              />
+              <select
+                value={newUserDept}
+                onChange={(e) => setNewUserDept(e.target.value)}
+              >
+                <option value="Engineering">Engineering</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Sales">Sales</option>
+              </select>
+              <button onClick={createUser}>Create User</button>
+            </div>
+
+            <ActionStatus action={USER.GET_MANY_FILTERED} />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const UserItem = ({ user, onUpdateName }) => {
+        const userAction = USER.GET.bindParams({
+          id: user.id,
+        });
+        const { pending, loaded } = useActionStatus(userAction);
+        const [editingName, setEditingName] = useState(false);
+        const [newName, setNewName] = useState(user.name);
+
+        const handleNameUpdate = async () => {
+          await onUpdateName(newName);
+          setEditingName(false);
+        };
+
+        return (
+          <div className={`user-item ${loaded ? "loaded" : ""}`}>
+            <div>
+              <strong>
+                {editingName ? (
+                  <span>
+                    <input
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleNameUpdate()}
+                    />
+                    <button onClick={handleNameUpdate}>✓</button>
+                    <button onClick={() => setEditingName(false)}>✗</button>
+                  </span>
+                ) : (
+                  <span
+                    onClick={() => setEditingName(true)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {user.name}
+                    {user.loadedAt && ` (loaded at ${user.loadedAt})`}
+                  </span>
+                )}
+              </strong>
+              - {user.gender}, {user.age}y, {user.department}
+            </div>
+
+            <div className="button-group">
+              <button onClick={() => userAction.reload()}>Reload</button>
+              <button onClick={() => userAction.unload()}>Unload</button>
+              <button onClick={() => userAction.preload()}>Preload</button>
+              {pending && <span>Loading...</span>}
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

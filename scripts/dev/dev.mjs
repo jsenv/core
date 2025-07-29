@@ -46,6 +46,7 @@ const jsenvPluginControlledResource = () => {
 // const { certificate, privateKey } = requestCertificate();
 await startDevServer({
   serverLogLevel: "warn",
+  serverRouterLogLevel: "warn",
   sourceDirectoryUrl: import.meta.resolve("../../"),
   hostname: "127.0.0.1",
   // https: { certificate, privateKey },
@@ -62,8 +63,8 @@ await startDevServer({
         errors: {
           "./tests/dev_server/errors/stories/**/*.html": true,
         },
-        router: {
-          "./packages/tooling/**/router/**/*.html": true,
+        navi: {
+          "./packages/frontend/**/navi/**/*.html": true,
         },
         tests: {
           "./tests/**/client/main.html": true,

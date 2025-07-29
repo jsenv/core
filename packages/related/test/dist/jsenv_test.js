@@ -738,6 +738,33 @@ const UNICODE = createUnicode({
   ANSI,
 });
 
+const prefixFirstAndIndentRemainingLines = (
+  text,
+  { prefix, indentation, trimLines, trimLastLine },
+) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  if (indentation === undefined) {
+    if (prefix) {
+      indentation = "  "; // prefix + space
+    } else {
+      indentation = "";
+    }
+  }
+  let result = prefix ? `${prefix} ${firstLine}` : firstLine;
+  let i = 0;
+  while (i < lines.length) {
+    const line = trimLines ? lines[i].trim() : lines[i];
+    i++;
+    result += line.length
+      ? `\n${indentation}${line}`
+      : trimLastLine && i === lines.length
+        ? ""
+        : `\n`;
+  }
+  return result;
+};
+
 const setRoundedPrecision = (
   number,
   { decimals = 1, decimalsWhenSmall = decimals } = {},
@@ -3666,13 +3693,24 @@ const defaultLookupPackageScope = (url) => {
 };
 
 const defaultReadPackageJson = (packageUrl) => {
-  const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync(packageJsonUrl);
-  const string = String(buffer);
+  const packageJsonFileUrl = new URL("./package.json", packageUrl);
+  let packageJsonFileContentBuffer;
   try {
-    return JSON.parse(string);
+    packageJsonFileContentBuffer = readFileSync(packageJsonFileUrl, "utf8");
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return null;
+    }
+    throw e;
+  }
+  const packageJsonFileContentString = String(packageJsonFileContentBuffer);
+  try {
+    const packageJsonFileContentObject = JSON.parse(
+      packageJsonFileContentString,
+    );
+    return packageJsonFileContentObject;
   } catch {
-    throw new Error(`Invalid package configuration`);
+    throw new Error(`Invalid package configuration at ${packageJsonFileUrl}`);
   }
 };
 
@@ -6549,9 +6587,8 @@ const renderConsoleOutput = (consoleCalls) => {
   let index = 0;
   for (const regroupedCall of regroupedCalls) {
     const text = regroupedCall.text;
-    const textFormatted = prefixFirstAndIndentRemainingLines({
+    const textFormatted = prefixFirstAndIndentRemainingLines(text, {
       prefix: everyCallIsLog ? "" : CONSOLE_ICONS[regroupedCall.type],
-      text,
       trimLines: false,
       trimLastLine: index === regroupedCalls.length - 1,
     });
@@ -6559,35 +6596,6 @@ const renderConsoleOutput = (consoleCalls) => {
     index++;
   }
   return consoleOutput;
-};
-const prefixFirstAndIndentRemainingLines = ({
-  prefix,
-  indentation,
-  text,
-  trimLines,
-  trimLastLine,
-}) => {
-  const lines = text.split(/\r?\n/);
-  const firstLine = lines.shift();
-  if (indentation === undefined) {
-    if (prefix) {
-      indentation = "  "; // prefix + space
-    } else {
-      indentation = "";
-    }
-  }
-  let result = prefix ? `${prefix} ${firstLine}` : firstLine;
-  let i = 0;
-  while (i < lines.length) {
-    const line = trimLines ? lines[i].trim() : lines[i];
-    i++;
-    result += line.length
-      ? `\n${indentation}${line}`
-      : trimLastLine && i === lines.length
-        ? ""
-        : `\n`;
-  }
-  return result;
 };
 const CONSOLE_ICONS = {
   get debug() {
@@ -6627,16 +6635,18 @@ const renderErrors = (execution, logOptions) => {
   let output = [];
   errors.forEach((error) => {
     output.push(
-      prefixFirstAndIndentRemainingLines({
-        prefix: `${UNICODE.CIRCLE_CROSS} `,
-        indentation: "   ",
-        text: formatErrorForTerminal(error, {
+      prefixFirstAndIndentRemainingLines(
+        formatErrorForTerminal(error, {
           rootDirectoryUrl: execution.rootDirectoryUrl,
           mainFileRelativeUrl: execution.fileRelativeUrl,
           mockFluctuatingValues: logOptions.mockFluctuatingValues,
           tryColors: true,
         }),
-      }),
+        {
+          prefix: `${UNICODE.CIRCLE_CROSS} `,
+          indentation: "   ",
+        },
+      ),
     );
   });
   return renderSection({

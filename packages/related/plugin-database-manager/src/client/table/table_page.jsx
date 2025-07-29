@@ -18,53 +18,28 @@
  *
  */
 
-import {
-  ErrorBoundaryContext,
-  Route,
-  SPADeleteButton,
-  useRouteParam,
-} from "@jsenv/router";
-import { useErrorBoundary } from "preact/hooks";
-import { DatabaseValue } from "../components/database_value.jsx";
-import { PageBody, PageHead } from "../layout/page.jsx";
-import { RoleLink } from "../role/role_link.jsx";
-import { useRoleByName } from "../role/role_signals.js";
+import { Button } from "@jsenv/navi";
+import { DatabaseFieldset, RoleField } from "../components/database_field.jsx";
+import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { TableSvg } from "./table_icons.jsx";
-import {
-  DELETE_TABLE_ACTION,
-  GET_TABLE_ROUTE,
-  PUT_TABLE_ACTION,
-} from "./table_routes.js";
-import { useActiveTableColumns, useTable } from "./table_signals.js";
+import { TABLE } from "./table_store.js";
 
-export const TableRoutes = () => {
-  return (
-    <Route
-      route={GET_TABLE_ROUTE}
-      renderLoaded={() => <TablePage />}
-      renderError={({ error }) => <TablePage routeError={error} />}
-    />
-  );
-};
-
-const TablePage = ({ routeError }) => {
-  const [error, resetError] = useErrorBoundary();
-  const tablename = useRouteParam(GET_TABLE_ROUTE, "tablename");
-  const deleteTableAction = DELETE_TABLE_ACTION.bindParams({ tablename });
-  const table = useTable(tablename);
+export const TablePage = ({ table }) => {
+  const tablename = table.tablename;
+  const deleteTableAction = TABLE.DELETE.bindParams({ tablename });
 
   return (
-    <ErrorBoundaryContext.Provider value={resetError}>
+    <Page>
       <PageHead
         actions={[
           {
             component: (
-              <SPADeleteButton
+              <Button
+                data-confirm-message={`Are you sure you want to delete the table "${tablename}"?`}
                 action={deleteTableAction}
-                disabled={error || routeError}
               >
                 Delete
-              </SPADeleteButton>
+              </Button>
             ),
           },
         ]}
@@ -74,73 +49,32 @@ const TablePage = ({ routeError }) => {
         </PageHead.Label>
       </PageHead>
       <PageBody>
-        {routeError ? (
-          <ErrorDetails error={routeError} />
-        ) : (
-          <>
-            <TableFields table={table} />
-            <a
-              href="https://www.postgresql.org/docs/14/ddl-basics.html"
-              target="_blank"
-            >
-              TABLE documentation
-            </a>
-          </>
-        )}
+        <>
+          <DatabaseFieldset
+            item={table}
+            columns={table.meta.columns}
+            usePutAction={(columnName, valueSignal) =>
+              TABLE.PUT.bindParams({
+                tablename: table.tablename,
+                columnName,
+                columnValue: valueSignal,
+              })
+            }
+            customFields={{
+              tableowner: () => {
+                const ownerRole = table.ownerRole;
+                return <RoleField role={ownerRole} />;
+              },
+            }}
+          />
+          <a
+            href="https://www.postgresql.org/docs/14/ddl-basics.html"
+            target="_blank"
+          >
+            TABLE documentation
+          </a>
+        </>
       </PageBody>
-    </ErrorBoundaryContext.Provider>
-  );
-};
-
-const ErrorDetails = ({ error }) => {
-  return (
-    <details className="route_error">
-      <summary>{error.message}</summary>
-      <pre style="white-space: pre-wrap;">
-        <code>{error.stack}</code>
-      </pre>
-    </details>
-  );
-};
-
-const TableFields = ({ table }) => {
-  const columns = useActiveTableColumns();
-  const ownerRolname = table.tableowner;
-  const ownerRole = useRoleByName(ownerRolname);
-
-  columns.sort((a, b) => {
-    return a.ordinal_position - b.ordinal_position;
-  });
-
-  return (
-    <ul>
-      {columns.map((column) => {
-        const columnName = column.column_name;
-        const value = table ? table[columnName] : "";
-        const action = PUT_TABLE_ACTION.bindParams({
-          tablename: table.tablename,
-          columnName,
-        });
-
-        if (columnName === "tableowner") {
-          return (
-            <li key={columnName}>
-              Owner:
-              <RoleLink role={ownerRole}>{ownerRole.rolname}</RoleLink>
-            </li>
-          );
-        }
-        return (
-          <li key={columnName}>
-            <DatabaseValue
-              label={<span>{columnName}:</span>}
-              column={column}
-              value={value}
-              action={action}
-            />
-          </li>
-        );
-      })}
-    </ul>
+    </Page>
   );
 };

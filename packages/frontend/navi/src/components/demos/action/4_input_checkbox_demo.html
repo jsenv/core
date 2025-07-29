@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkbox Demo</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .demo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+      .demo-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-title {
+        margin: 0 0 15px 0;
+        color: #333;
+        font-size: 16px;
+        font-weight: 600;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 8px;
+      }
+      .result-display {
+        margin-top: 15px;
+        padding: 12px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        min-height: 20px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+      .result-success {
+        background: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+      }
+      .result-error {
+        background: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+      }
+      .result-loading {
+        background: #d1ecf1;
+        border-color: #bee5eb;
+        color: #0c5460;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      button {
+        padding: 8px 16px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #f8f9fa;
+      }
+      button[type="submit"] {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+      }
+      button[type="submit"]:hover {
+        background: #0056b3;
+      }
+      button[type="reset"] {
+        background: #6c757d;
+        color: white;
+        border-color: #6c757d;
+      }
+      button[type="reset"]:hover {
+        background: #545b62;
+      }
+      .control-group {
+        margin-bottom: 15px;
+      }
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+      .checkbox-group label {
+        font-weight: 500;
+        color: #555;
+        cursor: pointer;
+      }
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+      .status-idle {
+        background: #6c757d;
+      }
+      .status-loading {
+        background: #007bff;
+        animation: pulse 1s infinite;
+      }
+      .status-success {
+        background: #28a745;
+      }
+      .status-error {
+        background: #dc3545;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Checkbox Demo</h1>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
+      import {
+        createAction,
+        // eslint-disable-next-line no-unused-vars
+        Field,
+        // eslint-disable-next-line no-unused-vars
+        Form,
+        // eslint-disable-next-line no-unused-vars
+        Input,
+        // eslint-disable-next-line no-unused-vars
+        Button,
+      } from "@jsenv/navi";
+
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <>
+            <div className="demo-grid">
+              <BasicCheckboxDemo />
+              <CheckboxWithInitialValueDemo />
+              <CheckboxWithExternalControlDemo />
+              <CheckboxWithSignalControlDemo />
+              <CheckboxErrorDemo />
+              <FormCheckboxDemo />
+              <SharedActionDemo />
+            </div>
+          </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const BasicCheckboxDemo = () => {
+        const [result, setResult] = useState("");
+        const [status, setStatus] = useState("idle");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Basic Checkbox with Action</h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <Input
+                  id="basic-checkbox"
+                  type="checkbox"
+                  name="enabled"
+                  action={async ({ enabled }) => {
+                    setStatus("loading");
+                    setResult("Processing...");
+                    try {
+                      await delay(1000);
+                      const response = `${enabled ? "✅" : "☐"} Checkbox ${enabled ? "checked" : "unchecked"}`;
+                      setResult(response);
+                      setStatus("success");
+                      return response;
+                    } catch (error) {
+                      setResult(`❌ Error: ${error.message}`);
+                      setStatus("error");
+                      throw error;
+                    }
+                  }}
+                />
+                <label htmlFor="basic-checkbox">
+                  <span className={`status-indicator status-${status}`}></span>
+                  Enable feature
+                </label>
+              </div>
+            </div>
+            <div
+              className={`result-display ${status === "loading" ? "result-loading" : status === "success" ? "result-success" : status === "error" ? "result-error" : ""}`}
+            >
+              {result || "Check or uncheck to see action..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxWithInitialValueDemo = () => {
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Checkbox with Initial Value</h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <Input
+                  id="initial-checkbox"
+                  type="checkbox"
+                  name="agreed"
+                  checked={true}
+                  action={async ({ agreed }) => {
+                    setResult("Processing...");
+                    await delay(800);
+                    const response = `${agreed ? "✅" : "☐"} Agreement: ${agreed ? "accepted" : "declined"}`;
+                    setResult(response);
+                    return response;
+                  }}
+                />
+                <label htmlFor="initial-checkbox">
+                  I agree to the terms and conditions
+                </label>
+              </div>
+            </div>
+            <div
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
+            >
+              {result || "Change checkbox to see action..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxWithExternalControlDemo = () => {
+        const [isChecked, setIsChecked] = useState(undefined);
+        const [result, setResult] = useState("");
+
+        // Debug logging
+        console.log(
+          "CheckboxWithExternalControlDemo render - isChecked:",
+          isChecked,
+        );
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Checkbox with External Control</h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <Input
+                  id="controlled-checkbox"
+                  type="checkbox"
+                  name="notifications"
+                  checked={isChecked}
+                  action={async ({ notifications }) => {
+                    setResult("Processing...");
+                    await delay(600);
+                    const response = `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
+                    setResult(response);
+                    return response;
+                  }}
+                />
+                <label htmlFor="controlled-checkbox">
+                  Enable notifications
+                </label>
+              </div>
+            </div>
+            <div className="button-group">
+              <button
+                onClick={() => {
+                  console.log("Setting checkbox to checked");
+                  setIsChecked(true);
+                }}
+              >
+                Enable
+              </button>
+              <button
+                onClick={() => {
+                  console.log("Setting checkbox to unchecked");
+                  setIsChecked(false);
+                }}
+              >
+                Disable
+              </button>
+              <button
+                onClick={() => {
+                  console.log(
+                    "Resetting checkbox, current isChecked:",
+                    isChecked,
+                  );
+                  setIsChecked(undefined);
+                }}
+              >
+                Reset
+              </button>
+            </div>
+            <div
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
+            >
+              Current state:{" "}
+              {isChecked === undefined
+                ? "undefined"
+                : isChecked
+                  ? "checked"
+                  : "unchecked"}
+              <br />
+              {result ||
+                "Use buttons to control checkbox, then it will trigger action..."}
+            </div>
+          </div>
+        );
+      };
+
+      // Create an action that's bound to the signal
+      const toggleAction = createAction(async ({ notifications }) => {
+        await delay(600);
+        return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
+      });
+      // Create a signal to control the checkbox state
+      const valueSignal = signal(undefined);
+      const toggleActionBound = toggleAction.bindParams({
+        notifications: valueSignal,
+      });
+
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxWithSignalControlDemo = () => {
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Checkbox with Signal Control</h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <Input
+                  id="signal-controlled-checkbox"
+                  type="checkbox"
+                  name="notifications_signal"
+                  valueSignal={valueSignal}
+                  action={toggleActionBound}
+                  onActionStart={() => {
+                    setResult("Processing...");
+                  }}
+                  onActionEnd={(e) => {
+                    setResult(e.detail.data);
+                  }}
+                />
+                <label htmlFor="signal-controlled-checkbox">
+                  Enable notifications (signal controlled)
+                </label>
+              </div>
+            </div>
+            <div className="button-group">
+              <button
+                onClick={() => {
+                  console.log("Setting signal to true");
+                  valueSignal.value = "on";
+                }}
+              >
+                Enable via Signal
+              </button>
+              <button
+                onClick={() => {
+                  console.log("Setting signal to false");
+                  valueSignal.value = false;
+                }}
+              >
+                Disable via Signal
+              </button>
+              <button
+                onClick={() => {
+                  console.log(
+                    "Toggling signal, current value:",
+                    valueSignal.value,
+                  );
+                  valueSignal.value = valueSignal.value === "on" ? false : "on";
+                }}
+              >
+                Toggle Signal
+              </button>
+            </div>
+            <div
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
+            >
+              Signal value: {valueSignal.value}
+              <br />
+              {result ||
+                "Use buttons to control checkbox via signal, action will trigger automatically..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxErrorDemo = () => {
+        const [result, setResult] = useState("");
+        const [status, setStatus] = useState("idle");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Checkbox with Error Handling</h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <Input
+                  id="error-checkbox"
+                  type="checkbox"
+                  name="dangerous"
+                  action={async ({ dangerous }) => {
+                    setStatus("loading");
+                    setResult("Processing...");
+                    try {
+                      await delay(1500);
+                      throw new Error(
+                        `Action failed for ${dangerous ? "checked" : "unchecked"} state`,
+                      );
+                    } catch (error) {
+                      setResult(`❌ ${error.message}`);
+                      setStatus("error");
+                      throw error;
+                    }
+                  }}
+                />
+                <label htmlFor="error-checkbox">
+                  <span className={`status-indicator status-${status}`}></span>
+                  Dangerous operation (always fails)
+                </label>
+              </div>
+            </div>
+            <div
+              className={`result-display ${status === "loading" ? "result-loading" : status === "error" ? "result-error" : ""}`}
+            >
+              {result || "This checkbox will always trigger an error..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const FormCheckboxDemo = () => {
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Checkboxes inside Form</h3>
+            <Form
+              action={async ({ username, newsletter, updates, marketing }) => {
+                setIsLoading(true);
+                setResult("Submitting preferences...");
+                try {
+                  await delay(1200);
+                  const prefs = [];
+                  if (newsletter) prefs.push("newsletter");
+                  if (updates) prefs.push("updates");
+                  if (marketing) prefs.push("marketing");
+                  const response = `✅ User: ${username}\nSubscriptions: ${prefs.length > 0 ? prefs.join(", ") : "none"}`;
+                  setResult(response);
+                  return response;
+                } catch (error) {
+                  setResult(`❌ Form error: ${error.message}`);
+                  throw error;
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+            >
+              <input type="hidden" name="username" value="john_doe" />
+              <div className="control-group">
+                <div className="checkbox-group">
+                  <Input
+                    id="form-newsletter"
+                    type="checkbox"
+                    name="newsletter"
+                    checked={true}
+                  />
+                  <label htmlFor="form-newsletter">
+                    Newsletter subscription
+                  </label>
+                </div>
+                <div className="checkbox-group">
+                  <Input id="form-updates" type="checkbox" name="updates" />
+                  <label htmlFor="form-updates">Product updates</label>
+                </div>
+                <div className="checkbox-group">
+                  <Input id="form-marketing" type="checkbox" name="marketing" />
+                  <label htmlFor="form-marketing">Marketing emails</label>
+                </div>
+              </div>
+              <div className="button-group">
+                <Button type="submit">Save Preferences</Button>
+                <Button type="reset">Reset</Button>
+              </div>
+            </Form>
+            <div
+              className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              {result || "Select preferences and submit..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const SharedActionDemo = () => {
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Shared Action Example</h3>
+            <p
+              style={{
+                margin: "0 0 15px 0",
+                fontSize: "14px",
+                color: "#666",
+                lineHeight: "1.4",
+              }}
+            >
+              <strong>Note:</strong> The checkbox states are not synced here,
+              which is normal. In a real application, both checkboxes would
+              typically be controlled by the same external state to keep them
+              synchronized.
+            </p>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <Input
+                  id="shared-checkbox-1"
+                  type="checkbox"
+                  name="feature1"
+                  action={sharedToggleAction}
+                  onActionStart={() => {
+                    setResult("Processing...");
+                  }}
+                  onActionEnd={(e) => {
+                    setResult(e.detail.data);
+                  }}
+                />
+                <label htmlFor="shared-checkbox-1">
+                  Feature 1 (shared action)
+                </label>
+              </div>
+              <div className="checkbox-group">
+                <Input
+                  id="shared-checkbox-2"
+                  type="checkbox"
+                  name="feature2"
+                  action={sharedToggleAction}
+                  onActionStart={() => {
+                    setResult("Processing...");
+                  }}
+                  onActionEnd={(e) => {
+                    setResult(e.detail.data);
+                  }}
+                />
+                <label htmlFor="shared-checkbox-2">
+                  Feature 2 (same shared action)
+                </label>
+              </div>
+            </div>
+            <div
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
+            >
+              {result || "Toggle either checkbox to see shared action..."}
+            </div>
+          </div>
+        );
+      };
+
+      const sharedToggleAction = createAction(async (params) => {
+        await delay(800);
+        const featureName = Object.keys(params).find((key) =>
+          key.startsWith("feature"),
+        );
+        const isEnabled = params[featureName];
+        const response = `${isEnabled ? "✅" : "☐"} ${featureName} ${isEnabled ? "enabled" : "disabled"} (from shared action)`;
+        return response;
+      });
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

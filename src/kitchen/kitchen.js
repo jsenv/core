@@ -12,6 +12,7 @@ import {
   defineNonEnumerableProperties,
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
+import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
 import {
   determineFileUrlForOutDirectory,
   determineSourcemapFileUrl,
@@ -107,6 +108,10 @@ export const createKitchen = ({
       isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
       isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
       isPlaceholderInjection,
+      asServerUrl: (fileUrl) =>
+        FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(fileUrl, rootDirectoryUrl),
+      asFileUrl: (serverUrl) =>
+        FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(serverUrl, rootDirectoryUrl),
       INJECTIONS,
       getPluginMeta: null,
       sourcemaps,

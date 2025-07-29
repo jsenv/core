@@ -1,7 +1,6 @@
 {
   "name": "@jsenv/navi",
   "version": "0.0.1",
-  "private": true,
   "description": "A navigation library for JS environments",
   "repository": {
     "type": "git",
@@ -23,7 +22,12 @@
     "/index.js",
     "/src/"
   ],
+  "dependencies": {
+    "@jsenv/dom": "0.0.1",
+    "@jsenv/humanize": "1.6.0"
+  },
   "devDependencies": {
+    "@jsenv/assert": "4.5.3",
     "@jsenv/validation": "0.0.1",
     "@preact/signals": "2.2.0",
     "preact": "10.26.9"

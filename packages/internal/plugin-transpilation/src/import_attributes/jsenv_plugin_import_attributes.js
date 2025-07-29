@@ -210,10 +210,11 @@ document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
 `;
         }
       }
+      const cssServerUrl = cssUrlInfo.context.asServerUrl(cssUrlInfo.url);
       let cssModuleContent = `import ${JSON.stringify(cssUrlInfo.context.inlineContentClientFileUrl)};
 
 const inlineContent = ${inlineContentCall};
-const stylesheet = new CSSStyleSheet();
+const stylesheet = new CSSStyleSheet({ baseUrl: ${JSON.stringify(cssServerUrl)} });
 stylesheet.replaceSync(inlineContent.text);
 ${cssModuleAutoInjectCode}
 export default stylesheet;`;

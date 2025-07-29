@@ -267,6 +267,31 @@ const UNICODE = createUnicode({
   ANSI,
 });
 
+const prefixFirstAndIndentRemainingLines = (
+  text,
+  { prefix, indentation, trimLines, trimLastLine },
+) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  if (indentation === undefined) {
+    {
+      indentation = "  "; // prefix + space
+    }
+  }
+  let result = `${prefix} ${firstLine}` ;
+  let i = 0;
+  while (i < lines.length) {
+    const line = trimLines ? lines[i].trim() : lines[i];
+    i++;
+    result += line.length
+      ? `\n${indentation}${line}`
+      : trimLastLine && i === lines.length
+        ? ""
+        : `\n`;
+  }
+  return result;
+};
+
 const setRoundedPrecision = (
   number,
   { decimals = 1, decimalsWhenSmall = decimals } = {},
@@ -643,10 +668,9 @@ const formatError = (error) => {
   const { cause } = error;
   if (cause) {
     const formatCause = (cause, depth) => {
-      let causeText = prefixFirstAndIndentRemainingLines({
+      let causeText = prefixFirstAndIndentRemainingLines(cause.stack, {
         prefix: "  [cause]:",
         indentation: "  ".repeat(depth + 1),
-        text: cause.stack,
       });
       const nestedCause = cause.cause;
       if (nestedCause) {
@@ -659,34 +683,6 @@ const formatError = (error) => {
     text += `\n${causeText}`;
   }
   return text;
-};
-
-const prefixFirstAndIndentRemainingLines = ({
-  prefix,
-  indentation,
-  text,
-  trimLines,
-  trimLastLine,
-}) => {
-  const lines = text.split(/\r?\n/);
-  const firstLine = lines.shift();
-  if (indentation === undefined) {
-    {
-      indentation = "  "; // prefix + space
-    }
-  }
-  let result = `${prefix} ${firstLine}` ;
-  let i = 0;
-  while (i < lines.length) {
-    const line = trimLines ? lines[i].trim() : lines[i];
-    i++;
-    result += line.length
-      ? `\n${indentation}${line}`
-      : trimLastLine && i === lines.length
-        ? ""
-        : `\n`;
-  }
-  return result;
 };
 
 const LOG_LEVEL_OFF = "off";
@@ -1958,15 +1954,24 @@ const lookupPackageDirectory = (currentUrl) => {
 };
 
 const readPackageAtOrNull = (packageDirectoryUrl) => {
+  const packageJsonFileUrl = new URL("./package.json", packageDirectoryUrl);
+  let packageJsonFileContentBuffer;
   try {
-    const packageFileContent = readFileSync(
-      new URL("./package.json", packageDirectoryUrl),
-      "utf8",
+    packageJsonFileContentBuffer = readFileSync(packageJsonFileUrl, "utf8");
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return null;
+    }
+    throw e;
+  }
+  const packageJsonFileContentString = String(packageJsonFileContentBuffer);
+  try {
+    const packageJsonFileContentObject = JSON.parse(
+      packageJsonFileContentString,
     );
-    const packageJSON = JSON.parse(packageFileContent);
-    return packageJSON;
+    return packageJsonFileContentObject;
   } catch {
-    return null;
+    throw new Error(`Invalid package configuration at ${packageJsonFileUrl}`);
   }
 };
 
@@ -3878,13 +3883,24 @@ const defaultLookupPackageScope = (url) => {
 };
 
 const defaultReadPackageJson = (packageUrl) => {
-  const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync(packageJsonUrl);
-  const string = String(buffer);
+  const packageJsonFileUrl = new URL("./package.json", packageUrl);
+  let packageJsonFileContentBuffer;
   try {
-    return JSON.parse(string);
+    packageJsonFileContentBuffer = readFileSync(packageJsonFileUrl, "utf8");
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return null;
+    }
+    throw e;
+  }
+  const packageJsonFileContentString = String(packageJsonFileContentBuffer);
+  try {
+    const packageJsonFileContentObject = JSON.parse(
+      packageJsonFileContentString,
+    );
+    return packageJsonFileContentObject;
   } catch {
-    throw new Error(`Invalid package configuration`);
+    throw new Error(`Invalid package configuration at ${packageJsonFileUrl}`);
   }
 };
 

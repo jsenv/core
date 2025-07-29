@@ -4,7 +4,9 @@ export {
   useActiveElement,
 } from "./focus/active_element.js";
 export { elementIsFocusable } from "./focus/element_is_focusable.js";
+export { initFocusGroup } from "./focus/focus_group.js";
 export { trapFocusInside } from "./focus/focus_trap.js";
+export { canInterceptKeys } from "./keyboard.js";
 export {
   getAncestorScrolls,
   getScrollableParentSet,
@@ -39,4 +41,9 @@ export { useResizeStatus } from "./size/hooks/use_resize_status.js";
 
 export { initPositionSticky } from "./position_sticky.js";
 export { getStyle, setAttributes, setStyles } from "./style_and_attributes.js";
-export { findFirstDescendant } from "./traversal.js";
+export {
+  findAfter,
+  findAncestor,
+  findBefore,
+  findDescendant,
+} from "./traversal.js";

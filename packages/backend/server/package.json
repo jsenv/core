@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "16.2.1",
+  "version": "16.3.0",
   "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "repository": {
     "type": "git",
@@ -45,8 +45,8 @@
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/humanize": "../../tooling/humanize",
+    "@jsenv/navi": "../../frontend/navi",
     "@jsenv/plugin-commonjs": "../../related/plugin-commonjs",
-    "@jsenv/router": "../../frontend/router",
     "@jsenv/server": "./",
     "@jsenv/snapshot": "../../tooling/snapshot",
     "@jsenv/url-meta": "../../tooling/url_meta",

@@ -1,4 +1,5 @@
 import { TextAndCount } from "../../components/text_and_count.jsx";
+import { useRoleGroupCount } from "../../database_manager_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
@@ -6,52 +7,63 @@ import {
 import { RoleGroupWithPlusSvg } from "../role_icons.jsx";
 import { RoleLink } from "../role_link.jsx";
 import {
-  DELETE_ROLE_ACTION,
-  POST_ROLE_ACTION,
-  PUT_ROLE_ACTION,
-} from "../role_routes.js";
-import { useRoleList } from "../role_signals.js";
-import { ROLE_GROUP_LIST_DETAILS_ROUTE } from "./role_group_list_details_routes.js";
-import { useRoleGroupCount, useRoleGroupList } from "./role_group_signals.js";
+  ROLE_CANNOT_LOGIN,
+  useRoleArrayInStore,
+  useRoleCannotLoginArray,
+} from "../role_store.js";
+import {
+  roleGroupListDetailsOnToggle,
+  roleGroupListDetailsOpenAtStart,
+} from "./role_group_list_details_state.js";
 
-export const roleGroupListDetailsController =
-  createExplorerGroupController("role_group_list");
+export const roleGroupListDetailsController = createExplorerGroupController(
+  "role_group_list",
+  {
+    detailsOpenAtStart: roleGroupListDetailsOpenAtStart,
+    detailsOnToggle: roleGroupListDetailsOnToggle,
+  },
+);
 
 export const RoleGroupListDetails = (props) => {
-  const roleGroupCount = useRoleGroupCount();
-  const roleGroupList = useRoleGroupList();
+  const roleCannotLoginCount = useRoleGroupCount();
+  const roleCannotLoginArray = useRoleCannotLoginArray();
 
   return (
     <ExplorerGroup
       {...props}
       controller={roleGroupListDetailsController}
-      detailsRoute={ROLE_GROUP_LIST_DETAILS_ROUTE}
+      detailsAction={ROLE_CANNOT_LOGIN.GET_MANY}
       idKey="oid"
       nameKey="rolname"
       labelChildren={
-        <TextAndCount text={"ROLE GROUPS"} count={roleGroupCount} />
+        <TextAndCount text={"ROLE GROUPS"} count={roleCannotLoginCount} />
       }
       renderNewButtonChildren={() => <RoleGroupWithPlusSvg />}
       renderItem={(role, { children, ...props }) => (
-        <RoleLink role={role} {...props}>
+        <RoleLink draggable={false} role={role} {...props}>
           {children}
         </RoleLink>
       )}
-      useItemList={useRoleList}
-      useRenameItemAction={(role) =>
-        PUT_ROLE_ACTION.bindParams({
-          rolname: role.rolname,
-          columnName: "rolname",
+      useItemArrayInStore={useRoleArrayInStore}
+      useCreateItemAction={(valueSignal) =>
+        ROLE_CANNOT_LOGIN.POST.bindParams({
+          rolname: valueSignal,
         })
       }
-      useCreateItemAction={() => POST_ROLE_ACTION}
       useDeleteItemAction={(role) =>
-        DELETE_ROLE_ACTION.bindParams({
+        ROLE_CANNOT_LOGIN.DELETE.bindParams({
           rolname: role.rolname,
+        })
+      }
+      useRenameItemAction={(role, valueSignal) =>
+        ROLE_CANNOT_LOGIN.PUT.bindParams({
+          rolname: role.rolname,
+          columnName: "rolname",
+          columnValue: valueSignal,
         })
       }
     >
-      {roleGroupList}
+      {roleCannotLoginArray}
     </ExplorerGroup>
   );
 };

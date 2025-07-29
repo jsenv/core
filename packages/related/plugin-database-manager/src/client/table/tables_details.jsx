@@ -1,49 +1,71 @@
 import { TextAndCount } from "../components/text_and_count.jsx";
+import { useTableCount } from "../database_manager_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../explorer/explorer_group.jsx";
 import { TableWithPlusSvg } from "./table_icons.jsx";
 import { TableLink } from "./table_link.jsx";
+import { TABLE, useTableArray, useTableArrayInStore } from "./table_store.js";
 import {
-  DELETE_TABLE_ACTION,
-  POST_TABLE_ACTION,
-  PUT_TABLE_ACTION,
-} from "./table_routes.js";
-import { useTableCount, useTableList } from "./table_signals.js";
-import { TABLES_DETAILS_ROUTE } from "./tables_details_routes.js";
+  tableListDetailsOnToggle,
+  tableListDetailsOpenAtStart,
+} from "./tables_details_state.js";
 
-export const tablesDetailsController = createExplorerGroupController("tables");
+export const tablesDetailsController = createExplorerGroupController("tables", {
+  detailsOpenAtStart: tableListDetailsOpenAtStart,
+  detailsOnToggle: tableListDetailsOnToggle,
+});
 
 export const TablesDetails = (props) => {
-  const tables = useTableList();
   const tableCount = useTableCount();
+  const tableArray = useTableArray();
 
   return (
     <ExplorerGroup
       {...props}
       controller={tablesDetailsController}
-      detailsRoute={TABLES_DETAILS_ROUTE}
+      detailsAction={TABLE.GET_MANY}
       idKey="oid"
       nameKey="tablename"
       labelChildren={<TextAndCount text={"TABLES"} count={tableCount} />}
       renderNewButtonChildren={() => <TableWithPlusSvg />}
-      renderItem={(item, props) => <TableLink table={item} {...props} />}
-      useItemList={useTableList}
-      useRenameItemAction={(table) =>
-        PUT_TABLE_ACTION.bindParams({
-          tablename: table.tablename,
-          columnName: "tablename",
+      renderItem={(table, props) => (
+        <TableLink
+          key={table.oid}
+          value={table.tablename}
+          readOnly={props.deletedItems.includes(table.tablename)}
+          loading={props.deletedItems.includes(table.tablename)}
+          table={table}
+          draggable={false}
+          {...props}
+        />
+      )}
+      useItemArrayInStore={useTableArrayInStore}
+      useCreateItemAction={(nameSignal) =>
+        TABLE.POST.bindParams({
+          tablename: nameSignal,
         })
       }
-      useCreateItemAction={() => POST_TABLE_ACTION}
-      useDeleteItemAction={(table) =>
-        DELETE_TABLE_ACTION.bindParams({
+      useRenameItemAction={(table, valueSignal) =>
+        TABLE.PUT.bindParams({
           tablename: table.tablename,
+          columnName: "tablename",
+          columnValue: valueSignal,
+        })
+      }
+      useDeleteItemAction={(table) =>
+        TABLE.DELETE.bindParams({
+          tablename: table.tablename,
+        })
+      }
+      useDeleteManyItemAction={(itemNamesSignal) =>
+        TABLE.DELETE_MANY.bindParams({
+          tablenames: itemNamesSignal,
         })
       }
     >
-      {tables}
+      {tableArray}
     </ExplorerGroup>
   );
 };

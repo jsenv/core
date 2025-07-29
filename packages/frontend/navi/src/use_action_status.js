@@ -1,43 +1,47 @@
-import { ABORTED, IDLE, LOADED, LOADING } from "./action_loading_states.js";
 import { getActionPrivateProperties } from "./action_private_properties.js";
+import { ABORTED, COMPLETED, IDLE, RUNNING } from "./action_run_states.js";
 
 export const useActionStatus = (action) => {
   if (!action) {
     return {
       params: undefined,
+      runningState: IDLE,
+      isPrerun: false,
       idle: true,
-      error: null,
+      loading: false,
       aborted: false,
-      pending: false,
-      preloaded: false,
+      error: null,
+      completed: false,
       data: undefined,
     };
   }
   const {
     paramsSignal,
-    loadingStateSignal,
-    loadRequestedSignal,
+    runningStateSignal,
+    isPrerunSignal,
     errorSignal,
     computedDataSignal,
   } = getActionPrivateProperties(action);
 
   const params = paramsSignal.value;
-  const loadRequested = loadRequestedSignal.value;
-  const loadingState = loadingStateSignal.value;
+  const isPrerun = isPrerunSignal.value;
+  const runningState = runningStateSignal.value;
+  const idle = runningState === IDLE;
+  const aborted = runningState === ABORTED;
   const error = errorSignal.value;
-  const idle = loadingState === IDLE;
-  const pending = loadingState === LOADING;
-  const aborted = loadingState === ABORTED;
-  const preloaded = loadingState === LOADED && !loadRequested;
+  const loading = runningState === RUNNING;
+  const completed = runningState === COMPLETED;
   const data = computedDataSignal.value;
 
   return {
     params,
+    runningState,
+    isPrerun,
     idle,
-    error,
+    loading,
     aborted,
-    pending,
-    preloaded,
+    error,
+    completed,
     data,
   };
 };

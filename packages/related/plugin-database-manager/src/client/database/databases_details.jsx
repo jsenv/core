@@ -1,52 +1,71 @@
 import { TextAndCount } from "../components/text_and_count.jsx";
+import { useDatabaseCount } from "../database_manager_signals.js";
 import {
   createExplorerGroupController,
   ExplorerGroup,
 } from "../explorer/explorer_group.jsx";
-import { DATABASES_DETAILS_ROUTE } from "./database_details_routes.js";
+import {
+  databaseListDetailsOnToggle,
+  databaseListDetailsOpenAtStart,
+} from "./database_details_state.js";
 import { DatabaseWithPlusSvg } from "./database_icons.jsx";
 import { DatabaseLink } from "./database_link.jsx";
 import {
-  DELETE_DATABASE_ACTION,
-  POST_DATABASE_ACTION,
-  PUT_DATABASE_ACTION,
-} from "./database_routes.js";
-import { useDatabaseCount, useDatabaseList } from "./database_signals.js";
+  DATABASE,
+  useDatabaseArray,
+  useDatabaseArrayInStore,
+} from "./database_store.js";
 
-export const databasesDetailsController =
-  createExplorerGroupController("databases");
+export const databasesDetailsController = createExplorerGroupController(
+  "databases",
+  {
+    detailsOpenAtStart: databaseListDetailsOpenAtStart,
+    detailsOnToggle: databaseListDetailsOnToggle,
+  },
+);
 
 export const DatabasesDetails = (props) => {
-  const databases = useDatabaseList();
   const databaseCount = useDatabaseCount();
+  const databaseArray = useDatabaseArray();
 
   return (
     <ExplorerGroup
       {...props}
       controller={databasesDetailsController}
-      detailsRoute={DATABASES_DETAILS_ROUTE}
+      detailsAction={DATABASE.GET_MANY}
       idKey="oid"
       nameKey="datname"
       labelChildren={<TextAndCount text={"DATABASES"} count={databaseCount} />}
       renderNewButtonChildren={() => <DatabaseWithPlusSvg />}
-      renderItem={(item, props) => (
-        <DatabaseLink key={item.oid} database={item} {...props} />
+      renderItem={(database, props) => (
+        <DatabaseLink
+          draggable={false}
+          key={database.oid}
+          value={database.datname}
+          database={database}
+          {...props}
+        />
       )}
-      useItemList={useDatabaseList}
-      useRenameItemAction={(database) =>
-        PUT_DATABASE_ACTION.bindParams({
-          datname: database.datname,
-          columnName: "datname",
+      useItemArrayInStore={useDatabaseArrayInStore}
+      useCreateItemAction={(valueSignal) =>
+        DATABASE.POST({
+          datname: valueSignal,
         })
       }
-      useCreateItemAction={() => POST_DATABASE_ACTION}
       useDeleteItemAction={(database) =>
-        DELETE_DATABASE_ACTION.bindParams({
+        DATABASE.DELETE.bindParams({
           datname: database.datname,
+        })
+      }
+      useRenameItemAction={(database, valueSignal) =>
+        DATABASE.PUT.bindParams({
+          datname: database.datname,
+          columnName: "datname",
+          columnValue: valueSignal,
         })
       }
     >
-      {databases}
+      {databaseArray}
     </ExplorerGroup>
   );
 };

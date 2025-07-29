@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tree Focus Group</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+
+      .tree-container {
+        border: 2px solid #333;
+        padding: 20px;
+        margin: 20px 0;
+        background: #f9f9f9;
+      }
+
+      details {
+        margin: 8px 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: white;
+      }
+
+      summary {
+        padding: 12px;
+        background: #e8e8e8;
+        cursor: pointer;
+        border-radius: 4px 4px 0 0;
+        font-weight: bold;
+      }
+
+      summary:hover {
+        background: #d8d8d8;
+      }
+
+      summary:focus {
+        outline: 2px solid #0066cc;
+        outline-offset: 2px;
+      }
+
+      .content {
+        padding-left: 16px;
+      }
+
+      .focusable-item {
+        display: block;
+        padding: 8px 12px;
+        margin: 4px 0;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        text-decoration: none;
+        color: #333;
+        cursor: pointer;
+      }
+
+      .focusable-item:hover {
+        background: #f0f8ff;
+        border-color: #0066cc;
+      }
+
+      .focusable-item:focus {
+        outline: 2px solid #0066cc;
+        outline-offset: 1px;
+        background: #e6f3ff;
+      }
+
+      .debug {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        width: 300px;
+        background: #222;
+        color: #fff;
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .debug h3 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+      }
+
+      .status-line {
+        margin: 2px 0;
+        padding: 2px 4px;
+        background: #333;
+        border-radius: 2px;
+      }
+
+      /* Visual indicators for focus group hierarchy */
+      [data-focus-group="root"] {
+        border-left: 4px solid #0066cc;
+      }
+
+      [data-focus-group="level-1"] {
+        border-left: 4px solid #00cc66;
+      }
+
+      [data-focus-group="level-2"] {
+        border-left: 4px solid #cc6600;
+      }
+
+      [data-focus-group="level-3"] {
+        border-left: 4px solid #cc0066;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tree Focus Group Test</h1>
+
+    <p>
+      This demonstrates a tree-like structure using nested
+      <code>&lt;details&gt;</code> elements with focus groups. Each details
+      contains a focus group for vertical arrow navigation within its content.
+    </p>
+
+    <div class="debug">
+      <h3>Debug Info</h3>
+      <div id="debug-output"></div>
+    </div>
+
+    <!-- Test element before the tree -->
+    <div
+      style="
+        margin: 20px 0;
+        padding: 10px;
+        border: 2px solid #0066cc;
+        background: #f0f8ff;
+      "
+    >
+      <label for="before-input">Input before tree (Tab test):</label>
+      <input
+        id="before-input"
+        type="text"
+        placeholder="Focus me, then press Tab"
+        style="margin-left: 10px; padding: 5px"
+      />
+    </div>
+
+    <div class="tree-container">
+      <h2>File System Tree</h2>
+
+      <!-- Root level details -->
+      <details open data-focus-group="root">
+        <summary tabindex="0">📁 Projects</summary>
+
+        <div class="content" id="projects-group">
+          <!-- Nested details level 1 -->
+          <details data-focus-group="level-1">
+            <summary tabindex="-1">📁 src</summary>
+            <div class="content" id="src-group">
+              <!-- Nested details level 2 -->
+              <details data-focus-group="level-2">
+                <summary tabindex="-1">📁 components</summary>
+                <div class="content" id="components-group">
+                  <div tabindex="-1" class="focusable-item">📄 Button.jsx</div>
+                  <div tabindex="-1" class="focusable-item">📄 Modal.jsx</div>
+                </div>
+              </details>
+            </div>
+          </details>
+          <details data-focus-group="level-2">
+            <summary tabindex="-1">📁 utils</summary>
+            <div class="content" id="utils-group">
+              <div tabindex="-1" class="focusable-item">📄 helpers.js</div>
+              <div tabindex="-1" class="focusable-item">📄 config.js</div>
+            </div>
+          </details>
+          <div tabindex="0" class="focusable-item">📄 README.md</div>
+          <div tabindex="0" class="focusable-item">📄 package.json</div>
+          <div tabindex="0" class="focusable-item">� .gitignore</div>
+        </div>
+      </details>
+    </div>
+
+    <!-- Test element after the tree -->
+    <div
+      style="
+        margin: 20px 0;
+        padding: 10px;
+        border: 2px solid #cc6600;
+        background: #fff8f0;
+      "
+    >
+      <label for="after-input">Input after tree (Tab test):</label>
+      <input
+        id="after-input"
+        type="text"
+        placeholder="Should receive focus after tree"
+        style="margin-left: 10px; padding: 5px"
+      />
+      <button style="margin-left: 10px; padding: 5px 10px">
+        Button after tree
+      </button>
+    </div>
+
+    <div class="tree-container">
+      <h2>Expected Focus Group Behavior</h2>
+      <ul>
+        <li>
+          <strong>Tab Navigation:</strong> Should skip over focus groups
+          entirely - from "Input before tree" directly to "Input after tree"
+        </li>
+        <li>
+          <strong>Arrow Up/Down:</strong> Navigates within the current focus
+          group (vertical)
+        </li>
+        <li>
+          <strong>Future Implementation:</strong> Arrow Left/Right to
+          collapse/expand or move between sibling groups
+        </li>
+      </ul>
+
+      <h3>Tab Navigation Test</h3>
+      <ol>
+        <li>Click on "Input before tree" field above</li>
+        <li>
+          Press Tab - should jump directly to "Input after tree" (skipping all
+          focus groups)
+        </li>
+        <li>Press Shift+Tab - should jump back to "Input before tree"</li>
+        <li>
+          To enter a focus group: click on any file/folder item, then use arrows
+        </li>
+      </ol>
+
+      <h3>Focus Group Configuration</h3>
+      <p>Each <code>details</code> element would be initialized as:</p>
+      <pre><code>initFocusGroup(element, {
+  direction: "vertical",  // Only up/down arrows
+  loop: false,           // Stay at boundaries
+  skipTab: true          // Tab exits the group
+});</code></pre>
+    </div>
+
+    <script type="module">
+      import { initFocusGroup } from "../focus_group.js";
+
+      // Initialize focus groups on details elements
+      const focusGroups = document.querySelectorAll("details");
+      focusGroups.forEach((group) => {
+        initFocusGroup(group, {
+          direction: "vertical", // Only allow up/down navigation within each group
+          loop: false, // Don't wrap around at boundaries
+          skipTab: true, // Tab key exits the group
+        });
+      });
+
+      // Debug logging
+      const debugOutput = document.getElementById("debug-output");
+
+      function log(message) {
+        const line = document.createElement("div");
+        line.className = "status-line";
+        line.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+        debugOutput.insertBefore(line, debugOutput.firstChild);
+
+        // Keep only last 10 messages
+        while (debugOutput.children.length > 10) {
+          debugOutput.removeChild(debugOutput.lastChild);
+        }
+      }
+
+      // Track focus changes
+      document.addEventListener("focusin", (event) => {
+        const element = event.target;
+        const groupId =
+          element.closest("details")?.getAttribute("data-focus-group") ||
+          "none";
+        const elementType = element.tagName.toLowerCase();
+        const elementText = element.textContent.trim().substring(0, 20);
+
+        log(`Focus: ${elementType} "${elementText}" in ${groupId}`);
+      });
+
+      // Track key presses for debugging
+      document.addEventListener("keydown", (event) => {
+        if (
+          ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab"].includes(
+            event.key,
+          )
+        ) {
+          const activeGroup =
+            document.activeElement
+              ?.closest("details")
+              ?.getAttribute("data-focus-group") || "none";
+          log(`Key: ${event.key} in ${activeGroup}`);
+        }
+      });
+
+      log("Tree focus group test initialized");
+    </script>
+  </body>
+</html>

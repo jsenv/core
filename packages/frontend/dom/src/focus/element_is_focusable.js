@@ -5,6 +5,9 @@ export const elementIsFocusable = (node) => {
   if (node.nodeType !== 1) {
     return false;
   }
+  if (!canInteract(node)) {
+    return false;
+  }
   const nodeName = node.nodeName.toLowerCase();
   if (nodeName === "input") {
     if (node.type === "hidden") {
@@ -16,12 +19,6 @@ export const elementIsFocusable = (node) => {
     ["button", "select", "datalist", "iframe", "textarea"].indexOf(nodeName) >
     -1
   ) {
-    return elementIsVisible(node);
-  }
-  if (node.hasAttribute("tabindex") || node.hasAttribute("tabIndex")) {
-    return elementIsVisible(node);
-  }
-  if (node.hasAttribute("draggable")) {
     return elementIsVisible(node);
   }
   if (["a", "area"].indexOf(nodeName) > -1) {
@@ -36,5 +33,25 @@ export const elementIsFocusable = (node) => {
     }
     return elementIsVisible(node);
   }
+  if (nodeName === "summary") {
+    return elementIsVisible(node);
+  }
+  if (node.hasAttribute("tabindex") || node.hasAttribute("tabIndex")) {
+    return elementIsVisible(node);
+  }
+  if (node.hasAttribute("draggable")) {
+    return elementIsVisible(node);
+  }
   return false;
+};
+
+const canInteract = (element) => {
+  if (element.disabled) {
+    return false;
+  }
+  if (element.hasAttribute("inert")) {
+    // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert
+    return false;
+  }
+  return true;
 };

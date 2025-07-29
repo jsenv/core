@@ -1,29 +1,28 @@
-import { ErrorBoundaryContext, SPADeleteButton } from "@jsenv/router";
-import { useErrorBoundary } from "preact/hooks";
-import { DatabaseValue } from "../../components/database_value.jsx";
-import { PageBody, PageHead } from "../../layout/page.jsx";
+import { Button } from "@jsenv/navi";
+import { DatabaseFieldset } from "../../components/database_field.jsx";
+import { Page, PageBody, PageHead } from "../../layout/page.jsx";
 import { RoleDatabaseList } from "../role_database_list.jsx";
 import { pickRoleIcon } from "../role_icons.jsx";
-import { DELETE_ROLE_ACTION, PUT_ROLE_ACTION } from "../role_routes.js";
-import { useActiveRoleColumns } from "../role_signals.js";
+import { ROLE } from "../role_store.js";
 import { RoleGroupMemberList } from "./role_group_member_list.jsx";
 
 export const RoleGroupPage = ({ role }) => {
-  const [error, resetError] = useErrorBoundary();
   const rolname = role.rolname;
-  const deleteRoleAction = DELETE_ROLE_ACTION.bindParams({ rolname });
+  const deleteRoleAction = ROLE.DELETE.bindParams({ rolname });
   const RoleIcon = pickRoleIcon(role);
 
   return (
-    <ErrorBoundaryContext.Provider value={resetError}>
-      {error && <ErrorDetails error={error} />}
+    <Page>
       <PageHead
         actions={[
           {
             component: (
-              <SPADeleteButton action={deleteRoleAction}>
+              <Button
+                data-confirm-message={`Are you sure you want to delete the role "${rolname}"?`}
+                action={deleteRoleAction}
+              >
                 Delete
-              </SPADeleteButton>
+              </Button>
             ),
           },
         ]}
@@ -33,7 +32,18 @@ export const RoleGroupPage = ({ role }) => {
         </PageHead.Label>
       </PageHead>
       <PageBody>
-        <RoleFields role={role} />
+        <DatabaseFieldset
+          item={role}
+          columns={role.meta.columns}
+          usePutAction={(columnName, valueSignal) =>
+            ROLE.PUT.bindParams({
+              rolname: role.tablename,
+              columnName,
+              columnValue: valueSignal,
+            })
+          }
+          ignoredFields={["rolcanlogin"]}
+        />
         <RoleGroupMemberList role={role} />
         <RoleDatabaseList role={role} />
         <a
@@ -43,60 +53,6 @@ export const RoleGroupPage = ({ role }) => {
           ROLE documentation
         </a>
       </PageBody>
-    </ErrorBoundaryContext.Provider>
-  );
-};
-
-const ErrorDetails = ({ error }) => {
-  return (
-    <details>
-      <summary>{error.message}</summary>
-      <pre>
-        <code>{error.stack}</code>
-      </pre>
-    </details>
-  );
-};
-
-const RoleFields = ({ role }) => {
-  const columns = useActiveRoleColumns();
-
-  columns.sort((a, b) => {
-    return a.ordinal_position - b.ordinal_position;
-  });
-  const fields = [];
-  for (const column of columns) {
-    const columnName = column.column_name;
-    if (columnName === "rolcanlogin") {
-      continue;
-    }
-    const value = role ? role[columnName] : "";
-    fields.push({
-      column,
-      value,
-    });
-  }
-
-  return (
-    <ul>
-      {fields.map(({ column, value }) => {
-        const columnName = column.column_name;
-        const action = PUT_ROLE_ACTION.bindParams({
-          rolname: role.rolname,
-          columnName,
-        });
-
-        return (
-          <li key={columnName}>
-            <DatabaseValue
-              label={<span>{columnName}:</span>}
-              column={column}
-              value={value}
-              action={action}
-            />
-          </li>
-        );
-      })}
-    </ul>
+    </Page>
   );
 };

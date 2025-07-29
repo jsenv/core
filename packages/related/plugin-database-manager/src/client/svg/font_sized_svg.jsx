@@ -30,6 +30,7 @@ export const FontSizedSvg = ({ width = "1em", height = "1em", children }) => {
         height,
         justifySelf: "center",
         lineHeight: "1em",
+        flexShrink: 0,
       }}
     >
       {children}

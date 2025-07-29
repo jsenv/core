@@ -1,6 +1,6 @@
 import {
   elementIsFocusable,
-  findFirstDescendant,
+  findDescendant,
   getAncestorScrolls,
   setAttributes,
   trapFocusInside,
@@ -86,10 +86,7 @@ const ModalOpened = ({
 
   const getFirstFocusableElementOrSelf = () => {
     const modal = modalRef.current;
-    const firstFocusableDescendant = findFirstDescendant(
-      modal,
-      elementIsFocusable,
-    );
+    const firstFocusableDescendant = findDescendant(modal, elementIsFocusable);
     if (firstFocusableDescendant) {
       return firstFocusableDescendant;
     }

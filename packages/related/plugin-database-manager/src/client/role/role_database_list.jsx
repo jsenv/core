@@ -1,8 +1,7 @@
 import { DatabaseLink } from "../database/database_link.jsx";
-import { useActiveRoleDatabases } from "./role_signals.js";
 
 export const RoleDatabaseList = ({ role }) => {
-  const databases = useActiveRoleDatabases();
+  const databases = role.databases;
 
   return (
     <div>

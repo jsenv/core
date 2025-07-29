@@ -2,14 +2,77 @@
  * https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Constraint_validation
  */
 
+// this constraint is not really a native constraint and browser just not let this happen at all
+// in our case it's just here in case some code is wrongly calling "requestAction" or "checkValidity" on a disabled element
+export const DISABLED_CONSTRAINT = {
+  name: "disabled",
+  check: (element) => {
+    if (element.disabled) {
+      return `Ce champ est désactivé.`;
+    }
+    return null;
+  },
+};
+
 export const REQUIRED_CONSTRAINT = {
   name: "required",
-  check: (element) => {
+  check: (element, { registerChange }) => {
     if (!element.required) {
       return null;
     }
+    const requiredMessage = element.getAttribute("data-required-message");
+
+    if (element.type === "checkbox") {
+      if (!element.checked) {
+        return requiredMessage || `Veuillez cocher cette case.`;
+      }
+      return null;
+    }
+    if (element.type === "radio") {
+      // For radio buttons, check if any radio with the same name is selected
+      const name = element.name;
+      if (!name) {
+        // If no name, check just this radio
+        if (!element.checked) {
+          return requiredMessage || `Veuillez sélectionner une option.`;
+        }
+        return null;
+      }
+
+      const closestFieldset = element.closest("fieldset");
+      const fieldsetRequiredMessage = closestFieldset
+        ? closestFieldset.getAttribute("data-required-message")
+        : null;
+
+      // Find the container (form or closest fieldset)
+      const container = element.form || closestFieldset || document;
+      // Check if any radio with the same name is checked
+      const radioSelector = `input[type="radio"][name="${CSS.escape(name)}"]`;
+      const radiosWithSameName = container.querySelectorAll(radioSelector);
+      for (const radio of radiosWithSameName) {
+        if (radio.checked) {
+          return null; // At least one radio is selected
+        }
+        registerChange((onChange) => {
+          radio.addEventListener("change", onChange);
+          return () => {
+            radio.removeEventListener("change", onChange);
+          };
+        });
+      }
+
+      return {
+        message:
+          requiredMessage ||
+          fieldsetRequiredMessage ||
+          `Veuillez sélectionner une option.`,
+        target: closestFieldset
+          ? closestFieldset.querySelector("legend")
+          : undefined,
+      };
+    }
     if (!element.value) {
-      return `Veuillez remplir ce champ.`;
+      return requiredMessage || `Veuillez remplir ce champ.`;
     }
     return null;
   },
@@ -21,15 +84,15 @@ export const PATTERN_CONSTRAINT = {
     if (!pattern) {
       return null;
     }
-    const regex = new RegExp(pattern);
-
     const value = input.value;
+    if (!value) {
+      return null;
+    }
+    const regex = new RegExp(pattern);
     if (!regex.test(value)) {
-      const patternValidationMessage = input.getAttribute(
-        "pattern-validation-message",
-      );
-      if (patternValidationMessage) {
-        return patternValidationMessage;
+      const patternMessage = input.getAttribute("data-pattern-message");
+      if (patternMessage) {
+        return patternMessage;
       }
       let message = `Veuillez respecter le format requis.`;
       const title = input.title;
@@ -47,14 +110,18 @@ const emailregex =
 export const TYPE_EMAIL_CONSTRAINT = {
   name: "type_email",
   check: (input) => {
-    if (input.type === "email") {
-      const value = input.value;
-      if (!value.includes("@")) {
-        return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
-      }
-      if (!emailregex.test(input.value)) {
-        return `Veuillez saisir une adresse e-mail valide.`;
-      }
+    if (input.type !== "email") {
+      return null;
+    }
+    const value = input.value;
+    if (!value) {
+      return null;
+    }
+    if (!value.includes("@")) {
+      return `Veuillez inclure "@" dans l'adresse e-mail. Il manque un symbole "@" dans ${value}.`;
+    }
+    if (!emailregex.test(value)) {
+      return `Veuillez saisir une adresse e-mail valide.`;
     }
     return null;
   },
@@ -154,21 +221,23 @@ export const MIN_CONSTRAINT = {
       return null;
     }
     if (element.type === "number") {
-      const min = element.min;
-      if (min === undefined) {
+      const minString = element.min;
+      if (minString === "") {
+        return null;
+      }
+      const minNumber = parseFloat(minString);
+      if (isNaN(minNumber)) {
         return null;
       }
       const valueAsNumber = element.valueAsNumber;
       if (isNaN(valueAsNumber)) {
         return null;
       }
-      if (valueAsNumber < min) {
-        const minValidationMessage = element.getAttribute(
-          "min-validation-message",
-        );
+      if (valueAsNumber < minNumber) {
+        const minMessage = element.getAttribute("data-min-message");
         return (
-          minValidationMessage ||
-          `Doit être supérieur ou égal à <strong>${min}</strong>.`
+          minMessage ||
+          `Doit être supérieur ou égal à <strong>${minString}</strong>.`
         );
       }
       return null;
@@ -205,21 +274,21 @@ export const MAX_CONSTRAINT = {
       return null;
     }
     if (element.type === "number") {
-      const max = element.max;
-      if (max === undefined) {
+      const maxString = element.max;
+      if (maxString === "") {
+        return null;
+      }
+      const maxNumber = parseFloat(maxString);
+      if (isNaN(maxNumber)) {
         return null;
       }
       const valueAsNumber = element.valueAsNumber;
       if (isNaN(valueAsNumber)) {
         return null;
       }
-      if (valueAsNumber > max) {
-        const maxValidationMessage = element.getAttribute(
-          "max-validation-message",
-        );
-        return (
-          maxValidationMessage || `Doit être <strong>${max}</strong> ou plus.`
-        );
+      if (valueAsNumber > maxNumber) {
+        const maxMessage = element.getAttribute("data-max-message");
+        return maxMessage || `Doit être <strong>${maxString}</strong> ou plus.`;
       }
       return null;
     }

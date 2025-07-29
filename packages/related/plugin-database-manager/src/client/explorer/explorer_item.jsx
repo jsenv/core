@@ -1,73 +1,86 @@
 import {
   EditableText,
-  Form,
-  InputText,
+  Input,
   useEditableController,
+  useSignalSync,
 } from "@jsenv/navi";
 import {
   createUniqueValueConstraint,
   SINGLE_SPACE_CONSTRAINT,
 } from "@jsenv/validation";
+import { useSignal } from "@preact/signals";
+import { Overflow } from "../layout/overflow.jsx";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
 export const ExplorerItem = ({
   nameKey,
   item,
   renderItem,
-  useItemList,
-  useRenameItemAction = () => undefined,
-  useDeleteItemAction = () => undefined,
+  deletedItems,
+  useItemArrayInStore,
+  useRenameItemAction,
+  useDeleteItemAction,
 }) => {
   const itemName = item[nameKey];
-  const deleteAction = useDeleteItemAction(item);
 
-  const renameAction = useRenameItemAction(item);
   const { editable, startEditing, stopEditing } = useEditableController();
+  const deleteItemAction = useDeleteItemAction
+    ? useDeleteItemAction(item)
+    : null;
 
-  return renderItem(item, {
-    deleteShortcutAction: deleteAction,
-    deleteShortcutConfirmContent: `Are you sure you want to delete "${itemName}"?`,
-    onKeydown: (e) => {
-      if (e.key === "Enter" && !editable && renameAction) {
-        e.preventDefault();
-        e.stopPropagation();
-        startEditing();
-      }
-    },
-    children: renameAction ? (
+  const itemRendered = renderItem(item, {
+    deletedItems,
+    className: "explorer_item_content",
+    shortcuts: [
+      {
+        key: "enter",
+        enabled: !editable,
+        action: startEditing,
+        description: "Edit item name",
+      },
+      ...(deleteItemAction
+        ? [
+            {
+              key: "command+delete",
+              action: deleteItemAction,
+              description: "Delete item",
+              confirmMessage: `Are you sure you want to delete "${itemName}"?`,
+            },
+          ]
+        : []),
+    ],
+    children: useRenameItemAction ? (
       <RenameInputOrName
         nameKey={nameKey}
         item={item}
-        useItemList={useItemList}
-        renameAction={renameAction}
+        useItemArrayInStore={useItemArrayInStore}
+        useRenameItemAction={useRenameItemAction}
         editable={editable}
         stopEditing={stopEditing}
       />
     ) : (
-      <span
-        style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {itemName}
-      </span>
+      <Overflow>{itemName}</Overflow>
     ),
   });
+  return itemRendered;
 };
 
 const RenameInputOrName = ({
   nameKey,
   item,
-  useItemList,
-  renameAction,
+  useItemArrayInStore,
+  useRenameItemAction,
   editable,
   stopEditing,
 }) => {
   const itemName = item[nameKey];
-  const itemList = useItemList();
+  const nameSignal = useSignalSync(itemName);
+
+  const renameAction = useRenameItemAction(item, nameSignal);
+
+  const itemArrayInStore = useItemArrayInStore();
   const otherValueSet = new Set();
-  for (const itemCandidate of itemList) {
+  for (const itemCandidate of itemArrayInStore) {
     if (itemCandidate === item) {
       continue;
     }
@@ -80,37 +93,31 @@ const RenameInputOrName = ({
 
   return (
     <EditableText
-      name={nameKey}
       action={renameAction}
       editable={editable}
       onEditEnd={stopEditing}
       value={itemName}
+      valueSignal={nameSignal}
       constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
     >
-      <span
-        style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {itemName}
-      </span>
+      <Overflow>{itemName}</Overflow>
     </EditableText>
   );
 };
 
 export const ExplorerNewItem = ({
   nameKey,
-  useItemList,
+  useItemArrayInStore,
   useCreateItemAction,
   cancelOnBlurInvalid,
   onCancel,
   onActionEnd,
 }) => {
-  const createItemAction = useCreateItemAction();
-  const itemList = useItemList();
+  const nameSignal = useSignal("");
+  const createItemAction = useCreateItemAction(nameSignal);
+  const itemArrayInStore = useItemArrayInStore();
   const valueSet = new Set();
-  for (const item of itemList) {
+  for (const item of itemArrayInStore) {
     valueSet.add(item[nameKey]);
   }
   const uniqueNameConstraint = createUniqueValueConstraint(
@@ -123,18 +130,18 @@ export const ExplorerNewItem = ({
       <FontSizedSvg>
         <EnterNameIconSvg />
       </FontSizedSvg>
-      <Form action={createItemAction} onActionEnd={onActionEnd}>
-        <InputText
-          name={nameKey}
-          autoFocus
-          required
-          requestExecuteOnChange
-          constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
-          cancelOnEscape
-          cancelOnBlurInvalid={cancelOnBlurInvalid}
-          onCancel={onCancel}
-        />
-      </Form>
+
+      <Input
+        action={createItemAction}
+        valueSignal={nameSignal}
+        cancelOnEscape
+        cancelOnBlurInvalid={cancelOnBlurInvalid}
+        onCancel={onCancel}
+        onActionEnd={onActionEnd}
+        autoFocus
+        required
+        constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
+      />
     </span>
   );
 };

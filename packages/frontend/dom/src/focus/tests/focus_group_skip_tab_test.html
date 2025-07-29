@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focus Group Test - Skip Tab</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        margin: 40px;
+        line-height: 1.6;
+      }
+
+      .test-section {
+        margin: 30px 0;
+        padding: 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+      }
+
+      .focus-group {
+        background: #f5f5f5;
+        border: 2px dashed #999;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+
+      .focus-group h3 {
+        margin-top: 0;
+        color: #666;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        margin: 5px;
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      button:focus,
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: 2px solid #007acc;
+        outline-offset: 2px;
+      }
+
+      .instructions {
+        background: #e8f4fd;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+      }
+
+      .status {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #333;
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="status" id="status">Focus: none</div>
+
+    <h1>Focus Group Test - Skip Tab</h1>
+
+    <div class="instructions">
+      <strong>Test Instructions:</strong>
+      <ol>
+        <li>Use <kbd>Tab</kbd> to navigate through focusable elements</li>
+        <li>
+          Elements in the focus group are still accessible (click them or
+          navigate normally)
+        </li>
+        <li>
+          When you're focused on an element INSIDE the focus group and press
+          <kbd>Tab</kbd>, it should jump to the next focusable element OUTSIDE
+          the group
+        </li>
+        <li>
+          Elements before and after the focus group should have normal tab
+          behavior
+        </li>
+        <li>
+          Try clicking on elements inside the focus group, then pressing
+          <kbd>Tab</kbd>
+        </li>
+      </ol>
+    </div>
+
+    <div class="test-section">
+      <h2>Before Focus Group</h2>
+      <button>Button Before 1</button>
+      <input type="text" placeholder="Input Before 1" />
+      <button>Button Before 2</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Focus Group (skipTab = true)</h2>
+      <div class="focus-group" id="focus-group-1">
+        <h3>� Tab from inside this group jumps outside</h3>
+        <button>Button in Group 1</button>
+        <input type="text" placeholder="Input in Group 1" />
+        <select>
+          <option>Option 1</option>
+          <option>Option 2</option>
+        </select>
+        <button>Button in Group 2</button>
+        <textarea placeholder="Textarea in Group"></textarea>
+        <button>Button in Group 3</button>
+      </div>
+    </div>
+
+    <div class="test-section">
+      <h2>After Focus Group</h2>
+      <button>Button After 1</button>
+      <input type="text" placeholder="Input After 1" />
+      <button>Button After 2</button>
+    </div>
+
+    <div class="test-section">
+      <h2>Control Group (no focus group)</h2>
+      <div class="focus-group" style="border-color: #4caf50">
+        <h3>✅ This group has normal tab behavior</h3>
+        <button>Normal Button 1</button>
+        <input type="text" placeholder="Normal Input 1" />
+        <button>Normal Button 2</button>
+      </div>
+    </div>
+
+    <script type="module">
+      import { initFocusGroup } from "../focus_group.js";
+
+      // Initialize the focus group with skipTab enabled
+      const focusGroup = document.getElementById("focus-group-1");
+      initFocusGroup(focusGroup, {
+        skipTab: true,
+      });
+
+      // Status tracking for debugging
+      const statusEl = document.getElementById("status");
+
+      function updateStatus() {
+        const activeElement = document.activeElement;
+        const tagName = activeElement.tagName.toLowerCase();
+        const text =
+          activeElement.textContent ||
+          activeElement.placeholder ||
+          activeElement.value ||
+          "";
+        const truncatedText =
+          text.length > 20 ? `${text.substring(0, 20)}...` : text;
+
+        statusEl.textContent = `Focus: ${tagName}${truncatedText ? ` (${truncatedText})` : ""}`;
+      }
+
+      // Track focus changes
+      document.addEventListener("focusin", updateStatus);
+      document.addEventListener("focusout", updateStatus);
+
+      // Initial status
+      updateStatus();
+
+      // Add some debugging
+      focusGroup.addEventListener(
+        "keydown",
+        (e) => {
+          if (e.key === "Tab") {
+            console.log("Tab pressed in focus group", {
+              target: e.target,
+              shiftKey: e.shiftKey,
+              defaultPrevented: e.defaultPrevented,
+            });
+          }
+        },
+        { capture: true },
+      );
+
+      // Log tab events globally for debugging
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") {
+          console.log("Global tab event:", {
+            target: e.target,
+            shiftKey: e.shiftKey,
+            defaultPrevented: e.defaultPrevented,
+            activeElement: document.activeElement,
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

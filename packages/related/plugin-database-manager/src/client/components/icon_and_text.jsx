@@ -1,6 +1,8 @@
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
 export const IconAndText = ({ icon, children, ...rest }) => {
+  if (typeof icon === "function") icon = icon({});
+
   return (
     <span
       className="icon_and_text"
@@ -8,6 +10,7 @@ export const IconAndText = ({ icon, children, ...rest }) => {
       style={{
         display: "flex",
         alignItems: "center",
+        gap: "0.1em",
         ...rest.style,
       }}
     >

@@ -1,3 +1,4 @@
+import { Link } from "@jsenv/navi";
 import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 import { CurrentSvg } from "../svg/icons.jsx";
 
@@ -8,17 +9,22 @@ import.meta.css = /* css */ `
     gap: 0.3em;
     min-width: 0;
     display: inline-flex;
-    overflow: hidden;
-  }
-
-  .link_with_icon[data-active] {
-    background-color: lightgrey;
+    flex-grow: 1;
   }
 `;
 
-export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {
+export const LinkWithIcon = ({
+  icon,
+  isCurrent,
+  children,
+  className = "",
+  ...rest
+}) => {
   return (
-    <a className="link_with_icon" {...rest}>
+    <Link
+      className={["link_with_icon", ...className.split(" ")].join(" ")}
+      {...rest}
+    >
       <FontSizedSvg>{icon}</FontSizedSvg>
       {isCurrent && (
         <FontSizedSvg>
@@ -26,6 +32,6 @@ export const LinkWithIcon = ({ icon, isCurrent, children, ...rest }) => {
         </FontSizedSvg>
       )}
       {children}
-    </a>
+    </Link>
   );
 };

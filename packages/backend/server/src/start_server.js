@@ -56,6 +56,7 @@ const TIMING_NOOP = () => {
 export const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
+  routerLogLevel,
   startLog = true,
   serverName = "server",
 
@@ -179,6 +180,7 @@ export const startServer = async ({
 
   const router = createRouter(allRouteArray, {
     optionsFallback: true,
+    logLevel: routerLogLevel,
   });
 
   const server = {};

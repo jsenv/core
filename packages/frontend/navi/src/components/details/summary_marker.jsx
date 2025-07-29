@@ -80,10 +80,10 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const SummaryMarker = ({ open, pending }) => {
-  const showLoading = useDebounceTrue(pending, 300);
+export const SummaryMarker = ({ open, loading }) => {
+  const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
-  const prevOpenRef = useRef(open); // ✅ Track previous open state
+  const prevOpenRef = useRef(open);
 
   useLayoutEffect(() => {
     mountedRef.current = true;

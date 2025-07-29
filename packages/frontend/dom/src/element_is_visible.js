@@ -1,5 +1,9 @@
 import { getStyle } from "./style_and_attributes.js";
-import { isDocumentElement } from "./utils.js";
+import {
+  elementIsDetails,
+  elementIsSummary,
+  isDocumentElement,
+} from "./utils.js";
 
 export const elementIsVisible = (node) => {
   if (isDocumentElement(node)) {
@@ -15,6 +19,16 @@ export const elementIsVisible = (node) => {
     }
     if (getStyle(nodeOrAncestor, "display") === "none") {
       return false;
+    }
+    // Check if element is inside a closed details element
+    if (elementIsDetails(nodeOrAncestor) && !nodeOrAncestor.open) {
+      // Special case: summary elements are visible even when their parent details is closed
+      // But only if this details element is the direct parent of the summary
+      if (elementIsSummary(node) && node.parentElement === nodeOrAncestor) {
+        // Continue checking ancestors, don't return false yet
+      } else {
+        return false;
+      }
     }
     nodeOrAncestor = nodeOrAncestor.parentNode;
   }

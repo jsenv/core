@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Link demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      // eslint-disable-next-line no-unused-vars
+      import { Link, SelectionProvider, defineRoutes } from "@jsenv/navi";
+
+      defineRoutes({});
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [contextSelectedItems, setContextSelectedItems] = useState([]);
+
+        return (
+          <div style="padding: 20px; font-family: system-ui, sans-serif; max-width: 800px;">
+            <h1>Link Component Demo</h1>
+
+            <section style="margin-bottom: 40px;">
+              <h2>Basic Links</h2>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <Link href="#default">Default link</Link>
+
+                <Link href="#active" active>
+                  Active link
+                </Link>
+
+                <Link href="#visited" visited>
+                  Visited link
+                </Link>
+
+                <Link href="#readonly" readOnly>
+                  Read-only link
+                </Link>
+
+                <Link href="#disabled" disabled>
+                  Disabled link
+                </Link>
+
+                <Link href="#loading" loading readOnly>
+                  Loading link
+                </Link>
+              </div>
+            </section>
+
+            <section style="margin-bottom: 40px;">
+              <h2>Styled Links</h2>
+              <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: #f8f9fa;">
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <Link
+                    href="#"
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
+                  >
+                    Gradient button link
+                  </Link>
+
+                  <Link
+                    href="#"
+                    style="background: #28a745; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
+                  >
+                    Success button link
+                  </Link>
+
+                  <Link
+                    href="#"
+                    style="background: #dc3545; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 500; display: inline-block; transition: transform 0.2s;"
+                    data-outline-inset
+                    loading
+                  >
+                    Loading button link
+                  </Link>
+                </div>
+              </div>
+            </section>
+
+            <section style="margin-bottom: 40px;">
+              <h2>Selectable Links</h2>
+              <p style="color: #666; margin-bottom: 16px;">
+                Using Selection context for centralized state management.{" "}
+                <kbd style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">
+                  Cmd/Ctrl + Click
+                </kbd>{" "}
+                to multi-select,{" "}
+                <kbd style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">
+                  Shift + Click
+                </kbd>{" "}
+                for range selection, and{" "}
+                <kbd style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;">
+                  Cmd/Ctrl + Delete
+                </kbd>{" "}
+                to show selected items.
+              </p>
+
+              <SelectionProvider
+                value={contextSelectedItems}
+                onChange={setContextSelectedItems}
+              >
+                <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background: white;">
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <Link href="#doc_report" name="doc" value="doc-1">
+                      📋 Annual Report 2024
+                    </Link>
+
+                    <Link href="#doc_budget" name="doc" value="doc-2">
+                      💰 Budget Proposal
+                    </Link>
+
+                    <Link href="#doc_presentation" name="doc" value="doc-3">
+                      🎯 Marketing Presentation
+                    </Link>
+
+                    <Link href="#doc_manual" name="doc" value="doc-4">
+                      📖 User Manual v2.0
+                    </Link>
+                  </div>
+
+                  {contextSelectedItems.length > 0 && (
+                    <div style="margin-top: 16px; padding: 12px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #1976d2;">
+                      <strong>Selected items:</strong>{" "}
+                      {contextSelectedItems.join(", ")}
+                      <br />
+                      <button
+                        onClick={() => setContextSelectedItems([])}
+                        style="margin-top: 8px; padding: 4px 12px; background: #1976d2; color: white; border: none; border-radius: 4px; font-size: 0.9em; cursor: pointer;"
+                      >
+                        Clear selection
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </SelectionProvider>
+            </section>
+
+            <section>
+              <h2>Navigation Instructions</h2>
+              <div style="background: #f8f9fa; padding: 16px; border-radius: 6px; color: #666;">
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li>
+                    <strong>Normal click:</strong> Navigate to the link
+                  </li>
+                  <li>
+                    <strong>Cmd/Ctrl + click:</strong> Toggle selection (for
+                    selectable links)
+                  </li>
+                  <li>
+                    <strong>Shift + click:</strong> Range selection (for
+                    selectable links)
+                  </li>
+                  <li>
+                    <strong>Cmd/Ctrl + Delete/Backspace:</strong> Show alert
+                    with selected items (when focused on a selectable link)
+                  </li>
+                </ul>
+              </div>
+            </section>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

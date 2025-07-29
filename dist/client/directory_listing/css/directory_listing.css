@@ -99,8 +99,10 @@ a.nav_item_text {
 
 .directory_content {
   border-radius: 3px;
+  flex-direction: column;
   margin: 10px 15px;
   list-style-type: none;
+  display: flex;
 }
 
 .directory_content_item {
@@ -109,7 +111,7 @@ a.nav_item_text {
   min-height: 19px;
   padding: 10px 15px;
   font-size: 15px;
-  display: flex;
+  display: inline-flex;
   position: relative;
 }
 
@@ -117,13 +119,16 @@ a.nav_item_text {
   flex: 1;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
   text-decoration: none;
-  display: flex;
+  display: inline-flex;
 }
 
 .directory_content_item_icon {
   aspect-ratio: 1;
   color: #f1f1f1;
+  flex-shrink: 0;
   width: 15px;
   display: flex;
 }
@@ -133,7 +138,9 @@ a.nav_item_text {
 }
 
 .directory_content_item_text {
-  display: flex;
+  flex-grow: 1;
+  align-items: center;
+  display: inline-flex;
 }
 
 .directory_content_item:last-child {

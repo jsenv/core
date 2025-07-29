@@ -3,16 +3,22 @@
 
 import { useEffect, useLayoutEffect } from "preact/hooks";
 
-export const useAutoFocus = (focusableElementRef, autoFocus, autoSelect) => {
+export const useAutoFocus = (
+  focusableElementRef,
+  autoFocus,
+  { autoFocusVisible, autoSelect } = {},
+) => {
   useLayoutEffect(() => {
     if (!autoFocus) {
       return null;
     }
     const activeElement = document.activeElement;
     const focusableElement = focusableElementRef.current;
-    focusableElement.focus();
+    focusableElement.focus({ focusVisible: autoFocusVisible });
     if (autoSelect) {
       focusableElement.select();
+      // Keep the beginning of the text visible instead of scrolling to the end
+      focusableElement.scrollLeft = 0;
     }
     return () => {
       if (
@@ -27,7 +33,7 @@ export const useAutoFocus = (focusableElementRef, autoFocus, autoSelect) => {
         }
       }
     };
-  }, [autoFocus]);
+  }, []);
   useEffect(() => {
     if (autoFocus) {
       const focusableElement = focusableElementRef.current;

@@ -1,4 +1,4 @@
-import { DatabaseValue } from "./database_value.jsx";
+import { DatabaseField } from "./database_field.jsx";
 import { Table } from "./table.jsx";
 
 export const DatabaseTable = ({ columns, action, data }) => {
@@ -15,7 +15,7 @@ export const DatabaseTable = ({ columns, action, data }) => {
         const value = info.getValue();
         const tableName = info.row.original.tablename;
         return (
-          <DatabaseValue
+          <DatabaseField
             tableName={tableName}
             column={column}
             action={action.bindParams({ tableName, columnName })}

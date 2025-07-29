@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scrollable List Demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useRef } from "preact/hooks";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [items, setItems] = useState(() =>
+          Array.from({ length: 100 }, (_, i) => ({
+            id: i,
+            text: `Item ${i} - Lorem ipsum dolor sit amet consectetur adipisicing elit`,
+          })),
+        );
+        const [renderKey, setRenderKey] = useState(0);
+        const listRef = useRef();
+
+        const addItem = () => {
+          setItems((prev) => [
+            ...prev,
+            {
+              id: Date.now(),
+              text: `New Item ${Date.now()} - Added dynamically with some long text`,
+            },
+          ]);
+        };
+
+        const removeLastItem = () => {
+          setItems((prev) => prev.slice(0, -1));
+        };
+
+        const forceReRender = () => {
+          setRenderKey((prev) => prev + 1);
+          // Force a re-render by updating items with new objects
+          setItems((prev) => prev.map((item) => ({ ...item })));
+        };
+
+        const scrollToMiddleAndReRender = () => {
+          if (listRef.current) {
+            const scrollHeight = listRef.current.scrollHeight;
+            const clientHeight = listRef.current.clientHeight;
+            const scrollTop = (scrollHeight - clientHeight) / 2;
+            listRef.current.scrollTop = scrollTop;
+
+            // Force re-render after scrolling
+            setTimeout(() => {
+              setRenderKey((prev) => prev + 1);
+              // Force a re-render by updating items with new objects
+              setItems((prev) => prev.map((item) => ({ ...item })));
+            }, 100);
+          }
+        };
+
+        return (
+          <div style="padding: 20px; font-family: Arial, sans-serif;">
+            <h1>Scrollable List Re-render Test</h1>
+
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+              <button onClick={addItem} style="padding: 8px 16px;">
+                Add Item
+              </button>
+              <button onClick={removeLastItem} style="padding: 8px 16px;">
+                Remove Last Item
+              </button>
+              <button
+                onClick={forceReRender}
+                style="padding: 8px 16px; background: orange; color: white;"
+              >
+                Force Re-render
+              </button>
+              <button
+                onClick={scrollToMiddleAndReRender}
+                style="padding: 8px 16px; background: purple; color: white;"
+              >
+                Scroll to Middle + Re-render
+              </button>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+              <strong>Total items: {items.length}</strong> |
+              <strong>Render key: {renderKey}</strong>
+            </div>
+
+            <ul
+              ref={listRef}
+              style="
+                height: 400px; 
+                overflow-y: auto; 
+                border: 2px solid #ccc; 
+                margin: 0; 
+                padding: 0; 
+                list-style: none;
+                background: #f9f9f9;
+              "
+            >
+              {items.map((item, index) => (
+                <li
+                  key={item.id}
+                  style="
+                    padding: 12px 16px; 
+                    border-bottom: 1px solid #ddd;
+                    background: white;
+                    margin-bottom: 2px;
+                  "
+                >
+                  <div style="font-weight: bold; color: #333;">
+                    #{index + 1} (ID: {item.id})
+                  </div>
+                  <div style="color: #666; margin-top: 4px;">{item.text}</div>
+                </li>
+              ))}
+            </ul>
+
+            <div style="margin-top: 20px; padding: 10px; background: #e8f4f8; border-radius: 4px;">
+              <h3>Test Instructions:</h3>
+              <ul>
+                <li>
+                  <strong>Add/Remove Items:</strong> Test how list changes
+                  affect scroll position
+                </li>
+                <li>
+                  <strong>Force Re-render:</strong> Test pure re-rendering
+                  without data changes
+                </li>
+                <li>
+                  <strong>Scroll + Re-render:</strong> Test scroll position
+                  preservation during re-render
+                </li>
+              </ul>
+              <p>
+                <em>
+                  Watch the scroll position and see how it behaves during
+                  different operations.
+                </em>
+              </p>
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

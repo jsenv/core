@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JS Value WeakMap Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      button {
+        margin: 5px;
+        padding: 8px 16px;
+        cursor: pointer;
+      }
+      .log {
+        background: #f5f5f5;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 3px;
+        font-family: monospace;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .status {
+        padding: 5px;
+        margin: 5px 0;
+        border-radius: 3px;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+      .warning {
+        background: #fff3cd;
+        color: #856404;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>JS Value WeakMap Test</h1>
+
+    <div class="test-section">
+      <h3>Ephemeron Pattern (Mutual Retention)</h3>
+      <button onclick="testMutualRetention()">Test Mutual Retention</button>
+      <button onclick="forceGC()">Force GC</button>
+      <button onclick="checkAliveness()">Check Aliveness</button>
+      <button onclick="testEphemeronGC()">Test Ephemeron GC</button>
+      <div id="retention-log" class="log"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Memory Management</h3>
+      <button onclick="createManyEntries()">Create Many Entries</button>
+      <button onclick="clearReferences()">Clear References</button>
+      <button onclick="testCleanup()">Test Cleanup</button>
+      <div id="memory-log" class="log"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Basic Operations</h3>
+      <button onclick="testBasicOperations()">Test Basic Set/Get</button>
+      <button onclick="testDeepEquality()">Test Deep Equality</button>
+      <div id="basic-log" class="log"></div>
+    </div>
+
+    <script type="module">
+      import { createJsValueWeakMap } from "./js_value_weak_map.js";
+
+      // Global test state
+      let cache = createJsValueWeakMap();
+      let testKey1;
+      let testValue1;
+      let testKey2;
+      let testValue2;
+      let keyWeakRef;
+      let valueWeakRef;
+
+      function log(elementId, message, type = "info") {
+        const element = document.getElementById(elementId);
+        const timestamp = new Date().toLocaleTimeString();
+        const statusClass =
+          {
+            error: "error",
+            success: "success",
+            warning: "warning",
+            info: "info",
+          }[type] || "info";
+        element.innerHTML += `<div class="status ${statusClass}">[${timestamp}] ${message}</div>`;
+        element.scrollTop = element.scrollHeight;
+      }
+
+      const forceGCWithPressure = async () => {
+        if (window.gc) {
+          window.gc();
+          return "✓ Forced GC (native)";
+        }
+
+        // Fallback: create memory pressure
+        const arrays = [];
+        for (let i = 0; i < 100; i++) {
+          arrays.push(new Array(100000).fill(Math.random()));
+        }
+        arrays.length = 0;
+
+        // Wait for GC
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return "✓ Forced GC (memory pressure)";
+      };
+
+      window.testEphemeronGC = async () => {
+        const logId = "retention-log";
+
+        log(logId, "", "info");
+        log(logId, "🗑️ TESTING EPHEMERON GARBAGE COLLECTION", "warning");
+        log(logId, "📝 What we do: Clear all references and test GC", "info");
+        log(
+          logId,
+          "📝 Expected: Both key and value should be garbage collected",
+          "info",
+        );
+        log(logId, "", "info");
+
+        // Clear all references
+        testKey1 = null;
+        testValue1 = null;
+
+        const message = await forceGCWithPressure();
+        log(logId, message, "success");
+
+        // Wait a bit then check results
+        setTimeout(() => {
+          log(logId, "🔍 CHECKING GC RESULTS:", "warning");
+
+          const keyAlive = keyWeakRef?.deref() !== undefined;
+          const valueAlive = valueWeakRef?.deref() !== undefined;
+
+          log(
+            logId,
+            `Key alive via WeakRef: ${keyAlive ? "YES" : "NO"}`,
+            !keyAlive ? "success" : "error",
+          );
+          log(
+            logId,
+            `Value alive via WeakRef: ${valueAlive ? "YES" : "NO"}`,
+            !valueAlive ? "success" : "error",
+          );
+
+          if (!keyAlive && !valueAlive) {
+            log(
+              logId,
+              "✅ SUCCESS: Key and value could be GC'ed, as expected",
+              "success",
+            );
+          } else {
+            log(
+              logId,
+              "❌ FAILURE: Objects still alive despite no references",
+              "error",
+            );
+          }
+        }, 100);
+      };
+
+      window.testMutualRetention = () => {
+        const logId = "retention-log";
+        document.getElementById(logId).innerHTML = "";
+
+        try {
+          log(logId, "🎯 STARTING MUTUAL RETENTION TEST", "warning");
+          log(
+            logId,
+            "📝 What we do: Create key-value pair with WeakRef monitoring",
+            "info",
+          );
+          log(
+            logId,
+            "📝 Expected: Both key and value should be findable in cache",
+            "info",
+          );
+          log(logId, "", "info");
+
+          testKey1 = { id: "mutual-test-1" };
+          testValue1 = { data: "should-stay-alive-1" };
+          keyWeakRef = new WeakRef(testKey1);
+          valueWeakRef = new WeakRef(testValue1);
+
+          cache.set(testKey1, testValue1);
+
+          log(logId, "🔍 ACTUAL RESULTS:", "warning");
+          const keyExists = cache.get(testKey1) !== undefined;
+          const valueMatches = cache.get(testKey1) === testValue1;
+          const keyAlive = keyWeakRef.deref() !== undefined;
+          const valueAlive = valueWeakRef.deref() !== undefined;
+
+          log(
+            logId,
+            `Key exists in cache: ${keyExists}`,
+            keyExists ? "success" : "error",
+          );
+          log(
+            logId,
+            `Value matches in cache: ${valueMatches}`,
+            valueMatches ? "success" : "error",
+          );
+          log(
+            logId,
+            `Key alive via WeakRef: ${keyAlive}`,
+            keyAlive ? "success" : "error",
+          );
+          log(
+            logId,
+            `Value alive via WeakRef: ${valueAlive}`,
+            valueAlive ? "success" : "error",
+          );
+
+          if (keyExists && valueMatches && keyAlive && valueAlive) {
+            log(logId, "✅ SUCCESS: Initial state correct", "success");
+          } else {
+            log(logId, "❌ FAILURE: Initial state incorrect", "error");
+          }
+        } catch (error) {
+          log(logId, `Error: ${error.message}`, "error");
+        }
+      };
+
+      window.forceGC = async () => {
+        const logId = "retention-log";
+        log(logId, "🧹 FORCING GARBAGE COLLECTION", "warning");
+        log(
+          logId,
+          "📝 What we do: Force GC and check if ephemeron survives",
+          "info",
+        );
+        log(
+          logId,
+          "📝 Expected: If value referenced, both key+value stay alive",
+          "info",
+        );
+        log(logId, "", "info");
+
+        const message = await forceGCWithPressure();
+        log(logId, message, "success");
+
+        setTimeout(() => {
+          window.checkAliveness();
+        }, 100);
+      };
+
+      // Remove the duplicate checkAliveness function and keep only this one:
+      window.checkAliveness = () => {
+        const logId = "retention-log";
+
+        if (testKey1) {
+          log(logId, "🗑️ CLEARING KEY REFERENCE", "warning");
+          log(
+            logId,
+            "📝 What we do: Clear local key ref, keep value ref",
+            "info",
+          );
+          log(
+            logId,
+            "📝 Expected: Value should keep key alive (ephemeron)",
+            "info",
+          );
+          testKey1 = null;
+        } else {
+          log(logId, "🔍 CHECKING CURRENT STATE", "warning");
+          log(
+            logId,
+            "📝 What we check: Current aliveness after previous operations",
+            "info",
+          );
+        }
+        log(logId, "", "info");
+
+        if (testValue1) {
+          log(
+            logId,
+            "📝 Expected: Key alive via ephemeron, value alive via reference",
+            "info",
+          );
+
+          const testKeyClone = { id: "mutual-test-1" };
+          const foundValue = cache.get(testKeyClone);
+          const entryFound = foundValue === testValue1;
+          const keyAlive = keyWeakRef?.deref() !== undefined;
+          const valueAlive = valueWeakRef?.deref() !== undefined;
+
+          log(logId, "🔍 ACTUAL RESULTS:", "warning");
+          log(
+            logId,
+            `Cache lookup with equivalent key: ${entryFound ? "FOUND" : "NOT FOUND"}`,
+            entryFound ? "success" : "error",
+          );
+          log(logId, `Value reference still alive: YES`, "success");
+          log(
+            logId,
+            `Key alive via WeakRef: ${keyAlive ? "YES" : "NO"}`,
+            keyAlive ? "success" : "error",
+          );
+          log(
+            logId,
+            `Value alive via WeakRef: ${valueAlive ? "YES" : "NO"}`,
+            valueAlive ? "success" : "error",
+          );
+
+          if (entryFound && keyAlive && valueAlive) {
+            log(logId, "✅ EPHEMERON WORKING: Value kept key alive", "success");
+          } else {
+            log(
+              logId,
+              "❌ EPHEMERON FAILED: Entry lost despite value reference",
+              "error",
+            );
+          }
+        } else {
+          log(
+            logId,
+            "📝 Expected: Both key and value should be garbage collected",
+            "info",
+          );
+          log(logId, "🔍 ACTUAL RESULTS:", "warning");
+
+          const keyAlive = keyWeakRef?.deref() !== undefined;
+          const valueAlive = valueWeakRef?.deref() !== undefined;
+
+          log(
+            logId,
+            `Key alive via WeakRef: ${keyAlive ? "YES" : "NO"}`,
+            !keyAlive ? "success" : "error",
+          );
+          log(
+            logId,
+            `Value alive via WeakRef: ${valueAlive ? "YES" : "NO"}`,
+            !valueAlive ? "success" : "error",
+          );
+
+          if (!keyAlive && !valueAlive) {
+            log(
+              logId,
+              "✅ SUCCESS: Key and value could be GC'ed, as expected",
+              "success",
+            );
+          } else {
+            log(
+              logId,
+              "❌ FAILURE: Objects still alive despite no references",
+              "error",
+            );
+          }
+        }
+      };
+
+      window.createManyEntries = () => {
+        const logId = "memory-log";
+        document.getElementById(logId).innerHTML = "";
+
+        log(logId, "🏗️ CREATING MANY CACHE ENTRIES", "warning");
+        log(
+          logId,
+          "📝 What we do: Create 100 entries, keep refs to first 5",
+          "info",
+        );
+        log(
+          logId,
+          "📝 Expected: All entries created, stats show 100 pairs",
+          "info",
+        );
+        log(logId, "", "info");
+
+        try {
+          const count = 100;
+          const keys = [];
+          const values = [];
+
+          for (let i = 0; i < count; i++) {
+            const key = { id: i, data: `key-${i}` };
+            const value = { id: i, result: `value-${i}` };
+            cache.set(key, value);
+
+            if (i < 5) {
+              keys.push(key);
+              values.push(value);
+            }
+          }
+
+          window.testReferences = { keys, values };
+
+          log(logId, "🔍 ACTUAL RESULTS:", "warning");
+          const stats = cache.getStats();
+          log(logId, `Created entries: ${count}`, "info");
+          log(logId, `Kept references to: 5 entries`, "info");
+          log(
+            logId,
+            `Cache stats: ${stats.ephemeronPairs.total} total pairs`,
+            stats.ephemeronPairs.total >= count ? "success" : "error",
+          );
+          log(logId, `✅ SUCCESS: Entries created`, "success");
+        } catch (error) {
+          log(logId, `❌ ERROR: ${error.message}`, "error");
+        }
+      };
+
+      window.clearReferences = async () => {
+        const logId = "memory-log";
+
+        const initialStats = cache.getStats();
+
+        // Check if already cleared
+        if (
+          initialStats.ephemeronPairs.total <= 1 &&
+          !window.testReferences &&
+          !testKey2 &&
+          !testValue2
+        ) {
+          log(logId, "✅ ALREADY CLEAN", "success");
+          log(logId, "📝 All test references already cleared and GC'd", "info");
+          log(
+            logId,
+            `Current state: ${initialStats.ephemeronPairs.total} pairs remaining (ephemeron test only)`,
+            "info",
+          );
+          return;
+        }
+
+        log(logId, "🗑️ CLEARING ALL REFERENCES", "warning");
+        log(
+          logId,
+          "📝 What we do: Clear all test references (except ephemeron test)",
+          "info",
+        );
+        log(
+          logId,
+          "📝 Expected: Unreferenced entries should be GC eligible",
+          "info",
+        );
+        log(logId, "", "info");
+
+        try {
+          const beforeStats = cache.getStats();
+
+          if (window.testReferences) {
+            window.testReferences.keys.length = 0;
+            window.testReferences.values.length = 0;
+            window.testReferences = null;
+          }
+          // Don't clear testValue1 - that's for ephemeron test
+          testKey2 = null;
+          testValue2 = null;
+
+          await forceGCWithPressure();
+
+          log(logId, "🔍 ACTUAL RESULTS:", "warning");
+          const afterStats = cache.getStats();
+          log(
+            logId,
+            `Before clearing: ${beforeStats.ephemeronPairs.total} pairs`,
+            "info",
+          );
+          log(
+            logId,
+            `After GC: ${afterStats.ephemeronPairs.total} pairs`,
+            "info",
+          );
+
+          const wasGCed =
+            afterStats.ephemeronPairs.total < beforeStats.ephemeronPairs.total;
+          log(
+            logId,
+            `Entries garbage collected: ${wasGCed ? "YES" : "NO"}`,
+            wasGCed ? "success" : "warning",
+          );
+
+          if (wasGCed) {
+            log(
+              logId,
+              `✅ SUCCESS: ${beforeStats.ephemeronPairs.total - afterStats.ephemeronPairs.total} entries GC'd`,
+              "success",
+            );
+          } else {
+            log(
+              logId,
+              "⚠️ No GC detected (ephemeron test entry still alive)",
+              "warning",
+            );
+          }
+        } catch (error) {
+          log(logId, `❌ ERROR: ${error.message}`, "error");
+        }
+      };
+
+      window.testCleanup = async () => {
+        const logId = "memory-log";
+
+        log(logId, "🧹 TESTING CLEANUP MECHANISM", "warning");
+        log(
+          logId,
+          "📝 What we do: Force GC then iterate cache to trigger cleanup",
+          "info",
+        );
+        log(
+          logId,
+          "📝 Expected: Dead pairs removed from internal structures",
+          "info",
+        );
+        log(logId, "", "info");
+
+        try {
+          const beforeStats = cache.getStats();
+          await forceGCWithPressure();
+
+          let iteratedCount = 0;
+          // eslint-disable-next-line no-unused-vars
+          for (const [key, value] of cache) {
+            iteratedCount++;
+          }
+
+          log(logId, "🔍 ACTUAL RESULTS:", "warning");
+          const afterStats = cache.getStats();
+          log(
+            logId,
+            `Before cleanup: ${beforeStats.ephemeronPairs.total} total, ${beforeStats.ephemeronPairs.alive} alive`,
+            "info",
+          );
+          log(
+            logId,
+            `After cleanup: ${afterStats.ephemeronPairs.total} total, ${afterStats.ephemeronPairs.alive} alive`,
+            "info",
+          );
+          log(logId, `Iterated entries: ${iteratedCount}`, "info");
+
+          const cleaned =
+            beforeStats.ephemeronPairs.total - afterStats.ephemeronPairs.total;
+          if (cleaned > 0) {
+            log(
+              logId,
+              `✅ SUCCESS: Cleanup removed ${cleaned} dead entries`,
+              "success",
+            );
+          } else {
+            log(logId, "ℹ️ No cleanup needed (no dead entries)", "info");
+          }
+        } catch (error) {
+          log(logId, `❌ ERROR: ${error.message}`, "error");
+        }
+      };
+
+      window.testBasicOperations = () => {
+        const logId = "basic-log";
+        document.getElementById(logId).innerHTML = "";
+
+        log(logId, "🔧 TESTING BASIC SET/GET OPERATIONS", "warning");
+        log(
+          logId,
+          "📝 What we do: Set object key-value, then get it back",
+          "info",
+        );
+        log(logId, "📝 Expected: Key exists, value matches exactly", "info");
+        log(logId, "", "info");
+
+        try {
+          testKey2 = { id: 1, name: "test" };
+          testValue2 = { data: "value1" };
+
+          cache.set(testKey2, testValue2);
+          const retrieved = cache.get(testKey2);
+          const keyExists = cache.get(testKey2) !== undefined;
+
+          log(logId, "🔍 ACTUAL RESULTS:", "warning");
+          log(
+            logId,
+            `Key exists in cache: ${keyExists}`,
+            keyExists ? "success" : "error",
+          );
+          log(
+            logId,
+            `Retrieved value matches: ${retrieved === testValue2}`,
+            retrieved === testValue2 ? "success" : "error",
+          );
+
+          // Test primitive keys
+          log(logId, "", "info");
+          log(logId, "📝 Testing primitive keys (string)", "info");
+          log(logId, "📝 Expected: Works but uses permanent memory", "info");
+
+          cache.set("primitive", "primitiveValue");
+          const primitiveValue = cache.get("primitive");
+          const primitiveExists = cache.get("primitive") !== undefined;
+
+          log(
+            logId,
+            `Primitive key exists: ${primitiveExists}`,
+            primitiveExists ? "success" : "error",
+          );
+          log(
+            logId,
+            `Primitive value matches: ${primitiveValue === "primitiveValue"}`,
+            primitiveValue === "primitiveValue" ? "success" : "error",
+          );
+          log(logId, "⚠️ Primitive keys never garbage collected", "warning");
+        } catch (error) {
+          log(logId, `❌ ERROR: ${error.message}`, "error");
+        }
+      };
+
+      window.testDeepEquality = () => {
+        const logId = "basic-log";
+
+        log(logId, "", "info");
+        log(logId, "🔍 TESTING DEEP EQUALITY", "warning");
+        log(
+          logId,
+          "📝 What we do: Set with key1, get with key2 (same content, different objects)",
+          "info",
+        );
+        log(logId, "📝 Expected: key2 should find value set by key1", "info");
+        log(logId, "", "info");
+
+        try {
+          const key1 = { id: 1, nested: { prop: "value" } };
+          const key2 = { id: 1, nested: { prop: "value" } };
+          const value = { result: "found" };
+
+          cache.set(key1, value);
+          const key1Exists = cache.get(key1) !== undefined;
+          const key2Exists = cache.get(key2) !== undefined;
+          const retrieved = cache.get(key2);
+
+          log(logId, "🔍 ACTUAL RESULTS:", "warning");
+          log(
+            logId,
+            `Original key1 exists: ${key1Exists}`,
+            key1Exists ? "success" : "error",
+          );
+          log(
+            logId,
+            `Equivalent key2 exists: ${key2Exists}`,
+            key2Exists ? "success" : "error",
+          );
+          log(
+            logId,
+            `Retrieved same value: ${retrieved === value}`,
+            retrieved === value ? "success" : "error",
+          );
+
+          if (key2Exists && retrieved === value) {
+            log(logId, "✅ SUCCESS: Deep equality working", "success");
+          } else {
+            log(logId, "❌ FAILURE: Deep equality not working", "error");
+          }
+        } catch (error) {
+          log(logId, `❌ ERROR: ${error.message}`, "error");
+        }
+      };
+
+      // Initial setup
+      log(
+        "retention-log",
+        "🎯 Ready to test ephemeron pattern - mutual retention",
+        "info",
+      );
+      log(
+        "retention-log",
+        "📖 Ephemeron: As long as either key OR value is alive, BOTH stay alive",
+        "info",
+      );
+      log("memory-log", "🧠 Ready to test memory management", "info");
+      log("basic-log", "⚙️ Ready to test basic operations", "info");
+    </script>
+  </body>
+</html>

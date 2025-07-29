@@ -1,4 +1,4 @@
-export const findFirstAncestor = (node, predicate) => {
+export const findAncestor = (node, predicate) => {
   let ancestor = node.parentNode;
   while (ancestor) {
     if (predicate(ancestor)) {
@@ -9,22 +9,34 @@ export const findFirstAncestor = (node, predicate) => {
   return null;
 };
 
-export const findFirstDescendant = (rootNode, fn) => {
-  const iterator = createNextNodeIterator(rootNode, rootNode);
+export const findDescendant = (rootNode, fn, { skipRoot } = {}) => {
+  const iterator = createNextNodeIterator(rootNode, rootNode, skipRoot);
   let { done, value: node } = iterator.next();
   while (done === false) {
-    if (fn(node)) {
-      return node;
+    let skipChildren = false;
+    if (node === skipRoot) {
+      skipChildren = true;
+    } else {
+      const skip = () => {
+        skipChildren = true;
+      };
+      if (fn(node, skip)) {
+        return node;
+      }
     }
-    ({ done, value: node } = iterator.next());
+    ({ done, value: node } = iterator.next(skipChildren));
   }
   return null;
 };
 
-export const findLastDescendant = (rootNode, fn) => {
-  const deepestNode = getDeepestNode(rootNode);
+export const findLastDescendant = (rootNode, fn, { skipRoot } = {}) => {
+  const deepestNode = getDeepestNode(rootNode, skipRoot);
   if (deepestNode) {
-    const iterator = createPreviousNodeIterator(deepestNode, rootNode);
+    const iterator = createPreviousNodeIterator(
+      deepestNode,
+      rootNode,
+      skipRoot,
+    );
     let { done, value: node } = iterator.next();
     while (done === false) {
       if (fn(node)) {
@@ -36,13 +48,12 @@ export const findLastDescendant = (rootNode, fn) => {
   return null;
 };
 
-export const findAfter = ({
+export const findAfter = (
   from,
-  root = null,
   predicate,
-  skipChildren = false,
-}) => {
-  const iterator = createAfterNodeIterator(from, root, skipChildren);
+  { root = null, skipRoot = null, skipChildren = false } = {},
+) => {
+  const iterator = createAfterNodeIterator(from, root, skipChildren, skipRoot);
   let { done, value: node } = iterator.next();
   while (done === false) {
     if (predicate(node)) {
@@ -53,11 +64,12 @@ export const findAfter = ({
   return null;
 };
 
-export const findAfterSkippingChildren = (param) =>
-  findAfter({ ...param, skipChildren: true });
-
-export const findBefore = ({ from, root = null, predicate }) => {
-  const iterator = createPreviousNodeIterator(from, root);
+export const findBefore = (
+  from,
+  predicate,
+  { root = null, skipRoot = null } = {},
+) => {
+  const iterator = createPreviousNodeIterator(from, root, skipRoot);
   let { done, value: node } = iterator.next();
   while (done === false) {
     if (predicate(node)) {
@@ -68,31 +80,48 @@ export const findBefore = ({ from, root = null, predicate }) => {
   return null;
 };
 
-const getNextNode = (node, rootNode, skipChild = false) => {
+const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
   if (!skipChild) {
     const firstChild = node.firstChild;
     if (firstChild) {
+      // If the first child is skipRoot or inside skipRoot, skip it
+      if (
+        skipRoot &&
+        (firstChild === skipRoot || skipRoot.contains(firstChild))
+      ) {
+        // Skip this entire subtree by going to next sibling or up
+        return getNextNode(node, rootNode, true, skipRoot);
+      }
       return firstChild;
     }
   }
 
   const nextSibling = node.nextSibling;
   if (nextSibling) {
+    // If next sibling is skipRoot, skip it entirely
+    if (skipRoot && nextSibling === skipRoot) {
+      return getNextNode(nextSibling, rootNode, true, skipRoot);
+    }
     return nextSibling;
   }
 
   const parentNode = node.parentNode;
   if (parentNode && parentNode !== rootNode) {
-    return getNextNode(parentNode, rootNode, true);
+    return getNextNode(parentNode, rootNode, true, skipRoot);
   }
 
   return null;
 };
 
-const createNextNodeIterator = (node, rootNode) => {
+const createNextNodeIterator = (node, rootNode, skipRoot = null) => {
   let current = node;
-  const next = () => {
-    const nextNode = getNextNode(current, rootNode);
+  const next = (innerSkipChildren = false) => {
+    const nextNode = getNextNode(
+      current,
+      rootNode,
+      innerSkipChildren,
+      skipRoot,
+    );
     current = nextNode;
     return {
       done: Boolean(nextNode) === false,
@@ -102,14 +131,28 @@ const createNextNodeIterator = (node, rootNode) => {
   return { next };
 };
 
-const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false) => {
+const createAfterNodeIterator = (
+  fromNode,
+  rootNode,
+  skipChildren = false,
+  skipRoot = null,
+) => {
   let current = fromNode;
   let childrenSkipped = false;
-  const next = () => {
+
+  // If we're inside skipRoot, we need to start searching after skipRoot entirely
+  if (skipRoot && (fromNode === skipRoot || skipRoot.contains(fromNode))) {
+    current = skipRoot;
+    childrenSkipped = true; // Mark that we've already "processed" this node
+    skipChildren = true; // Force skip children to exit the skipRoot subtree
+  }
+
+  const next = (innerSkipChildren = false) => {
     const nextNode = getNextNode(
       current,
       rootNode,
-      skipChildren && childrenSkipped === false,
+      (skipChildren && childrenSkipped === false) || innerSkipChildren,
+      skipRoot,
     );
     childrenSkipped = true;
     current = nextNode;
@@ -121,9 +164,23 @@ const createAfterNodeIterator = (fromNode, rootNode, skipChildren = false) => {
   return { next };
 };
 
-const getDeepestNode = (node) => {
+const getDeepestNode = (node, skipRoot = null) => {
   let deepestNode = node.lastChild;
   while (deepestNode) {
+    // If we hit skipRoot or enter its subtree, stop going deeper
+    if (
+      skipRoot &&
+      (deepestNode === skipRoot || skipRoot.contains(deepestNode))
+    ) {
+      // Try the previous sibling instead
+      const previousSibling = deepestNode.previousSibling;
+      if (previousSibling) {
+        return getDeepestNode(previousSibling, skipRoot);
+      }
+      // If no previous sibling, return the parent (which should be safe)
+      return deepestNode.parentNode === node ? null : deepestNode.parentNode;
+    }
+
     const lastChild = deepestNode.lastChild;
     if (lastChild) {
       deepestNode = lastChild;
@@ -134,10 +191,25 @@ const getDeepestNode = (node) => {
   return deepestNode;
 };
 
-const getPreviousNode = (node, rootNode) => {
+const getPreviousNode = (node, rootNode, skipRoot = null) => {
   const previousSibling = node.previousSibling;
   if (previousSibling) {
-    const deepestChild = getDeepestNode(previousSibling);
+    // If previous sibling is skipRoot, skip it entirely
+    if (skipRoot && previousSibling === skipRoot) {
+      return getPreviousNode(previousSibling, rootNode, skipRoot);
+    }
+
+    const deepestChild = getDeepestNode(previousSibling, skipRoot);
+
+    // Check if deepest child is inside skipRoot (shouldn't happen with updated getDeepestNode, but safe check)
+    if (
+      skipRoot &&
+      deepestChild &&
+      (deepestChild === skipRoot || skipRoot.contains(deepestChild))
+    ) {
+      // Skip this sibling entirely and try the next one
+      return getPreviousNode(previousSibling, rootNode, skipRoot);
+    }
 
     if (deepestChild) {
       return deepestChild;
@@ -153,10 +225,16 @@ const getPreviousNode = (node, rootNode) => {
   return null;
 };
 
-const createPreviousNodeIterator = (fromNode, rootNode) => {
+const createPreviousNodeIterator = (fromNode, rootNode, skipRoot = null) => {
   let current = fromNode;
+
+  // If we're inside skipRoot, we need to start searching before skipRoot entirely
+  if (skipRoot && (fromNode === skipRoot || skipRoot.contains(fromNode))) {
+    current = skipRoot;
+  }
+
   const next = () => {
-    const previousNode = getPreviousNode(current, rootNode);
+    const previousNode = getPreviousNode(current, rootNode, skipRoot);
     current = previousNode;
     return {
       done: Boolean(previousNode) === false,

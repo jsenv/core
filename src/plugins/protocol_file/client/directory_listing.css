@@ -101,9 +101,11 @@ a.nav_item_text {
   margin: 10px 15px 10px 15px;
   list-style-type: none;
   border-radius: 3px;
+  display: flex;
+  flex-direction: column;
 }
 .directory_content_item {
-  display: flex;
+  display: inline-flex;
   position: relative;
   padding: 10px 15px 10px 15px;
   font-size: 15px;
@@ -112,7 +114,9 @@ a.nav_item_text {
   align-items: center;
 }
 .directory_content_item_link {
-  display: flex;
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
   flex: 1;
   gap: 10px;
   align-items: center;
@@ -123,12 +127,15 @@ a.nav_item_text {
   aspect-ratio: 1/1;
   display: flex;
   color: #f1f1f1;
+  flex-shrink: 0;
 }
 .directory_content_item_icon img {
   width: 100%;
 }
 .directory_content_item_text {
-  display: flex;
+  display: inline-flex;
+  flex-grow: 1;
+  align-items: center;
 }
 .directory_content_item:last-child {
   border-bottom: none;

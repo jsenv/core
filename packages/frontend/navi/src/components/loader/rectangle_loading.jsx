@@ -16,8 +16,13 @@
  */
 
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useNetworkSpeed } from "./network_speed.js";
 
-export const RectangleLoading = ({ color = "currentColor", radius = 0 }) => {
+export const RectangleLoading = ({
+  color = "currentColor",
+  radius = 0,
+  size = 2,
+}) => {
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -57,44 +62,69 @@ export const RectangleLoading = ({ color = "currentColor", radius = 0 }) => {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      style="width: 100%; height: 100%; position: relative;"
-    >
+    <div name="rectangle_loading" ref={containerRef}>
       {dimensions.width > 0 && dimensions.height > 0 && (
         <RectangleLoadingSvg
           radius={radius}
           color={color}
           width={dimensions.width}
           height={dimensions.height}
+          strokeWidth={size}
         />
       )}
     </div>
   );
 };
 
-const RectangleLoadingSvg = ({ width, height, color, radius }) => {
-  // Calculate stroke width and margins based on container size
-  const strokeWidth = Math.max(1, Math.min(width, height) * 0.01);
+const RectangleLoadingSvg = ({
+  width,
+  height,
+  color,
+  radius,
+  trailColor = "transparent",
+  strokeWidth,
+}) => {
   const margin = Math.max(2, Math.min(width, height) * 0.03);
 
   // Calculate the drawable area
   const drawableWidth = width - margin * 2;
   const drawableHeight = height - margin * 2;
 
-  // Calculate corner radius - use the provided radius or a size-based default
+  // ✅ Check if this should be a circle
+  const maxPossibleRadius = Math.min(drawableWidth, drawableHeight) / 2;
   const actualRadius = Math.min(
     radius || Math.min(drawableWidth, drawableHeight) * 0.05,
-    Math.min(drawableWidth, drawableHeight) * 0.25, // Cap at 1/4 of the smaller dimension
+    maxPossibleRadius, // ✅ Limité au radius maximum possible
   );
 
-  // Calculate the perimeter of the rectangle for dash animation
-  const pathLength =
-    2 * (drawableWidth + drawableHeight) +
-    (actualRadius > 0 ? 2 * Math.PI * actualRadius : 0);
+  // ✅ Determine if we're dealing with a circle
+  const isCircle = actualRadius >= maxPossibleRadius * 0.95; // 95% = virtually a circle
 
-  // Starting at top-left corner + radius
-  const rectPath = `
+  let pathLength;
+  let rectPath;
+
+  if (isCircle) {
+    // ✅ Circle: perimeter = 2πr
+    pathLength = 2 * Math.PI * actualRadius;
+
+    // ✅ Circle path centered in the drawable area
+    const centerX = margin + drawableWidth / 2;
+    const centerY = margin + drawableHeight / 2;
+
+    rectPath = `
+      M ${centerX + actualRadius},${centerY}
+      A ${actualRadius},${actualRadius} 0 1 1 ${centerX - actualRadius},${centerY}
+      A ${actualRadius},${actualRadius} 0 1 1 ${centerX + actualRadius},${centerY}
+    `;
+  } else {
+    // ✅ Rectangle: calculate perimeter properly
+    const straightEdges =
+      2 * (drawableWidth - 2 * actualRadius) +
+      2 * (drawableHeight - 2 * actualRadius);
+    const cornerArcs = actualRadius > 0 ? 2 * Math.PI * actualRadius : 0;
+    pathLength = straightEdges + cornerArcs;
+
+    rectPath = `
       M ${margin + actualRadius},${margin}
       L ${margin + drawableWidth - actualRadius},${margin}
       A ${actualRadius},${actualRadius} 0 0 1 ${margin + drawableWidth},${margin + actualRadius}
@@ -105,6 +135,27 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
       L ${margin},${margin + actualRadius}
       A ${actualRadius},${actualRadius} 0 0 1 ${margin + actualRadius},${margin}
     `;
+  }
+
+  // Fixed segment size in pixels
+  const maxSegmentSize = 40;
+  const segmentLength = Math.min(maxSegmentSize, pathLength * 0.25);
+  const gapLength = pathLength - segmentLength;
+
+  // Vitesse constante en pixels par seconde
+  const networkSpeed = useNetworkSpeed();
+  const pixelsPerSecond =
+    {
+      "slow-2g": 40,
+      "2g": 60,
+      "3g": 80,
+      "4g": 120,
+    }[networkSpeed] || 80;
+  const animationDuration = Math.max(1.5, pathLength / pixelsPerSecond);
+
+  // ✅ Calculate correct offset based on actual segment size
+  const segmentRatio = segmentLength / pathLength;
+  const circleOffset = -animationDuration * segmentRatio;
 
   return (
     <svg
@@ -116,47 +167,57 @@ const RectangleLoadingSvg = ({ width, height, color, radius }) => {
       xmlns="http://www.w3.org/2000/svg"
       shape-rendering="geometricPrecision"
     >
-      {/* Base rectangle outline */}
-      <rect
-        x={margin}
-        y={margin}
-        width={drawableWidth}
-        height={drawableHeight}
-        fill="none"
-        stroke="rgba(0,0,0,0.05)"
-        strokeWidth={strokeWidth}
-        rx={actualRadius}
-      />
+      {/* Base outline - circle ou rectangle */}
+      {isCircle ? (
+        <circle
+          cx={margin + drawableWidth / 2}
+          cy={margin + drawableHeight / 2}
+          r={actualRadius}
+          fill="none"
+          stroke={trailColor}
+          strokeWidth={strokeWidth}
+        />
+      ) : (
+        <rect
+          x={margin}
+          y={margin}
+          width={drawableWidth}
+          height={drawableHeight}
+          fill="none"
+          stroke={trailColor}
+          strokeWidth={strokeWidth}
+          rx={actualRadius}
+        />
+      )}
 
       {/* Progress segment that grows and moves */}
       <path
         d={rectPath}
         fill="none"
         stroke={color}
-        strokeWidth={strokeWidth * 2}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
-        opacity="0.8"
-        strokeDasharray={`${pathLength * 0.25} ${pathLength * 0.75}`}
+        strokeDasharray={`${segmentLength} ${gapLength}`}
         pathLength={pathLength}
       >
         <animate
           attributeName="stroke-dashoffset"
           from={pathLength}
           to="0"
-          dur="1.8s"
+          dur={`${animationDuration}s`}
           repeatCount="indefinite"
           begin="0s"
         />
       </path>
 
       {/* Leading dot that follows the path */}
-      <circle r={strokeWidth * 1.75} opacity="0.8" fill={color}>
+      <circle r={strokeWidth} fill={color}>
         <animateMotion
           path={rectPath}
-          dur="1.8s"
+          dur={`${animationDuration}s`}
           repeatCount="indefinite"
           rotate="auto"
-          begin="-0.45s"
+          begin={`${circleOffset}s`}
         />
       </circle>
     </svg>

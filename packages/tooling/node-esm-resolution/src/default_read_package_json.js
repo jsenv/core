@@ -1,12 +1,23 @@
 import { readFileSync } from "node:fs";
 
 export const defaultReadPackageJson = (packageUrl) => {
-  const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync(packageJsonUrl);
-  const string = String(buffer);
+  const packageJsonFileUrl = new URL("./package.json", packageUrl);
+  let packageJsonFileContentBuffer;
   try {
-    return JSON.parse(string);
+    packageJsonFileContentBuffer = readFileSync(packageJsonFileUrl, "utf8");
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return null;
+    }
+    throw e;
+  }
+  const packageJsonFileContentString = String(packageJsonFileContentBuffer);
+  try {
+    const packageJsonFileContentObject = JSON.parse(
+      packageJsonFileContentString,
+    );
+    return packageJsonFileContentObject;
   } catch {
-    throw new Error(`Invalid package configuration`);
+    throw new Error(`Invalid package configuration at ${packageJsonFileUrl}`);
   }
 };
