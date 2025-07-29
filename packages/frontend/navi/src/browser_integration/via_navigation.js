@@ -1,3 +1,5 @@
+import { updateDocumentUrl } from "./document_url_signal.js";
+
 let DEBUG = false;
 
 export const setupRoutingViaNavigation = (handler) => {

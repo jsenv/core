@@ -1,7 +1,6 @@
 {
   "name": "@jsenv/navi",
   "version": "0.0.1",
-  "private": true,
   "description": "A navigation library for JS environments",
   "repository": {
     "type": "git",
