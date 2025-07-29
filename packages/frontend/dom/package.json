@@ -1,7 +1,6 @@
 {
   "name": "@jsenv/dom",
   "version": "0.0.1",
-  "private": true,
   "exports": {
     ".": "./src/dom.js",
     "./details_content_full_height": "./src/size/details_content_full_height.js",

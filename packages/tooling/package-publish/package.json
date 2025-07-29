@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/package-publish",
-  "version": "1.11.34",
+  "version": "1.11.35",
   "description": "Publish package to one or many registry.",
   "repository": {
     "type": "git",
@@ -22,7 +22,7 @@
   "dependencies": {
     "@jsenv/filesystem": "4.15.6",
     "@jsenv/humanize": "1.6.0",
-    "semver": "7.7.1"
+    "semver": "7.7.2"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert"
