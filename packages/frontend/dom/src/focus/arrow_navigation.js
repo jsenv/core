@@ -1,3 +1,4 @@
+import { canInterceptKeys } from "../keyboard.js";
 import {
   findAfter,
   findBefore,
@@ -16,6 +17,9 @@ export const performArrowNavigation = (
   element,
   { direction = "both", loop, name } = {},
 ) => {
+  if (!canInterceptKeys(event)) {
+    return false;
+  }
   if (arrowFocusNavEventMarker.isMarked(event)) {
     // Prevent double handling of the same event
     return false;

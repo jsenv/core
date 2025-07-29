@@ -1,6 +1,6 @@
+import { canInterceptKeys } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
-import { canInterceptKeys } from "../shortcut/shortcut_context.jsx";
 
 const SelectionContext = createContext(null);
 

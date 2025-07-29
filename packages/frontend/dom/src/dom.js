@@ -6,6 +6,7 @@ export {
 export { elementIsFocusable } from "./focus/element_is_focusable.js";
 export { initFocusGroup } from "./focus/focus_group.js";
 export { trapFocusInside } from "./focus/focus_trap.js";
+export { canInterceptKeys } from "./keyboard.js";
 export {
   getAncestorScrolls,
   getScrollableParentSet,
