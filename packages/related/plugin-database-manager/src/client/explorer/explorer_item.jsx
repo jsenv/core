@@ -34,9 +34,9 @@ export const ExplorerItem = ({
     shortcuts: [
       {
         key: "enter",
+        enabled: !editable,
         action: startEditing,
         description: "Edit item name",
-        enabled: !editable,
       },
       ...(deleteItemAction
         ? [

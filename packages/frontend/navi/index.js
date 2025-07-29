@@ -1,6 +1,9 @@
 // actions
 export { createAction, rerunActions, updateActions } from "./src/actions.js";
-export { ShortcutProvider } from "./src/components/shortcut/shortcut_context.jsx";
+export {
+  ShortcutProvider,
+  useKeyboardShortcuts,
+} from "./src/components/shortcut/shortcut_context.jsx";
 export { useActionData } from "./src/use_action_data.js";
 export { useActionStatus } from "./src/use_action_status.js";
 

@@ -8,6 +8,7 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { ActionRenderer } from "../action_renderer.jsx";
+import { useKeyboardShortcuts } from "../shortcut/shortcut_context.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useFocusGroup } from "../use_focus_group.js";
 import { SummaryMarker } from "./summary_marker.jsx";
@@ -66,10 +67,9 @@ const DetailsBasic = forwardRef((props, ref) => {
     focusGroup,
     focusGroupDirection,
     arrowKeyShortcuts = true,
-    openKeyShortcut = arrowKeyShortcuts ? "ArrowRight" : undefined,
-    closeKeyShortcut = arrowKeyShortcuts ? "ArrowLeft" : undefined,
+    openKeyShortcut = "ArrowRight",
+    closeKeyShortcut = "ArrowLeft",
     onToggle,
-    onKeyDown,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -104,6 +104,62 @@ const DetailsBasic = forwardRef((props, ref) => {
 
   const summaryRef = useRef(null);
 
+  useKeyboardShortcuts(
+    innerRef,
+    [
+      {
+        key: openKeyShortcut,
+        enabled: arrowKeyShortcuts,
+        when: (e) =>
+          document.activeElement === summaryRef.current &&
+          // avoid handling openKeyShortcut twice when keydown occurs inside nested details
+          !e.defaultPrevented,
+        action: (e) => {
+          const details = innerRef.current;
+          if (!details.open) {
+            e.preventDefault();
+            details.open = true;
+            return;
+          }
+          const summary = summaryRef.current;
+          const firstFocusableElementInDetails = findAfter(
+            summary,
+            elementIsFocusable,
+            { root: details },
+          );
+          if (!firstFocusableElementInDetails) {
+            return;
+          }
+          e.preventDefault();
+          firstFocusableElementInDetails.focus();
+        },
+      },
+      {
+        key: closeKeyShortcut,
+        enabled: arrowKeyShortcuts,
+        when: () => {
+          const details = innerRef.current;
+          return details.open;
+        },
+        action: (e) => {
+          const details = innerRef.current;
+          const summary = summaryRef.current;
+          if (document.activeElement === summary) {
+            e.preventDefault();
+            summary.focus();
+            details.open = false;
+          } else {
+            e.preventDefault();
+            summary.focus();
+          }
+        },
+      },
+    ],
+    (shortcut, e) => {
+      shortcut.action(e);
+    },
+  );
+
   return (
     <details
       {...rest}
@@ -126,62 +182,9 @@ const DetailsBasic = forwardRef((props, ref) => {
         }
         onToggle?.(e);
       }}
-      onKeyDown={(e) => {
-        if (
-          // avoid handling ArrowLeft twice when ArrowLeft occurs inside nested details
-          !e.defaultPrevented &&
-          e.key === closeKeyShortcut
-        ) {
-          const details = innerRef.current;
-          if (details.open) {
-            const summary = details.querySelector("summary");
-            if (document.activeElement !== summary) {
-              e.preventDefault();
-              summary.focus();
-            }
-          }
-        }
-        onKeyDown?.(e);
-      }}
       open={innerOpen}
     >
-      <summary
-        ref={summaryRef}
-        onKeyDown={(e) => {
-          if (e.defaultPrevented) {
-            return;
-          }
-          if (e.key === openKeyShortcut) {
-            const details = innerRef.current;
-            if (details.open) {
-              const summary = summaryRef.current;
-              const firstFocusableElementInDetails = findAfter(
-                summary,
-                elementIsFocusable,
-                { root: details },
-              );
-              if (firstFocusableElementInDetails) {
-                e.preventDefault();
-                firstFocusableElementInDetails.focus();
-              }
-              return;
-            }
-            e.preventDefault();
-            details.open = true;
-            return;
-          }
-          if (e.key === closeKeyShortcut) {
-            const details = innerRef.current;
-            const summary = summaryRef.current;
-            if (details.open) {
-              e.preventDefault();
-              summary.focus();
-              details.open = false;
-              return;
-            }
-          }
-        }}
-      >
+      <summary ref={summaryRef}>
         <div className="summary_body">
           <SummaryMarker open={innerOpen} loading={loading} />
           <div className="summary_label">{label}</div>

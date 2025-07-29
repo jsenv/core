@@ -1,12 +1,6 @@
 import { requestAction } from "@jsenv/validation";
 import { createContext } from "preact";
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useEffect, useRef, useState } from "preact/hooks";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
@@ -124,19 +118,49 @@ export const ShortcutProvider = ({
     },
   });
 
-  const shortcutsRef = useRef(shortcuts);
-  shortcutsRef.current = shortcuts;
-
   const [action, setAction] = useState(null);
   for (const shortcut of shortcuts) {
     shortcut.action = useAction(shortcut.action);
   }
 
-  const onKeyDownForShortcuts = useCallback(
-    (event) => {
-      if (shortcutActionIsBusy) {
-        return;
-      }
+  useKeyboardShortcuts(elementRef, shortcuts, (shortcut, event) => {
+    if (shortcutActionIsBusy) {
+      return;
+    }
+    event.preventDefault();
+    const { action } = shortcut;
+    requestAction(action, {
+      event,
+      target: shortcutElementRef.current,
+      requester: elementRef.current,
+      confirmMessage: shortcut.confirmMessage,
+    });
+  });
+
+  return (
+    <ShortcutContext.Provider
+      value={{
+        shortcutAction: action,
+        shortcutActionIsBusy,
+      }}
+    >
+      {children}
+      {shortcutHiddenElement}
+    </ShortcutContext.Provider>
+  );
+};
+
+export const useKeyboardShortcuts = (elementRef, shortcuts, onShortcut) => {
+  const shortcutsRef = useRef(shortcuts);
+  shortcutsRef.current = shortcuts;
+
+  const onShortcutRef = useRef(onShortcut);
+  onShortcutRef.current = onShortcut;
+
+  useEffect(() => {
+    const element = elementRef.current;
+
+    const onKeydown = (event) => {
       const target = event.target;
       // Don't handle shortcuts when user is typing
       if (
@@ -192,45 +216,26 @@ export const ShortcutProvider = ({
           crossPlatformCombination !== actualCombination &&
           eventIsMatchingKeyCombination(event, crossPlatformCombination);
 
-        if (matchesActual || matchesCrossPlatform) {
-          shortcutFound = shortcutCandidate;
-          break;
+        if (!matchesActual && !matchesCrossPlatform) {
+          continue;
         }
+        if (!shortcutCandidate.when?.(event)) {
+          continue;
+        }
+        shortcutFound = shortcutCandidate;
+        break;
       }
       if (!shortcutFound) {
         return;
       }
-      event.preventDefault();
-      const { action } = shortcutFound;
-      requestAction(action, {
-        event,
-        target: shortcutElementRef.current,
-        requester: elementRef.current,
-        confirmMessage: shortcutFound.confirmMessage,
-      });
-    },
-    [shortcutActionIsBusy],
-  );
-
-  useEffect(() => {
-    const element = elementRef.current;
-    element.addEventListener("keydown", onKeyDownForShortcuts);
-    return () => {
-      element.removeEventListener("keydown", onKeyDownForShortcuts);
+      onShortcutRef.current(shortcutFound, event);
     };
-  }, [onKeyDownForShortcuts]);
 
-  return (
-    <ShortcutContext.Provider
-      value={{
-        shortcutAction: action,
-        shortcutActionIsBusy,
-      }}
-    >
-      {children}
-      {shortcutHiddenElement}
-    </ShortcutContext.Provider>
-  );
+    element.addEventListener("keydown", onKeydown);
+    return () => {
+      element.removeEventListener("keydown", onKeydown);
+    };
+  }, []);
 };
 
 // Configuration for mapping shortcut key names to browser event properties
