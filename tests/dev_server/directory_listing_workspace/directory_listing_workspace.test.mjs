@@ -4,9 +4,9 @@ import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { chromium } from "playwright";
 
 let debug = false;
-const projectDirectoryUrl = new URL("./git_ignored/", import.meta.url);
-const sourceDirectoryUrl = new URL("./git_ignored/src/", import.meta.url);
-const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
+const projectDirectoryUrl = import.meta.resolve("./git_ignored/");
+const sourceDirectoryUrl = import.meta.resolve("./git_ignored/src/");
+const snapshotsDirectoryUrl = import.meta.resolve("./snapshots/");
 replaceFileStructureSync({
   from: new URL("./fixtures/0_at_start/", import.meta.url),
   to: projectDirectoryUrl,
@@ -41,9 +41,9 @@ const takeScreenshot = async (scenario) => {
 try {
   await page.goto(`${devServer.origin}`);
   await takeScreenshot("0_at_start");
-  await page.locator(`a:text-matches("git_ignored")`).click();
+  await page.locator(`a[href$="git_ignored/"]`).click();
   await takeScreenshot("1_after_click_git_ignored");
-  await page.locator(`a:text-matches("packages/")`).click();
+  await page.locator(`a[href$="git_ignored/packages/"]`).click();
   await takeScreenshot("1_after_click_packages");
 } finally {
   if (!debug) {
