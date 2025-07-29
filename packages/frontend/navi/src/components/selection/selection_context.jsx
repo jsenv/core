@@ -192,7 +192,8 @@ export const clickToSelect = (clickEvent, { selectionContext, value }) => {
     return;
   }
   if (isMultiSelect) {
-    clickEvent.preventDefault(); // Prevent navigation
+    // here no need to prevent nav on <a> but it means cmd + click will both multi select
+    // and open in a new tab
     selectionContext.toggle(value, clickEvent);
     return;
   }
