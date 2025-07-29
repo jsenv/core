@@ -513,3 +513,6 @@ export const defineRoutes = (routeDefinition) => {
 
   return routeArray;
 };
+
+// unit test exports
+export { createRoute };

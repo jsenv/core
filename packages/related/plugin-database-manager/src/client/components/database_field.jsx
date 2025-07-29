@@ -94,7 +94,7 @@ const DatabaseFieldWrapper = ({ item, column, usePutAction }) => {
     />
   );
 };
-const DatabaseField = ({ column, label, value, ...rest }) => {
+export const DatabaseField = ({ column, label, value, ...rest }) => {
   const columnName = column.column_name;
   const { valueSignal } = rest;
 
