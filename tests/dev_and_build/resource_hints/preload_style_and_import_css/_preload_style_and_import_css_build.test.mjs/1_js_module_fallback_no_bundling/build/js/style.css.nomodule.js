@@ -8,7 +8,9 @@ System.register(["/js/new_stylesheet.nomodule.js", "/js/inline_content.nomodule.
       inlineContent = new __InlineContent__("body {\n  font-size: 20px;\n}\n", {
         type: "text/css"
       });
-      stylesheet = new CSSStyleSheet();
+      stylesheet = new CSSStyleSheet({
+        baseUrl: "/style.css"
+      });
       stylesheet.replaceSync(inlineContent.text);
       _export("default", stylesheet);
     }

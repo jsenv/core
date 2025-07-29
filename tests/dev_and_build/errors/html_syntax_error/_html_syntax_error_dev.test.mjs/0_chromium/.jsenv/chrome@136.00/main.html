@@ -40,6 +40,13 @@
           "text": "DEV"
         });
       </script>
+      <script type="module" jsenv-injected-by="jsenv:drop_to_open" content-indented="">
+        import { initDropToOpen } from "/@fs@jsenv/core/src/plugins/drop_to_open/client/drop_to_open.js";
+            
+        initDropToOpen({
+          "rootDirectoryUrl": "base/client/"
+        });
+      </script>
       <script jsenv-injected-by="jsenv:inject_globals" content-indented="">
         Object.assign(window, {
           "HTML_ROOT_PATHNAME": "/main.html"

@@ -7,12 +7,17 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
     execute: function () {
       installImportMetaCss = importMeta => {
         let cssText = "";
-        let stylesheet = new CSSStyleSheet();
+        let stylesheet = new CSSStyleSheet({
+          baseUrl: importMeta.url
+        });
         let adopted = false;
         const css = {
           toString: () => cssText,
           update: value => {
             cssText = value;
+            cssText += `
+/* sourceURL=${importMeta.url} */
+/* inlined from ${importMeta.url} */`;
             stylesheet.replaceSync(cssText);
           },
           inject: () => {

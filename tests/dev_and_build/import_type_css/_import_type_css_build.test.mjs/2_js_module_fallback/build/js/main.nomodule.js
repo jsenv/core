@@ -36,7 +36,9 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
       inlineContent = new __InlineContent__('body {\n  background-color: red;\n  background-image: url('+__v__("/other/jsenv.png")+');\n}\n', {
         type: "text/css"
       });
-      stylesheet = new CSSStyleSheet();
+      stylesheet = new CSSStyleSheet({
+        baseUrl: "/src/main.css"
+      });
       stylesheet.replaceSync(inlineContent.text);
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
       return _await(new Promise(resolve => setTimeout(resolve, 200)), function () {

@@ -472,7 +472,9 @@ System.register([__v__("/jsenv_core_packages.js")], function (_export, _context)
       inlineContent = new __InlineContent__('@font-face {\n  font-family: Roboto;\n  font-style: normal;\n  font-weight: 400;\n  src: local(Roboto), url('+__v__("/other/roboto_v27_latin_regular.woff2")+') format("woff2");\n}\n\nbody {\n  font-family: Roboto;\n}\n', {
         type: "text/css"
       });
-      stylesheet = new CSSStyleSheet();
+      stylesheet = new CSSStyleSheet({
+        baseUrl: "/style.css"
+      });
       stylesheet.replaceSync(inlineContent.text);
       document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
       return _await(new Promise(resolve => {

@@ -17,7 +17,7 @@ globalObject.__InlineContent__ = function (content, { type = "text/plain" }) {
 };
 
 const inlineContent = new __InlineContent__("body {\n  font-size: 20px;\n}\n", { type: "text/css" });
-const stylesheet = new CSSStyleSheet();
+const stylesheet = new CSSStyleSheet({ baseUrl: "/style.css" });
 stylesheet.replaceSync(inlineContent.text);
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
