@@ -33,7 +33,7 @@ export const ExplorerItem = ({
     className: "explorer_item_content",
     shortcuts: [
       {
-        keyCombinations: ["Enter"],
+        key: "enter",
         action: startEditing,
         description: "Edit item name",
         enabled: !editable,
@@ -41,8 +41,9 @@ export const ExplorerItem = ({
       ...(deleteItemAction
         ? [
             {
-              keyCombinations: ["command+delete"],
+              key: "command+delete",
               action: deleteItemAction,
+              description: "Delete item",
               confirmMessage: `Are you sure you want to delete "${itemName}"?`,
             },
           ]

@@ -92,8 +92,9 @@ export const ExplorerItemList = forwardRef((props, ref) => {
         shortcuts={[
           {
             enabled: selectionLength > 0,
-            keyCombinations: ["command+delete"],
+            key: ["command+delete"],
             action: deleteManyAction,
+            description: "Delete selected items",
             confirmMessage:
               selectionLength === 1
                 ? `Are you sure you want to delete "${itemSelectionSignal.value[0]}"?`

@@ -149,7 +149,7 @@
                 href="#"
                 shortcuts={[
                   {
-                    keyCombinations: ["Enter"],
+                    key: "enter",
                     action: async () => {
                       await new Promise((resolve) => setTimeout(resolve, 500));
                       // eslint-disable-next-line no-alert
@@ -157,7 +157,7 @@
                     },
                   },
                   {
-                    keyCombinations: ["Space"],
+                    key: "space",
                     action: async () => {
                       await new Promise((resolve) => setTimeout(resolve, 1500));
                       throw new Error(

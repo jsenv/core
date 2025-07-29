@@ -209,14 +209,14 @@
 
         const containerShortcuts = [
           {
-            keyCombinations: ["a"],
+            key: "a",
             description: "Select all files",
             action: () => {
               setStatus("📋 Selected all files (container shortcut)");
             },
           },
           {
-            keyCombinations: ["Delete"],
+            key: "delete",
             description: "Delete selected files",
             action: async () => {
               setStatus("🗑️ Start deleting files (container shortcut)");
@@ -228,7 +228,7 @@
             confirmMessage: "Are you sure you want to delete selected files?",
           },
           {
-            keyCombinations: ["r"],
+            key: "r",
             description: "Refresh file list",
             action: () => {
               setStatus("🔄 Refreshed file list (container shortcut)");
@@ -334,7 +334,7 @@
                           loading={deletedFiles.includes(file.name)}
                           shortcuts={[
                             {
-                              keyCombinations: ["Enter"],
+                              key: "enter",
                               description: `Open ${file.name}`,
                               action: () => {
                                 setStatus(
@@ -343,7 +343,7 @@
                               },
                             },
                             {
-                              keyCombinations: ["Space"],
+                              key: "space",
                               description: `Preview ${file.name}`,
                               action: () => {
                                 setStatus(
@@ -352,7 +352,7 @@
                               },
                             },
                             {
-                              keyCombinations: ["i"],
+                              key: "i",
                               description: `Info for ${file.name}`,
                               action: () => {
                                 setStatus(
