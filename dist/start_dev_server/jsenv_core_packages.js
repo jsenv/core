@@ -267,6 +267,31 @@ const UNICODE = createUnicode({
   ANSI,
 });
 
+const prefixFirstAndIndentRemainingLines = (
+  text,
+  { prefix, indentation, trimLines, trimLastLine },
+) => {
+  const lines = text.split(/\r?\n/);
+  const firstLine = lines.shift();
+  if (indentation === undefined) {
+    {
+      indentation = "  "; // prefix + space
+    }
+  }
+  let result = `${prefix} ${firstLine}` ;
+  let i = 0;
+  while (i < lines.length) {
+    const line = trimLines ? lines[i].trim() : lines[i];
+    i++;
+    result += line.length
+      ? `\n${indentation}${line}`
+      : trimLastLine && i === lines.length
+        ? ""
+        : `\n`;
+  }
+  return result;
+};
+
 const setRoundedPrecision = (
   number,
   { decimals = 1, decimalsWhenSmall = decimals } = {},
@@ -643,10 +668,9 @@ const formatError = (error) => {
   const { cause } = error;
   if (cause) {
     const formatCause = (cause, depth) => {
-      let causeText = prefixFirstAndIndentRemainingLines({
+      let causeText = prefixFirstAndIndentRemainingLines(cause.stack, {
         prefix: "  [cause]:",
         indentation: "  ".repeat(depth + 1),
-        text: cause.stack,
       });
       const nestedCause = cause.cause;
       if (nestedCause) {
@@ -659,34 +683,6 @@ const formatError = (error) => {
     text += `\n${causeText}`;
   }
   return text;
-};
-
-const prefixFirstAndIndentRemainingLines = ({
-  prefix,
-  indentation,
-  text,
-  trimLines,
-  trimLastLine,
-}) => {
-  const lines = text.split(/\r?\n/);
-  const firstLine = lines.shift();
-  if (indentation === undefined) {
-    {
-      indentation = "  "; // prefix + space
-    }
-  }
-  let result = `${prefix} ${firstLine}` ;
-  let i = 0;
-  while (i < lines.length) {
-    const line = trimLines ? lines[i].trim() : lines[i];
-    i++;
-    result += line.length
-      ? `\n${indentation}${line}`
-      : trimLastLine && i === lines.length
-        ? ""
-        : `\n`;
-  }
-  return result;
 };
 
 const LOG_LEVEL_OFF = "off";

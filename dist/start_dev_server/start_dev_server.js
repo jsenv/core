@@ -586,6 +586,34 @@ const assertFetchedContentCompliance = ({ urlInfo, content }) => {
   }
 };
 
+const FILE_AND_SERVER_URLS_CONVERTER = {
+  asServerUrl: (fileUrl, serverRootDirectoryUrl) => {
+    if (urlIsOrIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
+      const urlRelativeToServer = urlToRelativeUrl(
+        fileUrl,
+        serverRootDirectoryUrl,
+      );
+      return `/${urlRelativeToServer}`;
+    }
+    const urlRelativeToFilesystemRoot = String(fileUrl).slice(
+      "file:///".length,
+    );
+    return `/@fs/${urlRelativeToFilesystemRoot}`;
+  },
+  asFileUrl: (urlRelativeToServer, serverRootDirectoryUrl) => {
+    if (urlRelativeToServer.startsWith("/@fs/")) {
+      const urlRelativeToFilesystemRoot = urlRelativeToServer.slice(
+        "/@fs/".length,
+      );
+      return `file:///${urlRelativeToFilesystemRoot}`;
+    }
+    if (urlRelativeToServer[0] === "/") {
+      return new URL(urlRelativeToServer.slice(1), serverRootDirectoryUrl).href;
+    }
+    return new URL(urlRelativeToServer, serverRootDirectoryUrl).href;
+  },
+};
+
 const determineFileUrlForOutDirectory = (urlInfo) => {
   let { url, filenameHint } = urlInfo;
   const { rootDirectoryUrl, outDirectoryUrl } = urlInfo.context;
@@ -2992,6 +3020,10 @@ const createKitchen = ({
       isSupportedOnCurrentClients: memoizeIsSupported(clientRuntimeCompat),
       isSupportedOnFutureClients: memoizeIsSupported(runtimeCompat),
       isPlaceholderInjection,
+      asServerUrl: (fileUrl) =>
+        FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(fileUrl, rootDirectoryUrl),
+      asFileUrl: (serverUrl) =>
+        FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(serverUrl, rootDirectoryUrl),
       INJECTIONS,
       getPluginMeta: null,
       sourcemaps,
@@ -6191,34 +6223,6 @@ const jsenvPluginVersionSearchParam = () => {
   };
 };
 
-const FILE_AND_SERVER_URLS_CONVERTER = {
-  asServerUrl: (fileUrl, serverRootDirectoryUrl) => {
-    if (urlIsOrIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
-      const urlRelativeToServer = urlToRelativeUrl(
-        fileUrl,
-        serverRootDirectoryUrl,
-      );
-      return `/${urlRelativeToServer}`;
-    }
-    const urlRelativeToFilesystemRoot = String(fileUrl).slice(
-      "file:///".length,
-    );
-    return `/@fs/${urlRelativeToFilesystemRoot}`;
-  },
-  asFileUrl: (urlRelativeToServer, serverRootDirectoryUrl) => {
-    if (urlRelativeToServer.startsWith("/@fs/")) {
-      const urlRelativeToFilesystemRoot = urlRelativeToServer.slice(
-        "/@fs/".length,
-      );
-      return `file:///${urlRelativeToFilesystemRoot}`;
-    }
-    if (urlRelativeToServer[0] === "/") {
-      return new URL(urlRelativeToServer.slice(1), serverRootDirectoryUrl).href;
-    }
-    return new URL(urlRelativeToServer, serverRootDirectoryUrl).href;
-  },
-};
-
 /*
  * NICE TO HAVE:
  * 
@@ -8858,6 +8862,49 @@ const jsenvPluginRibbon = ({
   };
 };
 
+/**
+ * HTML page server by jsenv dev server will listen for drop events
+ * and redirect the browser to the dropped file location.
+ *
+ * Works only for VSCode right now (because it sets "resourceurls" dataTransfer type).
+ *
+ */
+
+
+const jsenvPluginDropToOpen = () => {
+  const clientFileUrl = import.meta.resolve("../js/drop_to_open.js");
+  return {
+    name: "jsenv:drop_to_open",
+    appliesDuring: "dev",
+    transformUrlContent: {
+      html: (urlInfo) => {
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
+        const clientFileReference = urlInfo.dependencies.inject({
+          type: "script",
+          subtype: "js_module",
+          expectedType: "js_module",
+          specifier: clientFileUrl,
+        });
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: clientFileReference.generatedSpecifier,
+          initCall: {
+            callee: "initDropToOpen",
+            params: {
+              rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+            },
+          },
+          pluginName: "jsenv:drop_to_open",
+        });
+        return stringifyHtmlAst(htmlAst);
+      },
+    },
+  };
+};
+
 const jsenvPluginCleanHTML = () => {
   return {
     name: "jsenv:cleanup_html_during_dev",
@@ -9238,6 +9285,7 @@ const getCorePlugins = ({
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
+    jsenvPluginDropToOpen(),
     jsenvPluginCleanHTML(),
     jsenvPluginChromeDevtoolsJson(),
     ...(packageSideEffects
@@ -9405,6 +9453,7 @@ const startDevServer = async ({
   http2 = false,
   logLevel = EXECUTED_BY_TEST_PLAN ? "warn" : "info",
   serverLogLevel = "warn",
+  serverRouterLogLevel = "warn",
   services = [],
 
   signal = new AbortController().signal,
@@ -10011,6 +10060,7 @@ const startDevServer = async ({
     stopOnInternalError: false,
     keepProcessAlive,
     logLevel: serverLogLevel,
+    routerLogLevel: serverRouterLogLevel,
     startLog: false,
 
     https,
