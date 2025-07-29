@@ -77,9 +77,7 @@ export const ShortcutProvider = ({
         className="navi_shortcut_button"
         key={combinationString}
         aria-keyshortcuts={combinationString}
-        aria-hidden="true"
         tabIndex="-1"
-        disabled
         action={shortcut.action}
         data-action={shortcut.action.name}
         data-confirm-message={shortcut.confirmMessage}
