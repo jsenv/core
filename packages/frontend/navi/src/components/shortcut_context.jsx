@@ -71,7 +71,7 @@ export const ShortcutProvider = ({
 
   const shortcutElements = [];
   shortcuts.forEach((shortcut) => {
-    const combinationString = useAriaKeyShortcuts(shortcut.keyCombinations);
+    const combinationString = useAriaKeyShortcuts(shortcut.key);
     shortcutElements.push(
       <button
         className="navi_shortcut_button"
@@ -138,49 +138,39 @@ export const ShortcutProvider = ({
       }
       let shortcutFound;
       for (const shortcutCandidate of shortcutsRef.current) {
-        const { enabled = true, keyCombinations } = shortcutCandidate;
+        const { enabled = true, key } = shortcutCandidate;
         if (!enabled) {
           continue;
         }
-        const someMatch = keyCombinations.some((keyCombination) => {
-          // Handle platform-specific combination objects
-          let actualCombination;
-          let crossPlatformCombination;
 
-          if (
-            typeof keyCombination === "object" &&
-            keyCombination !== null &&
-            !Array.isArray(keyCombination)
-          ) {
-            actualCombination = isMac
-              ? keyCombination.mac
-              : keyCombination.other;
-          } else {
-            actualCombination = keyCombination;
+        // Handle platform-specific combination objects
+        let actualCombination;
+        let crossPlatformCombination;
 
-            // Auto-generate cross-platform combination if needed
-            if (containsPlatformSpecificKeys(keyCombination)) {
-              crossPlatformCombination =
-                generateCrossPlatformCombination(keyCombination);
-            }
+        if (typeof key === "object" && key !== null) {
+          actualCombination = isMac ? key.mac : key.other;
+        } else {
+          actualCombination = key;
+
+          // Auto-generate cross-platform combination if needed
+          if (containsPlatformSpecificKeys(key)) {
+            crossPlatformCombination = generateCrossPlatformCombination(key);
           }
-
-          // Check both the actual combination and cross-platform combination
-          const matchesActual =
-            actualCombination &&
-            eventIsMatchingKeyCombination(event, actualCombination);
-          const matchesCrossPlatform =
-            crossPlatformCombination &&
-            crossPlatformCombination !== actualCombination &&
-            eventIsMatchingKeyCombination(event, crossPlatformCombination);
-
-          return matchesActual || matchesCrossPlatform;
-        });
-        if (!someMatch) {
-          continue;
         }
-        shortcutFound = shortcutCandidate;
-        break;
+
+        // Check both the actual combination and cross-platform combination
+        const matchesActual =
+          actualCombination &&
+          eventIsMatchingKeyCombination(event, actualCombination);
+        const matchesCrossPlatform =
+          crossPlatformCombination &&
+          crossPlatformCombination !== actualCombination &&
+          eventIsMatchingKeyCombination(event, crossPlatformCombination);
+
+        if (matchesActual || matchesCrossPlatform) {
+          shortcutFound = shortcutCandidate;
+          break;
+        }
       }
       if (!shortcutFound) {
         return;
@@ -359,52 +349,21 @@ const normalizeKeyCombination = (combination) => {
 };
 
 // http://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts
-const useAriaKeyShortcuts = (combinations) => {
-  const combinationSet = new Set();
+const useAriaKeyShortcuts = (key) => {
+  let actualCombination;
 
-  for (const combination of combinations) {
-    let actualCombination;
-
-    // Handle platform-specific combination objects
-    if (
-      typeof combination === "object" &&
-      combination !== null &&
-      !Array.isArray(combination)
-    ) {
-      actualCombination = isMac ? combination.mac : combination.other;
-    } else {
-      actualCombination = combination;
-
-      // Auto-generate cross-platform combination if needed
-      if (containsPlatformSpecificKeys(combination)) {
-        const crossPlatformCombination =
-          generateCrossPlatformCombination(combination);
-        if (
-          crossPlatformCombination &&
-          crossPlatformCombination !== combination
-        ) {
-          const normalizedCrossPlatform = normalizeKeyCombination(
-            crossPlatformCombination,
-          );
-          combinationSet.add(normalizedCrossPlatform);
-        }
-      }
-    }
-
-    if (actualCombination) {
-      const normalizedCombination = normalizeKeyCombination(actualCombination);
-      combinationSet.add(normalizedCombination);
-    }
+  // Handle platform-specific combination objects
+  if (typeof key === "object" && key !== null) {
+    actualCombination = isMac ? key.mac : key.other;
+  } else {
+    actualCombination = key;
   }
 
-  let combinationString = "";
-  for (const combination of combinationSet) {
-    if (combinationString) {
-      combinationString += " ";
-    }
-    combinationString += combination;
+  if (actualCombination) {
+    return normalizeKeyCombination(actualCombination);
   }
-  return combinationString;
+
+  return "";
 };
 
 const containsPlatformSpecificKeys = (combination) => {
