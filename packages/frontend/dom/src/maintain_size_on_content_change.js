@@ -17,52 +17,56 @@ export const maintainSizeOnContentChange = (
   element.style.height = `${currentHeight}px`;
   element.style.overflow = "hidden";
 
+  let isUpdating = false;
   const updateSize = () => {
-    // Temporarily remove size constraints to measure true content size
-    element.style.width = "";
-    element.style.height = "";
+    if (isUpdating) {
+      return; // Prevent recursive updates
+    }
 
-    // Get unconstrained content size
-    const naturalWidth = getInnerWidth(element);
-    const naturalHeight = getInnerHeight(element);
+    try {
+      isUpdating = true;
 
-    // Restore size constraints
-    element.style.width = `${currentWidth}px`;
-    element.style.height = `${currentHeight}px`;
+      // Temporarily remove size constraints to measure true content size
+      element.style.width = "";
+      element.style.height = "";
 
-    // Only animate if size actually changed
-    if (naturalWidth !== currentWidth || naturalHeight !== currentHeight) {
-      currentWidth = naturalWidth;
-      currentHeight = naturalHeight;
-      sizeController.animateTo({
-        width: naturalWidth,
-        height: naturalHeight,
-      });
+      // Get unconstrained content size
+      const naturalWidth = getInnerWidth(element);
+      const naturalHeight = getInnerHeight(element);
+
+      // Restore size constraints
+      element.style.width = `${currentWidth}px`;
+      element.style.height = `${currentHeight}px`;
+
+      // Only animate if size actually changed
+      if (naturalWidth !== currentWidth || naturalHeight !== currentHeight) {
+        currentWidth = naturalWidth;
+        currentHeight = naturalHeight;
+        sizeController.animateTo({
+          width: naturalWidth,
+          height: naturalHeight,
+        });
+      }
+    } finally {
+      isUpdating = false;
     }
   };
 
   // Watch for DOM mutations that might affect size
-  const mutationObserver = new MutationObserver(updateSize);
-
-  // Watch for direct size changes (disabled for now as it might cause feedback loops)
-  const resizeObserver = new ResizeObserver(() => {
-    // We don't react to resize events as they might be caused by our own animations
-    // updateSize();
+  const mutationObserver = new MutationObserver(() => {
+    updateSize();
   });
 
   // Start observing
   mutationObserver.observe(element, {
     childList: true,
     subtree: true,
-    // characterData: true,
-    // attributes: true,
+    characterData: true,
   });
-  resizeObserver.observe(element);
 
   // Return cleanup function
   return () => {
     mutationObserver.disconnect();
-    resizeObserver.disconnect();
     sizeController.cancel();
   };
 };
