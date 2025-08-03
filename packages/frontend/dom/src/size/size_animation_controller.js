@@ -10,9 +10,22 @@ export const createHeightAnimationController = (element, options) =>
       return [{ height: `${target}px` }];
     },
     setup: () => {
-      return setStyles(element, {
-        "min-height": 0,
-      });
+      return setStyles(element, { "min-height": 0 });
+    },
+    ...options,
+  });
+
+export const createWidthAnimationController = (element, options) =>
+  createSizeAnimationController(element, {
+    getStyle: () => parseFloat(getComputedStyle(element).width),
+    setStyle: (value) => {
+      element.style.width = `${value}px`;
+    },
+    getKeyFrames: (target) => {
+      return [{ width: `${target}px` }];
+    },
+    setup: () => {
+      return setStyles(element, { "min-width": 0 });
     },
     ...options,
   });
