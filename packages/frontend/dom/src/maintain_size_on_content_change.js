@@ -1,58 +1,57 @@
-export const maintainSizeOnContentChange = (element) => {
-  let currentHeight = null;
+import { createSizeAnimationController } from "./size/size_animation_controller.js";
 
-  const updateElementHeight = (newHeight) => {
-    if (currentHeight === null) {
-      // Initial setup - set height without transition
-      element.style.height = `${newHeight}px`;
-      currentHeight = newHeight;
-      return;
-    }
+export const maintainSizeOnContentChange = (
+  element,
+  { duration = 300 } = {},
+) => {
+  const sizeController = createSizeAnimationController(element, { duration });
 
-    if (newHeight === currentHeight) {
-      return;
-    }
+  // Keep track of the current computed size to prevent feedback loop
+  let currentWidth = element.offsetWidth;
+  let currentHeight = element.offsetHeight;
 
-    // Set current height explicitly to start transition from
+  // Set initial size without animation and constrain overflow
+  element.style.width = `${currentWidth}px`;
+  element.style.height = `${currentHeight}px`;
+  element.style.overflow = "hidden";
+
+  const updateSize = () => {
+    // Temporarily remove size constraints to measure true content size
+    element.style.width = "";
+    element.style.height = "";
+    // Get unconstrained content size
+    const naturalWidth = element.scrollWidth;
+    const naturalHeight = element.scrollHeight;
+    // Restore size constraints
+    element.style.width = `${currentWidth}px`;
     element.style.height = `${currentHeight}px`;
-    // Force a reflow
-    element.offsetHeight; // eslint-disable-line no-unused-expressions
-    // Add transition and update to new height
-    element.style.transition = `height 300ms ease-out`;
-    element.style.height = `${newHeight}px`;
 
-    // Cleanup transition after it completes
-    const onTransitionEnd = () => {
-      element.style.transition = "";
-      element.removeEventListener("transitionend", onTransitionEnd);
-    };
-    element.addEventListener("transitionend", onTransitionEnd, { once: true });
-
-    currentHeight = newHeight;
+    // Only animate if size actually changed
+    if (naturalWidth !== currentWidth || naturalHeight !== currentHeight) {
+      currentWidth = naturalWidth;
+      currentHeight = naturalHeight;
+      sizeController.animateTo({
+        width: naturalWidth,
+        height: naturalHeight,
+      });
+    }
   };
 
-  // Set initial height
-  updateElementHeight(element.offsetHeight);
+  // Watch for DOM mutations that might affect size
+  const mutationObserver = new MutationObserver(updateSize);
 
-  // Watch for DOM mutations that might affect height
-  const mutationObserver = new MutationObserver(() => {
-    // Use scrollHeight to get the full height including overflow
-    updateElementHeight(element.scrollHeight);
-  });
-
-  // Watch for direct size changes
-  const resizeObserver = new ResizeObserver((entries) => {
-    const entry = entries[0];
-    if (!entry) return;
-    updateElementHeight(entry.contentRect.height);
+  // Watch for direct size changes (disabled for now as it might cause feedback loops)
+  const resizeObserver = new ResizeObserver(() => {
+    // We don't react to resize events as they might be caused by our own animations
+    // updateSize();
   });
 
   // Start observing
   mutationObserver.observe(element, {
     childList: true,
     subtree: true,
-    characterData: true,
-    attributes: true,
+    // characterData: true,
+    // attributes: true,
   });
   resizeObserver.observe(element);
 
@@ -60,7 +59,6 @@ export const maintainSizeOnContentChange = (element) => {
   return () => {
     mutationObserver.disconnect();
     resizeObserver.disconnect();
-    element.style.height = "";
-    element.style.transition = "";
+    sizeController.cancel();
   };
 };
