@@ -33,7 +33,7 @@
       }
 
       .loading-state.tall {
-        padding: 40px 0;
+        padding: 140px 0;
       }
 
       .content-state {
@@ -115,7 +115,7 @@
 
       const states = {
         loading: () => `
-          <div class="loading-state ${isLargeState ? "tall" : ""}">
+          <div class="loading-state ${isLargeState ? "tall" : ""}" data-preserve-content-height>
             <div class="spinner"></div>
             <div>Loading...</div>
           </div>
@@ -128,7 +128,7 @@
           </div>
         `,
         error: () => `
-          <div class="error-state ${isLargeState ? "tall" : ""}">
+          <div class="error-state ${isLargeState ? "tall" : ""}" data-preserve-content-height>
             <div>⚠️</div>
             <div>An error occurred</div>
           </div>
