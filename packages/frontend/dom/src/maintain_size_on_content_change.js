@@ -8,11 +8,12 @@ export const maintainSizeOnContentChange = (
 ) => {
   const sizeController = createSizeAnimationController(element, { duration });
 
-  // Track both current and content dimensions
-  let lastContentWidth = 0;
-  let lastContentHeight = 0;
-  let currentWidth = 0;
-  let currentHeight = 0;
+  // Track dimensions
+  let lastContentWidth = 0; // Last known content state width
+  let lastContentHeight = 0; // Last known content state height
+  let currentWidth = 0; // Current width we're animating from
+  let currentHeight = 0; // Current height we're animating from
+
   const measureSize = () => {
     return [getInnerWidth(element), getInnerHeight(element)];
   };
@@ -34,11 +35,12 @@ export const maintainSizeOnContentChange = (
       // Temporarily remove size constraints to measure true content size
       element.style.width = "";
       element.style.height = "";
-      sizeController.cancel();
+      sizeController.cancel(); // ensure any ongoing animations are stopped otherwise size measurements will be incorrect
       const [newWidth, newHeight] = measureSize();
-      // Restore size constraints
+      // Restore current size constraints
       element.style.width = `${currentWidth}px`;
       element.style.height = `${currentHeight}px`;
+
       if (newWidth === currentWidth && newHeight === currentHeight) {
         // no change in size
         return;
@@ -47,27 +49,29 @@ export const maintainSizeOnContentChange = (
       const preserveContentHeight = element.children[0]?.hasAttribute(
         "data-preserve-content-height",
       );
+
       if (preserveContentHeight) {
         // Non-content state: use last known content height
-        currentWidth =
-          lastContentWidth === undefined ? newWidth : lastContentWidth;
-        currentHeight =
-          lastContentHeight === undefined ? newHeight : lastContentHeight;
+        // Width can change freely, but height is constrained to last content height
+        const nextWidth = lastContentWidth || newWidth;
+        const nextHeight = lastContentHeight || newHeight;
+        sizeController.animateTo({
+          width: nextWidth,
+          height: nextHeight,
+        });
+        currentWidth = nextWidth;
+        currentHeight = nextHeight;
+      } else {
+        lastContentWidth = newWidth;
+        lastContentHeight = newHeight;
+        // Content state: update both current and content dimensions
         sizeController.animateTo({
           width: newWidth,
           height: newHeight,
         });
-        return;
+        currentWidth = newWidth;
+        currentHeight = newHeight;
       }
-      // Content state: update both current and content heights
-      currentWidth = newWidth;
-      currentHeight = newHeight;
-      lastContentWidth = newWidth;
-      lastContentHeight = newHeight;
-      sizeController.animateTo({
-        width: newWidth,
-        height: newHeight,
-      });
     } finally {
       isUpdating = false;
     }
