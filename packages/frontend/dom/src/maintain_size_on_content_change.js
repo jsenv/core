@@ -1,3 +1,5 @@
+import { getInnerHeight } from "./size/get_inner_height.js";
+import { getInnerWidth } from "./size/get_inner_width.js";
 import { createSizeAnimationController } from "./size/size_animation_controller.js";
 
 export const maintainSizeOnContentChange = (
@@ -6,9 +8,9 @@ export const maintainSizeOnContentChange = (
 ) => {
   const sizeController = createSizeAnimationController(element, { duration });
 
-  // Keep track of the current computed size to prevent feedback loop
-  let currentWidth = element.offsetWidth;
-  let currentHeight = element.offsetHeight;
+  // Measure natural content size
+  let currentWidth = getInnerWidth(element);
+  let currentHeight = getInnerHeight(element);
 
   // Set initial size without animation and constrain overflow
   element.style.width = `${currentWidth}px`;
@@ -19,9 +21,11 @@ export const maintainSizeOnContentChange = (
     // Temporarily remove size constraints to measure true content size
     element.style.width = "";
     element.style.height = "";
+
     // Get unconstrained content size
-    const naturalWidth = element.scrollWidth;
-    const naturalHeight = element.scrollHeight;
+    const naturalWidth = getInnerWidth(element);
+    const naturalHeight = getInnerHeight(element);
+
     // Restore size constraints
     element.style.width = `${currentWidth}px`;
     element.style.height = `${currentHeight}px`;
