@@ -12,10 +12,9 @@ export const maintainSizeOnContentChange = (
   let currentWidth = getInnerWidth(element);
   let currentHeight = getInnerHeight(element);
 
-  // Set initial size without animation and constrain overflow
+  // Set initial size without animation
   element.style.width = `${currentWidth}px`;
   element.style.height = `${currentHeight}px`;
-  element.style.overflow = "hidden";
 
   let isUpdating = false;
   const updateSize = () => {
