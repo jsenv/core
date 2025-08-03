@@ -15,6 +15,7 @@ export const maintainSizeOnContentChange = (
   // Set initial size without animation
   element.style.width = `${currentWidth}px`;
   element.style.height = `${currentHeight}px`;
+  element.style.overflow = "hidden"; // Prevent overflow during measurement
 
   let isUpdating = false;
   const updateSize = () => {
@@ -45,6 +46,7 @@ export const maintainSizeOnContentChange = (
           width: naturalWidth,
           height: naturalHeight,
         });
+      } else {
       }
     } finally {
       isUpdating = false;
