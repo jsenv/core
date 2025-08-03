@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Smooth height transition demo</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui;
+      }
+
+      .controls {
+        padding: 20px;
+        border-bottom: 1px solid #ccc;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        padding: 20px;
+      }
+
+      /* The element we'll apply the smooth transition to */
+      #dynamic-content {
+        background: white;
+        border: 2px solid #666;
+        padding: 16px;
+        margin: 20px 0;
+        width: 300px;
+        /* we'll handle height transitions in JS */
+      }
+
+      /* Some preset content styles for testing */
+      .content-block {
+        background: #f0f0f0;
+        margin: 8px 0;
+        padding: 12px;
+      }
+
+      button {
+        margin: 0 8px 8px 0;
+        padding: 8px 16px;
+      }
+
+      textarea {
+        display: block;
+        width: 300px;
+        height: 100px;
+        margin: 8px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <h3>Test Controls</h3>
+      <div>
+        <button onclick="setPresetContent('small')">Small Content</button>
+        <button onclick="setPresetContent('medium')">Medium Content</button>
+        <button onclick="setPresetContent('large')">Large Content</button>
+      </div>
+      <div>
+        <button onclick="addBlock()">Add Block</button>
+        <button onclick="removeBlock()">Remove Block</button>
+      </div>
+      <div>
+        <p>Custom content:</p>
+        <textarea id="custom-content" oninput="updateCustomContent(this.value)">
+Hello, this is some initial content.</textarea
+        >
+      </div>
+    </div>
+
+    <div class="demo-container">
+      <div id="dynamic-content">
+        <div class="content-block">Initial content block</div>
+      </div>
+    </div>
+
+    <script>
+      /* eslint-disable no-unused-vars */
+      const dynamicContent = document.getElementById("dynamic-content");
+
+      // We'll implement this function later
+      // const cleanup = initMaintainSizeOnContentChange(dynamicContent)
+
+      // Test helpers
+      const presetContents = {
+        small: `<div class="content-block">Small content</div>`,
+        medium: `
+          <div class="content-block">Medium content</div>
+          <div class="content-block">With multiple blocks</div>
+          <div class="content-block">To test transitions</div>
+        `,
+        large: `
+          <div class="content-block">Large content</div>
+          <div class="content-block">With many blocks</div>
+          <div class="content-block">To properly test</div>
+          <div class="content-block">How the transitions work</div>
+          <div class="content-block">With varying amounts of content</div>
+          <div class="content-block">And different heights</div>
+        `,
+      };
+
+      function setPresetContent(size) {
+        dynamicContent.innerHTML = presetContents[size];
+      }
+
+      function addBlock() {
+        const block = document.createElement("div");
+        block.className = "content-block";
+        block.textContent = `New content block ${dynamicContent.children.length + 1}`;
+        dynamicContent.appendChild(block);
+      }
+
+      function removeBlock() {
+        const blocks = dynamicContent.getElementsByClassName("content-block");
+        if (blocks.length > 0) {
+          blocks[blocks.length - 1].remove();
+        }
+      }
+
+      function updateCustomContent(text) {
+        dynamicContent.innerHTML = `<div class="content-block">${text}</div>`;
+      }
+    </script>
+  </body>
+</html>
