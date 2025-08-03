@@ -3,6 +3,7 @@ import { getPaddingSizes } from "./get_padding_sizes.js";
 import { getWidth } from "./get_width.js";
 
 export const getInnerWidth = (element) => {
+  // Always subtract paddings and borders to get the content width
   const paddingSizes = getPaddingSizes(element);
   const borderSizes = getBorderSizes(element);
   const width = getWidth(element);
