@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Content States Transition Demo</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui;
+      }
+
+      .controls {
+        padding: 20px;
+        border-bottom: 1px solid #ccc;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        padding: 20px;
+      }
+
+      #content-box {
+        background: white;
+        border: 2px solid #666;
+        padding: 16px;
+        margin: 20px 0;
+        width: 300px;
+      }
+
+      /* State-specific styles */
+      .loading-state {
+        color: #666;
+        text-align: center;
+      }
+
+      .loading-state.tall {
+        padding: 40px 0;
+      }
+
+      .content-state {
+        color: #000;
+      }
+
+      .error-state {
+        color: #d32f2f;
+        text-align: center;
+      }
+
+      .error-state.tall {
+        padding: 40px 0;
+      }
+
+      /* Shared styles */
+      .content-block {
+        background: #f0f0f0;
+        margin: 8px 0;
+        padding: 12px;
+      }
+
+      button {
+        margin: 0 8px 8px 0;
+        padding: 8px 16px;
+      }
+
+      button.active {
+        background: #4caf50;
+        color: white;
+        border-color: #388e3c;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #666;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 8px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <h3>Test States</h3>
+      <div>
+        <button id="show-loading">Loading</button>
+        <button id="show-content">Content</button>
+        <button id="show-error">Error</button>
+      </div>
+      <div>
+        <button id="toggle-size">Toggle Large State Size</button>
+      </div>
+    </div>
+
+    <div class="demo-container">
+      <div id="content-box">
+        <div class="content-state">
+          <div class="content-block">Initial content block</div>
+          <div class="content-block">Second content block</div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { maintainSizeOnContentChange } from "../maintain_size_on_content_change.js";
+
+      const contentBox = document.getElementById("content-box");
+      maintainSizeOnContentChange(contentBox);
+
+      let isLargeState = false;
+
+      const states = {
+        loading: () => `
+          <div class="loading-state ${isLargeState ? "tall" : ""}">
+            <div class="spinner"></div>
+            <div>Loading...</div>
+          </div>
+        `,
+        content: () => `
+          <div class="content-state">
+            <div class="content-block">Content block one</div>
+            <div class="content-block">Content block two</div>
+            <div class="content-block">Content block three</div>
+          </div>
+        `,
+        error: () => `
+          <div class="error-state ${isLargeState ? "tall" : ""}">
+            <div>⚠️</div>
+            <div>An error occurred</div>
+          </div>
+        `,
+      };
+
+      // Keep track of active state button
+      let activeButton = document.getElementById("show-content");
+      activeButton.classList.add("active");
+
+      function setState(state) {
+        // Update button states
+        activeButton.classList.remove("active");
+        activeButton = document.getElementById(`show-${state}`);
+        activeButton.classList.add("active");
+
+        // Update content
+        contentBox.innerHTML = states[state]();
+      }
+
+      // Setup event listeners
+      document
+        .getElementById("show-loading")
+        .addEventListener("click", () => setState("loading"));
+      document
+        .getElementById("show-content")
+        .addEventListener("click", () => setState("content"));
+      document
+        .getElementById("show-error")
+        .addEventListener("click", () => setState("error"));
+
+      document.getElementById("toggle-size").addEventListener("click", () => {
+        isLargeState = !isLargeState;
+        // Re-render current state with new size
+        const currentState = activeButton.id.replace("show-", "");
+        setState(currentState);
+      });
+    </script>
+  </body>
+</html>
