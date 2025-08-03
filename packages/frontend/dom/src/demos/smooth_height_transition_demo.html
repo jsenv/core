@@ -52,17 +52,17 @@
     <div class="controls">
       <h3>Test Controls</h3>
       <div>
-        <button onclick="setPresetContent('small')">Small Content</button>
-        <button onclick="setPresetContent('medium')">Medium Content</button>
-        <button onclick="setPresetContent('large')">Large Content</button>
+        <button id="small-content">Small Content</button>
+        <button id="medium-content">Medium Content</button>
+        <button id="large-content">Large Content</button>
       </div>
       <div>
-        <button onclick="addBlock()">Add Block</button>
-        <button onclick="removeBlock()">Remove Block</button>
+        <button id="add-block">Add Block</button>
+        <button id="remove-block">Remove Block</button>
       </div>
       <div>
         <p>Custom content:</p>
-        <textarea id="custom-content" oninput="updateCustomContent(this.value)">
+        <textarea id="custom-content">
 Hello, this is some initial content.</textarea
         >
       </div>
@@ -74,12 +74,29 @@ Hello, this is some initial content.</textarea
       </div>
     </div>
 
-    <script>
-      /* eslint-disable no-unused-vars */
-      const dynamicContent = document.getElementById("dynamic-content");
+    <script type="module">
+      import { maintainSizeOnContentChange } from "../maintain_size_on_content_change.js";
 
-      // We'll implement this function later
-      // const cleanup = initMaintainSizeOnContentChange(dynamicContent)
+      const dynamicContent = document.getElementById("dynamic-content");
+      maintainSizeOnContentChange(dynamicContent);
+
+      // Setup event listeners
+      document
+        .getElementById("small-content")
+        .addEventListener("click", () => setPresetContent("small"));
+      document
+        .getElementById("medium-content")
+        .addEventListener("click", () => setPresetContent("medium"));
+      document
+        .getElementById("large-content")
+        .addEventListener("click", () => setPresetContent("large"));
+      document.getElementById("add-block").addEventListener("click", addBlock);
+      document
+        .getElementById("remove-block")
+        .addEventListener("click", removeBlock);
+      document
+        .getElementById("custom-content")
+        .addEventListener("input", (e) => updateCustomContent(e.target.value));
 
       // Test helpers
       const presetContents = {
