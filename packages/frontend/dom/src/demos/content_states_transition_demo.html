@@ -92,6 +92,10 @@
   <body>
     <div class="controls">
       <h3>Predefined Sequences</h3>
+      <label style="display: block; margin-bottom: 10px">
+        <input type="checkbox" id="preserve-between-sequences" /> Preserve
+        content between sequences
+      </label>
       <div>
         <button id="demo-loading-content">Loading → Content</button>
         <button id="demo-loading-content-big">
@@ -113,15 +117,28 @@
           Error → Loading → Content (big content)
         </button>
       </div>
+      <div>
+        <button id="demo-content-to-bigger">
+          Content → Loading → Bigger Content
+        </button>
+        <button id="demo-content-to-smaller">
+          Big Content → Loading → Smaller Content
+        </button>
+        <button id="demo-content-a-to-b">
+          Content A → Loading → Content B
+        </button>
+      </div>
 
       <h3 style="margin-top: 20px">Manual Control</h3>
       <div>
         <button id="show-loading">Loading</button>
-        <button id="show-content">Content</button>
+        <button id="show-content">Content A</button>
+        <button id="show-content-alt">Content B</button>
         <button id="show-error">Error</button>
       </div>
       <div>
         <button id="toggle-size">Toggle Large State Size</button>
+        <button id="reset-content">Reset Content</button>
       </div>
     </div>
 
@@ -133,10 +150,14 @@
       import { maintainSizeOnContentChange } from "../maintain_size_on_content_change.js";
 
       const contentBox = document.getElementById("content-box");
-      maintainSizeOnContentChange(contentBox);
+      let cleanup = maintainSizeOnContentChange(contentBox);
 
       const createState = (type, options = {}) => {
-        const { tall = false, bigContent = false } = options;
+        const {
+          tall = false,
+          bigContent = false,
+          contentVariant = "A",
+        } = options;
 
         const states = {
           loading: () => `
@@ -148,15 +169,21 @@
           content: () => `
             <div class="content-state">
               ${
-                bigContent
-                  ? Array.from({ length: 6 })
-                      .map(
-                        (_, i) => `
+                contentVariant === "B"
+                  ? `
+                <div class="content-block">Alternative content block</div>
+                <div class="content-block">With different structure</div>
+                ${bigContent ? `<div class="content-block">And extra content when big</div>` : ""}
+                `
+                  : bigContent
+                    ? Array.from({ length: 6 })
+                        .map(
+                          (_, i) => `
                 <div class="content-block">Content block ${i + 1}</div>
               `,
-                      )
-                      .join("")
-                  : `
+                        )
+                        .join("")
+                    : `
                 <div class="content-block">Content block one</div>
                 <div class="content-block">Content block two</div>
                 <div class="content-block">Content block three</div>
@@ -180,13 +207,35 @@
       let activeButton = document.getElementById("show-content");
       activeButton.classList.add("active");
 
+      const resetContent = () => {
+        // Properly cleanup the current maintainSize functionality
+        if (cleanup) {
+          cleanup();
+        }
+
+        // Reset content without any animation
+        contentBox.innerHTML = "";
+
+        // Reinstall the maintainSize functionality
+        cleanup = maintainSizeOnContentChange(contentBox);
+
+        // Reset active button state
+        activeButton.classList.remove("active");
+        activeButton = document.getElementById("show-content");
+        activeButton.classList.add("active");
+      };
+
       const setState = (type, options = {}) => {
         if (
           !options.skipButtonUpdate &&
           type in { loading: 1, content: 1, error: 1 }
         ) {
+          const buttonId =
+            type === "content" && options.contentVariant === "B"
+              ? "show-content-alt"
+              : `show-${type}`;
           activeButton.classList.remove("active");
-          activeButton = document.getElementById(`show-${type}`);
+          activeButton = document.getElementById(buttonId);
           activeButton.classList.add("active");
         }
         contentBox.innerHTML = createState(type, options);
@@ -232,11 +281,32 @@
           ["loading", 1000],
           ["content", 0, { bigContent: true }],
         ],
+        "content-to-bigger": [
+          ["content", 0],
+          ["loading", 1000],
+          ["content", 0, { bigContent: true }],
+        ],
+        "content-to-smaller": [
+          ["content", 0, { bigContent: true }],
+          ["loading", 1000],
+          ["content", 0],
+        ],
+        "content-a-to-b": [
+          ["content", 0],
+          ["loading", 1000],
+          ["content", 0, { contentVariant: "B" }],
+        ],
       };
 
       // Setup sequence listeners
       Object.keys(sequences).forEach((key) => {
         document.getElementById(`demo-${key}`).addEventListener("click", () => {
+          const shouldPreserve = document.getElementById(
+            "preserve-between-sequences",
+          ).checked;
+          if (!shouldPreserve) {
+            resetContent();
+          }
           runSequence(sequences[key]);
         });
       });
@@ -251,10 +321,18 @@
         .getElementById("show-content")
         .addEventListener("click", () => setState("content"));
       document
+        .getElementById("show-content-alt")
+        .addEventListener("click", () =>
+          setState("content", { contentVariant: "B" }),
+        );
+      document
         .getElementById("show-error")
         .addEventListener("click", () =>
           setState("error", { tall: isLargeState }),
         );
+      document
+        .getElementById("reset-content")
+        .addEventListener("click", resetContent);
 
       document.getElementById("toggle-size").addEventListener("click", () => {
         isLargeState = !isLargeState;
