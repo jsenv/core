@@ -1,5 +1,7 @@
 import { setStyles } from "../style_and_attributes.js";
 
+const DEBUG = false;
+
 export const createSizeAnimationController = (
   element,
   {
@@ -159,6 +161,12 @@ const createStyleAnimationController = (
         }
       };
       return;
+    }
+
+    if (DEBUG) {
+      console.debug(
+        `animateTo(${JSON.stringify(target)}) on element ${element.tagName}`,
+      );
     }
 
     const animation = element.animate(getKeyFrames(target), {
