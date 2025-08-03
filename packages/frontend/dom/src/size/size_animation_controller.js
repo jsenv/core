@@ -1,7 +1,7 @@
 import { setStyles } from "../style_and_attributes.js";
 
 export const createHeightAnimationController = (element, options) =>
-  createSizeAnimationController(element, {
+  createStyleAnimationController(element, {
     getStyle: () => parseFloat(getComputedStyle(element).height),
     setStyle: (value) => {
       element.style.height = `${value}px`;
@@ -16,7 +16,7 @@ export const createHeightAnimationController = (element, options) =>
   });
 
 export const createWidthAnimationController = (element, options) =>
-  createSizeAnimationController(element, {
+  createStyleAnimationController(element, {
     getStyle: () => parseFloat(getComputedStyle(element).width),
     setStyle: (value) => {
       element.style.width = `${value}px`;
@@ -32,7 +32,7 @@ export const createWidthAnimationController = (element, options) =>
 
 const GROW_EASING = "ease-out";
 const SHRINK_EASING = "ease-in";
-const createSizeAnimationController = (
+const createStyleAnimationController = (
   element,
   { getStyle, setStyle, getKeyFrames, setup, duration = 300 } = {},
 ) => {
