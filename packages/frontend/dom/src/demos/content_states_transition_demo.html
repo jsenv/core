@@ -90,7 +90,30 @@
   </head>
   <body>
     <div class="controls">
-      <h3>Test States</h3>
+      <h3>Predefined Sequences</h3>
+      <div>
+        <button id="demo-loading-content">Loading → Content</button>
+        <button id="demo-loading-content-big">
+          Loading → Content (big content)
+        </button>
+        <button id="demo-loading-content-big-loading">
+          Loading → Content (big loading)
+        </button>
+      </div>
+      <div>
+        <button id="demo-loading-error">Loading → Error</button>
+        <button id="demo-loading-error-big">Loading → Error (big error)</button>
+      </div>
+      <div>
+        <button id="demo-error-loading-content">
+          Error → Loading → Content
+        </button>
+        <button id="demo-error-loading-content-big">
+          Error → Loading → Content (big content)
+        </button>
+      </div>
+
+      <h3 style="margin-top: 20px">Manual Control</h3>
       <div>
         <button id="show-loading">Loading</button>
         <button id="show-content">Content</button>
@@ -111,60 +134,131 @@
       const contentBox = document.getElementById("content-box");
       maintainSizeOnContentChange(contentBox);
 
-      let isLargeState = false;
+      const createState = (type, options = {}) => {
+        const { tall = false, bigContent = false } = options;
 
-      const states = {
-        loading: () => `
-          <div class="loading-state ${isLargeState ? "tall" : ""}" data-preserve-content-height>
-            <div class="spinner"></div>
-            <div>Loading...</div>
-          </div>
-        `,
-        content: () => `
-          <div class="content-state">
-            <div class="content-block">Content block one</div>
-            <div class="content-block">Content block two</div>
-            <div class="content-block">Content block three</div>
-          </div>
-        `,
-        error: () => `
-          <div class="error-state ${isLargeState ? "tall" : ""}" data-preserve-content-height>
-            <div>⚠️</div>
-            <div>An error occurred</div>
-          </div>
-        `,
+        const states = {
+          loading: () => `
+            <div class="loading-state ${tall ? "tall" : ""}" data-preserve-content-height>
+              <div class="spinner"></div>
+              <div>Loading...</div>
+            </div>
+          `,
+          content: () => `
+            <div class="content-state">
+              ${
+                bigContent
+                  ? Array.from({ length: 6 })
+                      .map(
+                        (_, i) => `
+                <div class="content-block">Content block ${i + 1}</div>
+              `,
+                      )
+                      .join("")
+                  : `
+                <div class="content-block">Content block one</div>
+                <div class="content-block">Content block two</div>
+                <div class="content-block">Content block three</div>
+              `
+              }
+            </div>
+          `,
+          error: () => `
+            <div class="error-state ${tall ? "tall" : ""}" data-preserve-content-height>
+              <div>⚠️</div>
+              <div>An error occurred</div>
+            </div>
+          `,
+        };
+
+        return states[type]();
       };
 
-      // Keep track of active state button
+      // For manual control
+      let isLargeState = false;
       let activeButton = document.getElementById("show-content");
       activeButton.classList.add("active");
 
-      function setState(state) {
-        // Update button states
-        activeButton.classList.remove("active");
-        activeButton = document.getElementById(`show-${state}`);
-        activeButton.classList.add("active");
+      const setState = (type, options = {}) => {
+        if (
+          !options.skipButtonUpdate &&
+          type in { loading: 1, content: 1, error: 1 }
+        ) {
+          activeButton.classList.remove("active");
+          activeButton = document.getElementById(`show-${type}`);
+          activeButton.classList.add("active");
+        }
+        contentBox.innerHTML = createState(type, options);
+      };
 
-        // Update content
-        contentBox.innerHTML = states[state]();
-      }
+      // Sequence runner
+      const runSequence = async (sequence) => {
+        for (const [type, delay, options] of sequence) {
+          setState(type, { skipButtonUpdate: true, ...options });
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      };
 
-      // Setup event listeners
+      // Predefined sequences
+      const sequences = {
+        "loading-content": [
+          ["loading", 1000],
+          ["content", 0],
+        ],
+        "loading-content-big": [
+          ["loading", 1000],
+          ["content", 0, { bigContent: true }],
+        ],
+        "loading-content-big-loading": [
+          ["loading", 1000, { tall: true }],
+          ["content", 0],
+        ],
+        "loading-error": [
+          ["loading", 1000],
+          ["error", 0],
+        ],
+        "loading-error-big": [
+          ["loading", 1000],
+          ["error", 0, { tall: true }],
+        ],
+        "error-loading-content": [
+          ["error", 1000],
+          ["loading", 1000],
+          ["content", 0],
+        ],
+        "error-loading-content-big": [
+          ["error", 1000],
+          ["loading", 1000],
+          ["content", 0, { bigContent: true }],
+        ],
+      };
+
+      // Setup sequence listeners
+      Object.keys(sequences).forEach((key) => {
+        document.getElementById(`demo-${key}`).addEventListener("click", () => {
+          runSequence(sequences[key]);
+        });
+      });
+
+      // Manual control listeners
       document
         .getElementById("show-loading")
-        .addEventListener("click", () => setState("loading"));
+        .addEventListener("click", () =>
+          setState("loading", { tall: isLargeState }),
+        );
       document
         .getElementById("show-content")
         .addEventListener("click", () => setState("content"));
       document
         .getElementById("show-error")
-        .addEventListener("click", () => setState("error"));
+        .addEventListener("click", () =>
+          setState("error", { tall: isLargeState }),
+        );
 
       document.getElementById("toggle-size").addEventListener("click", () => {
         isLargeState = !isLargeState;
-        // Re-render current state with new size
         const currentState = activeButton.id.replace("show-", "");
-        setState(currentState);
+        setState(currentState, { tall: isLargeState });
       });
     </script>
   </body>
