@@ -55,6 +55,14 @@ export const maintainSizeOnContentChange = (
         // Width can change freely, but height is constrained to last content height
         const nextWidth = lastContentWidth || newWidth;
         const nextHeight = lastContentHeight || newHeight;
+
+        // If we have content height and new state is taller, enable scrolling
+        if (lastContentHeight && newHeight > lastContentHeight) {
+          element.style.overflow = "auto";
+        } else {
+          element.style.overflow = "hidden";
+        }
+
         sizeController.animateTo({
           width: nextWidth,
           height: nextHeight,
@@ -64,6 +72,8 @@ export const maintainSizeOnContentChange = (
       } else {
         lastContentWidth = newWidth;
         lastContentHeight = newHeight;
+        // Content state: always hidden overflow
+        element.style.overflow = "hidden";
         // Content state: update both current and content dimensions
         sizeController.animateTo({
           width: newWidth,
