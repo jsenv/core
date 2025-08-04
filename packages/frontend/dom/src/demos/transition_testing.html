@@ -138,6 +138,7 @@
             isPaused: state.isPaused,
             transitionInProgress: state.transitionInProgress,
             currentDuration: box.dataset.uiTransitionDuration,
+            opacity: state.opacity === null ? "none" : state.opacity.toFixed(3),
           },
           null,
           2,
