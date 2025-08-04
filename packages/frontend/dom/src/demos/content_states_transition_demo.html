@@ -154,7 +154,8 @@
         </p>
         <div>
           <button id="demo-content-loading">Load Content</button>
-          <button id="demo-content-error-retry">Error → Retry → Success</button>
+          <button id="demo-loading-error">Loading → Error</button>
+          <button id="demo-error-retry">Error → Loading → Content</button>
         </div>
 
         <h3 style="margin-top: 20px">Content Navigation (Different UI Keys)</h3>
@@ -408,9 +409,12 @@
           ["loading", getLoadingSpeed()],
           ["content", 0],
         ],
-        "content-error-retry": () => [
+        "loading-error": () => [
           ["loading", getLoadingSpeed()],
-          ["error", 1000],
+          ["error", 0],
+        ],
+        "error-retry": () => [
+          ["error", 500],
           ["loading", getLoadingSpeed()],
           ["content", 0],
         ],
