@@ -91,8 +91,8 @@ export const createAnimationController = ({ duration }) => {
     cancelCallbackSet.clear();
   };
 
-  const update = (step, value, { timing }) => {
-    const { setValue, element, property, sideEffect } = step;
+  const updateAnimation = (animation, value, { timing }) => {
+    const { setValue, element, property, sideEffect } = animation;
     setValue(element, value, { timing });
     // Track animated value for this property
     animatedValues[property] = value;
@@ -146,6 +146,7 @@ export const createAnimationController = ({ duration }) => {
         runningAnimations.add({
           ...step,
           startValue,
+          completed: false,
         });
 
         const restoreWillChangeStyle = setStyles(element, {
@@ -190,7 +191,7 @@ export const createAnimationController = ({ duration }) => {
             const property = animation.property;
             const animatedValue =
               startValue + (targetValue - startValue) * easedProgress;
-            update(animation, animatedValue, { timing });
+            updateAnimation(animation, animatedValue, { timing });
             changeEntryArray.push({
               element: animation.element,
               property,
@@ -212,7 +213,8 @@ export const createAnimationController = ({ duration }) => {
           const element = animation.element;
           const property = animation.property;
           const finalValue = animation.target;
-          update(animation, finalValue, { timing });
+          updateAnimation(animation, finalValue, { timing });
+          animation.completed = true;
           changeEntryArray.push({
             element,
             property,
