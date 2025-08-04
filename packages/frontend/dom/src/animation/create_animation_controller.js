@@ -146,6 +146,14 @@ export const createAnimationController = ({ duration }) => {
             element.removeAttribute(`data-${property}-animated`);
           });
         } else {
+          const valueDiff = Math.abs(startValue - target);
+          const minDiff = property === "opacity" ? 0.1 : 10;
+          if (valueDiff < minDiff) {
+            console.warn(
+              `Animation of "${property}" might be unnecessary: change of ${valueDiff} is very small (min recommended: ${minDiff})`,
+              { element, from: startValue, to: target },
+            );
+          }
           if (startValue !== target || targetValueMap.get(element) !== target) {
             somethingChanged = true;
           }

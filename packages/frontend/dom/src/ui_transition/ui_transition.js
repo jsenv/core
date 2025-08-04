@@ -49,10 +49,6 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
       lastContentWidth = newWidth;
       lastContentHeight = newHeight;
 
-      // Update current dimensions to track actual size
-      currentWidth = newWidth;
-      currentHeight = newHeight;
-
       // If we have an ongoing animation and content has data-animate-height,
       // update the animation target to match the new content height
       if (
@@ -62,10 +58,15 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
         debug(
           "🎯 Updating animation target height to match content:",
           newHeight,
+          `(current: ${currentHeight})`,
         );
-        // Start animation from current height to new height
+        // Start animation from current constrained height to new height
         animateSize(newWidth, newHeight, { releaseConstraintsAfter: true });
       }
+
+      // Update tracked dimensions after potential animation start
+      currentWidth = newWidth;
+      currentHeight = newHeight;
     }
   };
 
