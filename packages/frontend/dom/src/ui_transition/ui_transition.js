@@ -2,8 +2,21 @@ import { getInnerHeight } from "../size/get_inner_height.js";
 import { getInnerWidth } from "../size/get_inner_width.js";
 import { createSizeAnimationController } from "../size/size_animation_controller.js";
 
-export const initUITransition = (element, { duration = 300 } = {}) => {
-  const sizeController = createSizeAnimationController(element, { duration });
+export const initUITransition = (container, { duration = 300 } = {}) => {
+  // Validate and get references to required elements
+  if (!container.classList.contains("ui-transition-container")) {
+    console.error("Element must have ui-transition-container class");
+    return { cleanup: () => {} };
+  }
+
+  const wrapper = container.querySelector(".ui-transition-wrapper");
+  const content = container.querySelector(".ui-transition-content");
+  if (!wrapper || !content) {
+    console.error("Missing required ui-transition structure");
+    return { cleanup: () => {} };
+  }
+
+  const sizeController = createSizeAnimationController(wrapper, { duration });
 
   // Track dimensions and UI state
   let lastContentWidth = 0; // Last known content state width
@@ -13,12 +26,12 @@ export const initUITransition = (element, { duration = 300 } = {}) => {
   let lastUIKey = null; // Track the last UI key to detect content changes
 
   const measureSize = () => {
-    return [getInnerWidth(element), getInnerHeight(element)];
+    return [getInnerWidth(content), getInnerHeight(content)];
   };
   [currentWidth, currentHeight] = measureSize();
-  element.style.width = `${currentWidth}px`;
-  element.style.height = `${currentHeight}px`;
-  element.style.overflow = "hidden";
+  wrapper.style.width = `${currentWidth}px`;
+  wrapper.style.height = `${currentHeight}px`;
+  wrapper.style.overflow = "hidden";
 
   let isUpdating = false;
 
@@ -31,16 +44,16 @@ export const initUITransition = (element, { duration = 300 } = {}) => {
       isUpdating = true;
 
       // Temporarily remove size constraints to measure true content size
-      element.style.width = "";
-      element.style.height = "";
+      wrapper.style.width = "";
+      wrapper.style.height = "";
       sizeController.cancel(); // ensure any ongoing animations are stopped otherwise size measurements will be incorrect
       const [newWidth, newHeight] = measureSize();
       // Restore current size constraints
-      element.style.width = `${currentWidth}px`;
-      element.style.height = `${currentHeight}px`;
+      wrapper.style.width = `${currentWidth}px`;
+      wrapper.style.height = `${currentHeight}px`;
 
       // Get current UI key and state information
-      const firstChild = element.children[0];
+      const firstChild = content.children[0];
       const currentUIKey = firstChild?.getAttribute("data-ui-key");
       const preserveContentHeight = firstChild?.hasAttribute(
         "data-preserve-content-height",
@@ -71,7 +84,7 @@ export const initUITransition = (element, { duration = 300 } = {}) => {
         // Different content: animate to new dimensions
         lastContentWidth = newWidth;
         lastContentHeight = newHeight;
-        element.style.overflow = "hidden";
+        wrapper.style.overflow = "hidden";
         sizeController.animateTo({
           width: newWidth,
           height: newHeight,
@@ -84,9 +97,9 @@ export const initUITransition = (element, { duration = 300 } = {}) => {
         const nextHeight = lastContentHeight || newHeight;
 
         if (lastContentHeight && newHeight > lastContentHeight) {
-          element.style.overflow = "auto";
+          wrapper.style.overflow = "auto";
         } else {
-          element.style.overflow = "hidden";
+          wrapper.style.overflow = "hidden";
         }
 
         sizeController.animateTo({
@@ -99,7 +112,7 @@ export const initUITransition = (element, { duration = 300 } = {}) => {
         // Same content, content state: update dimensions
         lastContentWidth = newWidth;
         lastContentHeight = newHeight;
-        element.style.overflow = "hidden";
+        wrapper.style.overflow = "hidden";
         sizeController.animateTo({
           width: newWidth,
           height: newHeight,
@@ -112,21 +125,26 @@ export const initUITransition = (element, { duration = 300 } = {}) => {
     }
   };
 
-  // Watch for DOM mutations that might affect size
+  // Watch for DOM mutations only in the content area
   const mutationObserver = new MutationObserver(() => {
     updateSize();
   });
 
-  // Start observing
-  mutationObserver.observe(element, {
+  // Start observing the content element only
+  mutationObserver.observe(content, {
     childList: true,
     subtree: true,
     characterData: true,
   });
 
-  // Return cleanup function
-  return () => {
-    mutationObserver.disconnect();
-    sizeController.cancel();
+  // Return cleanup function and API
+  return {
+    cleanup: () => {
+      mutationObserver.disconnect();
+      sizeController.cancel();
+    },
+    // Additional methods could be added here for direct control
+    // setContent: (content) => {...}
+    // transition: (from, to) => {...}
   };
 };
