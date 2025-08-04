@@ -426,32 +426,36 @@ const animateTransition = (
   newElement,
   { type = "cross-fade", onEnd } = {},
 ) => {
-  if (type !== "cross-fade") {
-    return null;
-  }
-
-  debug("transition", "🎭 Starting transition animation", {
-    type,
-    from: oldContent ? oldContent.getAttribute("data-ui-key") : "none",
-    to: newElement.getAttribute("data-ui-key"),
-  });
-
-  // Get transition duration from data attribute or use default
   const duration =
     parseInt(
       newElement.closest("[data-ui-transition-duration]")?.dataset
         .uiTransitionDuration,
       10,
     ) || 300;
+  debug("transition", "🎭 Starting transition animation", {
+    type,
+    from: oldContent ? oldContent.getAttribute("data-ui-key") : "none",
+    to: newElement.getAttribute("data-ui-key"),
+  });
   debug("transition", "⏱️ Transition duration:", duration);
 
-  const animation = createAnimationController({
+  if (type === "cross-fade") {
+    return applyCrossFade(oldContent, newElement, { duration, onEnd });
+  }
+
+  return null;
+};
+
+const applyCrossFade = (oldElement, newElement, { duration, onEnd }) => {
+  // Get transition duration from data attribute or use default
+
+  const crossFadeAnimation = createAnimationController({
     duration,
   });
 
   // Get the current opacity - check both old content and new element
-  const oldOpacity = oldContent
-    ? parseFloat(getComputedStyle(oldContent).opacity)
+  const oldOpacity = oldElement
+    ? parseFloat(getComputedStyle(oldElement).opacity)
     : 0;
   const newOpacity = parseFloat(getComputedStyle(newElement).opacity);
 
@@ -468,17 +472,17 @@ const animateTransition = (
   });
 
   // Setup initial state
-  if (oldContent) {
-    oldContent.style.opacity = startOpacity.toString();
+  if (oldElement) {
+    oldElement.style.opacity = startOpacity.toString();
   }
   // Only set new element opacity if it's not already higher
   if (isNaN(newOpacity) || newOpacity < startOpacity) {
     newElement.style.opacity = startOpacity.toString();
   }
 
-  if (!oldContent) {
+  if (!oldElement) {
     // Case 1: Empty -> Content (fade in only)
-    animation.animateAll([
+    crossFadeAnimation.animateAll([
       createStep({
         element: newElement,
         property: "opacity",
@@ -494,23 +498,23 @@ const animateTransition = (
         },
       }),
     ]);
-    return animation;
+    return crossFadeAnimation;
   }
 
   // Case 2 & 3: Cross-fade between states
-  animation.animateAll([
+  crossFadeAnimation.animateAll([
     createStep({
-      element: oldContent,
+      element: oldElement,
       property: "opacity",
       target: 0,
       sideEffect: (value, { timing }) => {
         // Skip if old content opacity is already 0
         if (value > 0) {
           debug("transition", "🔄 Old content fade out:", value.toFixed(3));
-          oldContent.style.opacity = value.toString();
+          oldElement.style.opacity = value.toString();
         }
         if (timing === "end") {
-          oldContent.remove();
+          oldElement.remove();
         }
       },
     }),
@@ -533,5 +537,5 @@ const animateTransition = (
       },
     }),
   ]);
-  return animation;
+  return crossFadeAnimation;
 };
