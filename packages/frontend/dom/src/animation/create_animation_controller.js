@@ -95,7 +95,7 @@ export const createAnimationController = ({ duration }) => {
 
   const update = (element, value, { timing }) => {
     const setValue = setValueMap.get(element);
-    setValue(value, { timing });
+    setValue(element, value, { timing });
     const sideEffect = sideEffectMap.get(element);
     if (sideEffect) {
       sideEffect(value, { timing });
@@ -110,7 +110,7 @@ export const createAnimationController = ({ duration }) => {
         const { element, property, target, sideEffect, getValue, setValue } =
           step;
         const isNew = !elementSet.has(element);
-        const startValue = getValue();
+        const startValue = getValue(element);
 
         if (isNew) {
           if (startValue === target) {

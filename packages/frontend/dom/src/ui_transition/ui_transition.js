@@ -19,7 +19,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
     return { cleanup: () => {} };
   }
 
-  const animationController = createAnimationController(wrapper, { duration });
+  const animationController = createAnimationController({ duration });
 
   // Track dimensions and UI state
   let lastContentWidth = 0; // Last known content state width
@@ -89,8 +89,16 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         lastContentHeight = newHeight;
         wrapper.style.overflow = "hidden";
         animationController.animateAll([
-          createStep({ property: "width", target: newWidth }),
-          createStep({ property: "height", target: newHeight }),
+          createStep({
+            element: wrapper,
+            property: "width",
+            target: newWidth,
+          }),
+          createStep({
+            element: wrapper,
+            property: "height",
+            target: newHeight,
+          }),
         ]);
         currentWidth = newWidth;
         currentHeight = newHeight;
@@ -106,8 +114,16 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         }
 
         animationController.animateAll([
-          createStep({ property: "width", target: nextWidth }),
-          createStep({ property: "height", target: nextHeight }),
+          createStep({
+            element: wrapper,
+            property: "width",
+            target: nextWidth,
+          }),
+          createStep({
+            element: wrapper,
+            property: "height",
+            target: nextHeight,
+          }),
         ]);
         currentWidth = nextWidth;
         currentHeight = nextHeight;
@@ -117,8 +133,16 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         lastContentHeight = newHeight;
         wrapper.style.overflow = "hidden";
         animationController.animateAll([
-          createStep({ property: "width", target: newWidth }),
-          createStep({ property: "height", target: newHeight }),
+          createStep({
+            element: wrapper,
+            property: "width",
+            target: newWidth,
+          }),
+          createStep({
+            element: wrapper,
+            property: "height",
+            target: newHeight,
+          }),
         ]);
         currentWidth = newWidth;
         currentHeight = newHeight;

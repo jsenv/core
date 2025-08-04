@@ -260,7 +260,7 @@
       import { initUITransition } from "../ui_transition/ui_transition.js";
 
       const contentBox = document.getElementById("content-box");
-      let cleanup = initUITransition(contentBox);
+      let uiTransition = initUITransition(contentBox);
 
       const createState = (type, options = {}) => {
         const {
@@ -319,8 +319,8 @@
 
       const resetContent = () => {
         // Properly cleanup the current maintainSize functionality
-        if (cleanup) {
-          cleanup();
+        if (uiTransition) {
+          uiTransition.cleanup();
         }
 
         // Reset content without any animation
@@ -332,7 +332,7 @@
         }
 
         // Reinstall the maintainSize functionality
-        cleanup = initUITransition(contentBox);
+        uiTransition = initUITransition(contentBox);
 
         // Reset active button state
         activeButton.classList.remove("active");
