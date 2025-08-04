@@ -88,7 +88,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   const sizeAnimationController = createAnimationController({
     duration: resizeDuration,
   });
-  let transitionAnimation = null;
+  const transitionAnimationController = createAnimationController({
+    duration: 300, // Default duration, will be updated dynamically
+  });
 
   // Track dimensions and UI state
   let lastContentWidth = 0; // Last known content state width
@@ -327,9 +329,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         );
 
         // Cancel any ongoing transition before starting a new one
-        if (transitionAnimation) {
-          transitionAnimation.cancel();
-        }
+        transitionAnimationController.cancel();
 
         let oldContent = null;
         // Check if we have an ongoing transition element that we should continue from
@@ -359,7 +359,11 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         }
 
         if (oldContent) {
-          transitionAnimation = animateTransition(oldContent, firstChild);
+          animateTransition(
+            transitionAnimationController,
+            oldContent,
+            firstChild,
+          );
         }
       }
 
@@ -462,24 +466,18 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       mutationObserver.disconnect();
       stopObservingResize();
       sizeAnimationController.cancel();
-      if (transitionAnimation) {
-        transitionAnimation.cancel();
-      }
+      transitionAnimationController.cancel();
     },
     pause: () => {
-      if (transitionAnimation) {
-        transitionAnimation.pause();
-      }
+      transitionAnimationController.pause();
     },
     resume: () => {
-      if (transitionAnimation) {
-        transitionAnimation.resume();
-      }
+      transitionAnimationController.resume();
     },
     getState: () => ({
-      isPaused: transitionAnimation?.isPaused() || false,
-      transitionInProgress: Boolean(transitionAnimation),
-      opacity: transitionAnimation?.animatedValues.opacity || null,
+      isPaused: transitionAnimationController.isPaused(),
+      transitionInProgress: transitionAnimationController.pending,
+      opacity: transitionAnimationController.animatedValues.opacity || null,
     }),
     // Additional methods could be added here for direct control
     // setContent: (content) => {...}
@@ -487,7 +485,12 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   };
 };
 
-const animateTransition = (oldContent, newElement, { type, onEnd } = {}) => {
+const animateTransition = (
+  animationController,
+  oldContent,
+  newElement,
+  { type, onEnd } = {},
+) => {
   const duration =
     parseInt(
       newElement.closest("[data-ui-transition-duration]")?.dataset
@@ -500,19 +503,28 @@ const animateTransition = (oldContent, newElement, { type, onEnd } = {}) => {
     to: newElement.getAttribute("data-ui-key"),
   });
   debug("transition", "⏱️ Transition duration:", duration);
+
+  // Update animation controller duration dynamically
+  animationController.setDuration(duration);
+
   if (type === undefined) {
     type = newElement.getAttribute("data-ui-transition");
   }
 
+  let steps = [];
+
   if (type === "cross-fade") {
-    return applyCrossFade(oldContent, newElement, { duration, onEnd });
+    steps = applyCrossFade(oldContent, newElement, { onEnd });
+  } else if (type === "slide-left") {
+    steps = applySlideLeft(oldContent, newElement, { onEnd });
   }
 
-  if (type === "slide-left") {
-    return applySlideLeft(oldContent, newElement, { duration, onEnd });
+  if (steps.length === 0) {
+    return;
   }
 
-  return null;
+  // Use the persistent animation controller
+  animationController.animateAll(steps);
 };
 
 const getCurrentTranslateX = (element) => {
@@ -528,8 +540,7 @@ const getCurrentTranslateX = (element) => {
   return parseFloat(values[values.length - 2]) || 0;
 };
 
-const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
-  const slideAnimation = createAnimationController({ duration });
+const applySlideLeft = (oldElement, newElement, { onEnd }) => {
   const containerWidth = newElement.parentElement?.offsetWidth || 0;
 
   if (!oldElement) {
@@ -538,7 +549,8 @@ const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
     const startPos =
       currentPos || (containerWidth ? `${containerWidth}px` : "100%");
     newElement.style.transform = `translateX(${startPos})`;
-    slideAnimation.animateAll([
+
+    return [
       createStep({
         element: newElement,
         property: "transform",
@@ -553,8 +565,7 @@ const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
           }
         },
       }),
-    ]);
-    return slideAnimation;
+    ];
   }
 
   // Case 2: Content -> Content (slide out left, slide in from right)
@@ -573,7 +584,7 @@ const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
     new: startNewPos,
   });
 
-  slideAnimation.animateAll([
+  return [
     createStep({
       element: oldElement,
       property: "transform",
@@ -600,15 +611,10 @@ const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
         }
       },
     }),
-  ]);
-  return slideAnimation;
+  ];
 };
 
-const applyCrossFade = (oldElement, newElement, { duration, onEnd }) => {
-  const crossFadeAnimation = createAnimationController({
-    duration,
-  });
-
+const applyCrossFade = (oldElement, newElement, { onEnd }) => {
   // Get the current opacity - check both old content and new element
   const oldOpacity = oldElement
     ? parseFloat(getComputedStyle(oldElement).opacity)
@@ -638,7 +644,7 @@ const applyCrossFade = (oldElement, newElement, { duration, onEnd }) => {
 
   if (!oldElement) {
     // Case 1: Empty -> Content (fade in only)
-    crossFadeAnimation.animateAll([
+    return [
       createStep({
         element: newElement,
         property: "opacity",
@@ -653,12 +659,11 @@ const applyCrossFade = (oldElement, newElement, { duration, onEnd }) => {
           }
         },
       }),
-    ]);
-    return crossFadeAnimation;
+    ];
   }
 
   // Case 2 & 3: Cross-fade between states
-  crossFadeAnimation.animateAll([
+  return [
     createStep({
       element: oldElement,
       property: "opacity",
@@ -692,6 +697,5 @@ const applyCrossFade = (oldElement, newElement, { duration, onEnd }) => {
         }
       },
     }),
-  ]);
-  return crossFadeAnimation;
+  ];
 };

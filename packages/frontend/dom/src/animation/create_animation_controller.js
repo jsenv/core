@@ -5,7 +5,8 @@ import { setStyles } from "../style_and_attributes.js";
 
 const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
-export const createAnimationController = ({ duration }) => {
+export const createAnimationController = ({ duration: initialDuration }) => {
+  let duration = initialDuration;
   const runningAnimations = new Set();
   let animationFrame;
   let startTime;
@@ -49,6 +50,9 @@ export const createAnimationController = ({ duration }) => {
     },
     resume: () => {
       isPaused = false;
+    },
+    setDuration: (newDuration) => {
+      duration = newDuration;
     },
     animatedValues,
     animateAll: (stepArray, { onChange, onCancel, onEnd } = {}) => {
