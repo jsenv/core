@@ -39,30 +39,31 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
   let resizeObserver = null;
 
   const updateLastContentDimensions = (element) => {
-    // Only track dimensions of actual content (not loading/error states)
-    if (!element.hasAttribute("data-inherit-content-dimensions")) {
-      const [newWidth, newHeight] = measureSize();
-      debug("📊 Content dimensions updated via ResizeObserver:", {
-        width: `${lastContentWidth} → ${newWidth}`,
-        height: `${lastContentHeight} → ${newHeight}`,
-      });
-      lastContentWidth = newWidth;
-      lastContentHeight = newHeight;
+    if (element.hasAttribute("data-inherit-content-dimensions")) {
+      // Only track dimensions of actual content (not loading/error states)
+      return;
+    }
+    const [newWidth, newHeight] = measureSize();
+    debug("📊 Content dimensions updated via ResizeObserver:", {
+      width: `${lastContentWidth} → ${newWidth}`,
+      height: `${lastContentHeight} → ${newHeight}`,
+    });
+    lastContentWidth = newWidth;
+    lastContentHeight = newHeight;
 
-      // If we have an ongoing animation and content has data-animate-height,
-      // update the animation target to match the new content height
-      if (
-        animationController.pending &&
-        element.hasAttribute("data-animate-height")
-      ) {
-        debug(
-          "🎯 Updating animation target height to match content:",
-          newHeight,
-          `(current: ${currentHeight})`,
-        );
-        // Start animation from current constrained height to new height
-        animateSize(newWidth, newHeight, { releaseConstraintsAfter: true });
-      }
+    // If we have an ongoing animation and content has data-animate-height,
+    // update the animation target to match the new content height
+    if (animationController.pending) {
+      debug(
+        "🎯 Updating animation target height to match content:",
+        newHeight,
+        `(current: ${currentHeight})`,
+      );
+      // Start animation from current constrained height to new height
+      animateSize(newWidth, newHeight, { releaseConstraintsAfter: true });
+    } else {
+      currentWidth = newWidth;
+      currentHeight = newHeight;
     }
   };
 
