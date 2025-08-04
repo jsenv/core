@@ -69,7 +69,7 @@ export const createCustomStep = ({
 };
 
 export const createAnimationController = ({ duration }) => {
-  const stepSet = new Set();
+  const runningAnimations = new Set();
   let animationFrame;
   let startTime;
 
@@ -110,25 +110,25 @@ export const createAnimationController = ({ duration }) => {
         const property = step.property;
         const startValue = step.getValue(element);
 
-        let existingStep;
-        for (const existingStepCandidate of stepSet) {
+        let existingAnimation;
+        for (const runningAnimation of runningAnimations) {
           if (
-            existingStepCandidate.element === element &&
-            existingStepCandidate.property === property
+            runningAnimation.element === element &&
+            runningAnimation.property === property
           ) {
-            // If the step already exists, skip it
-            existingStep = existingStepCandidate;
+            // If we're already animating this property, update it
+            existingAnimation = runningAnimation;
             break;
           }
         }
 
-        if (existingStep) {
+        if (existingAnimation) {
           if (startValue === target) {
             // nothing to do, same element, same property, same target
             continue;
           }
-          // update the step target
-          existingStep.target = target;
+          // update the animation target
+          existingAnimation.target = target;
           somethingChanged = true;
           continue;
         }
@@ -143,7 +143,7 @@ export const createAnimationController = ({ duration }) => {
         }
 
         somethingChanged = true;
-        stepSet.add({
+        runningAnimations.add({
           ...step,
           startValue,
         });
@@ -184,15 +184,15 @@ export const createAnimationController = ({ duration }) => {
         if (progress < 1) {
           const easedProgress = easing(progress);
           const changeEntryArray = [];
-          for (const step of stepSet) {
-            const startValue = step.startValue;
-            const targetValue = step.target;
-            const property = step.property;
+          for (const animation of runningAnimations) {
+            const startValue = animation.startValue;
+            const targetValue = animation.target;
+            const property = animation.property;
             const animatedValue =
               startValue + (targetValue - startValue) * easedProgress;
-            update(step, animatedValue, { timing });
+            update(animation, animatedValue, { timing });
             changeEntryArray.push({
-              element: step.element,
+              element: animation.element,
               property,
               value: animatedValue,
             });
@@ -208,11 +208,11 @@ export const createAnimationController = ({ duration }) => {
         // Animation complete
         timing = "end";
         const changeEntryArray = [];
-        for (const step of stepSet) {
-          const element = step.element;
-          const property = step.property;
-          const finalValue = step.target;
-          update(step, finalValue, { timing });
+        for (const animation of runningAnimations) {
+          const element = animation.element;
+          const property = animation.property;
+          const finalValue = animation.target;
+          update(animation, finalValue, { timing });
           changeEntryArray.push({
             element,
             property,
@@ -223,7 +223,7 @@ export const createAnimationController = ({ duration }) => {
           onChange(changeEntryArray, true);
         }
         callFinishCallbacks();
-        stepSet.clear();
+        runningAnimations.clear();
         animatedValues = {};
         animationFrame = null;
         animationController.pending = false;
