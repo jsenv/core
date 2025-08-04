@@ -490,20 +490,10 @@ const getCurrentTranslateX = (element) => {
 const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
   const slideAnimation = createAnimationController({ duration });
 
-  // Get current positions
-  const oldPosition = oldElement ? getCurrentTranslateX(oldElement) : 0;
-  const newPosition = getCurrentTranslateX(newElement);
-
-  debug("transition", "🎯 Starting positions:", {
-    old: oldPosition,
-    new: newPosition,
-  });
-
   if (!oldElement) {
     // Case 1: Empty -> Content (slide in from right)
-    // Start from current position or 100%
-    const startX = newPosition || "100%";
-    newElement.style.transform = `translateX(${startX})`;
+    const currentPos = getCurrentTranslateX(newElement);
+    newElement.style.transform = `translateX(${currentPos || "100%"})`;
     slideAnimation.animateAll([
       createStep({
         element: newElement,
@@ -524,9 +514,21 @@ const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
   }
 
   // Case 2: Content -> Content (slide out left, slide in from right)
-  // Start from current positions
-  oldElement.style.transform = `translateX(${oldPosition}px)`;
-  newElement.style.transform = `translateX(${newPosition || "100%"})`;
+  // Get current positions - if elements are mid-animation, use their current position
+  const currentOldPos = getCurrentTranslateX(oldElement);
+  const currentNewPos = getCurrentTranslateX(newElement);
+
+  // If new element doesn't have a position, start from where old element is
+  const startNewPos = currentNewPos || `${currentOldPos}px`;
+
+  oldElement.style.transform = `translateX(${currentOldPos}px)`;
+  newElement.style.transform = `translateX(${startNewPos})`;
+
+  debug("transition", "🎯 Continuing from positions:", {
+    old: currentOldPos,
+    new: startNewPos,
+  });
+
   slideAnimation.animateAll([
     createStep({
       element: oldElement,
