@@ -5,11 +5,12 @@ import { createSizeAnimationController } from "../size/size_animation_controller
 export const initUITransition = (element, { duration = 300 } = {}) => {
   const sizeController = createSizeAnimationController(element, { duration });
 
-  // Track dimensions
+  // Track dimensions and UI state
   let lastContentWidth = 0; // Last known content state width
   let lastContentHeight = 0; // Last known content state height
   let currentWidth = 0; // Current width we're animating from
   let currentHeight = 0; // Current height we're animating from
+  let lastUIKey = null; // Track the last UI key to detect content changes
 
   const measureSize = () => {
     return [getInnerWidth(element), getInnerHeight(element)];
@@ -38,22 +39,50 @@ export const initUITransition = (element, { duration = 300 } = {}) => {
       element.style.width = `${currentWidth}px`;
       element.style.height = `${currentHeight}px`;
 
-      if (newWidth === currentWidth && newHeight === currentHeight) {
-        // no change in size
-        return;
-      }
-
-      const preserveContentHeight = element.children[0]?.hasAttribute(
+      // Get current UI key and state information
+      const firstChild = element.children[0];
+      const currentUIKey = firstChild?.getAttribute("data-ui-key");
+      const preserveContentHeight = firstChild?.hasAttribute(
         "data-preserve-content-height",
       );
 
-      if (preserveContentHeight) {
-        // Non-content state: use last known content height
-        // Width can change freely, but height is constrained to last content height
+      // Determine transition type based on UI key
+      const isUIKeyChange = lastUIKey !== null && currentUIKey !== lastUIKey;
+
+      // TODO: Handle cross-fade transitions
+      // if (isUIKeyChange || (lastUIKey && preserveContentHeight)) {
+      //   // 1. Clone current content
+      //   // 2. Position it absolutely
+      //   // 3. Add new content
+      //   // 4. Fade between them
+      //   // 5. Clean up after animation
+      // }
+
+      // Store current UI key for next update
+      lastUIKey = currentUIKey;
+
+      // Skip size animation if no changes
+      if (newWidth === currentWidth && newHeight === currentHeight) {
+        return;
+      }
+
+      // Handle height preservation and animation based on state
+      if (isUIKeyChange) {
+        // Different content: animate to new dimensions
+        lastContentWidth = newWidth;
+        lastContentHeight = newHeight;
+        element.style.overflow = "hidden";
+        sizeController.animateTo({
+          width: newWidth,
+          height: newHeight,
+        });
+        currentWidth = newWidth;
+        currentHeight = newHeight;
+      } else if (preserveContentHeight) {
+        // Same content, preserve height from content state
         const nextWidth = lastContentWidth || newWidth;
         const nextHeight = lastContentHeight || newHeight;
 
-        // If we have content height and new state is taller, enable scrolling
         if (lastContentHeight && newHeight > lastContentHeight) {
           element.style.overflow = "auto";
         } else {
@@ -67,11 +96,10 @@ export const initUITransition = (element, { duration = 300 } = {}) => {
         currentWidth = nextWidth;
         currentHeight = nextHeight;
       } else {
+        // Same content, content state: update dimensions
         lastContentWidth = newWidth;
         lastContentHeight = newHeight;
-        // Content state: always hidden overflow
         element.style.overflow = "hidden";
-        // Content state: update both current and content dimensions
         sizeController.animateTo({
           width: newWidth,
           height: newHeight,
