@@ -200,9 +200,23 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         // Either:
         // 1. UI key changed but we want to inherit content dimensions (loading/error state)
         // 2. Same UI key but inherit dimensions requested
-        // In both cases: maintain last known content dimensions
-        const nextWidth = lastContentWidth || newWidth;
-        const nextHeight = lastContentHeight || newHeight;
+        // If we have content dimensions, use those. Otherwise use measured dimensions
+        // This ensures we don't collapse to 0 when transitioning between loading/error states
+        // before any real content has been shown
+        const shouldUseNewDimensions =
+          lastContentWidth === 0 && lastContentHeight === 0;
+        const nextWidth = shouldUseNewDimensions
+          ? newWidth
+          : lastContentWidth || newWidth;
+        const nextHeight = shouldUseNewDimensions
+          ? newHeight
+          : lastContentHeight || newHeight;
+
+        debug("📐 Using dimensions:", {
+          width: nextWidth,
+          height: nextHeight,
+          source: shouldUseNewDimensions ? "measured" : "inherited",
+        });
 
         wrapper.style.overflow = "hidden";
         animationController.animateAll([
