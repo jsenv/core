@@ -50,6 +50,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   let currentWidth = 0; // Current width we're animating from
   let currentHeight = 0; // Current height we're animating from
   let lastUIKey = null; // Track the last UI key to detect content changes
+  let wasInheritingDimensions = false; // Track if previous content was inheriting dimensions
   let resizeObserver = null;
 
   const updateLastContentDimensions = (element) => {
@@ -254,8 +255,9 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       //   // 5. Clean up after animation
       // }
 
-      // Store current UI key for next update
+      // Store current state for next update
       lastUIKey = currentUIKey;
+      wasInheritingDimensions = inheritContentDimensions;
 
       const getTargetDimensions = () => {
         if (!inheritContentDimensions) {
@@ -294,9 +296,13 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       });
 
       // Handle height inheritance and animation based on state
-      if (isUIKeyChange && !inheritContentDimensions) {
-        // New content (not a loading/error state): animate to new dimensions and release constraints after
-        // Content dimensions will be tracked by ResizeObserver
+      const wasLoadingToContent =
+        wasInheritingDimensions && !inheritContentDimensions;
+      if (wasLoadingToContent || (isUIKeyChange && !inheritContentDimensions)) {
+        // Animate when:
+        // 1. New content with different key
+        // 2. Transitioning from loading/error state (wasInheriting) to actual content (!inheriting)
+        debug("🎭 Transitioning to actual content, animating size");
         animateSize(targetWidth, targetHeight, {
           releaseConstraintsAfter: true,
         });
@@ -306,8 +312,8 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         // 2. Same UI key but inherit dimensions requested
         animateSize(targetWidth, targetHeight);
       } else {
-        // Same UI key, no height preservation: don't animate or constrain
-        letContentSelfManage("same UI key without height preservation");
+        // Same UI key, no special states: no need to animate, let content handle its own size
+        letContentSelfManage("direct content update");
       }
     } finally {
       isUpdating = false;
