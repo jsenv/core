@@ -132,36 +132,24 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
           target: targetHeight,
         }),
       ],
-      releaseConstraintsAfter
-        ? {
-            onChange: (changes, isComplete) => {
-              // Update current dimensions based on animation progress
-              for (const change of changes) {
-                if (change.property === "width") {
-                  currentWidth = change.value;
-                }
-                if (change.property === "height") {
-                  currentHeight = change.value;
-                }
-              }
-              if (isComplete) {
-                letContentSelfManage();
-              }
-            },
+      {
+        onChange: (changes) => {
+          // Update current dimensions based on animation progress
+          for (const change of changes) {
+            if (change.property === "width") {
+              currentWidth = change.value;
+            }
+            if (change.property === "height") {
+              currentHeight = change.value;
+            }
           }
-        : {
-            // Even without releasing constraints, track current values
-            onChange: (changes) => {
-              for (const change of changes) {
-                if (change.property === "width") {
-                  currentWidth = change.value;
-                }
-                if (change.property === "height") {
-                  currentHeight = change.value;
-                }
-              }
-            },
-          },
+        },
+        onEnd: () => {
+          if (releaseConstraintsAfter) {
+            letContentSelfManage();
+          }
+        },
+      },
     );
   };
 

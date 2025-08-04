@@ -104,7 +104,7 @@ export const createAnimationController = ({ duration }) => {
 
   const animationController = {
     pending: false,
-    animateAll: (stepArray, { onChange } = {}) => {
+    animateAll: (stepArray, { onChange, onEnd } = {}) => {
       let somethingChanged = false;
       for (const step of stepArray) {
         const { element, property, target, sideEffect, getValue, setValue } =
@@ -222,6 +222,7 @@ export const createAnimationController = ({ duration }) => {
         elementSet.clear();
         animationFrame = null;
         animationController.pending = false;
+        onEnd?.();
       };
 
       animationFrame = requestAnimationFrame(draw);
