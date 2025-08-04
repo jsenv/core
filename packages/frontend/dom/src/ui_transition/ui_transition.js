@@ -53,16 +53,16 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   let wasInheritingDimensions = false; // Track if previous content was inheriting dimensions
   let resizeObserver = null;
 
-  const updateLastContentDimensions = (element) => {
-    if (element.hasAttribute("data-inherit-content-dimensions")) {
-      // Only track dimensions of actual content (not loading/error states)
-      return;
-    }
+  const measureSize = () => {
+    // We measure the inner wrapper which is not constrained by animations
+    // This gives us the natural content size
+    return [getWidth(measureWrapper), getHeight(measureWrapper)];
+  };
+
+  const updateLastContentDimensions = () => {
     // Measure natural size using measure wrapper which has no constraints
     // No need to remove constraints since measureWrapper is always unconstrained
-    const newWidth = measureWrapper.offsetWidth;
-    const newHeight = measureWrapper.offsetHeight;
-
+    const [newWidth, newHeight] = measureSize();
     debug("📊 Content natural size from ResizeObserver:", {
       width: `${lastContentWidth} → ${newWidth}`,
       height: `${lastContentHeight} → ${newHeight}`,
@@ -98,12 +98,6 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       updateLastContentDimensions(content);
     });
     resizeObserver.observe(measureWrapper);
-  };
-
-  const measureSize = () => {
-    // We measure the inner wrapper which is not constrained by animations
-    // This gives us the natural content size
-    return [getWidth(measureWrapper), getHeight(measureWrapper)];
   };
 
   const letContentSelfManage = (reason) => {
