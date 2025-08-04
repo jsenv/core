@@ -69,7 +69,6 @@ export const createCustomStep = ({
 };
 
 export const createAnimationController = ({ duration }) => {
-  const startValueMap = new Map();
   const stepSet = new Set();
   let animationFrame;
   let startTime;
@@ -144,8 +143,10 @@ export const createAnimationController = ({ duration }) => {
         }
 
         somethingChanged = true;
-        stepSet.add({ ...step });
-        startValueMap.set(element, startValue);
+        stepSet.add({
+          ...step,
+          startValue,
+        });
 
         const restoreWillChangeStyle = setStyles(element, {
           "will-change": property,
@@ -184,7 +185,7 @@ export const createAnimationController = ({ duration }) => {
           const easedProgress = easing(progress);
           const changeEntryArray = [];
           for (const step of stepSet) {
-            const startValue = startValueMap.get(step);
+            const startValue = step.startValue;
             const targetValue = step.target;
             const property = step.property;
             const animatedValue =
@@ -222,7 +223,6 @@ export const createAnimationController = ({ duration }) => {
           onChange(changeEntryArray, true);
         }
         callFinishCallbacks();
-        startValueMap.clear();
         stepSet.clear();
         animatedValues = {};
         animationFrame = null;

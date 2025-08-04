@@ -157,6 +157,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
           property: "width",
           target: targetWidth,
           sideEffect: (value) => {
+            // debug(`📏 Width updated: ${currentWidth} → ${value}`);
             currentWidth = value;
           },
         }),
@@ -169,6 +170,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
           property: "height",
           target: targetHeight,
           sideEffect: (value) => {
+            // debug(`📏 Height updated: ${currentHeight} → ${value}`);
             currentHeight = value;
           },
         }),
@@ -188,7 +190,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   const createTransitionSteps = (
     oldElement,
     newElement,
-    { type = "cross-fade" } = {},
+    { type = "none" } = {},
   ) => {
     const steps = [];
     if (type === "cross-fade") {
