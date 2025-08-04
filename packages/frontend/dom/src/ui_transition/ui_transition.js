@@ -5,6 +5,15 @@ import {
 import { getInnerHeight } from "../size/get_inner_height.js";
 import { getInnerWidth } from "../size/get_inner_width.js";
 
+const DEBUG = true;
+const debug = (...args) => {
+  if (!DEBUG) {
+    return;
+  }
+
+  console.debug(...args);
+};
+
 export const initUITransition = (container, { duration = 300 } = {}) => {
   // Validate and get references to required elements
   if (!container.classList.contains("ui-transition-container")) {
@@ -32,8 +41,14 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   const updateLastContentDimensions = (element) => {
     // Only track dimensions of actual content (not loading/error states)
     if (!element.hasAttribute("data-inherit-content-dimensions")) {
-      lastContentWidth = getInnerWidth(element);
-      lastContentHeight = getInnerHeight(element);
+      const newWidth = getInnerWidth(element);
+      const newHeight = getInnerHeight(element);
+      debug("📊 Content dimensions updated via ResizeObserver:", {
+        width: `${lastContentWidth} → ${newWidth}`,
+        height: `${lastContentHeight} → ${newHeight}`,
+      });
+      lastContentWidth = newWidth;
+      lastContentHeight = newHeight;
     }
   };
 
@@ -63,17 +78,28 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
 
   const updateSize = () => {
     if (isUpdating) {
+      debug("⚠️ Preventing recursive update");
       return; // Prevent recursive updates
     }
 
     try {
       isUpdating = true;
+      if (DEBUG) {
+        console.group("UI Transition Update");
+      }
+      debug("🔄 Update triggered");
 
       // Temporarily remove size constraints to measure true content size
       wrapper.style.width = "";
       wrapper.style.height = "";
       animationController.cancel(); // ensure any ongoing animations are stopped otherwise size measurements will be incorrect
       const [newWidth, newHeight] = measureSize();
+      debug("📐 Measured size:", {
+        newWidth,
+        newHeight,
+        currentWidth,
+        currentHeight,
+      });
       // Restore current size constraints
       wrapper.style.width = `${currentWidth}px`;
       wrapper.style.height = `${currentHeight}px`;
@@ -85,13 +111,33 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         "data-inherit-content-dimensions",
       );
 
+      debug("🏷️ Content info:", {
+        currentUIKey,
+        lastUIKey,
+        inheritContentDimensions,
+        lastContentWidth,
+        lastContentHeight,
+      });
+
       // Setup resize observer for content elements
       if (firstChild) {
         setupResizeObserver(firstChild);
+        debug(
+          "👀 ResizeObserver:",
+          !firstChild.hasAttribute("data-inherit-content-dimensions")
+            ? "Observing content"
+            : "Skipping non-content element",
+        );
       }
 
       // Determine transition type based on UI key
       const isUIKeyChange = lastUIKey !== null && currentUIKey !== lastUIKey;
+      debug("🔄 Transition type:", {
+        isUIKeyChange,
+        reason: isUIKeyChange
+          ? `Key change from ${lastUIKey} to ${currentUIKey}`
+          : "Same key",
+      });
 
       // TODO: Handle cross-fade transitions
       // if (isUIKeyChange || (lastUIKey && preserveContentHeight)) {
@@ -107,8 +153,15 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
 
       // Skip size animation if no changes
       if (newWidth === currentWidth && newHeight === currentHeight) {
+        debug("⏭️ Skipping animation - no size changes");
+        console.groupEnd();
         return;
       }
+
+      debug("📏 Size change detected", {
+        width: `${currentWidth} → ${newWidth}`,
+        height: `${currentHeight} → ${newHeight}`,
+      });
 
       // Handle height inheritance and animation based on state
       if (isUIKeyChange && !inheritContentDimensions) {
@@ -166,6 +219,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         currentHeight = nextHeight;
       } else {
         // Same UI key, no height preservation: don't animate or constrain
+        debug("↕️ Removing size constraints - content is self-managing");
         lastContentWidth = newWidth;
         lastContentHeight = newHeight;
         wrapper.style.width = "";
@@ -176,6 +230,9 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       }
     } finally {
       isUpdating = false;
+      if (DEBUG) {
+        console.groupEnd();
+      }
     }
   };
 
