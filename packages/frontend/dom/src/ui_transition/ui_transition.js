@@ -474,12 +474,36 @@ const animateTransition = (oldContent, newElement, { type, onEnd } = {}) => {
   return null;
 };
 
+const getCurrentTranslateX = (element) => {
+  const transform = getComputedStyle(element).transform;
+  if (transform === "none") return 0;
+
+  // Parse matrix/matrix3d values
+  const match = transform.match(/matrix(?:3d)?\((.*)\)/);
+  if (!match) return 0;
+
+  const values = match[1].split(", ");
+  // For both matrix and matrix3d, the X translation is the second to last value
+  return parseFloat(values[values.length - 2]) || 0;
+};
+
 const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
   const slideAnimation = createAnimationController({ duration });
 
+  // Get current positions
+  const oldPosition = oldElement ? getCurrentTranslateX(oldElement) : 0;
+  const newPosition = getCurrentTranslateX(newElement);
+
+  debug("transition", "🎯 Starting positions:", {
+    old: oldPosition,
+    new: newPosition,
+  });
+
   if (!oldElement) {
     // Case 1: Empty -> Content (slide in from right)
-    newElement.style.transform = "translateX(100%)";
+    // Start from current position or 100%
+    const startX = newPosition || "100%";
+    newElement.style.transform = `translateX(${startX})`;
     slideAnimation.animateAll([
       createStep({
         element: newElement,
@@ -500,8 +524,9 @@ const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
   }
 
   // Case 2: Content -> Content (slide out left, slide in from right)
-  oldElement.style.transform = "translateX(0)";
-  newElement.style.transform = "translateX(100%)";
+  // Start from current positions
+  oldElement.style.transform = `translateX(${oldPosition}px)`;
+  newElement.style.transform = `translateX(${newPosition || "100%"})`;
   slideAnimation.animateAll([
     createStep({
       element: oldElement,
