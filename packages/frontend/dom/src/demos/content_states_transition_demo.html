@@ -322,7 +322,7 @@
               "animate-content-height",
             )?.checked;
             return `
-            <div class="content-state" data-ui-key="${uiKey}" ${shouldAnimate ? "data-animate-height" : ""} data-ui-name="content">
+            <div class="content-state" data-ui-key="${uiKey}" ${shouldAnimate ? "data-animate-height" : ""} data-ui-name="${uiKey}">
               ${
                 contentVariant === "B"
                   ? `

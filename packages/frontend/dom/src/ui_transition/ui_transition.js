@@ -63,10 +63,6 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
         // Start animation from current constrained height to new height
         animateSize(newWidth, newHeight, { releaseConstraintsAfter: true });
       }
-
-      // Update tracked dimensions after potential animation start
-      currentWidth = newWidth;
-      currentHeight = newHeight;
     }
   };
 
@@ -129,15 +125,34 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
       releaseConstraintsAfter
         ? {
             onChange: (changes, isComplete) => {
+              // Update current dimensions based on animation progress
+              for (const change of changes) {
+                if (change.property === "width") {
+                  currentWidth = change.value;
+                }
+                if (change.property === "height") {
+                  currentHeight = change.value;
+                }
+              }
               if (isComplete) {
                 letContentSelfManage(targetWidth, targetHeight);
               }
             },
           }
-        : undefined,
+        : {
+            // Even without releasing constraints, track current values
+            onChange: (changes) => {
+              for (const change of changes) {
+                if (change.property === "width") {
+                  currentWidth = change.value;
+                }
+                if (change.property === "height") {
+                  currentHeight = change.value;
+                }
+              }
+            },
+          },
     );
-    currentWidth = targetWidth;
-    currentHeight = targetHeight;
   };
 
   [currentWidth, currentHeight] = measureSize();
