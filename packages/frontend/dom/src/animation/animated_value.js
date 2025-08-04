@@ -61,6 +61,11 @@ export const createAnimatedValue = (
       onUpdate?.({ progress, value, timing });
     },
     onCancel,
+    cancel: () => {
+      animatedValue.playing = false;
+      removeFromTimeline(animatedValue);
+      onCancel?.();
+    },
     onFinish: () => {
       animatedValue.playing = false;
       animatedValue.ended = true;
