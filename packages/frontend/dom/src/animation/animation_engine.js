@@ -2,7 +2,6 @@ const animationToUpdateSet = new Set();
 const animationCleanupMap = new Map();
 export const addOnTimeline = (animation) => {
   animationToUpdateSet.add(animation);
-  animation.startTime = document.timeline.currentTime;
   const startReturnValue = animation.onStart();
   if (typeof startReturnValue === "function") {
     animationCleanupMap.set(animation, startReturnValue);

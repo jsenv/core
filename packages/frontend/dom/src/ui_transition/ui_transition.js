@@ -118,7 +118,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     lastContentHeight = newHeight;
 
     // If we have an ongoing size animation, update it
-    if (sizeAnimation.playing) {
+    if (sizeAnimation && sizeAnimation.playing) {
       debug(
         "size",
         "🎯 Updating animation target height to match content:",

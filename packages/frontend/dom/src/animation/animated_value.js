@@ -14,6 +14,8 @@ export const createAnimatedValue = (
   to,
   {
     duration,
+    startTime,
+    currentTime,
     easing = easingDefault,
     onStart,
     onUpdate,
@@ -37,6 +39,9 @@ export const createAnimatedValue = (
       }
       animatedValue.paused = false;
       animatedValue.playing = true;
+      if (startTime === undefined) {
+        animatedValue.startTime = document.timeline.currentTime;
+      }
       addOnTimeline(animatedValue);
     },
     pause: () => {
@@ -47,8 +52,8 @@ export const createAnimatedValue = (
       animatedValue.playing = false;
       removeFromTimeline(animatedValue);
     },
-    startTime: null,
-    currentTime: null,
+    startTime,
+    currentTime,
     onStart,
     update: ({ progress, value, timing }) => {
       animatedValue.progress = progress;
