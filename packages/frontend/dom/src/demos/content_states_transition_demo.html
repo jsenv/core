@@ -445,6 +445,62 @@
         }
       };
 
+      // Restore UI state from localStorage
+      const restoreUIState = () => {
+        // Restore animation checkbox
+        const shouldAnimate =
+          localStorage.getItem("animate-content-height") === "true";
+        document.getElementById("animate-content-height").checked =
+          shouldAnimate;
+
+        // Restore sequence preservation checkbox
+        const shouldPreserve =
+          localStorage.getItem("preserve-between-sequences") === "true";
+        document.getElementById("preserve-between-sequences").checked =
+          shouldPreserve;
+
+        // Restore speed selection
+        const savedSpeed = localStorage.getItem("loading-speed") || "fast";
+        document.querySelector(
+          `input[name="speed"][value="${savedSpeed}"]`,
+        ).checked = true;
+      };
+
+      // Save UI state to localStorage
+      const saveUIState = () => {
+        // Save animation checkbox
+        localStorage.setItem(
+          "animate-content-height",
+          document.getElementById("animate-content-height").checked,
+        );
+
+        // Save sequence preservation checkbox
+        localStorage.setItem(
+          "preserve-between-sequences",
+          document.getElementById("preserve-between-sequences").checked,
+        );
+
+        // Save speed selection
+        const selectedSpeed = document.querySelector(
+          'input[name="speed"]:checked',
+        ).value;
+        localStorage.setItem("loading-speed", selectedSpeed);
+      };
+
+      // Restore state on page load
+      restoreUIState();
+
+      // Setup persistence listeners
+      document
+        .getElementById("animate-content-height")
+        .addEventListener("change", saveUIState);
+      document
+        .getElementById("preserve-between-sequences")
+        .addEventListener("change", saveUIState);
+      document.querySelectorAll('input[name="speed"]').forEach((radio) => {
+        radio.addEventListener("change", saveUIState);
+      });
+
       // Loading speed control
       const LOADING_SPEEDS = {
         fast: 100,
