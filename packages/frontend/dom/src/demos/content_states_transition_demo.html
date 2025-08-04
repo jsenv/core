@@ -160,14 +160,14 @@
         } = options;
 
         const states = {
-          loading: () => `
-            <div class="loading-state ${tall ? "tall" : ""}" data-preserve-content-height>
+          loading: (uiKey) => `
+            <div class="loading-state ${tall ? "tall" : ""}" data-ui-key="${uiKey}" data-preserve-content-height>
               <div class="spinner"></div>
               <div>Loading...</div>
             </div>
           `,
-          content: () => `
-            <div class="content-state">
+          content: (uiKey) => `
+            <div class="content-state" data-ui-key="${uiKey}">
               ${
                 contentVariant === "B"
                   ? `
@@ -191,15 +191,15 @@
               }
             </div>
           `,
-          error: () => `
-            <div class="error-state ${tall ? "tall" : ""}" data-preserve-content-height>
+          error: (uiKey) => `
+            <div class="error-state ${tall ? "tall" : ""}" data-ui-key="${uiKey}" data-preserve-content-height>
               <div>⚠️</div>
               <div>An error occurred</div>
             </div>
           `,
         };
 
-        return states[type]();
+        return states[type](options.uiKey);
       };
 
       // For manual control
@@ -238,7 +238,13 @@
           activeButton = document.getElementById(buttonId);
           activeButton.classList.add("active");
         }
-        contentBox.innerHTML = createState(type, options);
+
+        // Generate UI key based on the content we're displaying
+        // For content A and B, they get different keys
+        // For loading/error states of the same content, they share the key
+        const uiKey =
+          options.contentVariant === "B" ? "content-b" : "content-a";
+        contentBox.innerHTML = createState(type, { ...options, uiKey });
       };
 
       // Sequence runner
