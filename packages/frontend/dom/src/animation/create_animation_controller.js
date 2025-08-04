@@ -55,6 +55,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
       duration = newDuration;
     },
     animatedValues,
+    animationSet,
     animateAll: (stepArray, { onChange, onCancel, onEnd } = {}) => {
       if (onCancel) {
         cancelCallbackSet.add(onCancel);
@@ -70,7 +71,6 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         const element = step.element;
         const targetValue = step.target;
         const property = step.property;
-        const subproperty = step.subproperty;
         const startValue = step.getValue(element);
 
         if (animationSet.size) {
@@ -78,8 +78,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
           for (const animation of animationSet) {
             if (
               animation.step.element === element &&
-              animation.step.property === property &&
-              animation.step.subproperty === subproperty
+              animation.step.property === property
             ) {
               // If we're already animating this property, update it
               existingAnimation = animation;
@@ -103,17 +102,14 @@ export const createAnimationController = ({ duration: initialDuration }) => {
 
         const valueDiff = Math.abs(startValue - targetValue);
         const minDiff = property === "opacity" ? 0.1 : 10;
-        const propertyName = subproperty
-          ? `${property}.${subproperty}`
-          : property;
         if (valueDiff === 0) {
           console.warn(
-            `Animation of "${propertyName}" is unnecessary: start and target values are identical (${startValue})`,
+            `Animation of "${property}" is unnecessary: start and target values are identical (${startValue})`,
             { element },
           );
         } else if (valueDiff < minDiff) {
           console.warn(
-            `Animation of "${propertyName}" might be too subtle: change of ${valueDiff} is below recommended threshold of ${minDiff}`,
+            `Animation of "${property}" might be too subtle: change of ${valueDiff} is below recommended threshold of ${minDiff}`,
             { element, from: startValue, to: targetValue },
           );
         }
@@ -126,16 +122,22 @@ export const createAnimationController = ({ duration: initialDuration }) => {
           completed: false,
         });
 
+        const styleProp = property.startsWith("transform.")
+          ? "transform"
+          : property;
         const restoreWillChangeStyle = setStyles(element, {
-          "will-change": property,
+          "will-change": styleProp,
         });
         finishCallbackSet.add(restoreWillChangeStyle);
 
-        // Store current value as inline style
-        const restoreValueStyle = setStyles(element, {
-          [property]: `${startValue}px`,
+        const initialValue = step.getValue(element);
+        const isOnInlineStyle = Boolean(element.style[styleProp]);
+        cancelCallbackSet.add(() => {
+          step.setValue(element, initialValue);
+          if (!isOnInlineStyle) {
+            element.style.removeProperty(styleProp);
+          }
         });
-        cancelCallbackSet.add(restoreValueStyle);
 
         element.setAttribute(`data-animated`, "");
         element.setAttribute(`data-${property}-animated`, "");
@@ -191,7 +193,6 @@ export const createAnimationController = ({ duration: initialDuration }) => {
             changeEntryArray.push({
               element: animation.step.element,
               property,
-              subproperty: animation.step.subproperty,
               value: animatedValue,
             });
           }
@@ -215,7 +216,6 @@ export const createAnimationController = ({ duration: initialDuration }) => {
           changeEntryArray.push({
             element,
             property,
-            subproperty: animation.step.subproperty,
             value: finalValue,
           });
         }
@@ -296,8 +296,7 @@ const createTranslateXStep = ({ element, target, unit = "px", sideEffect }) => {
 
   return {
     element,
-    property: "transform",
-    subproperty: "translateX",
+    property: "transform.translateX",
     target,
     getValue,
     setValue,

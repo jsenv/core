@@ -338,6 +338,24 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           "[data-ui-transition-old]",
         );
 
+        // Calculate animation progress before canceling for smooth continuation
+        let animationProgress = 0;
+        if (transitionAnimationController.pending && existingOldContents[0]) {
+          // Calculate progress based on current position vs target
+          const currentOldPos = getCurrentTranslateX(existingOldContents[0]);
+          const containerWidth =
+            existingOldContents[0].parentElement?.offsetWidth || 300;
+          // Progress = how far we've moved toward the target (-containerWidth)
+          // If we started at 0 and target is -300, then at -60 we're 20% done
+          animationProgress = Math.abs(currentOldPos) / containerWidth;
+          animationProgress = Math.max(0, Math.min(1, animationProgress)); // Clamp to [0,1]
+          debug(
+            "transition",
+            "🎯 Preserving animation progress:",
+            `${(animationProgress * 100).toFixed(1)}%`,
+          );
+        }
+
         // Cancel any ongoing transition before starting a new one
         transitionAnimationController.cancel();
 
@@ -394,7 +412,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           transitionAnimationController,
           firstChild,
           setupTransition,
-          { duration, type },
+          { duration, type, animationProgress },
         );
       } else {
         // No transition needed, clean up any remaining old elements
@@ -522,7 +540,7 @@ const animateTransition = (
   animationController,
   newElement,
   setupTransition,
-  { type, duration },
+  { type, duration, animationProgress = 0 },
 ) => {
   let applyAnimation;
   if (type === "cross-fade") {
@@ -539,15 +557,21 @@ const animateTransition = (
     type,
     from: oldContent ? oldContent.getAttribute("data-ui-key") : "none",
     to: newElement.getAttribute("data-ui-key"),
+    progress: `${(animationProgress * 100).toFixed(1)}%`,
   });
   debug("transition", "⏱️ Transition duration:", duration);
+
+  // Adjust duration based on remaining progress
+  const remainingDuration = Math.max(100, duration * (1 - animationProgress));
+  debug("transition", "⏱️ Remaining duration:", remainingDuration);
+
   const steps = applyAnimation(oldContent, newElement);
   if (steps.length === 0) {
     // If no steps, still call cleanup
     cleanup();
     return;
   }
-  animationController.setDuration(duration);
+  animationController.setDuration(remainingDuration);
   animationController.animateAll(steps, {
     onEnd: () => {
       cleanup();
