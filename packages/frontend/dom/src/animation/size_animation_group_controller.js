@@ -1,6 +1,6 @@
 import { cubicBezier } from "@jsenv/animation";
+import { getHeight } from "../size/get_height.js";
 import { setStyles } from "../style_and_attributes.js";
-import { getHeight } from "./get_height.js";
 
 const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
