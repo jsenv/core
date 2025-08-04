@@ -32,13 +32,16 @@ import.meta.css = /* css */ `
   }
 `;
 
-const DEBUG = true;
-const debug = (...args) => {
-  if (!DEBUG) {
+const DEBUG = {
+  size: false,
+  transition: true,
+};
+
+const debug = (type, ...args) => {
+  if (!DEBUG[type]) {
     return;
   }
-
-  console.debug(...args);
+  console.debug(`[${type}]`, ...args);
 };
 
 export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
@@ -104,7 +107,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     // Measure natural size using measure wrapper which has no constraints
     // No need to remove constraints since measureWrapper is always unconstrained
     const [newWidth, newHeight] = measureSize();
-    debug("📊 Content natural size from ResizeObserver:", {
+    debug("size", "📊 Content natural size from ResizeObserver:", {
       width: `${lastContentWidth} → ${newWidth}`,
       height: `${lastContentHeight} → ${newHeight}`,
     });
@@ -114,6 +117,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     // If we have an ongoing size animation, update it
     if (sizeAnimationController.pending) {
       debug(
+        "size",
         "🎯 Updating animation target height to match content:",
         newHeight,
         `(current: ${currentHeight})`,
@@ -145,7 +149,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   };
 
   const letContentSelfManage = (reason) => {
-    debug(`↕️ Letting content self-manage size (${reason})`);
+    debug("size", `↕️ Letting content self-manage size (${reason})`);
     // First measure the current size while constrained
     const [beforeWidth, beforeHeight] = measureSize();
     // Release constraints
@@ -154,7 +158,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     outerWrapper.style.overflow = "";
     // Measure actual size after releasing constraints
     const [afterWidth, afterHeight] = measureSize();
-    debug("📏 Size after self-manage:", {
+    debug("size", "📏 Size after self-manage:", {
       width: `${beforeWidth} → ${afterWidth}`,
       height: `${beforeHeight} → ${afterHeight}`,
     });
@@ -166,7 +170,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   };
 
   const animateSize = (targetWidth, targetHeight, { onEnd } = {}) => {
-    debug("🎬 Starting size animation", {
+    debug("size", "🎬 Starting size animation", {
       width: `${currentWidth} → ${targetWidth}`,
       height: `${currentHeight} → ${targetHeight}`,
     });
@@ -232,6 +236,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         console.group(`UI Transition Update (${childUIName})`);
       }
       debug(
+        "size",
         `🔄 Update triggered, current size: ${currentWidth}x${currentHeight}`,
       );
 
@@ -239,7 +244,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       sizeAnimationController.cancel();
       // No need to remove constraints from outerWrapper since we measure the inner wrapper
       const [newWidth, newHeight] = measureSize();
-      debug(`📐 Measured size: ${newWidth}x${newHeight}`);
+      debug("size", `📐 Measured size: ${newWidth}x${newHeight}`);
       // Make sure outer wrapper has current constraints
       outerWrapper.style.width = `${currentWidth}px`;
       outerWrapper.style.height = `${currentHeight}px`;
@@ -425,6 +430,12 @@ const animateTransition = (
     return null;
   }
 
+  debug("transition", "🎭 Starting transition animation", {
+    type,
+    from: oldContent ? oldContent.getAttribute("data-ui-key") : "none",
+    to: newElement.getAttribute("data-ui-key"),
+  });
+
   // Get transition duration from data attribute or use default
   const duration =
     parseInt(
@@ -432,6 +443,8 @@ const animateTransition = (
         .uiTransitionDuration,
       10,
     ) || 300;
+  debug("transition", "⏱️ Transition duration:", duration);
+
   const animation = createAnimationController({
     duration,
   });
@@ -440,6 +453,7 @@ const animateTransition = (
   const startOpacity = oldContent
     ? parseFloat(getComputedStyle(oldContent).opacity)
     : 0;
+  debug("transition", "🎨 Starting opacity:", startOpacity);
 
   // Setup initial state
   if (oldContent) {
@@ -454,8 +468,10 @@ const animateTransition = (
         element: newElement,
         property: "opacity",
         target: 1,
-        sideEffect: (_, { timing }) => {
+        sideEffect: (value, { timing }) => {
+          debug("transition", "🔄 Fade in progress:", value.toFixed(3));
           if (timing === "end") {
+            debug("transition", "✨ Transition complete");
             newElement.style.opacity = "";
             onEnd?.();
           }
@@ -471,13 +487,18 @@ const animateTransition = (
       element: oldContent,
       property: "opacity",
       target: 0,
+      sideEffect: (value) => {
+        debug("transition", "🔄 Old content fade out:", value.toFixed(3));
+      },
     }),
     createStep({
       element: newElement,
       property: "opacity",
       target: 1,
-      sideEffect: (_, { timing }) => {
+      sideEffect: (value, { timing }) => {
+        debug("transition", "🔄 New content fade in:", value.toFixed(3));
         if (timing === "end") {
+          debug("transition", "✨ Cross-fade complete");
           newElement.style.opacity = "";
           onEnd?.();
         }
