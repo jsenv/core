@@ -147,10 +147,10 @@
     </div>
 
     <script type="module">
-      import { maintainSizeOnContentChange } from "../maintain_size_on_content_change.js";
+      import { initUITransition } from "../ui_transition/ui_transition.js";
 
       const contentBox = document.getElementById("content-box");
-      let cleanup = maintainSizeOnContentChange(contentBox);
+      let cleanup = initUITransition(contentBox);
 
       const createState = (type, options = {}) => {
         const {
@@ -217,7 +217,7 @@
         contentBox.innerHTML = "";
 
         // Reinstall the maintainSize functionality
-        cleanup = maintainSizeOnContentChange(contentBox);
+        cleanup = initUITransition(contentBox);
 
         // Reset active button state
         activeButton.classList.remove("active");

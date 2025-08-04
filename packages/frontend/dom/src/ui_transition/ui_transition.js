@@ -1,11 +1,18 @@
-import { getInnerHeight } from "./size/get_inner_height.js";
-import { getInnerWidth } from "./size/get_inner_width.js";
-import { createSizeAnimationController } from "./size/size_animation_controller.js";
+/**
+ * TODO:
+ *
+ * - rename data-ui-key="a_key"
+ *
+ * - when data-content-state is the same we animate size
+ * - when data-content-state changes we cross fade content (with ability to animate differently than cross fade, like slide-left, slide-right etc)
+ 
+ */
 
-export const maintainSizeOnContentChange = (
-  element,
-  { duration = 300 } = {},
-) => {
+import { getInnerHeight } from "../size/get_inner_height.js";
+import { getInnerWidth } from "../size/get_inner_width.js";
+import { createSizeAnimationController } from "../size/size_animation_controller.js";
+
+export const initUITransition = (element, { duration = 300 } = {}) => {
   const sizeController = createSizeAnimationController(element, { duration });
 
   // Track dimensions

@@ -75,10 +75,10 @@ Hello, this is some initial content.</textarea
     </div>
 
     <script type="module">
-      import { maintainSizeOnContentChange } from "../maintain_size_on_content_change.js";
+      import { initUITransition } from "../ui_transition/ui_transition.js";
 
       const dynamicContent = document.getElementById("dynamic-content");
-      maintainSizeOnContentChange(dynamicContent);
+      initUITransition(dynamicContent);
 
       // Setup event listeners
       document
