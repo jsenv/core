@@ -23,10 +23,6 @@ import.meta.css = /* css */ `
     position: absolute;
     inset: 0;
     pointer-events: none;
-    /* Match content's box model and position exactly */
-    box-sizing: border-box;
-    /* Create a stacking context for absolutely positioned children */
-    transform: translateZ(0);
   }
 
   /* Old content is positioned absolutely within the overlay */
