@@ -209,13 +209,38 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     });
   };
 
+  let isUpdating = false;
+  let previousContent = null; // Track previous content for transitions
+
+  // Handle initial content if present
+  const initialFirstChild = content.children[0];
+  if (initialFirstChild) {
+    debug("size", "📦 Found initial content, analyzing...");
+    // Store initial content state
+    lastUIKey = initialFirstChild.getAttribute("data-ui-key");
+    wasInheritingDimensions = initialFirstChild.hasAttribute(
+      "data-inherit-content-dimensions",
+    );
+    [lastContentWidth, lastContentHeight] = measureSize();
+    debug(
+      "size",
+      `📐 Initial content size: ${lastContentWidth}x${lastContentHeight}`,
+    );
+
+    // Start observing resize if needed
+    if (!wasInheritingDimensions) {
+      startObservingResize();
+      debug("👀 ResizeObserver: Observing initial content");
+    }
+    // Store initial content for future transitions
+    previousContent = initialFirstChild.cloneNode(true);
+  }
+
+  // Set initial dimensions without animation
   [currentWidth, currentHeight] = measureSize();
   outerWrapper.style.width = `${currentWidth}px`;
   outerWrapper.style.height = `${currentHeight}px`;
   outerWrapper.style.overflow = "hidden";
-
-  let isUpdating = false;
-  let previousContent = null; // Track previous content for transitions
 
   const onMutation = () => {
     if (isUpdating) {
