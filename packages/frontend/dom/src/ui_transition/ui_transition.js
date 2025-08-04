@@ -87,15 +87,25 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
     return [getWidth(wrapper), getHeight(wrapper)];
   };
 
-  const letContentSelfManage = (newWidth, newHeight) => {
+  const letContentSelfManage = () => {
     debug("↕️ Letting content self-manage size");
+    // First measure the current size while constrained
+    const [beforeWidth, beforeHeight] = measureSize();
+    // Release constraints
     wrapper.style.width = "";
     wrapper.style.height = "";
     wrapper.style.overflow = "";
-    currentWidth = newWidth;
-    currentHeight = newHeight;
-    lastContentWidth = newWidth;
-    lastContentHeight = newHeight;
+    // Measure actual size after releasing constraints
+    const [afterWidth, afterHeight] = measureSize();
+    debug("📏 Size after self-manage:", {
+      width: `${beforeWidth} → ${afterWidth}`,
+      height: `${beforeHeight} → ${afterHeight}`,
+    });
+    // Update with actual measured values
+    currentWidth = afterWidth;
+    currentHeight = afterHeight;
+    lastContentWidth = afterWidth;
+    lastContentHeight = afterHeight;
   };
 
   const animateSize = (
@@ -135,7 +145,7 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
                 }
               }
               if (isComplete) {
-                letContentSelfManage(targetWidth, targetHeight);
+                letContentSelfManage();
               }
             },
           }
@@ -258,7 +268,7 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
         // Even with no changes, we should release constraints for regular content
         // This is important for elements that manage their own height animation
         if (!inheritContentDimensions) {
-          letContentSelfManage(targetWidth, targetHeight);
+          letContentSelfManage();
         }
         if (DEBUG) {
           console.groupEnd();
@@ -285,7 +295,7 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
         animateSize(targetWidth, targetHeight);
       } else {
         // Same UI key, no height preservation: don't animate or constrain
-        letContentSelfManage(targetWidth, targetHeight);
+        letContentSelfManage();
       }
     } finally {
       isUpdating = false;
