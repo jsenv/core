@@ -92,9 +92,14 @@ export const createAnimationController = ({ duration }) => {
 
         const valueDiff = Math.abs(startValue - targetValue);
         const minDiff = property === "opacity" ? 0.1 : 10;
-        if (valueDiff < minDiff) {
+        if (valueDiff === 0) {
           console.warn(
-            `Animation of "${property}" might be unnecessary: change of ${valueDiff} is very small (min recommended: ${minDiff})`,
+            `Animation of "${property}" is unnecessary: start and target values are identical (${startValue})`,
+            { element },
+          );
+        } else if (valueDiff < minDiff) {
+          console.warn(
+            `Animation of "${property}" might be too subtle: change of ${valueDiff} is below recommended threshold of ${minDiff}`,
             { element, from: startValue, to: targetValue },
           );
         }
