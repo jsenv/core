@@ -453,13 +453,14 @@ const animateTransition = (
   const startOpacity = oldContent
     ? parseFloat(getComputedStyle(oldContent).opacity)
     : 0;
-  debug("transition", "🎨 Starting opacity:", startOpacity);
+  const computedStartOpacity = isNaN(startOpacity) ? 0 : startOpacity;
+  debug("transition", "🎨 Starting opacity:", computedStartOpacity);
 
   // Setup initial state
   if (oldContent) {
-    oldContent.style.opacity = startOpacity.toString();
+    oldContent.style.opacity = computedStartOpacity.toString();
   }
-  newElement.style.opacity = startOpacity.toString();
+  newElement.style.opacity = computedStartOpacity.toString();
 
   if (!oldContent) {
     // Case 1: Empty -> Content (fade in only)
@@ -470,6 +471,7 @@ const animateTransition = (
         target: 1,
         sideEffect: (value, { timing }) => {
           debug("transition", "🔄 Fade in progress:", value.toFixed(3));
+          newElement.style.opacity = value.toString();
           if (timing === "end") {
             debug("transition", "✨ Transition complete");
             newElement.style.opacity = "";
@@ -487,8 +489,12 @@ const animateTransition = (
       element: oldContent,
       property: "opacity",
       target: 0,
-      sideEffect: (value) => {
+      sideEffect: (value, { timing }) => {
         debug("transition", "🔄 Old content fade out:", value.toFixed(3));
+        oldContent.style.opacity = value.toString();
+        if (timing === "end") {
+          oldContent.remove();
+        }
       },
     }),
     createStep({
@@ -497,6 +503,7 @@ const animateTransition = (
       target: 1,
       sideEffect: (value, { timing }) => {
         debug("transition", "🔄 New content fade in:", value.toFixed(3));
+        newElement.style.opacity = value.toString();
         if (timing === "end") {
           debug("transition", "✨ Cross-fade complete");
           newElement.style.opacity = "";

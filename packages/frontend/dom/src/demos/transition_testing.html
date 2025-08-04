@@ -98,7 +98,11 @@
       <div class="ui-transition-outer-wrapper">
         <div class="ui-transition-measure-wrapper">
           <div class="ui-transition-content">
-            <div class="test-content content" data-ui-key="content-a">
+            <div
+              class="test-content content"
+              data-ui-key="content-a"
+              data-ui-name="content-a"
+            >
               Initial Content
             </div>
           </div>
@@ -156,7 +160,7 @@
       startButton.addEventListener("click", () => {
         // Set loading state
         setContent(`
-          <div class="test-content loading" data-ui-key="loading" data-inherit-content-dimensions>
+          <div class="test-content loading" data-ui-key="content-a" data-ui-name="loading" data-inherit-content-dimensions>
             Loading...
           </div>
         `);
@@ -188,7 +192,7 @@
       insertButton.addEventListener("click", () => {
         // Replace loading with content
         setContent(`
-          <div class="test-content content" data-ui-key="content-b">
+          <div class="test-content content" data-ui-key="content-a" data-ui-name="content-a">
             New Content
           </div>
         `);
@@ -205,7 +209,7 @@
         }
 
         setContent(`
-          <div class="test-content content" data-ui-key="content-a">
+          <div class="test-content content" data-ui-key="content-a" data-ui-name="content-a">
             Initial Content
           </div>
         `);
