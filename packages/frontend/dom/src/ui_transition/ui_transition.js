@@ -255,6 +255,10 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       //   // 5. Clean up after animation
       // }
 
+      // Detect state transitions before updating state
+      const becomesContent =
+        wasInheritingDimensions && !inheritContentDimensions;
+
       // Store current state for next update
       lastUIKey = currentUIKey;
       wasInheritingDimensions = inheritContentDimensions;
@@ -296,9 +300,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       });
 
       // Handle height inheritance and animation based on state
-      const wasLoadingToContent =
-        wasInheritingDimensions && !inheritContentDimensions;
-      if (wasLoadingToContent || (isUIKeyChange && !inheritContentDimensions)) {
+      if (becomesContent || (isUIKeyChange && !inheritContentDimensions)) {
         // Animate when:
         // 1. New content with different key
         // 2. Transitioning from loading/error state (wasInheriting) to actual content (!inheriting)
