@@ -283,9 +283,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           oldContent = previousContent.cloneNode(true);
           oldContent.removeAttribute("data-ui-key");
           oldContent.setAttribute("data-ui-transition-old", "");
-          oldContent.style.opacity = "1";
           transitionOverlay.appendChild(oldContent);
-          firstChild.style.opacity = "0";
         }
         // Cancel any ongoing transition before starting a new one
         if (transitionAnimation) {
@@ -415,9 +413,20 @@ const animateTransition = (
   const animation = createAnimationController({
     duration: 300,
   });
+
+  // Get the current opacity of old content (if any) to use as starting point
+  const startOpacity = oldContent
+    ? parseFloat(getComputedStyle(oldContent).opacity)
+    : 0;
+
+  // Setup initial state
+  if (oldContent) {
+    oldContent.style.opacity = startOpacity.toString();
+  }
+  newElement.style.opacity = startOpacity.toString();
+
   if (!oldContent) {
     // Case 1: Empty -> Content (fade in only)
-    newElement.style.opacity = "0";
     animation.animateAll([
       createStep({
         element: newElement,
