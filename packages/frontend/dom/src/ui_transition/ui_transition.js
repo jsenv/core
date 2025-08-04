@@ -212,6 +212,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let isUpdating = false;
   let previousContent = null; // Track previous content for transitions
 
+  // Let initial content have its natural size
+  [currentWidth, currentHeight] = measureSize();
+
   // Handle initial content if present
   const initialFirstChild = content.children[0];
   if (initialFirstChild) {
@@ -221,7 +224,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     wasInheritingDimensions = initialFirstChild.hasAttribute(
       "data-inherit-content-dimensions",
     );
-    [lastContentWidth, lastContentHeight] = measureSize();
+    lastContentWidth = currentWidth;
+    lastContentHeight = currentHeight;
     debug(
       "size",
       `📐 Initial content size: ${lastContentWidth}x${lastContentHeight}`,
@@ -235,12 +239,6 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     // Store initial content for future transitions
     previousContent = initialFirstChild.cloneNode(true);
   }
-
-  // Set initial dimensions without animation
-  [currentWidth, currentHeight] = measureSize();
-  outerWrapper.style.width = `${currentWidth}px`;
-  outerWrapper.style.height = `${currentHeight}px`;
-  outerWrapper.style.overflow = "hidden";
 
   const onMutation = () => {
     if (isUpdating) {
