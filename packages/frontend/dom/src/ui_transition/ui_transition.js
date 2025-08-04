@@ -24,12 +24,8 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
+  /* Old content just needs to fill its grid cell, overlay handles positioning */
   [data-ui-transition-old] {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
   }
 `;
 
