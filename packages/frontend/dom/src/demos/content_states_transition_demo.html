@@ -69,6 +69,11 @@
         background: #f0f0f0;
         margin: 8px 0;
         padding: 12px;
+        transition: padding 0.3s;
+      }
+
+      .content-block[data-expanded] {
+        padding: 32px 12px;
       }
 
       button {
@@ -156,6 +161,8 @@
           <button id="demo-content-loading">Load Content</button>
           <button id="demo-loading-error">Loading → Error</button>
           <button id="demo-error-retry">Error → Loading → Content</button>
+          <button id="demo-content-update">Update Active Content</button>
+          <button id="demo-content-add-block">Add Content Block</button>
         </div>
 
         <h3 style="margin-top: 20px">Content Navigation (Different UI Keys)</h3>
@@ -468,11 +475,58 @@
         .getElementById("reset-content")
         .addEventListener("click", resetContent);
 
+      // Update Active Content button logic
+      document
+        .getElementById("demo-content-update")
+        .addEventListener("click", () => {
+          const contentContainer = contentBox.querySelector(
+            ".ui-transition-content",
+          );
+          const contentState =
+            contentContainer &&
+            contentContainer.querySelector(".content-state");
+          if (!contentState) return;
+
+          // Toggle data-expanded attribute on content blocks
+          const blocks = contentState.querySelectorAll(".content-block");
+          blocks.forEach((block) => {
+            if (block.hasAttribute("data-expanded")) {
+              block.removeAttribute("data-expanded");
+              // Convert text back to normal case
+              block.textContent = block.textContent.toLowerCase();
+            } else {
+              block.setAttribute("data-expanded", "");
+              // Convert text to uppercase
+              block.textContent = block.textContent.toUpperCase();
+            }
+          });
+        });
+
       document.getElementById("toggle-size").addEventListener("click", () => {
         isLargeState = !isLargeState;
         const currentState = activeButton.id.replace("show-", "");
         setState(currentState, { tall: isLargeState });
       });
+
+      // Add Content Block button logic
+      document
+        .getElementById("demo-content-add-block")
+        .addEventListener("click", () => {
+          // Only works if current state is content (A or B)
+          const contentContainer = contentBox.querySelector(
+            ".ui-transition-content",
+          );
+          const contentState =
+            contentContainer &&
+            contentContainer.querySelector(".content-state");
+          if (!contentState) return;
+
+          // Add a new content block
+          const newBlock = document.createElement("div");
+          newBlock.className = "content-block";
+          newBlock.textContent = `Dynamically added block ${contentState.children.length + 1}`;
+          contentState.appendChild(newBlock);
+        });
     </script>
   </body>
 </html>
