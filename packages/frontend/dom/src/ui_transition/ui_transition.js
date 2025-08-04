@@ -187,6 +187,11 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         targetHeight,
         {
           duration: resizeDuration,
+          startTime: sizeAnimation
+            ? sizeAnimation.getAnimationByConstructor(
+                createElementHeightTransition,
+              )?.startTime
+            : null,
           onUpdate: ({ value }) => {
             currentHeight = value;
           },
@@ -200,6 +205,11 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         targetWidth,
         {
           duration: resizeDuration,
+          startTime: sizeAnimation
+            ? sizeAnimation.getAnimationByConstructor(
+                createElementWidthTransition,
+              )?.startTime
+            : null,
           onUpdate: ({ value }) => {
             currentWidth = value;
           },
@@ -207,12 +217,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       );
       animations.push(widthAnimation);
     }
-
-    if (sizeAnimation) {
-      sizeAnimation.update(animations, { onEnd });
-    } else {
-      sizeAnimation = playAnimations(animations, { onEnd });
-    }
+    sizeAnimation = playAnimations(animations, { onEnd });
   };
 
   let isUpdating = false;

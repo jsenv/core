@@ -30,11 +30,13 @@ export const createAnimatedValue = (
     progress: 0,
     paused: true,
     ended: false,
+    playing: false,
     play: () => {
       if (!animatedValue.paused) {
         return;
       }
       animatedValue.paused = false;
+      animatedValue.playing = true;
       addOnTimeline(animatedValue);
     },
     pause: () => {
@@ -42,6 +44,7 @@ export const createAnimatedValue = (
         return;
       }
       animatedValue.paused = true;
+      animatedValue.playing = false;
       removeFromTimeline(animatedValue);
     },
     startTime: null,
@@ -54,6 +57,7 @@ export const createAnimatedValue = (
     },
     onCancel,
     onFinish: () => {
+      animatedValue.playing = false;
       animatedValue.ended = true;
       animatedValue.onfinish?.();
       onFinish?.();
@@ -63,43 +67,55 @@ export const createAnimatedValue = (
 };
 
 export const playAnimations = (animations, { onEnd }) => {
-  let animationPlayingCount = animations.length;
-  for (const animation of animations) {
-    // eslint-disable-next-line no-loop-func
-    animation.onfinish = () => {
-      animationPlayingCount--;
-      if (animationPlayingCount === 0) {
-        onEnd?.();
-      }
-    };
-    animation.play();
-  }
-
-  return {
-    update: (newAnimations) => {},
+  const animationWrapper = {
+    playing: true,
+    paused: false,
+    ended: false,
     cancel: () => {
       for (const animation of animations) {
         animation.onCancel?.();
         removeFromTimeline(animation);
       }
     },
+    getAnimationByConstructor: (constructor) => {
+      return animations.find(
+        (animation) => animation.constructor === constructor,
+      );
+    },
   };
+
+  let animationPlayingCount = animations.length;
+  for (const animation of animations) {
+    // eslint-disable-next-line no-loop-func
+    animation.onfinish = () => {
+      animationPlayingCount--;
+      if (animationPlayingCount === 0) {
+        animationWrapper.playing = false;
+        animationWrapper.ended = true;
+        onEnd?.();
+      }
+    };
+    animation.play();
+  }
+
+  return animationWrapper;
 };
 
 export const createElementHeightTransition = (
   element,
   to,
-  { duration, easing, onUpdate, onFinish },
+  { onStart, onUpdate, onCancel, ...options },
 ) => {
   const from = getHeight(element);
   let heightAtStartFromInlineStyle;
 
   return createAnimatedValue(from, to, {
-    duration,
-    easing,
+    constructor: createElementHeightTransition,
+    ...options,
     onStart: () => {
       heightAtStartFromInlineStyle = element.style.height;
       element.setAttribute(`data-height-animated`, "");
+      onStart?.();
       return () => {
         element.removeAttribute(`data-height-animated`);
       };
@@ -115,24 +131,25 @@ export const createElementHeightTransition = (
       } else {
         element.style.removeProperty("height");
       }
+      onCancel?.();
     },
-    onFinish,
   });
 };
 export const createElementWidthTransition = (
   element,
   to,
-  { duration, easing, onUpdate, onFinish },
+  { onStart, onUpdate, onCancel, ...options },
 ) => {
   const from = getWidth(element);
   let widthAtStartFromInlineStyle;
 
   return createAnimatedValue(from, to, {
-    duration,
-    easing,
+    constructor: createElementWidthTransition,
+    ...options,
     onStart: () => {
       widthAtStartFromInlineStyle = element.style.width;
       element.setAttribute(`data-width-animated`, "");
+      onStart?.();
       return () => {
         element.removeAttribute(`data-width-animated`);
       };
@@ -148,24 +165,25 @@ export const createElementWidthTransition = (
       } else {
         element.style.removeProperty("width");
       }
+      onCancel?.();
     },
-    onFinish,
   });
 };
 export const createElementOpacityTransition = (
   element,
   to,
-  { duration, easing, onUpdate, onFinish } = {},
+  { onStart, onUpdate, onCancel, ...options } = {},
 ) => {
   const from = parseFloat(getComputedStyle(element).opacity) || 0;
   let opacityAtStartFromInlineStyle;
 
   return createAnimatedValue(from, to, {
-    duration,
-    easing,
+    constructor: createElementOpacityTransition,
+    options,
     onStart: () => {
       opacityAtStartFromInlineStyle = element.style.opacity;
       element.setAttribute(`data-opacity-animated`, "");
+      onStart?.();
       return () => {
         element.removeAttribute(`data-opacity-animated`);
       };
@@ -181,14 +199,14 @@ export const createElementOpacityTransition = (
       } else {
         element.style.removeProperty("opacity");
       }
+      onCancel?.();
     },
-    onFinish,
   });
 };
 export const createElementTranslateXTransition = (
   element,
   to,
-  { duration, easing, onUpdate, onFinish } = {},
+  { onStart, onCancel, onUpdate, ...options } = {},
 ) => {
   const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
   if (!match) {
@@ -201,11 +219,12 @@ export const createElementTranslateXTransition = (
   let transformAtStartFromInlineStyle;
 
   return createAnimatedValue(from, to, {
-    duration,
-    easing,
+    constructor: createElementTranslateXTransition,
+    ...options,
     onStart: () => {
       transformAtStartFromInlineStyle = element.style.transform;
       element.setAttribute(`data-translate-x-animated`, "");
+      onStart?.();
       return () => {
         element.removeAttribute(`data-translate-x-animated`);
       };
@@ -221,8 +240,8 @@ export const createElementTranslateXTransition = (
       } else {
         element.style.removeProperty("transform");
       }
+      onCancel?.();
     },
-    onFinish,
   });
 };
 const getTranslateX = (element) => {
