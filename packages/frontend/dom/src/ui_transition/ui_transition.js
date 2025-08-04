@@ -8,6 +8,7 @@ import { getWidth } from "../size/get_width.js";
 import.meta.css = /* css */ `
   .ui-transition-container {
     position: relative;
+    overflow: hidden;
   }
 
   .ui-transition-content {
@@ -29,6 +30,12 @@ import.meta.css = /* css */ `
     left: 0;
     width: 100%;
     height: 100%;
+  }
+
+  /* Slide transition styles */
+  [data-ui-transition="slide-left"] {
+    transform: translateX(0);
+    will-change: transform;
   }
 `;
 
@@ -443,12 +450,76 @@ const animateTransition = (
     return applyCrossFade(oldContent, newElement, { duration, onEnd });
   }
 
+  if (type === "slide-left") {
+    return applySlideLeft(oldContent, newElement, { duration, onEnd });
+  }
+
   return null;
 };
 
-const applyCrossFade = (oldElement, newElement, { duration, onEnd }) => {
-  // Get transition duration from data attribute or use default
+const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
+  const slideAnimation = createAnimationController({ duration });
 
+  // Setup initial positions
+  if (oldElement) {
+    oldElement.style.transform = "translateX(0)";
+  }
+  newElement.style.transform = "translateX(100%)";
+
+  if (!oldElement) {
+    // Case 1: Empty -> Content (slide in from right)
+    slideAnimation.animateAll([
+      createStep({
+        element: newElement,
+        property: "transform",
+        target: "translateX(0)",
+        sideEffect: (value, { timing }) => {
+          debug("transition", "🔄 Slide in progress:", value);
+          newElement.style.transform = value;
+          if (timing === "end") {
+            debug("transition", "✨ Slide complete");
+            newElement.style.transform = "";
+            onEnd?.();
+          }
+        },
+      }),
+    ]);
+    return slideAnimation;
+  }
+
+  // Case 2: Content -> Content (slide out left, slide in from right)
+  slideAnimation.animateAll([
+    createStep({
+      element: oldElement,
+      property: "transform",
+      target: "translateX(-100%)",
+      sideEffect: (value, { timing }) => {
+        debug("transition", "🔄 Old content slide out:", value);
+        oldElement.style.transform = value;
+        if (timing === "end") {
+          oldElement.remove();
+        }
+      },
+    }),
+    createStep({
+      element: newElement,
+      property: "transform",
+      target: "translateX(0)",
+      sideEffect: (value, { timing }) => {
+        debug("transition", "🔄 New content slide in:", value);
+        newElement.style.transform = value;
+        if (timing === "end") {
+          debug("transition", "✨ Slide complete");
+          newElement.style.transform = "";
+          onEnd?.();
+        }
+      },
+    }),
+  ]);
+  return slideAnimation;
+};
+
+const applyCrossFade = (oldElement, newElement, { duration, onEnd }) => {
   const crossFadeAnimation = createAnimationController({
     duration,
   });

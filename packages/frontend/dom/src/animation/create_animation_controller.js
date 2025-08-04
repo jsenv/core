@@ -225,6 +225,12 @@ export const createAnimationController = ({ duration }) => {
   return animationController;
 };
 
+const parseTransform = (transform) => {
+  if (!transform || transform === "none") return { translateX: 0 };
+  const match = transform.match(/translateX\(([-\d.]+)%?\)/);
+  return { translateX: match ? parseFloat(match[1]) : 0 };
+};
+
 const KNOWN_PROPERTIES = {
   height: {
     getValue: (element) => getHeight(element),
@@ -244,6 +250,32 @@ const KNOWN_PROPERTIES = {
       element.style.opacity = value;
     },
   },
+  transform: {
+    getValue: (element) => {
+      const transform = getComputedStyle(element).transform;
+      const { translateX } = parseTransform(transform);
+      // If the target is a percentage string like "translateX(100%)",
+      // return the numeric percentage value
+      if (typeof element._transformTarget === "string") {
+        const match = element._transformTarget.match(
+          /translateX\(([-\d.]+)%\)/,
+        );
+        if (match) return parseFloat(match[1]);
+      }
+      return translateX;
+    },
+    setValue: (element, value) => {
+      // Check if we're targeting a percentage value
+      if (
+        typeof element._transformTarget === "string" &&
+        element._transformTarget.includes("%")
+      ) {
+        element.style.transform = `translateX(${value}%)`;
+      } else {
+        element.style.transform = `translateX(${value}px)`;
+      }
+    },
+  },
 };
 export const createStep = ({ element, property, target, sideEffect }) => {
   const propertyConfig = KNOWN_PROPERTIES[property];
@@ -251,6 +283,11 @@ export const createStep = ({ element, property, target, sideEffect }) => {
     throw new Error(
       `Unknown property: ${property}. Use createCustomStep for custom properties.`,
     );
+  }
+
+  // Store target value on element for transforms
+  if (property === "transform" && typeof target === "string") {
+    element._transformTarget = target;
   }
 
   const { getValue, setValue } = propertyConfig;
