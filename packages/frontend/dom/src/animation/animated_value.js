@@ -157,6 +157,13 @@ export const createElementTranslateXTransition = (
   to,
   { duration, easing, onFinish } = {},
 ) => {
+  const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
+  if (!match) {
+    throw new Error(
+      `Invalid to value for translateX transition: ${to}. Expected format: translateX(value[px|%])`,
+    );
+  }
+  const unit = match[2] || "px";
   const from = getTranslateX(element);
   let transformAtStartFromInlineStyle;
 
@@ -171,7 +178,7 @@ export const createElementTranslateXTransition = (
       };
     },
     onUpdate: (value) => {
-      setTranslateX(element, value);
+      setTranslateX(element, value, { unit });
     },
     onCancel: () => {
       if (transformAtStartFromInlineStyle) {
@@ -188,7 +195,7 @@ const getTranslateX = (element) => {
   const transformMap = parseTransform(transform);
   return transformMap.get("translateX")?.value || 0;
 };
-const setTranslateX = (element, value) => {
+const setTranslateX = (element, value, { unit }) => {
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   transformMap.set("translateX", { value, unit });
