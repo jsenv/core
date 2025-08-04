@@ -78,6 +78,9 @@ export const createAnimationController = ({ duration }) => {
   let animationFrame;
   let startTime;
 
+  // Track current animated values per property
+  let animatedValues = {};
+
   const finishCallbackSet = new Set();
   const callFinishCallbacks = () => {
     for (const finishCallback of finishCallbackSet) {
@@ -96,6 +99,9 @@ export const createAnimationController = ({ duration }) => {
   const update = (element, value, { timing }) => {
     const setValue = setValueMap.get(element);
     setValue(element, value, { timing });
+    // Track animated value for this property
+    const property = propertyMap.get(element);
+    animatedValues[property] = value;
     const sideEffect = sideEffectMap.get(element);
     if (sideEffect) {
       sideEffect(value, { timing });
@@ -104,6 +110,7 @@ export const createAnimationController = ({ duration }) => {
 
   const animationController = {
     pending: false,
+    animatedValues,
     animateAll: (stepArray, { onChange, onEnd } = {}) => {
       let somethingChanged = false;
       for (const step of stepArray) {
@@ -220,6 +227,7 @@ export const createAnimationController = ({ duration }) => {
         setValueMap.clear();
         sideEffectMap.clear();
         elementSet.clear();
+        animatedValues = {};
         animationFrame = null;
         animationController.pending = false;
         onEnd?.();
@@ -231,6 +239,7 @@ export const createAnimationController = ({ duration }) => {
       animationController.pending = false;
       cancelAnimationFrame(animationFrame);
       animationFrame = null;
+      animatedValues = {};
       callFinishCallbacks();
       callCancelCallbacks();
     },
