@@ -74,6 +74,56 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
     // take some space on the wrapper
     return [getWidth(wrapper), getHeight(wrapper)];
   };
+
+  const letContentSelfManage = (newWidth, newHeight) => {
+    debug("↕️ Letting content self-manage size");
+    wrapper.style.width = "";
+    wrapper.style.height = "";
+    wrapper.style.overflow = "";
+    currentWidth = newWidth;
+    currentHeight = newHeight;
+    lastContentWidth = newWidth;
+    lastContentHeight = newHeight;
+  };
+
+  const animateSize = (
+    targetWidth,
+    targetHeight,
+    { releaseConstraintsAfter = false } = {},
+  ) => {
+    debug("🎬 Animating size", {
+      width: `${currentWidth} → ${targetWidth}`,
+      height: `${currentHeight} → ${targetHeight}`,
+      releaseConstraints: releaseConstraintsAfter,
+    });
+    wrapper.style.overflow = "hidden";
+    animationController.animateAll(
+      [
+        createStep({
+          element: wrapper,
+          property: "width",
+          target: targetWidth,
+        }),
+        createStep({
+          element: wrapper,
+          property: "height",
+          target: targetHeight,
+        }),
+      ],
+      releaseConstraintsAfter
+        ? {
+            onChange: (changes, isComplete) => {
+              if (isComplete) {
+                letContentSelfManage(targetWidth, targetHeight);
+              }
+            },
+          }
+        : undefined,
+    );
+    currentWidth = targetWidth;
+    currentHeight = targetHeight;
+  };
+
   [currentWidth, currentHeight] = measureSize();
   wrapper.style.width = `${currentWidth}px`;
   wrapper.style.height = `${currentHeight}px`;
@@ -159,14 +209,11 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         // Even with no size changes, we should release constraints for regular content
         // This is important for elements that manage their own height animation
         if (!inheritContentDimensions) {
-          debug("↕️ Releasing size constraints for self-managing content");
-          wrapper.style.width = "";
-          wrapper.style.height = "";
-          wrapper.style.overflow = "";
-          currentWidth = newWidth;
-          currentHeight = newHeight;
+          letContentSelfManage(newWidth, newHeight);
         }
-        console.groupEnd();
+        if (DEBUG) {
+          console.groupEnd();
+        }
         return;
       }
 
@@ -179,33 +226,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       if (isUIKeyChange && !inheritContentDimensions) {
         // New content (not a loading/error state): animate to new dimensions and release constraints after
         // Content dimensions will be tracked by ResizeObserver
-        wrapper.style.overflow = "hidden";
-        animationController.animateAll(
-          [
-            createStep({
-              element: wrapper,
-              property: "width",
-              target: newWidth,
-            }),
-            createStep({
-              element: wrapper,
-              property: "height",
-              target: newHeight,
-            }),
-          ],
-          {
-            onChange: (changes, isComplete) => {
-              if (isComplete) {
-                // Remove size constraints after animation completes
-                wrapper.style.width = "";
-                wrapper.style.height = "";
-                wrapper.style.overflow = "";
-              }
-            },
-          },
-        );
-        currentWidth = newWidth;
-        currentHeight = newHeight;
+        animateSize(newWidth, newHeight, { releaseConstraintsAfter: true });
       } else if (isUIKeyChange || inheritContentDimensions) {
         // Either:
         // 1. UI key changed but we want to inherit content dimensions (loading/error state)
@@ -228,31 +249,10 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
           source: shouldUseNewDimensions ? "measured" : "inherited",
         });
 
-        wrapper.style.overflow = "hidden";
-        animationController.animateAll([
-          createStep({
-            element: wrapper,
-            property: "width",
-            target: nextWidth,
-          }),
-          createStep({
-            element: wrapper,
-            property: "height",
-            target: nextHeight,
-          }),
-        ]);
-        currentWidth = nextWidth;
-        currentHeight = nextHeight;
+        animateSize(nextWidth, nextHeight);
       } else {
         // Same UI key, no height preservation: don't animate or constrain
-        debug("↕️ Removing size constraints - content is self-managing");
-        lastContentWidth = newWidth;
-        lastContentHeight = newHeight;
-        wrapper.style.width = "";
-        wrapper.style.height = "";
-        wrapper.style.overflow = "";
-        currentWidth = newWidth;
-        currentHeight = newHeight;
+        letContentSelfManage(newWidth, newHeight);
       }
     } finally {
       isUpdating = false;
