@@ -152,16 +152,17 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
     }
   };
 
-  // Watch for DOM mutations only in the content area
+  // Watch for direct children mutations only in the content area
+  // We only care about top-level content changes where data-ui-key lives
   const mutationObserver = new MutationObserver(() => {
     updateSize();
   });
 
-  // Start observing the content element only
+  // Start observing only direct children of the content element
   mutationObserver.observe(content, {
-    childList: true,
-    subtree: true,
-    characterData: true,
+    childList: true, // Only watch for direct children changes
+    subtree: false, // Don't watch nested changes
+    characterData: false, // Don't watch for text changes
   });
 
   // Return cleanup function and API
