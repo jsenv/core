@@ -55,6 +55,24 @@
         color: #000;
       }
 
+      .content-state[data-animate-height] .content-block {
+        max-height: 0;
+        opacity: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        margin: 0;
+        overflow: hidden;
+        transition: all 0.5s ease-out;
+      }
+
+      .content-state[data-animate-height] .content-block.visible {
+        max-height: 200px;
+        opacity: 1;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        margin: 8px 0;
+      }
+
       .error-state {
         color: #d32f2f;
         text-align: center;
@@ -179,6 +197,21 @@
         <div style="margin-top: 30px">
           <div style="margin-bottom: 20px">
             <label style="display: block; margin-bottom: 8px; font-weight: 500"
+              >Content Animation:</label
+            >
+            <label style="display: block">
+              <input type="checkbox" id="animate-content-height" />
+              Animate content height after insert
+            </label>
+            <p class="description" style="margin-top: 4px">
+              When checked, content blocks will animate their height after being
+              inserted. This helps demonstrate how height animations in content
+              can affect transitions.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 20px">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500"
               >Sequence Behavior:</label
             >
             <label style="display: block">
@@ -283,8 +316,12 @@
               <div>Loading...</div>
             </div>
           `,
-          content: (uiKey) => `
-            <div class="content-state" data-ui-key="${uiKey}">
+          content: (uiKey) => {
+            const shouldAnimate = document.getElementById(
+              "animate-content-height",
+            )?.checked;
+            return `
+            <div class="content-state" data-ui-key="${uiKey}" ${shouldAnimate ? "data-animate-height" : ""}>
               ${
                 contentVariant === "B"
                   ? `
@@ -307,7 +344,8 @@
               `
               }
             </div>
-          `,
+          `;
+          },
           error: (uiKey) => `
             <div class="error-state ${tall ? "tall" : ""}" data-ui-key="${uiKey}" data-preserve-content-height>
               <div>⚠️</div>
@@ -385,6 +423,19 @@
           }
         }
         contentContainer.innerHTML = content;
+
+        // If it's content with height animation, trigger the animation after a small delay
+        const contentState = contentContainer.querySelector(
+          ".content-state[data-animate-height]",
+        );
+        if (contentState) {
+          // Small delay to ensure DOM is ready
+          setTimeout(() => {
+            contentState.querySelectorAll(".content-block").forEach((block) => {
+              block.classList.add("visible");
+            });
+          }, 50);
+        }
       };
 
       // Sequence runner
