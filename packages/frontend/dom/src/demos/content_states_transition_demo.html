@@ -9,14 +9,28 @@
         font-family: system-ui;
       }
 
+      .page-layout {
+        display: flex;
+        min-height: 100vh;
+      }
+
       .controls {
         padding: 20px;
-        border-bottom: 1px solid #ccc;
         background: #f5f5f5;
+        border-right: 1px solid #ccc;
+        width: 400px;
+        flex-shrink: 0;
       }
 
       .demo-container {
+        flex-grow: 1;
         padding: 20px;
+      }
+
+      .demo-container h2 {
+        margin-top: 0;
+        color: #666;
+        font-weight: 500;
       }
 
       #content-box {
@@ -80,6 +94,35 @@
         margin: 20px 0;
       }
 
+      .speed-control {
+        background: #fff;
+        padding: 12px 15px;
+        border-radius: 4px;
+      }
+
+      details.manual-control {
+        margin-top: 20px;
+      }
+
+      details.manual-control summary {
+        cursor: pointer;
+        font-size: 1.17em;
+        font-weight: bold;
+        margin-top: 1em;
+      }
+
+      .radio-group {
+        display: flex;
+        gap: 20px;
+      }
+
+      .radio-group label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+
       .spinner {
         display: inline-block;
         width: 24px;
@@ -102,62 +145,93 @@
     </style>
   </head>
   <body>
-    <div class="controls">
-      <h3>Content Lifecycle (Same UI Key)</h3>
-      <p class="description">
-        Simulates loading states and errors for the same content (like a page
-        refresh)
-      </p>
-      <div>
-        <button id="demo-content-loading-fast">
-          Load Content (fast: 100ms)
-        </button>
-        <button id="demo-content-loading-slow">Load Content (slow: 1s)</button>
-      </div>
-      <div>
-        <button id="demo-content-error-retry-fast">
-          Error → Retry → Success (fast)
-        </button>
-        <button id="demo-content-error-retry-slow">
-          Error → Retry → Success (slow)
-        </button>
+    <div class="page-layout">
+      <div class="controls">
+        <h3>Content Lifecycle (Same UI Key)</h3>
+        <p class="description">
+          Simulates loading states and errors for the same content (like a page
+          refresh)
+        </p>
+        <div>
+          <button id="demo-content-loading">Load Content</button>
+          <button id="demo-content-error-retry">Error → Retry → Success</button>
+        </div>
+
+        <h3 style="margin-top: 20px">Content Navigation (Different UI Keys)</h3>
+        <p class="description">
+          Simulates navigating between different contents
+        </p>
+        <div>
+          <button id="demo-navigate-simple">Navigate: A → B</button>
+          <button id="demo-navigate-size-change">
+            Navigate: Small → Big Content
+          </button>
+        </div>
+
+        <div style="margin-top: 30px">
+          <div style="margin-bottom: 20px">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500"
+              >Sequence Behavior:</label
+            >
+            <label style="display: block">
+              <input type="checkbox" id="preserve-between-sequences" />
+              Preserve content between sequences
+            </label>
+            <p class="description" style="margin-top: 4px">
+              When checked, the content box will maintain its state between
+              sequence runs. When unchecked, it will reset to empty before each
+              sequence.
+            </p>
+          </div>
+
+          <div class="speed-control">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500"
+              >Loading State Duration:</label
+            >
+            <div class="radio-group">
+              <label>
+                <input type="radio" name="speed" value="fast" checked />
+                Fast (100ms)
+              </label>
+              <label>
+                <input type="radio" name="speed" value="medium" /> Medium
+                (300ms)
+              </label>
+              <label>
+                <input type="radio" name="speed" value="slow" /> Slow (1s)
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="separator"></div>
+
+        <details class="manual-control">
+          <summary>Manual Control</summary>
+          <div style="padding-top: 10px">
+            <div>
+              <button id="show-loading">Loading</button>
+              <button id="show-content">Content A</button>
+              <button id="show-content-alt">Content B</button>
+              <button id="show-error">Error</button>
+            </div>
+            <div>
+              <button id="toggle-size">Toggle Large State Size</button>
+              <button id="reset-content">Reset Content</button>
+            </div>
+          </div>
+        </details>
       </div>
 
-      <h3 style="margin-top: 20px">Content Navigation (Different UI Keys)</h3>
-      <p class="description">Simulates navigating between different contents</p>
-      <div>
-        <button id="demo-navigate-simple-fast">Navigate: A → B (fast)</button>
-        <button id="demo-navigate-simple-slow">Navigate: A → B (slow)</button>
+      <div class="demo-container">
+        <h2>Content Display Area</h2>
+        <p class="description">
+          This area shows how the UI handles different content states and
+          transitions. Use the controls on the left to trigger various content
+          lifecycle and navigation scenarios.
+        </p>
+        <div id="content-box"></div>
       </div>
-      <div>
-        <button id="demo-navigate-size-change-fast">
-          Navigate: Small → Big Content (fast)
-        </button>
-        <button id="demo-navigate-size-change-slow">
-          Navigate: Small → Big Content (slow)
-        </button>
-      </div>
-      <div class="separator"></div>
-      <label style="display: block; margin: 10px 0">
-        <input type="checkbox" id="preserve-between-sequences" /> Preserve
-        content between sequences
-      </label>
-
-      <h3 style="margin-top: 20px">Manual Control</h3>
-      <div>
-        <button id="show-loading">Loading</button>
-        <button id="show-content">Content A</button>
-        <button id="show-content-alt">Content B</button>
-        <button id="show-error">Error</button>
-      </div>
-      <div>
-        <button id="toggle-size">Toggle Large State Size</button>
-        <button id="reset-content">Reset Content</button>
-      </div>
-    </div>
-
-    <div class="demo-container">
-      <div id="content-box"></div>
     </div>
 
     <script type="module">
@@ -269,52 +343,43 @@
         }
       };
 
-      // Predefined sequences
-      const FAST_LOADING = 100;
-      const SLOW_LOADING = 1000;
+      // Loading speed control
+      const LOADING_SPEEDS = {
+        fast: 100,
+        medium: 300,
+        slow: 1000,
+      };
 
+      const getLoadingSpeed = () => {
+        const selectedSpeed = document.querySelector(
+          'input[name="speed"]:checked',
+        ).value;
+        return LOADING_SPEEDS[selectedSpeed];
+      };
+
+      // Predefined sequences
       const sequences = {
         // Content Lifecycle (Same UI Key)
-        "content-loading-fast": [
-          ["loading", FAST_LOADING],
+        "content-loading": () => [
+          ["loading", getLoadingSpeed()],
           ["content", 0],
         ],
-        "content-loading-slow": [
-          ["loading", SLOW_LOADING],
-          ["content", 0],
-        ],
-        "content-error-retry-fast": [
-          ["loading", FAST_LOADING],
+        "content-error-retry": () => [
+          ["loading", getLoadingSpeed()],
           ["error", 1000],
-          ["loading", FAST_LOADING],
-          ["content", 0],
-        ],
-        "content-error-retry-slow": [
-          ["loading", SLOW_LOADING],
-          ["error", 1000],
-          ["loading", SLOW_LOADING],
+          ["loading", getLoadingSpeed()],
           ["content", 0],
         ],
 
         // Content Navigation (Different UI Keys)
-        "navigate-simple-fast": [
+        "navigate-simple": () => [
           ["content", 500], // Show initial content
-          ["loading", FAST_LOADING],
+          ["loading", getLoadingSpeed()],
           ["content", 0, { contentVariant: "B" }],
         ],
-        "navigate-simple-slow": [
+        "navigate-size-change": () => [
           ["content", 500], // Show initial content
-          ["loading", SLOW_LOADING],
-          ["content", 0, { contentVariant: "B" }],
-        ],
-        "navigate-size-change-fast": [
-          ["content", 500], // Show initial content
-          ["loading", FAST_LOADING],
-          ["content", 0, { bigContent: true }],
-        ],
-        "navigate-size-change-slow": [
-          ["content", 500], // Show initial content
-          ["loading", SLOW_LOADING],
+          ["loading", getLoadingSpeed()],
           ["content", 0, { bigContent: true }],
         ],
       };
@@ -328,7 +393,7 @@
           if (!shouldPreserve) {
             resetContent();
           }
-          runSequence(sequences[key]);
+          runSequence(sequences[key]());
         });
       });
 
