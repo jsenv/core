@@ -55,22 +55,23 @@
         color: #000;
       }
 
-      .content-state[data-animate-height] .content-block {
-        max-height: 0;
-        opacity: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-        margin: 0;
+      .content-state[data-animate-height] {
+        height: 0;
         overflow: hidden;
-        transition: all 0.5s ease-out;
+        transition: height 0.5s ease-out;
       }
 
-      .content-state[data-animate-height] .content-block.visible {
-        max-height: 200px;
+      .content-state[data-animate-height].visible {
+        height: auto;
+      }
+
+      .content-state[data-animate-height] .content-block {
+        opacity: 0;
+        transition: opacity 0.5s ease-out;
+      }
+
+      .content-state[data-animate-height].visible .content-block {
         opacity: 1;
-        padding-top: 12px;
-        padding-bottom: 12px;
-        margin: 8px 0;
       }
 
       .error-state {
@@ -424,17 +425,15 @@
         }
         contentContainer.innerHTML = content;
 
-        // If it's content with height animation, trigger the animation after a small delay
+        // If it's content with height animation, add visible class in next frame
+        // This ensures height=0 is measured first by ui_transition.js
         const contentState = contentContainer.querySelector(
           ".content-state[data-animate-height]",
         );
         if (contentState) {
-          // Small delay to ensure DOM is ready
-          setTimeout(() => {
-            contentState.querySelectorAll(".content-block").forEach((block) => {
-              block.classList.add("visible");
-            });
-          }, 50);
+          requestAnimationFrame(() => {
+            contentState.classList.add("visible");
+          });
         }
       };
 
