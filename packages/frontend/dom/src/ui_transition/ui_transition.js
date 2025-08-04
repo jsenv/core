@@ -528,7 +528,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     getState: () => ({
       isPaused: transitionAnimationController.isPaused(),
       transitionInProgress: transitionAnimationController.pending,
-      opacity: transitionAnimationController.animatedValues.opacity || null,
+      opacity:
+        transitionAnimationController.animationMap.get("opacity")?.value ||
+        null,
     }),
     // Additional methods could be added here for direct control
     // setContent: (content) => {...}

@@ -7,14 +7,11 @@ const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
 export const createAnimationController = ({ duration: initialDuration }) => {
   let duration = initialDuration;
-  const animationSet = new Set();
+  const animationMap = new Map(); // Map of property -> animation object
   let animationFrame;
   let startTime;
   let pauseTime;
   let isPaused = false;
-
-  // Track current animated values per property
-  let animatedValues = {};
 
   const finishCallbackSet = new Set();
   const callFinishCallbacks = () => {
@@ -35,10 +32,9 @@ export const createAnimationController = ({ duration: initialDuration }) => {
   };
 
   const updateAnimation = (animation, value, { timing }) => {
-    const { setValue, element, property, sideEffect } = animation.step;
+    const { setValue, element, sideEffect } = animation.step;
     setValue(element, value, { timing });
-    // Track animated value for this property
-    animatedValues[property] = value;
+    animation.value = value;
     sideEffect?.(value, { timing });
   };
 
@@ -54,8 +50,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
     setDuration: (newDuration) => {
       duration = newDuration;
     },
-    animatedValues,
-    animationSet,
+    animationMap,
     animateAll: (stepArray, { onChange, onCancel, onEnd } = {}) => {
       if (onCancel) {
         cancelCallbackSet.add(onCancel);
@@ -64,7 +59,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         finishCallbackSet.add(onEnd);
       }
 
-      const animationToKillSet = new Set(animationSet);
+      const animationsToKill = new Set(animationMap.keys());
 
       let somethingChanged = false;
       for (const step of stepArray) {
@@ -73,31 +68,21 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         const property = step.property;
         const startValue = step.getValue(element);
 
-        if (animationSet.size) {
-          let existingAnimation;
-          for (const animation of animationSet) {
-            if (
-              animation.step.element === element &&
-              animation.step.property === property
-            ) {
-              // If we're already animating this property, update it
-              existingAnimation = animation;
-              animationToKillSet.delete(animation);
-              break;
-            }
-          }
+        const animationKey = `${element.tagName}-${property}`;
+        const existingAnimation = animationMap.get(animationKey);
 
-          if (existingAnimation) {
-            if (startValue === targetValue) {
-              // nothing to do, same element, same property, same target
-              continue;
-            }
-            // update the animation target
-            existingAnimation.targetValue = targetValue;
-            existingAnimation.startValue = startValue;
-            somethingChanged = true;
+        if (existingAnimation) {
+          animationsToKill.delete(animationKey);
+
+          if (startValue === targetValue) {
+            // nothing to do, same element, same property, same target
             continue;
           }
+          // update the animation target
+          existingAnimation.targetValue = targetValue;
+          existingAnimation.startValue = startValue;
+          somethingChanged = true;
+          continue;
         }
 
         const valueDiff = Math.abs(startValue - targetValue);
@@ -115,12 +100,14 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         }
 
         somethingChanged = true;
-        animationSet.add({
+        const animation = {
           step,
           targetValue,
           startValue,
+          value: startValue, // Current animated value
           completed: false,
-        });
+        };
+        animationMap.set(animationKey, animation);
 
         const styleProp = property.startsWith("transform.")
           ? "transform"
@@ -151,8 +138,8 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         });
       }
 
-      for (const animationToKill of animationToKillSet) {
-        animationSet.delete(animationToKill);
+      for (const animationKey of animationsToKill) {
+        animationMap.delete(animationKey);
       }
 
       if (somethingChanged) {
@@ -183,7 +170,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         if (progress < 1) {
           const easedProgress = easing(progress);
           const changeEntryArray = [];
-          for (const animation of animationSet) {
+          for (const animation of animationMap.values()) {
             const startValue = animation.startValue;
             const targetValue = animation.targetValue;
             const property = animation.step.property;
@@ -207,7 +194,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         // Animation complete
         timing = "end";
         const changeEntryArray = [];
-        for (const animation of animationSet) {
+        for (const animation of animationMap.values()) {
           const element = animation.step.element;
           const property = animation.step.property;
           const finalValue = animation.targetValue;
@@ -224,8 +211,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         }
         animationController.pending = false;
         callFinishCallbacks();
-        animationSet.clear();
-        animatedValues = {};
+        animationMap.clear();
         animationFrame = null;
         pauseTime = null;
       };
@@ -236,7 +222,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
       animationController.pending = false;
       cancelAnimationFrame(animationFrame);
       animationFrame = null;
-      animatedValues = {};
+      animationMap.clear();
       pauseTime = null;
       isPaused = false;
       callFinishCallbacks();
