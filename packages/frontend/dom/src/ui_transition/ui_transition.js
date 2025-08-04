@@ -6,8 +6,21 @@ import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
 
 import.meta.css = /* css */ `
+  .ui-transition-container {
+    position: relative;
+  }
+
   .ui-transition-content {
     position: relative;
+  }
+
+  .ui-transition-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
   }
 
   [data-ui-transition-old] {
@@ -44,6 +57,9 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   //       </div>
   //     </div>
   //   </div>
+  //   <div class="ui-transition-overlay">
+  //     <!-- transition elements (clones) are inserted here -->
+  //   </div>
   // </div>
 
   const outerWrapper = container.querySelector(".ui-transition-outer-wrapper");
@@ -51,6 +67,14 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
     ".ui-transition-measure-wrapper",
   );
   const content = container.querySelector(".ui-transition-content");
+  const transitionOverlay = container.querySelector(".ui-transition-overlay");
+
+  // Create overlay if it doesn't exist
+  if (!transitionOverlay) {
+    const overlay = document.createElement("div");
+    overlay.className = "ui-transition-overlay";
+    container.appendChild(overlay);
+  }
   if (!outerWrapper || !measureWrapper || !content) {
     console.error("Missing required ui-transition structure");
     return { cleanup: () => {} };
@@ -188,15 +212,14 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   let previousContent = null; // Track previous content for transitions
 
   const createTransitionSteps = (
-    oldElement,
+    oldContent,
     newElement,
-    { type = "none" } = {},
+    { type = "cross-fade", onComplete } = {},
   ) => {
     const steps = [];
     if (type === "cross-fade") {
-      if (!oldElement) {
+      if (!oldContent) {
         // Case 1: Empty -> Content (fade in only)
-        newElement.style.opacity = "0";
         steps.push(
           createStep({
             element: newElement,
@@ -205,6 +228,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
             sideEffect: (_, { timing }) => {
               if (timing === "end") {
                 newElement.style.opacity = "";
+                onComplete?.();
               }
             },
           }),
@@ -213,24 +237,11 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       }
 
       // Case 2 & 3: Cross-fade between states
-      const oldContent = oldElement.cloneNode(true);
-      oldContent.removeAttribute("data-ui-key");
-      oldContent.setAttribute("data-ui-transition-old", "");
-      oldContent.style.opacity = "1";
-      oldContent.classList.add("ui-transition-old-content");
-      content.insertBefore(oldContent, newElement);
-      newElement.style.opacity = "0";
-
       steps.push(
         createStep({
           element: oldContent,
           property: "opacity",
           target: 0,
-          sideEffect: (_, { timing }) => {
-            if (timing === "end" && oldContent.parentNode) {
-              oldContent.remove();
-            }
-          },
         }),
         createStep({
           element: newElement,
@@ -239,6 +250,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
           sideEffect: (_, { timing }) => {
             if (timing === "end") {
               newElement.style.opacity = "";
+              onComplete?.();
             }
           },
         }),
@@ -315,11 +327,26 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
 
       // Handle transitions between UI states if we have content
       if (firstChild) {
-        // Use the tracked previous content for transition
-        const transitionSteps = createTransitionSteps(
-          previousContent,
-          firstChild,
-        );
+        let oldContent = null;
+        if (previousContent) {
+          // Clone and prepare the old content before creating steps
+          oldContent = previousContent.cloneNode(true);
+          oldContent.removeAttribute("data-ui-key");
+          oldContent.setAttribute("data-ui-transition-old", "");
+          oldContent.style.opacity = "1";
+          transitionOverlay.appendChild(oldContent);
+          firstChild.style.opacity = "0";
+        }
+
+        const transitionSteps = createTransitionSteps(oldContent, firstChild, {
+          type: "cross-fade",
+          onComplete: () => {
+            // Remove all transition elements from overlay
+            while (transitionOverlay.firstChild) {
+              transitionOverlay.firstChild.remove();
+            }
+          },
+        });
         animationSteps.push(...transitionSteps);
       }
 
