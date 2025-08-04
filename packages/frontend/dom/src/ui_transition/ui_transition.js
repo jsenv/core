@@ -31,12 +31,6 @@ import.meta.css = /* css */ `
     width: 100%;
     height: 100%;
   }
-
-  /* Slide transition styles */
-  [data-ui-transition="slide-left"] {
-    transform: translateX(0);
-    will-change: transform;
-  }
 `;
 
 const DEBUG = {
@@ -428,11 +422,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   };
 };
 
-const animateTransition = (
-  oldContent,
-  newElement,
-  { type = "cross-fade", onEnd } = {},
-) => {
+const animateTransition = (oldContent, newElement, { type, onEnd } = {}) => {
   const duration =
     parseInt(
       newElement.closest("[data-ui-transition-duration]")?.dataset
@@ -445,6 +435,9 @@ const animateTransition = (
     to: newElement.getAttribute("data-ui-key"),
   });
   debug("transition", "⏱️ Transition duration:", duration);
+  if (type === undefined) {
+    type = newElement.getAttribute("data-ui-transition");
+  }
 
   if (type === "cross-fade") {
     return applyCrossFade(oldContent, newElement, { duration, onEnd });
@@ -460,14 +453,9 @@ const animateTransition = (
 const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
   const slideAnimation = createAnimationController({ duration });
 
-  // Setup initial positions
-  if (oldElement) {
-    oldElement.style.transform = "translateX(0)";
-  }
-  newElement.style.transform = "translateX(100%)";
-
   if (!oldElement) {
     // Case 1: Empty -> Content (slide in from right)
+    newElement.style.transform = "translateX(100%)";
     slideAnimation.animateAll([
       createStep({
         element: newElement,
@@ -488,6 +476,8 @@ const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
   }
 
   // Case 2: Content -> Content (slide out left, slide in from right)
+  oldElement.style.transform = "translateX(0)";
+  newElement.style.transform = "translateX(100%)";
   slideAnimation.animateAll([
     createStep({
       element: oldElement,

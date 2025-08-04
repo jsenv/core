@@ -64,13 +64,15 @@ export const createAnimationController = ({ duration }) => {
         const element = step.element;
         const targetValue = step.target;
         const property = step.property;
+        const subproperty = step.subproperty;
         const startValue = step.getValue(element);
 
         let existingAnimation;
         for (const runningAnimation of runningAnimations) {
           if (
             runningAnimation.step.element === element &&
-            runningAnimation.step.property === property
+            runningAnimation.step.property === property &&
+            runningAnimation.step.subproperty === subproperty
           ) {
             // If we're already animating this property, update it
             existingAnimation = runningAnimation;
@@ -92,14 +94,17 @@ export const createAnimationController = ({ duration }) => {
 
         const valueDiff = Math.abs(startValue - targetValue);
         const minDiff = property === "opacity" ? 0.1 : 10;
+        const propertyName = subproperty
+          ? `${property}.${subproperty}`
+          : property;
         if (valueDiff === 0) {
           console.warn(
-            `Animation of "${property}" is unnecessary: start and target values are identical (${startValue})`,
+            `Animation of "${propertyName}" is unnecessary: start and target values are identical (${startValue})`,
             { element },
           );
         } else if (valueDiff < minDiff) {
           console.warn(
-            `Animation of "${property}" might be too subtle: change of ${valueDiff} is below recommended threshold of ${minDiff}`,
+            `Animation of "${propertyName}" might be too subtle: change of ${valueDiff} is below recommended threshold of ${minDiff}`,
             { element, from: startValue, to: targetValue },
           );
         }
@@ -172,6 +177,7 @@ export const createAnimationController = ({ duration }) => {
             changeEntryArray.push({
               element: animation.step.element,
               property,
+              subproperty: animation.step.subproperty,
               value: animatedValue,
             });
           }
@@ -195,6 +201,7 @@ export const createAnimationController = ({ duration }) => {
           changeEntryArray.push({
             element,
             property,
+            subproperty: animation.step.subproperty,
             value: finalValue,
           });
         }
@@ -248,24 +255,25 @@ const stringifyTransform = (transformMap) => {
 const createTranslateXStep = ({ element, target, unit = "px", sideEffect }) => {
   const getValue = (element) => {
     const transform = getComputedStyle(element).transform;
-    const transforms = parseTransform(transform);
-    return transforms.get("translateX")?.value || 0;
+    const transformMap = parseTransform(transform);
+    return transformMap.get("translateX")?.value || 0;
   };
 
-  const setValue = (element, value, { unit = "px" } = {}) => {
+  const setValue = (element, value) => {
     const transform = getComputedStyle(element).transform;
-    const transforms = parseTransform(transform);
-    transforms.set("translateX", { value, unit });
-    element.style.transform = stringifyTransform(transforms);
+    const transformMap = parseTransform(transform);
+    transformMap.set("translateX", { value, unit });
+    const transformString = stringifyTransform(transformMap);
+    element.style.transform = transformString;
   };
 
   return {
     element,
-    property: "translateX",
+    property: "transform",
+    subproperty: "translateX",
     target,
     getValue,
-    setValue: (element, value, options) =>
-      setValue(element, value, { ...options, unit }),
+    setValue,
     sideEffect,
   };
 };
