@@ -27,6 +27,29 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   let currentWidth = 0; // Current width we're animating from
   let currentHeight = 0; // Current height we're animating from
   let lastUIKey = null; // Track the last UI key to detect content changes
+  let resizeObserver = null;
+
+  const updateLastContentDimensions = (element) => {
+    // Only track dimensions of actual content (not loading/error states)
+    if (!element.hasAttribute("data-inherit-content-dimensions")) {
+      lastContentWidth = getInnerWidth(element);
+      lastContentHeight = getInnerHeight(element);
+    }
+  };
+
+  // Setup resize observer to track content size changes
+  const setupResizeObserver = (element) => {
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+    }
+    // Only observe actual content elements
+    if (!element.hasAttribute("data-inherit-content-dimensions")) {
+      resizeObserver = new ResizeObserver(() => {
+        updateLastContentDimensions(element);
+      });
+      resizeObserver.observe(element);
+    }
+  };
 
   const measureSize = () => {
     return [getInnerWidth(content), getInnerHeight(content)];
@@ -58,9 +81,14 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       // Get current UI key and state information
       const firstChild = content.children[0];
       const currentUIKey = firstChild?.getAttribute("data-ui-key");
-      const preserveContentHeight = firstChild?.hasAttribute(
-        "data-preserve-content-height",
+      const inheritContentDimensions = firstChild?.hasAttribute(
+        "data-inherit-content-dimensions",
       );
+
+      // Setup resize observer for content elements
+      if (firstChild) {
+        setupResizeObserver(firstChild);
+      }
 
       // Determine transition type based on UI key
       const isUIKeyChange = lastUIKey !== null && currentUIKey !== lastUIKey;
@@ -82,11 +110,10 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         return;
       }
 
-      // Handle height preservation and animation based on state
-      if (isUIKeyChange && !preserveContentHeight) {
-        // New content (not a loading state): animate to new dimensions and release constraints after
-        lastContentWidth = newWidth;
-        lastContentHeight = newHeight;
+      // Handle height inheritance and animation based on state
+      if (isUIKeyChange && !inheritContentDimensions) {
+        // New content (not a loading/error state): animate to new dimensions and release constraints after
+        // Content dimensions will be tracked by ResizeObserver
         wrapper.style.overflow = "hidden";
         animationController.animateAll(
           [
@@ -114,10 +141,10 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         );
         currentWidth = newWidth;
         currentHeight = newHeight;
-      } else if (isUIKeyChange || preserveContentHeight) {
+      } else if (isUIKeyChange || inheritContentDimensions) {
         // Either:
-        // 1. UI key changed but we want to preserve height (loading state)
-        // 2. Same UI key but preserve height requested
+        // 1. UI key changed but we want to inherit content dimensions (loading/error state)
+        // 2. Same UI key but inherit dimensions requested
         // In both cases: maintain last known content dimensions
         const nextWidth = lastContentWidth || newWidth;
         const nextHeight = lastContentHeight || newHeight;
@@ -169,6 +196,9 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   return {
     cleanup: () => {
       mutationObserver.disconnect();
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       animationController.cancel();
     },
     // Additional methods could be added here for direct control
