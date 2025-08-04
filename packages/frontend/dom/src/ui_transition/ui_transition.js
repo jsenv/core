@@ -489,11 +489,14 @@ const getCurrentTranslateX = (element) => {
 
 const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
   const slideAnimation = createAnimationController({ duration });
+  const containerWidth = newElement.parentElement?.offsetWidth || 0;
 
   if (!oldElement) {
     // Case 1: Empty -> Content (slide in from right)
     const currentPos = getCurrentTranslateX(newElement);
-    newElement.style.transform = `translateX(${currentPos || "100%"})`;
+    const startPos =
+      currentPos || (containerWidth ? `${containerWidth}px` : "100%");
+    newElement.style.transform = `translateX(${startPos})`;
     slideAnimation.animateAll([
       createStep({
         element: newElement,
@@ -518,13 +521,13 @@ const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
   const currentOldPos = getCurrentTranslateX(oldElement);
   const currentNewPos = getCurrentTranslateX(newElement);
 
-  // If new element doesn't have a position, start from where old element is
-  const startNewPos = currentNewPos || `${currentOldPos}px`;
+  // If new element doesn't have a position, start from container width
+  const startNewPos = currentNewPos || containerWidth;
 
   oldElement.style.transform = `translateX(${currentOldPos}px)`;
-  newElement.style.transform = `translateX(${startNewPos})`;
+  newElement.style.transform = `translateX(${startNewPos}px)`;
 
-  debug("transition", "🎯 Continuing from positions:", {
+  debug("transition", "🎯 Starting slide positions:", {
     old: currentOldPos,
     new: startNewPos,
   });
@@ -533,7 +536,7 @@ const applySlideLeft = (oldElement, newElement, { duration, onEnd }) => {
     createStep({
       element: oldElement,
       property: "transform",
-      target: "translateX(-100%)",
+      target: `translateX(${-containerWidth}px)`,
       sideEffect: (value, { timing }) => {
         debug("transition", "🔄 Old content slide out:", value);
         oldElement.style.transform = value;
