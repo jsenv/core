@@ -41,8 +41,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   const updateLastContentDimensions = (element) => {
     // Only track dimensions of actual content (not loading/error states)
     if (!element.hasAttribute("data-inherit-content-dimensions")) {
-      const newWidth = getWidth(wrapper);
-      const newHeight = getHeight(wrapper);
+      const [newWidth, newHeight] = measureSize();
       debug("📊 Content dimensions updated via ResizeObserver:", {
         width: `${lastContentWidth} → ${newWidth}`,
         height: `${lastContentHeight} → ${newHeight}`,
@@ -67,6 +66,9 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   };
 
   const measureSize = () => {
+    // we can measure the wrapper directly because we don't use padding no border
+    // this allows to measure eventual margins used by the content that would overflow and
+    // take some space on the wrapper
     return [getWidth(wrapper), getHeight(wrapper)];
   };
   [currentWidth, currentHeight] = measureSize();
