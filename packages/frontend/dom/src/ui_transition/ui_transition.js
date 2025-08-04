@@ -2,8 +2,8 @@ import {
   createAnimationController,
   createStep,
 } from "../animation/create_animation_controller.js";
-import { getInnerHeight } from "../size/get_inner_height.js";
-import { getInnerWidth } from "../size/get_inner_width.js";
+import { getHeight } from "../size/get_height.js";
+import { getWidth } from "../size/get_width.js";
 
 const DEBUG = true;
 const debug = (...args) => {
@@ -41,8 +41,8 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   const updateLastContentDimensions = (element) => {
     // Only track dimensions of actual content (not loading/error states)
     if (!element.hasAttribute("data-inherit-content-dimensions")) {
-      const newWidth = getInnerWidth(element);
-      const newHeight = getInnerHeight(element);
+      const newWidth = getWidth(wrapper);
+      const newHeight = getHeight(wrapper);
       debug("📊 Content dimensions updated via ResizeObserver:", {
         width: `${lastContentWidth} → ${newWidth}`,
         height: `${lastContentHeight} → ${newHeight}`,
@@ -67,7 +67,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   };
 
   const measureSize = () => {
-    return [getInnerWidth(content), getInnerHeight(content)];
+    return [getWidth(wrapper), getHeight(wrapper)];
   };
   [currentWidth, currentHeight] = measureSize();
   wrapper.style.width = `${currentWidth}px`;
@@ -76,7 +76,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
 
   let isUpdating = false;
 
-  const updateSize = () => {
+  const onMutation = () => {
     if (isUpdating) {
       debug("⚠️ Preventing recursive update");
       return; // Prevent recursive updates
@@ -87,19 +87,19 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       if (DEBUG) {
         console.group("UI Transition Update");
       }
-      debug("🔄 Update triggered");
+      debug(
+        `🔄 Update triggered, current size: ${currentWidth}x${currentHeight}`,
+      );
 
       // Temporarily remove size constraints to measure true content size
       wrapper.style.width = "";
       wrapper.style.height = "";
       animationController.cancel(); // ensure any ongoing animations are stopped otherwise size measurements will be incorrect
       const [newWidth, newHeight] = measureSize();
-      debug("📐 Measured size:", {
-        newWidth,
-        newHeight,
-        currentWidth,
-        currentHeight,
-      });
+      if (newHeight === 92) {
+        debugger;
+      }
+      debug(`📐 Measured size: ${newWidth}x${newHeight}`);
       // Restore current size constraints
       wrapper.style.width = `${currentWidth}px`;
       wrapper.style.height = `${currentHeight}px`;
@@ -239,7 +239,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   // Watch for direct children mutations only in the content area
   // We only care about top-level content changes where data-ui-key lives
   const mutationObserver = new MutationObserver(() => {
-    updateSize();
+    onMutation();
   });
 
   // Start observing only direct children of the content element
