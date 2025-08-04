@@ -93,6 +93,7 @@
     <div
       id="transition-box"
       class="ui-transition-container"
+      data-ui-transition="slide-left"
       data-ui-transition-duration="3000"
     >
       <div class="ui-transition-outer-wrapper">
@@ -160,7 +161,7 @@
       startButton.addEventListener("click", () => {
         // Set loading state
         setContent(`
-          <div class="test-content loading" data-ui-key="b" data-ui-name="b-loading" data-inherit-content-dimensions data-ui-transition="slide-left">
+          <div class="test-content loading" data-ui-key="b" data-ui-name="b-loading" data-inherit-content-dimensions>
             Loading...
           </div>
         `);
@@ -192,7 +193,7 @@
       insertButton.addEventListener("click", () => {
         // Replace loading with content
         setContent(`
-          <div class="test-content content" style="background-color: orange" data-ui-key="b" data-ui-name="b-content" data-ui-transition="slide-left">
+          <div class="test-content content" style="background-color: orange" data-ui-key="b" data-ui-name="b-content">
             New Content
           </div>
         `);

@@ -386,10 +386,16 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           return { oldContent, cleanup };
         };
 
+        const duration = parseInt(
+          container.getAttribute("data-ui-transition-duration") || 300,
+        );
+        const type = container.getAttribute("data-ui-transition");
+
         animateTransition(
           transitionAnimationController,
           firstChild,
           setupTransition,
+          { duration, type },
         );
       } else {
         // No transition needed, clean up any remaining old elements
@@ -520,54 +526,37 @@ const animateTransition = (
   animationController,
   newElement,
   setupTransition,
-  { type, onEnd } = {},
+  { type, duration },
 ) => {
-  const duration =
-    parseInt(
-      newElement.closest("[data-ui-transition-duration]")?.dataset
-        .uiTransitionDuration,
-      10,
-    ) || 300;
+  let applyAnimation;
+  if (type === "cross-fade") {
+    applyAnimation = applyCrossFade;
+  } else if (type === "slide-left") {
+    applyAnimation = applySlideLeft;
+  } else {
+    return;
+  }
 
   // Call setup function to prepare transition elements
   const { oldContent, cleanup } = setupTransition();
-
   debug("transition", "🎭 Starting transition animation", {
     type,
     from: oldContent ? oldContent.getAttribute("data-ui-key") : "none",
     to: newElement.getAttribute("data-ui-key"),
   });
   debug("transition", "⏱️ Transition duration:", duration);
-
-  // Update animation controller duration dynamically
-  animationController.setDuration(duration);
-
-  if (type === undefined) {
-    type = newElement.getAttribute("data-ui-transition");
-  }
-
-  let steps = [];
-
-  // Create a wrapper onEnd that calls both cleanup and user onEnd
-  const wrappedOnEnd = () => {
-    cleanup();
-    onEnd?.();
-  };
-
-  if (type === "cross-fade") {
-    steps = applyCrossFade(oldContent, newElement, { onEnd: wrappedOnEnd });
-  } else if (type === "slide-left") {
-    steps = applySlideLeft(oldContent, newElement, { onEnd: wrappedOnEnd });
-  }
-
+  const steps = applyAnimation(oldContent, newElement);
   if (steps.length === 0) {
     // If no steps, still call cleanup
     cleanup();
     return;
   }
-
-  // Use the persistent animation controller
-  animationController.animateAll(steps);
+  animationController.setDuration(duration);
+  animationController.animateAll(steps, {
+    onEnd: () => {
+      cleanup();
+    },
+  });
 };
 
 const getCurrentTranslateX = (element) => {
@@ -583,10 +572,9 @@ const getCurrentTranslateX = (element) => {
   return parseFloat(values[values.length - 2]) || 0;
 };
 
-const applySlideLeft = (oldElement, newElement, { onEnd }) => {
+const applySlideLeft = (oldElement, newElement) => {
   if (!oldElement && !newElement) {
     // Edge case: no elements to animate
-    onEnd?.();
     return [];
   }
 
@@ -609,11 +597,8 @@ const applySlideLeft = (oldElement, newElement, { onEnd }) => {
         target: `translateX(${-containerWidth}px)`,
         sideEffect: (value, { timing }) => {
           debug("transition", "🔄 Content slide out to empty:", value);
-          oldElement.style.transform = value;
           if (timing === "end") {
             debug("transition", "✨ Slide out complete");
-            oldElement.remove();
-            onEnd?.();
           }
         },
       }),
@@ -634,14 +619,8 @@ const applySlideLeft = (oldElement, newElement, { onEnd }) => {
         element: newElement,
         property: "transform",
         target: "translateX(0)",
-        sideEffect: (value, { timing }) => {
+        sideEffect: (value) => {
           debug("transition", "🔄 Slide in progress:", value);
-          newElement.style.transform = value;
-          if (timing === "end") {
-            debug("transition", "✨ Slide complete");
-            newElement.style.transform = "";
-            onEnd?.();
-          }
         },
       }),
     ];
@@ -668,12 +647,8 @@ const applySlideLeft = (oldElement, newElement, { onEnd }) => {
       element: oldElement,
       property: "transform",
       target: `translateX(${-containerWidth}px)`,
-      sideEffect: (value, { timing }) => {
+      sideEffect: (value) => {
         debug("transition", "🔄 Old content slide out:", value);
-        oldElement.style.transform = value;
-        if (timing === "end") {
-          oldElement.remove();
-        }
       },
     }),
     createStep({
@@ -682,21 +657,18 @@ const applySlideLeft = (oldElement, newElement, { onEnd }) => {
       target: "translateX(0)",
       sideEffect: (value, { timing }) => {
         debug("transition", "🔄 New content slide in:", value);
-        newElement.style.transform = value;
         if (timing === "end") {
           debug("transition", "✨ Slide complete");
-          newElement.style.transform = "";
-          onEnd?.();
         }
       },
     }),
   ];
 };
 
-const applyCrossFade = (oldElement, newElement, { onEnd }) => {
+const applyCrossFade = (oldElement, newElement) => {
   if (!oldElement && !newElement) {
     // Edge case: no elements to animate
-    onEnd?.();
+
     return [];
   }
 
@@ -722,11 +694,8 @@ const applyCrossFade = (oldElement, newElement, { onEnd }) => {
             "🔄 Content fade out to empty:",
             value.toFixed(3),
           );
-          oldElement.style.opacity = value.toString();
           if (timing === "end") {
             debug("transition", "✨ Fade out complete");
-            oldElement.remove();
-            onEnd?.();
           }
         },
       }),
@@ -769,11 +738,9 @@ const applyCrossFade = (oldElement, newElement, { onEnd }) => {
         target: 1,
         sideEffect: (value, { timing }) => {
           debug("transition", "🔄 Fade in progress:", value.toFixed(3));
-          newElement.style.opacity = value.toString();
+
           if (timing === "end") {
             debug("transition", "✨ Transition complete");
-            newElement.style.opacity = "";
-            onEnd?.();
           }
         },
       }),
@@ -786,14 +753,10 @@ const applyCrossFade = (oldElement, newElement, { onEnd }) => {
       element: oldElement,
       property: "opacity",
       target: 0,
-      sideEffect: (value, { timing }) => {
+      sideEffect: (value) => {
         // Skip if old content opacity is already 0
         if (value > 0) {
           debug("transition", "🔄 Old content fade out:", value.toFixed(3));
-          oldElement.style.opacity = value.toString();
-        }
-        if (timing === "end") {
-          oldElement.remove();
         }
       },
     }),
@@ -806,12 +769,9 @@ const applyCrossFade = (oldElement, newElement, { onEnd }) => {
         const currentOpacity = parseFloat(getComputedStyle(newElement).opacity);
         if (isNaN(currentOpacity) || value > currentOpacity) {
           debug("transition", "🔄 New content fade in:", value.toFixed(3));
-          newElement.style.opacity = value.toString();
         }
         if (timing === "end") {
           debug("transition", "✨ Cross-fade complete");
-          newElement.style.opacity = "";
-          onEnd?.();
         }
       },
     }),
