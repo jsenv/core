@@ -48,6 +48,9 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       });
       lastContentWidth = newWidth;
       lastContentHeight = newHeight;
+      // Also update current dimensions to track actual size
+      currentWidth = newWidth;
+      currentHeight = newHeight;
     }
   };
 
