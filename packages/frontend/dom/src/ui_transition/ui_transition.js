@@ -308,10 +308,24 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         lastInheritContentDimensions !== inheritContentDimensions; // But different content phase
       const shouldTransition = isUIKeyChange || isContentPhaseChange;
 
-      debug("🔄 Transition type:", {
+      // Define clear transition scenarios
+      const hadContent = previousContent !== null;
+      const hasContent = firstChild !== null;
+      const becomesEmpty = hadContent && !hasContent;
+      const becomesContent = !hadContent && hasContent;
+      const contentToContent = hadContent && hasContent && isUIKeyChange;
+      const phaseChange = hadContent && hasContent && isContentPhaseChange;
+
+      debug("🔄 Transition scenarios:", {
         isUIKeyChange,
         isContentPhaseChange,
         shouldTransition,
+        hadContent,
+        hasContent,
+        becomesEmpty,
+        becomesContent,
+        contentToContent,
+        phaseChange,
         lastInheritContentDimensions,
         currentInheritContentDimensions: inheritContentDimensions,
         reason: isUIKeyChange
@@ -321,8 +335,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             : "Same content",
       });
 
-      // Handle transitions between UI states if we have content
-      if (firstChild) {
+      // Handle transitions between UI states - can happen even when becoming empty
+      if (shouldTransition) {
         // First, clean up any existing old content in the overlay but preserve current transitions
         const existingOldContents = transitionOverlay.querySelectorAll(
           "[data-ui-transition-old]",
@@ -331,49 +345,63 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         // Cancel any ongoing transition before starting a new one
         transitionAnimationController.cancel();
 
-        let oldContent = null;
-        // Check if we have an ongoing transition element that we should continue from
-        const currentTransitionElement = existingOldContents[0];
+        // Determine if we need to create a setup function that clones content
+        const needsOldContentClone =
+          (contentToContent || phaseChange || becomesEmpty) &&
+          previousContent &&
+          !existingOldContents[0];
 
-        if (currentTransitionElement && shouldTransition) {
-          // Use the current transitioning element as the old content
-          oldContent = currentTransitionElement;
-          // Don't remove it yet - the animation will handle removal
-          debug("transition", "🔄 Continuing from current transition element");
-        } else if (previousContent && shouldTransition) {
-          // Clean up any old transition elements first
-          existingOldContents.forEach((oldEl) => oldEl.remove());
+        const setupTransition = () => {
+          let oldContent = null;
+          let cleanup = () => {};
 
-          // Clone and prepare the old content
-          oldContent = previousContent.cloneNode(true);
-          oldContent.removeAttribute("data-ui-key");
-          oldContent.setAttribute("data-ui-transition-old", "");
-          transitionOverlay.appendChild(oldContent);
-          debug(
-            "transition",
-            "🔄 Starting fresh transition from previous content",
-          );
-        } else {
-          // Clean up any remaining old elements
-          existingOldContents.forEach((oldEl) => oldEl.remove());
-        }
+          // Check if we have an ongoing transition element that we should continue from
+          const currentTransitionElement = existingOldContents[0];
 
-        if (oldContent) {
-          animateTransition(
-            transitionAnimationController,
-            oldContent,
-            firstChild,
-          );
-        }
+          if (currentTransitionElement) {
+            // Use the current transitioning element as the old content
+            oldContent = currentTransitionElement;
+            debug(
+              "transition",
+              "🔄 Continuing from current transition element",
+            );
+            // Cleanup will be handled by animation sideEffects
+          } else if (needsOldContentClone) {
+            // Clean up any old transition elements first
+            existingOldContents.forEach((oldEl) => oldEl.remove());
+
+            // Clone and prepare the old content
+            oldContent = previousContent.cloneNode(true);
+            oldContent.removeAttribute("data-ui-key");
+            oldContent.setAttribute("data-ui-transition-old", "");
+            transitionOverlay.appendChild(oldContent);
+            debug("transition", "🔄 Cloned previous content for transition");
+            // Cleanup will be handled by animation sideEffects
+          } else {
+            // Clean up any remaining old elements
+            existingOldContents.forEach((oldEl) => oldEl.remove());
+            debug("transition", "🔄 No old content to clone");
+          }
+
+          return { oldContent, cleanup };
+        };
+
+        animateTransition(
+          transitionAnimationController,
+          firstChild,
+          setupTransition,
+        );
+      } else {
+        // No transition needed, clean up any remaining old elements
+        const existingOldContents = transitionOverlay.querySelectorAll(
+          "[data-ui-transition-old]",
+        );
+        existingOldContents.forEach((oldEl) => oldEl.remove());
       }
 
       // Store the current content for next transition
       // We must clone it before any mutations occur
       previousContent = firstChild ? firstChild.cloneNode(true) : null;
-
-      // Detect state transitions before updating state
-      const becomesContent =
-        wasInheritingDimensions && !inheritContentDimensions;
 
       // Store current state for next update
       lastUIKey = currentUIKey;
@@ -416,7 +444,10 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       });
 
       // Handle height inheritance and animation based on state
-      if (becomesContent || (isUIKeyChange && !inheritContentDimensions)) {
+      const becomesContentPhase =
+        wasInheritingDimensions && !inheritContentDimensions;
+
+      if (becomesContentPhase || (isUIKeyChange && !inheritContentDimensions)) {
         // Animate when:
         // 1. New content with different key
         // 2. Transitioning from loading/error state (wasInheriting) to actual content (!inheriting)
@@ -487,8 +518,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
 const animateTransition = (
   animationController,
-  oldContent,
   newElement,
+  setupTransition,
   { type, onEnd } = {},
 ) => {
   const duration =
@@ -497,6 +528,10 @@ const animateTransition = (
         .uiTransitionDuration,
       10,
     ) || 300;
+
+  // Call setup function to prepare transition elements
+  const { oldContent, cleanup } = setupTransition();
+
   debug("transition", "🎭 Starting transition animation", {
     type,
     from: oldContent ? oldContent.getAttribute("data-ui-key") : "none",
@@ -513,13 +548,21 @@ const animateTransition = (
 
   let steps = [];
 
+  // Create a wrapper onEnd that calls both cleanup and user onEnd
+  const wrappedOnEnd = () => {
+    cleanup();
+    onEnd?.();
+  };
+
   if (type === "cross-fade") {
-    steps = applyCrossFade(oldContent, newElement, { onEnd });
+    steps = applyCrossFade(oldContent, newElement, { onEnd: wrappedOnEnd });
   } else if (type === "slide-left") {
-    steps = applySlideLeft(oldContent, newElement, { onEnd });
+    steps = applySlideLeft(oldContent, newElement, { onEnd: wrappedOnEnd });
   }
 
   if (steps.length === 0) {
+    // If no steps, still call cleanup
+    cleanup();
     return;
   }
 
@@ -541,10 +584,46 @@ const getCurrentTranslateX = (element) => {
 };
 
 const applySlideLeft = (oldElement, newElement, { onEnd }) => {
+  if (!oldElement && !newElement) {
+    // Edge case: no elements to animate
+    onEnd?.();
+    return [];
+  }
+
+  if (!newElement) {
+    // Case: Content -> Empty (slide out left only)
+    const containerWidth = oldElement.parentElement?.offsetWidth || 0;
+    const currentOldPos = getCurrentTranslateX(oldElement);
+
+    oldElement.style.transform = `translateX(${currentOldPos}px)`;
+
+    debug("transition", "🎯 Slide out to empty:", {
+      old: currentOldPos,
+      target: -containerWidth,
+    });
+
+    return [
+      createStep({
+        element: oldElement,
+        property: "transform",
+        target: `translateX(${-containerWidth}px)`,
+        sideEffect: (value, { timing }) => {
+          debug("transition", "🔄 Content slide out to empty:", value);
+          oldElement.style.transform = value;
+          if (timing === "end") {
+            debug("transition", "✨ Slide out complete");
+            oldElement.remove();
+            onEnd?.();
+          }
+        },
+      }),
+    ];
+  }
+
   const containerWidth = newElement.parentElement?.offsetWidth || 0;
 
   if (!oldElement) {
-    // Case 1: Empty -> Content (slide in from right)
+    // Case: Empty -> Content (slide in from right)
     const currentPos = getCurrentTranslateX(newElement);
     const startPos =
       currentPos || (containerWidth ? `${containerWidth}px` : "100%");
@@ -568,7 +647,7 @@ const applySlideLeft = (oldElement, newElement, { onEnd }) => {
     ];
   }
 
-  // Case 2: Content -> Content (slide out left, slide in from right)
+  // Case: Content -> Content (slide out left, slide in from right)
   // Get current positions - if elements are mid-animation, use their current position
   const currentOldPos = getCurrentTranslateX(oldElement);
   const currentNewPos = getCurrentTranslateX(newElement);
@@ -615,6 +694,45 @@ const applySlideLeft = (oldElement, newElement, { onEnd }) => {
 };
 
 const applyCrossFade = (oldElement, newElement, { onEnd }) => {
+  if (!oldElement && !newElement) {
+    // Edge case: no elements to animate
+    onEnd?.();
+    return [];
+  }
+
+  if (!newElement) {
+    // Case: Content -> Empty (fade out only)
+    const oldOpacity = parseFloat(getComputedStyle(oldElement).opacity);
+    const startOpacity = isNaN(oldOpacity) ? 1 : oldOpacity;
+
+    oldElement.style.opacity = startOpacity.toString();
+
+    debug("transition", "🎨 Fade out to empty:", {
+      startOpacity,
+    });
+
+    return [
+      createStep({
+        element: oldElement,
+        property: "opacity",
+        target: 0,
+        sideEffect: (value, { timing }) => {
+          debug(
+            "transition",
+            "🔄 Content fade out to empty:",
+            value.toFixed(3),
+          );
+          oldElement.style.opacity = value.toString();
+          if (timing === "end") {
+            debug("transition", "✨ Fade out complete");
+            oldElement.remove();
+            onEnd?.();
+          }
+        },
+      }),
+    ];
+  }
+
   // Get the current opacity - check both old content and new element
   const oldOpacity = oldElement
     ? parseFloat(getComputedStyle(oldElement).opacity)
@@ -643,7 +761,7 @@ const applyCrossFade = (oldElement, newElement, { onEnd }) => {
   }
 
   if (!oldElement) {
-    // Case 1: Empty -> Content (fade in only)
+    // Case: Empty -> Content (fade in only)
     return [
       createStep({
         element: newElement,
@@ -662,7 +780,7 @@ const applyCrossFade = (oldElement, newElement, { onEnd }) => {
     ];
   }
 
-  // Case 2 & 3: Cross-fade between states
+  // Case: Content -> Content (cross-fade between states)
   return [
     createStep({
       element: oldElement,
