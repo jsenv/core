@@ -1,6 +1,9 @@
+import {
+  createAnimationController,
+  createStep,
+} from "../animation/create_animation_controller.js";
 import { getInnerHeight } from "../size/get_inner_height.js";
 import { getInnerWidth } from "../size/get_inner_width.js";
-import { createSizeAnimationController } from "../size/size_animation_controller.js";
 
 export const initUITransition = (container, { duration = 300 } = {}) => {
   // Validate and get references to required elements
@@ -16,7 +19,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
     return { cleanup: () => {} };
   }
 
-  const sizeController = createSizeAnimationController(wrapper, { duration });
+  const animationController = createAnimationController(wrapper, { duration });
 
   // Track dimensions and UI state
   let lastContentWidth = 0; // Last known content state width
@@ -46,7 +49,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       // Temporarily remove size constraints to measure true content size
       wrapper.style.width = "";
       wrapper.style.height = "";
-      sizeController.cancel(); // ensure any ongoing animations are stopped otherwise size measurements will be incorrect
+      animationController.cancel(); // ensure any ongoing animations are stopped otherwise size measurements will be incorrect
       const [newWidth, newHeight] = measureSize();
       // Restore current size constraints
       wrapper.style.width = `${currentWidth}px`;
@@ -85,10 +88,10 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         lastContentWidth = newWidth;
         lastContentHeight = newHeight;
         wrapper.style.overflow = "hidden";
-        sizeController.animateTo({
-          width: newWidth,
-          height: newHeight,
-        });
+        animationController.animateAll([
+          createStep({ property: "width", target: newWidth }),
+          createStep({ property: "height", target: newHeight }),
+        ]);
         currentWidth = newWidth;
         currentHeight = newHeight;
       } else if (preserveContentHeight) {
@@ -102,10 +105,10 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
           wrapper.style.overflow = "hidden";
         }
 
-        sizeController.animateTo({
-          width: nextWidth,
-          height: nextHeight,
-        });
+        animationController.animateAll([
+          createStep({ property: "width", target: nextWidth }),
+          createStep({ property: "height", target: nextHeight }),
+        ]);
         currentWidth = nextWidth;
         currentHeight = nextHeight;
       } else {
@@ -113,10 +116,10 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         lastContentWidth = newWidth;
         lastContentHeight = newHeight;
         wrapper.style.overflow = "hidden";
-        sizeController.animateTo({
-          width: newWidth,
-          height: newHeight,
-        });
+        animationController.animateAll([
+          createStep({ property: "width", target: newWidth }),
+          createStep({ property: "height", target: newHeight }),
+        ]);
         currentWidth = newWidth;
         currentHeight = newHeight;
       }
@@ -141,7 +144,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   return {
     cleanup: () => {
       mutationObserver.disconnect();
-      sizeController.cancel();
+      animationController.cancel();
     },
     // Additional methods could be added here for direct control
     // setContent: (content) => {...}
