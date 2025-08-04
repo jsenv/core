@@ -63,6 +63,8 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         finishCallbackSet.add(onEnd);
       }
 
+      const animationToKillSet = new Set(animationSet);
+
       let somethingChanged = false;
       for (const step of stepArray) {
         const element = step.element;
@@ -71,29 +73,32 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         const subproperty = step.subproperty;
         const startValue = step.getValue(element);
 
-        let existingAnimation;
-        for (const animation of animationSet) {
-          if (
-            animation.step.element === element &&
-            animation.step.property === property &&
-            animation.step.subproperty === subproperty
-          ) {
-            // If we're already animating this property, update it
-            existingAnimation = animation;
-            break;
+        if (animationSet.size) {
+          let existingAnimation;
+          for (const animation of animationSet) {
+            if (
+              animation.step.element === element &&
+              animation.step.property === property &&
+              animation.step.subproperty === subproperty
+            ) {
+              // If we're already animating this property, update it
+              existingAnimation = animation;
+              animationToKillSet.delete(animation);
+              break;
+            }
           }
-        }
 
-        if (existingAnimation) {
-          if (startValue === targetValue) {
-            // nothing to do, same element, same property, same target
+          if (existingAnimation) {
+            if (startValue === targetValue) {
+              // nothing to do, same element, same property, same target
+              continue;
+            }
+            // update the animation target
+            existingAnimation.targetValue = targetValue;
+            existingAnimation.startValue = startValue;
+            somethingChanged = true;
             continue;
           }
-          // update the animation target
-          existingAnimation.targetValue = targetValue;
-          existingAnimation.startValue = startValue;
-          somethingChanged = true;
-          continue;
         }
 
         const valueDiff = Math.abs(startValue - targetValue);
@@ -143,6 +148,11 @@ export const createAnimationController = ({ duration: initialDuration }) => {
           element.removeAttribute(`data-${property}-animated`);
         });
       }
+
+      for (const animationToKill of animationToKillSet) {
+        animationSet.delete(animationToKill);
+      }
+
       if (somethingChanged) {
         startTime = document.timeline.currentTime;
       }
