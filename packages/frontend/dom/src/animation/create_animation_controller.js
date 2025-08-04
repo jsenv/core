@@ -7,7 +7,7 @@ const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
 export const createAnimationController = ({ duration: initialDuration }) => {
   let duration = initialDuration;
-  const runningAnimations = new Set();
+  const animationSet = new Set();
   let animationFrame;
   let startTime;
   let pauseTime;
@@ -72,14 +72,14 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         const startValue = step.getValue(element);
 
         let existingAnimation;
-        for (const runningAnimation of runningAnimations) {
+        for (const animation of animationSet) {
           if (
-            runningAnimation.step.element === element &&
-            runningAnimation.step.property === property &&
-            runningAnimation.step.subproperty === subproperty
+            animation.step.element === element &&
+            animation.step.property === property &&
+            animation.step.subproperty === subproperty
           ) {
             // If we're already animating this property, update it
-            existingAnimation = runningAnimation;
+            existingAnimation = animation;
             break;
           }
         }
@@ -114,7 +114,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         }
 
         somethingChanged = true;
-        runningAnimations.add({
+        animationSet.add({
           step,
           targetValue,
           startValue,
@@ -171,7 +171,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         if (progress < 1) {
           const easedProgress = easing(progress);
           const changeEntryArray = [];
-          for (const animation of runningAnimations) {
+          for (const animation of animationSet) {
             const startValue = animation.startValue;
             const targetValue = animation.targetValue;
             const property = animation.step.property;
@@ -196,7 +196,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         // Animation complete
         timing = "end";
         const changeEntryArray = [];
-        for (const animation of runningAnimations) {
+        for (const animation of animationSet) {
           const element = animation.step.element;
           const property = animation.step.property;
           const finalValue = animation.targetValue;
@@ -214,7 +214,7 @@ export const createAnimationController = ({ duration: initialDuration }) => {
         }
         animationController.pending = false;
         callFinishCallbacks();
-        runningAnimations.clear();
+        animationSet.clear();
         animatedValues = {};
         animationFrame = null;
         pauseTime = null;
