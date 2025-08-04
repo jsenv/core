@@ -94,13 +94,10 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       );
 
       // Temporarily remove size constraints to measure true content size
+      animationController.cancel(); // ensure any ongoing animations are stopped otherwise size measurements will be incorrect
       wrapper.style.width = "";
       wrapper.style.height = "";
-      animationController.cancel(); // ensure any ongoing animations are stopped otherwise size measurements will be incorrect
       const [newWidth, newHeight] = measureSize();
-      if (newHeight === 92) {
-        debugger;
-      }
       debug(`📐 Measured size: ${newWidth}x${newHeight}`);
       // Restore current size constraints
       wrapper.style.width = `${currentWidth}px`;
