@@ -361,21 +361,24 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
               "transition",
               "🔄 Continuing from current transition element",
             );
-            // Cleanup will be handled by animation sideEffects
+            cleanup = () => {
+              oldContent.remove();
+            };
           } else if (needsOldContentClone) {
             // Clean up any old transition elements first
-            existingOldContents.forEach((oldEl) => oldEl.remove());
-
+            transitionOverlay.innerHTML = "";
             // Clone and prepare the old content
             oldContent = previousContent.cloneNode(true);
             oldContent.removeAttribute("data-ui-key");
             oldContent.setAttribute("data-ui-transition-old", "");
             transitionOverlay.appendChild(oldContent);
             debug("transition", "🔄 Cloned previous content for transition");
-            // Cleanup will be handled by animation sideEffects
+            cleanup = () => {
+              oldContent.remove();
+            };
           } else {
             // Clean up any remaining old elements
-            existingOldContents.forEach((oldEl) => oldEl.remove());
+            transitionOverlay.innerHTML = "";
             debug("transition", "🔄 No old content to clone");
           }
 
@@ -395,10 +398,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         );
       } else {
         // No transition needed, clean up any remaining old elements
-        const existingOldContents = transitionOverlay.querySelectorAll(
-          "[data-ui-transition-old]",
-        );
-        existingOldContents.forEach((oldEl) => oldEl.remove());
+        transitionOverlay.innerHTML = "";
       }
 
       // Store the current content for next transition
@@ -627,8 +627,22 @@ const applySlideLeft = (oldElement, newElement) => {
   const currentOldPos = getCurrentTranslateX(oldElement);
   const currentNewPos = getCurrentTranslateX(newElement);
 
-  // If new element doesn't have a position, start from container width
-  const startNewPos = currentNewPos || containerWidth;
+  // For smooth continuation: if the old element is mid-transition (not at position 0),
+  // start the new element from where the old element currently is for visual continuity
+  let startNewPos;
+  if (currentOldPos !== 0 && currentNewPos === 0) {
+    // Old element is mid-transition, new element needs to start from old element's position
+    // This ensures smooth visual continuity when interrupting transitions
+    startNewPos = currentOldPos;
+    debug(
+      "transition",
+      "📐 Using old element position for continuity:",
+      currentOldPos,
+    );
+  } else {
+    // Use current new position if it exists, otherwise start from container width
+    startNewPos = currentNewPos || containerWidth;
+  }
 
   oldElement.style.transform = `translateX(${currentOldPos}px)`;
   newElement.style.transform = `translateX(${startNewPos}px)`;
