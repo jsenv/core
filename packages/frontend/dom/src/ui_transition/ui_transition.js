@@ -14,16 +14,30 @@ const debug = (...args) => {
   console.debug(...args);
 };
 
-export const initUITransition = (container, { duration = 3000 } = {}) => {
+export const initUITransition = (container, { duration = 300 } = {}) => {
   // Validate and get references to required elements
   if (!container.classList.contains("ui-transition-container")) {
     console.error("Element must have ui-transition-container class");
     return { cleanup: () => {} };
   }
 
-  const wrapper = container.querySelector(".ui-transition-wrapper");
+  // Required structure:
+  // <div class="ui-transition-container">
+  //   <div class="ui-transition-outer-wrapper"> <!-- for animation constraints -->
+  //     <div class="ui-transition-measure-wrapper"> <!-- for content measurements -->
+  //       <div class="ui-transition-content">
+  //         <!-- actual content -->
+  //       </div>
+  //     </div>
+  //   </div>
+  // </div>
+
+  const outerWrapper = container.querySelector(".ui-transition-outer-wrapper");
+  const measureWrapper = container.querySelector(
+    ".ui-transition-measure-wrapper",
+  );
   const content = container.querySelector(".ui-transition-content");
-  if (!wrapper || !content) {
+  if (!outerWrapper || !measureWrapper || !content) {
     console.error("Missing required ui-transition structure");
     return { cleanup: () => {} };
   }
@@ -43,8 +57,12 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
       // Only track dimensions of actual content (not loading/error states)
       return;
     }
-    const [newWidth, newHeight] = measureSize();
-    debug("📊 Content dimensions updated via ResizeObserver:", {
+    // Measure natural size using measure wrapper which has no constraints
+    // No need to remove constraints since measureWrapper is always unconstrained
+    const newWidth = measureWrapper.offsetWidth;
+    const newHeight = measureWrapper.offsetHeight;
+
+    debug("📊 Content natural size from ResizeObserver:", {
       width: `${lastContentWidth} → ${newWidth}`,
       height: `${lastContentHeight} → ${newHeight}`,
     });
@@ -52,7 +70,7 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
     lastContentHeight = newHeight;
 
     // If we have an ongoing animation and content has data-animate-height,
-    // update the animation target to match the new content height
+    // update the animation target to match the natural content height
     if (animationController.pending) {
       debug(
         "🎯 Updating animation target height to match content:",
@@ -68,24 +86,22 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
   };
 
   // Setup resize observer to track content size changes
-  const setupResizeObserver = (element) => {
+  const setupResizeObserver = () => {
     if (resizeObserver) {
       resizeObserver.disconnect();
     }
-    // Only observe actual content elements
-    if (!element.hasAttribute("data-inherit-content-dimensions")) {
-      resizeObserver = new ResizeObserver(() => {
-        updateLastContentDimensions(element);
-      });
-      resizeObserver.observe(element);
-    }
+    // Observe the measure wrapper which has no constraints
+    resizeObserver = new ResizeObserver(() => {
+      // Always measure using the measureWrapper
+      updateLastContentDimensions(content);
+    });
+    resizeObserver.observe(measureWrapper);
   };
 
   const measureSize = () => {
-    // we can measure the wrapper directly because we don't use padding no border
-    // this allows to measure eventual margins used by the content that would overflow and
-    // take some space on the wrapper
-    return [getWidth(wrapper), getHeight(wrapper)];
+    // We measure the inner wrapper which is not constrained by animations
+    // This gives us the natural content size
+    return [getWidth(measureWrapper), getHeight(measureWrapper)];
   };
 
   const letContentSelfManage = () => {
@@ -93,9 +109,9 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
     // First measure the current size while constrained
     const [beforeWidth, beforeHeight] = measureSize();
     // Release constraints
-    wrapper.style.width = "";
-    wrapper.style.height = "";
-    wrapper.style.overflow = "";
+    outerWrapper.style.width = "";
+    outerWrapper.style.height = "";
+    outerWrapper.style.overflow = "";
     // Measure actual size after releasing constraints
     const [afterWidth, afterHeight] = measureSize();
     debug("📏 Size after self-manage:", {
@@ -119,19 +135,27 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
       height: `${currentHeight} → ${targetHeight}`,
       releaseConstraints: releaseConstraintsAfter,
     });
-    wrapper.style.overflow = "hidden";
+    outerWrapper.style.overflow = "hidden";
     animationController.animateAll(
       [
-        createStep({
-          element: wrapper,
-          property: "width",
-          target: targetWidth,
-        }),
-        createStep({
-          element: wrapper,
-          property: "height",
-          target: targetHeight,
-        }),
+        ...(targetWidth !== currentWidth
+          ? [
+              createStep({
+                element: outerWrapper,
+                property: "width",
+                target: targetWidth,
+              }),
+            ]
+          : []),
+        ...(targetHeight !== currentHeight
+          ? [
+              createStep({
+                element: outerWrapper,
+                property: "height",
+                target: targetHeight,
+              }),
+            ]
+          : []),
       ],
       {
         onChange: (changes) => {
@@ -155,9 +179,9 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
   };
 
   [currentWidth, currentHeight] = measureSize();
-  wrapper.style.width = `${currentWidth}px`;
-  wrapper.style.height = `${currentHeight}px`;
-  wrapper.style.overflow = "hidden";
+  outerWrapper.style.width = `${currentWidth}px`;
+  outerWrapper.style.height = `${currentHeight}px`;
+  outerWrapper.style.overflow = "hidden";
 
   let isUpdating = false;
 
@@ -184,15 +208,14 @@ export const initUITransition = (container, { duration = 3000 } = {}) => {
         `🔄 Update triggered, current size: ${currentWidth}x${currentHeight}`,
       );
 
-      // Temporarily remove size constraints to measure true content size
-      animationController.cancel(); // ensure any ongoing animations are stopped otherwise size measurements will be incorrect
-      wrapper.style.width = "";
-      wrapper.style.height = "";
+      // Cancel any ongoing animations
+      animationController.cancel(); // ensure any ongoing animations are stopped
+      // No need to remove constraints from outerWrapper since we measure the inner wrapper
       const [newWidth, newHeight] = measureSize();
       debug(`📐 Measured size: ${newWidth}x${newHeight}`);
-      // Restore current size constraints
-      wrapper.style.width = `${currentWidth}px`;
-      wrapper.style.height = `${currentHeight}px`;
+      // Make sure outer wrapper has current constraints
+      outerWrapper.style.width = `${currentWidth}px`;
+      outerWrapper.style.height = `${currentHeight}px`;
 
       debug("🏷️ Content info:", {
         currentUIKey,

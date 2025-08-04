@@ -41,6 +41,18 @@
         width: 300px;
       }
 
+      /* Nested wrapper structure:
+         - outer wrapper: manages size constraints during animations
+         - measure wrapper: allows measuring natural content size without animation constraints
+         - content: actual content that can change height */
+      .ui-transition-outer-wrapper {
+        position: relative;
+      }
+      .ui-transition-measure-wrapper {
+        /* prevent margins from collapsing which would affect measurements */
+        padding: 0.1px 0;
+      }
+
       /* State-specific styles */
       .loading-state {
         color: #666;
@@ -273,8 +285,10 @@
           lifecycle and navigation scenarios.
         </p>
         <div id="content-box" class="ui-transition-container">
-          <div class="ui-transition-wrapper">
-            <div class="ui-transition-content"></div>
+          <div class="ui-transition-outer-wrapper">
+            <div class="ui-transition-measure-wrapper">
+              <div class="ui-transition-content"></div>
+            </div>
           </div>
         </div>
       </div>
