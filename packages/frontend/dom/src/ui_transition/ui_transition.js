@@ -150,9 +150,19 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       // Store current UI key for next update
       lastUIKey = currentUIKey;
 
-      // Skip size animation if no changes
+      // Skip size animation if no changes, but still release constraints for content elements
       if (newWidth === currentWidth && newHeight === currentHeight) {
-        debug("⏭️ Skipping animation - no size changes");
+        debug("⏭️ No size changes detected");
+        // Even with no size changes, we should release constraints for regular content
+        // This is important for elements that manage their own height animation
+        if (!inheritContentDimensions) {
+          debug("↕️ Releasing size constraints for self-managing content");
+          wrapper.style.width = "";
+          wrapper.style.height = "";
+          wrapper.style.overflow = "";
+          currentWidth = newWidth;
+          currentHeight = newHeight;
+        }
         console.groupEnd();
         return;
       }
