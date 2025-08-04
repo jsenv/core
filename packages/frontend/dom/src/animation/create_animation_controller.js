@@ -106,7 +106,7 @@ export const createAnimationController = ({ duration }) => {
       let somethingChanged = false;
       for (const step of stepArray) {
         const element = step.element;
-        const target = step.target;
+        const targetValue = step.target;
         const property = step.property;
         const startValue = step.getValue(element);
 
@@ -123,28 +123,30 @@ export const createAnimationController = ({ duration }) => {
         }
 
         if (existingAnimation) {
-          if (startValue === target) {
+          if (startValue === targetValue) {
             // nothing to do, same element, same property, same target
             continue;
           }
           // update the animation target
-          existingAnimation.target = target;
+          existingAnimation.targetValue = targetValue;
+          existingAnimation.startValue = startValue;
           somethingChanged = true;
           continue;
         }
 
-        const valueDiff = Math.abs(startValue - target);
+        const valueDiff = Math.abs(startValue - targetValue);
         const minDiff = property === "opacity" ? 0.1 : 10;
         if (valueDiff < minDiff) {
           console.warn(
             `Animation of "${property}" might be unnecessary: change of ${valueDiff} is very small (min recommended: ${minDiff})`,
-            { element, from: startValue, to: target },
+            { element, from: startValue, to: targetValue },
           );
         }
 
         somethingChanged = true;
         runningAnimations.add({
           step,
+          targetValue,
           startValue,
           completed: false,
         });
@@ -187,7 +189,7 @@ export const createAnimationController = ({ duration }) => {
           const changeEntryArray = [];
           for (const animation of runningAnimations) {
             const startValue = animation.startValue;
-            const targetValue = animation.step.target;
+            const targetValue = animation.targetValue;
             const property = animation.step.property;
             const animatedValue =
               startValue + (targetValue - startValue) * easedProgress;
@@ -212,7 +214,7 @@ export const createAnimationController = ({ duration }) => {
         for (const animation of runningAnimations) {
           const element = animation.step.element;
           const property = animation.step.property;
-          const finalValue = animation.step.target;
+          const finalValue = animation.targetValue;
           updateAnimation(animation, finalValue, { timing });
           animation.completed = true;
           changeEntryArray.push({
