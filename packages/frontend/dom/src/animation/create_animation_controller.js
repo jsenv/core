@@ -92,7 +92,7 @@ export const createAnimationController = ({ duration }) => {
   };
 
   const updateAnimation = (animation, value, { timing }) => {
-    const { setValue, element, property, sideEffect } = animation;
+    const { setValue, element, property, sideEffect } = animation.step;
     setValue(element, value, { timing });
     // Track animated value for this property
     animatedValues[property] = value;
@@ -113,8 +113,8 @@ export const createAnimationController = ({ duration }) => {
         let existingAnimation;
         for (const runningAnimation of runningAnimations) {
           if (
-            runningAnimation.element === element &&
-            runningAnimation.property === property
+            runningAnimation.step.element === element &&
+            runningAnimation.step.property === property
           ) {
             // If we're already animating this property, update it
             existingAnimation = runningAnimation;
@@ -144,7 +144,7 @@ export const createAnimationController = ({ duration }) => {
 
         somethingChanged = true;
         runningAnimations.add({
-          ...step,
+          step,
           startValue,
           completed: false,
         });
@@ -187,13 +187,13 @@ export const createAnimationController = ({ duration }) => {
           const changeEntryArray = [];
           for (const animation of runningAnimations) {
             const startValue = animation.startValue;
-            const targetValue = animation.target;
-            const property = animation.property;
+            const targetValue = animation.step.target;
+            const property = animation.step.property;
             const animatedValue =
               startValue + (targetValue - startValue) * easedProgress;
             updateAnimation(animation, animatedValue, { timing });
             changeEntryArray.push({
-              element: animation.element,
+              element: animation.step.element,
               property,
               value: animatedValue,
             });
@@ -210,9 +210,9 @@ export const createAnimationController = ({ duration }) => {
         timing = "end";
         const changeEntryArray = [];
         for (const animation of runningAnimations) {
-          const element = animation.element;
-          const property = animation.property;
-          const finalValue = animation.target;
+          const element = animation.step.element;
+          const property = animation.step.property;
+          const finalValue = animation.step.target;
           updateAnimation(animation, finalValue, { timing });
           animation.completed = true;
           changeEntryArray.push({
