@@ -48,9 +48,23 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       });
       lastContentWidth = newWidth;
       lastContentHeight = newHeight;
-      // Also update current dimensions to track actual size
-      currentWidth = newWidth;
-      currentHeight = newHeight;
+
+      // If we have an ongoing animation and content has data-animate-height,
+      // update the animation target to the new height
+      if (
+        animationController.pending &&
+        element.hasAttribute("data-animate-height")
+      ) {
+        debug(
+          "🎯 Updating animation target height to match content:",
+          newHeight,
+        );
+        animateSize(newWidth, newHeight, { releaseConstraintsAfter: true });
+      } else {
+        // Otherwise just track the dimensions
+        currentWidth = newWidth;
+        currentHeight = newHeight;
+      }
     }
   };
 
@@ -139,8 +153,16 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
 
     try {
       isUpdating = true;
+      // Get current UI key and state information
+      const firstChild = content.children[0];
+      const childUIName = firstChild?.getAttribute("data-ui-name");
+      const currentUIKey = firstChild?.getAttribute("data-ui-key");
+      const inheritContentDimensions = firstChild?.hasAttribute(
+        "data-inherit-content-dimensions",
+      );
+
       if (DEBUG) {
-        console.group("UI Transition Update");
+        console.group(`UI Transition Update (${childUIName})`);
       }
       debug(
         `🔄 Update triggered, current size: ${currentWidth}x${currentHeight}`,
@@ -155,13 +177,6 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       // Restore current size constraints
       wrapper.style.width = `${currentWidth}px`;
       wrapper.style.height = `${currentHeight}px`;
-
-      // Get current UI key and state information
-      const firstChild = content.children[0];
-      const currentUIKey = firstChild?.getAttribute("data-ui-key");
-      const inheritContentDimensions = firstChild?.hasAttribute(
-        "data-inherit-content-dimensions",
-      );
 
       debug("🏷️ Content info:", {
         currentUIKey,
