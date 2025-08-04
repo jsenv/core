@@ -9,6 +9,8 @@ export const createAnimationController = ({ duration }) => {
   const runningAnimations = new Set();
   let animationFrame;
   let startTime;
+  let pauseTime;
+  let isPaused = false;
 
   // Track current animated values per property
   let animatedValues = {};
@@ -41,6 +43,13 @@ export const createAnimationController = ({ duration }) => {
 
   const animationController = {
     pending: false,
+    isPaused: () => isPaused,
+    pause: () => {
+      isPaused = true;
+    },
+    resume: () => {
+      isPaused = false;
+    },
     animatedValues,
     animateAll: (stepArray, { onChange, onCancel, onEnd } = {}) => {
       if (onCancel) {
@@ -128,6 +137,20 @@ export const createAnimationController = ({ duration }) => {
 
       let timing = "start";
       const draw = () => {
+        if (isPaused) {
+          if (!pauseTime) {
+            pauseTime = document.timeline.currentTime - startTime;
+          }
+          animationFrame = requestAnimationFrame(draw);
+          return;
+        }
+
+        // If resuming from pause, adjust startTime to preserve progress
+        if (pauseTime) {
+          startTime = document.timeline.currentTime - pauseTime;
+          pauseTime = null;
+        }
+
         const elapsed = document.timeline.currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
@@ -178,6 +201,7 @@ export const createAnimationController = ({ duration }) => {
         runningAnimations.clear();
         animatedValues = {};
         animationFrame = null;
+        pauseTime = null;
       };
 
       animationFrame = requestAnimationFrame(draw);
@@ -187,6 +211,8 @@ export const createAnimationController = ({ duration }) => {
       cancelAnimationFrame(animationFrame);
       animationFrame = null;
       animatedValues = {};
+      pauseTime = null;
+      isPaused = false;
       callFinishCallbacks();
       callCancelCallbacks();
     },

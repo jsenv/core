@@ -395,6 +395,20 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         transitionAnimation.cancel();
       }
     },
+    pause: () => {
+      if (transitionAnimation) {
+        transitionAnimation.pause();
+      }
+    },
+    resume: () => {
+      if (transitionAnimation) {
+        transitionAnimation.resume();
+      }
+    },
+    getState: () => ({
+      isPaused: transitionAnimation?.isPaused() || false,
+      transitionInProgress: Boolean(transitionAnimation),
+    }),
     // Additional methods could be added here for direct control
     // setContent: (content) => {...}
     // transition: (from, to) => {...}
@@ -410,8 +424,15 @@ const animateTransition = (
     return null;
   }
 
+  // Get transition duration from data attribute or use default
+  const duration =
+    parseInt(
+      newElement.closest("[data-ui-transition-duration]")?.dataset
+        .uiTransitionDuration,
+      10,
+    ) || 300;
   const animation = createAnimationController({
-    duration: 300,
+    duration,
   });
 
   // Get the current opacity of old content (if any) to use as starting point
