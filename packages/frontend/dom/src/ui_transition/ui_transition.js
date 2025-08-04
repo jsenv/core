@@ -14,7 +14,7 @@ const debug = (...args) => {
   console.debug(...args);
 };
 
-export const initUITransition = (container, { duration = 300 } = {}) => {
+export const initUITransition = (container, { duration = 3000 } = {}) => {
   // Validate and get references to required elements
   if (!container.classList.contains("ui-transition-container")) {
     console.error("Element must have ui-transition-container class");
@@ -128,7 +128,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         ? {
             onChange: (changes, isComplete) => {
               if (isComplete) {
-                letContentSelfManage(targetWidth, targetHeight);
+                // letContentSelfManage(targetWidth, targetHeight);
               }
             },
           }
@@ -218,13 +218,30 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       // Store current UI key for next update
       lastUIKey = currentUIKey;
 
-      // Skip size animation if no changes, but still release constraints for content elements
-      if (newWidth === currentWidth && newHeight === currentHeight) {
-        debug("⏭️ No size changes detected");
-        // Even with no size changes, we should release constraints for regular content
+      const getTargetDimensions = () => {
+        if (!inheritContentDimensions) {
+          return [newWidth, newHeight];
+        }
+        const shouldUseNewDimensions =
+          lastContentWidth === 0 && lastContentHeight === 0;
+        const targetWidth = shouldUseNewDimensions
+          ? newWidth
+          : lastContentWidth || newWidth;
+        const targetHeight = shouldUseNewDimensions
+          ? newHeight
+          : lastContentHeight || newHeight;
+        return [targetWidth, targetHeight];
+      };
+
+      const [targetWidth, targetHeight] = getTargetDimensions();
+
+      // Skip animation if no size changes needed
+      if (targetWidth === currentWidth && targetHeight === currentHeight) {
+        debug("⏭️ No size change required");
+        // Even with no changes, we should release constraints for regular content
         // This is important for elements that manage their own height animation
         if (!inheritContentDimensions) {
-          letContentSelfManage(newWidth, newHeight);
+          letContentSelfManage(targetWidth, targetHeight);
         }
         if (DEBUG) {
           console.groupEnd();
@@ -232,42 +249,26 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         return;
       }
 
-      debug("📏 Size change detected", {
-        width: `${currentWidth} → ${newWidth}`,
-        height: `${currentHeight} → ${newHeight}`,
+      debug("📏 Size change needed", {
+        width: `${currentWidth} → ${targetWidth}`,
+        height: `${currentHeight} → ${targetHeight}`,
       });
 
       // Handle height inheritance and animation based on state
       if (isUIKeyChange && !inheritContentDimensions) {
         // New content (not a loading/error state): animate to new dimensions and release constraints after
         // Content dimensions will be tracked by ResizeObserver
-        animateSize(newWidth, newHeight, { releaseConstraintsAfter: true });
+        animateSize(targetWidth, targetHeight, {
+          releaseConstraintsAfter: true,
+        });
       } else if (isUIKeyChange || inheritContentDimensions) {
         // Either:
         // 1. UI key changed but we want to inherit content dimensions (loading/error state)
         // 2. Same UI key but inherit dimensions requested
-        // If we have content dimensions, use those. Otherwise use measured dimensions
-        // This ensures we don't collapse to 0 when transitioning between loading/error states
-        // before any real content has been shown
-        const shouldUseNewDimensions =
-          lastContentWidth === 0 && lastContentHeight === 0;
-        const nextWidth = shouldUseNewDimensions
-          ? newWidth
-          : lastContentWidth || newWidth;
-        const nextHeight = shouldUseNewDimensions
-          ? newHeight
-          : lastContentHeight || newHeight;
-
-        debug("📐 Using dimensions:", {
-          width: nextWidth,
-          height: nextHeight,
-          source: shouldUseNewDimensions ? "measured" : "inherited",
-        });
-
-        animateSize(nextWidth, nextHeight);
+        animateSize(targetWidth, targetHeight);
       } else {
         // Same UI key, no height preservation: don't animate or constrain
-        letContentSelfManage(newWidth, newHeight);
+        letContentSelfManage(targetWidth, targetHeight);
       }
     } finally {
       isUpdating = false;
