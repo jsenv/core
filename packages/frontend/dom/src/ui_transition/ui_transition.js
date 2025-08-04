@@ -86,14 +86,15 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
     }
   };
 
-  // Setup resize observer to track content size changes
-  const setupResizeObserver = () => {
+  const stopObservingResize = () => {
     if (resizeObserver) {
       resizeObserver.disconnect();
+      resizeObserver = null;
     }
-    // Observe the measure wrapper which has no constraints
+  };
+
+  const startObservingResize = () => {
     resizeObserver = new ResizeObserver(() => {
-      // Always measure using the measureWrapper
       updateLastContentDimensions(content);
     });
     resizeObserver.observe(measureWrapper);
@@ -226,14 +227,17 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         lastContentHeight,
       });
 
-      // Setup resize observer for content elements
-      if (firstChild) {
-        setupResizeObserver(firstChild);
+      // Handle resize observation based on content type
+      stopObservingResize(); // Always cleanup first
+      if (
+        firstChild &&
+        !firstChild.hasAttribute("data-inherit-content-dimensions")
+      ) {
+        startObservingResize();
+        debug("👀 ResizeObserver: Observing content");
+      } else {
         debug(
-          "👀 ResizeObserver:",
-          !firstChild.hasAttribute("data-inherit-content-dimensions")
-            ? "Observing content"
-            : "Skipping non-content element",
+          "👀 ResizeObserver: Skipping observation for loading/error state",
         );
       }
 
@@ -342,9 +346,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   return {
     cleanup: () => {
       mutationObserver.disconnect();
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
+      stopObservingResize();
       animationController.cancel();
     },
     // Additional methods could be added here for direct control
