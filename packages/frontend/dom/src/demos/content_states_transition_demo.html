@@ -230,9 +230,30 @@
           transitions. Use the controls on the left to trigger various content
           lifecycle and navigation scenarios.
         </p>
-        <div id="content-box"></div>
+        <div id="content-box" class="ui-transition-container">
+          <div class="ui-transition-wrapper">
+            <div class="ui-transition-content"></div>
+          </div>
+        </div>
       </div>
     </div>
+
+    <style>
+      .ui-transition-container {
+        position: relative;
+      }
+      .ui-transition-wrapper {
+        position: relative;
+        overflow: hidden;
+      }
+      .ui-transition-content {
+        position: relative;
+        width: 100%;
+      }
+      .ui-transition-content > * {
+        width: 100%;
+      }
+    </style>
 
     <script type="module">
       import { initUITransition } from "../ui_transition/ui_transition.js";
@@ -302,7 +323,12 @@
         }
 
         // Reset content without any animation
-        contentBox.innerHTML = "";
+        const contentContainer = contentBox.querySelector(
+          ".ui-transition-content",
+        );
+        if (contentContainer) {
+          contentContainer.innerHTML = "";
+        }
 
         // Reinstall the maintainSize functionality
         cleanup = initUITransition(contentBox);
@@ -332,7 +358,25 @@
         // For loading/error states of the same content, they share the key
         const uiKey =
           options.contentVariant === "B" ? "content-b" : "content-a";
-        contentBox.innerHTML = createState(type, { ...options, uiKey });
+        const content = createState(type, { ...options, uiKey });
+
+        // Find or create the content container
+        let contentContainer = contentBox.querySelector(
+          ".ui-transition-content",
+        );
+        if (!contentContainer) {
+          const wrapper = contentBox.querySelector(".ui-transition-wrapper");
+          if (!wrapper) {
+            console.error("Missing required ui-transition structure");
+            return;
+          }
+          contentContainer = wrapper.querySelector(".ui-transition-content");
+          if (!contentContainer) {
+            console.error("Missing required ui-transition structure");
+            return;
+          }
+        }
+        contentContainer.innerHTML = content;
       };
 
       // Sequence runner
