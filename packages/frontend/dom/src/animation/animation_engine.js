@@ -26,11 +26,19 @@ const draw = () => {
     if (progress < 1) {
       const easedProgress = animationToUpdate.easing(progress);
       const animatedValue = from + (to - from) * easedProgress;
-      animationToUpdate.onUpdate(animatedValue, { timing: "progress" });
+      animationToUpdate.update({
+        progress,
+        value: animatedValue,
+        timing: "progress",
+      });
       continue;
     }
     animationToUpdateSet.delete(animationToUpdate);
-    animationToUpdate.onUpdate(to, { timing: "end" });
+    animationToUpdate.update({
+      progress: 1,
+      value: to,
+      timing: "end",
+    });
     const cleanup = animationCleanupMap.get(animationToUpdate);
     if (cleanup) {
       animationCleanupMap.delete(animationToUpdate);

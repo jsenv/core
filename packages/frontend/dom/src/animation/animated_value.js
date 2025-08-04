@@ -27,6 +27,7 @@ export const createAnimatedValue = (
     duration,
     value: from,
     easing,
+    progress: 0,
     paused: true,
     ended: false,
     play: () => {
@@ -46,23 +47,49 @@ export const createAnimatedValue = (
     startTime: null,
     currentTime: null,
     onStart,
-    onUpdate: (value, { timing }) => {
+    update: ({ progress, value, timing }) => {
+      animatedValue.progress = progress;
       animatedValue.value = value;
-      onUpdate?.(value, { timing });
+      onUpdate?.({ progress, value, timing });
     },
     onCancel,
     onFinish: () => {
       animatedValue.ended = true;
+      animatedValue.onfinish?.();
       onFinish?.();
     },
   };
   return animatedValue;
 };
 
+export const playAnimations = (animations, { onEnd }) => {
+  let animationPlayingCount = animations.length;
+  for (const animation of animations) {
+    // eslint-disable-next-line no-loop-func
+    animation.onfinish = () => {
+      animationPlayingCount--;
+      if (animationPlayingCount === 0) {
+        onEnd?.();
+      }
+    };
+    animation.play();
+  }
+
+  return {
+    update: (newAnimations) => {},
+    cancel: () => {
+      for (const animation of animations) {
+        animation.onCancel?.();
+        removeFromTimeline(animation);
+      }
+    },
+  };
+};
+
 export const createElementHeightTransition = (
   element,
   to,
-  { duration, easing, onFinish },
+  { duration, easing, onUpdate, onFinish },
 ) => {
   const from = getHeight(element);
   let heightAtStartFromInlineStyle;
@@ -77,8 +104,10 @@ export const createElementHeightTransition = (
         element.removeAttribute(`data-height-animated`);
       };
     },
-    onUpdate: (value) => {
+    onUpdate: (updateInfo) => {
+      const { value } = updateInfo;
       element.style.height = `${value}px`;
+      onUpdate?.(updateInfo);
     },
     onCancel: () => {
       if (heightAtStartFromInlineStyle) {
@@ -93,7 +122,7 @@ export const createElementHeightTransition = (
 export const createElementWidthTransition = (
   element,
   to,
-  { duration, easing, onFinish },
+  { duration, easing, onUpdate, onFinish },
 ) => {
   const from = getWidth(element);
   let widthAtStartFromInlineStyle;
@@ -108,8 +137,10 @@ export const createElementWidthTransition = (
         element.removeAttribute(`data-width-animated`);
       };
     },
-    onUpdate: (value) => {
+    onUpdate: (updateInfo) => {
+      const { value } = updateInfo;
       element.style.height = `${value}px`;
+      onUpdate?.(updateInfo);
     },
     onCancel: () => {
       if (widthAtStartFromInlineStyle) {
@@ -124,7 +155,7 @@ export const createElementWidthTransition = (
 export const createElementOpacityTransition = (
   element,
   to,
-  { duration, easing, onFinish } = {},
+  { duration, easing, onUpdate, onFinish } = {},
 ) => {
   const from = parseFloat(getComputedStyle(element).opacity) || 0;
   let opacityAtStartFromInlineStyle;
@@ -139,8 +170,10 @@ export const createElementOpacityTransition = (
         element.removeAttribute(`data-opacity-animated`);
       };
     },
-    onUpdate: (value) => {
+    onUpdate: (updateInfo) => {
+      const { value } = updateInfo;
       element.style.opacity = value;
+      onUpdate?.(updateInfo);
     },
     onCancel: () => {
       if (opacityAtStartFromInlineStyle) {
@@ -155,7 +188,7 @@ export const createElementOpacityTransition = (
 export const createElementTranslateXTransition = (
   element,
   to,
-  { duration, easing, onFinish } = {},
+  { duration, easing, onUpdate, onFinish } = {},
 ) => {
   const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
   if (!match) {
@@ -177,8 +210,10 @@ export const createElementTranslateXTransition = (
         element.removeAttribute(`data-translate-x-animated`);
       };
     },
-    onUpdate: (value) => {
+    onUpdate: (updateInfo) => {
+      const { value } = updateInfo;
       setTranslateX(element, value, { unit });
+      onUpdate?.(updateInfo);
     },
     onCancel: () => {
       if (transformAtStartFromInlineStyle) {

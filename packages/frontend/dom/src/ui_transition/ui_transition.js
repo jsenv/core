@@ -1,4 +1,9 @@
 import {
+  createElementHeightTransition,
+  createElementWidthTransition,
+  playAnimations,
+} from "../animation/animated_value.js";
+import {
   createAnimationController,
   createStep,
 } from "../animation/create_animation_controller.js";
@@ -81,9 +86,6 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     return { cleanup: () => {} };
   }
 
-  const sizeAnimationController = createAnimationController({
-    duration: resizeDuration,
-  });
   const transitionAnimationController = createAnimationController({
     duration: 300, // Default duration, will be updated dynamically
   });
@@ -96,6 +98,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let lastUIKey = null; // Track the last UI key to detect content changes
   let wasInheritingDimensions = false; // Track if previous content was inheriting dimensions
   let resizeObserver = null;
+  let sizeAnimation = null;
 
   const measureSize = () => {
     // We measure the inner wrapper which is not constrained by animations
@@ -115,7 +118,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     lastContentHeight = newHeight;
 
     // If we have an ongoing size animation, update it
-    if (sizeAnimationController.pending) {
+    if (sizeAnimation.playing) {
       debug(
         "size",
         "🎯 Updating animation target height to match content:",
@@ -170,42 +173,46 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   };
 
   const animateSize = (targetWidth, targetHeight, { onEnd } = {}) => {
+    // if we already have an animation we want to resume from that point
+
     debug("size", "🎬 Starting size animation", {
       width: `${currentWidth} → ${targetWidth}`,
       height: `${currentHeight} → ${targetHeight}`,
     });
     outerWrapper.style.overflow = "hidden";
-
-    const steps = [];
-    if (targetWidth !== currentWidth) {
-      steps.push(
-        createStep({
-          element: outerWrapper,
-          property: "width",
-          target: targetWidth,
-          sideEffect: (value) => {
-            // debug(`📏 Width updated: ${currentWidth} → ${value}`);
-            currentWidth = value;
-          },
-        }),
-      );
-    }
+    const animations = [];
     if (targetHeight !== currentHeight) {
-      steps.push(
-        createStep({
-          element: outerWrapper,
-          property: "height",
-          target: targetHeight,
-          sideEffect: (value) => {
-            // debug(`📏 Height updated: ${currentHeight} → ${value}`);
+      const heightAnimation = createElementHeightTransition(
+        outerWrapper,
+        targetHeight,
+        {
+          duration: resizeDuration,
+          onUpdate: ({ value }) => {
             currentHeight = value;
           },
-        }),
+        },
       );
+      animations.push(heightAnimation);
     }
-    sizeAnimationController.animateAll(steps, {
-      onEnd,
-    });
+    if (targetWidth !== currentWidth) {
+      const widthAnimation = createElementWidthTransition(
+        outerWrapper,
+        targetWidth,
+        {
+          duration: resizeDuration,
+          onUpdate: ({ value }) => {
+            currentWidth = value;
+          },
+        },
+      );
+      animations.push(widthAnimation);
+    }
+
+    if (sizeAnimation) {
+      sizeAnimation.update(animations, { onEnd });
+    } else {
+      sizeAnimation = playAnimations(animations, { onEnd });
+    }
   };
 
   let isUpdating = false;
@@ -264,7 +271,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       );
 
       // Cancel any ongoing animations
-      sizeAnimationController.cancel();
+      if (sizeAnimation) {
+        sizeAnimation.cancel();
+      }
       // No need to remove constraints from outerWrapper since we measure the inner wrapper
       const [newWidth, newHeight] = measureSize();
       debug("size", `📐 Measured size: ${newWidth}x${newHeight}`);
@@ -516,7 +525,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     cleanup: () => {
       mutationObserver.disconnect();
       stopObservingResize();
-      sizeAnimationController.cancel();
+      if (sizeAnimation) {
+        sizeAnimation.cancel();
+      }
       transitionAnimationController.cancel();
     },
     pause: () => {
