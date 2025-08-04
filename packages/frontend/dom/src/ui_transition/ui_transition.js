@@ -449,18 +449,32 @@ const animateTransition = (
     duration,
   });
 
-  // Get the current opacity of old content (if any) to use as starting point
-  const startOpacity = oldContent
+  // Get the current opacity - check both old content and new element
+  const oldOpacity = oldContent
     ? parseFloat(getComputedStyle(oldContent).opacity)
     : 0;
-  const computedStartOpacity = isNaN(startOpacity) ? 0 : startOpacity;
-  debug("transition", "🎨 Starting opacity:", computedStartOpacity);
+  const newOpacity = parseFloat(getComputedStyle(newElement).opacity);
+
+  // Use the highest opacity as our starting point
+  // This ensures we continue from wherever the previous transition left off
+  const startOpacity = Math.max(
+    isNaN(oldOpacity) ? 0 : oldOpacity,
+    isNaN(newOpacity) ? 0 : newOpacity,
+  );
+  debug("transition", "🎨 Starting opacity:", {
+    oldOpacity,
+    newOpacity,
+    startOpacity,
+  });
 
   // Setup initial state
   if (oldContent) {
-    oldContent.style.opacity = computedStartOpacity.toString();
+    oldContent.style.opacity = startOpacity.toString();
   }
-  newElement.style.opacity = computedStartOpacity.toString();
+  // Only set new element opacity if it's not already higher
+  if (isNaN(newOpacity) || newOpacity < startOpacity) {
+    newElement.style.opacity = startOpacity.toString();
+  }
 
   if (!oldContent) {
     // Case 1: Empty -> Content (fade in only)
@@ -490,8 +504,11 @@ const animateTransition = (
       property: "opacity",
       target: 0,
       sideEffect: (value, { timing }) => {
-        debug("transition", "🔄 Old content fade out:", value.toFixed(3));
-        oldContent.style.opacity = value.toString();
+        // Skip if old content opacity is already 0
+        if (value > 0) {
+          debug("transition", "🔄 Old content fade out:", value.toFixed(3));
+          oldContent.style.opacity = value.toString();
+        }
         if (timing === "end") {
           oldContent.remove();
         }
@@ -502,8 +519,12 @@ const animateTransition = (
       property: "opacity",
       target: 1,
       sideEffect: (value, { timing }) => {
-        debug("transition", "🔄 New content fade in:", value.toFixed(3));
-        newElement.style.opacity = value.toString();
+        // Skip if new content opacity is already at or above target
+        const currentOpacity = parseFloat(getComputedStyle(newElement).opacity);
+        if (isNaN(currentOpacity) || value > currentOpacity) {
+          debug("transition", "🔄 New content fade in:", value.toFixed(3));
+          newElement.style.opacity = value.toString();
+        }
         if (timing === "end") {
           debug("transition", "✨ Cross-fade complete");
           newElement.style.opacity = "";
