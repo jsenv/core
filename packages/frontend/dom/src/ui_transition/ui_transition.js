@@ -83,36 +83,46 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
       }
 
       // Handle height preservation and animation based on state
-      if (isUIKeyChange) {
-        // Different content: animate to new dimensions
+      if (isUIKeyChange && !preserveContentHeight) {
+        // New content (not a loading state): animate to new dimensions and release constraints after
         lastContentWidth = newWidth;
         lastContentHeight = newHeight;
         wrapper.style.overflow = "hidden";
-        animationController.animateAll([
-          createStep({
-            element: wrapper,
-            property: "width",
-            target: newWidth,
-          }),
-          createStep({
-            element: wrapper,
-            property: "height",
-            target: newHeight,
-          }),
-        ]);
+        animationController.animateAll(
+          [
+            createStep({
+              element: wrapper,
+              property: "width",
+              target: newWidth,
+            }),
+            createStep({
+              element: wrapper,
+              property: "height",
+              target: newHeight,
+            }),
+          ],
+          {
+            onChange: (changes, isComplete) => {
+              if (isComplete) {
+                // Remove size constraints after animation completes
+                wrapper.style.width = "";
+                wrapper.style.height = "";
+                wrapper.style.overflow = "";
+              }
+            },
+          },
+        );
         currentWidth = newWidth;
         currentHeight = newHeight;
-      } else if (preserveContentHeight) {
-        // Same content, preserve height from content state
+      } else if (isUIKeyChange || preserveContentHeight) {
+        // Either:
+        // 1. UI key changed but we want to preserve height (loading state)
+        // 2. Same UI key but preserve height requested
+        // In both cases: maintain last known content dimensions
         const nextWidth = lastContentWidth || newWidth;
         const nextHeight = lastContentHeight || newHeight;
 
-        if (lastContentHeight && newHeight > lastContentHeight) {
-          wrapper.style.overflow = "auto";
-        } else {
-          wrapper.style.overflow = "hidden";
-        }
-
+        wrapper.style.overflow = "hidden";
         animationController.animateAll([
           createStep({
             element: wrapper,
@@ -128,22 +138,12 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         currentWidth = nextWidth;
         currentHeight = nextHeight;
       } else {
-        // Same content, content state: update dimensions
+        // Same UI key, no height preservation: don't animate or constrain
         lastContentWidth = newWidth;
         lastContentHeight = newHeight;
-        wrapper.style.overflow = "hidden";
-        animationController.animateAll([
-          createStep({
-            element: wrapper,
-            property: "width",
-            target: newWidth,
-          }),
-          createStep({
-            element: wrapper,
-            property: "height",
-            target: newHeight,
-          }),
-        ]);
+        wrapper.style.width = "";
+        wrapper.style.height = "";
+        wrapper.style.overflow = "";
         currentWidth = newWidth;
         currentHeight = newHeight;
       }
