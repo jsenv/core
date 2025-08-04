@@ -104,8 +104,8 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
     return [getWidth(measureWrapper), getHeight(measureWrapper)];
   };
 
-  const letContentSelfManage = () => {
-    debug("↕️ Letting content self-manage size");
+  const letContentSelfManage = (reason) => {
+    debug(`↕️ Letting content self-manage size (${reason})`);
     // First measure the current size while constrained
     const [beforeWidth, beforeHeight] = measureSize();
     // Release constraints
@@ -171,7 +171,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         },
         onEnd: () => {
           if (releaseConstraintsAfter) {
-            letContentSelfManage();
+            letContentSelfManage("animation completed");
           }
         },
       },
@@ -280,7 +280,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         // Even with no changes, we should release constraints for regular content
         // This is important for elements that manage their own height animation
         if (!inheritContentDimensions) {
-          letContentSelfManage();
+          letContentSelfManage("no size change needed");
         }
         if (DEBUG) {
           console.groupEnd();
@@ -307,7 +307,7 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         animateSize(targetWidth, targetHeight);
       } else {
         // Same UI key, no height preservation: don't animate or constrain
-        letContentSelfManage();
+        letContentSelfManage("same UI key without height preservation");
       }
     } finally {
       isUpdating = false;
