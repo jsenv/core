@@ -296,30 +296,71 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         );
       }
 
-      // Determine transition type based on UI key
+      // Determine transition type based on UI key and content phase changes
       const isUIKeyChange = lastUIKey !== null && currentUIKey !== lastUIKey;
+      const lastInheritContentDimensions = previousContent?.hasAttribute(
+        "data-inherit-content-dimensions",
+      );
+      const isContentPhaseChange =
+        lastUIKey === currentUIKey && // Same UI key
+        lastInheritContentDimensions !== inheritContentDimensions; // But different content phase
+      const shouldTransition = isUIKeyChange || isContentPhaseChange;
+
       debug("🔄 Transition type:", {
         isUIKeyChange,
+        isContentPhaseChange,
+        shouldTransition,
+        lastInheritContentDimensions,
+        currentInheritContentDimensions: inheritContentDimensions,
         reason: isUIKeyChange
           ? `Key change from ${lastUIKey} to ${currentUIKey}`
-          : "Same key",
+          : isContentPhaseChange
+            ? `Content phase change (inherit: ${lastInheritContentDimensions} → ${inheritContentDimensions})`
+            : "Same content",
       });
 
       // Handle transitions between UI states if we have content
       if (firstChild) {
+        // First, clean up any existing old content in the overlay but preserve current transitions
+        const existingOldContents = transitionOverlay.querySelectorAll(
+          "[data-ui-transition-old]",
+        );
+
+        // Cancel any ongoing transition before starting a new one
+        if (transitionAnimation) {
+          transitionAnimation.cancel();
+        }
+
         let oldContent = null;
-        if (previousContent) {
+        // Check if we have an ongoing transition element that we should continue from
+        const currentTransitionElement = existingOldContents[0];
+
+        if (currentTransitionElement && shouldTransition) {
+          // Use the current transitioning element as the old content
+          oldContent = currentTransitionElement;
+          // Don't remove it yet - the animation will handle removal
+          debug("transition", "🔄 Continuing from current transition element");
+        } else if (previousContent && shouldTransition) {
+          // Clean up any old transition elements first
+          existingOldContents.forEach((oldEl) => oldEl.remove());
+
           // Clone and prepare the old content
           oldContent = previousContent.cloneNode(true);
           oldContent.removeAttribute("data-ui-key");
           oldContent.setAttribute("data-ui-transition-old", "");
           transitionOverlay.appendChild(oldContent);
+          debug(
+            "transition",
+            "🔄 Starting fresh transition from previous content",
+          );
+        } else {
+          // Clean up any remaining old elements
+          existingOldContents.forEach((oldEl) => oldEl.remove());
         }
-        // Cancel any ongoing transition before starting a new one
-        if (transitionAnimation) {
-          transitionAnimation.cancel();
+
+        if (oldContent) {
+          transitionAnimation = animateTransition(oldContent, firstChild);
         }
-        transitionAnimation = animateTransition(oldContent, firstChild);
       }
 
       // Store the current content for next transition
