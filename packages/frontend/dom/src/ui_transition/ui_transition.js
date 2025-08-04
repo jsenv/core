@@ -5,6 +5,20 @@ import {
 import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
 
+import.meta.css = /* css */ `
+  .ui-transition-content {
+    position: relative;
+  }
+
+  [data-ui-transition-old] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+`;
+
 const DEBUG = true;
 const debug = (...args) => {
   if (!DEBUG) {
@@ -79,7 +93,14 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         `(current: ${currentHeight})`,
       );
       // Start animation from current constrained height to new height
-      animateSize(newWidth, newHeight, { releaseConstraintsAfter: true });
+      const sizeSteps = createSizeSteps(newWidth, newHeight);
+      if (sizeSteps.length > 0) {
+        animationController.animateAll(sizeSteps, {
+          onEnd: () => {
+            letContentSelfManage("size animation completed");
+          },
+        });
+      }
     } else {
       currentWidth = newWidth;
       currentHeight = newHeight;
@@ -121,57 +142,39 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
     lastContentHeight = afterHeight;
   };
 
-  const animateSize = (
-    targetWidth,
-    targetHeight,
-    { releaseConstraintsAfter = false } = {},
-  ) => {
-    debug("🎬 Animating size", {
+  const createSizeSteps = (targetWidth, targetHeight) => {
+    debug("🎬 Creating size animation steps", {
       width: `${currentWidth} → ${targetWidth}`,
       height: `${currentHeight} → ${targetHeight}`,
-      releaseConstraints: releaseConstraintsAfter,
     });
     outerWrapper.style.overflow = "hidden";
-    animationController.animateAll(
-      [
-        ...(targetWidth !== currentWidth
-          ? [
-              createStep({
-                element: outerWrapper,
-                property: "width",
-                target: targetWidth,
-              }),
-            ]
-          : []),
-        ...(targetHeight !== currentHeight
-          ? [
-              createStep({
-                element: outerWrapper,
-                property: "height",
-                target: targetHeight,
-              }),
-            ]
-          : []),
-      ],
-      {
-        onChange: (changes) => {
-          // Update current dimensions based on animation progress
-          for (const change of changes) {
-            if (change.property === "width") {
-              currentWidth = change.value;
-            }
-            if (change.property === "height") {
-              currentHeight = change.value;
-            }
-          }
-        },
-        onEnd: () => {
-          if (releaseConstraintsAfter) {
-            letContentSelfManage("animation completed");
-          }
-        },
-      },
-    );
+
+    const steps = [];
+    if (targetWidth !== currentWidth) {
+      steps.push(
+        createStep({
+          element: outerWrapper,
+          property: "width",
+          target: targetWidth,
+          sideEffect: (value) => {
+            currentWidth = value;
+          },
+        }),
+      );
+    }
+    if (targetHeight !== currentHeight) {
+      steps.push(
+        createStep({
+          element: outerWrapper,
+          property: "height",
+          target: targetHeight,
+          sideEffect: (value) => {
+            currentHeight = value;
+          },
+        }),
+      );
+    }
+    return steps;
   };
 
   [currentWidth, currentHeight] = measureSize();
@@ -180,6 +183,67 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
   outerWrapper.style.overflow = "hidden";
 
   let isUpdating = false;
+  let previousContent = null; // Track previous content for transitions
+
+  const createTransitionSteps = (
+    oldElement,
+    newElement,
+    { type = "cross-fade" } = {},
+  ) => {
+    const steps = [];
+    if (type === "cross-fade") {
+      if (!oldElement) {
+        // Case 1: Empty -> Content (fade in only)
+        newElement.style.opacity = "0";
+        steps.push(
+          createStep({
+            element: newElement,
+            property: "opacity",
+            target: 1,
+            sideEffect: (_, { timing }) => {
+              if (timing === "end") {
+                newElement.style.opacity = "";
+              }
+            },
+          }),
+        );
+        return steps;
+      }
+
+      // Case 2 & 3: Cross-fade between states
+      const oldContent = oldElement.cloneNode(true);
+      oldContent.removeAttribute("data-ui-key");
+      oldContent.setAttribute("data-ui-transition-old", "");
+      oldContent.style.opacity = "1";
+      oldContent.classList.add("ui-transition-old-content");
+      content.insertBefore(oldContent, newElement);
+      newElement.style.opacity = "0";
+
+      steps.push(
+        createStep({
+          element: oldContent,
+          property: "opacity",
+          target: 0,
+          sideEffect: (_, { timing }) => {
+            if (timing === "end" && oldContent.parentNode) {
+              oldContent.remove();
+            }
+          },
+        }),
+        createStep({
+          element: newElement,
+          property: "opacity",
+          target: 1,
+          sideEffect: (_, { timing }) => {
+            if (timing === "end") {
+              newElement.style.opacity = "";
+            }
+          },
+        }),
+      );
+    }
+    return steps;
+  };
 
   const onMutation = () => {
     if (isUpdating) {
@@ -244,14 +308,22 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
           : "Same key",
       });
 
-      // TODO: Handle cross-fade transitions
-      // if (isUIKeyChange || (lastUIKey && preserveContentHeight)) {
-      //   // 1. Clone current content
-      //   // 2. Position it absolutely
-      //   // 3. Add new content
-      //   // 4. Fade between them
-      //   // 5. Clean up after animation
-      // }
+      // Prepare animation steps
+      const animationSteps = [];
+
+      // Handle transitions between UI states if we have content
+      if (firstChild) {
+        // Use the tracked previous content for transition
+        const transitionSteps = createTransitionSteps(
+          previousContent,
+          firstChild,
+        );
+        animationSteps.push(...transitionSteps);
+      }
+
+      // Store the current content for next transition
+      // We must clone it before any mutations occur
+      previousContent = firstChild ? firstChild.cloneNode(true) : null;
 
       // Detect state transitions before updating state
       const becomesContent =
@@ -303,17 +375,26 @@ export const initUITransition = (container, { duration = 300 } = {}) => {
         // 1. New content with different key
         // 2. Transitioning from loading/error state (wasInheriting) to actual content (!inheriting)
         debug("🎭 Transitioning to actual content, animating size");
-        animateSize(targetWidth, targetHeight, {
-          releaseConstraintsAfter: true,
-        });
+        const sizeSteps = createSizeSteps(targetWidth, targetHeight);
+        animationSteps.push(...sizeSteps);
       } else if (isUIKeyChange || inheritContentDimensions) {
         // Either:
         // 1. UI key changed but we want to inherit content dimensions (loading/error state)
         // 2. Same UI key but inherit dimensions requested
-        animateSize(targetWidth, targetHeight);
+        const sizeSteps = createSizeSteps(targetWidth, targetHeight);
+        animationSteps.push(...sizeSteps);
       } else {
         // Same UI key, no special states: no need to animate, let content handle its own size
         letContentSelfManage("direct content update");
+      }
+
+      // Execute all animation steps together
+      if (animationSteps.length > 0) {
+        animationController.animateAll(animationSteps, {
+          onEnd: () => {
+            letContentSelfManage("all animations completed");
+          },
+        });
       }
     } finally {
       isUpdating = false;

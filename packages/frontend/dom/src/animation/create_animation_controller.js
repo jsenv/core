@@ -70,11 +70,7 @@ export const createCustomStep = ({
 
 export const createAnimationController = ({ duration }) => {
   const startValueMap = new Map();
-  const targetValueMap = new Map();
-  const propertyMap = new Map();
-  const setValueMap = new Map();
-  const sideEffectMap = new Map();
-  const elementSet = new Set();
+  const stepSet = new Set();
   let animationFrame;
   let startTime;
 
@@ -96,16 +92,12 @@ export const createAnimationController = ({ duration }) => {
     cancelCallbackSet.clear();
   };
 
-  const update = (element, value, { timing }) => {
-    const setValue = setValueMap.get(element);
+  const update = (step, value, { timing }) => {
+    const { setValue, element, property, sideEffect } = step;
     setValue(element, value, { timing });
     // Track animated value for this property
-    const property = propertyMap.get(element);
     animatedValues[property] = value;
-    const sideEffect = sideEffectMap.get(element);
-    if (sideEffect) {
-      sideEffect(value, { timing });
-    }
+    sideEffect?.(value, { timing });
   };
 
   const animationController = {
@@ -114,62 +106,68 @@ export const createAnimationController = ({ duration }) => {
     animateAll: (stepArray, { onChange, onEnd } = {}) => {
       let somethingChanged = false;
       for (const step of stepArray) {
-        const { element, property, target, sideEffect, getValue, setValue } =
-          step;
-        const isNew = !elementSet.has(element);
-        const startValue = getValue(element);
+        const element = step.element;
+        const target = step.target;
+        const property = step.property;
+        const startValue = step.getValue(element);
 
-        if (isNew) {
+        let existingStep;
+        for (const existingStepCandidate of stepSet) {
+          if (
+            existingStepCandidate.element === element &&
+            existingStepCandidate.property === property
+          ) {
+            // If the step already exists, skip it
+            existingStep = existingStepCandidate;
+            break;
+          }
+        }
+
+        if (existingStep) {
           if (startValue === target) {
+            // nothing to do, same element, same property, same target
             continue;
           }
+          // update the step target
+          existingStep.target = target;
           somethingChanged = true;
-          elementSet.add(element);
-          startValueMap.set(element, startValue);
-          targetValueMap.set(element, target);
-          propertyMap.set(element, property);
-          setValueMap.set(element, setValue);
-          sideEffectMap.set(element, sideEffect);
-
-          const restoreWillChangeStyle = setStyles(element, {
-            "will-change": property,
-          });
-          finishCallbackSet.add(restoreWillChangeStyle);
-
-          // Store current value as inline style
-          const restoreValueStyle = setStyles(element, {
-            [property]: `${startValue}px`,
-          });
-          cancelCallbackSet.add(restoreValueStyle);
-
-          element.setAttribute(`data-animated`, "");
-          element.setAttribute(`data-${property}-animated`, "");
-          finishCallbackSet.add(() => {
-            element.removeAttribute(`data-animated`);
-            element.removeAttribute(`data-${property}-animated`);
-          });
-          cancelCallbackSet.add(() => {
-            element.removeAttribute(`data-animated`);
-            element.removeAttribute(`data-${property}-animated`);
-          });
-        } else {
-          const valueDiff = Math.abs(startValue - target);
-          const minDiff = property === "opacity" ? 0.1 : 10;
-          if (valueDiff < minDiff) {
-            console.warn(
-              `Animation of "${property}" might be unnecessary: change of ${valueDiff} is very small (min recommended: ${minDiff})`,
-              { element, from: startValue, to: target },
-            );
-          }
-          if (startValue !== target || targetValueMap.get(element) !== target) {
-            somethingChanged = true;
-          }
-          startValueMap.set(element, startValue);
-          targetValueMap.set(element, target);
-          propertyMap.set(element, property);
-          setValueMap.set(element, setValue);
-          sideEffectMap.set(element, sideEffect);
+          continue;
         }
+
+        const valueDiff = Math.abs(startValue - target);
+        const minDiff = property === "opacity" ? 0.1 : 10;
+        if (valueDiff < minDiff) {
+          console.warn(
+            `Animation of "${property}" might be unnecessary: change of ${valueDiff} is very small (min recommended: ${minDiff})`,
+            { element, from: startValue, to: target },
+          );
+        }
+
+        somethingChanged = true;
+        stepSet.add({ ...step });
+        startValueMap.set(element, startValue);
+
+        const restoreWillChangeStyle = setStyles(element, {
+          "will-change": property,
+        });
+        finishCallbackSet.add(restoreWillChangeStyle);
+
+        // Store current value as inline style
+        const restoreValueStyle = setStyles(element, {
+          [property]: `${startValue}px`,
+        });
+        cancelCallbackSet.add(restoreValueStyle);
+
+        element.setAttribute(`data-animated`, "");
+        element.setAttribute(`data-${property}-animated`, "");
+        finishCallbackSet.add(() => {
+          element.removeAttribute(`data-animated`);
+          element.removeAttribute(`data-${property}-animated`);
+        });
+        cancelCallbackSet.add(() => {
+          element.removeAttribute(`data-animated`);
+          element.removeAttribute(`data-${property}-animated`);
+        });
       }
       if (somethingChanged) {
         startTime = document.timeline.currentTime;
@@ -185,15 +183,16 @@ export const createAnimationController = ({ duration }) => {
         if (progress < 1) {
           const easedProgress = easing(progress);
           const changeEntryArray = [];
-          for (const element of elementSet) {
-            const startValue = startValueMap.get(element);
-            const targetValue = targetValueMap.get(element);
+          for (const step of stepSet) {
+            const startValue = startValueMap.get(step);
+            const targetValue = step.target;
+            const property = step.property;
             const animatedValue =
               startValue + (targetValue - startValue) * easedProgress;
-            update(element, animatedValue, { timing });
+            update(step, animatedValue, { timing });
             changeEntryArray.push({
-              element,
-              property: propertyMap.get(element),
+              element: step.element,
+              property,
               value: animatedValue,
             });
           }
@@ -208,12 +207,14 @@ export const createAnimationController = ({ duration }) => {
         // Animation complete
         timing = "end";
         const changeEntryArray = [];
-        for (const element of elementSet) {
-          const finalValue = targetValueMap.get(element);
-          update(element, finalValue, { timing });
+        for (const step of stepSet) {
+          const element = step.element;
+          const property = step.property;
+          const finalValue = step.target;
+          update(step, finalValue, { timing });
           changeEntryArray.push({
             element,
-            property: propertyMap.get(element),
+            property,
             value: finalValue,
           });
         }
@@ -222,11 +223,7 @@ export const createAnimationController = ({ duration }) => {
         }
         callFinishCallbacks();
         startValueMap.clear();
-        targetValueMap.clear();
-        propertyMap.clear();
-        setValueMap.clear();
-        sideEffectMap.clear();
-        elementSet.clear();
+        stepSet.clear();
         animatedValues = {};
         animationFrame = null;
         animationController.pending = false;
