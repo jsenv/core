@@ -1,32 +1,70 @@
 import { cubicBezier } from "@jsenv/animation";
 import { getHeight } from "../size/get_height.js";
+import { getWidth } from "../size/get_width.js";
 import { setStyles } from "../style_and_attributes.js";
 
 const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
-export const createStep = ({
-  element,
-  property,
-  target,
-  sideEffect,
-  getValue = () => {
-    // Default value getters based on property
-    if (property === "height") return getHeight(element);
-    // Add more property getters as needed
-    throw new Error(`No default value getter for property: ${property}`);
+const KNOWN_PROPERTIES = {
+  height: {
+    getValue: (element) => getHeight(element),
+    setValue: (element, value) => {
+      element.style.height = `${value}px`;
+    },
   },
-  setValue = (value, { timing }) => {
-    element.style[property] = `${value}px`;
-    // Add special handling for other properties if needed
+  width: {
+    getValue: (element) => getWidth(element),
+    setValue: (element, value) => {
+      element.style.width = `${value}px`;
+    },
   },
-}) => {
+  opacity: {
+    getValue: (element) => parseFloat(getComputedStyle(element).opacity) || 0,
+    setValue: (element, value) => {
+      element.style.opacity = value;
+    },
+  },
+};
+
+export const createStep = ({ element, property, target, sideEffect }) => {
+  const propertyConfig = KNOWN_PROPERTIES[property];
+  if (!propertyConfig) {
+    throw new Error(
+      `Unknown property: ${property}. Use createCustomStep for custom properties.`,
+    );
+  }
+
+  const { getValue, setValue } = propertyConfig;
+
   return {
     element,
     property,
     target,
-    sideEffect,
     getValue,
     setValue,
+    sideEffect,
+  };
+};
+
+export const createCustomStep = ({
+  element,
+  name,
+  target,
+  getValue,
+  setValue,
+  sideEffect,
+}) => {
+  if (!getValue || !setValue) {
+    throw new Error("getValue and setValue are required for custom steps");
+  }
+
+  return {
+    element,
+    property: name,
+    target,
+    getValue,
+    setValue,
+    sideEffect,
   };
 };
 
@@ -69,7 +107,8 @@ export const createAnimationController = ({ duration }) => {
     animateAll: (stepArray, { onChange } = {}) => {
       let somethingChanged = false;
       for (const step of stepArray) {
-        const { element, property, target, sideEffect, getValue, setValue } = step;
+        const { element, property, target, sideEffect, getValue, setValue } =
+          step;
         const isNew = !elementSet.has(element);
         const startValue = getValue();
 
@@ -96,11 +135,14 @@ export const createAnimationController = ({ duration }) => {
           });
           cancelCallbackSet.add(restoreValueStyle);
 
+          element.setAttribute(`data-animated`, "");
           element.setAttribute(`data-${property}-animated`, "");
           finishCallbackSet.add(() => {
+            element.removeAttribute(`data-animated`);
             element.removeAttribute(`data-${property}-animated`);
           });
           cancelCallbackSet.add(() => {
+            element.removeAttribute(`data-animated`);
             element.removeAttribute(`data-${property}-animated`);
           });
         } else {
