@@ -628,16 +628,17 @@ const applySlideLeft = (oldElement, newElement) => {
   const currentNewPos = getCurrentTranslateX(newElement);
 
   // For smooth continuation: if the old element is mid-transition (not at position 0),
-  // start the new element from where the old element currently is for visual continuity
+  // calculate the new element's position to maintain seamless sliding effect
   let startNewPos;
   if (currentOldPos !== 0 && currentNewPos === 0) {
-    // Old element is mid-transition, new element needs to start from old element's position
-    // This ensures smooth visual continuity when interrupting transitions
-    startNewPos = currentOldPos;
+    // Old element is mid-transition, calculate where new element should start
+    // to maintain the sliding illusion: old_pos + container_width
+    // This ensures the new element appears to be "pushing" the old one
+    startNewPos = currentOldPos + containerWidth;
     debug(
       "transition",
-      "📐 Using old element position for continuity:",
-      currentOldPos,
+      "📐 Calculated new position for seamless slide:",
+      `${currentOldPos} + ${containerWidth} = ${startNewPos}`,
     );
   } else {
     // Use current new position if it exists, otherwise start from container width
