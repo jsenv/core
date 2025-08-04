@@ -287,6 +287,10 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           transitionOverlay.appendChild(oldContent);
           firstChild.style.opacity = "0";
         }
+        // Cancel any ongoing transition before starting a new one
+        if (transitionAnimation) {
+          transitionAnimation.cancel();
+        }
         transitionAnimation = animateTransition(oldContent, firstChild);
       }
 
@@ -402,7 +406,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 const animateTransition = (
   oldContent,
   newElement,
-  { type = "cross-fade", onComplete } = {},
+  { type = "cross-fade", onEnd } = {},
 ) => {
   if (type !== "cross-fade") {
     return null;
@@ -422,7 +426,7 @@ const animateTransition = (
         sideEffect: (_, { timing }) => {
           if (timing === "end") {
             newElement.style.opacity = "";
-            onComplete?.();
+            onEnd?.();
           }
         },
       }),
@@ -444,7 +448,7 @@ const animateTransition = (
       sideEffect: (_, { timing }) => {
         if (timing === "end") {
           newElement.style.opacity = "";
-          onComplete?.();
+          onEnd?.();
         }
       },
     }),

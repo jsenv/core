@@ -5,69 +5,6 @@ import { setStyles } from "../style_and_attributes.js";
 
 const easing = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 
-const KNOWN_PROPERTIES = {
-  height: {
-    getValue: (element) => getHeight(element),
-    setValue: (element, value) => {
-      element.style.height = `${value}px`;
-    },
-  },
-  width: {
-    getValue: (element) => getWidth(element),
-    setValue: (element, value) => {
-      element.style.width = `${value}px`;
-    },
-  },
-  opacity: {
-    getValue: (element) => parseFloat(getComputedStyle(element).opacity) || 0,
-    setValue: (element, value) => {
-      element.style.opacity = value;
-    },
-  },
-};
-
-export const createStep = ({ element, property, target, sideEffect }) => {
-  const propertyConfig = KNOWN_PROPERTIES[property];
-  if (!propertyConfig) {
-    throw new Error(
-      `Unknown property: ${property}. Use createCustomStep for custom properties.`,
-    );
-  }
-
-  const { getValue, setValue } = propertyConfig;
-
-  return {
-    element,
-    property,
-    target,
-    getValue,
-    setValue,
-    sideEffect,
-  };
-};
-
-export const createCustomStep = ({
-  element,
-  name,
-  target,
-  getValue,
-  setValue,
-  sideEffect,
-}) => {
-  if (!getValue || !setValue) {
-    throw new Error("getValue and setValue are required for custom steps");
-  }
-
-  return {
-    element,
-    property: name,
-    target,
-    getValue,
-    setValue,
-    sideEffect,
-  };
-};
-
 export const createAnimationController = ({ duration }) => {
   const runningAnimations = new Set();
   let animationFrame;
@@ -78,16 +15,19 @@ export const createAnimationController = ({ duration }) => {
 
   const finishCallbackSet = new Set();
   const callFinishCallbacks = () => {
+    finishCallbackSet.clear();
     for (const finishCallback of finishCallbackSet) {
       finishCallback();
     }
-    finishCallbackSet.clear();
+    cancelCallbackSet.clear();
   };
   const cancelCallbackSet = new Set();
   const callCancelCallbacks = () => {
+    finishCallbackSet.clear();
     for (const cancelCallback of cancelCallbackSet) {
       cancelCallback();
     }
+
     cancelCallbackSet.clear();
   };
 
@@ -102,7 +42,14 @@ export const createAnimationController = ({ duration }) => {
   const animationController = {
     pending: false,
     animatedValues,
-    animateAll: (stepArray, { onChange, onEnd } = {}) => {
+    animateAll: (stepArray, { onChange, onCancel, onEnd } = {}) => {
+      if (onCancel) {
+        cancelCallbackSet.add(onCancel);
+      }
+      if (onEnd) {
+        finishCallbackSet.add(onEnd);
+      }
+
       let somethingChanged = false;
       for (const step of stepArray) {
         const element = step.element;
@@ -226,12 +173,11 @@ export const createAnimationController = ({ duration }) => {
         if (changeEntryArray.length && onChange) {
           onChange(changeEntryArray, true);
         }
+        animationController.pending = false;
         callFinishCallbacks();
         runningAnimations.clear();
         animatedValues = {};
         animationFrame = null;
-        animationController.pending = false;
-        onEnd?.();
       };
 
       animationFrame = requestAnimationFrame(draw);
@@ -246,4 +192,65 @@ export const createAnimationController = ({ duration }) => {
     },
   };
   return animationController;
+};
+
+const KNOWN_PROPERTIES = {
+  height: {
+    getValue: (element) => getHeight(element),
+    setValue: (element, value) => {
+      element.style.height = `${value}px`;
+    },
+  },
+  width: {
+    getValue: (element) => getWidth(element),
+    setValue: (element, value) => {
+      element.style.width = `${value}px`;
+    },
+  },
+  opacity: {
+    getValue: (element) => parseFloat(getComputedStyle(element).opacity) || 0,
+    setValue: (element, value) => {
+      element.style.opacity = value;
+    },
+  },
+};
+export const createStep = ({ element, property, target, sideEffect }) => {
+  const propertyConfig = KNOWN_PROPERTIES[property];
+  if (!propertyConfig) {
+    throw new Error(
+      `Unknown property: ${property}. Use createCustomStep for custom properties.`,
+    );
+  }
+
+  const { getValue, setValue } = propertyConfig;
+
+  return {
+    element,
+    property,
+    target,
+    getValue,
+    setValue,
+    sideEffect,
+  };
+};
+export const createCustomStep = ({
+  element,
+  name,
+  target,
+  getValue,
+  setValue,
+  sideEffect,
+}) => {
+  if (!getValue || !setValue) {
+    throw new Error("getValue and setValue are required for custom steps");
+  }
+
+  return {
+    element,
+    property: name,
+    target,
+    getValue,
+    setValue,
+    sideEffect,
+  };
 };
