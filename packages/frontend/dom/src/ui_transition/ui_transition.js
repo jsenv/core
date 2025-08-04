@@ -17,15 +17,20 @@ import.meta.css = /* css */ `
 
   .ui-transition-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
     pointer-events: none;
+    /* Match content's box model and position exactly */
+    box-sizing: border-box;
+    /* Create a stacking context for absolutely positioned children */
+    transform: translateZ(0);
   }
 
-  /* Old content just needs to fill its grid cell, overlay handles positioning */
+  /* Old content is positioned absolutely within the overlay */
   [data-ui-transition-old] {
+    position: absolute;
+    box-sizing: border-box;
+    inset: 0;
+    width: 100%;
+    height: 100%;
   }
 `;
 
@@ -79,6 +84,20 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     console.error("Missing required ui-transition structure");
     return { cleanup: () => {} };
   }
+
+  const updateOverlayPosition = () => {
+    // Get content position relative to outer wrapper
+    const contentRect = content.getBoundingClientRect();
+    const wrapperRect = outerWrapper.getBoundingClientRect();
+    const top = contentRect.top - wrapperRect.top;
+    const left = contentRect.left - wrapperRect.left;
+
+    // Update overlay position and size to match content exactly
+    transitionOverlay.style.top = `${top}px`;
+    transitionOverlay.style.left = `${left}px`;
+    transitionOverlay.style.width = `${contentRect.width}px`;
+    transitionOverlay.style.height = `${contentRect.height}px`;
+  };
 
   const sizeAnimationController = createAnimationController({
     duration: resizeDuration,
@@ -269,6 +288,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       outerWrapper.style.width = `${currentWidth}px`;
       outerWrapper.style.height = `${currentHeight}px`;
 
+      // Update overlay position to match new content position
+      updateOverlayPosition();
+
       debug("🏷️ Content info:", {
         currentUIKey,
         lastUIKey,
@@ -304,10 +326,20 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       if (firstChild) {
         let oldContent = null;
         if (previousContent) {
-          // Clone and prepare the old content before creating steps
+          // Clone and prepare the old content
           oldContent = previousContent.cloneNode(true);
           oldContent.removeAttribute("data-ui-key");
           oldContent.setAttribute("data-ui-transition-old", "");
+
+          // Copy other relevant computed styles
+          const computedStyle = window.getComputedStyle(previousContent);
+          oldContent.style.margin = "0"; // Reset margin since we're using absolute positioning
+          oldContent.style.padding = computedStyle.padding;
+          oldContent.style.display = computedStyle.display;
+          // Preserve other layout properties that might affect the content's appearance
+          oldContent.style.boxSizing = computedStyle.boxSizing;
+          oldContent.style.transformOrigin = computedStyle.transformOrigin;
+
           transitionOverlay.appendChild(oldContent);
         }
         // Cancel any ongoing transition before starting a new one
