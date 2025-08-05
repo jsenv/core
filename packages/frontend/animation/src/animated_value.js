@@ -127,45 +127,49 @@ export const createAnimatedValue = (
     startTime: startTime || document.timeline.currentTime,
     currentTime,
   };
-  const playbackController = createPlaybackController({
-    start: () => {
-      const cleanup = init?.();
-      animation.update = playbackController.progress;
-      addOnTimeline(animation);
-      return {
-        update: (progress) => {
-          animatedValue.progress = progress;
-          if (progress === 1) {
-            animatedValue.value = to;
-          } else {
-            const easedProgress = easing(progress);
-            const animatedValue = from + (to - from) * easedProgress;
-            animatedValue.value = animatedValue;
-          }
-        },
-        pause: () => {
-          removeFromTimeline(animation);
-          return () => {
-            addOnTimeline(animation);
-          };
-        },
-        abort: () => {
-          removeFromTimeline(animation);
-          if (typeof cleanup === "function") {
-            cleanup();
-          }
-        },
-        finish: () => {
-          removeFromTimeline(animation);
-          if (typeof cleanup === "function") {
-            cleanup();
-          }
-        },
-      };
+  const playbackController = createPlaybackController(
+    {
+      start: () => {
+        const cleanup = init?.();
+        animation.update = playbackController.progress;
+        addOnTimeline(animation);
+        return {
+          update: (progress) => {
+            animatedValue.progress = progress;
+            if (progress === 1) {
+              animatedValue.value = to;
+            } else {
+              const easedProgress = easing(progress);
+              const animatedValue = from + (to - from) * easedProgress;
+              animatedValue.value = animatedValue;
+            }
+          },
+          pause: () => {
+            removeFromTimeline(animation);
+            return () => {
+              addOnTimeline(animation);
+            };
+          },
+          abort: () => {
+            removeFromTimeline(animation);
+            if (typeof cleanup === "function") {
+              cleanup();
+            }
+          },
+          finish: () => {
+            removeFromTimeline(animation);
+            if (typeof cleanup === "function") {
+              cleanup();
+            }
+          },
+        };
+      },
     },
-    onFinish: executeFinishCallbacks,
-    onProgress: executeProgressCallbacks,
-  });
+    {
+      onFinish: executeFinishCallbacks,
+      onProgress: executeProgressCallbacks,
+    },
+  );
 
   animatedValue.animation = animation;
   animatedValue[playableSymbol] = playbackController;
@@ -258,49 +262,53 @@ export const createPlaybackGroup = (
   playableContentArray,
   { onProgress, onFinish },
 ) => {
-  const playbackController = createPlaybackController({
-    start: () => {
-      const playingCount = playableContentArray.length;
-      let finishedCount = 0;
+  const playbackController = createPlaybackController(
+    {
+      start: () => {
+        const playingCount = playableContentArray.length;
+        let finishedCount = 0;
 
-      playableContentArray = playableContentArray.map((value) => {
-        return value[playableSymbol];
-      });
-
-      for (const playableContent of playableContentArray) {
-        // eslint-disable-next-line no-loop-func
-        const remove = playableContent.finishCallbacks.add(() => {
-          remove();
-          finishedCount++;
-          const progress = finishedCount / playingCount;
-          playbackController.progress(progress);
+        playableContentArray = playableContentArray.map((value) => {
+          return value[playableSymbol];
         });
-        playableContent.play();
-      }
-      return {
-        pause: () => {
-          for (const playableContent of playableContentArray) {
-            playableContent.pause();
-          }
-        },
-        update: () => {
-          // noop
-        },
-        finish: () => {
-          for (const playableContent of playableContentArray) {
-            playableContent.finish();
-          }
-        },
-        abort: () => {
-          for (const playableContent of playableContentArray) {
-            playableContent.abort();
-          }
-        },
-      };
+
+        for (const playableContent of playableContentArray) {
+          // eslint-disable-next-line no-loop-func
+          const remove = playableContent.finishCallbacks.add(() => {
+            remove();
+            finishedCount++;
+            const progress = finishedCount / playingCount;
+            playbackController.progress(progress);
+          });
+          playableContent.play();
+        }
+        return {
+          pause: () => {
+            for (const playableContent of playableContentArray) {
+              playableContent.pause();
+            }
+          },
+          update: () => {
+            // noop
+          },
+          finish: () => {
+            for (const playableContent of playableContentArray) {
+              playableContent.finish();
+            }
+          },
+          abort: () => {
+            for (const playableContent of playableContentArray) {
+              playableContent.abort();
+            }
+          },
+        };
+      },
     },
-    onProgress,
-    onFinish,
-  });
+    {
+      onProgress,
+      onFinish,
+    },
+  );
   return playbackController;
 };
 

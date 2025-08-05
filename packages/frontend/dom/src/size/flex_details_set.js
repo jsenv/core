@@ -9,7 +9,7 @@ import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinHeight } from "./get_min_height.js";
 import { resolveCSSSize } from "./resolve_css_size.js";
-import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
+// import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;

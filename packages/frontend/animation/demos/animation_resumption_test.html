@@ -246,7 +246,7 @@
         createElementHeightTransition,
         createElementWidthTransition,
         createElementOpacityTransition,
-        createAnimationController,
+        createPlaybackGroup,
       } from "@jsenv/animation";
 
       const testElement = document.getElementById("test-element");
@@ -447,14 +447,14 @@
                 },
               ),
             ];
-            const animController = createAnimationController(animations);
-            animController.finishCallbacks.add(() => {
-              updateStatus("Combined animation completed", "ended");
-              updateButtons(false);
-              log("Combined animation completed");
+            const animGroup = createPlaybackGroup(animations, {
+              onFinish: () => {
+                updateStatus("Combined animation completed", "ended");
+                updateButtons(false);
+                log("Combined animation completed");
+              },
             });
-            animController.play();
-            return null;
+            return animGroup;
           }
 
           default:
