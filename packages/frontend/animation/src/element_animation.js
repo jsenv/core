@@ -26,6 +26,7 @@ export const createElementHeightTransition = (element, to, options) => {
     const { value } = animatedHeight;
     element.style.height = `${value}px`;
   });
+  return animatedHeight;
 };
 export const createElementWidthTransition = (element, to, options) => {
   const from = getWidth(element);
@@ -49,6 +50,7 @@ export const createElementWidthTransition = (element, to, options) => {
     const { value } = animatedWidth;
     element.style.height = `${value}px`;
   });
+  return animatedWidth;
 };
 export const createElementOpacityTransition = (element, to, options) => {
   const from = parseFloat(getComputedStyle(element).opacity) || 0;
@@ -71,6 +73,7 @@ export const createElementOpacityTransition = (element, to, options) => {
     const { value } = animatedOpacity;
     element.style.opacity = value;
   });
+  return animatedOpacity;
 };
 export const createElementTranslateXTransition = (element, to, options) => {
   const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
@@ -101,6 +104,7 @@ export const createElementTranslateXTransition = (element, to, options) => {
     const { value } = animatedTranslateX;
     setTranslateX(element, value, { unit });
   });
+  return animatedTranslateX;
 };
 const getTranslateX = (element) => {
   const transform = getComputedStyle(element).transform;

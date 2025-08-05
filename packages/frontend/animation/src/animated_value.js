@@ -173,7 +173,9 @@ export const createAnimatedValue = (
   return animatedValue;
 };
 
-export const createPlaybackController = (content, { onFinish, onProgress }) => {
+export const createPlaybackController = (content, { onProgress, onFinish }) => {
+  const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
+
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let contentPlaying = null;
   let resume;
@@ -207,7 +209,7 @@ export const createPlaybackController = (content, { onFinish, onProgress }) => {
       }
       // "running" or "paused"
       contentPlaying.update(progress);
-      onProgress();
+      onProgress?.();
       if (progress === 1) {
         playbackController.finish();
       }
@@ -237,7 +239,8 @@ export const createPlaybackController = (content, { onFinish, onProgress }) => {
       contentPlaying.finish();
       resume = null;
       playState = playbackController.playState = "finished";
-      onFinish();
+      onFinish?.();
+      executeFinishCallbacks();
     },
     abort: () => {
       if (contentPlaying) {
@@ -246,11 +249,15 @@ export const createPlaybackController = (content, { onFinish, onProgress }) => {
       resume = null;
       playState = playbackController.playState = "idle";
     },
+    finishCallbacks,
   };
   playbackController[playableSymbol] = playbackController;
   return playbackController;
 };
-export const createPlaybackGroup = (playableContentArray, { onFinish }) => {
+export const createPlaybackGroup = (
+  playableContentArray,
+  { onProgress, onFinish },
+) => {
   const playbackController = createPlaybackController({
     start: () => {
       const playingCount = playableContentArray.length;
@@ -276,6 +283,9 @@ export const createPlaybackGroup = (playableContentArray, { onFinish }) => {
             playableContent.pause();
           }
         },
+        update: () => {
+          // noop
+        },
         finish: () => {
           for (const playableContent of playableContentArray) {
             playableContent.finish();
@@ -288,6 +298,7 @@ export const createPlaybackGroup = (playableContentArray, { onFinish }) => {
         },
       };
     },
+    onProgress,
     onFinish,
   });
   return playbackController;
