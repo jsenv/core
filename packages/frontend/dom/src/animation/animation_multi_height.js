@@ -1,8 +1,12 @@
 import { createHeightAnimation } from "./animation_dom.js";
 import { createPlaybackGroup } from "./animation_playback.js";
 
+// Global tracking of ongoing animations by element
+const ongoingAnimations = new WeakMap();
+
 /**
  * Animate multiple elements to different target heights simultaneously
+ * Automatically handles updateTarget for elements that are already animating
  * @param {Array} animations - Array of {element, target, sideEffect?} objects
  * @param {Object} options - Animation options
  * @param {number} options.duration - Animation duration in ms
@@ -24,8 +28,30 @@ export const animateMultipleHeights = (animations, options = {}) => {
     };
   }
 
-  // Create individual height animations for each element
-  const playbackControllers = animations.map(
+  const newAnimations = [];
+  const updatedAnimations = [];
+
+  // Separate elements into new animations vs updates to existing ones
+  for (const { element, target, sideEffect } of animations) {
+    const existingAnimation = ongoingAnimations.get(element);
+
+    if (existingAnimation && existingAnimation.playState === "running") {
+      // Update existing animation target
+      existingAnimation.updateTarget(target);
+      updatedAnimations.push({
+        element,
+        target,
+        sideEffect,
+        animation: existingAnimation,
+      });
+    } else {
+      // Create new animation
+      newAnimations.push({ element, target, sideEffect });
+    }
+  }
+
+  // Create individual height animations for new elements
+  const playbackControllers = newAnimations.map(
     ({ element, target, sideEffect }) => {
       const animation = createHeightAnimation(element, target, {
         duration,
@@ -33,6 +59,14 @@ export const animateMultipleHeights = (animations, options = {}) => {
         from: Math.round(
           parseFloat(element.style.height) || element.offsetHeight,
         ),
+      });
+
+      // Track this animation globally
+      ongoingAnimations.set(element, animation);
+
+      // Clean up tracking when animation finishes
+      animation.channels.finish.add(() => {
+        ongoingAnimations.delete(element);
       });
 
       // Add side effects to progress tracking
@@ -52,21 +86,41 @@ export const animateMultipleHeights = (animations, options = {}) => {
     },
   );
 
-  // Create group controller to coordinate all animations
+  // If we only have updated animations (no new ones), return a minimal controller
+  if (newAnimations.length === 0) {
+    return {
+      play: () => {}, // Already playing
+      pause: () =>
+        updatedAnimations.forEach(({ animation }) => animation.pause()),
+      cancel: () =>
+        updatedAnimations.forEach(({ animation }) => animation.cancel()),
+      finish: () =>
+        updatedAnimations.forEach(({ animation }) => animation.finish()),
+      playState: "running", // All are already running
+      channels: {
+        progress: { add: () => {} }, // Progress tracking already set up
+        finish: { add: () => {} },
+      },
+    };
+  }
+
+  // Create group controller to coordinate new animations only
   const groupController = createPlaybackGroup(
     playbackControllers.map(({ animation }) => animation),
   );
 
-  // Add unified progress tracking
+  // Add unified progress tracking for ALL animations (new + updated)
   if (onChange) {
     groupController.channels.progress.add((progress) => {
-      // Build change entries for current state
-      const changeEntries = playbackControllers.map(({ element }) => ({
-        element,
-        value: Math.round(
-          parseFloat(element.style.height) || element.offsetHeight,
-        ),
-      }));
+      // Build change entries for current state of ALL elements
+      const changeEntries = [...newAnimations, ...updatedAnimations].map(
+        ({ element }) => ({
+          element,
+          value: Math.round(
+            parseFloat(element.style.height) || element.offsetHeight,
+          ),
+        }),
+      );
 
       onChange(changeEntries, progress === 1); // isLast = progress === 1
     });
@@ -75,17 +129,23 @@ export const animateMultipleHeights = (animations, options = {}) => {
   // Add finish tracking
   if (onFinish) {
     groupController.channels.finish.add(() => {
-      const changeEntries = playbackControllers.map(({ element, target }) => ({
-        element,
-        value: target,
-      }));
+      const changeEntries = [...newAnimations, ...updatedAnimations].map(
+        ({ element, target }) => ({
+          element,
+          value: target,
+        }),
+      );
       onFinish(changeEntries);
     });
   }
 
   return {
     ...groupController,
-    elements: playbackControllers.map(({ element }) => element),
-    targets: playbackControllers.map(({ target }) => target),
+    elements: [...newAnimations, ...updatedAnimations].map(
+      ({ element }) => element,
+    ),
+    targets: [...newAnimations, ...updatedAnimations].map(
+      ({ target }) => target,
+    ),
   };
 };
