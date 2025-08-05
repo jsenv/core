@@ -51,8 +51,13 @@ export const createHeightAnimation = (element, to, options = {}) => {
         },
       });
     },
-    { isVisual: true },
+    {
+      isVisual: true,
+      constructor: createHeightAnimation,
+      key: element,
+    },
   );
+
   return heightAnimation;
 };
 export const createWidthAnimation = (element, to, options = {}) => {
@@ -99,7 +104,11 @@ export const createWidthAnimation = (element, to, options = {}) => {
         },
       });
     },
-    { isVisual: true },
+    {
+      isVisual: true,
+      constructor: createWidthAnimation,
+      key: element,
+    },
   );
   return widthAnimation;
 };
@@ -147,7 +156,11 @@ export const createOpacityAnimation = (element, to, options = {}) => {
         },
       });
     },
-    { isVisual: true },
+    {
+      isVisual: true,
+      constructor: createOpacityAnimation,
+      key: element,
+    },
   );
   return opacityAnimation;
 };
@@ -208,7 +221,11 @@ export const createTranslateXAnimation = (element, to, options = {}) => {
         },
       });
     },
-    { isVisual: true },
+    {
+      isVisual: true,
+      constructor: createTranslateXAnimation,
+      key: element,
+    },
   );
   return translateXAnimation;
 };

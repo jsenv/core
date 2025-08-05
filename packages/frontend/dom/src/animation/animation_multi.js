@@ -1,29 +1,27 @@
-import { createHeightAnimation } from "./animation_dom.js";
 import { createPlaybackGroup } from "./animation_playback.js";
 
 /**
  * Creates a multi-animation controller that manages ongoing animations
  * and handles target updates automatically
  */
-export const createMultiHeightAnimationController = () => {
-  // Track ongoing animations by element within this controller instance
-  const ongoingAnimations = new WeakMap();
+export const createMultiAnimationController = () => {
+  // Track ongoing animations by targetKey + constructor combination
+  const ongoingAnimations = new Map();
   // Also maintain a Set for cancellation purposes
   const activeAnimations = new Set();
 
   return {
     /**
-     * Animate multiple elements to different target heights simultaneously
+     * Animate multiple animations simultaneously
      * Automatically handles updateTarget for elements that are already animating
-     * @param {Array} animations - Array of {element, target, sideEffect?} objects
+     * @param {Array} animations - Array of animation objects with updateTarget capability
      * @param {Object} options - Animation options
-     * @param {number} options.duration - Animation duration in ms
      * @param {Function} options.onChange - Called with (changeEntries, isLast) during animation
      * @param {Function} options.onFinish - Called when all animations complete
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
     animate: (animations, options = {}) => {
-      const { duration = 300, onChange, onFinish } = options;
+      const { onChange, onFinish } = options;
 
       if (animations.length === 0) {
         return {
@@ -39,44 +37,32 @@ export const createMultiHeightAnimationController = () => {
       const newAnimations = [];
       const updatedAnimations = [];
 
-      // Separate elements into new animations vs updates to existing ones
-      for (const { element, target, sideEffect } of animations) {
-        const existingAnimation = ongoingAnimations.get(element);
+      // Separate animations into new vs updates to existing ones
+      for (const animation of animations) {
+        // Create a key to identify this type of animation on this target
+        const animationKey = `${animation.constructor?.name || "unknown"}_${animation.targetKey ? animation.targetKey.toString() : "notarget"}`;
+        const existingAnimation = ongoingAnimations.get(animationKey);
+
         if (existingAnimation && existingAnimation.playState === "running") {
-          // Update existing animation target
-          existingAnimation.updateTarget(target);
-          updatedAnimations.push({
-            element,
-            target,
-            sideEffect,
-            animation: existingAnimation,
-          });
+          // Update the existing animation's target if it supports updateTarget
+          if (
+            existingAnimation.updateTarget &&
+            animation.targetValue !== undefined
+          ) {
+            existingAnimation.updateTarget(animation.targetValue);
+          }
+          updatedAnimations.push(existingAnimation);
         } else {
-          const animation = createHeightAnimation(element, target, {
-            duration,
-          });
-          // Track this animation in this controller instance
-          ongoingAnimations.set(element, animation);
+          // Track this animation by its key
+          ongoingAnimations.set(animationKey, animation);
           activeAnimations.add(animation);
           // Clean up tracking when animation finishes
           animation.channels.finish.add(() => {
-            ongoingAnimations.delete(element);
+            ongoingAnimations.delete(animationKey);
             activeAnimations.delete(animation);
           });
-          // Add side effects to progress tracking
-          if (sideEffect) {
-            animation.channels.progress.add((transition) => {
-              const { value, timing } = transition;
-              sideEffect(value, { timing });
-            });
-          }
 
-          newAnimations.push({
-            element,
-            target,
-            sideEffect,
-            animation,
-          });
+          newAnimations.push(animation);
         }
       }
 
@@ -85,11 +71,11 @@ export const createMultiHeightAnimationController = () => {
         return {
           play: () => {}, // Already playing
           pause: () =>
-            updatedAnimations.forEach(({ animation }) => animation.pause()),
+            updatedAnimations.forEach((animation) => animation.pause()),
           cancel: () =>
-            updatedAnimations.forEach(({ animation }) => animation.cancel()),
+            updatedAnimations.forEach((animation) => animation.cancel()),
           finish: () =>
-            updatedAnimations.forEach(({ animation }) => animation.finish()),
+            updatedAnimations.forEach((animation) => animation.finish()),
           playState: "running", // All are already running
           channels: {
             progress: { add: () => {} }, // Progress tracking already set up
@@ -99,17 +85,15 @@ export const createMultiHeightAnimationController = () => {
       }
 
       // Create group controller to coordinate new animations only
-      const groupController = createPlaybackGroup(
-        newAnimations.map(({ animation }) => animation),
-      );
+      const groupController = createPlaybackGroup(newAnimations);
 
       // Add unified progress tracking for ALL animations (new + updated)
       if (onChange) {
         groupController.channels.progress.add((transition) => {
-          // Build change entries for current state of ALL elements
+          // Build change entries for current state of ALL animations
           const changeEntries = [...newAnimations, ...updatedAnimations].map(
-            ({ element, animation }) => ({
-              element,
+            (animation) => ({
+              animation,
               value: animation.content.value,
             }),
           );
@@ -122,9 +106,9 @@ export const createMultiHeightAnimationController = () => {
       if (onFinish) {
         groupController.channels.finish.add(() => {
           const changeEntries = [...newAnimations, ...updatedAnimations].map(
-            ({ element, target }) => ({
-              element,
-              value: target,
+            (animation) => ({
+              animation,
+              value: animation.content.value,
             }),
           );
           onFinish(changeEntries);

@@ -41,7 +41,7 @@ export const createTransition = ({
   return transition;
 };
 
-export const animate = (transitionProducer, { isVisual }) => {
+export const animate = (transitionProducer, { isVisual, constructor, key }) => {
   const playbackController = createPlaybackController({
     start: (...args) => {
       const transition = transitionProducer(...args);
@@ -102,6 +102,11 @@ export const animate = (transitionProducer, { isVisual }) => {
       return [transition, hooks];
     },
   });
+
+  // Add metadata to the controller
+  playbackController.constructor = constructor;
+  playbackController.key = key;
+
   return playbackController;
 };
 
