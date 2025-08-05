@@ -42,7 +42,6 @@ export const createMultiHeightAnimationController = () => {
       // Separate elements into new animations vs updates to existing ones
       for (const { element, target, sideEffect } of animations) {
         const existingAnimation = ongoingAnimations.get(element);
-
         if (existingAnimation && existingAnimation.playState === "running") {
           // Update existing animation target
           existingAnimation.updateTarget(target);
@@ -53,39 +52,33 @@ export const createMultiHeightAnimationController = () => {
             animation: existingAnimation,
           });
         } else {
-          // Create new animation
-          newAnimations.push({ element, target, sideEffect });
-        }
-      }
-
-      // Create individual height animations for new elements
-      const playbackControllers = newAnimations.map(
-        ({ element, target, sideEffect }) => {
           const animation = createHeightAnimation(element, target, {
             duration,
           });
-
           // Track this animation in this controller instance
           ongoingAnimations.set(element, animation);
           activeAnimations.add(animation);
-
           // Clean up tracking when animation finishes
           animation.channels.finish.add(() => {
             ongoingAnimations.delete(element);
             activeAnimations.delete(animation);
           });
-
           // Add side effects to progress tracking
           if (sideEffect) {
             animation.channels.progress.add((transition) => {
-              const { value: height, timing } = transition;
-              sideEffect(height, { timing });
+              const { value, timing } = transition;
+              sideEffect(value, { timing });
             });
           }
 
-          return { animation, element, target, sideEffect };
-        },
-      );
+          newAnimations.push({
+            element,
+            target,
+            sideEffect,
+            animation,
+          });
+        }
+      }
 
       // If we only have updated animations (no new ones), return a minimal controller
       if (newAnimations.length === 0) {
@@ -107,7 +100,7 @@ export const createMultiHeightAnimationController = () => {
 
       // Create group controller to coordinate new animations only
       const groupController = createPlaybackGroup(
-        playbackControllers.map(({ animation }) => animation),
+        newAnimations.map(({ animation }) => animation),
       );
 
       // Add unified progress tracking for ALL animations (new + updated)
@@ -115,11 +108,9 @@ export const createMultiHeightAnimationController = () => {
         groupController.channels.progress.add((transition) => {
           // Build change entries for current state of ALL elements
           const changeEntries = [...newAnimations, ...updatedAnimations].map(
-            ({ element }) => ({
+            ({ element, animation }) => ({
               element,
-              value: Math.round(
-                parseFloat(element.style.height) || element.offsetHeight,
-              ),
+              value: animation.content.value,
             }),
           );
 
@@ -140,15 +131,7 @@ export const createMultiHeightAnimationController = () => {
         });
       }
 
-      return {
-        ...groupController,
-        elements: [...newAnimations, ...updatedAnimations].map(
-          ({ element }) => element,
-        ),
-        targets: [...newAnimations, ...updatedAnimations].map(
-          ({ target }) => target,
-        ),
-      };
+      return groupController;
     },
 
     /**

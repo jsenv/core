@@ -213,6 +213,10 @@ export const createPlaybackController = (content) => {
         contentHooks.resetStartTime();
       }
     },
+
+    get content() {
+      return contentPlaying;
+    },
   };
   return playbackController;
 };
