@@ -1,7 +1,11 @@
 import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
 import { addWillChange } from "../style_and_attributes.js";
-import { animate, createTransition } from "./animation_playback.js";
+import {
+  animate,
+  createTimelineTransition,
+  createTransition,
+} from "./animation_playback.js";
 import {
   parseTransform,
   stringifyTransform,
@@ -12,13 +16,14 @@ export const createHeightAnimation = (
   to,
   { from, duration, easing, ...options } = {},
 ) => {
-  const heightTransition = createTransition({
+  const heightTransition = createTimelineTransition({
     constructor: createHeightAnimation,
     key: element,
     from,
     to,
     duration,
     easing,
+    isVisual: true,
     setup: () => {
       heightTransition.from = from ?? getHeight(element);
       const heightAtStartFromInlineStyle = element.style.height;
@@ -41,7 +46,6 @@ export const createHeightAnimation = (
         },
       };
     },
-    isVisual: true,
   });
 
   const heightAnimation = animate(heightTransition, options);
