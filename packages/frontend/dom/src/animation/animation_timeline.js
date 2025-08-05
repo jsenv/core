@@ -1,9 +1,18 @@
-const animationSet = new Set();
-export const addOnTimeline = (animation) => {
-  animationSet.add(animation);
+const visualAnimationSet = new Set();
+const backgroundAnimationSet = new Set();
+export const addOnTimeline = (animation, isVisual) => {
+  if (isVisual) {
+    visualAnimationSet.add(animation);
+  } else {
+    backgroundAnimationSet.add(animation);
+  }
 };
-export const removeFromTimeline = (animation) => {
-  animationSet.delete(animation);
+export const removeFromTimeline = (animation, isVisual) => {
+  if (isVisual) {
+    visualAnimationSet.delete(animation);
+  } else {
+    backgroundAnimationSet.delete(animation);
+  }
 };
 const updateAnimation = (animation) => {
   const { startTime, duration } = animation;
@@ -26,11 +35,8 @@ const updateAnimation = (animation) => {
 const createBackgroundUpdateLoop = () => {
   let timeout;
   const update = () => {
-    for (const animation of animationSet) {
-      if (animation.isVisual) {
-        continue;
-      }
-      updateAnimation(animation);
+    for (const backgroundAnimation of backgroundAnimationSet) {
+      updateAnimation(backgroundAnimation);
     }
     timeout = setTimeout(update, 16); // roughly 60fps
   };
@@ -47,11 +53,8 @@ const createBackgroundUpdateLoop = () => {
 const createAnimationFrameLoop = () => {
   let animationFrame = null;
   const update = () => {
-    for (const animation of animationSet) {
-      if (!animation.isVisual) {
-        continue;
-      }
-      updateAnimation(animation);
+    for (const visualAnimation of visualAnimationSet) {
+      updateAnimation(visualAnimation);
     }
     animationFrame = requestAnimationFrame(update);
   };
