@@ -347,7 +347,8 @@
           currentAnimation && currentAnimation.playState === "running";
 
         if (isAnimating) {
-          if (isExpanded) {
+          const targetHeight = isExpanded ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT;
+          if (targetHeight === COLLAPSED_HEIGHT) {
             toggleBtn.className = "toggle-button collapsing";
             toggleBtn.textContent = `Collapsing to ${COLLAPSED_HEIGHT}px...`;
           } else {
@@ -357,7 +358,7 @@
         } else {
           toggleBtn.className = "toggle-button";
           const nextTarget = isExpanded ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT;
-          const action = isExpanded ? "Collapse" : "Expand";
+          const action = nextTarget === EXPANDED_HEIGHT ? "Expand" : "Collapse";
           toggleBtn.textContent = `${action} to ${nextTarget}px`;
         }
       }
@@ -382,7 +383,8 @@
       function toggleHeight() {
         toggleCount++;
         const targetHeight = isExpanded ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT;
-        const action = isExpanded ? "Collapsing" : "Expanding";
+        const action =
+          targetHeight === EXPANDED_HEIGHT ? "Expanding" : "Collapsing";
 
         log(`Toggle ${toggleCount}: ${action} to ${targetHeight}px`);
 
@@ -392,15 +394,11 @@
           currentAnimation.updateTarget(targetHeight);
           updateStatus(
             `Target updated mid-animation`,
-            isExpanded ? "collapsing" : "expanding",
+            targetHeight === COLLAPSED_HEIGHT ? "collapsing" : "expanding",
           );
         } else {
           // Start new animation
           log(`Starting new animation to ${targetHeight}px`);
-
-          if (currentAnimation) {
-            currentAnimation.cancel();
-          }
 
           currentAnimation = createHeightAnimation(testElement, targetHeight, {
             duration: ANIMATION_DURATION,
@@ -424,7 +422,7 @@
           currentAnimation.play();
           updateStatus(
             `${action} animation started`,
-            isExpanded ? "collapsing" : "expanding",
+            targetHeight === COLLAPSED_HEIGHT ? "collapsing" : "expanding",
           );
         }
 
