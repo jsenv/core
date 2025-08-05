@@ -13,9 +13,7 @@ const removeFromTimeline = (animation) => {
   animationSet.delete(animation);
 };
 
-const animationCleanupMap = new Map();
 let paused = true;
-
 const updateAnimation = (animation) => {
   const { startTime, duration } = animation;
   const elapsed = document.timeline.currentTime - startTime;
@@ -122,14 +120,31 @@ export const createAnimatedValue = (
   to,
   { duration, startTime, currentTime, easing = easingDefault } = {},
 ) => {
-  const start = () => {
-    const startReturnValue = animatedValue.onStart();
-    if (typeof startReturnValue === "function") {
-      animationCleanupMap.set(animatedValue, startReturnValue);
-    }
-    animatedValue.playState = "running";
-    addOnTimeline(animatedValue);
-  };
+  const playbackController = createPlaybackController({
+    start: () => {
+      const startReturnValue = animatedValue.onStart();
+      addOnTimeline(animatedValue);
+      return {
+        pause: () => {
+          removeFromTimeline(animatedValue);
+          return () => {
+            addOnTimeline(animatedValue);
+          };
+        },
+        finish: () => {
+          removeFromTimeline(animatedValue);
+          if (typeof startReturnValue === "function") {
+            startReturnValue();
+          }
+        },
+        stop: () => {
+          if (typeof startReturnValue === "function") {
+            startReturnValue();
+          }
+        },
+      };
+    },
+  });
 
   const animatedValue = {
     duration,
@@ -144,91 +159,141 @@ export const createAnimatedValue = (
       animatedValue.progress = progress;
       animatedValue.value = value;
     },
-    playState: "idle", // 'idle', 'running', 'paused', 'finished'
-    play: () => {
-      if (animatedValue.playState === "idle") {
-        start();
-        return;
-      }
-      if (animatedValue.playState === "running") {
-        console.warn("animation already running");
-        return;
-      }
-      if (animatedValue.playState === "paused") {
-        animatedValue.playState = "running";
-        addOnTimeline(animatedValue);
-        return;
-      }
-      // "finished"
-      start();
+    get playState() {
+      return playbackController.playState;
     },
-    pause: () => {
-      if (animatedValue.playState === "paused") {
-        console.warn("animation already paused");
-        return;
-      }
-      if (animatedValue.playState === "finished") {
-        console.warn("Cannot pause a finished animation");
-        return;
-      }
-      animatedValue.playState = "paused";
-      removeFromTimeline(animatedValue);
-    },
-    finish: () => {
-      if (animatedValue.playState === "idle") {
-        console.warn("Cannot finish an animation that is idle");
-        return;
-      }
-      if (animatedValue.playState === "finished") {
-        console.warn("animation already finished");
-        return;
-      }
-      // "running" or "paused"
-      animatedValue.update({
-        progress: 1,
-        value: to,
-        timing: "end",
-      });
-      animatedValue.playState = "finished";
-      removeFromTimeline(animatedValue);
-      const cleanup = animationCleanupMap.get(animatedValue);
-      if (cleanup) {
-        animationCleanupMap.delete(animatedValue);
-        cleanup();
-      }
-    },
+    play: playbackController.play,
+    pause: playbackController.pause,
+    finish: playbackController.finish,
+    finishCallbacks: playbackController.finishCallbacks,
   };
   return animatedValue;
 };
 
-export const playAnimations = (animations, { onEnd }) => {
-  const animationWrapper = {
-    cancel: () => {
-      for (const animation of animations) {
-        animation.onCancel?.();
-        removeFromTimeline(animation);
+const createPlaybackController = (playableContent) => {
+  const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
+
+  let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
+  let contentPlaying = null;
+  let resume;
+  const playbackController = {
+    playState,
+    play: () => {
+      if (playState === "idle") {
+        contentPlaying = playableContent.start();
+        return;
       }
+      if (playState === "running") {
+        console.warn("animation already running");
+        return;
+      }
+      if (playState === "paused") {
+        playState = playbackController.playState = "running";
+        resume();
+        return;
+      }
+      // "finished"
+      contentPlaying = playableContent.start();
     },
-    getAnimationByConstructor: (constructor) => {
-      return animations.find(
-        (animation) => animation.constructor === constructor,
-      );
+    pause: () => {
+      if (playState === "paused") {
+        console.warn("animation already paused");
+        return;
+      }
+      if (playState === "finished") {
+        console.warn("Cannot pause a finished animation");
+        return;
+      }
+      playState = playbackController.playState = "paused";
+      resume = contentPlaying.pause();
     },
+    finish: () => {
+      if (playState === "idle") {
+        console.warn("Cannot finish an animation that is idle");
+        return;
+      }
+      if (playState === "finished") {
+        console.warn("animation already finished");
+        return;
+      }
+      // "running" or "paused"
+      resume = null;
+      playState = playbackController.playState = "finished";
+      contentPlaying.finish();
+      executeFinishCallbacks();
+    },
+    finishCallbacks,
   };
 
-  let animationPlayingCount = animations.length;
-  for (const animation of animations) {
-    // eslint-disable-next-line no-loop-func
-    animation.onfinish = () => {
-      animationPlayingCount--;
-      if (animationPlayingCount === 0) {
-        animationWrapper.playing = false;
-        animationWrapper.ended = true;
-        onEnd?.();
+  return playbackController;
+};
+const createCallbackController = () => {
+  const callbackSet = new Set();
+  const execute = (...args) => {
+    for (const callback of callbackSet) {
+      callback(...args);
+    }
+  };
+  const callbacks = {
+    add: (callback) => {
+      if (typeof callback !== "function") {
+        throw new TypeError("Callback must be a function");
       }
-    };
-    animation.play();
-  }
+      callbackSet.add(callback);
+      return () => {
+        callbackSet.delete(callback);
+      };
+    },
+  };
+  return [callbacks, execute];
+};
 
-  return animationWrapper;
+export const createAnimationController = (animations) => {
+  const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
+
+  const playbackController = createPlaybackController({
+    start: () => {
+      let animationPlayingCount = animations.length;
+
+      for (const animation of animations) {
+        // eslint-disable-next-line no-loop-func
+        const remove = animation.finishCallbacks.add(() => {
+          remove();
+          animationPlayingCount--;
+          if (animationPlayingCount === 0) {
+            executeFinishCallbacks();
+          }
+        });
+        animation.play();
+      }
+      return {
+        pause: () => {
+          for (const animation of animations) {
+            animation.pause();
+          }
+        },
+        finish: () => {
+          for (const animation of animations) {
+            animation.finish();
+          }
+        },
+        stop: () => {
+          for (const animation of animations) {
+            animation.stop();
+          }
+        },
+      };
+    },
+  });
+  const animation = {
+    get playState() {
+      return playbackController.playState;
+    },
+    play: playbackController.play,
+    pause: playbackController.pause,
+    finish: playbackController.finish,
+    finishCallbacks,
+  };
+
+  return animation;
 };
