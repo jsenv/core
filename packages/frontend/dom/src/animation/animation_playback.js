@@ -53,83 +53,8 @@ export const createTransition = ({
 
 export const animate = (
   transitionProducer,
-  { isVisual, constructor, key, to, onProgress },
+  { isVisual, constructor, key, targetValue, onProgress },
 ) => {
-  const playbackController = createPlaybackController(
-    {
-      start: (...args) => {
-        const transition = transitionProducer(...args);
-        const animation = {
-          transition,
-          startTime: document.timeline.currentTime,
-          duration: transition.duration,
-          isVisual,
-          update: playbackController.progress,
-        };
-        const { update, teardown, restore } = transition.setup();
-        addOnTimeline(animation);
-
-        const hooks = {
-          resetStartTime: () => {
-            animation.startTime = document.timeline.currentTime;
-          },
-          updateTarget: (to) => {
-            const currentValue = transition.value;
-            transition.updateTarget(currentValue, to);
-            hooks.resetStartTime();
-          },
-          update: (progress, { isFirstUpdate }) => {
-            transition.progress = progress;
-            if (progress === 1) {
-              transition.value = transition.to;
-            } else {
-              const easedProgress = transition.easing(progress);
-              const value =
-                transition.from +
-                (transition.to - transition.from) * easedProgress;
-              transition.value = value;
-            }
-            transition.timing =
-              progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
-            update(transition.value);
-          },
-          pause: () => {
-            const pauseTime = document.timeline.currentTime;
-            removeFromTimeline(animation);
-            return () => {
-              const pausedDuration = document.timeline.currentTime - pauseTime;
-              animation.startTime = animation.startTime + pausedDuration;
-              addOnTimeline(animation);
-            };
-          },
-          cancel: () => {
-            removeFromTimeline(animation);
-            teardown();
-            restore();
-          },
-          finish: () => {
-            removeFromTimeline(animation);
-            teardown();
-          },
-        };
-
-        return [transition, hooks];
-      },
-    },
-    {
-      onProgress,
-    },
-  );
-
-  // Add metadata to the controller
-  playbackController.constructor = constructor;
-  playbackController.key = key;
-  playbackController.to = to;
-
-  return playbackController;
-};
-
-export const createPlaybackController = (content, { onProgress } = {}) => {
   const [progressCallbacks, executeProgressCallbacks] =
     createCallbackController();
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
@@ -142,213 +67,184 @@ export const createPlaybackController = (content, { onProgress } = {}) => {
   }
 
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
-  let contentPlaying = null;
-  let contentHooks = null;
+  let transition = null;
   let isFirstUpdate = false;
   let resume;
-  const playbackController = {
+  let startTime = null;
+
+  const animation = {
     channels,
-    playState,
+    constructor,
+    key,
+    targetValue,
+    get playState() {
+      return playState;
+    },
+    get content() {
+      return transition;
+    },
+    get startTime() {
+      return startTime;
+    },
+    set startTime(value) {
+      startTime = value;
+    },
+    get duration() {
+      return transition?.duration || 0;
+    },
+    get isVisual() {
+      return isVisual;
+    },
+    update: null, // Will be set to progress method
+
     play: (...args) => {
       if (playState === "idle") {
         isFirstUpdate = true;
-        playState = playbackController.playState = "running";
-        [contentPlaying, contentHooks] = content.start(...args);
+        playState = "running";
+        transition = transitionProducer(...args);
+        startTime = document.timeline.currentTime;
+
+        const { update, teardown, restore } = transition.setup();
+        addOnTimeline(animation);
+
+        animation._update = update;
+        animation._teardown = teardown;
+        animation._restore = restore;
         return;
       }
       if (playState === "running") {
-        console.warn("content already running");
+        console.warn("animation already running");
         return;
       }
       if (playState === "paused") {
-        playState = playbackController.playState = "running";
+        playState = "running";
         resume();
         return;
       }
       // "finished"
       isFirstUpdate = true;
-      playState = playbackController.playState = "running";
-      [contentPlaying, contentHooks] = content.start(...args);
+      playState = "running";
+      transition = transitionProducer(...args);
+      startTime = document.timeline.currentTime;
+
+      const { update, teardown, restore } = transition.setup();
+      addOnTimeline(animation);
+
+      animation._update = update;
+      animation._teardown = teardown;
+      animation._restore = restore;
     },
+
     progress: (progress) => {
       if (playState === "idle") {
-        console.warn("Cannot progress content that is idle");
+        console.warn("Cannot progress animation that is idle");
         return;
       }
       if (playState === "finished") {
-        console.warn("Cannot progress a finished content");
+        console.warn("Cannot progress a finished animation");
         return;
       }
       // "running" or "paused"
-      contentHooks.update(progress, { isFirstUpdate });
-      isFirstUpdate = false;
-      executeProgressCallbacks(contentPlaying);
+      transition.progress = progress;
       if (progress === 1) {
-        playbackController.finish();
+        transition.value = transition.to;
+      } else {
+        const easedProgress = transition.easing(progress);
+        const value =
+          transition.from + (transition.to - transition.from) * easedProgress;
+        transition.value = value;
+      }
+      transition.timing =
+        progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
+
+      animation._update(transition.value);
+      isFirstUpdate = false;
+      executeProgressCallbacks(transition);
+
+      if (progress === 1) {
+        animation.finish();
       }
     },
+
     pause: () => {
       if (playState === "paused") {
-        console.warn("content already paused");
+        console.warn("animation already paused");
         return;
       }
       if (playState === "finished") {
-        console.warn("Cannot pause a finished content");
+        console.warn("Cannot pause a finished animation");
         return;
       }
-      playState = playbackController.playState = "paused";
-      resume = contentHooks.pause();
+      playState = "paused";
+      const pauseTime = document.timeline.currentTime;
+      removeFromTimeline(animation);
+      resume = () => {
+        const pausedDuration = document.timeline.currentTime - pauseTime;
+        startTime = startTime + pausedDuration;
+        addOnTimeline(animation);
+      };
     },
+
     cancel: () => {
-      if (contentPlaying) {
-        contentHooks.cancel();
+      if (transition) {
+        removeFromTimeline(animation);
+        animation._teardown();
+        animation._restore();
       }
       resume = null;
-      playState = playbackController.playState = "idle";
+      playState = "idle";
     },
+
     finish: () => {
       if (playState === "idle") {
-        console.warn("Cannot finish a content that is idle");
+        console.warn("Cannot finish an animation that is idle");
         return;
       }
       if (playState === "finished") {
-        console.warn("content already finished");
+        console.warn("animation already finished");
         return;
       }
       // "running" or "paused"
-      contentHooks.finish();
+      removeFromTimeline(animation);
+      animation._teardown();
       resume = null;
-      playState = playbackController.playState = "finished";
+      playState = "finished";
       executeFinishCallbacks();
     },
 
     resetStartTime: () => {
-      contentHooks.resetStartTime();
+      startTime = document.timeline.currentTime;
     },
+
     updateTarget: (newTarget) => {
+      if (
+        typeof newTarget !== "number" ||
+        isNaN(newTarget) ||
+        !isFinite(newTarget)
+      ) {
+        throw new Error(
+          `updateTarget: newTarget must be a finite number, got ${newTarget}`,
+        );
+      }
       if (playState === "idle") {
-        console.warn("Cannot update target of idle content");
+        console.warn("Cannot update target of idle animation");
         return;
       }
       if (playState === "finished") {
-        console.warn("Cannot update target of finished content");
+        console.warn("Cannot update target of finished animation");
         return;
       }
       // Update the transition target and reset timing
-      if (contentHooks && contentHooks.updateTarget) {
-        contentHooks.updateTarget(newTarget);
-        contentHooks.resetStartTime();
-      }
-    },
-
-    get content() {
-      return contentPlaying;
+      const currentValue = transition.value;
+      transition.updateTarget(currentValue, newTarget);
+      animation.resetStartTime();
     },
   };
-  return playbackController;
-};
-export const createPlaybackGroup = (playableContentArray) => {
-  const playbackController = createPlaybackController({
-    start: () => {
-      // Create a transition to manage group progress and timing
-      const groupTransition = createTransition({
-        from: 0,
-        to: 1,
-        duration: 0, // Duration doesn't matter for group progress tracking
-        easing: (x) => x, // Linear for group progress
-        setup: () => ({
-          update: () => {}, // No direct DOM updates for group transition
-          teardown: () => {},
-          restore: () => {},
-        }),
-      });
 
-      const playingCount = playableContentArray.length;
-      const progressValues = new Array(playingCount).fill(0);
-      const finishedStates = new Array(playingCount).fill(false);
+  // Set the update method reference
+  animation.update = animation.progress;
 
-      // Start all animations and track their progress
-      playableContentArray.forEach((playableContent, index) => {
-        // Track progress updates from each animation
-        const removeProgressListener = playableContent.channels.progress.add(
-          (content) => {
-            progressValues[index] = content.progress;
-            // Calculate average progress
-            const averageProgress =
-              progressValues.reduce((sum, p) => sum + p, 0) / playingCount;
-            // Only call progress if we haven't finished yet
-            if (averageProgress < 1) {
-              playbackController.progress(averageProgress);
-            }
-          },
-        );
-
-        // Track when animations finish
-        const removeFinishListener = playableContent.channels.finish.add(() => {
-          removeProgressListener();
-          removeFinishListener();
-          progressValues[index] = 1;
-          finishedStates[index] = true;
-
-          // Check if all animations are finished
-          const allFinished = finishedStates.every((finished) => finished);
-          if (allFinished) {
-            playbackController.progress(1);
-          }
-        });
-
-        playableContent.play();
-      });
-
-      const groupHooks = {
-        pause: () => {
-          for (const playableContent of playableContentArray) {
-            if (playableContent.playState !== "finished") {
-              playableContent.pause();
-            }
-          }
-        },
-        update: (progress, { isFirstUpdate }) => {
-          // Update group transition timing based on playback controller state
-          groupTransition.progress = progress;
-          groupTransition.value = progress;
-          groupTransition.timing =
-            progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
-        },
-        cancel: () => {
-          for (const playableContent of playableContentArray) {
-            if (playableContent.playState !== "finished") {
-              playableContent.cancel();
-            }
-          }
-        },
-        finish: () => {
-          for (const playableContent of playableContentArray) {
-            if (playableContent.playState !== "finished") {
-              playableContent.finish();
-            }
-          }
-        },
-        resetStartTime: () => {
-          for (const playableContent of playableContentArray) {
-            if (
-              playableContent.resetStartTime &&
-              playableContent.playState !== "finished"
-            ) {
-              playableContent.resetStartTime();
-            }
-          }
-        },
-        updateTarget: () => {
-          // Groups don't support updateTarget - individual animations handle this
-          console.warn("updateTarget not supported on animation groups");
-        },
-      };
-
-      return [groupTransition, groupHooks];
-    },
-  });
-  return playbackController;
+  return animation;
 };
 
 const createCallbackController = () => {
@@ -370,4 +266,126 @@ const createCallbackController = () => {
     },
   };
   return [callbacks, execute];
+};
+export const animateGroup = (animationArray) => {
+  const [progressCallbacks, executeProgressCallbacks] =
+    createCallbackController();
+  const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
+  const channels = {
+    progress: progressCallbacks,
+    finish: finishCallbacks,
+  };
+
+  let playState = "idle";
+  const playingCount = animationArray.length;
+  const progressValues = new Array(playingCount).fill(0);
+  const finishedStates = new Array(playingCount).fill(false);
+
+  // Create a group transition for tracking overall progress
+  const groupTransition = createTransition({
+    from: 0,
+    to: 1,
+    duration: 0,
+    easing: (x) => x,
+    setup: () => ({
+      update: () => {},
+      teardown: () => {},
+      restore: () => {},
+    }),
+  });
+
+  const animationGroup = {
+    channels,
+    get playState() {
+      return playState;
+    },
+    get content() {
+      return groupTransition;
+    },
+
+    play: (...args) => {
+      if (playState === "running") {
+        console.warn("animation group already running");
+        return;
+      }
+
+      playState = "running";
+      progressValues.fill(0);
+      finishedStates.fill(false);
+
+      // Start all animations and track their progress
+      animationArray.forEach((animation, index) => {
+        // Track progress updates from each animation
+        const removeProgressListener = animation.channels.progress.add(
+          (content) => {
+            progressValues[index] = content.progress;
+            // Calculate average progress
+            const averageProgress =
+              progressValues.reduce((sum, p) => sum + p, 0) / playingCount;
+
+            // Update group transition
+            groupTransition.progress = averageProgress;
+            groupTransition.value = averageProgress;
+            groupTransition.timing = averageProgress === 1 ? "end" : "progress";
+
+            executeProgressCallbacks(groupTransition);
+          },
+        );
+
+        // Track when animations finish
+        const removeFinishListener = animation.channels.finish.add(() => {
+          removeProgressListener();
+          removeFinishListener();
+          progressValues[index] = 1;
+          finishedStates[index] = true;
+
+          // Check if all animations are finished
+          const allFinished = finishedStates.every((finished) => finished);
+          if (allFinished) {
+            playState = "finished";
+            executeFinishCallbacks();
+          }
+        });
+
+        animation.play(...args);
+      });
+    },
+
+    pause: () => {
+      if (playState !== "running") {
+        console.warn("Cannot pause animation group that is not running");
+        return;
+      }
+      playState = "paused";
+      for (const animation of animationArray) {
+        if (animation.playState === "running") {
+          animation.pause();
+        }
+      }
+    },
+
+    cancel: () => {
+      playState = "idle";
+      for (const animation of animationArray) {
+        if (animation.playState !== "idle") {
+          animation.cancel();
+        }
+      }
+    },
+
+    finish: () => {
+      if (playState === "idle") {
+        console.warn("Cannot finish animation group that is idle");
+        return;
+      }
+      playState = "finished";
+      for (const animation of animationArray) {
+        if (animation.playState !== "finished") {
+          animation.finish();
+        }
+      }
+    },
+  };
+
+  return animationGroup;
 };

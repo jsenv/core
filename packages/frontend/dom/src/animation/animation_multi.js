@@ -1,4 +1,4 @@
-import { createPlaybackGroup } from "./animation_playback.js";
+import { animateGroup } from "./animation_playback.js";
 
 /**
  * Creates a multi-animation controller that manages ongoing animations
@@ -86,7 +86,7 @@ export const createMultiAnimationController = () => {
       }
 
       // Create group controller to coordinate new animations only
-      const groupController = createPlaybackGroup(newAnimations);
+      const groupController = animateGroup(newAnimations);
 
       // Add unified progress tracking for ALL animations (new + updated)
       if (onChange) {
