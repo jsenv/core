@@ -10,60 +10,41 @@ import {
 export const createHeightAnimation = (
   element,
   to,
-  { from, onProgress, ...options } = {},
+  { from, duration, easing, ...options } = {},
 ) => {
-  const heightAnimation = animate(
-    () => {
-      from = from ?? getHeight(element);
-
-      // Warn if the animation difference is too small
-      const diff = Math.abs(to - from);
-      if (diff === 0) {
-        console.warn(
-          `Height animation has identical from and to values (${from}px). This animation will have no visual effect.`,
-        );
-      } else if (diff < 10) {
-        console.warn(
-          `Height animation difference is very small (${diff}px). Consider if this animation is necessary.`,
-        );
-      }
-
-      return createTransition({
-        ...options,
-        from,
-        to,
-        setup: () => {
-          const heightAtStartFromInlineStyle = element.style.height;
-          const restoreWillChange = addWillChange(element, "height");
-          element.setAttribute(`data-height-animated`, "");
-          return {
-            update: (value) => {
-              element.style.height = `${value}px`;
-            },
-            teardown: () => {
-              element.removeAttribute(`data-height-animated`);
-              restoreWillChange();
-            },
-            restore: () => {
-              if (heightAtStartFromInlineStyle) {
-                element.style.height = heightAtStartFromInlineStyle;
-              } else {
-                element.style.removeProperty("height");
-              }
-            },
-          };
+  const heightTransition = createTransition({
+    constructor: createHeightAnimation,
+    key: element,
+    from,
+    to,
+    duration,
+    easing,
+    setup: () => {
+      heightTransition.from = from ?? getHeight(element);
+      const heightAtStartFromInlineStyle = element.style.height;
+      const restoreWillChange = addWillChange(element, "height");
+      element.setAttribute(`data-height-animated`, "");
+      return {
+        update: (value) => {
+          element.style.height = `${value}px`;
         },
-      });
+        teardown: () => {
+          element.removeAttribute(`data-height-animated`);
+          restoreWillChange();
+        },
+        restore: () => {
+          if (heightAtStartFromInlineStyle) {
+            element.style.height = heightAtStartFromInlineStyle;
+          } else {
+            element.style.removeProperty("height");
+          }
+        },
+      };
     },
-    {
-      isVisual: true,
-      constructor: createHeightAnimation,
-      key: element,
-      to,
-      onProgress,
-    },
-  );
+    isVisual: true,
+  });
 
+  const heightAnimation = animate(heightTransition, options);
   return heightAnimation;
 };
 export const createWidthAnimation = (element, to, options = {}) => {

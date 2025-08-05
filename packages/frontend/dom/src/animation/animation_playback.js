@@ -5,56 +5,31 @@
 import { addOnTimeline, removeFromTimeline } from "./animation_timeline.js";
 import { EASING } from "./easing.js";
 
-const INCREASE_EASING = EASING.EASE_OUT;
-const DECREASE_EASING = EASING.EASE_OUT;
-
 export const createTransition = ({
+  constructor,
+  key,
   from,
   to,
   duration,
-  easing,
+  easing = EASING.EASE_OUT,
   setup,
 } = {}) => {
   const transition = {
+    constructor,
+    key,
     from,
     to,
     value: from,
     duration,
-    progess: 0,
+    progress: 0,
     timing: "",
-    easing:
-      easing === undefined
-        ? to > from
-          ? INCREASE_EASING
-          : DECREASE_EASING
-        : easing,
+    easing,
     setup,
-    updateTarget: (newFrom, newTo) => {
-      if (typeof newFrom !== "number" || isNaN(newFrom) || !isFinite(newFrom)) {
-        throw new Error(
-          `updateTarget: newFrom must be a finite number, got ${newFrom}`,
-        );
-      }
-      if (typeof newTo !== "number" || isNaN(newTo) || !isFinite(newTo)) {
-        throw new Error(
-          `updateTarget: newTo must be a finite number, got ${newTo}`,
-        );
-      }
-      transition.from = newFrom;
-      transition.to = newTo;
-      if (easing === undefined) {
-        transition.easing =
-          transition.to > transition.from ? INCREASE_EASING : DECREASE_EASING;
-      }
-    },
   };
   return transition;
 };
 
-export const animate = (
-  transitionProducer,
-  { isVisual, constructor, key, targetValue, onProgress },
-) => {
+export const animate = (transition, { onProgress }) => {
   const [progressCallbacks, executeProgressCallbacks] =
     createCallbackController();
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
@@ -66,81 +41,70 @@ export const animate = (
     progressCallbacks.add(onProgress);
   }
 
-  let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
-  let transition = null;
   let isFirstUpdate = false;
   let resume;
-  let startTime = null;
+
+  const resetStartTime = () => {
+    animation.startTime = document.timeline.currentTime;
+  };
+  let teardown = null;
+  let update = null;
+  let restore = null;
+  const start = () => {
+    isFirstUpdate = true;
+    animation.playState = "running";
+    animation.startTime = document.timeline.currentTime;
+
+    const setupResult = transition.setup();
+    update = setupResult.update;
+    teardown = setupResult.teardown;
+    restore = setupResult.restore;
+
+    const from = transition.from;
+    const to = transition.to;
+    // Warn if the animation difference is too small
+    const diff = Math.abs(to - from);
+    if (diff === 0) {
+      console.warn(
+        `transition has identical from and to values (${from}px). This transition will have no effect.`,
+      );
+    } else if (diff < 10) {
+      console.warn(
+        `transition difference is very small (${diff}px). Consider if this transition is necessary.`,
+      );
+    }
+    addOnTimeline(animation);
+  };
 
   const animation = {
+    transition,
     channels,
-    constructor,
-    key,
-    targetValue,
-    get playState() {
-      return playState;
-    },
-    get content() {
-      return transition;
-    },
-    get startTime() {
-      return startTime;
-    },
-    set startTime(value) {
-      startTime = value;
-    },
-    get duration() {
-      return transition?.duration || 0;
-    },
-    get isVisual() {
-      return isVisual;
-    },
-    update: null, // Will be set to progress method
+    playState: "idle", // 'idle', 'running', 'paused', 'finished'
 
-    play: (...args) => {
-      if (playState === "idle") {
-        isFirstUpdate = true;
-        playState = "running";
-        transition = transitionProducer(...args);
-        startTime = document.timeline.currentTime;
-
-        const { update, teardown, restore } = transition.setup();
-        addOnTimeline(animation);
-
-        animation._update = update;
-        animation._teardown = teardown;
-        animation._restore = restore;
+    play: () => {
+      if (animation.playState === "idle") {
+        start();
         return;
       }
-      if (playState === "running") {
+      if (animation.playState === "running") {
         console.warn("animation already running");
         return;
       }
-      if (playState === "paused") {
-        playState = "running";
+      if (animation.playState === "paused") {
+        animation.playState = "running";
         resume();
         return;
       }
       // "finished"
-      isFirstUpdate = true;
-      playState = "running";
-      transition = transitionProducer(...args);
-      startTime = document.timeline.currentTime;
-
-      const { update, teardown, restore } = transition.setup();
-      addOnTimeline(animation);
-
-      animation._update = update;
-      animation._teardown = teardown;
-      animation._restore = restore;
+      start();
     },
 
     progress: (progress) => {
-      if (playState === "idle") {
+      if (animation.playState === "idle") {
         console.warn("Cannot progress animation that is idle");
         return;
       }
-      if (playState === "finished") {
+      if (animation.playState === "finished") {
         console.warn("Cannot progress a finished animation");
         return;
       }
@@ -156,31 +120,29 @@ export const animate = (
       }
       transition.timing =
         progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
-
-      animation._update(transition.value);
+      update(transition.value);
       isFirstUpdate = false;
       executeProgressCallbacks(transition);
-
       if (progress === 1) {
         animation.finish();
       }
     },
 
     pause: () => {
-      if (playState === "paused") {
+      if (animation.playState === "paused") {
         console.warn("animation already paused");
         return;
       }
-      if (playState === "finished") {
+      if (animation.playState === "finished") {
         console.warn("Cannot pause a finished animation");
         return;
       }
-      playState = "paused";
+      animation.playState = "paused";
       const pauseTime = document.timeline.currentTime;
       removeFromTimeline(animation);
       resume = () => {
         const pausedDuration = document.timeline.currentTime - pauseTime;
-        startTime = startTime + pausedDuration;
+        animation.startTime += pausedDuration;
         addOnTimeline(animation);
       };
     },
@@ -188,32 +150,28 @@ export const animate = (
     cancel: () => {
       if (transition) {
         removeFromTimeline(animation);
-        animation._teardown();
-        animation._restore();
+        teardown();
+        restore();
       }
       resume = null;
-      playState = "idle";
+      animation.playState = "idle";
     },
 
     finish: () => {
-      if (playState === "idle") {
+      if (animation.playState === "idle") {
         console.warn("Cannot finish an animation that is idle");
         return;
       }
-      if (playState === "finished") {
+      if (animation.playState === "finished") {
         console.warn("animation already finished");
         return;
       }
       // "running" or "paused"
       removeFromTimeline(animation);
-      animation._teardown();
+      teardown();
       resume = null;
-      playState = "finished";
+      animation.playState = "finished";
       executeFinishCallbacks();
-    },
-
-    resetStartTime: () => {
-      startTime = document.timeline.currentTime;
     },
 
     updateTarget: (newTarget) => {
@@ -226,23 +184,20 @@ export const animate = (
           `updateTarget: newTarget must be a finite number, got ${newTarget}`,
         );
       }
-      if (playState === "idle") {
+      if (animation.playState === "idle") {
         console.warn("Cannot update target of idle animation");
         return;
       }
-      if (playState === "finished") {
+      if (animation.playState === "finished") {
         console.warn("Cannot update target of finished animation");
         return;
       }
-      // Update the transition target and reset timing
       const currentValue = transition.value;
-      transition.updateTarget(currentValue, newTarget);
-      animation.resetStartTime();
+      transition.from = currentValue;
+      transition.to = newTarget;
+      resetStartTime();
     },
   };
-
-  // Set the update method reference
-  animation.update = animation.progress;
 
   return animation;
 };
