@@ -122,6 +122,15 @@ export const createAnimatedValue = (
   to,
   { duration, startTime, currentTime, easing = easingDefault } = {},
 ) => {
+  const start = () => {
+    const startReturnValue = animatedValue.onStart();
+    if (typeof startReturnValue === "function") {
+      animationCleanupMap.set(animatedValue, startReturnValue);
+    }
+    animatedValue.playState = "running";
+    addOnTimeline(animatedValue);
+  };
+
   const animatedValue = {
     duration,
     startTime,
@@ -135,18 +144,14 @@ export const createAnimatedValue = (
       animatedValue.progress = progress;
       animatedValue.value = value;
     },
-    playState: "idle", // 'idle', 'running', 'paused', 'removed', 'finished'
+    playState: "idle", // 'idle', 'running', 'paused', 'finished'
     play: () => {
-      if (
-        animatedValue.playState === "idle" ||
-        animatedValue.playState === "finished"
-      ) {
-        const startReturnValue = animatedValue.onStart();
-        if (typeof startReturnValue === "function") {
-          animationCleanupMap.set(animatedValue, startReturnValue);
-        }
-        animatedValue.playState = "running";
-        addOnTimeline(animatedValue);
+      if (animatedValue.playState === "idle") {
+        start();
+        return;
+      }
+      if (animatedValue.playState === "running") {
+        console.warn("animation already running");
         return;
       }
       if (animatedValue.playState === "paused") {
@@ -154,42 +159,42 @@ export const createAnimatedValue = (
         addOnTimeline(animatedValue);
         return;
       }
+      // "finished"
+      start();
     },
     pause: () => {
-      if (
-        animatedValue.playState === "running" ||
-        animatedValue.playState === "finished"
-      ) {
-        animatedValue.playState = "paused";
-        removeFromTimeline(animatedValue);
+      if (animatedValue.playState === "paused") {
+        console.warn("animation already paused");
+        return;
       }
+      if (animatedValue.playState === "finished") {
+        console.warn("Cannot pause a finished animation");
+        return;
+      }
+      animatedValue.playState = "paused";
+      removeFromTimeline(animatedValue);
     },
-    remove: () => {
-      animatedValue.playState = "removed";
+    finish: () => {
+      if (animatedValue.playState === "idle") {
+        console.warn("Cannot finish an animation that is idle");
+        return;
+      }
+      if (animatedValue.playState === "finished") {
+        console.warn("animation already finished");
+        return;
+      }
+      // "running" or "paused"
+      animatedValue.update({
+        progress: 1,
+        value: to,
+        timing: "end",
+      });
+      animatedValue.playState = "finished";
       removeFromTimeline(animatedValue);
       const cleanup = animationCleanupMap.get(animatedValue);
       if (cleanup) {
         animationCleanupMap.delete(animatedValue);
         cleanup();
-      }
-    },
-    finish: () => {
-      if (
-        animatedValue.playState === "running" ||
-        animatedValue.playState === "paused"
-      ) {
-        animatedValue.update({
-          progress: 1,
-          value: to,
-          timing: "end",
-        });
-        animatedValue.playState = "finished";
-        removeFromTimeline(animatedValue);
-        const cleanup = animationCleanupMap.get(animatedValue);
-        if (cleanup) {
-          animationCleanupMap.delete(animatedValue);
-          cleanup();
-        }
       }
     },
   };
