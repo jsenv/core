@@ -28,7 +28,6 @@ const updateAnimation = (animation) => {
     animation.update(progress);
   }
 };
-
 // We need setTimeout to animate things like volume because requestAnimationFrame would be killed when tab is not visible
 // while we might want to fadeout volumn when leaving the page for instance
 const createBackgroundUpdateLoop = () => {
@@ -36,9 +35,6 @@ const createBackgroundUpdateLoop = () => {
   const update = () => {
     for (const animation of animationSet) {
       if (animation.isVisual) {
-        continue;
-      }
-      if (animation.paused) {
         continue;
       }
       updateAnimation(animation);
@@ -62,9 +58,6 @@ const createAnimationFrameLoop = () => {
       if (!animation.isVisual) {
         continue;
       }
-      if (animation.paused) {
-        continue;
-      }
       updateAnimation(animation);
     }
     animationFrame = requestAnimationFrame(update);
@@ -81,35 +74,52 @@ const createAnimationFrameLoop = () => {
 const backgroundUpdateLoop = createBackgroundUpdateLoop();
 const animationUpdateLoop = createAnimationFrameLoop();
 
-let paused = true;
-export const pause = () => {
-  if (paused) {
+let timelineIsRunning = false;
+export const stopTimeline = () => {
+  if (!timelineIsRunning) {
     return;
   }
-  paused = true;
+  timelineIsRunning = false;
   backgroundUpdateLoop.play();
   animationUpdateLoop.play();
 };
-export const play = () => {
-  if (!paused) {
+export const startTimeline = () => {
+  if (!timelineIsRunning) {
     return;
   }
-  paused = false;
+  timelineIsRunning = true;
   backgroundUpdateLoop.play();
   animationUpdateLoop.play();
 };
-play();
+startTimeline();
 
 const playableSymbol = Symbol.for("jsenv_playable_content");
 const easingDefault = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 export const createAnimatedValue = (
   from,
   to,
-  { duration, startTime, currentTime, easing = easingDefault, init } = {},
+  {
+    duration,
+    startTime,
+    currentTime,
+    easing = easingDefault,
+    init,
+    onProgress,
+    onFinish,
+  } = {},
 ) => {
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
   const [progressCallbacks, executeProgressCallbacks] =
     createCallbackController();
+  if (onProgress) {
+    progressCallbacks.add(() => {
+      onProgress(animatedValue);
+    });
+  }
+  if (onFinish) {
+    finishCallbacks.add(onFinish);
+  }
+
   const animatedValue = {
     from,
     to,
@@ -173,6 +183,7 @@ export const createAnimatedValue = (
 
   animatedValue.animation = animation;
   animatedValue[playableSymbol] = playbackController;
+  Object.assign(animatedValue, playbackController);
 
   return animatedValue;
 };

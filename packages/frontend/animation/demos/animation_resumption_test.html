@@ -377,7 +377,7 @@
         const commonOptions = {
           duration,
           startTime,
-          onUpdate: ({ progress, value }) => {
+          onProgress: ({ progress, value }) => {
             updateProgress(progress);
             log(
               `Animation progress: ${(progress * 100).toFixed(1)}% (value: ${value})`,
@@ -414,7 +414,7 @@
                 parseInt(heightValue.value),
                 {
                   ...commonOptions,
-                  onUpdate: ({ progress, value }) => {
+                  onProgress: ({ progress, value }) => {
                     updateProgress(progress);
                     log(
                       `Height progress: ${(progress * 100).toFixed(1)}% (${value}px)`,
@@ -427,7 +427,7 @@
                 parseInt(widthValue.value),
                 {
                   ...commonOptions,
-                  onUpdate: ({ progress, value }) => {
+                  onProgress: ({ progress, value }) => {
                     log(
                       `Width progress: ${(progress * 100).toFixed(1)}% (${value}px)`,
                     );
@@ -439,7 +439,7 @@
                 parseFloat(opacityValue.value),
                 {
                   ...commonOptions,
-                  onUpdate: ({ progress, value }) => {
+                  onProgress: ({ progress, value }) => {
                     log(
                       `Opacity progress: ${(progress * 100).toFixed(1)}% (${value})`,
                     );
@@ -481,14 +481,12 @@
         log(`Started ${animationType} animation`);
 
         // Handle animation end for single animations
-        if (animationType !== "combined" && currentAnimation.onfinish) {
-          const originalOnFinish = currentAnimation.onfinish;
-          currentAnimation.onfinish = () => {
-            originalOnFinish?.();
+        if (animationType !== "combined" && currentAnimation.finishCallbacks) {
+          currentAnimation.finishCallbacks.add(() => {
             updateStatus("Animation completed", "ended");
             updateButtons(false);
             log("Animation completed");
-          };
+          });
         }
       };
 
@@ -519,14 +517,15 @@
           updateStatus("Animation resumed from interruption", "playing");
 
           // Handle animation end for resumed animation
-          if (animationType !== "combined" && currentAnimation.onfinish) {
-            const originalOnFinish = currentAnimation.onfinish;
-            currentAnimation.onfinish = () => {
-              originalOnFinish?.();
+          if (
+            animationType !== "combined" &&
+            currentAnimation.finishCallbacks
+          ) {
+            currentAnimation.finishCallbacks.add(() => {
               updateStatus("Resumed animation completed", "ended");
               updateButtons(false);
               log("Resumed animation completed");
-            };
+            });
           }
         }, 100); // Small delay to simulate real interruption
       };
