@@ -1,7 +1,3 @@
-/**
- * Nice to have: support transition.fps that would cap the animation to a certain frame rate.
- */
-
 import { EASING } from "./easing.js";
 import { addOnTimeline, removeFromTimeline } from "./transition_timeline.js";
 
@@ -23,6 +19,7 @@ export const createTransition = ({
   easing = EASING.EASE_OUT,
   lifecycle = LIFECYCLE_DEFAULT,
   onProgress,
+  fps,
 } = {}) => {
   const [progressCallbacks, executeProgressCallbacks] =
     createCallbackController();
@@ -39,6 +36,8 @@ export const createTransition = ({
   let isFirstUpdate = false;
   let resume;
   let executionLifecycle = null;
+  let lastUpdateTime = 0;
+  const frameInterval = fps ? 1000 / fps : 0; // milliseconds between frames
 
   const start = () => {
     isFirstUpdate = true;
@@ -76,6 +75,7 @@ export const createTransition = ({
     progress: 0,
     timing: "",
     easing,
+    fps,
     channels,
     get playState() {
       return playState;
@@ -108,6 +108,19 @@ export const createTransition = ({
         console.warn("Cannot progress a finished transition");
         return;
       }
+
+      // Apply FPS capping if specified
+      if (fps) {
+        const currentTime = performance.now();
+        const timeSinceLastUpdate = currentTime - lastUpdateTime;
+
+        // Skip update if not enough time has passed for the target FPS
+        if (timeSinceLastUpdate < frameInterval && progress < 1) {
+          return;
+        }
+        lastUpdateTime = currentTime;
+      }
+
       // "running" or "paused"
       transition.progress = progress;
       if (progress === 1) {
@@ -201,25 +214,9 @@ export const createTransition = ({
 };
 
 // Timeline-managed transition that adds/removes itself from the animation timeline
-export const createTimelineTransition = ({
-  constructor,
-  key,
-  from,
-  to,
-  duration,
-  easing = EASING.EASE_OUT,
-  setup,
-  isVisual,
-  onProgress,
-} = {}) => {
+export const createTimelineTransition = ({ isVisual, setup, ...options }) => {
   return createTransition({
-    constructor,
-    key,
-    from,
-    to,
-    duration,
-    easing,
-    onProgress,
+    ...options,
     lifecycle: {
       setup: (transition) => {
         // Handle timeline management
