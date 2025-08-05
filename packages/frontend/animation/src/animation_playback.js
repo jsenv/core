@@ -36,6 +36,8 @@ export const animate = (transitionProducer, { isVisual }) => {
         isVisual,
         update: playbackController.progress,
       };
+      const { update, teardown, restore } = transition.setup();
+      addOnTimeline(animation);
 
       const content = {
         transition,
@@ -53,7 +55,7 @@ export const animate = (transitionProducer, { isVisual }) => {
               (transition.to - transition.from) * easedProgress;
             transition.value = value;
           }
-          transition.effect?.(transition.value);
+          update(transition.value);
         },
         pause: () => {
           const pauseTime = document.timeline.currentTime;
@@ -66,20 +68,15 @@ export const animate = (transitionProducer, { isVisual }) => {
         },
         cancel: () => {
           removeFromTimeline(animation);
-          if (typeof cleanup === "function") {
-            cleanup();
-          }
+          teardown();
+          restore();
         },
         finish: () => {
           removeFromTimeline(animation);
-          if (typeof cleanup === "function") {
-            cleanup();
-          }
+          teardown();
         },
       };
 
-      const cleanup = transition.init?.();
-      addOnTimeline(animation);
       return content;
     },
   });
