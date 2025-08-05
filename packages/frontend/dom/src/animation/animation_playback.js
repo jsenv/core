@@ -38,22 +38,20 @@ export const createTransition = ({
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let isFirstUpdate = false;
   let resume;
-  let teardown = null;
-  let update = null;
-  let restore = null;
+  let executionLifecycle = null;
 
   const start = () => {
     isFirstUpdate = true;
     playState = "running";
 
-    const setupResult = lifecycle.setup(transition);
-    update = setupResult.update;
-    teardown = setupResult.teardown;
-    restore = setupResult.restore;
+    executionLifecycle = lifecycle.setup(transition);
 
     // Allow setup to override from value if transition.from is undefined
-    if (transition.from === undefined && setupResult.from !== undefined) {
-      transition.from = setupResult.from;
+    if (
+      transition.from === undefined &&
+      executionLifecycle.from !== undefined
+    ) {
+      transition.from = executionLifecycle.from;
     }
 
     const diff = Math.abs(transition.to - transition.from);
@@ -122,7 +120,7 @@ export const createTransition = ({
       }
       transition.timing =
         progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
-      update(transition.value);
+      executionLifecycle.update(transition.value);
       isFirstUpdate = false;
       executeProgressCallbacks(transition);
       if (progress === 1) {
@@ -146,10 +144,10 @@ export const createTransition = ({
     },
 
     cancel: () => {
-      if (restore) {
+      if (executionLifecycle) {
         lifecycle.cancel(transition);
-        teardown();
-        restore();
+        executionLifecycle.teardown();
+        executionLifecycle.restore();
       }
       resume = null;
       playState = "idle";
@@ -166,7 +164,7 @@ export const createTransition = ({
       }
       // "running" or "paused"
       lifecycle.finish(transition);
-      teardown();
+      executionLifecycle.teardown();
       resume = null;
       playState = "finished";
       executeFinishCallbacks();
