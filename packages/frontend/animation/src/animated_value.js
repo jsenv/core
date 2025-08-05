@@ -6,7 +6,6 @@ import { cubicBezier } from "./easing.js";
 
 const animationSet = new Set();
 const addOnTimeline = (animation) => {
-  animation.startTime = document.timeline.currentTime;
   animationSet.add(animation);
 };
 const removeFromTimeline = (animation) => {
@@ -84,7 +83,7 @@ export const stopTimeline = () => {
   animationUpdateLoop.stop();
 };
 export const startTimeline = () => {
-  if (!timelineIsRunning) {
+  if (timelineIsRunning) {
     return;
   }
   timelineIsRunning = true;
@@ -101,6 +100,7 @@ export const createAnimatedValue = (
     duration,
     startTime,
     currentTime,
+    isVisual,
     easing = easingDefault,
     init,
     onProgress,
@@ -133,13 +133,15 @@ export const createAnimatedValue = (
   };
   const animation = {
     duration,
-    startTime: startTime || document.timeline.currentTime,
+    startTime,
     currentTime,
+    isVisual,
   };
   const playbackController = createPlaybackController(
     {
       start: () => {
         const cleanup = init?.();
+        animation.startTime = document.timeline.currentTime;
         animation.update = playbackController.progress;
         addOnTimeline(animation);
         return {
@@ -149,8 +151,8 @@ export const createAnimatedValue = (
               animatedValue.value = to;
             } else {
               const easedProgress = easing(progress);
-              const animatedValue = from + (to - from) * easedProgress;
-              animatedValue.value = animatedValue;
+              const value = from + (to - from) * easedProgress;
+              animatedValue.value = value;
             }
           },
           pause: () => {
@@ -211,11 +213,12 @@ export const createPlaybackController = (content, { onProgress, onFinish }) => {
     playState,
     play: () => {
       if (playState === "idle") {
+        playState = playbackController.playState = "running";
         contentPlaying = content.start(playbackController);
         return;
       }
       if (playState === "running") {
-        console.warn("animation already running");
+        console.warn("content already running");
         return;
       }
       if (playState === "paused") {
@@ -224,15 +227,16 @@ export const createPlaybackController = (content, { onProgress, onFinish }) => {
         return;
       }
       // "finished"
+      playState = playbackController.playState = "running";
       contentPlaying = content.start(playbackController);
     },
     progress: (progress) => {
       if (playState === "idle") {
-        console.warn("Cannot update an animation that is idle");
+        console.warn("Cannot progress content that is idle");
         return;
       }
       if (playState === "finished") {
-        console.warn("Cannot update a finished animation");
+        console.warn("Cannot progress a finished content");
         return;
       }
       // "running" or "paused"
@@ -244,11 +248,11 @@ export const createPlaybackController = (content, { onProgress, onFinish }) => {
     },
     pause: () => {
       if (playState === "paused") {
-        console.warn("animation already paused");
+        console.warn("content already paused");
         return;
       }
       if (playState === "finished") {
-        console.warn("Cannot pause a finished animation");
+        console.warn("Cannot pause a finished content");
         return;
       }
       playState = playbackController.playState = "paused";
@@ -263,11 +267,11 @@ export const createPlaybackController = (content, { onProgress, onFinish }) => {
     },
     finish: () => {
       if (playState === "idle") {
-        console.warn("Cannot finish an animation that is idle");
+        console.warn("Cannot finish a content that is idle");
         return;
       }
       if (playState === "finished") {
-        console.warn("animation already finished");
+        console.warn("content already finished");
         return;
       }
       // "running" or "paused"
