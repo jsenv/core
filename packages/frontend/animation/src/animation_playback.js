@@ -11,8 +11,7 @@ export const createTransition = ({
   to,
   duration,
   easing = easingDefault,
-  init,
-  effect,
+  setup,
 } = {}) => {
   const transition = {
     from,
@@ -21,8 +20,7 @@ export const createTransition = ({
     duration,
     easing,
     progress: 0,
-    init,
-    effect,
+    setup,
   };
   return transition;
 };
