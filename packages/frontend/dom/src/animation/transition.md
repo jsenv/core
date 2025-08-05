@@ -1,10 +1,10 @@
 # Transition System
 
-The transition system provides a unified, framework-agnostic approach to animations and value interpolation over time. It's built around the concept of "transitions" - smooth changes from one value to another with complete lifecycle control.
+The transition system provides a unified, framework-agnostic approach to animations and value interpolation over time. It's built around the concept of "transitions" - smooth changes from one value to another with fine-grained control over when they start, pause, cancel, or redirect to new targets.
 
 ## What is a Transition?
 
-A transition is a self-contained object that manages the smooth change of a value from a starting point to an ending point over a specified duration. Unlike traditional animation libraries that separate data and control, transitions integrate both aspects into a single, coherent API.
+A transition is a self-contained object that manages the smooth change of a value from a starting point to an ending point over a specified duration. You can control exactly how the transition behaves at any point during its lifecycle.
 
 ```js
 import { createTransition } from "./transition_playback.js";
@@ -14,61 +14,6 @@ const transition = createTransition({
   to: 100,
   duration: 1000,
   easing: EASING.EASE_OUT,
-});
-
-transition.play(); // Start the transition
-```
-
-## Core Concepts
-
-### Unified Object Model
-
-Each transition contains both **data properties** and **control methods**:
-
-**Data Properties:**
-
-- `from`, `to`: Start and end values
-- `value`: Current interpolated value
-- `progress`: Current progress (0 to 1)
-- `duration`: Duration in milliseconds
-- `playState`: Current state ("idle", "running", "paused", "finished")
-
-**Control Methods:**
-
-- `play()`: Start or resume the transition
-- `pause()`: Pause the transition
-- `cancel()`: Cancel and restore original state
-- `finish()`: Jump to completion
-- `update(progress)`: Manually update progress
-- `updateTarget(newValue)`: Change the target value mid-transition
-
-### Lifecycle Management
-
-Transitions have two types of lifecycle methods:
-
-#### Configuration Lifecycle
-
-Handles transition setup and state management:
-
-- `setup()`: Initialize the transition and return execution methods
-- `pause()`: Handle pause logic and return resume function
-- `cancel()`: Handle cancellation cleanup
-- `finish()`: Handle completion cleanup
-- `updateTarget()`: Handle target value changes
-
-#### Execution Lifecycle
-
-Returned by setup for runtime control:
-
-- `update(value)`: Apply the current value (e.g., update DOM)
-- `teardown()`: Clean up resources
-- `restore()`: Restore original state
-
-```js
-const transition = createTransition({
-  from: 0,
-  to: 100,
-  duration: 1000,
   lifecycle: {
     setup: (transition) => {
       const element = document.getElementById("box");
@@ -88,58 +33,66 @@ const transition = createTransition({
     },
   },
 });
+
+transition.play(); // Start the transition
+// Later: transition.pause(), transition.cancel(), or transition.updateTarget(150)
 ```
+
+## Core Concepts
+
+### Control Methods
+
+- `play()`: Start or resume the transition
+- `pause()`: Pause the transition
+- `cancel()`: Cancel and restore original state
+- `finish()`: Jump to completion
+- `updateTarget(newValue)`: Change the target value mid-transition
+
+### Data Properties
+
+- `from`, `to`: Start and end values
+- `value`: Current interpolated value
+- `progress`: Current progress (0 to 1)
+- `duration`: Duration in milliseconds
+- `playState`: Current state ("idle", "running", "paused", "finished")
 
 ## Why Transitions?
 
-### 1. **Unified API**
+### Timeline Integration
 
-No more juggling separate animation objects, controllers, and data. Everything you need is in one place.
-
-### 2. **Predictable State Management**
-
-Clear state transitions with built-in state checking and warnings for invalid operations.
-
-### 3. **Performance Control**
-
-Built-in FPS capping for performance optimization:
-
-```js
-const transition = createTransition({
-  from: 0,
-  to: 100,
-  duration: 1000,
-  fps: 30, // Limit to 30 FPS for better performance
-});
-```
-
-### 4. **Timeline Integration**
-
-Automatic browser timeline management for optimal performance:
+All transitions are managed by a centralized timeline that coordinates their execution. Visual transitions (DOM animations) use `requestAnimationFrame` for optimal performance, while background transitions (like audio volume) use `setTimeout` to continue running even when the tab is not visible.
 
 ```js
 const transition = createTimelineTransition({
   from: 0,
   to: 100,
   duration: 1000,
-  isVisual: true, // Uses requestAnimationFrame
-  setup: () => ({
-    update: (value) => (element.style.left = `${value}px`),
-  }),
+  isVisual: true, // Uses requestAnimationFrame with other visual transitions
+  lifecycle: {
+    setup: () => ({
+      update: (value) => (element.style.left = `${value}px`),
+    }),
+  },
 });
 ```
 
-### 5. **Reactive Programming**
+### Beyond Visual Animations
 
-Built-in event channels for reactive updates:
+Unlike `requestAnimationFrame`-only solutions, the transition system can animate any value, including audio properties that need to continue running when the page is not visible:
 
 ```js
-transition.channels.progress.add((transition) => {
-  console.log(`Progress: ${transition.progress}`);
-});
-
-transition.channels.finish.add(() => {
-  console.log("Animation complete!");
+// Audio volume fade - continues even when tab is inactive
+const volumeTransition = createTimelineTransition({
+  from: 1.0,
+  to: 0.0,
+  duration: 2000,
+  lifecycle: {
+    setup: () => ({
+      update: (value) => {
+        audioElement.volume = value;
+      },
+    }),
+  },
 });
 ```
 
@@ -159,24 +112,6 @@ const heightTransition = createHeightAnimation(element, 200, {
 heightTransition.play();
 ```
 
-### Value Interpolation
-
-```js
-// Animate any numeric value
-const volumeTransition = createTransition({
-  from: 1.0,
-  to: 0.0,
-  duration: 2000,
-  lifecycle: {
-    setup: () => ({
-      update: (value) => {
-        audioElement.volume = value;
-      },
-    }),
-  },
-});
-```
-
 ### Group Coordination
 
 ```js
@@ -192,20 +127,11 @@ const group = createGroupTransition([
 group.play(); // Start all transitions together
 ```
 
-### Progressive Enhancement
-
-```js
-// Graceful fallback for reduced motion
-const transition = createTransition({
-  from: 0,
-  to: 100,
-  duration: window.matchMedia("(prefers-reduced-motion)").matches ? 0 : 500,
-});
-```
-
 ## Advanced Features
 
 ### Target Updates Mid-Transition
+
+The most powerful feature is the ability to smoothly redirect a running transition to a new target. This enables natural back-and-forth transitions that respond to user interaction without jarring stops and restarts:
 
 ```js
 const transition = createTransition({
@@ -216,11 +142,18 @@ const transition = createTransition({
 
 transition.play();
 
-// Change target while running
+// User changes their mind - smoothly redirect to new target
 setTimeout(() => {
-  transition.updateTarget(200); // Smoothly redirect to new target
+  transition.updateTarget(200); // Seamlessly changes direction
 }, 300);
+
+// Can redirect again while running
+setTimeout(() => {
+  transition.updateTarget(50); // Goes back towards start
+}, 600);
 ```
+
+This creates fluid, responsive animations that feel natural to users - like a drawer that can smoothly change direction based on gesture input, or a progress bar that updates its target without visual discontinuity.
 
 ### Custom Easing Functions
 
@@ -236,52 +169,20 @@ const bounceTransition = createTransition({
 });
 ```
 
-### Performance Monitoring
-
-```js
-const transition = createTransition({
-  from: 0,
-  to: 100,
-  duration: 1000,
-  onProgress: (transition) => {
-    if (transition.timing === "start") {
-      console.time("transition-duration");
-    } else if (transition.timing === "end") {
-      console.timeEnd("transition-duration");
-    }
-  },
-});
-```
-
-## Best Practices
-
-### 1. **Use Timeline Transitions for DOM**
-
-For DOM animations, prefer `createTimelineTransition` for optimal performance.
-
-### 2. **Implement Proper Cleanup**
-
-Always provide teardown and restore methods in your execution lifecycle.
-
-### 3. **Batch DOM Updates**
-
-Group multiple DOM changes in a single update function to minimize reflows.
-
-### 4. **Consider FPS Limits**
-
-Use FPS capping for non-critical animations to preserve performance.
-
-### 5. **Handle Edge Cases**
-
-Check for zero-duration transitions and very small value differences.
-
 ## Integration with jsenv
 
-The transition system is designed to integrate seamlessly with other jsenv packages:
+The transition system is a core component of the jsenv ecosystem, particularly in **@jsenv/navi** where it powers smooth UI transitions:
 
-- **@jsenv/navi**: Transitions in navigation and UI state changes
-- **Form validation**: Smooth validation message appearances
-- **Component lifecycle**: Smooth mounting/unmounting transitions
-- **Responsive design**: Smooth breakpoint transitions
+### Navigation Transitions
 
-The system prioritizes web standards, performance, and developer experience while providing the flexibility needed for complex animation scenarios.
+- **Page transitions**: Smooth fade-ins and slide-outs when navigating between routes
+- **Loading states**: Progress indicators and skeleton animations during data fetching
+- **Menu animations**: Drawer openings, dropdown expansions, and overlay appearances
+
+### Interactive Elements
+
+- **Form validation**: Smooth error message appearances and field highlighting
+- **Modal dialogs**: Backdrop fades and modal scaling animations
+- **Collapsible content**: Details elements that expand and contract smoothly
+
+The transition system ensures that all these UI changes feel cohesive and responsive, creating a polished user experience where interface elements flow naturally from one state to another. When you navigate in @jsenv/navi applications, the smooth page transitions and responsive UI elements are all powered by this transition system working behind the scenes.
