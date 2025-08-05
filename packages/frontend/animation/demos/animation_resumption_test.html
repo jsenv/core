@@ -380,11 +380,11 @@
         const commonOptions = {
           duration,
           startTime,
-          onProgress: ({ progress, value }) => {
+          onProgress: ({ progress }) => {
             updateProgress(progress);
-            log(
-              `Animation progress: ${(progress * 100).toFixed(1)}% (value: ${value})`,
-            );
+            // log(
+            //   `Animation progress: ${(progress * 100).toFixed(1)}% (value: ${value})`,
+            // );
           },
         };
 
@@ -417,11 +417,11 @@
                 parseInt(heightValue.value),
                 {
                   ...commonOptions,
-                  onProgress: ({ progress, value }) => {
+                  onProgress: ({ progress }) => {
                     updateProgress(progress);
-                    log(
-                      `Height progress: ${(progress * 100).toFixed(1)}% (${value}px)`,
-                    );
+                    // log(
+                    //   `Height progress: ${(progress * 100).toFixed(1)}% (${value}px)`,
+                    // );
                   },
                 },
               ),
@@ -430,11 +430,6 @@
                 parseInt(widthValue.value),
                 {
                   ...commonOptions,
-                  onProgress: ({ progress, value }) => {
-                    log(
-                      `Width progress: ${(progress * 100).toFixed(1)}% (${value}px)`,
-                    );
-                  },
                 },
               ),
               createElementOpacityTransition(
@@ -442,11 +437,6 @@
                 parseFloat(opacityValue.value),
                 {
                   ...commonOptions,
-                  onProgress: ({ progress, value }) => {
-                    log(
-                      `Opacity progress: ${(progress * 100).toFixed(1)}% (${value})`,
-                    );
-                  },
                 },
               ),
             ];
