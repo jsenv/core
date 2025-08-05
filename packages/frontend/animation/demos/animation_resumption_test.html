@@ -332,9 +332,12 @@
         startBtn.disabled = playing;
         interruptBtn.disabled = !playing;
         pauseBtn.disabled =
-          !playing || (currentAnimation && currentAnimation.ended);
+          !playing ||
+          (currentAnimation && currentAnimation.playState === "finished");
         resumeBtn.disabled =
-          playing || !currentAnimation || !currentAnimation.paused;
+          playing ||
+          !currentAnimation ||
+          currentAnimation.playState !== "pause";
       }
 
       function resetElement() {
@@ -491,7 +494,8 @@
       };
 
       interruptBtn.onclick = () => {
-        if (!currentAnimation || currentAnimation.ended) return;
+        if (!currentAnimation || currentAnimation.playState !== "finished")
+          return;
 
         const currentTime = Date.now();
         const elapsed = animationStartTime

@@ -159,7 +159,7 @@ export const createAnimatedValue = (
               addOnTimeline(animation);
             };
           },
-          abort: () => {
+          cancel: () => {
             removeFromTimeline(animation);
             if (typeof cleanup === "function") {
               cleanup();
@@ -187,13 +187,13 @@ export const createAnimatedValue = (
 };
 
 const makePlayable = (content, playbackController) => {
-  const { play, pause, finish, abort, progress } = playbackController;
+  const { play, progress, pause, cancel, finish } = playbackController;
   Object.assign(content, {
     play,
-    pause,
-    finish,
-    abort,
     progress,
+    pause,
+    cancel,
+    finish,
     get playState() {
       return playbackController.playState;
     },
@@ -254,6 +254,13 @@ export const createPlaybackController = (content, { onProgress, onFinish }) => {
       playState = playbackController.playState = "paused";
       resume = contentPlaying.pause();
     },
+    cancel: () => {
+      if (contentPlaying) {
+        contentPlaying.cancel();
+      }
+      resume = null;
+      playState = playbackController.playState = "idle";
+    },
     finish: () => {
       if (playState === "idle") {
         console.warn("Cannot finish an animation that is idle");
@@ -269,13 +276,6 @@ export const createPlaybackController = (content, { onProgress, onFinish }) => {
       playState = playbackController.playState = "finished";
       onFinish?.();
       executeFinishCallbacks();
-    },
-    abort: () => {
-      if (contentPlaying) {
-        contentPlaying.abort();
-      }
-      resume = null;
-      playState = playbackController.playState = "idle";
     },
     finishCallbacks,
   };
@@ -311,14 +311,14 @@ export const createPlaybackGroup = (
           update: () => {
             // noop
           },
+          cancel: () => {
+            for (const playableContent of playableContentArray) {
+              playableContent.cancel();
+            }
+          },
           finish: () => {
             for (const playableContent of playableContentArray) {
               playableContent.finish();
-            }
-          },
-          abort: () => {
-            for (const playableContent of playableContentArray) {
-              playableContent.abort();
             }
           },
         };
