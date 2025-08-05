@@ -5,11 +5,13 @@ import {
   stringifyTransform,
 } from "./transform_style_parser.js";
 
-export const createHeightAnimation = (element, options) => {
+export const createHeightAnimation = (element, to, options = {}) => {
   const heightAnimation = animate(
-    (to) => {
+    () => {
+      const { from = getHeight(element), ...rest } = options;
       return createTransition({
-        from: getHeight(element),
+        ...rest,
+        from,
         to,
         init: () => {
           const heightAtStartFromInlineStyle = element.style.height;
@@ -28,15 +30,17 @@ export const createHeightAnimation = (element, options) => {
         },
       });
     },
-    { isVisual: true, ...options },
+    { isVisual: true },
   );
   return heightAnimation;
 };
-export const createWidthAnimation = (element, options) => {
+export const createWidthAnimation = (element, to, options = {}) => {
   const widthAnimation = animate(
-    (to) => {
+    () => {
+      const { from = getWidth(element), ...rest } = options;
       return createTransition({
-        from: getWidth(element),
+        ...rest,
+        from,
         to,
         init: () => {
           const widthAtStartFromInlineStyle = element.style.width;
@@ -56,18 +60,18 @@ export const createWidthAnimation = (element, options) => {
         },
       });
     },
-    {
-      isVisual: true,
-      ...options,
-    },
+    { isVisual: true },
   );
   return widthAnimation;
 };
-export const createOpacityAnimation = (element, options) => {
+export const createOpacityAnimation = (element, to, options = {}) => {
   const opacityAnimation = animate(
-    (to) => {
+    () => {
+      const { from = getOpacity(element), ...rest } = options;
+
       return createTransition({
-        from: parseFloat(getComputedStyle(element).opacity) || 0,
+        ...rest,
+        from,
         to,
         init: () => {
           const opacityAtStartFromInlineStyle = element.style.opacity;
@@ -86,11 +90,15 @@ export const createOpacityAnimation = (element, options) => {
         },
       });
     },
-    { isVisual: true, ...options },
+    { isVisual: true },
   );
   return opacityAnimation;
 };
-export const createTranslateXAnimation = (element, to, options) => {
+const getOpacity = (element) => {
+  return parseFloat(getComputedStyle(element).opacity) || 0;
+};
+
+export const createTranslateXAnimation = (element, to, options = {}) => {
   const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
   if (!match) {
     throw new Error(
@@ -101,8 +109,10 @@ export const createTranslateXAnimation = (element, to, options) => {
 
   const translateXAnimation = animate(
     () => {
+      const { from = getTranslateX(element), ...rest } = options;
       return createTransition({
-        from: getTranslateX(element),
+        ...rest,
+        from,
         to,
         init: () => {
           const transformAtStartFromInlineStyle = element.style.transform;
@@ -121,7 +131,7 @@ export const createTranslateXAnimation = (element, to, options) => {
         },
       });
     },
-    { isVisual: true, ...options },
+    { isVisual: true },
   );
   return translateXAnimation;
 };
