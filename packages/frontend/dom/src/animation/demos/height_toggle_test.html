@@ -417,7 +417,7 @@
           });
 
           // Set up progress tracking
-          currentAnimation.channels.progress.add((progress) => {
+          currentAnimation.channels.progress.add(({ progress }) => {
             updateProgress(progress);
             updateStats();
           });

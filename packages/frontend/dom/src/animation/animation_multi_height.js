@@ -55,10 +55,6 @@ export const animateMultipleHeights = (animations, options = {}) => {
     ({ element, target, sideEffect }) => {
       const animation = createHeightAnimation(element, target, {
         duration,
-        // Always use current height as explicit from value for precise control
-        from: Math.round(
-          parseFloat(element.style.height) || element.offsetHeight,
-        ),
       });
 
       // Track this animation globally
@@ -71,14 +67,9 @@ export const animateMultipleHeights = (animations, options = {}) => {
 
       // Add side effects to progress tracking
       if (sideEffect) {
-        animation.channels.progress.add((progress) => {
-          const currentHeight = Math.round(
-            parseFloat(element.style.height) || element.offsetHeight,
-          );
-          sideEffect(currentHeight, {
-            timing:
-              progress === 0 ? "start" : progress === 1 ? "end" : "progress",
-          });
+        animation.channels.progress.add((transition) => {
+          const { value: height, timing } = transition;
+          sideEffect(height, { timing });
         });
       }
 
@@ -111,7 +102,7 @@ export const animateMultipleHeights = (animations, options = {}) => {
 
   // Add unified progress tracking for ALL animations (new + updated)
   if (onChange) {
-    groupController.channels.progress.add((progress) => {
+    groupController.channels.progress.add((transition) => {
       // Build change entries for current state of ALL elements
       const changeEntries = [...newAnimations, ...updatedAnimations].map(
         ({ element }) => ({
@@ -122,7 +113,7 @@ export const animateMultipleHeights = (animations, options = {}) => {
         }),
       );
 
-      onChange(changeEntries, progress === 1); // isLast = progress === 1
+      onChange(changeEntries, transition.progress === 1); // isLast = progress === 1
     });
   }
 

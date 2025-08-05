@@ -20,13 +20,14 @@ export const createTransition = ({
     to,
     value: from,
     duration,
+    progess: 0,
+    timing: "",
     easing:
       easing === undefined
         ? to > from
           ? INCREASE_EASING
           : DECREASE_EASING
         : easing,
-    progress: 0,
     setup,
     updateTarget: (newFrom, newTo) => {
       transition.from = newFrom;
@@ -54,12 +55,16 @@ export const animate = (transitionProducer, { isVisual }) => {
       const { update, teardown, restore } = transition.setup();
       addOnTimeline(animation);
 
-      const content = {
-        transition,
+      const hooks = {
         resetStartTime: () => {
           animation.startTime = document.timeline.currentTime;
         },
-        update: (progress) => {
+        updateTarget: (to) => {
+          const currentValue = transition.value;
+          transition.updateTarget(currentValue, to);
+          hooks.resetStartTime();
+        },
+        update: (progress, { isFirstUpdate }) => {
           transition.progress = progress;
           if (progress === 1) {
             transition.value = transition.to;
@@ -70,6 +75,8 @@ export const animate = (transitionProducer, { isVisual }) => {
               (transition.to - transition.from) * easedProgress;
             transition.value = value;
           }
+          transition.timing =
+            progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
           update(transition.value);
         },
         pause: () => {
@@ -92,7 +99,7 @@ export const animate = (transitionProducer, { isVisual }) => {
         },
       };
 
-      return content;
+      return [transition, hooks];
     },
   });
   return playbackController;
@@ -109,14 +116,17 @@ export const createPlaybackController = (content) => {
 
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let contentPlaying = null;
+  let contentHooks = null;
+  let isFirstUpdate = false;
   let resume;
   const playbackController = {
     channels,
     playState,
     play: (...args) => {
       if (playState === "idle") {
+        isFirstUpdate = true;
         playState = playbackController.playState = "running";
-        contentPlaying = content.start(...args);
+        [contentPlaying, contentHooks] = content.start(...args);
         return;
       }
       if (playState === "running") {
@@ -129,8 +139,9 @@ export const createPlaybackController = (content) => {
         return;
       }
       // "finished"
+      isFirstUpdate = true;
       playState = playbackController.playState = "running";
-      contentPlaying = content.start(...args);
+      [contentPlaying, contentHooks] = content.start(...args);
     },
     progress: (progress) => {
       if (playState === "idle") {
@@ -142,8 +153,9 @@ export const createPlaybackController = (content) => {
         return;
       }
       // "running" or "paused"
-      contentPlaying.update(progress);
-      executeProgressCallbacks(progress);
+      contentHooks.update(progress, { isFirstUpdate });
+      isFirstUpdate = false;
+      executeProgressCallbacks(contentPlaying);
       if (progress === 1) {
         playbackController.finish();
       }
@@ -158,11 +170,11 @@ export const createPlaybackController = (content) => {
         return;
       }
       playState = playbackController.playState = "paused";
-      resume = contentPlaying.pause();
+      resume = contentHooks.pause();
     },
     cancel: () => {
       if (contentPlaying) {
-        contentPlaying.cancel();
+        contentHooks.cancel();
       }
       resume = null;
       playState = playbackController.playState = "idle";
@@ -177,14 +189,14 @@ export const createPlaybackController = (content) => {
         return;
       }
       // "running" or "paused"
-      contentPlaying.finish();
+      contentHooks.finish();
       resume = null;
       playState = playbackController.playState = "finished";
       executeFinishCallbacks();
     },
 
     resetStartTime: () => {
-      contentPlaying.resetStartTime();
+      contentHooks.resetStartTime();
     },
     updateTarget: (newTarget) => {
       if (playState === "idle") {
@@ -196,10 +208,9 @@ export const createPlaybackController = (content) => {
         return;
       }
       // Update the transition target and reset timing
-      if (contentPlaying && contentPlaying.transition) {
-        const currentValue = contentPlaying.transition.value;
-        contentPlaying.transition.updateTarget(currentValue, newTarget);
-        contentPlaying.resetStartTime();
+      if (contentHooks && contentHooks.updateTarget) {
+        contentHooks.updateTarget(newTarget);
+        contentHooks.resetStartTime();
       }
     },
   };
@@ -208,6 +219,19 @@ export const createPlaybackController = (content) => {
 export const createPlaybackGroup = (playableContentArray) => {
   const playbackController = createPlaybackController({
     start: () => {
+      // Create a transition to manage group progress and timing
+      const groupTransition = createTransition({
+        from: 0,
+        to: 1,
+        duration: 0, // Duration doesn't matter for group progress tracking
+        easing: (x) => x, // Linear for group progress
+        setup: () => ({
+          update: () => {}, // No direct DOM updates for group transition
+          teardown: () => {},
+          restore: () => {},
+        }),
+      });
+
       const playingCount = playableContentArray.length;
       const progressValues = new Array(playingCount).fill(0);
       const finishedStates = new Array(playingCount).fill(false);
@@ -216,8 +240,8 @@ export const createPlaybackGroup = (playableContentArray) => {
       playableContentArray.forEach((playableContent, index) => {
         // Track progress updates from each animation
         const removeProgressListener = playableContent.channels.progress.add(
-          (progress) => {
-            progressValues[index] = progress;
+          (content) => {
+            progressValues[index] = content.progress;
             // Calculate average progress
             const averageProgress =
               progressValues.reduce((sum, p) => sum + p, 0) / playingCount;
@@ -245,7 +269,7 @@ export const createPlaybackGroup = (playableContentArray) => {
         playableContent.play();
       });
 
-      return {
+      const groupHooks = {
         pause: () => {
           for (const playableContent of playableContentArray) {
             if (playableContent.playState !== "finished") {
@@ -253,8 +277,12 @@ export const createPlaybackGroup = (playableContentArray) => {
             }
           }
         },
-        update: () => {
-          // noop - progress is handled by individual animation listeners
+        update: (progress, { isFirstUpdate }) => {
+          // Update group transition timing based on playback controller state
+          groupTransition.progress = progress;
+          groupTransition.value = progress;
+          groupTransition.timing =
+            progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
         },
         cancel: () => {
           for (const playableContent of playableContentArray) {
@@ -280,7 +308,13 @@ export const createPlaybackGroup = (playableContentArray) => {
             }
           }
         },
+        updateTarget: () => {
+          // Groups don't support updateTarget - individual animations handle this
+          console.warn("updateTarget not supported on animation groups");
+        },
       };
+
+      return [groupTransition, groupHooks];
     },
   });
   return playbackController;

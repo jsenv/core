@@ -420,7 +420,7 @@
         currentAnimation = createAnimation();
 
         // Set up progress callback using channels
-        currentAnimation.channels.progress.add((progress) => {
+        currentAnimation.channels.progress.add(({ progress }) => {
           updateProgress(progress);
         });
 
