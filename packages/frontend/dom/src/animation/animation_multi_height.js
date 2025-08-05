@@ -1,142 +1,171 @@
 import { createHeightAnimation } from "./animation_dom.js";
 import { createPlaybackGroup } from "./animation_playback.js";
 
-// Global tracking of ongoing animations by element
-const ongoingAnimations = new WeakMap();
-
 /**
- * Animate multiple elements to different target heights simultaneously
- * Automatically handles updateTarget for elements that are already animating
- * @param {Array} animations - Array of {element, target, sideEffect?} objects
- * @param {Object} options - Animation options
- * @param {number} options.duration - Animation duration in ms
- * @param {Function} options.onChange - Called with (changeEntries, isLast) during animation
- * @param {Function} options.onFinish - Called when all animations complete
- * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
+ * Creates a multi-animation controller that manages ongoing animations
+ * and handles target updates automatically
  */
-export const animateMultipleHeights = (animations, options = {}) => {
-  const { duration = 300, onChange, onFinish } = options;
+export const createMultiHeightAnimationController = () => {
+  // Track ongoing animations by element within this controller instance
+  const ongoingAnimations = new WeakMap();
+  // Also maintain a Set for cancellation purposes
+  const activeAnimations = new Set();
 
-  if (animations.length === 0) {
-    return {
-      play: () => {},
-      pause: () => {},
-      cancel: () => {},
-      finish: () => {},
-      playState: "idle",
-      channels: { progress: { add: () => {} }, finish: { add: () => {} } },
-    };
-  }
+  return {
+    /**
+     * Animate multiple elements to different target heights simultaneously
+     * Automatically handles updateTarget for elements that are already animating
+     * @param {Array} animations - Array of {element, target, sideEffect?} objects
+     * @param {Object} options - Animation options
+     * @param {number} options.duration - Animation duration in ms
+     * @param {Function} options.onChange - Called with (changeEntries, isLast) during animation
+     * @param {Function} options.onFinish - Called when all animations complete
+     * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
+     */
+    animate: (animations, options = {}) => {
+      const { duration = 300, onChange, onFinish } = options;
 
-  const newAnimations = [];
-  const updatedAnimations = [];
+      if (animations.length === 0) {
+        return {
+          play: () => {},
+          pause: () => {},
+          cancel: () => {},
+          finish: () => {},
+          playState: "idle",
+          channels: { progress: { add: () => {} }, finish: { add: () => {} } },
+        };
+      }
 
-  // Separate elements into new animations vs updates to existing ones
-  for (const { element, target, sideEffect } of animations) {
-    const existingAnimation = ongoingAnimations.get(element);
+      const newAnimations = [];
+      const updatedAnimations = [];
 
-    if (existingAnimation && existingAnimation.playState === "running") {
-      // Update existing animation target
-      existingAnimation.updateTarget(target);
-      updatedAnimations.push({
-        element,
-        target,
-        sideEffect,
-        animation: existingAnimation,
-      });
-    } else {
-      // Create new animation
-      newAnimations.push({ element, target, sideEffect });
-    }
-  }
+      // Separate elements into new animations vs updates to existing ones
+      for (const { element, target, sideEffect } of animations) {
+        const existingAnimation = ongoingAnimations.get(element);
 
-  // Create individual height animations for new elements
-  const playbackControllers = newAnimations.map(
-    ({ element, target, sideEffect }) => {
-      const animation = createHeightAnimation(element, target, {
-        duration,
-      });
+        if (existingAnimation && existingAnimation.playState === "running") {
+          // Update existing animation target
+          existingAnimation.updateTarget(target);
+          updatedAnimations.push({
+            element,
+            target,
+            sideEffect,
+            animation: existingAnimation,
+          });
+        } else {
+          // Create new animation
+          newAnimations.push({ element, target, sideEffect });
+        }
+      }
 
-      // Track this animation globally
-      ongoingAnimations.set(element, animation);
+      // Create individual height animations for new elements
+      const playbackControllers = newAnimations.map(
+        ({ element, target, sideEffect }) => {
+          const animation = createHeightAnimation(element, target, {
+            duration,
+          });
 
-      // Clean up tracking when animation finishes
-      animation.channels.finish.add(() => {
-        ongoingAnimations.delete(element);
-      });
+          // Track this animation in this controller instance
+          ongoingAnimations.set(element, animation);
+          activeAnimations.add(animation);
 
-      // Add side effects to progress tracking
-      if (sideEffect) {
-        animation.channels.progress.add((transition) => {
-          const { value: height, timing } = transition;
-          sideEffect(height, { timing });
+          // Clean up tracking when animation finishes
+          animation.channels.finish.add(() => {
+            ongoingAnimations.delete(element);
+            activeAnimations.delete(animation);
+          });
+
+          // Add side effects to progress tracking
+          if (sideEffect) {
+            animation.channels.progress.add((transition) => {
+              const { value: height, timing } = transition;
+              sideEffect(height, { timing });
+            });
+          }
+
+          return { animation, element, target, sideEffect };
+        },
+      );
+
+      // If we only have updated animations (no new ones), return a minimal controller
+      if (newAnimations.length === 0) {
+        return {
+          play: () => {}, // Already playing
+          pause: () =>
+            updatedAnimations.forEach(({ animation }) => animation.pause()),
+          cancel: () =>
+            updatedAnimations.forEach(({ animation }) => animation.cancel()),
+          finish: () =>
+            updatedAnimations.forEach(({ animation }) => animation.finish()),
+          playState: "running", // All are already running
+          channels: {
+            progress: { add: () => {} }, // Progress tracking already set up
+            finish: { add: () => {} },
+          },
+        };
+      }
+
+      // Create group controller to coordinate new animations only
+      const groupController = createPlaybackGroup(
+        playbackControllers.map(({ animation }) => animation),
+      );
+
+      // Add unified progress tracking for ALL animations (new + updated)
+      if (onChange) {
+        groupController.channels.progress.add((transition) => {
+          // Build change entries for current state of ALL elements
+          const changeEntries = [...newAnimations, ...updatedAnimations].map(
+            ({ element }) => ({
+              element,
+              value: Math.round(
+                parseFloat(element.style.height) || element.offsetHeight,
+              ),
+            }),
+          );
+
+          onChange(changeEntries, transition.progress === 1); // isLast = progress === 1
         });
       }
 
-      return { animation, element, target, sideEffect };
+      // Add finish tracking
+      if (onFinish) {
+        groupController.channels.finish.add(() => {
+          const changeEntries = [...newAnimations, ...updatedAnimations].map(
+            ({ element, target }) => ({
+              element,
+              value: target,
+            }),
+          );
+          onFinish(changeEntries);
+        });
+      }
+
+      return {
+        ...groupController,
+        elements: [...newAnimations, ...updatedAnimations].map(
+          ({ element }) => element,
+        ),
+        targets: [...newAnimations, ...updatedAnimations].map(
+          ({ target }) => target,
+        ),
+      };
     },
-  );
 
-  // If we only have updated animations (no new ones), return a minimal controller
-  if (newAnimations.length === 0) {
-    return {
-      play: () => {}, // Already playing
-      pause: () =>
-        updatedAnimations.forEach(({ animation }) => animation.pause()),
-      cancel: () =>
-        updatedAnimations.forEach(({ animation }) => animation.cancel()),
-      finish: () =>
-        updatedAnimations.forEach(({ animation }) => animation.finish()),
-      playState: "running", // All are already running
-      channels: {
-        progress: { add: () => {} }, // Progress tracking already set up
-        finish: { add: () => {} },
-      },
-    };
-  }
-
-  // Create group controller to coordinate new animations only
-  const groupController = createPlaybackGroup(
-    playbackControllers.map(({ animation }) => animation),
-  );
-
-  // Add unified progress tracking for ALL animations (new + updated)
-  if (onChange) {
-    groupController.channels.progress.add((transition) => {
-      // Build change entries for current state of ALL elements
-      const changeEntries = [...newAnimations, ...updatedAnimations].map(
-        ({ element }) => ({
-          element,
-          value: Math.round(
-            parseFloat(element.style.height) || element.offsetHeight,
-          ),
-        }),
-      );
-
-      onChange(changeEntries, transition.progress === 1); // isLast = progress === 1
-    });
-  }
-
-  // Add finish tracking
-  if (onFinish) {
-    groupController.channels.finish.add(() => {
-      const changeEntries = [...newAnimations, ...updatedAnimations].map(
-        ({ element, target }) => ({
-          element,
-          value: target,
-        }),
-      );
-      onFinish(changeEntries);
-    });
-  }
-
-  return {
-    ...groupController,
-    elements: [...newAnimations, ...updatedAnimations].map(
-      ({ element }) => element,
-    ),
-    targets: [...newAnimations, ...updatedAnimations].map(
-      ({ target }) => target,
-    ),
+    /**
+     * Cancel all ongoing animations managed by this controller
+     */
+    cancel: () => {
+      // Cancel all active animations
+      for (const animation of activeAnimations) {
+        if (
+          animation.playState === "running" ||
+          animation.playState === "paused"
+        ) {
+          animation.cancel();
+        }
+      }
+      // Clear the sets - the finish callbacks will handle individual cleanup
+      activeAnimations.clear();
+    },
   };
 };
