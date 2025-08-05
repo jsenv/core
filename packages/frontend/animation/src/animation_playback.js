@@ -12,7 +12,7 @@ export const createTransition = ({
   from,
   to,
   duration,
-  easing = to > from ? INCREASE_EASING : DECREASE_EASING,
+  easing,
   setup,
 } = {}) => {
   const transition = {
@@ -20,9 +20,22 @@ export const createTransition = ({
     to,
     value: from,
     duration,
-    easing,
+    easing:
+      easing === undefined
+        ? to > from
+          ? INCREASE_EASING
+          : DECREASE_EASING
+        : easing,
     progress: 0,
     setup,
+    updateTarget: (newFrom, newTo) => {
+      transition.from = newFrom;
+      transition.to = newTo;
+      if (easing === undefined) {
+        transition.easing =
+          transition.to > transition.from ? INCREASE_EASING : DECREASE_EASING;
+      }
+    },
   };
   return transition;
 };
@@ -184,8 +197,8 @@ export const createPlaybackController = (content) => {
       }
       // Update the transition target and reset timing
       if (contentPlaying && contentPlaying.transition) {
-        contentPlaying.transition.from = contentPlaying.transition.value;
-        contentPlaying.transition.to = newTarget;
+        const currentValue = contentPlaying.transition.value;
+        contentPlaying.transition.updateTarget(currentValue, newTarget);
         contentPlaying.resetStartTime();
       }
     },
