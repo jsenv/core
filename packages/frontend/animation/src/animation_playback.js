@@ -3,14 +3,16 @@
  */
 
 import { addOnTimeline, removeFromTimeline } from "./animation_timeline.js";
-import { cubicBezier } from "./easing.js";
+import { EASING } from "./easing.js";
 
-const easingDefault = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
+const INCREASE_EASING = EASING.EASE_OUT;
+const DECREASE_EASING = EASING.EASE_IN;
+
 export const createTransition = ({
   from,
   to,
   duration,
-  easing = easingDefault,
+  easing = to > from ? INCREASE_EASING : DECREASE_EASING,
   setup,
 } = {}) => {
   const transition = {

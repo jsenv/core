@@ -36,6 +36,8 @@ export const EASING = {
   },
 };
 
+export const easingDefault = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
+
 export const cubicBezier = (t, initial, p1, p2, final) => {
   return (
     (1 - t) * (1 - t) * (1 - t) * initial +
