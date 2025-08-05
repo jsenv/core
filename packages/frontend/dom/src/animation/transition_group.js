@@ -1,10 +1,98 @@
-import { createTransitionGroup } from "./transition_playback.js";
+import { createTransition } from "./transition_playback.js";
+
+// Group transition that manages multiple transitions
+export const createTransitionGroup = (transitionArray) => {
+  const progressValues = new Array(transitionArray.length).fill(0);
+  const finishedStates = new Array(transitionArray.length).fill(false);
+
+  return createTransition({
+    from: 0,
+    to: 1,
+    duration: 0,
+    easing: (x) => x,
+    lifecycle: {
+      setup: (transition) => {
+        progressValues.fill(0);
+        finishedStates.fill(false);
+
+        // Start all transitions and track their progress
+        transitionArray.forEach((childTransition, index) => {
+          const removeProgressListener = childTransition.channels.progress.add(
+            (content) => {
+              progressValues[index] = content.progress;
+              // Calculate average progress
+              const averageProgress =
+                progressValues.reduce((sum, p) => sum + p, 0) /
+                transitionArray.length;
+
+              // Update this transition's progress
+              transition.update(averageProgress);
+            },
+          );
+
+          const removeFinishListener = childTransition.channels.finish.add(
+            () => {
+              removeProgressListener();
+              removeFinishListener();
+              progressValues[index] = 1;
+              finishedStates[index] = true;
+
+              // Check if all transitions are finished
+              const allFinished = finishedStates.every((finished) => finished);
+              if (allFinished) {
+                transition.finish();
+              }
+            },
+          );
+
+          childTransition.play();
+        });
+
+        return {
+          update: () => {},
+          teardown: () => {},
+          restore: () => {},
+        };
+      },
+      pause: () => {
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState === "running") {
+            childTransition.pause();
+          }
+        }
+        return () => {
+          for (const childTransition of transitionArray) {
+            if (childTransition.playState === "paused") {
+              childTransition.play();
+            }
+          }
+        };
+      },
+
+      cancel: () => {
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState !== "idle") {
+            childTransition.cancel();
+          }
+        }
+      },
+
+      finish: () => {
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState !== "finished") {
+            childTransition.finish();
+          }
+        }
+      },
+    },
+  });
+};
 
 /**
- * Creates a multi-transition controller that manages ongoing transitions
+ * Creates a transition group controller that manages ongoing transitions
  * and handles target updates automatically
  */
-export const createMultiTransitionController = () => {
+export const createTransitionGroupController = () => {
   // Track all active transitions for cancellation and matching
   const activeTransitions = new Set();
 
