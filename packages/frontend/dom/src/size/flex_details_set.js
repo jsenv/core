@@ -296,13 +296,15 @@ export const initFlexDetailsSet = (
       return animation;
     });
 
-    animationController.animate(animations, {
+    const multiAnimation = animationController.animate(animations, {
       onChange: (changeEntries, isLast) => {
         // Apply side effects for each animated element
         for (const { animation, value } of changeEntries) {
           for (const change of changeSet) {
             if (change.element === animation.key) {
-              change.sideEffect(value, { isAnimationEnd: isLast });
+              if (change.sideEffect) {
+                change.sideEffect(value, { isAnimationEnd: isLast });
+              }
               break;
             }
           }
@@ -323,6 +325,7 @@ export const initFlexDetailsSet = (
         }
       },
     });
+    multiAnimation.play();
   };
 
   const allocateSpace = (child, spaceToAllocate, requestSource) => {
