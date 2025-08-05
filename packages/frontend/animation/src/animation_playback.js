@@ -195,6 +195,7 @@ export const createPlaybackGroup = (playableContentArray) => {
     start: () => {
       const playingCount = playableContentArray.length;
       const progressValues = new Array(playingCount).fill(0);
+      const finishedStates = new Array(playingCount).fill(false);
 
       // Start all animations and track their progress
       playableContentArray.forEach((playableContent, index) => {
@@ -205,7 +206,10 @@ export const createPlaybackGroup = (playableContentArray) => {
             // Calculate average progress
             const averageProgress =
               progressValues.reduce((sum, p) => sum + p, 0) / playingCount;
-            playbackController.progress(averageProgress);
+            // Only call progress if we haven't finished yet
+            if (averageProgress < 1) {
+              playbackController.progress(averageProgress);
+            }
           },
         );
 
@@ -214,11 +218,13 @@ export const createPlaybackGroup = (playableContentArray) => {
           removeProgressListener();
           removeFinishListener();
           progressValues[index] = 1;
+          finishedStates[index] = true;
 
-          // Update final progress
-          const averageProgress =
-            progressValues.reduce((sum, p) => sum + p, 0) / playingCount;
-          playbackController.progress(averageProgress);
+          // Check if all animations are finished
+          const allFinished = finishedStates.every((finished) => finished);
+          if (allFinished) {
+            playbackController.progress(1);
+          }
         });
 
         playableContent.play();
@@ -227,7 +233,9 @@ export const createPlaybackGroup = (playableContentArray) => {
       return {
         pause: () => {
           for (const playableContent of playableContentArray) {
-            playableContent.pause();
+            if (playableContent.playState !== "finished") {
+              playableContent.pause();
+            }
           }
         },
         update: () => {
@@ -235,17 +243,24 @@ export const createPlaybackGroup = (playableContentArray) => {
         },
         cancel: () => {
           for (const playableContent of playableContentArray) {
-            playableContent.cancel();
+            if (playableContent.playState !== "finished") {
+              playableContent.cancel();
+            }
           }
         },
         finish: () => {
           for (const playableContent of playableContentArray) {
-            playableContent.finish();
+            if (playableContent.playState !== "finished") {
+              playableContent.finish();
+            }
           }
         },
         resetStartTime: () => {
           for (const playableContent of playableContentArray) {
-            if (playableContent.resetStartTime) {
+            if (
+              playableContent.resetStartTime &&
+              playableContent.playState !== "finished"
+            ) {
               playableContent.resetStartTime();
             }
           }
