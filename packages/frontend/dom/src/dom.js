@@ -60,7 +60,6 @@ export {
   createTranslateXAnimation,
   createWidthAnimation,
 } from "./animation/animation_dom.js";
-export { animateMultipleHeights } from "./animation/animation_multi_height.js";
 export {
   animate,
   createPlaybackController,

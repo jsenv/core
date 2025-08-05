@@ -7,10 +7,14 @@ import {
   stringifyTransform,
 } from "./transform_style_parser.js";
 
-export const createHeightAnimation = (element, to, options = {}) => {
+export const createHeightAnimation = (
+  element,
+  to,
+  { from, onProgress, ...options } = {},
+) => {
   const heightAnimation = animate(
     () => {
-      const { from = getHeight(element), ...rest } = options;
+      from = from ?? getHeight(element);
 
       // Warn if the animation difference is too small
       const diff = Math.abs(to - from);
@@ -25,7 +29,7 @@ export const createHeightAnimation = (element, to, options = {}) => {
       }
 
       return createTransition({
-        ...rest,
+        ...options,
         from,
         to,
         setup: () => {
@@ -55,6 +59,7 @@ export const createHeightAnimation = (element, to, options = {}) => {
       isVisual: true,
       constructor: createHeightAnimation,
       key: element,
+      onProgress,
     },
   );
 

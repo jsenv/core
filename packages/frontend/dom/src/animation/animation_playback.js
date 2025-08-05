@@ -41,67 +41,75 @@ export const createTransition = ({
   return transition;
 };
 
-export const animate = (transitionProducer, { isVisual, constructor, key }) => {
-  const playbackController = createPlaybackController({
-    start: (...args) => {
-      const transition = transitionProducer(...args);
-      const animation = {
-        transition,
-        startTime: document.timeline.currentTime,
-        duration: transition.duration,
-        isVisual,
-        update: playbackController.progress,
-      };
-      const { update, teardown, restore } = transition.setup();
-      addOnTimeline(animation);
+export const animate = (
+  transitionProducer,
+  { isVisual, constructor, key, onProgress },
+) => {
+  const playbackController = createPlaybackController(
+    {
+      start: (...args) => {
+        const transition = transitionProducer(...args);
+        const animation = {
+          transition,
+          startTime: document.timeline.currentTime,
+          duration: transition.duration,
+          isVisual,
+          update: playbackController.progress,
+        };
+        const { update, teardown, restore } = transition.setup();
+        addOnTimeline(animation);
 
-      const hooks = {
-        resetStartTime: () => {
-          animation.startTime = document.timeline.currentTime;
-        },
-        updateTarget: (to) => {
-          const currentValue = transition.value;
-          transition.updateTarget(currentValue, to);
-          hooks.resetStartTime();
-        },
-        update: (progress, { isFirstUpdate }) => {
-          transition.progress = progress;
-          if (progress === 1) {
-            transition.value = transition.to;
-          } else {
-            const easedProgress = transition.easing(progress);
-            const value =
-              transition.from +
-              (transition.to - transition.from) * easedProgress;
-            transition.value = value;
-          }
-          transition.timing =
-            progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
-          update(transition.value);
-        },
-        pause: () => {
-          const pauseTime = document.timeline.currentTime;
-          removeFromTimeline(animation);
-          return () => {
-            const pausedDuration = document.timeline.currentTime - pauseTime;
-            animation.startTime = animation.startTime + pausedDuration;
-            addOnTimeline(animation);
-          };
-        },
-        cancel: () => {
-          removeFromTimeline(animation);
-          teardown();
-          restore();
-        },
-        finish: () => {
-          removeFromTimeline(animation);
-          teardown();
-        },
-      };
+        const hooks = {
+          resetStartTime: () => {
+            animation.startTime = document.timeline.currentTime;
+          },
+          updateTarget: (to) => {
+            const currentValue = transition.value;
+            transition.updateTarget(currentValue, to);
+            hooks.resetStartTime();
+          },
+          update: (progress, { isFirstUpdate }) => {
+            transition.progress = progress;
+            if (progress === 1) {
+              transition.value = transition.to;
+            } else {
+              const easedProgress = transition.easing(progress);
+              const value =
+                transition.from +
+                (transition.to - transition.from) * easedProgress;
+              transition.value = value;
+            }
+            transition.timing =
+              progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
+            update(transition.value);
+          },
+          pause: () => {
+            const pauseTime = document.timeline.currentTime;
+            removeFromTimeline(animation);
+            return () => {
+              const pausedDuration = document.timeline.currentTime - pauseTime;
+              animation.startTime = animation.startTime + pausedDuration;
+              addOnTimeline(animation);
+            };
+          },
+          cancel: () => {
+            removeFromTimeline(animation);
+            teardown();
+            restore();
+          },
+          finish: () => {
+            removeFromTimeline(animation);
+            teardown();
+          },
+        };
 
-      return [transition, hooks];
+        return [transition, hooks];
+      },
     },
-  });
+    {
+      onProgress,
+    },
+  );
 
   // Add metadata to the controller
   playbackController.constructor = constructor;
@@ -110,7 +118,7 @@ export const animate = (transitionProducer, { isVisual, constructor, key }) => {
   return playbackController;
 };
 
-export const createPlaybackController = (content) => {
+export const createPlaybackController = (content, { onProgress } = {}) => {
   const [progressCallbacks, executeProgressCallbacks] =
     createCallbackController();
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
@@ -118,6 +126,9 @@ export const createPlaybackController = (content) => {
     progress: progressCallbacks,
     finish: finishCallbacks,
   };
+  if (onProgress) {
+    progressCallbacks.add(onProgress);
+  }
 
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let contentPlaying = null;

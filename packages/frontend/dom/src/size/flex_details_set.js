@@ -3,7 +3,8 @@
  *
  */
 
-import { animateMultipleHeights } from "../animation/animation_multi_height.js";
+import { createHeightAnimation } from "../animation/animation_dom.js";
+import { createMultiAnimationController } from "../animation/animation_multi.js";
 import { forceStyles } from "../style_and_attributes.js";
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
@@ -80,8 +81,14 @@ export const initFlexDetailsSet = (
     cleanup: null,
   };
 
+  // Create animation controller for managing height animations
+  const animationController = createMultiAnimationController();
+
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
+    // Cancel any ongoing animations
+    animationController.cancel();
+
     for (const cleanupCallback of cleanupCallbackSet) {
       cleanupCallback();
     }
@@ -282,13 +289,34 @@ export const initFlexDetailsSet = (
       return;
     }
 
-    const animations = Array.from(changeSet);
-    animateMultipleHeights(animations, {
-      duration: HEIGHT_ANIMATION_DURATION,
+    // Create height animations for each element in changeSet
+    const animations = Array.from(changeSet).map(
+      ({ element, target, sideEffect }) => {
+        const animation = createHeightAnimation(element, target, {
+          duration: HEIGHT_ANIMATION_DURATION,
+          onProgress: (transition) => {
+            if (sideEffect) {
+              const { value, timing } = transition;
+              sideEffect(value, { timing });
+            }
+          },
+        });
+        return animation;
+      },
+    );
+
+    animationController.animate(animations, {
       onChange: (changeEntries, isLast) => {
         if (onSizeChange) {
+          // Convert animation entries to the expected format
+          const sizeChangeEntries = changeEntries.map(
+            ({ animation, value }) => ({
+              element: animation.key, // key is the element
+              value,
+            }),
+          );
           onSizeChange(
-            changeEntries,
+            sizeChangeEntries,
             isLast ? { ...resizeDetails, animated: false } : resizeDetails,
           );
         }

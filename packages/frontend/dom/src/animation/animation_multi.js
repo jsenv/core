@@ -5,16 +5,14 @@ import { createPlaybackGroup } from "./animation_playback.js";
  * and handles target updates automatically
  */
 export const createMultiAnimationController = () => {
-  // Track ongoing animations by targetKey + constructor combination
-  const ongoingAnimations = new Map();
-  // Also maintain a Set for cancellation purposes
+  // Track all active animations for cancellation and matching
   const activeAnimations = new Set();
 
   return {
     /**
      * Animate multiple animations simultaneously
-     * Automatically handles updateTarget for elements that are already animating
-     * @param {Array} animations - Array of animation objects with updateTarget capability
+     * Automatically handles updateTarget for animations that match constructor + targetKey
+     * @param {Array} animations - Array of animation objects with constructor and targetKey properties
      * @param {Object} options - Animation options
      * @param {Function} options.onChange - Called with (changeEntries, isLast) during animation
      * @param {Function} options.onFinish - Called when all animations complete
@@ -39,26 +37,29 @@ export const createMultiAnimationController = () => {
 
       // Separate animations into new vs updates to existing ones
       for (const animation of animations) {
-        // Create a key to identify this type of animation on this target
-        const animationKey = `${animation.constructor?.name || "unknown"}_${animation.targetKey ? animation.targetKey.toString() : "notarget"}`;
-        const existingAnimation = ongoingAnimations.get(animationKey);
+        // Look for existing animation with same constructor and targetKey
+        let existingAnimation = null;
+        for (const animationCandidate of activeAnimations) {
+          if (
+            animationCandidate.constructor === animation.constructor &&
+            animationCandidate.key === animation.key
+          ) {
+            existingAnimation = animationCandidate;
+            break;
+          }
+        }
 
         if (existingAnimation && existingAnimation.playState === "running") {
           // Update the existing animation's target if it supports updateTarget
-          if (
-            existingAnimation.updateTarget &&
-            animation.targetValue !== undefined
-          ) {
+          if (existingAnimation.updateTarget) {
             existingAnimation.updateTarget(animation.targetValue);
           }
           updatedAnimations.push(existingAnimation);
         } else {
-          // Track this animation by its key
-          ongoingAnimations.set(animationKey, animation);
+          // Track this new animation
           activeAnimations.add(animation);
           // Clean up tracking when animation finishes
           animation.channels.finish.add(() => {
-            ongoingAnimations.delete(animationKey);
             activeAnimations.delete(animation);
           });
 
