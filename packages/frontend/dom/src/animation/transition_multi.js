@@ -1,27 +1,27 @@
-import { animateGroup } from "./animation_playback.js";
+import { createTransitionGroup } from "./transition_playback.js";
 
 /**
- * Creates a multi-animation controller that manages ongoing animations
+ * Creates a multi-transition controller that manages ongoing transitions
  * and handles target updates automatically
  */
-export const createMultiAnimationController = () => {
-  // Track all active animations for cancellation and matching
-  const activeAnimations = new Set();
+export const createMultiTransitionController = () => {
+  // Track all active transitions for cancellation and matching
+  const activeTransitions = new Set();
 
   return {
     /**
-     * Animate multiple animations simultaneously
-     * Automatically handles updateTarget for animations that match constructor + targetKey
-     * @param {Array} animations - Array of animation objects with constructor and targetKey properties
-     * @param {Object} options - Animation options
-     * @param {Function} options.onChange - Called with (changeEntries, isLast) during animation
-     * @param {Function} options.onFinish - Called when all animations complete
+     * Animate multiple transitions simultaneously
+     * Automatically handles updateTarget for transitions that match constructor + targetKey
+     * @param {Array} transitions - Array of transition objects with constructor and targetKey properties
+     * @param {Object} options - Transition options
+     * @param {Function} options.onChange - Called with (changeEntries, isLast) during transition
+     * @param {Function} options.onFinish - Called when all transitions complete
      * @returns {Object} Playback controller with play(), pause(), cancel(), etc.
      */
-    animate: (animations, options = {}) => {
+    animate: (transitions, options = {}) => {
       const { onChange, onFinish } = options;
 
-      if (animations.length === 0) {
+      if (transitions.length === 0) {
         return {
           play: () => {},
           pause: () => {},
@@ -32,51 +32,51 @@ export const createMultiAnimationController = () => {
         };
       }
 
-      const newAnimations = [];
-      const updatedAnimations = [];
+      const newTransitions = [];
+      const updatedTransitions = [];
 
-      // Separate animations into new vs updates to existing ones
-      for (const animation of animations) {
-        // Look for existing animation with same constructor and targetKey
-        let existingAnimation = null;
-        for (const animationCandidate of activeAnimations) {
+      // Separate transitions into new vs updates to existing ones
+      for (const transition of transitions) {
+        // Look for existing transition with same constructor and targetKey
+        let existingTransition = null;
+        for (const transitionCandidate of activeTransitions) {
           if (
-            animationCandidate.constructor === animation.constructor &&
-            animationCandidate.key === animation.key
+            transitionCandidate.constructor === transition.constructor &&
+            transitionCandidate.key === transition.key
           ) {
-            existingAnimation = animationCandidate;
+            existingTransition = transitionCandidate;
             break;
           }
         }
 
-        if (existingAnimation && existingAnimation.playState === "running") {
-          // Update the existing animation's target if it supports updateTarget
-          if (existingAnimation.updateTarget) {
-            existingAnimation.updateTarget(animation.to);
+        if (existingTransition && existingTransition.playState === "running") {
+          // Update the existing transition's target if it supports updateTarget
+          if (existingTransition.updateTarget) {
+            existingTransition.updateTarget(transition.to);
           }
-          updatedAnimations.push(existingAnimation);
+          updatedTransitions.push(existingTransition);
         } else {
-          // Track this new animation
-          activeAnimations.add(animation);
-          // Clean up tracking when animation finishes
-          animation.channels.finish.add(() => {
-            activeAnimations.delete(animation);
+          // Track this new transition
+          activeTransitions.add(transition);
+          // Clean up tracking when transition finishes
+          transition.channels.finish.add(() => {
+            activeTransitions.delete(transition);
           });
 
-          newAnimations.push(animation);
+          newTransitions.push(transition);
         }
       }
 
-      // If we only have updated animations (no new ones), return a minimal controller
-      if (newAnimations.length === 0) {
+      // If we only have updated transitions (no new ones), return a minimal controller
+      if (newTransitions.length === 0) {
         return {
           play: () => {}, // Already playing
           pause: () =>
-            updatedAnimations.forEach((animation) => animation.pause()),
+            updatedTransitions.forEach((transition) => transition.pause()),
           cancel: () =>
-            updatedAnimations.forEach((animation) => animation.cancel()),
+            updatedTransitions.forEach((transition) => transition.cancel()),
           finish: () =>
-            updatedAnimations.forEach((animation) => animation.finish()),
+            updatedTransitions.forEach((transition) => transition.finish()),
           playState: "running", // All are already running
           channels: {
             progress: { add: () => {} }, // Progress tracking already set up
@@ -85,17 +85,17 @@ export const createMultiAnimationController = () => {
         };
       }
 
-      // Create group controller to coordinate new animations only
-      const groupController = animateGroup(newAnimations);
+      // Create group controller to coordinate new transitions only
+      const groupController = createTransitionGroup(newTransitions);
 
-      // Add unified progress tracking for ALL animations (new + updated)
+      // Add unified progress tracking for ALL transitions (new + updated)
       if (onChange) {
         groupController.channels.progress.add((transition) => {
-          // Build change entries for current state of ALL animations
-          const changeEntries = [...newAnimations, ...updatedAnimations].map(
-            (animation) => ({
-              animation,
-              value: animation.content.value,
+          // Build change entries for current state of ALL transitions
+          const changeEntries = [...newTransitions, ...updatedTransitions].map(
+            (transition) => ({
+              transition,
+              value: transition.value,
             }),
           );
 
@@ -106,10 +106,10 @@ export const createMultiAnimationController = () => {
       // Add finish tracking
       if (onFinish) {
         groupController.channels.finish.add(() => {
-          const changeEntries = [...newAnimations, ...updatedAnimations].map(
-            (animation) => ({
-              animation,
-              value: animation.content.value,
+          const changeEntries = [...newTransitions, ...updatedTransitions].map(
+            (transition) => ({
+              transition,
+              value: transition.value,
             }),
           );
           onFinish(changeEntries);
@@ -120,20 +120,20 @@ export const createMultiAnimationController = () => {
     },
 
     /**
-     * Cancel all ongoing animations managed by this controller
+     * Cancel all ongoing transitions managed by this controller
      */
     cancel: () => {
-      // Cancel all active animations
-      for (const animation of activeAnimations) {
+      // Cancel all active transitions
+      for (const transition of activeTransitions) {
         if (
-          animation.playState === "running" ||
-          animation.playState === "paused"
+          transition.playState === "running" ||
+          transition.playState === "paused"
         ) {
-          animation.cancel();
+          transition.cancel();
         }
       }
       // Clear the sets - the finish callbacks will handle individual cleanup
-      activeAnimations.clear();
+      activeTransitions.clear();
     },
   };
 };
