@@ -1,14 +1,15 @@
 import { getHeight, getWidth } from "@jsenv/dom";
-import { createAnimatedValue } from "./animated_value.js";
+import { animate, createTransition } from "./animated_value.js";
 import {
   parseTransform,
   stringifyTransform,
 } from "./transform_style_parser.js";
 
 export const createElementHeightTransition = (element, to, options) => {
-  const from = getHeight(element);
-  const animatedHeight = createAnimatedValue(from, to, {
+  const heightTransition = createTransition({
     ...options,
+    from: getHeight(element),
+    to,
     init: () => {
       const heightAtStartFromInlineStyle = element.style.height;
       element.setAttribute(`data-height-animated`, "");
@@ -21,12 +22,12 @@ export const createElementHeightTransition = (element, to, options) => {
         }
       };
     },
+    effect: (value) => {
+      element.style.height = `${value}px`;
+    },
   });
-  animatedHeight.progressCallbacks.add(() => {
-    const { value } = animatedHeight;
-    element.style.height = `${value}px`;
-  });
-  return animatedHeight;
+  const heightAnimation = animate(heightTransition, { isVisual: true });
+  return heightAnimation;
 };
 export const createElementWidthTransition = (element, to, options) => {
   const from = getWidth(element);
