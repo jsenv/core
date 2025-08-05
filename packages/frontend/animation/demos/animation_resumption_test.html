@@ -153,10 +153,10 @@
     </style>
   </head>
   <body>
-    <h1>Animation Resumption Test</h1>
+    <h1>Animation Target Update Test</h1>
     <p>
-      Test animation interruption and resumption using startTime parameter in
-      animated_value.js
+      Test dynamic animation target updates using the new updateTarget API in
+      animation_playback.js
     </p>
 
     <div class="controls">
@@ -213,7 +213,7 @@
       <div class="control-group">
         <label>Actions:</label>
         <button id="start-btn">Start Animation</button>
-        <button id="interrupt-btn" disabled>Interrupt & Resume</button>
+        <button id="interrupt-btn" disabled>Update Target</button>
         <button id="pause-btn" disabled>Pause</button>
         <button id="resume-btn" disabled>Resume</button>
         <button id="reset-btn">Reset Element</button>
@@ -247,7 +247,7 @@
         createWidthAnimation,
         createOpacityAnimation,
         createPlaybackGroup,
-      } from "@jsenv/animation";
+      } from "../index.js";
 
       const testElement = document.getElementById("test-element");
       const debugLog = document.getElementById("debug-log");
@@ -277,8 +277,6 @@
 
       let currentAnimation = null;
       let animationType = "height";
-      let lastInterruptTime = null;
-      let animationStartTime = null;
 
       // Sync slider and number inputs
       heightSlider.oninput = () => {
@@ -335,9 +333,9 @@
           !playing ||
           (currentAnimation && currentAnimation.playState === "finished");
         resumeBtn.disabled =
-          playing ||
+          !playing ||
           !currentAnimation ||
-          currentAnimation.playState === "paused";
+          currentAnimation.playState !== "paused";
       }
 
       function resetElement() {
@@ -362,29 +360,18 @@
         updateStatus("Element reset to initial state");
         updateProgress(0);
         updateButtons(false);
-        lastInterruptTime = null;
-        animationStartTime = null;
         log("Element reset to initial state");
       }
 
-      function createAnimation(useStartTime = null) {
+      function createAnimation() {
         const duration = parseInt(durationInput.value);
-        const startTime =
-          useStartTime ||
-          (lastInterruptTime ? Date.now() - lastInterruptTime : null);
 
-        log(
-          `Creating ${animationType} animation (duration: ${duration}ms, startTime: ${startTime ? "resumed" : "new"})`,
-        );
+        log(`Creating ${animationType} animation (duration: ${duration}ms)`);
 
         const commonOptions = {
           duration,
-          startTime,
           onProgress: ({ progress }) => {
             updateProgress(progress);
-            // log(
-            //   `Animation progress: ${(progress * 100).toFixed(1)}% (value: ${value})`,
-            // );
           },
         };
 
@@ -414,12 +401,6 @@
             const animations = [
               createHeightAnimation(testElement, parseInt(heightValue.value), {
                 ...commonOptions,
-                onProgress: ({ progress }) => {
-                  updateProgress(progress);
-                  // log(
-                  //   `Height progress: ${(progress * 100).toFixed(1)}% (${value}px)`,
-                  // );
-                },
               }),
               createWidthAnimation(testElement, parseInt(widthValue.value), {
                 ...commonOptions,
@@ -432,13 +413,7 @@
                 },
               ),
             ];
-            const animGroup = createPlaybackGroup(animations, {
-              onFinish: () => {
-                updateStatus("Combined animation completed", "ended");
-                updateButtons(false);
-                log("Combined animation completed");
-              },
-            });
+            const animGroup = createPlaybackGroup(animations);
             return animGroup;
           }
 
@@ -453,26 +428,19 @@
           currentAnimation.cancel();
         }
 
-        animationStartTime = Date.now();
-        lastInterruptTime = null;
         currentAnimation = createAnimation();
-
-        if (currentAnimation.play) {
-          currentAnimation.play();
-        }
+        currentAnimation.play();
 
         updateStatus("Animation started", "playing");
         updateButtons(true);
         log(`Started ${animationType} animation`);
 
-        // Handle animation end for single animations
-        if (animationType !== "combined" && currentAnimation.finishCallbacks) {
-          currentAnimation.finishCallbacks.add(() => {
-            updateStatus("Animation completed", "ended");
-            updateButtons(false);
-            log("Animation completed");
-          });
-        }
+        // Handle animation end
+        currentAnimation.channels.finish.add(() => {
+          updateStatus("Animation completed", "ended");
+          updateButtons(false);
+          log("Animation completed");
+        });
       };
 
       interruptBtn.onclick = () => {
@@ -480,41 +448,32 @@
           return;
         }
 
-        const currentTime = Date.now();
-        const elapsed = animationStartTime
-          ? currentTime - animationStartTime
-          : 0;
-        lastInterruptTime = elapsed;
+        log(`Interrupting animation and updating target`);
 
-        log(`Interrupting animation at ${elapsed}ms elapsed`);
+        // Update target using the new updateTarget method
+        switch (animationType) {
+          case "height":
+            currentAnimation.updateTarget(parseInt(heightValue.value));
+            log(`Updated height target to ${heightValue.value}px`);
+            break;
+          case "width":
+            currentAnimation.updateTarget(parseInt(widthValue.value));
+            log(`Updated width target to ${widthValue.value}px`);
+            break;
+          case "opacity":
+            currentAnimation.updateTarget(parseFloat(opacityValue.value));
+            log(`Updated opacity target to ${opacityValue.value}`);
+            break;
+          case "combined":
+            // For combined animations, we need to update each individual animation
+            log(`Combined animations don't support updateTarget yet`);
+            break;
+          default:
+            log(`Unknown animation type: ${animationType}`);
+            break;
+        }
 
-        // Cancel current animation
-        currentAnimation.cancel();
-        updateStatus("Animation interrupted", "paused");
-
-        // Create new animation with startTime to resume from current position
-        setTimeout(() => {
-          log(`Resuming animation from ${elapsed}ms position`);
-          currentAnimation = createAnimation(elapsed);
-
-          if (currentAnimation.play) {
-            currentAnimation.play();
-          }
-
-          updateStatus("Animation resumed from interruption", "playing");
-
-          // Handle animation end for resumed animation
-          if (
-            animationType !== "combined" &&
-            currentAnimation.finishCallbacks
-          ) {
-            currentAnimation.finishCallbacks.add(() => {
-              updateStatus("Resumed animation completed", "ended");
-              updateButtons(false);
-              log("Resumed animation completed");
-            });
-          }
-        }, 100); // Small delay to simulate real interruption
+        updateStatus("Animation target updated", "playing");
       };
 
       pauseBtn.onclick = () => {
@@ -538,7 +497,7 @@
       resetBtn.onclick = resetElement;
 
       // Initialize
-      log("Animation resumption test initialized");
+      log("Animation target update test initialized with new updateTarget API");
       updateStatus("Ready to start animation");
       updateButtons(false);
     </script>

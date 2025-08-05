@@ -40,6 +40,7 @@ export const animate = (transitionProducer, { isVisual }) => {
       };
 
       const content = {
+        transition,
         resetStartTime: () => {
           animation.startTime = document.timeline.currentTime;
         },
@@ -174,6 +175,22 @@ export const createPlaybackController = (content) => {
 
     resetStartTime: () => {
       contentPlaying.resetStartTime();
+    },
+    updateTarget: (newTarget) => {
+      if (playState === "idle") {
+        console.warn("Cannot update target of idle content");
+        return;
+      }
+      if (playState === "finished") {
+        console.warn("Cannot update target of finished content");
+        return;
+      }
+      // Update the transition target and reset timing
+      if (contentPlaying && contentPlaying.transition) {
+        contentPlaying.transition.from = contentPlaying.transition.value;
+        contentPlaying.transition.to = newTarget;
+        contentPlaying.resetStartTime();
+      }
     },
   };
   return playbackController;
