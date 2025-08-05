@@ -1,14 +1,12 @@
-import {
-  createElementHeightTransition,
-  createElementWidthTransition,
-  playAnimations,
-} from "../animation/animated_value.js";
-import {
-  createAnimationController,
-  createStep,
-} from "../animation/create_animation_controller.js";
 import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
+import {
+  createHeightTransition,
+  createOpacityTransition,
+  createTranslateXTransition,
+  createWidthTransition,
+} from "../transition/dom_transition.js";
+import { createGroupTransitionController } from "../transition/group_transition.js";
 
 import.meta.css = /* css */ `
   .ui-transition-container {
@@ -86,9 +84,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     return { cleanup: () => {} };
   }
 
-  const transitionAnimationController = createAnimationController({
-    duration: 300, // Default duration, will be updated dynamically
-  });
+  const transitionController = createGroupTransitionController();
 
   // Track dimensions and UI state
   let lastContentWidth = 0; // Last known content state width
@@ -182,42 +178,31 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     outerWrapper.style.overflow = "hidden";
     const animations = [];
     if (targetHeight !== currentHeight) {
-      const heightAnimation = createElementHeightTransition(
+      const heightTransition = createHeightTransition(
         outerWrapper,
         targetHeight,
         {
           duration: resizeDuration,
-          startTime: sizeAnimation
-            ? sizeAnimation.getAnimationByConstructor(
-                createElementHeightTransition,
-              )?.startTime
-            : null,
-          onUpdate: ({ value }) => {
+          onProgress: ({ value }) => {
             currentHeight = value;
           },
         },
       );
-      animations.push(heightAnimation);
+      animations.push(heightTransition);
     }
     if (targetWidth !== currentWidth) {
-      const widthAnimation = createElementWidthTransition(
-        outerWrapper,
-        targetWidth,
-        {
-          duration: resizeDuration,
-          startTime: sizeAnimation
-            ? sizeAnimation.getAnimationByConstructor(
-                createElementWidthTransition,
-              )?.startTime
-            : null,
-          onUpdate: ({ value }) => {
-            currentWidth = value;
-          },
+      const widthTransition = createWidthTransition(outerWrapper, targetWidth, {
+        duration: resizeDuration,
+        onUpdate: ({ value }) => {
+          currentWidth = value;
         },
-      );
-      animations.push(widthAnimation);
+      });
+      animations.push(widthTransition);
     }
-    sizeAnimation = playAnimations(animations, { onEnd });
+    sizeAnimation = transitionController.animate(animations, {
+      onFinish: onEnd,
+    });
+    sizeAnimation.play();
   };
 
   let isUpdating = false;
@@ -354,7 +339,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
         // Calculate animation progress before canceling for smooth continuation
         let animationProgress = 0;
-        if (transitionAnimationController.pending && existingOldContents[0]) {
+        if (transitionController.pending && existingOldContents[0]) {
           // Calculate progress based on current position vs target
           const currentOldPos = getCurrentTranslateX(existingOldContents[0]);
           const containerWidth =
@@ -371,7 +356,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         }
 
         // Cancel any ongoing transition before starting a new one
-        transitionAnimationController.cancel();
+        transitionController.cancel();
 
         // Determine if we need to create a setup function that clones content
         const needsOldContentClone =
@@ -422,12 +407,11 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         );
         const type = container.getAttribute("data-ui-transition");
 
-        animateTransition(
-          transitionAnimationController,
-          firstChild,
-          setupTransition,
-          { duration, type, animationProgress },
-        );
+        animateTransition(transitionController, firstChild, setupTransition, {
+          duration,
+          type,
+          animationProgress,
+        });
       } else {
         // No transition needed, clean up any remaining old elements
         transitionOverlay.innerHTML = "";
@@ -533,20 +517,17 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       if (sizeAnimation) {
         sizeAnimation.cancel();
       }
-      transitionAnimationController.cancel();
+      transitionController.cancel();
     },
     pause: () => {
-      transitionAnimationController.pause();
+      transitionController.pause();
     },
     resume: () => {
-      transitionAnimationController.resume();
+      transitionController.resume();
     },
     getState: () => ({
-      isPaused: transitionAnimationController.isPaused(),
-      transitionInProgress: transitionAnimationController.pending,
-      opacity:
-        transitionAnimationController.animationMap.get("opacity")?.value ||
-        null,
+      isPaused: transitionController.isPaused(),
+      transitionInProgress: transitionController.pending,
     }),
     // Additional methods could be added here for direct control
     // setContent: (content) => {...}
@@ -555,16 +536,16 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 };
 
 const animateTransition = (
-  animationController,
+  transitionController,
   newElement,
   setupTransition,
   { type, duration, animationProgress = 0 },
 ) => {
-  let applyAnimation;
+  let applyTransition;
   if (type === "cross-fade") {
-    applyAnimation = applyCrossFade;
+    applyTransition = applyCrossFade;
   } else if (type === "slide-left") {
-    applyAnimation = applySlideLeft;
+    applyTransition = applySlideLeft;
   } else {
     return;
   }
@@ -583,15 +564,9 @@ const animateTransition = (
   const remainingDuration = Math.max(100, duration * (1 - animationProgress));
   debug("transition", "⏱️ Remaining duration:", remainingDuration);
 
-  const steps = applyAnimation(oldContent, newElement);
-  if (steps.length === 0) {
-    // If no steps, still call cleanup
-    cleanup();
-    return;
-  }
-  animationController.setDuration(remainingDuration);
-  animationController.animateAll(steps, {
-    onEnd: () => {
+  const transitions = applyTransition(oldContent, newElement);
+  transitionController.animate(transitions, {
+    onFinish: () => {
       cleanup();
     },
   });
@@ -629,11 +604,8 @@ const applySlideLeft = (oldElement, newElement) => {
     });
 
     return [
-      createStep({
-        element: oldElement,
-        property: "transform",
-        target: `translateX(${-containerWidth}px)`,
-        sideEffect: (value, { timing }) => {
+      createTranslateXTransition(oldElement, -containerWidth, {
+        onProgress: ({ value, timing }) => {
           debug("transition", "🔄 Content slide out to empty:", value);
           if (timing === "end") {
             debug("transition", "✨ Slide out complete");
@@ -653,11 +625,8 @@ const applySlideLeft = (oldElement, newElement) => {
     newElement.style.transform = `translateX(${startPos})`;
 
     return [
-      createStep({
-        element: newElement,
-        property: "transform",
-        target: "translateX(0)",
-        sideEffect: (value) => {
+      createTranslateXTransition(newElement, 0, {
+        sideEffect: ({ value }) => {
           debug("transition", "🔄 Slide in progress:", value);
         },
       }),
@@ -696,19 +665,13 @@ const applySlideLeft = (oldElement, newElement) => {
   });
 
   return [
-    createStep({
-      element: oldElement,
-      property: "transform",
-      target: `translateX(${-containerWidth}px)`,
-      sideEffect: (value) => {
+    createTranslateXTransition(oldElement, -containerWidth, {
+      onProgress: ({ value }) => {
         debug("transition", "🔄 Old content slide out:", value);
       },
     }),
-    createStep({
-      element: newElement,
-      property: "transform",
-      target: "translateX(0)",
-      sideEffect: (value, { timing }) => {
+    createTranslateXTransition(newElement, 0, {
+      onProgress: ({ value, timing }) => {
         debug("transition", "🔄 New content slide in:", value);
         if (timing === "end") {
           debug("transition", "✨ Slide complete");
@@ -737,11 +700,8 @@ const applyCrossFade = (oldElement, newElement) => {
     });
 
     return [
-      createStep({
-        element: oldElement,
-        property: "opacity",
-        target: 0,
-        sideEffect: (value, { timing }) => {
+      createOpacityTransition(oldElement, 0, {
+        onProgress: ({ value, timing }) => {
           debug(
             "transition",
             "🔄 Content fade out to empty:",
@@ -785,11 +745,8 @@ const applyCrossFade = (oldElement, newElement) => {
   if (!oldElement) {
     // Case: Empty -> Content (fade in only)
     return [
-      createStep({
-        element: newElement,
-        property: "opacity",
-        target: 1,
-        sideEffect: (value, { timing }) => {
+      createOpacityTransition(newElement, 1, {
+        onProgress: ({ value, timing }) => {
           debug("transition", "🔄 Fade in progress:", value.toFixed(3));
 
           if (timing === "end") {
@@ -802,22 +759,16 @@ const applyCrossFade = (oldElement, newElement) => {
 
   // Case: Content -> Content (cross-fade between states)
   return [
-    createStep({
-      element: oldElement,
-      property: "opacity",
-      target: 0,
-      sideEffect: (value) => {
+    createOpacityTransition(oldElement, 0, {
+      onProgress: ({ value }) => {
         // Skip if old content opacity is already 0
         if (value > 0) {
           debug("transition", "🔄 Old content fade out:", value.toFixed(3));
         }
       },
     }),
-    createStep({
-      element: newElement,
-      property: "opacity",
-      target: 1,
-      sideEffect: (value, { timing }) => {
+    createOpacityTransition(newElement, 1, {
+      onProgress: ({ value, timing }) => {
         // Skip if new content opacity is already at or above target
         const currentOpacity = parseFloat(getComputedStyle(newElement).opacity);
         if (isNaN(currentOpacity) || value > currentOpacity) {

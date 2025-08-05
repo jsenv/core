@@ -110,6 +110,10 @@ export const createGroupTransitionController = () => {
       const { onChange, onFinish } = options;
 
       if (transitions.length === 0) {
+        // No transitions to animate, call onFinish immediately
+        if (onFinish) {
+          onFinish([]);
+        }
         return {
           play: () => {},
           pause: () => {},
