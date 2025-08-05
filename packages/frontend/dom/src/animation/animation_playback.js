@@ -25,6 +25,14 @@ export const createTransition = ({
     timing: "",
     easing,
     setup,
+    // Default lifecycle methods that do nothing
+    lifecycle: {
+      start: () => {},
+      pause: () => {},
+      cancel: () => {},
+      finish: () => {},
+      updateTarget: () => {},
+    },
   };
   return transition;
 };
@@ -73,9 +81,7 @@ export const animate = (transition, { onProgress } = {}) => {
     }
 
     // Let the transition manage its own lifecycle
-    if (transition.lifecycle && transition.lifecycle.onStart) {
-      transition.lifecycle.onStart(animation);
-    }
+    transition.lifecycle.start(animation);
   };
 
   const animation = {
@@ -144,16 +150,12 @@ export const animate = (transition, { onProgress } = {}) => {
       playState = "paused";
 
       // Let the transition handle its own pause logic
-      if (transition.lifecycle && transition.lifecycle.onPause) {
-        resume = transition.lifecycle.onPause(animation);
-      }
+      resume = transition.lifecycle.pause(animation);
     },
 
     cancel: () => {
       if (transition) {
-        if (transition.lifecycle && transition.lifecycle.onCancel) {
-          transition.lifecycle.onCancel(animation);
-        }
+        transition.lifecycle.cancel(animation);
         teardown();
         restore();
       }
@@ -171,9 +173,7 @@ export const animate = (transition, { onProgress } = {}) => {
         return;
       }
       // "running" or "paused"
-      if (transition.lifecycle && transition.lifecycle.onFinish) {
-        transition.lifecycle.onFinish(animation);
-      }
+      transition.lifecycle.finish(animation);
       teardown();
       resume = null;
       playState = "finished";
@@ -203,9 +203,7 @@ export const animate = (transition, { onProgress } = {}) => {
       transition.to = newTarget;
 
       // Let the transition handle its own target update logic
-      if (transition.lifecycle && transition.lifecycle.onUpdateTarget) {
-        transition.lifecycle.onUpdateTarget(animation);
-      }
+      transition.lifecycle.updateTarget(animation);
     },
   };
 
@@ -236,11 +234,11 @@ export const createTimelineTransition = ({
   // Add timeline management hooks
   transition.isVisual = isVisual;
   transition.lifecycle = {
-    onStart: (animation) => {
+    start: (animation) => {
       animation.startTime = document.timeline.currentTime;
       addOnTimeline(animation);
     },
-    onPause: (animation) => {
+    pause: (animation) => {
       const pauseTime = document.timeline.currentTime;
       removeFromTimeline(animation);
       return () => {
@@ -249,13 +247,13 @@ export const createTimelineTransition = ({
         addOnTimeline(animation);
       };
     },
-    onCancel: (animation) => {
+    cancel: (animation) => {
       removeFromTimeline(animation);
     },
-    onFinish: (animation) => {
+    finish: (animation) => {
       removeFromTimeline(animation);
     },
-    onUpdateTarget: (animation) => {
+    updateTarget: (animation) => {
       animation.startTime = document.timeline.currentTime;
     },
   };
@@ -280,7 +278,7 @@ export const createGroupTransition = (animationArray) => {
   });
 
   transition.lifecycle = {
-    onStart: (animation) => {
+    start: (animation) => {
       progressValues.fill(0);
       finishedStates.fill(false);
 
@@ -316,7 +314,7 @@ export const createGroupTransition = (animationArray) => {
       });
     },
 
-    onPause: () => {
+    pause: () => {
       for (const childAnimation of animationArray) {
         if (childAnimation.playState === "running") {
           childAnimation.pause();
@@ -331,7 +329,7 @@ export const createGroupTransition = (animationArray) => {
       };
     },
 
-    onCancel: () => {
+    cancel: () => {
       for (const childAnimation of animationArray) {
         if (childAnimation.playState !== "idle") {
           childAnimation.cancel();
@@ -339,7 +337,7 @@ export const createGroupTransition = (animationArray) => {
       }
     },
 
-    onFinish: () => {
+    finish: () => {
       for (const childAnimation of animationArray) {
         if (childAnimation.playState !== "finished") {
           childAnimation.finish();
