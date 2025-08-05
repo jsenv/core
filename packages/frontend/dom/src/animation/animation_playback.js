@@ -5,6 +5,15 @@
 import { addOnTimeline, removeFromTimeline } from "./animation_timeline.js";
 import { EASING } from "./easing.js";
 
+// Default lifecycle methods that do nothing
+const LICECYCLE_DEFAULT = {
+  setup: () => {},
+  pause: () => {},
+  cancel: () => {},
+  finish: () => {},
+  updateTarget: () => {},
+};
+
 export const createTransition = ({
   constructor,
   key,
@@ -12,7 +21,7 @@ export const createTransition = ({
   to,
   duration,
   easing = EASING.EASE_OUT,
-  setup,
+  lifecycle = LICECYCLE_DEFAULT,
 } = {}) => {
   const transition = {
     constructor,
@@ -24,15 +33,7 @@ export const createTransition = ({
     progress: 0,
     timing: "",
     easing,
-    setup,
-    // Default lifecycle methods that do nothing
-    lifecycle: {
-      start: () => {},
-      pause: () => {},
-      cancel: () => {},
-      finish: () => {},
-      updateTarget: () => {},
-    },
+    lifecycle,
   };
   return transition;
 };
@@ -61,7 +62,7 @@ export const animate = (transition, { onProgress } = {}) => {
     isFirstUpdate = true;
     playState = "running";
 
-    const setupResult = transition.setup();
+    const setupResult = transition.lifecycle.setup(animation);
     update = setupResult.update;
     teardown = setupResult.teardown;
     restore = setupResult.restore;
@@ -79,9 +80,6 @@ export const animate = (transition, { onProgress } = {}) => {
         `transition difference is very small (${diff}px). Consider if this transition is necessary.`,
       );
     }
-
-    // Let the transition manage its own lifecycle
-    transition.lifecycle.start(animation);
   };
 
   const animation = {
@@ -228,35 +226,34 @@ export const createTimelineTransition = ({
     to,
     duration,
     easing,
-    setup,
+    lifecycle: {
+      setup: (animation) => {
+        // Handle timeline management
+        animation.startTime = document.timeline.currentTime;
+        addOnTimeline(animation, isVisual);
+        // Call the original setup
+        return setup();
+      },
+      pause: (animation) => {
+        const pauseTime = document.timeline.currentTime;
+        removeFromTimeline(animation);
+        return () => {
+          const pausedDuration = document.timeline.currentTime - pauseTime;
+          animation.startTime += pausedDuration;
+          addOnTimeline(animation, isVisual);
+        };
+      },
+      cancel: (animation) => {
+        removeFromTimeline(animation, isVisual);
+      },
+      finish: (animation) => {
+        removeFromTimeline(animation, isVisual);
+      },
+      updateTarget: (animation) => {
+        animation.startTime = document.timeline.currentTime;
+      },
+    },
   });
-
-  // Add timeline management hooks
-  transition.isVisual = isVisual;
-  transition.lifecycle = {
-    start: (animation) => {
-      animation.startTime = document.timeline.currentTime;
-      addOnTimeline(animation);
-    },
-    pause: (animation) => {
-      const pauseTime = document.timeline.currentTime;
-      removeFromTimeline(animation);
-      return () => {
-        const pausedDuration = document.timeline.currentTime - pauseTime;
-        animation.startTime += pausedDuration;
-        addOnTimeline(animation);
-      };
-    },
-    cancel: (animation) => {
-      removeFromTimeline(animation);
-    },
-    finish: (animation) => {
-      removeFromTimeline(animation);
-    },
-    updateTarget: (animation) => {
-      animation.startTime = document.timeline.currentTime;
-    },
-  };
   return transition;
 };
 
@@ -270,81 +267,82 @@ export const createGroupTransition = (animationArray) => {
     to: 1,
     duration: 0,
     easing: (x) => x,
-    setup: () => ({
-      update: () => {},
-      teardown: () => {},
-      restore: () => {},
-    }),
-  });
+    lifecycle: {
+      setup: (animation) => {
+        progressValues.fill(0);
+        finishedStates.fill(false);
 
-  transition.lifecycle = {
-    start: (animation) => {
-      progressValues.fill(0);
-      finishedStates.fill(false);
+        // Start all animations and track their progress
+        animationArray.forEach((childAnimation, index) => {
+          const removeProgressListener = childAnimation.channels.progress.add(
+            (content) => {
+              progressValues[index] = content.progress;
+              // Calculate average progress
+              const averageProgress =
+                progressValues.reduce((sum, p) => sum + p, 0) /
+                animationArray.length;
 
-      // Start all animations and track their progress
-      animationArray.forEach((childAnimation, index) => {
-        const removeProgressListener = childAnimation.channels.progress.add(
-          (content) => {
-            progressValues[index] = content.progress;
-            // Calculate average progress
-            const averageProgress =
-              progressValues.reduce((sum, p) => sum + p, 0) /
-              animationArray.length;
+              // Update this transition's progress
+              animation.progress(averageProgress);
+            },
+          );
 
-            // Update this transition's progress
-            animation.progress(averageProgress);
-          },
-        );
+          const removeFinishListener = childAnimation.channels.finish.add(
+            () => {
+              removeProgressListener();
+              removeFinishListener();
+              progressValues[index] = 1;
+              finishedStates[index] = true;
 
-        const removeFinishListener = childAnimation.channels.finish.add(() => {
-          removeProgressListener();
-          removeFinishListener();
-          progressValues[index] = 1;
-          finishedStates[index] = true;
+              // Check if all animations are finished
+              const allFinished = finishedStates.every((finished) => finished);
+              if (allFinished) {
+                animation.finish();
+              }
+            },
+          );
 
-          // Check if all animations are finished
-          const allFinished = finishedStates.every((finished) => finished);
-          if (allFinished) {
-            animation.finish();
-          }
+          childAnimation.play();
         });
 
-        childAnimation.play();
-      });
-    },
-
-    pause: () => {
-      for (const childAnimation of animationArray) {
-        if (childAnimation.playState === "running") {
-          childAnimation.pause();
-        }
-      }
-      return () => {
+        return {
+          update: () => {},
+          teardown: () => {},
+          restore: () => {},
+        };
+      },
+      pause: () => {
         for (const childAnimation of animationArray) {
-          if (childAnimation.playState === "paused") {
-            childAnimation.play();
+          if (childAnimation.playState === "running") {
+            childAnimation.pause();
           }
         }
-      };
-    },
+        return () => {
+          for (const childAnimation of animationArray) {
+            if (childAnimation.playState === "paused") {
+              childAnimation.play();
+            }
+          }
+        };
+      },
 
-    cancel: () => {
-      for (const childAnimation of animationArray) {
-        if (childAnimation.playState !== "idle") {
-          childAnimation.cancel();
+      cancel: () => {
+        for (const childAnimation of animationArray) {
+          if (childAnimation.playState !== "idle") {
+            childAnimation.cancel();
+          }
         }
-      }
-    },
+      },
 
-    finish: () => {
-      for (const childAnimation of animationArray) {
-        if (childAnimation.playState !== "finished") {
-          childAnimation.finish();
+      finish: () => {
+        for (const childAnimation of animationArray) {
+          if (childAnimation.playState !== "finished") {
+            childAnimation.finish();
+          }
         }
-      }
+      },
     },
-  };
+  });
 
   return transition;
 };
