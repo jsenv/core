@@ -1,11 +1,10 @@
 import { createTransition } from "./transition_playback.js";
 
-// Group transition that manages multiple transitions
-export const createTransitionGroup = (transitionArray) => {
+// transition that manages multiple transitions
+export const createGroupTransition = (transitionArray) => {
   const progressValues = new Array(transitionArray.length).fill(0);
   const finishedStates = new Array(transitionArray.length).fill(false);
-
-  return createTransition({
+  const groupTransition = createTransition({
     from: 0,
     to: 1,
     duration: 0,
@@ -86,13 +85,14 @@ export const createTransitionGroup = (transitionArray) => {
       },
     },
   });
+  return groupTransition;
 };
 
 /**
- * Creates a transition group controller that manages ongoing transitions
+ * Creates an interface that manages ongoing transitions
  * and handles target updates automatically
  */
-export const createTransitionGroupController = () => {
+export const createGroupTransitionController = () => {
   // Track all active transitions for cancellation and matching
   const activeTransitions = new Set();
 
@@ -173,12 +173,12 @@ export const createTransitionGroupController = () => {
         };
       }
 
-      // Create group controller to coordinate new transitions only
-      const groupController = createTransitionGroup(newTransitions);
+      // Create group transition to coordinate new transitions only
+      const groupTransition = createGroupTransition(newTransitions);
 
       // Add unified progress tracking for ALL transitions (new + updated)
       if (onChange) {
-        groupController.channels.progress.add((transition) => {
+        groupTransition.channels.progress.add((transition) => {
           // Build change entries for current state of ALL transitions
           const changeEntries = [...newTransitions, ...updatedTransitions].map(
             (transition) => ({
@@ -193,7 +193,7 @@ export const createTransitionGroupController = () => {
 
       // Add finish tracking
       if (onFinish) {
-        groupController.channels.finish.add(() => {
+        groupTransition.channels.finish.add(() => {
           const changeEntries = [...newTransitions, ...updatedTransitions].map(
             (transition) => ({
               transition,
@@ -204,7 +204,7 @@ export const createTransitionGroupController = () => {
         });
       }
 
-      return groupController;
+      return groupTransition;
     },
 
     /**
