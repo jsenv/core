@@ -42,11 +42,11 @@ const createBackgroundUpdateLoop = () => {
     timeout = setTimeout(update, 16); // roughly 60fps
   };
   return {
-    pause: () => {
-      clearTimeout(timeout);
-    },
-    play: () => {
+    start: () => {
       timeout = setTimeout(update, 16);
+    },
+    stop: () => {
+      clearTimeout(timeout);
     },
   };
 };
@@ -63,10 +63,10 @@ const createAnimationFrameLoop = () => {
     animationFrame = requestAnimationFrame(update);
   };
   return {
-    play: () => {
+    start: () => {
       animationFrame = requestAnimationFrame(update);
     },
-    pause: () => {
+    stop: () => {
       cancelAnimationFrame(animationFrame);
     },
   };
@@ -80,16 +80,16 @@ export const stopTimeline = () => {
     return;
   }
   timelineIsRunning = false;
-  backgroundUpdateLoop.play();
-  animationUpdateLoop.play();
+  backgroundUpdateLoop.stop();
+  animationUpdateLoop.stop();
 };
 export const startTimeline = () => {
   if (!timelineIsRunning) {
     return;
   }
   timelineIsRunning = true;
-  backgroundUpdateLoop.play();
-  animationUpdateLoop.play();
+  backgroundUpdateLoop.start();
+  animationUpdateLoop.start();
 };
 startTimeline();
 
