@@ -194,18 +194,36 @@ export const createPlaybackGroup = (playableContentArray) => {
   const playbackController = createPlaybackController({
     start: () => {
       const playingCount = playableContentArray.length;
-      let finishedCount = 0;
+      const progressValues = new Array(playingCount).fill(0);
 
-      for (const playableContent of playableContentArray) {
-        // eslint-disable-next-line no-loop-func
-        const remove = playableContent.channels.finish.add(() => {
-          remove();
-          finishedCount++;
-          const progress = finishedCount / playingCount;
-          playbackController.progress(progress);
+      // Start all animations and track their progress
+      playableContentArray.forEach((playableContent, index) => {
+        // Track progress updates from each animation
+        const removeProgressListener = playableContent.channels.progress.add(
+          (progress) => {
+            progressValues[index] = progress;
+            // Calculate average progress
+            const averageProgress =
+              progressValues.reduce((sum, p) => sum + p, 0) / playingCount;
+            playbackController.progress(averageProgress);
+          },
+        );
+
+        // Track when animations finish
+        const removeFinishListener = playableContent.channels.finish.add(() => {
+          removeProgressListener();
+          removeFinishListener();
+          progressValues[index] = 1;
+
+          // Update final progress
+          const averageProgress =
+            progressValues.reduce((sum, p) => sum + p, 0) / playingCount;
+          playbackController.progress(averageProgress);
         });
+
         playableContent.play();
-      }
+      });
+
       return {
         pause: () => {
           for (const playableContent of playableContentArray) {
@@ -213,7 +231,7 @@ export const createPlaybackGroup = (playableContentArray) => {
           }
         },
         update: () => {
-          // noop
+          // noop - progress is handled by individual animation listeners
         },
         cancel: () => {
           for (const playableContent of playableContentArray) {
@@ -223,6 +241,13 @@ export const createPlaybackGroup = (playableContentArray) => {
         finish: () => {
           for (const playableContent of playableContentArray) {
             playableContent.finish();
+          }
+        },
+        resetStartTime: () => {
+          for (const playableContent of playableContentArray) {
+            if (playableContent.resetStartTime) {
+              playableContent.resetStartTime();
+            }
           }
         },
       };
