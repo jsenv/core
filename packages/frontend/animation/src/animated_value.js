@@ -93,7 +93,6 @@ export const startTimeline = () => {
 };
 startTimeline();
 
-const playableSymbol = Symbol.for("jsenv_playable_content");
 const easingDefault = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 export const createAnimatedValue = (
   from,
@@ -182,12 +181,26 @@ export const createAnimatedValue = (
   );
 
   animatedValue.animation = animation;
-  animatedValue[playableSymbol] = playbackController;
-  Object.assign(animatedValue, playbackController);
+  makePlayable(animatedValue, playbackController);
 
   return animatedValue;
 };
 
+const makePlayable = (content, playbackController) => {
+  const { play, pause, finish, abort, progress } = playbackController;
+  Object.assign(content, {
+    play,
+    pause,
+    finish,
+    abort,
+    progress,
+    get playState() {
+      return playbackController.playState;
+    },
+  });
+};
+
+const playableSymbol = Symbol.for("jsenv_playable_content");
 export const createPlaybackController = (content, { onProgress, onFinish }) => {
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
 
@@ -278,10 +291,6 @@ export const createPlaybackGroup = (
       start: () => {
         const playingCount = playableContentArray.length;
         let finishedCount = 0;
-
-        playableContentArray = playableContentArray.map((value) => {
-          return value[playableSymbol];
-        });
 
         for (const playableContent of playableContentArray) {
           // eslint-disable-next-line no-loop-func
