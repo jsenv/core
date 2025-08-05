@@ -312,7 +312,7 @@
 
       function log(message) {
         const timestamp = new Date().toLocaleTimeString();
-        debugLog.innerHTML += `[${timestamp}] ${message}\n`;
+        debugLog.innerHTML += `[${timestamp}] ${message}<br>`;
         debugLog.scrollTop = debugLog.scrollHeight;
       }
 
@@ -333,7 +333,7 @@
           !playing ||
           (currentAnimation && currentAnimation.playState === "finished");
         resumeBtn.disabled =
-          !playing ||
+          playing ||
           !currentAnimation ||
           currentAnimation.playState !== "paused";
       }
@@ -370,9 +370,6 @@
 
         const commonOptions = {
           duration,
-          onProgress: ({ progress }) => {
-            updateProgress(progress);
-          },
         };
 
         switch (animationType) {
@@ -429,6 +426,12 @@
         }
 
         currentAnimation = createAnimation();
+
+        // Set up progress callback using channels
+        currentAnimation.channels.progress.add((progress) => {
+          updateProgress(progress);
+        });
+
         currentAnimation.play();
 
         updateStatus("Animation started", "playing");
