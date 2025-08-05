@@ -32,7 +32,7 @@ export const createHeightAnimation = (element, options) => {
   );
   return heightAnimation;
 };
-export const createWidthAnimation = (element, to, options) => {
+export const createWidthAnimation = (element, options) => {
   const widthAnimation = animate(
     (to) => {
       return createTransition({
@@ -63,7 +63,7 @@ export const createWidthAnimation = (element, to, options) => {
   );
   return widthAnimation;
 };
-export const createOpacityAnimation = (element, to, options) => {
+export const createOpacityAnimation = (element, options) => {
   const opacityAnimation = animate(
     (to) => {
       return createTransition({
@@ -90,17 +90,17 @@ export const createOpacityAnimation = (element, to, options) => {
   );
   return opacityAnimation;
 };
-export const createTranslateXAnimation = (element, to, options) => {
-  const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
-  if (!match) {
-    throw new Error(
-      `Invalid to value for translateX transition: ${to}. Expected format: translateX(value[px|%])`,
-    );
-  }
-  const unit = match[2] || "px";
-
+export const createTranslateXAnimation = (element, options) => {
   const translateXAnimation = animate(
     (to) => {
+      const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
+      if (!match) {
+        throw new Error(
+          `Invalid to value for translateX transition: ${to}. Expected format: translateX(value[px|%])`,
+        );
+      }
+      const unit = match[2] || "px";
+
       return createTransition({
         from: getTranslateX(element),
         to,

@@ -243,9 +243,9 @@
 
     <script type="module">
       import {
-        createElementHeightTransition,
-        createElementWidthTransition,
-        createElementOpacityTransition,
+        createHeightAnimation,
+        createWidthAnimation,
+        createOpacityAnimation,
         createPlaybackGroup,
       } from "@jsenv/animation";
 
@@ -390,21 +390,21 @@
 
         switch (animationType) {
           case "height":
-            return createElementHeightTransition(
+            return createHeightAnimation(
               testElement,
               parseInt(heightValue.value),
               commonOptions,
             );
 
           case "width":
-            return createElementWidthTransition(
+            return createWidthAnimation(
               testElement,
               parseInt(widthValue.value),
               commonOptions,
             );
 
           case "opacity":
-            return createElementOpacityTransition(
+            return createOpacityAnimation(
               testElement,
               parseFloat(opacityValue.value),
               commonOptions,
@@ -412,27 +412,19 @@
 
           case "combined": {
             const animations = [
-              createElementHeightTransition(
-                testElement,
-                parseInt(heightValue.value),
-                {
-                  ...commonOptions,
-                  onProgress: ({ progress }) => {
-                    updateProgress(progress);
-                    // log(
-                    //   `Height progress: ${(progress * 100).toFixed(1)}% (${value}px)`,
-                    // );
-                  },
+              createHeightAnimation(testElement, parseInt(heightValue.value), {
+                ...commonOptions,
+                onProgress: ({ progress }) => {
+                  updateProgress(progress);
+                  // log(
+                  //   `Height progress: ${(progress * 100).toFixed(1)}% (${value}px)`,
+                  // );
                 },
-              ),
-              createElementWidthTransition(
-                testElement,
-                parseInt(widthValue.value),
-                {
-                  ...commonOptions,
-                },
-              ),
-              createElementOpacityTransition(
+              }),
+              createWidthAnimation(testElement, parseInt(widthValue.value), {
+                ...commonOptions,
+              }),
+              createOpacityAnimation(
                 testElement,
                 parseFloat(opacityValue.value),
                 {

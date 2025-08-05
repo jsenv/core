@@ -29,8 +29,8 @@ export const createTransition = ({
 
 export const animate = (transitionProducer, { isVisual }) => {
   const playbackController = createPlaybackController({
-    start: () => {
-      const transition = transitionProducer();
+    start: (...args) => {
+      const transition = transitionProducer(...args);
       const animation = {
         duration: transition.duration,
         startTime: undefined,
@@ -98,10 +98,10 @@ export const createPlaybackController = (content) => {
   const playbackController = {
     channels,
     playState,
-    play: () => {
+    play: (...args) => {
       if (playState === "idle") {
         playState = playbackController.playState = "running";
-        contentPlaying = content.start(playbackController);
+        contentPlaying = content.start(...args);
         return;
       }
       if (playState === "running") {
@@ -115,7 +115,7 @@ export const createPlaybackController = (content) => {
       }
       // "finished"
       playState = playbackController.playState = "running";
-      contentPlaying = content.start(playbackController);
+      contentPlaying = content.start(...args);
     },
     progress: (progress) => {
       if (playState === "idle") {
