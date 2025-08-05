@@ -30,6 +30,16 @@ export const createTransition = ({
         : easing,
     setup,
     updateTarget: (newFrom, newTo) => {
+      if (typeof newFrom !== "number" || isNaN(newFrom) || !isFinite(newFrom)) {
+        throw new Error(
+          `updateTarget: newFrom must be a finite number, got ${newFrom}`,
+        );
+      }
+      if (typeof newTo !== "number" || isNaN(newTo) || !isFinite(newTo)) {
+        throw new Error(
+          `updateTarget: newTo must be a finite number, got ${newTo}`,
+        );
+      }
       transition.from = newFrom;
       transition.to = newTo;
       if (easing === undefined) {
@@ -43,7 +53,7 @@ export const createTransition = ({
 
 export const animate = (
   transitionProducer,
-  { isVisual, constructor, key, onProgress },
+  { isVisual, constructor, key, to, onProgress },
 ) => {
   const playbackController = createPlaybackController(
     {
@@ -114,6 +124,7 @@ export const animate = (
   // Add metadata to the controller
   playbackController.constructor = constructor;
   playbackController.key = key;
+  playbackController.to = to;
 
   return playbackController;
 };

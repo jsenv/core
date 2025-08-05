@@ -52,7 +52,7 @@ export const createMultiAnimationController = () => {
         if (existingAnimation && existingAnimation.playState === "running") {
           // Update the existing animation's target if it supports updateTarget
           if (existingAnimation.updateTarget) {
-            existingAnimation.updateTarget(animation.targetValue);
+            existingAnimation.updateTarget(animation.to);
           }
           updatedAnimations.push(existingAnimation);
         } else {

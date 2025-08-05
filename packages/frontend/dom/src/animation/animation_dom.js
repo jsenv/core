@@ -59,6 +59,7 @@ export const createHeightAnimation = (
       isVisual: true,
       constructor: createHeightAnimation,
       key: element,
+      to,
       onProgress,
     },
   );
