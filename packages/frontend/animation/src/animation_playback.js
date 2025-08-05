@@ -27,14 +27,17 @@ export const createTransition = ({
   return transition;
 };
 
-export const animate = (transition, { isVisual }) => {
-  const animation = {
-    duration: transition.duration,
-    startTime: undefined,
-    isVisual,
-  };
+export const animate = (transitionProducer, { isVisual }) => {
   const playbackController = createPlaybackController({
     start: () => {
+      const transition = transitionProducer();
+      const animation = {
+        duration: transition.duration,
+        startTime: undefined,
+        isVisual,
+        update: undefined,
+      };
+
       const cleanup = transition.init?.();
       animation.startTime = document.timeline.currentTime;
       animation.update = playbackController.progress;
@@ -77,36 +80,7 @@ export const animate = (transition, { isVisual }) => {
       };
     },
   });
-  makePlayable(animation, playbackController);
-  return animation;
-};
-
-const makePlayable = (content, playbackController) => {
-  const { channels, play, progress, pause, cancel, finish } =
-    playbackController;
-  Object.assign(content, {
-    channels,
-    play,
-    progress,
-    pause,
-    cancel,
-    finish,
-    get playState() {
-      return playbackController.playState;
-    },
-    get idle() {
-      return playbackController.playState === "idle";
-    },
-    get running() {
-      return playbackController.playState === "running";
-    },
-    get paused() {
-      return playbackController.playState === "paused";
-    },
-    get finished() {
-      return playbackController.playState === "finished";
-    },
-  });
+  return playbackController;
 };
 
 export const createPlaybackController = (content) => {

@@ -1,12 +1,13 @@
 export {
-  createAnimatedValue,
+  animate,
   createPlaybackController,
   createPlaybackGroup,
-} from "./src/animated_value.js";
+  createTransition,
+} from "./src/animation_playback.js";
 export { EASING, cubicBezier } from "./src/easing.js";
 export {
-  createElementHeightTransition,
-  createElementOpacityTransition,
-  createElementTranslateXTransition,
-  createElementWidthTransition,
+  createHeightAnimation,
+  createOpacityAnimation,
+  createTranslateXAnimation,
+  createWidthAnimation,
 } from "./src/element_animation.js";
