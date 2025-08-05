@@ -10,6 +10,18 @@ export const createHeightAnimation = (element, to, options = {}) => {
     () => {
       const { from = getHeight(element), ...rest } = options;
 
+      // Warn if the animation difference is too small
+      const diff = Math.abs(to - from);
+      if (diff === 0) {
+        console.warn(
+          `Height animation has identical from and to values (${from}px). This animation will have no visual effect.`,
+        );
+      } else if (diff < 10) {
+        console.warn(
+          `Height animation difference is very small (${diff}px). Consider if this animation is necessary.`,
+        );
+      }
+
       return createTransition({
         ...rest,
         from,
@@ -43,6 +55,19 @@ export const createWidthAnimation = (element, to, options = {}) => {
   const widthAnimation = animate(
     () => {
       const { from = getWidth(element), ...rest } = options;
+
+      // Warn if the animation difference is too small
+      const diff = Math.abs(to - from);
+      if (diff === 0) {
+        console.warn(
+          `Width animation has identical from and to values (${from}px). This animation will have no visual effect.`,
+        );
+      } else if (diff < 10) {
+        console.warn(
+          `Width animation difference is very small (${diff}px). Consider if this animation is necessary.`,
+        );
+      }
+
       return createTransition({
         ...rest,
         from,
@@ -76,6 +101,19 @@ export const createOpacityAnimation = (element, to, options = {}) => {
   const opacityAnimation = animate(
     () => {
       const { from = getOpacity(element), ...rest } = options;
+
+      // Warn if the animation difference is too small
+      const diff = Math.abs(to - from);
+      if (diff === 0) {
+        console.warn(
+          `Opacity animation has identical from and to values (${from}). This animation will have no visual effect.`,
+        );
+      } else if (diff < 0.1) {
+        console.warn(
+          `Opacity animation difference is very small (${diff}). Consider if this animation is necessary.`,
+        );
+      }
+
       return createTransition({
         ...rest,
         from,
@@ -117,10 +155,24 @@ export const createTranslateXAnimation = (element, to, options = {}) => {
     );
   }
   const unit = match[2] || "px";
+  const toValue = parseFloat(match[1]);
 
   const translateXAnimation = animate(
     () => {
       const { from = getTranslateX(element), ...rest } = options;
+
+      // Warn if the animation difference is too small
+      const diff = Math.abs(toValue - from);
+      if (diff === 0) {
+        console.warn(
+          `TranslateX animation has identical from and to values (${from}${unit}). This animation will have no visual effect.`,
+        );
+      } else if (diff < 10) {
+        console.warn(
+          `TranslateX animation difference is very small (${diff}${unit}). Consider if this animation is necessary.`,
+        );
+      }
+
       return createTransition({
         ...rest,
         from,
