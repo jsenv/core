@@ -250,8 +250,8 @@ export const createTimelineTransition = ({
   });
 };
 
-// Group transition that manages multiple animations
-export const createGroupTransition = (transitionArray) => {
+// Transition that manages multiple transition
+export const createTransitionGroup = (transitionArray) => {
   const progressValues = new Array(transitionArray.length).fill(0);
   const finishedStates = new Array(transitionArray.length).fill(false);
 
@@ -357,9 +357,4 @@ const createCallbackController = () => {
     },
   };
   return [callbacks, execute];
-};
-
-// Group multiple transitions together
-export const groupTransitions = (transitionArray) => {
-  return createGroupTransition(transitionArray);
 };
