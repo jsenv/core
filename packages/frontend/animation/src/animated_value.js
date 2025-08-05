@@ -121,9 +121,9 @@ export const createAnimatedValue = (
     currentTime,
   };
   const playbackController = createPlaybackController({
-    start: ({ onProgress, onFinish }) => {
+    start: () => {
       const cleanup = init?.();
-      animation.update = onProgress;
+      animation.update = playbackController.progress;
       addOnTimeline(animation);
       return {
         update: (progress) => {
@@ -147,7 +147,6 @@ export const createAnimatedValue = (
           if (typeof cleanup === "function") {
             cleanup();
           }
-          onFinish();
         },
         stop: () => {
           if (typeof cleanup === "function") {
@@ -172,24 +171,12 @@ export const createPlaybackController = (content) => {
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let contentPlaying = null;
   let resume;
-  const onProgress = (progress) => {
-    playbackController.update(progress);
-  };
-  const onFinish = () => {
-    resume = null;
-    playState = playbackController.playState = "finished";
-    executeFinishCallbacks();
-  };
-  const startParams = {
-    onProgress,
-    onFinish,
-  };
 
   const playbackController = {
     playState,
     play: () => {
       if (playState === "idle") {
-        contentPlaying = content.start(startParams);
+        contentPlaying = content.start(playbackController);
         return;
       }
       if (playState === "running") {
@@ -202,9 +189,9 @@ export const createPlaybackController = (content) => {
         return;
       }
       // "finished"
-      contentPlaying = content.start(startParams);
+      contentPlaying = content.start(playbackController);
     },
-    update: (progress) => {
+    progress: (progress) => {
       if (playState === "idle") {
         console.warn("Cannot update an animation that is idle");
         return;
@@ -217,7 +204,7 @@ export const createPlaybackController = (content) => {
       contentPlaying.update(progress);
       executeProgressCallbacks();
       if (progress === 1) {
-        contentPlaying.finish();
+        playbackController.finish();
       }
     },
     pause: () => {
@@ -243,6 +230,9 @@ export const createPlaybackController = (content) => {
       }
       // "running" or "paused"
       contentPlaying.finish();
+      resume = null;
+      playState = playbackController.playState = "finished";
+      executeFinishCallbacks();
     },
     progressCallbacks,
     finishCallbacks,
@@ -252,17 +242,17 @@ export const createPlaybackController = (content) => {
 };
 export const createPlaybackGroup = (playableContentArray) => {
   const playbackController = createPlaybackController({
-    start: ({ onFinish }) => {
-      let playingCount = playableContentArray.length;
+    start: () => {
+      const playingCount = playableContentArray.length;
+      let finishedCount = 0;
 
       for (const animation of playableContentArray) {
         // eslint-disable-next-line no-loop-func
         const remove = animation.finishCallbacks.add(() => {
           remove();
-          playingCount--;
-          if (playingCount === 0) {
-            onFinish();
-          }
+          finishedCount++;
+          const progress = finishedCount / playingCount;
+          playbackController.progress(progress);
         });
         animation.play();
       }
