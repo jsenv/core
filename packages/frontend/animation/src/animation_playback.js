@@ -32,17 +32,17 @@ export const animate = (transitionProducer, { isVisual }) => {
     start: (...args) => {
       const transition = transitionProducer(...args);
       const animation = {
+        transition,
+        startTime: document.timeline.currentTime,
         duration: transition.duration,
-        startTime: undefined,
         isVisual,
-        update: undefined,
+        update: playbackController.progress,
       };
 
-      const cleanup = transition.init?.();
-      animation.startTime = document.timeline.currentTime;
-      animation.update = playbackController.progress;
-      addOnTimeline(animation);
-      return {
+      const content = {
+        resetStartTime: () => {
+          animation.startTime = document.timeline.currentTime;
+        },
         update: (progress) => {
           transition.progress = progress;
           if (progress === 1) {
@@ -78,6 +78,10 @@ export const animate = (transitionProducer, { isVisual }) => {
           }
         },
       };
+
+      const cleanup = transition.init?.();
+      addOnTimeline(animation);
+      return content;
     },
   });
   return playbackController;
@@ -166,6 +170,10 @@ export const createPlaybackController = (content) => {
       resume = null;
       playState = playbackController.playState = "finished";
       executeFinishCallbacks();
+    },
+
+    resetStartTime: () => {
+      contentPlaying.resetStartTime();
     },
   };
   return playbackController;

@@ -90,17 +90,17 @@ export const createOpacityAnimation = (element, options) => {
   );
   return opacityAnimation;
 };
-export const createTranslateXAnimation = (element, options) => {
-  const translateXAnimation = animate(
-    (to) => {
-      const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
-      if (!match) {
-        throw new Error(
-          `Invalid to value for translateX transition: ${to}. Expected format: translateX(value[px|%])`,
-        );
-      }
-      const unit = match[2] || "px";
+export const createTranslateXAnimation = (element, to, options) => {
+  const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
+  if (!match) {
+    throw new Error(
+      `Invalid to value for translateX transition: ${to}. Expected format: translateX(value[px|%])`,
+    );
+  }
+  const unit = match[2] || "px";
 
+  const translateXAnimation = animate(
+    () => {
       return createTransition({
         from: getTranslateX(element),
         to,
