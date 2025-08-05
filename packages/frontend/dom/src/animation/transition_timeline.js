@@ -1,21 +1,21 @@
-const visualAnimationSet = new Set();
-const backgroundAnimationSet = new Set();
-export const addOnTimeline = (animation, isVisual) => {
+const visualTransitionSet = new Set();
+const backgroundTransitionSet = new Set();
+export const addOnTimeline = (transition, isVisual) => {
   if (isVisual) {
-    visualAnimationSet.add(animation);
+    visualTransitionSet.add(transition);
   } else {
-    backgroundAnimationSet.add(animation);
+    backgroundTransitionSet.add(transition);
   }
 };
-export const removeFromTimeline = (animation, isVisual) => {
+export const removeFromTimeline = (transition, isVisual) => {
   if (isVisual) {
-    visualAnimationSet.delete(animation);
+    visualTransitionSet.delete(transition);
   } else {
-    backgroundAnimationSet.delete(animation);
+    backgroundTransitionSet.delete(transition);
   }
 };
-const updateAnimation = (animation) => {
-  const { startTime, duration } = animation;
+const updateTransition = (transition) => {
+  const { startTime, duration } = transition;
   const elapsed = document.timeline.currentTime - startTime;
   const msRemaining = duration - elapsed;
   if (
@@ -24,10 +24,10 @@ const updateAnimation = (animation) => {
     // we are very close from the end, round progress to 1
     msRemaining <= 16.6
   ) {
-    animation.update(1);
+    transition.update(1);
   } else {
     const progress = Math.min(elapsed / duration, 1);
-    animation.update(progress);
+    transition.update(progress);
   }
 };
 // We need setTimeout to animate things like volume because requestAnimationFrame would be killed when tab is not visible
@@ -35,8 +35,8 @@ const updateAnimation = (animation) => {
 const createBackgroundUpdateLoop = () => {
   let timeout;
   const update = () => {
-    for (const backgroundAnimation of backgroundAnimationSet) {
-      updateAnimation(backgroundAnimation);
+    for (const backgroundTransition of backgroundTransitionSet) {
+      updateTransition(backgroundTransition);
     }
     timeout = setTimeout(update, 16); // roughly 60fps
   };
@@ -53,8 +53,8 @@ const createBackgroundUpdateLoop = () => {
 const createAnimationFrameLoop = () => {
   let animationFrame = null;
   const update = () => {
-    for (const visualAnimation of visualAnimationSet) {
-      updateAnimation(visualAnimation);
+    for (const visualTransition of visualTransitionSet) {
+      updateTransition(visualTransition);
     }
     animationFrame = requestAnimationFrame(update);
   };

@@ -2,8 +2,8 @@
  * Nice to have: support animation.fps that would cap the animation to a certain frame rate.
  */
 
-import { addOnTimeline, removeFromTimeline } from "./animation_timeline.js";
 import { EASING } from "./easing.js";
+import { addOnTimeline, removeFromTimeline } from "./transition_timeline.js";
 
 // Default lifecycle methods that do nothing
 const LIFECYCLE_DEFAULT = {
