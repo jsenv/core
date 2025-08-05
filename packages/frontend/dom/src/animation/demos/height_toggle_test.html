@@ -268,7 +268,7 @@
     <div class="debug-log" id="debug-log"></div>
 
     <script type="module">
-      import { createHeightAnimation } from "@jsenv/animation";
+      import { createHeightAnimation } from "@jsenv/dom";
 
       const testElement = document.getElementById("test-element");
       const debugLog = document.getElementById("debug-log");
@@ -347,13 +347,18 @@
           currentAnimation && currentAnimation.playState === "running";
 
         if (isAnimating) {
-          const targetHeight = isExpanded ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT;
-          if (targetHeight === COLLAPSED_HEIGHT) {
-            toggleBtn.className = "toggle-button collapsing";
-            toggleBtn.textContent = `Collapsing to ${COLLAPSED_HEIGHT}px...`;
-          } else {
+          // During animation, determine direction by comparing current height to target
+          const currentHeight = Math.round(
+            parseFloat(testElement.style.height) || 150,
+          );
+          const targetHeight = isExpanded ? EXPANDED_HEIGHT : COLLAPSED_HEIGHT;
+
+          if (targetHeight > currentHeight) {
             toggleBtn.className = "toggle-button expanding";
-            toggleBtn.textContent = `Expanding to ${EXPANDED_HEIGHT}px...`;
+            toggleBtn.textContent = `Expanding to ${targetHeight}px...`;
+          } else {
+            toggleBtn.className = "toggle-button collapsing";
+            toggleBtn.textContent = `Collapsing to ${targetHeight}px...`;
           }
         } else {
           toggleBtn.className = "toggle-button";
@@ -407,6 +412,8 @@
 
           currentAnimation = createHeightAnimation(testElement, targetHeight, {
             duration: ANIMATION_DURATION,
+            // Uncomment the line below to test with linear easing
+            // easing: (x) => x, // Linear easing for comparison
           });
 
           // Set up progress tracking

@@ -8,7 +8,6 @@
     "./resize": "./src/size/resize.js"
   },
   "dependencies": {
-    "@jsenv/animation": "0.0.1",
     "@preact/signals": "2.0.4",
     "preact": "10.26.5"
   },

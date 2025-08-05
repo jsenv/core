@@ -6,7 +6,7 @@ import { addOnTimeline, removeFromTimeline } from "./animation_timeline.js";
 import { EASING } from "./easing.js";
 
 const INCREASE_EASING = EASING.EASE_OUT;
-const DECREASE_EASING = EASING.EASE_IN;
+const DECREASE_EASING = EASING.EASE_OUT;
 
 export const createTransition = ({
   from,

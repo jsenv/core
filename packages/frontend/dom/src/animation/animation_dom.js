@@ -1,4 +1,6 @@
-import { addWillChange, getHeight, getWidth } from "@jsenv/dom";
+import { getHeight } from "../size/get_height.js";
+import { getWidth } from "../size/get_width.js";
+import { addWillChange } from "../style_and_attributes.js";
 import { animate, createTransition } from "./animation_playback.js";
 import {
   parseTransform,

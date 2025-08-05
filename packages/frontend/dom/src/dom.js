@@ -52,3 +52,19 @@ export {
   findBefore,
   findDescendant,
 } from "./traversal.js";
+
+// animation
+export {
+  createHeightAnimation,
+  createOpacityAnimation,
+  createTranslateXAnimation,
+  createWidthAnimation,
+} from "./animation/animation_dom.js";
+export { animateMultipleHeights } from "./animation/animation_multi_height.js";
+export {
+  animate,
+  createPlaybackController,
+  createPlaybackGroup,
+  createTransition,
+} from "./animation/animation_playback.js";
+export { EASING, cubicBezier } from "./animation/easing.js";

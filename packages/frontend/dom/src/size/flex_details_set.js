@@ -3,13 +3,13 @@
  *
  */
 
+import { animateMultipleHeights } from "../animation/animation_multi_height.js";
 import { forceStyles } from "../style_and_attributes.js";
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinHeight } from "./get_min_height.js";
 import { resolveCSSSize } from "./resolve_css_size.js";
-// import { createSizeAnimationGroupController } from "./size_animation_group_controller.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_ANIMATION_DURATION = 300;
@@ -215,9 +215,6 @@ export const initFlexDetailsSet = (
     }
   };
 
-  const heightAnimationGroupController = createSizeAnimationGroupController({
-    duration: HEIGHT_ANIMATION_DURATION,
-  });
   const applyAllocatedSpaces = (resizeDetails) => {
     const changeSet = new Set();
     let maxChange = 0;
@@ -285,15 +282,9 @@ export const initFlexDetailsSet = (
       return;
     }
 
-    const animations = [];
-    for (const { element, target, sideEffect } of changeSet) {
-      animations.push({
-        element,
-        target,
-        sideEffect,
-      });
-    }
-    heightAnimationGroupController.animateAll(animations, {
+    const animations = Array.from(changeSet);
+    animateMultipleHeights(animations, {
+      duration: HEIGHT_ANIMATION_DURATION,
       onChange: (changeEntries, isLast) => {
         if (onSizeChange) {
           onSizeChange(
