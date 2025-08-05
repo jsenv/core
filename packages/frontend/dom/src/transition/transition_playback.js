@@ -1,5 +1,5 @@
 /**
- * Nice to have: support animation.fps that would cap the animation to a certain frame rate.
+ * Nice to have: support transition.fps that would cap the animation to a certain frame rate.
  */
 
 import { EASING } from "./easing.js";

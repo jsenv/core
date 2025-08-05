@@ -53,17 +53,15 @@ export {
   findDescendant,
 } from "./traversal.js";
 
-// animation
+// transition
 export {
-  createHeightAnimation,
-  createOpacityAnimation,
-  createTranslateXAnimation,
-  createWidthAnimation,
-} from "./animation/animation_dom.js";
+  createHeightTransition,
+  createOpacityTransition,
+  createTranslateXTransition,
+  createWidthTransition,
+} from "./transition/dom_transition.js";
+export { EASING, cubicBezier } from "./transition/easing.js";
 export {
-  animate,
-  createPlaybackController,
-  createPlaybackGroup,
+  createTimelineTransition,
   createTransition,
-} from "./animation/animation_playback.js";
-export { EASING, cubicBezier } from "./animation/easing.js";
+} from "./transition/transition_playback.js";
