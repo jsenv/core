@@ -14,27 +14,29 @@ export const createHeightTransition = (element, to, options) => {
     key: element,
     to,
     isVisual: true,
-    setup: () => {
-      const heightAtStartFromInlineStyle = element.style.height;
-      const restoreWillChange = addWillChange(element, "height");
-      element.setAttribute(`data-height-animated`, "");
-      return {
-        from: getHeight(element),
-        update: (value) => {
-          element.style.height = `${value}px`;
-        },
-        teardown: () => {
-          element.removeAttribute(`data-height-animated`);
-          restoreWillChange();
-        },
-        restore: () => {
-          if (heightAtStartFromInlineStyle) {
-            element.style.height = heightAtStartFromInlineStyle;
-          } else {
-            element.style.removeProperty("height");
-          }
-        },
-      };
+    lifecycle: {
+      setup: () => {
+        const heightAtStartFromInlineStyle = element.style.height;
+        const restoreWillChange = addWillChange(element, "height");
+        element.setAttribute(`data-height-animated`, "");
+        return {
+          from: getHeight(element),
+          update: (value) => {
+            element.style.height = `${value}px`;
+          },
+          teardown: () => {
+            element.removeAttribute(`data-height-animated`);
+            restoreWillChange();
+          },
+          restore: () => {
+            if (heightAtStartFromInlineStyle) {
+              element.style.height = heightAtStartFromInlineStyle;
+            } else {
+              element.style.removeProperty("height");
+            }
+          },
+        };
+      },
     },
   });
   return heightTransition;
@@ -46,27 +48,29 @@ export const createWidthTransition = (element, to, options) => {
     key: element,
     to,
     isVisual: true,
-    setup: () => {
-      const widthAtStartFromInlineStyle = element.style.width;
-      const restoreWillChange = addWillChange(element, "width");
-      element.setAttribute(`data-width-animated`, "");
-      return {
-        from: getWidth(element),
-        update: (value) => {
-          element.style.width = `${value}px`;
-        },
-        teardown: () => {
-          element.removeAttribute(`data-width-animated`);
-          restoreWillChange();
-        },
-        restore: () => {
-          if (widthAtStartFromInlineStyle) {
-            element.style.width = widthAtStartFromInlineStyle;
-          } else {
-            element.style.removeProperty("width");
-          }
-        },
-      };
+    lifecycle: {
+      setup: () => {
+        const widthAtStartFromInlineStyle = element.style.width;
+        const restoreWillChange = addWillChange(element, "width");
+        element.setAttribute(`data-width-animated`, "");
+        return {
+          from: getWidth(element),
+          update: (value) => {
+            element.style.width = `${value}px`;
+          },
+          teardown: () => {
+            element.removeAttribute(`data-width-animated`);
+            restoreWillChange();
+          },
+          restore: () => {
+            if (widthAtStartFromInlineStyle) {
+              element.style.width = widthAtStartFromInlineStyle;
+            } else {
+              element.style.removeProperty("width");
+            }
+          },
+        };
+      },
     },
   });
   return widthTransition;
@@ -78,27 +82,29 @@ export const createOpacityTransition = (element, to, options = {}) => {
     key: element,
     to,
     isVisual: true,
-    setup: () => {
-      const opacityAtStartFromInlineStyle = element.style.opacity;
-      const restoreWillChange = addWillChange(element, "opacity");
-      element.setAttribute(`data-opacity-animated`, "");
-      return {
-        from: getOpacity(element),
-        update: (value) => {
-          element.style.opacity = value;
-        },
-        teardown: () => {
-          element.removeAttribute(`data-opacity-animated`);
-          restoreWillChange();
-        },
-        restore: () => {
-          if (opacityAtStartFromInlineStyle) {
-            element.style.opacity = opacityAtStartFromInlineStyle;
-          } else {
-            element.style.removeProperty("opacity");
-          }
-        },
-      };
+    lifecycle: {
+      setup: () => {
+        const opacityAtStartFromInlineStyle = element.style.opacity;
+        const restoreWillChange = addWillChange(element, "opacity");
+        element.setAttribute(`data-opacity-animated`, "");
+        return {
+          from: getOpacity(element),
+          update: (value) => {
+            element.style.opacity = value;
+          },
+          teardown: () => {
+            element.removeAttribute(`data-opacity-animated`);
+            restoreWillChange();
+          },
+          restore: () => {
+            if (opacityAtStartFromInlineStyle) {
+              element.style.opacity = opacityAtStartFromInlineStyle;
+            } else {
+              element.style.removeProperty("opacity");
+            }
+          },
+        };
+      },
     },
   });
   return opacityTransition;
@@ -123,27 +129,29 @@ export const createTranslateXTransition = (element, to, options = {}) => {
     key: element,
     to: toValue,
     isVisual: true,
-    setup: () => {
-      const transformAtStartFromInlineStyle = element.style.transform;
-      const restoreWillChange = addWillChange(element, "transform");
-      element.setAttribute(`data-translate-x-animated`, "");
-      return {
-        from: getTranslateX(element),
-        update: (value) => {
-          setTranslateX(element, value, { unit });
-        },
-        teardown: () => {
-          restoreWillChange();
-          element.removeAttribute(`data-translate-x-animated`);
-        },
-        restore: () => {
-          if (transformAtStartFromInlineStyle) {
-            element.style.transform = transformAtStartFromInlineStyle;
-          } else {
-            element.style.removeProperty("transform");
-          }
-        },
-      };
+    lifecycle: {
+      setup: () => {
+        const transformAtStartFromInlineStyle = element.style.transform;
+        const restoreWillChange = addWillChange(element, "transform");
+        element.setAttribute(`data-translate-x-animated`, "");
+        return {
+          from: getTranslateX(element),
+          update: (value) => {
+            setTranslateX(element, value, { unit });
+          },
+          teardown: () => {
+            restoreWillChange();
+            element.removeAttribute(`data-translate-x-animated`);
+          },
+          restore: () => {
+            if (transformAtStartFromInlineStyle) {
+              element.style.transform = transformAtStartFromInlineStyle;
+            } else {
+              element.style.removeProperty("transform");
+            }
+          },
+        };
+      },
     },
   });
   return translateXTransition;

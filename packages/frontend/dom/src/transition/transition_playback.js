@@ -72,6 +72,7 @@ export const createTransition = ({
     to,
     value: from,
     duration,
+    startTime: null,
     progress: 0,
     timing: "",
     easing,
@@ -214,10 +215,16 @@ export const createTransition = ({
 };
 
 // Timeline-managed transition that adds/removes itself from the animation timeline
-export const createTimelineTransition = ({ isVisual, setup, ...options }) => {
+export const createTimelineTransition = ({
+  isVisual,
+  lifecycle,
+  ...options
+}) => {
+  const { setup } = lifecycle;
   return createTransition({
     ...options,
     lifecycle: {
+      ...lifecycle,
       setup: (transition) => {
         // Handle timeline management
         transition.startTime = document.timeline.currentTime;
@@ -227,21 +234,21 @@ export const createTimelineTransition = ({ isVisual, setup, ...options }) => {
       },
       pause: (transition) => {
         const pauseTime = document.timeline.currentTime;
-        removeFromTimeline(transition);
+        removeFromTimeline(transition, isVisual);
         return () => {
           const pausedDuration = document.timeline.currentTime - pauseTime;
           transition.startTime += pausedDuration;
           addOnTimeline(transition, isVisual);
         };
       },
+      updateTarget: (transition) => {
+        transition.startTime = document.timeline.currentTime;
+      },
       cancel: (transition) => {
         removeFromTimeline(transition, isVisual);
       },
       finish: (transition) => {
         removeFromTimeline(transition, isVisual);
-      },
-      updateTarget: (transition) => {
-        transition.startTime = document.timeline.currentTime;
       },
     },
   });
