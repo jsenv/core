@@ -100,12 +100,16 @@ export const play = () => {
 };
 play();
 
+const playableSymbol = Symbol.for("jsenv_playable_content");
 const easingDefault = (x) => cubicBezier(x, 0.1, 0.4, 0.6, 1.0);
 export const createAnimatedValue = (
   from,
   to,
   { duration, startTime, currentTime, easing = easingDefault, init } = {},
 ) => {
+  const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
+  const [progressCallbacks, executeProgressCallbacks] =
+    createCallbackController();
   const animatedValue = {
     from,
     to,
@@ -113,7 +117,10 @@ export const createAnimatedValue = (
     easing,
     progress: 0,
     animation: null,
-    playbackController: null,
+    [playableSymbol]: null,
+
+    progressCallbacks,
+    finishCallbacks,
   };
   const animation = {
     duration,
@@ -142,36 +149,34 @@ export const createAnimatedValue = (
             addOnTimeline(animation);
           };
         },
+        abort: () => {
+          removeFromTimeline(animation);
+          if (typeof cleanup === "function") {
+            cleanup();
+          }
+        },
         finish: () => {
           removeFromTimeline(animation);
           if (typeof cleanup === "function") {
             cleanup();
           }
         },
-        stop: () => {
-          if (typeof cleanup === "function") {
-            cleanup();
-          }
-        },
       };
     },
+    onFinish: executeFinishCallbacks,
+    onProgress: executeProgressCallbacks,
   });
 
   animatedValue.animation = animation;
-  animatedValue.playbackController = playbackController;
+  animatedValue[playableSymbol] = playbackController;
 
   return animatedValue;
 };
 
-export const createPlaybackController = (content) => {
-  const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
-  const [progressCallbacks, executeProgressCallbacks] =
-    createCallbackController();
-
+export const createPlaybackController = (content, { onFinish, onProgress }) => {
   let playState = "idle"; // 'idle', 'running', 'paused', 'finished'
   let contentPlaying = null;
   let resume;
-
   const playbackController = {
     playState,
     play: () => {
@@ -202,7 +207,7 @@ export const createPlaybackController = (content) => {
       }
       // "running" or "paused"
       contentPlaying.update(progress);
-      executeProgressCallbacks();
+      onProgress();
       if (progress === 1) {
         playbackController.finish();
       }
@@ -232,29 +237,38 @@ export const createPlaybackController = (content) => {
       contentPlaying.finish();
       resume = null;
       playState = playbackController.playState = "finished";
-      executeFinishCallbacks();
+      onFinish();
     },
-    progressCallbacks,
-    finishCallbacks,
+    abort: () => {
+      if (contentPlaying) {
+        contentPlaying.abort();
+      }
+      resume = null;
+      playState = playbackController.playState = "idle";
+    },
   };
-
+  playbackController[playableSymbol] = playbackController;
   return playbackController;
 };
-export const createPlaybackGroup = (playableContentArray) => {
+export const createPlaybackGroup = (playableContentArray, { onFinish }) => {
   const playbackController = createPlaybackController({
     start: () => {
       const playingCount = playableContentArray.length;
       let finishedCount = 0;
 
-      for (const animation of playableContentArray) {
+      playableContentArray = playableContentArray.map((value) => {
+        return value[playableSymbol];
+      });
+
+      for (const playableContent of playableContentArray) {
         // eslint-disable-next-line no-loop-func
-        const remove = animation.finishCallbacks.add(() => {
+        const remove = playableContent.finishCallbacks.add(() => {
           remove();
           finishedCount++;
           const progress = finishedCount / playingCount;
           playbackController.progress(progress);
         });
-        animation.play();
+        playableContent.play();
       }
       return {
         pause: () => {
@@ -267,13 +281,14 @@ export const createPlaybackGroup = (playableContentArray) => {
             playableContent.finish();
           }
         },
-        stop: () => {
+        abort: () => {
           for (const playableContent of playableContentArray) {
-            playableContent.stop();
+            playableContent.abort();
           }
         },
       };
     },
+    onFinish,
   });
   return playbackController;
 };
