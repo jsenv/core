@@ -156,7 +156,7 @@ export const createTranslateXTransition = (element, to, options = {}) => {
   });
   return translateXTransition;
 };
-const getTranslateX = (element) => {
+export const getTranslateX = (element) => {
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   return transformMap.get("translateX")?.value || 0;

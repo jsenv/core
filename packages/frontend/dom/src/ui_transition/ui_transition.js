@@ -5,6 +5,7 @@ import {
   createOpacityTransition,
   createTranslateXTransition,
   createWidthTransition,
+  getTranslateX,
 } from "../transition/dom_transition.js";
 import { createGroupTransitionController } from "../transition/group_transition.js";
 
@@ -85,6 +86,11 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   }
 
   const transitionController = createGroupTransitionController();
+
+  // Add state tracking for transition controller
+  let currentTransition = null;
+  let isPaused = false;
+  let currentTransitionType = null;
 
   // Track dimensions and UI state
   let lastContentWidth = 0; // Last known content state width
@@ -339,9 +345,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
         // Calculate animation progress before canceling for smooth continuation
         let animationProgress = 0;
-        if (transitionController.pending && existingOldContents[0]) {
+        if (currentTransition && existingOldContents[0]) {
           // Calculate progress based on current position vs target
-          const currentOldPos = getCurrentTranslateX(existingOldContents[0]);
+          const currentOldPos = getTranslateX(existingOldContents[0]);
           const containerWidth =
             existingOldContents[0].parentElement?.offsetWidth || 300;
           // Progress = how far we've moved toward the target (-containerWidth)
@@ -355,8 +361,25 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           );
         }
 
-        // Cancel any ongoing transition before starting a new one
-        transitionController.cancel();
+        // Handle smooth transition interruption
+        const newTransitionType = container.getAttribute("data-ui-transition");
+        const canContinueSmoothly =
+          currentTransitionType === newTransitionType && currentTransition;
+
+        if (canContinueSmoothly) {
+          // Same transition type - let existing transitions smoothly redirect
+          debug(
+            "transition",
+            "🔄 Continuing with same transition type, allowing smooth redirect",
+          );
+        } else if (currentTransition) {
+          // Different transition type - need to gracefully stop current transitions
+          debug(
+            "transition",
+            "🛑 Gracefully stopping current transition for type change",
+          );
+          currentTransition.cancel();
+        }
 
         // Determine if we need to create a setup function that clones content
         const needsOldContentClone =
@@ -407,14 +430,28 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         );
         const type = container.getAttribute("data-ui-transition");
 
-        animateTransition(transitionController, firstChild, setupTransition, {
-          duration,
-          type,
-          animationProgress,
-        });
+        currentTransition = animateTransition(
+          transitionController,
+          firstChild,
+          setupTransition,
+          {
+            duration,
+            type,
+            animationProgress,
+            onComplete: () => {
+              // Clear current transition when complete
+              currentTransition = null;
+              currentTransitionType = null;
+            },
+          },
+        );
+        currentTransitionType = type;
       } else {
         // No transition needed, clean up any remaining old elements
         transitionOverlay.innerHTML = "";
+        // Clear current transition state since no transition is happening
+        currentTransition = null;
+        currentTransitionType = null;
       }
 
       // Store the current content for next transition
@@ -517,17 +554,31 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       if (sizeAnimation) {
         sizeAnimation.cancel();
       }
-      transitionController.cancel();
+      if (currentTransition) {
+        currentTransition.cancel();
+      }
     },
     pause: () => {
-      transitionController.pause();
+      if (currentTransition) {
+        // Pause all transitions in the current group
+        if (currentTransition.pause) {
+          currentTransition.pause();
+        }
+        isPaused = true;
+      }
     },
     resume: () => {
-      transitionController.resume();
+      if (currentTransition && isPaused) {
+        // Resume all transitions in the current group
+        if (currentTransition.play) {
+          currentTransition.play();
+        }
+        isPaused = false;
+      }
     },
     getState: () => ({
-      isPaused: transitionController.isPaused(),
-      transitionInProgress: transitionController.pending,
+      isPaused,
+      transitionInProgress: currentTransition !== null,
     }),
     // Additional methods could be added here for direct control
     // setContent: (content) => {...}
@@ -539,7 +590,7 @@ const animateTransition = (
   transitionController,
   newElement,
   setupTransition,
-  { type, duration, animationProgress = 0 },
+  { type, duration, animationProgress = 0, onComplete },
 ) => {
   let applyTransition;
   if (type === "cross-fade") {
@@ -547,7 +598,7 @@ const animateTransition = (
   } else if (type === "slide-left") {
     applyTransition = applySlideLeft;
   } else {
-    return;
+    return null;
   }
 
   // Call setup function to prepare transition elements
@@ -565,24 +616,17 @@ const animateTransition = (
   debug("transition", "⏱️ Remaining duration:", remainingDuration);
 
   const transitions = applyTransition(oldContent, newElement);
-  transitionController.animate(transitions, {
+  const groupTransition = transitionController.animate(transitions, {
     onFinish: () => {
       cleanup();
+      // Call completion callback if provided
+      if (onComplete) {
+        onComplete();
+      }
     },
   });
-};
 
-const getCurrentTranslateX = (element) => {
-  const transform = getComputedStyle(element).transform;
-  if (transform === "none") return 0;
-
-  // Parse matrix/matrix3d values
-  const match = transform.match(/matrix(?:3d)?\((.*)\)/);
-  if (!match) return 0;
-
-  const values = match[1].split(", ");
-  // For both matrix and matrix3d, the X translation is the second to last value
-  return parseFloat(values[values.length - 2]) || 0;
+  return groupTransition;
 };
 
 const applySlideLeft = (oldElement, newElement) => {
@@ -594,7 +638,7 @@ const applySlideLeft = (oldElement, newElement) => {
   if (!newElement) {
     // Case: Content -> Empty (slide out left only)
     const containerWidth = oldElement.parentElement?.offsetWidth || 0;
-    const currentOldPos = getCurrentTranslateX(oldElement);
+    const currentOldPos = getTranslateX(oldElement);
 
     oldElement.style.transform = `translateX(${currentOldPos}px)`;
 
@@ -619,7 +663,7 @@ const applySlideLeft = (oldElement, newElement) => {
 
   if (!oldElement) {
     // Case: Empty -> Content (slide in from right)
-    const currentPos = getCurrentTranslateX(newElement);
+    const currentPos = getTranslateX(newElement);
     const startPos =
       currentPos || (containerWidth ? `${containerWidth}px` : "100%");
     newElement.style.transform = `translateX(${startPos})`;
@@ -635,8 +679,8 @@ const applySlideLeft = (oldElement, newElement) => {
 
   // Case: Content -> Content (slide out left, slide in from right)
   // Get current positions - if elements are mid-animation, use their current position
-  const currentOldPos = getCurrentTranslateX(oldElement);
-  const currentNewPos = getCurrentTranslateX(newElement);
+  const currentOldPos = getTranslateX(oldElement);
+  const currentNewPos = getTranslateX(newElement);
 
   // For smooth continuation: if the old element is mid-transition (not at position 0),
   // calculate the new element's position to maintain seamless sliding effect
