@@ -296,7 +296,7 @@
 
       const COLLAPSED_HEIGHT = 100;
       const EXPANDED_HEIGHT = 300;
-      const ANIMATION_DURATION = 3000;
+      const ANIMATION_DURATION = 1000;
 
       function log(message) {
         const timestamp = new Date().toLocaleTimeString();
@@ -398,7 +398,12 @@
           );
         } else {
           // Start new animation
-          log(`Starting new animation to ${targetHeight}px`);
+          const currentHeight = Math.round(
+            parseFloat(testElement.style.height) || 150,
+          );
+          log(
+            `Starting new animation from ${currentHeight}px to ${targetHeight}px`,
+          );
 
           currentAnimation = createHeightAnimation(testElement, targetHeight, {
             duration: ANIMATION_DURATION,
@@ -412,7 +417,13 @@
 
           // Handle animation completion
           currentAnimation.channels.finish.add(() => {
-            log(`Animation completed at ${targetHeight}px`);
+            // Log the actual height when animation completes
+            const actualHeight = Math.round(
+              parseFloat(testElement.style.height) || 0,
+            );
+            log(
+              `Animation completed. Target was ${targetHeight}px, actual height is ${actualHeight}px`,
+            );
             updateStatus(`Animation completed`, "idle");
             updateProgress(0);
             updateStats();
