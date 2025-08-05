@@ -245,11 +245,10 @@ export const initFlexDetailsSet = (
         changeSet.add({
           element: child,
           target: allocatedSize,
-          sideEffect: (height, { timing } = {}) => {
+          sideEffect: (height, { isAnimationEnd } = {}) => {
             syncDetailsContentHeight(height, {
               isAnimation: true,
-              isAnimationStart: timing === "start",
-              isAnimationEnd: timing === "end",
+              isAnimationEnd,
             });
           },
         });
@@ -290,28 +289,30 @@ export const initFlexDetailsSet = (
     }
 
     // Create height animations for each element in changeSet
-    const animations = Array.from(changeSet).map(
-      ({ element, target, sideEffect }) => {
-        const animation = createHeightAnimation(element, target, {
-          duration: HEIGHT_ANIMATION_DURATION,
-          onProgress: (transition) => {
-            if (sideEffect) {
-              const { value, timing } = transition;
-              sideEffect(value, { timing });
-            }
-          },
-        });
-        return animation;
-      },
-    );
+    const animations = Array.from(changeSet).map(({ element, target }) => {
+      const animation = createHeightAnimation(element, target, {
+        duration: HEIGHT_ANIMATION_DURATION,
+      });
+      return animation;
+    });
 
     animationController.animate(animations, {
       onChange: (changeEntries, isLast) => {
+        // Apply side effects for each animated element
+        for (const { animation, value } of changeEntries) {
+          for (const change of changeSet) {
+            if (change.element === animation.key) {
+              change.sideEffect(value, { isAnimationEnd: isLast });
+              break;
+            }
+          }
+        }
+
         if (onSizeChange) {
           // Convert animation entries to the expected format
           const sizeChangeEntries = changeEntries.map(
             ({ animation, value }) => ({
-              element: animation.key, // key is the element
+              element: animation.key, // targetKey is the element
               value,
             }),
           );
