@@ -337,7 +337,7 @@
         resumeBtn.disabled =
           playing ||
           !currentAnimation ||
-          currentAnimation.playState !== "pause";
+          currentAnimation.playState === "paused";
       }
 
       function resetElement() {
@@ -484,8 +484,9 @@
       };
 
       interruptBtn.onclick = () => {
-        if (!currentAnimation || currentAnimation.playState !== "finished")
+        if (!currentAnimation || currentAnimation.playState === "finished") {
           return;
+        }
 
         const currentTime = Date.now();
         const elapsed = animationStartTime

@@ -12,8 +12,8 @@ const removeFromTimeline = (animation) => {
   animationSet.delete(animation);
 };
 const updateAnimation = (animation) => {
-  const { startTime, duration } = animation;
-  const elapsed = document.timeline.currentTime - startTime;
+  const { startTime, duration, pausedDuration = 0 } = animation;
+  const elapsed = document.timeline.currentTime - startTime - pausedDuration;
   const msRemaining = duration - elapsed;
   if (
     // we reach the end, round progress to 1
@@ -136,6 +136,8 @@ export const createAnimatedValue = (
     startTime,
     currentTime,
     isVisual,
+    pausedDuration: 0,
+    pauseStartTime: null,
   };
   const playbackController = createPlaybackController(
     {
@@ -156,8 +158,16 @@ export const createAnimatedValue = (
             }
           },
           pause: () => {
+            animation.pauseStartTime = document.timeline.currentTime;
             removeFromTimeline(animation);
             return () => {
+              if (animation.pauseStartTime) {
+                const pausedTime =
+                  document.timeline.currentTime - animation.pauseStartTime;
+                animation.pausedDuration =
+                  (animation.pausedDuration || 0) + pausedTime;
+                animation.pauseStartTime = null;
+              }
               addOnTimeline(animation);
             };
           },
