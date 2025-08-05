@@ -5,113 +5,74 @@ import {
   stringifyTransform,
 } from "./transform_style_parser.js";
 
-export const createElementHeightTransition = (
-  element,
-  to,
-  { onStart, onUpdate, onCancel, ...options },
-) => {
+export const createElementHeightTransition = (element, to, options) => {
   const from = getHeight(element);
-  let heightAtStartFromInlineStyle;
-
-  return createAnimatedValue(from, to, {
-    constructor: createElementHeightTransition,
+  const animatedHeight = createAnimatedValue(from, to, {
     ...options,
-    onStart: () => {
-      heightAtStartFromInlineStyle = element.style.height;
+    init: () => {
+      const heightAtStartFromInlineStyle = element.style.height;
       element.setAttribute(`data-height-animated`, "");
-      onStart?.();
       return () => {
         element.removeAttribute(`data-height-animated`);
+        if (heightAtStartFromInlineStyle) {
+          element.style.height = heightAtStartFromInlineStyle;
+        } else {
+          element.style.removeProperty("height");
+        }
       };
     },
-    onUpdate: (updateInfo) => {
-      const { value } = updateInfo;
-      element.style.height = `${value}px`;
-      onUpdate?.(updateInfo);
-    },
-    onCancel: () => {
-      if (heightAtStartFromInlineStyle) {
-        element.style.height = heightAtStartFromInlineStyle;
-      } else {
-        element.style.removeProperty("height");
-      }
-      onCancel?.();
-    },
+  });
+  animatedHeight.progressCallbacks.add(() => {
+    const { value } = animatedHeight;
+    element.style.height = `${value}px`;
   });
 };
-export const createElementWidthTransition = (
-  element,
-  to,
-  { onStart, onUpdate, onCancel, ...options },
-) => {
+export const createElementWidthTransition = (element, to, options) => {
   const from = getWidth(element);
-  let widthAtStartFromInlineStyle;
-
-  return createAnimatedValue(from, to, {
-    constructor: createElementWidthTransition,
+  const animatedWidth = createAnimatedValue(from, to, {
     ...options,
-    onStart: () => {
-      widthAtStartFromInlineStyle = element.style.width;
+    init: () => {
+      const widthAtStartFromInlineStyle = element.style.width;
       element.setAttribute(`data-width-animated`, "");
-      onStart?.();
+
       return () => {
         element.removeAttribute(`data-width-animated`);
+        if (widthAtStartFromInlineStyle) {
+          element.style.width = widthAtStartFromInlineStyle;
+        } else {
+          element.style.removeProperty("width");
+        }
       };
     },
-    onUpdate: (updateInfo) => {
-      const { value } = updateInfo;
-      element.style.height = `${value}px`;
-      onUpdate?.(updateInfo);
-    },
-    onCancel: () => {
-      if (widthAtStartFromInlineStyle) {
-        element.style.width = widthAtStartFromInlineStyle;
-      } else {
-        element.style.removeProperty("width");
-      }
-      onCancel?.();
-    },
+  });
+  animatedWidth.progressCallbacks.add(() => {
+    const { value } = animatedWidth;
+    element.style.height = `${value}px`;
   });
 };
-export const createElementOpacityTransition = (
-  element,
-  to,
-  { onStart, onUpdate, onCancel, ...options } = {},
-) => {
+export const createElementOpacityTransition = (element, to, options) => {
   const from = parseFloat(getComputedStyle(element).opacity) || 0;
-  let opacityAtStartFromInlineStyle;
-
-  return createAnimatedValue(from, to, {
-    constructor: createElementOpacityTransition,
-    options,
+  const animatedOpacity = createAnimatedValue(from, to, {
+    ...options,
     onStart: () => {
-      opacityAtStartFromInlineStyle = element.style.opacity;
+      const opacityAtStartFromInlineStyle = element.style.opacity;
       element.setAttribute(`data-opacity-animated`, "");
-      onStart?.();
       return () => {
         element.removeAttribute(`data-opacity-animated`);
+        if (opacityAtStartFromInlineStyle) {
+          element.style.opacity = opacityAtStartFromInlineStyle;
+        } else {
+          element.style.removeProperty("opacity");
+        }
       };
     },
-    onUpdate: (updateInfo) => {
-      const { value } = updateInfo;
-      element.style.opacity = value;
-      onUpdate?.(updateInfo);
-    },
-    onCancel: () => {
-      if (opacityAtStartFromInlineStyle) {
-        element.style.opacity = opacityAtStartFromInlineStyle;
-      } else {
-        element.style.removeProperty("opacity");
-      }
-      onCancel?.();
-    },
+  });
+  animatedOpacity.progressCallbacks.add(() => {
+    const { value } = animatedOpacity;
+    element.style.opacity = value;
   });
 };
-export const createElementTranslateXTransition = (
-  element,
-  to,
-  { onStart, onCancel, onUpdate, ...options } = {},
-) => {
+export const createElementTranslateXTransition = (element, to, options) => {
   const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
   if (!match) {
     throw new Error(
@@ -120,32 +81,25 @@ export const createElementTranslateXTransition = (
   }
   const unit = match[2] || "px";
   const from = getTranslateX(element);
-  let transformAtStartFromInlineStyle;
-
-  return createAnimatedValue(from, to, {
+  const animatedTranslateX = createAnimatedValue(from, to, {
     constructor: createElementTranslateXTransition,
     ...options,
-    onStart: () => {
-      transformAtStartFromInlineStyle = element.style.transform;
+    init: () => {
+      const transformAtStartFromInlineStyle = element.style.transform;
       element.setAttribute(`data-translate-x-animated`, "");
-      onStart?.();
       return () => {
+        if (transformAtStartFromInlineStyle) {
+          element.style.transform = transformAtStartFromInlineStyle;
+        } else {
+          element.style.removeProperty("transform");
+        }
         element.removeAttribute(`data-translate-x-animated`);
       };
     },
-    onUpdate: (updateInfo) => {
-      const { value } = updateInfo;
-      setTranslateX(element, value, { unit });
-      onUpdate?.(updateInfo);
-    },
-    onCancel: () => {
-      if (transformAtStartFromInlineStyle) {
-        element.style.transform = transformAtStartFromInlineStyle;
-      } else {
-        element.style.removeProperty("transform");
-      }
-      onCancel?.();
-    },
+  });
+  animatedTranslateX.progressCallbacks.add(() => {
+    const { value } = animatedTranslateX;
+    setTranslateX(element, value, { unit });
   });
 };
 const getTranslateX = (element) => {
