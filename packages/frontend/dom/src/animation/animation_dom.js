@@ -2,7 +2,6 @@ import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
 import { addWillChange } from "../style_and_attributes.js";
 import {
-  animate,
   createTimelineTransition,
   createTransition,
 } from "./animation_playback.js";
@@ -11,25 +10,19 @@ import {
   stringifyTransform,
 } from "./transform_style_parser.js";
 
-export const createHeightAnimation = (
-  element,
-  to,
-  { from, duration, easing, ...options } = {},
-) => {
+export const createHeightAnimation = (element, to, options) => {
   const heightTransition = createTimelineTransition({
+    ...options,
     constructor: createHeightAnimation,
     key: element,
-    from,
     to,
-    duration,
-    easing,
     isVisual: true,
     setup: () => {
-      heightTransition.from = from ?? getHeight(element);
       const heightAtStartFromInlineStyle = element.style.height;
       const restoreWillChange = addWillChange(element, "height");
       element.setAttribute(`data-height-animated`, "");
       return {
+        from: getHeight(element),
         update: (value) => {
           element.style.height = `${value}px`;
         },
@@ -47,9 +40,7 @@ export const createHeightAnimation = (
       };
     },
   });
-
-  const heightAnimation = animate(heightTransition, options);
-  return heightAnimation;
+  return heightTransition;
 };
 export const createWidthAnimation = (element, to, options = {}) => {
   const widthAnimation = animate(

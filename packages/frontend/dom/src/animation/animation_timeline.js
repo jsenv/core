@@ -24,10 +24,10 @@ const updateAnimation = (animation) => {
     // we are very close from the end, round progress to 1
     msRemaining <= 16.6
   ) {
-    animation.progress(1);
+    animation.update(1);
   } else {
     const progress = Math.min(elapsed / duration, 1);
-    animation.progress(progress);
+    animation.update(progress);
   }
 };
 // We need setTimeout to animate things like volume because requestAnimationFrame would be killed when tab is not visible

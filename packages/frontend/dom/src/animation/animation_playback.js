@@ -6,7 +6,7 @@ import { addOnTimeline, removeFromTimeline } from "./animation_timeline.js";
 import { EASING } from "./easing.js";
 
 // Default lifecycle methods that do nothing
-const LICECYCLE_DEFAULT = {
+const LIFECYCLE_DEFAULT = {
   setup: () => {},
   pause: () => {},
   cancel: () => {},
@@ -21,25 +21,9 @@ export const createTransition = ({
   to,
   duration,
   easing = EASING.EASE_OUT,
-  lifecycle = LICECYCLE_DEFAULT,
+  lifecycle = LIFECYCLE_DEFAULT,
+  onProgress,
 } = {}) => {
-  const transition = {
-    constructor,
-    key,
-    from,
-    to,
-    value: from,
-    duration,
-    progress: 0,
-    timing: "",
-    easing,
-    lifecycle,
-  };
-  return transition;
-};
-
-// Base animation that handles common animation logic
-export const animate = (transition, { onProgress } = {}) => {
   const [progressCallbacks, executeProgressCallbacks] =
     createCallbackController();
   const [finishCallbacks, executeFinishCallbacks] = createCallbackController();
@@ -62,18 +46,20 @@ export const animate = (transition, { onProgress } = {}) => {
     isFirstUpdate = true;
     playState = "running";
 
-    const setupResult = transition.lifecycle.setup(animation);
+    const setupResult = lifecycle.setup(transition);
     update = setupResult.update;
     teardown = setupResult.teardown;
     restore = setupResult.restore;
 
-    const from = transition.from;
-    const to = transition.to;
-    // Warn if the animation difference is too small
-    const diff = Math.abs(to - from);
+    // Allow setup to override from value if transition.from is undefined
+    if (transition.from === undefined && setupResult.from !== undefined) {
+      transition.from = setupResult.from;
+    }
+
+    const diff = Math.abs(transition.to - transition.from);
     if (diff === 0) {
       console.warn(
-        `transition has identical from and to values (${from}px). This transition will have no effect.`,
+        `transition has identical from and to values (${transition.from}px). This transition will have no effect.`,
       );
     } else if (diff < 10) {
       console.warn(
@@ -82,8 +68,16 @@ export const animate = (transition, { onProgress } = {}) => {
     }
   };
 
-  const animation = {
-    transition,
+  const transition = {
+    constructor,
+    key,
+    from,
+    to,
+    value: from,
+    duration,
+    progress: 0,
+    timing: "",
+    easing,
     channels,
     get playState() {
       return playState;
@@ -95,7 +89,7 @@ export const animate = (transition, { onProgress } = {}) => {
         return;
       }
       if (playState === "running") {
-        console.warn("animation already running");
+        console.warn("transition already running");
         return;
       }
       if (playState === "paused") {
@@ -107,13 +101,13 @@ export const animate = (transition, { onProgress } = {}) => {
       start();
     },
 
-    progress: (progress) => {
+    update: (progress) => {
       if (playState === "idle") {
-        console.warn("Cannot progress animation that is idle");
+        console.warn("Cannot progress transition that is idle");
         return;
       }
       if (playState === "finished") {
-        console.warn("Cannot progress a finished animation");
+        console.warn("Cannot progress a finished transition");
         return;
       }
       // "running" or "paused"
@@ -132,28 +126,28 @@ export const animate = (transition, { onProgress } = {}) => {
       isFirstUpdate = false;
       executeProgressCallbacks(transition);
       if (progress === 1) {
-        animation.finish();
+        transition.finish();
       }
     },
 
     pause: () => {
       if (playState === "paused") {
-        console.warn("animation already paused");
+        console.warn("transition already paused");
         return;
       }
       if (playState === "finished") {
-        console.warn("Cannot pause a finished animation");
+        console.warn("Cannot pause a finished transition");
         return;
       }
       playState = "paused";
 
       // Let the transition handle its own pause logic
-      resume = transition.lifecycle.pause(animation);
+      resume = lifecycle.pause(transition);
     },
 
     cancel: () => {
-      if (transition) {
-        transition.lifecycle.cancel(animation);
+      if (restore) {
+        lifecycle.cancel(transition);
         teardown();
         restore();
       }
@@ -163,15 +157,15 @@ export const animate = (transition, { onProgress } = {}) => {
 
     finish: () => {
       if (playState === "idle") {
-        console.warn("Cannot finish an animation that is idle");
+        console.warn("Cannot finish a transition that is idle");
         return;
       }
       if (playState === "finished") {
-        console.warn("animation already finished");
+        console.warn("transition already finished");
         return;
       }
       // "running" or "paused"
-      transition.lifecycle.finish(animation);
+      lifecycle.finish(transition);
       teardown();
       resume = null;
       playState = "finished";
@@ -189,11 +183,11 @@ export const animate = (transition, { onProgress } = {}) => {
         );
       }
       if (playState === "idle") {
-        console.warn("Cannot update target of idle animation");
+        console.warn("Cannot update target of idle transition");
         return;
       }
       if (playState === "finished") {
-        console.warn("Cannot update target of finished animation");
+        console.warn("Cannot update target of finished transition");
         return;
       }
       const currentValue = transition.value;
@@ -201,11 +195,11 @@ export const animate = (transition, { onProgress } = {}) => {
       transition.to = newTarget;
 
       // Let the transition handle its own target update logic
-      transition.lifecycle.updateTarget(animation);
+      lifecycle.updateTarget(transition);
     },
   };
 
-  return animation;
+  return transition;
 };
 
 // Timeline-managed transition that adds/removes itself from the animation timeline
@@ -217,92 +211,93 @@ export const createTimelineTransition = ({
   duration,
   easing = EASING.EASE_OUT,
   setup,
-  isVisual = true,
+  isVisual,
+  onProgress,
 } = {}) => {
-  const transition = createTransition({
+  return createTransition({
     constructor,
     key,
     from,
     to,
     duration,
     easing,
+    onProgress,
     lifecycle: {
-      setup: (animation) => {
+      setup: (transition) => {
         // Handle timeline management
-        animation.startTime = document.timeline.currentTime;
-        addOnTimeline(animation, isVisual);
+        transition.startTime = document.timeline.currentTime;
+        addOnTimeline(transition, isVisual);
         // Call the original setup
         return setup();
       },
-      pause: (animation) => {
+      pause: (transition) => {
         const pauseTime = document.timeline.currentTime;
-        removeFromTimeline(animation);
+        removeFromTimeline(transition);
         return () => {
           const pausedDuration = document.timeline.currentTime - pauseTime;
-          animation.startTime += pausedDuration;
-          addOnTimeline(animation, isVisual);
+          transition.startTime += pausedDuration;
+          addOnTimeline(transition, isVisual);
         };
       },
-      cancel: (animation) => {
-        removeFromTimeline(animation, isVisual);
+      cancel: (transition) => {
+        removeFromTimeline(transition, isVisual);
       },
-      finish: (animation) => {
-        removeFromTimeline(animation, isVisual);
+      finish: (transition) => {
+        removeFromTimeline(transition, isVisual);
       },
-      updateTarget: (animation) => {
-        animation.startTime = document.timeline.currentTime;
+      updateTarget: (transition) => {
+        transition.startTime = document.timeline.currentTime;
       },
     },
   });
-  return transition;
 };
 
 // Group transition that manages multiple animations
-export const createGroupTransition = (animationArray) => {
-  const progressValues = new Array(animationArray.length).fill(0);
-  const finishedStates = new Array(animationArray.length).fill(false);
+export const createGroupTransition = (transitionArray) => {
+  const progressValues = new Array(transitionArray.length).fill(0);
+  const finishedStates = new Array(transitionArray.length).fill(false);
 
-  const transition = createTransition({
+  return createTransition({
     from: 0,
     to: 1,
     duration: 0,
     easing: (x) => x,
     lifecycle: {
-      setup: (animation) => {
+      setup: (transition) => {
         progressValues.fill(0);
         finishedStates.fill(false);
 
-        // Start all animations and track their progress
-        animationArray.forEach((childAnimation, index) => {
-          const removeProgressListener = childAnimation.channels.progress.add(
+        // Start all transitions and track their progress
+        transitionArray.forEach((childTransition, index) => {
+          const removeProgressListener = childTransition.channels.progress.add(
             (content) => {
               progressValues[index] = content.progress;
               // Calculate average progress
               const averageProgress =
                 progressValues.reduce((sum, p) => sum + p, 0) /
-                animationArray.length;
+                transitionArray.length;
 
               // Update this transition's progress
-              animation.progress(averageProgress);
+              transition.update(averageProgress);
             },
           );
 
-          const removeFinishListener = childAnimation.channels.finish.add(
+          const removeFinishListener = childTransition.channels.finish.add(
             () => {
               removeProgressListener();
               removeFinishListener();
               progressValues[index] = 1;
               finishedStates[index] = true;
 
-              // Check if all animations are finished
+              // Check if all transitions are finished
               const allFinished = finishedStates.every((finished) => finished);
               if (allFinished) {
-                animation.finish();
+                transition.finish();
               }
             },
           );
 
-          childAnimation.play();
+          childTransition.play();
         });
 
         return {
@@ -312,39 +307,37 @@ export const createGroupTransition = (animationArray) => {
         };
       },
       pause: () => {
-        for (const childAnimation of animationArray) {
-          if (childAnimation.playState === "running") {
-            childAnimation.pause();
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState === "running") {
+            childTransition.pause();
           }
         }
         return () => {
-          for (const childAnimation of animationArray) {
-            if (childAnimation.playState === "paused") {
-              childAnimation.play();
+          for (const childTransition of transitionArray) {
+            if (childTransition.playState === "paused") {
+              childTransition.play();
             }
           }
         };
       },
 
       cancel: () => {
-        for (const childAnimation of animationArray) {
-          if (childAnimation.playState !== "idle") {
-            childAnimation.cancel();
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState !== "idle") {
+            childTransition.cancel();
           }
         }
       },
 
       finish: () => {
-        for (const childAnimation of animationArray) {
-          if (childAnimation.playState !== "finished") {
-            childAnimation.finish();
+        for (const childTransition of transitionArray) {
+          if (childTransition.playState !== "finished") {
+            childTransition.finish();
           }
         }
       },
     },
   });
-
-  return transition;
 };
 
 const createCallbackController = () => {
@@ -368,8 +361,7 @@ const createCallbackController = () => {
   return [callbacks, execute];
 };
 
-// Simplified animateGroup using group transition
-export const animateGroup = (animationArray) => {
-  const groupTransition = createGroupTransition(animationArray);
-  return animate(groupTransition);
+// Group multiple transitions together
+export const groupTransitions = (transitionArray) => {
+  return createGroupTransition(transitionArray);
 };
