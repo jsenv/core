@@ -7,10 +7,10 @@ import {
 } from "./transform_style_parser.js";
 import { createTimelineTransition } from "./transition_playback.js";
 
-export const createHeightTransiton = (element, to, options) => {
+export const createHeightTransition = (element, to, options) => {
   const heightTransition = createTimelineTransition({
     ...options,
-    constructor: createHeightTransiton,
+    constructor: createHeightTransition,
     key: element,
     to,
     isVisual: true,
@@ -71,10 +71,10 @@ export const createWidthTransition = (element, to, options) => {
   });
   return widthTransition;
 };
-export const createOpacityAnimation = (element, to, options = {}) => {
+export const createOpacityTransition = (element, to, options = {}) => {
   const opacityTransition = createTimelineTransition({
     ...options,
-    constructor: createOpacityAnimation,
+    constructor: createOpacityTransition,
     key: element,
     to,
     isVisual: true,
@@ -107,7 +107,7 @@ const getOpacity = (element) => {
   return parseFloat(getComputedStyle(element).opacity) || 0;
 };
 
-export const createTranslateXAnimation = (element, to, options = {}) => {
+export const createTranslateXTransition = (element, to, options = {}) => {
   const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
   if (!match) {
     throw new Error(
@@ -119,7 +119,7 @@ export const createTranslateXAnimation = (element, to, options = {}) => {
 
   const translateXTransition = createTimelineTransition({
     ...options,
-    constructor: createTranslateXAnimation,
+    constructor: createTranslateXTransition,
     key: element,
     to: toValue,
     isVisual: true,

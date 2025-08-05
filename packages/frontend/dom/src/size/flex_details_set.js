@@ -3,9 +3,9 @@
  *
  */
 
-import { createHeightAnimation } from "../animation/animation_dom.js";
-import { createMultiAnimationController } from "../animation/animation_multi.js";
 import { forceStyles } from "../style_and_attributes.js";
+import { createHeightTransition } from "../transition/dom_transition.js";
+import { createGroupTransitionController } from "../transition/group_transition.js";
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
@@ -13,7 +13,7 @@ import { getMinHeight } from "./get_min_height.js";
 import { resolveCSSSize } from "./resolve_css_size.js";
 import { startResizeGesture } from "./start_resize_gesture.js";
 
-const HEIGHT_ANIMATION_DURATION = 300;
+const HEIGHT_TRANSITION_DURATION = 300;
 const ANIMATE_TOGGLE = true;
 const ANIMATE_RESIZE_AFTER_MUTATION = true;
 const ANIMATION_THRESHOLD_PX = 10; // Don't animate changes smaller than this
@@ -82,12 +82,12 @@ export const initFlexDetailsSet = (
   };
 
   // Create animation controller for managing height animations
-  const animationController = createMultiAnimationController();
+  const transitionController = createGroupTransitionController();
 
   const cleanupCallbackSet = new Set();
   const cleanup = () => {
     // Cancel any ongoing animations
-    animationController.cancel();
+    transitionController.cancel();
 
     for (const cleanupCallback of cleanupCallbackSet) {
       cleanupCallback();
@@ -289,19 +289,19 @@ export const initFlexDetailsSet = (
     }
 
     // Create height animations for each element in changeSet
-    const animations = Array.from(changeSet).map(({ element, target }) => {
-      const animation = createHeightAnimation(element, target, {
-        duration: HEIGHT_ANIMATION_DURATION,
+    const transitions = Array.from(changeSet).map(({ element, target }) => {
+      const transition = createHeightTransition(element, target, {
+        duration: HEIGHT_TRANSITION_DURATION,
       });
-      return animation;
+      return transition;
     });
 
-    const multiAnimation = animationController.animate(animations, {
+    const transition = transitionController.animate(transitions, {
       onChange: (changeEntries, isLast) => {
         // Apply side effects for each animated element
-        for (const { animation, value } of changeEntries) {
+        for (const { transition, value } of changeEntries) {
           for (const change of changeSet) {
-            if (change.element === animation.key) {
+            if (change.element === transition.key) {
               if (change.sideEffect) {
                 change.sideEffect(value, { isAnimationEnd: isLast });
               }
@@ -313,8 +313,8 @@ export const initFlexDetailsSet = (
         if (onSizeChange) {
           // Convert animation entries to the expected format
           const sizeChangeEntries = changeEntries.map(
-            ({ animation, value }) => ({
-              element: animation.key, // targetKey is the element
+            ({ transition, value }) => ({
+              element: transition.key, // targetKey is the element
               value,
             }),
           );
@@ -325,7 +325,7 @@ export const initFlexDetailsSet = (
         }
       },
     });
-    multiAnimation.play();
+    transition.play();
   };
 
   const allocateSpace = (child, spaceToAllocate, requestSource) => {
