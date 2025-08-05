@@ -40,7 +40,12 @@ export { useMaxWidth } from "./size/hooks/use_max_width.js";
 export { useResizeStatus } from "./size/hooks/use_resize_status.js";
 
 export { initPositionSticky } from "./position_sticky.js";
-export { getStyle, setAttributes, setStyles } from "./style_and_attributes.js";
+export {
+  addWillChange,
+  getStyle,
+  setAttributes,
+  setStyles,
+} from "./style_and_attributes.js";
 export {
   findAfter,
   findAncestor,

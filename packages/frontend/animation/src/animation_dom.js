@@ -1,4 +1,4 @@
-import { getHeight, getWidth, setStyles } from "@jsenv/dom";
+import { addWillChange, getHeight, getWidth } from "@jsenv/dom";
 import { animate, createTransition } from "./animation_playback.js";
 import {
   parseTransform,
@@ -28,9 +28,7 @@ export const createHeightAnimation = (element, to, options = {}) => {
         to,
         setup: () => {
           const heightAtStartFromInlineStyle = element.style.height;
-          const restoreWillChange = setStyles(element, {
-            "will-change": "height",
-          });
+          const restoreWillChange = addWillChange(element, "height");
           element.setAttribute(`data-height-animated`, "");
           return {
             update: (value) => {
@@ -78,9 +76,7 @@ export const createWidthAnimation = (element, to, options = {}) => {
         to,
         setup: () => {
           const widthAtStartFromInlineStyle = element.style.width;
-          const restoreWillChange = setStyles(element, {
-            "will-change": "width",
-          });
+          const restoreWillChange = addWillChange(element, "width");
           element.setAttribute(`data-width-animated`, "");
           return {
             update: (value) => {
@@ -128,9 +124,7 @@ export const createOpacityAnimation = (element, to, options = {}) => {
         to,
         setup: () => {
           const opacityAtStartFromInlineStyle = element.style.opacity;
-          const restoreWillChange = setStyles(element, {
-            "will-change": "opacity",
-          });
+          const restoreWillChange = addWillChange(element, "opacity");
           element.setAttribute(`data-opacity-animated`, "");
           return {
             update: (value) => {
@@ -191,9 +185,7 @@ export const createTranslateXAnimation = (element, to, options = {}) => {
         to,
         setup: () => {
           const transformAtStartFromInlineStyle = element.style.transform;
-          const restoreWillChange = setStyles(element, {
-            "will-change": "transform",
-          });
+          const restoreWillChange = addWillChange(element, "transform");
           element.setAttribute(`data-translate-x-animated`, "");
           return {
             update: (value) => {
