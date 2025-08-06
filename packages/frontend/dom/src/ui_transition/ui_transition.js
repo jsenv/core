@@ -96,7 +96,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   // Child state
   let lastContentKey = null;
   let previousChild = null;
-  let wasContentPhase = false;
+  let isContentPhase = false; // Current state: true when showing content phase (loading/error)
+  let wasContentPhase = false; // Previous state for comparison
 
   const measureContentSize = () => {
     return [getWidth(measureWrapper), getHeight(measureWrapper)];
@@ -199,12 +200,10 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   if (initialChild) {
     debug("size", "Found initial child");
     lastContentKey = initialChild.getAttribute("data-content-key");
-    const isInitialContentPhase =
-      initialChild.hasAttribute("data-content-phase");
-    wasContentPhase = isInitialContentPhase;
+    isContentPhase = initialChild.hasAttribute("data-content-phase");
 
     // Only set natural content dimensions if this is actual content, not a content phase
-    if (!isInitialContentPhase) {
+    if (!isContentPhase) {
       naturalContentWidth = constrainedWidth;
       naturalContentHeight = constrainedHeight;
       debug(
@@ -234,7 +233,10 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       const firstChild = slot.children[0];
       const childUIName = firstChild?.getAttribute("data-ui-name");
       const currentContentKey = firstChild?.getAttribute("data-content-key");
-      const isContentPhase = firstChild?.hasAttribute("data-content-phase");
+
+      // Capture previous state before updating
+      wasContentPhase = isContentPhase;
+      isContentPhase = firstChild?.hasAttribute("data-content-phase");
 
       if (DEBUG.transition) {
         console.group(`UI Update: ${childUIName || "unknown"}`);
@@ -258,6 +260,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         currentContentKey,
         lastContentKey,
         isContentPhase,
+        wasContentPhase,
         naturalContentWidth,
         naturalContentHeight,
       });
@@ -394,7 +397,6 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       // Store current child for next transition
       previousChild = firstChild ? firstChild.cloneNode(true) : null;
       lastContentKey = currentContentKey;
-      wasContentPhase = isContentPhase;
 
       const getTargetDimensions = () => {
         if (!isContentPhase) {
@@ -434,9 +436,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       });
 
       // Handle size animation based on content state
-      const becomesContentPhase = wasContentPhase && !isContentPhase;
+      const becomesContent = wasContentPhase && !isContentPhase;
 
-      if (becomesContentPhase || (isContentKeyChange && !isContentPhase)) {
+      if (becomesContent || (isContentKeyChange && !isContentPhase)) {
         debug("size", "Transitioning to actual content");
         animateToSize(targetWidth, targetHeight, {
           onEnd: () => releaseConstraints("all animations completed"),
