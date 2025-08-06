@@ -47,6 +47,16 @@ const renderErrorDefault = (error) => {
 const renderCompletedDefault = () => null;
 
 export const ActionRenderer = ({ action, children, disabled }) => {
+  return (
+    <UITransition>
+      <ActionRendererContent action={action} disabled={disabled}>
+        {children}
+      </ActionRendererContent>
+    </UITransition>
+  );
+};
+
+const ActionRendererContent = ({ action, children, disabled }) => {
   const {
     idle: renderIdle = renderIdleDefault,
     loading: renderLoading = renderLoadingDefault,
@@ -55,6 +65,11 @@ export const ActionRenderer = ({ action, children, disabled }) => {
     completed: renderCompleted,
     always: renderAlways,
   } = typeof children === "function" ? { completed: children } : children || {};
+
+  if (disabled) {
+    return null;
+  }
+
   if (!action) {
     throw new Error(
       "ActionRenderer requires an action to render, but none was provided.",
