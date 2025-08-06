@@ -1,5 +1,9 @@
 import { EASING } from "./easing.js";
-import { addOnTimeline, removeFromTimeline } from "./transition_timeline.js";
+import {
+  addOnTimeline,
+  getTimelineCurrentTime,
+  removeFromTimeline,
+} from "./transition_timeline.js";
 
 // Default lifecycle methods that do nothing
 const LIFECYCLE_DEFAULT = {
@@ -15,10 +19,8 @@ export const createTransition = ({
   key,
   from,
   to,
-  easing = EASING.EASE_OUT,
   lifecycle = LIFECYCLE_DEFAULT,
   onProgress,
-  fps = 60,
   ...rest
 } = {}) => {
   const [progressCallbacks, executeProgressCallbacks] =
@@ -36,8 +38,6 @@ export const createTransition = ({
   let isFirstUpdate = false;
   let resume;
   let executionLifecycle = null;
-  let lastUpdateTime = 0;
-  const msBetweenFrames = 1000 / fps;
 
   const start = () => {
     isFirstUpdate = true;
@@ -71,11 +71,9 @@ export const createTransition = ({
     from,
     to,
     value: from,
-    msBetweenFrames,
     startTime: null,
     progress: 0,
     timing: "",
-    easing,
     channels,
     get playState() {
       return playState;
@@ -99,7 +97,7 @@ export const createTransition = ({
       start();
     },
 
-    update: (msElapsedSinceStart) => {
+    update: ({ value, progress }) => {
       if (playState === "idle") {
         console.warn("Cannot progress transition that is idle");
         return;
@@ -109,41 +107,12 @@ export const createTransition = ({
         return;
       }
 
-      const msRemaining = transition.duration - msElapsedSinceStart;
-      let progress = 0;
-      if (
-        // we reach the end, round progress to 1
-        msRemaining < 0 ||
-        // we are very close from the end, round progress to 1
-        msRemaining <= msBetweenFrames
-      ) {
-        progress = 1;
-      } else {
-        progress = Math.min(msElapsedSinceStart / transition.duration, 1);
-      }
-
-      // "running" or "paused"
+      transition.value = value;
       transition.progress = progress;
-      if (progress === 1) {
-        transition.value = transition.to;
-      } else {
-        const currentTime = performance.now();
-        const timeSinceLastUpdate = currentTime - lastUpdateTime;
-        // Skip update if not enough time has passed for the target FPS
-        if (timeSinceLastUpdate < msBetweenFrames) {
-          return;
-        }
-        lastUpdateTime = currentTime;
-
-        const easedProgress = transition.easing(progress);
-        const value =
-          transition.from + (transition.to - transition.from) * easedProgress;
-        transition.value = value;
-      }
       transition.timing =
         progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
-      executionLifecycle.update(transition.value);
       isFirstUpdate = false;
+      executionLifecycle.update(transition.value, transition);
       executeProgressCallbacks(transition);
       if (progress === 1) {
         transition.finish();
@@ -228,6 +197,8 @@ export const createTransition = ({
 export const createTimelineTransition = ({
   isVisual,
   duration,
+  fps = 60,
+  easing = EASING.EASE_OUT,
   lifecycle,
   ...options
 }) => {
@@ -236,40 +207,82 @@ export const createTimelineTransition = ({
       `Invalid duration: ${duration}. Duration must be a positive number.`,
     );
   }
+  const msBetweenFrames = 1000 / fps;
+  const timeChangeCallback = () => {
+    const timelineCurrentTime = getTimelineCurrentTime();
+    const msElapsedSinceStart = timelineCurrentTime - transition.startTime;
+    let lastUpdateTime = 0;
+
+    const msRemaining = transition.duration - msElapsedSinceStart;
+    let progress = 0;
+    let value;
+    if (
+      // we reach the end, round progress to 1
+      msRemaining < 0 ||
+      // we are very close from the end, round progress to 1
+      msRemaining <= msBetweenFrames
+    ) {
+      progress = 1;
+      value = transition.to;
+    } else {
+      const currentTime = performance.now();
+      const timeSinceLastUpdate = currentTime - lastUpdateTime;
+      // Skip update if not enough time has passed for the target FPS
+      if (timeSinceLastUpdate < msBetweenFrames) {
+        return;
+      }
+      lastUpdateTime = currentTime;
+      progress = Math.min(msElapsedSinceStart / transition.duration, 1);
+      const easedProgress = transition.easing(progress);
+      value =
+        transition.from + (transition.to - transition.from) * easedProgress;
+    }
+    transition.update({ progress, value });
+  };
+  const onTimelineNeeded = () => {
+    addOnTimeline(timeChangeCallback, isVisual);
+  };
+  const onTimelineNotNeeded = () => {
+    removeFromTimeline(timeChangeCallback, isVisual);
+  };
 
   const { setup } = lifecycle;
-  return createTransition({
+  const transition = createTransition({
     ...options,
+    startTime: null,
     duration,
+    easing,
+    fps,
     lifecycle: {
       ...lifecycle,
       setup: (transition) => {
         // Handle timeline management
-        transition.startTime = document.timeline.currentTime;
-        addOnTimeline(transition, isVisual);
+        transition.startTime = getTimelineCurrentTime();
+        onTimelineNeeded();
         // Call the original setup
         return setup();
       },
       pause: (transition) => {
-        const pauseTime = document.timeline.currentTime;
-        removeFromTimeline(transition, isVisual);
+        const pauseTime = getTimelineCurrentTime();
+        onTimelineNotNeeded();
         return () => {
-          const pausedDuration = document.timeline.currentTime - pauseTime;
+          const pausedDuration = getTimelineCurrentTime() - pauseTime;
           transition.startTime += pausedDuration;
-          addOnTimeline(transition, isVisual);
+          onTimelineNeeded();
         };
       },
       updateTarget: (transition) => {
-        transition.startTime = document.timeline.currentTime;
+        transition.startTime = getTimelineCurrentTime();
       },
-      cancel: (transition) => {
-        removeFromTimeline(transition, isVisual);
+      cancel: () => {
+        onTimelineNotNeeded();
       },
-      finish: (transition) => {
-        removeFromTimeline(transition, isVisual);
+      finish: () => {
+        onTimelineNotNeeded();
       },
     },
   });
+  return transition;
 };
 
 const createCallbackController = () => {

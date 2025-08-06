@@ -2,54 +2,58 @@ import { createTransition } from "./transition_playback.js";
 
 // transition that manages multiple transitions
 export const createGroupTransition = (transitionArray) => {
-  const progressValues = new Array(transitionArray.length).fill(0);
-  const finishedStates = new Array(transitionArray.length).fill(false);
+  let finishedCount = 0;
+  let duration = 0;
+  let childCount = transitionArray.length;
+  for (const childTransition of transitionArray) {
+    if (childTransition.duration > duration) {
+      duration = childTransition.duration;
+    }
+  }
+
   const groupTransition = createTransition({
     from: 0,
     to: 1,
-    duration: 0,
-    easing: (x) => x,
+    duration,
     lifecycle: {
       setup: (transition) => {
-        progressValues.fill(0);
-        finishedStates.fill(false);
+        finishedCount = 0;
 
-        // Start all transitions and track their progress
-        transitionArray.forEach((childTransition, index) => {
+        const cleanupCallbackSet = new Set();
+        for (const childTransition of transitionArray) {
           const removeProgressListener = childTransition.channels.progress.add(
-            (content) => {
-              progressValues[index] = content.progress;
+            () => {
               // Calculate average progress
               const averageProgress =
-                progressValues.reduce((sum, p) => sum + p, 0) /
-                transitionArray.length;
-
+                transitionArray.reduce((sum, t) => sum + t.progress, 0) /
+                childCount;
               // Update this transition's progress
               transition.update(averageProgress);
             },
           );
-
+          cleanupCallbackSet.add(removeProgressListener);
           const removeFinishListener = childTransition.channels.finish.add(
+            // eslint-disable-next-line no-loop-func
             () => {
-              removeProgressListener();
-              removeFinishListener();
-              progressValues[index] = 1;
-              finishedStates[index] = true;
-
-              // Check if all transitions are finished
-              const allFinished = finishedStates.every((finished) => finished);
+              finishedCount++;
+              const allFinished = finishedCount === childCount;
               if (allFinished) {
                 transition.finish();
               }
             },
           );
-
+          cleanupCallbackSet.add(removeFinishListener);
           childTransition.play();
-        });
+        }
 
         return {
           update: () => {},
-          teardown: () => {},
+          teardown: () => {
+            for (const cleanupCallback of cleanupCallbackSet) {
+              cleanupCallback();
+            }
+            cleanupCallbackSet.clear();
+          },
           restore: () => {},
         };
       },

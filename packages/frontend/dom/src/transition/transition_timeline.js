@@ -1,31 +1,31 @@
-const visualTransitionSet = new Set();
-const backgroundTransitionSet = new Set();
-export const addOnTimeline = (transition, isVisual) => {
+export const getTimelineCurrentTime = () => {
+  return document.timeline.currentTime;
+};
+
+const visualCallbackSet = new Set();
+const backgroundCallbackSet = new Set();
+export const addOnTimeline = (callback, isVisual) => {
   if (isVisual) {
-    visualTransitionSet.add(transition);
+    visualCallbackSet.add(callback);
   } else {
-    backgroundTransitionSet.add(transition);
+    backgroundCallbackSet.add(callback);
   }
 };
-export const removeFromTimeline = (transition, isVisual) => {
+export const removeFromTimeline = (callback, isVisual) => {
   if (isVisual) {
-    visualTransitionSet.delete(transition);
+    visualCallbackSet.delete(callback);
   } else {
-    backgroundTransitionSet.delete(transition);
+    backgroundCallbackSet.delete(callback);
   }
 };
-const updateTransition = (transition) => {
-  const { startTime } = transition;
-  const msElapsedSinceStart = document.timeline.currentTime - startTime;
-  transition.update(msElapsedSinceStart);
-};
+
 // We need setTimeout to animate things like volume because requestAnimationFrame would be killed when tab is not visible
 // while we might want to fadeout volumn when leaving the page for instance
 const createBackgroundUpdateLoop = () => {
   let timeout;
   const update = () => {
-    for (const backgroundTransition of backgroundTransitionSet) {
-      updateTransition(backgroundTransition);
+    for (const backgroundCallback of backgroundCallbackSet) {
+      backgroundCallback(getTimelineCurrentTime());
     }
     timeout = setTimeout(update, 16); // roughly 60fps
   };
@@ -42,8 +42,8 @@ const createBackgroundUpdateLoop = () => {
 const createAnimationFrameLoop = () => {
   let animationFrame = null;
   const update = () => {
-    for (const visualTransition of visualTransitionSet) {
-      updateTransition(visualTransition);
+    for (const visualCallback of visualCallbackSet) {
+      visualCallback(getTimelineCurrentTime());
     }
     animationFrame = requestAnimationFrame(update);
   };
