@@ -112,7 +112,7 @@ export const createTransition = ({
       transition.timing =
         progress === 1 ? "end" : isFirstUpdate ? "start" : "progress";
       isFirstUpdate = false;
-      executionLifecycle.update(transition.value, transition);
+      executionLifecycle.update(transition);
       executeProgressCallbacks(transition);
       if (progress === 1) {
         transition.finish();
@@ -207,35 +207,43 @@ export const createTimelineTransition = ({
       `Invalid duration: ${duration}. Duration must be a positive number.`,
     );
   }
-  const msBetweenFrames = 1000 / fps;
+
+  let lastUpdateTime = -1;
+
   const timeChangeCallback = () => {
     const timelineCurrentTime = getTimelineCurrentTime();
     const msElapsedSinceStart = timelineCurrentTime - transition.startTime;
-    let lastUpdateTime = 0;
-
     const msRemaining = transition.duration - msElapsedSinceStart;
     let progress = 0;
     let value;
+
     if (
       // we reach the end, round progress to 1
       msRemaining < 0 ||
       // we are very close from the end, round progress to 1
-      msRemaining <= msBetweenFrames
+      msRemaining <= transition.frameDuration
     ) {
       progress = 1;
       value = transition.to;
+      transition.frameRemainingCount = 0;
     } else {
-      const currentTime = performance.now();
-      const timeSinceLastUpdate = currentTime - lastUpdateTime;
-      // Skip update if not enough time has passed for the target FPS
-      if (timeSinceLastUpdate < msBetweenFrames) {
-        return;
+      if (lastUpdateTime === -1) {
+        // First frame - always allow
+      } else {
+        const timeSinceLastUpdate = timelineCurrentTime - lastUpdateTime;
+        // Skip update if not enough time has passed for the target FPS
+        if (timeSinceLastUpdate < transition.frameDuration) {
+          return;
+        }
       }
-      lastUpdateTime = currentTime;
+      lastUpdateTime = timelineCurrentTime;
       progress = Math.min(msElapsedSinceStart / transition.duration, 1);
       const easedProgress = transition.easing(progress);
       value =
         transition.from + (transition.to - transition.from) * easedProgress;
+      transition.frameRemainingCount = Math.ceil(
+        msRemaining / transition.frameDuration,
+      );
     }
     transition.update({ progress, value });
   };
@@ -253,14 +261,22 @@ export const createTimelineTransition = ({
     duration,
     easing,
     fps,
+    get frameDuration() {
+      return 1000 / fps;
+    },
+    frameRemainingCount: 0,
     lifecycle: {
       ...lifecycle,
       setup: (transition) => {
         // Handle timeline management
+        lastUpdateTime = -1;
         transition.startTime = getTimelineCurrentTime();
+        transition.frameRemainingCount = Math.ceil(
+          transition.duration / transition.frameDuration,
+        );
         onTimelineNeeded();
         // Call the original setup
-        return setup();
+        return setup(transition);
       },
       pause: (transition) => {
         const pauseTime = getTimelineCurrentTime();
@@ -268,11 +284,19 @@ export const createTimelineTransition = ({
         return () => {
           const pausedDuration = getTimelineCurrentTime() - pauseTime;
           transition.startTime += pausedDuration;
+          // Only adjust lastUpdateTime if it was set (not -1)
+          if (lastUpdateTime !== -1) {
+            lastUpdateTime += pausedDuration;
+          }
           onTimelineNeeded();
         };
       },
       updateTarget: (transition) => {
         transition.startTime = getTimelineCurrentTime();
+        // Don't reset lastUpdateTime - we want visual continuity for smooth target updates
+        transition.frameRemainingCount = Math.ceil(
+          transition.duration / transition.frameDuration,
+        );
       },
       cancel: () => {
         onTimelineNotNeeded();

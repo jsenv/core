@@ -25,7 +25,7 @@ const createBackgroundUpdateLoop = () => {
   let timeout;
   const update = () => {
     for (const backgroundCallback of backgroundCallbackSet) {
-      backgroundCallback(getTimelineCurrentTime());
+      backgroundCallback();
     }
     timeout = setTimeout(update, 16); // roughly 60fps
   };
@@ -43,7 +43,7 @@ const createAnimationFrameLoop = () => {
   let animationFrame = null;
   const update = () => {
     for (const visualCallback of visualCallbackSet) {
-      visualCallback(getTimelineCurrentTime());
+      visualCallback();
     }
     animationFrame = requestAnimationFrame(update);
   };

@@ -21,7 +21,7 @@ export const createHeightTransition = (element, to, options) => {
         element.setAttribute(`data-height-animated`, "");
         return {
           from: getHeight(element),
-          update: (value) => {
+          update: ({ value }) => {
             element.style.height = `${value}px`;
           },
           teardown: () => {
@@ -55,7 +55,7 @@ export const createWidthTransition = (element, to, options) => {
         element.setAttribute(`data-width-animated`, "");
         return {
           from: getWidth(element),
-          update: (value) => {
+          update: ({ value }) => {
             element.style.width = `${value}px`;
           },
           teardown: () => {
@@ -89,7 +89,7 @@ export const createOpacityTransition = (element, to, options = {}) => {
         element.setAttribute(`data-opacity-animated`, "");
         return {
           from: getOpacity(element),
-          update: (value) => {
+          update: ({ value }) => {
             element.style.opacity = value;
           },
           teardown: () => {
@@ -135,7 +135,7 @@ export const createTranslateXTransition = (element, to, options) => {
         element.setAttribute(`data-translate-x-animated`, "");
         return {
           from: getTranslateX(element),
-          update: (value) => {
+          update: ({ value }) => {
             console.log("set translateX", value);
             setTranslateX(element, value, { unit });
           },
