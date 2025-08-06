@@ -1,3 +1,8 @@
+- le ui transition.jsx en gros qui va s'occuper de faire des transitions
+  lorsque ses enfants changent
+  notons que <Route> devra ssurement changer son fusil d'épaule histoire que ActionRenderer
+  puisse voir quand la route stops matching (easy on passera une prop genre disabled au renderer)
+
 - La table qui affiche une page, on mettra les details dans un bouton settings en haut a droite
   Qui ouvrira les infos a propos de cette tables et on focus sur les données au lieu des settings de la table
   (surement qu'on aura

@@ -10,20 +10,20 @@ import {
 import { createGroupTransitionController } from "../transition/group_transition.js";
 
 import.meta.css = /* css */ `
-  .ui-transition-container {
+  .ui_transition_container {
     position: relative;
     overflow: hidden;
   }
 
-  .ui-transition-measure-wrapper {
+  .ui_transition_measure_wrapper {
     overflow: hidden;
   }
 
-  .ui-transition-slot {
+  .ui_transition_slot {
     position: relative;
   }
 
-  .ui-transition-overlay {
+  .ui_transition_overlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -31,8 +31,8 @@ import.meta.css = /* css */ `
 `;
 
 const DEBUG = {
-  size: true,
-  transition: true,
+  size: false,
+  transition: false,
 };
 
 const debug = (type, ...args) => {
@@ -41,35 +41,22 @@ const debug = (type, ...args) => {
   }
 };
 
-// Required structure:
-// <div class="ui-transition-container">
-//   <div class="ui-transition-outer-wrapper"> <!-- for animation constraints -->
-//     <div class="ui-transition-measure-wrapper"> <!-- for content measurements -->
-//       <div class="ui-transition-slot">
-//         <!-- actual content -->
-//       </div>
-//     </div>
-//   </div>
-//   <div class="ui-transition-overlay">
-//     <!-- transition elements (clones) are inserted here -->
-//   </div>
-// </div>
 export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
-  if (!container.classList.contains("ui-transition-container")) {
-    console.error("Element must have ui-transition-container class");
+  if (!container.classList.contains("ui_transition_container")) {
+    console.error("Element must have ui_transition_container class");
     return { cleanup: () => {} };
   }
 
-  const outerWrapper = container.querySelector(".ui-transition-outer-wrapper");
+  const outerWrapper = container.querySelector(".ui_transition_outer_wrapper");
   const measureWrapper = container.querySelector(
-    ".ui-transition-measure-wrapper",
+    ".ui_transition_measure_wrapper",
   );
-  const slot = container.querySelector(".ui-transition-slot");
-  let overlay = container.querySelector(".ui-transition-overlay");
+  const slot = container.querySelector(".ui_transition_slot");
+  let overlay = container.querySelector(".ui_transition_overlay");
 
   if (!overlay) {
     overlay = document.createElement("div");
-    overlay.className = "ui-transition-overlay";
+    overlay.className = "ui_transition_overlay";
     container.appendChild(overlay);
   }
 
