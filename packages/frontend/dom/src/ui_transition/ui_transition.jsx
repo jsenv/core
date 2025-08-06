@@ -31,7 +31,7 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 import { initUITransition } from "./ui_transition.js";
 
-export const UITransition = ({ children }) => {
+export const UITransition = ({ children, ...props }) => {
   const ref = useRef();
   useLayoutEffect(() => {
     const uiTransition = initUITransition(ref.current);
@@ -41,7 +41,7 @@ export const UITransition = ({ children }) => {
   }, []);
 
   return (
-    <div ref={ref} className="ui-transition-container">
+    <div ref={ref} {...props} className="ui-transition-container">
       <div className="ui-transition-outer-wrapper">
         <div className="ui-transition-measure-wrapper">
           <div className="ui-transition-slot">{children}</div>

@@ -9,7 +9,9 @@ export const Route = ({ route, children }) => {
   }
   const { active } = useRouteStatus(route);
 
-  return active ? (
-    <ActionRenderer action={route.action}>{children}</ActionRenderer>
-  ) : null;
+  return (
+    <ActionRenderer disabled={!active} action={route.action}>
+      {children}
+    </ActionRenderer>
+  );
 };
