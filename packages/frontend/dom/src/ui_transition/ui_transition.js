@@ -112,7 +112,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     naturalContentWidth = newWidth;
     naturalContentHeight = newHeight;
 
-    if (sizeAnimation?.playing) {
+    if (sizeAnimation) {
       debug("size", "Updating animation target:", newHeight);
       animateToSize(newWidth, newHeight, {
         onEnd: () => releaseConstraints("size animation completed"),
