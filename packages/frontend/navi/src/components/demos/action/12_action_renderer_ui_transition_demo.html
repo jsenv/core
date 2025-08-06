@@ -278,22 +278,22 @@
 
         // Create actions with content key metadata
         const smallAction = createSuccessAction("small", 800);
-        smallAction.meta.contentKey = "small";
+        smallAction.meta = { contentKey: "small" };
 
         const mediumAction = createSuccessAction("medium", 1200);
-        mediumAction.meta.contentKey = "medium";
+        mediumAction.meta = { contentKey: "medium" };
 
         const largeAction = createSuccessAction("large", 1000);
-        largeAction.meta.contentKey = "large";
+        largeAction.meta = { contentKey: "large" };
 
         const errorAction = createErrorAction(500);
-        errorAction.meta.contentKey = "error";
+        errorAction.meta = { contentKey: "error" };
 
         const slowAction = createSlowAction();
-        slowAction.meta.contentKey = "slow";
+        slowAction.meta = { contentKey: "slow" };
 
         const stuckLoadingAction = createStuckLoadingAction();
-        stuckLoadingAction.meta.contentKey = "stuck-loading";
+        stuckLoadingAction.meta = { contentKey: "stuck-loading" };
 
         // Helper to get content key for an action
         const getContentKeyForAction = (action) => {
@@ -304,7 +304,6 @@
         };
 
         const triggerAction = (action) => {
-          console.log("Triggering action:", action, "meta:", action.meta);
           setCurrentAction(() => action);
           // Clear any previous state and trigger fresh load
           action.rerun();

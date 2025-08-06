@@ -557,7 +557,6 @@ ${lines.join("\n")}`);
 
 const NO_PARAMS = {};
 const initialParamsDefault = NO_PARAMS;
-const metaDefault = {};
 
 const actionWeakMap = new WeakMap();
 export const createAction = (callback, rootOptions = {}) => {
@@ -583,7 +582,7 @@ export const createAction = (callback, rootOptions = {}) => {
       renderLoadedAsync,
       sideEffect = () => {},
       keepOldData = false,
-      meta = metaDefault,
+      meta = {},
       dataEffect,
       completeSideEffect,
     },
