@@ -198,10 +198,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   const initialChild = content.children[0];
   if (initialChild) {
     debug("size", "Found initial content");
-    lastUIKey = initialChild.getAttribute("data-ui-key");
-    wasInheritingDimensions = initialChild.hasAttribute(
-      "data-inherit-content-dimensions",
-    );
+    lastUIKey = initialChild.getAttribute("data-content-key");
+    wasInheritingDimensions = initialChild.hasAttribute("data-content-phase");
     naturalContentWidth = constrainedWidth;
     naturalContentHeight = constrainedHeight;
     debug(
@@ -226,10 +224,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       isUpdating = true;
       const firstChild = content.children[0];
       const childUIName = firstChild?.getAttribute("data-ui-name");
-      const currentUIKey = firstChild?.getAttribute("data-ui-key");
-      const inheritContentDimensions = firstChild?.hasAttribute(
-        "data-inherit-content-dimensions",
-      );
+      const currentUIKey = firstChild?.getAttribute("data-content-key");
+      const inheritContentDimensions =
+        firstChild?.hasAttribute("data-content-phase");
 
       if (DEBUG.transition) {
         console.group(`UI Update: ${childUIName || "unknown"}`);
@@ -266,9 +263,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
       // Determine transition scenarios
       const isUIKeyChange = lastUIKey !== null && currentUIKey !== lastUIKey;
-      const lastInheritContentDimensions = previousContent?.hasAttribute(
-        "data-inherit-content-dimensions",
-      );
+      const lastInheritContentDimensions =
+        previousContent?.hasAttribute("data-content-phase");
       const isContentPhaseChange =
         lastUIKey === currentUIKey &&
         lastInheritContentDimensions !== inheritContentDimensions;
@@ -345,7 +341,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           } else if (needsOldContentClone) {
             overlay.innerHTML = "";
             oldContent = previousContent.cloneNode(true);
-            oldContent.removeAttribute("data-ui-key");
+            oldContent.removeAttribute("data-content-key");
             oldContent.setAttribute("data-ui-transition-old", "");
             overlay.appendChild(oldContent);
             debug("transition", "Cloned previous content for transition");
@@ -514,8 +510,8 @@ const animateTransition = (
   const { oldContent, cleanup } = setupTransition();
   debug("transition", "Starting animation:", {
     type,
-    from: oldContent?.getAttribute("data-ui-key") || "none",
-    to: newElement?.getAttribute("data-ui-key") || "none",
+    from: oldContent?.getAttribute("data-content-key") || "none",
+    to: newElement?.getAttribute("data-content-key") || "none",
     progress: `${(animationProgress * 100).toFixed(1)}%`,
   });
 
