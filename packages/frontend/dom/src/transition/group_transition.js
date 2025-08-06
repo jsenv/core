@@ -35,6 +35,8 @@ export const createGroupTransition = (transitionArray) => {
               }
               const averageProgress =
                 progressCount > 0 ? totalProgress / progressCount : 0;
+              // Expose progress on the group transition for external access
+              transition.progress = averageProgress;
               // Update this transition's value with average progress
               const isLast = averageProgress >= 1;
               transition.update(averageProgress, isLast);

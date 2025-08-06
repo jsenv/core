@@ -621,7 +621,6 @@ const animateTransition = (
     duration: remainingDuration,
     startProgress: animationProgress,
   });
-  console.log("the transitions", transitions);
   const groupTransition = transitionController.animate(transitions, {
     onFinish: () => {
       cleanup();
