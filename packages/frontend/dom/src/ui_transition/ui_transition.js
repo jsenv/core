@@ -359,11 +359,12 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           currentTransitionType === newTransitionType && currentTransition;
 
         if (canContinueSmoothly) {
-          // Same transition type - let existing transitions smoothly redirect
+          // Same transition type - cancel current but start new one from current progress
           debug(
             "transition",
             "🔄 Continuing with same transition type, allowing smooth redirect",
           );
+          currentTransition.cancel();
         } else if (currentTransition) {
           // Different transition type - need to gracefully stop current transitions
           debug(
