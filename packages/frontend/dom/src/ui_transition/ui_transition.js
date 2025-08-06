@@ -233,8 +233,6 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       const firstChild = slot.children[0];
       const childUIName = firstChild?.getAttribute("data-ui-name");
       const currentContentKey = firstChild?.getAttribute("data-content-key");
-
-      // Capture previous state before updating
       wasContentPhase = isContentPhase;
       isContentPhase = firstChild?.hasAttribute("data-content-phase");
 
