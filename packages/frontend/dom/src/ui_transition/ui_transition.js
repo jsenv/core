@@ -189,7 +189,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         targetHeight,
         {
           duration: resizeDuration,
-          onProgress: ({ value }) => {
+          onUpdate: ({ value }) => {
             currentHeight = value;
           },
         },
@@ -652,7 +652,7 @@ const applySlideLeft = (oldElement, newElement, { duration }) => {
     return [
       createTranslateXTransition(oldElement, -containerWidth, {
         duration,
-        onProgress: ({ value, timing }) => {
+        onUpdate: ({ value, timing }) => {
           debug("transition", "🔄 Content slide out to empty:", value);
           if (timing === "end") {
             debug("transition", "✨ Slide out complete");
@@ -674,7 +674,7 @@ const applySlideLeft = (oldElement, newElement, { duration }) => {
     return [
       createTranslateXTransition(newElement, 0, {
         duration,
-        onProgress: ({ value }) => {
+        onUpdate: ({ value }) => {
           debug("transition", "🔄 Slide in progress:", value);
         },
       }),
@@ -715,13 +715,13 @@ const applySlideLeft = (oldElement, newElement, { duration }) => {
   return [
     createTranslateXTransition(oldElement, -containerWidth, {
       duration,
-      onProgress: ({ value }) => {
+      onUpdate: ({ value }) => {
         debug("transition", "🔄 Old content slide out:", value);
       },
     }),
     createTranslateXTransition(newElement, 0, {
       duration,
-      onProgress: ({ value, timing }) => {
+      onUpdate: ({ value, timing }) => {
         debug("transition", "🔄 New content slide in:", value);
         if (timing === "end") {
           debug("transition", "✨ Slide complete");
@@ -751,7 +751,7 @@ const applyCrossFade = (oldElement, newElement) => {
 
     return [
       createOpacityTransition(oldElement, 0, {
-        onProgress: ({ value, timing }) => {
+        onUpdate: ({ value, timing }) => {
           debug(
             "transition",
             "🔄 Content fade out to empty:",
@@ -796,7 +796,7 @@ const applyCrossFade = (oldElement, newElement) => {
     // Case: Empty -> Content (fade in only)
     return [
       createOpacityTransition(newElement, 1, {
-        onProgress: ({ value, timing }) => {
+        onUpdate: ({ value, timing }) => {
           debug("transition", "🔄 Fade in progress:", value.toFixed(3));
 
           if (timing === "end") {
@@ -810,7 +810,7 @@ const applyCrossFade = (oldElement, newElement) => {
   // Case: Content -> Content (cross-fade between states)
   return [
     createOpacityTransition(oldElement, 0, {
-      onProgress: ({ value }) => {
+      onUpdate: ({ value }) => {
         // Skip if old content opacity is already 0
         if (value > 0) {
           debug("transition", "🔄 Old content fade out:", value.toFixed(3));
@@ -818,7 +818,7 @@ const applyCrossFade = (oldElement, newElement) => {
       },
     }),
     createOpacityTransition(newElement, 1, {
-      onProgress: ({ value, timing }) => {
+      onUpdate: ({ value, timing }) => {
         // Skip if new content opacity is already at or above target
         const currentOpacity = parseFloat(getComputedStyle(newElement).opacity);
         if (isNaN(currentOpacity) || value > currentOpacity) {

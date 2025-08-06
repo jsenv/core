@@ -136,7 +136,6 @@ export const createTranslateXTransition = (element, to, options) => {
         return {
           from: getTranslateX(element),
           update: ({ value }) => {
-            console.log("set translateX", value);
             setTranslateX(element, value, { unit });
           },
           teardown: () => {
