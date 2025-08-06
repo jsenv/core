@@ -266,8 +266,13 @@
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const [currentAction, setCurrentAction] = useState(null);
-        const [transitionType, setTransitionType] = useState("cross-fade");
-        const [transitionDuration, setTransitionDuration] = useState(300);
+        const [transitionType, setTransitionType] = useState(() => {
+          return localStorage.getItem('ui-transition-demo-type') || "cross-fade";
+        });
+        const [transitionDuration, setTransitionDuration] = useState(() => {
+          const saved = localStorage.getItem('ui-transition-demo-duration');
+          return saved ? parseInt(saved) : 300;
+        });
 
         // Create actions
         const smallAction = createSuccessAction("small", 800);
@@ -291,6 +296,16 @@
           setCurrentAction(() => action);
           // Clear any previous state and trigger fresh load
           action.rerun();
+        };
+
+        const handleTransitionTypeChange = (newType) => {
+          setTransitionType(newType);
+          localStorage.setItem('ui-transition-demo-type', newType);
+        };
+
+        const handleTransitionDurationChange = (newDuration) => {
+          setTransitionDuration(newDuration);
+          localStorage.setItem('ui-transition-demo-duration', newDuration.toString());
         };
 
         return (
@@ -370,7 +385,7 @@
                       name="transition-type"
                       value="cross-fade"
                       checked={transitionType === "cross-fade"}
-                      onChange={(e) => setTransitionType(e.target.value)}
+                      onChange={(e) => handleTransitionTypeChange(e.target.value)}
                     />
                     Cross Fade
                   </label>
@@ -380,7 +395,7 @@
                       name="transition-type"
                       value="slide-left"
                       checked={transitionType === "slide-left"}
-                      onChange={(e) => setTransitionType(e.target.value)}
+                      onChange={(e) => handleTransitionTypeChange(e.target.value)}
                     />
                     Slide Left
                   </label>
@@ -398,7 +413,7 @@
                     step="50"
                     value={transitionDuration}
                     onChange={(e) =>
-                      setTransitionDuration(parseInt(e.target.value))
+                      handleTransitionDurationChange(parseInt(e.target.value))
                     }
                     style="flex: 1;"
                   />
