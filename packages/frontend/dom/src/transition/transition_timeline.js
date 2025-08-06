@@ -15,20 +15,9 @@ export const removeFromTimeline = (transition, isVisual) => {
   }
 };
 const updateTransition = (transition) => {
-  const { startTime, duration } = transition;
-  const elapsed = document.timeline.currentTime - startTime;
-  const msRemaining = duration - elapsed;
-  if (
-    // we reach the end, round progress to 1
-    msRemaining < 0 ||
-    // we are very close from the end, round progress to 1
-    msRemaining <= 16.6
-  ) {
-    transition.update(1);
-  } else {
-    const progress = Math.min(elapsed / duration, 1);
-    transition.update(progress);
-  }
+  const { startTime } = transition;
+  const msElapsedSinceStart = document.timeline.currentTime - startTime;
+  transition.update(msElapsedSinceStart);
 };
 // We need setTimeout to animate things like volume because requestAnimationFrame would be killed when tab is not visible
 // while we might want to fadeout volumn when leaving the page for instance

@@ -15,11 +15,11 @@ export const createTransition = ({
   key,
   from,
   to,
-  duration,
   easing = EASING.EASE_OUT,
   lifecycle = LIFECYCLE_DEFAULT,
   onProgress,
-  fps,
+  fps = 60,
+  ...rest
 } = {}) => {
   const [progressCallbacks, executeProgressCallbacks] =
     createCallbackController();
@@ -37,7 +37,7 @@ export const createTransition = ({
   let resume;
   let executionLifecycle = null;
   let lastUpdateTime = 0;
-  const frameInterval = fps ? 1000 / fps : 0; // milliseconds between frames
+  const msBetweenFrames = 1000 / fps;
 
   const start = () => {
     isFirstUpdate = true;
@@ -71,12 +71,11 @@ export const createTransition = ({
     from,
     to,
     value: from,
-    duration,
+    msBetweenFrames,
     startTime: null,
     progress: 0,
     timing: "",
     easing,
-    fps,
     channels,
     get playState() {
       return playState;
@@ -100,7 +99,7 @@ export const createTransition = ({
       start();
     },
 
-    update: (progress) => {
+    update: (msElapsedSinceStart) => {
       if (playState === "idle") {
         console.warn("Cannot progress transition that is idle");
         return;
@@ -110,16 +109,17 @@ export const createTransition = ({
         return;
       }
 
-      // Apply FPS capping if specified
-      if (fps) {
-        const currentTime = performance.now();
-        const timeSinceLastUpdate = currentTime - lastUpdateTime;
-
-        // Skip update if not enough time has passed for the target FPS
-        if (timeSinceLastUpdate < frameInterval && progress < 1) {
-          return;
-        }
-        lastUpdateTime = currentTime;
+      const msRemaining = transition.duration - msElapsedSinceStart;
+      let progress = 0;
+      if (
+        // we reach the end, round progress to 1
+        msRemaining < 0 ||
+        // we are very close from the end, round progress to 1
+        msRemaining <= msBetweenFrames
+      ) {
+        progress = 1;
+      } else {
+        progress = Math.min(msElapsedSinceStart / transition.duration, 1);
       }
 
       // "running" or "paused"
@@ -127,6 +127,14 @@ export const createTransition = ({
       if (progress === 1) {
         transition.value = transition.to;
       } else {
+        const currentTime = performance.now();
+        const timeSinceLastUpdate = currentTime - lastUpdateTime;
+        // Skip update if not enough time has passed for the target FPS
+        if (timeSinceLastUpdate < msBetweenFrames) {
+          return;
+        }
+        lastUpdateTime = currentTime;
+
         const easedProgress = transition.easing(progress);
         const value =
           transition.from + (transition.to - transition.from) * easedProgress;
@@ -209,6 +217,8 @@ export const createTransition = ({
       // Let the transition handle its own target update logic
       lifecycle.updateTarget(transition);
     },
+
+    ...rest,
   };
 
   return transition;
@@ -217,12 +227,20 @@ export const createTransition = ({
 // Timeline-managed transition that adds/removes itself from the animation timeline
 export const createTimelineTransition = ({
   isVisual,
+  duration,
   lifecycle,
   ...options
 }) => {
+  if (typeof duration !== "number" || duration <= 0) {
+    throw new Error(
+      `Invalid duration: ${duration}. Duration must be a positive number.`,
+    );
+  }
+
   const { setup } = lifecycle;
   return createTransition({
     ...options,
+    duration,
     lifecycle: {
       ...lifecycle,
       setup: (transition) => {

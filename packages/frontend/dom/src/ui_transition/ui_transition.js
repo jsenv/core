@@ -614,7 +614,10 @@ const animateTransition = (
   const remainingDuration = Math.max(100, duration * (1 - animationProgress));
   debug("transition", "⏱️ Remaining duration:", remainingDuration);
 
-  const transitions = applyTransition(oldContent, newElement);
+  const transitions = applyTransition(oldContent, newElement, {
+    duration: remainingDuration,
+  });
+  console.log("the transitions", transitions);
   const groupTransition = transitionController.animate(transitions, {
     onFinish: () => {
       cleanup();
@@ -628,7 +631,7 @@ const animateTransition = (
   return groupTransition;
 };
 
-const applySlideLeft = (oldElement, newElement) => {
+const applySlideLeft = (oldElement, newElement, { duration }) => {
   if (!oldElement && !newElement) {
     // Edge case: no elements to animate
     return [];
@@ -648,6 +651,7 @@ const applySlideLeft = (oldElement, newElement) => {
 
     return [
       createTranslateXTransition(oldElement, -containerWidth, {
+        duration,
         onProgress: ({ value, timing }) => {
           debug("transition", "🔄 Content slide out to empty:", value);
           if (timing === "end") {
@@ -669,7 +673,8 @@ const applySlideLeft = (oldElement, newElement) => {
 
     return [
       createTranslateXTransition(newElement, 0, {
-        sideEffect: ({ value }) => {
+        duration,
+        onProgress: ({ value }) => {
           debug("transition", "🔄 Slide in progress:", value);
         },
       }),
@@ -709,11 +714,13 @@ const applySlideLeft = (oldElement, newElement) => {
 
   return [
     createTranslateXTransition(oldElement, -containerWidth, {
+      duration,
       onProgress: ({ value }) => {
         debug("transition", "🔄 Old content slide out:", value);
       },
     }),
     createTranslateXTransition(newElement, 0, {
+      duration,
       onProgress: ({ value, timing }) => {
         debug("transition", "🔄 New content slide in:", value);
         if (timing === "end") {

@@ -113,7 +113,7 @@ const getOpacity = (element) => {
   return parseFloat(getComputedStyle(element).opacity) || 0;
 };
 
-export const createTranslateXTransition = (element, to, options = {}) => {
+export const createTranslateXTransition = (element, to, options) => {
   let unit = "px";
   if (typeof to === "string") {
     if (to.endsWith("%")) {
