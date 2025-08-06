@@ -193,6 +193,7 @@ export const createTimelineTransition = ({
   fps = 60,
   easing = EASING.EASE_OUT,
   lifecycle,
+  startProgress = 0, // Progress to start from (0-1)
   ...options
 }) => {
   if (typeof duration !== "number" || duration <= 0) {
@@ -235,7 +236,9 @@ export const createTimelineTransition = ({
       }
     }
     lastUpdateTime = timelineCurrentTime;
-    const progress = Math.min(msElapsedSinceStart / transition.duration, 1);
+    const rawProgress = Math.min(msElapsedSinceStart / transition.duration, 1);
+    // Apply start progress offset - transition runs from startProgress to 1
+    const progress = startProgress + rawProgress * (1 - startProgress);
     transition.progress = progress;
     const easedProgress = transition.easing(progress);
     const value =
@@ -256,7 +259,7 @@ export const createTimelineTransition = ({
   const transition = createTransition({
     ...options,
     startTime: null,
-    progress: 0,
+    progress: startProgress, // Initialize with start progress
     duration,
     easing,
     fps,
@@ -264,14 +267,18 @@ export const createTimelineTransition = ({
       return 1000 / fps;
     },
     frameRemainingCount: 0,
+    startProgress, // Store for calculations
     lifecycle: {
       ...lifecycle,
       setup: (transition) => {
         // Handle timeline management
         lastUpdateTime = -1;
         transition.startTime = getTimelineCurrentTime();
+        // Calculate remaining frames based on remaining progress
+        const remainingProgress = 1 - startProgress;
+        const remainingDuration = transition.duration * remainingProgress;
         transition.frameRemainingCount = Math.ceil(
-          transition.duration / transition.frameDuration,
+          remainingDuration / transition.frameDuration,
         );
         onTimelineNeeded();
         // Call the original setup
@@ -293,8 +300,11 @@ export const createTimelineTransition = ({
       updateTarget: (transition) => {
         transition.startTime = getTimelineCurrentTime();
         // Don't reset lastUpdateTime - we want visual continuity for smooth target updates
+        // Recalculate remaining frames from current progress
+        const remainingProgress = 1 - transition.progress;
+        const remainingDuration = transition.duration * remainingProgress;
         transition.frameRemainingCount = Math.ceil(
-          transition.duration / transition.frameDuration,
+          remainingDuration / transition.frameDuration,
         );
       },
       cancel: () => {

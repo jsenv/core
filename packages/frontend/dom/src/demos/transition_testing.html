@@ -73,6 +73,8 @@
       </div>
       <div class="button-group">
         <button id="insert-content" disabled>Insert Content</button>
+        <button id="change-to-fade" disabled>Change to Cross-fade</button>
+        <button id="change-to-slide" disabled>Change to Slide-left</button>
         <button id="reset">Reset</button>
       </div>
       <div>
@@ -87,6 +89,12 @@
             style="width: 80px"
           />
         </label>
+      </div>
+      <div class="description">
+        Test smooth transition interruptions: Start a transition, then click
+        "Insert Content" mid-animation to see smooth easing continuation. Use
+        "Change to Cross-fade" or "Change to Slide-left" to test smooth
+        transition type changes.
       </div>
     </div>
 
@@ -125,6 +133,8 @@
       const pauseButton = document.getElementById("pause-transition");
       const resumeButton = document.getElementById("resume-transition");
       const insertButton = document.getElementById("insert-content");
+      const changeToFadeButton = document.getElementById("change-to-fade");
+      const changeToSlideButton = document.getElementById("change-to-slide");
       const resetButton = document.getElementById("reset");
 
       let uiTransition = initUITransition(box);
@@ -168,6 +178,8 @@
         // Enable relevant buttons
         pauseButton.disabled = false;
         insertButton.disabled = false;
+        changeToFadeButton.disabled = false;
+        changeToSlideButton.disabled = false;
         startButton.disabled = true;
 
         updateDebugInfo();
@@ -202,6 +214,36 @@
         updateDebugInfo();
       });
 
+      changeToFadeButton.addEventListener("click", () => {
+        // Change transition type to cross-fade mid-animation
+        box.dataset.uiTransition = "cross-fade";
+
+        // Trigger content change to see smooth transition type change
+        setContent(`
+          <div class="test-content content" style="background-color: lightblue" data-ui-key="c" data-ui-name="c-fade">
+            Cross-fade Content
+          </div>
+        `);
+
+        changeToFadeButton.disabled = true;
+        updateDebugInfo();
+      });
+
+      changeToSlideButton.addEventListener("click", () => {
+        // Change transition type back to slide-left mid-animation
+        box.dataset.uiTransition = "slide-left";
+
+        // Trigger content change to see smooth transition type change
+        setContent(`
+          <div class="test-content content" style="background-color: lightgreen" data-ui-key="d" data-ui-name="d-slide">
+            Slide-left Content
+          </div>
+        `);
+
+        changeToSlideButton.disabled = true;
+        updateDebugInfo();
+      });
+
       resetButton.addEventListener("click", () => {
         // Reset to initial state
         if (uiTransition) {
@@ -221,6 +263,8 @@
         pauseButton.disabled = true;
         resumeButton.disabled = true;
         insertButton.disabled = true;
+        changeToFadeButton.disabled = true;
+        changeToSlideButton.disabled = true;
 
         updateDebugInfo();
       });
