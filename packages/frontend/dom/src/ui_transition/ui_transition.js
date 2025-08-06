@@ -366,19 +366,16 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           );
           currentTransition.cancel();
         } else if (currentTransition) {
-          // Different transition type - need to gracefully stop current transitions
+          // Different transition type - gracefully reverse current transitions
           debug(
             "transition",
-            "🛑 Gracefully stopping current transition for type change",
+            "� Gracefully reversing current transition for type change",
           );
-          // TODO: Transition interruption improvement
-          // Right now this cancel() call synchronously reverts UI elements to their final state.
-          // This is not ideal because if a fade was in progress, the element will immediately
-          // become fully visible instead of smoothly transitioning. Ideally we should be able
-          // to revert via a transition too - we should be able to "revert a transition" and
-          // make it part of the new transition we want to start. This would provide truly
-          // seamless interruptions between different transition types.
-          currentTransition.cancel();
+          // Use reverse() to smoothly transition back to original state
+          // This provides seamless interruptions between different transition types
+          // by animating elements back to their starting positions instead of
+          // abruptly snapping them to final state
+          currentTransition.reverse();
         }
 
         // Determine if we need to create a setup function that clones content

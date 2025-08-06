@@ -154,6 +154,29 @@ export const createTransition = ({
       executeFinishCallbacks();
     },
 
+    reverse: () => {
+      if (playState === "idle") {
+        console.warn("Cannot reverse a transition that is idle");
+        return;
+      }
+      if (playState === "finished") {
+        console.warn("Cannot reverse a finished transition");
+        return;
+      }
+
+      // Simply swap from and to values to reverse direction
+      const originalFrom = transition.from;
+      const originalTo = transition.to;
+
+      transition.from = originalTo;
+      transition.to = originalFrom;
+
+      // Let the transition handle its own reverse logic (if any)
+      if (lifecycle.reverse) {
+        lifecycle.reverse(transition);
+      }
+    },
+
     updateTarget: (newTarget) => {
       if (
         typeof newTarget !== "number" ||

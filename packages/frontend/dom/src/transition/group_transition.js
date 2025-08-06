@@ -98,6 +98,17 @@ export const createGroupTransition = (transitionArray) => {
           }
         }
       },
+
+      reverse: () => {
+        for (const childTransition of transitionArray) {
+          if (
+            childTransition.playState === "running" ||
+            childTransition.playState === "paused"
+          ) {
+            childTransition.reverse();
+          }
+        }
+      },
     },
   });
   return groupTransition;
@@ -184,6 +195,8 @@ export const createGroupTransitionController = () => {
             updatedTransitions.forEach((transition) => transition.cancel()),
           finish: () =>
             updatedTransitions.forEach((transition) => transition.finish()),
+          reverse: () =>
+            updatedTransitions.forEach((transition) => transition.reverse()),
           playState: "running", // All are already running
           channels: {
             update: { add: () => {} }, // Update tracking already set up
