@@ -131,9 +131,11 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useRef } from "preact/hooks";
-      import { createAction } from "@jsenv/navi";
-      // eslint-disable-next-line no-unused-vars
-      import { ActionRenderer } from "@jsenv/navi";
+      import {
+        createAction,
+        // eslint-disable-next-line no-unused-vars
+        ActionRenderer,
+      } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

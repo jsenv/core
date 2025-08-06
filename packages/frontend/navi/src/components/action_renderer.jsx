@@ -96,7 +96,7 @@ const ActionRendererContent = ({ action, children, disabled }) => {
     return () => {
       actionUIRenderedPromiseWeakMap.delete(action);
     };
-  }, []);
+  }, [action]);
 
   // If renderAlways is provided, it wins and handles all rendering
   if (renderAlways) {
@@ -137,8 +137,8 @@ const ActionRendererContent = ({ action, children, disabled }) => {
 };
 
 const actionUIRenderedPromiseWeakMap = new WeakMap();
-const useUIRenderedPromise = (route) => {
-  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(route);
+const useUIRenderedPromise = (action) => {
+  const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
   if (actionUIRenderedPromise) {
     return actionUIRenderedPromise;
   }
@@ -147,6 +147,6 @@ const useUIRenderedPromise = (route) => {
     resolve = res;
   });
   promise.resolve = resolve;
-  actionUIRenderedPromiseWeakMap.set(route, promise);
+  actionUIRenderedPromiseWeakMap.set(action, promise);
   return promise;
 };
