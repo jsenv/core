@@ -86,10 +86,10 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let isPaused = false;
 
   // Size state
-  let contentWidth = 0;
-  let contentHeight = 0;
-  let animatedWidth = 0;
-  let animatedHeight = 0;
+  let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
+  let naturalContentHeight = 0;
+  let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
+  let constrainedHeight = 0;
   let sizeAnimation = null;
   let resizeObserver = null;
 
@@ -105,11 +105,11 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   const updateContentDimensions = () => {
     const [newWidth, newHeight] = measureContentSize();
     debug("size", "Content size changed:", {
-      width: `${contentWidth} → ${newWidth}`,
-      height: `${contentHeight} → ${newHeight}`,
+      width: `${naturalContentWidth} → ${newWidth}`,
+      height: `${naturalContentHeight} → ${newHeight}`,
     });
-    contentWidth = newWidth;
-    contentHeight = newHeight;
+    naturalContentWidth = newWidth;
+    naturalContentHeight = newHeight;
 
     if (sizeAnimation?.playing) {
       debug("size", "Updating animation target:", newHeight);
@@ -117,8 +117,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         onEnd: () => releaseConstraints("size animation completed"),
       });
     } else {
-      animatedWidth = newWidth;
-      animatedHeight = newHeight;
+      constrainedWidth = newWidth;
+      constrainedHeight = newHeight;
     }
   };
 
@@ -147,37 +147,37 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       width: `${beforeWidth} → ${afterWidth}`,
       height: `${beforeHeight} → ${afterHeight}`,
     });
-    animatedWidth = afterWidth;
-    animatedHeight = afterHeight;
-    contentWidth = afterWidth;
-    contentHeight = afterHeight;
+    constrainedWidth = afterWidth;
+    constrainedHeight = afterHeight;
+    naturalContentWidth = afterWidth;
+    naturalContentHeight = afterHeight;
   };
 
   const animateToSize = (targetWidth, targetHeight, { onEnd } = {}) => {
     debug("size", "Animating size:", {
-      width: `${animatedWidth} → ${targetWidth}`,
-      height: `${animatedHeight} → ${targetHeight}`,
+      width: `${constrainedWidth} → ${targetWidth}`,
+      height: `${constrainedHeight} → ${targetHeight}`,
     });
     outerWrapper.style.overflow = "hidden";
     const animations = [];
 
-    if (targetHeight !== animatedHeight) {
+    if (targetHeight !== constrainedHeight) {
       animations.push(
         createHeightTransition(outerWrapper, targetHeight, {
           duration: resizeDuration,
           onUpdate: ({ value }) => {
-            animatedHeight = value;
+            constrainedHeight = value;
           },
         }),
       );
     }
 
-    if (targetWidth !== animatedWidth) {
+    if (targetWidth !== constrainedWidth) {
       animations.push(
         createWidthTransition(outerWrapper, targetWidth, {
           duration: resizeDuration,
           onUpdate: ({ value }) => {
-            animatedWidth = value;
+            constrainedWidth = value;
           },
         }),
       );
@@ -192,7 +192,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let isUpdating = false;
 
   // Initialize with current size
-  [animatedWidth, animatedHeight] = measureContentSize();
+  [constrainedWidth, constrainedHeight] = measureContentSize();
 
   // Handle initial content if present
   const initialChild = content.children[0];
@@ -202,9 +202,12 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     wasInheritingDimensions = initialChild.hasAttribute(
       "data-inherit-content-dimensions",
     );
-    contentWidth = animatedWidth;
-    contentHeight = animatedHeight;
-    debug("size", `Initial size: ${contentWidth}x${contentHeight}`);
+    naturalContentWidth = constrainedWidth;
+    naturalContentHeight = constrainedHeight;
+    debug(
+      "size",
+      `Initial size: ${naturalContentWidth}x${naturalContentHeight}`,
+    );
 
     if (!wasInheritingDimensions) {
       startResizeObserver();
@@ -234,7 +237,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
       debug(
         "size",
-        `Update triggered, size: ${animatedWidth}x${animatedHeight}`,
+        `Update triggered, size: ${constrainedWidth}x${constrainedHeight}`,
       );
 
       if (sizeAnimation) {
@@ -243,15 +246,15 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
       const [newWidth, newHeight] = measureContentSize();
       debug("size", `Measured size: ${newWidth}x${newHeight}`);
-      outerWrapper.style.width = `${animatedWidth}px`;
-      outerWrapper.style.height = `${animatedHeight}px`;
+      outerWrapper.style.width = `${constrainedWidth}px`;
+      outerWrapper.style.height = `${constrainedHeight}px`;
 
       debug("transition", "Content info:", {
         currentUIKey,
         lastUIKey,
         inheritContentDimensions,
-        contentWidth,
-        contentHeight,
+        naturalContentWidth,
+        naturalContentHeight,
       });
 
       // Handle resize observation
@@ -395,20 +398,23 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           return [newWidth, newHeight];
         }
         const shouldUseNewDimensions =
-          contentWidth === 0 && contentHeight === 0;
+          naturalContentWidth === 0 && naturalContentHeight === 0;
         const targetWidth = shouldUseNewDimensions
           ? newWidth
-          : contentWidth || newWidth;
+          : naturalContentWidth || newWidth;
         const targetHeight = shouldUseNewDimensions
           ? newHeight
-          : contentHeight || newHeight;
+          : naturalContentHeight || newHeight;
         return [targetWidth, targetHeight];
       };
 
       const [targetWidth, targetHeight] = getTargetDimensions();
 
       // Skip animation if no size changes needed
-      if (targetWidth === animatedWidth && targetHeight === animatedHeight) {
+      if (
+        targetWidth === constrainedWidth &&
+        targetHeight === constrainedHeight
+      ) {
         debug("size", "No size change required");
         if (!inheritContentDimensions) {
           releaseConstraints("no size change needed");
@@ -420,8 +426,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       }
 
       debug("size", "Size change needed:", {
-        width: `${animatedWidth} → ${targetWidth}`,
-        height: `${animatedHeight} → ${targetHeight}`,
+        width: `${constrainedWidth} → ${targetWidth}`,
+        height: `${constrainedHeight} → ${targetHeight}`,
       });
 
       // Handle size animation based on content state
