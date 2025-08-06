@@ -624,6 +624,9 @@ const animateTransition = (
   });
   const groupTransition = transitionController.animate(transitions, {
     onFinish: () => {
+      // Reset all transition styles by canceling the group transition
+      // This cancels all individual transitions, leaving elements in their final state
+      groupTransition.cancel();
       cleanup();
       // Call completion callback if provided
       if (onComplete) {
@@ -650,8 +653,6 @@ const applySlideLeft = (
     const containerWidth = oldElement.parentElement?.offsetWidth || 0;
     const currentOldPos = getTranslateX(oldElement);
 
-    oldElement.style.transform = `translateX(${currentOldPos}px)`;
-
     debug("transition", "🎯 Slide out to empty:", {
       old: currentOldPos,
       target: -containerWidth,
@@ -659,6 +660,7 @@ const applySlideLeft = (
 
     return [
       createTranslateXTransition(oldElement, -containerWidth, {
+        from: currentOldPos,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
@@ -676,12 +678,11 @@ const applySlideLeft = (
   if (!oldElement) {
     // Case: Empty -> Content (slide in from right)
     const currentPos = getTranslateX(newElement);
-    const startPos =
-      currentPos || (containerWidth ? `${containerWidth}px` : "100%");
-    newElement.style.transform = `translateX(${startPos})`;
+    const startPos = currentPos || containerWidth;
 
     return [
       createTranslateXTransition(newElement, 0, {
+        from: startPos,
         duration,
         startProgress,
         onUpdate: ({ value }) => {
@@ -714,9 +715,6 @@ const applySlideLeft = (
     startNewPos = currentNewPos || containerWidth;
   }
 
-  oldElement.style.transform = `translateX(${currentOldPos}px)`;
-  newElement.style.transform = `translateX(${startNewPos}px)`;
-
   debug("transition", "🎯 Starting slide positions:", {
     old: currentOldPos,
     new: startNewPos,
@@ -724,6 +722,7 @@ const applySlideLeft = (
 
   return [
     createTranslateXTransition(oldElement, -containerWidth, {
+      from: currentOldPos,
       duration,
       startProgress,
       onUpdate: ({ value }) => {
@@ -731,6 +730,7 @@ const applySlideLeft = (
       },
     }),
     createTranslateXTransition(newElement, 0, {
+      from: startNewPos,
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {
@@ -759,14 +759,13 @@ const applyCrossFade = (
     const oldOpacity = parseFloat(getComputedStyle(oldElement).opacity);
     const startOpacity = isNaN(oldOpacity) ? 1 : oldOpacity;
 
-    oldElement.style.opacity = startOpacity.toString();
-
     debug("transition", "🎨 Fade out to empty:", {
       startOpacity,
     });
 
     return [
       createOpacityTransition(oldElement, 0, {
+        from: startOpacity,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
@@ -801,19 +800,11 @@ const applyCrossFade = (
     startOpacity,
   });
 
-  // Setup initial state
-  if (oldElement) {
-    oldElement.style.opacity = startOpacity.toString();
-  }
-  // Only set new element opacity if it's not already higher
-  if (isNaN(newOpacity) || newOpacity < startOpacity) {
-    newElement.style.opacity = startOpacity.toString();
-  }
-
   if (!oldElement) {
     // Case: Empty -> Content (fade in only)
     return [
       createOpacityTransition(newElement, 1, {
+        from: startOpacity,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
@@ -830,6 +821,7 @@ const applyCrossFade = (
   // Case: Content -> Content (cross-fade between states)
   return [
     createOpacityTransition(oldElement, 0, {
+      from: Math.max(isNaN(oldOpacity) ? 1 : oldOpacity, startOpacity),
       duration,
       startProgress,
       onUpdate: ({ value }) => {
@@ -840,6 +832,7 @@ const applyCrossFade = (
       },
     }),
     createOpacityTransition(newElement, 1, {
+      from: Math.max(isNaN(newOpacity) ? 0 : newOpacity, startOpacity),
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {
