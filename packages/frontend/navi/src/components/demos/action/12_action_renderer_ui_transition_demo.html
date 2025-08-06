@@ -267,10 +267,12 @@
       const App = () => {
         const [currentAction, setCurrentAction] = useState(null);
         const [transitionType, setTransitionType] = useState(() => {
-          return localStorage.getItem('ui-transition-demo-type') || "cross-fade";
+          return (
+            localStorage.getItem("ui-transition-demo-type") || "cross-fade"
+          );
         });
         const [transitionDuration, setTransitionDuration] = useState(() => {
-          const saved = localStorage.getItem('ui-transition-demo-duration');
+          const saved = localStorage.getItem("ui-transition-demo-duration");
           return saved ? parseInt(saved) : 300;
         });
 
@@ -300,12 +302,15 @@
 
         const handleTransitionTypeChange = (newType) => {
           setTransitionType(newType);
-          localStorage.setItem('ui-transition-demo-type', newType);
+          localStorage.setItem("ui-transition-demo-type", newType);
         };
 
         const handleTransitionDurationChange = (newDuration) => {
           setTransitionDuration(newDuration);
-          localStorage.setItem('ui-transition-demo-duration', newDuration.toString());
+          localStorage.setItem(
+            "ui-transition-demo-duration",
+            newDuration.toString(),
+          );
         };
 
         return (
@@ -385,7 +390,9 @@
                       name="transition-type"
                       value="cross-fade"
                       checked={transitionType === "cross-fade"}
-                      onChange={(e) => handleTransitionTypeChange(e.target.value)}
+                      onChange={(e) =>
+                        handleTransitionTypeChange(e.target.value)
+                      }
                     />
                     Cross Fade
                   </label>
@@ -395,7 +402,9 @@
                       name="transition-type"
                       value="slide-left"
                       checked={transitionType === "slide-left"}
-                      onChange={(e) => handleTransitionTypeChange(e.target.value)}
+                      onChange={(e) =>
+                        handleTransitionTypeChange(e.target.value)
+                      }
                     />
                     Slide Left
                   </label>
