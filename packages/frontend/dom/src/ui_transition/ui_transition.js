@@ -62,7 +62,7 @@ import.meta.css = /* css */ `
 
 const DEBUG = {
   size: false,
-  transition: false,
+  transition: true,
 };
 
 const debug = (type, ...args) => {

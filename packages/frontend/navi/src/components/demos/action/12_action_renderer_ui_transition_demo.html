@@ -158,6 +158,12 @@
           return { message: "This took 3 seconds to load!" };
         });
 
+      const createStuckLoadingAction = () =>
+        createAction(async () => {
+          // This action never resolves, staying in loading state
+          await new Promise(() => {}); // Never resolves
+        });
+
       // Content renderers for different scenarios
       const renderSmallContent = (data) => (
         <div className="success-content" data-content-key="small">
@@ -215,28 +221,6 @@
         </div>
       );
 
-      const renderAnimatedHeightContent = (data) => (
-        <div
-          className="success-content"
-          data-content-key="animated"
-          data-animate-height
-        >
-          <h4>Height-Animated Content</h4>
-          <p>
-            This content has CSS height animation applied to test interaction
-            with UITransition.
-          </p>
-          <div
-            style="height: 0; overflow: hidden; transition: height 0.5s ease-out;"
-            className="expandable-section"
-          >
-            <p>This section expands with CSS animation!</p>
-            <p>Additional content that was initially hidden.</p>
-          </div>
-          <small>Loaded at: {data.timestamp}</small>
-        </div>
-      );
-
       const renderLoadingContent = () => (
         <div
           className="info-content"
@@ -267,34 +251,20 @@
         const [currentAction, setCurrentAction] = useState(null);
         const [transitionType, setTransitionType] = useState("cross-fade");
         const [transitionDuration, setTransitionDuration] = useState(300);
-        const [disabled, setDisabled] = useState(false);
         const containerRef = useRef();
 
         // Create actions
         const smallAction = createSuccessAction("small", 800);
         const mediumAction = createSuccessAction("medium", 1200);
         const largeAction = createSuccessAction("large", 1000);
-        const animatedAction = createSuccessAction("animated", 1000);
         const errorAction = createErrorAction(500);
         const slowAction = createSlowAction();
+        const stuckLoadingAction = createStuckLoadingAction();
 
         const triggerAction = (action) => {
           setCurrentAction(() => action);
           // Clear any previous state and trigger fresh load
           action.rerun();
-        };
-
-        // Effect to apply expandable animation to animated content
-        const handleAnimatedContent = () => {
-          setTimeout(() => {
-            const expandableSection = document.querySelector(
-              ".expandable-section",
-            );
-            if (expandableSection) {
-              expandableSection.style.height = "auto";
-              expandableSection.classList.add("visible");
-            }
-          }, 100);
         };
 
         return (
@@ -316,19 +286,14 @@
                 <button onClick={() => triggerAction(largeAction)}>
                   Load Large Content
                 </button>
-                <button
-                  onClick={() => {
-                    triggerAction(animatedAction);
-                    handleAnimatedContent();
-                  }}
-                >
-                  Load Animated Height Content
-                </button>
                 <button onClick={() => triggerAction(errorAction)}>
                   Trigger Error
                 </button>
                 <button onClick={() => triggerAction(slowAction)}>
                   Slow Loading (3s)
+                </button>
+                <button onClick={() => triggerAction(stuckLoadingAction)}>
+                  Stay Loading
                 </button>
                 <button onClick={() => setCurrentAction(null)}>
                   Clear Content
@@ -341,7 +306,7 @@
                 data-ui-transition={transitionType}
                 data-ui-transition-duration={transitionDuration}
               >
-                <ActionRenderer action={currentAction} disabled={disabled}>
+                <ActionRenderer action={currentAction}>
                   {{
                     loading: renderLoadingContent,
                     error: renderErrorContent,
@@ -354,8 +319,6 @@
                           return renderMediumContent(data);
                         case "large":
                           return renderLargeContent(data);
-                        case "animated":
-                          return renderAnimatedHeightContent(data);
                         default:
                           return renderSmallContent(data);
                       }
@@ -411,20 +374,6 @@
                   />
                 </label>
               </div>
-
-              <div className="config-section">
-                <h4>Component State</h4>
-                <div className="checkbox-group">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={disabled}
-                      onChange={(e) => setDisabled(e.target.checked)}
-                    />
-                    Disabled (ActionRenderer returns null)
-                  </label>
-                </div>
-              </div>
             </div>
 
             <div className="demo-container">
@@ -447,13 +396,8 @@
                   <code>data-content-key</code> for transition tracking
                 </li>
                 <li>
-                  <strong>Height Animation Interaction:</strong> Content with{" "}
-                  <code>data-animate-height</code> works correctly with size
-                  measurements
-                </li>
-                <li>
-                  <strong>Disabled State:</strong> When disabled, ActionRenderer
-                  returns null inside UITransition
+                  <strong>Stay Loading:</strong> The "Stay Loading" button
+                  demonstrates persistent loading states that never complete
                 </li>
               </ul>
             </div>
