@@ -19,7 +19,7 @@ import.meta.css = /* css */ `
     overflow: hidden;
   }
 
-  .ui-transition-content {
+  .ui-transition-slot {
     position: relative;
   }
 
@@ -45,7 +45,7 @@ const debug = (type, ...args) => {
 // <div class="ui-transition-container">
 //   <div class="ui-transition-outer-wrapper"> <!-- for animation constraints -->
 //     <div class="ui-transition-measure-wrapper"> <!-- for content measurements -->
-//       <div class="ui-transition-content">
+//       <div class="ui-transition-slot">
 //         <!-- actual content -->
 //       </div>
 //     </div>
@@ -64,7 +64,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   const measureWrapper = container.querySelector(
     ".ui-transition-measure-wrapper",
   );
-  const content = container.querySelector(".ui-transition-content");
+  const slot = container.querySelector(".ui-transition-slot");
   let overlay = container.querySelector(".ui-transition-overlay");
 
   if (!overlay) {
@@ -73,7 +73,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     container.appendChild(overlay);
   }
 
-  if (!outerWrapper || !measureWrapper || !content) {
+  if (!outerWrapper || !measureWrapper || !slot) {
     console.error("Missing required ui-transition structure");
     return { cleanup: () => {} };
   }
@@ -93,9 +93,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let sizeAnimation = null;
   let resizeObserver = null;
 
-  // Content state
+  // View state
   let lastContentKey = null;
-  let previousContent = null;
+  let previousView = null;
   let wasContentPhase = false;
 
   const measureContentSize = () => {
@@ -194,10 +194,10 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   // Initialize with current size
   [constrainedWidth, constrainedHeight] = measureContentSize();
 
-  // Handle initial content if present
-  const initialChild = content.children[0];
+  // Handle initial view if present
+  const initialChild = slot.children[0];
   if (initialChild) {
-    debug("size", "Found initial content");
+    debug("size", "Found initial view");
     lastContentKey = initialChild.getAttribute("data-content-key");
     wasContentPhase = initialChild.hasAttribute("data-content-phase");
     naturalContentWidth = constrainedWidth;
@@ -211,7 +211,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       startResizeObserver();
       debug("size", "Observing resize");
     }
-    previousContent = initialChild.cloneNode(true);
+    previousView = initialChild.cloneNode(true);
   }
 
   const handleContentUpdate = () => {
@@ -222,7 +222,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
     try {
       isUpdating = true;
-      const firstChild = content.children[0];
+      const firstChild = slot.children[0];
       const childUIName = firstChild?.getAttribute("data-ui-name");
       const currentContentKey = firstChild?.getAttribute("data-content-key");
       const isContentPhase = firstChild?.hasAttribute("data-content-phase");
@@ -245,7 +245,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       outerWrapper.style.width = `${constrainedWidth}px`;
       outerWrapper.style.height = `${constrainedHeight}px`;
 
-      debug("transition", "Content info:", {
+      debug("transition", "View info:", {
         currentContentKey,
         lastContentKey,
         isContentPhase,
@@ -257,35 +257,34 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       stopResizeObserver();
       if (firstChild && !isContentPhase) {
         startResizeObserver();
-        debug("size", "Observing content resize");
+        debug("size", "Observing view resize");
       }
 
       // Determine transition scenarios
       const isContentKeyChange =
         lastContentKey !== null && currentContentKey !== lastContentKey;
-      const lastContentPhase =
-        previousContent?.hasAttribute("data-content-phase");
+      const lastContentPhase = previousView?.hasAttribute("data-content-phase");
       const isContentPhaseChange =
         lastContentKey === currentContentKey &&
         lastContentPhase !== isContentPhase;
       const shouldTransition = isContentKeyChange || isContentPhaseChange;
 
-      const hadContent = previousContent !== null;
-      const hasContent = firstChild !== null;
-      const becomesEmpty = hadContent && !hasContent;
-      const becomesContent = !hadContent && hasContent;
-      const contentToContent = hadContent && hasContent && isContentKeyChange;
-      const phaseChange = hadContent && hasContent && isContentPhaseChange;
+      const hadView = previousView !== null;
+      const hasView = firstChild !== null;
+      const becomesEmpty = hadView && !hasView;
+      const becomesView = !hadView && hasView;
+      const viewToView = hadView && hasView && isContentKeyChange;
+      const phaseChange = hadView && hasView && isContentPhaseChange;
 
       debug("transition", "Transition scenarios:", {
         isContentKeyChange,
         isContentPhaseChange,
         shouldTransition,
-        hadContent,
-        hasContent,
+        hadView,
+        hasView,
         becomesEmpty,
-        becomesContent,
-        contentToContent,
+        becomesView,
+        viewToView,
         phaseChange,
       });
 
@@ -324,34 +323,34 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           activeTransition.cancel();
         }
 
-        const needsOldContentClone =
-          (contentToContent || phaseChange || becomesEmpty) &&
-          previousContent &&
+        const needsOldViewClone =
+          (viewToView || phaseChange || becomesEmpty) &&
+          previousView &&
           !existingOldContents[0];
 
         const setupTransition = () => {
-          let oldContent = null;
+          let oldView = null;
           let cleanup = () => {};
           const currentTransitionElement = existingOldContents[0];
 
           if (currentTransitionElement) {
-            oldContent = currentTransitionElement;
+            oldView = currentTransitionElement;
             debug("transition", "Continuing from current transition element");
-            cleanup = () => oldContent.remove();
-          } else if (needsOldContentClone) {
+            cleanup = () => oldView.remove();
+          } else if (needsOldViewClone) {
             overlay.innerHTML = "";
-            oldContent = previousContent.cloneNode(true);
-            oldContent.removeAttribute("data-content-key");
-            oldContent.setAttribute("data-ui-transition-old", "");
-            overlay.appendChild(oldContent);
-            debug("transition", "Cloned previous content for transition");
-            cleanup = () => oldContent.remove();
+            oldView = previousView.cloneNode(true);
+            oldView.removeAttribute("data-content-key");
+            oldView.setAttribute("data-ui-transition-old", "");
+            overlay.appendChild(oldView);
+            debug("transition", "Cloned previous view for transition");
+            cleanup = () => oldView.remove();
           } else {
             overlay.innerHTML = "";
-            debug("transition", "No old content to clone");
+            debug("transition", "No old view to clone");
           }
 
-          return { oldContent, cleanup };
+          return { oldContent: oldView, cleanup };
         };
 
         const duration = parseInt(
@@ -384,8 +383,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         activeTransitionType = null;
       }
 
-      // Store current content for next transition
-      previousContent = firstChild ? firstChild.cloneNode(true) : null;
+      // Store current view for next transition
+      previousView = firstChild ? firstChild.cloneNode(true) : null;
       lastContentKey = currentContentKey;
       wasContentPhase = isContentPhase;
 
@@ -449,12 +448,12 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     }
   };
 
-  // Watch for content changes
+  // Watch for view changes
   const mutationObserver = new MutationObserver(() => {
     handleContentUpdate();
   });
 
-  mutationObserver.observe(content, {
+  mutationObserver.observe(slot, {
     childList: true,
     subtree: false,
     characterData: false,

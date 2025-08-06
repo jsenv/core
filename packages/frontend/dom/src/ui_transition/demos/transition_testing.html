@@ -106,7 +106,7 @@
     >
       <div class="ui-transition-outer-wrapper">
         <div class="ui-transition-measure-wrapper">
-          <div class="ui-transition-content">
+          <div class="ui-transition-slot">
             <div
               class="test-content content"
               data-content-key="a"
@@ -163,7 +163,7 @@
       setInterval(updateDebugInfo, 100);
 
       function setContent(content) {
-        const container = box.querySelector(".ui-transition-content");
+        const container = box.querySelector(".ui-transition-slot");
         container.innerHTML = content;
       }
 
