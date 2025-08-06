@@ -22,10 +22,10 @@
  *
  */
 
-import { UITransition } from "@jsenv/dom";
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 import { getActionPrivateProperties } from "../action_private_properties.js";
 import { useActionStatus } from "../use_action_status.js";
+import { UITransition } from "./ui_transition.jsx";
 
 import.meta.css = /* css */ `
   .action_error {
@@ -46,9 +46,9 @@ const renderErrorDefault = (error) => {
 };
 const renderCompletedDefault = () => null;
 
-export const ActionRenderer = ({ action, children, disabled }) => {
+export const ActionRenderer = ({ action, children, disabled, ...props }) => {
   return (
-    <UITransition>
+    <UITransition {...props}>
       <ActionRendererContent action={action} disabled={disabled}>
         {children}
       </ActionRendererContent>

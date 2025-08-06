@@ -65,4 +65,4 @@ export {
   createTimelineTransition,
   createTransition,
 } from "./transition/transition_playback.js";
-export { UITransition } from "./ui_transition/ui_transition.jsx";
+export { initUITransition } from "./ui_transition/ui_transition.js";
