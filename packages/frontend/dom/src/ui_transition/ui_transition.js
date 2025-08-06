@@ -31,7 +31,7 @@ import.meta.css = /* css */ `
 `;
 
 const DEBUG = {
-  size: false,
+  size: true,
   transition: true,
 };
 
