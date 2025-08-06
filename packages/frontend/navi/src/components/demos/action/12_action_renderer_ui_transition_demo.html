@@ -276,25 +276,35 @@
           return saved ? parseInt(saved) : 300;
         });
 
-        // Create actions
+        // Create actions with content key metadata
         const smallAction = createSuccessAction("small", 800);
-        const mediumAction = createSuccessAction("medium", 1200);
-        const largeAction = createSuccessAction("large", 1000);
-        const errorAction = createErrorAction(500);
-        const slowAction = createSlowAction();
-        const stuckLoadingAction = createStuckLoadingAction();
+        smallAction.meta.contentKey = "small";
 
-        // Map actions to their content keys for loading state
-        const actionContentKeys = new Map([
-          [smallAction, "small"],
-          [mediumAction, "medium"],
-          [largeAction, "large"],
-          [errorAction, "error"],
-          [slowAction, "slow"],
-          [stuckLoadingAction, "stuck-loading"],
-        ]);
+        const mediumAction = createSuccessAction("medium", 1200);
+        mediumAction.meta.contentKey = "medium";
+
+        const largeAction = createSuccessAction("large", 1000);
+        largeAction.meta.contentKey = "large";
+
+        const errorAction = createErrorAction(500);
+        errorAction.meta.contentKey = "error";
+
+        const slowAction = createSlowAction();
+        slowAction.meta.contentKey = "slow";
+
+        const stuckLoadingAction = createStuckLoadingAction();
+        stuckLoadingAction.meta.contentKey = "stuck-loading";
+
+        // Helper to get content key for an action
+        const getContentKeyForAction = (action) => {
+          if (!action) return "loading";
+
+          // Use the contentKey property we set on action.meta
+          return action.meta?.contentKey || "loading";
+        };
 
         const triggerAction = (action) => {
+          console.log("Triggering action:", action, "meta:", action.meta);
           setCurrentAction(() => action);
           // Clear any previous state and trigger fresh load
           action.rerun();
@@ -355,8 +365,13 @@
                   {{
                     loading: () => {
                       // Use the content key of what we're loading
-                      const contentKey =
-                        actionContentKeys.get(currentAction) || "loading";
+                      const contentKey = getContentKeyForAction(currentAction);
+                      console.log(
+                        "Loading renderer - currentAction:",
+                        currentAction,
+                        "contentKey:",
+                        contentKey,
+                      );
                       return renderLoadingContent(contentKey);
                     },
                     error: renderErrorContent,
