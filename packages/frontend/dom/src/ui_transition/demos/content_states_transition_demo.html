@@ -287,7 +287,7 @@
         <div id="content-box" class="ui-transition-container">
           <div class="ui-transition-outer-wrapper">
             <div class="ui-transition-measure-wrapper">
-              <div class="ui-transition-content"></div>
+              <div class="ui-transition-slot"></div>
             </div>
           </div>
           <div class="ui-transition-overlay"></div>
@@ -422,27 +422,11 @@
           options.contentVariant === "B" ? "content-b" : "content-a";
         const content = createState(type, { ...options, uiKey });
 
-        // Find or create the content container
-        let contentContainer = contentBox.querySelector(
-          ".ui-transition-content",
-        );
-        if (!contentContainer) {
-          const wrapper = contentBox.querySelector(".ui-transition-wrapper");
-          if (!wrapper) {
-            console.error("Missing required ui-transition structure");
-            return;
-          }
-          contentContainer = wrapper.querySelector(".ui-transition-content");
-          if (!contentContainer) {
-            console.error("Missing required ui-transition structure");
-            return;
-          }
-        }
-        contentContainer.innerHTML = content;
+        uiTransition.slot.innerHTML = content;
 
         // If it's content with height animation, add visible class in next frame
         // This ensures height=0 is measured first by ui_transition.js
-        const contentState = contentContainer.querySelector(
+        const contentState = uiTransition.slot.querySelector(
           ".content-state[data-animate-height]",
         );
         if (contentState) {
