@@ -224,8 +224,13 @@ export const createTimelineTransition = ({
       // First frame - always allow
     } else {
       const timeSinceLastUpdate = timelineCurrentTime - lastUpdateTime;
-      // Skip update if not enough time has passed for the target FPS
-      if (timeSinceLastUpdate < transition.frameDuration) {
+      // Allow rendering if we're within 3ms of the target frame duration
+      // This prevents choppy animations when browser timing is slightly off
+      const frameTimeTolerance = 3; // ms
+      const targetFrameTime = transition.frameDuration - frameTimeTolerance;
+
+      // Skip update only if we're significantly early
+      if (timeSinceLastUpdate < targetFrameTime) {
         return;
       }
     }
