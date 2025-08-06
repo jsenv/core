@@ -21,17 +21,25 @@ export const createGroupTransition = (transitionArray) => {
 
         const cleanupCallbackSet = new Set();
         for (const childTransition of transitionArray) {
-          const removeProgressListener = childTransition.channels.progress.add(
+          const removeUpdateListener = childTransition.channels.update.add(
             () => {
-              // Calculate average progress
+              // Calculate average progress (handle undefined progress)
+              let totalProgress = 0;
+              let progressCount = 0;
+              for (const t of transitionArray) {
+                if (typeof t.progress === "number") {
+                  totalProgress += t.progress;
+                  progressCount++;
+                }
+              }
               const averageProgress =
-                transitionArray.reduce((sum, t) => sum + t.progress, 0) /
-                childCount;
-              // Update this transition's progress
-              transition.update(averageProgress);
+                progressCount > 0 ? totalProgress / progressCount : 0;
+              // Update this transition's value with average progress
+              const isLast = averageProgress >= 1;
+              transition.update(averageProgress, isLast);
             },
           );
-          cleanupCallbackSet.add(removeProgressListener);
+          cleanupCallbackSet.add(removeUpdateListener);
           const removeFinishListener = childTransition.channels.finish.add(
             // eslint-disable-next-line no-loop-func
             () => {
@@ -124,7 +132,7 @@ export const createGroupTransitionController = () => {
           cancel: () => {},
           finish: () => {},
           playState: "idle",
-          channels: { progress: { add: () => {} }, finish: { add: () => {} } },
+          channels: { update: { add: () => {} }, finish: { add: () => {} } },
         };
       }
 
@@ -175,7 +183,7 @@ export const createGroupTransitionController = () => {
             updatedTransitions.forEach((transition) => transition.finish()),
           playState: "running", // All are already running
           channels: {
-            progress: { add: () => {} }, // Progress tracking already set up
+            update: { add: () => {} }, // Update tracking already set up
             finish: { add: () => {} },
           },
         };
@@ -184,9 +192,9 @@ export const createGroupTransitionController = () => {
       // Create group transition to coordinate new transitions only
       const groupTransition = createGroupTransition(newTransitions);
 
-      // Add unified progress tracking for ALL transitions (new + updated)
+      // Add unified update tracking for ALL transitions (new + updated)
       if (onChange) {
-        groupTransition.channels.progress.add((transition) => {
+        groupTransition.channels.update.add((transition) => {
           // Build change entries for current state of ALL transitions
           const changeEntries = [...newTransitions, ...updatedTransitions].map(
             (transition) => ({
@@ -195,7 +203,8 @@ export const createGroupTransitionController = () => {
             }),
           );
 
-          onChange(changeEntries, transition.progress === 1); // isLast = progress === 1
+          const isLast = transition.value >= 1; // isLast = value >= 1 (since group tracks 0-1)
+          onChange(changeEntries, isLast);
         });
       }
 
