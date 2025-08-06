@@ -303,10 +303,15 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       const contentChange = hadChild && hasChild && isContentKeyChange;
       const phaseChange = hadChild && hasChild && isContentPhaseChange;
 
+      // Include becomesPopulated in shouldTransition for empty->content transitions
+      const shouldTransitionIncludingPopulation =
+        shouldTransition || becomesPopulated;
+
       debug("transition", "Transition scenarios:", {
         isContentKeyChange,
         isContentPhaseChange,
         shouldTransition,
+        shouldTransitionIncludingPopulation,
         hadChild,
         hasChild,
         becomesEmpty,
@@ -316,7 +321,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       });
 
       // Handle transitions
-      if (shouldTransition) {
+      if (shouldTransitionIncludingPopulation) {
         const existingOldContents = overlay.querySelectorAll(
           "[data-ui-transition-old]",
         );

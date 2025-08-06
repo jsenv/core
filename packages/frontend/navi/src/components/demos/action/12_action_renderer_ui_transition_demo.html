@@ -336,7 +336,7 @@
                     loading: () => {
                       // Use the content key of what we're loading
                       const contentKey =
-                        actionContentKeys.get(currentAction) || "unset";
+                        actionContentKeys.get(currentAction) || "loading";
                       return renderLoadingContent(contentKey);
                     },
                     error: renderErrorContent,
