@@ -86,8 +86,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let isPaused = false;
 
   // Size state
-  let naturalChildWidth = 0; // Natural size of actual content (not loading/error states)
-  let naturalChildHeight = 0;
+  let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
+  let naturalContentHeight = 0;
   let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
   let constrainedHeight = 0;
   let sizeAnimation = null;
@@ -105,11 +105,11 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   const updateContentDimensions = () => {
     const [newWidth, newHeight] = measureContentSize();
     debug("size", "Content size changed:", {
-      width: `${naturalChildWidth} → ${newWidth}`,
-      height: `${naturalChildHeight} → ${newHeight}`,
+      width: `${naturalContentWidth} → ${newWidth}`,
+      height: `${naturalContentHeight} → ${newHeight}`,
     });
-    naturalChildWidth = newWidth;
-    naturalChildHeight = newHeight;
+    naturalContentWidth = newWidth;
+    naturalContentHeight = newHeight;
 
     if (sizeAnimation?.playing) {
       debug("size", "Updating animation target:", newHeight);
@@ -149,8 +149,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     });
     constrainedWidth = afterWidth;
     constrainedHeight = afterHeight;
-    naturalChildWidth = afterWidth;
-    naturalChildHeight = afterHeight;
+    naturalContentWidth = afterWidth;
+    naturalContentHeight = afterHeight;
   };
 
   const animateToSize = (targetWidth, targetHeight, { onEnd } = {}) => {
@@ -199,15 +199,27 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   if (initialChild) {
     debug("size", "Found initial child");
     lastContentKey = initialChild.getAttribute("data-content-key");
-    wasContentPhase = initialChild.hasAttribute("data-content-phase");
-    naturalChildWidth = constrainedWidth;
-    naturalChildHeight = constrainedHeight;
-    debug("size", `Initial size: ${naturalChildWidth}x${naturalChildHeight}`);
+    const isInitialContentPhase =
+      initialChild.hasAttribute("data-content-phase");
+    wasContentPhase = isInitialContentPhase;
 
-    if (!wasContentPhase) {
+    // Only set natural content dimensions if this is actual content, not a content phase
+    if (!isInitialContentPhase) {
+      naturalContentWidth = constrainedWidth;
+      naturalContentHeight = constrainedHeight;
+      debug(
+        "size",
+        `Initial content size: ${naturalContentWidth}x${naturalContentHeight}`,
+      );
       startResizeObserver();
       debug("size", "Observing resize");
+    } else {
+      debug(
+        "size",
+        "Initial child is content phase, not setting natural dimensions",
+      );
     }
+
     previousChild = initialChild.cloneNode(true);
   }
 
@@ -246,8 +258,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         currentContentKey,
         lastContentKey,
         isContentPhase,
-        naturalChildWidth,
-        naturalChildHeight,
+        naturalContentWidth,
+        naturalContentHeight,
       });
 
       // Handle resize observation
@@ -389,13 +401,13 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           return [newWidth, newHeight];
         }
         const shouldUseNewDimensions =
-          naturalChildWidth === 0 && naturalChildHeight === 0;
+          naturalContentWidth === 0 && naturalContentHeight === 0;
         const targetWidth = shouldUseNewDimensions
           ? newWidth
-          : naturalChildWidth || newWidth;
+          : naturalContentWidth || newWidth;
         const targetHeight = shouldUseNewDimensions
           ? newHeight
-          : naturalChildHeight || newHeight;
+          : naturalContentHeight || newHeight;
         return [targetWidth, targetHeight];
       };
 
