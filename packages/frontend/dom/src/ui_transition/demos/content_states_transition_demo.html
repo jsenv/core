@@ -313,7 +313,7 @@
     </style>
 
     <script type="module">
-      import { initUITransition } from "../ui_transition/ui_transition.js";
+      import { initUITransition } from "../ui_transition.js";
 
       const contentBox = document.getElementById("content-box");
       let uiTransition = initUITransition(contentBox);
@@ -327,7 +327,7 @@
 
         const states = {
           loading: (uiKey) => `
-            <div class="loading-state ${tall ? "tall" : ""}" data-ui-key="${uiKey}" data-inherit-content-dimensions data-ui-name="loading">
+            <div class="loading-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase data-content-name="loading">
               <div class="spinner"></div>
               <div>Loading...</div>
             </div>
@@ -337,7 +337,7 @@
               "animate-content-height",
             )?.checked;
             return `
-            <div class="content-state" data-ui-key="${uiKey}" ${shouldAnimate ? "data-animate-height" : ""} data-ui-name="${uiKey}">
+            <div class="content-state" data-content-key="${uiKey}" ${shouldAnimate ? "data-animate-height" : ""} data-content-name="${uiKey}">
               ${
                 contentVariant === "B"
                   ? `
@@ -363,7 +363,7 @@
           `;
           },
           error: (uiKey) => `
-            <div class="error-state ${tall ? "tall" : ""}" data-ui-key="${uiKey}" data-inherit-content-dimensions data-ui-name="error">
+            <div class="error-state ${tall ? "tall" : ""}" data-content-key="${uiKey}" data-content-phase data-content-name="error">
               <div>⚠️</div>
               <div>An error occurred</div>
             </div>
