@@ -14,6 +14,7 @@ export const createHeightTransition = (element, to, options) => {
     key: element,
     to,
     isVisual: true,
+    minDiff: 10,
     lifecycle: {
       setup: () => {
         const heightAtStartFromInlineStyle = element.style.height;
@@ -47,6 +48,7 @@ export const createWidthTransition = (element, to, options) => {
     constructor: createWidthTransition,
     key: element,
     to,
+    minDiff: 10,
     isVisual: true,
     lifecycle: {
       setup: () => {
@@ -81,6 +83,7 @@ export const createOpacityTransition = (element, to, options = {}) => {
     constructor: createOpacityTransition,
     key: element,
     to,
+    minDiff: 0.1,
     isVisual: true,
     lifecycle: {
       setup: () => {
@@ -127,6 +130,7 @@ export const createTranslateXTransition = (element, to, options) => {
     constructor: createTranslateXTransition,
     key: element,
     to,
+    minDiff: 10,
     isVisual: true,
     lifecycle: {
       setup: () => {

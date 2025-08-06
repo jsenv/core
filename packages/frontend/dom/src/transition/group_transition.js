@@ -12,6 +12,7 @@ export const createGroupTransition = (transitionArray) => {
   }
 
   const groupTransition = createTransition({
+    constructor: createGroupTransition,
     from: 0,
     to: 1,
     duration,

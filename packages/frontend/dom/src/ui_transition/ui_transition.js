@@ -444,6 +444,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             },
           },
         );
+        if (currentTransition) {
+          currentTransition.play();
+        }
         currentTransitionType = type;
       } else {
         // No transition needed, clean up any remaining old elements

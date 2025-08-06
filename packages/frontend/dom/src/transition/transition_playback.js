@@ -21,6 +21,7 @@ export const createTransition = ({
   to,
   lifecycle = LIFECYCLE_DEFAULT,
   onUpdate,
+  minDiff,
   ...rest
 } = {}) => {
   const [updateCallbacks, executeUpdateCallbacks] = createCallbackController();
@@ -55,11 +56,11 @@ export const createTransition = ({
     const diff = Math.abs(transition.to - transition.from);
     if (diff === 0) {
       console.warn(
-        `transition has identical from and to values (${transition.from}px). This transition will have no effect.`,
+        `${constructor.name} transition has identical from and to values (${transition.from}). This transition will have no effect.`,
       );
-    } else if (diff < 10) {
+    } else if (typeof minDiff === "number" && diff < minDiff) {
       console.warn(
-        `transition difference is very small (${diff}px). Consider if this transition is necessary.`,
+        `${constructor.name} transition difference is very small (${diff}). Consider if this transition is necessary (minimum threshold: ${minDiff}).`,
       );
     }
   };
