@@ -166,7 +166,11 @@
 
       // Content renderers for different scenarios
       const renderSmallContent = (data) => (
-        <div className="success-content" data-content-key="small">
+        <div
+          className="success-content"
+          data-content-key="small"
+          data-ui-name="small-content"
+        >
           <h4>Small Content</h4>
           <p>This is small content that loaded successfully.</p>
           <small>Loaded at: {data.timestamp}</small>
@@ -174,7 +178,11 @@
       );
 
       const renderLargeContent = (data) => (
-        <div className="success-content" data-content-key="large">
+        <div
+          className="success-content"
+          data-content-key="large"
+          data-ui-name="large-content"
+        >
           <h4>Large Content</h4>
           <p>
             This is much larger content that should cause a smooth size
@@ -207,7 +215,11 @@
       );
 
       const renderMediumContent = (data) => (
-        <div className="success-content" data-content-key="medium">
+        <div
+          className="success-content"
+          data-content-key="medium"
+          data-ui-name="medium-content"
+        >
           <h4>Medium Content</h4>
           <p>
             This is medium-sized content that demonstrates size transitions.
@@ -226,6 +238,7 @@
           className="info-content"
           data-content-phase
           data-content-key="loading"
+          data-ui-name="loading-content"
         >
           <div style="display: flex; align-items: center;">
             <div className="loading-spinner"></div>
@@ -239,6 +252,7 @@
           className="error-content"
           data-content-phase
           data-content-key="error"
+          data-ui-name="error-content"
         >
           <h4>❌ Error Occurred</h4>
           <p>{error.message}</p>
