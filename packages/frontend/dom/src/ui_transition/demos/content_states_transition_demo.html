@@ -584,12 +584,8 @@
       document
         .getElementById("demo-content-update")
         .addEventListener("click", () => {
-          const contentContainer = contentBox.querySelector(
-            ".ui-transition-content",
-          );
-          const contentState =
-            contentContainer &&
-            contentContainer.querySelector(".content-state");
+          const slot = uiTransition.slot;
+          const contentState = slot.querySelector(".content-state");
           if (!contentState) return;
 
           // Toggle data-expanded attribute on content blocks
@@ -618,19 +614,14 @@
         .getElementById("demo-content-add-block")
         .addEventListener("click", () => {
           // Only works if current state is content (A or B)
-          const contentContainer = contentBox.querySelector(
-            ".ui-transition-content",
-          );
-          const contentState =
-            contentContainer &&
-            contentContainer.querySelector(".content-state");
-          if (!contentState) return;
+          const slot = uiTransition.slot;
+          if (!slot) return;
 
           // Add a new content block
           const newBlock = document.createElement("div");
           newBlock.className = "content-block";
-          newBlock.textContent = `Dynamically added block ${contentState.children.length + 1}`;
-          contentState.appendChild(newBlock);
+          newBlock.textContent = `Dynamically added block ${slot.children.length + 1}`;
+          slot.appendChild(newBlock);
         });
     </script>
   </body>
