@@ -469,6 +469,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
   // Return API
   return {
+    slot,
+
     cleanup: () => {
       mutationObserver.disconnect();
       stopResizeObserver();

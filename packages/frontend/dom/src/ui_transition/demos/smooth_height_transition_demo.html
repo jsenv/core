@@ -69,16 +69,23 @@ Hello, this is some initial content.</textarea
     </div>
 
     <div class="demo-container">
-      <div id="dynamic-content">
-        <div class="content-block">Initial content block</div>
+      <div id="dynamic-content" class="ui-transition-container">
+        <div class="ui-transition-outer-wrapper">
+          <div class="ui-transition-measure-wrapper">
+            <div class="ui-transition-slot">
+              <div class="content-block">Initial content block</div>
+            </div>
+          </div>
+        </div>
+        <div class="ui-transition-overlay"></div>
       </div>
     </div>
 
     <script type="module">
-      import { initUITransition } from "../ui_transition/ui_transition.js";
+      import { initUITransition } from "../ui_transition.js";
 
       const dynamicContent = document.getElementById("dynamic-content");
-      initUITransition(dynamicContent);
+      const { slot } = initUITransition(dynamicContent);
 
       // Setup event listeners
       document
@@ -117,25 +124,25 @@ Hello, this is some initial content.</textarea
       };
 
       function setPresetContent(size) {
-        dynamicContent.innerHTML = presetContents[size];
+        slot.innerHTML = presetContents[size];
       }
 
       function addBlock() {
         const block = document.createElement("div");
         block.className = "content-block";
-        block.textContent = `New content block ${dynamicContent.children.length + 1}`;
-        dynamicContent.appendChild(block);
+        block.textContent = `New content block ${slot.children.length + 1}`;
+        slot.appendChild(block);
       }
 
       function removeBlock() {
-        const blocks = dynamicContent.getElementsByClassName("content-block");
+        const blocks = slot.getElementsByClassName("content-block");
         if (blocks.length > 0) {
           blocks[blocks.length - 1].remove();
         }
       }
 
       function updateCustomContent(text) {
-        dynamicContent.innerHTML = `<div class="content-block">${text}</div>`;
+        slot.innerHTML = `<div class="content-block">${text}</div>`;
       }
     </script>
   </body>
