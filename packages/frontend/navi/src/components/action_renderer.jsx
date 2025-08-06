@@ -1,25 +1,32 @@
 /**
- * TODO: when switching from one state to another we should preserve the dimensions to prevent layout shift
- * the exact way to do this is not yet clear but I suspect something as follow:
+ * ActionRenderer
  *
+ * A Preact component for declaratively rendering the UI of an async action's lifecycle.
+ * - Automatically animates transitions between states using UITransition
+ * - Handles error boundaries
+ * - Centralizes error handling and UI state logic for actions
+ * - Supports custom transition to animate content changes
  *
- * While content is loading we don't know (except if we are given an size)
- * When reloading the content will be gone, we should keep a placeholder taking the same space
- * When there is an error the error should take the same space as the content
- * but be displayed on top
- * (If error is bigger it can take more space? I guess so, maybe an overflow would be better to prevent layout shit again)
+ * To animate transitions when the content changes, set a unique `data-content-key` on your rendered content.
+ * Use the `transitionType` prop to control the animation style (e.g. "slide-left", "cross-fade").
  *
- * And once we know the new content size ideally we could have some sort of transition
- * (like an height transition from current height to new height)
+ * Example:
  *
- * consider https://motion.dev/docs/react-layout-animations
+ *   <ActionRenderer
+ *     action={fetchUserAction}
+ *     transitionType="slide-left"
+ *     transitionDuration={400}
+ *   >
+ *     {{
+ *       loading: () => <Spinner data-content-key={userId} data-content-phase />,
+ *       error: (err) => <ErrorMessage error={err} data-content-key={userId} data-content-phase />,
+ *       completed: (user) => (
+ *         <UserProfile user={user} data-content-key={userId} />
+ *       ),
+ *     }}
+ *   </ActionRenderer>
  *
- * but might be too complexe for what we want.
- * we want ability to transit from anything to anything, it's not a layout change
- * it's more view transition but with a very simple behavior
- *
- * And certainly this https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API#pseudo-elements
- *
+ * When the value of `data-content-key` changes, ActionRenderer will animate the transition between content using the specified transitionType.
  */
 
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
@@ -46,9 +53,20 @@ const renderErrorDefault = (error) => {
 };
 const renderCompletedDefault = () => null;
 
-export const ActionRenderer = ({ action, children, disabled, ...props }) => {
+export const ActionRenderer = ({
+  action,
+  children,
+  disabled,
+  transitionType,
+  transitionDuration,
+  ...props
+}) => {
   return (
-    <UITransition {...props}>
+    <UITransition
+      transitionType={transitionType}
+      transitionDuration={transitionDuration}
+      {...props}
+    >
       <ActionRendererContent action={action} disabled={disabled}>
         {children}
       </ActionRendererContent>
