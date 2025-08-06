@@ -343,17 +343,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           "[data-ui-transition-old]",
         );
 
-        // Calculate animation progress before canceling for smooth continuation
-        let animationProgress = 0;
-        if (currentTransition && existingOldContents[0]) {
-          // Calculate progress based on current position vs target
-          const currentOldPos = getTranslateX(existingOldContents[0]);
-          const containerWidth =
-            existingOldContents[0].parentElement?.offsetWidth || 300;
-          // Progress = how far we've moved toward the target (-containerWidth)
-          // If we started at 0 and target is -300, then at -60 we're 20% done
-          animationProgress = Math.abs(currentOldPos) / containerWidth;
-          animationProgress = Math.max(0, Math.min(1, animationProgress)); // Clamp to [0,1]
+        // Get current animation progress for smooth continuation
+        const animationProgress = currentTransition?.progress || 0;
+        if (animationProgress > 0) {
           debug(
             "transition",
             "🎯 Preserving animation progress:",
@@ -378,6 +370,13 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             "transition",
             "🛑 Gracefully stopping current transition for type change",
           );
+          // TODO: Transition interruption improvement
+          // Right now this cancel() call synchronously reverts UI elements to their final state.
+          // This is not ideal because if a fade was in progress, the element will immediately
+          // become fully visible instead of smoothly transitioning. Ideally we should be able
+          // to revert via a transition too - we should be able to "revert a transition" and
+          // make it part of the new transition we want to start. This would provide truly
+          // seamless interruptions between different transition types.
           currentTransition.cancel();
         }
 

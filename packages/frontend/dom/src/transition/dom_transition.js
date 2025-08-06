@@ -114,20 +114,19 @@ const getOpacity = (element) => {
 };
 
 export const createTranslateXTransition = (element, to, options = {}) => {
-  const match = to.match(/translateX\(([-\d.]+)(%|px)?\)/);
-  if (!match) {
-    throw new Error(
-      `Invalid to value for translateX transition: ${to}. Expected format: translateX(value[px|%])`,
-    );
+  let unit = "px";
+  if (typeof to === "string") {
+    if (to.endsWith("%")) {
+      unit = "%";
+    }
+    to = parseFloat(to);
   }
-  const unit = match[2] || "px";
-  const toValue = parseFloat(match[1]);
 
   const translateXTransition = createTimelineTransition({
     ...options,
     constructor: createTranslateXTransition,
     key: element,
-    to: toValue,
+    to,
     isVisual: true,
     lifecycle: {
       setup: () => {
@@ -137,6 +136,7 @@ export const createTranslateXTransition = (element, to, options = {}) => {
         return {
           from: getTranslateX(element),
           update: (value) => {
+            console.log("set translateX", value);
             setTranslateX(element, value, { unit });
           },
           teardown: () => {
