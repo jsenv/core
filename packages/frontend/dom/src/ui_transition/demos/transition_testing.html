@@ -109,8 +109,8 @@
           <div class="ui-transition-content">
             <div
               class="test-content content"
-              data-ui-key="a"
-              data-ui-name="a-content"
+              data-content-key="a"
+              data-content-name="a-content"
             >
               Initial Content
             </div>
@@ -170,7 +170,7 @@
       startButton.addEventListener("click", () => {
         // Set loading state
         setContent(`
-          <div class="test-content loading" data-ui-key="b" data-ui-name="b-loading" data-inherit-content-dimensions>
+          <div class="test-content loading" data-content-key="b" data-content-name="b-loading" data-content-phase>
             Loading...
           </div>
         `);
@@ -204,7 +204,7 @@
       insertButton.addEventListener("click", () => {
         // Replace loading with content
         setContent(`
-          <div class="test-content content" style="background-color: orange" data-ui-key="b" data-ui-name="b-content">
+          <div class="test-content content" style="background-color: orange" data-content-key="b" data-content-name="b-content">
             New Content
           </div>
         `);
@@ -220,7 +220,7 @@
 
         // Trigger content change to see smooth transition type change
         setContent(`
-          <div class="test-content content" style="background-color: lightblue" data-ui-key="c" data-ui-name="c-fade">
+          <div class="test-content content" style="background-color: lightblue" data-content-key="c" data-content-name="c-fade">
             Cross-fade Content
           </div>
         `);
@@ -235,7 +235,7 @@
 
         // Trigger content change to see smooth transition type change
         setContent(`
-          <div class="test-content content" style="background-color: lightgreen" data-ui-key="d" data-ui-name="d-slide">
+          <div class="test-content content" style="background-color: lightgreen" data-content-key="d" data-content-name="d-slide">
             Slide-left Content
           </div>
         `);
@@ -251,7 +251,7 @@
         }
 
         setContent(`
-          <div class="test-content content" data-ui-key="a" data-ui-name="a-content">
+          <div class="test-content content" data-content-key="a" data-content-name="a-content">
             Initial Content
           </div>
         `);

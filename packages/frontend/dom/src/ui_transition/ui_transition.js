@@ -94,9 +94,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let resizeObserver = null;
 
   // Content state
-  let lastUIKey = null;
+  let lastContentKey = null;
   let previousContent = null;
-  let wasInheritingDimensions = false;
+  let wasContentPhase = false;
 
   const measureContentSize = () => {
     return [getWidth(measureWrapper), getHeight(measureWrapper)];
@@ -198,8 +198,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   const initialChild = content.children[0];
   if (initialChild) {
     debug("size", "Found initial content");
-    lastUIKey = initialChild.getAttribute("data-content-key");
-    wasInheritingDimensions = initialChild.hasAttribute("data-content-phase");
+    lastContentKey = initialChild.getAttribute("data-content-key");
+    wasContentPhase = initialChild.hasAttribute("data-content-phase");
     naturalContentWidth = constrainedWidth;
     naturalContentHeight = constrainedHeight;
     debug(
@@ -207,7 +207,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       `Initial size: ${naturalContentWidth}x${naturalContentHeight}`,
     );
 
-    if (!wasInheritingDimensions) {
+    if (!wasContentPhase) {
       startResizeObserver();
       debug("size", "Observing resize");
     }
@@ -224,9 +224,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       isUpdating = true;
       const firstChild = content.children[0];
       const childUIName = firstChild?.getAttribute("data-ui-name");
-      const currentUIKey = firstChild?.getAttribute("data-content-key");
-      const inheritContentDimensions =
-        firstChild?.hasAttribute("data-content-phase");
+      const currentContentKey = firstChild?.getAttribute("data-content-key");
+      const isContentPhase = firstChild?.hasAttribute("data-content-phase");
 
       if (DEBUG.transition) {
         console.group(`UI Update: ${childUIName || "unknown"}`);
@@ -247,38 +246,39 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       outerWrapper.style.height = `${constrainedHeight}px`;
 
       debug("transition", "Content info:", {
-        currentUIKey,
-        lastUIKey,
-        inheritContentDimensions,
+        currentContentKey,
+        lastContentKey,
+        isContentPhase,
         naturalContentWidth,
         naturalContentHeight,
       });
 
       // Handle resize observation
       stopResizeObserver();
-      if (firstChild && !inheritContentDimensions) {
+      if (firstChild && !isContentPhase) {
         startResizeObserver();
         debug("size", "Observing content resize");
       }
 
       // Determine transition scenarios
-      const isUIKeyChange = lastUIKey !== null && currentUIKey !== lastUIKey;
-      const lastInheritContentDimensions =
+      const isContentKeyChange =
+        lastContentKey !== null && currentContentKey !== lastContentKey;
+      const lastContentPhase =
         previousContent?.hasAttribute("data-content-phase");
       const isContentPhaseChange =
-        lastUIKey === currentUIKey &&
-        lastInheritContentDimensions !== inheritContentDimensions;
-      const shouldTransition = isUIKeyChange || isContentPhaseChange;
+        lastContentKey === currentContentKey &&
+        lastContentPhase !== isContentPhase;
+      const shouldTransition = isContentKeyChange || isContentPhaseChange;
 
       const hadContent = previousContent !== null;
       const hasContent = firstChild !== null;
       const becomesEmpty = hadContent && !hasContent;
       const becomesContent = !hadContent && hasContent;
-      const contentToContent = hadContent && hasContent && isUIKeyChange;
+      const contentToContent = hadContent && hasContent && isContentKeyChange;
       const phaseChange = hadContent && hasContent && isContentPhaseChange;
 
       debug("transition", "Transition scenarios:", {
-        isUIKeyChange,
+        isContentKeyChange,
         isContentPhaseChange,
         shouldTransition,
         hadContent,
@@ -386,11 +386,11 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
       // Store current content for next transition
       previousContent = firstChild ? firstChild.cloneNode(true) : null;
-      lastUIKey = currentUIKey;
-      wasInheritingDimensions = inheritContentDimensions;
+      lastContentKey = currentContentKey;
+      wasContentPhase = isContentPhase;
 
       const getTargetDimensions = () => {
-        if (!inheritContentDimensions) {
+        if (!isContentPhase) {
           return [newWidth, newHeight];
         }
         const shouldUseNewDimensions =
@@ -412,7 +412,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         targetHeight === constrainedHeight
       ) {
         debug("size", "No size change required");
-        if (!inheritContentDimensions) {
+        if (!isContentPhase) {
           releaseConstraints("no size change needed");
         }
         if (DEBUG.transition) {
@@ -427,15 +427,14 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       });
 
       // Handle size animation based on content state
-      const becomesContentPhase =
-        wasInheritingDimensions && !inheritContentDimensions;
+      const becomesContentPhase = wasContentPhase && !isContentPhase;
 
-      if (becomesContentPhase || (isUIKeyChange && !inheritContentDimensions)) {
+      if (becomesContentPhase || (isContentKeyChange && !isContentPhase)) {
         debug("size", "Transitioning to actual content");
         animateToSize(targetWidth, targetHeight, {
           onEnd: () => releaseConstraints("all animations completed"),
         });
-      } else if (isUIKeyChange || inheritContentDimensions) {
+      } else if (isContentKeyChange || isContentPhase) {
         animateToSize(targetWidth, targetHeight, {
           onEnd: () => releaseConstraints("all animations completed"),
         });
