@@ -140,10 +140,13 @@
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
       // Demo actions with different behaviors
-      const createSuccessAction = (contentType, delayMs = 1000) =>
+      const createSuccessAction = (contentKey, delayMs = 1000) =>
         createAction(async () => {
           await delay(delayMs);
-          return { contentType, timestamp: new Date().toISOString() };
+          return {
+            contentType: contentKey,
+            timestamp: new Date().toISOString(),
+          };
         });
 
       const createErrorAction = (delayMs = 1000) =>
@@ -233,12 +236,12 @@
         </div>
       );
 
-      const renderLoadingContent = () => (
+      const renderLoadingContent = (contentKey) => (
         <div
           className="info-content"
           data-content-phase
-          data-content-key="loading"
-          data-ui-name="loading-content"
+          data-content-key={contentKey}
+          data-ui-name={`${contentKey}-loading`}
         >
           <div style="display: flex; align-items: center;">
             <div className="loading-spinner"></div>
@@ -273,6 +276,16 @@
         const errorAction = createErrorAction(500);
         const slowAction = createSlowAction();
         const stuckLoadingAction = createStuckLoadingAction();
+
+        // Map actions to their content keys for loading state
+        const actionContentKeys = new Map([
+          [smallAction, "small"],
+          [mediumAction, "medium"],
+          [largeAction, "large"],
+          [errorAction, "error"],
+          [slowAction, "slow"],
+          [stuckLoadingAction, "stuck-loading"],
+        ]);
 
         const triggerAction = (action) => {
           setCurrentAction(() => action);
@@ -320,7 +333,12 @@
                   data-ui-transition-duration={transitionDuration}
                 >
                   {{
-                    loading: renderLoadingContent,
+                    loading: () => {
+                      // Use the content key of what we're loading
+                      const contentKey =
+                        actionContentKeys.get(currentAction) || "unset";
+                      return renderLoadingContent(contentKey);
+                    },
                     error: renderErrorContent,
                     completed: (data) => {
                       if (!data) return null;

@@ -63,6 +63,7 @@ import.meta.css = /* css */ `
 const DEBUG = {
   size: false,
   transition: true,
+  transition_updates: false,
 };
 
 const debug = (type, ...args) => {
@@ -613,7 +614,7 @@ const applySlideLeft = (
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
-          debug("transition", "Slide out progress:", value);
+          debug("transition_updates", "Slide out progress:", value);
           if (timing === "end") {
             debug("transition", "Slide out complete");
           }
@@ -635,7 +636,7 @@ const applySlideLeft = (
         duration,
         startProgress,
         onUpdate: ({ value }) => {
-          debug("transition", "Slide in progress:", value);
+          debug("transition_updates", "Slide in progress:", value);
         },
       }),
     ];
@@ -670,7 +671,7 @@ const applySlideLeft = (
       duration,
       startProgress,
       onUpdate: ({ value }) => {
-        debug("transition", "Old content slide out:", value);
+        debug("transition_updates", "Old content slide out:", value);
       },
     }),
     createTranslateXTransition(newChild, 0, {
@@ -678,7 +679,7 @@ const applySlideLeft = (
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {
-        debug("transition", "New content slide in:", value);
+        debug("transition_updates", "New content slide in:", value);
         if (timing === "end") {
           debug("transition", "Slide complete");
         }
@@ -709,7 +710,7 @@ const applyCrossFade = (
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
-          debug("transition", "Content fade out:", value.toFixed(3));
+          debug("transition_updates", "Content fade out:", value.toFixed(3));
           if (timing === "end") {
             debug("transition", "Fade out complete");
           }
@@ -743,7 +744,7 @@ const applyCrossFade = (
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
-          debug("transition", "Fade in progress:", value.toFixed(3));
+          debug("transition_updates", "Fade in progress:", value.toFixed(3));
           if (timing === "end") {
             debug("transition", "Fade in complete");
           }
@@ -760,7 +761,11 @@ const applyCrossFade = (
       startProgress,
       onUpdate: ({ value }) => {
         if (value > 0) {
-          debug("transition", "Old content fade out:", value.toFixed(3));
+          debug(
+            "transition_updates",
+            "Old content fade out:",
+            value.toFixed(3),
+          );
         }
       },
     }),
@@ -771,7 +776,7 @@ const applyCrossFade = (
       onUpdate: ({ value, timing }) => {
         const currentOpacity = parseFloat(getComputedStyle(newChild).opacity);
         if (isNaN(currentOpacity) || value > currentOpacity) {
-          debug("transition", "New content fade in:", value.toFixed(3));
+          debug("transition_updates", "New content fade in:", value.toFixed(3));
         }
         if (timing === "end") {
           debug("transition", "Cross-fade complete");
