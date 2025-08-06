@@ -86,8 +86,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let isPaused = false;
 
   // Size state
-  let naturalContentWidth = 0; // Natural size of actual content (not loading/error states)
-  let naturalContentHeight = 0;
+  let naturalChildWidth = 0; // Natural size of actual content (not loading/error states)
+  let naturalChildHeight = 0;
   let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
   let constrainedHeight = 0;
   let sizeAnimation = null;
@@ -105,11 +105,11 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   const updateContentDimensions = () => {
     const [newWidth, newHeight] = measureContentSize();
     debug("size", "Content size changed:", {
-      width: `${naturalContentWidth} → ${newWidth}`,
-      height: `${naturalContentHeight} → ${newHeight}`,
+      width: `${naturalChildWidth} → ${newWidth}`,
+      height: `${naturalChildHeight} → ${newHeight}`,
     });
-    naturalContentWidth = newWidth;
-    naturalContentHeight = newHeight;
+    naturalChildWidth = newWidth;
+    naturalChildHeight = newHeight;
 
     if (sizeAnimation?.playing) {
       debug("size", "Updating animation target:", newHeight);
@@ -149,8 +149,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     });
     constrainedWidth = afterWidth;
     constrainedHeight = afterHeight;
-    naturalContentWidth = afterWidth;
-    naturalContentHeight = afterHeight;
+    naturalChildWidth = afterWidth;
+    naturalChildHeight = afterHeight;
   };
 
   const animateToSize = (targetWidth, targetHeight, { onEnd } = {}) => {
@@ -200,12 +200,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     debug("size", "Found initial child");
     lastContentKey = initialChild.getAttribute("data-content-key");
     wasContentPhase = initialChild.hasAttribute("data-content-phase");
-    naturalContentWidth = constrainedWidth;
-    naturalContentHeight = constrainedHeight;
-    debug(
-      "size",
-      `Initial size: ${naturalContentWidth}x${naturalContentHeight}`,
-    );
+    naturalChildWidth = constrainedWidth;
+    naturalChildHeight = constrainedHeight;
+    debug("size", `Initial size: ${naturalChildWidth}x${naturalChildHeight}`);
 
     if (!wasContentPhase) {
       startResizeObserver();
@@ -214,7 +211,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     previousChild = initialChild.cloneNode(true);
   }
 
-  const handleContentUpdate = () => {
+  const handleChildSlotMutation = () => {
     if (isUpdating) {
       debug("transition", "Preventing recursive update");
       return;
@@ -249,8 +246,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         currentContentKey,
         lastContentKey,
         isContentPhase,
-        naturalContentWidth,
-        naturalContentHeight,
+        naturalChildWidth,
+        naturalChildHeight,
       });
 
       // Handle resize observation
@@ -263,17 +260,15 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       // Determine transition scenarios
       const isContentKeyChange =
         lastContentKey !== null && currentContentKey !== lastContentKey;
-      const lastContentPhase =
-        previousChild?.hasAttribute("data-content-phase");
       const isContentPhaseChange =
         lastContentKey === currentContentKey &&
-        lastContentPhase !== isContentPhase;
+        wasContentPhase !== isContentPhase;
       const shouldTransition = isContentKeyChange || isContentPhaseChange;
 
       const hadChild = previousChild !== null;
       const hasChild = firstChild !== null;
       const becomesEmpty = hadChild && !hasChild;
-      const becomesChild = !hadChild && hasChild;
+      const becomesPopulated = !hadChild && hasChild;
       const contentChange = hadChild && hasChild && isContentKeyChange;
       const phaseChange = hadChild && hasChild && isContentPhaseChange;
 
@@ -284,7 +279,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         hadChild,
         hasChild,
         becomesEmpty,
-        becomesChild,
+        becomesPopulated,
         contentChange,
         phaseChange,
       });
@@ -351,7 +346,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             debug("transition", "No old child to clone");
           }
 
-          return { oldContent: oldChild, cleanup };
+          return { oldChild, cleanup };
         };
 
         const duration = parseInt(
@@ -394,13 +389,13 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           return [newWidth, newHeight];
         }
         const shouldUseNewDimensions =
-          naturalContentWidth === 0 && naturalContentHeight === 0;
+          naturalChildWidth === 0 && naturalChildHeight === 0;
         const targetWidth = shouldUseNewDimensions
           ? newWidth
-          : naturalContentWidth || newWidth;
+          : naturalChildWidth || newWidth;
         const targetHeight = shouldUseNewDimensions
           ? newHeight
-          : naturalContentHeight || newHeight;
+          : naturalChildHeight || newHeight;
         return [targetWidth, targetHeight];
       };
 
@@ -451,7 +446,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
   // Watch for child changes
   const mutationObserver = new MutationObserver(() => {
-    handleContentUpdate();
+    handleChildSlotMutation();
   });
 
   mutationObserver.observe(slot, {
@@ -493,7 +488,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
 const animateTransition = (
   transitionController,
-  newElement,
+  newChild,
   setupTransition,
   { type, duration, animationProgress = 0, onComplete },
 ) => {
@@ -506,18 +501,18 @@ const animateTransition = (
     return null;
   }
 
-  const { oldContent, cleanup } = setupTransition();
+  const { oldChild, cleanup } = setupTransition();
   debug("transition", "Starting animation:", {
     type,
-    from: oldContent?.getAttribute("data-content-key") || "none",
-    to: newElement?.getAttribute("data-content-key") || "none",
+    from: oldChild?.getAttribute("data-content-key") || "none",
+    to: newChild?.getAttribute("data-content-key") || "none",
     progress: `${(animationProgress * 100).toFixed(1)}%`,
   });
 
   const remainingDuration = Math.max(100, duration * (1 - animationProgress));
   debug("transition", "Duration:", remainingDuration);
 
-  const transitions = applyTransition(oldContent, newElement, {
+  const transitions = applyTransition(oldChild, newChild, {
     duration: remainingDuration,
     startProgress: animationProgress,
   });
@@ -534,18 +529,18 @@ const animateTransition = (
 };
 
 const applySlideLeft = (
-  oldElement,
-  newElement,
+  oldChild,
+  newChild,
   { duration, startProgress = 0 },
 ) => {
-  if (!oldElement && !newElement) {
+  if (!oldChild && !newChild) {
     return [];
   }
 
-  if (!newElement) {
+  if (!newChild) {
     // Content -> Empty (slide out left only)
-    const containerWidth = oldElement.parentElement?.offsetWidth || 0;
-    const currentOldPos = getTranslateX(oldElement);
+    const containerWidth = oldChild.parentElement?.offsetWidth || 0;
+    const currentOldPos = getTranslateX(oldChild);
 
     debug("transition", "Slide out to empty:", {
       old: currentOldPos,
@@ -553,7 +548,7 @@ const applySlideLeft = (
     });
 
     return [
-      createTranslateXTransition(oldElement, -containerWidth, {
+      createTranslateXTransition(oldChild, -containerWidth, {
         from: currentOldPos,
         duration,
         startProgress,
@@ -567,15 +562,15 @@ const applySlideLeft = (
     ];
   }
 
-  const containerWidth = newElement.parentElement?.offsetWidth || 0;
+  const containerWidth = newChild.parentElement?.offsetWidth || 0;
 
-  if (!oldElement) {
+  if (!oldChild) {
     // Empty -> Content (slide in from right)
-    const currentPos = getTranslateX(newElement);
+    const currentPos = getTranslateX(newChild);
     const startPos = currentPos || containerWidth;
 
     return [
-      createTranslateXTransition(newElement, 0, {
+      createTranslateXTransition(newChild, 0, {
         from: startPos,
         duration,
         startProgress,
@@ -587,8 +582,8 @@ const applySlideLeft = (
   }
 
   // Content -> Content (slide out left, slide in from right)
-  const currentOldPos = getTranslateX(oldElement);
-  const currentNewPos = getTranslateX(newElement);
+  const currentOldPos = getTranslateX(oldChild);
+  const currentNewPos = getTranslateX(newChild);
 
   // For smooth continuation: if old element is mid-transition,
   // calculate new element position to maintain seamless sliding
@@ -610,7 +605,7 @@ const applySlideLeft = (
   });
 
   return [
-    createTranslateXTransition(oldElement, -containerWidth, {
+    createTranslateXTransition(oldChild, -containerWidth, {
       from: currentOldPos,
       duration,
       startProgress,
@@ -618,7 +613,7 @@ const applySlideLeft = (
         debug("transition", "Old content slide out:", value);
       },
     }),
-    createTranslateXTransition(newElement, 0, {
+    createTranslateXTransition(newChild, 0, {
       from: startNewPos,
       duration,
       startProgress,
@@ -633,23 +628,23 @@ const applySlideLeft = (
 };
 
 const applyCrossFade = (
-  oldElement,
-  newElement,
+  oldChild,
+  newChild,
   { duration, startProgress = 0 },
 ) => {
-  if (!oldElement && !newElement) {
+  if (!oldChild && !newChild) {
     return [];
   }
 
-  if (!newElement) {
+  if (!newChild) {
     // Content -> Empty (fade out only)
-    const oldOpacity = parseFloat(getComputedStyle(oldElement).opacity);
+    const oldOpacity = parseFloat(getComputedStyle(oldChild).opacity);
     const startOpacity = isNaN(oldOpacity) ? 1 : oldOpacity;
 
     debug("transition", "Fade out to empty:", { startOpacity });
 
     return [
-      createOpacityTransition(oldElement, 0, {
+      createOpacityTransition(oldChild, 0, {
         from: startOpacity,
         duration,
         startProgress,
@@ -664,10 +659,10 @@ const applyCrossFade = (
   }
 
   // Get current opacity for both elements
-  const oldOpacity = oldElement
-    ? parseFloat(getComputedStyle(oldElement).opacity)
+  const oldOpacity = oldChild
+    ? parseFloat(getComputedStyle(oldChild).opacity)
     : 0;
-  const newOpacity = parseFloat(getComputedStyle(newElement).opacity);
+  const newOpacity = parseFloat(getComputedStyle(newChild).opacity);
 
   // Use highest opacity as starting point for smooth continuation
   const startOpacity = Math.max(
@@ -680,10 +675,10 @@ const applyCrossFade = (
     startOpacity,
   });
 
-  if (!oldElement) {
+  if (!oldChild) {
     // Empty -> Content (fade in only)
     return [
-      createOpacityTransition(newElement, 1, {
+      createOpacityTransition(newChild, 1, {
         from: startOpacity,
         duration,
         startProgress,
@@ -699,7 +694,7 @@ const applyCrossFade = (
 
   // Content -> Content (cross-fade)
   return [
-    createOpacityTransition(oldElement, 0, {
+    createOpacityTransition(oldChild, 0, {
       from: Math.max(isNaN(oldOpacity) ? 1 : oldOpacity, startOpacity),
       duration,
       startProgress,
@@ -709,12 +704,12 @@ const applyCrossFade = (
         }
       },
     }),
-    createOpacityTransition(newElement, 1, {
+    createOpacityTransition(newChild, 1, {
       from: Math.max(isNaN(newOpacity) ? 0 : newOpacity, startOpacity),
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {
-        const currentOpacity = parseFloat(getComputedStyle(newElement).opacity);
+        const currentOpacity = parseFloat(getComputedStyle(newChild).opacity);
         if (isNaN(currentOpacity) || value > currentOpacity) {
           debug("transition", "New content fade in:", value.toFixed(3));
         }
