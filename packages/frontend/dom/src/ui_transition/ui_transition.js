@@ -294,7 +294,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       const isContentPhaseChange =
         lastContentKey === currentContentKey &&
         wasContentPhase !== isContentPhase;
-      const shouldTransition = isContentKeyChange || isContentPhaseChange;
+      // Only transition when content key changes, not for phase changes within same content
+      const shouldTransition = isContentKeyChange;
 
       const hadChild = previousChild !== null;
       const hasChild = firstChild !== null;

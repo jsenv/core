@@ -365,12 +365,6 @@
                     loading: () => {
                       // Use the content key of what we're loading
                       const contentKey = getContentKeyForAction(currentAction);
-                      console.log(
-                        "Loading renderer - currentAction:",
-                        currentAction,
-                        "contentKey:",
-                        contentKey,
-                      );
                       return renderLoadingContent(contentKey);
                     },
                     error: renderErrorContent,
