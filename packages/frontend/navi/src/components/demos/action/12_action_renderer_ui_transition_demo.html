@@ -279,9 +279,9 @@
         const slowAction = createSlowAction();
 
         const triggerAction = (action) => {
-          setCurrentAction(action);
+          setCurrentAction(() => action);
           // Clear any previous state and trigger fresh load
-          action.reload();
+          action.rerun();
         };
 
         // Effect to apply expandable animation to animated content

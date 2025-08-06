@@ -70,7 +70,7 @@ const ActionRendererContent = ({ action, children, disabled }) => {
     return null;
   }
 
-  if (!action) {
+  if (action === undefined) {
     throw new Error(
       "ActionRenderer requires an action to render, but none was provided.",
     );
@@ -83,8 +83,10 @@ const ActionRendererContent = ({ action, children, disabled }) => {
   // This tells the action system that errors should be caught and stored
   // in the action's error state rather than bubbling up
   useLayoutEffect(() => {
-    const { ui } = getActionPrivateProperties(action);
-    ui.hasRenderers = true;
+    if (action) {
+      const { ui } = getActionPrivateProperties(action);
+      ui.hasRenderers = true;
+    }
   }, [action]);
 
   useLayoutEffect(() => {
@@ -136,8 +138,14 @@ const ActionRendererContent = ({ action, children, disabled }) => {
   return renderCompletedSafe(data, action);
 };
 
+const defaultPromise = Promise.resolve();
+defaultPromise.resolve = () => {};
+
 const actionUIRenderedPromiseWeakMap = new WeakMap();
 const useUIRenderedPromise = (action) => {
+  if (!action) {
+    return defaultPromise;
+  }
   const actionUIRenderedPromise = actionUIRenderedPromiseWeakMap.get(action);
   if (actionUIRenderedPromise) {
     return actionUIRenderedPromise;
