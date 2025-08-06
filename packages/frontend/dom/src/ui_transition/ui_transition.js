@@ -473,14 +473,43 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     }
   };
 
-  // Watch for child changes
-  const mutationObserver = new MutationObserver(() => {
-    handleChildSlotMutation();
+  // Watch for child changes and attribute changes on children
+  const mutationObserver = new MutationObserver((mutations) => {
+    let shouldUpdate = false;
+
+    for (const mutation of mutations) {
+      if (mutation.type === "childList") {
+        shouldUpdate = true;
+        break;
+      }
+      if (mutation.type === "attributes") {
+        const { attributeName, target } = mutation;
+        // Check if data-content-key or data-content-phase changed
+        if (
+          attributeName === "data-content-key" ||
+          attributeName === "data-content-phase"
+        ) {
+          debug(
+            "transition",
+            `Attribute change detected: ${attributeName} on`,
+            target.getAttribute("data-ui-name") || "element",
+          );
+          shouldUpdate = true;
+          break;
+        }
+      }
+    }
+
+    if (shouldUpdate) {
+      handleChildSlotMutation();
+    }
   });
 
   mutationObserver.observe(slot, {
     childList: true,
-    subtree: false,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["data-content-key", "data-content-phase"],
     characterData: false,
   });
 
