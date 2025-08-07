@@ -44,6 +44,7 @@ export { Select } from "./src/components/input/select.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
 export { SelectionProvider } from "./src/components/selection/selection.js";
+export { UITransition } from "./src/components/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
 
 // for debbugging testing purposes

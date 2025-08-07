@@ -135,6 +135,8 @@
         createAction,
         // eslint-disable-next-line no-unused-vars
         ActionRenderer,
+        // eslint-disable-next-line no-unused-vars
+        UITransition,
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -356,33 +358,35 @@
               </div>
 
               <div className="content-area">
-                <ActionRenderer
-                  action={currentAction}
+                <UITransition
                   transitionType={transitionType}
                   transitionDuration={transitionDuration}
                 >
-                  {{
-                    loading: () => {
-                      // Use the content key of what we're loading
-                      const contentKey = getContentKeyForAction(currentAction);
-                      return renderLoadingContent(contentKey);
-                    },
-                    error: renderErrorContent,
-                    completed: (data) => {
-                      if (!data) return null;
-                      switch (data.contentType) {
-                        case "small":
-                          return renderSmallContent(data);
-                        case "medium":
-                          return renderMediumContent(data);
-                        case "large":
-                          return renderLargeContent(data);
-                        default:
-                          return renderSmallContent(data);
-                      }
-                    },
-                  }}
-                </ActionRenderer>
+                  <ActionRenderer action={currentAction}>
+                    {{
+                      loading: () => {
+                        // Use the content key of what we're loading
+                        const contentKey =
+                          getContentKeyForAction(currentAction);
+                        return renderLoadingContent(contentKey);
+                      },
+                      error: renderErrorContent,
+                      completed: (data) => {
+                        if (!data) return null;
+                        switch (data.contentType) {
+                          case "small":
+                            return renderSmallContent(data);
+                          case "medium":
+                            return renderMediumContent(data);
+                          case "large":
+                            return renderLargeContent(data);
+                          default:
+                            return renderSmallContent(data);
+                        }
+                      },
+                    }}
+                  </ActionRenderer>
+                </UITransition>
               </div>
             </div>
 
