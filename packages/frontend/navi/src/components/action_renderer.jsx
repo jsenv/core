@@ -1,38 +1,6 @@
-/**
- * ActionRenderer
- *
- * A Preact component for declaratively rendering the UI of an async action's lifecycle.
- * - Automatically animates transitions between states using UITransition
- * - Handles error boundaries
- * - Centralizes error handling and UI state logic for actions
- * - Supports custom transition to animate content changes
- *
- * To animate transitions when the content changes, set a unique `data-content-key` on your rendered content.
- * Use the `transitionType` prop to control the animation style (e.g. "slide-left", "cross-fade").
- *
- * Example:
- *
- *   <ActionRenderer
- *     action={fetchUserAction}
- *     transitionType="slide-left"
- *     transitionDuration={400}
- *   >
- *     {{
- *       loading: () => <Spinner data-content-key={userId} data-content-phase />,
- *       error: (err) => <ErrorMessage error={err} data-content-key={userId} data-content-phase />,
- *       completed: (user) => (
- *         <UserProfile user={user} data-content-key={userId} />
- *       ),
- *     }}
- *   </ActionRenderer>
- *
- * When the value of `data-content-key` changes, ActionRenderer will animate the transition between content using the specified transitionType.
- */
-
 import { useErrorBoundary, useLayoutEffect } from "preact/hooks";
 import { getActionPrivateProperties } from "../action_private_properties.js";
 import { useActionStatus } from "../use_action_status.js";
-import { UITransition } from "./ui_transition.jsx";
 
 import.meta.css = /* css */ `
   .action_error {
@@ -53,28 +21,7 @@ const renderErrorDefault = (error) => {
 };
 const renderCompletedDefault = () => null;
 
-export const ActionRenderer = ({
-  action,
-  children,
-  disabled,
-  transitionType,
-  transitionDuration,
-  ...props
-}) => {
-  return (
-    <UITransition
-      transitionType={transitionType}
-      transitionDuration={transitionDuration}
-      {...props}
-    >
-      <ActionRendererContent action={action} disabled={disabled}>
-        {children}
-      </ActionRendererContent>
-    </UITransition>
-  );
-};
-
-const ActionRendererContent = ({ action, children, disabled }) => {
+export const ActionRenderer = ({ action, children, disabled }) => {
   const {
     idle: renderIdle = renderIdleDefault,
     loading: renderLoading = renderLoadingDefault,
