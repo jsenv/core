@@ -250,7 +250,19 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       isUpdating = true;
       const firstChild = slot.children[0];
       const childUIName = firstChild?.getAttribute("data-ui-name");
-      const currentContentKey = firstChild?.getAttribute("data-content-key");
+
+      // Prefer data-content-key on child, fallback to slot
+      let currentContentKey = null;
+      let slotContentKey = slot.getAttribute("data-content-key");
+      let childContentKey = firstChild?.getAttribute("data-content-key");
+      if (childContentKey && slotContentKey) {
+        console.warn(
+          "Both data-content-key found on child and ui_transition_slot. Using child value.",
+          { childContentKey, slotContentKey },
+        );
+      }
+      currentContentKey = childContentKey || slotContentKey || null;
+
       wasContentPhase = isContentPhase;
       isContentPhase = firstChild?.hasAttribute("data-content-phase");
 
