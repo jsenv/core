@@ -274,7 +274,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       debug(
         "transition",
         `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
-        previousChild.outerHTML,
+        previousChild.getAttribute("data-ui-name") || "unnamed",
       );
       cleanup = () => oldChild.remove();
     } else {
@@ -342,7 +342,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       currentContentKey = childContentKey || slotContentKey || null;
 
       wasContentPhase = isContentPhase;
-      isContentPhase = firstChild?.hasAttribute("data-content-phase");
+      isContentPhase = firstChild
+        ? firstChild.hasAttribute("data-content-phase")
+        : true; // empty (no child) is treated as content phase
 
       if (DEBUG.transition) {
         console.group(
@@ -367,7 +369,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       debug("transition", "Content keys:", {
         previous: lastContentKey || "null",
         current: currentContentKey || "null",
-        phase: `${wasContentPhase ? "content-phase" : "content"} → ${isContentPhase ? "content-phase" : "content"}`,
+        phase: `${wasContentPhase ? "content-phase" : "content"} → ${firstChild ? (isContentPhase ? "content-phase" : "content") : "null"}`,
       });
 
       // Handle resize observation
@@ -380,7 +382,23 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       // Determine transition scenarios
       const hadChild = previousChild !== null;
       const hasChild = firstChild !== null;
-      // Treat null as a content phase except when slot data-content-key changes
+
+      /**
+       * Content Phase Logic: Why empty slots are treated as content phases
+       *
+       * When there is no child element (React component returns null), it is considered
+       * that the component does not render anything temporarily. This might be because:
+       * - The component is loading but does not have a loading state
+       * - The component has an error but does not have an error state
+       * - The component is conceptually unloaded (underlying content was deleted/is not accessible)
+       *
+       * This represents a phase of the given content: having nothing to display.
+       *
+       * We support transitions between different contents via the ability to set
+       * [data-content-key] on the ".ui_transition_slot". This is also useful when you want
+       * all children of a React component to inherit the same data-content-key without
+       * explicitly setting the attribute on each child element.
+       */
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
@@ -577,15 +595,6 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           : isContentPhase
             ? "content-phase"
             : "content";
-
-        debug("transition", "Phase transition variables:", {
-          hadChild,
-          hasChild,
-          wasContentPhase,
-          isContentPhase,
-          fromPhase,
-          toPhase,
-        });
 
         debug(
           "transition",
