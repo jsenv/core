@@ -39,8 +39,8 @@ import {
   createOpacityTransition,
   createTranslateXTransition,
   createWidthTransition,
-  getNaturalOpacity,
   getOpacity,
+  getOpacityWithoutTransition,
   getTranslateX,
 } from "../transition/dom_transition.js";
 import { createGroupTransitionController } from "../transition/group_transition.js";
@@ -895,14 +895,12 @@ const applyCrossFade = (
 
   if (!newChild) {
     // Content -> Empty (fade out only)
-    const oldOpacity = getOpacity(oldChild);
-    const startOpacity = isNaN(oldOpacity) ? 1 : oldOpacity;
-
-    debug("transition", "Fade out to empty:", { startOpacity });
-
+    const from = getOpacity(oldChild);
+    const to = 0;
+    debug("transition", "Fade out to empty:", { from, to });
     return [
-      createOpacityTransition(oldChild, 0, {
-        from: startOpacity,
+      createOpacityTransition(oldChild, to, {
+        from,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
@@ -916,17 +914,13 @@ const applyCrossFade = (
   }
 
   if (!oldChild) {
-    const newOpacity = getOpacity(newChild);
-    const naturalOpacity = getNaturalOpacity(newChild);
-
-    debug("transition", "Fade in from empty:", {
-      from: newOpacity,
-      to: naturalOpacity,
-    });
     // Empty -> Content (fade in only)
+    const from = getOpacity(newChild);
+    const to = getOpacityWithoutTransition(newChild);
+    debug("transition", "Fade in from empty:", { from, to });
     return [
-      createOpacityTransition(newChild, naturalOpacity, {
-        from: newOpacity,
+      createOpacityTransition(newChild, to, {
+        from,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
@@ -943,11 +937,7 @@ const applyCrossFade = (
   // Get current opacity for both elements
   const oldOpacity = getOpacity(oldChild);
   const newOpacity = getOpacity(newChild);
-
-  // Get natural target opacities using helper functions
-  const oldNaturalOpacity = getNaturalOpacity(oldChild);
-  const newNaturalOpacity = getNaturalOpacity(newChild);
-
+  const newNaturalOpacity = getOpacityWithoutTransition(newChild);
   debug("transition", "Cross-fade transition:", {
     oldOpacity: `${oldOpacity} → 0`,
     newOpacity: `${newOpacity} → ${newNaturalOpacity}`,
@@ -955,7 +945,7 @@ const applyCrossFade = (
 
   return [
     createOpacityTransition(oldChild, 0, {
-      from: isNaN(oldOpacity) ? oldNaturalOpacity : oldOpacity,
+      from: oldOpacity,
       duration,
       startProgress,
       onUpdate: ({ value }) => {
@@ -969,7 +959,7 @@ const applyCrossFade = (
       },
     }),
     createOpacityTransition(newChild, newNaturalOpacity, {
-      from: isNaN(newOpacity) ? 0 : newOpacity,
+      from: newOpacity,
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {

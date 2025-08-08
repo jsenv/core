@@ -35,7 +35,7 @@ export const createHeightTransition = (element, to, options) => {
       setup: () => {
         const restoreWillChange = addWillChange(element, "height");
         return {
-          from: getTransitionHeight(element),
+          from: getHeight(element),
           update: ({ value }) => {
             const valueWithUnit = `${value}px`;
             element.setAttribute("data-transition-height", valueWithUnit);
@@ -68,7 +68,7 @@ export const createWidthTransition = (element, to, options) => {
       setup: () => {
         const restoreWillChange = addWillChange(element, "width");
         return {
-          from: getTransitionWidth(element),
+          from: getWidth(element),
           update: ({ value }) => {
             const valueWithUnit = `${value}px`;
             element.setAttribute("data-transition-width", valueWithUnit);
@@ -122,33 +122,7 @@ export const createOpacityTransition = (element, to, options = {}) => {
   return opacityTransition;
 };
 export const getOpacity = (element) => {
-  // Check for transition data attribute first
-  const transitionOpacity = element.getAttribute("data-transition-opacity");
-  if (transitionOpacity !== null) {
-    return parseFloat(transitionOpacity) || 0;
-  }
-  // Fall back to computed style
   return parseFloat(getComputedStyle(element).opacity) || 0;
-};
-
-export const getTransitionWidth = (element) => {
-  // Check for transition data attribute first
-  const transitionWidth = element.getAttribute("data-transition-width");
-  if (transitionWidth !== null) {
-    return parseFloat(transitionWidth) || 0;
-  }
-  // Fall back to computed style
-  return getWidth(element);
-};
-
-export const getTransitionHeight = (element) => {
-  // Check for transition data attribute first
-  const transitionHeight = element.getAttribute("data-transition-height");
-  if (transitionHeight !== null) {
-    return parseFloat(transitionHeight) || 0;
-  }
-  // Fall back to computed style
-  return getHeight(element);
 };
 
 export const createTranslateXTransition = (element, to, options) => {
@@ -196,94 +170,75 @@ export const createTranslateXTransition = (element, to, options) => {
   return translateXTransition;
 };
 export const getTranslateX = (element) => {
-  // Check for transition data attribute first
-  const transitionTranslateX = element.getAttribute(
-    "data-transition-translate-x",
-  );
-  if (transitionTranslateX !== null) {
-    return parseFloat(transitionTranslateX) || 0;
-  }
-  // Fall back to computed transform
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   return transformMap.get("translateX")?.value || 0;
 };
 
 // Helper functions for getting natural (non-transition) values
-export const getNaturalOpacity = (element) => {
+export const getOpacityWithoutTransition = (element) => {
   const transitionOpacity = element.getAttribute("data-transition-opacity");
 
-  // Temporarily remove transition attributes
+  // Temporarily remove transition attribute
   element.removeAttribute("data-transition-opacity");
-  element.style.removeProperty("--ui-transition-opacity");
 
   const naturalValue = parseFloat(getComputedStyle(element).opacity) || 0;
 
-  // Restore transition attributes if they existed
+  // Restore transition attribute if it existed
   if (transitionOpacity !== null) {
     element.setAttribute("data-transition-opacity", transitionOpacity);
-    element.style.setProperty("--ui-transition-opacity", transitionOpacity);
   }
 
   return naturalValue;
 };
 
-export const getNaturalTranslateX = (element) => {
+export const getTranslateXWithoutTransition = (element) => {
   const transitionTranslateX = element.getAttribute(
     "data-transition-translate-x",
   );
 
-  // Temporarily remove transition attributes
+  // Temporarily remove transition attribute
   element.removeAttribute("data-transition-translate-x");
-  element.style.removeProperty("--ui-transition-translate-x");
 
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   const naturalValue = transformMap.get("translateX")?.value || 0;
 
-  // Restore transition attributes if they existed
+  // Restore transition attribute if it existed
   if (transitionTranslateX !== null) {
     element.setAttribute("data-transition-translate-x", transitionTranslateX);
-    element.style.setProperty(
-      "--ui-transition-translate-x",
-      transitionTranslateX,
-    );
   }
 
   return naturalValue;
 };
 
-export const getNaturalWidth = (element) => {
+export const getWidthWithoutTransition = (element) => {
   const transitionWidth = element.getAttribute("data-transition-width");
 
-  // Temporarily remove transition attributes
+  // Temporarily remove transition attribute
   element.removeAttribute("data-transition-width");
-  element.style.removeProperty("--ui-transition-width");
 
   const naturalValue = getWidth(element);
 
-  // Restore transition attributes if they existed
+  // Restore transition attribute if it existed
   if (transitionWidth !== null) {
     element.setAttribute("data-transition-width", transitionWidth);
-    element.style.setProperty("--ui-transition-width", transitionWidth);
   }
 
   return naturalValue;
 };
 
-export const getNaturalHeight = (element) => {
+export const getHeightWithoutTransition = (element) => {
   const transitionHeight = element.getAttribute("data-transition-height");
 
-  // Temporarily remove transition attributes
+  // Temporarily remove transition attribute
   element.removeAttribute("data-transition-height");
-  element.style.removeProperty("--ui-transition-height");
 
   const naturalValue = getHeight(element);
 
-  // Restore transition attributes if they existed
+  // Restore transition attribute if it existed
   if (transitionHeight !== null) {
     element.setAttribute("data-transition-height", transitionHeight);
-    element.style.setProperty("--ui-transition-height", transitionHeight);
   }
 
   return naturalValue;
