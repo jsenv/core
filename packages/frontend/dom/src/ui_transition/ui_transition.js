@@ -42,6 +42,7 @@ import {
   getOpacity,
   getOpacityWithoutTransition,
   getTranslateX,
+  getTranslateXWithoutTransition,
 } from "../transition/dom_transition.js";
 import { createGroupTransitionController } from "../transition/group_transition.js";
 
@@ -837,7 +838,7 @@ const applySlideLeft = (
   if (!oldChild) {
     // Empty -> Content (slide in from right)
     const from = containerWidth; // Start from right edge for slide-in effect
-    const to = 0;
+    const to = getTranslateXWithoutTransition(newChild);
     debug("transition", "Slide in from empty:", { from, to });
     return [
       createTranslateXTransition(newChild, to, {
@@ -857,6 +858,7 @@ const applySlideLeft = (
   // Content -> Content (slide out left, slide in from right)
   const oldPosition = getTranslateX(oldChild);
   const newPosition = getTranslateX(newChild);
+  const newNaturalPosition = getTranslateXWithoutTransition(newChild);
 
   // For smooth continuation: if old element is mid-transition,
   // calculate new element position to maintain seamless sliding
@@ -872,9 +874,14 @@ const applySlideLeft = (
     startNewPosition = newPosition || containerWidth;
   }
 
+  // For phase transitions, force new content to start from right edge for proper slide-in
+  const effectiveFromPosition = isPhaseTransition
+    ? containerWidth
+    : startNewPosition;
+
   debug("transition", "Slide transition:", {
     oldPosition: `${oldPosition} → ${-containerWidth}`,
-    newPosition: `${startNewPosition} → 0`,
+    newPosition: `${effectiveFromPosition} → ${newNaturalPosition}`,
   });
 
   return [
@@ -886,8 +893,8 @@ const applySlideLeft = (
         debug("transition_updates", "Old content slide out:", value);
       },
     }),
-    createTranslateXTransition(newChild, 0, {
-      from: startNewPosition,
+    createTranslateXTransition(newChild, newNaturalPosition, {
+      from: effectiveFromPosition,
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {
