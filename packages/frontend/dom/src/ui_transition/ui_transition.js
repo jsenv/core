@@ -57,6 +57,12 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
+  .ui_transition_phase_overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
   .ui_transition_content_overlay {
     position: absolute;
     inset: 0;
@@ -122,7 +128,6 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let activeContentTransition = null;
   let activeContentTransitionType = null;
   let activePhaseTransition = null;
-  let activePhaseTransitionType = null;
   let isPaused = false;
 
   // Size state
@@ -472,52 +477,100 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
       // Handle phase transitions (cross-fade for content phase changes)
       if (shouldDoPhaseTransition) {
-        const phaseTransitionType = container.getAttribute(
-          "data-ui-transition-phase",
+        const phaseTransitionType =
+          container.getAttribute("data-ui-transition-phase") || "cross-fade"; // Default to cross-fade for phase transitions
+
+        const existingOldPhaseContents = phaseOverlay.querySelectorAll(
+          "[data-ui-transition-old]",
         );
-        activePhaseTransitionType = phaseTransitionType;
-        // We'll want to cross-fade from previous content phase to new one
-        let contentPhaseClone = null;
-        if (previousChild) {
-          contentPhaseClone = previousChild.cloneNode(true);
-          // For now, just log what we would do
-          const fromPhase = !hadChild
-            ? "null"
-            : wasContentPhase
-              ? "content-phase"
-              : "content";
-          const toPhase = !hasChild
-            ? "null"
-            : isContentPhase
-              ? "content-phase"
-              : "content";
-          console.log(
-            `[ui_transition] PHASE TRANSITION: ${fromPhase} → ${toPhase}`,
-            `\nWould clone previous element:`,
-            contentPhaseClone,
-            `\nWould insert into .ui_transition_phase_overlay for cross-fade animation`,
-            `\nThis runs independently of any content transitions (slide-left/cross-fade)`,
-            `\nPhase transitions handle: null ↔ loading ↔ error ↔ content states`,
-          );
-          // In future: phaseOverlay.insertBefore(contentPhaseClone, slot.nextSibling);
-          // Set up phase transition animation here
-        } else {
-          const fromPhase = !hadChild
-            ? "null"
-            : wasContentPhase
-              ? "content-phase"
-              : "content";
-          const toPhase = !hasChild
-            ? "null"
-            : isContentPhase
-              ? "content-phase"
-              : "content";
-          console.log(
-            `[ui_transition] PHASE TRANSITION: ${fromPhase} → ${toPhase}`,
-            `\nNo previous child to clone (first time showing content)`,
-            `\nWould fade in new content phase directly`,
+        const phaseAnimationProgress = activePhaseTransition?.progress || 0;
+
+        if (phaseAnimationProgress > 0) {
+          debug(
+            "transition",
+            `Preserving phase transition progress: ${(phaseAnimationProgress * 100).toFixed(1)}%`,
           );
         }
+
+        if (activePhaseTransition) {
+          debug("transition", "Cancelling current phase transition");
+          activePhaseTransition.cancel();
+        }
+
+        const needsOldPhaseClone =
+          (becomesEmpty || becomesPopulated || phaseChange) &&
+          previousChild &&
+          !existingOldPhaseContents[0];
+
+        const setupPhaseTransition = () => {
+          let oldChild = null;
+          let cleanup = () => {};
+          const currentPhaseTransitionElement = existingOldPhaseContents[0];
+
+          if (currentPhaseTransitionElement) {
+            oldChild = currentPhaseTransitionElement;
+            debug(
+              "transition",
+              "Continuing from current phase transition element",
+            );
+            cleanup = () => oldChild.remove();
+          } else if (needsOldPhaseClone) {
+            phaseOverlay.innerHTML = "";
+            oldChild = previousChild.cloneNode(true);
+            oldChild.removeAttribute("data-content-key");
+            oldChild.removeAttribute("data-content-phase");
+            oldChild.setAttribute("data-ui-transition-old", "");
+            phaseOverlay.appendChild(oldChild);
+            debug("transition", "Cloned previous child for phase transition");
+            cleanup = () => oldChild.remove();
+          } else {
+            phaseOverlay.innerHTML = "";
+            debug("transition", "No old child to clone for phase transition");
+          }
+
+          return { oldChild, cleanup };
+        };
+
+        const phaseDuration = parseInt(
+          container.getAttribute("data-ui-transition-phase-duration") || 300,
+        );
+
+        const fromPhase = !hadChild
+          ? "null"
+          : wasContentPhase
+            ? "content-phase"
+            : "content";
+        const toPhase = !hasChild
+          ? "null"
+          : isContentPhase
+            ? "content-phase"
+            : "content";
+
+        debug(
+          "transition",
+          `Starting phase transition: ${fromPhase} → ${toPhase}`,
+        );
+
+        activePhaseTransition = animateTransition(
+          transitionController,
+          firstChild,
+          setupPhaseTransition,
+          {
+            duration: phaseDuration,
+            type: phaseTransitionType,
+            animationProgress: phaseAnimationProgress,
+            onComplete: () => {
+              activePhaseTransition = null;
+              activePhaseTransitionType = null;
+              debug("transition", "Phase transition complete");
+            },
+          },
+        );
+
+        if (activePhaseTransition) {
+          activePhaseTransition.play();
+        }
+        activePhaseTransitionType = phaseTransitionType;
       }
 
       // Store current child for next transition
