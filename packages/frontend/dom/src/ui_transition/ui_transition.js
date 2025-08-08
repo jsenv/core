@@ -791,6 +791,18 @@ const animateTransition = (
     isPhaseTransition,
   });
 
+  debug(
+    "transition",
+    `Created ${transitions.length} transition(s) for animation`,
+  );
+
+  if (transitions.length === 0) {
+    debug("transition", "No transitions to animate, cleaning up immediately");
+    cleanup();
+    onComplete?.();
+    return null;
+  }
+
   const groupTransition = transitionController.animate(transitions, {
     onFinish: () => {
       groupTransition.cancel();
