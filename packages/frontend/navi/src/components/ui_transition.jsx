@@ -2,23 +2,36 @@
  * UITransition
  *
  * A Preact component that enables smooth animated transitions between its children when the content changes.
- * It observes the value of `data-content-key` on child elements and animates transitions when the key changes.
+ * It observes content keys and phases to create different types of transitions.
+ *
+ * Features:
+ * - Content transitions: Between different content keys (e.g., user profiles, search results)
+ * - Phase transitions: Between loading/content/error states for the same content key
+ * - Automatic size animation to accommodate content changes
+ * - Configurable transition types: "slide-left", "cross-fade"
+ * - Independent duration control for content and phase transitions
  *
  * Usage:
- * - Wrap dynamic content in <UITransition> to animate between states (loading, error, completed, etc.)
- * - Set a unique `data-content-key` on your rendered content to identify each state or variant
- * - Use the `transitionType` prop to control the animation style (e.g. "slide-left", "cross-fade")
- * - Use `transitionDuration` to control animation speed in milliseconds
+ * - Wrap dynamic content in <UITransition> to animate between states
+ * - Set a unique `data-content-key` on your rendered content to identify each content variant
+ * - Use `data-content-phase` to mark loading/error states for phase transitions
+ * - Configure transition types and durations for both content and phase changes
  *
  * Example:
  *
- *   <UITransition transitionType="slide-left" transitionDuration={400}>
+ *   <UITransition
+ *     transitionType="slide-left"
+ *     transitionDuration={400}
+ *     phaseTransitionType="cross-fade"
+ *     phaseTransitionDuration={300}
+ *   >
  *     {isLoading
  *       ? <Spinner data-content-key={userId} data-content-phase />
  *       : <UserProfile user={user} data-content-key={userId} />}
  *   </UITransition>
  *
- * When `data-content-key` changes, UITransition animates the transition between the old and new content using the specified transitionType.
+ * When `data-content-key` changes, UITransition animates content transitions.
+ * When `data-content-phase` changes for the same key, it animates phase transitions.
  */
 
 import { initUITransition } from "@jsenv/dom";
@@ -28,6 +41,8 @@ export const UITransition = ({
   children,
   transitionType,
   transitionDuration,
+  phaseTransitionType,
+  phaseTransitionDuration,
   ...props
 }) => {
   const ref = useRef();
@@ -45,6 +60,12 @@ export const UITransition = ({
       data-ui-transition={transitionType ? transitionType : undefined}
       data-ui-transition-duration={
         transitionDuration ? transitionDuration : undefined
+      }
+      data-ui-transition-phase={
+        phaseTransitionType ? phaseTransitionType : undefined
+      }
+      data-ui-transition-phase-duration={
+        phaseTransitionDuration ? phaseTransitionDuration : undefined
       }
       className="ui_transition_container"
     >

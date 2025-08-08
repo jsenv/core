@@ -160,7 +160,11 @@
       const createSlowAction = () =>
         createAction(async () => {
           await delay(3000);
-          return { message: "This took 3 seconds to load!" };
+          return {
+            contentType: "slow",
+            message: "This took 3 seconds to load!",
+            timestamp: new Date().toISOString(),
+          };
         });
 
       const createStuckLoadingAction = () =>
@@ -238,6 +242,22 @@
         </div>
       );
 
+      const renderSlowContent = (data) => (
+        <div
+          className="success-content"
+          data-content-key="slow"
+          data-ui-name="slow-content"
+        >
+          <h4>Slow Content</h4>
+          <p>{data.message}</p>
+          <p>
+            This content took 3 seconds to load and demonstrates phase
+            transitions from loading to content with the same content key.
+          </p>
+          <small>Loaded at: {data.timestamp}</small>
+        </div>
+      );
+
       const renderLoadingContent = (contentKey) => (
         <div
           className="info-content"
@@ -252,12 +272,12 @@
         </div>
       );
 
-      const renderErrorContent = (error) => (
+      const renderErrorContent = (error, contentKey) => (
         <div
           className="error-content"
           data-content-phase
-          data-content-key="error"
-          data-ui-name="error-content"
+          data-content-key={contentKey}
+          data-ui-name={`${contentKey}-error`}
         >
           <h4>❌ Error Occurred</h4>
           <p>{error.message}</p>
@@ -277,6 +297,20 @@
           const saved = localStorage.getItem("ui-transition-demo-duration");
           return saved ? parseInt(saved) : 300;
         });
+        const [phaseTransitionType, setPhaseTransitionType] = useState(() => {
+          return (
+            localStorage.getItem("ui-transition-demo-phase-type") ||
+            "cross-fade"
+          );
+        });
+        const [phaseTransitionDuration, setPhaseTransitionDuration] = useState(
+          () => {
+            const saved = localStorage.getItem(
+              "ui-transition-demo-phase-duration",
+            );
+            return saved ? parseInt(saved) : 300;
+          },
+        );
 
         // Create actions with content key metadata
         const smallAction = createSuccessAction("small", 800);
@@ -324,6 +358,19 @@
           );
         };
 
+        const handlePhaseTransitionTypeChange = (newType) => {
+          setPhaseTransitionType(newType);
+          localStorage.setItem("ui-transition-demo-phase-type", newType);
+        };
+
+        const handlePhaseTransitionDurationChange = (newDuration) => {
+          setPhaseTransitionDuration(newDuration);
+          localStorage.setItem(
+            "ui-transition-demo-phase-duration",
+            newDuration.toString(),
+          );
+        };
+
         return (
           <div>
             <div className="demo-container">
@@ -361,6 +408,8 @@
                 <UITransition
                   transitionType={transitionType}
                   transitionDuration={transitionDuration}
+                  phaseTransitionType={phaseTransitionType}
+                  phaseTransitionDuration={phaseTransitionDuration}
                 >
                   <ActionRenderer action={currentAction}>
                     {{
@@ -370,7 +419,11 @@
                           getContentKeyForAction(currentAction);
                         return renderLoadingContent(contentKey);
                       },
-                      error: renderErrorContent,
+                      error: (error) => {
+                        const contentKey =
+                          getContentKeyForAction(currentAction);
+                        return renderErrorContent(error, contentKey);
+                      },
                       completed: (data) => {
                         if (!data) return null;
                         switch (data.contentType) {
@@ -380,6 +433,8 @@
                             return renderMediumContent(data);
                           case "large":
                             return renderLargeContent(data);
+                          case "slow":
+                            return renderSlowContent(data);
                           default:
                             return renderSmallContent(data);
                         }
@@ -394,7 +449,7 @@
               <h2 className="demo-title">⚙️ Transition Configuration</h2>
 
               <div className="config-section">
-                <h4>Transition Type</h4>
+                <h4>Content Transition Type</h4>
                 <div className="checkbox-group">
                   <label>
                     <input
@@ -424,7 +479,44 @@
               </div>
 
               <div className="config-section">
-                <h4>Transition Duration</h4>
+                <h4>Phase Transition Type</h4>
+                <div className="checkbox-group">
+                  <label>
+                    <input
+                      type="radio"
+                      name="phase-transition-type"
+                      value="cross-fade"
+                      checked={phaseTransitionType === "cross-fade"}
+                      onChange={(e) =>
+                        handlePhaseTransitionTypeChange(e.target.value)
+                      }
+                    />
+                    Cross Fade
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="phase-transition-type"
+                      value="slide-left"
+                      checked={phaseTransitionType === "slide-left"}
+                      onChange={(e) =>
+                        handlePhaseTransitionTypeChange(e.target.value)
+                      }
+                    />
+                    Slide Left
+                  </label>
+                </div>
+                <p className="description">
+                  <strong>Content Transitions:</strong> Between different
+                  content keys (small → medium → large)
+                  <br />
+                  <strong>Phase Transitions:</strong> Between loading/content
+                  states (loading → content) for same key
+                </p>
+              </div>
+
+              <div className="config-section">
+                <h4>Content Transition Duration</h4>
                 <label style="display: flex; align-items: center; gap: 10px;">
                   <span>Duration: {transitionDuration}ms</span>
                   <input
@@ -435,6 +527,26 @@
                     value={transitionDuration}
                     onChange={(e) =>
                       handleTransitionDurationChange(parseInt(e.target.value))
+                    }
+                    style="flex: 1;"
+                  />
+                </label>
+              </div>
+
+              <div className="config-section">
+                <h4>Phase Transition Duration</h4>
+                <label style="display: flex; align-items: center; gap: 10px;">
+                  <span>Duration: {phaseTransitionDuration}ms</span>
+                  <input
+                    type="range"
+                    min="100"
+                    max="1000"
+                    step="50"
+                    value={phaseTransitionDuration}
+                    onChange={(e) =>
+                      handlePhaseTransitionDurationChange(
+                        parseInt(e.target.value),
+                      )
                     }
                     style="flex: 1;"
                   />
