@@ -128,6 +128,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let activeContentTransition = null;
   let activeContentTransitionType = null;
   let activePhaseTransition = null;
+  let activePhaseTransitionType = null;
   let isPaused = false;
 
   // Size state
@@ -236,6 +237,52 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   };
 
   let isUpdating = false;
+
+  // Shared transition setup function
+  const setupTransition = ({
+    isPhaseTransition = false,
+    overlay,
+    existingOldContents,
+    needsOldChildClone,
+    previousChild,
+    attributeToRemove = [],
+    oldElementAttribute,
+  }) => {
+    let oldChild = null;
+    let cleanup = () => {};
+    const currentTransitionElement = existingOldContents[0];
+
+    if (currentTransitionElement) {
+      oldChild = currentTransitionElement;
+      debug(
+        "transition",
+        `Continuing from current ${isPhaseTransition ? "phase" : "content"} transition element`,
+      );
+      cleanup = () => oldChild.remove();
+    } else if (needsOldChildClone) {
+      overlay.innerHTML = "";
+      oldChild = previousChild.cloneNode(true);
+
+      // Remove specified attributes
+      attributeToRemove.forEach((attr) => oldChild.removeAttribute(attr));
+
+      oldChild.setAttribute(oldElementAttribute, "");
+      overlay.appendChild(oldChild);
+      debug(
+        "transition",
+        `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition`,
+      );
+      cleanup = () => oldChild.remove();
+    } else {
+      overlay.innerHTML = "";
+      debug(
+        "transition",
+        `No old child to clone for ${isPhaseTransition ? "phase" : "content"} transition`,
+      );
+    }
+
+    return { oldChild, cleanup };
+  };
 
   // Initialize with current size
   [constrainedWidth, constrainedHeight] = measureContentSize();
@@ -416,33 +463,16 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           previousChild &&
           !existingOldContents[0];
 
-        const setupContentTransition = () => {
-          let oldChild = null;
-          let cleanup = () => {};
-          const currentTransitionElement = existingOldContents[0];
-
-          if (currentTransitionElement) {
-            oldChild = currentTransitionElement;
-            debug(
-              "transition",
-              "Continuing from current content transition element",
-            );
-            cleanup = () => oldChild.remove();
-          } else if (needsOldChildClone) {
-            contentOverlay.innerHTML = "";
-            oldChild = previousChild.cloneNode(true);
-            oldChild.removeAttribute("data-content-key");
-            oldChild.setAttribute("data-ui-transition-old", "");
-            contentOverlay.appendChild(oldChild);
-            debug("transition", "Cloned previous child for content transition");
-            cleanup = () => oldChild.remove();
-          } else {
-            contentOverlay.innerHTML = "";
-            debug("transition", "No old child to clone for content transition");
-          }
-
-          return { oldChild, cleanup };
-        };
+        const setupContentTransition = () =>
+          setupTransition({
+            isPhaseTransition: false,
+            overlay: contentOverlay,
+            existingOldContents,
+            needsOldChildClone,
+            previousChild,
+            attributeToRemove: ["data-content-key"],
+            oldElementAttribute: "data-ui-transition-old",
+          });
 
         const duration = parseInt(
           container.getAttribute("data-ui-transition-duration") || 300,
@@ -492,7 +522,23 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           );
         }
 
-        if (activePhaseTransition) {
+        const canContinueSmoothly =
+          activePhaseTransitionType === phaseTransitionType &&
+          activePhaseTransition;
+
+        if (canContinueSmoothly) {
+          debug("transition", "Continuing with same phase transition type");
+          activePhaseTransition.cancel();
+        } else if (
+          activePhaseTransition &&
+          activePhaseTransitionType !== phaseTransitionType
+        ) {
+          debug(
+            "transition",
+            "Different phase transition type, keeping both",
+            `${activePhaseTransitionType} → ${phaseTransitionType}`,
+          );
+        } else if (activePhaseTransition) {
           debug("transition", "Cancelling current phase transition");
           activePhaseTransition.cancel();
         }
@@ -502,34 +548,16 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           previousChild &&
           !existingOldPhaseContents[0];
 
-        const setupPhaseTransition = () => {
-          let oldChild = null;
-          let cleanup = () => {};
-          const currentPhaseTransitionElement = existingOldPhaseContents[0];
-
-          if (currentPhaseTransitionElement) {
-            oldChild = currentPhaseTransitionElement;
-            debug(
-              "transition",
-              "Continuing from current phase transition element",
-            );
-            cleanup = () => oldChild.remove();
-          } else if (needsOldPhaseClone) {
-            phaseOverlay.innerHTML = "";
-            oldChild = previousChild.cloneNode(true);
-            oldChild.removeAttribute("data-content-key");
-            oldChild.removeAttribute("data-content-phase");
-            oldChild.setAttribute("data-ui-transition-old", "");
-            phaseOverlay.appendChild(oldChild);
-            debug("transition", "Cloned previous child for phase transition");
-            cleanup = () => oldChild.remove();
-          } else {
-            phaseOverlay.innerHTML = "";
-            debug("transition", "No old child to clone for phase transition");
-          }
-
-          return { oldChild, cleanup };
-        };
+        const setupPhaseTransition = () =>
+          setupTransition({
+            isPhaseTransition: true,
+            overlay: phaseOverlay,
+            existingOldContents: existingOldPhaseContents,
+            needsOldChildClone: needsOldPhaseClone,
+            previousChild,
+            attributeToRemove: ["data-content-key", "data-content-phase"],
+            oldElementAttribute: "data-ui-transition-old",
+          });
 
         const phaseDuration = parseInt(
           container.getAttribute("data-ui-transition-phase-duration") || 300,
