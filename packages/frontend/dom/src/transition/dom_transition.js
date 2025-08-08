@@ -13,6 +13,14 @@ import.meta.css = /* css */ `
   *[data-transition-translate-x] {
     transform: translateX(var(--ui-transition-translate-x)) !important;
   }
+
+  *[data-transition-width] {
+    width: var(--ui-transition-width) !important;
+  }
+
+  *[data-transition-height] {
+    height: var(--ui-transition-height) !important;
+  }
 `;
 
 export const createHeightTransition = (element, to, options) => {
@@ -25,24 +33,22 @@ export const createHeightTransition = (element, to, options) => {
     minDiff: 10,
     lifecycle: {
       setup: () => {
-        const heightAtStartFromInlineStyle = element.style.height;
         const restoreWillChange = addWillChange(element, "height");
-        element.setAttribute(`data-height-animated`, "");
         return {
-          from: getHeight(element),
+          from: getTransitionHeight(element),
           update: ({ value }) => {
-            element.style.height = `${value}px`;
+            const valueWithUnit = `${value}px`;
+            element.setAttribute("data-transition-height", valueWithUnit);
+            element.style.setProperty("--ui-transition-height", valueWithUnit);
           },
           teardown: () => {
-            element.removeAttribute(`data-height-animated`);
+            element.removeAttribute("data-transition-height");
+            element.style.removeProperty("--ui-transition-height");
             restoreWillChange();
           },
           restore: () => {
-            if (heightAtStartFromInlineStyle) {
-              element.style.height = heightAtStartFromInlineStyle;
-            } else {
-              element.style.removeProperty("height");
-            }
+            element.removeAttribute("data-transition-height");
+            element.style.removeProperty("--ui-transition-height");
           },
         };
       },
@@ -60,24 +66,22 @@ export const createWidthTransition = (element, to, options) => {
     isVisual: true,
     lifecycle: {
       setup: () => {
-        const widthAtStartFromInlineStyle = element.style.width;
         const restoreWillChange = addWillChange(element, "width");
-        element.setAttribute(`data-width-animated`, "");
         return {
-          from: getWidth(element),
+          from: getTransitionWidth(element),
           update: ({ value }) => {
-            element.style.width = `${value}px`;
+            const valueWithUnit = `${value}px`;
+            element.setAttribute("data-transition-width", valueWithUnit);
+            element.style.setProperty("--ui-transition-width", valueWithUnit);
           },
           teardown: () => {
-            element.removeAttribute(`data-width-animated`);
+            element.removeAttribute("data-transition-width");
+            element.style.removeProperty("--ui-transition-width");
             restoreWillChange();
           },
           restore: () => {
-            if (widthAtStartFromInlineStyle) {
-              element.style.width = widthAtStartFromInlineStyle;
-            } else {
-              element.style.removeProperty("width");
-            }
+            element.removeAttribute("data-transition-width");
+            element.style.removeProperty("--ui-transition-width");
           },
         };
       },
@@ -125,6 +129,26 @@ export const getOpacity = (element) => {
   }
   // Fall back to computed style
   return parseFloat(getComputedStyle(element).opacity) || 0;
+};
+
+export const getTransitionWidth = (element) => {
+  // Check for transition data attribute first
+  const transitionWidth = element.getAttribute("data-transition-width");
+  if (transitionWidth !== null) {
+    return parseFloat(transitionWidth) || 0;
+  }
+  // Fall back to computed style
+  return getWidth(element);
+};
+
+export const getTransitionHeight = (element) => {
+  // Check for transition data attribute first
+  const transitionHeight = element.getAttribute("data-transition-height");
+  if (transitionHeight !== null) {
+    return parseFloat(transitionHeight) || 0;
+  }
+  // Fall back to computed style
+  return getHeight(element);
 };
 
 export const createTranslateXTransition = (element, to, options) => {
@@ -183,4 +207,84 @@ export const getTranslateX = (element) => {
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   return transformMap.get("translateX")?.value || 0;
+};
+
+// Helper functions for getting natural (non-transition) values
+export const getNaturalOpacity = (element) => {
+  const transitionOpacity = element.getAttribute("data-transition-opacity");
+
+  // Temporarily remove transition attributes
+  element.removeAttribute("data-transition-opacity");
+  element.style.removeProperty("--ui-transition-opacity");
+
+  const naturalValue = parseFloat(getComputedStyle(element).opacity) || 0;
+
+  // Restore transition attributes if they existed
+  if (transitionOpacity !== null) {
+    element.setAttribute("data-transition-opacity", transitionOpacity);
+    element.style.setProperty("--ui-transition-opacity", transitionOpacity);
+  }
+
+  return naturalValue;
+};
+
+export const getNaturalTranslateX = (element) => {
+  const transitionTranslateX = element.getAttribute(
+    "data-transition-translate-x",
+  );
+
+  // Temporarily remove transition attributes
+  element.removeAttribute("data-transition-translate-x");
+  element.style.removeProperty("--ui-transition-translate-x");
+
+  const transform = getComputedStyle(element).transform;
+  const transformMap = parseTransform(transform);
+  const naturalValue = transformMap.get("translateX")?.value || 0;
+
+  // Restore transition attributes if they existed
+  if (transitionTranslateX !== null) {
+    element.setAttribute("data-transition-translate-x", transitionTranslateX);
+    element.style.setProperty(
+      "--ui-transition-translate-x",
+      transitionTranslateX,
+    );
+  }
+
+  return naturalValue;
+};
+
+export const getNaturalWidth = (element) => {
+  const transitionWidth = element.getAttribute("data-transition-width");
+
+  // Temporarily remove transition attributes
+  element.removeAttribute("data-transition-width");
+  element.style.removeProperty("--ui-transition-width");
+
+  const naturalValue = getWidth(element);
+
+  // Restore transition attributes if they existed
+  if (transitionWidth !== null) {
+    element.setAttribute("data-transition-width", transitionWidth);
+    element.style.setProperty("--ui-transition-width", transitionWidth);
+  }
+
+  return naturalValue;
+};
+
+export const getNaturalHeight = (element) => {
+  const transitionHeight = element.getAttribute("data-transition-height");
+
+  // Temporarily remove transition attributes
+  element.removeAttribute("data-transition-height");
+  element.style.removeProperty("--ui-transition-height");
+
+  const naturalValue = getHeight(element);
+
+  // Restore transition attributes if they existed
+  if (transitionHeight !== null) {
+    element.setAttribute("data-transition-height", transitionHeight);
+    element.style.setProperty("--ui-transition-height", transitionHeight);
+  }
+
+  return naturalValue;
 };

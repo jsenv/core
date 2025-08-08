@@ -39,6 +39,7 @@ import {
   createOpacityTransition,
   createTranslateXTransition,
   createWidthTransition,
+  getNaturalOpacity,
   getOpacity,
   getTranslateX,
 } from "../transition/dom_transition.js";
@@ -916,15 +917,7 @@ const applyCrossFade = (
 
   if (!oldChild) {
     const newOpacity = getOpacity(newChild);
-    // Get the natural opacity target by temporarily removing transition attributes
-    const transitionOpacity = newChild.getAttribute("data-transition-opacity");
-    newChild.removeAttribute("data-transition-opacity");
-    newChild.style.removeProperty("--ui-transition-opacity");
-    const naturalOpacity = getOpacity(newChild);
-    if (transitionOpacity !== null) {
-      newChild.setAttribute("data-transition-opacity", transitionOpacity);
-      newChild.style.setProperty("--ui-transition-opacity", transitionOpacity);
-    }
+    const naturalOpacity = getNaturalOpacity(newChild);
 
     debug("transition", "Fade in from empty:", {
       from: newOpacity,
@@ -951,27 +944,9 @@ const applyCrossFade = (
   const oldOpacity = getOpacity(oldChild);
   const newOpacity = getOpacity(newChild);
 
-  // Get natural target opacities by temporarily removing transition attributes
-  const oldTransitionOpacity = oldChild.getAttribute("data-transition-opacity");
-  const newTransitionOpacity = newChild.getAttribute("data-transition-opacity");
-
-  oldChild.removeAttribute("data-transition-opacity");
-  newChild.removeAttribute("data-transition-opacity");
-  oldChild.style.removeProperty("--ui-transition-opacity");
-  newChild.style.removeProperty("--ui-transition-opacity");
-
-  const oldNaturalOpacity = getOpacity(oldChild);
-  const newNaturalOpacity = getOpacity(newChild);
-
-  // Restore transition attributes if they existed
-  if (oldTransitionOpacity !== null) {
-    oldChild.setAttribute("data-transition-opacity", oldTransitionOpacity);
-    oldChild.style.setProperty("--ui-transition-opacity", oldTransitionOpacity);
-  }
-  if (newTransitionOpacity !== null) {
-    newChild.setAttribute("data-transition-opacity", newTransitionOpacity);
-    newChild.style.setProperty("--ui-transition-opacity", newTransitionOpacity);
-  }
+  // Get natural target opacities using helper functions
+  const oldNaturalOpacity = getNaturalOpacity(oldChild);
+  const newNaturalOpacity = getNaturalOpacity(newChild);
 
   debug("transition", "Cross-fade transition:", {
     oldOpacity: `${oldOpacity} → 0`,
