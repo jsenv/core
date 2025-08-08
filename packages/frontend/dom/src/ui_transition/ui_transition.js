@@ -1,5 +1,5 @@
 /**
- * Required HTML structure for UI transitions with smooth size animations:
+ * Required HTML structure for UI transitions with smooth size and phase/content animations:
  *
  * <div class="ui_transition_container">
  *   <!-- Main container with relative positioning and overflow hidden -->
@@ -13,18 +13,22 @@
  *       <div class="ui_transition_slot">
  *         <!-- Content slot: actual content is inserted here via children -->
  *       </div>
+ *
+ *       <div class="ui_transition_phase_overlay">
+ *         <!-- Phase transition overlay: clone old content phase is positioned here for content phase transitions (loading/error) -->
+ *       </div>
  *     </div>
  *   </div>
  *
- *   <div class="ui-transition-overlay">
- *     <!-- Transition overlay: cloned old content is positioned here for slide/fade animations -->
+ *   <div class="ui_transition_content_overlay">
+ *     <!-- Content transition overlay: cloned old content is positioned here for slide/fade animations -->
  *   </div>
  * </div>
  *
  * This separation allows:
  * - Smooth size transitions by constraining outer-wrapper dimensions
  * - Accurate content measurement via measure-wrapper ResizeObserver
- * - Visual transitions using overlay-positioned clones
+ * - Visual transitions using overlay-positioned clones for both content and phase transitions
  * - Independent content updates in the slot without affecting ongoing animations
  */
 
@@ -53,7 +57,7 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
-  .ui_transition_overlay {
+  .ui_transition_content_overlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -83,15 +87,31 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     ".ui_transition_measure_wrapper",
   );
   const slot = container.querySelector(".ui_transition_slot");
-  let overlay = container.querySelector(".ui_transition_overlay");
+  let phaseOverlay = measureWrapper.querySelector(
+    ".ui_transition_phase_overlay",
+  );
+  let contentOverlay = container.querySelector(
+    ".ui_transition_content_overlay",
+  );
 
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.className = "ui_transition_overlay";
-    container.appendChild(overlay);
+  if (!phaseOverlay) {
+    phaseOverlay = document.createElement("div");
+    phaseOverlay.className = "ui_transition_phase_overlay";
+    measureWrapper.appendChild(phaseOverlay);
+  }
+  if (!contentOverlay) {
+    contentOverlay = document.createElement("div");
+    contentOverlay.className = "ui_transition_content_overlay";
+    container.appendChild(contentOverlay);
   }
 
-  if (!outerWrapper || !measureWrapper || !slot) {
+  if (
+    !outerWrapper ||
+    !measureWrapper ||
+    !slot ||
+    !phaseOverlay ||
+    !contentOverlay
+  ) {
     console.error("Missing required ui-transition structure");
     return { cleanup: () => {} };
   }
@@ -335,7 +355,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
       // Handle transitions
       if (shouldTransitionIncludingPopulation) {
-        const existingOldContents = overlay.querySelectorAll(
+        const existingOldContents = contentOverlay.querySelectorAll(
           "[data-ui-transition-old]",
         );
         const animationProgress = activeTransition?.progress || 0;
@@ -373,6 +393,23 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
           previousChild &&
           !existingOldContents[0];
 
+        // --- NEW: Log cross-fade for content phase transitions ---
+        if (isContentPhaseChange) {
+          // We'll want to cross-fade from previous content phase to new one
+          let contentPhaseClone = null;
+          if (previousChild) {
+            contentPhaseClone = previousChild.cloneNode(true);
+            // For now, just log what we would do
+            console.log(
+              "[ui_transition] Would cross-fade from previous content phase to new content phase/content",
+              contentPhaseClone,
+              "(would insert into .ui_transition_phase_overlay after .ui_transition_slot)",
+            );
+            // In future: phaseOverlay.insertBefore(contentPhaseClone, slot.nextSibling);
+          }
+        }
+        // --- END NEW ---
+
         const setupTransition = () => {
           let oldChild = null;
           let cleanup = () => {};
@@ -383,15 +420,15 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             debug("transition", "Continuing from current transition element");
             cleanup = () => oldChild.remove();
           } else if (needsOldChildClone) {
-            overlay.innerHTML = "";
+            contentOverlay.innerHTML = "";
             oldChild = previousChild.cloneNode(true);
             oldChild.removeAttribute("data-content-key");
             oldChild.setAttribute("data-ui-transition-old", "");
-            overlay.appendChild(oldChild);
+            contentOverlay.appendChild(oldChild);
             debug("transition", "Cloned previous child for transition");
             cleanup = () => oldChild.remove();
           } else {
-            overlay.innerHTML = "";
+            contentOverlay.innerHTML = "";
             debug("transition", "No old child to clone");
           }
 
@@ -423,7 +460,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         }
         activeTransitionType = type;
       } else {
-        overlay.innerHTML = "";
+        contentOverlay.innerHTML = "";
         activeTransition = null;
         activeTransitionType = null;
       }

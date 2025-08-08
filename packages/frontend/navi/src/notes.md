@@ -1,3 +1,5 @@
+- null should be a content-phase
+
 - le ui transition.jsx en gros qui va s'occuper de faire des transitions
   lorsque ses enfants changent
   notons que <Route> devra ssurement changer son fusil d'épaule histoire que ActionRenderer
