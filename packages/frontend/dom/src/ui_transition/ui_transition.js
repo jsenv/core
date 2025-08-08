@@ -484,6 +484,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             duration,
             type,
             animationProgress,
+            isPhaseTransition: false,
             onComplete: () => {
               activeContentTransition = null;
               activeContentTransitionType = null;
@@ -584,6 +585,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             duration: phaseDuration,
             type: phaseTransitionType,
             animationProgress: phaseAnimationProgress,
+            isPhaseTransition: true,
             onComplete: () => {
               activePhaseTransition = null;
               activePhaseTransitionType = null;
@@ -751,7 +753,13 @@ const animateTransition = (
   transitionController,
   newChild,
   setupTransition,
-  { type, duration, animationProgress = 0, onComplete },
+  {
+    type,
+    duration,
+    animationProgress = 0,
+    isPhaseTransition = false,
+    onComplete,
+  },
 ) => {
   let applyTransition;
   if (type === "cross-fade") {
@@ -776,6 +784,7 @@ const animateTransition = (
   const transitions = applyTransition(oldChild, newChild, {
     duration: remainingDuration,
     startProgress: animationProgress,
+    isPhaseTransition,
   });
 
   const groupTransition = transitionController.animate(transitions, {
@@ -792,7 +801,7 @@ const animateTransition = (
 const applySlideLeft = (
   oldChild,
   newChild,
-  { duration, startProgress = 0 },
+  { duration, startProgress = 0, isPhaseTransition = false },
 ) => {
   if (!oldChild && !newChild) {
     return [];
@@ -894,7 +903,7 @@ const applySlideLeft = (
 const applyCrossFade = (
   oldChild,
   newChild,
-  { duration, startProgress = 0 },
+  { duration, startProgress = 0, isPhaseTransition = false },
 ) => {
   if (!oldChild && !newChild) {
     return [];
@@ -945,9 +954,13 @@ const applyCrossFade = (
   const oldOpacity = getOpacity(oldChild);
   const newOpacity = getOpacity(newChild);
   const newNaturalOpacity = getOpacityWithoutTransition(newChild);
+
+  // For phase transitions, force new content to start from 0 for proper fade-in
+  const effectiveFromOpacity = isPhaseTransition ? 0 : newOpacity;
+
   debug("transition", "Cross-fade transition:", {
     oldOpacity: `${oldOpacity} → 0`,
-    newOpacity: `${newOpacity} → ${newNaturalOpacity}`,
+    newOpacity: `${effectiveFromOpacity} → ${newNaturalOpacity}`,
   });
 
   return [
@@ -966,7 +979,7 @@ const applyCrossFade = (
       },
     }),
     createOpacityTransition(newChild, newNaturalOpacity, {
-      from: newOpacity,
+      from: effectiveFromOpacity,
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {
