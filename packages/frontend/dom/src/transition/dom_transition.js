@@ -1,10 +1,7 @@
 import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
 import { addWillChange } from "../style_and_attributes.js";
-import {
-  parseTransform,
-  stringifyTransform,
-} from "./transform_style_parser.js";
+import { parseTransform } from "./transform_style_parser.js";
 import { createTimelineTransition } from "./transition_playback.js";
 
 export const createHeightTransition = (element, to, options) => {
@@ -87,24 +84,21 @@ export const createOpacityTransition = (element, to, options = {}) => {
     isVisual: true,
     lifecycle: {
       setup: () => {
-        const opacityAtStartFromInlineStyle = element.style.opacity;
         const restoreWillChange = addWillChange(element, "opacity");
-        element.setAttribute(`data-opacity-animated`, "");
         return {
           from: getOpacity(element),
           update: ({ value }) => {
-            element.style.opacity = value;
+            element.setAttribute("data-transition-opacity", value);
+            element.style.setProperty("--ui-transition-opacity", value);
           },
           teardown: () => {
-            element.removeAttribute(`data-opacity-animated`);
+            element.removeAttribute("data-transition-opacity");
+            element.style.removeProperty("--ui-transition-opacity");
             restoreWillChange();
           },
           restore: () => {
-            if (opacityAtStartFromInlineStyle) {
-              element.style.opacity = opacityAtStartFromInlineStyle;
-            } else {
-              element.style.removeProperty("opacity");
-            }
+            element.removeAttribute("data-transition-opacity");
+            element.style.removeProperty("--ui-transition-opacity");
           },
         };
       },
@@ -113,6 +107,12 @@ export const createOpacityTransition = (element, to, options = {}) => {
   return opacityTransition;
 };
 export const getOpacity = (element) => {
+  // Check for transition data attribute first
+  const transitionOpacity = element.getAttribute("data-transition-opacity");
+  if (transitionOpacity !== null) {
+    return parseFloat(transitionOpacity) || 0;
+  }
+  // Fall back to computed style
   return parseFloat(getComputedStyle(element).opacity) || 0;
 };
 
@@ -134,24 +134,25 @@ export const createTranslateXTransition = (element, to, options) => {
     isVisual: true,
     lifecycle: {
       setup: () => {
-        const transformAtStartFromInlineStyle = element.style.transform;
         const restoreWillChange = addWillChange(element, "transform");
-        element.setAttribute(`data-translate-x-animated`, "");
         return {
           from: getTranslateX(element),
           update: ({ value }) => {
-            setTranslateX(element, value, { unit });
+            const valueWithUnit = `${value}${unit}`;
+            element.setAttribute("data-transition-translate-x", valueWithUnit);
+            element.style.setProperty(
+              "--ui-transition-translate-x",
+              valueWithUnit,
+            );
           },
           teardown: () => {
             restoreWillChange();
-            element.removeAttribute(`data-translate-x-animated`);
+            element.removeAttribute("data-transition-translate-x");
+            element.style.removeProperty("--ui-transition-translate-x");
           },
           restore: () => {
-            if (transformAtStartFromInlineStyle) {
-              element.style.transform = transformAtStartFromInlineStyle;
-            } else {
-              element.style.removeProperty("transform");
-            }
+            element.removeAttribute("data-transition-translate-x");
+            element.style.removeProperty("--ui-transition-translate-x");
           },
         };
       },
@@ -160,14 +161,15 @@ export const createTranslateXTransition = (element, to, options) => {
   return translateXTransition;
 };
 export const getTranslateX = (element) => {
+  // Check for transition data attribute first
+  const transitionTranslateX = element.getAttribute(
+    "data-transition-translate-x",
+  );
+  if (transitionTranslateX !== null) {
+    return parseFloat(transitionTranslateX) || 0;
+  }
+  // Fall back to computed transform
   const transform = getComputedStyle(element).transform;
   const transformMap = parseTransform(transform);
   return transformMap.get("translateX")?.value || 0;
-};
-const setTranslateX = (element, value, { unit }) => {
-  const transform = getComputedStyle(element).transform;
-  const transformMap = parseTransform(transform);
-  transformMap.set("translateX", { value, unit });
-  const transformString = stringifyTransform(transformMap);
-  element.style.transform = transformString;
 };

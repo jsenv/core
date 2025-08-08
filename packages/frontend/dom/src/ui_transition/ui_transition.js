@@ -69,6 +69,15 @@ import.meta.css = /* css */ `
     inset: 0;
     pointer-events: none;
   }
+
+  /* Transition data attributes override inline styles using CSS custom properties */
+  *[data-transition-opacity] {
+    opacity: var(--ui-transition-opacity) !important;
+  }
+
+  *[data-transition-translate-x] {
+    transform: translateX(var(--ui-transition-translate-x)) !important;
+  }
 `;
 
 const DEBUG = {
@@ -916,13 +925,23 @@ const applyCrossFade = (
 
   if (!oldChild) {
     const newOpacity = getOpacity(newChild);
-    debug("transition", "Starting opacity:", {
+    // Get the natural opacity target by temporarily removing transition attributes
+    const transitionOpacity = newChild.getAttribute("data-transition-opacity");
+    newChild.removeAttribute("data-transition-opacity");
+    newChild.style.removeProperty("--ui-transition-opacity");
+    const naturalOpacity = getOpacity(newChild);
+    if (transitionOpacity !== null) {
+      newChild.setAttribute("data-transition-opacity", transitionOpacity);
+      newChild.style.setProperty("--ui-transition-opacity", transitionOpacity);
+    }
+
+    debug("transition", "Fade in from empty:", {
       from: newOpacity,
-      to: 1,
+      to: naturalOpacity,
     });
     // Empty -> Content (fade in only)
     return [
-      createOpacityTransition(newChild, 1, {
+      createOpacityTransition(newChild, naturalOpacity, {
         from: newOpacity,
         duration,
         startProgress,
@@ -940,17 +959,37 @@ const applyCrossFade = (
   // Get current opacity for both elements
   const oldOpacity = getOpacity(oldChild);
   const newOpacity = getOpacity(newChild);
-  // Use highest opacity as starting point for smooth continuation
-  const startOpacity = Math.max(oldOpacity, newOpacity);
-  debug("transition", "Starting opacity:", {
-    oldOpacity,
-    newOpacity,
-    startOpacity,
+
+  // Get natural target opacities by temporarily removing transition attributes
+  const oldTransitionOpacity = oldChild.getAttribute("data-transition-opacity");
+  const newTransitionOpacity = newChild.getAttribute("data-transition-opacity");
+
+  oldChild.removeAttribute("data-transition-opacity");
+  newChild.removeAttribute("data-transition-opacity");
+  oldChild.style.removeProperty("--ui-transition-opacity");
+  newChild.style.removeProperty("--ui-transition-opacity");
+
+  const oldNaturalOpacity = getOpacity(oldChild);
+  const newNaturalOpacity = getOpacity(newChild);
+
+  // Restore transition attributes if they existed
+  if (oldTransitionOpacity !== null) {
+    oldChild.setAttribute("data-transition-opacity", oldTransitionOpacity);
+    oldChild.style.setProperty("--ui-transition-opacity", oldTransitionOpacity);
+  }
+  if (newTransitionOpacity !== null) {
+    newChild.setAttribute("data-transition-opacity", newTransitionOpacity);
+    newChild.style.setProperty("--ui-transition-opacity", newTransitionOpacity);
+  }
+
+  debug("transition", "Cross-fade transition:", {
+    oldOpacity: `${oldOpacity} → 0`,
+    newOpacity: `${newOpacity} → ${newNaturalOpacity}`,
   });
 
   return [
     createOpacityTransition(oldChild, 0, {
-      from: Math.max(isNaN(oldOpacity) ? 1 : oldOpacity, startOpacity),
+      from: isNaN(oldOpacity) ? oldNaturalOpacity : oldOpacity,
       duration,
       startProgress,
       onUpdate: ({ value }) => {
@@ -963,8 +1002,8 @@ const applyCrossFade = (
         }
       },
     }),
-    createOpacityTransition(newChild, 1, {
-      from: Math.max(isNaN(newOpacity) ? 0 : newOpacity, startOpacity),
+    createOpacityTransition(newChild, newNaturalOpacity, {
+      from: isNaN(newOpacity) ? 0 : newOpacity,
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {
