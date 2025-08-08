@@ -823,16 +823,19 @@ const applySlideLeft = (
 
   if (!oldChild) {
     // Empty -> Content (slide in from right)
-    const currentPosition = getTranslateX(newChild);
-    const startPosition = currentPosition || containerWidth;
-
+    const from = containerWidth; // Start from right edge for slide-in effect
+    const to = 0;
+    debug("transition", "Slide in from empty:", { from, to });
     return [
-      createTranslateXTransition(newChild, 0, {
-        from: startPosition,
+      createTranslateXTransition(newChild, to, {
+        from,
         duration,
         startProgress,
-        onUpdate: ({ value }) => {
+        onUpdate: ({ value, timing }) => {
           debug("transition_updates", "Slide in progress:", value);
+          if (timing === "end") {
+            debug("transition", "Slide in complete");
+          }
         },
       }),
     ];
@@ -856,9 +859,9 @@ const applySlideLeft = (
     startNewPosition = newPosition || containerWidth;
   }
 
-  debug("transition", "Starting slide positions:", {
-    old: oldPosition,
-    new: startNewPosition,
+  debug("transition", "Slide transition:", {
+    oldPosition: `${oldPosition} → ${-containerWidth}`,
+    newPosition: `${startNewPosition} → 0`,
   });
 
   return [
