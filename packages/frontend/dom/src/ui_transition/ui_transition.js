@@ -380,9 +380,13 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
-      // Content key change only if slot data-content-key is set and changed
+      // Content key change when either slot or child has data-content-key and it changed
       let shouldDoContentTransition = false;
-      if (slot.getAttribute("data-content-key") && lastContentKey !== null) {
+      if (
+        (slot.getAttribute("data-content-key") ||
+          firstChild?.getAttribute("data-content-key")) &&
+        lastContentKey !== null
+      ) {
         shouldDoContentTransition = currentContentKey !== lastContentKey;
       }
 
