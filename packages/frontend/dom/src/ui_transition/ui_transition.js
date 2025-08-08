@@ -758,15 +758,15 @@ const animateTransition = (
   }
 
   const { oldChild, cleanup } = setupTransition();
-  debug("transition", "Starting animation:", {
+  debug("transition", "Setting up animation:", {
     type,
-    from: oldChild?.getAttribute("data-content-key") || "none",
-    to: newChild?.getAttribute("data-content-key") || "none",
+    from: oldChild?.getAttribute("data-content-key") || "empty",
+    to: newChild?.getAttribute("data-content-key") || "empty",
     progress: `${(animationProgress * 100).toFixed(1)}%`,
   });
 
   const remainingDuration = Math.max(100, duration * (1 - animationProgress));
-  debug("transition", "Duration:", remainingDuration);
+  debug("transition", `Animation duration: ${remainingDuration}ms`);
 
   const transitions = applyTransition(oldChild, newChild, {
     duration: remainingDuration,
@@ -796,16 +796,16 @@ const applySlideLeft = (
   if (!newChild) {
     // Content -> Empty (slide out left only)
     const containerWidth = oldChild.parentElement?.offsetWidth || 0;
-    const currentOldPos = getTranslateX(oldChild);
+    const currentPosition = getTranslateX(oldChild);
 
     debug("transition", "Slide out to empty:", {
-      old: currentOldPos,
-      target: -containerWidth,
+      from: currentPosition,
+      to: -containerWidth,
     });
 
     return [
       createTranslateXTransition(oldChild, -containerWidth, {
-        from: currentOldPos,
+        from: currentPosition,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
@@ -822,12 +822,12 @@ const applySlideLeft = (
 
   if (!oldChild) {
     // Empty -> Content (slide in from right)
-    const currentPos = getTranslateX(newChild);
-    const startPos = currentPos || containerWidth;
+    const currentPosition = getTranslateX(newChild);
+    const startPosition = currentPosition || containerWidth;
 
     return [
       createTranslateXTransition(newChild, 0, {
-        from: startPos,
+        from: startPosition,
         duration,
         startProgress,
         onUpdate: ({ value }) => {
@@ -838,31 +838,31 @@ const applySlideLeft = (
   }
 
   // Content -> Content (slide out left, slide in from right)
-  const currentOldPos = getTranslateX(oldChild);
-  const currentNewPos = getTranslateX(newChild);
+  const oldPosition = getTranslateX(oldChild);
+  const newPosition = getTranslateX(newChild);
 
   // For smooth continuation: if old element is mid-transition,
   // calculate new element position to maintain seamless sliding
-  let startNewPos;
-  if (currentOldPos !== 0 && currentNewPos === 0) {
-    startNewPos = currentOldPos + containerWidth;
+  let startNewPosition;
+  if (oldPosition !== 0 && newPosition === 0) {
+    startNewPosition = oldPosition + containerWidth;
     debug(
       "transition",
       "Calculated seamless position:",
-      `${currentOldPos} + ${containerWidth} = ${startNewPos}`,
+      `${oldPosition} + ${containerWidth} = ${startNewPosition}`,
     );
   } else {
-    startNewPos = currentNewPos || containerWidth;
+    startNewPosition = newPosition || containerWidth;
   }
 
   debug("transition", "Starting slide positions:", {
-    old: currentOldPos,
-    new: startNewPos,
+    old: oldPosition,
+    new: startNewPosition,
   });
 
   return [
     createTranslateXTransition(oldChild, -containerWidth, {
-      from: currentOldPos,
+      from: oldPosition,
       duration,
       startProgress,
       onUpdate: ({ value }) => {
@@ -870,7 +870,7 @@ const applySlideLeft = (
       },
     }),
     createTranslateXTransition(newChild, 0, {
-      from: startNewPos,
+      from: startNewPosition,
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {
@@ -914,26 +914,16 @@ const applyCrossFade = (
     ];
   }
 
-  // Get current opacity for both elements
-  const oldOpacity = oldChild ? getOpacity(oldChild) : 0;
-  const newOpacity = getOpacity(newChild);
-
-  // Use highest opacity as starting point for smooth continuation
-  const startOpacity = Math.max(
-    isNaN(oldOpacity) ? 0 : oldOpacity,
-    isNaN(newOpacity) ? 0 : newOpacity,
-  );
-  debug("transition", "Starting opacity:", {
-    oldOpacity,
-    newOpacity,
-    startOpacity,
-  });
-
   if (!oldChild) {
+    const newOpacity = getOpacity(newChild);
+    debug("transition", "Starting opacity:", {
+      from: newOpacity,
+      to: 1,
+    });
     // Empty -> Content (fade in only)
     return [
       createOpacityTransition(newChild, 1, {
-        from: startOpacity,
+        from: newOpacity,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
@@ -947,6 +937,17 @@ const applyCrossFade = (
   }
 
   // Content -> Content (cross-fade)
+  // Get current opacity for both elements
+  const oldOpacity = getOpacity(oldChild);
+  const newOpacity = getOpacity(newChild);
+  // Use highest opacity as starting point for smooth continuation
+  const startOpacity = Math.max(oldOpacity, newOpacity);
+  debug("transition", "Starting opacity:", {
+    oldOpacity,
+    newOpacity,
+    startOpacity,
+  });
+
   return [
     createOpacityTransition(oldChild, 0, {
       from: Math.max(isNaN(oldOpacity) ? 1 : oldOpacity, startOpacity),
