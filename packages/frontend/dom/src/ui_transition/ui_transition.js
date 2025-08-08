@@ -404,9 +404,10 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       const contentChange = hadChild && hasChild && shouldDoContentTransition;
       const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
 
-      // Include becomesPopulated in content transition for empty->content transitions
+      // Include becomesPopulated in content transition only if it's not a phase transition
       const shouldDoContentTransitionIncludingPopulation =
-        shouldDoContentTransition || becomesPopulated;
+        shouldDoContentTransition ||
+        (becomesPopulated && !shouldDoPhaseTransition);
 
       debug("transition", "Transition scenarios:", {
         shouldDoContentTransition,
