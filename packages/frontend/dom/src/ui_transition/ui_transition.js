@@ -69,15 +69,6 @@ import.meta.css = /* css */ `
     inset: 0;
     pointer-events: none;
   }
-
-  /* Transition data attributes override inline styles using CSS custom properties */
-  *[data-transition-opacity] {
-    opacity: var(--ui-transition-opacity) !important;
-  }
-
-  *[data-transition-translate-x] {
-    transform: translateX(var(--ui-transition-translate-x)) !important;
-  }
 `;
 
 const DEBUG = {

@@ -4,6 +4,17 @@ import { addWillChange } from "../style_and_attributes.js";
 import { parseTransform } from "./transform_style_parser.js";
 import { createTimelineTransition } from "./transition_playback.js";
 
+import.meta.css = /* css */ `
+  /* Transition data attributes override inline styles using CSS custom properties */
+  *[data-transition-opacity] {
+    opacity: var(--ui-transition-opacity) !important;
+  }
+
+  *[data-transition-translate-x] {
+    transform: translateX(var(--ui-transition-translate-x)) !important;
+  }
+`;
+
 export const createHeightTransition = (element, to, options) => {
   const heightTransition = createTimelineTransition({
     ...options,
