@@ -915,7 +915,7 @@ const applyCrossFade = (
 
   if (!oldChild) {
     // Empty -> Content (fade in only)
-    const from = getOpacity(newChild);
+    const from = 0;
     const to = getOpacityWithoutTransition(newChild);
     debug("transition", "Fade in from empty:", { from, to });
     return [
