@@ -273,7 +273,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       overlay.appendChild(oldChild);
       debug(
         "transition",
-        `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition`,
+        `Cloned previous child for ${isPhaseTransition ? "phase" : "content"} transition:`,
+        previousChild.outerHTML,
       );
       cleanup = () => oldChild.remove();
     } else {
@@ -489,6 +490,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             type,
             animationProgress,
             isPhaseTransition: false,
+            previousChild,
             onComplete: () => {
               activeContentTransition = null;
               activeContentTransitionType = null;
@@ -576,6 +578,15 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             ? "content-phase"
             : "content";
 
+        debug("transition", "Phase transition variables:", {
+          hadChild,
+          hasChild,
+          wasContentPhase,
+          isContentPhase,
+          fromPhase,
+          toPhase,
+        });
+
         debug(
           "transition",
           `Starting phase transition: ${fromPhase} → ${toPhase}`,
@@ -590,6 +601,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
             type: phaseTransitionType,
             animationProgress: phaseAnimationProgress,
             isPhaseTransition: true,
+            previousChild,
             onComplete: () => {
               activePhaseTransition = null;
               activePhaseTransitionType = null;
@@ -762,6 +774,7 @@ const animateTransition = (
     duration,
     animationProgress = 0,
     isPhaseTransition = false,
+    previousChild = null,
     onComplete,
   },
 ) => {
@@ -775,10 +788,16 @@ const animateTransition = (
   }
 
   const { oldChild, cleanup } = setupTransition();
+
+  // Get content keys before attributes are removed
+  const fromContentKey =
+    previousChild?.getAttribute("data-content-key") || "empty";
+  const toContentKey = newChild?.getAttribute("data-content-key") || "empty";
+
   debug("transition", "Setting up animation:", {
     type,
-    from: oldChild?.getAttribute("data-content-key") || "empty",
-    to: newChild?.getAttribute("data-content-key") || "empty",
+    from: fromContentKey,
+    to: toContentKey,
     progress: `${(animationProgress * 100).toFixed(1)}%`,
   });
 
