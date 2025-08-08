@@ -344,7 +344,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       isContentPhase = firstChild?.hasAttribute("data-content-phase");
 
       if (DEBUG.transition) {
-        console.group(`UI Update: ${childUIName || (firstChild ? "data-ui-name not specified" : "cleared/empty")}`);
+        console.group(
+          `UI Update: ${childUIName || (firstChild ? "data-ui-name not specified" : "cleared/empty")}`,
+        );
       }
 
       debug(
