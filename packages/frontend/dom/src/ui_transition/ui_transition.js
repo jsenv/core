@@ -411,7 +411,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       // Include becomesPopulated in content transition only if it's not a phase transition
       const shouldDoContentTransitionIncludingPopulation =
         shouldDoContentTransition ||
-        (becomesPopulated && !shouldDoPhaseTransition);
+        (becomesPopulated && !shouldDoPhaseTransition) ||
+        activeContentTransition !== null; // Continue managing active content transitions
 
       const decisions = [];
       if (shouldDoContentTransition) decisions.push("CONTENT TRANSITION");
