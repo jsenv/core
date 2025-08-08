@@ -39,6 +39,7 @@ import {
   createOpacityTransition,
   createTranslateXTransition,
   createWidthTransition,
+  getOpacity,
   getTranslateX,
 } from "../transition/dom_transition.js";
 import { createGroupTransitionController } from "../transition/group_transition.js";
@@ -358,13 +359,10 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       outerWrapper.style.width = `${constrainedWidth}px`;
       outerWrapper.style.height = `${constrainedHeight}px`;
 
-      debug("transition", "Child info:", {
-        currentContentKey,
-        lastContentKey,
-        isContentPhase,
-        wasContentPhase,
-        naturalContentWidth,
-        naturalContentHeight,
+      debug("transition", "Content keys:", {
+        previous: lastContentKey || "null",
+        current: currentContentKey || "null",
+        phase: `${wasContentPhase ? "content-phase" : "content"} → ${isContentPhase ? "content-phase" : "content"}`,
       });
 
       // Handle resize observation
@@ -409,19 +407,12 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         shouldDoContentTransition ||
         (becomesPopulated && !shouldDoPhaseTransition);
 
-      debug("transition", "Transition scenarios:", {
-        shouldDoContentTransition,
-        shouldDoPhaseTransition,
-        shouldDoContentTransitionIncludingPopulation,
-        hadChild,
-        hasChild,
-        becomesEmpty,
-        becomesPopulated,
-        contentChange,
-        phaseChange,
-        previousIsContentPhase,
-        currentIsContentPhase,
-      });
+      const decisions = [];
+      if (shouldDoContentTransition) decisions.push("CONTENT TRANSITION");
+      if (shouldDoPhaseTransition) decisions.push("PHASE TRANSITION");
+      if (decisions.length === 0) decisions.push("NO TRANSITION");
+
+      debug("transition", `Decision: ${decisions.join(" + ")}`);
 
       // Handle content transitions (slide-left, cross-fade for content key changes)
       if (shouldDoContentTransitionIncludingPopulation) {
@@ -903,7 +894,7 @@ const applyCrossFade = (
 
   if (!newChild) {
     // Content -> Empty (fade out only)
-    const oldOpacity = parseFloat(getComputedStyle(oldChild).opacity);
+    const oldOpacity = getOpacity(oldChild);
     const startOpacity = isNaN(oldOpacity) ? 1 : oldOpacity;
 
     debug("transition", "Fade out to empty:", { startOpacity });
@@ -924,10 +915,8 @@ const applyCrossFade = (
   }
 
   // Get current opacity for both elements
-  const oldOpacity = oldChild
-    ? parseFloat(getComputedStyle(oldChild).opacity)
-    : 0;
-  const newOpacity = parseFloat(getComputedStyle(newChild).opacity);
+  const oldOpacity = oldChild ? getOpacity(oldChild) : 0;
+  const newOpacity = getOpacity(newChild);
 
   // Use highest opacity as starting point for smooth continuation
   const startOpacity = Math.max(
@@ -978,10 +967,7 @@ const applyCrossFade = (
       duration,
       startProgress,
       onUpdate: ({ value, timing }) => {
-        const currentOpacity = parseFloat(getComputedStyle(newChild).opacity);
-        if (isNaN(currentOpacity) || value > currentOpacity) {
-          debug("transition_updates", "New content fade in:", value.toFixed(3));
-        }
+        debug("transition_updates", "New content fade in:", value.toFixed(3));
         if (timing === "end") {
           debug("transition", "Cross-fade complete");
         }

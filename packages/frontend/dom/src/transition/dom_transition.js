@@ -112,7 +112,7 @@ export const createOpacityTransition = (element, to, options = {}) => {
   });
   return opacityTransition;
 };
-const getOpacity = (element) => {
+export const getOpacity = (element) => {
   return parseFloat(getComputedStyle(element).opacity) || 0;
 };
 
