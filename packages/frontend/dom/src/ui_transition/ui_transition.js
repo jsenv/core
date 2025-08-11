@@ -944,7 +944,7 @@ const animateTransition = (
 
 const slideLeft = {
   name: "slide-left",
-  impactsBothPhases: true, // This transition affects both content and content-phase, so must be applied to their container
+  impactsBothPhases: true, // This transition works on both content and phase transitions
   apply: (
     oldElement,
     newElement,
@@ -1067,23 +1067,22 @@ const slideLeft = {
 
 const crossFade = {
   name: "cross-fade",
-  impactsBothPhases: false, // This transition affects individual elements directly
   apply: (
-    oldChild,
-    newChild,
+    oldElement,
+    newElement,
     { duration, startProgress = 0, isPhaseTransition = false },
   ) => {
-    if (!oldChild && !newChild) {
+    if (!oldElement && !newElement) {
       return [];
     }
 
-    if (!newChild) {
+    if (!newElement) {
       // Content -> Empty (fade out only)
-      const from = getOpacity(oldChild);
+      const from = getOpacity(oldElement);
       const to = 0;
       debug("transition", "Fade out to empty:", { from, to });
       return [
-        createOpacityTransition(oldChild, to, {
+        createOpacityTransition(oldElement, to, {
           from,
           duration,
           startProgress,
@@ -1097,13 +1096,13 @@ const crossFade = {
       ];
     }
 
-    if (!oldChild) {
+    if (!oldElement) {
       // Empty -> Content (fade in only)
       const from = 0;
-      const to = getOpacityWithoutTransition(newChild);
+      const to = getOpacityWithoutTransition(newElement);
       debug("transition", "Fade in from empty:", { from, to });
       return [
-        createOpacityTransition(newChild, to, {
+        createOpacityTransition(newElement, to, {
           from,
           duration,
           startProgress,
@@ -1119,16 +1118,15 @@ const crossFade = {
 
     // Content -> Content (cross-fade)
     // Get current opacity for both elements
-    const oldOpacity = getOpacity(oldChild);
-    const newOpacity = getOpacity(newChild);
-    const newNaturalOpacity = getOpacityWithoutTransition(newChild);
+    const oldOpacity = getOpacity(oldElement);
+    const newOpacity = getOpacity(newElement);
+    const newNaturalOpacity = getOpacityWithoutTransition(newElement);
 
-    // Smart opacity starting point:
-    // - For phase transitions: always start from 0 (new content appears)
-    // - For content transitions: check for ongoing transitions
+    // For phase transitions, always start new content from 0 for clean visual transition
+    // For content transitions, check for ongoing transitions to continue smoothly
     let effectiveFromOpacity;
     if (isPhaseTransition) {
-      effectiveFromOpacity = 0;
+      effectiveFromOpacity = 0; // Always start fresh for phase transitions (loading → content, etc.)
     } else {
       // For content transitions: if new element has ongoing opacity transition
       // (indicated by non-zero opacity when natural opacity is different),
@@ -1141,10 +1139,11 @@ const crossFade = {
     debug("transition", "Cross-fade transition:", {
       oldOpacity: `${oldOpacity} → 0`,
       newOpacity: `${effectiveFromOpacity} → ${newNaturalOpacity}`,
+      isPhaseTransition,
     });
 
     return [
-      createOpacityTransition(oldChild, 0, {
+      createOpacityTransition(oldElement, 0, {
         from: oldOpacity,
         duration,
         startProgress,
@@ -1158,7 +1157,7 @@ const crossFade = {
           }
         },
       }),
-      createOpacityTransition(newChild, newNaturalOpacity, {
+      createOpacityTransition(newElement, newNaturalOpacity, {
         from: effectiveFromOpacity,
         duration,
         startProgress,
