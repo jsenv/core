@@ -166,14 +166,12 @@ export const initUITransition = (container) => {
       width: `${naturalContentWidth} → ${newWidth}`,
       height: `${naturalContentHeight} → ${newHeight}`,
     });
-    naturalContentWidth = newWidth;
-    naturalContentHeight = newHeight;
+
+    updateNaturalContentSize(newWidth, newHeight);
 
     if (sizeTransition) {
       debug("size", "Updating animation target:", newHeight);
-      updateToSize(newWidth, newHeight, {
-        onEnd: () => releaseConstraints("size animation completed"),
-      });
+      updateToSize(newWidth, newHeight);
     } else {
       constrainedWidth = newWidth;
       constrainedHeight = newHeight;
@@ -211,20 +209,20 @@ export const initUITransition = (container) => {
     naturalContentHeight = afterHeight;
   };
 
-  const updateToSize = (targetWidth, targetHeight, { onEnd } = {}) => {
-    // Check if size transitions are enabled via data-size-transition attribute
+  const updateToSize = (targetWidth, targetHeight) => {
     const shouldAnimate = container.hasAttribute("data-size-transition");
+
     if (!shouldAnimate) {
-      // Instant size update without animation
+      // No size transitions - just update dimensions instantly
       debug("size", "Updating size instantly:", {
         width: `${constrainedWidth} → ${targetWidth}`,
         height: `${constrainedHeight} → ${targetHeight}`,
       });
+
       outerWrapper.style.width = `${targetWidth}px`;
       outerWrapper.style.height = `${targetHeight}px`;
       constrainedWidth = targetWidth;
       constrainedHeight = targetHeight;
-      onEnd?.();
       return;
     }
 
@@ -265,12 +263,33 @@ export const initUITransition = (container) => {
 
     if (transitions.length > 0) {
       sizeTransition = transitionController.animate(transitions, {
-        onFinish: onEnd,
+        onFinish: () =>
+          releaseConstraints("animated size transition completed"),
       });
       sizeTransition.play();
-    } else {
-      onEnd?.();
     }
+  };
+
+  const applySizeConstraints = (targetWidth, targetHeight) => {
+    debug("size", "Applying size constraints:", {
+      width: `${constrainedWidth} → ${targetWidth}`,
+      height: `${constrainedHeight} → ${targetHeight}`,
+    });
+
+    outerWrapper.style.width = `${targetWidth}px`;
+    outerWrapper.style.height = `${targetHeight}px`;
+    outerWrapper.style.overflow = "hidden";
+    constrainedWidth = targetWidth;
+    constrainedHeight = targetHeight;
+  };
+
+  const updateNaturalContentSize = (newWidth, newHeight) => {
+    debug("size", "Updating natural content size:", {
+      width: `${naturalContentWidth} → ${newWidth}`,
+      height: `${naturalContentHeight} → ${newHeight}`,
+    });
+    naturalContentWidth = newWidth;
+    naturalContentHeight = newHeight;
   };
 
   let isUpdating = false;
@@ -700,20 +719,29 @@ export const initUITransition = (container) => {
         height: `${constrainedHeight} → ${targetHeight}`,
       });
 
-      // Handle size animation based on content state
-      const becomesContent = wasContentPhase && !isContentPhase;
+      // Handle size updates based on content state
+      const hasSizeTransitions = container.hasAttribute("data-size-transition");
 
-      if (becomesContent || (shouldDoContentTransition && !isContentPhase)) {
-        debug("size", "Transitioning to actual content");
-        updateToSize(targetWidth, targetHeight, {
-          onEnd: () => releaseConstraints("all transitions completed"),
-        });
-      } else if (shouldDoContentTransition || isContentPhase) {
-        updateToSize(targetWidth, targetHeight, {
-          onEnd: () => releaseConstraints("all transitions completed"),
-        });
+      if (isContentPhase) {
+        // Content phases (loading/error) always use size constraints for consistent sizing
+        if (hasSizeTransitions) {
+          // Animate to target size with constraints
+          updateToSize(targetWidth, targetHeight);
+        } else {
+          // Apply constraints instantly (no animation)
+          applySizeConstraints(targetWidth, targetHeight);
+        }
       } else {
-        releaseConstraints("direct content update");
+        // Actual content: update natural content dimensions for future content phases
+        updateNaturalContentSize(targetWidth, targetHeight);
+
+        if (hasSizeTransitions) {
+          // With size transitions: animate to target size, constraints released after animation
+          updateToSize(targetWidth, targetHeight);
+        } else {
+          // Without size transitions: release constraints immediately for natural sizing
+          releaseConstraints("actual content - no size transitions needed");
+        }
       }
     } finally {
       isUpdating = false;
