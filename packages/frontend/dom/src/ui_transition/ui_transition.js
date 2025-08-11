@@ -4,10 +4,10 @@
  * <div class="ui_transition_container"
  *      data-size-transition              <!-- Optional: enable size animations -->
  *      data-size-transition-duration     <!-- Optional: size transition duration, default 300ms -->
- *      data-ui-transition                <!-- Content transition type: cross-fade, slide-left -->
- *      data-ui-transition-duration       <!-- Content transition duration -->
- *      data-ui-transition-phase          <!-- Phase transition type: cross-fade, slide-left -->
- *      data-ui-transition-phase-duration <!-- Phase transition duration -->
+ *      data-content-transition           <!-- Content transition type: cross-fade, slide-left -->
+ *      data-content-transition-duration  <!-- Content transition duration -->
+ *      data-phase-transition             <!-- Phase transition type: cross-fade, slide-left -->
+ *      data-phase-transition-duration    <!-- Phase transition duration -->
  * >
  *   <!-- Main container with relative positioning and overflow hidden -->
  *
@@ -92,6 +92,12 @@ const debug = (type, ...args) => {
     console.debug(`[${type}]`, ...args);
   }
 };
+
+const SIZE_TRANSITION_DURATION = 150; // Default size transition duration
+const CONTENT_TRANSITION = "cross-fade"; // Default content transition type
+const CONTENT_TRANSITION_DURATION = 300; // Default content transition duration
+const PHASE_TRANSITION = "cross-fade";
+const PHASE_TRANSITION_DURATION = 300; // Default phase transition duration
 
 export const initUITransition = (container) => {
   if (!container.classList.contains("ui_transition_container")) {
@@ -233,7 +239,8 @@ export const initUITransition = (container) => {
     });
 
     const duration = parseInt(
-      container.getAttribute("data-size-transition-duration") || 300,
+      container.getAttribute("data-size-transition-duration") ||
+        SIZE_TRANSITION_DURATION,
     );
 
     outerWrapper.style.overflow = "hidden";
@@ -509,7 +516,9 @@ export const initUITransition = (container) => {
           );
         }
 
-        const newTransitionType = container.getAttribute("data-ui-transition");
+        const newTransitionType =
+          container.getAttribute("data-content-transition") ||
+          CONTENT_TRANSITION;
         const canContinueSmoothly =
           activeContentTransitionType === newTransitionType &&
           activeContentTransition;
@@ -548,9 +557,12 @@ export const initUITransition = (container) => {
           });
 
         const duration = parseInt(
-          container.getAttribute("data-ui-transition-duration") || 300,
+          container.getAttribute("data-content-transition-duration") ||
+            CONTENT_TRANSITION_DURATION,
         );
-        const type = container.getAttribute("data-ui-transition");
+        const type =
+          container.getAttribute("data-content-transition") ||
+          CONTENT_TRANSITION;
 
         activeContentTransition = animateTransition(
           transitionController,
@@ -583,7 +595,7 @@ export const initUITransition = (container) => {
       // Handle phase transitions (cross-fade for content phase changes)
       if (shouldDoPhaseTransition) {
         const phaseTransitionType =
-          container.getAttribute("data-ui-transition-phase") || "cross-fade"; // Default to cross-fade for phase transitions
+          container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
 
         const existingOldPhaseContents = phaseOverlay.querySelectorAll(
           "[data-ui-transition-old]",
@@ -635,7 +647,8 @@ export const initUITransition = (container) => {
           });
 
         const phaseDuration = parseInt(
-          container.getAttribute("data-ui-transition-phase-duration") || 300,
+          container.getAttribute("data-phase-transition-duration") ||
+            PHASE_TRANSITION_DURATION,
         );
 
         const fromPhase = !hadChild

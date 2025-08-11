@@ -63,14 +63,14 @@ export const UITransition = ({
       data-size-transition-duration={
         sizeTransitionDuration ? sizeTransitionDuration : undefined
       }
-      data-ui-transition={transitionType ? transitionType : undefined}
-      data-ui-transition-duration={
+      data-content-transition={transitionType ? transitionType : undefined}
+      data-content-transition-duration={
         transitionDuration ? transitionDuration : undefined
       }
-      data-ui-transition-phase={
+      data-phase-transition={
         phaseTransitionType ? phaseTransitionType : undefined
       }
-      data-ui-transition-phase-duration={
+      data-phase-transition-duration={
         phaseTransitionDuration ? phaseTransitionDuration : undefined
       }
       className="ui_transition_container"
