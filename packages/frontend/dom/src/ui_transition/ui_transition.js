@@ -1163,7 +1163,7 @@ const crossFade = {
       createOpacityTransition(newElement, newNaturalOpacity, {
         from: effectiveFromOpacity,
         duration,
-        startProgress,
+        startProgress: isPhaseTransition ? 0 : startProgress, // Phase transitions: new content always starts fresh
         onUpdate: ({ value, timing }) => {
           debug("transition_updates", "New content fade in:", value.toFixed(3));
           if (timing === "end") {
