@@ -6,7 +6,7 @@
  *      data-size-transition-duration     <!-- Optional: size transition duration, default 300ms -->
  *      data-content-transition           <!-- Content transition type: cross-fade, slide-left -->
  *      data-content-transition-duration  <!-- Content transition duration -->
- *      data-phase-transition             <!-- Phase transition type: cross-fade, slide-left -->
+ *      data-phase-transition             <!-- Phase transition type: cross-fade only -->
  *      data-phase-transition-duration    <!-- Phase transition duration -->
  * >
  *   <!-- Main container with relative positioning and overflow hidden -->
@@ -36,7 +36,8 @@
  * - Optional smooth size transitions by constraining outer-wrapper dimensions (when data-size-transition is present)
  * - Instant size updates by default
  * - Accurate content measurement via measure-wrapper ResizeObserver
- * - Visual transitions using overlay-positioned clones for both content and phase transitions
+ * - Content transitions (slide, etc.) that operate at container level and can outlive content phase changes
+ * - Phase transitions (cross-fade only) that operate on individual elements for loading/error states
  * - Independent content updates in the slot without affecting ongoing animations
  */
 
@@ -311,7 +312,6 @@ export const initUITransition = (container) => {
     previousChild,
     firstChild,
     attributeToRemove = [],
-    transitionType,
   }) => {
     let oldChild = null;
     let cleanup = () => {};
@@ -327,7 +327,7 @@ export const initUITransition = (container) => {
     } else if (needsOldChildClone) {
       overlay.innerHTML = "";
 
-      // Always clone individual elements - the slide transition will be applied to measureWrapper
+      // Clone the individual element for the transition
       oldChild = previousChild.cloneNode(true);
 
       // Remove specified attributes
@@ -349,21 +349,19 @@ export const initUITransition = (container) => {
       );
     }
 
-    // Get the transition object to check its impactsBothPhases property
-    const transitionObj =
-      transitionType === "slide-left" ? slideLeft : crossFade;
-
-    // Determine which elements to return based on the transition's impactsBothPhases property
+    // Determine which elements to return based on transition type:
+    // - Phase transitions: operate on individual elements (cross-fade between specific elements)
+    // - Content transitions: operate at container level (slide entire containers, outlive content phases)
     let oldElement;
     let newElement;
-    if (transitionObj.impactsBothPhases) {
-      // For transitions that impact both phases, use the overlay containers
-      oldElement = oldChild ? overlay : null;
-      newElement = firstChild ? measureWrapper : null;
-    } else {
-      // For transitions that work on individual elements, use the actual elements
+    if (isPhaseTransition) {
+      // Phase transitions work on individual elements
       oldElement = oldChild;
       newElement = firstChild;
+    } else {
+      // Content transitions work at container level and can outlive content phase changes
+      oldElement = oldChild ? overlay : null;
+      newElement = firstChild ? measureWrapper : null;
     }
 
     return {
@@ -947,7 +945,6 @@ const animateTransition = (
 
 const slideLeft = {
   name: "slide-left",
-  impactsBothPhases: true, // This transition works on both content and phase transitions
   apply: (
     oldElement,
     newElement,
