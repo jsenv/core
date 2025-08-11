@@ -180,20 +180,20 @@
 
       // Update duration when input changes
       durationInput.addEventListener("change", () => {
-        box.dataset.uiTransitionDuration = durationInput.value;
+        box.dataset.contentTransitionDuration = durationInput.value;
       });
 
       phaseDurationInput.addEventListener("change", () => {
-        box.dataset.uiTransitionPhaseDuration = phaseDurationInput.value;
+        box.dataset.phaseTransitionDuration = phaseDurationInput.value;
       });
 
       // Update transition types when selects change
       contentTypeSelect.addEventListener("change", () => {
-        box.dataset.uiTransition = contentTypeSelect.value;
+        box.dataset.contentTransition = contentTypeSelect.value;
       });
 
       phaseTypeSelect.addEventListener("change", () => {
-        box.dataset.uiTransitionPhase = phaseTypeSelect.value;
+        box.dataset.phaseTransition = phaseTypeSelect.value;
       });
 
       function updateDebugInfo() {
@@ -205,10 +205,10 @@
             isPaused: state.isPaused,
             contentTransitionInProgress: state.contentTransitionInProgress,
             phaseTransitionInProgress: state.phaseTransitionInProgress,
-            contentDuration: box.dataset.uiTransitionDuration,
-            phaseDuration: box.dataset.uiTransitionPhaseDuration,
-            contentType: box.dataset.uiTransition,
-            phaseType: box.dataset.uiTransitionPhase,
+            contentDuration: box.dataset.contentTransitionDuration,
+            phaseDuration: box.dataset.phaseTransitionDuration,
+            contentType: box.dataset.contentTransition,
+            phaseType: box.dataset.phaseTransition,
           },
           null,
           2,
@@ -295,7 +295,7 @@
 
       changeToFadeButton.addEventListener("click", () => {
         // Change transition type to cross-fade mid-animation
-        box.dataset.uiTransition = "cross-fade";
+        box.dataset.contentTransition = "cross-fade";
 
         // Trigger content change to see smooth transition type change
         setContent(`
@@ -310,7 +310,7 @@
 
       changeToSlideButton.addEventListener("click", () => {
         // Change transition type back to slide-left mid-animation
-        box.dataset.uiTransition = "slide-left";
+        box.dataset.contentTransition = "slide-left";
 
         // Trigger content change to see smooth transition type change
         setContent(`

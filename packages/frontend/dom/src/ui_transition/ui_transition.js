@@ -857,8 +857,8 @@ const animateTransition = (
     type,
     duration,
     animationProgress = 0,
-    isPhaseTransition = false,
     previousChild = null,
+    isPhaseTransition,
     onComplete,
   },
 ) => {
@@ -1080,8 +1080,20 @@ const applyCrossFade = (
   const newOpacity = getOpacity(newChild);
   const newNaturalOpacity = getOpacityWithoutTransition(newChild);
 
-  // For phase transitions, force new content to start from 0 for proper fade-in
-  const effectiveFromOpacity = isPhaseTransition ? 0 : newOpacity;
+  // Smart opacity starting point:
+  // - For phase transitions: always start from 0 (new content appears)
+  // - For content transitions: check for ongoing transitions
+  let effectiveFromOpacity;
+  if (isPhaseTransition) {
+    effectiveFromOpacity = 0;
+  } else {
+    // For content transitions: if new element has ongoing opacity transition
+    // (indicated by non-zero opacity when natural opacity is different),
+    // start from current opacity to continue smoothly, otherwise start from 0
+    const hasOngoingTransition =
+      newOpacity !== newNaturalOpacity && newOpacity > 0;
+    effectiveFromOpacity = hasOngoingTransition ? newOpacity : 0;
+  }
 
   debug("transition", "Cross-fade transition:", {
     oldOpacity: `${oldOpacity} → 0`,
