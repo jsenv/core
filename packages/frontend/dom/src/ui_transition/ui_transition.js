@@ -310,8 +310,7 @@ export const initUITransition = (container) => {
     needsOldChildClone,
     previousChild,
     attributeToRemove = [],
-    oldElementAttribute,
-    transitionType = "cross-fade",
+    transitionType,
   }) => {
     let oldChild = null;
     let cleanup = () => {};
@@ -333,7 +332,7 @@ export const initUITransition = (container) => {
       // Remove specified attributes
       attributeToRemove.forEach((attr) => oldChild.removeAttribute(attr));
 
-      oldChild.setAttribute(oldElementAttribute, "");
+      oldChild.setAttribute("data-ui-transition-old", "");
       overlay.appendChild(oldChild);
       debug(
         "transition",
@@ -358,12 +357,12 @@ export const initUITransition = (container) => {
     let newElement;
     if (transitionObj.impactsBothPhases) {
       // For transitions that impact both phases, use the overlay containers
-      oldElement = overlay; // Container with old content slides out
-      newElement = measureWrapper; // Container with new content slides in
+      oldElement = oldChild ? overlay : null;
+      newElement = measureWrapper.children[0] ? measureWrapper : null; // Container with new content (only if content exists)
     } else {
       // For transitions that work on individual elements, use the actual elements
       oldElement = oldChild;
-      newElement = measureWrapper.children[0]; // The actual new content
+      newElement = measureWrapper.children[0];
     }
 
     return {
@@ -587,7 +586,6 @@ export const initUITransition = (container) => {
             needsOldChildClone,
             previousChild,
             attributeToRemove: ["data-content-key"],
-            oldElementAttribute: "data-ui-transition-old",
             transitionType: type,
           });
 
@@ -675,7 +673,6 @@ export const initUITransition = (container) => {
             needsOldChildClone: needsOldPhaseClone,
             previousChild,
             attributeToRemove: ["data-content-key", "data-content-phase"],
-            oldElementAttribute: "data-ui-transition-old",
             transitionType: phaseTransitionType,
           });
 
