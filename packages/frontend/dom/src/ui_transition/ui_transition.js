@@ -359,7 +359,7 @@ export const initUITransition = (container) => {
     if (transitionObj.impactsBothPhases) {
       // For transitions that impact both phases, use the overlay containers
       oldElement = oldChild ? overlay : null;
-      newElement = measureWrapper.children[0] ? measureWrapper : null; // Container with new content (only if content exists)
+      newElement = firstChild ? measureWrapper : null;
     } else {
       // For transitions that work on individual elements, use the actual elements
       oldElement = oldChild;
