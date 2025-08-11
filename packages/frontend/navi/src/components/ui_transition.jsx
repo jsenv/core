@@ -39,6 +39,8 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 
 export const UITransition = ({
   children,
+  sizeTransition,
+  sizeTransitionDuration,
   transitionType,
   transitionDuration,
   phaseTransitionType,
@@ -57,6 +59,10 @@ export const UITransition = ({
     <div
       ref={ref}
       {...props}
+      data-size-transition={sizeTransition ? "" : undefined}
+      data-size-transition-duration={
+        sizeTransitionDuration ? sizeTransitionDuration : undefined
+      }
       data-ui-transition={transitionType ? transitionType : undefined}
       data-ui-transition-duration={
         transitionDuration ? transitionDuration : undefined

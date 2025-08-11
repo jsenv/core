@@ -116,6 +116,16 @@
         gap: 8px;
         cursor: pointer;
       }
+      .config-section input[type="range"]:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .config-section .description {
+        margin: 8px 0 0 0;
+        font-size: 0.9em;
+        color: #666;
+        line-height: 1.4;
+      }
     </style>
   </head>
   <body>
@@ -123,7 +133,8 @@
     <p>
       This demo showcases how ActionRenderer uses UITransition to smoothly
       animate between different action states (idle, loading, completed, error)
-      with different content sizes.
+      with different content sizes. You can control whether size changes are
+      animated or instant, and customize the duration of all transitions.
     </p>
 
     <div id="root"></div>
@@ -311,6 +322,18 @@
             return saved ? parseInt(saved) : 300;
           },
         );
+        const [sizeTransition, setSizeTransition] = useState(() => {
+          const saved = localStorage.getItem("ui-transition-demo-size-enabled");
+          return saved ? saved === "true" : true; // Default to enabled
+        });
+        const [sizeTransitionDuration, setSizeTransitionDuration] = useState(
+          () => {
+            const saved = localStorage.getItem(
+              "ui-transition-demo-size-duration",
+            );
+            return saved ? parseInt(saved) : 300;
+          },
+        );
 
         // Create actions with content key metadata
         const smallAction = createSuccessAction("small", 800);
@@ -371,6 +394,22 @@
           );
         };
 
+        const handleSizeTransitionChange = (enabled) => {
+          setSizeTransition(enabled);
+          localStorage.setItem(
+            "ui-transition-demo-size-enabled",
+            enabled.toString(),
+          );
+        };
+
+        const handleSizeTransitionDurationChange = (newDuration) => {
+          setSizeTransitionDuration(newDuration);
+          localStorage.setItem(
+            "ui-transition-demo-size-duration",
+            newDuration.toString(),
+          );
+        };
+
         return (
           <div>
             <div className="demo-container">
@@ -406,6 +445,8 @@
 
               <div className="content-area">
                 <UITransition
+                  sizeTransition={sizeTransition}
+                  sizeTransitionDuration={sizeTransitionDuration}
                   transitionType={transitionType}
                   transitionDuration={transitionDuration}
                   phaseTransitionType={phaseTransitionType}
@@ -552,6 +593,52 @@
                   />
                 </label>
               </div>
+
+              <div className="config-section">
+                <h4>Size Transition</h4>
+                <div className="checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={sizeTransition}
+                      onChange={(e) =>
+                        handleSizeTransitionChange(e.target.checked)
+                      }
+                    />
+                    Enable Size Transitions
+                  </label>
+                </div>
+                <p className="description">
+                  When enabled, the container smoothly animates to accommodate
+                  different content sizes. When disabled, size changes are
+                  instant.
+                </p>
+              </div>
+
+              <div className="config-section">
+                <h4>Size Transition Duration</h4>
+                <label style="display: flex; align-items: center; gap: 10px;">
+                  <span>Duration: {sizeTransitionDuration}ms</span>
+                  <input
+                    type="range"
+                    min="100"
+                    max="1000"
+                    step="50"
+                    value={sizeTransitionDuration}
+                    onChange={(e) =>
+                      handleSizeTransitionDurationChange(
+                        parseInt(e.target.value),
+                      )
+                    }
+                    style="flex: 1;"
+                    disabled={!sizeTransition}
+                  />
+                </label>
+                <p className="description">
+                  Controls how fast the container animates when content size
+                  changes. Only applies when size transitions are enabled.
+                </p>
+              </div>
             </div>
 
             <div className="demo-container">
@@ -562,8 +649,13 @@
                   wraps all content in UITransition for smooth state changes
                 </li>
                 <li>
-                  <strong>Size Adaptation:</strong> Container smoothly animates
-                  to accommodate different content sizes
+                  <strong>Size Adaptation:</strong> Container can smoothly
+                  animate to accommodate different content sizes (when enabled)
+                </li>
+                <li>
+                  <strong>Optional Size Transitions:</strong> Toggle between
+                  instant and animated size changes using the "Enable Size
+                  Transitions" checkbox
                 </li>
                 <li>
                   <strong>Content Phases:</strong> Loading and error states are
