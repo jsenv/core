@@ -349,19 +349,19 @@ export const initUITransition = (container) => {
       );
     }
 
-    // Get the transition object to check its appliesTo property
+    // Get the transition object to check its impactsBothPhases property
     const transitionObj =
       transitionType === "slide-left" ? slideLeft : crossFade;
 
-    // Determine which elements to return based on the transition's appliesTo property
+    // Determine which elements to return based on the transition's impactsBothPhases property
     let oldElement;
     let newElement;
-    if (transitionObj.appliesTo === "container") {
-      // For container-level transitions (like slide), use the overlay containers
+    if (transitionObj.impactsBothPhases) {
+      // For transitions that impact both phases, use the overlay containers
       oldElement = overlay; // Container with old content slides out
       newElement = measureWrapper; // Container with new content slides in
     } else {
-      // For element-level transitions (like cross-fade), use the individual elements
+      // For transitions that work on individual elements, use the actual elements
       oldElement = oldChild;
       newElement = measureWrapper.children[0]; // The actual new content
     }
@@ -947,7 +947,7 @@ const animateTransition = (
 
 const slideLeft = {
   name: "slide-left",
-  appliesTo: "container", // This transition affects both content and content-phase, so must be applied to their container
+  impactsBothPhases: true, // This transition affects both content and content-phase, so must be applied to their container
   apply: (
     oldElement,
     newElement,
@@ -1070,7 +1070,7 @@ const slideLeft = {
 
 const crossFade = {
   name: "cross-fade",
-  appliesTo: "element", // This transition affects individual elements directly
+  impactsBothPhases: false, // This transition affects individual elements directly
   apply: (
     oldChild,
     newChild,
