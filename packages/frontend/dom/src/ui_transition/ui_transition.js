@@ -1,7 +1,14 @@
 /**
  * Required HTML structure for UI transitions with smooth size and phase/content animations:
  *
- * <div class="ui_transition_container">
+ * <div class="ui_transition_container"
+ *      data-size-transition              <!-- Optional: enable size animations -->
+ *      data-size-transition-duration     <!-- Optional: size transition duration, default 300ms -->
+ *      data-ui-transition                <!-- Content transition type: cross-fade, slide-left -->
+ *      data-ui-transition-duration       <!-- Content transition duration -->
+ *      data-ui-transition-phase          <!-- Phase transition type: cross-fade, slide-left -->
+ *      data-ui-transition-phase-duration <!-- Phase transition duration -->
+ * >
  *   <!-- Main container with relative positioning and overflow hidden -->
  *
  *   <div class="ui_transition_outer_wrapper">
@@ -26,7 +33,8 @@
  * </div>
  *
  * This separation allows:
- * - Smooth size transitions by constraining outer-wrapper dimensions
+ * - Optional smooth size transitions by constraining outer-wrapper dimensions (when data-size-transition is present)
+ * - Instant size updates by default
  * - Accurate content measurement via measure-wrapper ResizeObserver
  * - Visual transitions using overlay-positioned clones for both content and phase transitions
  * - Independent content updates in the slot without affecting ongoing animations
@@ -85,7 +93,7 @@ const debug = (type, ...args) => {
   }
 };
 
-export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
+export const initUITransition = (container) => {
   if (!container.classList.contains("ui_transition_container")) {
     console.error("Element must have ui_transition_container class");
     return { cleanup: () => {} };
@@ -139,7 +147,7 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
   let naturalContentHeight = 0;
   let constrainedWidth = 0; // Current constrained dimensions (what outer wrapper is set to)
   let constrainedHeight = 0;
-  let sizeAnimation = null;
+  let sizeTransition = null;
   let resizeObserver = null;
 
   // Child state
@@ -161,9 +169,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     naturalContentWidth = newWidth;
     naturalContentHeight = newHeight;
 
-    if (sizeAnimation) {
+    if (sizeTransition) {
       debug("size", "Updating animation target:", newHeight);
-      animateToSize(newWidth, newHeight, {
+      updateToSize(newWidth, newHeight, {
         onEnd: () => releaseConstraints("size animation completed"),
       });
     } else {
@@ -203,18 +211,40 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     naturalContentHeight = afterHeight;
   };
 
-  const animateToSize = (targetWidth, targetHeight, { onEnd } = {}) => {
+  const updateToSize = (targetWidth, targetHeight, { onEnd } = {}) => {
+    // Check if size transitions are enabled via data-size-transition attribute
+    const shouldAnimate = container.hasAttribute("data-size-transition");
+    if (!shouldAnimate) {
+      // Instant size update without animation
+      debug("size", "Updating size instantly:", {
+        width: `${constrainedWidth} → ${targetWidth}`,
+        height: `${constrainedHeight} → ${targetHeight}`,
+      });
+      outerWrapper.style.width = `${targetWidth}px`;
+      outerWrapper.style.height = `${targetHeight}px`;
+      constrainedWidth = targetWidth;
+      constrainedHeight = targetHeight;
+      onEnd?.();
+      return;
+    }
+
+    // Animated size transition
     debug("size", "Animating size:", {
       width: `${constrainedWidth} → ${targetWidth}`,
       height: `${constrainedHeight} → ${targetHeight}`,
     });
+
+    const duration = parseInt(
+      container.getAttribute("data-size-transition-duration") || 300,
+    );
+
     outerWrapper.style.overflow = "hidden";
-    const animations = [];
+    const transitions = [];
 
     if (targetHeight !== constrainedHeight) {
-      animations.push(
+      transitions.push(
         createHeightTransition(outerWrapper, targetHeight, {
-          duration: resizeDuration,
+          duration,
           onUpdate: ({ value }) => {
             constrainedHeight = value;
           },
@@ -223,9 +253,9 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     }
 
     if (targetWidth !== constrainedWidth) {
-      animations.push(
+      transitions.push(
         createWidthTransition(outerWrapper, targetWidth, {
-          duration: resizeDuration,
+          duration,
           onUpdate: ({ value }) => {
             constrainedWidth = value;
           },
@@ -233,10 +263,14 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
       );
     }
 
-    sizeAnimation = transitionController.animate(animations, {
-      onFinish: onEnd,
-    });
-    sizeAnimation.play();
+    if (transitions.length > 0) {
+      sizeTransition = transitionController.animate(transitions, {
+        onFinish: onEnd,
+      });
+      sizeTransition.play();
+    } else {
+      onEnd?.();
+    }
   };
 
   let isUpdating = false;
@@ -357,8 +391,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
         `Update triggered, size: ${constrainedWidth}x${constrainedHeight}`,
       );
 
-      if (sizeAnimation) {
-        sizeAnimation.cancel();
+      if (sizeTransition) {
+        sizeTransition.cancel();
       }
 
       const [newWidth, newHeight] = measureContentSize();
@@ -671,12 +705,12 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
 
       if (becomesContent || (shouldDoContentTransition && !isContentPhase)) {
         debug("size", "Transitioning to actual content");
-        animateToSize(targetWidth, targetHeight, {
-          onEnd: () => releaseConstraints("all animations completed"),
+        updateToSize(targetWidth, targetHeight, {
+          onEnd: () => releaseConstraints("all transitions completed"),
         });
       } else if (shouldDoContentTransition || isContentPhase) {
-        animateToSize(targetWidth, targetHeight, {
-          onEnd: () => releaseConstraints("all animations completed"),
+        updateToSize(targetWidth, targetHeight, {
+          onEnd: () => releaseConstraints("all transitions completed"),
         });
       } else {
         releaseConstraints("direct content update");
@@ -736,8 +770,8 @@ export const initUITransition = (container, { resizeDuration = 300 } = {}) => {
     cleanup: () => {
       mutationObserver.disconnect();
       stopResizeObserver();
-      if (sizeAnimation) {
-        sizeAnimation.cancel();
+      if (sizeTransition) {
+        sizeTransition.cancel();
       }
       if (activeContentTransition) {
         activeContentTransition.cancel();
