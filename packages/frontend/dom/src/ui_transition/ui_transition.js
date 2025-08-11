@@ -309,6 +309,7 @@ export const initUITransition = (container) => {
     existingOldContents,
     needsOldChildClone,
     previousChild,
+    firstChild,
     attributeToRemove = [],
     transitionType,
   }) => {
@@ -362,7 +363,7 @@ export const initUITransition = (container) => {
     } else {
       // For transitions that work on individual elements, use the actual elements
       oldElement = oldChild;
-      newElement = measureWrapper.children[0];
+      newElement = firstChild;
     }
 
     return {
@@ -585,6 +586,7 @@ export const initUITransition = (container) => {
             existingOldContents,
             needsOldChildClone,
             previousChild,
+            firstChild,
             attributeToRemove: ["data-content-key"],
             transitionType: type,
           });
@@ -672,6 +674,7 @@ export const initUITransition = (container) => {
             existingOldContents: existingOldPhaseContents,
             needsOldChildClone: needsOldPhaseClone,
             previousChild,
+            firstChild,
             attributeToRemove: ["data-content-key", "data-content-phase"],
             transitionType: phaseTransitionType,
           });
