@@ -41,6 +41,7 @@
  */
 
 import { getHeight } from "../size/get_height.js";
+import { getInnerWidth } from "../size/get_inner_width.js";
 import { getWidth } from "../size/get_width.js";
 import {
   createHeightTransition,
@@ -949,30 +950,17 @@ const applySlideLeft = (
     return [];
   }
 
-  const containerWidth =
-    oldElement?.parentElement?.offsetWidth ||
-    newElement?.parentElement?.offsetWidth ||
-    0;
-  if (!containerWidth) {
-    debug(
-      "transition",
-      "Warning: Could not determine container width for slide transition",
-    );
-    return [];
-  }
-
   if (!newElement) {
     // Content -> Empty (slide out left only)
     const currentPosition = getTranslateX(oldElement);
-
-    debug("transition", "Slide out to empty:", {
-      from: currentPosition,
-      to: -containerWidth,
-    });
+    const containerWidth = getInnerWidth(oldElement.parentElement);
+    const from = currentPosition;
+    const to = -containerWidth;
+    debug("transition", "Slide out to empty:", { from, to });
 
     return [
-      createTranslateXTransition(oldElement, -containerWidth, {
-        from: currentPosition,
+      createTranslateXTransition(oldElement, to, {
+        from,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
@@ -987,6 +975,7 @@ const applySlideLeft = (
 
   if (!oldElement) {
     // Empty -> Content (slide in from right)
+    const containerWidth = getInnerWidth(newElement.parentElement);
     const from = containerWidth; // Start from right edge for slide-in effect
     const to = getTranslateXWithoutTransition(newElement);
     debug("transition", "Slide in from empty:", { from, to });
@@ -1010,6 +999,7 @@ const applySlideLeft = (
   // The new content (newElement) slides IN from the right
 
   // Get positions for the slide animation
+  const containerWidth = getInnerWidth(newElement.parentElement);
   const oldContentPosition = getTranslateX(oldElement);
   const currentNewPosition = getTranslateX(newElement);
   const naturalNewPosition = getTranslateXWithoutTransition(newElement);
