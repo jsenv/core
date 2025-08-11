@@ -83,7 +83,7 @@ import.meta.css = /* css */ `
 `;
 
 const DEBUG = {
-  size: true,
+  size: false,
   transition: true,
   transition_updates: false,
 };
