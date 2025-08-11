@@ -349,15 +349,19 @@ export const initUITransition = (container) => {
       );
     }
 
-    // For slide transitions, the old element to slide out is the overlay,
-    // and the new element to slide in is the measureWrapper
+    // Get the transition object to check its appliesTo property
+    const transitionObj =
+      transitionType === "slide-left" ? slideLeft : crossFade;
+
+    // Determine which elements to return based on the transition's appliesTo property
     let oldElement;
     let newElement;
-    if (transitionType === "slide-left") {
+    if (transitionObj.appliesTo === "container") {
+      // For container-level transitions (like slide), use the overlay containers
       oldElement = overlay; // Container with old content slides out
       newElement = measureWrapper; // Container with new content slides in
     } else {
-      // For cross-fade and other transitions, use the individual elements
+      // For element-level transitions (like cross-fade), use the individual elements
       oldElement = oldChild;
       newElement = measureWrapper.children[0]; // The actual new content
     }
@@ -886,11 +890,11 @@ const animateTransition = (
     onComplete,
   },
 ) => {
-  let applyTransition;
+  let transitionType;
   if (type === "cross-fade") {
-    applyTransition = applyCrossFade;
+    transitionType = crossFade;
   } else if (type === "slide-left") {
-    applyTransition = applySlideLeft;
+    transitionType = slideLeft;
   } else {
     return null;
   }
@@ -912,7 +916,7 @@ const animateTransition = (
   const remainingDuration = Math.max(100, duration * (1 - animationProgress));
   debug("transition", `Animation duration: ${remainingDuration}ms`);
 
-  const transitions = applyTransition(oldElement, newElement, {
+  const transitions = transitionType.apply(oldElement, newElement, {
     duration: remainingDuration,
     startProgress: animationProgress,
     isPhaseTransition,
@@ -941,225 +945,233 @@ const animateTransition = (
   return groupTransition;
 };
 
-const applySlideLeft = (
-  oldElement,
-  newElement,
-  { duration, startProgress = 0, isPhaseTransition = false },
-) => {
-  if (!oldElement && !newElement) {
-    return [];
-  }
+const slideLeft = {
+  name: "slide-left",
+  appliesTo: "container", // This transition affects both content and content-phase, so must be applied to their container
+  apply: (
+    oldElement,
+    newElement,
+    { duration, startProgress = 0, isPhaseTransition = false },
+  ) => {
+    if (!oldElement && !newElement) {
+      return [];
+    }
 
-  if (!newElement) {
-    // Content -> Empty (slide out left only)
-    const currentPosition = getTranslateX(oldElement);
-    const containerWidth = getInnerWidth(oldElement.parentElement);
-    const from = currentPosition;
-    const to = -containerWidth;
-    debug("transition", "Slide out to empty:", { from, to });
+    if (!newElement) {
+      // Content -> Empty (slide out left only)
+      const currentPosition = getTranslateX(oldElement);
+      const containerWidth = getInnerWidth(oldElement.parentElement);
+      const from = currentPosition;
+      const to = -containerWidth;
+      debug("transition", "Slide out to empty:", { from, to });
 
-    return [
-      createTranslateXTransition(oldElement, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({ value, timing }) => {
-          debug("transition_updates", "Slide out progress:", value);
-          if (timing === "end") {
-            debug("transition", "Slide out complete");
-          }
-        },
-      }),
-    ];
-  }
+      return [
+        createTranslateXTransition(oldElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Slide out progress:", value);
+            if (timing === "end") {
+              debug("transition", "Slide out complete");
+            }
+          },
+        }),
+      ];
+    }
 
-  if (!oldElement) {
-    // Empty -> Content (slide in from right)
+    if (!oldElement) {
+      // Empty -> Content (slide in from right)
+      const containerWidth = getInnerWidth(newElement.parentElement);
+      const from = containerWidth; // Start from right edge for slide-in effect
+      const to = getTranslateXWithoutTransition(newElement);
+      debug("transition", "Slide in from empty:", { from, to });
+      return [
+        createTranslateXTransition(newElement, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Slide in progress:", value);
+            if (timing === "end") {
+              debug("transition", "Slide in complete");
+            }
+          },
+        }),
+      ];
+    }
+
+    // Content -> Content (slide left)
+    // The old content (oldElement) slides OUT to the left
+    // The new content (newElement) slides IN from the right
+
+    // Get positions for the slide animation
     const containerWidth = getInnerWidth(newElement.parentElement);
-    const from = containerWidth; // Start from right edge for slide-in effect
-    const to = getTranslateXWithoutTransition(newElement);
-    debug("transition", "Slide in from empty:", { from, to });
-    return [
-      createTranslateXTransition(newElement, to, {
-        from,
+    const oldContentPosition = getTranslateX(oldElement);
+    const currentNewPosition = getTranslateX(newElement);
+    const naturalNewPosition = getTranslateXWithoutTransition(newElement);
+
+    // For smooth continuation: if newElement is mid-transition,
+    // calculate new position to maintain seamless sliding
+    let startNewPosition;
+    if (currentNewPosition !== 0 && naturalNewPosition === 0) {
+      startNewPosition = currentNewPosition + containerWidth;
+      debug(
+        "transition",
+        "Calculated seamless position:",
+        `${currentNewPosition} + ${containerWidth} = ${startNewPosition}`,
+      );
+    } else {
+      startNewPosition = naturalNewPosition || containerWidth;
+    }
+
+    // For phase transitions, force new content to start from right edge for proper slide-in
+    const effectiveFromPosition = isPhaseTransition
+      ? containerWidth
+      : startNewPosition;
+
+    debug("transition", "Slide transition:", {
+      oldContent: `${oldContentPosition} → ${-containerWidth}`,
+      newContent: `${effectiveFromPosition} → ${naturalNewPosition}`,
+    });
+
+    const transitions = [];
+
+    // Slide old content out
+    transitions.push(
+      createTranslateXTransition(oldElement, -containerWidth, {
+        from: oldContentPosition,
+        duration,
+        startProgress,
+        onUpdate: ({ value }) => {
+          debug("transition_updates", "Old content slide out:", value);
+        },
+      }),
+    );
+
+    // Slide new content in
+    transitions.push(
+      createTranslateXTransition(newElement, naturalNewPosition, {
+        from: effectiveFromPosition,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
-          debug("transition_updates", "Slide in progress:", value);
+          debug("transition_updates", "New content slide in:", value);
           if (timing === "end") {
-            debug("transition", "Slide in complete");
+            debug("transition", "Slide complete");
           }
         },
       }),
-    ];
-  }
-
-  // Content -> Content (slide left)
-  // The old content (oldElement) slides OUT to the left
-  // The new content (newElement) slides IN from the right
-
-  // Get positions for the slide animation
-  const containerWidth = getInnerWidth(newElement.parentElement);
-  const oldContentPosition = getTranslateX(oldElement);
-  const currentNewPosition = getTranslateX(newElement);
-  const naturalNewPosition = getTranslateXWithoutTransition(newElement);
-
-  // For smooth continuation: if newElement is mid-transition,
-  // calculate new position to maintain seamless sliding
-  let startNewPosition;
-  if (currentNewPosition !== 0 && naturalNewPosition === 0) {
-    startNewPosition = currentNewPosition + containerWidth;
-    debug(
-      "transition",
-      "Calculated seamless position:",
-      `${currentNewPosition} + ${containerWidth} = ${startNewPosition}`,
     );
-  } else {
-    startNewPosition = naturalNewPosition || containerWidth;
-  }
 
-  // For phase transitions, force new content to start from right edge for proper slide-in
-  const effectiveFromPosition = isPhaseTransition
-    ? containerWidth
-    : startNewPosition;
-
-  debug("transition", "Slide transition:", {
-    oldContent: `${oldContentPosition} → ${-containerWidth}`,
-    newContent: `${effectiveFromPosition} → ${naturalNewPosition}`,
-  });
-
-  const transitions = [];
-
-  // Slide old content out
-  transitions.push(
-    createTranslateXTransition(oldElement, -containerWidth, {
-      from: oldContentPosition,
-      duration,
-      startProgress,
-      onUpdate: ({ value }) => {
-        debug("transition_updates", "Old content slide out:", value);
-      },
-    }),
-  );
-
-  // Slide new content in
-  transitions.push(
-    createTranslateXTransition(newElement, naturalNewPosition, {
-      from: effectiveFromPosition,
-      duration,
-      startProgress,
-      onUpdate: ({ value, timing }) => {
-        debug("transition_updates", "New content slide in:", value);
-        if (timing === "end") {
-          debug("transition", "Slide complete");
-        }
-      },
-    }),
-  );
-
-  return transitions;
+    return transitions;
+  },
 };
 
-const applyCrossFade = (
-  oldChild,
-  newChild,
-  { duration, startProgress = 0, isPhaseTransition = false },
-) => {
-  if (!oldChild && !newChild) {
-    return [];
-  }
+const crossFade = {
+  name: "cross-fade",
+  appliesTo: "element", // This transition affects individual elements directly
+  apply: (
+    oldChild,
+    newChild,
+    { duration, startProgress = 0, isPhaseTransition = false },
+  ) => {
+    if (!oldChild && !newChild) {
+      return [];
+    }
 
-  if (!newChild) {
-    // Content -> Empty (fade out only)
-    const from = getOpacity(oldChild);
-    const to = 0;
-    debug("transition", "Fade out to empty:", { from, to });
+    if (!newChild) {
+      // Content -> Empty (fade out only)
+      const from = getOpacity(oldChild);
+      const to = 0;
+      debug("transition", "Fade out to empty:", { from, to });
+      return [
+        createOpacityTransition(oldChild, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Content fade out:", value.toFixed(3));
+            if (timing === "end") {
+              debug("transition", "Fade out complete");
+            }
+          },
+        }),
+      ];
+    }
+
+    if (!oldChild) {
+      // Empty -> Content (fade in only)
+      const from = 0;
+      const to = getOpacityWithoutTransition(newChild);
+      debug("transition", "Fade in from empty:", { from, to });
+      return [
+        createOpacityTransition(newChild, to, {
+          from,
+          duration,
+          startProgress,
+          onUpdate: ({ value, timing }) => {
+            debug("transition_updates", "Fade in progress:", value.toFixed(3));
+            if (timing === "end") {
+              debug("transition", "Fade in complete");
+            }
+          },
+        }),
+      ];
+    }
+
+    // Content -> Content (cross-fade)
+    // Get current opacity for both elements
+    const oldOpacity = getOpacity(oldChild);
+    const newOpacity = getOpacity(newChild);
+    const newNaturalOpacity = getOpacityWithoutTransition(newChild);
+
+    // Smart opacity starting point:
+    // - For phase transitions: always start from 0 (new content appears)
+    // - For content transitions: check for ongoing transitions
+    let effectiveFromOpacity;
+    if (isPhaseTransition) {
+      effectiveFromOpacity = 0;
+    } else {
+      // For content transitions: if new element has ongoing opacity transition
+      // (indicated by non-zero opacity when natural opacity is different),
+      // start from current opacity to continue smoothly, otherwise start from 0
+      const hasOngoingTransition =
+        newOpacity !== newNaturalOpacity && newOpacity > 0;
+      effectiveFromOpacity = hasOngoingTransition ? newOpacity : 0;
+    }
+
+    debug("transition", "Cross-fade transition:", {
+      oldOpacity: `${oldOpacity} → 0`,
+      newOpacity: `${effectiveFromOpacity} → ${newNaturalOpacity}`,
+    });
+
     return [
-      createOpacityTransition(oldChild, to, {
-        from,
+      createOpacityTransition(oldChild, 0, {
+        from: oldOpacity,
+        duration,
+        startProgress,
+        onUpdate: ({ value }) => {
+          if (value > 0) {
+            debug(
+              "transition_updates",
+              "Old content fade out:",
+              value.toFixed(3),
+            );
+          }
+        },
+      }),
+      createOpacityTransition(newChild, newNaturalOpacity, {
+        from: effectiveFromOpacity,
         duration,
         startProgress,
         onUpdate: ({ value, timing }) => {
-          debug("transition_updates", "Content fade out:", value.toFixed(3));
+          debug("transition_updates", "New content fade in:", value.toFixed(3));
           if (timing === "end") {
-            debug("transition", "Fade out complete");
+            debug("transition", "Cross-fade complete");
           }
         },
       }),
     ];
-  }
-
-  if (!oldChild) {
-    // Empty -> Content (fade in only)
-    const from = 0;
-    const to = getOpacityWithoutTransition(newChild);
-    debug("transition", "Fade in from empty:", { from, to });
-    return [
-      createOpacityTransition(newChild, to, {
-        from,
-        duration,
-        startProgress,
-        onUpdate: ({ value, timing }) => {
-          debug("transition_updates", "Fade in progress:", value.toFixed(3));
-          if (timing === "end") {
-            debug("transition", "Fade in complete");
-          }
-        },
-      }),
-    ];
-  }
-
-  // Content -> Content (cross-fade)
-  // Get current opacity for both elements
-  const oldOpacity = getOpacity(oldChild);
-  const newOpacity = getOpacity(newChild);
-  const newNaturalOpacity = getOpacityWithoutTransition(newChild);
-
-  // Smart opacity starting point:
-  // - For phase transitions: always start from 0 (new content appears)
-  // - For content transitions: check for ongoing transitions
-  let effectiveFromOpacity;
-  if (isPhaseTransition) {
-    effectiveFromOpacity = 0;
-  } else {
-    // For content transitions: if new element has ongoing opacity transition
-    // (indicated by non-zero opacity when natural opacity is different),
-    // start from current opacity to continue smoothly, otherwise start from 0
-    const hasOngoingTransition =
-      newOpacity !== newNaturalOpacity && newOpacity > 0;
-    effectiveFromOpacity = hasOngoingTransition ? newOpacity : 0;
-  }
-
-  debug("transition", "Cross-fade transition:", {
-    oldOpacity: `${oldOpacity} → 0`,
-    newOpacity: `${effectiveFromOpacity} → ${newNaturalOpacity}`,
-  });
-
-  return [
-    createOpacityTransition(oldChild, 0, {
-      from: oldOpacity,
-      duration,
-      startProgress,
-      onUpdate: ({ value }) => {
-        if (value > 0) {
-          debug(
-            "transition_updates",
-            "Old content fade out:",
-            value.toFixed(3),
-          );
-        }
-      },
-    }),
-    createOpacityTransition(newChild, newNaturalOpacity, {
-      from: effectiveFromOpacity,
-      duration,
-      startProgress,
-      onUpdate: ({ value, timing }) => {
-        debug("transition_updates", "New content fade in:", value.toFixed(3));
-        if (timing === "end") {
-          debug("transition", "Cross-fade complete");
-        }
-      },
-    }),
-  ];
+  },
 };
