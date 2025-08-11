@@ -310,6 +310,7 @@ export const initUITransition = (container) => {
     previousChild,
     attributeToRemove = [],
     oldElementAttribute,
+    transitionType = "cross-fade",
   }) => {
     let oldChild = null;
     let cleanup = () => {};
@@ -324,6 +325,8 @@ export const initUITransition = (container) => {
       cleanup = () => oldChild.remove();
     } else if (needsOldChildClone) {
       overlay.innerHTML = "";
+
+      // Always clone individual elements - the slide transition will be applied to measureWrapper
       oldChild = previousChild.cloneNode(true);
 
       // Remove specified attributes
@@ -345,7 +348,25 @@ export const initUITransition = (container) => {
       );
     }
 
-    return { oldChild, cleanup };
+    // For slide transitions, the old element to slide out is the overlay,
+    // and the new element to slide in is the measureWrapper
+    let oldElement;
+    let newElement;
+    if (transitionType === "slide-left") {
+      oldElement = overlay; // Container with old content slides out
+      newElement = measureWrapper; // Container with new content slides in
+    } else {
+      // For cross-fade and other transitions, use the individual elements
+      oldElement = oldChild;
+      newElement = measureWrapper.children[0]; // The actual new content
+    }
+
+    return {
+      oldChild,
+      cleanup,
+      oldElement,
+      newElement,
+    };
   };
 
   // Initialize with current size
@@ -545,6 +566,14 @@ export const initUITransition = (container) => {
           previousChild &&
           !existingOldContents[0];
 
+        const duration = parseInt(
+          container.getAttribute("data-content-transition-duration") ||
+            CONTENT_TRANSITION_DURATION,
+        );
+        const type =
+          container.getAttribute("data-content-transition") ||
+          CONTENT_TRANSITION;
+
         const setupContentTransition = () =>
           setupTransition({
             isPhaseTransition: false,
@@ -554,15 +583,8 @@ export const initUITransition = (container) => {
             previousChild,
             attributeToRemove: ["data-content-key"],
             oldElementAttribute: "data-ui-transition-old",
+            transitionType: type,
           });
-
-        const duration = parseInt(
-          container.getAttribute("data-content-transition-duration") ||
-            CONTENT_TRANSITION_DURATION,
-        );
-        const type =
-          container.getAttribute("data-content-transition") ||
-          CONTENT_TRANSITION;
 
         activeContentTransition = animateTransition(
           transitionController,
@@ -635,6 +657,11 @@ export const initUITransition = (container) => {
           previousChild &&
           !existingOldPhaseContents[0];
 
+        const phaseDuration = parseInt(
+          container.getAttribute("data-phase-transition-duration") ||
+            PHASE_TRANSITION_DURATION,
+        );
+
         const setupPhaseTransition = () =>
           setupTransition({
             isPhaseTransition: true,
@@ -644,12 +671,8 @@ export const initUITransition = (container) => {
             previousChild,
             attributeToRemove: ["data-content-key", "data-content-phase"],
             oldElementAttribute: "data-ui-transition-old",
+            transitionType: phaseTransitionType,
           });
-
-        const phaseDuration = parseInt(
-          container.getAttribute("data-phase-transition-duration") ||
-            PHASE_TRANSITION_DURATION,
-        );
 
         const fromPhase = !hadChild
           ? "null"
@@ -871,7 +894,7 @@ const animateTransition = (
     return null;
   }
 
-  const { oldChild, cleanup } = setupTransition();
+  const { cleanup, oldElement, newElement } = setupTransition();
 
   // Get content keys before attributes are removed
   const fromContentKey =
@@ -888,7 +911,7 @@ const animateTransition = (
   const remainingDuration = Math.max(100, duration * (1 - animationProgress));
   debug("transition", `Animation duration: ${remainingDuration}ms`);
 
-  const transitions = applyTransition(oldChild, newChild, {
+  const transitions = applyTransition(oldElement, newElement, {
     duration: remainingDuration,
     startProgress: animationProgress,
     isPhaseTransition,
@@ -918,18 +941,29 @@ const animateTransition = (
 };
 
 const applySlideLeft = (
-  oldChild,
-  newChild,
+  oldElement,
+  newElement,
   { duration, startProgress = 0, isPhaseTransition = false },
 ) => {
-  if (!oldChild && !newChild) {
+  if (!oldElement && !newElement) {
     return [];
   }
 
-  if (!newChild) {
+  const containerWidth =
+    oldElement?.parentElement?.offsetWidth ||
+    newElement?.parentElement?.offsetWidth ||
+    0;
+  if (!containerWidth) {
+    debug(
+      "transition",
+      "Warning: Could not determine container width for slide transition",
+    );
+    return [];
+  }
+
+  if (!newElement) {
     // Content -> Empty (slide out left only)
-    const containerWidth = oldChild.parentElement?.offsetWidth || 0;
-    const currentPosition = getTranslateX(oldChild);
+    const currentPosition = getTranslateX(oldElement);
 
     debug("transition", "Slide out to empty:", {
       from: currentPosition,
@@ -937,7 +971,7 @@ const applySlideLeft = (
     });
 
     return [
-      createTranslateXTransition(oldChild, -containerWidth, {
+      createTranslateXTransition(oldElement, -containerWidth, {
         from: currentPosition,
         duration,
         startProgress,
@@ -951,15 +985,13 @@ const applySlideLeft = (
     ];
   }
 
-  const containerWidth = newChild.parentElement?.offsetWidth || 0;
-
-  if (!oldChild) {
+  if (!oldElement) {
     // Empty -> Content (slide in from right)
     const from = containerWidth; // Start from right edge for slide-in effect
-    const to = getTranslateXWithoutTransition(newChild);
+    const to = getTranslateXWithoutTransition(newElement);
     debug("transition", "Slide in from empty:", { from, to });
     return [
-      createTranslateXTransition(newChild, to, {
+      createTranslateXTransition(newElement, to, {
         from,
         duration,
         startProgress,
@@ -973,23 +1005,27 @@ const applySlideLeft = (
     ];
   }
 
-  // Content -> Content (slide out left, slide in from right)
-  const oldPosition = getTranslateX(oldChild);
-  const newPosition = getTranslateX(newChild);
-  const newNaturalPosition = getTranslateXWithoutTransition(newChild);
+  // Content -> Content (slide left)
+  // The old content (oldElement) slides OUT to the left
+  // The new content (newElement) slides IN from the right
 
-  // For smooth continuation: if old element is mid-transition,
-  // calculate new element position to maintain seamless sliding
+  // Get positions for the slide animation
+  const oldContentPosition = getTranslateX(oldElement);
+  const currentNewPosition = getTranslateX(newElement);
+  const naturalNewPosition = getTranslateXWithoutTransition(newElement);
+
+  // For smooth continuation: if newElement is mid-transition,
+  // calculate new position to maintain seamless sliding
   let startNewPosition;
-  if (oldPosition !== 0 && newPosition === 0) {
-    startNewPosition = oldPosition + containerWidth;
+  if (currentNewPosition !== 0 && naturalNewPosition === 0) {
+    startNewPosition = currentNewPosition + containerWidth;
     debug(
       "transition",
       "Calculated seamless position:",
-      `${oldPosition} + ${containerWidth} = ${startNewPosition}`,
+      `${currentNewPosition} + ${containerWidth} = ${startNewPosition}`,
     );
   } else {
-    startNewPosition = newPosition || containerWidth;
+    startNewPosition = naturalNewPosition || containerWidth;
   }
 
   // For phase transitions, force new content to start from right edge for proper slide-in
@@ -998,20 +1034,27 @@ const applySlideLeft = (
     : startNewPosition;
 
   debug("transition", "Slide transition:", {
-    oldPosition: `${oldPosition} → ${-containerWidth}`,
-    newPosition: `${effectiveFromPosition} → ${newNaturalPosition}`,
+    oldContent: `${oldContentPosition} → ${-containerWidth}`,
+    newContent: `${effectiveFromPosition} → ${naturalNewPosition}`,
   });
 
-  return [
-    createTranslateXTransition(oldChild, -containerWidth, {
-      from: oldPosition,
+  const transitions = [];
+
+  // Slide old content out
+  transitions.push(
+    createTranslateXTransition(oldElement, -containerWidth, {
+      from: oldContentPosition,
       duration,
       startProgress,
       onUpdate: ({ value }) => {
         debug("transition_updates", "Old content slide out:", value);
       },
     }),
-    createTranslateXTransition(newChild, newNaturalPosition, {
+  );
+
+  // Slide new content in
+  transitions.push(
+    createTranslateXTransition(newElement, naturalNewPosition, {
       from: effectiveFromPosition,
       duration,
       startProgress,
@@ -1022,7 +1065,9 @@ const applySlideLeft = (
         }
       },
     }),
-  ];
+  );
+
+  return transitions;
 };
 
 const applyCrossFade = (
