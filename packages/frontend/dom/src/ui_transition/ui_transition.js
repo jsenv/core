@@ -96,6 +96,7 @@ const debug = (type, ...args) => {
 };
 
 const SIZE_TRANSITION_DURATION = 150; // Default size transition duration
+const SIZE_DIFF_EPSILON = 0.5; // Ignore size transition when difference below this (px)
 const CONTENT_TRANSITION = "cross-fade"; // Default content transition type
 const CONTENT_TRANSITION_DURATION = 300; // Default content transition duration
 const PHASE_TRANSITION = "cross-fade";
@@ -218,7 +219,33 @@ export const initUITransition = (container) => {
   };
 
   const updateToSize = (targetWidth, targetHeight) => {
+    if (
+      constrainedWidth === targetWidth &&
+      constrainedHeight === targetHeight
+    ) {
+      return;
+    }
+
     const shouldAnimate = container.hasAttribute("data-size-transition");
+    const widthDiff = Math.abs(targetWidth - constrainedWidth);
+    const heightDiff = Math.abs(targetHeight - constrainedHeight);
+
+    if (widthDiff <= SIZE_DIFF_EPSILON && heightDiff <= SIZE_DIFF_EPSILON) {
+      // Both diffs negligible; just sync styles if changed and bail
+      if (widthDiff > 0) {
+        outerWrapper.style.width = `${targetWidth}px`;
+        constrainedWidth = targetWidth;
+      }
+      if (heightDiff > 0) {
+        outerWrapper.style.height = `${targetHeight}px`;
+        constrainedHeight = targetHeight;
+      }
+      debug(
+        "size",
+        `Skip size animation entirely (diffs width:${widthDiff.toFixed(4)}px height:${heightDiff.toFixed(4)}px)`,
+      );
+      return;
+    }
 
     if (!shouldAnimate) {
       // No size transitions - just update dimensions instantly
@@ -248,7 +275,18 @@ export const initUITransition = (container) => {
     outerWrapper.style.overflow = "hidden";
     const transitions = [];
 
-    if (targetHeight !== constrainedHeight) {
+    // heightDiff & widthDiff already computed earlier in updateToSize when deciding to skip entirely
+    if (heightDiff <= SIZE_DIFF_EPSILON) {
+      // Treat as identical
+      if (heightDiff > 0) {
+        debug(
+          "size",
+          `Skip height transition (negligible diff ${heightDiff.toFixed(4)}px)`,
+        );
+      }
+      outerWrapper.style.height = `${targetHeight}px`;
+      constrainedHeight = targetHeight;
+    } else if (targetHeight !== constrainedHeight) {
       transitions.push(
         createHeightTransition(outerWrapper, targetHeight, {
           duration,
@@ -259,7 +297,16 @@ export const initUITransition = (container) => {
       );
     }
 
-    if (targetWidth !== constrainedWidth) {
+    if (widthDiff <= SIZE_DIFF_EPSILON) {
+      if (widthDiff > 0) {
+        debug(
+          "size",
+          `Skip width transition (negligible diff ${widthDiff.toFixed(4)}px)`,
+        );
+      }
+      outerWrapper.style.width = `${targetWidth}px`;
+      constrainedWidth = targetWidth;
+    } else if (targetWidth !== constrainedWidth) {
       transitions.push(
         createWidthTransition(outerWrapper, targetWidth, {
           duration,
@@ -276,6 +323,11 @@ export const initUITransition = (container) => {
           releaseConstraints("animated size transition completed"),
       });
       sizeTransition.play();
+    } else {
+      debug(
+        "size",
+        "No size transitions created (identical or negligible differences)",
+      );
     }
   };
 
