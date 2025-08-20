@@ -95,6 +95,17 @@ const debug = (type, ...args) => {
   }
 };
 
+// Utility function to format content key states consistently for debug logs
+const formatContentKeyState = (contentKey, hasChild) => {
+  if (!hasChild) {
+    return "[empty]";
+  }
+  if (contentKey === null || contentKey === undefined) {
+    return "[unkeyed]";
+  }
+  return `[data-content-key="${contentKey}"]`;
+};
+
 const SIZE_TRANSITION_DURATION = 150; // Default size transition duration
 const SIZE_DIFF_EPSILON = 0.5; // Ignore size transition when difference below this (px)
 const CONTENT_TRANSITION = "cross-fade"; // Default content transition type
@@ -502,7 +513,7 @@ export const initUITransition = (container) => {
 
     try {
       isUpdating = true;
-      const firstChild = slot.children[0];
+      const firstChild = slot.children[0] || null;
       const childUIName = firstChild?.getAttribute("data-ui-name");
 
       // Prefer data-content-key on child, fallback to slot
@@ -517,14 +528,47 @@ export const initUITransition = (container) => {
       }
       currentContentKey = childContentKey || slotContentKey || null;
 
+      // Determine transition scenarios early for early registration check
+      const hadChild = previousChild !== null;
+      const hasChild = firstChild !== null;
+
+      // Compute formatted content key states ONCE per mutation (requirement: max 2 calls)
+      const previousContentKeyState = formatContentKeyState(
+        lastContentKey,
+        hadChild,
+      );
+      const currentContentKeyState = formatContentKeyState(
+        currentContentKey,
+        hasChild,
+      );
+
+      // Early registration path: data-content-key changed while empty (no child rendered)
+      // We treat this as selecting which conceptual content is currently unloaded.
+      // No transition should occur now; later when the child appears it will be a phase transition
+      // (content-phase → content) instead of a content transition.
+      if (!hadChild && !hasChild) {
+        const keyChanged = lastContentKey !== currentContentKey;
+        lastContentKey = currentContentKey; // Register immediately
+        debug(
+          "transition",
+          currentContentKey !== null
+            ? `Decision: REGISTER CONTENT KEY - ${currentContentKeyState} while empty (no visual transition)`
+            : keyChanged
+              ? `Decision: CLEAR CONTENT KEY - while empty (no visual transition)`
+              : `Decision: NO CHANGE - content key unchanged while empty`,
+        );
+        if (DEBUG.transition) {
+          console.groupEnd();
+        }
+        return;
+      }
+
       wasContentPhase = isContentPhase;
       isContentPhase = firstChild
         ? firstChild.hasAttribute("data-content-phase")
         : true; // empty (no child) is treated as content phase
 
-      // Determine transition scenarios early for logging
-      const hadChild = previousChild !== null;
-      const hasChild = firstChild !== null;
+      // Use hadChild/hasChild already computed earlier
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
@@ -574,8 +618,8 @@ export const initUITransition = (container) => {
           "null → content-phase: initial phase of previously unloaded content";
       }
       debug("transition", "Content keys:", {
-        previous: lastContentKey || "[unkeyed]",
-        current: currentContentKey || "[unkeyed]",
+        previous: previousContentKeyState,
+        current: currentContentKeyState,
         phase: `${previousPhaseLabel} → ${currentPhaseLabel}`,
         note: debugNote,
       });
@@ -764,6 +808,8 @@ export const initUITransition = (container) => {
             animationProgress,
             isPhaseTransition: false,
             previousChild,
+            fromContentKeyState: previousContentKeyState,
+            toContentKeyState: currentContentKeyState,
             onComplete: () => {
               activeContentTransition = null;
               activeContentTransitionType = null;
@@ -868,6 +914,8 @@ export const initUITransition = (container) => {
             animationProgress: phaseAnimationProgress,
             isPhaseTransition: true,
             previousChild,
+            fromContentKeyState: previousContentKeyState,
+            toContentKeyState: currentContentKeyState,
             onComplete: () => {
               activePhaseTransition = null;
               activePhaseTransitionType = null;
@@ -1055,9 +1103,10 @@ const animateTransition = (
     type,
     duration,
     animationProgress = 0,
-    previousChild = null,
     isPhaseTransition,
     onComplete,
+    fromContentKeyState,
+    toContentKeyState,
   },
 ) => {
   let transitionType;
@@ -1070,14 +1119,9 @@ const animateTransition = (
   }
 
   const { cleanup, oldElement, newElement } = setupTransition();
-
-  // Get content keys before attributes are removed
-  const fromContentKey = previousChild
-    ? previousChild.getAttribute("data-content-key") || "[unkeyed]"
-    : "empty";
-  const toContentKey = newChild
-    ? newChild.getAttribute("data-content-key") || "[unkeyed]"
-    : "empty";
+  // Use precomputed content key states (expected to be provided by caller)
+  const fromContentKey = fromContentKeyState;
+  const toContentKey = toContentKeyState;
 
   debug("transition", "Setting up animation:", {
     type,
