@@ -1,3 +1,6 @@
+import { Button } from "@jsenv/navi";
+import { TABLE } from "./table_store.js";
+
 export const TableSettingsPage = ({ table }) => {
   const tablename = table.tablename;
   const deleteTableAction = TABLE.DELETE.bindParams({ tablename });
