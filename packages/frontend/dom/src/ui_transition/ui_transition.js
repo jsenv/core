@@ -514,18 +514,34 @@ export const initUITransition = (container) => {
       const contentChange = hadChild && hasChild && shouldDoContentTransition;
       const phaseChange = hadChild && hasChild && shouldDoPhaseTransition;
 
+      // Determine if we only need to preserve an existing content transition (no new change)
+      const preserveOnlyContentTransition =
+        activeContentTransition !== null &&
+        !shouldDoContentTransition &&
+        !shouldDoPhaseTransition &&
+        !becomesPopulated &&
+        !becomesEmpty;
+
       // Include becomesPopulated in content transition only if it's not a phase transition
       const shouldDoContentTransitionIncludingPopulation =
         shouldDoContentTransition ||
-        (becomesPopulated && !shouldDoPhaseTransition) ||
-        activeContentTransition !== null; // Continue managing active content transitions
+        (becomesPopulated && !shouldDoPhaseTransition);
 
       const decisions = [];
       if (shouldDoContentTransition) decisions.push("CONTENT TRANSITION");
       if (shouldDoPhaseTransition) decisions.push("PHASE TRANSITION");
+      if (preserveOnlyContentTransition)
+        decisions.push("PRESERVE CONTENT TRANSITION");
       if (decisions.length === 0) decisions.push("NO TRANSITION");
 
       debug("transition", `Decision: ${decisions.join(" + ")}`);
+      if (preserveOnlyContentTransition) {
+        const progress = (activeContentTransition.progress * 100).toFixed(1);
+        debug(
+          "transition",
+          `Preserving existing content transition (progress ${progress}%)`,
+        );
+      }
 
       // Early return optimization: if no transition decision and we are not continuing
       // an existing active content transition (animationProgress > 0), we can skip
@@ -551,7 +567,10 @@ export const initUITransition = (container) => {
         activePhaseTransition === null
       ) {
         // Skip creating any new transitions entirely
-      } else if (shouldDoContentTransitionIncludingPopulation) {
+      } else if (
+        shouldDoContentTransitionIncludingPopulation &&
+        !preserveOnlyContentTransition
+      ) {
         const existingOldContents = contentOverlay.querySelectorAll(
           "[data-ui-transition-old]",
         );
@@ -572,7 +591,10 @@ export const initUITransition = (container) => {
           activeContentTransition;
 
         if (canContinueSmoothly) {
-          debug("transition", "Continuing with same content transition type");
+          debug(
+            "transition",
+            "Continuing with same content transition type (restarting due to actual change)",
+          );
           activeContentTransition.cancel();
         } else if (
           activeContentTransition &&
@@ -634,8 +656,8 @@ export const initUITransition = (container) => {
           activeContentTransition.play();
         }
         activeContentTransitionType = type;
-      } else if (!shouldDoContentTransition) {
-        // Clean up content overlay if no content transition needed
+      } else if (!shouldDoContentTransition && !preserveOnlyContentTransition) {
+        // Clean up content overlay if no content transition needed and nothing to preserve
         contentOverlay.innerHTML = "";
         activeContentTransition = null;
         activeContentTransitionType = null;
