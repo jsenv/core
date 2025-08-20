@@ -77,6 +77,7 @@ export const initPositionSticky = (element) => {
   const createPlaceholderClone = () => {
     const clone = element.cloneNode(true);
     clone.setAttribute("data-position-sticky-placeholder", "");
+    clone.removeAttribute("data-sticky");
     return clone;
   };
 
@@ -176,8 +177,18 @@ export const initPositionSticky = (element) => {
   }
 
   update_on_parent_size_change: {
+    let ignore = false;
     const resizeObserver = new ResizeObserver(() => {
+      console.log("ResizeObserver triggered for position sticky");
+
+      ignore = true;
+      if (ignore) {
+        return;
+      }
       updateSize();
+      requestAnimationFrame(() => {
+        ignore = false;
+      });
     });
     resizeObserver.observe(parentElement);
     cleanupCallbackSet.add(() => {

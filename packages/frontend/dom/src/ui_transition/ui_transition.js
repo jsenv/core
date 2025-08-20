@@ -84,8 +84,8 @@ import.meta.css = /* css */ `
 `;
 
 const DEBUG = {
-  size: false,
-  transition: true,
+  size: true,
+  transition: false,
   transition_updates: false,
 };
 
@@ -219,9 +219,9 @@ export const initUITransition = (container) => {
   const releaseConstraints = (reason) => {
     debug("size", `Releasing constraints (${reason})`);
     const [beforeWidth, beforeHeight] = measureContentSize();
-    outerWrapper.style.width = "";
-    outerWrapper.style.height = "";
-    outerWrapper.style.overflow = "";
+    // outerWrapper.style.width = "";
+    // outerWrapper.style.height = "";
+    // outerWrapper.style.overflow = "";
     const [afterWidth, afterHeight] = measureContentSize();
     debug("size", "Size after release:", {
       width: `${beforeWidth} → ${afterWidth}`,

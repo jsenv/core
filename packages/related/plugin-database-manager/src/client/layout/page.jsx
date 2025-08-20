@@ -46,7 +46,7 @@ export const Page = ({ children }) => {
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <PageError error={error} />}
-      {children}
+      <div className="page">{children}</div>
     </ErrorBoundaryContext.Provider>
   );
 };
@@ -73,7 +73,7 @@ export const PageHead = ({ children, actions = [] }) => {
   }, []);
 
   return (
-    <header ref={headerRef} className="page_head" data-position-sticky-fix>
+    <header ref={headerRef} className="page_head">
       {children}
       <div className="actions">
         {actions.map((action) => {
