@@ -22,6 +22,19 @@ export const createGroupTransition = (transitionArray) => {
 
         const cleanupCallbackSet = new Set();
         for (const childTransition of transitionArray) {
+          const removeFinishListener = childTransition.channels.finish.add(
+            // eslint-disable-next-line no-loop-func
+            () => {
+              finishedCount++;
+              const allFinished = finishedCount === childCount;
+              if (allFinished) {
+                transition.finish();
+              }
+            },
+          );
+          cleanupCallbackSet.add(removeFinishListener);
+          childTransition.play();
+
           const removeUpdateListener = childTransition.channels.update.add(
             () => {
               // Calculate average progress (handle undefined progress)
@@ -43,18 +56,6 @@ export const createGroupTransition = (transitionArray) => {
             },
           );
           cleanupCallbackSet.add(removeUpdateListener);
-          const removeFinishListener = childTransition.channels.finish.add(
-            // eslint-disable-next-line no-loop-func
-            () => {
-              finishedCount++;
-              const allFinished = finishedCount === childCount;
-              if (allFinished) {
-                transition.finish();
-              }
-            },
-          );
-          cleanupCallbackSet.add(removeFinishListener);
-          childTransition.play();
         }
 
         return {

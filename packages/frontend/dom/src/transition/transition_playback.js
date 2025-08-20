@@ -63,6 +63,7 @@ export const createTransition = ({
         `${constructor.name} transition difference is very small (${diff}). Consider if this transition is necessary (minimum threshold: ${minDiff}).`,
       );
     }
+    transition.update(transition.value);
   };
 
   const transition = {
@@ -79,6 +80,8 @@ export const createTransition = ({
 
     play: () => {
       if (playState === "idle") {
+        transition.value = transition.from;
+        transition.timing = "";
         start();
         return;
       }
