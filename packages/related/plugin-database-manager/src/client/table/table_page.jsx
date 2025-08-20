@@ -19,6 +19,7 @@
  */
 
 import { Button } from "@jsenv/navi";
+import { useState } from "preact/hooks";
 import { DatabaseFieldset, RoleField } from "../components/database_field.jsx";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { TableSvg } from "./table_icons.jsx";
@@ -26,7 +27,7 @@ import { TABLE } from "./table_store.js";
 
 export const TablePage = ({ table }) => {
   const tablename = table.tablename;
-  const deleteTableAction = TABLE.DELETE.bindParams({ tablename });
+  const [settingsOpened, setSettingsOpened] = useState(false);
 
   return (
     <Page>
@@ -35,10 +36,11 @@ export const TablePage = ({ table }) => {
           {
             component: (
               <Button
-                data-confirm-message={`Are you sure you want to delete the table "${tablename}"?`}
-                action={deleteTableAction}
+                action={() => {
+                  setSettingsOpened(!settingsOpened);
+                }}
               >
-                Delete
+                Settings
               </Button>
             ),
           },
@@ -50,6 +52,7 @@ export const TablePage = ({ table }) => {
       </PageHead>
       <PageBody>
         <>
+          {settingsOpened && <TableSettingSection table={table} />}
           <DatabaseFieldset
             item={table}
             columns={table.meta.columns}
@@ -76,5 +79,23 @@ export const TablePage = ({ table }) => {
         </>
       </PageBody>
     </Page>
+  );
+};
+
+const TableSettingSection = ({ table }) => {
+  const tablename = table.tablename;
+  const deleteTableAction = TABLE.DELETE.bindParams({ tablename });
+
+  return (
+    <div>
+      <p>
+        <Button
+          data-confirm-message={`Are you sure you want to delete the table "${tablename}"?`}
+          action={deleteTableAction}
+        >
+          Delete this table
+        </Button>
+      </p>
+    </div>
   );
 };
