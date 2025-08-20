@@ -35,8 +35,10 @@
  */
 
 import { initUITransition } from "@jsenv/dom";
-import { useLayoutEffect, useRef } from "preact/hooks";
-import { useContentKeyContext } from "./content_key_context.jsx";
+import { createContext } from "preact";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+
+const ContentKeyContext = createContext();
 
 export const UITransition = ({
   children,
@@ -49,7 +51,7 @@ export const UITransition = ({
   phaseTransitionDuration,
   ...props
 }) => {
-  const contentKeyFromContext = useContentKeyContext();
+  const [contentKeyFromContext, setContentKeyFromContext] = useState();
   const effectiveContentKey = contentKey || contentKeyFromContext;
 
   const ref = useRef();
@@ -61,39 +63,55 @@ export const UITransition = ({
   }, []);
 
   return (
-    <div
-      ref={ref}
-      {...props}
-      data-size-transition={sizeTransition ? "" : undefined}
-      data-size-transition-duration={
-        sizeTransitionDuration ? sizeTransitionDuration : undefined
-      }
-      data-content-transition={transitionType ? transitionType : undefined}
-      data-content-transition-duration={
-        transitionDuration ? transitionDuration : undefined
-      }
-      data-phase-transition={
-        phaseTransitionType ? phaseTransitionType : undefined
-      }
-      data-phase-transition-duration={
-        phaseTransitionDuration ? phaseTransitionDuration : undefined
-      }
-      className="ui_transition_container"
-    >
-      <div className="ui_transition_outer_wrapper">
-        <div className="ui_transition_measure_wrapper">
-          <div
-            className="ui_transition_slot"
-            data-content-key={
-              effectiveContentKey ? effectiveContentKey : undefined
-            }
-          >
-            {children}
+    <ContentKeyContext.Provider value={setContentKeyFromContext}>
+      <div
+        ref={ref}
+        {...props}
+        data-size-transition={sizeTransition ? "" : undefined}
+        data-size-transition-duration={
+          sizeTransitionDuration ? sizeTransitionDuration : undefined
+        }
+        data-content-transition={transitionType ? transitionType : undefined}
+        data-content-transition-duration={
+          transitionDuration ? transitionDuration : undefined
+        }
+        data-phase-transition={
+          phaseTransitionType ? phaseTransitionType : undefined
+        }
+        data-phase-transition-duration={
+          phaseTransitionDuration ? phaseTransitionDuration : undefined
+        }
+        className="ui_transition_container"
+      >
+        <div className="ui_transition_outer_wrapper">
+          <div className="ui_transition_measure_wrapper">
+            <div
+              className="ui_transition_slot"
+              data-content-key={
+                effectiveContentKey ? effectiveContentKey : undefined
+              }
+            >
+              {children}
+            </div>
+            <div className="ui_transition_phase_overlay"></div>
           </div>
-          <div className="ui_transition_phase_overlay"></div>
         </div>
+        <div className="ui_transition_content_overlay"></div>
       </div>
-      <div className="ui_transition_content_overlay"></div>
-    </div>
+    </ContentKeyContext.Provider>
   );
+};
+
+export const useContentKey = (key, enabled) => {
+  const setKey = useContext(ContentKeyContext);
+  if (setKey && enabled) {
+    setKey(key);
+  }
+  useLayoutEffect(() => {
+    return () => {
+      if (setKey && enabled) {
+        setKey(undefined);
+      }
+    };
+  }, [enabled]);
 };

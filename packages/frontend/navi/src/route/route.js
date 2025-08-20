@@ -450,13 +450,16 @@ export const useRouteStatus = (route) => {
     throw new Error(`Cannot find route private properties for ${route}`);
   }
 
-  const { activeSignal, paramsSignal, visitedSignal } = routePrivateProperties;
+  const { urlSignal, activeSignal, paramsSignal, visitedSignal } =
+    routePrivateProperties;
 
+  const url = urlSignal.value;
   const active = activeSignal.value;
   const params = paramsSignal.value;
   const visited = visitedSignal.value;
 
   return {
+    url,
     active,
     params,
     visited,

@@ -84,8 +84,8 @@ import.meta.css = /* css */ `
 `;
 
 const DEBUG = {
-  size: true,
-  transition: false,
+  size: false,
+  transition: true,
   transition_updates: false,
 };
 
@@ -560,13 +560,24 @@ export const initUITransition = (container) => {
           : "content"
         : "null";
       const bothUnkeyed = lastContentKey === null && currentContentKey === null;
+      // A null → content-phase transition is expected: "null" represents an unloaded/unrendered
+      // state for some conceptual content. When something appears and is marked as a content-phase
+      // (like loading or error placeholder) we treat it as a phase of that same conceptual content.
+      let debugNote;
+      if (bothUnkeyed) {
+        debugNote = "treating as same conceptual content (unkeyed)";
+      } else if (
+        previousPhaseLabel === "null" &&
+        currentPhaseLabel === "content-phase"
+      ) {
+        debugNote =
+          "null → content-phase: initial phase of previously unloaded content";
+      }
       debug("transition", "Content keys:", {
         previous: lastContentKey || "[unkeyed]",
         current: currentContentKey || "[unkeyed]",
         phase: `${previousPhaseLabel} → ${currentPhaseLabel}`,
-        note: bothUnkeyed
-          ? "treating as same conceptual content (unkeyed)"
-          : undefined,
+        note: debugNote,
       });
 
       // Handle resize observation
