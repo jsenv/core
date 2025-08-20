@@ -1,4 +1,6 @@
-- null should be a content-phase
+- le souci que je vais avoir avec ui transition
+
+c'est que je vais surement vouloir des transitions entre des trucs qui sont pas enfant direct si?
 
 - La table qui affiche une page, on mettra les details dans un bouton settings en haut a droite
   Qui ouvrira les infos a propos de cette tables et on focus sur les données au lieu des settings de la table

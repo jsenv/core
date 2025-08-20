@@ -17,7 +17,7 @@
  *     <div class="ui_transition_measure_wrapper">
  *       <!-- Content measurement layer: ResizeObserver watches this to detect natural content size changes -->
  *
- *       <div class="ui_transition_slot">
+ *       <div class="ui_transition_slot" data-content-key>
  *         <!-- Content slot: actual content is inserted here via children -->
  *       </div>
  *

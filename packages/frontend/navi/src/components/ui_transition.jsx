@@ -39,6 +39,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 
 export const UITransition = ({
   children,
+  contentKey,
   sizeTransition,
   sizeTransitionDuration,
   transitionType,
@@ -77,7 +78,12 @@ export const UITransition = ({
     >
       <div className="ui_transition_outer_wrapper">
         <div className="ui_transition_measure_wrapper">
-          <div className="ui_transition_slot">{children}</div>
+          <div
+            className="ui_transition_slot"
+            data-content-key={contentKey ? contentKey : undefined}
+          >
+            {children}
+          </div>
           <div className="ui_transition_phase_overlay"></div>
         </div>
       </div>
