@@ -1061,9 +1061,12 @@ const animateTransition = (
   const { cleanup, oldElement, newElement } = setupTransition();
 
   // Get content keys before attributes are removed
-  const fromContentKey =
-    previousChild?.getAttribute("data-content-key") || "empty";
-  const toContentKey = newChild?.getAttribute("data-content-key") || "empty";
+  const fromContentKey = previousChild
+    ? previousChild.getAttribute("data-content-key") || "[unkeyed]"
+    : "empty";
+  const toContentKey = newChild
+    ? newChild.getAttribute("data-content-key") || "[unkeyed]"
+    : "empty";
 
   debug("transition", "Setting up animation:", {
     type,
