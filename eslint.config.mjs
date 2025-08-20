@@ -36,7 +36,6 @@ export default [
       "**/_*test.*/",
       "**/_*test_manual.*/",
       "experiments/",
-      "**/frontend/router/src/",
     ],
   },
 ];

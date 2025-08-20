@@ -1,0 +1,17 @@
+import { Route } from "@jsenv/navi";
+import { TABLE_ROUTE } from "./routes.js";
+import { TablePage } from "./table_page.jsx";
+import { TableSettingsPage } from "./table_settings_page.jsx";
+
+export const TableRoute = () => {
+  return (
+    <>
+      <Route route={TABLE_ROUTE}>
+        {(table) => <TablePage table={table} />}
+      </Route>
+      <Route route={TABLE_SETTINGS_ROUTE}>
+        {(table) => <TableSettingsPage table={table} />}
+      </Route>
+    </>
+  );
+};

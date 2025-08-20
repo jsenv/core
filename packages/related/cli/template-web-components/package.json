@@ -23,7 +23,7 @@
     "@jsenv/plugin-minification": "1.7.2",
     "@jsenv/eslint-config-relax": "1.6.12",
     "@jsenv/test": "3.7.11",
-    "eslint": "9.26.0",
+    "eslint": "9.33.0",
     "open": "10.1.2",
     "@playwright/browser-chromium": "1.52.0",
     "prettier": "3.5.3",
