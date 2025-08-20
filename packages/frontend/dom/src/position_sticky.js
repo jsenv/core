@@ -177,22 +177,21 @@ export const initPositionSticky = (element) => {
   }
 
   update_on_parent_size_change: {
-    let ignore = false;
+    let animationFrame = null;
     const resizeObserver = new ResizeObserver(() => {
-      console.log("ResizeObserver triggered for position sticky");
-
-      ignore = true;
-      if (ignore) {
+      if (animationFrame !== null) {
         return;
       }
-      updateSize();
-      requestAnimationFrame(() => {
-        ignore = false;
+      animationFrame = requestAnimationFrame(() => {
+        animationFrame = null;
+        updateSize();
       });
     });
     resizeObserver.observe(parentElement);
     cleanupCallbackSet.add(() => {
       resizeObserver.disconnect();
+      cancelAnimationFrame(animationFrame);
+      animationFrame = null;
     });
   }
 
