@@ -159,6 +159,10 @@ export const initUITransition = (container) => {
   let sizeTransition = null;
   let resizeObserver = null;
 
+  // Prevent reacting to our own constrained size changes while animating
+  let suppressResizeObserver = false;
+  let pendingResizeSync = false; // ensure one measurement after suppression ends
+
   // Handle size updates based on content state
   let hasSizeTransitions = container.hasAttribute("data-size-transition");
 
@@ -199,9 +203,15 @@ export const initUITransition = (container) => {
 
   const startResizeObserver = () => {
     resizeObserver = new ResizeObserver(() => {
-      if (hasSizeTransitions) {
-        updateContentDimensions();
+      if (!hasSizeTransitions) {
+        return;
       }
+      if (suppressResizeObserver) {
+        pendingResizeSync = true;
+        debug("size", "Resize ignored (suppressed during size transition)");
+        return;
+      }
+      updateContentDimensions();
     });
     resizeObserver.observe(measureWrapper);
   };
@@ -221,6 +231,11 @@ export const initUITransition = (container) => {
     constrainedHeight = afterHeight;
     naturalContentWidth = afterWidth;
     naturalContentHeight = afterHeight;
+    // Defer a sync if suppression just ended; actual dispatch will come from resize observer
+    if (!suppressResizeObserver && pendingResizeSync) {
+      pendingResizeSync = false;
+      updateContentDimensions();
+    }
   };
 
   const updateToSize = (targetWidth, targetHeight) => {
@@ -258,11 +273,19 @@ export const initUITransition = (container) => {
         width: `${constrainedWidth} → ${targetWidth}`,
         height: `${constrainedHeight} → ${targetHeight}`,
       });
-
+      suppressResizeObserver = true;
       outerWrapper.style.width = `${targetWidth}px`;
       outerWrapper.style.height = `${targetHeight}px`;
       constrainedWidth = targetWidth;
       constrainedHeight = targetHeight;
+      // allow any resize notifications to settle then re-enable
+      requestAnimationFrame(() => {
+        suppressResizeObserver = false;
+        if (pendingResizeSync) {
+          pendingResizeSync = false;
+          updateContentDimensions();
+        }
+      });
       return;
     }
 
@@ -323,9 +346,19 @@ export const initUITransition = (container) => {
     }
 
     if (transitions.length > 0) {
+      suppressResizeObserver = true;
       sizeTransition = transitionController.animate(transitions, {
-        onFinish: () =>
-          releaseConstraints("animated size transition completed"),
+        onFinish: () => {
+          releaseConstraints("animated size transition completed");
+          // End suppression next frame to avoid RO loop warnings
+          requestAnimationFrame(() => {
+            suppressResizeObserver = false;
+            if (pendingResizeSync) {
+              pendingResizeSync = false;
+              updateContentDimensions();
+            }
+          });
+        },
       });
       sizeTransition.play();
     } else {
