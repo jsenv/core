@@ -561,30 +561,6 @@ export const initUITransition = (container) => {
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
-      const previousPhaseLabel = hadChild
-        ? previousIsContentPhase
-          ? "content-phase"
-          : "content"
-        : "null";
-      const currentPhaseLabel = hasChild
-        ? currentIsContentPhase
-          ? "content-phase"
-          : "content"
-        : "null";
-
-      const bothUnkeyed =
-        prevKeyBeforeRegistration === null && currentContentKey === null;
-      let debugNote;
-      if (bothUnkeyed) {
-        debugNote = "treating as same conceptual content (unkeyed)";
-      } else if (
-        previousPhaseLabel === "null" &&
-        currentPhaseLabel === "content-phase"
-      ) {
-        debugNote =
-          "null → content-phase: initial phase of previously unloaded content";
-      }
-
       // Early conceptual registration path: empty slot with key change (no visual transition)
       const isEarlyEmptySlot = !hadChild && !hasChild;
       let earlyAction = null;
@@ -601,8 +577,6 @@ export const initUITransition = (container) => {
           earlyAction = "changed";
         }
         // Will update lastContentKey after unified logging
-        debugNote =
-          "empty slot - conceptual content key update (no visual transition)";
       }
 
       // Decide which representation to display for previous/current in early empty case
@@ -621,20 +595,13 @@ export const initUITransition = (container) => {
         ? conceptualCurrentDisplay
         : currentContentKeyState;
 
-      const contentKeysLog = {
-        previous: previousDisplay,
-        current: currentDisplay,
-        phase: `${previousPhaseLabel} → ${currentPhaseLabel}`,
-      };
-      if (debugNote) {
-        contentKeysLog.note = debugNote;
-      }
-      if (isEarlyEmptySlot) {
-        contentKeysLog.decision = `EARLY_RETURN (${earlyAction})`;
-      }
-      debug("transition", "Content keys:", contentKeysLog);
+      // Build a simple descriptive sentence
+      let contentKeysSentence = `Content key: ${previousDisplay} → ${currentDisplay}`;
+      debug("transition", contentKeysSentence);
 
       if (isEarlyEmptySlot) {
+        // Log decision explicitly (was previously embedded)
+        debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
         // Register new conceptual key & return early (skip rest of transition logic)
         lastContentKey = currentContentKey;
         if (DEBUG.transition) {
