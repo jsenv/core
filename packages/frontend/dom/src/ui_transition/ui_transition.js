@@ -402,7 +402,7 @@ export const initUITransition = (container) => {
     previousChild = initialChild.cloneNode(true);
   }
 
-  const handleChildSlotMutation = () => {
+  const handleChildSlotMutation = (reason = "mutation") => {
     if (isUpdating) {
       debug("transition", "Preventing recursive update");
       return;
@@ -431,9 +431,10 @@ export const initUITransition = (container) => {
         : true; // empty (no child) is treated as content phase
 
       if (DEBUG.transition) {
-        console.group(
-          `UI Update: ${childUIName || (firstChild ? "data-ui-name not specified" : "cleared/empty")}`,
-        );
+        const updateLabel =
+          childUIName ||
+          (firstChild ? "data-ui-name not specified" : "cleared/empty");
+        console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
       }
 
       debug(
@@ -793,10 +794,12 @@ export const initUITransition = (container) => {
   // Watch for child changes and attribute changes on children
   const mutationObserver = new MutationObserver((mutations) => {
     let shouldUpdate = false;
+    let reason = "mutation";
 
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
         shouldUpdate = true;
+        reason = "childList";
         break;
       }
       if (mutation.type === "attributes") {
@@ -812,13 +815,14 @@ export const initUITransition = (container) => {
             target.getAttribute("data-ui-name") || "element",
           );
           shouldUpdate = true;
+          reason = `attribute:${attributeName}`;
           break;
         }
       }
     }
 
     if (shouldUpdate) {
-      handleChildSlotMutation();
+      handleChildSlotMutation(reason);
     }
   });
 
