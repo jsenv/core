@@ -542,35 +542,14 @@ export const initUITransition = (container) => {
         hasChild,
       );
 
-      // Early registration path: data-content-key changed while empty (no child rendered)
-      // We treat this as selecting which conceptual content is currently unloaded.
-      // No transition should occur now; later when the child appears it will be a phase transition
-      // (content-phase → content) instead of a content transition.
-      if (!hadChild && !hasChild) {
-        const keyChanged = lastContentKey !== currentContentKey;
-        lastContentKey = currentContentKey; // Register immediately
-        debug(
-          "transition",
-          currentContentKey !== null
-            ? `Decision: REGISTER CONTENT KEY - ${currentContentKeyState} while empty (no visual transition)`
-            : keyChanged
-              ? `Decision: CLEAR CONTENT KEY - while empty (no visual transition)`
-              : `Decision: NO CHANGE - content key unchanged while empty`,
-        );
-        if (DEBUG.transition) {
-          console.groupEnd();
-        }
-        return;
-      }
+      // Track previous key before any potential early registration update
+      const prevKeyBeforeRegistration = lastContentKey;
 
+      // Prepare phase info early so logging can be unified (even for early return)
       wasContentPhase = isContentPhase;
       isContentPhase = firstChild
         ? firstChild.hasAttribute("data-content-phase")
         : true; // empty (no child) is treated as content phase
-
-      // Use hadChild/hasChild already computed earlier
-      const previousIsContentPhase = !hadChild || wasContentPhase;
-      const currentIsContentPhase = !hasChild || isContentPhase;
 
       if (DEBUG.transition) {
         const updateLabel =
@@ -579,6 +558,90 @@ export const initUITransition = (container) => {
         console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
       }
 
+      const previousIsContentPhase = !hadChild || wasContentPhase;
+      const currentIsContentPhase = !hasChild || isContentPhase;
+
+      const previousPhaseLabel = hadChild
+        ? previousIsContentPhase
+          ? "content-phase"
+          : "content"
+        : "null";
+      const currentPhaseLabel = hasChild
+        ? currentIsContentPhase
+          ? "content-phase"
+          : "content"
+        : "null";
+
+      const bothUnkeyed =
+        prevKeyBeforeRegistration === null && currentContentKey === null;
+      let debugNote;
+      if (bothUnkeyed) {
+        debugNote = "treating as same conceptual content (unkeyed)";
+      } else if (
+        previousPhaseLabel === "null" &&
+        currentPhaseLabel === "content-phase"
+      ) {
+        debugNote =
+          "null → content-phase: initial phase of previously unloaded content";
+      }
+
+      // Early conceptual registration path: empty slot with key change (no visual transition)
+      const isEarlyEmptySlot = !hadChild && !hasChild;
+      let earlyAction = null;
+      if (isEarlyEmptySlot) {
+        const prevKey = prevKeyBeforeRegistration;
+        const keyChanged = prevKey !== currentContentKey;
+        if (!keyChanged) {
+          earlyAction = "unchanged";
+        } else if (prevKey === null && currentContentKey !== null) {
+          earlyAction = "registered";
+        } else if (prevKey !== null && currentContentKey === null) {
+          earlyAction = "cleared";
+        } else {
+          earlyAction = "changed";
+        }
+        // Will update lastContentKey after unified logging
+        debugNote =
+          "empty slot - conceptual content key update (no visual transition)";
+      }
+
+      // Decide which representation to display for previous/current in early empty case
+      const conceptualPrevDisplay =
+        prevKeyBeforeRegistration === null
+          ? "[unkeyed]"
+          : `[data-content-key="${prevKeyBeforeRegistration}"]`;
+      const conceptualCurrentDisplay =
+        currentContentKey === null
+          ? "[unkeyed]"
+          : `[data-content-key="${currentContentKey}"]`;
+      const previousDisplay = isEarlyEmptySlot
+        ? conceptualPrevDisplay
+        : previousContentKeyState;
+      const currentDisplay = isEarlyEmptySlot
+        ? conceptualCurrentDisplay
+        : currentContentKeyState;
+
+      const contentKeysLog = {
+        previous: previousDisplay,
+        current: currentDisplay,
+        phase: `${previousPhaseLabel} → ${currentPhaseLabel}`,
+      };
+      if (debugNote) {
+        contentKeysLog.note = debugNote;
+      }
+      if (isEarlyEmptySlot) {
+        contentKeysLog.decision = `EARLY_RETURN (${earlyAction})`;
+      }
+      debug("transition", "Content keys:", contentKeysLog);
+
+      if (isEarlyEmptySlot) {
+        // Register new conceptual key & return early (skip rest of transition logic)
+        lastContentKey = currentContentKey;
+        if (DEBUG.transition) {
+          console.groupEnd();
+        }
+        return;
+      }
       debug(
         "size",
         `Update triggered, size: ${constrainedWidth}x${constrainedHeight}`,
@@ -592,37 +655,6 @@ export const initUITransition = (container) => {
       debug("size", `Measured size: ${newWidth}x${newHeight}`);
       outerWrapper.style.width = `${constrainedWidth}px`;
       outerWrapper.style.height = `${constrainedHeight}px`;
-
-      const previousPhaseLabel = hadChild
-        ? previousIsContentPhase
-          ? "content-phase"
-          : "content"
-        : "null";
-      const currentPhaseLabel = hasChild
-        ? currentIsContentPhase
-          ? "content-phase"
-          : "content"
-        : "null";
-      const bothUnkeyed = lastContentKey === null && currentContentKey === null;
-      // A null → content-phase transition is expected: "null" represents an unloaded/unrendered
-      // state for some conceptual content. When something appears and is marked as a content-phase
-      // (like loading or error placeholder) we treat it as a phase of that same conceptual content.
-      let debugNote;
-      if (bothUnkeyed) {
-        debugNote = "treating as same conceptual content (unkeyed)";
-      } else if (
-        previousPhaseLabel === "null" &&
-        currentPhaseLabel === "content-phase"
-      ) {
-        debugNote =
-          "null → content-phase: initial phase of previously unloaded content";
-      }
-      debug("transition", "Content keys:", {
-        previous: previousContentKeyState,
-        current: currentContentKeyState,
-        phase: `${previousPhaseLabel} → ${currentPhaseLabel}`,
-        note: debugNote,
-      });
 
       // Handle resize observation
       stopResizeObserver();
