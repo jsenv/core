@@ -291,7 +291,7 @@ const LoaderBackgroundWithWrapper = ({
   spacingBottom += size / 4;
 
   return (
-    <div
+    <span
       name="element_with_loader_wrapper"
       ref={containerRef}
       data-loader-visible={shouldShowSpinner ? "" : undefined}
@@ -302,7 +302,7 @@ const LoaderBackgroundWithWrapper = ({
       }}
     >
       {shouldShowSpinner && (
-        <div
+        <span
           name="loading_rectangle_wrapper"
           style={{
             top: `${spacingTop}px`,
@@ -316,9 +316,9 @@ const LoaderBackgroundWithWrapper = ({
             radius={borderRadius}
             size={size}
           />
-        </div>
+        </span>
       )}
       {children}
-    </div>
+    </span>
   );
 };

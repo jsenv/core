@@ -85,7 +85,7 @@ import.meta.css = /* css */ `
 
 const DEBUG = {
   size: false,
-  transition: true,
+  transition: false,
   transition_updates: false,
 };
 
