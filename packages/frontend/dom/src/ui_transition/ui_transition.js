@@ -527,8 +527,31 @@ export const initUITransition = (container) => {
 
       debug("transition", `Decision: ${decisions.join(" + ")}`);
 
+      // Early return optimization: if no transition decision and we are not continuing
+      // an existing active content transition (animationProgress > 0), we can skip
+      // all transition setup logic below.
+      if (
+        decisions.length === 1 &&
+        decisions[0] === "NO TRANSITION" &&
+        activeContentTransition === null &&
+        activePhaseTransition === null
+      ) {
+        debug(
+          "transition",
+          `Early return: no transition or continuation required (${reason})`,
+        );
+        // Still ensure size logic executes below (so do not return before size alignment)
+      }
+
       // Handle content transitions (slide-left, cross-fade for content key changes)
-      if (shouldDoContentTransitionIncludingPopulation) {
+      if (
+        decisions.length === 1 &&
+        decisions[0] === "NO TRANSITION" &&
+        activeContentTransition === null &&
+        activePhaseTransition === null
+      ) {
+        // Skip creating any new transitions entirely
+      } else if (shouldDoContentTransitionIncludingPopulation) {
         const existingOldContents = contentOverlay.querySelectorAll(
           "[data-ui-transition-old]",
         );
@@ -793,37 +816,44 @@ export const initUITransition = (container) => {
 
   // Watch for child changes and attribute changes on children
   const mutationObserver = new MutationObserver((mutations) => {
-    let shouldUpdate = false;
-    let reason = "mutation";
+    let childListMutation = false;
+    const attributeMutationSet = new Set();
 
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
-        shouldUpdate = true;
-        reason = "childList";
-        break;
+        childListMutation = true;
+        continue;
       }
       if (mutation.type === "attributes") {
         const { attributeName, target } = mutation;
-        // Check if data-content-key or data-content-phase changed
         if (
           attributeName === "data-content-key" ||
           attributeName === "data-content-phase"
         ) {
+          attributeMutationSet.add(attributeName);
           debug(
             "transition",
             `Attribute change detected: ${attributeName} on`,
             target.getAttribute("data-ui-name") || "element",
           );
-          shouldUpdate = true;
-          reason = `attribute:${attributeName}`;
-          break;
         }
       }
     }
 
-    if (shouldUpdate) {
-      handleChildSlotMutation(reason);
+    if (!childListMutation && attributeMutationSet.size === 0) {
+      return;
     }
+    const reasonParts = [];
+    if (childListMutation) {
+      reasonParts.push("childList");
+    }
+    if (attributeMutationSet.size) {
+      for (const attr of attributeMutationSet) {
+        reasonParts.push(`[${attr}]`);
+      }
+    }
+    const reason = reasonParts.join("+");
+    handleChildSlotMutation(reason);
   });
 
   mutationObserver.observe(slot, {
