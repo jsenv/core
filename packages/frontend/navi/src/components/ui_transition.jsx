@@ -36,6 +36,7 @@
 
 import { initUITransition } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
+import { useContentKeyContext } from "./content_key_context.jsx";
 
 export const UITransition = ({
   children,
@@ -48,6 +49,9 @@ export const UITransition = ({
   phaseTransitionDuration,
   ...props
 }) => {
+  const contentKeyFromContext = useContentKeyContext();
+  const effectiveContentKey = contentKey || contentKeyFromContext;
+
   const ref = useRef();
   useLayoutEffect(() => {
     const uiTransition = initUITransition(ref.current);
@@ -80,7 +84,9 @@ export const UITransition = ({
         <div className="ui_transition_measure_wrapper">
           <div
             className="ui_transition_slot"
-            data-content-key={contentKey ? contentKey : undefined}
+            data-content-key={
+              effectiveContentKey ? effectiveContentKey : undefined
+            }
           >
             {children}
           </div>

@@ -522,6 +522,12 @@ export const initUITransition = (container) => {
         ? firstChild.hasAttribute("data-content-phase")
         : true; // empty (no child) is treated as content phase
 
+      // Determine transition scenarios early for logging
+      const hadChild = previousChild !== null;
+      const hasChild = firstChild !== null;
+      const previousIsContentPhase = !hadChild || wasContentPhase;
+      const currentIsContentPhase = !hasChild || isContentPhase;
+
       if (DEBUG.transition) {
         const updateLabel =
           childUIName ||
@@ -543,10 +549,24 @@ export const initUITransition = (container) => {
       outerWrapper.style.width = `${constrainedWidth}px`;
       outerWrapper.style.height = `${constrainedHeight}px`;
 
+      const previousPhaseLabel = hadChild
+        ? previousIsContentPhase
+          ? "content-phase"
+          : "content"
+        : "null";
+      const currentPhaseLabel = hasChild
+        ? currentIsContentPhase
+          ? "content-phase"
+          : "content"
+        : "null";
+      const bothUnkeyed = lastContentKey === null && currentContentKey === null;
       debug("transition", "Content keys:", {
-        previous: lastContentKey || "null",
-        current: currentContentKey || "null",
-        phase: `${wasContentPhase ? "content-phase" : "content"} → ${firstChild ? (isContentPhase ? "content-phase" : "content") : "null"}`,
+        previous: lastContentKey || "[unkeyed]",
+        current: currentContentKey || "[unkeyed]",
+        phase: `${previousPhaseLabel} → ${currentPhaseLabel}`,
+        note: bothUnkeyed
+          ? "treating as same conceptual content (unkeyed)"
+          : undefined,
       });
 
       // Handle resize observation
@@ -556,9 +576,7 @@ export const initUITransition = (container) => {
         debug("size", "Observing child resize");
       }
 
-      // Determine transition scenarios
-      const hadChild = previousChild !== null;
-      const hasChild = firstChild !== null;
+      // Determine transition scenarios (hadChild/hasChild already computed above for logging)
 
       /**
        * Content Phase Logic: Why empty slots are treated as content phases
@@ -576,8 +594,6 @@ export const initUITransition = (container) => {
        * all children of a React component to inherit the same data-content-key without
        * explicitly setting the attribute on each child element.
        */
-      const previousIsContentPhase = !hadChild || wasContentPhase;
-      const currentIsContentPhase = !hasChild || isContentPhase;
 
       // Content key change when either slot or child has data-content-key and it changed
       let shouldDoContentTransition = false;
