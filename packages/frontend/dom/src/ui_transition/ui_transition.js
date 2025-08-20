@@ -159,6 +159,9 @@ export const initUITransition = (container) => {
   let sizeTransition = null;
   let resizeObserver = null;
 
+  // Handle size updates based on content state
+  let hasSizeTransitions = container.hasAttribute("data-size-transition");
+
   // Child state
   let lastContentKey = null;
   let previousChild = null;
@@ -196,7 +199,9 @@ export const initUITransition = (container) => {
 
   const startResizeObserver = () => {
     resizeObserver = new ResizeObserver(() => {
-      updateContentDimensions();
+      if (hasSizeTransitions) {
+        updateContentDimensions();
+      }
     });
     resizeObserver.observe(measureWrapper);
   };
@@ -459,6 +464,8 @@ export const initUITransition = (container) => {
       debug("transition", "Preventing recursive update");
       return;
     }
+
+    hasSizeTransitions = container.hasAttribute("data-size-transition");
 
     try {
       isUpdating = true;
@@ -855,9 +862,6 @@ export const initUITransition = (container) => {
         width: `${constrainedWidth} → ${targetWidth}`,
         height: `${constrainedHeight} → ${targetHeight}`,
       });
-
-      // Handle size updates based on content state
-      const hasSizeTransitions = container.hasAttribute("data-size-transition");
 
       if (isContentPhase) {
         // Content phases (loading/error) always use size constraints for consistent sizing
