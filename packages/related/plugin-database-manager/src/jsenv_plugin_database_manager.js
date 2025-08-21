@@ -130,11 +130,11 @@ export const jsenvPluginDatabaseManager = ({
         "POST": async (request) => {
           const { tablename } = await request.json();
           await createTable(sql, tablename);
-          const table = await selectTable(sql, tablename);
+          const [table, tableMeta] = await selectTable(sql, tablename);
           return {
             data: table,
             meta: {
-              roleCounts: await countRoles(sql),
+              ...tableMeta,
             },
           };
         },
@@ -219,6 +219,7 @@ export const jsenvPluginDatabaseManager = ({
           await alterTableQuery(sql, tablename, colname, value);
           return { [colname]: value };
         },
+        "GET /:tablename/settings": async (request) => {},
       }),
       ...createRESTRoutes(`${pathname}api/roles`, {
         "GET": async (request) => {

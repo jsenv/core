@@ -1,3 +1,5 @@
+import { getTableColumns } from "./manage_sql.js";
+
 export const createTable = async (sql, tablename) => {
   await sql`CREATE TABLE ${sql(tablename)} (id SERIAL PRIMARY KEY)`;
 };
@@ -6,9 +8,12 @@ export const selectTable = async (sql, tablename) => {
   const [table] = await sql`
     SELECT
       pg_tables.*,
+      role.rolname AS owner_rolname,
+      role.oid AS owner_oid,
       pg_class.oid AS tableoid
     FROM
       pg_tables
+      LEFT JOIN pg_roles role ON pg_tables.tableowner = role.rolname
       LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename
       AND pg_class.relnamespace = (
         SELECT
@@ -21,7 +26,27 @@ export const selectTable = async (sql, tablename) => {
     WHERE
       pg_tables.tablename = ${tablename}
   `;
-  return table;
+  if (!table) {
+    return [null, {}];
+  }
+
+  const columns = await getTableColumns(sql, "pg_tables");
+  const ownerRole = table.owner_oid
+    ? {
+        oid: table.owner_oid,
+        rolname: table.owner_rolname,
+      }
+    : null;
+  delete table.owner_rolname;
+  delete table.owner_oid;
+
+  return [
+    table,
+    {
+      columns,
+      ownerRole,
+    },
+  ];
 };
 
 export const selectTables = async (sql, { publicFilter, rolname }) => {
