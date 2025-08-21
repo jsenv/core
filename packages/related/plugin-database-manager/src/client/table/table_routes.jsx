@@ -3,7 +3,7 @@ import { TABLE_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
 import { TablePage } from "./table_page.jsx";
 import { TableSettingsPage } from "./table_settings_page.jsx";
 
-export const TableRoute = () => {
+export const TableRoutes = () => {
   return (
     <UITransition>
       <Route route={TABLE_ROUTE}>

@@ -1,20 +1,17 @@
-import { Route, UITransition } from "@jsenv/navi";
-import { DatabasePage } from "./database/database_page.jsx";
+import { UITransition } from "@jsenv/navi";
+import { DatabaseRoutes } from "./database/database_routes.jsx";
 import "./database_manager.css" with { type: "css" };
 import "./layout/layout.css" with { type: "css" };
-import { RolePage } from "./role/role_page.jsx";
-import { DATABASE_ROUTE, ROLE_ROUTE } from "./routes.js";
+import { RoleRoutes } from "./role/role_routes.jsx";
 import "./store.js";
-import { TableRoute } from "./table/table_route.jsx";
+import { TableRoutes } from "./table/table_routes.jsx";
 
 export const MainRoutes = () => {
   return (
     <UITransition>
-      <Route route={ROLE_ROUTE}>{(role) => <RolePage role={role} />}</Route>
-      <Route route={DATABASE_ROUTE}>
-        {(database) => <DatabasePage database={database} />}
-      </Route>
-      <TableRoute />{" "}
+      <RoleRoutes />
+      <DatabaseRoutes />
+      <TableRoutes />
     </UITransition>
   );
 };
