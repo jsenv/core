@@ -30,10 +30,17 @@ export const setupBrowserIntegrationViaHistory = ({
     return window.history.state ? { ...window.history.state } : null;
   };
 
-  const replaceDocumentState = (newState) => {
+  const replaceDocumentState = (
+    newState,
+    { reason = "replaceDocumentState called" } = {},
+  ) => {
     const url = window.location.href;
     window.history.replaceState(newState, null, url);
-    handleRoutingTask(url, { state: newState });
+    handleRoutingTask(url, {
+      replace: true,
+      state: newState,
+      reason,
+    });
   };
 
   const historyStartAtStart = getDocumentState();

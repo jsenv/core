@@ -163,12 +163,26 @@ const useNavStateBasic = (id, initialValue, { debug } = {}) => {
     }
 
     const currentState = browserIntegration.getDocumentState() || {};
+
     if (value === undefined) {
+      if (!Object.hasOwn(currentState, id)) {
+        return;
+      }
       delete currentState[id];
-    } else {
-      currentState[id] = value;
+      browserIntegration.replaceDocumentState(currentState, {
+        reason: `delete "${id}" from browser state`,
+      });
+      return;
     }
-    browserIntegration.replaceDocumentState(currentState);
+
+    const valueInBrowserState = currentState[id];
+    if (valueInBrowserState === value) {
+      return;
+    }
+    currentState[id] = value;
+    browserIntegration.replaceDocumentState(currentState, {
+      reason: `set { ${id}: ${value} } in browser state`,
+    });
   };
 
   return [
