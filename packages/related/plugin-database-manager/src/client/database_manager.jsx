@@ -9,7 +9,9 @@ import "./store.js";
 const App = () => {
   return (
     <div id="app">
-      <Aside>{/* <Explorer /> */}</Aside>
+      <Aside>
+        <Explorer />
+      </Aside>
       <main>
         <div className="main_body">
           <MainRoutes />

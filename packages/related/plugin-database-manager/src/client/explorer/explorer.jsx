@@ -31,7 +31,9 @@ import { EXPLORER } from "./explorer_store.js";
 
 export const Explorer = () => {
   useEffect(() => {
-    EXPLORER.GET.run();
+    EXPLORER.GET.run({
+      reason: "Explorer component mounted",
+    });
   }, []);
 
   const role = useCurrentRole();
