@@ -48,7 +48,7 @@ const applyRouting = (
     runSet: loadSet,
     rerunSet: reloadSet,
     abortSignalMap,
-    reason: `Document navigating to ${url}`,
+    reason: `navigating to ${url}`,
   });
   const { allResult, runningActionSet } = updateActionsResult;
   const pendingTaskNameArray = [];
