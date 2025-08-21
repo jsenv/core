@@ -65,7 +65,7 @@ const PageError = ({ error }) => {
   );
 };
 
-export const PageHead = ({ children, actions = [] }) => {
+export const PageHead = ({ children, actions = [], ...rest }) => {
   const headerRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -73,7 +73,7 @@ export const PageHead = ({ children, actions = [] }) => {
   }, []);
 
   return (
-    <header ref={headerRef} className="page_head">
+    <header ref={headerRef} className="page_head" {...rest}>
       {children}
       <div className="actions">
         {actions.map((action) => {

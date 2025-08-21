@@ -18,12 +18,13 @@
  *
  */
 
-import { Link } from "@jsenv/navi";
-import { DatabaseFieldset, RoleField } from "../components/database_field.jsx";
+import { Link, Route, UITransition } from "@jsenv/navi";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
-import { TABLE_SETTINGS_ROUTE } from "../routes.js";
+import { TABLE_ROUTE } from "../routes.js";
 import { TableSvg } from "./table_icons.jsx";
-import { TABLE } from "./table_store.js";
+import { TableRows } from "./table_rows.jsx";
+
+const TABLE_SETTINGS_ROUTE = TABLE_ROUTE.something("settings");
 
 export const TablePage = ({ table }) => {
   const tablename = table.tablename;
@@ -32,6 +33,10 @@ export const TablePage = ({ table }) => {
   return (
     <Page>
       <PageHead
+        style={{
+          backgroundColor: `rgb(239, 242, 245)`,
+          boxShadow: `rgb(69, 76, 84) 0px -1px 0px 0px inset`,
+        }}
         actions={[
           {
             component: <Link href={tableSettingUrl}>Settings</Link>,
@@ -43,31 +48,9 @@ export const TablePage = ({ table }) => {
         </PageHead.Label>
       </PageHead>
       <PageBody>
-        <>
-          <DatabaseFieldset
-            item={table}
-            columns={table.meta.columns}
-            usePutAction={(columnName, valueSignal) =>
-              TABLE.PUT.bindParams({
-                tablename: table.tablename,
-                columnName,
-                columnValue: valueSignal,
-              })
-            }
-            customFields={{
-              tableowner: () => {
-                const ownerRole = table.ownerRole;
-                return <RoleField role={ownerRole} />;
-              },
-            }}
-          />
-          <a
-            href="https://www.postgresql.org/docs/14/ddl-basics.html"
-            target="_blank"
-          >
-            TABLE documentation
-          </a>
-        </>
+        <UITransition>
+          <Route route={null}>{() => <TableRows table={table} />}</Route>
+        </UITransition>
       </PageBody>
     </Page>
   );

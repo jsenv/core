@@ -140,46 +140,11 @@ export const jsenvPluginDatabaseManager = ({
         },
         "GET /:tablename": async (request) => {
           const { tablename } = request.params;
-          const results = await sql`
-            SELECT
-              pg_tables.*,
-              role.rolname AS owner_rolname,
-              role.oid AS owner_oid,
-              pg_class.oid AS tableoid
-            FROM
-              pg_tables
-              LEFT JOIN pg_roles role ON pg_tables.tableowner = role.rolname
-              LEFT JOIN pg_class ON pg_class.relname = pg_tables.tablename
-              AND pg_class.relnamespace = (
-                SELECT
-                  oid
-                FROM
-                  pg_namespace
-                WHERE
-                  nspname = pg_tables.schemaname
-              )
-            WHERE
-              pg_tables.tablename = ${tablename}
-          `;
-          if (results.length === 0) {
-            return null;
-          }
-          const columns = await getTableColumns(sql, "pg_tables");
-          const [table] = results;
-          const ownerRole = table.owner_oid
-            ? {
-                oid: table.owner_oid,
-                rolname: table.owner_rolname,
-              }
-            : null;
-          delete table.owner_rolname;
-          delete table.owner_oid;
-
+          const [table, tableMeta] = await selectTable(sql, tablename);
           return {
             data: table,
             meta: {
-              ownerRole,
-              columns,
+              ...tableMeta,
             },
           };
         },
@@ -219,7 +184,6 @@ export const jsenvPluginDatabaseManager = ({
           await alterTableQuery(sql, tablename, colname, value);
           return { [colname]: value };
         },
-        "GET /:tablename/settings": async (request) => {},
       }),
       ...createRESTRoutes(`${pathname}api/roles`, {
         "GET": async (request) => {
@@ -888,7 +852,12 @@ const createRESTRoutes = (resource, endpoints) => {
         declarationSource: import.meta.url,
         fetch: async (request) => {
           const body = await handler(request);
-          if (!body) {
+          if (
+            !body ||
+            ("data" in body &&
+              "meta" in body &&
+              (body.data === null || body.data === undefined))
+          ) {
             const paramKeys = Object.keys(request.params);
             if (paramKeys.length) {
               const identifier = request.params[paramKeys[0]];
