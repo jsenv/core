@@ -297,7 +297,11 @@ export const updateActions = ({
   }
 
   if (DEBUG) {
-    console.group(`updateActions(\`${reason}\`)`);
+    let argSource = `reason: \`${reason}\``;
+    if (isReplace) {
+      argSource += `, isReplace: true`;
+    }
+    console.group(`updateActions({ ${argSource} })`);
     const lines = [
       ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
       ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),
@@ -306,8 +310,7 @@ export const updateActions = ({
     ];
     console.debug(
       `requested operations:
-${lines.join("\n")}
-- meta: { isReplace: ${isReplace} }`,
+${lines.join("\n")}`,
     );
   }
 
