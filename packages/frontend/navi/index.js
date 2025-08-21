@@ -1,5 +1,6 @@
 // actions
 export { createAction, rerunActions, updateActions } from "./src/actions.js";
+export { useRunOnMount } from "./src/components/action_execution/use_run_on_mount.js";
 export {
   ShortcutProvider,
   useKeyboardShortcuts,
@@ -47,6 +48,6 @@ export { SelectionProvider } from "./src/components/selection/selection.js";
 export { UITransition } from "./src/components/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
 
-// for debbugging testing purposes
+// for debugging testing purposes
 export { enableDebugActions } from "./src/actions.js";
 export { enableDebugOnDocumentLoading } from "./src/browser_integration/document_loading_signal.js";

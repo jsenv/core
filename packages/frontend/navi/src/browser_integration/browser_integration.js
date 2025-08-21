@@ -26,7 +26,7 @@ const applyActions = (params) => {
 
 const applyRouting = (
   url,
-  { globalAbortSignal, abortSignal, state, replace, isVisited },
+  { globalAbortSignal, abortSignal, state, replace, isVisited, reason },
 ) => {
   const {
     loadSet,
@@ -48,7 +48,7 @@ const applyRouting = (
     runSet: loadSet,
     rerunSet: reloadSet,
     abortSignalMap,
-    reason: `navigating to ${url}`,
+    reason,
   });
   const { allResult, runningActionSet } = updateActionsResult;
   const pendingTaskNameArray = [];

@@ -73,7 +73,7 @@ export const setupBrowserIntegrationViaHistory = ({
   };
 
   let abortController = null;
-  const handleRoutingTask = (url, { state, replace }) => {
+  const handleRoutingTask = (url, { state, replace, reason }) => {
     markUrlAsVisited(url);
     updateDocumentUrl(url);
     updateDocumentState(state);
@@ -88,6 +88,7 @@ export const setupBrowserIntegrationViaHistory = ({
       state,
       replace,
       isVisited,
+      reason,
     });
 
     executeWithCleanup(
@@ -126,7 +127,10 @@ export const setupBrowserIntegrationViaHistory = ({
       e.preventDefault();
       const state = null;
       history.pushState(state, null, href);
-      handleRoutingTask(href, { state });
+      handleRoutingTask(href, {
+        state,
+        reason: `"click" on a[href="${href}"]`,
+      });
     },
     { capture: true },
   );
@@ -142,7 +146,10 @@ export const setupBrowserIntegrationViaHistory = ({
   window.addEventListener("popstate", (popstateEvent) => {
     const url = window.location.href;
     const state = popstateEvent.state;
-    handleRoutingTask(url, { state });
+    handleRoutingTask(url, {
+      state,
+      reason: `"popstate" event for ${url}`,
+    });
   });
 
   const goTo = async (url, { state = null, replace } = {}) => {
@@ -155,7 +162,7 @@ export const setupBrowserIntegrationViaHistory = ({
     } else {
       window.history.pushState(state, null, url);
     }
-    handleRoutingTask(url, { state, replace });
+    handleRoutingTask(url, { state, replace, reason: `goTo("${url}")` });
   };
 
   const stop = (reason = "stop called") => {
@@ -165,7 +172,10 @@ export const setupBrowserIntegrationViaHistory = ({
   const reload = () => {
     const url = window.location.href;
     const state = history.state;
-    handleRoutingTask(url, { state });
+    handleRoutingTask(url, {
+      state,
+      routingReason: "reload(window.location.href)",
+    });
   };
 
   const goBack = () => {
@@ -180,7 +190,11 @@ export const setupBrowserIntegrationViaHistory = ({
     const url = window.location.href;
     const state = history.state;
     history.replaceState(state, null, url);
-    handleRoutingTask(url, { state, replace: true });
+    handleRoutingTask(url, {
+      state,
+      replace: true,
+      reason: "init(window.location.href)",
+    });
   };
 
   return {

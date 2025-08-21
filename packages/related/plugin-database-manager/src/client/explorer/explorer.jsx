@@ -1,5 +1,6 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
-import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useRunOnMount } from "@jsenv/navi";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
 import {
@@ -30,11 +31,7 @@ import "./explorer_store.js";
 import { EXPLORER } from "./explorer_store.js";
 
 export const Explorer = () => {
-  useEffect(() => {
-    EXPLORER.GET.run({
-      reason: "Explorer component mounted",
-    });
-  }, []);
+  useRunOnMount(EXPLORER.GET, Explorer);
 
   const role = useCurrentRole();
   // const database = useCurrentDatabase();
