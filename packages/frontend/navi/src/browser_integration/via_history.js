@@ -162,7 +162,11 @@ export const setupBrowserIntegrationViaHistory = ({
     } else {
       window.history.pushState(state, null, url);
     }
-    handleRoutingTask(url, { state, replace, reason: `goTo("${url}")` });
+    handleRoutingTask(url, {
+      state,
+      replace,
+      reason: `goTo called with "${url}"`,
+    });
   };
 
   const stop = (reason = "stop called") => {
@@ -174,7 +178,7 @@ export const setupBrowserIntegrationViaHistory = ({
     const state = history.state;
     handleRoutingTask(url, {
       state,
-      routingReason: "reload(window.location.href)",
+      routingReason: "reload method call",
     });
   };
 
@@ -193,7 +197,7 @@ export const setupBrowserIntegrationViaHistory = ({
     handleRoutingTask(url, {
       state,
       replace: true,
-      reason: "init(window.location.href)",
+      reason: "routing initialization",
     });
   };
 
