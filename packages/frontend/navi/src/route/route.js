@@ -346,19 +346,20 @@ const createRoute = (urlPatternInput) => {
 
   /**
    * Creates a sub-route from this route with the specified sub-path.
+   * The sub-route will inherit the parent's bound action if one exists.
    *
    * @param {string} subPath - The sub-path to append. Use "/" for root matching.
    * @returns {Object} A new route object that matches the combined pattern.
    *
    * @example
    * const [USER_ROUTE] = defineRoutes({
-   *   '/users/:username/*?': () => {}
+   *   '/users/:username/*?': getUserAction
    * });
    *
-   * // Creates route matching "/users/:username/settings"
+   * // Creates route matching "/users/:username/settings" with same action
    * const USER_SETTINGS_ROUTE = USER_ROUTE.createSubRoute("/settings");
    *
-   * // Creates route matching "/users/:username" and "/users/:username/"
+   * // Creates route matching "/users/:username" and "/users/:username/" with same action
    * const USER_ROOT_ROUTE = USER_ROUTE.createSubRoute("/");
    */
   const createSubRoute = (subPath) => {
@@ -371,7 +372,14 @@ const createRoute = (urlPatternInput) => {
       }
       // Also match with trailing slash
       const subRoutePattern = `${parentPattern}{/}?`;
-      return createRoute(subRoutePattern);
+      const subRoute = createRoute(subRoutePattern);
+
+      // Preserve parent's bound action
+      if (route.action) {
+        subRoute.action = route.action;
+      }
+
+      return subRoute;
     }
 
     // Handle specific sub-path case
@@ -389,7 +397,14 @@ const createRoute = (urlPatternInput) => {
     const normalizedSubPath = subPath.startsWith("/") ? subPath : `/${subPath}`;
     const subRoutePattern = `${parentPattern}${normalizedSubPath}`;
 
-    return createRoute(subRoutePattern);
+    const subRoute = createRoute(subRoutePattern);
+
+    // Preserve parent's bound action
+    if (route.action) {
+      subRoute.action = route.action;
+    }
+
+    return subRoute;
   };
   route.createSubRoute = createSubRoute;
 

@@ -24,10 +24,12 @@ import { TABLE_ROUTE } from "../routes.js";
 import { TableSvg } from "./table_icons.jsx";
 import { TableRows } from "./table_rows.jsx";
 
-const TABLE_SETTINGS_ROUTE = TABLE_ROUTE.something("settings");
+const TABLE_CONTENT_ROUTE = TABLE_ROUTE.createSubRoute("/");
+const TABLE_SETTINGS_ROUTE = TABLE_ROUTE.createSubRoute("/settings");
 
 export const TablePage = ({ table }) => {
   const tablename = table.tablename;
+  const tableContentUrl = TABLE_CONTENT_ROUTE.buildUrl({ tablename });
   const tableSettingUrl = TABLE_SETTINGS_ROUTE.buildUrl({ tablename });
 
   return (
@@ -39,6 +41,9 @@ export const TablePage = ({ table }) => {
         }}
         actions={[
           {
+            component: <Link href={tableContentUrl}>Content</Link>,
+          },
+          {
             component: <Link href={tableSettingUrl}>Settings</Link>,
           },
         ]}
@@ -49,7 +54,12 @@ export const TablePage = ({ table }) => {
       </PageHead>
       <PageBody>
         <UITransition>
-          <Route route={null}>{() => <TableRows table={table} />}</Route>
+          <Route route={TABLE_CONTENT_ROUTE}>
+            {() => <TableRows table={table} />}
+          </Route>
+          <Route route={TABLE_SETTINGS_ROUTE}>
+            {() => <TableRows table={table} />}
+          </Route>
         </UITransition>
       </PageBody>
     </Page>
