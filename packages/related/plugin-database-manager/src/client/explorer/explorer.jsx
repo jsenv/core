@@ -1,5 +1,5 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
 import {
@@ -27,8 +27,13 @@ import {
 } from "../table/tables_details.jsx";
 import "./explorer.css" with { type: "css" };
 import "./explorer_store.js";
+import { EXPLORER } from "./explorer_store.js";
 
 export const Explorer = () => {
+  useEffect(() => {
+    EXPLORER.GET.run();
+  }, []);
+
   const role = useCurrentRole();
   // const database = useCurrentDatabase();
   const RoleIcon = pickRoleIcon(role);

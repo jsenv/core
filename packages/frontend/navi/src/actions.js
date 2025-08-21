@@ -297,7 +297,7 @@ export const updateActions = ({
   }
 
   if (DEBUG) {
-    console.group(`updateActions()`);
+    console.group(`updateActions("${reason}")`);
     const lines = [
       ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
       ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),
@@ -307,7 +307,7 @@ export const updateActions = ({
     console.debug(
       `requested operations:
 ${lines.join("\n")}
-- meta: { reason: ${reason}, isReplace: ${isReplace} }`,
+- meta: { isReplace: ${isReplace} }`,
     );
   }
 
@@ -978,7 +978,7 @@ export const createAction = (callback, rootOptions = {}) => {
             completeSideEffect?.(action);
           });
           if (DEBUG) {
-            console.log(`"${action}": completed (reason: ${reason})`);
+            console.log(`"${action}": completed`);
           }
           return computedDataSignal.peek();
         };
