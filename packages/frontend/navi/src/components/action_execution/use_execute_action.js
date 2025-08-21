@@ -92,7 +92,21 @@ export const useExecuteAction = (
     });
 
     return action[method]({
-      reason: `"${event.type}" event on <${event.target.tagName.toLowerCase()}>`,
+      reason: `"${event.type}" event on ${(() => {
+        const target = event.target;
+        const tagName = target.tagName.toLowerCase();
+
+        if (target.id) {
+          return `${tagName}#${target.id}`;
+        }
+
+        const uiName = target.getAttribute("data-ui-name");
+        if (uiName) {
+          return `${tagName}[data-ui-name="${uiName}"]`;
+        }
+
+        return `<${tagName}>`;
+      })()}`,
       onAbort: (reason) => {
         if (
           // at this stage the action side effect might have removed the <element> from the DOM
