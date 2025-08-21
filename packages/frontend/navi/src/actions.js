@@ -297,7 +297,7 @@ export const updateActions = ({
   }
 
   if (DEBUG) {
-    console.group(`updateActions("${reason}")`);
+    console.group(`updateActions(${reason})`);
     const lines = [
       ...(prerunSet.size ? [formatActionSet(prerunSet, "- prerun:")] : []),
       ...(runSet.size ? [formatActionSet(runSet, "- run:")] : []),

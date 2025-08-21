@@ -92,6 +92,7 @@ export const useExecuteAction = (
     });
 
     return action[method]({
+      reason: `"${event.type}" event on <${event.target.tagName.toLowerCase()}>`,
       onAbort: (reason) => {
         if (
           // at this stage the action side effect might have removed the <element> from the DOM
