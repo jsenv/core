@@ -8,7 +8,7 @@ import { TableRoutes } from "./table/table_routes.jsx";
 
 export const MainRoutes = () => {
   return (
-    <UITransition debugTransition>
+    <UITransition>
       <RoleRoutes />
       <DatabaseRoutes />
       <TableRoutes />

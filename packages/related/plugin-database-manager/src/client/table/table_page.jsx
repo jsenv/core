@@ -51,7 +51,7 @@ export const TablePage = ({ table }) => {
         </PageHead.Label>
       </PageHead>
       <PageBody>
-        <UITransition debugTransition>
+        <UITransition>
           <Route route={TABLE_DATA_ROUTE}>
             {() => <TableData table={table} />}
           </Route>
