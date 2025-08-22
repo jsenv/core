@@ -475,17 +475,14 @@ const createRoute = (urlPatternInput) => {
     routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
 
     // Analyze pattern once to detect optional params (named and wildcard indices)
+    // Note: Wildcard indices are stored as strings ("0", "1", ...) to match keys from extractParams
     const optionalParamKeySet = new Set();
-    urlPatternInput.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
-      optionalParamKeySet.add(name);
-      return "";
-    });
-    urlPatternInput.replace(/\{([A-Za-z0-9_]+)\}\?/g, (_m, name) => {
+    normalizedUrlPattern.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
       optionalParamKeySet.add(name);
       return "";
     });
     let wildcardIndex = 0;
-    urlPatternInput.replace(/\*(\?)?/g, (_m, opt) => {
+    normalizedUrlPattern.replace(/\*(\?)?/g, (_m, opt) => {
       if (opt === "?") {
         optionalParamKeySet.add(String(wildcardIndex));
       }
