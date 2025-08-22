@@ -90,7 +90,10 @@ const DEBUG = {
 };
 
 // Utility function to format content key states consistently for debug logs
-const formatContentKeyState = (contentKey, hasChild) => {
+const formatContentKeyState = (contentKey, hasChild, hasTextNode = false) => {
+  if (hasTextNode) {
+    return "[text]";
+  }
   if (!hasChild) {
     return "[empty]";
   }
@@ -522,6 +525,17 @@ export const initUITransition = (container) => {
       const firstChild = slot.children[0] || null;
       const childUIName = firstChild?.getAttribute("data-ui-name");
 
+      // Check for text nodes in the slot (not supported)
+      const hasTextNode = Array.from(slot.childNodes).some(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim()
+      );
+      if (hasTextNode) {
+        console.warn(
+          "UI Transition: Text nodes in transition slots are not supported. Please wrap text content in an element.",
+          { slot, textContent: slot.textContent.trim() }
+        );
+      }
+
       // Prefer data-content-key on child, fallback to slot
       let currentContentKey = null;
       let slotContentKey = slot.getAttribute("data-content-key");
@@ -538,14 +552,19 @@ export const initUITransition = (container) => {
       const hadChild = previousChild !== null;
       const hasChild = firstChild !== null;
 
+      // Check for text nodes in previous state (reconstruct from previousChild)
+      const hadTextNode = previousChild && previousChild.nodeType === Node.TEXT_NODE;
+
       // Compute formatted content key states ONCE per mutation (requirement: max 2 calls)
       const previousContentKeyState = formatContentKeyState(
         lastContentKey,
         hadChild,
+        hadTextNode,
       );
       const currentContentKeyState = formatContentKeyState(
         currentContentKey,
         hasChild,
+        hasTextNode,
       );
 
       // Track previous key before any potential early registration update
@@ -568,7 +587,7 @@ export const initUITransition = (container) => {
       const currentIsContentPhase = !hasChild || isContentPhase;
 
       // Early conceptual registration path: empty slot with key change (no visual transition)
-      const isEarlyEmptySlot = !hadChild && !hasChild;
+      const isEarlyEmptySlot = !hadChild && !hasChild && !hasTextNode;
       let earlyAction = null;
       if (isEarlyEmptySlot) {
         const prevKey = prevKeyBeforeRegistration;
