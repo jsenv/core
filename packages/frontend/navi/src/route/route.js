@@ -257,7 +257,6 @@ const createRoute = (urlPatternInput) => {
     params: NO_PARAMS,
     buildUrl: null,
     bindAction: null,
-    createSubRoute: null,
     relativeUrl: null,
     url: null,
     action: null,
@@ -343,70 +342,6 @@ const createRoute = (urlPatternInput) => {
     browserIntegration.goTo(updatedUrl, { replace: true });
   };
   route.replaceParams = replaceParams;
-
-  /**
-   * Creates a sub-route from this route with the specified sub-path.
-   * The sub-route will inherit the parent's bound action if one exists.
-   *
-   * @param {string} subPath - The sub-path to append. Use "/" for root matching.
-   * @returns {Object} A new route object that matches the combined pattern.
-   *
-   * @example
-   * const [USER_ROUTE] = defineRoutes({
-   *   '/users/:username/*?': getUserAction
-   * });
-   *
-   * // Creates route matching "/users/:username/settings" with same action
-   * const USER_SETTINGS_ROUTE = USER_ROUTE.createSubRoute("/settings");
-   *
-   * // Creates route matching "/users/:username" and "/users/:username/" with same action
-   * const USER_ROOT_ROUTE = USER_ROUTE.createSubRoute("/");
-   */
-  const createSubRoute = (subPath) => {
-    // Handle root sub-route case
-    if (subPath === "/") {
-      // Remove the wildcard (*) from the parent pattern to match exact path
-      let parentPattern = urlPatternInput;
-      if (parentPattern.endsWith("/*") || parentPattern.endsWith("/*?")) {
-        parentPattern = parentPattern.replace(/\/\*\??$/, "");
-      }
-      // Also match with trailing slash
-      const subRoutePattern = `${parentPattern}{/}?`;
-      const subRoute = createRoute(subRoutePattern);
-
-      // Preserve parent's bound action
-      if (route.action) {
-        subRoute.action = route.action;
-      }
-
-      return subRoute;
-    }
-
-    // Handle specific sub-path case
-    let parentPattern = urlPatternInput;
-    // Remove optional wildcard if present
-    if (parentPattern.endsWith("/*?")) {
-      parentPattern = parentPattern.replace(/\/\*\?$/, "");
-    }
-    // Remove required wildcard if present
-    else if (parentPattern.endsWith("/*")) {
-      parentPattern = parentPattern.replace(/\/\*$/, "");
-    }
-
-    // Ensure subPath starts with /
-    const normalizedSubPath = subPath.startsWith("/") ? subPath : `/${subPath}`;
-    const subRoutePattern = `${parentPattern}${normalizedSubPath}`;
-
-    const subRoute = createRoute(subRoutePattern);
-
-    // Preserve parent's bound action
-    if (route.action) {
-      subRoute.action = route.action;
-    }
-
-    return subRoute;
-  };
-  route.createSubRoute = createSubRoute;
 
   const bindAction = (action) => {
     /*

@@ -2,7 +2,7 @@ import { Button } from "@jsenv/navi";
 import { DatabaseFieldset, RoleField } from "../components/database_field.jsx";
 import { TABLE } from "./table_store.js";
 
-export const TableRows = ({ table }) => {
+export const TableSettings = ({ table }) => {
   const tablename = table.tablename;
   const deleteTableAction = TABLE.DELETE.bindParams({ tablename });
 
