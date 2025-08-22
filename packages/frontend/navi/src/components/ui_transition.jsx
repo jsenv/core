@@ -110,10 +110,19 @@ export const useContentKey = (key, enabled) => {
     setKey(key);
   }
   useLayoutEffect(() => {
+    if (!setKey || !enabled) {
+      return null;
+    }
     return () => {
-      if (setKey && enabled) {
-        setKey(undefined);
-      }
+      setKey((v) => {
+        if (v !== key) {
+          // the current key is different from the one we set
+          // it means another component set it in the meantime
+          // we should not clear it
+          return v;
+        }
+        return undefined;
+      });
     };
   }, [enabled]);
 };
