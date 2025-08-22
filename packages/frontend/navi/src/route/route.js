@@ -175,14 +175,95 @@ export const updateRoutes = (
         );
       }
       const currentAction = routeAction.getCurrentAction();
-      if (!replace || currentAction.aborted || currentAction.error) {
-        toReloadSet.add(currentAction);
-        routeLoadRequestedMap.set(route, currentAction);
-        // Create a new abort controller for the reload
-        const actionAbortController = new AbortController();
-        actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-        abortSignalMap.set(currentAction, actionAbortController.signal);
+
+      // Decide what to do based on which params changed and which of them are optional
+      // whatTodo = "ignore" | "load" | "reload"
+      let whatTodo = "ignore";
+
+      const pattern = route.urlPattern;
+
+      // Collect optional named parameters from the pattern, supporting :name? and {name}?
+      const optionalNamedParams = new Set();
+      pattern.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
+        optionalNamedParams.add(name);
+        return "";
+      });
+      pattern.replace(/\{([A-Za-z0-9_]+)\}\?/g, (_m, name) => {
+        optionalNamedParams.add(name);
+        return "";
+      });
+
+      // Detect optional vs required wildcards
+      const hasOptionalWildcard = /\*\?/.test(pattern);
+      const hasRequiredWildcard = /\*(?!\?)/.test(pattern);
+
+      // Build sets of keys
+      const allKeys = new Set([
+        ...Object.keys(oldParams),
+        ...Object.keys(newParams),
+      ]);
+      const namedKeys = Array.from(allKeys).filter((k) =>
+        Number.isNaN(parseInt(k, 10)),
+      );
+
+      // Check named parameter changes
+      let namedConceptualChange = false;
+      let namedOptionalOnlyChange = false;
+      let sawNamedChange = false;
+      for (const k of namedKeys) {
+        if (!compareTwoJsValues(oldParams[k], newParams[k])) {
+          sawNamedChange = true;
+          if (!optionalNamedParams.has(k)) {
+            namedConceptualChange = true;
+            break;
+          }
+        }
       }
+      if (!namedConceptualChange && sawNamedChange) {
+        namedOptionalOnlyChange = true;
+      }
+
+      // Check numeric (wildcard) parameter changes
+      let wildcardChange = false;
+      for (const k of allKeys) {
+        const idx = parseInt(k, 10);
+        if (!Number.isNaN(idx)) {
+          if (!compareTwoJsValues(oldParams[k], newParams[k])) {
+            wildcardChange = true;
+            break;
+          }
+        }
+      }
+
+      // Decision matrix
+      if (namedConceptualChange) {
+        whatTodo = "reload";
+      } else if (wildcardChange) {
+        // If we only have optional wildcards (no required ones), treat as load
+        // If any required wildcard exists, consider the change conceptual => reload
+        whatTodo =
+          hasOptionalWildcard && !hasRequiredWildcard ? "load" : "reload";
+      } else if (namedOptionalOnlyChange) {
+        whatTodo = "load";
+      } else {
+        // Param identity changed but no detectable difference in values; be safe and ignore
+        continue;
+      }
+
+      if (whatTodo === "load") {
+        if (replace || currentAction.aborted || currentAction.error) {
+          whatTodo = "reload";
+        }
+      }
+      if (whatTodo === "load") {
+        toLoadSet.add(currentAction);
+      } else {
+        toReloadSet.add(currentAction);
+      }
+      routeLoadRequestedMap.set(route, currentAction);
+      const actionAbortController = new AbortController();
+      actionAbortControllerWeakMap.set(currentAction, actionAbortController);
+      abortSignalMap.set(currentAction, actionAbortController.signal);
       continue;
     }
   }
@@ -252,6 +333,7 @@ const createRoute = (urlPatternInput) => {
   };
 
   const route = {
+    urlPattern: urlPatternInput,
     isRoute: true,
     active: false,
     params: NO_PARAMS,

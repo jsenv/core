@@ -31,7 +31,7 @@ export const TablePage = ({ table }) => {
   const tableSettingUrl = TABLE_SETTINGS_ROUTE.buildUrl({ tablename });
 
   return (
-    <Page>
+    <Page data-ui-name="<TablePage />">
       <PageHead
         style={{
           backgroundColor: `rgb(239, 242, 245)`,
@@ -51,14 +51,12 @@ export const TablePage = ({ table }) => {
         </PageHead.Label>
       </PageHead>
       <PageBody>
-        <UITransition>
-          <Route route={TABLE_DATA_ROUTE}>
-            {() => <TableData table={table} />}
-          </Route>
-          <Route route={TABLE_SETTINGS_ROUTE}>
-            {() => <TableSettings table={table} />}
-          </Route>
-        </UITransition>
+        <Route route={TABLE_DATA_ROUTE}>
+          {() => <TableData table={table} />}
+        </Route>
+        <Route route={TABLE_SETTINGS_ROUTE}>
+          {() => <TableSettings table={table} />}
+        </Route>
       </PageBody>
     </Page>
   );
