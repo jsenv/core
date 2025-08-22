@@ -11,7 +11,7 @@ export const RoleCanLoginPage = ({ role }) => {
   const RoleIcon = pickRoleIcon(role);
 
   return (
-    <Page>
+    <Page data-ui-name="<RoleCanLoginPage />">
       <PageHead
         actions={[
           {

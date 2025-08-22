@@ -9,7 +9,7 @@ export const DatabasePage = ({ database }) => {
   const deleteDatabaseAction = DATABASE.DELETE.bindParams({ datname });
 
   return (
-    <Page>
+    <Page data-ui-name="<DatabasePage />">
       <PageHead
         actions={[
           {

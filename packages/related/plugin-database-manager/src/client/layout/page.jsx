@@ -40,13 +40,15 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const Page = ({ children }) => {
+export const Page = ({ children, ...props }) => {
   const [error, resetError] = useErrorBoundary();
 
   return (
     <ErrorBoundaryContext.Provider value={resetError}>
       {error && <PageError error={error} />}
-      <div className="page">{children}</div>
+      <div className="page" {...props}>
+        {children}
+      </div>
     </ErrorBoundaryContext.Provider>
   );
 };

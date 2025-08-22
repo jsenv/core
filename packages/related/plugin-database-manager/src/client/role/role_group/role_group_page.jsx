@@ -12,7 +12,7 @@ export const RoleGroupPage = ({ role }) => {
   const RoleIcon = pickRoleIcon(role);
 
   return (
-    <Page>
+    <Page data-ui-name="<RoleGroupPage />">
       <PageHead
         actions={[
           {
