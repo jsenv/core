@@ -505,7 +505,8 @@ export const initUITransition = (container) => {
       );
     }
 
-    previousChild = initialChild.cloneNode(true);
+    // Don't clone the initial child yet - it will be cloned when first mutation occurs
+    // This avoids premature cloning and reduces the need for subtree observation
   }
 
   const handleChildSlotMutation = (reason = "mutation") => {
@@ -1037,11 +1038,11 @@ export const initUITransition = (container) => {
     }
     const reasonParts = [];
     if (childListMutation) {
-      reasonParts.push("childList");
+      reasonParts.push("childList change");
     }
     if (attributeMutationSet.size) {
       for (const attr of attributeMutationSet) {
-        reasonParts.push(`[${attr}]`);
+        reasonParts.push(`[${attr}] change`);
       }
     }
     const reason = reasonParts.join("+");
@@ -1050,7 +1051,6 @@ export const initUITransition = (container) => {
 
   mutationObserver.observe(slot, {
     childList: true,
-    subtree: true,
     attributes: true,
     attributeFilter: ["data-content-key", "data-content-phase"],
     characterData: false,
