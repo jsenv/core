@@ -54,7 +54,12 @@ export const updateRoutes = (
     const newActive = Boolean(match);
     let newParams;
     if (match) {
-      const extractedParams = extractParams(urlPattern, url);
+      const { optionalParamKeySet } = routePrivateProperties;
+      const extractedParams = extractParams(
+        urlPattern,
+        url,
+        optionalParamKeySet,
+      );
       if (compareTwoJsValues(oldParams, extractedParams)) {
         // No change in parameters, keep the old params
         newParams = oldParams;
@@ -112,6 +117,43 @@ export const updateRoutes = (
   const abortSignalMap = new Map();
   const routeLoadRequestedMap = new Map();
 
+  const shouldLoadOrReload = (route, shouldLoad) => {
+    const routeAction = route.action;
+    const currentAction = routeAction.getCurrentAction();
+    if (shouldLoad) {
+      if (replace || currentAction.aborted || currentAction.error) {
+        shouldLoad = false;
+      }
+    }
+    if (shouldLoad) {
+      toLoadSet.add(currentAction);
+    } else {
+      toReloadSet.add(currentAction);
+    }
+    routeLoadRequestedMap.set(route, currentAction);
+    // Create a new abort controller for this action
+    const actionAbortController = new AbortController();
+    actionAbortControllerWeakMap.set(currentAction, actionAbortController);
+    abortSignalMap.set(currentAction, actionAbortController.signal);
+  };
+
+  const shouldLoad = (route) => {
+    shouldLoadOrReload(route, true);
+  };
+  const shouldReload = (route) => {
+    shouldLoadOrReload(route, false);
+  };
+  const shouldAbort = (route) => {
+    const routeAction = route.action;
+    const currentAction = routeAction.getCurrentAction();
+    const actionAbortController =
+      actionAbortControllerWeakMap.get(currentAction);
+    if (actionAbortController) {
+      actionAbortController.abort(`route no longer matching`);
+      actionAbortControllerWeakMap.delete(currentAction);
+    }
+  };
+
   for (const {
     route,
     routePrivateProperties,
@@ -138,31 +180,13 @@ export const updateRoutes = (
           newParams,
         );
       }
-      const currentAction = routeAction.getCurrentAction();
-      if (replace) {
-        toLoadSet.add(currentAction);
-      } else {
-        toReloadSet.add(currentAction);
-      }
-      routeLoadRequestedMap.set(route, currentAction);
-
-      // Create a new abort controller for this action
-      const actionAbortController = new AbortController();
-      actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-      abortSignalMap.set(currentAction, actionAbortController.signal);
-
+      shouldLoad(route);
       continue;
     }
 
     // Handle actions for routes that become inactive - abort them
     if (becomesInactive && ROUTE_DEACTIVATION_STRATEGY === "abort") {
-      const currentAction = routeAction.getCurrentAction();
-      const actionAbortController =
-        actionAbortControllerWeakMap.get(currentAction);
-      if (actionAbortController) {
-        actionAbortController.abort(`route no longer matching`);
-        actionAbortControllerWeakMap.delete(currentAction);
-      }
+      shouldAbort(route);
       continue;
     }
 
@@ -174,48 +198,7 @@ export const updateRoutes = (
           newParams,
         );
       }
-      const currentAction = routeAction.getCurrentAction();
-
-      // Decide what to do based on which params changed and which of them are optional
-      // whatTodo = "ignore" | "load" | "reload"
-      let whatTodo = "ignore";
-
-      const { optionalParamKeySet } = routePrivateProperties;
-      if (optionalParamKeySet.size === 0) {
-        whatTodo = "reload";
-      } else {
-        const allKeys = new Set([
-          ...Object.keys(oldParams),
-          ...Object.keys(newParams),
-        ]);
-        let allChangesAreOptional = false;
-        for (const k of allKeys) {
-          if (compareTwoJsValues(oldParams[k], newParams[k])) {
-            continue;
-          }
-          if (!optionalParamKeySet.has(k)) {
-            break;
-          }
-          allChangesAreOptional = true;
-        }
-        whatTodo = allChangesAreOptional ? "load" : "reload";
-      }
-
-      if (whatTodo === "load") {
-        if (replace || currentAction.aborted || currentAction.error) {
-          whatTodo = "reload";
-        }
-      }
-      if (whatTodo === "load") {
-        toLoadSet.add(currentAction);
-      } else {
-        toReloadSet.add(currentAction);
-      }
-      routeLoadRequestedMap.set(route, currentAction);
-      const actionAbortController = new AbortController();
-      actionAbortControllerWeakMap.set(currentAction, actionAbortController);
-      abortSignalMap.set(currentAction, actionAbortController.signal);
-      continue;
+      shouldReload(route);
     }
   }
 
@@ -227,7 +210,7 @@ export const updateRoutes = (
     activeRouteSet,
   };
 };
-const extractParams = (urlPattern, url) => {
+const extractParams = (urlPattern, url, ignoreSet = new Set()) => {
   const match = urlPattern.exec(url);
   if (!match) {
     return NO_PARAMS;
@@ -245,12 +228,15 @@ const extractParams = (urlPattern, url) => {
         const keyAsNumber = parseInt(key, 10);
         if (!isNaN(keyAsNumber)) {
           if (value) {
-            // Only include non-empty values
-            params[wildcardOffset + keyAsNumber] = decodeURIComponent(value);
+            // Only include non-empty values and non-ignored wildcard indices
+            const wildcardKey = String(wildcardOffset + keyAsNumber);
+            if (!ignoreSet.has(wildcardKey)) {
+              params[wildcardKey] = decodeURIComponent(value);
+            }
             localWildcardCount++;
           }
-        } else {
-          // Named group (:param or {param})
+        } else if (!ignoreSet.has(key)) {
+          // Named group (:param or {param}) - only include if not ignored
           params[key] = decodeURIComponent(value);
         }
       }
