@@ -51,12 +51,14 @@ export const TablePage = ({ table }) => {
         </PageHead.Label>
       </PageHead>
       <PageBody>
-        <Route route={TABLE_DATA_ROUTE}>
-          {() => <TableData table={table} />}
-        </Route>
-        <Route route={TABLE_SETTINGS_ROUTE}>
-          {() => <TableSettings table={table} />}
-        </Route>
+        <UITransition debugTransition>
+          <Route route={TABLE_DATA_ROUTE}>
+            {() => <TableData table={table} />}
+          </Route>
+          <Route route={TABLE_SETTINGS_ROUTE}>
+            {() => <TableSettings table={table} />}
+          </Route>
+        </UITransition>
       </PageBody>
     </Page>
   );
