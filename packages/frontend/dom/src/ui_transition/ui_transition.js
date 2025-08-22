@@ -542,6 +542,15 @@ export const initUITransition = (container) => {
         );
       }
 
+      // Check for multiple elements in the slot (not supported yet)
+      const hasMultipleElements = slot.children.length > 1;
+      if (hasMultipleElements) {
+        console.warn(
+          "UI Transition: Multiple elements in transition slots are not supported yet. Please use a single container element.",
+          { slot, elementCount: slot.children.length },
+        );
+      }
+
       // Prefer data-content-key on child, fallback to slot
       let currentContentKey = null;
       let slotContentKey = slot.getAttribute("data-content-key");
@@ -586,13 +595,17 @@ export const initUITransition = (container) => {
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
-      // Early conceptual registration path: empty slot or text nodes (no visual transition)
+      // Early conceptual registration path: empty slot, text nodes, or multiple elements (no visual transition)
       const shouldGiveUpEarlyAndJustRegister =
-        (!hadChild && !hasChild && !hasTextNode) || hasTextNode;
+        (!hadChild && !hasChild && !hasTextNode) ||
+        hasTextNode ||
+        hasMultipleElements;
       let earlyAction = null;
       if (shouldGiveUpEarlyAndJustRegister) {
         if (hasTextNode) {
           earlyAction = "text_nodes_unsupported";
+        } else if (hasMultipleElements) {
+          earlyAction = "multiple_elements_unsupported";
         } else {
           const prevKey = prevKeyBeforeRegistration;
           const keyChanged = prevKey !== currentContentKey;
