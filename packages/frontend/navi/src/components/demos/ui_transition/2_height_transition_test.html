@@ -82,12 +82,12 @@
         padding: 30px;
         background: repeating-linear-gradient(
           to bottom,
-          rgba(102, 126, 234, 0.3) 0px,
-          rgba(102, 126, 234, 0.3) 20px,
-          rgba(118, 75, 162, 0.3) 20px,
-          rgba(118, 75, 162, 0.3) 40px
+          rgba(0, 0, 0, 0.05) 0px,
+          rgba(0, 0, 0, 0.05) 20px,
+          rgba(0, 0, 0, 0.1) 20px,
+          rgba(0, 0, 0, 0.1) 40px
         );
-        color: white;
+        color: #222;
         border-radius: 6px;
         min-height: 300px;
         display: flex;
@@ -110,11 +110,12 @@
 
       .small-content {
         padding: 15px;
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
+        background: transparent; /* reveal any cropping during cross-fade */
+        color: #222;
         border-radius: 6px;
         text-align: center;
-        font-weight: 500;
+        font-weight: 600;
+        border: 1px dashed #bbb; /* show where the new smaller height is */
       }
 
       /* A bright bar anchored at the bottom to make cropping obvious when height shrinks */
@@ -215,6 +216,7 @@
           <p>Perfect for testing height transitions</p>
           <p>When you switch to small content,</p>
           <p>watch how smoothly it transitions!</p>
+          <div class="bottom-flag" title="Bottom area to reveal cropping"></div>
         `;
         return div;
       };
