@@ -524,15 +524,21 @@ export const initUITransition = (container) => {
       isUpdating = true;
       const firstChild = slot.children[0] || null;
       const childUIName = firstChild?.getAttribute("data-ui-name");
+      if (DEBUG.transition) {
+        const updateLabel =
+          childUIName ||
+          (firstChild ? "data-ui-name not specified" : "cleared/empty");
+        console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
+      }
 
       // Check for text nodes in the slot (not supported)
       const hasTextNode = Array.from(slot.childNodes).some(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim()
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
       );
       if (hasTextNode) {
         console.warn(
           "UI Transition: Text nodes in transition slots are not supported. Please wrap text content in an element.",
-          { slot, textContent: slot.textContent.trim() }
+          { slot, textContent: slot.textContent.trim() },
         );
       }
 
@@ -553,7 +559,8 @@ export const initUITransition = (container) => {
       const hasChild = firstChild !== null;
 
       // Check for text nodes in previous state (reconstruct from previousChild)
-      const hadTextNode = previousChild && previousChild.nodeType === Node.TEXT_NODE;
+      const hadTextNode =
+        previousChild && previousChild.nodeType === Node.TEXT_NODE;
 
       // Compute formatted content key states ONCE per mutation (requirement: max 2 calls)
       const previousContentKeyState = formatContentKeyState(
@@ -576,35 +583,33 @@ export const initUITransition = (container) => {
         ? firstChild.hasAttribute("data-content-phase")
         : true; // empty (no child) is treated as content phase
 
-      if (DEBUG.transition) {
-        const updateLabel =
-          childUIName ||
-          (firstChild ? "data-ui-name not specified" : "cleared/empty");
-        console.group(`UI Update: ${updateLabel} (reason: ${reason})`);
-      }
-
       const previousIsContentPhase = !hadChild || wasContentPhase;
       const currentIsContentPhase = !hasChild || isContentPhase;
 
-      // Early conceptual registration path: empty slot with key change (no visual transition)
-      const isEarlyEmptySlot = !hadChild && !hasChild && !hasTextNode;
+      // Early conceptual registration path: empty slot or text nodes (no visual transition)
+      const shouldGiveUpEarlyAndJustRegister =
+        (!hadChild && !hasChild && !hasTextNode) || hasTextNode;
       let earlyAction = null;
-      if (isEarlyEmptySlot) {
-        const prevKey = prevKeyBeforeRegistration;
-        const keyChanged = prevKey !== currentContentKey;
-        if (!keyChanged) {
-          earlyAction = "unchanged";
-        } else if (prevKey === null && currentContentKey !== null) {
-          earlyAction = "registered";
-        } else if (prevKey !== null && currentContentKey === null) {
-          earlyAction = "cleared";
+      if (shouldGiveUpEarlyAndJustRegister) {
+        if (hasTextNode) {
+          earlyAction = "text_nodes_unsupported";
         } else {
-          earlyAction = "changed";
+          const prevKey = prevKeyBeforeRegistration;
+          const keyChanged = prevKey !== currentContentKey;
+          if (!keyChanged) {
+            earlyAction = "unchanged";
+          } else if (prevKey === null && currentContentKey !== null) {
+            earlyAction = "registered";
+          } else if (prevKey !== null && currentContentKey === null) {
+            earlyAction = "cleared";
+          } else {
+            earlyAction = "changed";
+          }
         }
         // Will update lastContentKey after unified logging
       }
 
-      // Decide which representation to display for previous/current in early empty case
+      // Decide which representation to display for previous/current in early case
       const conceptualPrevDisplay =
         prevKeyBeforeRegistration === null
           ? "[unkeyed]"
@@ -613,10 +618,10 @@ export const initUITransition = (container) => {
         currentContentKey === null
           ? "[unkeyed]"
           : `[data-content-key="${currentContentKey}"]`;
-      const previousDisplay = isEarlyEmptySlot
+      const previousDisplay = shouldGiveUpEarlyAndJustRegister
         ? conceptualPrevDisplay
         : previousContentKeyState;
-      const currentDisplay = isEarlyEmptySlot
+      const currentDisplay = shouldGiveUpEarlyAndJustRegister
         ? conceptualCurrentDisplay
         : currentContentKeyState;
 
@@ -624,7 +629,7 @@ export const initUITransition = (container) => {
       let contentKeysSentence = `Content key: ${previousDisplay} → ${currentDisplay}`;
       debug("transition", contentKeysSentence);
 
-      if (isEarlyEmptySlot) {
+      if (shouldGiveUpEarlyAndJustRegister) {
         // Log decision explicitly (was previously embedded)
         debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
         // Register new conceptual key & return early (skip rest of transition logic)
