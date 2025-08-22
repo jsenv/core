@@ -22,7 +22,7 @@ import {
 import { weakEffect } from "./utils/weak_effect.js";
 
 const ACTION_AS_FUNCTION = true;
-let DEBUG = true;
+let DEBUG = false;
 export const enableDebugActions = () => {
   DEBUG = true;
 };

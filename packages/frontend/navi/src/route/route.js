@@ -280,6 +280,7 @@ const createRoute = (urlPatternInput) => {
 
   const buildRelativeUrl = (params = {}) => {
     let relativeUrl = urlPatternInput;
+
     // Replace named parameters (:param and {param})
     for (const key of Object.keys(params)) {
       const value = params[key];
@@ -287,16 +288,44 @@ const createRoute = (urlPatternInput) => {
       relativeUrl = relativeUrl.replace(`:${key}`, encodedValue);
       relativeUrl = relativeUrl.replace(`{${key}}`, encodedValue);
     }
-    // Replace wildcards (*) with numbered parameters (0, 1, 2, etc.)
-    let wildcardIndex = 0;
-    relativeUrl = relativeUrl.replace(/\*/g, () => {
-      const paramKey = wildcardIndex.toString();
-      const replacement = params[paramKey]
-        ? encodeURIComponent(params[paramKey])
-        : "*";
-      wildcardIndex++;
-      return replacement;
-    });
+
+    // Handle wildcards: if the pattern ends with /*? (optional wildcard)
+    // and no wildcard parameters are provided, remove the wildcard part for URL building
+    if (relativeUrl.endsWith("/*?")) {
+      // Check if we have wildcard parameters (numbered parameters starting from 0)
+      const hasWildcardParams = Object.keys(params).some((key) => {
+        const keyAsNumber = parseInt(key, 10);
+        return !isNaN(keyAsNumber) && params[key];
+      });
+
+      if (!hasWildcardParams) {
+        // Remove the optional wildcard part for URL building
+        relativeUrl = relativeUrl.replace(/\/\*\?$/, "");
+      } else {
+        // Replace wildcards (*) with numbered parameters (0, 1, 2, etc.)
+        let wildcardIndex = 0;
+        relativeUrl = relativeUrl.replace(/\*/g, () => {
+          const paramKey = wildcardIndex.toString();
+          const replacement = params[paramKey]
+            ? encodeURIComponent(params[paramKey])
+            : "";
+          wildcardIndex++;
+          return replacement;
+        });
+      }
+    } else {
+      // For required wildcards (/*) or other patterns, replace normally
+      let wildcardIndex = 0;
+      relativeUrl = relativeUrl.replace(/\*/g, () => {
+        const paramKey = wildcardIndex.toString();
+        const replacement = params[paramKey]
+          ? encodeURIComponent(params[paramKey])
+          : "*";
+        wildcardIndex++;
+        return replacement;
+      });
+    }
+
     return relativeUrl;
   };
   const buildUrl = (params = {}) => {
