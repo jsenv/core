@@ -7,7 +7,7 @@ export const TableSettings = ({ table }) => {
   const deleteTableAction = TABLE.DELETE.bindParams({ tablename });
 
   return (
-    <>
+    <div>
       <DatabaseFieldset
         item={table}
         columns={table.meta.columns}
@@ -43,6 +43,6 @@ export const TableSettings = ({ table }) => {
           </Button>
         </p>
       </div>
-    </>
+    </div>
   );
 };

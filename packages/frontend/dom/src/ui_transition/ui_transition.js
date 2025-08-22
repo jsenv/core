@@ -746,7 +746,7 @@ export const initUITransition = (container) => {
       ) {
         debug(
           "transition",
-          `Early return: no transition or continuation required (${reason})`,
+          `Early return: no transition or continuation required`,
         );
         // Still ensure size logic executes below (so do not return before size alignment)
       }

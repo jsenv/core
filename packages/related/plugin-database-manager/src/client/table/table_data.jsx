@@ -1,3 +1,3 @@
 export const TableData = () => {
-  return <>Table rows</>;
+  return <div>Table rows</div>;
 };
