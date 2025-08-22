@@ -180,74 +180,25 @@ export const updateRoutes = (
       // whatTodo = "ignore" | "load" | "reload"
       let whatTodo = "ignore";
 
-      const pattern = route.urlPattern;
-
-      // Collect optional named parameters from the pattern, supporting :name? and {name}?
-      const optionalNamedParams = new Set();
-      pattern.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
-        optionalNamedParams.add(name);
-        return "";
-      });
-      pattern.replace(/\{([A-Za-z0-9_]+)\}\?/g, (_m, name) => {
-        optionalNamedParams.add(name);
-        return "";
-      });
-
-      // Detect optional vs required wildcards
-      const hasOptionalWildcard = /\*\?/.test(pattern);
-      const hasRequiredWildcard = /\*(?!\?)/.test(pattern);
-
-      // Build sets of keys
-      const allKeys = new Set([
-        ...Object.keys(oldParams),
-        ...Object.keys(newParams),
-      ]);
-      const namedKeys = Array.from(allKeys).filter((k) =>
-        Number.isNaN(parseInt(k, 10)),
-      );
-
-      // Check named parameter changes
-      let namedConceptualChange = false;
-      let namedOptionalOnlyChange = false;
-      let sawNamedChange = false;
-      for (const k of namedKeys) {
-        if (!compareTwoJsValues(oldParams[k], newParams[k])) {
-          sawNamedChange = true;
-          if (!optionalNamedParams.has(k)) {
-            namedConceptualChange = true;
-            break;
-          }
-        }
-      }
-      if (!namedConceptualChange && sawNamedChange) {
-        namedOptionalOnlyChange = true;
-      }
-
-      // Check numeric (wildcard) parameter changes
-      let wildcardChange = false;
-      for (const k of allKeys) {
-        const idx = parseInt(k, 10);
-        if (!Number.isNaN(idx)) {
-          if (!compareTwoJsValues(oldParams[k], newParams[k])) {
-            wildcardChange = true;
-            break;
-          }
-        }
-      }
-
-      // Decision matrix
-      if (namedConceptualChange) {
+      const { optionalParamKeySet } = routePrivateProperties;
+      if (optionalParamKeySet.size === 0) {
         whatTodo = "reload";
-      } else if (wildcardChange) {
-        // If we only have optional wildcards (no required ones), treat as load
-        // If any required wildcard exists, consider the change conceptual => reload
-        whatTodo =
-          hasOptionalWildcard && !hasRequiredWildcard ? "load" : "reload";
-      } else if (namedOptionalOnlyChange) {
-        whatTodo = "load";
       } else {
-        // Param identity changed but no detectable difference in values; be safe and ignore
-        continue;
+        const allKeys = new Set([
+          ...Object.keys(oldParams),
+          ...Object.keys(newParams),
+        ]);
+        let allChangesAreOptional = false;
+        for (const k of allKeys) {
+          if (compareTwoJsValues(oldParams[k], newParams[k])) {
+            continue;
+          }
+          if (!optionalParamKeySet.has(k)) {
+            break;
+          }
+          allChangesAreOptional = true;
+        }
+        whatTodo = allChangesAreOptional ? "load" : "reload";
       }
 
       if (whatTodo === "load") {
@@ -357,6 +308,7 @@ const createRoute = (urlPatternInput) => {
     visitedSignal: null,
     relativeUrlSignal: null,
     urlSignal: null,
+    optionalParamKeySet: null,
   };
   routePrivatePropertiesMap.set(route, routePrivateProperties);
 
@@ -521,6 +473,26 @@ const createRoute = (urlPatternInput) => {
     routePrivateProperties.relativeUrlSignal = relativeUrlSignal;
     routePrivateProperties.urlSignal = urlSignal;
     routePrivateProperties.cleanupCallbackSet = cleanupCallbackSet;
+
+    // Analyze pattern once to detect optional params (named and wildcard indices)
+    const optionalParamKeySet = new Set();
+    urlPatternInput.replace(/:([A-Za-z0-9_]+)\?/g, (_m, name) => {
+      optionalParamKeySet.add(name);
+      return "";
+    });
+    urlPatternInput.replace(/\{([A-Za-z0-9_]+)\}\?/g, (_m, name) => {
+      optionalParamKeySet.add(name);
+      return "";
+    });
+    let wildcardIndex = 0;
+    urlPatternInput.replace(/\*(\?)?/g, (_m, opt) => {
+      if (opt === "?") {
+        optionalParamKeySet.add(String(wildcardIndex));
+      }
+      wildcardIndex++;
+      return "";
+    });
+    routePrivateProperties.optionalParamKeySet = optionalParamKeySet;
   }
 
   return route;
