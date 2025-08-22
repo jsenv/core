@@ -85,14 +85,8 @@ import.meta.css = /* css */ `
 
 const DEBUG = {
   size: false,
-  transition: false,
+  transition: true,
   transition_updates: false,
-};
-
-const debug = (type, ...args) => {
-  if (DEBUG[type]) {
-    console.debug(`[${type}]`, ...args);
-  }
 };
 
 // Utility function to format content key states consistently for debug logs
@@ -114,6 +108,17 @@ const PHASE_TRANSITION = "cross-fade";
 const PHASE_TRANSITION_DURATION = 300; // Default phase transition duration
 
 export const initUITransition = (container) => {
+  const localDebug = {
+    ...DEBUG,
+    transition: container.hasAttribute("data-debug-transition"),
+  };
+
+  const debug = (type, ...args) => {
+    if (localDebug[type]) {
+      console.debug(`[${type}]`, ...args);
+    }
+  };
+
   if (!container.classList.contains("ui_transition_container")) {
     console.error("Element must have ui_transition_container class");
     return { cleanup: () => {} };
@@ -813,6 +818,7 @@ export const initUITransition = (container) => {
               activeContentTransition = null;
               activeContentTransitionType = null;
             },
+            debug,
           },
         );
 
@@ -920,6 +926,7 @@ export const initUITransition = (container) => {
               activePhaseTransitionType = null;
               debug("transition", "Phase transition complete");
             },
+            debug,
           },
         );
 
@@ -1106,6 +1113,7 @@ const animateTransition = (
     onComplete,
     fromContentKeyState,
     toContentKeyState,
+    debug,
   },
 ) => {
   let transitionType;
@@ -1136,6 +1144,7 @@ const animateTransition = (
     duration: remainingDuration,
     startProgress: animationProgress,
     isPhaseTransition,
+    debug,
   });
 
   debug(
@@ -1166,7 +1175,7 @@ const slideLeft = {
   apply: (
     oldElement,
     newElement,
-    { duration, startProgress = 0, isPhaseTransition = false },
+    { duration, startProgress = 0, isPhaseTransition = false, debug },
   ) => {
     if (!oldElement && !newElement) {
       return [];
@@ -1288,7 +1297,7 @@ const crossFade = {
   apply: (
     oldElement,
     newElement,
-    { duration, startProgress = 0, isPhaseTransition = false },
+    { duration, startProgress = 0, isPhaseTransition = false, debug },
   ) => {
     if (!oldElement && !newElement) {
       return [];
