@@ -7,6 +7,7 @@ import { Button, Input } from "@jsenv/navi";
 import { useState } from "preact/hooks";
 import { DatabaseField } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
+import { TABLE_ROW } from "./table_store.js";
 
 import.meta.css = /* css */ `
   .table_data_actions {
@@ -16,7 +17,7 @@ import.meta.css = /* css */ `
 
 export const TableData = ({ table, rows }) => {
   const tableName = table.tablename;
-  const [rowAdded, setRowAdded] = useState(null);
+  const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
   const [rowSelection, setRowSelection] = useState({});
 
   const { schemaColumns } = table.meta;
@@ -72,20 +73,12 @@ export const TableData = ({ table, rows }) => {
     };
   });
 
-  const data = [...(rowAdded ? [rowAdded] : []), ...rows];
+  const data = rows;
 
   return (
     <div>
       <div className="table_data_actions">
-        <Button
-          action={() => {
-            setRowAdded({
-              isEditing: true,
-            });
-          }}
-        >
-          Add row
-        </Button>
+        <Button action={createRow}>Add row</Button>
       </div>
       <Table
         columns={[selectColumn, ...columns]}

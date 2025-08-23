@@ -117,7 +117,7 @@ export const useTableArray = () => {
   return tableArray;
 };
 
-export const TABLE_ROWS = resource("table_rows", {
+export const TABLE_ROW = resource("table_row", {
   GET_MANY: async ({ tablename }, { signal }) => {
     const response = await fetch(
       `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/rows`,
@@ -127,6 +127,28 @@ export const TABLE_ROWS = resource("table_rows", {
     );
     if (!response.ok) {
       throw await errorFromResponse(response, "Failed to get table rows");
+    }
+    const { data } = await response.json();
+    return data;
+  },
+  POST: async ({ tablename }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/rows`,
+      {
+        signal,
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(
+        response,
+        `Failed to create row in "${tablename}" table`,
+      );
     }
     const { data } = await response.json();
     return data;
