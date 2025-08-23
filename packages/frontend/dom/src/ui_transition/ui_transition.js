@@ -766,7 +766,7 @@ export const initUITransition = (container) => {
         }
 
         // Register state and mark initial population done
-        previousChild = firstChild ? firstChild.cloneNode(true) : null;
+        previousChild = firstChild;
         lastContentKey = currentContentKey;
         hasPopulatedOnce = true;
         if (localDebug.transition) {
@@ -1064,26 +1064,23 @@ export const initUITransition = (container) => {
       }
 
       // Store current child for next transition
-      previousChild = firstChild ? firstChild.cloneNode(true) : null;
+      previousChild = firstChild;
       lastContentKey = currentContentKey;
       if (becomesPopulated) {
         hasPopulatedOnce = true;
       }
 
       // Execute planned size action, unless holding size during a content transition
-      if (
-        sizePlan.targetWidth === constrainedWidth &&
-        sizePlan.targetHeight === constrainedHeight
-      ) {
-        // no size changes planned; possibly release constraints
-        if (!isContentPhase && !sizeHoldActive) {
-          releaseConstraints("no size change needed");
-        }
-        return;
-      }
-
       if (!sizeHoldActive) {
-        if (sizePlan.action === "animate") {
+        if (
+          sizePlan.targetWidth === constrainedWidth &&
+          sizePlan.targetHeight === constrainedHeight
+        ) {
+          // no size changes planned; possibly release constraints
+          if (!isContentPhase) {
+            releaseConstraints("no size change needed");
+          }
+        } else if (sizePlan.action === "animate") {
           updateToSize(sizePlan.targetWidth, sizePlan.targetHeight);
         } else if (sizePlan.action === "applyConstraints") {
           applySizeConstraints(sizePlan.targetWidth, sizePlan.targetHeight);
