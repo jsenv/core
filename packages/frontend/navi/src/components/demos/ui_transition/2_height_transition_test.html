@@ -156,7 +156,10 @@
         <button id="clear">Clear Content</button>
       </div>
       <div class="button-group">
-        <button id="toggle-transitions">Toggle Size Transitions</button>
+        <label style="display: flex; align-items: center; gap: 8px">
+          <input type="checkbox" id="toggle-transitions" />
+          Enable Size Transitions
+        </label>
       </div>
     </div>
 
@@ -248,20 +251,16 @@
         slot.innerHTML = "";
       });
 
-      document
-        .getElementById("toggle-transitions")
-        .addEventListener("click", (e) => {
-          const hasTransitions = transitionBox.hasAttribute(
-            "data-size-transition",
-          );
-          if (hasTransitions) {
-            transitionBox.removeAttribute("data-size-transition");
-            e.target.textContent = "Enable Size Transitions";
-          } else {
-            transitionBox.setAttribute("data-size-transition", "");
-            e.target.textContent = "Disable Size Transitions";
-          }
-        });
+      // Initialize and handle size transitions checkbox
+      const sizeToggle = document.getElementById("toggle-transitions");
+      sizeToggle.checked = transitionBox.hasAttribute("data-size-transition");
+      sizeToggle.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          transitionBox.setAttribute("data-size-transition", "");
+        } else {
+          transitionBox.removeAttribute("data-size-transition");
+        }
+      });
 
       // removed debug toggle
 

@@ -177,6 +177,7 @@ export const initUITransition = (container) => {
   let constrainedHeight = 0;
   let sizeTransition = null;
   let resizeObserver = null;
+  let sizeHoldActive = false; // Hold previous dimensions during content transitions when size transitions are disabled
 
   // Prevent reacting to our own constrained size changes while animating
   let suppressResizeObserver = false;
@@ -840,6 +841,21 @@ export const initUITransition = (container) => {
             transitionType: type,
           });
 
+        // If size transitions are disabled and the new content is smaller,
+        // hold the previous size to avoid cropping during the transition.
+        if (!hasSizeTransitions) {
+          const willShrinkWidth = constrainedWidth > newWidth;
+          const willShrinkHeight = constrainedHeight > newHeight;
+          sizeHoldActive = willShrinkWidth || willShrinkHeight;
+          if (sizeHoldActive) {
+            debug(
+              "size",
+              `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
+            );
+            applySizeConstraints(constrainedWidth, constrainedHeight);
+          }
+        }
+
         activeContentTransition = animateTransition(
           transitionController,
           firstChild,
@@ -855,6 +871,13 @@ export const initUITransition = (container) => {
             onComplete: () => {
               activeContentTransition = null;
               activeContentTransitionType = null;
+              if (sizeHoldActive) {
+                // Release the hold after the content transition completes
+                releaseConstraints(
+                  "content transition completed - release size hold",
+                );
+                sizeHoldActive = false;
+              }
             },
             debug,
           },
@@ -1001,7 +1024,8 @@ export const initUITransition = (container) => {
         targetHeight === constrainedHeight
       ) {
         debug("size", "No size change required");
-        if (!isContentPhase) {
+        // Do not release constraints if we are deliberately holding size during a content transition
+        if (!isContentPhase && !sizeHoldActive) {
           releaseConstraints("no size change needed");
         }
         if (DEBUG.transition) {
@@ -1020,8 +1044,8 @@ export const initUITransition = (container) => {
         if (hasSizeTransitions) {
           // Animate to target size with constraints
           updateToSize(targetWidth, targetHeight);
-        } else {
-          // Apply constraints instantly (no animation)
+        } else if (!sizeHoldActive) {
+          // Apply constraints instantly (no animation) if not holding previous size
           applySizeConstraints(targetWidth, targetHeight);
         }
       } else {
@@ -1031,7 +1055,7 @@ export const initUITransition = (container) => {
         if (hasSizeTransitions) {
           // With size transitions: animate to target size, constraints released after animation
           updateToSize(targetWidth, targetHeight);
-        } else {
+        } else if (!sizeHoldActive) {
           // Without size transitions: release constraints immediately for natural sizing
           releaseConstraints("actual content - no size transitions needed");
         }
