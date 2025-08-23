@@ -58,16 +58,23 @@ import { createGroupTransitionController } from "../transition/group_transition.
 
 import.meta.css = /* css */ `
   .ui_transition_container {
+    display: inline-flex;
     position: relative;
     overflow: hidden;
+  }
+
+  .ui_transition_outer_wrapper {
+    display: inline-flex;
   }
 
   .ui_transition_measure_wrapper {
     overflow: hidden;
+    display: inline-flex;
   }
 
   .ui_transition_slot {
     position: relative;
+    display: inline-flex;
   }
 
   .ui_transition_phase_overlay {
