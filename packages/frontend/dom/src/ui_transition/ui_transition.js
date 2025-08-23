@@ -684,13 +684,6 @@ export const initUITransition = (container) => {
       const isInitialPopulationWithoutTransition =
         becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
 
-      debug("transition", {
-        becomesEmpty,
-        becomesPopulated,
-        hasPopulatedOnce,
-        isInitialPopulationWithoutTransition,
-      });
-
       // Content phase change: any transition between content/content-phase/null except when slot key changes
       // This includes: null→loading, loading→content, content→loading, loading→null, etc.
       const shouldDoPhaseTransition =
