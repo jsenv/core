@@ -489,35 +489,6 @@ export const initUITransition = (container) => {
   // Initialize with current size
   [constrainedWidth, constrainedHeight] = measureContentSize();
 
-  // Handle initial child if present
-  const initialChild = slot.children[0];
-  if (initialChild) {
-    debug("transition", "Found initial child");
-    hasPopulatedOnce = true; // already populated at init, so next mutation is not initial population
-    lastContentKey = initialChild.getAttribute("data-content-key");
-    isContentPhase = initialChild.hasAttribute("data-content-phase");
-
-    // Only set natural content dimensions if this is actual content, not a content phase
-    if (!isContentPhase) {
-      naturalContentWidth = constrainedWidth;
-      naturalContentHeight = constrainedHeight;
-      debug(
-        "size",
-        `Initial content size: ${naturalContentWidth}x${naturalContentHeight}`,
-      );
-      startResizeObserver();
-      debug("size", "Observing resize");
-    } else {
-      debug(
-        "size",
-        "Initial child is content phase, not setting natural dimensions",
-      );
-    }
-
-    // Don't clone the initial child yet - it will be cloned when first mutation occurs
-    // This avoids premature cloning and reduces the need for subtree observation
-  }
-
   const handleChildSlotMutation = (reason = "mutation") => {
     if (isUpdating) {
       debug("transition", "Preventing recursive update");
@@ -804,236 +775,292 @@ export const initUITransition = (container) => {
         return;
       }
 
-      // Handle content transitions (slide-left, cross-fade for content key changes)
-      if (
-        decisions.length === 1 &&
-        decisions[0] === "NO TRANSITION" &&
-        activeContentTransition === null &&
-        activePhaseTransition === null
-      ) {
-        // Skip creating any new transitions entirely
-      } else if (
-        shouldDoContentTransitionIncludingPopulation &&
-        !preserveOnlyContentTransition
-      ) {
-        const existingOldContents = contentOverlay.querySelectorAll(
-          "[data-ui-transition-old]",
-        );
-        const animationProgress = activeContentTransition?.progress || 0;
+      // Plan size transition upfront; execution will happen after content/phase transitions
+      let sizePlan = {
+        action: "none",
+        targetWidth: constrainedWidth,
+        targetHeight: constrainedHeight,
+      };
 
-        if (animationProgress > 0) {
-          debug(
-            "transition",
-            `Preserving content transition progress: ${(animationProgress * 100).toFixed(1)}%`,
-          );
-        }
-
-        const newTransitionType =
-          container.getAttribute("data-content-transition") ||
-          CONTENT_TRANSITION;
-        const canContinueSmoothly =
-          activeContentTransitionType === newTransitionType &&
-          activeContentTransition;
-
-        if (canContinueSmoothly) {
-          debug(
-            "transition",
-            "Continuing with same content transition type (restarting due to actual change)",
-          );
-          activeContentTransition.cancel();
-        } else if (
-          activeContentTransition &&
-          activeContentTransitionType !== newTransitionType
-        ) {
-          debug(
-            "transition",
-            "Different content transition type, keeping both",
-            `${activeContentTransitionType} → ${newTransitionType}`,
-          );
-        } else if (activeContentTransition) {
-          debug("transition", "Cancelling current content transition");
-          activeContentTransition.cancel();
-        }
-
-        const needsOldChildClone =
-          (contentChange || becomesEmpty) &&
-          previousChild &&
-          !existingOldContents[0];
-
-        const duration = parseInt(
-          container.getAttribute("data-content-transition-duration") ||
-            CONTENT_TRANSITION_DURATION,
-        );
-        const type =
-          container.getAttribute("data-content-transition") ||
-          CONTENT_TRANSITION;
-
-        const setupContentTransition = () =>
-          setupTransition({
-            isPhaseTransition: false,
-            overlay: contentOverlay,
-            existingOldContents,
-            needsOldChildClone,
-            previousChild,
-            firstChild,
-            attributeToRemove: ["data-content-key"],
-            transitionType: type,
-          });
-
-        // If size transitions are disabled and the new content is smaller,
-        // hold the previous size to avoid cropping during the transition.
-        if (!hasSizeTransitions) {
-          const willShrinkWidth = constrainedWidth > newWidth;
-          const willShrinkHeight = constrainedHeight > newHeight;
-          sizeHoldActive = willShrinkWidth || willShrinkHeight;
-          if (sizeHoldActive) {
-            debug(
-              "size",
-              `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
-            );
-            applySizeConstraints(constrainedWidth, constrainedHeight);
+      size_transition: {
+        const getTargetDimensions = () => {
+          if (!isContentPhase) {
+            return [newWidth, newHeight];
           }
+          const shouldUseNewDimensions =
+            naturalContentWidth === 0 && naturalContentHeight === 0;
+          const targetWidth = shouldUseNewDimensions
+            ? newWidth
+            : naturalContentWidth || newWidth;
+          const targetHeight = shouldUseNewDimensions
+            ? newHeight
+            : naturalContentHeight || newHeight;
+          return [targetWidth, targetHeight];
+        };
+
+        const [targetWidth, targetHeight] = getTargetDimensions();
+        sizePlan.targetWidth = targetWidth;
+        sizePlan.targetHeight = targetHeight;
+
+        if (
+          targetWidth === constrainedWidth &&
+          targetHeight === constrainedHeight
+        ) {
+          debug("size", "No size change required");
+          // We'll handle potential constraint release in final section (if not holding)
+          break size_transition;
         }
 
-        activeContentTransition = animateTransition(
-          transitionController,
-          firstChild,
-          setupContentTransition,
-          {
-            duration,
-            type,
-            animationProgress,
-            isPhaseTransition: false,
-            previousChild,
-            fromContentKeyState: previousContentKeyState,
-            toContentKeyState: currentContentKeyState,
-            onComplete: () => {
-              activeContentTransition = null;
-              activeContentTransitionType = null;
-              if (sizeHoldActive) {
-                // Release the hold after the content transition completes
-                releaseConstraints(
-                  "content transition completed - release size hold",
-                );
-                sizeHoldActive = false;
-              }
-            },
-            debug,
-          },
-        );
+        debug("size", "Size change needed:", {
+          width: `${constrainedWidth} → ${targetWidth}`,
+          height: `${constrainedHeight} → ${targetHeight}`,
+        });
 
-        if (activeContentTransition) {
-          activeContentTransition.play();
+        if (isContentPhase) {
+          // Content phases (loading/error) always use size constraints for consistent sizing
+          sizePlan.action = hasSizeTransitions ? "animate" : "applyConstraints";
+        } else {
+          // Actual content: update natural content dimensions for future content phases
+          updateNaturalContentSize(targetWidth, targetHeight);
+          sizePlan.action = hasSizeTransitions ? "animate" : "release";
         }
-        activeContentTransitionType = type;
-      } else if (!shouldDoContentTransition && !preserveOnlyContentTransition) {
-        // Clean up content overlay if no content transition needed and nothing to preserve
-        contentOverlay.innerHTML = "";
-        activeContentTransition = null;
-        activeContentTransitionType = null;
       }
 
-      // Handle phase transitions (cross-fade for content phase changes)
-      if (shouldDoPhaseTransition) {
-        const phaseTransitionType =
-          container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
-
-        const existingOldPhaseContents = phaseOverlay.querySelectorAll(
-          "[data-ui-transition-old]",
-        );
-        const phaseAnimationProgress = activePhaseTransition?.progress || 0;
-
-        if (phaseAnimationProgress > 0) {
-          debug(
-            "transition",
-            `Preserving phase transition progress: ${(phaseAnimationProgress * 100).toFixed(1)}%`,
-          );
-        }
-
-        const canContinueSmoothly =
-          activePhaseTransitionType === phaseTransitionType &&
-          activePhaseTransition;
-
-        if (canContinueSmoothly) {
-          debug("transition", "Continuing with same phase transition type");
-          activePhaseTransition.cancel();
-        } else if (
-          activePhaseTransition &&
-          activePhaseTransitionType !== phaseTransitionType
+      content_transition: {
+        // Handle content transitions (slide-left, cross-fade for content key changes)
+        if (
+          decisions.length === 1 &&
+          decisions[0] === "NO TRANSITION" &&
+          activeContentTransition === null &&
+          activePhaseTransition === null
         ) {
+          // Skip creating any new transitions entirely
+        } else if (
+          shouldDoContentTransitionIncludingPopulation &&
+          !preserveOnlyContentTransition
+        ) {
+          const existingOldContents = contentOverlay.querySelectorAll(
+            "[data-ui-transition-old]",
+          );
+          const animationProgress = activeContentTransition?.progress || 0;
+
+          if (animationProgress > 0) {
+            debug(
+              "transition",
+              `Preserving content transition progress: ${(animationProgress * 100).toFixed(1)}%`,
+            );
+          }
+
+          const newTransitionType =
+            container.getAttribute("data-content-transition") ||
+            CONTENT_TRANSITION;
+          const canContinueSmoothly =
+            activeContentTransitionType === newTransitionType &&
+            activeContentTransition;
+
+          if (canContinueSmoothly) {
+            debug(
+              "transition",
+              "Continuing with same content transition type (restarting due to actual change)",
+            );
+            activeContentTransition.cancel();
+          } else if (
+            activeContentTransition &&
+            activeContentTransitionType !== newTransitionType
+          ) {
+            debug(
+              "transition",
+              "Different content transition type, keeping both",
+              `${activeContentTransitionType} → ${newTransitionType}`,
+            );
+          } else if (activeContentTransition) {
+            debug("transition", "Cancelling current content transition");
+            activeContentTransition.cancel();
+          }
+
+          const needsOldChildClone =
+            (contentChange || becomesEmpty) &&
+            previousChild &&
+            !existingOldContents[0];
+
+          const duration = parseInt(
+            container.getAttribute("data-content-transition-duration") ||
+              CONTENT_TRANSITION_DURATION,
+          );
+          const type =
+            container.getAttribute("data-content-transition") ||
+            CONTENT_TRANSITION;
+
+          const setupContentTransition = () =>
+            setupTransition({
+              isPhaseTransition: false,
+              overlay: contentOverlay,
+              existingOldContents,
+              needsOldChildClone,
+              previousChild,
+              firstChild,
+              attributeToRemove: ["data-content-key"],
+              transitionType: type,
+            });
+
+          // If size transitions are disabled and the new content is smaller,
+          // hold the previous size to avoid cropping during the transition.
+          if (!hasSizeTransitions) {
+            const willShrinkWidth = constrainedWidth > newWidth;
+            const willShrinkHeight = constrainedHeight > newHeight;
+            sizeHoldActive = willShrinkWidth || willShrinkHeight;
+            if (sizeHoldActive) {
+              debug(
+                "size",
+                `Holding previous size during content transition: ${constrainedWidth}x${constrainedHeight}`,
+              );
+              applySizeConstraints(constrainedWidth, constrainedHeight);
+            }
+          }
+
+          activeContentTransition = animateTransition(
+            transitionController,
+            firstChild,
+            setupContentTransition,
+            {
+              duration,
+              type,
+              animationProgress,
+              isPhaseTransition: false,
+              previousChild,
+              fromContentKeyState: previousContentKeyState,
+              toContentKeyState: currentContentKeyState,
+              onComplete: () => {
+                activeContentTransition = null;
+                activeContentTransitionType = null;
+                if (sizeHoldActive) {
+                  // Release the hold after the content transition completes
+                  releaseConstraints(
+                    "content transition completed - release size hold",
+                  );
+                  sizeHoldActive = false;
+                }
+              },
+              debug,
+            },
+          );
+
+          if (activeContentTransition) {
+            activeContentTransition.play();
+          }
+          activeContentTransitionType = type;
+        } else if (
+          !shouldDoContentTransition &&
+          !preserveOnlyContentTransition
+        ) {
+          // Clean up content overlay if no content transition needed and nothing to preserve
+          contentOverlay.innerHTML = "";
+          activeContentTransition = null;
+          activeContentTransitionType = null;
+        }
+
+        // Handle phase transitions (cross-fade for content phase changes)
+        if (shouldDoPhaseTransition) {
+          const phaseTransitionType =
+            container.getAttribute("data-phase-transition") || PHASE_TRANSITION;
+
+          const existingOldPhaseContents = phaseOverlay.querySelectorAll(
+            "[data-ui-transition-old]",
+          );
+          const phaseAnimationProgress = activePhaseTransition?.progress || 0;
+
+          if (phaseAnimationProgress > 0) {
+            debug(
+              "transition",
+              `Preserving phase transition progress: ${(phaseAnimationProgress * 100).toFixed(1)}%`,
+            );
+          }
+
+          const canContinueSmoothly =
+            activePhaseTransitionType === phaseTransitionType &&
+            activePhaseTransition;
+
+          if (canContinueSmoothly) {
+            debug("transition", "Continuing with same phase transition type");
+            activePhaseTransition.cancel();
+          } else if (
+            activePhaseTransition &&
+            activePhaseTransitionType !== phaseTransitionType
+          ) {
+            debug(
+              "transition",
+              "Different phase transition type, keeping both",
+              `${activePhaseTransitionType} → ${phaseTransitionType}`,
+            );
+          } else if (activePhaseTransition) {
+            debug("transition", "Cancelling current phase transition");
+            activePhaseTransition.cancel();
+          }
+
+          const needsOldPhaseClone =
+            (becomesEmpty || becomesPopulated || phaseChange) &&
+            previousChild &&
+            !existingOldPhaseContents[0];
+
+          const phaseDuration = parseInt(
+            container.getAttribute("data-phase-transition-duration") ||
+              PHASE_TRANSITION_DURATION,
+          );
+
+          const setupPhaseTransition = () =>
+            setupTransition({
+              isPhaseTransition: true,
+              overlay: phaseOverlay,
+              existingOldContents: existingOldPhaseContents,
+              needsOldChildClone: needsOldPhaseClone,
+              previousChild,
+              firstChild,
+              attributeToRemove: ["data-content-key", "data-content-phase"],
+              transitionType: phaseTransitionType,
+            });
+
+          const fromPhase = !hadChild
+            ? "null"
+            : wasContentPhase
+              ? "content-phase"
+              : "content";
+          const toPhase = !hasChild
+            ? "null"
+            : isContentPhase
+              ? "content-phase"
+              : "content";
+
           debug(
             "transition",
-            "Different phase transition type, keeping both",
-            `${activePhaseTransitionType} → ${phaseTransitionType}`,
+            `Starting phase transition: ${fromPhase} → ${toPhase}`,
           );
-        } else if (activePhaseTransition) {
-          debug("transition", "Cancelling current phase transition");
-          activePhaseTransition.cancel();
-        }
 
-        const needsOldPhaseClone =
-          (becomesEmpty || becomesPopulated || phaseChange) &&
-          previousChild &&
-          !existingOldPhaseContents[0];
-
-        const phaseDuration = parseInt(
-          container.getAttribute("data-phase-transition-duration") ||
-            PHASE_TRANSITION_DURATION,
-        );
-
-        const setupPhaseTransition = () =>
-          setupTransition({
-            isPhaseTransition: true,
-            overlay: phaseOverlay,
-            existingOldContents: existingOldPhaseContents,
-            needsOldChildClone: needsOldPhaseClone,
-            previousChild,
+          activePhaseTransition = animateTransition(
+            transitionController,
             firstChild,
-            attributeToRemove: ["data-content-key", "data-content-phase"],
-            transitionType: phaseTransitionType,
-          });
-
-        const fromPhase = !hadChild
-          ? "null"
-          : wasContentPhase
-            ? "content-phase"
-            : "content";
-        const toPhase = !hasChild
-          ? "null"
-          : isContentPhase
-            ? "content-phase"
-            : "content";
-
-        debug(
-          "transition",
-          `Starting phase transition: ${fromPhase} → ${toPhase}`,
-        );
-
-        activePhaseTransition = animateTransition(
-          transitionController,
-          firstChild,
-          setupPhaseTransition,
-          {
-            duration: phaseDuration,
-            type: phaseTransitionType,
-            animationProgress: phaseAnimationProgress,
-            isPhaseTransition: true,
-            previousChild,
-            fromContentKeyState: previousContentKeyState,
-            toContentKeyState: currentContentKeyState,
-            onComplete: () => {
-              activePhaseTransition = null;
-              activePhaseTransitionType = null;
-              debug("transition", "Phase transition complete");
+            setupPhaseTransition,
+            {
+              duration: phaseDuration,
+              type: phaseTransitionType,
+              animationProgress: phaseAnimationProgress,
+              isPhaseTransition: true,
+              previousChild,
+              fromContentKeyState: previousContentKeyState,
+              toContentKeyState: currentContentKeyState,
+              onComplete: () => {
+                activePhaseTransition = null;
+                activePhaseTransitionType = null;
+                debug("transition", "Phase transition complete");
+              },
+              debug,
             },
-            debug,
-          },
-        );
+          );
 
-        if (activePhaseTransition) {
-          activePhaseTransition.play();
+          if (activePhaseTransition) {
+            activePhaseTransition.play();
+          }
+          activePhaseTransitionType = phaseTransitionType;
         }
-        activePhaseTransitionType = phaseTransitionType;
       }
 
       // Store current child for next transition
@@ -1043,62 +1070,24 @@ export const initUITransition = (container) => {
         hasPopulatedOnce = true;
       }
 
-      const getTargetDimensions = () => {
-        if (!isContentPhase) {
-          return [newWidth, newHeight];
-        }
-        const shouldUseNewDimensions =
-          naturalContentWidth === 0 && naturalContentHeight === 0;
-        const targetWidth = shouldUseNewDimensions
-          ? newWidth
-          : naturalContentWidth || newWidth;
-        const targetHeight = shouldUseNewDimensions
-          ? newHeight
-          : naturalContentHeight || newHeight;
-        return [targetWidth, targetHeight];
-      };
-
-      const [targetWidth, targetHeight] = getTargetDimensions();
-
-      // Skip animation if no size changes needed
+      // Execute planned size action, unless holding size during a content transition
       if (
-        targetWidth === constrainedWidth &&
-        targetHeight === constrainedHeight
+        sizePlan.targetWidth === constrainedWidth &&
+        sizePlan.targetHeight === constrainedHeight
       ) {
-        debug("size", "No size change required");
-        // Do not release constraints if we are deliberately holding size during a content transition
+        // no size changes planned; possibly release constraints
         if (!isContentPhase && !sizeHoldActive) {
           releaseConstraints("no size change needed");
-        }
-        if (localDebug.transition) {
-          console.groupEnd();
         }
         return;
       }
 
-      debug("size", "Size change needed:", {
-        width: `${constrainedWidth} → ${targetWidth}`,
-        height: `${constrainedHeight} → ${targetHeight}`,
-      });
-
-      if (isContentPhase) {
-        // Content phases (loading/error) always use size constraints for consistent sizing
-        if (hasSizeTransitions) {
-          // Animate to target size with constraints
-          updateToSize(targetWidth, targetHeight);
-        } else if (!sizeHoldActive) {
-          // Apply constraints instantly (no animation) if not holding previous size
-          applySizeConstraints(targetWidth, targetHeight);
-        }
-      } else {
-        // Actual content: update natural content dimensions for future content phases
-        updateNaturalContentSize(targetWidth, targetHeight);
-
-        if (hasSizeTransitions) {
-          // With size transitions: animate to target size, constraints released after animation
-          updateToSize(targetWidth, targetHeight);
-        } else if (!sizeHoldActive) {
-          // Without size transitions: release constraints immediately for natural sizing
+      if (!sizeHoldActive) {
+        if (sizePlan.action === "animate") {
+          updateToSize(sizePlan.targetWidth, sizePlan.targetHeight);
+        } else if (sizePlan.action === "applyConstraints") {
+          applySizeConstraints(sizePlan.targetWidth, sizePlan.targetHeight);
+        } else if (sizePlan.action === "release") {
           releaseConstraints("actual content - no size transitions needed");
         }
       }
@@ -1109,6 +1098,9 @@ export const initUITransition = (container) => {
       }
     }
   };
+
+  // Run once at init to process current slot content (warnings, sizing, transitions)
+  handleChildSlotMutation("init");
 
   // Watch for child changes and attribute changes on children
   const mutationObserver = new MutationObserver((mutations) => {
