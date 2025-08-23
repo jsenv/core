@@ -492,7 +492,7 @@ export const initUITransition = (container) => {
   // Handle initial child if present
   const initialChild = slot.children[0];
   if (initialChild) {
-    debug("size", "Found initial child");
+    debug("transition", "Found initial child");
     hasPopulatedOnce = true; // already populated at init, so next mutation is not initial population
     lastContentKey = initialChild.getAttribute("data-content-key");
     isContentPhase = initialChild.hasAttribute("data-content-phase");
@@ -712,6 +712,13 @@ export const initUITransition = (container) => {
       const becomesPopulated = !hadChild && hasChild;
       const isInitialPopulationWithoutTransition =
         becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
+
+      debug("transition", {
+        becomesEmpty,
+        becomesPopulated,
+        hasPopulatedOnce,
+        isInitialPopulationWithoutTransition,
+      });
 
       // Content phase change: any transition between content/content-phase/null except when slot key changes
       // This includes: null→loading, loading→content, content→loading, loading→null, etc.
