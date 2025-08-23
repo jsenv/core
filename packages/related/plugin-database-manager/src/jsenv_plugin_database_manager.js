@@ -198,6 +198,29 @@ export const jsenvPluginDatabaseManager = ({
             data: rows,
           };
         },
+        "POST /:tablename/rows": async (request) => {
+          const { tablename } = request.params;
+          const rowData = await request.json();
+          const columnNames = Object.keys(rowData);
+          if (columnNames.length === 0) {
+            return Response.json(
+              { message: "no column provided to insert a row" },
+              { status: 400 },
+            );
+          }
+          const insertResult = await sql`
+            INSERT INTO
+              ${sql(tablename)} (${sql(columnNames)})
+            VALUES
+              (${sql(columnNames.map((colName) => rowData[colName]))})
+            RETURNING
+              *
+          `;
+          const [insertedRow] = insertResult;
+          return {
+            data: insertedRow,
+          };
+        },
       }),
       ...createRESTRoutes(`${pathname}api/roles`, {
         "GET": async (request) => {
