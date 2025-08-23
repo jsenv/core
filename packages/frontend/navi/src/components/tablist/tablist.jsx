@@ -48,6 +48,16 @@ import.meta.css = /* css */ `
     margin-top: 5px;
   }
 
+  /* Hidden bold clone to reserve space for bold width without affecting height */
+  .navi_tab_content_bold_clone {
+    font-weight: 600; /* force bold to compute max width */
+    visibility: hidden; /* not visible */
+    display: block; /* in-flow so it contributes to width */
+    height: 0; /* zero height so it doesn't change layout height */
+    overflow: hidden; /* avoid any accidental height */
+    pointer-events: none; /* inert */
+  }
+
   .navi_tab[aria-selected="true"] .active_marker {
     background: rgb(205, 52, 37);
   }
@@ -78,6 +88,9 @@ export const Tab = ({ children, selected, ...props }) => {
       {...props}
     >
       <div className="navi_tab_content">{children}</div>
+      <div className="navi_tab_content_bold_clone" aria-hidden="true">
+        {children}
+      </div>
       <span className="active_marker"></span>
     </div>
   );
