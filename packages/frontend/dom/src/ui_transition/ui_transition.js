@@ -85,7 +85,7 @@ import.meta.css = /* css */ `
 
 const DEBUG = {
   size: false,
-  transition: true,
+  transition: false,
   transition_updates: false,
 };
 
@@ -185,6 +185,10 @@ export const initUITransition = (container) => {
 
   // Handle size updates based on content state
   let hasSizeTransitions = container.hasAttribute("data-size-transition");
+  const initialTransitionEnabled = container.hasAttribute(
+    "data-initial-transition",
+  );
+  let hasPopulatedOnce = false; // track if we've already populated once (null → something)
 
   // Child state
   let lastContentKey = null;
@@ -489,6 +493,7 @@ export const initUITransition = (container) => {
   const initialChild = slot.children[0];
   if (initialChild) {
     debug("size", "Found initial child");
+    hasPopulatedOnce = true; // already populated at init, so next mutation is not initial population
     lastContentKey = initialChild.getAttribute("data-content-key");
     isContentPhase = initialChild.hasAttribute("data-content-phase");
 
@@ -525,7 +530,7 @@ export const initUITransition = (container) => {
       isUpdating = true;
       const firstChild = slot.children[0] || null;
       const childUIName = firstChild?.getAttribute("data-ui-name");
-      if (DEBUG.transition) {
+      if (localDebug.transition) {
         const updateLabel =
           childUIName ||
           (firstChild ? "data-ui-name not specified" : "cleared/empty");
@@ -648,7 +653,7 @@ export const initUITransition = (container) => {
         debug("transition", `Decision: EARLY_RETURN (${earlyAction})`);
         // Register new conceptual key & return early (skip rest of transition logic)
         lastContentKey = currentContentKey;
-        if (DEBUG.transition) {
+        if (localDebug.transition) {
           console.groupEnd();
         }
         return;
@@ -705,6 +710,8 @@ export const initUITransition = (container) => {
 
       const becomesEmpty = hadChild && !hasChild;
       const becomesPopulated = !hadChild && hasChild;
+      const isInitialPopulationWithoutTransition =
+        becomesPopulated && !hasPopulatedOnce && !initialTransitionEnabled;
 
       // Content phase change: any transition between content/content-phase/null except when slot key changes
       // This includes: null→loading, loading→content, content→loading, loading→null, etc.
@@ -763,6 +770,31 @@ export const initUITransition = (container) => {
           `Early return: no transition or continuation required`,
         );
         // Still ensure size logic executes below (so do not return before size alignment)
+      }
+
+      // Handle initial population skip (first null → something): no content or size animations
+      if (isInitialPopulationWithoutTransition) {
+        debug(
+          "transition",
+          "Initial population detected: skipping transitions (opt-in with data-initial-transition)",
+        );
+
+        // Apply sizes instantly, no animation
+        if (isContentPhase) {
+          applySizeConstraints(newWidth, newHeight);
+        } else {
+          updateNaturalContentSize(newWidth, newHeight);
+          releaseConstraints("initial population - skip transitions");
+        }
+
+        // Register state and mark initial population done
+        previousChild = firstChild ? firstChild.cloneNode(true) : null;
+        lastContentKey = currentContentKey;
+        hasPopulatedOnce = true;
+        if (localDebug.transition) {
+          console.groupEnd();
+        }
+        return;
       }
 
       // Handle content transitions (slide-left, cross-fade for content key changes)
@@ -1000,6 +1032,9 @@ export const initUITransition = (container) => {
       // Store current child for next transition
       previousChild = firstChild ? firstChild.cloneNode(true) : null;
       lastContentKey = currentContentKey;
+      if (becomesPopulated) {
+        hasPopulatedOnce = true;
+      }
 
       const getTargetDimensions = () => {
         if (!isContentPhase) {
@@ -1028,7 +1063,7 @@ export const initUITransition = (container) => {
         if (!isContentPhase && !sizeHoldActive) {
           releaseConstraints("no size change needed");
         }
-        if (DEBUG.transition) {
+        if (localDebug.transition) {
           console.groupEnd();
         }
         return;
@@ -1062,7 +1097,7 @@ export const initUITransition = (container) => {
       }
     } finally {
       isUpdating = false;
-      if (DEBUG.transition) {
+      if (localDebug.transition) {
         console.groupEnd();
       }
     }
