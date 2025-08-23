@@ -11,6 +11,8 @@ import.meta.css = /* css */ `
     display: flex;
     gap: 0.5rem;
     list-style: none;
+    margin: 0;
+    padding: 0;
   }
 
   .navi_tablist > ul > li {
@@ -18,20 +20,40 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
-  .navi_tab .active_marker {
-    display: none;
+  .navi_tab {
+    white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+  }
 
-    background: rgb(205, 52, 37);
+  .navi_tab_content {
+    transition: background 0.12s ease-out;
+    border-radius: 6px;
+    text-decoration: none;
+    line-height: 30px;
+  }
+
+  .navi_tab:hover .navi_tab_content {
+    background: #dae0e7;
+    color: #010409;
+  }
+
+  .navi_tab .active_marker {
+    display: flex;
+    background: transparent;
     border-radius: 0.1px;
-    bottom: 2px;
-    height: 2px;
-    position: absolute;
     width: 100%;
     z-index: 1;
+    height: 2px;
+    margin-top: 5px;
   }
 
   .navi_tab[aria-selected="true"] .active_marker {
-    display: block;
+    background: rgb(205, 52, 37);
+  }
+
+  .navi_tab[aria-selected="true"] .navi_tab_content {
+    font-weight: 600;
   }
 `;
 
@@ -55,7 +77,7 @@ export const Tab = ({ children, selected, ...props }) => {
       aria-selected={selected ? "true" : "false"}
       {...props}
     >
-      {children}
+      <div className="navi_tab_content">{children}</div>
       <span className="active_marker"></span>
     </div>
   );
