@@ -15,7 +15,9 @@ import.meta.css = /* css */ `
 `;
 
 export const TableData = ({ table, rows }) => {
-  const [, setRowSelection] = useState({});
+  const tableName = table.tablename;
+  const [rowAdded, setRowAdded] = useState(null);
+  const [rowSelection, setRowSelection] = useState({});
 
   const { schemaColumns } = table.meta;
   const selectColumn = {
@@ -24,21 +26,25 @@ export const TableData = ({ table, rows }) => {
       <Input
         type="checkbox"
         checked={table.getIsAllRowsSelected()}
-        indeterminate={table.getIsSomeRowsSelected()}
+        // indeterminate={table.getIsSomeRowsSelected()}
         onChange={table.getToggleAllRowsSelectedHandler()}
       />
     ),
-    cell: ({ row }) => (
-      <div className="px-1">
-        <Input
-          type="checkbox"
-          checked={row.getIsSelected()}
-          disabled={!row.getCanSelect()}
-          indeterminate={row.getIsSomeSelected()}
-          onChange={row.getToggleSelectedHandler()}
-        />
-      </div>
-    ),
+    cell: ({ row }) => {
+      const onChange = row.getToggleSelectedHandler();
+      const checked = row.getIsSelected();
+      return (
+        <div className="px-1">
+          <Input
+            type="checkbox"
+            checked={checked}
+            disabled={!row.getCanSelect()}
+            // indeterminate={row.getIsSomeSelected()}
+            onChange={onChange}
+          />
+        </div>
+      );
+    },
   };
 
   const columns = schemaColumns.map((column) => {
@@ -49,7 +55,10 @@ export const TableData = ({ table, rows }) => {
       header: () => <span>{columnName}</span>,
       cell: (info) => {
         const value = info.getValue();
-        const tableName = info.row.original.tablename;
+        const rowData = info.row.original;
+        if (rowData.isEditing) {
+          return "editing...";
+        }
         return (
           <DatabaseField
             tableName={tableName}
@@ -63,14 +72,25 @@ export const TableData = ({ table, rows }) => {
     };
   });
 
+  const data = [...(rowAdded ? [rowAdded] : []), ...rows];
+
   return (
     <div>
       <div className="table_data_actions">
-        <Button>Add row</Button>
+        <Button
+          action={() => {
+            setRowAdded({
+              isEditing: true,
+            });
+          }}
+        >
+          Add row
+        </Button>
       </div>
       <Table
         columns={[selectColumn, ...columns]}
-        data={rows}
+        data={data}
+        rowSelection={rowSelection}
         onRowSelectionChange={(value) => {
           setRowSelection(value);
         }}
