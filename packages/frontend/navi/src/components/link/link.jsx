@@ -66,6 +66,10 @@ import.meta.css = /* css */ `
   .navi_link[data-visited] {
     color: light-dark(#6a1b9a, #ab47bc);
   }
+
+  .navi_link[data-no-text-decoration] {
+    text-decoration: none;
+  }
 `;
 
 export const Link = forwardRef((props, ref) => {

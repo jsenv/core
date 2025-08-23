@@ -31,6 +31,8 @@ import.meta.css = /* css */ `
     border-radius: 6px;
     text-decoration: none;
     line-height: 30px;
+    display: flex;
+    padding: 0 0.5rem;
   }
 
   .navi_tab:hover .navi_tab_content {

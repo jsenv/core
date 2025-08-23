@@ -16,7 +16,7 @@ import.meta.css = /* css */ `
     top: 0;
 
     background-color: rgb(239, 242, 245);
-    box-shadow: rgb(69, 76, 84) 0px -1px 0px 0px inset;
+    border-bottom: 1px solid rgb(69, 76, 84);
   }
 
   .page_head h1 {
