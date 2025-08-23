@@ -184,6 +184,20 @@ export const jsenvPluginDatabaseManager = ({
           await alterTableQuery(sql, tablename, colname, value);
           return { [colname]: value };
         },
+        "GET /:tablename/rows": async (request) => {
+          const { tablename } = request.params;
+          const rows = await sql`
+            SELECT
+              *
+            FROM
+              ${sql(tablename)}
+            LIMIT
+              1000
+          `;
+          return {
+            data: rows,
+          };
+        },
       }),
       ...createRESTRoutes(`${pathname}api/roles`, {
         "GET": async (request) => {

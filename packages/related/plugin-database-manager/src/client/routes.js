@@ -1,7 +1,7 @@
 import { createAction, defineRoutes, setBaseUrl } from "@jsenv/navi";
 import { DATABASE } from "./database/database_store.js";
 import { ROLE } from "./role/role_store.js";
-import { TABLE } from "./table/table_store.js";
+import { TABLE, TABLE_ROWS } from "./table/table_store.js";
 
 setBaseUrl(window.DB_MANAGER_CONFIG.pathname);
 
@@ -15,9 +15,7 @@ let [
   "/roles/:rolname": ROLE.GET,
   "/databases/:datname": DATABASE.GET,
   "/tables/:tablename/*?": TABLE.GET,
-  "/tables/:tablename": createAction(() => {}, {
-    name: "get table data",
-  }),
+  "/tables/:tablename": TABLE_ROWS.GET_MANY,
   "/tables/:tablename/settings": createAction(() => {}, {
     name: "get table settings",
   }),

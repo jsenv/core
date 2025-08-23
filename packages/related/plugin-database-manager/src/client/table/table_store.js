@@ -115,3 +115,19 @@ export const useTableArray = () => {
   const tableArray = useActionData(TABLE.GET_MANY);
   return tableArray;
 };
+
+export const TABLE_ROWS = resource("table_rows", {
+  GET_MANY: async ({ tablename }, { signal }) => {
+    const response = await fetch(
+      `${window.DB_MANAGER_CONFIG.apiUrl}/tables/${tablename}/rows`,
+      {
+        signal,
+      },
+    );
+    if (!response.ok) {
+      throw await errorFromResponse(response, "Failed to get table rows");
+    }
+    const { data } = await response.json();
+    return data;
+  },
+});
