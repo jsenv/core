@@ -3,11 +3,16 @@
  *
  */
 
-import { Input } from "@jsenv/navi";
+import { Button, Input } from "@jsenv/navi";
+import { useState } from "preact/hooks";
 import { DatabaseField } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 
-import { useState } from "preact/hooks";
+import.meta.css = /* css */ `
+  .table_data_actions {
+    margin-bottom: 15px;
+  }
+`;
 
 export const TableData = ({ table, rows }) => {
   const [, setRowSelection] = useState({});
@@ -59,13 +64,18 @@ export const TableData = ({ table, rows }) => {
   });
 
   return (
-    <Table
-      columns={[selectColumn, ...columns]}
-      data={rows}
-      onRowSelectionChange={(value) => {
-        setRowSelection(value);
-      }}
-      style={{ height: "fit-content" }}
-    />
+    <div>
+      <div className="table_data_actions">
+        <Button>Add row</Button>
+      </div>
+      <Table
+        columns={[selectColumn, ...columns]}
+        data={rows}
+        onRowSelectionChange={(value) => {
+          setRowSelection(value);
+        }}
+        style={{ height: "fit-content" }}
+      />
+    </div>
   );
 };
