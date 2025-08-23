@@ -33,10 +33,6 @@ export const TablePage = ({ table }) => {
   return (
     <Page data-ui-name="<TablePage />">
       <PageHead
-        style={{
-          backgroundColor: `rgb(239, 242, 245)`,
-          boxShadow: `rgb(69, 76, 84) 0px -1px 0px 0px inset`,
-        }}
         actions={[
           {
             component: <Link href={tableDataUrl}>Data</Link>,
