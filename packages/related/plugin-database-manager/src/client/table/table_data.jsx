@@ -25,5 +25,7 @@ export const TableData = ({ table, rows }) => {
     };
   });
 
-  return <Table columns={columns} data={rows} />;
+  return (
+    <Table columns={columns} data={rows} style={{ height: "fit-content" }} />
+  );
 };

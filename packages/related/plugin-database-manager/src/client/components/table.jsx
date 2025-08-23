@@ -8,7 +8,7 @@ import { useMemo } from "preact/hooks";
 import "./table.css" with { type: "css" };
 import { useTable } from "./use_table.js";
 
-export const Table = ({ columns, data }) => {
+export const Table = ({ columns, data, ...props }) => {
   const extraColumns = useMemo(
     () => getExtraColumns(columns, data),
     [columns, data],
@@ -24,7 +24,7 @@ export const Table = ({ columns, data }) => {
   });
 
   return (
-    <table>
+    <table {...props}>
       <thead>
         {getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
