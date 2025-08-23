@@ -194,30 +194,8 @@ export const jsenvPluginDatabaseManager = ({
             LIMIT
               1000
           `;
-          // also return columns metadata (name, type, nullable, defaults, etc.)
-          // find the table schema to avoid ambiguity when same name exists in multiple schemas
-          const [tableInfo] = await sql`
-            SELECT
-              schemaname
-            FROM
-              pg_tables
-            WHERE
-              tablename = ${tablename}
-            LIMIT
-              1
-          `;
-          const columns = await getTableColumns(
-            sql,
-            tablename,
-            tableInfo && tableInfo.schemaname
-              ? { schema: tableInfo.schemaname }
-              : undefined,
-          );
           return {
             data: rows,
-            meta: {
-              columns,
-            },
           };
         },
       }),

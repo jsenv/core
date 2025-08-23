@@ -4,6 +4,12 @@ import { useErrorBoundary, useLayoutEffect, useRef } from "preact/hooks";
 import { IconAndText } from "../components/icon_and_text.jsx";
 
 import.meta.css = /* css */ `
+  .page {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
   .page_head {
     display: flex;
     gap: 10px;

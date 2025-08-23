@@ -65,5 +65,7 @@ main {
   z-index: 0; /* Ensures main content is below the sidebar */
 }
 .main_body {
+  display: flex;
   min-width: 100%; /* Ensure padding applies when content overflows */
+  flex: 1;
 }

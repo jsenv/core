@@ -2,11 +2,8 @@ import { DatabaseField } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 
 export const TableData = ({ table, rows }) => {
-  const { columns } = table.meta;
-  columns.sort((a, b) => {
-    return a.ordinal_position - b.ordinal_position;
-  });
-  const tableColumns = columns.map((column) => {
+  const { schemaColumns } = table.meta;
+  const columns = schemaColumns.map((column) => {
     const columnName = column.column_name;
 
     return {
@@ -28,5 +25,5 @@ export const TableData = ({ table, rows }) => {
     };
   });
 
-  return <Table columns={tableColumns} data={rows} />;
+  return <Table columns={columns} data={rows} />;
 };

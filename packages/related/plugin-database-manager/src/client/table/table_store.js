@@ -24,12 +24,13 @@ export const TABLE = resource("table", {
     }
     const { data, meta } = await response.json();
     const table = data;
-    const { ownerRole, columns } = meta;
+    const { ownerRole, columns, schemaColumns } = meta;
     return {
       ...table,
       ownerRole,
       meta: {
         columns,
+        schemaColumns,
       },
     };
   },

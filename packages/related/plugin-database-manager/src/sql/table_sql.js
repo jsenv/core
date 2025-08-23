@@ -40,10 +40,31 @@ export const selectTable = async (sql, tablename) => {
   delete table.owner_rolname;
   delete table.owner_oid;
 
+  // also return columns metadata (name, type, nullable, defaults, etc.)
+  // find the table schema to avoid ambiguity when same name exists in multiple schemas
+  const [tableInfo] = await sql`
+    SELECT
+      schemaname
+    FROM
+      pg_tables
+    WHERE
+      tablename = ${tablename}
+    LIMIT
+      1
+  `;
+  const schemaColumns = await getTableColumns(
+    sql,
+    tablename,
+    tableInfo && tableInfo.schemaname
+      ? { schema: tableInfo.schemaname }
+      : undefined,
+  );
+
   return [
     table,
     {
       columns,
+      schemaColumns,
       ownerRole,
     },
   ];
