@@ -18,7 +18,7 @@
  *
  */
 
-import { Link, Route, UITransition } from "@jsenv/navi";
+import { Link, Route, Tab, TabList, UITransition } from "@jsenv/navi";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
 import { TableData } from "./table_data.jsx";
@@ -32,19 +32,18 @@ export const TablePage = ({ table }) => {
 
   return (
     <Page data-ui-name="<TablePage />">
-      <PageHead
-        actions={[
-          {
-            component: <Link href={tableDataUrl}>Data</Link>,
-          },
-          {
-            component: <Link href={tableSettingUrl}>Settings</Link>,
-          },
-        ]}
-      >
+      <PageHead spacingBottom={0}>
         <PageHead.Label icon={<TableSvg />} label={"Table:"}>
           {tablename}
         </PageHead.Label>
+        <TabList>
+          <Tab>
+            <Link href={tableDataUrl}>Data</Link>
+          </Tab>
+          <Tab>
+            <Link href={tableSettingUrl}>Settings</Link>
+          </Tab>
+        </TabList>
       </PageHead>
       <PageBody>
         <UITransition debugTransition>

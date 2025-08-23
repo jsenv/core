@@ -8,7 +8,7 @@ import.meta.css = /* css */ `
     display: flex;
     gap: 10px;
     justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
 
     padding: 20px;
     background: white;
@@ -22,6 +22,11 @@ import.meta.css = /* css */ `
   .page_head h1 {
     margin: 0;
     line-height: 1em;
+  }
+
+  .page_head_with_actions {
+    display: flex;
+    flex-direction: row;
   }
 
   .page_head > .actions {
@@ -70,7 +75,7 @@ const PageError = ({ error }) => {
   );
 };
 
-export const PageHead = ({ children, actions = [], ...rest }) => {
+export const PageHead = ({ children, spacingBottom, ...rest }) => {
   const headerRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -78,18 +83,22 @@ export const PageHead = ({ children, actions = [], ...rest }) => {
   }, []);
 
   return (
-    <header ref={headerRef} className="page_head" {...rest}>
+    <header
+      ref={headerRef}
+      className="page_head"
+      style={{
+        ...(spacingBottom === undefined
+          ? {}
+          : { paddingBottom: `${spacingBottom}px` }),
+      }}
+      {...rest}
+    >
       {children}
-      <div className="actions">
-        {actions.map((action) => {
-          return action.component;
-        })}
-      </div>
     </header>
   );
 };
-const PageHeadLabel = ({ icon, label, children }) => {
-  return (
+const PageHeadLabel = ({ icon, label, children, actions = [] }) => {
+  const title = (
     <h1 style="display: flex; align-items: stretch; gap: 0.2em;">
       <IconAndText
         icon={icon}
@@ -103,6 +112,21 @@ const PageHeadLabel = ({ icon, label, children }) => {
       </IconAndText>
       <span>{children}</span>
     </h1>
+  );
+
+  if (actions.length === 0) {
+    return title;
+  }
+
+  return (
+    <div className="page_head_with_actions">
+      {title}
+      <div className="actions">
+        {actions.map((action) => {
+          return action.component;
+        })}
+      </div>
+    </div>
   );
 };
 PageHead.Label = PageHeadLabel;
