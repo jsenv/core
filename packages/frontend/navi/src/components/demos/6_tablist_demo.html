@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TabList demo</title>
+    <style>
+      .tab_button {
+        background: none;
+        border: none;
+        color: inherit;
+        font: inherit;
+        padding: 8px 12px;
+        cursor: pointer;
+        border-radius: 6px;
+      }
+      .tab_button[aria-selected="true"] {
+        background: rgba(0, 0, 0, 0.06);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        TabList,
+        // eslint-disable-next-line no-unused-vars
+        Tab,
+      } from "../tablist/tablist.jsx";
+
+      const tabs = [
+        { id: "overview", label: "Overview" },
+        { id: "code", label: "Code" },
+        { id: "issues", label: "Issues" },
+        { id: "pulls", label: "Pull requests" },
+        { id: "actions", label: "Actions" },
+        { id: "projects", label: "Projects" },
+        { id: "wiki", label: "Wiki" },
+        { id: "security", label: "Security" },
+        { id: "insights", label: "Insights" },
+      ];
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const [selectedTabId, setSelectedTabId] = useState("overview");
+
+        return (
+          <div>
+            <p style="max-width: 800px; margin: 20px auto 0;">
+              Click the tabs to toggle the active one. The underline marker is
+              shown for the active tab.
+            </p>
+            <TabList aria-label="Demo tabs">
+              {tabs.map((tab) => (
+                <Tab key={tab.id} selected={selectedTabId === tab.id}>
+                  <button
+                    type="button"
+                    className="tab_button"
+                    onClick={() => setSelectedTabId(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                </Tab>
+              ))}
+            </TabList>
+            <div style="max-width: 800px; margin: 16px auto; padding: 12px; border: 1px dashed #ccc; border-radius: 8px;">
+              <strong>Selected tab:</strong>{" "}
+              {tabs.find((t) => t.id === selectedTabId).label}
+            </div>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
