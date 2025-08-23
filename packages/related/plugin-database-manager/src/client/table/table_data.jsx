@@ -1,8 +1,41 @@
+/**
+ * https://tanstack.com/table/latest/docs/framework/react/examples/basic?panel=code
+ *
+ */
+
+import { Input } from "@jsenv/navi";
 import { DatabaseField } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 
+import { useState } from "preact/hooks";
+
 export const TableData = ({ table, rows }) => {
+  const [, setRowSelection] = useState({});
+
   const { schemaColumns } = table.meta;
+  const selectColumn = {
+    id: "select",
+    header: ({ table }) => (
+      <Input
+        type="checkbox"
+        checked={table.getIsAllRowsSelected()}
+        indeterminate={table.getIsSomeRowsSelected()}
+        onChange={table.getToggleAllRowsSelectedHandler()}
+      />
+    ),
+    cell: ({ row }) => (
+      <div className="px-1">
+        <Input
+          type="checkbox"
+          checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
+          indeterminate={row.getIsSomeSelected()}
+          onChange={row.getToggleSelectedHandler()}
+        />
+      </div>
+    ),
+  };
+
   const columns = schemaColumns.map((column) => {
     const columnName = column.column_name;
 
@@ -26,6 +59,13 @@ export const TableData = ({ table, rows }) => {
   });
 
   return (
-    <Table columns={columns} data={rows} style={{ height: "fit-content" }} />
+    <Table
+      columns={[selectColumn, ...columns]}
+      data={rows}
+      onRowSelectionChange={(value) => {
+        setRowSelection(value);
+      }}
+      style={{ height: "fit-content" }}
+    />
   );
 };

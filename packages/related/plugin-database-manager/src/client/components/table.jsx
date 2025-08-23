@@ -8,7 +8,7 @@ import { useMemo } from "preact/hooks";
 import "./table.css" with { type: "css" };
 import { useTable } from "./use_table.js";
 
-export const Table = ({ columns, data, ...props }) => {
+export const Table = ({ columns, data, onRowSelectionChange, ...props }) => {
   const extraColumns = useMemo(
     () => getExtraColumns(columns, data),
     [columns, data],
@@ -21,6 +21,8 @@ export const Table = ({ columns, data, ...props }) => {
     columns: extraColumns ? [...columns, ...extraColumns] : columns,
     data,
     getCoreRowModel: getCoreRowModel(),
+    enableRowSelection: true,
+    onRowSelectionChange,
   });
 
   return (
