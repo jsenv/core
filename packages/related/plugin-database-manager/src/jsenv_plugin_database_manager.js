@@ -22,6 +22,7 @@ import { alterRoleQuery, selectRoleByName } from "./sql/role_sql.js";
 import {
   alterTableQuery,
   createTable,
+  insertRow,
   selectTable,
   selectTables,
 } from "./sql/table_sql.js";
@@ -201,22 +202,7 @@ export const jsenvPluginDatabaseManager = ({
         "POST /:tablename/rows": async (request) => {
           const { tablename } = request.params;
           const rowData = await request.json();
-          const columnNames = Object.keys(rowData);
-          if (columnNames.length === 0) {
-            return Response.json(
-              { message: "no column provided to insert a row" },
-              { status: 400 },
-            );
-          }
-          const insertResult = await sql`
-            INSERT INTO
-              ${sql(tablename)} (${sql(columnNames)})
-            VALUES
-              (${sql(columnNames.map((colName) => rowData[colName]))})
-            RETURNING
-              *
-          `;
-          const [insertedRow] = insertResult;
+          const insertedRow = await insertRow(sql, tablename, rowData);
           return {
             data: insertedRow,
           };
