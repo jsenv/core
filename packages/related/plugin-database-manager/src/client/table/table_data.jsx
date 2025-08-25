@@ -60,6 +60,7 @@ export const TableData = ({ table, rows }) => {
         if (rowData.isEditing) {
           return "editing...";
         }
+
         return <DatabaseField column={column} action={null} value={value} />;
       },
       footer: (info) => info.column.id,
