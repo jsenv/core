@@ -1,5 +1,5 @@
 import { initFlexDetailsSet } from "@jsenv/dom";
-import { useRunOnMount } from "@jsenv/navi";
+import { FontSizedSvg, useRunOnMount } from "@jsenv/navi";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 // import { DatabaseSvg } from "../database/database_icons.jsx";
 // import { useCurrentDatabase } from "../database/database_signals.js";
@@ -21,7 +21,6 @@ import {
   RoleWithOwnershipListDetails,
   roleWithOwnershipListDetailsController,
 } from "../role/role_with_ownership/role_with_ownership_list_details.jsx";
-import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 import {
   TablesDetails,
   tablesDetailsController,
