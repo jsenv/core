@@ -80,6 +80,8 @@ import.meta.css = /* css */ `
   .validation_message_content {
     align-self: center;
     word-break: break-word;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .validation_message_border svg {
