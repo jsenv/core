@@ -77,9 +77,6 @@ export const TableData = ({ table, rows }) => {
 
   return (
     <div>
-      <div className="table_data_actions">
-        <Button action={createRow}>Add row</Button>
-      </div>
       <Table
         columns={[selectColumn, ...columns]}
         data={data}
@@ -89,6 +86,10 @@ export const TableData = ({ table, rows }) => {
         }}
         style={{ height: "fit-content" }}
       />
+      {data.length === 0 ? <div>No data</div> : null}
+      <div className="table_data_actions">
+        <Button action={createRow}>Add row</Button>
+      </div>
     </div>
   );
 };

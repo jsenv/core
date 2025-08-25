@@ -12,113 +12,118 @@ import { getBorderSizes, getScrollableParentSet } from "@jsenv/dom";
 /**
  * Shows a validation message attached to the specified element
  * @param {HTMLElement} targetElement - Element the validation message should follow
- * @param {string} innerHtml - HTML content for the validation message
+ * @param {string} message - HTML content for the validation message
  * @param {Object} options - Configuration options
  * @param {boolean} options.scrollIntoView - Whether to scroll the target element into view
  * @returns {Function} - Function to hide and remove the validation message
  */
 
-import.meta.css = /*css*/ `
-.validation_message {
-  display: block;
-  overflow: visible;
-  height: auto;
-  position: fixed;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out;
-}
+import.meta.css = /* css */ `
+  .validation_message {
+    display: block;
+    overflow: visible;
+    height: auto;
+    position: fixed;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
 
-.validation_message_border {
-  position: absolute;
-  pointer-events: none;
-  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
-}
+  .validation_message_border {
+    position: absolute;
+    pointer-events: none;
+    filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
+  }
 
-.validation_message_body_wrapper {
-  border-style: solid;
-  border-color: transparent;
-  position: relative;
-}
+  .validation_message_body_wrapper {
+    border-style: solid;
+    border-color: transparent;
+    position: relative;
+  }
 
-.validation_message_body {
-  padding: 8px; 
-  position: relative;
-  max-width: 47vw;
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-}
+  .validation_message_body {
+    padding: 8px;
+    position: relative;
+    max-width: 47vw;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+  }
 
-.validation_message_icon {
-  display: flex;
-  align-self: flex-start;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
+  .validation_message_icon {
+    display: flex;
+    align-self: flex-start;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
 
-.validation_message_exclamation_svg {
-  width: 16px;
-  height: 12px;
-  color: white;
-}
+  .validation_message_exclamation_svg {
+    width: 16px;
+    height: 12px;
+    color: white;
+  }
 
-.validation_message[data-level="info"] .validation_message_icon { 
-  background-color: #2196f3;
-}
-.validation_message[data-level="warning"] .validation_message_icon { 
-  background-color: #ff9800;
-}
-.validation_message[data-level="error"] .validation_message_icon { 
-  background-color: #f44336;
-}
+  .validation_message[data-level="info"] .validation_message_icon {
+    background-color: #2196f3;
+  }
+  .validation_message[data-level="warning"] .validation_message_icon {
+    background-color: #ff9800;
+  }
+  .validation_message[data-level="error"] .validation_message_icon {
+    background-color: #f44336;
+  }
 
-.validation_message_content {
-  align-self: center;
-  word-break: break-word;  
-}
+  .validation_message_content {
+    align-self: center;
+    word-break: break-word;
+  }
 
-.validation_message_border svg {
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-}
+  .validation_message_border svg {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+  }
 
-.border_path {
-  fill: var(--border-color);
-}
+  .border_path {
+    fill: var(--border-color);
+  }
 
-.background_path {  
-  fill: var(--background-color);
-}
+  .background_path {
+    fill: var(--background-color);
+  }
 
-.validation_message_close_button_column {
-  display: flex;
-  height: 22px;
-}
-.validation_message_close_button {
-  border: none;
-  background: none;
-  padding: 0;
-  width: 1em;
-  height: 1em;
-  font-size: inherit;
-  cursor: pointer;
-  border-radius: 0.2em;
-  align-self: center;
-  color: currentColor;
-}
-.validation_message_close_button:hover {
-  background: rgba(0, 0, 0, 0.1);
-}
-.close_svg {
-  width: 100%;
-  height: 100%;
-}
+  .validation_message_close_button_column {
+    display: flex;
+    height: 22px;
+  }
+  .validation_message_close_button {
+    border: none;
+    background: none;
+    padding: 0;
+    width: 1em;
+    height: 1em;
+    font-size: inherit;
+    cursor: pointer;
+    border-radius: 0.2em;
+    align-self: center;
+    color: currentColor;
+  }
+  .validation_message_close_button:hover {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  .close_svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .error_stack {
+    overflow: auto;
+    max-height: 200px;
+  }
 `;
 
 // HTML template for the validation message
@@ -168,7 +173,7 @@ const validationMessageTemplate = /* html */ `
 
 export const openValidationMessage = (
   targetElement,
-  innerHtml,
+  message,
   {
     level = "warning",
     onClose,
@@ -181,7 +186,7 @@ export const openValidationMessage = (
 
   if (debug) {
     console.debug("open validation message on", targetElement, {
-      message: innerHtml,
+      message,
       level,
     });
   }
@@ -214,7 +219,7 @@ export const openValidationMessage = (
   };
 
   const update = (
-    newInnerHTML,
+    newMessage,
     {
       level = "warning",
       closeOnClickOutside = level === "info",
@@ -234,10 +239,17 @@ export const openValidationMessage = (
       "--background-color",
       backgroundColor,
     );
+
+    if (Error.isError(newMessage)) {
+      const error = newMessage;
+      newMessage = error.message;
+      newMessage += `<pre class="error_stack">${escapeHtml(error.stack)}</pre>`;
+    }
+
     jsenvValidationMessage.setAttribute("data-level", level);
-    jsenvValidationMessageContent.innerHTML = newInnerHTML;
+    jsenvValidationMessageContent.innerHTML = newMessage;
   };
-  update(innerHtml, { level });
+  update(message, { level });
 
   jsenvValidationMessage.style.opacity = "0";
 
@@ -883,4 +895,13 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
   }
 
   return { updatePosition, stop };
+};
+
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 };
