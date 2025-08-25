@@ -47,6 +47,11 @@ export const TableData = ({ table, rows }) => {
       );
     },
   };
+  const numberColumn = {
+    id: "number",
+    header: () => "#",
+    cell: ({ row }) => row.original.index,
+  };
 
   const columns = schemaColumns.map((column) => {
     const columnName = column.column_name;
@@ -68,7 +73,7 @@ export const TableData = ({ table, rows }) => {
   return (
     <div>
       <Table
-        columns={[selectColumn, ...columns]}
+        columns={[selectColumn, numberColumn, ...columns]}
         data={data}
         rowSelection={rowSelection}
         onRowSelectionChange={(value) => {

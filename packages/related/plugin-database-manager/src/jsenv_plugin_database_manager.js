@@ -191,7 +191,18 @@ export const jsenvPluginDatabaseManager = ({
             SELECT
               *
             FROM
-              ${sql(tablename)}
+              (
+                SELECT
+                  t.*,
+                  row_number() OVER (
+                    ORDER BY
+                      t.ctid
+                  ) AS "index"
+                FROM
+                  ${sql(tablename)} AS t
+              ) AS sub
+            ORDER BY
+              sub."index"
             LIMIT
               1000
           `;
