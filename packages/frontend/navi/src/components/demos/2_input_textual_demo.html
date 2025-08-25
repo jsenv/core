@@ -194,12 +194,8 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        // eslint-disable-next-line no-unused-vars
-        Input,
-        // eslint-disable-next-line no-unused-vars
-        Field,
-      } from "@jsenv/navi";
+      // eslint-disable-next-line no-unused-vars
+      import { Input } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -213,22 +209,12 @@
             <div className="demo-card">
               <h3 className="demo-title">💫 Loading State</h3>
               <div className="control-group">
-                <Field
-                  input={
-                    <Input loading={loading} placeholder="Enter some text..." />
-                  }
-                  label="Basic Input"
-                />
+                <h4>@jsenv/navi Input</h4>
+                <Input loading={loading} placeholder="Enter some text..." />
               </div>
-              <div className="native-comparison">
-                <div className="native-demo">
-                  <h4>@jsenv/navi Input</h4>
-                  <Input loading={loading} placeholder="Enter some text..." />
-                </div>
-                <div className="native-demo">
-                  <h4>Native HTML Input</h4>
-                  <input placeholder="Native comparison" />
-                </div>
+              <div className="control-group">
+                <h4>Native HTML Input</h4>
+                <input placeholder="Enter some text..." />
               </div>
               <div className="button-group">
                 <button onClick={() => setLoading(!loading)}>
@@ -240,32 +226,17 @@
             <div className="demo-card">
               <h3 className="demo-title">⚡ Action Input</h3>
               <div className="control-group">
-                <Field
-                  input={
-                    <Input
-                      name="action-input"
-                      action={() => {}}
-                      loading={loadingB}
-                      placeholder="Input with action..."
-                    />
-                  }
-                  label="Action Input"
+                <h4>@jsenv/navi Input with Action</h4>
+                <Input
+                  name="action-input"
+                  action={() => {}}
+                  loading={loadingB}
+                  placeholder="placeholder..."
                 />
               </div>
-              <div className="native-comparison">
-                <div className="native-demo">
-                  <h4>@jsenv/navi Input with Action</h4>
-                  <Input
-                    name="action-input"
-                    action={() => {}}
-                    loading={loadingB}
-                    placeholder="Input with action..."
-                  />
-                </div>
-                <div className="native-demo">
-                  <h4>Native HTML Input</h4>
-                  <input placeholder="Native has no built-in action" />
-                </div>
+              <div className="control-group">
+                <h4>Native HTML Input</h4>
+                <input placeholder="placeholder..." />
               </div>
               <div className="button-group">
                 <button onClick={() => setLoadingB(!loadingB)}>
@@ -277,31 +248,16 @@
             <div className="demo-card">
               <h3 className="demo-title">🔒 Read-only State</h3>
               <div className="control-group">
-                <Field
-                  input={
-                    <Input
-                      value="This is read-only content"
-                      readonly
-                      loading={loadingC}
-                    />
-                  }
-                  label="Read-only Input"
+                <h4>@jsenv/navi Read-only</h4>
+                <Input
+                  value="This is read-only content"
                   readonly
+                  loading={loadingC}
                 />
               </div>
-              <div className="native-comparison">
-                <div className="native-demo">
-                  <h4>@jsenv/navi Read-only</h4>
-                  <Input
-                    value="This is read-only content"
-                    readonly
-                    loading={loadingC}
-                  />
-                </div>
-                <div className="native-demo">
-                  <h4>Native Read-only</h4>
-                  <input readonly value="Native read-only" />
-                </div>
+              <div className="control-group">
+                <h4>Native Read-only</h4>
+                <input readOnly value="This is read-only content" />
               </div>
               <div className="button-group">
                 <button onClick={() => setLoadingC(!loadingC)}>
@@ -313,30 +269,16 @@
             <div className="demo-card">
               <h3 className="demo-title">🚫 Disabled State</h3>
               <div className="control-group">
-                <Field
-                  input={
-                    <Input
-                      disabled
-                      loading={loadingD}
-                      placeholder="Disabled input..."
-                    />
-                  }
-                  label="Disabled Input"
+                <h4>@jsenv/navi Disabled</h4>
+                <Input
+                  disabled
+                  loading={loadingD}
+                  placeholder="Disabled input..."
                 />
               </div>
-              <div className="native-comparison">
-                <div className="native-demo">
-                  <h4>@jsenv/navi Disabled</h4>
-                  <Input
-                    disabled
-                    loading={loadingD}
-                    placeholder="Disabled input..."
-                  />
-                </div>
-                <div className="native-demo">
-                  <h4>Native Disabled</h4>
-                  <input disabled placeholder="Native disabled" />
-                </div>
+              <div className="control-group">
+                <h4>Native Disabled</h4>
+                <input disabled placeholder="Disabled input..." />
               </div>
               <div className="button-group">
                 <button onClick={() => setLoadingD(!loadingD)}>
