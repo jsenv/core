@@ -139,6 +139,14 @@ export const DatabaseField = ({ column, label, value, ...rest }) => {
       />
     );
   }
+  if (column.data_type === "text") {
+    return (
+      <Field
+        label={label}
+        input={<Input type="text" name={columnName} {...rest} />}
+      />
+    );
+  }
   if (column.data_type === "oid") {
     return (
       <Field

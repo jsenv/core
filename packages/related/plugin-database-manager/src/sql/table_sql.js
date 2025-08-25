@@ -161,9 +161,7 @@ export const insertRow = async (sql, tablename, values) => {
       continue; // let DB handle it
     }
     if (hasDefault) {
-      // explicit DEFAULT for this column
-      finalColumns.push(col.column_name);
-      finalValues.push(sql`DEFAULT`);
+      // let DB apply the default by omitting the column
       continue;
     }
     if (isNullable) {
@@ -192,7 +190,7 @@ export const insertRow = async (sql, tablename, values) => {
     INSERT INTO
       ${sql(tablename)} (${sql(finalColumns)})
     VALUES
-      (${sql(finalValues)})
+      (${finalValues})
     RETURNING
       *
   `;
