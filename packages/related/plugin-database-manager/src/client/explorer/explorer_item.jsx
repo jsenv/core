@@ -1,6 +1,8 @@
 import {
   EditableText,
+  FontSizedSvg,
   Input,
+  Overflow,
   useEditableController,
   useSignalSync,
 } from "@jsenv/navi";
@@ -9,8 +11,6 @@ import {
   SINGLE_SPACE_CONSTRAINT,
 } from "@jsenv/validation";
 import { useSignal } from "@preact/signals";
-import { Overflow } from "../layout/overflow.jsx";
-import { FontSizedSvg } from "../svg/font_sized_svg.jsx";
 
 export const ExplorerItem = ({
   nameKey,

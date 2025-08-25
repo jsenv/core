@@ -18,8 +18,14 @@
  *
  */
 
-import { Route, Tab, TabList, UITransition, useRouteStatus } from "@jsenv/navi";
-import { LinkWithIcon } from "../components/link_with_icon.jsx";
+import {
+  LinkWithIcon,
+  Route,
+  Tab,
+  TabList,
+  UITransition,
+  useRouteStatus,
+} from "@jsenv/navi";
 import { Page, PageBody, PageHead } from "../layout/page.jsx";
 import { TABLE_DATA_ROUTE, TABLE_SETTINGS_ROUTE } from "../routes.js";
 import { DataSvg } from "../svg/data_svg.jsx";

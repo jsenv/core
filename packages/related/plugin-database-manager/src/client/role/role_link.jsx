@@ -1,5 +1,4 @@
-import { useRouteStatus } from "@jsenv/navi";
-import { LinkWithIcon } from "../components/link_with_icon.jsx";
+import { LinkWithIcon, useRouteStatus } from "@jsenv/navi";
 import { ROLE_ROUTE } from "../routes.js";
 import { pickRoleIcon } from "./role_icons.jsx";
 import { useCurrentRole } from "./role_store.js";

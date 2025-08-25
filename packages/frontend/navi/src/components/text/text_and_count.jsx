@@ -1,4 +1,4 @@
-import { Overflow } from "../layout/overflow.jsx";
+import { Overflow } from "./overflow.jsx";
 
 import.meta.css = /* css */ `
   .text_and_count {

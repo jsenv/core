@@ -49,6 +49,14 @@ export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
 
+// Text and icons
+export { LinkWithIcon } from "./src/components/link/link_with_icon.jsx";
+export { FontSizedSvg } from "./src/components/svg/font_sized_svg.jsx";
+export { IconAndText } from "./src/components/svg/icon_and_text.jsx";
+export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
+export { Overflow } from "./src/components/text/overflow.jsx";
+export { TextAndCount } from "./src/components/text/text_and_count.jsx";
+
 // for debugging testing purposes
 export { enableDebugActions } from "./src/actions.js";
 export { enableDebugOnDocumentLoading } from "./src/browser_integration/document_loading_signal.js";
