@@ -56,12 +56,8 @@ export const TableData = ({ table, rows }) => {
       header: () => <span>{columnName}</span>,
       cell: (info) => {
         const value = info.getValue();
-        const rowData = info.row.original;
-        if (rowData.isEditing) {
-          return "editing...";
-        }
-
-        return <DatabaseField column={column} action={null} value={value} />;
+        // const rowData = info.row.original;
+        return <DatabaseField column={column} value={value} />;
       },
       footer: (info) => info.column.id,
     };

@@ -10,7 +10,6 @@ export const Route = ({ route, children }) => {
   }
   const { active, url } = useRouteStatus(route);
   useContentKey(url, active);
-  console.log(url, active);
 
   return (
     <ActionRenderer disabled={!active} action={route.action}>
