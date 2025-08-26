@@ -3,6 +3,8 @@
 - https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/Focusgroup/explainer.md
  - https://open-ui.org/components/focusgroup.explainer/
  - https://github.com/openui/open-ui/issues/990
+
+ - https://github.com/MicrosoftEdge/MSEdgeExplainers/blob/main/Focusgroup/explainer.md#69-grid-focusgroups
  */
 
 import { performArrowNavigation } from "./arrow_navigation.js";
