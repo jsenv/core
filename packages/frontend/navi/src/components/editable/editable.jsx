@@ -107,7 +107,10 @@ export const Editable = forwardRef((props, ref) => {
             });
           }}
           onBlur={(e) => {
-            if (e.target.value === valueWhenEditStartRef.current) {
+            const value =
+              type === "number" ? e.target.valueAsNumber : e.target.value;
+            const valueWhenEditStart = valueWhenEditStartRef.current;
+            if (value === valueWhenEditStart) {
               onEditEnd({
                 cancelled: true,
                 event: e,

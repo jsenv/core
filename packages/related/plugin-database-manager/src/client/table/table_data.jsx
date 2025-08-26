@@ -34,6 +34,11 @@ import.meta.css = /* css */ `
     outline-offset: -2px;
   }
 
+  .database_table_cell_content[data-editing] {
+    outline: 2px solid #a8c7fa;
+    outline-offset: 0px;
+  }
+
   .database_table_cell_value {
     display: inline-flex;
     flex-grow: 1;
@@ -134,7 +139,11 @@ const DatabaseTableCell = ({ column, value }) => {
   const databaseInputProps = useDatabaseInputProps({ column });
 
   return (
-    <div className="database_table_cell_content" tabIndex="0">
+    <div
+      className="database_table_cell_content"
+      tabIndex="0"
+      data-editing={editable ? "" : undefined}
+    >
       <Editable
         editable={editable}
         onEditEnd={stopEditing}
