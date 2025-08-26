@@ -9,6 +9,7 @@ export { useActionData } from "./src/use_action_data.js";
 export { useActionStatus } from "./src/use_action_status.js";
 
 // state management (store)
+export { useStateArray } from "./src/components/use_state_array.js";
 export { resource } from "./src/store/resource_graph.js";
 export { valueInLocalStorage } from "./src/store/value_in_local_storage.js";
 

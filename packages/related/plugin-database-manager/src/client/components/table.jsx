@@ -49,7 +49,7 @@ export const Table = ({
                 <th
                   key={header.id}
                   style={{
-                    ...(header.column.columnDef.enableResizing !== false
+                    ...(header.column.columnDef.size
                       ? { width: `${header.getSize()}px` }
                       : {}),
                   }}

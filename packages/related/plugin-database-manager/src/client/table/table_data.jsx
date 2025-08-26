@@ -3,8 +3,12 @@
  *
  */
 
-import { Button, Editable, Input, useEditableController } from "@jsenv/navi";
-import { useState } from "preact/hooks";
+import {
+  Button,
+  Editable,
+  useEditableController,
+  useStateArray,
+} from "@jsenv/navi";
 import { useDatabaseInputProps } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
@@ -23,6 +27,11 @@ import.meta.css = /* css */ `
     flex-grow: 1;
     width: 100%;
     height: 100%;
+  }
+
+  .database_table_cell_content:focus {
+    outline: 2px solid #0078d4;
+    outline-offset: -2px;
   }
 
   .database_table_cell_value {
@@ -49,41 +58,27 @@ import.meta.css = /* css */ `
 export const TableData = ({ table, rows }) => {
   const tableName = table.tablename;
   const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
-  const [rowSelection, setRowSelection] = useState({});
+  const [rowSelection, addRowToSelection, removeRowFromSelection] =
+    useStateArray();
+  const rowIsSelected = (row) => rowSelection.includes(row.id);
 
   const { schemaColumns } = table.meta;
-  const selectColumn = {
-    id: "select",
+  const numberColumn = {
+    id: "number",
+    size: 50,
+    header: () => "",
     enableResizing: false,
-    header: ({ table }) => (
-      <Input
-        type="checkbox"
-        checked={table.getIsAllRowsSelected()}
-        // indeterminate={table.getIsSomeRowsSelected()}
-        onChange={table.getToggleAllRowsSelectedHandler()}
-      />
-    ),
     cell: ({ row }) => {
-      const onChange = row.getToggleSelectedHandler();
-      const checked = row.getIsSelected();
       return (
-        <div className="px-1">
-          <Input
-            type="checkbox"
-            checked={checked}
-            disabled={!row.getCanSelect()}
-            // indeterminate={row.getIsSomeSelected()}
-            onChange={onChange}
-          />
+        <div
+          style={{
+            textAlign: "center",
+          }}
+        >
+          {row.original.index}
         </div>
       );
     },
-  };
-  const numberColumn = {
-    id: "number",
-    header: () => "#",
-    enableResizing: false,
-    cell: ({ row }) => row.original.index,
   };
 
   const columns = schemaColumns.map((column) => {
@@ -95,8 +90,22 @@ export const TableData = ({ table, rows }) => {
       header: () => <span>{columnName}</span>,
       cell: (info) => {
         const value = info.getValue();
+        const row = info.row;
+        const selected = rowIsSelected(row);
         // const rowData = info.row.original;
-        return <DatabaseTableCell column={column} value={value} />;
+        return (
+          <DatabaseTableCell
+            onClick={() => {
+              if (selected) {
+                removeRowFromSelection(row.id);
+              } else {
+                addRowToSelection(row.id);
+              }
+            }}
+            column={column}
+            value={value}
+          />
+        );
       },
       footer: (info) => info.column.id,
     };
@@ -108,12 +117,8 @@ export const TableData = ({ table, rows }) => {
     <div>
       <Table
         className="database_table"
-        columns={[selectColumn, numberColumn, ...columns]}
+        columns={[numberColumn, ...columns]}
         data={data}
-        rowSelection={rowSelection}
-        onRowSelectionChange={(value) => {
-          setRowSelection(value);
-        }}
         style={{ height: "fit-content" }}
       />
       {data.length === 0 ? <div>No data</div> : null}
