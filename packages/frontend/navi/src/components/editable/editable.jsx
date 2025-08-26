@@ -35,6 +35,15 @@ export const Editable = forwardRef((props, ref) => {
     valueSignal,
     onEditEnd,
     constraints,
+    type,
+    required,
+    readOnly,
+    min,
+    max,
+    step,
+    minLength,
+    maxLength,
+    pattern,
   } = props;
   if (import.meta.DEV && !action) {
     console.warn(`Editable requires an action prop`);
@@ -64,16 +73,24 @@ export const Editable = forwardRef((props, ref) => {
       {editable && (
         <Input
           ref={innerRef}
+          type={type}
           name={name}
           value={value}
           valueSignal={valueSignal}
           autoFocus
           autoFocusVisible
           autoSelect
-          required
           cancelOnEscape
           cancelOnBlurInvalid
           constraints={constraints}
+          required={required}
+          readOnly={readOnly}
+          min={min}
+          max={max}
+          step={step}
+          minLength={minLength}
+          maxLength={maxLength}
+          pattern={pattern}
           onCancel={(e) => {
             if (valueSignal) {
               valueSignal.value = valueWhenEditStartRef.current;

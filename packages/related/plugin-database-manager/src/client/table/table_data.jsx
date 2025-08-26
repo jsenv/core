@@ -94,6 +94,8 @@ const DatabaseTableCell = ({ column, value }) => {
   const databaseInputProps = useDatabaseInputProps({ column });
 
   return (
-    <Editable editable={editable} inputProps={databaseInputProps}></Editable>
+    <Editable editable={editable} value={value} {...databaseInputProps}>
+      {/* here we put the focusable table cell */}
+    </Editable>
   );
 };

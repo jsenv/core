@@ -93,14 +93,13 @@ const RenameInputOrName = ({
 
   return (
     <Editable
-      action={renameAction}
       editable={editable}
       onEditEnd={stopEditing}
       value={itemName}
       valueSignal={nameSignal}
-      inputProps={{
-        constraints: [SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint],
-      }}
+      action={renameAction}
+      required
+      constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
     >
       <Overflow>{itemName}</Overflow>
     </Editable>
