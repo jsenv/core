@@ -45,7 +45,7 @@ export const Editable = forwardRef((props, ref) => {
     maxLength,
     pattern,
   } = props;
-  if (import.meta.DEV && !action) {
+  if (import.meta.dev && !action) {
     console.warn(`Editable requires an action prop`);
   }
 
