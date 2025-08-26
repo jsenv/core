@@ -30,10 +30,11 @@ export const Editable = forwardRef((props, ref) => {
     children,
     action,
     editable,
+    name,
     value,
     valueSignal,
     onEditEnd,
-    inputProps,
+    constraints,
   } = props;
   if (import.meta.DEV && !action) {
     console.warn(`Editable requires an action prop`);
@@ -63,6 +64,7 @@ export const Editable = forwardRef((props, ref) => {
       {editable && (
         <Input
           ref={innerRef}
+          name={name}
           value={value}
           valueSignal={valueSignal}
           autoFocus
@@ -71,7 +73,7 @@ export const Editable = forwardRef((props, ref) => {
           required
           cancelOnEscape
           cancelOnBlurInvalid
-          {...inputProps}
+          constraints={constraints}
           onCancel={(e) => {
             if (valueSignal) {
               valueSignal.value = valueWhenEditStartRef.current;

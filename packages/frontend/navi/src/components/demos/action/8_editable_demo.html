@@ -195,15 +195,13 @@
                     stopEditing();
                     setResult(``);
                   }}
+                  value={value}
                   name="test"
                   action={({ test }) => {
                     setValue(test);
                     return `Updated to: "${test}"`;
                   }}
-                  value={value}
-                  inputProps={{
-                    constraints: [SINGLE_SPACE_CONSTRAINT],
-                  }}
+                  constraints={[SINGLE_SPACE_CONSTRAINT]}
                 />
               </div>
             </div>
@@ -243,6 +241,8 @@
                     setIsLoading(false);
                     setResult();
                   }}
+                  value={value}
+                  name="test"
                   action={async ({ test }) => {
                     setIsLoading(true);
                     setResult("Saving...");
@@ -250,11 +250,7 @@
                     setValue(test);
                     return `Saved: "${test}"`;
                   }}
-                  value={value}
-                  inputProps={{
-                    name: "test",
-                    constraints: [SINGLE_SPACE_CONSTRAINT],
-                  }}
+                  constraints={[SINGLE_SPACE_CONSTRAINT]}
                 />
               </div>
             </div>
@@ -299,16 +295,14 @@
                     stopEditing();
                     setResult("");
                   }}
+                  value={value}
                   name="test"
                   action={async ({ test }) => {
                     setResult("Processing...");
                     await new Promise((resolve) => setTimeout(resolve, 500));
                     throw new Error(`Cannot save "${test}" - simulated error`);
                   }}
-                  value={value}
-                  inputProps={{
-                    constraints: [SINGLE_SPACE_CONSTRAINT],
-                  }}
+                  constraints={[SINGLE_SPACE_CONSTRAINT]}
                 />
               </div>
             </div>
@@ -346,12 +340,12 @@
                     stopEditing();
                     setResult("");
                   }}
+                  value={value}
                   name="test"
                   action={({ test }) => {
                     setValue(test);
                     return `Updated styled text: "${test}"`;
                   }}
-                  value={value}
                   constraints={[SINGLE_SPACE_CONSTRAINT]}
                 >
                   <strong style={{ color: "#e74c3c", fontSize: "18px" }}>
@@ -396,19 +390,17 @@
               <label>Signal-Controlled Content:</label>
               <div className="editable-container">
                 <Editable
-                  valueSignal={valueSignal}
                   editable={editable}
                   onEditEnd={() => {
                     stopEditing();
                     setResult("");
                   }}
+                  valueSignal={valueSignal}
+                  name="coucou"
+                  action={boundAction}
                   onActionStart={() => {
                     setResult("Saving via signal...");
                   }}
-                  name="coucou"
-                  action={boundAction}
-                  cancelOnEscape
-                  cancelOnBlurInvalid
                   constraints={[SINGLE_SPACE_CONSTRAINT]}
                 >
                   <span
