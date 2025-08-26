@@ -20,7 +20,7 @@ import { useRef } from "preact/hooks";
  *   const nameSignal = useSignalSync(file.name);
  *
  *   return (
- *     <EditableText
+ *     <Editable
  *       valueSignal={nameSignal}  // User can edit this
  *       action={renameFileAction} // Saves changes
  *     />

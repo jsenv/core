@@ -31,9 +31,9 @@ export { ActionRenderer } from "./src/components/action_renderer.jsx";
 export { Details } from "./src/components/details/details.jsx";
 export { SummaryMarker } from "./src/components/details/summary_marker.jsx";
 export {
-  EditableText,
+  Editable,
   useEditableController,
-} from "./src/components/editable_text/editable_text.jsx";
+} from "./src/components/editable/editable.jsx";
 export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
 export { Form } from "./src/components/form.jsx";
 export { Button } from "./src/components/input/button.jsx";

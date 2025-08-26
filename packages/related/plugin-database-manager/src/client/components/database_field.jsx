@@ -95,52 +95,74 @@ const DatabaseFieldWrapper = ({ item, column, usePutAction }) => {
   );
 };
 
-export const DatabaseInput = ({ column, ...rest }) => {
+export const useDatabaseInputProps = ({ column, valueSignal }) => {
   const columnName = column.column_name;
-  const { valueSignal } = rest;
-
   if (column.data_type === "boolean") {
-    return (
-      <Input
-        type="checkbox"
-        name={columnName}
-        checkedSignal={valueSignal}
-        {...rest}
-      />
-    );
+    return {
+      type: "checkbox",
+      name: columnName,
+      checkedSignal: valueSignal,
+    };
   }
   if (column.data_type === "timestamp with time zone") {
-    return <Input type="datetime-local" name={columnName} {...rest} />;
+    return {
+      type: "datetime-local",
+      name: columnName,
+    };
   }
   if (column.data_type === "integer") {
-    return <Input type="number" min="0" step="1" name={columnName} {...rest} />;
+    return {
+      type: "number",
+      name: columnName,
+      min: 0,
+      step: 1,
+    };
   }
   if (column.data_type === "name") {
-    return <Input type="text" name={columnName} required {...rest} />;
+    return {
+      type: "text",
+      name: columnName,
+      required: true,
+    };
   }
   if (column.data_type === "text") {
-    return <Input type="text" name={columnName} {...rest} />;
+    return {
+      type: "text",
+      name: columnName,
+    };
   }
   if (column.data_type === "oid") {
-    return <span>{rest.value}</span>;
+    return {};
   }
   if (column.column_name === "rolpassword") {
-    return <Input type="text" name={columnName} {...rest} />;
+    return {
+      type: "text",
+      name: columnName,
+    };
   }
   if (column.column_name === "rolconfig") {
     // rolconfig something custom like client_min_messages
     // see https://www.postgresql.org/docs/14/config-setting.html#CONFIG-SETTING-NAMES-VALUES
-    return <span>{String(rest.value)}</span>;
+    return {};
   }
   if (column.data_type === "xid") {
-    return <Input type="text" readOnly name={columnName} {...rest} />;
+    return {
+      type: "text",
+      readOnly: true,
+      name: columnName,
+    };
   }
   if (column.column_name === "datacl") {
     // datacl is a custom type
     // see https://www.postgresql.org/docs/14/sql-grant.html
-    return <span>{String(rest.value)}</span>;
+    return {};
   }
-  return String(rest.value);
+  return {};
+};
+
+export const DatabaseInput = ({ column, valueSignal, ...rest }) => {
+  const inputProps = useDatabaseInputProps({ column, valueSignal });
+  return <Input {...inputProps} {...rest} />;
 };
 
 export const DatabaseField = ({ column, label, ...rest }) => {

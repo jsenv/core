@@ -1,5 +1,5 @@
 import {
-  EditableText,
+  Editable,
   FontSizedSvg,
   Input,
   Overflow,
@@ -92,16 +92,18 @@ const RenameInputOrName = ({
   );
 
   return (
-    <EditableText
+    <Editable
       action={renameAction}
       editable={editable}
       onEditEnd={stopEditing}
       value={itemName}
       valueSignal={nameSignal}
-      constraints={[SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint]}
+      inputProps={{
+        constraints: [SINGLE_SPACE_CONSTRAINT, uniqueNameConstraint],
+      }}
     >
       <Overflow>{itemName}</Overflow>
-    </EditableText>
+    </Editable>
   );
 };
 

@@ -3,9 +3,9 @@
  *
  */
 
-import { Button, Input } from "@jsenv/navi";
+import { Button, Editable, Input, useEditableController } from "@jsenv/navi";
 import { useState } from "preact/hooks";
-import { DatabaseInput } from "../components/database_field.jsx";
+import { useDatabaseInputProps } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
 
@@ -62,7 +62,7 @@ export const TableData = ({ table, rows }) => {
       cell: (info) => {
         const value = info.getValue();
         // const rowData = info.row.original;
-        return <DatabaseInput column={column} value={value} />;
+        return <DatabaseTableCell column={column} value={value} />;
       },
       footer: (info) => info.column.id,
     };
@@ -86,5 +86,14 @@ export const TableData = ({ table, rows }) => {
         <Button action={createRow}>Add row</Button>
       </div>
     </div>
+  );
+};
+
+const DatabaseTableCell = ({ column, value }) => {
+  const { editable, startEditing, stopEditing } = useEditableController();
+  const databaseInputProps = useDatabaseInputProps({ column });
+
+  return (
+    <Editable editable={editable} inputProps={databaseInputProps}></Editable>
   );
 };
