@@ -5,7 +5,7 @@
 
 import { Button, Input } from "@jsenv/navi";
 import { useState } from "preact/hooks";
-import { DatabaseField } from "../components/database_field.jsx";
+import { DatabaseInput } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
 
@@ -62,7 +62,7 @@ export const TableData = ({ table, rows }) => {
       cell: (info) => {
         const value = info.getValue();
         // const rowData = info.row.original;
-        return <DatabaseField column={column} value={value} />;
+        return <DatabaseInput column={column} value={value} />;
       },
       footer: (info) => info.column.id,
     };

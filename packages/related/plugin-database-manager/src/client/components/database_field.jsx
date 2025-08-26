@@ -94,107 +94,68 @@ const DatabaseFieldWrapper = ({ item, column, usePutAction }) => {
     />
   );
 };
-export const DatabaseField = ({ column, label, ...rest }) => {
+
+export const DatabaseInput = ({ column, ...rest }) => {
   const columnName = column.column_name;
   const { valueSignal } = rest;
 
   if (column.data_type === "boolean") {
     return (
-      <Field
-        label={label}
-        input={
-          <Input
-            type="checkbox"
-            name={columnName}
-            checkedSignal={valueSignal}
-            {...rest}
-          />
-        }
+      <Input
+        type="checkbox"
+        name={columnName}
+        checkedSignal={valueSignal}
+        {...rest}
       />
     );
   }
   if (column.data_type === "timestamp with time zone") {
-    return (
-      <Field
-        label={label}
-        input={<Input type="datetime-local" name={columnName} {...rest} />}
-      />
-    );
+    return <Input type="datetime-local" name={columnName} {...rest} />;
   }
   if (column.data_type === "integer") {
-    return (
-      <Field
-        label={label}
-        input={
-          <Input type="number" min="0" step="1" name={columnName} {...rest} />
-        }
-      />
-    );
+    return <Input type="number" min="0" step="1" name={columnName} {...rest} />;
   }
   if (column.data_type === "name") {
-    return (
-      <Field
-        label={label}
-        input={<Input type="text" name={columnName} required {...rest} />}
-      />
-    );
+    return <Input type="text" name={columnName} required {...rest} />;
   }
   if (column.data_type === "text") {
-    return (
-      <Field
-        label={label}
-        input={<Input type="text" name={columnName} {...rest} />}
-      />
-    );
+    return <Input type="text" name={columnName} {...rest} />;
   }
   if (column.data_type === "oid") {
-    return (
-      <Field
-        label={<span>{column.column_name}: </span>}
-        input={<span>{rest.value}</span>}
-      ></Field>
-    );
+    return <span>{rest.value}</span>;
   }
   if (column.column_name === "rolpassword") {
-    return (
-      <Field
-        label={label}
-        input={<Input type="text" name={columnName} {...rest} />}
-      />
-    );
+    return <Input type="text" name={columnName} {...rest} />;
   }
   if (column.column_name === "rolconfig") {
     // rolconfig something custom like client_min_messages
     // see https://www.postgresql.org/docs/14/config-setting.html#CONFIG-SETTING-NAMES-VALUES
-    return (
-      <span>
-        <span>{column.column_name}: </span>
-        <span>{String(rest.value)}</span>
-      </span>
-    );
+    return <span>{String(rest.value)}</span>;
   }
   if (column.data_type === "xid") {
-    return (
-      <Field
-        label={label}
-        input={<Input type="text" readOnly name={columnName} {...rest} />}
-      />
-    );
+    return <Input type="text" readOnly name={columnName} {...rest} />;
   }
   if (column.column_name === "datacl") {
     // datacl is a custom type
     // see https://www.postgresql.org/docs/14/sql-grant.html
-    return (
-      <Field
-        label={<span>{column.column_name}: </span>}
-        input={<span>{String(rest.value)}</span>}
-      />
-    );
+    return <span>{String(rest.value)}</span>;
   }
+  return String(rest.value);
+};
+
+export const DatabaseField = ({ column, label, ...rest }) => {
+  const columnName = column.column_name;
+  if (label === undefined) {
+    if (column.data_type === "oid") {
+      label = <span>{columnName}: </span>;
+    } else if (columnName === "rolconfig") {
+      label = <span>{columnName}: </span>;
+    } else {
+      label = <span>{columnName}:</span>;
+    }
+  }
+
   return (
-    <Field
-      label={<span>{column.column_name}: </span>}
-      input={String(rest.value)}
-    ></Field>
+    <Field label={label} input={<DatabaseInput column={column} {...rest} />} />
   );
 };
