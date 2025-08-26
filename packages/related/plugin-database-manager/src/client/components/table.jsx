@@ -31,6 +31,11 @@ export const Table = ({
     state: {
       rowSelection,
     },
+    defaultColumn: {
+      size: 200, //starting column size
+      minSize: 50, //enforced during column resizing
+      maxSize: 500, //enforced during column resizing
+    },
     onRowSelectionChange,
   });
 
@@ -39,13 +44,22 @@ export const Table = ({
       <thead>
         {getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <th key={header.id}>
-                {header.isPlaceholder ? null : (
-                  <header.column.columnDef.header {...header.getContext()} />
-                )}
-              </th>
-            ))}
+            {headerGroup.headers.map((header) => {
+              return (
+                <th
+                  key={header.id}
+                  style={{
+                    ...(header.column.columnDef.enableResizing !== false
+                      ? { width: `${header.getSize()}px` }
+                      : {}),
+                  }}
+                >
+                  {header.isPlaceholder ? null : (
+                    <header.column.columnDef.header {...header.getContext()} />
+                  )}
+                </th>
+              );
+            })}
           </tr>
         ))}
       </thead>

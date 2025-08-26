@@ -13,6 +13,37 @@ import.meta.css = /* css */ `
   .table_data_actions {
     margin-bottom: 15px;
   }
+
+  .database_table td {
+    padding: 0;
+  }
+
+  .database_table_cell_content {
+    display: inline-flex;
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+  }
+
+  .database_table_cell_value {
+    display: inline-flex;
+    flex-grow: 1;
+    user-select: none;
+    padding: 8px;
+  }
+
+  .database_table_cell_content input {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    flex-grow: 1;
+    padding-left: 8px;
+  }
+
+  .database_table_cell_content input[type="number"]::-webkit-inner-spin-button {
+    width: 14px;
+    height: 30px;
+  }
 `;
 
 export const TableData = ({ table, rows }) => {
@@ -23,6 +54,7 @@ export const TableData = ({ table, rows }) => {
   const { schemaColumns } = table.meta;
   const selectColumn = {
     id: "select",
+    enableResizing: false,
     header: ({ table }) => (
       <Input
         type="checkbox"
@@ -50,6 +82,7 @@ export const TableData = ({ table, rows }) => {
   const numberColumn = {
     id: "number",
     header: () => "#",
+    enableResizing: false,
     cell: ({ row }) => row.original.index,
   };
 
@@ -57,6 +90,7 @@ export const TableData = ({ table, rows }) => {
     const columnName = column.column_name;
 
     return {
+      enableResizing: true,
       accessorKey: columnName,
       header: () => <span>{columnName}</span>,
       cell: (info) => {
@@ -73,6 +107,7 @@ export const TableData = ({ table, rows }) => {
   return (
     <div>
       <Table
+        className="database_table"
         columns={[selectColumn, numberColumn, ...columns]}
         data={data}
         rowSelection={rowSelection}
@@ -94,20 +129,22 @@ const DatabaseTableCell = ({ column, value }) => {
   const databaseInputProps = useDatabaseInputProps({ column });
 
   return (
-    <Editable
-      editable={editable}
-      onEditEnd={stopEditing}
-      value={value}
-      {...databaseInputProps}
-    >
-      <div
-        tabIndex="0"
-        onDoubleClick={() => {
-          startEditing();
-        }}
+    <div className="database_table_cell_content" tabIndex="0">
+      <Editable
+        editable={editable}
+        onEditEnd={stopEditing}
+        value={value}
+        {...databaseInputProps}
       >
-        {value}
-      </div>
-    </Editable>
+        <div
+          className="database_table_cell_value"
+          onDoubleClick={() => {
+            startEditing();
+          }}
+        >
+          {value}
+        </div>
+      </Editable>
+    </div>
   );
 };

@@ -67,7 +67,13 @@ export const Editable = forwardRef((props, ref) => {
 
   return (
     <>
-      <div style={{ display: editable ? "none" : "inline-flex", flexGrow: 1 }}>
+      <div
+        style={{
+          display: editable ? "none" : "inline-flex",
+          flexGrow: 1,
+          width: "100%",
+        }}
+      >
         {children || <span>{value}</span>}
       </div>
       {editable && (
