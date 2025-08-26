@@ -160,7 +160,7 @@
       import {
         useEditableController,
         // eslint-disable-next-line no-unused-vars
-        EditableText,
+        Editable,
         createAction,
       } from "@jsenv/navi";
 
@@ -189,7 +189,7 @@
             <div className="control-group">
               <label>Editable Content:</label>
               <div className="editable-container">
-                <EditableText
+                <Editable
                   editable={editable}
                   onEditEnd={() => {
                     stopEditing();
@@ -201,7 +201,9 @@
                     return `Updated to: "${test}"`;
                   }}
                   value={value}
-                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                  inputProps={{
+                    constraints: [SINGLE_SPACE_CONSTRAINT],
+                  }}
                 />
               </div>
             </div>
@@ -234,14 +236,13 @@
             <div className="control-group">
               <label>Editable Content (2s delay):</label>
               <div className="editable-container">
-                <EditableText
+                <Editable
                   editable={editable}
                   onEditEnd={() => {
                     stopEditing();
                     setIsLoading(false);
                     setResult();
                   }}
-                  name="test"
                   action={async ({ test }) => {
                     setIsLoading(true);
                     setResult("Saving...");
@@ -250,7 +251,10 @@
                     return `Saved: "${test}"`;
                   }}
                   value={value}
-                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                  inputProps={{
+                    name: "test",
+                    constraints: [SINGLE_SPACE_CONSTRAINT],
+                  }}
                 />
               </div>
             </div>
@@ -289,7 +293,7 @@
             <div className="control-group">
               <label>Editable Content (always fails):</label>
               <div className="editable-container">
-                <EditableText
+                <Editable
                   editable={editable}
                   onEditEnd={() => {
                     stopEditing();
@@ -302,7 +306,9 @@
                     throw new Error(`Cannot save "${test}" - simulated error`);
                   }}
                   value={value}
-                  constraints={[SINGLE_SPACE_CONSTRAINT]}
+                  inputProps={{
+                    constraints: [SINGLE_SPACE_CONSTRAINT],
+                  }}
                 />
               </div>
             </div>
@@ -334,7 +340,7 @@
             <div className="control-group">
               <label>Styled Editable Content:</label>
               <div className="editable-container">
-                <EditableText
+                <Editable
                   editable={editable}
                   onEditEnd={() => {
                     stopEditing();
@@ -351,7 +357,7 @@
                   <strong style={{ color: "#e74c3c", fontSize: "18px" }}>
                     {value}
                   </strong>
-                </EditableText>
+                </Editable>
               </div>
             </div>
             <div className="button-group">
@@ -389,7 +395,7 @@
             <div className="control-group">
               <label>Signal-Controlled Content:</label>
               <div className="editable-container">
-                <EditableText
+                <Editable
                   valueSignal={valueSignal}
                   editable={editable}
                   onEditEnd={() => {
@@ -412,7 +418,7 @@
                   >
                     {valueSignal.value}
                   </span>
-                </EditableText>
+                </Editable>
               </div>
             </div>
             <div className="button-group">
