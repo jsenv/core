@@ -131,80 +131,20 @@
   <body>
     <div id="root"></div>
 
-    <script type="module">
+    <script type="module" jsenv-type="module/jsx">
       import { render, h, createContext } from "preact";
       import { useRef, useState, useMemo, useContext } from "preact/hooks";
       import { signal } from "@preact/signals";
+      import {
+        SelectionProvider,
+        useSelectionContext,
+        clickToSelect,
+        keydownToSelect,
+        // eslint-disable-next-line no-unused-vars
+        Table,
+      } from "@jsenv/navi";
 
-      // Mock the selection context similar to @jsenv/navi
-      const SelectionContext = createContext();
-
-      const SelectionProvider = ({ children, value, onChange }) => {
-        const selectionValue = useMemo(
-          () => ({
-            selection: value || [],
-            isSelected: (itemId) => (value || []).includes(itemId),
-            toggle: (itemId) => {
-              const currentSelection = value || [];
-              const newSelection = currentSelection.includes(itemId)
-                ? currentSelection.filter((id) => id !== itemId)
-                : [...currentSelection, itemId];
-              onChange?.(newSelection);
-            },
-            add: (itemId) => {
-              const currentSelection = value || [];
-              if (!currentSelection.includes(itemId)) {
-                onChange?.([...currentSelection, itemId]);
-              }
-            },
-            remove: (itemId) => {
-              const currentSelection = value || [];
-              onChange?.(currentSelection.filter((id) => id !== itemId));
-            },
-          }),
-          [value, onChange],
-        );
-
-        return h(
-          SelectionContext.Provider,
-          { value: selectionValue },
-          children,
-        );
-      };
-
-      const useSelectionContext = () => {
-        const context = useContext(SelectionContext);
-        if (!context) {
-          throw new Error(
-            "useSelectionContext must be used within SelectionProvider",
-          );
-        }
-        return context;
-      };
-
-      const clickToSelect = (event, { selectionContext, value }) => {
-        event.preventDefault();
-
-        if (event.metaKey || event.ctrlKey) {
-          // Multi-select with Cmd/Ctrl
-          selectionContext.toggle(value);
-        } else if (event.shiftKey) {
-          // Range select with Shift (simplified)
-          selectionContext.add(value);
-        } else {
-          // Single select
-          selectionContext.onChange([value]);
-        }
-      };
-
-      const keydownToSelect = (event, { selectionContext, value }) => {
-        if (event.key === " " || event.key === "Enter") {
-          event.preventDefault();
-          clickToSelect(event, { selectionContext, value });
-        }
-      };
-
-      // Table State Context for focus management
+      // Table State Context for focus management (keeping this one as it's specific to this demo)
       const TableStateContext = createContext();
 
       // Sample data
