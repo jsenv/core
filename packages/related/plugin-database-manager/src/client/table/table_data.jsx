@@ -75,13 +75,13 @@ export const TableData = ({ table, rows }) => {
     enableResizing: false,
     cell: ({ row }) => {
       return (
-        <div
+        <td
           style={{
             textAlign: "center",
           }}
         >
           {row.original.index}
-        </div>
+        </td>
       );
     },
   };
