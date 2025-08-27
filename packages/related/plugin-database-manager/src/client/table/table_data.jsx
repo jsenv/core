@@ -18,8 +18,18 @@ import.meta.css = /* css */ `
     margin-bottom: 15px;
   }
 
-  .database_table td {
+  .database_table_cell {
     padding: 0;
+  }
+
+  .database_table_cell:focus {
+    outline: 2px solid #0078d4;
+    outline-offset: -2px;
+  }
+
+  .database_table_cell[data-editing] {
+    outline: 2px solid #a8c7fa;
+    outline-offset: 0px;
   }
 
   .database_table_cell_content {
@@ -27,16 +37,6 @@ import.meta.css = /* css */ `
     flex-grow: 1;
     width: 100%;
     height: 100%;
-  }
-
-  .database_table_cell_content:focus {
-    outline: 2px solid #0078d4;
-    outline-offset: -2px;
-  }
-
-  .database_table_cell_content[data-editing] {
-    outline: 2px solid #a8c7fa;
-    outline-offset: 0px;
   }
 
   .database_table_cell_value {
@@ -139,26 +139,28 @@ const DatabaseTableCell = ({ column, value }) => {
   const databaseInputProps = useDatabaseInputProps({ column });
 
   return (
-    <div
-      className="database_table_cell_content"
+    <td
+      className="database_table_cell"
       tabIndex="0"
       data-editing={editable ? "" : undefined}
     >
-      <Editable
-        editable={editable}
-        onEditEnd={stopEditing}
-        value={value}
-        {...databaseInputProps}
-      >
-        <div
-          className="database_table_cell_value"
-          onDoubleClick={() => {
-            startEditing();
-          }}
+      <div className="database_table_cell_content">
+        <Editable
+          editable={editable}
+          onEditEnd={stopEditing}
+          value={value}
+          {...databaseInputProps}
         >
-          {value}
-        </div>
-      </Editable>
-    </div>
+          <div
+            className="database_table_cell_value"
+            onDoubleClick={() => {
+              startEditing();
+            }}
+          >
+            {value}
+          </div>
+        </Editable>
+      </div>
+    </td>
   );
 };

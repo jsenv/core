@@ -144,9 +144,5 @@ const TableBodyRow = ({ cells }) => {
 const TableBodyCell = ({ cell }) => {
   const CellComponent = cell.column.columnDef.cell;
   const cellProps = cell.getContext();
-  return (
-    <td>
-      <CellComponent {...cellProps} />
-    </td>
-  );
+  return <CellComponent {...cellProps} />;
 };
