@@ -76,7 +76,7 @@ const GridSelectionProvider = ({ value = [], onChange, children }) => {
     getAllItems: () => {
       return Array.from(registryRef.current.keys());
     },
-    getItemCoordinates: (value) => {
+    getItemPosition: (value) => {
       const item = registryRef.current.get(value);
       return item ? { x: item.x, y: item.y } : null;
     },
@@ -304,9 +304,9 @@ const LinearSelectionProvider = ({
     getAllItems: () => {
       return Array.from(registryRef.current.keys());
     },
-    getItemCoordinates: (value) => {
+    getItemPosition: (value) => {
       const item = registryRef.current.get(value);
-      return item ? { index: item.index } : null;
+      return item ? item.index : null;
     },
     getRange: (fromValue, toValue) => {
       const registry = registryRef.current;
