@@ -5,103 +5,114 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 const SelectionContext = createContext(null);
 
 export const SelectionProvider = ({
-  value = [],
+  selectedElements = [],
   onChange,
   layout = "vertical",
   children,
 }) => {
   if (layout === "grid") {
     return (
-      <GridSelectionProvider value={value} onChange={onChange}>
+      <GridSelectionProvider
+        selectedElements={selectedElements}
+        onChange={onChange}
+      >
         {children}
       </GridSelectionProvider>
     );
   }
 
   return (
-    <LinearSelectionProvider value={value} onChange={onChange} axis={layout}>
+    <LinearSelectionProvider
+      selectedElements={selectedElements}
+      onChange={onChange}
+      axis={layout}
+    >
       {children}
     </LinearSelectionProvider>
   );
 };
 
 // Grid Selection Provider - for 2D layouts like tables
-const GridSelectionProvider = ({ value = [], onChange, children }) => {
-  const selection = value || [];
-  const registryRef = useRef(new Map()); // Map<value, {x, y, element}>
+const GridSelectionProvider = ({
+  selectedElements = [],
+  onChange,
+  children,
+}) => {
+  const selection = selectedElements || [];
+  const registryRef = useRef(new Set()); // Set<element>
   const anchorRef = useRef(null);
 
   const contextValue = {
     selection,
     layout: "grid",
 
-    register: (value, { x, y }, element = null) => {
-      if (typeof x !== "number" || typeof y !== "number") {
-        throw new Error(
-          `GridSelectionProvider: Both x and y coordinates are required for value "${value}".`,
-        );
-      }
-
+    registerElement: (element) => {
       const registry = registryRef.current;
-      registry.set(value, { x, y, element });
+      registry.add(element);
     },
-    unregister: (value) => {
+    unregisterElement: (element) => {
       const registry = registryRef.current;
-      registry.delete(value);
+      registry.delete(element);
     },
-    updatePosition: (value, { x, y }) => {
-      const registry = registryRef.current;
-      const existing = registry.get(value);
-      if (!existing) return;
+    updateElementPosition: () => {
+      // No-op for grid since position is determined by DOM structure
+    },
+    setAnchorElement: (element) => {
+      anchorRef.current = element;
+    },
+    isElementSelected: (element) => {
+      return selection.includes(element);
+    },
+    getAllElements: () => {
+      return Array.from(registryRef.current);
+    },
+    getElementPosition: (element) => {
+      // Get position by checking element's position in table structure
+      const cell = element.closest("td, th");
+      if (!cell) return null;
 
-      if (x !== undefined && typeof x !== "number") {
-        throw new Error(
-          `GridSelectionProvider: x coordinate must be a number for value "${value}".`,
-        );
-      }
-      if (y !== undefined && typeof y !== "number") {
-        throw new Error(
-          `GridSelectionProvider: y coordinate must be a number for value "${value}".`,
-        );
-      }
+      const row = cell.closest("tr");
+      if (!row) return null;
 
-      registry.set(value, { ...existing, x, y });
-    },
-    setAnchor: (value) => {
-      anchorRef.current = value;
-    },
-    isSelected: (itemValue) => {
-      return selection.includes(itemValue);
-    },
-    getAllItems: () => {
-      return Array.from(registryRef.current.keys());
-    },
-    getItemPosition: (value) => {
-      const item = registryRef.current.get(value);
-      return item ? { x: item.x, y: item.y } : null;
-    },
-    getRange: (fromValue, toValue) => {
-      const registry = registryRef.current;
-      const fromItem = registry.get(fromValue);
-      const toItem = registry.get(toValue);
+      const table = row.closest("table");
+      if (!table) return null;
 
-      if (!fromItem || !toItem) {
+      const rows = Array.from(table.rows);
+      const cells = Array.from(row.cells);
+
+      return {
+        x: cells.indexOf(cell),
+        y: rows.indexOf(row),
+      };
+    },
+    getElementRange: (fromElement, toElement) => {
+      const fromPos = contextValue.getElementPosition(fromElement);
+      const toPos = contextValue.getElementPosition(toElement);
+
+      if (!fromPos || !toPos) {
         return [];
       }
 
       // Calculate rectangular selection area
-      const { x: fromX, y: fromY } = fromItem;
-      const { x: toX, y: toY } = toItem;
+      const { x: fromX, y: fromY } = fromPos;
+      const { x: toX, y: toY } = toPos;
       const minX = Math.min(fromX, toX);
       const maxX = Math.max(fromX, toX);
       const minY = Math.min(fromY, toY);
       const maxY = Math.max(fromY, toY);
 
-      // Find all items within the rectangular area
+      // Find all registered elements within the rectangular area
       const itemsInRange = [];
-      for (const [value, { x, y }] of registry) {
-        if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-          itemsInRange.push(value);
+      for (const element of registryRef.current) {
+        const pos = contextValue.getElementPosition(element);
+        if (
+          pos &&
+          pos.x >= minX &&
+          pos.x <= maxX &&
+          pos.y >= minY &&
+          pos.y <= maxY
+        ) {
+          itemsInRange.push(element);
         }
       }
 
@@ -109,72 +120,76 @@ const GridSelectionProvider = ({ value = [], onChange, children }) => {
     },
 
     // Navigation methods for grid
-    getValueAfter: (value) => {
-      const registry = registryRef.current;
-      const currentItem = registry.get(value);
-      if (!currentItem) return null;
+    getElementAfter: (element) => {
+      const currentPos = contextValue.getElementPosition(element);
+      if (!currentPos) return null;
 
-      const { x, y } = currentItem;
+      const { x, y } = currentPos;
       const nextX = x + 1;
 
-      for (const [candidateValue, item] of registry) {
-        if (item.x === nextX && item.y === y) {
-          return candidateValue;
+      // Find element at next position in same row
+      for (const candidateElement of registryRef.current) {
+        const pos = contextValue.getElementPosition(candidateElement);
+        if (pos && pos.x === nextX && pos.y === y) {
+          return candidateElement;
         }
       }
       return null;
     },
-    getValueBefore: (value) => {
-      const registry = registryRef.current;
-      const currentItem = registry.get(value);
-      if (!currentItem) return null;
+    getElementBefore: (element) => {
+      const currentPos = contextValue.getElementPosition(element);
+      if (!currentPos) return null;
 
-      const { x, y } = currentItem;
+      const { x, y } = currentPos;
       const prevX = x - 1;
 
-      for (const [candidateValue, item] of registry) {
-        if (item.x === prevX && item.y === y) {
-          return candidateValue;
+      // Find element at previous position in same row
+      for (const candidateElement of registryRef.current) {
+        const pos = contextValue.getElementPosition(candidateElement);
+        if (pos && pos.x === prevX && pos.y === y) {
+          return candidateElement;
         }
       }
       return null;
     },
-    getValueBelow: (value) => {
-      const registry = registryRef.current;
-      const currentItem = registry.get(value);
-      if (!currentItem) return null;
+    getElementBelow: (element) => {
+      const currentPos = contextValue.getElementPosition(element);
+      if (!currentPos) return null;
 
-      const { x, y } = currentItem;
+      const { x, y } = currentPos;
       const nextY = y + 1;
 
-      for (const [candidateValue, item] of registry) {
-        if (item.x === x && item.y === nextY) {
-          return candidateValue;
+      // Find element at next position in same column
+      for (const candidateElement of registryRef.current) {
+        const pos = contextValue.getElementPosition(candidateElement);
+        if (pos && pos.x === x && pos.y === nextY) {
+          return candidateElement;
         }
       }
       return null;
     },
-    getValueAbove: (value) => {
-      const registry = registryRef.current;
-      const currentItem = registry.get(value);
-      if (!currentItem) return null;
+    getElementAbove: (element) => {
+      const currentPos = contextValue.getElementPosition(element);
+      if (!currentPos) return null;
 
-      const { x, y } = currentItem;
+      const { x, y } = currentPos;
       const prevY = y - 1;
 
-      for (const [candidateValue, item] of registry) {
-        if (item.x === x && item.y === prevY) {
-          return candidateValue;
+      // Find element at previous position in same column
+      for (const candidateElement of registryRef.current) {
+        const pos = contextValue.getElementPosition(candidateElement);
+        if (pos && pos.x === x && pos.y === prevY) {
+          return candidateElement;
         }
       }
       return null;
     },
 
     // Selection manipulation methods
-    set: (newSelection, event = null) => {
+    setSelection: (newSelection, event = null) => {
       if (
         newSelection.length === selection.length &&
-        newSelection.every((value, index) => value === selection[index])
+        newSelection.every((element, index) => element === selection[index])
       ) {
         return;
       }
@@ -183,16 +198,16 @@ const GridSelectionProvider = ({ value = [], onChange, children }) => {
       }
       onChange?.(newSelection, event);
     },
-    add: (arrayOfValueToAddToSelection, event = null) => {
-      const selectionWithValues = [...selection];
+    addToSelection: (arrayOfElementsToAdd, event = null) => {
+      const selectionWithElements = [...selection];
       let modified = false;
       let lastAdded = null;
 
-      for (const valueToAdd of arrayOfValueToAddToSelection) {
-        if (!selectionWithValues.includes(valueToAdd)) {
+      for (const elementToAdd of arrayOfElementsToAdd) {
+        if (!selectionWithElements.includes(elementToAdd)) {
           modified = true;
-          selectionWithValues.push(valueToAdd);
-          lastAdded = valueToAdd;
+          selectionWithElements.push(elementToAdd);
+          lastAdded = elementToAdd;
         }
       }
 
@@ -200,43 +215,43 @@ const GridSelectionProvider = ({ value = [], onChange, children }) => {
         if (lastAdded) {
           anchorRef.current = lastAdded;
         }
-        onChange?.(selectionWithValues, event);
+        onChange?.(selectionWithElements, event);
       }
     },
-    remove: (arrayOfValueToRemoveFromSelection, event = null) => {
+    removeFromSelection: (arrayOfElementsToRemove, event = null) => {
       let modified = false;
-      const selectionWithoutValues = [];
+      const selectionWithoutElements = [];
 
-      for (const value of selection) {
-        if (arrayOfValueToRemoveFromSelection.includes(value)) {
+      for (const element of selection) {
+        if (arrayOfElementsToRemove.includes(element)) {
           modified = true;
-          if (value === anchorRef.current) {
+          if (element === anchorRef.current) {
             anchorRef.current = null;
           }
         } else {
-          selectionWithoutValues.push(value);
+          selectionWithoutElements.push(element);
         }
       }
 
       if (modified) {
-        onChange?.(selectionWithoutValues, event);
+        onChange?.(selectionWithoutElements, event);
       }
     },
-    toggle: (value, event = null) => {
-      if (selection.includes(value)) {
-        contextValue.remove([value], event);
+    toggleElement: (element, event = null) => {
+      if (selection.includes(element)) {
+        contextValue.removeFromSelection([element], event);
       } else {
-        contextValue.add([value], event);
+        contextValue.addToSelection([element], event);
       }
     },
-    setFromAnchorTo: (value, event = null) => {
-      const anchorValue = anchorRef.current;
+    selectFromAnchorTo: (element, event = null) => {
+      const anchorElement = anchorRef.current;
 
-      if (anchorValue && selection.includes(anchorValue)) {
-        const range = contextValue.getRange(anchorValue, value);
-        contextValue.set(range, event);
+      if (anchorElement && selection.includes(anchorElement)) {
+        const range = contextValue.getElementRange(anchorElement, element);
+        contextValue.setSelection(range, event);
       } else {
-        contextValue.set([value], event);
+        contextValue.setSelection([element], event);
       }
     },
   };
@@ -249,13 +264,13 @@ const GridSelectionProvider = ({ value = [], onChange, children }) => {
 };
 // Linear Selection Provider - for 1D layouts like lists
 const LinearSelectionProvider = ({
-  value = [],
+  selectedElements = [],
   onChange,
   axis = "vertical", // "horizontal" or "vertical"
   children,
 }) => {
-  const selection = value || [];
-  const registryRef = useRef(new Map()); // Map<value, {index, element}>
+  const selection = selectedElements || [];
+  const registryRef = useRef(new Set()); // Set<element>
   const anchorRef = useRef(null);
 
   if (!["horizontal", "vertical"].includes(axis)) {
@@ -268,113 +283,149 @@ const LinearSelectionProvider = ({
     selection,
     layout: axis,
 
-    register: (value, index, element = null) => {
-      if (typeof index !== "number") {
-        throw new Error(
-          `LinearSelectionProvider: index must be a number for value "${value}".`,
-        );
-      }
-
+    registerElement: (element) => {
       const registry = registryRef.current;
-      registry.set(value, { index, element });
+      registry.add(element);
     },
-    unregister: (value) => {
+    unregisterElement: (element) => {
       const registry = registryRef.current;
-      registry.delete(value);
+      registry.delete(element);
     },
-    updatePosition: (value, index) => {
+    updateElementPosition: () => {
+      // No-op for linear layout since elements are already tracked
+    },
+    setAnchorElement: (element) => {
+      anchorRef.current = element;
+    },
+    isElementSelected: (element) => {
+      return selection.includes(element);
+    },
+    getAllElements: () => {
+      return Array.from(registryRef.current);
+    },
+    getElementPosition: (element) => {
+      return registryRef.current.has(element) ? element : null;
+    },
+    getElementRange: (fromElement, toElement) => {
       const registry = registryRef.current;
-      const existing = registry.get(value);
-      if (!existing) return;
 
-      if (typeof index !== "number") {
-        throw new Error(
-          `LinearSelectionProvider: index must be a number for value "${value}".`,
-        );
-      }
-
-      registry.set(value, { ...existing, index });
-    },
-    setAnchor: (value) => {
-      anchorRef.current = value;
-    },
-    isSelected: (itemValue) => {
-      return selection.includes(itemValue);
-    },
-    getAllItems: () => {
-      return Array.from(registryRef.current.keys());
-    },
-    getItemPosition: (value) => {
-      const item = registryRef.current.get(value);
-      return item ? item.index : null;
-    },
-    getRange: (fromValue, toValue) => {
-      const registry = registryRef.current;
-      const fromItem = registry.get(fromValue);
-      const toItem = registry.get(toValue);
-
-      if (!fromItem || !toItem) {
+      if (!registry.has(fromElement) || !registry.has(toElement)) {
         return [];
       }
 
-      const { index: fromPos } = fromItem;
-      const { index: toPos } = toItem;
-      const minPos = Math.min(fromPos, toPos);
-      const maxPos = Math.max(fromPos, toPos);
+      // Use compareDocumentPosition to determine order
+      const comparison = fromElement.compareDocumentPosition(toElement);
+      let startElement;
+      let endElement;
 
-      const itemsInRange = [];
-      for (const [value, { index }] of registry) {
-        if (index >= minPos && index <= maxPos) {
-          itemsInRange.push(value);
+      if (comparison & Node.DOCUMENT_POSITION_FOLLOWING) {
+        // toElement comes after fromElement
+        startElement = fromElement;
+        endElement = toElement;
+      } else if (comparison & Node.DOCUMENT_POSITION_PRECEDING) {
+        // toElement comes before fromElement
+        startElement = toElement;
+        endElement = fromElement;
+      } else {
+        // Same element
+        return [fromElement];
+      }
+
+      const elementsInRange = [];
+
+      // Check all registered elements to see if they're in the range
+      for (const element of registry) {
+        // Check if element is between startElement and endElement
+        const afterStart =
+          startElement.compareDocumentPosition(element) &
+          Node.DOCUMENT_POSITION_FOLLOWING;
+        const beforeEnd =
+          element.compareDocumentPosition(endElement) &
+          Node.DOCUMENT_POSITION_FOLLOWING;
+
+        if (
+          element === startElement ||
+          element === endElement ||
+          (afterStart && beforeEnd)
+        ) {
+          elementsInRange.push(element);
         }
       }
 
-      return itemsInRange;
+      return elementsInRange;
     },
 
-    // Navigation methods for linear layout
-    getValueAfter: (value) => {
+    // Navigation methods for linear layout using DOM order
+    getElementAfter: (element) => {
       const registry = registryRef.current;
-      const currentItem = registry.get(value);
-      if (!currentItem) return null;
+      if (!registry.has(element)) return null;
 
-      const { index } = currentItem;
-      const nextPos = index + 1;
+      let nextElement = null;
 
-      for (const [candidateValue, item] of registry) {
-        if (item.index === nextPos) {
-          return candidateValue;
+      // Find the element that comes immediately after in DOM order
+      for (const candidateElement of registry) {
+        if (candidateElement === element) continue;
+
+        // Check if this element comes after current
+        if (
+          element.compareDocumentPosition(candidateElement) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+        ) {
+          // If we don't have a next element yet, or this one is closer than our current next
+          if (
+            !nextElement ||
+            candidateElement.compareDocumentPosition(nextElement) &
+              Node.DOCUMENT_POSITION_PRECEDING
+          ) {
+            nextElement = candidateElement;
+          }
         }
       }
-      return null;
+
+      return nextElement;
     },
-    getValueBefore: (value) => {
+    getElementBefore: (element) => {
       const registry = registryRef.current;
-      const currentItem = registry.get(value);
-      if (!currentItem) return null;
+      if (!registry.has(element)) return null;
 
-      const { index } = currentItem;
-      const prevPos = index - 1;
+      let prevElement = null;
 
-      for (const [candidateValue, item] of registry) {
-        if (item.index === prevPos) {
-          return candidateValue;
+      // Find the element that comes immediately before in DOM order
+      for (const candidateElement of registry) {
+        if (candidateElement === element) continue;
+
+        // Check if this element comes before current
+        if (
+          element.compareDocumentPosition(candidateElement) &
+          Node.DOCUMENT_POSITION_PRECEDING
+        ) {
+          // If we don't have a prev element yet, or this one is closer than our current prev
+          if (
+            !prevElement ||
+            prevElement.compareDocumentPosition(candidateElement) &
+              Node.DOCUMENT_POSITION_PRECEDING
+          ) {
+            prevElement = candidateElement;
+          }
         }
       }
-      return null;
+
+      return prevElement;
     },
-    getValueBelow: (value) => {
-      return axis === "vertical" ? contextValue.getValueAfter(value) : null;
+    getElementBelow: (element) => {
+      return axis === "vertical" ? contextValue.getElementAfter(element) : null;
     },
-    getValueAbove: (value) => {
-      return axis === "vertical" ? contextValue.getValueBefore(value) : null;
+    getElementAbove: (element) => {
+      return axis === "vertical"
+        ? contextValue.getElementBefore(element)
+        : null;
     },
 
-    // Selection manipulation methods (same as grid)
-    set: (newSelection, event = null) => {
+    // Selection manipulation methods
+    setSelection: (newSelection, event = null) => {
       if (
         newSelection.length === selection.length &&
-        newSelection.every((value, index) => value === selection[index])
+        newSelection.every((element, index) => element === selection[index])
       ) {
         return;
       }
@@ -383,16 +434,16 @@ const LinearSelectionProvider = ({
       }
       onChange?.(newSelection, event);
     },
-    add: (arrayOfValueToAddToSelection, event = null) => {
-      const selectionWithValues = [...selection];
+    addToSelection: (arrayOfElementsToAdd, event = null) => {
+      const selectionWithElements = [...selection];
       let modified = false;
       let lastAdded = null;
 
-      for (const valueToAdd of arrayOfValueToAddToSelection) {
-        if (!selectionWithValues.includes(valueToAdd)) {
+      for (const elementToAdd of arrayOfElementsToAdd) {
+        if (!selectionWithElements.includes(elementToAdd)) {
           modified = true;
-          selectionWithValues.push(valueToAdd);
-          lastAdded = valueToAdd;
+          selectionWithElements.push(elementToAdd);
+          lastAdded = elementToAdd;
         }
       }
 
@@ -400,43 +451,43 @@ const LinearSelectionProvider = ({
         if (lastAdded) {
           anchorRef.current = lastAdded;
         }
-        onChange?.(selectionWithValues, event);
+        onChange?.(selectionWithElements, event);
       }
     },
-    remove: (arrayOfValueToRemoveFromSelection, event = null) => {
+    removeFromSelection: (arrayOfElementsToRemove, event = null) => {
       let modified = false;
-      const selectionWithoutValues = [];
+      const selectionWithoutElements = [];
 
-      for (const value of selection) {
-        if (arrayOfValueToRemoveFromSelection.includes(value)) {
+      for (const element of selection) {
+        if (arrayOfElementsToRemove.includes(element)) {
           modified = true;
-          if (value === anchorRef.current) {
+          if (element === anchorRef.current) {
             anchorRef.current = null;
           }
         } else {
-          selectionWithoutValues.push(value);
+          selectionWithoutElements.push(element);
         }
       }
 
       if (modified) {
-        onChange?.(selectionWithoutValues, event);
+        onChange?.(selectionWithoutElements, event);
       }
     },
-    toggle: (value, event = null) => {
-      if (selection.includes(value)) {
-        contextValue.remove([value], event);
+    toggleElement: (element, event = null) => {
+      if (selection.includes(element)) {
+        contextValue.removeFromSelection([element], event);
       } else {
-        contextValue.add([value], event);
+        contextValue.addToSelection([element], event);
       }
     },
-    setFromAnchorTo: (value, event = null) => {
-      const anchorValue = anchorRef.current;
+    selectFromAnchorTo: (element, event = null) => {
+      const anchorElement = anchorRef.current;
 
-      if (anchorValue && selection.includes(anchorValue)) {
-        const range = contextValue.getRange(anchorValue, value);
-        contextValue.set(range, event);
+      if (anchorElement && selection.includes(anchorElement)) {
+        const range = contextValue.getElementRange(anchorElement, element);
+        contextValue.setSelection(range, event);
       } else {
-        contextValue.set([value], event);
+        contextValue.setSelection([element], event);
       }
     },
   };
@@ -452,29 +503,29 @@ export const useSelectionContext = () => {
   return useContext(SelectionContext);
 };
 
-export const useRegisterSelectionValue = (value, position) => {
+export const useRegisterSelectionElement = () => {
   const selectionContext = useSelectionContext();
   const elementRef = useRef(null);
 
   useLayoutEffect(() => {
-    if (selectionContext) {
-      selectionContext.register(value, position, elementRef.current);
-      return () => selectionContext.unregister(value);
+    if (selectionContext && elementRef.current) {
+      selectionContext.registerElement(elementRef.current);
+      return () => selectionContext.unregisterElement(elementRef.current);
     }
     return undefined;
-  }, [selectionContext, value, position]);
+  }, [selectionContext]);
 
-  // Update position if it changes
+  // Update element reference when it changes
   useLayoutEffect(() => {
-    if (selectionContext) {
-      selectionContext.updatePosition(value, position);
+    if (selectionContext && elementRef.current) {
+      selectionContext.updateElementPosition();
     }
-  }, [selectionContext, value, position]);
+  }, [selectionContext]);
 
   return elementRef;
 };
 
-export const clickToSelect = (clickEvent, { selectionContext, value }) => {
+export const clickToSelect = (clickEvent, { selectionContext, element }) => {
   if (clickEvent.defaultPrevented) {
     // If the click was prevented by another handler, do not interfere
     return;
@@ -486,29 +537,32 @@ export const clickToSelect = (clickEvent, { selectionContext, value }) => {
 
   if (isSingleSelect) {
     // Single select - replace entire selection with just this item
-    selectionContext.set([value], clickEvent);
+    selectionContext.setSelection([element], clickEvent);
     return;
   }
   if (isMultiSelect) {
     // here no need to prevent nav on <a> but it means cmd + click will both multi select
     // and open in a new tab
-    selectionContext.toggle(value, clickEvent);
+    selectionContext.toggleElement(element, clickEvent);
     return;
   }
   if (isShiftSelect) {
     clickEvent.preventDefault(); // Prevent navigation
-    selectionContext.setFromAnchorTo(value, clickEvent);
+    selectionContext.selectFromAnchorTo(element, clickEvent);
     return;
   }
 };
 
-export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
+export const keydownToSelect = (
+  keydownEvent,
+  { selectionContext, element },
+) => {
   if (!canInterceptKeys(keydownEvent)) {
     return;
   }
 
   if (keydownEvent.key === "Shift") {
-    selectionContext.setAnchor(value);
+    selectionContext.setAnchorElement(element);
     return;
   }
 
@@ -521,7 +575,10 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
       return;
     }
     keydownEvent.preventDefault(); // prevent default select all text behavior
-    selectionContext.set(selectionContext.getAllItems(), keydownEvent);
+    selectionContext.setSelection(
+      selectionContext.getAllElements(),
+      keydownEvent,
+    );
     return;
   }
 
@@ -529,20 +586,20 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     if (selectionContext.layout === "horizontal") {
       return; // No down navigation in horizontal layout
     }
-    const nextValue = selectionContext.getValueBelow(value);
-    if (!nextValue) {
-      return; // No next value to select
+    const nextElement = selectionContext.getElementBelow(element);
+    if (!nextElement) {
+      return; // No next element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.setFromAnchorTo(nextValue, keydownEvent);
+      selectionContext.selectFromAnchorTo(nextElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selectionContext.add([nextValue], keydownEvent);
+      selectionContext.addToSelection([nextElement], keydownEvent);
       return;
     }
-    selectionContext.set([nextValue], keydownEvent);
+    selectionContext.setSelection([nextElement], keydownEvent);
     return;
   }
 
@@ -550,20 +607,20 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     if (selectionContext.layout === "horizontal") {
       return; // No up navigation in horizontal layout
     }
-    const previousValue = selectionContext.getValueAbove(value);
-    if (!previousValue) {
-      return; // No previous value to select
+    const previousElement = selectionContext.getElementAbove(element);
+    if (!previousElement) {
+      return; // No previous element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.setFromAnchorTo(previousValue, keydownEvent);
+      selectionContext.selectFromAnchorTo(previousElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selectionContext.add([previousValue], keydownEvent);
+      selectionContext.addToSelection([previousElement], keydownEvent);
       return;
     }
-    selectionContext.set([previousValue], keydownEvent);
+    selectionContext.setSelection([previousElement], keydownEvent);
     return;
   }
 
@@ -571,20 +628,20 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     if (selectionContext.layout === "vertical") {
       return; // No left navigation in vertical layout
     }
-    const previousValue = selectionContext.getValueBefore(value);
-    if (!previousValue) {
-      return; // No previous value to select
+    const previousElement = selectionContext.getElementBefore(element);
+    if (!previousElement) {
+      return; // No previous element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.setFromAnchorTo(previousValue, keydownEvent);
+      selectionContext.selectFromAnchorTo(previousElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selectionContext.add([previousValue], keydownEvent);
+      selectionContext.addToSelection([previousElement], keydownEvent);
       return;
     }
-    selectionContext.set([previousValue], keydownEvent);
+    selectionContext.setSelection([previousElement], keydownEvent);
     return;
   }
 
@@ -592,20 +649,20 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     if (selectionContext.layout === "vertical") {
       return; // No right navigation in vertical layout
     }
-    const nextValue = selectionContext.getValueAfter(value);
-    if (!nextValue) {
-      return; // No next value to select
+    const nextElement = selectionContext.getElementAfter(element);
+    if (!nextElement) {
+      return; // No next element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.setFromAnchorTo(nextValue, keydownEvent);
+      selectionContext.selectFromAnchorTo(nextElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selectionContext.add([nextValue], keydownEvent);
+      selectionContext.addToSelection([nextElement], keydownEvent);
       return;
     }
-    selectionContext.set([nextValue], keydownEvent);
+    selectionContext.setSelection([nextElement], keydownEvent);
     return;
   }
 };

@@ -165,7 +165,6 @@ const LinkWithSelection = forwardRef((props, ref) => {
     selectionContext,
     name,
     value,
-    position,
     children,
     onClick,
     onKeyDown,
@@ -173,10 +172,7 @@ const LinkWithSelection = forwardRef((props, ref) => {
   } = props;
   const isSelected = selectionContext.isSelected(value);
 
-  // Auto-assign position if not provided (for backward compatibility)
-  const actualPosition = position ?? 0;
-
-  useRegisterSelectionValue(value, actualPosition);
+  useRegisterSelectionValue(ref);
 
   return (
     <LinkPlain
