@@ -42,19 +42,12 @@ export const Table = forwardRef((props, ref) => {
         {getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => {
+              const HeaderCellComponent = header.column.columnDef.header;
+              if (header.isPlaceholder) {
+                return <th key={header.id}></th>;
+              }
               return (
-                <th
-                  key={header.id}
-                  style={{
-                    ...(header.column.columnDef.size
-                      ? { width: `${header.getSize()}px` }
-                      : {}),
-                  }}
-                >
-                  {header.isPlaceholder ? null : (
-                    <header.column.columnDef.header {...header.getContext()} />
-                  )}
-                </th>
+                <HeaderCellComponent key={header.id} {...header.getContext()} />
               );
             })}
           </tr>

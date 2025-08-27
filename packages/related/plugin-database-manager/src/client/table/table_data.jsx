@@ -1,6 +1,18 @@
 /**
  * https://tanstack.com/table/latest/docs/framework/react/examples/basic?panel=code
  *
+ * Next step:
+ * 1. When a cell is focuses the corresponding th should have a background and the first column too (the one with row number)
+ * 2. row selection (take inspitation from the way it's done in the explorer)
+ *    selected row should have a special background
+ * 3. A last row with buttons like a delete button with a delete icon
+ * 4. Ability to delete a row (button + a shortcut key cmd + delete) with a confirmation message
+ * 5. Ability to update a cell (double click to edit, enter to validate, esc to cancel)
+ * 6. Pagination
+ * 7. Can add a column
+ * 8. Can remove a column
+ * 9. Can edit a column (name, type, etc.)
+ *
  */
 
 import {
@@ -10,7 +22,7 @@ import {
   useFocusGroup,
   useStateArray,
 } from "@jsenv/navi";
-import { useRef } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 import { useDatabaseInputProps } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
@@ -69,6 +81,13 @@ import.meta.css = /* css */ `
     width: 14px;
     height: 30px;
   }
+
+  .database_table *[data-focus-within] {
+    background-color: light-dark(
+      rgba(0, 120, 212, 0.08),
+      rgba(59, 130, 246, 0.15)
+    );
+  }
 `;
 
 export const TableData = ({ table, rows }) => {
@@ -79,34 +98,51 @@ export const TableData = ({ table, rows }) => {
   const rowIsSelected = (row) => rowSelection.includes(row.id);
   const tableRef = useRef(null);
 
+  const [focusWithinRow, setFocusWithinRow] = useState(-1);
+  const [focusWithinColumn, setFocusWithinColumn] = useState(-1);
+
   useFocusGroup(tableRef);
 
   const { schemaColumns } = table.meta;
   const numberColumn = {
     id: "number",
     size: 50,
-    header: () => "",
+    header: () => {
+      return <th></th>;
+    },
     enableResizing: false,
     cell: ({ row }) => {
       return (
-        <td
-          style={{
-            textAlign: "center",
-          }}
-        >
-          {row.original.index}
-        </td>
+        <DatabaseTableCell
+          value={row.original.index}
+          style={{ textAlign: "center" }}
+          data-focus-within={focusWithinRow === row.index ? "" : undefined}
+        />
       );
     },
   };
 
-  const columns = schemaColumns.map((column) => {
+  const columns = schemaColumns.map((column, index) => {
     const columnName = column.column_name;
+    const columnIndex = index + 1; // +1 because number column is first
 
     return {
       enableResizing: true,
       accessorKey: columnName,
-      header: () => <span>{columnName}</span>,
+      header: ({ header }) => {
+        return (
+          <th
+            style={{
+              width: `${header.getSize()}px`,
+            }}
+            data-focus-within={
+              focusWithinColumn === columnIndex ? "" : undefined
+            }
+          >
+            <span>{columnName}</span>
+          </th>
+        );
+      },
       cell: (info) => {
         const value = info.getValue();
         const row = info.row;
@@ -132,6 +168,28 @@ export const TableData = ({ table, rows }) => {
 
   const data = rows;
 
+  const updateFocusPosition = (target) => {
+    const [row, column] = getCellPosition(tableRef.current, target);
+    setFocusWithinRow(row);
+    setFocusWithinColumn(column);
+  };
+
+  // Track focus changes within the table
+  const handleTableFocusIn = (event) => {
+    updateFocusPosition(event.target);
+  };
+
+  const handleTableFocusOut = (event) => {
+    const table = tableRef.current;
+    // Only clear focus if we're leaving the table entirely
+    if (!table.contains(event.relatedTarget)) {
+      setFocusWithinColumn(-1);
+      setFocusWithinRow(-1);
+      return;
+    }
+    updateFocusPosition(event.relatedTarget);
+  };
+
   return (
     <div>
       <Table
@@ -140,6 +198,12 @@ export const TableData = ({ table, rows }) => {
         columns={[numberColumn, ...columns]}
         data={data}
         style={{ height: "fit-content" }}
+        onFocusIn={(event) => {
+          handleTableFocusIn(event);
+        }}
+        onFocusOut={(event) => {
+          handleTableFocusOut(event);
+        }}
       />
       {data.length === 0 ? <div>No data</div> : null}
       <div className="table_data_actions">
@@ -149,7 +213,19 @@ export const TableData = ({ table, rows }) => {
   );
 };
 
-const DatabaseTableCell = ({ column, value }) => {
+// Function to find cell position from DOM element
+const getCellPosition = (table, elementFocusedOrReceivingFocus) => {
+  const cellElement = elementFocusedOrReceivingFocus.closest("td");
+  if (!cellElement) {
+    return [-1, -1];
+  }
+  const row = cellElement.parentElement;
+  const rowIndex = Array.from(table.rows).indexOf(row);
+  const columnIndex = Array.from(row.cells).indexOf(cellElement);
+  return [columnIndex, rowIndex];
+};
+
+const DatabaseTableCell = ({ column, value, ...props }) => {
   const { editable, startEditing, stopEditing } = useEditableController();
   const databaseInputProps = useDatabaseInputProps({ column });
 
@@ -158,6 +234,7 @@ const DatabaseTableCell = ({ column, value }) => {
       className="database_table_cell"
       tabIndex="0"
       data-editing={editable ? "" : undefined}
+      {...props}
     >
       <div className="database_table_cell_content">
         <Editable
