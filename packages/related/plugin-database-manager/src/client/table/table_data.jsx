@@ -25,11 +25,19 @@ import.meta.css = /* css */ `
   }
 
   .database_table_cell:focus {
+    /* Table cell border size impacts the visual appeareance of the outline
+                (It's kinda melted into the table border, as if it was 1.5 px instead of 2)
+                -> To avoid this we display outline on .database_table_cell_content */
+    outline: none;
+  }
+
+  .database_table_cell:focus .database_table_cell_content {
     outline: 2px solid #0078d4;
+    outline-color: light-dark(#355fcc, #3b82f6);
     outline-offset: -2px;
   }
 
-  .database_table_cell[data-editing] {
+  .database_table_cell[data-editing] .database_table_cell_content {
     outline: 2px solid #a8c7fa;
     outline-offset: 0px;
   }
@@ -54,6 +62,7 @@ import.meta.css = /* css */ `
     display: inline-flex;
     flex-grow: 1;
     padding-left: 8px;
+    border-radius: 0; /* match table cell border-radius */
   }
 
   .database_table_cell_content input[type="number"]::-webkit-inner-spin-button {
