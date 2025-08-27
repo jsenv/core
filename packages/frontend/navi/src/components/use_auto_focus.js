@@ -4,6 +4,7 @@
 import { useEffect, useLayoutEffect } from "preact/hooks";
 
 let blurEvent = null;
+let timeout;
 document.body.addEventListener(
   "blur",
   (e) => {
@@ -11,6 +12,14 @@ document.body.addEventListener(
     setTimeout(() => {
       blurEvent = null;
     });
+  },
+  { capture: true },
+);
+document.body.addEventListener(
+  "focus",
+  () => {
+    clearTimeout(timeout);
+    blurEvent = null;
   },
   { capture: true },
 );
