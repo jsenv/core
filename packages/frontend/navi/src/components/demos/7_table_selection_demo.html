@@ -49,6 +49,9 @@
         position: relative;
       }
 
+      .database_table [data-selected-within] {
+        background-color: rgba(0, 120, 212, 0.08);
+      }
       .database_table[data-multi-selection]
         .database_table_cell[data-selected] {
         background-color: rgba(0, 120, 212, 0.08);
@@ -78,11 +81,6 @@
         user-select: none;
         padding: 8px;
         cursor: pointer;
-      }
-
-      /* Focus highlighting */
-      .database_table *[data-focus-within] {
-        background-color: rgba(0, 120, 212, 0.08);
       }
 
       /* Number column specific styling */
@@ -134,7 +132,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render, createContext } from "preact";
       import { useRef, useContext } from "preact/hooks";
-      import { signal } from "@preact/signals";
+      import { useSignal } from "@preact/signals";
       import {
         // eslint-disable-next-line no-unused-vars
         SelectionProvider,
@@ -229,7 +227,6 @@
           <td
             className="database_table_cell"
             tabIndex={0}
-            data-with-selection=""
             data-selected={isSelected ? "" : undefined}
             onClick={(e) =>
               clickToSelect(e, { selectionContext, value: cellId })
@@ -248,10 +245,11 @@
       // eslint-disable-next-line no-unused-vars
       const TableDemo = () => {
         const tableRef = useRef(null);
-        const cellSelectionSignal = signal([]);
+        const cellSelectionSignal = useSignal([]);
+        const cellSelection = cellSelectionSignal.value;
         const rowWithSomeSelectedCell = [];
         const columnWithSomeSelectedCell = [];
-        const selectionLength = cellSelectionSignal.value.length;
+        const selectionLength = cellSelection.length;
         const clearSelection = () => {
           cellSelectionSignal.value = [];
         };
