@@ -42,7 +42,6 @@ export const SelectionProvider = ({
     </LinearSelectionProvider>
   );
 };
-
 // Grid Selection Provider - for 2D layouts like tables
 const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
   const selection = selectedValues || [];
@@ -66,6 +65,9 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
     },
     isElementSelected: (element) => {
       const value = getElementValue(element);
+      return selection.includes(value);
+    },
+    isValueSelected: (value) => {
       return selection.includes(value);
     },
     getAllElements: () => {
@@ -321,6 +323,9 @@ const LinearSelectionProvider = ({
       const value = getElementValue(element);
       return selection.includes(value);
     },
+    isValueSelected: (value) => {
+      return selection.includes(value);
+    },
     getAllElements: () => {
       return Array.from(registryRef.current);
     },
@@ -542,7 +547,7 @@ export const useSelectionContext = () => {
   return useContext(SelectionContext);
 };
 
-export const useRegisterSelectionElement = (elementRef) => {
+export const useRegisterSelectableElement = (elementRef) => {
   const selectionContext = useSelectionContext();
 
   useLayoutEffect(() => {

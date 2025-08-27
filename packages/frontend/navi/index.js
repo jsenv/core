@@ -49,7 +49,7 @@ export {
   SelectionProvider,
   clickToSelect,
   keydownToSelect,
-  useRegisterSelectionValue,
+  useRegisterSelectableElement,
   useSelectionContext,
 } from "./src/components/selection/selection.js";
 export { Table } from "./src/components/table/table.jsx";

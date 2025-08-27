@@ -137,7 +137,7 @@
         // eslint-disable-next-line no-unused-vars
         SelectionProvider,
         useSelectionContext,
-        useRegisterSelectionValue,
+        useRegisterSelectableElement,
         clickToSelect,
         keydownToSelect,
       } from "@jsenv/navi";
@@ -223,19 +223,18 @@
       const DatabaseTableCell = ({ columnName, row, value, columnIndex }) => {
         const cellId = `${columnName}:${row.id}`;
         const selectionContext = useSelectionContext();
-        const isSelected = selectionContext.isSelected(cellId);
+        const isSelected = selectionContext.isValueSelected(cellId);
 
         // Register this cell with its coordinates (x = columnIndex, y = row.index - 1)
-        const elementRef = useRegisterSelectionValue(cellId, {
-          x: columnIndex,
-          y: row.index - 1,
-        });
+        const cellRef = useRef();
+        useRegisterSelectableElement(cellRef);
 
         return (
           <td
-            ref={elementRef}
+            ref={cellRef}
             className="database_table_cell"
             tabIndex={0}
+            data-value={cellId}
             data-selected={isSelected ? "" : undefined}
             onClick={(e) =>
               clickToSelect(e, { selectionContext, value: cellId })

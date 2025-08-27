@@ -8,7 +8,7 @@ import { LoaderBackground } from "../loader/loader_background.jsx";
 import {
   clickToSelect,
   keydownToSelect,
-  useRegisterSelectionElement,
+  useRegisterSelectableElement,
   useSelectionContext,
 } from "../selection/selection_context.jsx";
 import {
@@ -170,9 +170,9 @@ const LinkWithSelection = forwardRef((props, ref) => {
     onKeyDown,
     ...rest
   } = props;
-  const isSelected = selectionContext.isSelected(value);
+  const isSelected = selectionContext.isValueSelected(value);
 
-  useRegisterSelectionElement(ref);
+  useRegisterSelectableElement(ref);
 
   return (
     <LinkPlain

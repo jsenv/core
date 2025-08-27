@@ -2,6 +2,6 @@ export {
   SelectionProvider,
   clickToSelect,
   keydownToSelect,
-  useRegisterSelectionValue,
+  useRegisterSelectableElement,
   useSelectionContext,
 } from "./selection_context.jsx";
