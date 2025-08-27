@@ -106,18 +106,18 @@ export const TableData = ({ table, rows }) => {
   const { schemaColumns } = table.meta;
   const numberColumn = {
     id: "number",
-    size: 50,
     header: () => {
-      return <th></th>;
+      return <th style={{ width: "50px" }}></th>;
     },
     enableResizing: false,
     cell: ({ row }) => {
       return (
-        <DatabaseTableCell
-          value={row.original.index}
+        <DatabaseTableClientCell
           style={{ textAlign: "center" }}
           data-focus-within={focusWithinRow === row.index ? "" : undefined}
-        />
+        >
+          {row.original.index}
+        </DatabaseTableClientCell>
       );
     },
   };
@@ -223,6 +223,14 @@ const getCellPosition = (table, elementFocusedOrReceivingFocus) => {
   const rowIndex = Array.from(table.rows).indexOf(row);
   const columnIndex = Array.from(row.cells).indexOf(cellElement);
   return [columnIndex, rowIndex];
+};
+
+const DatabaseTableClientCell = ({ children, ...props }) => {
+  return (
+    <td className="database_table_cell" {...props}>
+      {children}
+    </td>
+  );
 };
 
 const DatabaseTableCell = ({ column, value, ...props }) => {
