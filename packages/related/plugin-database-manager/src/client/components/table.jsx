@@ -10,7 +10,7 @@ import "./table.css" with { type: "css" };
 import { useTable } from "./use_table.js";
 
 export const Table = forwardRef((props, ref) => {
-  const { columns, data, rowSelection, onRowSelectionChange, ...rest } = props;
+  const { columns, data, ...rest } = props;
 
   const extraColumns = useMemo(
     () => getExtraColumns(columns, data),
@@ -24,16 +24,12 @@ export const Table = forwardRef((props, ref) => {
     columns: extraColumns ? [...columns, ...extraColumns] : columns,
     data,
     getCoreRowModel: getCoreRowModel(),
-    enableRowSelection: true,
-    state: {
-      rowSelection,
-    },
+    state: {},
     defaultColumn: {
       size: 200, //starting column size
       minSize: 50, //enforced during column resizing
       maxSize: 500, //enforced during column resizing
     },
-    onRowSelectionChange,
   });
 
   return (
@@ -43,11 +39,12 @@ export const Table = forwardRef((props, ref) => {
           <tr key={headerGroup.id}>
             {headerGroup.headers.map((header) => {
               const HeaderCellComponent = header.column.columnDef.header;
+              const headerCellProps = header.getContext();
               if (header.isPlaceholder) {
                 return <th key={header.id}></th>;
               }
               return (
-                <HeaderCellComponent key={header.id} {...header.getContext()} />
+                <HeaderCellComponent key={header.id} {...headerCellProps} />
               );
             })}
           </tr>
@@ -104,9 +101,13 @@ const getExtraColumns = (columns, values) => {
     const extraColumn = {
       accessor: extraColumnKey,
       id: extraColumnKey,
-      cell: (info) => info.getValue(),
-      header: () => <span>{extraColumnKey}</span>,
-      footer: (info) => info.column.id,
+      header: () => (
+        <th>
+          <span>{extraColumnKey}</span>
+        </th>
+      ),
+      cell: (info) => <td>{info.getValue()}</td>,
+      footer: (info) => <td>{info.column.id}</td>,
     };
     extraColumns.push(extraColumn);
   }
@@ -132,7 +133,7 @@ const TableBodyRow = ({ cells }) => {
   );
 };
 const TableBodyCell = ({ cell }) => {
-  const CellComponent = cell.column.columnDef.cell;
-  const cellProps = cell.getContext();
-  return <CellComponent {...cellProps} />;
+  const BodyCellComponent = cell.column.columnDef.cell;
+  const bodyCellProps = cell.getContext();
+  return <BodyCellComponent {...bodyCellProps} />;
 };

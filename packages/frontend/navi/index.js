@@ -59,6 +59,7 @@ export { Overflow } from "./src/components/text/overflow.jsx";
 export { TextAndCount } from "./src/components/text/text_and_count.jsx";
 
 // Other
+export { useDependenciesDiff } from "./src/components/use_dependencies_diff.js";
 export { useFocusGroup } from "./src/components/use_focus_group.js";
 
 // for debugging testing purposes

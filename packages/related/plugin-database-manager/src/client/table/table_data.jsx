@@ -18,11 +18,12 @@
 import {
   Button,
   Editable,
+  useDependenciesDiff,
   useEditableController,
   useFocusGroup,
   useStateArray,
 } from "@jsenv/navi";
-import { useRef, useState } from "preact/hooks";
+import { useMemo, useRef, useState } from "preact/hooks";
 import { useDatabaseInputProps } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
@@ -92,7 +93,7 @@ import.meta.css = /* css */ `
 
 export const TableData = ({ table, rows }) => {
   const tableName = table.tablename;
-  const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
+  // const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
   const [rowSelection, addRowToSelection, removeRowFromSelection] =
     useStateArray();
   const rowIsSelected = (row) => rowSelection.includes(row.id);
@@ -101,8 +102,11 @@ export const TableData = ({ table, rows }) => {
   useFocusGroup(tableRef);
   const [focusWithinRow, setFocusWithinRow] = useState(-1);
   const [focusWithinColumn, setFocusWithinColumn] = useState(-1);
-  const updateFocusPosition = (target) => {
-    const [row, column] = getCellPosition(tableRef.current, target);
+  const updateFocusPosition = (elementFocusedOrReceivingFocus) => {
+    const [row, column] = getCellPosition(
+      tableRef.current,
+      elementFocusedOrReceivingFocus,
+    );
     setFocusWithinRow(row);
     setFocusWithinColumn(column);
   };
@@ -118,99 +122,104 @@ export const TableData = ({ table, rows }) => {
   };
 
   const { schemaColumns } = table.meta;
-  const numberColumn = {
-    id: "number",
-    header: () => {
-      return <th style={{ width: "50px" }}></th>;
-    },
-    enableResizing: false,
-    cell: ({ row }) => {
-      return (
-        <DatabaseTableClientCell
-          style={{ textAlign: "center" }}
-          data-focus-within={focusWithinRow === row.index ? "" : undefined}
-        >
-          {row.original.index}
-        </DatabaseTableClientCell>
-      );
-    },
-  };
-  const columns = schemaColumns.map((column, index) => {
-    const columnName = column.column_name;
-    const columnIndex = index + 1; // +1 because number column is first
-
+  const numberColumn = useMemo(() => {
     return {
-      enableResizing: true,
-      accessorKey: columnName,
-      header: ({ header }) => {
+      id: "number",
+      header: () => {
+        return <th style={{ width: "50px" }}>Coucou</th>;
+      },
+      enableResizing: false,
+      cell: ({ row }) => {
         return (
-          <th
-            style={{
-              width: `${header.getSize()}px`,
-            }}
-            data-focus-within={
-              focusWithinColumn === columnIndex ? "" : undefined
-            }
+          <DatabaseTableClientCell
+            style={{ textAlign: "center" }}
+            data-focus-within={focusWithinRow === row.index ? "" : undefined}
           >
-            <span>{columnName}</span>
-          </th>
+            {row.original.index}
+          </DatabaseTableClientCell>
         );
       },
-      cell: (info) => {
-        const value = info.getValue();
-        const row = info.row;
-        const selected = rowIsSelected(row);
-        // const rowData = info.row.original;
-        return (
-          <DatabaseTableCell
-            onClick={() => {
-              if (selected) {
-                removeRowFromSelection(row.id);
-              } else {
-                addRowToSelection(row.id);
-              }
-            }}
-            column={column}
-            value={value}
-          />
-        );
-      },
-      footer: (info) => info.column.id,
     };
-  });
+  }, []);
 
   const data = rows;
+
+  const columns = useMemo(() => {
+    const remainingColumns = schemaColumns.map((column, index) => {
+      const columnName = column.column_name;
+      const columnIndex = index + 1; // +1 because number column is first
+
+      return {
+        enableResizing: true,
+        accessorKey: columnName,
+        header: ({ header }) => {
+          return (
+            <th
+              // style={{
+              //   width: `${header.getSize()}px`,
+              // }}
+              data-focus-within={
+                focusWithinColumn === columnIndex ? "" : undefined
+              }
+            >
+              <span>{columnName}</span>
+            </th>
+          );
+        },
+        cell: (info) => {
+          const value = info.getValue();
+          const row = info.row;
+          const selected = rowIsSelected(row);
+          // const rowData = info.row.original;
+          return (
+            <DatabaseTableCell
+              onClick={() => {
+                if (selected) {
+                  removeRowFromSelection(row.id);
+                } else {
+                  addRowToSelection(row.id);
+                }
+              }}
+              column={column}
+              value={value}
+            />
+          );
+        },
+        footer: (info) => info.column.id,
+      };
+    });
+
+    return [...remainingColumns];
+  }, [numberColumn, schemaColumns]);
 
   return (
     <div>
       <Table
         ref={tableRef}
         className="database_table"
-        columns={[numberColumn, ...columns]}
+        columns={columns}
         data={data}
-        style={{ height: "fit-content" }}
-        onFocusIn={(event) => {
-          handleTableFocusIn(event);
-        }}
-        onFocusOut={(event) => {
-          handleTableFocusOut(event);
-        }}
+        // style={{ height: "fit-content" }}
+        // onFocusIn={(event) => {
+        //   handleTableFocusIn(event);
+        // }}
+        // onFocusOut={(event) => {
+        //   handleTableFocusOut(event);
+        // }}
       />
       {data.length === 0 ? <div>No data</div> : null}
       <div className="table_data_actions">
-        <Button action={createRow}>Add row</Button>
+        {/* <Button action={createRow}>Add row</Button> */}
       </div>
     </div>
   );
 };
 
-// Function to find cell position from DOM element
-const getCellPosition = (table, elementFocusedOrReceivingFocus) => {
-  // Only clear focus if we're leaving the table entirely
-  if (!table.contains(elementFocusedOrReceivingFocus)) {
+const getCellPosition = (table, element) => {
+  if (!table.contains(element)) {
     return [-1, -1];
   }
-  const cellElement = elementFocusedOrReceivingFocus.closest("td");
+  const cellElement = element.closest("td");
   if (!cellElement) {
     return [-1, -1];
   }
@@ -240,7 +249,7 @@ const DatabaseTableCell = ({ column, value, ...props }) => {
       {...props}
     >
       <div className="database_table_cell_content">
-        <Editable
+        {/* <Editable
           editable={editable}
           onEditEnd={stopEditing}
           value={value}
@@ -254,7 +263,7 @@ const DatabaseTableCell = ({ column, value, ...props }) => {
           >
             {value}
           </div>
-        </Editable>
+        </Editable> */}
       </div>
     </td>
   );
