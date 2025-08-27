@@ -25,9 +25,9 @@ import.meta.css = /* css */ `
   }
 
   .database_table_cell:focus {
-    /* Table cell border size impacts the visual appeareance of the outline
-                (It's kinda melted into the table border, as if it was 1.5 px instead of 2)
-                -> To avoid this we display outline on .database_table_cell_content */
+    /* Table cell border size impacts the visual appeareance of the outline */
+    /* (It's kinda melted into the table border, as if it was 1.5 px instead of 2) */
+    /* To avoid this we display outline on .database_table_cell_content  */
     outline: none;
   }
 
