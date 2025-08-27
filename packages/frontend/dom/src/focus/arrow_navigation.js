@@ -271,60 +271,64 @@ const getNextPositionInTable = (
   originalCellIndex,
   loop,
 ) => {
-  let nextRowIndex = rowIndex;
-  let nextCellIndex = cellIndex;
   if (key === "ArrowRight") {
-    nextCellIndex = cellIndex + 1;
     const currentRowCells = rows[rowIndex]?.cells || [];
-    if (nextCellIndex >= currentRowCells.length) {
-      nextRowIndex = rowIndex + 1;
-      if (nextRowIndex >= rows.length) {
-        if (!loop) return null;
-        nextRowIndex = 0;
-      }
-      nextCellIndex = 0;
+    const nextCellIndex = cellIndex + 1;
+    if (nextCellIndex < currentRowCells.length) {
+      return { rowIndex, cellIndex: nextCellIndex };
     }
-  } else if (key === "ArrowLeft") {
-    nextCellIndex = cellIndex - 1;
-    if (nextCellIndex < 0) {
-      nextRowIndex = rowIndex - 1;
-      if (nextRowIndex < 0) {
-        if (!loop) {
-          return null;
-        }
-        nextRowIndex = rows.length - 1;
-      }
-      const prevRowCells = rows[nextRowIndex]?.cells || [];
-      nextCellIndex = Math.max(0, prevRowCells.length - 1);
-    }
-  } else if (key === "ArrowDown") {
-    nextRowIndex = rowIndex + 1;
+    // move to first cell of next row (or wrap)
+    let nextRowIndex = rowIndex + 1;
     if (nextRowIndex >= rows.length) {
-      if (!loop) {
-        return null;
-      }
+      if (!loop) return null;
+      nextRowIndex = 0;
+    }
+    return { rowIndex: nextRowIndex, cellIndex: 0 };
+  }
+
+  if (key === "ArrowLeft") {
+    const prevCellIndex = cellIndex - 1;
+    if (prevCellIndex >= 0) {
+      return { rowIndex, cellIndex: prevCellIndex };
+    }
+    // move to last cell of previous row (or wrap)
+    let prevRowIndex = rowIndex - 1;
+    if (prevRowIndex < 0) {
+      if (!loop) return null;
+      prevRowIndex = rows.length - 1;
+    }
+    const prevRowCells = rows[prevRowIndex]?.cells || [];
+    const lastIndex = Math.max(0, prevRowCells.length - 1);
+    return { rowIndex: prevRowIndex, cellIndex: lastIndex };
+  }
+
+  if (key === "ArrowDown") {
+    let nextRowIndex = rowIndex + 1;
+    if (nextRowIndex >= rows.length) {
+      if (!loop) return null;
       nextRowIndex = 0;
     }
     const targetRowCells = rows[nextRowIndex]?.cells || [];
-    nextCellIndex = Math.min(
+    const nextCellIndex = Math.min(
       originalCellIndex,
       Math.max(0, targetRowCells.length - 1),
     );
-  } else if (key === "ArrowUp") {
-    nextRowIndex = rowIndex - 1;
-    if (nextRowIndex < 0) {
-      if (!loop) {
-        return null;
-      }
-      nextRowIndex = rows.length - 1;
-    }
-    const targetRowCells = rows[nextRowIndex]?.cells || [];
-    nextCellIndex = Math.min(
-      originalCellIndex,
-      Math.max(0, targetRowCells.length - 1),
-    );
-  } else {
-    return null;
+    return { rowIndex: nextRowIndex, cellIndex: nextCellIndex };
   }
-  return { rowIndex: nextRowIndex, cellIndex: nextCellIndex };
+
+  if (key === "ArrowUp") {
+    let prevRowIndex = rowIndex - 1;
+    if (prevRowIndex < 0) {
+      if (!loop) return null;
+      prevRowIndex = rows.length - 1;
+    }
+    const targetRowCells = rows[prevRowIndex]?.cells || [];
+    const nextCellIndex = Math.min(
+      originalCellIndex,
+      Math.max(0, targetRowCells.length - 1),
+    );
+    return { rowIndex: prevRowIndex, cellIndex: nextCellIndex };
+  }
+
+  return null;
 };
