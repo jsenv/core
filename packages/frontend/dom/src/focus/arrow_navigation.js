@@ -26,10 +26,10 @@ export const performArrowNavigation = (
   }
 
   const activeElement = document.activeElement;
-  const isForward = isForwardArrow(event, direction);
+
   const onTargetToFocus = (targetToFocus) => {
     console.debug(
-      `Arrow navigation: ${isForward ? "forward" : "backward"} from`,
+      `Arrow navigation: ${event.key} from`,
       activeElement,
       "to",
       targetToFocus,
@@ -38,6 +38,37 @@ export const performArrowNavigation = (
     arrowFocusNavEventMarker.mark(event);
     targetToFocus.focus();
   };
+
+  // Grid navigation: we support only TABLE element for now
+  // A role="table" or an element with display: table could be used too but for now we need only TABLE support
+  if (element.tagName === "TABLE") {
+    const targetInGrid = getTargetInTableFocusGroup(event, element, { loop });
+    if (!targetInGrid) {
+      return false;
+    }
+    onTargetToFocus(targetInGrid);
+    return true;
+  }
+
+  const targetInLinearGroup = getTargetInLinearFocusGroup(event, element, {
+    direction,
+    loop,
+    name,
+  });
+  if (!targetInLinearGroup) {
+    return false;
+  }
+  onTargetToFocus(targetInLinearGroup);
+  return true;
+};
+
+const getTargetInLinearFocusGroup = (
+  event,
+  element,
+  { direction, loop, name },
+) => {
+  const activeElement = document.activeElement;
+  const isForward = isForwardArrow(event, direction);
 
   // Arrow Left/Up: move to previous focusable element in group
   backward: {
@@ -48,10 +79,15 @@ export const performArrowNavigation = (
       root: element,
     });
     if (previousElement) {
-      return onTargetToFocus(previousElement);
+      return previousElement;
     }
-    if (delegateArrowNavigation(event, element, { direction, loop, name })) {
-      return true;
+    const ancestorTarget = delegateArrowNavigation(event, element, {
+      direction,
+      loop,
+      name,
+    });
+    if (ancestorTarget) {
+      return ancestorTarget;
     }
     if (loop) {
       const lastFocusableElement = findLastDescendant(
@@ -59,10 +95,10 @@ export const performArrowNavigation = (
         elementIsFocusable,
       );
       if (lastFocusableElement) {
-        return onTargetToFocus(lastFocusableElement);
+        return lastFocusableElement;
       }
     }
-    return false;
+    return null;
   }
 
   // Arrow Right/Down: move to next focusable element in group
@@ -74,23 +110,27 @@ export const performArrowNavigation = (
       root: element,
     });
     if (nextElement) {
-      return onTargetToFocus(nextElement);
+      return nextElement;
     }
-
-    if (delegateArrowNavigation(event, element, { direction, loop, name })) {
-      return true;
+    const ancestorTarget = delegateArrowNavigation(event, element, {
+      direction,
+      loop,
+      name,
+    });
+    if (ancestorTarget) {
+      return ancestorTarget;
     }
     if (loop) {
       // No next element, wrap to first focusable in group
       const firstFocusableElement = findDescendant(element, elementIsFocusable);
       if (firstFocusableElement) {
-        return onTargetToFocus(firstFocusableElement);
+        return firstFocusableElement;
       }
     }
-    return false;
+    return null;
   }
 
-  return false;
+  return null;
 };
 // Find parent focus group with the same name and try delegation
 const delegateArrowNavigation = (event, currentElement, { name }) => {
@@ -117,18 +157,14 @@ const delegateArrowNavigation = (event, currentElement, { name }) => {
         );
       }
       // Try navigation in parent focus group
-      const handled = performArrowNavigation(event, ancestorElement, {
+      return getTargetInLinearFocusGroup(event, ancestorElement, {
         direction: ancestorFocusGroup.direction,
         loop: ancestorFocusGroup.loop,
         name: ancestorFocusGroup.name,
       });
-      if (handled) {
-        return true;
-      }
     }
   }
-
-  return false;
+  return null;
 };
 const isBackwardArrow = (event, direction = "both") => {
   const backwardKeys = {
@@ -138,7 +174,6 @@ const isBackwardArrow = (event, direction = "both") => {
   };
   return backwardKeys[direction]?.includes(event.key) ?? false;
 };
-
 const isForwardArrow = (event, direction = "both") => {
   const forwardKeys = {
     both: ["ArrowRight", "ArrowDown"],
@@ -146,4 +181,120 @@ const isForwardArrow = (event, direction = "both") => {
     horizontal: ["ArrowRight"],
   };
   return forwardKeys[direction]?.includes(event.key) ?? false;
+};
+
+// Handle arrow navigation inside an HTMLTableElement as a grid.
+// Moves focus to adjacent cell in the direction of the arrow key.
+const getTargetInTableFocusGroup = (event, table, { loop }) => {
+  const key = event.key;
+  if (
+    key !== "ArrowRight" &&
+    key !== "ArrowLeft" &&
+    key !== "ArrowUp" &&
+    key !== "ArrowDown"
+  ) {
+    return null;
+  }
+
+  const active = document.activeElement;
+  // Find current cell (td or th)
+  const currentCell = active?.closest?.("td,th");
+  if (!currentCell || !table.contains(currentCell)) {
+    // If not inside a cell, try to focus the first focusable within the first cell
+    const rows = Array.from(table.rows);
+    if (!rows.length) {
+      return null;
+    }
+    const firstCell = rows[0].cells[0];
+    if (!firstCell) {
+      return null;
+    }
+    const target = findDescendant(firstCell, elementIsFocusable) || firstCell;
+    if (target === firstCell && firstCell.tabIndex < 0) {
+      firstCell.tabIndex = -1;
+    }
+    return target;
+  }
+
+  const currentRow = currentCell.parentElement; // tr
+  const rows = Array.from(table.rows);
+  const rowIndex = /** @type {HTMLTableRowElement} */ (currentRow).rowIndex;
+  const cellIndex = /** @type {HTMLTableCellElement} */ (currentCell).cellIndex;
+
+  let nextRowIndex = rowIndex;
+  let nextCellIndex = cellIndex;
+
+  if (key === "ArrowRight") {
+    nextCellIndex = cellIndex + 1;
+    const currentRowCells = rows[rowIndex].cells;
+    if (nextCellIndex >= currentRowCells.length) {
+      // move to first cell of next row (or wrap)
+      nextRowIndex = rowIndex + 1;
+      if (nextRowIndex >= rows.length) {
+        if (!loop) {
+          return null;
+        }
+        nextRowIndex = 0;
+      }
+      nextCellIndex = 0;
+    }
+  } else if (key === "ArrowLeft") {
+    nextCellIndex = cellIndex - 1;
+    if (nextCellIndex < 0) {
+      // move to last cell of previous row (or wrap)
+      nextRowIndex = rowIndex - 1;
+      if (nextRowIndex < 0) {
+        if (!loop) {
+          return null;
+        }
+        nextRowIndex = rows.length - 1;
+      }
+      const prevRowCells = rows[nextRowIndex].cells;
+      if (!prevRowCells || prevRowCells.length === 0) {
+        return null;
+      }
+      nextCellIndex = prevRowCells.length - 1;
+    }
+  } else if (key === "ArrowDown") {
+    nextRowIndex = rowIndex + 1;
+    if (nextRowIndex >= rows.length) {
+      if (!loop) {
+        return null;
+      }
+      nextRowIndex = 0;
+    }
+    // keep same column, clamp if row shorter
+    const targetRowCells = rows[nextRowIndex].cells;
+    if (!targetRowCells || targetRowCells.length === 0) {
+      return null;
+    }
+    nextCellIndex = Math.min(cellIndex, targetRowCells.length - 1);
+  } else if (key === "ArrowUp") {
+    nextRowIndex = rowIndex - 1;
+    if (nextRowIndex < 0) {
+      if (!loop) {
+        return null;
+      }
+      nextRowIndex = rows.length - 1;
+    }
+    const targetRowCells = rows[nextRowIndex].cells;
+    if (!targetRowCells || targetRowCells.length === 0) {
+      return null;
+    }
+    nextCellIndex = Math.min(cellIndex, targetRowCells.length - 1);
+  }
+
+  const nextRow = rows[nextRowIndex];
+  if (!nextRow) {
+    return null;
+  }
+  const nextCell = nextRow.cells[nextCellIndex];
+  if (!nextCell) {
+    return null;
+  }
+  const focusTarget = findDescendant(nextCell, elementIsFocusable) || nextCell;
+  if (focusTarget === nextCell && nextCell.tabIndex < 0) {
+    nextCell.tabIndex = -1;
+  }
+  return focusTarget;
 };
