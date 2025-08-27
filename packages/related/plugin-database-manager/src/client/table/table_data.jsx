@@ -16,22 +16,18 @@
 
 import {
   Button,
+  clickToSelect,
   Editable,
+  keydownToSelect,
   SelectionProvider,
   ShortcutProvider,
   useEditableController,
   useFocusGroup,
-  useStateArray,
+  useSelectionContext,
 } from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
 import { createContext } from "preact";
-import {
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useMemo, useRef, useState } from "preact/hooks";
 import { useDatabaseInputProps } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
@@ -103,16 +99,9 @@ import.meta.css = /* css */ `
 `;
 
 export const TableData = ({ table, rows }) => {
+  const tableRef = useRef(null);
   const tableName = table.tablename;
   const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
-  const [rowSelection, addRowToSelection, removeRowFromSelection] =
-    useStateArray();
-  const rowIsSelected = useCallback(
-    (row) => rowSelection.includes(row.id),
-    [rowSelection],
-  );
-
-  const tableRef = useRef(null);
 
   useFocusGroup(tableRef);
   const [focusWithinRow, setFocusWithinRow] = useState(-1);
@@ -167,7 +156,6 @@ export const TableData = ({ table, rows }) => {
             column={column}
             value={info.getValue()}
             row={info.row}
-            selected={rowIsSelected(info.row)}
           />
         ),
         footer: (info) => info.column.id,
@@ -190,19 +178,8 @@ export const TableData = ({ table, rows }) => {
     () => ({
       focusWithinRow,
       focusWithinColumn,
-      rowSelection,
-      rowIsSelected,
-      addRowToSelection,
-      removeRowFromSelection,
     }),
-    [
-      focusWithinRow,
-      focusWithinColumn,
-      rowSelection,
-      rowIsSelected,
-      addRowToSelection,
-      removeRowFromSelection,
-    ],
+    [focusWithinRow, focusWithinColumn],
   );
 
   const cellSelectionSignal = useSignal([]);
@@ -329,9 +306,17 @@ const DatabaseTableClientCell = ({ children, ...props }) => {
   );
 };
 
-const DatabaseTableCell = ({ column, row, value, selected, ...props }) => {
-  const { addRowToSelection, removeRowFromSelection } =
-    useContext(TableStateContext);
+const DatabaseTableCell = ({
+  column,
+  row,
+  value,
+  onClick,
+  onKeyDown,
+  ...props
+}) => {
+  const cellId = row.id;
+  const selectionContext = useSelectionContext();
+  const isSelected = selectionContext.isSelected(cellId);
   const { editable, startEditing, stopEditing } = useEditableController();
   const databaseInputProps = useDatabaseInputProps({ column });
 
@@ -340,12 +325,15 @@ const DatabaseTableCell = ({ column, row, value, selected, ...props }) => {
       className="database_table_cell"
       tabIndex="0"
       data-editing={editable ? "" : undefined}
-      onClick={() => {
-        if (selected) {
-          removeRowFromSelection(row.id);
-        } else {
-          addRowToSelection(row.id);
-        }
+      data-with-selection=""
+      data-selected={isSelected ? "" : undefined}
+      onClick={(e) => {
+        clickToSelect(e, { selectionContext, value: cellId });
+        onClick?.(e);
+      }}
+      onKeyDown={(e) => {
+        keydownToSelect(e, { selectionContext, value: cellId });
+        onKeyDown?.(e);
       }}
       {...props}
     >
