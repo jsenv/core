@@ -18,12 +18,11 @@
 import {
   Button,
   Editable,
-  useDependenciesDiff,
   useEditableController,
   useFocusGroup,
   useStateArray,
 } from "@jsenv/navi";
-import { useMemo, useRef, useState } from "preact/hooks";
+import { useCallback, useMemo, useRef, useState } from "preact/hooks";
 import { useDatabaseInputProps } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
@@ -93,15 +92,20 @@ import.meta.css = /* css */ `
 
 export const TableData = ({ table, rows }) => {
   const tableName = table.tablename;
-  // const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
+  const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
   const [rowSelection, addRowToSelection, removeRowFromSelection] =
     useStateArray();
-  const rowIsSelected = (row) => rowSelection.includes(row.id);
+  const rowIsSelected = useCallback(
+    (row) => rowSelection.includes(row.id),
+    [rowSelection],
+  );
+
   const tableRef = useRef(null);
 
   useFocusGroup(tableRef);
   const [focusWithinRow, setFocusWithinRow] = useState(-1);
   const [focusWithinColumn, setFocusWithinColumn] = useState(-1);
+
   const updateFocusPosition = (elementFocusedOrReceivingFocus) => {
     const [row, column] = getCellPosition(
       tableRef.current,
@@ -122,11 +126,12 @@ export const TableData = ({ table, rows }) => {
   };
 
   const { schemaColumns } = table.meta;
-  const numberColumn = useMemo(() => {
-    return {
+
+  const columns = useMemo(() => {
+    const numberColumn = {
       id: "number",
       header: () => {
-        return <th style={{ width: "50px" }}>Coucou</th>;
+        return <th style={{ width: "50px" }}></th>;
       },
       enableResizing: false,
       cell: ({ row }) => {
@@ -140,11 +145,7 @@ export const TableData = ({ table, rows }) => {
         );
       },
     };
-  }, []);
 
-  const data = rows;
-
-  const columns = useMemo(() => {
     const remainingColumns = schemaColumns.map((column, index) => {
       const columnName = column.column_name;
       const columnIndex = index + 1; // +1 because number column is first
@@ -155,9 +156,9 @@ export const TableData = ({ table, rows }) => {
         header: ({ header }) => {
           return (
             <th
-              // style={{
-              //   width: `${header.getSize()}px`,
-              // }}
+              style={{
+                width: `${header.getSize()}px`,
+              }}
               data-focus-within={
                 focusWithinColumn === columnIndex ? "" : undefined
               }
@@ -189,8 +190,17 @@ export const TableData = ({ table, rows }) => {
       };
     });
 
-    return [...remainingColumns];
-  }, [numberColumn, schemaColumns]);
+    return [numberColumn, ...remainingColumns];
+  }, [
+    schemaColumns,
+    focusWithinRow,
+    focusWithinColumn,
+    removeRowFromSelection,
+    addRowToSelection,
+    rowIsSelected,
+  ]);
+
+  const data = rows;
 
   return (
     <div>
@@ -199,7 +209,7 @@ export const TableData = ({ table, rows }) => {
         className="database_table"
         columns={columns}
         data={data}
-        // style={{ height: "fit-content" }}
+        style={{ height: "fit-content" }}
         // onFocusIn={(event) => {
         //   handleTableFocusIn(event);
         // }}
@@ -209,7 +219,7 @@ export const TableData = ({ table, rows }) => {
       />
       {data.length === 0 ? <div>No data</div> : null}
       <div className="table_data_actions">
-        {/* <Button action={createRow}>Add row</Button> */}
+        <Button action={createRow}>Add row</Button>
       </div>
     </div>
   );
@@ -249,7 +259,7 @@ const DatabaseTableCell = ({ column, value, ...props }) => {
       {...props}
     >
       <div className="database_table_cell_content">
-        {/* <Editable
+        <Editable
           editable={editable}
           onEditEnd={stopEditing}
           value={value}
@@ -263,7 +273,7 @@ const DatabaseTableCell = ({ column, value, ...props }) => {
           >
             {value}
           </div>
-        </Editable> */}
+        </Editable>
       </div>
     </td>
   );
