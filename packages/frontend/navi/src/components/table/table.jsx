@@ -1,6 +1,7 @@
 /**
  *
- *  https://tanstack.com/table/v8/docs/framework/react/examples/basic
+ * https://tanstack.com/table/v8/docs/framework/react/examples/basic
+ * https://docs.google.com/spreadsheets/d/1m1wWDgM61HUbkShYYR9ClAFhLPE7edh-tzeF6hA2dww/edit?gid=0#gid=0
  */
 
 import { getCoreRowModel } from "@tanstack/table-core";

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Table Cell Selection Demo</title>
+    <title>Table Cell Selection Demo - Preact</title>
     <style>
       body {
         font-family:
@@ -49,6 +49,11 @@
         position: relative;
       }
 
+      .database_table[data-multi-selection]
+        .database_table_cell[data-selected] {
+        background-color: rgba(0, 120, 212, 0.08);
+      }
+
       .database_table_cell:focus {
         outline: none;
       }
@@ -78,15 +83,6 @@
       /* Focus highlighting */
       .database_table *[data-focus-within] {
         background-color: rgba(0, 120, 212, 0.08);
-      }
-
-      /* Row selection highlighting */
-      .database_table tr.selected {
-        background-color: rgba(0, 120, 212, 0.15);
-      }
-
-      .database_table tr.selected td {
-        background-color: rgba(0, 120, 212, 0.15);
       }
 
       /* Number column specific styling */
@@ -133,346 +129,366 @@
     </style>
   </head>
   <body>
-    <div class="demo-container">
-      <h1>Table Cell Selection Demo</h1>
-      <p>
-        Click cells to select/deselect rows. Use Tab/Shift+Tab and arrow keys to
-        navigate.
-      </p>
+    <div id="root"></div>
 
-      <table class="database_table" id="demo-table">
-        <thead>
-          <tr>
-            <th class="number-column">#</th>
-            <th data-focus-within="">Name</th>
-            <th>Email</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr data-row-id="1">
-            <td class="database_table_cell number-column" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">1</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">John Doe</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">john@example.com</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">Active</div>
-              </div>
-            </td>
-          </tr>
-          <tr data-row-id="2">
-            <td class="database_table_cell number-column" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">2</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">Jane Smith</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">jane@example.com</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">Inactive</div>
-              </div>
-            </td>
-          </tr>
-          <tr data-row-id="3">
-            <td class="database_table_cell number-column" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">3</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">Bob Johnson</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">bob@example.com</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">Active</div>
-              </div>
-            </td>
-          </tr>
-          <tr data-row-id="4">
-            <td class="database_table_cell number-column" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">4</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">Alice Brown</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">alice@example.com</div>
-              </div>
-            </td>
-            <td class="database_table_cell" tabindex="0">
-              <div class="database_table_cell_content">
-                <div class="database_table_cell_value">Active</div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <script type="module">
+      import { render, h, createContext } from "preact";
+      import { useRef, useState, useMemo, useContext } from "preact/hooks";
+      import { signal } from "@preact/signals";
 
-      <div class="status">
-        <div>Selected rows: <span id="selected-rows">[]</span></div>
-        <div>Focused cell: <span id="focused-cell">None</span></div>
-        <div>
-          Focus position: <span id="focus-position">Row: -, Column: -</span>
-        </div>
-      </div>
+      // Mock the selection context similar to @jsenv/navi
+      const SelectionContext = createContext();
 
-      <div class="actions">
-        <button onclick="clearSelection()">Clear Selection</button>
-        <button onclick="selectAll()">Select All</button>
-        <button onclick="logState()">Log State</button>
-      </div>
-    </div>
+      const SelectionProvider = ({ children, value, onChange }) => {
+        const selectionValue = useMemo(
+          () => ({
+            selection: value || [],
+            isSelected: (itemId) => (value || []).includes(itemId),
+            toggle: (itemId) => {
+              const currentSelection = value || [];
+              const newSelection = currentSelection.includes(itemId)
+                ? currentSelection.filter((id) => id !== itemId)
+                : [...currentSelection, itemId];
+              onChange?.(newSelection);
+            },
+            add: (itemId) => {
+              const currentSelection = value || [];
+              if (!currentSelection.includes(itemId)) {
+                onChange?.([...currentSelection, itemId]);
+              }
+            },
+            remove: (itemId) => {
+              const currentSelection = value || [];
+              onChange?.(currentSelection.filter((id) => id !== itemId));
+            },
+          }),
+          [value, onChange],
+        );
 
-    <script>
-      // State management similar to useStateArray
-      let rowSelection = [];
-      let focusWithinRow = -1;
-      let focusWithinColumn = -1;
+        return h(
+          SelectionContext.Provider,
+          { value: selectionValue },
+          children,
+        );
+      };
 
-      // DOM references
-      const table = document.getElementById("demo-table");
-      const selectedRowsSpan = document.getElementById("selected-rows");
-      const focusedCellSpan = document.getElementById("focused-cell");
-      const focusPositionSpan = document.getElementById("focus-position");
-
-      // Helper functions
-      function addRowToSelection(rowId) {
-        if (!rowSelection.includes(rowId)) {
-          rowSelection.push(rowId);
-          updateUI();
+      const useSelectionContext = () => {
+        const context = useContext(SelectionContext);
+        if (!context) {
+          throw new Error(
+            "useSelectionContext must be used within SelectionProvider",
+          );
         }
-      }
+        return context;
+      };
 
-      function removeRowFromSelection(rowId) {
-        const index = rowSelection.indexOf(rowId);
-        if (index > -1) {
-          rowSelection.splice(index, 1);
-          updateUI();
-        }
-      }
+      const clickToSelect = (event, { selectionContext, value }) => {
+        event.preventDefault();
 
-      function rowIsSelected(rowId) {
-        return rowSelection.includes(rowId);
-      }
-
-      function getCellPosition(element) {
-        const cell = element.closest("td");
-        if (!cell) return [-1, -1];
-
-        const row = cell.closest("tr");
-        const allRows = Array.from(table.querySelectorAll("tbody tr"));
-        const allCells = Array.from(row.querySelectorAll("td"));
-
-        const rowIndex = allRows.indexOf(row);
-        const columnIndex = allCells.indexOf(cell);
-
-        return [columnIndex, rowIndex];
-      }
-
-      function updateFocusHighlighting() {
-        // Clear previous highlighting
-        table.querySelectorAll("[data-focus-within]").forEach((el) => {
-          el.removeAttribute("data-focus-within");
-        });
-
-        if (focusWithinRow >= 0) {
-          // Highlight focused row's number cell
-          const numberCells = table.querySelectorAll("td.number-column");
-          if (numberCells[focusWithinRow]) {
-            numberCells[focusWithinRow].setAttribute("data-focus-within", "");
-          }
-        }
-
-        if (focusWithinColumn >= 0) {
-          // Highlight focused column header
-          const headers = table.querySelectorAll("th");
-          if (headers[focusWithinColumn]) {
-            headers[focusWithinColumn].setAttribute("data-focus-within", "");
-          }
-        }
-      }
-
-      function updateRowSelection() {
-        // Clear previous selection styling
-        table.querySelectorAll("tr").forEach((row) => {
-          row.classList.remove("selected");
-        });
-
-        // Apply selection styling
-        rowSelection.forEach((rowId) => {
-          const row = table.querySelector(`tr[data-row-id="${rowId}"]`);
-          if (row) {
-            row.classList.add("selected");
-          }
-        });
-      }
-
-      function updateUI() {
-        updateRowSelection();
-        updateFocusHighlighting();
-
-        // Update status display
-        selectedRowsSpan.textContent = JSON.stringify(rowSelection);
-        focusedCellSpan.textContent = document.activeElement?.closest("td")
-          ? document.activeElement.closest("td").textContent.trim()
-          : "None";
-        focusPositionSpan.textContent = `Row: ${focusWithinRow}, Column: ${focusWithinColumn}`;
-      }
-
-      // Event handlers
-      function handleCellClick(event) {
-        const cell = event.target.closest("td");
-        if (!cell) return;
-
-        const row = cell.closest("tr");
-        const rowId = row.getAttribute("data-row-id");
-
-        if (rowIsSelected(rowId)) {
-          removeRowFromSelection(rowId);
-          console.log("Removed row from selection:", rowId);
+        if (event.metaKey || event.ctrlKey) {
+          // Multi-select with Cmd/Ctrl
+          selectionContext.toggle(value);
+        } else if (event.shiftKey) {
+          // Range select with Shift (simplified)
+          selectionContext.add(value);
         } else {
-          addRowToSelection(rowId);
-          console.log("Added row to selection:", rowId);
+          // Single select
+          selectionContext.onChange([value]);
         }
-      }
+      };
 
-      function handleCellFocus(event) {
-        const cell = event.target.closest("td");
-        if (!cell) return;
-
-        const [columnIndex, rowIndex] = getCellPosition(cell);
-        focusWithinRow = rowIndex;
-        focusWithinColumn = columnIndex;
-
-        console.log("Focus changed to:", {
-          row: rowIndex,
-          column: columnIndex,
-        });
-        updateUI();
-      }
-
-      function handleCellBlur(event) {
-        // Only clear focus if we're leaving the table entirely
-        setTimeout(() => {
-          if (!table.contains(document.activeElement)) {
-            focusWithinRow = -1;
-            focusWithinColumn = -1;
-            updateUI();
-          }
-        }, 0);
-      }
-
-      // Action functions
-      function clearSelection() {
-        rowSelection = [];
-        updateUI();
-      }
-
-      function selectAll() {
-        rowSelection = ["1", "2", "3", "4"];
-        updateUI();
-      }
-
-      function logState() {
-        console.log("Current state:", {
-          rowSelection,
-          focusWithinRow,
-          focusWithinColumn,
-          activeElement: document.activeElement?.textContent?.trim(),
-        });
-      }
-
-      // Event listeners
-      table.addEventListener("click", handleCellClick);
-      table.addEventListener("focusin", handleCellFocus);
-      table.addEventListener("focusout", handleCellBlur);
-
-      // Keyboard navigation (basic implementation)
-      table.addEventListener("keydown", function (event) {
-        const cell = event.target.closest("td");
-        if (!cell) return;
-
-        const [columnIndex, rowIndex] = getCellPosition(cell);
-        let newCell = null;
-
-        switch (event.key) {
-          case "ArrowRight":
-            newCell = table.querySelector(
-              `tbody tr:nth-child(${rowIndex + 1}) td:nth-child(${columnIndex + 2})`,
-            );
-            break;
-          case "ArrowLeft":
-            if (columnIndex > 0) {
-              newCell = table.querySelector(
-                `tbody tr:nth-child(${rowIndex + 1}) td:nth-child(${columnIndex})`,
-              );
-            }
-            break;
-          case "ArrowDown":
-            newCell = table.querySelector(
-              `tbody tr:nth-child(${rowIndex + 2}) td:nth-child(${columnIndex + 1})`,
-            );
-            break;
-          case "ArrowUp":
-            if (rowIndex > 0) {
-              newCell = table.querySelector(
-                `tbody tr:nth-child(${rowIndex}) td:nth-child(${columnIndex + 1})`,
-              );
-            }
-            break;
-          case " ":
-          case "Enter":
-            event.preventDefault();
-            handleCellClick(event);
-            return;
-        }
-
-        if (newCell) {
+      const keydownToSelect = (event, { selectionContext, value }) => {
+        if (event.key === " " || event.key === "Enter") {
           event.preventDefault();
-          newCell.focus();
+          clickToSelect(event, { selectionContext, value });
         }
-      });
+      };
 
-      // Initialize UI
-      updateUI();
+      // Table State Context for focus management
+      const TableStateContext = createContext();
 
-      console.log("Table selection demo loaded. Try:");
-      console.log("- Click cells to select/deselect rows");
-      console.log("- Use Tab/Shift+Tab to navigate");
-      console.log("- Use arrow keys to navigate");
+      // Sample data
+      const sampleData = [
+        {
+          id: "1",
+          index: 1,
+          name: "John Doe",
+          email: "john@example.com",
+          status: "Active",
+        },
+        {
+          id: "2",
+          index: 2,
+          name: "Jane Smith",
+          email: "jane@example.com",
+          status: "Inactive",
+        },
+        {
+          id: "3",
+          index: 3,
+          name: "Bob Johnson",
+          email: "bob@example.com",
+          status: "Active",
+        },
+        {
+          id: "4",
+          index: 4,
+          name: "Alice Brown",
+          email: "alice@example.com",
+          status: "Active",
+        },
+      ];
+
+      // Column definitions
+      const columns = [
+        { id: "name", accessorKey: "name", header: "Name" },
+        { id: "email", accessorKey: "email", header: "Email" },
+        { id: "status", accessorKey: "status", header: "Status" },
+      ];
+
+      // Helper function to get cell position
+      const getCellPosition = (table, element) => {
+        if (!table || !table.contains(element)) {
+          return [-1, -1];
+        }
+        const cellElement = element.closest("td");
+        if (!cellElement) {
+          return [-1, -1];
+        }
+        const row = cellElement.parentElement;
+        const columnIndex = Array.from(row.cells).indexOf(cellElement);
+        const rowIndex = Array.from(table.rows).indexOf(row);
+        return [columnIndex, rowIndex];
+      };
+
+      // Components
+      const NumberColumnHeader = () => {
+        return h("th", { className: "number-column" }, "#");
+      };
+
+      const NumberColumnCell = ({ row }) => {
+        const { focusWithinRow } = useContext(TableStateContext) || {};
+        return h(
+          "td",
+          {
+            "className": "database_table_cell number-column",
+            "tabIndex": 0,
+            "data-focus-within": focusWithinRow === row.index ? "" : undefined,
+          },
+          row.index,
+        );
+      };
+
+      const DatabaseTableHeaderCell = ({ columnName, columnIndex }) => {
+        const { focusWithinColumn } = useContext(TableStateContext) || {};
+        return h(
+          "th",
+          {
+            "data-focus-within":
+              focusWithinColumn === columnIndex ? "" : undefined,
+          },
+          h("span", null, columnName),
+        );
+      };
+
+      const DatabaseTableCell = ({ columnName, row, value }) => {
+        const cellId = `${columnName}:${row.id}`;
+        const selectionContext = useSelectionContext();
+        const isSelected = selectionContext.isSelected(cellId);
+
+        return h(
+          "td",
+          {
+            "className": "database_table_cell",
+            "tabIndex": 0,
+            "data-with-selection": "",
+            "data-selected": isSelected ? "" : undefined,
+            "onClick": (e) =>
+              clickToSelect(e, { selectionContext, value: cellId }),
+            "onKeyDown": (e) =>
+              keydownToSelect(e, { selectionContext, value: cellId }),
+          },
+          h(
+            "div",
+            { className: "database_table_cell_content" },
+            h("div", { className: "database_table_cell_value" }, value),
+          ),
+        );
+      };
+
+      const TableDemo = () => {
+        const tableRef = useRef(null);
+        const [focusWithinRow, setFocusWithinRow] = useState(-1);
+        const [focusWithinColumn, setFocusWithinColumn] = useState(-1);
+        const cellSelectionSignal = signal([]);
+
+        const updateFocusPosition = (elementFocusedOrReceivingFocus) => {
+          const [column, row] = getCellPosition(
+            tableRef.current,
+            elementFocusedOrReceivingFocus,
+          );
+          setFocusWithinColumn(column);
+          setFocusWithinRow(row);
+        };
+
+        const handleTableFocusIn = (event) => {
+          updateFocusPosition(event.target);
+        };
+
+        const handleTableFocusOut = (event) => {
+          const table = tableRef.current;
+          if (!table) {
+            return;
+          }
+          updateFocusPosition(event.relatedTarget);
+        };
+
+        const tableState = useMemo(
+          () => ({
+            focusWithinRow,
+            focusWithinColumn,
+          }),
+          [focusWithinRow, focusWithinColumn],
+        );
+
+        const selectionLength = cellSelectionSignal.value.length;
+
+        const clearSelection = () => {
+          cellSelectionSignal.value = [];
+        };
+
+        const selectAll = () => {
+          const allCellIds = [];
+          sampleData.forEach((row) => {
+            columns.forEach((col) => {
+              allCellIds.push(`${col.accessorKey}:${row.id}`);
+            });
+          });
+          cellSelectionSignal.value = allCellIds;
+        };
+
+        const logState = () => {
+          console.log("Current state:", {
+            selection: cellSelectionSignal.value,
+            focusWithinRow,
+            focusWithinColumn,
+            activeElement: document.activeElement?.textContent?.trim(),
+          });
+        };
+
+        return h(
+          SelectionProvider,
+          {
+            value: cellSelectionSignal.value,
+            onChange: (value) => {
+              cellSelectionSignal.value = value;
+            },
+          },
+          h(
+            TableStateContext.Provider,
+            { value: tableState },
+            h(
+              "div",
+              { className: "demo-container" },
+              h("h1", null, "Table Cell Selection Demo - Preact"),
+              h(
+                "p",
+                null,
+                "Click cells to select/deselect. Use Cmd/Ctrl+click for multi-select. Use Tab and arrow keys to navigate.",
+              ),
+
+              h(
+                "table",
+                {
+                  "ref": tableRef,
+                  "className": "database_table",
+                  "data-multi-selection": selectionLength > 1 ? "" : undefined,
+                  "onFocusIn": handleTableFocusIn,
+                  "onFocusOut": handleTableFocusOut,
+                },
+                h(
+                  "thead",
+                  null,
+                  h(
+                    "tr",
+                    null,
+                    h(NumberColumnHeader),
+                    ...columns.map((col, index) =>
+                      h(DatabaseTableHeaderCell, {
+                        key: col.id,
+                        columnName: col.header,
+                        columnIndex: index + 1,
+                      }),
+                    ),
+                  ),
+                ),
+                h(
+                  "tbody",
+                  null,
+                  ...sampleData.map((row) =>
+                    h(
+                      "tr",
+                      { "key": row.id, "data-row-id": row.id },
+                      h(NumberColumnCell, { row }),
+                      ...columns.map((col) =>
+                        h(DatabaseTableCell, {
+                          key: `${row.id}-${col.id}`,
+                          columnName: col.accessorKey,
+                          row,
+                          value: row[col.accessorKey],
+                        }),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              h(
+                "div",
+                { className: "status" },
+                h(
+                  "div",
+                  null,
+                  "Selected cells: ",
+                  h("span", null, JSON.stringify(cellSelectionSignal.value)),
+                ),
+                h(
+                  "div",
+                  null,
+                  "Selection count: ",
+                  h("span", null, selectionLength),
+                ),
+                h(
+                  "div",
+                  null,
+                  "Focus position: ",
+                  h(
+                    "span",
+                    null,
+                    `Row: ${focusWithinRow}, Column: ${focusWithinColumn}`,
+                  ),
+                ),
+              ),
+
+              h(
+                "div",
+                { className: "actions" },
+                h("button", { onClick: clearSelection }, "Clear Selection"),
+                h("button", { onClick: selectAll }, "Select All"),
+                h("button", { onClick: logState }, "Log State"),
+              ),
+            ),
+          ),
+        );
+      };
+
+      // Render the app
+      render(h(TableDemo), document.getElementById("root"));
+
+      console.log("Preact Table selection demo loaded. Try:");
+      console.log("- Click cells to select/deselect");
+      console.log("- Use Cmd/Ctrl+click for multi-select");
+      console.log("- Use Tab and arrow keys to navigate");
       console.log("- Press Space or Enter to toggle selection");
     </script>
   </body>

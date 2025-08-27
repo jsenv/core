@@ -1,6 +1,13 @@
 /**
  * https://tanstack.com/table/latest/docs/framework/react/examples/basic?panel=code
  *
+ * - Il faut pouvoir sélectionner plusieurs cellules avec shift etc
+ * donc le selection provider machin doit supporter une structure en grille
+ *
+ * - Il faut surement pouvoir support différent type de selection
+ * on peut selectionner N cellules ou N lignes/colonnes
+ * Dans le cas des lignes et colonnes on change des trucs
+ *
  * Next step:
  * 2. row selection (take inspitation from the way it's done in the explorer)
  *    selected row should have a special background
