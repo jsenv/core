@@ -22,10 +22,20 @@ import {
   useFocusGroup,
   useStateArray,
 } from "@jsenv/navi";
-import { useCallback, useMemo, useRef, useState } from "preact/hooks";
+import { createContext } from "preact";
+import {
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { useDatabaseInputProps } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
+
+// Context to pass dynamic state to stable components
+const TableStateContext = createContext();
 
 import.meta.css = /* css */ `
   .table_data_actions {
@@ -127,23 +137,13 @@ export const TableData = ({ table, rows }) => {
 
   const { schemaColumns } = table.meta;
 
+  // Stable column definitions - only recreate when schema changes
   const columns = useMemo(() => {
     const numberColumn = {
       id: "number",
-      header: () => {
-        return <th style={{ width: "50px" }}></th>;
-      },
+      header: NumberColumnHeader,
       enableResizing: false,
-      cell: ({ row }) => {
-        return (
-          <DatabaseTableClientCell
-            style={{ textAlign: "center" }}
-            data-focus-within={focusWithinRow === row.index ? "" : undefined}
-          >
-            {row.original.index}
-          </DatabaseTableClientCell>
-        );
-      },
+      cell: NumberColumnCell,
     };
 
     const remainingColumns = schemaColumns.map((column, index) => {
@@ -153,75 +153,78 @@ export const TableData = ({ table, rows }) => {
       return {
         enableResizing: true,
         accessorKey: columnName,
-        header: ({ header }) => {
-          return (
-            <th
-              style={{
-                width: `${header.getSize()}px`,
-              }}
-              data-focus-within={
-                focusWithinColumn === columnIndex ? "" : undefined
-              }
-            >
-              <span>{columnName}</span>
-            </th>
-          );
-        },
-        cell: (info) => {
-          const value = info.getValue();
-          const row = info.row;
-          const selected = rowIsSelected(row);
-          // const rowData = info.row.original;
-          return (
-            <DatabaseTableCell
-              onClick={() => {
-                if (selected) {
-                  removeRowFromSelection(row.id);
-                } else {
-                  addRowToSelection(row.id);
-                }
-              }}
-              column={column}
-              value={value}
-            />
-          );
-        },
+        header: ({ header }) => (
+          <DatabaseTableHeaderCell
+            header={header}
+            columnName={columnName}
+            columnIndex={columnIndex}
+          />
+        ),
+        cell: (info) => (
+          <DatabaseTableCell
+            column={column}
+            value={info.getValue()}
+            row={info.row}
+            selected={rowIsSelected(info.row)}
+          />
+        ),
         footer: (info) => info.column.id,
+        // Store static data for use in components
+        meta: {
+          columnName,
+          columnIndex,
+          column,
+        },
       };
     });
 
     return [numberColumn, ...remainingColumns];
-  }, [
-    schemaColumns,
-    focusWithinRow,
-    focusWithinColumn,
-    removeRowFromSelection,
-    addRowToSelection,
-    rowIsSelected,
-  ]);
+  }, [schemaColumns]); // Only depend on schema, not dynamic state
 
   const data = rows;
 
+  // Create a stable context value for the table
+  const tableState = useMemo(
+    () => ({
+      focusWithinRow,
+      focusWithinColumn,
+      rowSelection,
+      rowIsSelected,
+      addRowToSelection,
+      removeRowFromSelection,
+    }),
+    [
+      focusWithinRow,
+      focusWithinColumn,
+      rowSelection,
+      rowIsSelected,
+      addRowToSelection,
+      removeRowFromSelection,
+    ],
+  );
+
   return (
-    <div>
-      <Table
-        ref={tableRef}
-        className="database_table"
-        columns={columns}
-        data={data}
-        style={{ height: "fit-content" }}
-        // onFocusIn={(event) => {
-        //   handleTableFocusIn(event);
-        // }}
-        // onFocusOut={(event) => {
-        //   handleTableFocusOut(event);
-        // }}
-      />
-      {data.length === 0 ? <div>No data</div> : null}
-      <div className="table_data_actions">
-        <Button action={createRow}>Add row</Button>
+    <TableStateContext.Provider value={tableState}>
+      <div>
+        <Table
+          ref={tableRef}
+          className="database_table"
+          columns={columns}
+          data={data}
+          style={{ height: "fit-content" }}
+          onFocusIn={(event) => {
+            handleTableFocusIn(event);
+          }}
+          onFocusOut={(event) => {
+            handleTableFocusOut(event);
+          }}
+        />
+        {data.length === 0 ? <div>No data</div> : null}
+        <div className="table_data_actions">
+          <Button action={createRow}>Add row</Button>
+        </div>
       </div>
-    </div>
+    </TableStateContext.Provider>
   );
 };
 
@@ -239,6 +242,38 @@ const getCellPosition = (table, element) => {
   return [columnIndex, rowIndex];
 };
 
+// Stable component definitions - these don't recreate on every render
+const NumberColumnHeader = () => {
+  return <th style={{ width: "50px" }}></th>;
+};
+
+const NumberColumnCell = ({ row }) => {
+  const { focusWithinRow } = useContext(TableStateContext);
+  return (
+    <DatabaseTableClientCell
+      style={{ textAlign: "center" }}
+      data-focus-within={focusWithinRow === row.index ? "" : undefined}
+    >
+      {row.original.index}
+    </DatabaseTableClientCell>
+  );
+};
+
+const DatabaseTableHeaderCell = ({ header, columnName, columnIndex }) => {
+  const { focusWithinColumn } = useContext(TableStateContext);
+
+  return (
+    <th
+      style={{
+        width: `${header.getSize()}px`,
+      }}
+      data-focus-within={focusWithinColumn === columnIndex ? "" : undefined}
+    >
+      <span>{columnName}</span>
+    </th>
+  );
+};
+
 const DatabaseTableClientCell = ({ children, ...props }) => {
   return (
     <td className="database_table_cell" {...props}>
@@ -247,7 +282,9 @@ const DatabaseTableClientCell = ({ children, ...props }) => {
   );
 };
 
-const DatabaseTableCell = ({ column, value, ...props }) => {
+const DatabaseTableCell = ({ column, row, value, selected, ...props }) => {
+  const { addRowToSelection, removeRowFromSelection } =
+    useContext(TableStateContext);
   const { editable, startEditing, stopEditing } = useEditableController();
   const databaseInputProps = useDatabaseInputProps({ column });
 
@@ -256,6 +293,13 @@ const DatabaseTableCell = ({ column, value, ...props }) => {
       className="database_table_cell"
       tabIndex="0"
       data-editing={editable ? "" : undefined}
+      onClick={() => {
+        if (selected) {
+          removeRowFromSelection(row.id);
+        } else {
+          addRowToSelection(row.id);
+        }
+      }}
       {...props}
     >
       <div className="database_table_cell_content">
