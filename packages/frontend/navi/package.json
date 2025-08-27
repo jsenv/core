@@ -24,7 +24,8 @@
   ],
   "dependencies": {
     "@jsenv/dom": "0.0.1",
-    "@jsenv/humanize": "1.6.0"
+    "@jsenv/humanize": "1.6.0",
+    "@tanstack/table-core": "8.21.3"
   },
   "devDependencies": {
     "@jsenv/assert": "4.5.3",

@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Table Cell Selection Demo</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        margin: 20px;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .database_table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .database_table th,
+      .database_table td {
+        border: 1px solid #e0e0e0;
+        text-align: left;
+        position: relative;
+      }
+
+      .database_table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        padding: 12px 8px;
+      }
+
+      .database_table_cell {
+        padding: 0;
+        position: relative;
+      }
+
+      .database_table_cell:focus {
+        outline: none;
+      }
+
+      .database_table_cell:focus .database_table_cell_content {
+        outline: 2px solid #0078d4;
+        outline-offset: -2px;
+      }
+
+      .database_table_cell_content {
+        display: inline-flex;
+        flex-grow: 1;
+        width: 100%;
+        height: 100%;
+        min-height: 32px;
+        align-items: center;
+      }
+
+      .database_table_cell_value {
+        display: inline-flex;
+        flex-grow: 1;
+        user-select: none;
+        padding: 8px;
+        cursor: pointer;
+      }
+
+      /* Focus highlighting */
+      .database_table *[data-focus-within] {
+        background-color: rgba(0, 120, 212, 0.08);
+      }
+
+      /* Row selection highlighting */
+      .database_table tr.selected {
+        background-color: rgba(0, 120, 212, 0.15);
+      }
+
+      .database_table tr.selected td {
+        background-color: rgba(0, 120, 212, 0.15);
+      }
+
+      /* Number column specific styling */
+      .number-column {
+        width: 50px;
+        text-align: center;
+        background: #fafafa;
+        font-weight: 500;
+        color: #666;
+      }
+
+      /* Status display */
+      .status {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f0f8ff;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+
+      .actions {
+        margin-top: 15px;
+      }
+
+      button {
+        background: #0078d4;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 8px;
+      }
+
+      button:hover {
+        background: #106ebe;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h1>Table Cell Selection Demo</h1>
+      <p>
+        Click cells to select/deselect rows. Use Tab/Shift+Tab and arrow keys to
+        navigate.
+      </p>
+
+      <table class="database_table" id="demo-table">
+        <thead>
+          <tr>
+            <th class="number-column">#</th>
+            <th data-focus-within="">Name</th>
+            <th>Email</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-row-id="1">
+            <td class="database_table_cell number-column" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">1</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">John Doe</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">john@example.com</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">Active</div>
+              </div>
+            </td>
+          </tr>
+          <tr data-row-id="2">
+            <td class="database_table_cell number-column" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">2</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">Jane Smith</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">jane@example.com</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">Inactive</div>
+              </div>
+            </td>
+          </tr>
+          <tr data-row-id="3">
+            <td class="database_table_cell number-column" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">3</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">Bob Johnson</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">bob@example.com</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">Active</div>
+              </div>
+            </td>
+          </tr>
+          <tr data-row-id="4">
+            <td class="database_table_cell number-column" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">4</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">Alice Brown</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">alice@example.com</div>
+              </div>
+            </td>
+            <td class="database_table_cell" tabindex="0">
+              <div class="database_table_cell_content">
+                <div class="database_table_cell_value">Active</div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="status">
+        <div>Selected rows: <span id="selected-rows">[]</span></div>
+        <div>Focused cell: <span id="focused-cell">None</span></div>
+        <div>
+          Focus position: <span id="focus-position">Row: -, Column: -</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button onclick="clearSelection()">Clear Selection</button>
+        <button onclick="selectAll()">Select All</button>
+        <button onclick="logState()">Log State</button>
+      </div>
+    </div>
+
+    <script>
+      // State management similar to useStateArray
+      let rowSelection = [];
+      let focusWithinRow = -1;
+      let focusWithinColumn = -1;
+
+      // DOM references
+      const table = document.getElementById("demo-table");
+      const selectedRowsSpan = document.getElementById("selected-rows");
+      const focusedCellSpan = document.getElementById("focused-cell");
+      const focusPositionSpan = document.getElementById("focus-position");
+
+      // Helper functions
+      function addRowToSelection(rowId) {
+        if (!rowSelection.includes(rowId)) {
+          rowSelection.push(rowId);
+          updateUI();
+        }
+      }
+
+      function removeRowFromSelection(rowId) {
+        const index = rowSelection.indexOf(rowId);
+        if (index > -1) {
+          rowSelection.splice(index, 1);
+          updateUI();
+        }
+      }
+
+      function rowIsSelected(rowId) {
+        return rowSelection.includes(rowId);
+      }
+
+      function getCellPosition(element) {
+        const cell = element.closest("td");
+        if (!cell) return [-1, -1];
+
+        const row = cell.closest("tr");
+        const allRows = Array.from(table.querySelectorAll("tbody tr"));
+        const allCells = Array.from(row.querySelectorAll("td"));
+
+        const rowIndex = allRows.indexOf(row);
+        const columnIndex = allCells.indexOf(cell);
+
+        return [columnIndex, rowIndex];
+      }
+
+      function updateFocusHighlighting() {
+        // Clear previous highlighting
+        table.querySelectorAll("[data-focus-within]").forEach((el) => {
+          el.removeAttribute("data-focus-within");
+        });
+
+        if (focusWithinRow >= 0) {
+          // Highlight focused row's number cell
+          const numberCells = table.querySelectorAll("td.number-column");
+          if (numberCells[focusWithinRow]) {
+            numberCells[focusWithinRow].setAttribute("data-focus-within", "");
+          }
+        }
+
+        if (focusWithinColumn >= 0) {
+          // Highlight focused column header
+          const headers = table.querySelectorAll("th");
+          if (headers[focusWithinColumn]) {
+            headers[focusWithinColumn].setAttribute("data-focus-within", "");
+          }
+        }
+      }
+
+      function updateRowSelection() {
+        // Clear previous selection styling
+        table.querySelectorAll("tr").forEach((row) => {
+          row.classList.remove("selected");
+        });
+
+        // Apply selection styling
+        rowSelection.forEach((rowId) => {
+          const row = table.querySelector(`tr[data-row-id="${rowId}"]`);
+          if (row) {
+            row.classList.add("selected");
+          }
+        });
+      }
+
+      function updateUI() {
+        updateRowSelection();
+        updateFocusHighlighting();
+
+        // Update status display
+        selectedRowsSpan.textContent = JSON.stringify(rowSelection);
+        focusedCellSpan.textContent = document.activeElement?.closest("td")
+          ? document.activeElement.closest("td").textContent.trim()
+          : "None";
+        focusPositionSpan.textContent = `Row: ${focusWithinRow}, Column: ${focusWithinColumn}`;
+      }
+
+      // Event handlers
+      function handleCellClick(event) {
+        const cell = event.target.closest("td");
+        if (!cell) return;
+
+        const row = cell.closest("tr");
+        const rowId = row.getAttribute("data-row-id");
+
+        if (rowIsSelected(rowId)) {
+          removeRowFromSelection(rowId);
+          console.log("Removed row from selection:", rowId);
+        } else {
+          addRowToSelection(rowId);
+          console.log("Added row to selection:", rowId);
+        }
+      }
+
+      function handleCellFocus(event) {
+        const cell = event.target.closest("td");
+        if (!cell) return;
+
+        const [columnIndex, rowIndex] = getCellPosition(cell);
+        focusWithinRow = rowIndex;
+        focusWithinColumn = columnIndex;
+
+        console.log("Focus changed to:", {
+          row: rowIndex,
+          column: columnIndex,
+        });
+        updateUI();
+      }
+
+      function handleCellBlur(event) {
+        // Only clear focus if we're leaving the table entirely
+        setTimeout(() => {
+          if (!table.contains(document.activeElement)) {
+            focusWithinRow = -1;
+            focusWithinColumn = -1;
+            updateUI();
+          }
+        }, 0);
+      }
+
+      // Action functions
+      function clearSelection() {
+        rowSelection = [];
+        updateUI();
+      }
+
+      function selectAll() {
+        rowSelection = ["1", "2", "3", "4"];
+        updateUI();
+      }
+
+      function logState() {
+        console.log("Current state:", {
+          rowSelection,
+          focusWithinRow,
+          focusWithinColumn,
+          activeElement: document.activeElement?.textContent?.trim(),
+        });
+      }
+
+      // Event listeners
+      table.addEventListener("click", handleCellClick);
+      table.addEventListener("focusin", handleCellFocus);
+      table.addEventListener("focusout", handleCellBlur);
+
+      // Keyboard navigation (basic implementation)
+      table.addEventListener("keydown", function (event) {
+        const cell = event.target.closest("td");
+        if (!cell) return;
+
+        const [columnIndex, rowIndex] = getCellPosition(cell);
+        let newCell = null;
+
+        switch (event.key) {
+          case "ArrowRight":
+            newCell = table.querySelector(
+              `tbody tr:nth-child(${rowIndex + 1}) td:nth-child(${columnIndex + 2})`,
+            );
+            break;
+          case "ArrowLeft":
+            if (columnIndex > 0) {
+              newCell = table.querySelector(
+                `tbody tr:nth-child(${rowIndex + 1}) td:nth-child(${columnIndex})`,
+              );
+            }
+            break;
+          case "ArrowDown":
+            newCell = table.querySelector(
+              `tbody tr:nth-child(${rowIndex + 2}) td:nth-child(${columnIndex + 1})`,
+            );
+            break;
+          case "ArrowUp":
+            if (rowIndex > 0) {
+              newCell = table.querySelector(
+                `tbody tr:nth-child(${rowIndex}) td:nth-child(${columnIndex + 1})`,
+              );
+            }
+            break;
+          case " ":
+          case "Enter":
+            event.preventDefault();
+            handleCellClick(event);
+            return;
+        }
+
+        if (newCell) {
+          event.preventDefault();
+          newCell.focus();
+        }
+      });
+
+      // Initialize UI
+      updateUI();
+
+      console.log("Table selection demo loaded. Try:");
+      console.log("- Click cells to select/deselect rows");
+      console.log("- Use Tab/Shift+Tab to navigate");
+      console.log("- Use arrow keys to navigate");
+      console.log("- Press Space or Enter to toggle selection");
+    </script>
+  </body>
+</html>

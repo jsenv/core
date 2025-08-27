@@ -52,6 +52,7 @@ export {
   useRegisterSelectionValue,
   useSelectionContext,
 } from "./src/components/selection/selection.js";
+export { Table } from "./src/components/table/table.jsx";
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";

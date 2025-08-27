@@ -21,6 +21,7 @@ import {
   keydownToSelect,
   SelectionProvider,
   ShortcutProvider,
+  Table,
   useEditableController,
   useFocusGroup,
   useRegisterSelectionValue,
@@ -30,7 +31,6 @@ import { useSignal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useMemo, useRef, useState } from "preact/hooks";
 import { useDatabaseInputProps } from "../components/database_field.jsx";
-import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
 
 // Context to pass dynamic state to stable components
