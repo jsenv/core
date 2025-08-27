@@ -133,7 +133,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render, createContext } from "preact";
-      import { useRef, useState, useMemo, useContext } from "preact/hooks";
+      import { useRef, useContext } from "preact/hooks";
       import { signal } from "@preact/signals";
       import {
         // eslint-disable-next-line no-unused-vars
@@ -184,21 +184,6 @@
         { id: "email", accessorKey: "email", header: "Email" },
         { id: "status", accessorKey: "status", header: "Status" },
       ];
-
-      // Helper function to get cell position
-      const getCellPosition = (table, element) => {
-        if (!table || !table.contains(element)) {
-          return [-1, -1];
-        }
-        const cellElement = element.closest("td");
-        if (!cellElement) {
-          return [-1, -1];
-        }
-        const row = cellElement.parentElement;
-        const columnIndex = Array.from(row.cells).indexOf(cellElement);
-        const rowIndex = Array.from(table.rows).indexOf(row);
-        return [columnIndex, rowIndex];
-      };
 
       // Components
       // eslint-disable-next-line no-unused-vars
@@ -263,41 +248,10 @@
       // eslint-disable-next-line no-unused-vars
       const TableDemo = () => {
         const tableRef = useRef(null);
-        const [focusWithinRow, setFocusWithinRow] = useState(-1);
-        const [focusWithinColumn, setFocusWithinColumn] = useState(-1);
         const cellSelectionSignal = signal([]);
-
-        const updateFocusPosition = (elementFocusedOrReceivingFocus) => {
-          const [column, row] = getCellPosition(
-            tableRef.current,
-            elementFocusedOrReceivingFocus,
-          );
-          setFocusWithinColumn(column);
-          setFocusWithinRow(row);
-        };
-
-        const handleTableFocusIn = (event) => {
-          updateFocusPosition(event.target);
-        };
-
-        const handleTableFocusOut = (event) => {
-          const table = tableRef.current;
-          if (!table) {
-            return;
-          }
-          updateFocusPosition(event.relatedTarget);
-        };
-
-        const tableState = useMemo(
-          () => ({
-            focusWithinRow,
-            focusWithinColumn,
-          }),
-          [focusWithinRow, focusWithinColumn],
-        );
-
+        const rowWithSomeSelectedCell = [];
+        const columnWithSomeSelectedCell = [];
         const selectionLength = cellSelectionSignal.value.length;
-
         const clearSelection = () => {
           cellSelectionSignal.value = [];
         };
@@ -315,8 +269,8 @@
         const logState = () => {
           console.log("Current state:", {
             selection: cellSelectionSignal.value,
-            focusWithinRow,
-            focusWithinColumn,
+            rowWithSomeSelectedCell,
+            columnWithSomeSelectedCell,
             activeElement: document.activeElement?.textContent?.trim(),
           });
         };
@@ -328,74 +282,72 @@
               cellSelectionSignal.value = value;
             }}
           >
-            <TableStateContext.Provider value={tableState}>
-              <div className="demo-container">
-                <h1>Table Cell Selection Demo - Preact</h1>
-                <p>
-                  Click cells to select/deselect. Use Cmd/Ctrl+click for
-                  multi-select. Use Tab and arrow keys to navigate.
-                </p>
+            <div className="demo-container">
+              <h1>Table Cell Selection Demo - Preact</h1>
+              <p>
+                Click cells to select/deselect. Use Cmd/Ctrl+click for
+                multi-select. Use Tab and arrow keys to navigate.
+              </p>
 
-                <table
-                  ref={tableRef}
-                  className="database_table"
-                  data-multi-selection={selectionLength > 1 ? "" : undefined}
-                  onFocusIn={handleTableFocusIn}
-                  onFocusOut={handleTableFocusOut}
-                >
-                  <thead>
-                    <tr>
-                      <NumberColumnHeader />
-                      {columns.map((col, index) => (
-                        <DatabaseTableHeaderCell
-                          key={col.id}
-                          columnName={col.header}
-                          columnIndex={index + 1}
+              <table
+                ref={tableRef}
+                className="database_table"
+                data-multi-selection={selectionLength > 1 ? "" : undefined}
+              >
+                <thead>
+                  <tr>
+                    <NumberColumnHeader />
+                    {columns.map((col, index) => (
+                      <DatabaseTableHeaderCell
+                        key={col.id}
+                        columnName={col.header}
+                        columnIndex={index + 1}
+                      />
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sampleData.map((row) => (
+                    <tr key={row.id} data-row-id={row.id}>
+                      <NumberColumnCell row={row} />
+                      {columns.map((col) => (
+                        <DatabaseTableCell
+                          key={`${row.id}-${col.id}`}
+                          columnName={col.accessorKey}
+                          row={row}
+                          value={row[col.accessorKey]}
                         />
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {sampleData.map((row) => (
-                      <tr key={row.id} data-row-id={row.id}>
-                        <NumberColumnCell row={row} />
-                        {columns.map((col) => (
-                          <DatabaseTableCell
-                            key={`${row.id}-${col.id}`}
-                            columnName={col.accessorKey}
-                            row={row}
-                            value={row[col.accessorKey]}
-                          />
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  ))}
+                </tbody>
+              </table>
 
-                <div className="status">
-                  <div>
-                    Selected cells:
-                    <span>{JSON.stringify(cellSelectionSignal.value)}</span>
-                  </div>
-                  <div>
-                    Selection count:
-                    <span>{selectionLength}</span>
-                  </div>
-                  <div>
-                    Focus position:
-                    <span>
-                      {`Row: ${focusWithinRow}, Column: ${focusWithinColumn}`}
-                    </span>
-                  </div>
+              <div className="status">
+                <div>
+                  Selected cells:
+                  <span>{JSON.stringify(cellSelectionSignal.value)}</span>
                 </div>
-
-                <div className="actions">
-                  <button onClick={clearSelection}>Clear Selection</button>
-                  <button onClick={selectAll}>Select All</button>
-                  <button onClick={logState}>Log State</button>
+                <div>
+                  Selected cell count:
+                  <span>{selectionLength}</span>
+                </div>
+                <div>
+                  Row with some selected cell:
+                  <span>{rowWithSomeSelectedCell.join(",")}</span>
+                </div>
+                <div>
+                  Column with some selected cell:
+                  <span>{columnWithSomeSelectedCell.join(",")}</span>
                 </div>
               </div>
-            </TableStateContext.Provider>
+
+              <div className="actions">
+                <button onClick={clearSelection}>Clear Selection</button>
+                <button onClick={selectAll}>Select All</button>
+                <button onClick={logState}>Log State</button>
+              </div>
+            </div>
           </SelectionProvider>
         );
       };
