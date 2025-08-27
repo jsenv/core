@@ -58,6 +58,9 @@ export { SVGMaskOverlay } from "./src/components/svg/svg_mask_overlay.jsx";
 export { Overflow } from "./src/components/text/overflow.jsx";
 export { TextAndCount } from "./src/components/text/text_and_count.jsx";
 
+// Other
+export { useFocusGroup } from "./src/components/use_focus_group.js";
+
 // for debugging testing purposes
 export { enableDebugActions } from "./src/actions.js";
 export { enableDebugOnDocumentLoading } from "./src/browser_integration/document_loading_signal.js";

@@ -220,7 +220,7 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
     startRow: currentRowIndex,
     startColumn: currentColumnIndex,
     originalColumn: currentColumnIndex, // Used to maintain column alignment for vertical moves
-    loopMode: loop,
+    loopMode: normalizeLoop(loop),
   });
 
   // Find the first cell that is itself focusable
@@ -267,12 +267,13 @@ const createTableCellIterator = function* (
     return; // Cannot move in this direction (no looping enabled)
   }
 
-  // Keep track of where we started to detect when we've completed a full loop
-  const startingPosition = `${nextPosition[1]}:${nextPosition[0]}`; // row:column
+  // Keep track of our actual starting position to detect when we've completed a full loop
+  const actualStartingPosition = `${startRow}:${startColumn}`;
 
   while (true) {
-    const targetRow = allRows[nextPosition[1]]; // row is at index 1
-    const targetCell = targetRow?.cells?.[nextPosition[0]]; // column is at index 0
+    const [nextColumn, nextRow] = nextPosition; // Destructure [column, row]
+    const targetRow = allRows[nextRow];
+    const targetCell = targetRow?.cells?.[nextColumn];
 
     // Yield the cell if it exists
     if (targetCell) {
@@ -283,9 +284,9 @@ const createTableCellIterator = function* (
     // - For horizontal moves, update to current column
     // - For vertical moves in flow mode at boundaries, advance to next/previous column
     if (arrowKey === "ArrowRight" || arrowKey === "ArrowLeft") {
-      preferredColumn = nextPosition[0]; // column is at index 0
+      preferredColumn = nextColumn;
     } else if (arrowKey === "ArrowDown") {
-      const isAtBottomRow = nextPosition[1] === allRows.length - 1; // row is at index 1
+      const isAtBottomRow = nextRow === allRows.length - 1;
       if (isAtBottomRow && normalizedLoopMode === "flow") {
         // Moving down from bottom row in flow mode: advance to next column
         const maxColumns = getMaxColumns(allRows);
@@ -295,7 +296,7 @@ const createTableCellIterator = function* (
         }
       }
     } else if (arrowKey === "ArrowUp") {
-      const isAtTopRow = nextPosition[1] === 0; // row is at index 1
+      const isAtTopRow = nextRow === 0;
       if (isAtTopRow && normalizedLoopMode === "flow") {
         // Moving up from top row in flow mode: go to previous column
         const maxColumns = getMaxColumns(allRows);
@@ -308,15 +309,15 @@ const createTableCellIterator = function* (
     }
 
     // Calculate where to move next
-    nextPosition = calculateNextPosition(nextPosition[1], nextPosition[0]); // row, column
+    nextPosition = calculateNextPosition(nextRow, nextColumn);
     if (!nextPosition) {
       return; // Hit a boundary with no looping
     }
 
-    // Check if we've completed a full loop
-    const currentPositionKey = `${nextPosition[1]}:${nextPosition[0]}`; // row:column
-    if (currentPositionKey === startingPosition) {
-      return; // We've gone full circle
+    // Check if we've completed a full loop by returning to our actual starting position
+    const currentPositionKey = `${nextRow}:${nextColumn}`;
+    if (currentPositionKey === actualStartingPosition) {
+      return; // We've gone full circle back to where we started
     }
   }
 };
@@ -342,8 +343,6 @@ const getNextTablePosition = (
   preferredColumn, // Used for vertical movement to maintain column alignment
   loopMode,
 ) => {
-  const normalizedMode = normalizeLoop(loopMode);
-
   if (arrowKey === "ArrowRight") {
     const currentRowLength = allRows[currentRow]?.cells?.length || 0;
     const nextColumn = currentColumn + 1;
@@ -354,7 +353,7 @@ const getNextTablePosition = (
     }
 
     // We're at the end of the row - handle boundary behavior
-    if (normalizedMode === "flow") {
+    if (loopMode === "flow") {
       // Flow mode: move to first cell of next row (wrap to top if at bottom)
       let nextRow = currentRow + 1;
       if (nextRow >= allRows.length) {
@@ -363,7 +362,7 @@ const getNextTablePosition = (
       return [0, nextRow]; // [column, row]
     }
 
-    if (normalizedMode === "wrap") {
+    if (loopMode === "wrap") {
       // Wrap mode: stay in same row, wrap to first column
       return [0, currentRow]; // [column, row]
     }
@@ -381,7 +380,7 @@ const getNextTablePosition = (
     }
 
     // We're at the beginning of the row - handle boundary behavior
-    if (normalizedMode === "flow") {
+    if (loopMode === "flow") {
       // Flow mode: move to last cell of previous row (wrap to bottom if at top)
       let previousRow = currentRow - 1;
       if (previousRow < 0) {
@@ -392,7 +391,7 @@ const getNextTablePosition = (
       return [lastColumnInPreviousRow, previousRow]; // [column, row]
     }
 
-    if (normalizedMode === "wrap") {
+    if (loopMode === "wrap") {
       // Wrap mode: stay in same row, wrap to last column
       const currentRowLength = allRows[currentRow]?.cells?.length || 0;
       const lastColumnInCurrentRow = Math.max(0, currentRowLength - 1);
@@ -418,7 +417,7 @@ const getNextTablePosition = (
     }
 
     // We're at the bottom row - handle boundary behavior
-    if (normalizedMode === "flow") {
+    if (loopMode === "flow") {
       // Flow mode: advance to next column and go to top row
       const maxColumns = Math.max(1, getMaxColumns(allRows));
       let nextColumnInFlow = currentColumn + 1;
@@ -433,7 +432,7 @@ const getNextTablePosition = (
       return [clampedColumn, 0]; // [column, row]
     }
 
-    if (normalizedMode === "wrap") {
+    if (loopMode === "wrap") {
       // Wrap mode: go to top row, maintaining preferred column
       const topRowLength = allRows[0]?.cells?.length || 0;
       const targetColumn = Math.min(
@@ -462,7 +461,7 @@ const getNextTablePosition = (
     }
 
     // We're at the top row - handle boundary behavior
-    if (normalizedMode === "flow") {
+    if (loopMode === "flow") {
       // Flow mode: go to previous column and move to bottom row
       const maxColumns = Math.max(1, getMaxColumns(allRows));
       let previousColumnInFlow;
@@ -480,7 +479,7 @@ const getNextTablePosition = (
       return [clampedColumn, bottomRowIndex]; // [column, row]
     }
 
-    if (normalizedMode === "wrap") {
+    if (loopMode === "wrap") {
       // Wrap mode: go to bottom row, maintaining preferred column
       const bottomRowIndex = allRows.length - 1;
       const bottomRowLength = allRows[bottomRowIndex]?.cells?.length || 0;

@@ -7,8 +7,10 @@ import {
   Button,
   Editable,
   useEditableController,
+  useFocusGroup,
   useStateArray,
 } from "@jsenv/navi";
+import { useRef } from "preact/hooks";
 import { useDatabaseInputProps } from "../components/database_field.jsx";
 import { Table } from "../components/table.jsx";
 import { TABLE_ROW } from "./table_store.js";
@@ -66,6 +68,9 @@ export const TableData = ({ table, rows }) => {
   const [rowSelection, addRowToSelection, removeRowFromSelection] =
     useStateArray();
   const rowIsSelected = (row) => rowSelection.includes(row.id);
+  const tableRef = useRef(null);
+
+  useFocusGroup(tableRef);
 
   const { schemaColumns } = table.meta;
   const numberColumn = {
@@ -121,6 +126,7 @@ export const TableData = ({ table, rows }) => {
   return (
     <div>
       <Table
+        ref={tableRef}
         className="database_table"
         columns={[numberColumn, ...columns]}
         data={data}
