@@ -186,97 +186,138 @@ const isForwardArrow = (event, direction = "both") => {
 // Handle arrow navigation inside an HTMLTableElement as a grid.
 // Moves focus to adjacent cell in the direction of the arrow key.
 const getTargetInTableFocusGroup = (event, table, { loop }) => {
-  const key = event.key;
+  const arrowKey = event.key;
+
+  // Only handle arrow keys
   if (
-    key !== "ArrowRight" &&
-    key !== "ArrowLeft" &&
-    key !== "ArrowUp" &&
-    key !== "ArrowDown"
+    arrowKey !== "ArrowRight" &&
+    arrowKey !== "ArrowLeft" &&
+    arrowKey !== "ArrowUp" &&
+    arrowKey !== "ArrowDown"
   ) {
     return null;
   }
 
-  const active = document.activeElement;
-  // Find current cell (td or th)
-  const currentCell = active?.closest?.("td,th");
+  const focusedElement = document.activeElement;
+  const currentCell = focusedElement?.closest?.("td,th");
+
+  // If we're not currently in a table cell, try to focus the first focusable element in the table
   if (!currentCell || !table.contains(currentCell)) {
-    // Not currently inside a cell: focus the first focusable element in the table, if any
     return findDescendant(table, elementIsFocusable) || null;
   }
 
-  const currentRow = currentCell.parentElement; // tr
-  const rows = Array.from(table.rows);
-  const y = /** @type {HTMLTableRowElement} */ (currentRow).rowIndex; // row index
-  const x = /** @type {HTMLTableCellElement} */ (currentCell).cellIndex; // column index
+  // Get the current position in the table grid
+  const currentRow = currentCell.parentElement; // tr element
+  const allRows = Array.from(table.rows);
+  const currentRowIndex = /** @type {HTMLTableRowElement} */ (currentRow)
+    .rowIndex;
+  const currentColumnIndex = /** @type {HTMLTableCellElement} */ (currentCell)
+    .cellIndex;
 
-  // Iterate over subsequent cells in arrow direction and return the first focusable descendant
-  const cellIterator = createCellIterator(key, rows, {
-    y,
-    x,
-    originalX: x,
-    loop,
+  // Create an iterator that will scan through cells in the arrow direction
+  // until it finds one with a focusable element inside
+  const candidateCells = createTableCellIterator(arrowKey, allRows, {
+    startRow: currentRowIndex,
+    startColumn: currentColumnIndex,
+    originalColumn: currentColumnIndex, // Used to maintain column alignment for vertical moves
+    loopMode: loop,
   });
-  for (const cell of cellIterator) {
-    const target = findDescendant(cell, elementIsFocusable);
-    if (target) {
-      return target;
+
+  // Find the first cell that contains a focusable element
+  for (const candidateCell of candidateCells) {
+    const focusableTarget = findDescendant(candidateCell, elementIsFocusable);
+    if (focusableTarget) {
+      return focusableTarget;
     }
   }
-  return null;
+
+  return null; // No focusable target found
 };
 
-// Create an iterator over cells in a table following arrow key direction
-const createCellIterator = function* (key, rows, { y, x, originalX, loop }) {
-  if (!rows.length) {
-    return;
+// Create an iterator that yields table cells in the direction of arrow key movement.
+// This scans through cells until it finds one with a focusable element or completes a full loop.
+const createTableCellIterator = function* (
+  arrowKey,
+  allRows,
+  { startRow, startColumn, originalColumn, loopMode },
+) {
+  if (allRows.length === 0) {
+    return; // No rows to navigate
   }
 
-  // Maintain a column anchor used to keep vertical moves aligned
-  let anchorX = originalX;
-  const loopMode = normalizeLoop(loop);
-  const getNext = (y0, x0) =>
-    getNextPositionInTable(key, rows, y0, x0, anchorX, loopMode);
+  // Keep track of which column we should prefer for vertical movements
+  // This helps maintain column alignment when moving up/down through rows of different lengths
+  let preferredColumn = originalColumn;
 
-  // Compute the first candidate position from the current one
-  let next = getNext(y, x);
-  if (!next) {
-    return; // cannot move in this direction without loop
+  const normalizedLoopMode = normalizeLoop(loopMode);
+
+  // Helper function to calculate the next position based on current position and arrow key
+  const calculateNextPosition = (currentRow, currentColumn) =>
+    getNextTablePosition(
+      arrowKey,
+      allRows,
+      currentRow,
+      currentColumn,
+      preferredColumn,
+      normalizedLoopMode,
+    );
+
+  // Start by calculating the first position to move to
+  let nextPosition = calculateNextPosition(startRow, startColumn);
+  if (!nextPosition) {
+    return; // Cannot move in this direction (no looping enabled)
   }
-  const start = `${next.y}:${next.x}`;
+
+  // Keep track of where we started to detect when we've completed a full loop
+  const startingPosition = `${nextPosition.row}:${nextPosition.column}`;
 
   while (true) {
-    const row = rows[next.y];
-    const cell = row?.cells?.[next.x];
-    if (cell) {
-      yield cell;
+    const targetRow = allRows[nextPosition.row];
+    const targetCell = targetRow?.cells?.[nextPosition.column];
+
+    // Yield the cell if it exists
+    if (targetCell) {
+      yield targetCell;
     }
-    // Update anchor when horizontal moved, or when vertical flow crosses columns
-    if (key === "ArrowRight" || key === "ArrowLeft") {
-      anchorX = next.x;
-    } else if (key === "ArrowDown") {
-      const atBottom = next.y === rows.length - 1;
-      if (atBottom && loopMode === "flow") {
-        // Next will be top row of next column in flow mode
-        const maxCols = Math.max(1, getMaxColumns(rows));
-        anchorX = anchorX + 1;
-        if (anchorX >= maxCols) anchorX = 0;
+
+    // Update our preferred column based on movement:
+    // - For horizontal moves, update to current column
+    // - For vertical moves in flow mode at boundaries, advance to next/previous column
+    if (arrowKey === "ArrowRight" || arrowKey === "ArrowLeft") {
+      preferredColumn = nextPosition.column;
+    } else if (arrowKey === "ArrowDown") {
+      const isAtBottomRow = nextPosition.row === allRows.length - 1;
+      if (isAtBottomRow && normalizedLoopMode === "flow") {
+        // Moving down from bottom row in flow mode: advance to next column
+        const maxColumns = getMaxColumns(allRows);
+        preferredColumn = preferredColumn + 1;
+        if (preferredColumn >= maxColumns) {
+          preferredColumn = 0; // Wrap to first column
+        }
       }
-    } else if (key === "ArrowUp") {
-      const atTop = next.y === 0;
-      if (atTop && loopMode === "flow") {
-        const maxCols = Math.max(1, getMaxColumns(rows));
-        if (anchorX === 0) anchorX = maxCols - 1;
-        else anchorX = anchorX - 1;
+    } else if (arrowKey === "ArrowUp") {
+      const isAtTopRow = nextPosition.row === 0;
+      if (isAtTopRow && normalizedLoopMode === "flow") {
+        // Moving up from top row in flow mode: go to previous column
+        const maxColumns = getMaxColumns(allRows);
+        if (preferredColumn === 0) {
+          preferredColumn = maxColumns - 1; // Wrap to last column
+        } else {
+          preferredColumn = preferredColumn - 1;
+        }
       }
     }
 
-    next = getNext(next.y, next.x);
-    if (!next) {
-      return; // reached boundary and no loop
+    // Calculate where to move next
+    nextPosition = calculateNextPosition(nextPosition.row, nextPosition.column);
+    if (!nextPosition) {
+      return; // Hit a boundary with no looping
     }
-    const keyPos = `${next.y}:${next.x}`;
-    if (keyPos === start) {
-      return; // completed a full loop
+
+    // Check if we've completed a full loop
+    const currentPositionKey = `${nextPosition.row}:${nextPosition.column}`;
+    if (currentPositionKey === startingPosition) {
+      return; // We've gone full circle
     }
   }
 };
@@ -292,106 +333,169 @@ const normalizeLoop = (loop) => {
 const getMaxColumns = (rows) =>
   rows.reduce((max, r) => Math.max(max, r?.cells?.length || 0), 0);
 
-// Compute the next row/cell indices when moving in a table for a given arrow key
-const getNextPositionInTable = (
-  keyboardKey,
-  rows,
-  y,
-  x,
-  originalX,
+// Calculate the next row and column position when moving in a table with arrow keys.
+// Returns { row, column } for the next position, or null if movement is not possible.
+const getNextTablePosition = (
+  arrowKey,
+  allRows,
+  currentRow,
+  currentColumn,
+  preferredColumn, // Used for vertical movement to maintain column alignment
   loopMode,
 ) => {
-  const mode = normalizeLoop(loopMode);
+  const normalizedMode = normalizeLoop(loopMode);
 
-  if (keyboardKey === "ArrowRight") {
-    const rowLen = rows[y]?.cells?.length || 0;
-    const nextX = x + 1;
-    if (nextX < rowLen) {
-      return { y, x: nextX };
+  if (arrowKey === "ArrowRight") {
+    const currentRowLength = allRows[currentRow]?.cells?.length || 0;
+    const nextColumn = currentColumn + 1;
+
+    // Can we move right within the same row?
+    if (nextColumn < currentRowLength) {
+      return { row: currentRow, column: nextColumn };
     }
-    // boundary
-    if (mode === "flow") {
-      let nextY = y + 1;
-      if (nextY >= rows.length) nextY = 0;
-      return { y: nextY, x: 0 };
+
+    // We're at the end of the row - handle boundary behavior
+    if (normalizedMode === "flow") {
+      // Flow mode: move to first cell of next row (wrap to top if at bottom)
+      let nextRow = currentRow + 1;
+      if (nextRow >= allRows.length) {
+        nextRow = 0; // Wrap to first row
+      }
+      return { row: nextRow, column: 0 };
     }
-    if (mode === "wrap") {
-      return { y, x: 0 };
+
+    if (normalizedMode === "wrap") {
+      // Wrap mode: stay in same row, wrap to first column
+      return { row: currentRow, column: 0 };
     }
+
+    // No looping: can't move
     return null;
   }
 
-  if (keyboardKey === "ArrowLeft") {
-    const prevX = x - 1;
-    if (prevX >= 0) {
-      return { y, x: prevX };
+  if (arrowKey === "ArrowLeft") {
+    const previousColumn = currentColumn - 1;
+
+    // Can we move left within the same row?
+    if (previousColumn >= 0) {
+      return { row: currentRow, column: previousColumn };
     }
-    // boundary
-    if (mode === "flow") {
-      let prevY = y - 1;
-      if (prevY < 0) prevY = rows.length - 1;
-      const prevRowLen = rows[prevY]?.cells?.length || 0;
-      const lastX = Math.max(0, prevRowLen - 1);
-      return { y: prevY, x: lastX };
+
+    // We're at the beginning of the row - handle boundary behavior
+    if (normalizedMode === "flow") {
+      // Flow mode: move to last cell of previous row (wrap to bottom if at top)
+      let previousRow = currentRow - 1;
+      if (previousRow < 0) {
+        previousRow = allRows.length - 1; // Wrap to last row
+      }
+      const previousRowLength = allRows[previousRow]?.cells?.length || 0;
+      const lastColumnInPreviousRow = Math.max(0, previousRowLength - 1);
+      return { row: previousRow, column: lastColumnInPreviousRow };
     }
-    if (mode === "wrap") {
-      const rowLen = rows[y]?.cells?.length || 0;
-      const lastX = Math.max(0, rowLen - 1);
-      return { y, x: lastX };
+
+    if (normalizedMode === "wrap") {
+      // Wrap mode: stay in same row, wrap to last column
+      const currentRowLength = allRows[currentRow]?.cells?.length || 0;
+      const lastColumnInCurrentRow = Math.max(0, currentRowLength - 1);
+      return { row: currentRow, column: lastColumnInCurrentRow };
     }
+
+    // No looping: can't move
     return null;
   }
 
-  if (keyboardKey === "ArrowDown") {
-    const nextY = y + 1;
-    if (nextY < rows.length) {
-      const targetRowLen = rows[nextY]?.cells?.length || 0;
-      const nextX = Math.min(originalX, Math.max(0, targetRowLen - 1));
-      return { y: nextY, x: nextX };
+  if (arrowKey === "ArrowDown") {
+    const nextRow = currentRow + 1;
+
+    // Can we move down within the table?
+    if (nextRow < allRows.length) {
+      const nextRowLength = allRows[nextRow]?.cells?.length || 0;
+      // Try to maintain the preferred column, but clamp to row length
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, nextRowLength - 1),
+      );
+      return { row: nextRow, column: targetColumn };
     }
-    // boundary
-    if (mode === "flow") {
-      const maxCols = Math.max(1, getMaxColumns(rows));
-      let flowedX = x + 1;
-      if (flowedX >= maxCols) flowedX = 0;
-      const topRowLen = rows[0]?.cells?.length || 0;
-      const clampedX = Math.min(flowedX, Math.max(0, topRowLen - 1));
-      return { y: 0, x: clampedX };
+
+    // We're at the bottom row - handle boundary behavior
+    if (normalizedMode === "flow") {
+      // Flow mode: advance to next column and go to top row
+      const maxColumns = Math.max(1, getMaxColumns(allRows));
+      let nextColumnInFlow = currentColumn + 1;
+      if (nextColumnInFlow >= maxColumns) {
+        nextColumnInFlow = 0; // Wrap to first column
+      }
+      const topRowLength = allRows[0]?.cells?.length || 0;
+      const clampedColumn = Math.min(
+        nextColumnInFlow,
+        Math.max(0, topRowLength - 1),
+      );
+      return { row: 0, column: clampedColumn };
     }
-    if (mode === "wrap") {
-      const topRowLen = rows[0]?.cells?.length || 0;
-      const nextX = Math.min(originalX, Math.max(0, topRowLen - 1));
-      return { y: 0, x: nextX };
+
+    if (normalizedMode === "wrap") {
+      // Wrap mode: go to top row, maintaining preferred column
+      const topRowLength = allRows[0]?.cells?.length || 0;
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, topRowLength - 1),
+      );
+      return { row: 0, column: targetColumn };
     }
+
+    // No looping: can't move
     return null;
   }
 
-  if (keyboardKey === "ArrowUp") {
-    const prevY = y - 1;
-    if (prevY >= 0) {
-      const targetRowLen = rows[prevY]?.cells?.length || 0;
-      const nextX = Math.min(originalX, Math.max(0, targetRowLen - 1));
-      return { y: prevY, x: nextX };
+  if (arrowKey === "ArrowUp") {
+    const previousRow = currentRow - 1;
+
+    // Can we move up within the table?
+    if (previousRow >= 0) {
+      const previousRowLength = allRows[previousRow]?.cells?.length || 0;
+      // Try to maintain the preferred column, but clamp to row length
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, previousRowLength - 1),
+      );
+      return { row: previousRow, column: targetColumn };
     }
-    // boundary
-    if (mode === "flow") {
-      const maxCols = Math.max(1, getMaxColumns(rows));
-      let flowedX;
-      if (x === 0) flowedX = maxCols - 1;
-      else flowedX = x - 1;
-      const bottomRowIndex = rows.length - 1;
-      const bottomRowLen = rows[bottomRowIndex]?.cells?.length || 0;
-      const clampedX = Math.min(flowedX, Math.max(0, bottomRowLen - 1));
-      return { y: bottomRowIndex, x: clampedX };
+
+    // We're at the top row - handle boundary behavior
+    if (normalizedMode === "flow") {
+      // Flow mode: go to previous column and move to bottom row
+      const maxColumns = Math.max(1, getMaxColumns(allRows));
+      let previousColumnInFlow;
+      if (currentColumn === 0) {
+        previousColumnInFlow = maxColumns - 1; // Wrap to last column
+      } else {
+        previousColumnInFlow = currentColumn - 1;
+      }
+      const bottomRowIndex = allRows.length - 1;
+      const bottomRowLength = allRows[bottomRowIndex]?.cells?.length || 0;
+      const clampedColumn = Math.min(
+        previousColumnInFlow,
+        Math.max(0, bottomRowLength - 1),
+      );
+      return { row: bottomRowIndex, column: clampedColumn };
     }
-    if (mode === "wrap") {
-      const bottomRowIndex = rows.length - 1;
-      const bottomRowLen = rows[bottomRowIndex]?.cells?.length || 0;
-      const nextX = Math.min(originalX, Math.max(0, bottomRowLen - 1));
-      return { y: bottomRowIndex, x: nextX };
+
+    if (normalizedMode === "wrap") {
+      // Wrap mode: go to bottom row, maintaining preferred column
+      const bottomRowIndex = allRows.length - 1;
+      const bottomRowLength = allRows[bottomRowIndex]?.cells?.length || 0;
+      const targetColumn = Math.min(
+        preferredColumn,
+        Math.max(0, bottomRowLength - 1),
+      );
+      return { row: bottomRowIndex, column: targetColumn };
     }
+
+    // No looping: can't move
     return null;
   }
 
+  // Unknown arrow key
   return null;
 };
