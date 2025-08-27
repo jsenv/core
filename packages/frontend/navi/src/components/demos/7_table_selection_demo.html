@@ -138,8 +138,6 @@
         SelectionProvider,
         useSelectionContext,
         useRegisterSelectableElement,
-        clickToSelect,
-        keydownToSelect,
       } from "@jsenv/navi";
 
       // Sample data
@@ -227,7 +225,8 @@
 
         // Register this cell with its coordinates (x = columnIndex, y = row.index - 1)
         const cellRef = useRef();
-        useRegisterSelectableElement(cellRef);
+        const { clickToSelect, keydownToSelect } =
+          useRegisterSelectableElement(cellRef);
 
         return (
           <td
@@ -236,12 +235,12 @@
             tabIndex={0}
             data-value={cellId}
             data-selected={isSelected ? "" : undefined}
-            onClick={(e) =>
-              clickToSelect(e, { selectionContext, value: cellId })
-            }
-            onKeyDown={(e) =>
-              keydownToSelect(e, { selectionContext, value: cellId })
-            }
+            onClick={(e) => {
+              clickToSelect(e);
+            }}
+            onKeyDown={(e) => {
+              keydownToSelect(e);
+            }}
           >
             <div className="database_table_cell_content">
               <div className="database_table_cell_value">{value}</div>

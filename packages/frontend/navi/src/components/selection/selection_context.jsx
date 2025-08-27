@@ -2,17 +2,27 @@ import { canInterceptKeys } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
+const DEBUG = true; // Set to true to enable debug logs
+const log = (...args) => {
+  if (DEBUG) {
+    console.debug("[SelectionContext]", ...args);
+  }
+};
+
 const SelectionContext = createContext(null);
 
 // Helper function to extract value from an element
 const getElementValue = (element) => {
+  let value;
   if (element.value !== undefined) {
-    return element.value;
+    value = element.value;
+  } else if (element.hasAttribute("data-value")) {
+    value = element.getAttribute("data-value");
+  } else {
+    value = element;
   }
-  if (element.hasAttribute("data-value")) {
-    return element.getAttribute("data-value");
-  }
-  return element;
+  log("getElementValue:", element, "->", value);
+  return value;
 };
 
 export const SelectionProvider = ({
@@ -54,21 +64,54 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
 
     registerElement: (element) => {
       const registry = registryRef.current;
+      const value = getElementValue(element);
+      log(
+        "Grid registerElement:",
+        element,
+        "value:",
+        value,
+        "registry size before:",
+        registry.size,
+      );
       registry.add(element);
+      log("Grid registerElement: registry size after:", registry.size);
     },
     unregisterElement: (element) => {
       const registry = registryRef.current;
+      const value = getElementValue(element);
+      log(
+        "Grid unregisterElement:",
+        element,
+        "value:",
+        value,
+        "registry size before:",
+        registry.size,
+      );
       registry.delete(element);
+      log("Grid unregisterElement: registry size after:", registry.size);
     },
     setAnchorElement: (element) => {
+      const value = getElementValue(element);
+      log("Grid setAnchorElement:", element, "value:", value);
       anchorRef.current = element;
     },
     isElementSelected: (element) => {
       const value = getElementValue(element);
-      return selection.includes(value);
+      const isSelected = selection.includes(value);
+      log(
+        "Grid isElementSelected:",
+        element,
+        "value:",
+        value,
+        "selected:",
+        isSelected,
+      );
+      return isSelected;
     },
     isValueSelected: (value) => {
-      return selection.includes(value);
+      const isSelected = selection.includes(value);
+      log("Grid isValueSelected:", value, "selected:", isSelected);
+      return isSelected;
     },
     getAllElements: () => {
       return Array.from(registryRef.current);
@@ -194,25 +237,44 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
 
     // Selection manipulation methods
     setSelection: (newSelection, event = null) => {
+      log(
+        "Grid setSelection called with:",
+        newSelection,
+        "current selection:",
+        selection,
+      );
       if (
         newSelection.length === selection.length &&
         newSelection.every((value, index) => value === selection[index])
       ) {
+        log("Grid setSelection: no change, returning early");
         return;
       }
       if (newSelection.length > 0) {
         // Find the element for the last selected value to set as anchor
         const lastValue = newSelection[newSelection.length - 1];
+        log("Grid setSelection: finding element for anchor value:", lastValue);
         for (const element of registryRef.current) {
           if (getElementValue(element) === lastValue) {
+            log("Grid setSelection: setting anchor element:", element);
             anchorRef.current = element;
             break;
           }
         }
+      } else {
+        log("Grid setSelection: clearing anchor (empty selection)");
+        anchorRef.current = null;
       }
+      log("Grid setSelection: calling onChange with:", newSelection);
       onChange?.(newSelection, event);
     },
     addToSelection: (arrayOfValuesToAdd, event = null) => {
+      log(
+        "Grid addToSelection called with:",
+        arrayOfValuesToAdd,
+        "current selection:",
+        selection,
+      );
       const selectionWithValues = [...selection];
       let modified = false;
       let lastAddedElement = null;
@@ -221,10 +283,12 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
         if (!selectionWithValues.includes(valueToAdd)) {
           modified = true;
           selectionWithValues.push(valueToAdd);
+          log("Grid addToSelection: adding value:", valueToAdd);
           // Find the element for this value
           for (const element of registryRef.current) {
             if (getElementValue(element) === valueToAdd) {
               lastAddedElement = element;
+              log("Grid addToSelection: found element for value:", element);
               break;
             }
           }
@@ -233,9 +297,13 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
 
       if (modified) {
         if (lastAddedElement) {
+          log("Grid addToSelection: setting anchor element:", lastAddedElement);
           anchorRef.current = lastAddedElement;
         }
+        log("Grid addToSelection: calling onChange with:", selectionWithValues);
         onChange?.(selectionWithValues, event);
+      } else {
+        log("Grid addToSelection: no changes made");
       }
     },
     removeFromSelection: (arrayOfValuesToRemove, event = null) => {
@@ -310,21 +378,54 @@ const LinearSelectionProvider = ({
 
     registerElement: (element) => {
       const registry = registryRef.current;
+      const value = getElementValue(element);
+      log(
+        "Linear registerElement:",
+        element,
+        "value:",
+        value,
+        "registry size before:",
+        registry.size,
+      );
       registry.add(element);
+      log("Linear registerElement: registry size after:", registry.size);
     },
     unregisterElement: (element) => {
       const registry = registryRef.current;
+      const value = getElementValue(element);
+      log(
+        "Linear unregisterElement:",
+        element,
+        "value:",
+        value,
+        "registry size before:",
+        registry.size,
+      );
       registry.delete(element);
+      log("Linear unregisterElement: registry size after:", registry.size);
     },
     setAnchorElement: (element) => {
+      const value = getElementValue(element);
+      log("Linear setAnchorElement:", element, "value:", value);
       anchorRef.current = element;
     },
     isElementSelected: (element) => {
       const value = getElementValue(element);
-      return selection.includes(value);
+      const isSelected = selection.includes(value);
+      log(
+        "Linear isElementSelected:",
+        element,
+        "value:",
+        value,
+        "selected:",
+        isSelected,
+      );
+      return isSelected;
     },
     isValueSelected: (value) => {
-      return selection.includes(value);
+      const isSelected = selection.includes(value);
+      log("Linear isValueSelected:", value, "selected:", isSelected);
+      return isSelected;
     },
     getAllElements: () => {
       return Array.from(registryRef.current);
@@ -553,36 +654,74 @@ export const useRegisterSelectableElement = (elementRef) => {
   useLayoutEffect(() => {
     if (selectionContext && elementRef.current) {
       const element = elementRef.current;
+      const value = getElementValue(element);
+      log(
+        "useRegisterSelectableElement: registering element:",
+        element,
+        "value:",
+        value,
+      );
       selectionContext.registerElement(element);
-      return () => selectionContext.unregisterElement(element);
+      return () => {
+        log(
+          "useRegisterSelectableElement: unregistering element:",
+          element,
+          "value:",
+          value,
+        );
+        selectionContext.unregisterElement(element);
+      };
     }
     return undefined;
   }, [selectionContext]);
+
+  return {
+    clickToSelect: (e) => {
+      clickToSelect(e, { selectionContext, element: elementRef.current });
+    },
+    keydownToSelect: (e) => {
+      keydownToSelect(e, { selectionContext, element: elementRef.current });
+    },
+  };
 };
 
 export const clickToSelect = (clickEvent, { selectionContext, element }) => {
   if (clickEvent.defaultPrevented) {
     // If the click was prevented by another handler, do not interfere
+    log("clickToSelect: event already prevented, skipping");
     return;
   }
 
   const isMultiSelect = clickEvent.metaKey || clickEvent.ctrlKey;
   const isShiftSelect = clickEvent.shiftKey;
   const isSingleSelect = !isMultiSelect && !isShiftSelect;
+  const value = getElementValue(element);
+
+  log("clickToSelect:", {
+    element,
+    value,
+    isMultiSelect,
+    isShiftSelect,
+    isSingleSelect,
+    currentSelection: selectionContext.selection,
+  });
 
   if (isSingleSelect) {
     // Single select - replace entire selection with just this item
-    selectionContext.setSelection([element], clickEvent);
+    log("clickToSelect: single select, setting selection to:", [value]);
+    selectionContext.setSelection([value], clickEvent);
     return;
   }
   if (isMultiSelect) {
     // here no need to prevent nav on <a> but it means cmd + click will both multi select
     // and open in a new tab
+    log("clickToSelect: multi select, toggling element");
     selectionContext.toggleElement(element, clickEvent);
     return;
   }
   if (isShiftSelect) {
     clickEvent.preventDefault(); // Prevent navigation
+    log("clickToSelect: shift select, selecting from anchor to element");
     selectionContext.selectFromAnchorTo(element, clickEvent);
     return;
   }
@@ -593,10 +732,21 @@ export const keydownToSelect = (
   { selectionContext, element },
 ) => {
   if (!canInterceptKeys(keydownEvent)) {
+    log("keydownToSelect: cannot intercept keys, skipping");
     return;
   }
 
+  const value = getElementValue(element);
+  log("keydownToSelect:", {
+    key: keydownEvent.key,
+    element,
+    value,
+    currentSelection: selectionContext.selection,
+    layout: selectionContext.layout,
+  });
+
   if (keydownEvent.key === "Shift") {
+    log("keydownToSelect: Shift key, setting anchor element");
     selectionContext.setAnchorElement(element);
     return;
   }
@@ -607,35 +757,51 @@ export const keydownToSelect = (
 
   if (key === "a") {
     if (!isMultiSelect) {
+      log('keydownToSelect: "a" key without multi-select modifier, skipping');
       return;
     }
     keydownEvent.preventDefault(); // prevent default select all text behavior
     const allValues = selectionContext.getAllElements().map(getElementValue);
+    log(
+      "keydownToSelect: Select All - setting selection to all values:",
+      allValues,
+    );
     selectionContext.setSelection(allValues, keydownEvent);
     return;
   }
 
   if (key === "ArrowDown") {
     if (selectionContext.layout === "horizontal") {
+      log("keydownToSelect: ArrowDown in horizontal layout, skipping");
       return; // No down navigation in horizontal layout
     }
     const nextElement = selectionContext.getElementBelow(element);
     if (!nextElement) {
+      log("keydownToSelect: ArrowDown - no next element found");
       return; // No next element to select
     }
+    const nextValue = getElementValue(nextElement);
+    log(
+      "keydownToSelect: ArrowDown - found next element:",
+      nextElement,
+      "value:",
+      nextValue,
+    );
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
+      log(
+        "keydownToSelect: ArrowDown with Shift - selecting from anchor to next element",
+      );
       selectionContext.selectFromAnchorTo(nextElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selectionContext.addToSelection(
-        [getElementValue(nextElement)],
-        keydownEvent,
-      );
+      log("keydownToSelect: ArrowDown with multi-select - adding to selection");
+      selectionContext.addToSelection([nextValue], keydownEvent);
       return;
     }
-    selectionContext.setSelection([getElementValue(nextElement)], keydownEvent);
+    log("keydownToSelect: ArrowDown - setting selection to next element");
+    selectionContext.setSelection([nextValue], keydownEvent);
     return;
   }
 
