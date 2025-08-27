@@ -200,20 +200,8 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
   // Find current cell (td or th)
   const currentCell = active?.closest?.("td,th");
   if (!currentCell || !table.contains(currentCell)) {
-    // If not inside a cell, try to focus the first focusable within the first cell
-    const rows = Array.from(table.rows);
-    if (!rows.length) {
-      return null;
-    }
-    const firstCell = rows[0].cells[0];
-    if (!firstCell) {
-      return null;
-    }
-    const target = findDescendant(firstCell, elementIsFocusable) || firstCell;
-    if (target === firstCell && firstCell.tabIndex < 0) {
-      firstCell.tabIndex = -1;
-    }
-    return target;
+    // Not currently inside a cell: focus the first focusable element in the table, if any
+    return findDescendant(table, elementIsFocusable) || null;
   }
 
   const currentRow = currentCell.parentElement; // tr
@@ -284,17 +272,113 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
     nextCellIndex = Math.min(cellIndex, targetRowCells.length - 1);
   }
 
-  const nextRow = rows[nextRowIndex];
-  if (!nextRow) {
-    return null;
+  // Scan forward in the chosen direction until we find a cell with a focusable descendant
+  const startRowIndex = nextRowIndex;
+  const startCellIndex = nextCellIndex;
+  let firstStepDone = false;
+  while (true) {
+    const row = rows[nextRowIndex];
+    if (!row || row.cells.length === 0) {
+      // move again in same direction
+      ({ nextRowIndex, nextCellIndex } = stepInTable(
+        key,
+        rows,
+        nextRowIndex,
+        nextCellIndex,
+        cellIndex,
+        loop,
+      ));
+      if (!firstStepDone) firstStepDone = true;
+      // stop if we loop back to start
+      if (
+        firstStepDone &&
+        nextRowIndex === startRowIndex &&
+        nextCellIndex === startCellIndex
+      ) {
+        return null;
+      }
+      continue;
+    }
+    const cell = row.cells[nextCellIndex];
+    const target = cell && findDescendant(cell, elementIsFocusable);
+    if (target) {
+      return target;
+    }
+    // advance to next position
+    ({ nextRowIndex, nextCellIndex } = stepInTable(
+      key,
+      rows,
+      nextRowIndex,
+      nextCellIndex,
+      cellIndex,
+      loop,
+    ));
+    if (!firstStepDone) firstStepDone = true;
+    if (
+      firstStepDone &&
+      nextRowIndex === startRowIndex &&
+      nextCellIndex === startCellIndex
+    ) {
+      return null;
+    }
   }
-  const nextCell = nextRow.cells[nextCellIndex];
-  if (!nextCell) {
-    return null;
+};
+
+// Compute the next row/cell indices when moving in a table for a given arrow key
+const stepInTable = (
+  key,
+  rows,
+  rowIndex,
+  cellIndex,
+  originalCellIndex,
+  loop,
+) => {
+  let nextRowIndex = rowIndex;
+  let nextCellIndex = cellIndex;
+  if (key === "ArrowRight") {
+    nextCellIndex = cellIndex + 1;
+    const currentRowCells = rows[rowIndex]?.cells || [];
+    if (nextCellIndex >= currentRowCells.length) {
+      nextRowIndex = rowIndex + 1;
+      if (nextRowIndex >= rows.length) {
+        if (!loop) return { nextRowIndex: rowIndex, nextCellIndex: cellIndex };
+        nextRowIndex = 0;
+      }
+      nextCellIndex = 0;
+    }
+  } else if (key === "ArrowLeft") {
+    nextCellIndex = cellIndex - 1;
+    if (nextCellIndex < 0) {
+      nextRowIndex = rowIndex - 1;
+      if (nextRowIndex < 0) {
+        if (!loop) return { nextRowIndex: rowIndex, nextCellIndex: cellIndex };
+        nextRowIndex = rows.length - 1;
+      }
+      const prevRowCells = rows[nextRowIndex]?.cells || [];
+      nextCellIndex = Math.max(0, prevRowCells.length - 1);
+    }
+  } else if (key === "ArrowDown") {
+    nextRowIndex = rowIndex + 1;
+    if (nextRowIndex >= rows.length) {
+      if (!loop) return { nextRowIndex: rowIndex, nextCellIndex: cellIndex };
+      nextRowIndex = 0;
+    }
+    const targetRowCells = rows[nextRowIndex]?.cells || [];
+    nextCellIndex = Math.min(
+      originalCellIndex,
+      Math.max(0, targetRowCells.length - 1),
+    );
+  } else if (key === "ArrowUp") {
+    nextRowIndex = rowIndex - 1;
+    if (nextRowIndex < 0) {
+      if (!loop) return { nextRowIndex: rowIndex, nextCellIndex: cellIndex };
+      nextRowIndex = rows.length - 1;
+    }
+    const targetRowCells = rows[nextRowIndex]?.cells || [];
+    nextCellIndex = Math.min(
+      originalCellIndex,
+      Math.max(0, targetRowCells.length - 1),
+    );
   }
-  const focusTarget = findDescendant(nextCell, elementIsFocusable) || nextCell;
-  if (focusTarget === nextCell && nextCell.tabIndex < 0) {
-    nextCell.tabIndex = -1;
-  }
-  return focusTarget;
+  return { nextRowIndex, nextCellIndex };
 };
