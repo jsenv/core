@@ -2,7 +2,6 @@
  * https://tanstack.com/table/latest/docs/framework/react/examples/basic?panel=code
  *
  * Next step:
- * 1. When a cell is focuses the corresponding th should have a background and the first column too (the one with row number)
  * 2. row selection (take inspitation from the way it's done in the explorer)
  *    selected row should have a special background
  * 3. A last row with buttons like a delete button with a delete icon
@@ -18,10 +17,13 @@
 import {
   Button,
   Editable,
+  SelectionProvider,
+  ShortcutProvider,
   useEditableController,
   useFocusGroup,
   useStateArray,
 } from "@jsenv/navi";
+import { useSignal } from "@preact/signals";
 import { createContext } from "preact";
 import {
   useCallback,
@@ -203,28 +205,73 @@ export const TableData = ({ table, rows }) => {
     ],
   );
 
+  const cellSelectionSignal = useSignal([]);
+  const selectionLength = cellSelectionSignal.value.length;
+  const [, setDeletedItems] = useState([]);
+
   return (
-    <TableStateContext.Provider value={tableState}>
-      <div>
-        <Table
-          ref={tableRef}
-          className="database_table"
-          columns={columns}
-          data={data}
-          style={{ height: "fit-content" }}
-          onFocusIn={(event) => {
-            handleTableFocusIn(event);
-          }}
-          onFocusOut={(event) => {
-            handleTableFocusOut(event);
-          }}
-        />
-        {data.length === 0 ? <div>No data</div> : null}
-        <div className="table_data_actions">
-          <Button action={createRow}>Add row</Button>
-        </div>
-      </div>
-    </TableStateContext.Provider>
+    <SelectionProvider
+      value={cellSelectionSignal.value}
+      onChange={(value) => {
+        cellSelectionSignal.value = value;
+      }}
+      onActionStart={() => {
+        setDeletedItems(cellSelectionSignal.value);
+      }}
+      onActionAbort={() => {
+        setDeletedItems([]);
+      }}
+      onActionError={() => {
+        setDeletedItems([]);
+      }}
+      onActionEnd={() => {
+        setDeletedItems([]);
+      }}
+    >
+      <ShortcutProvider
+        shortcuts={[
+          {
+            // TODO: whenever a row/column is selected the effect is different
+            // we'll delete the row/column instead of the cell
+            // in case of multiple selection (row + cells) then we'll need to decide what to do
+            // no actuall we'll change this as follow:
+            // selecting a row unselect eventual cells
+            // selecting a cell unselect eventual rows
+            enabled: selectionLength > 0,
+            key: ["command+delete"],
+            action: () => {},
+            description: "Reset selected cells",
+            confirmMessage:
+              selectionLength === 1
+                ? `Are you sure you want to reset "${cellSelectionSignal.value[0]}"?`
+                : `Are you sure you want to reset the ${selectionLength} selected cells?`,
+          },
+        ]}
+        elementRef={tableRef}
+      >
+        <TableStateContext.Provider value={tableState}>
+          <div>
+            <Table
+              ref={tableRef}
+              className="database_table"
+              columns={columns}
+              data={data}
+              style={{ height: "fit-content" }}
+              onFocusIn={(event) => {
+                handleTableFocusIn(event);
+              }}
+              onFocusOut={(event) => {
+                handleTableFocusOut(event);
+              }}
+            />
+            {data.length === 0 ? <div>No data</div> : null}
+            <div className="table_data_actions">
+              <Button action={createRow}>Add row</Button>
+            </div>
+          </div>
+        </TableStateContext.Provider>
+      </ShortcutProvider>
+    </SelectionProvider>
   );
 };
 
