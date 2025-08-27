@@ -4,29 +4,69 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 const SelectionContext = createContext(null);
 
-export const SelectionProvider = ({ value = [], onChange, children }) => {
+export const SelectionProvider = ({
+  value = [],
+  onChange,
+  layout = "vertical", // "grid", "horizontal", "vertical"
+  children,
+}) => {
   const selection = value || [];
   const registryRef = useRef(new Map()); // Map<value, {x, y, element}>
   const anchorRef = useRef(null);
 
+  // Validate layout parameter
+  if (!["grid", "horizontal", "vertical"].includes(layout)) {
+    throw new Error(
+      `SelectionProvider: Invalid layout "${layout}". Must be "grid", "horizontal", or "vertical".`,
+    );
+  }
+
   const contextValue = {
     selection,
+    layout,
 
-    register: (value, coordinates = null, element = null) => {
+    register: (value, coordinates, element = null) => {
       const registry = registryRef.current;
+
+      // Validate required coordinates based on layout
+      if (layout === "grid") {
+        if (
+          !coordinates ||
+          typeof coordinates.x !== "number" ||
+          typeof coordinates.y !== "number"
+        ) {
+          throw new Error(
+            `SelectionProvider (grid layout): Both x and y coordinates are required for value "${value}".`,
+          );
+        }
+      } else if (layout === "horizontal") {
+        if (!coordinates || typeof coordinates.x !== "number") {
+          throw new Error(
+            `SelectionProvider (horizontal layout): x coordinate is required for value "${value}".`,
+          );
+        }
+      } else if (layout === "vertical") {
+        if (!coordinates || typeof coordinates.y !== "number") {
+          throw new Error(
+            `SelectionProvider (vertical layout): y coordinate is required for value "${value}".`,
+          );
+        }
+      }
+
       if (registry.has(value)) {
         // Update existing entry with new coordinates/element
         const existing = registry.get(value);
         registry.set(value, {
-          x: coordinates?.x ?? existing.x,
-          y: coordinates?.y ?? existing.y,
+          x: coordinates.x ?? existing.x ?? 0,
+          y: coordinates.y ?? existing.y ?? 0,
           element: element ?? existing.element,
         });
         return;
       }
+
       registry.set(value, {
-        x: coordinates?.x ?? 0,
-        y: coordinates?.y ?? 0,
+        x: coordinates.x ?? 0,
+        y: coordinates.y ?? 0,
         element,
       });
     },
@@ -37,9 +77,37 @@ export const SelectionProvider = ({ value = [], onChange, children }) => {
     updateCoordinates: (value, coordinates) => {
       const registry = registryRef.current;
       const existing = registry.get(value);
-      if (existing) {
-        registry.set(value, { ...existing, ...coordinates });
+      if (!existing) {
+        return; // Value not registered
       }
+
+      // Validate coordinates based on layout
+      if (layout === "grid") {
+        if (coordinates.x !== undefined && typeof coordinates.x !== "number") {
+          throw new Error(
+            `SelectionProvider (grid layout): x coordinate must be a number for value "${value}".`,
+          );
+        }
+        if (coordinates.y !== undefined && typeof coordinates.y !== "number") {
+          throw new Error(
+            `SelectionProvider (grid layout): y coordinate must be a number for value "${value}".`,
+          );
+        }
+      } else if (layout === "horizontal") {
+        if (coordinates.x !== undefined && typeof coordinates.x !== "number") {
+          throw new Error(
+            `SelectionProvider (horizontal layout): x coordinate must be a number for value "${value}".`,
+          );
+        }
+      } else if (layout === "vertical") {
+        if (coordinates.y !== undefined && typeof coordinates.y !== "number") {
+          throw new Error(
+            `SelectionProvider (vertical layout): y coordinate must be a number for value "${value}".`,
+          );
+        }
+      }
+
+      registry.set(value, { ...existing, ...coordinates });
     },
     setAnchor: (value) => {
       anchorRef.current = value;
@@ -169,11 +237,24 @@ export const SelectionProvider = ({ value = [], onChange, children }) => {
       const currentItem = registry.get(value);
       if (!currentItem) return null;
 
-      // Find the next item in the same row (x + 1)
-      const nextX = currentItem.x + 1;
-      for (const [candidateValue, item] of registry) {
-        if (item.x === nextX && item.y === currentItem.y) {
-          return candidateValue;
+      if (layout === "horizontal" || layout === "grid") {
+        // Find the next item in the same row (x + 1)
+        const nextX = currentItem.x + 1;
+        for (const [candidateValue, item] of registry) {
+          if (
+            item.x === nextX &&
+            (layout === "horizontal" || item.y === currentItem.y)
+          ) {
+            return candidateValue;
+          }
+        }
+      } else if (layout === "vertical") {
+        // Find the next item in the sequence (y + 1)
+        const nextY = currentItem.y + 1;
+        for (const [candidateValue, item] of registry) {
+          if (item.y === nextY) {
+            return candidateValue;
+          }
         }
       }
       return null;
@@ -183,11 +264,24 @@ export const SelectionProvider = ({ value = [], onChange, children }) => {
       const currentItem = registry.get(value);
       if (!currentItem) return null;
 
-      // Find the previous item in the same row (x - 1)
-      const prevX = currentItem.x - 1;
-      for (const [candidateValue, item] of registry) {
-        if (item.x === prevX && item.y === currentItem.y) {
-          return candidateValue;
+      if (layout === "horizontal" || layout === "grid") {
+        // Find the previous item in the same row (x - 1)
+        const prevX = currentItem.x - 1;
+        for (const [candidateValue, item] of registry) {
+          if (
+            item.x === prevX &&
+            (layout === "horizontal" || item.y === currentItem.y)
+          ) {
+            return candidateValue;
+          }
+        }
+      } else if (layout === "vertical") {
+        // Find the previous item in the sequence (y - 1)
+        const prevY = currentItem.y - 1;
+        for (const [candidateValue, item] of registry) {
+          if (item.y === prevY) {
+            return candidateValue;
+          }
         }
       }
       return null;
@@ -197,11 +291,16 @@ export const SelectionProvider = ({ value = [], onChange, children }) => {
       const currentItem = registry.get(value);
       if (!currentItem) return null;
 
-      // Find the item below in the same column (y + 1)
-      const nextY = currentItem.y + 1;
-      for (const [candidateValue, item] of registry) {
-        if (item.x === currentItem.x && item.y === nextY) {
-          return candidateValue;
+      if (layout === "grid" || layout === "vertical") {
+        // Find the item below in the same column (y + 1)
+        const nextY = currentItem.y + 1;
+        for (const [candidateValue, item] of registry) {
+          if (
+            item.y === nextY &&
+            (layout === "vertical" || item.x === currentItem.x)
+          ) {
+            return candidateValue;
+          }
         }
       }
       return null;
@@ -211,11 +310,16 @@ export const SelectionProvider = ({ value = [], onChange, children }) => {
       const currentItem = registry.get(value);
       if (!currentItem) return null;
 
-      // Find the item above in the same column (y - 1)
-      const prevY = currentItem.y - 1;
-      for (const [candidateValue, item] of registry) {
-        if (item.x === currentItem.x && item.y === prevY) {
-          return candidateValue;
+      if (layout === "grid" || layout === "vertical") {
+        // Find the item above in the same column (y - 1)
+        const prevY = currentItem.y - 1;
+        for (const [candidateValue, item] of registry) {
+          if (
+            item.y === prevY &&
+            (layout === "vertical" || item.x === currentItem.x)
+          ) {
+            return candidateValue;
+          }
         }
       }
       return null;
@@ -233,9 +337,15 @@ export const useSelectionContext = () => {
   return useContext(SelectionContext);
 };
 
-export const useRegisterSelectionValue = (value, coordinates = null) => {
+export const useRegisterSelectionValue = (value, coordinates) => {
   const selectionContext = useSelectionContext();
   const elementRef = useRef(null);
+
+  if (!coordinates) {
+    throw new Error(
+      `useRegisterSelectionValue: coordinates are required for value "${value}".`,
+    );
+  }
 
   useLayoutEffect(() => {
     if (selectionContext) {
@@ -243,14 +353,14 @@ export const useRegisterSelectionValue = (value, coordinates = null) => {
       return () => selectionContext.unregister(value);
     }
     return undefined;
-  }, [selectionContext, value, coordinates?.x, coordinates?.y]);
+  }, [selectionContext, value, coordinates.x, coordinates.y]);
 
   // Update coordinates if they change
   useLayoutEffect(() => {
-    if (selectionContext && coordinates) {
+    if (selectionContext) {
       selectionContext.updateCoordinates(value, coordinates);
     }
-  }, [selectionContext, value, coordinates?.x, coordinates?.y]);
+  }, [selectionContext, value, coordinates.x, coordinates.y]);
 
   return elementRef;
 };
@@ -305,6 +415,9 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     return;
   }
   if (key === "ArrowDown") {
+    if (selectionContext.layout === "horizontal") {
+      return; // No down navigation in horizontal layout
+    }
     const nextValue = selectionContext.getValueBelow(value);
     if (!nextValue) {
       return; // No next value to select
@@ -322,6 +435,9 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     return;
   }
   if (key === "ArrowUp") {
+    if (selectionContext.layout === "horizontal") {
+      return; // No up navigation in horizontal layout
+    }
     const previousValue = selectionContext.getValueAbove(value);
     if (!previousValue) {
       return; // No previous value to select
@@ -339,6 +455,9 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     return;
   }
   if (key === "ArrowLeft") {
+    if (selectionContext.layout === "vertical") {
+      return; // No left navigation in vertical layout
+    }
     const previousValue = selectionContext.getValueBefore(value);
     if (!previousValue) {
       return; // No previous value to select
@@ -356,6 +475,9 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     return;
   }
   if (key === "ArrowRight") {
+    if (selectionContext.layout === "vertical") {
+      return; // No right navigation in vertical layout
+    }
     const nextValue = selectionContext.getValueAfter(value);
     if (!nextValue) {
       return; // No next value to select
