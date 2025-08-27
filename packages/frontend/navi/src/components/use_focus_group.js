@@ -3,7 +3,7 @@ import { useLayoutEffect } from "preact/hooks";
 
 export const useFocusGroup = (
   elementRef,
-  { direction, skipTab, loop, name, enabled } = {},
+  { enabled = true, direction, skipTab, loop, name } = {},
 ) => {
   useLayoutEffect(() => {
     if (!enabled) {

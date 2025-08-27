@@ -4,17 +4,14 @@
  */
 
 import { getCoreRowModel } from "@tanstack/table-core";
+import { forwardRef } from "preact/compat";
 import { useMemo } from "preact/hooks";
 import "./table.css" with { type: "css" };
 import { useTable } from "./use_table.js";
 
-export const Table = ({
-  columns,
-  data,
-  rowSelection,
-  onRowSelectionChange,
-  ...props
-}) => {
+export const Table = forwardRef((props, ref) => {
+  const { columns, data, rowSelection, onRowSelectionChange, ...rest } = props;
+
   const extraColumns = useMemo(
     () => getExtraColumns(columns, data),
     [columns, data],
@@ -40,7 +37,7 @@ export const Table = ({
   });
 
   return (
-    <table {...props}>
+    <table ref={ref} {...rest}>
       <thead>
         {getHeaderGroups().map((headerGroup) => (
           <tr key={headerGroup.id}>
@@ -79,7 +76,7 @@ export const Table = ({
       </tfoot> */}
     </table>
   );
-};
+});
 
 const getExtraColumns = (columns, values) => {
   const columnSet = new Set();
