@@ -130,8 +130,8 @@
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
-      import { render, createContext } from "preact";
-      import { useRef, useContext } from "preact/hooks";
+      import { render } from "preact";
+      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         // eslint-disable-next-line no-unused-vars
@@ -140,9 +140,6 @@
         clickToSelect,
         keydownToSelect,
       } from "@jsenv/navi";
-
-      // Table State Context for focus management (keeping this one as it's specific to this demo)
-      const TableStateContext = createContext();
 
       // Sample data
       const sampleData = [
@@ -185,18 +182,19 @@
 
       // Components
       // eslint-disable-next-line no-unused-vars
-      const NumberColumnHeader = () => {
+      const NumberColumnHeader = ({ rowWithSomeSelectedCell }) => {
         return <th className="number-column">#</th>;
       };
 
       // eslint-disable-next-line no-unused-vars
-      const NumberColumnCell = ({ row }) => {
-        const { focusWithinRow } = useContext(TableStateContext) || {};
+      const NumberColumnCell = ({ row, rowWithSomeSelectedCell }) => {
         return (
           <td
             className="database_table_cell number-column"
             tabIndex={0}
-            data-focus-within={focusWithinRow === row.index ? "" : undefined}
+            data-selected-within={
+              rowWithSomeSelectedCell.includes(row.index) ? "" : undefined
+            }
           >
             {row.index}
           </td>
@@ -204,12 +202,15 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const DatabaseTableHeaderCell = ({ columnName, columnIndex }) => {
-        const { focusWithinColumn } = useContext(TableStateContext) || {};
+      const DatabaseTableHeaderCell = ({
+        columnName,
+        columnIndex,
+        columnWithSomeSelectedCell,
+      }) => {
         return (
           <th
-            data-focus-within={
-              focusWithinColumn === columnIndex ? "" : undefined
+            data-selected-within={
+              columnWithSomeSelectedCell.includes(columnIndex) ? "" : undefined
             }
           >
             <span>{columnName}</span>
@@ -300,6 +301,7 @@
                         key={col.id}
                         columnName={col.header}
                         columnIndex={index + 1}
+                        columnWithSomeSelectedCell={columnWithSomeSelectedCell}
                       />
                     ))}
                   </tr>
@@ -307,7 +309,10 @@
                 <tbody>
                   {sampleData.map((row) => (
                     <tr key={row.id} data-row-id={row.id}>
-                      <NumberColumnCell row={row} />
+                      <NumberColumnCell
+                        row={row}
+                        rowWithSomeSelectedCell={rowWithSomeSelectedCell}
+                      />
                       {columns.map((col) => (
                         <DatabaseTableCell
                           key={`${row.id}-${col.id}`}
