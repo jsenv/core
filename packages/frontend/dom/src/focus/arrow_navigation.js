@@ -231,8 +231,11 @@ const createCellIterator = function* (key, rows, { y, x, originalX, loop }) {
     return;
   }
 
+  // Maintain a column anchor used to keep vertical moves aligned
+  let anchorX = originalX;
+  const loopMode = normalizeLoop(loop);
   const getNext = (y0, x0) =>
-    getNextPositionInTable(key, rows, y0, x0, originalX, loop);
+    getNextPositionInTable(key, rows, y0, x0, anchorX, loopMode);
 
   // Compute the first candidate position from the current one
   let next = getNext(y, x);
@@ -247,6 +250,23 @@ const createCellIterator = function* (key, rows, { y, x, originalX, loop }) {
     if (cell) {
       yield cell;
     }
+    // Update anchor when horizontal moved, or when vertical flow crosses columns
+    if (key === "ArrowRight" || key === "ArrowLeft") {
+      anchorX = next.x;
+    } else if (key === "ArrowDown") {
+      const atBottom = next.y === rows.length - 1;
+      if (atBottom && loopMode === "flow") {
+        // Next will be top row of next column in flow mode
+        anchorX = (anchorX + 1) % getMaxColumns(rows);
+      }
+    } else if (key === "ArrowUp") {
+      const atTop = next.y === 0;
+      if (atTop && loopMode === "flow") {
+        const maxCols = getMaxColumns(rows);
+        anchorX = (anchorX - 1 + maxCols) % maxCols;
+      }
+    }
+
     next = getNext(next.y, next.x);
     if (!next) {
       return; // reached boundary and no loop
@@ -258,23 +278,43 @@ const createCellIterator = function* (key, rows, { y, x, originalX, loop }) {
   }
 };
 
+// Normalize loop option to a mode string or false
+const normalizeLoop = (loop) => {
+  if (loop === true) return "wrap";
+  if (loop === "wrap") return "wrap";
+  if (loop === "flow") return "flow";
+  return false;
+};
+
+const getMaxColumns = (rows) =>
+  rows.reduce((max, r) => Math.max(max, r?.cells?.length || 0), 0);
+
 // Compute the next row/cell indices when moving in a table for a given arrow key
-const getNextPositionInTable = (keyboardKey, rows, y, x, originalX, loop) => {
+const getNextPositionInTable = (
+  keyboardKey,
+  rows,
+  y,
+  x,
+  originalX,
+  loopMode,
+) => {
+  const mode = normalizeLoop(loopMode);
+
   if (keyboardKey === "ArrowRight") {
-    const currentRowCells = rows[y]?.cells || [];
+    const rowLen = rows[y]?.cells?.length || 0;
     const nextX = x + 1;
-    if (nextX < currentRowCells.length) {
+    if (nextX < rowLen) {
       return { y, x: nextX };
     }
-    // move to first cell of next row (or wrap)
-    let nextY = y + 1;
-    if (nextY >= rows.length) {
-      if (!loop) {
-        return null;
-      }
-      nextY = 0;
+    // boundary
+    if (mode === "flow") {
+      const nextY = (y + 1) % rows.length;
+      return { y: nextY, x: 0 };
     }
-    return { y: nextY, x: 0 };
+    if (mode === "wrap") {
+      return { y, x: 0 };
+    }
+    return null;
   }
 
   if (keyboardKey === "ArrowLeft") {
@@ -282,43 +322,67 @@ const getNextPositionInTable = (keyboardKey, rows, y, x, originalX, loop) => {
     if (prevX >= 0) {
       return { y, x: prevX };
     }
-    // move to last cell of previous row (or wrap)
-    let prevY = y - 1;
-    if (prevY < 0) {
-      if (!loop) {
-        return null;
-      }
-      prevY = rows.length - 1;
+    // boundary
+    if (mode === "flow") {
+      const prevY = (y - 1 + rows.length) % rows.length;
+      const prevRowLen = rows[prevY]?.cells?.length || 0;
+      const lastX = Math.max(0, prevRowLen - 1);
+      return { y: prevY, x: lastX };
     }
-    const prevRowCells = rows[prevY]?.cells || [];
-    const lastX = Math.max(0, prevRowCells.length - 1);
-    return { y: prevY, x: lastX };
+    if (mode === "wrap") {
+      const rowLen = rows[y]?.cells?.length || 0;
+      const lastX = Math.max(0, rowLen - 1);
+      return { y, x: lastX };
+    }
+    return null;
   }
 
   if (keyboardKey === "ArrowDown") {
-    let nextY = y + 1;
-    if (nextY >= rows.length) {
-      if (!loop) {
-        return null;
-      }
-      nextY = 0;
+    const nextY = y + 1;
+    if (nextY < rows.length) {
+      const targetRowLen = rows[nextY]?.cells?.length || 0;
+      const nextX = Math.min(originalX, Math.max(0, targetRowLen - 1));
+      return { y: nextY, x: nextX };
     }
-    const targetRowCells = rows[nextY]?.cells || [];
-    const nextX = Math.min(originalX, Math.max(0, targetRowCells.length - 1));
-    return { y: nextY, x: nextX };
+    // boundary
+    if (mode === "flow") {
+      const maxCols = getMaxColumns(rows);
+      const flowedX = (x + 1) % Math.max(1, maxCols);
+      const topRowLen = rows[0]?.cells?.length || 0;
+      const clampedX = Math.min(flowedX, Math.max(0, topRowLen - 1));
+      return { y: 0, x: clampedX };
+    }
+    if (mode === "wrap") {
+      const topRowLen = rows[0]?.cells?.length || 0;
+      const nextX = Math.min(originalX, Math.max(0, topRowLen - 1));
+      return { y: 0, x: nextX };
+    }
+    return null;
   }
 
   if (keyboardKey === "ArrowUp") {
-    let prevY = y - 1;
-    if (prevY < 0) {
-      if (!loop) {
-        return null;
-      }
-      prevY = rows.length - 1;
+    const prevY = y - 1;
+    if (prevY >= 0) {
+      const targetRowLen = rows[prevY]?.cells?.length || 0;
+      const nextX = Math.min(originalX, Math.max(0, targetRowLen - 1));
+      return { y: prevY, x: nextX };
     }
-    const targetRowCells = rows[prevY]?.cells || [];
-    const nextX = Math.min(originalX, Math.max(0, targetRowCells.length - 1));
-    return { y: prevY, x: nextX };
+    // boundary
+    if (mode === "flow") {
+      const maxCols = getMaxColumns(rows);
+      const flowedX = (x - 1 + Math.max(1, maxCols)) % Math.max(1, maxCols);
+      const bottomRowIndex = rows.length - 1;
+      const bottomRowLen = rows[bottomRowIndex]?.cells?.length || 0;
+      const clampedX = Math.min(flowedX, Math.max(0, bottomRowLen - 1));
+      return { y: bottomRowIndex, x: clampedX };
+    }
+    if (mode === "wrap") {
+      const bottomRowIndex = rows.length - 1;
+      const bottomRowLen = rows[bottomRowIndex]?.cells?.length || 0;
+      const nextX = Math.min(originalX, Math.max(0, bottomRowLen - 1));
+      return { y: bottomRowIndex, x: nextX };
+    }
+    return null;
   }
 
   return null;
