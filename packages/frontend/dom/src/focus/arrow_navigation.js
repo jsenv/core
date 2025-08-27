@@ -257,13 +257,16 @@ const createCellIterator = function* (key, rows, { y, x, originalX, loop }) {
       const atBottom = next.y === rows.length - 1;
       if (atBottom && loopMode === "flow") {
         // Next will be top row of next column in flow mode
-        anchorX = (anchorX + 1) % getMaxColumns(rows);
+        const maxCols = Math.max(1, getMaxColumns(rows));
+        anchorX = anchorX + 1;
+        if (anchorX >= maxCols) anchorX = 0;
       }
     } else if (key === "ArrowUp") {
       const atTop = next.y === 0;
       if (atTop && loopMode === "flow") {
-        const maxCols = getMaxColumns(rows);
-        anchorX = (anchorX - 1 + maxCols) % maxCols;
+        const maxCols = Math.max(1, getMaxColumns(rows));
+        if (anchorX === 0) anchorX = maxCols - 1;
+        else anchorX = anchorX - 1;
       }
     }
 
@@ -308,7 +311,8 @@ const getNextPositionInTable = (
     }
     // boundary
     if (mode === "flow") {
-      const nextY = (y + 1) % rows.length;
+      let nextY = y + 1;
+      if (nextY >= rows.length) nextY = 0;
       return { y: nextY, x: 0 };
     }
     if (mode === "wrap") {
@@ -324,7 +328,8 @@ const getNextPositionInTable = (
     }
     // boundary
     if (mode === "flow") {
-      const prevY = (y - 1 + rows.length) % rows.length;
+      let prevY = y - 1;
+      if (prevY < 0) prevY = rows.length - 1;
       const prevRowLen = rows[prevY]?.cells?.length || 0;
       const lastX = Math.max(0, prevRowLen - 1);
       return { y: prevY, x: lastX };
@@ -346,8 +351,9 @@ const getNextPositionInTable = (
     }
     // boundary
     if (mode === "flow") {
-      const maxCols = getMaxColumns(rows);
-      const flowedX = (x + 1) % Math.max(1, maxCols);
+      const maxCols = Math.max(1, getMaxColumns(rows));
+      let flowedX = x + 1;
+      if (flowedX >= maxCols) flowedX = 0;
       const topRowLen = rows[0]?.cells?.length || 0;
       const clampedX = Math.min(flowedX, Math.max(0, topRowLen - 1));
       return { y: 0, x: clampedX };
@@ -369,8 +375,10 @@ const getNextPositionInTable = (
     }
     // boundary
     if (mode === "flow") {
-      const maxCols = getMaxColumns(rows);
-      const flowedX = (x - 1 + Math.max(1, maxCols)) % Math.max(1, maxCols);
+      const maxCols = Math.max(1, getMaxColumns(rows));
+      let flowedX;
+      if (x === 0) flowedX = maxCols - 1;
+      else flowedX = x - 1;
       const bottomRowIndex = rows.length - 1;
       const bottomRowLen = rows[bottomRowIndex]?.cells?.length || 0;
       const clampedX = Math.min(flowedX, Math.max(0, bottomRowLen - 1));
