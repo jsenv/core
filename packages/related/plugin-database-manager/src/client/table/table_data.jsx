@@ -23,6 +23,7 @@ import {
   ShortcutProvider,
   useEditableController,
   useFocusGroup,
+  useRegisterSelectionValue,
   useSelectionContext,
 } from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
@@ -153,6 +154,7 @@ export const TableData = ({ table, rows }) => {
         ),
         cell: (info) => (
           <DatabaseTableCell
+            columnName={columnName}
             column={column}
             value={info.getValue()}
             row={info.row}
@@ -307,6 +309,7 @@ const DatabaseTableClientCell = ({ children, ...props }) => {
 };
 
 const DatabaseTableCell = ({
+  columnName,
   column,
   row,
   value,
@@ -314,8 +317,9 @@ const DatabaseTableCell = ({
   onKeyDown,
   ...props
 }) => {
-  const cellId = row.id;
+  const cellId = `${columnName}:${row.id}`;
   const selectionContext = useSelectionContext();
+  useRegisterSelectionValue(cellId);
   const isSelected = selectionContext.isSelected(cellId);
   const { editable, startEditing, stopEditing } = useEditableController();
   const databaseInputProps = useDatabaseInputProps({ column });

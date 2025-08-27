@@ -49,6 +49,7 @@ export {
   SelectionProvider,
   clickToSelect,
   keydownToSelect,
+  useRegisterSelectionValue,
   useSelectionContext,
 } from "./src/components/selection/selection.js";
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
