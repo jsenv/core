@@ -2,7 +2,10 @@ import { canInterceptKeys } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
-const DEBUG = true; // Set to true to enable debug logs
+const DEBUG = {
+  registration: false,
+  interaction: true,
+}; // Set to true to enable debug logs
 const log = (...args) => {
   if (DEBUG) {
     console.debug("[SelectionContext]", ...args);
@@ -21,7 +24,6 @@ const getElementValue = (element) => {
   } else {
     value = element;
   }
-  log("getElementValue:", element, "->", value);
   return value;
 };
 
@@ -98,19 +100,10 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
     isElementSelected: (element) => {
       const value = getElementValue(element);
       const isSelected = selection.includes(value);
-      log(
-        "Grid isElementSelected:",
-        element,
-        "value:",
-        value,
-        "selected:",
-        isSelected,
-      );
       return isSelected;
     },
     isValueSelected: (value) => {
       const isSelected = selection.includes(value);
-      log("Grid isValueSelected:", value, "selected:", isSelected);
       return isSelected;
     },
     getAllElements: () => {
@@ -412,19 +405,10 @@ const LinearSelectionProvider = ({
     isElementSelected: (element) => {
       const value = getElementValue(element);
       const isSelected = selection.includes(value);
-      log(
-        "Linear isElementSelected:",
-        element,
-        "value:",
-        value,
-        "selected:",
-        isSelected,
-      );
       return isSelected;
     },
     isValueSelected: (value) => {
       const isSelected = selection.includes(value);
-      log("Linear isValueSelected:", value, "selected:", isSelected);
       return isSelected;
     },
     getAllElements: () => {
