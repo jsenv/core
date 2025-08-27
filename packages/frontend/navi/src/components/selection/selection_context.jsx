@@ -6,28 +6,39 @@ const SelectionContext = createContext(null);
 
 export const SelectionProvider = ({ value = [], onChange, children }) => {
   const selection = value || [];
-  const registryRef = useRef([]); // Array<value>
+  const registryRef = useRef(new Map()); // Map<value, {x, y, element}>
   const anchorRef = useRef(null);
 
   const contextValue = {
     selection,
 
-    register: (value) => {
+    register: (value, coordinates = null, element = null) => {
       const registry = registryRef.current;
-      const existingIndex = registry.indexOf(value);
-      if (existingIndex >= 0) {
-        console.warn(
-          `SelectionContext: Attempted to register an already registered value: ${value}. All values must be unique.`,
-        );
+      if (registry.has(value)) {
+        // Update existing entry with new coordinates/element
+        const existing = registry.get(value);
+        registry.set(value, {
+          x: coordinates?.x ?? existing.x,
+          y: coordinates?.y ?? existing.y,
+          element: element ?? existing.element,
+        });
         return;
       }
-      registry.push(value);
+      registry.set(value, {
+        x: coordinates?.x ?? 0,
+        y: coordinates?.y ?? 0,
+        element,
+      });
     },
     unregister: (value) => {
       const registry = registryRef.current;
-      const index = registry.indexOf(value);
-      if (index >= 0) {
-        registry.splice(index, 1);
+      registry.delete(value);
+    },
+    updateCoordinates: (value, coordinates) => {
+      const registry = registryRef.current;
+      const existing = registry.get(value);
+      if (existing) {
+        registry.set(value, { ...existing, ...coordinates });
       }
     },
     setAnchor: (value) => {
@@ -37,33 +48,41 @@ export const SelectionProvider = ({ value = [], onChange, children }) => {
       return selection.includes(itemValue);
     },
     getAllItems: () => {
-      return registryRef.current;
+      return Array.from(registryRef.current.keys());
+    },
+    getItemCoordinates: (value) => {
+      const item = registryRef.current.get(value);
+      return item ? { x: item.x, y: item.y } : null;
     },
     getRange: (fromValue, toValue) => {
       const registry = registryRef.current;
+      const fromItem = registry.get(fromValue);
+      const toItem = registry.get(toValue);
 
-      // Find indices of fromValue and toValue
-      let fromIndex = -1;
-      let toIndex = -1;
-      let index = 0;
-      for (const valueCandidate of registry) {
-        if (valueCandidate === fromValue) {
-          fromIndex = index;
-        }
-        if (valueCandidate === toValue) {
-          toIndex = index;
-        }
-        index++;
+      if (!fromItem || !toItem) {
+        return [];
       }
 
-      if (fromIndex >= 0 && toIndex >= 0) {
-        // Select all items between fromIndex and toIndex (inclusive)
-        const start = Math.min(fromIndex, toIndex);
-        const end = Math.max(fromIndex, toIndex);
-        const valueInRangeArray = registry.slice(start, end + 1);
-        return valueInRangeArray;
+      // Calculate rectangular selection area
+      const minX = Math.min(fromItem.x, toItem.x);
+      const maxX = Math.max(fromItem.x, toItem.x);
+      const minY = Math.min(fromItem.y, toItem.y);
+      const maxY = Math.max(fromItem.y, toItem.y);
+
+      // Find all items within the rectangular area
+      const itemsInRange = [];
+      for (const [value, item] of registry) {
+        if (
+          item.x >= minX &&
+          item.x <= maxX &&
+          item.y >= minY &&
+          item.y <= maxY
+        ) {
+          itemsInRange.push(value);
+        }
       }
-      return [];
+
+      return itemsInRange;
     },
 
     // basic methods to manipulate selection
@@ -74,6 +93,10 @@ export const SelectionProvider = ({ value = [], onChange, children }) => {
       ) {
         return;
       }
+      // Set anchor to the last item in the new selection
+      if (newSelection.length > 0) {
+        anchorRef.current = newSelection[newSelection.length - 1];
+      }
       onChange?.(newSelection, event);
     },
     add: (arrayOfValueToAddToSelection, event = null) => {
@@ -82,14 +105,20 @@ export const SelectionProvider = ({ value = [], onChange, children }) => {
         selectionWithValues.push(value);
       }
       let modified = false;
+      let lastAdded = null;
       for (const valueToAdd of arrayOfValueToAddToSelection) {
         if (selectionWithValues.includes(valueToAdd)) {
           continue;
         }
         modified = true;
         selectionWithValues.push(valueToAdd);
+        lastAdded = valueToAdd;
       }
       if (modified) {
+        // Set anchor to the last added item
+        if (lastAdded) {
+          anchorRef.current = lastAdded;
+        }
         onChange?.(selectionWithValues, event);
       }
     },
@@ -137,19 +166,59 @@ export const SelectionProvider = ({ value = [], onChange, children }) => {
 
     getValueAfter: (value) => {
       const registry = registryRef.current;
-      const index = registry.indexOf(value);
-      if (index < 0 || index >= registry.length - 1) {
-        return null; // No next value
+      const currentItem = registry.get(value);
+      if (!currentItem) return null;
+
+      // Find the next item in the same row (x + 1)
+      const nextX = currentItem.x + 1;
+      for (const [candidateValue, item] of registry) {
+        if (item.x === nextX && item.y === currentItem.y) {
+          return candidateValue;
+        }
       }
-      return registry[index + 1];
+      return null;
     },
     getValueBefore: (value) => {
       const registry = registryRef.current;
-      const index = registry.indexOf(value);
-      if (index <= 0) {
-        return null; // No previous value
+      const currentItem = registry.get(value);
+      if (!currentItem) return null;
+
+      // Find the previous item in the same row (x - 1)
+      const prevX = currentItem.x - 1;
+      for (const [candidateValue, item] of registry) {
+        if (item.x === prevX && item.y === currentItem.y) {
+          return candidateValue;
+        }
       }
-      return registry[index - 1];
+      return null;
+    },
+    getValueBelow: (value) => {
+      const registry = registryRef.current;
+      const currentItem = registry.get(value);
+      if (!currentItem) return null;
+
+      // Find the item below in the same column (y + 1)
+      const nextY = currentItem.y + 1;
+      for (const [candidateValue, item] of registry) {
+        if (item.x === currentItem.x && item.y === nextY) {
+          return candidateValue;
+        }
+      }
+      return null;
+    },
+    getValueAbove: (value) => {
+      const registry = registryRef.current;
+      const currentItem = registry.get(value);
+      if (!currentItem) return null;
+
+      // Find the item above in the same column (y - 1)
+      const prevY = currentItem.y - 1;
+      for (const [candidateValue, item] of registry) {
+        if (item.x === currentItem.x && item.y === prevY) {
+          return candidateValue;
+        }
+      }
+      return null;
     },
   };
 
@@ -164,16 +233,26 @@ export const useSelectionContext = () => {
   return useContext(SelectionContext);
 };
 
-export const useRegisterSelectionValue = (value) => {
+export const useRegisterSelectionValue = (value, coordinates = null) => {
   const selectionContext = useSelectionContext();
+  const elementRef = useRef(null);
 
   useLayoutEffect(() => {
     if (selectionContext) {
-      selectionContext.register(value);
+      selectionContext.register(value, coordinates, elementRef.current);
       return () => selectionContext.unregister(value);
     }
     return undefined;
-  }, [selectionContext, value]);
+  }, [selectionContext, value, coordinates?.x, coordinates?.y]);
+
+  // Update coordinates if they change
+  useLayoutEffect(() => {
+    if (selectionContext && coordinates) {
+      selectionContext.updateCoordinates(value, coordinates);
+    }
+  }, [selectionContext, value, coordinates?.x, coordinates?.y]);
+
+  return elementRef;
 };
 
 export const clickToSelect = (clickEvent, { selectionContext, value }) => {
@@ -226,7 +305,7 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     return;
   }
   if (key === "ArrowDown") {
-    const nextValue = selectionContext.getValueAfter(value);
+    const nextValue = selectionContext.getValueBelow(value);
     if (!nextValue) {
       return; // No next value to select
     }
@@ -243,6 +322,23 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
     return;
   }
   if (key === "ArrowUp") {
+    const previousValue = selectionContext.getValueAbove(value);
+    if (!previousValue) {
+      return; // No previous value to select
+    }
+    keydownEvent.preventDefault(); // Prevent default scrolling behavior
+    if (isShiftSelect) {
+      selectionContext.setFromAnchorTo(previousValue, keydownEvent);
+      return;
+    }
+    if (isMultiSelect) {
+      selectionContext.add([previousValue], keydownEvent);
+      return;
+    }
+    selectionContext.set([previousValue], keydownEvent);
+    return;
+  }
+  if (key === "ArrowLeft") {
     const previousValue = selectionContext.getValueBefore(value);
     if (!previousValue) {
       return; // No previous value to select
@@ -257,6 +353,23 @@ export const keydownToSelect = (keydownEvent, { selectionContext, value }) => {
       return;
     }
     selectionContext.set([previousValue], keydownEvent);
+    return;
+  }
+  if (key === "ArrowRight") {
+    const nextValue = selectionContext.getValueAfter(value);
+    if (!nextValue) {
+      return; // No next value to select
+    }
+    keydownEvent.preventDefault(); // Prevent default scrolling behavior
+    if (isShiftSelect) {
+      selectionContext.setFromAnchorTo(nextValue, keydownEvent);
+      return;
+    }
+    if (isMultiSelect) {
+      selectionContext.add([nextValue], keydownEvent);
+      return;
+    }
+    selectionContext.set([nextValue], keydownEvent);
     return;
   }
 };

@@ -137,6 +137,7 @@
         // eslint-disable-next-line no-unused-vars
         SelectionProvider,
         useSelectionContext,
+        useRegisterSelectionValue,
         clickToSelect,
         keydownToSelect,
       } from "@jsenv/navi";
@@ -219,13 +220,20 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const DatabaseTableCell = ({ columnName, row, value }) => {
+      const DatabaseTableCell = ({ columnName, row, value, columnIndex }) => {
         const cellId = `${columnName}:${row.id}`;
         const selectionContext = useSelectionContext();
         const isSelected = selectionContext.isSelected(cellId);
 
+        // Register this cell with its coordinates (x = columnIndex, y = row.index - 1)
+        const elementRef = useRegisterSelectionValue(cellId, {
+          x: columnIndex,
+          y: row.index - 1,
+        });
+
         return (
           <td
+            ref={elementRef}
             className="database_table_cell"
             tabIndex={0}
             data-selected={isSelected ? "" : undefined}
@@ -248,9 +256,38 @@
         const tableRef = useRef(null);
         const cellSelectionSignal = useSignal([]);
         const cellSelection = cellSelectionSignal.value;
+        const selectionLength = cellSelection.length;
+
+        // Compute which rows and columns have selected cells
         const rowWithSomeSelectedCell = [];
         const columnWithSomeSelectedCell = [];
-        const selectionLength = cellSelection.length;
+
+        cellSelection.forEach((cellId) => {
+          // Parse cellId to extract row and column information
+          // cellId format: "columnName:rowId"
+          const [columnName, rowId] = cellId.split(":");
+
+          // Find column index
+          const columnIndex = columns.findIndex(
+            (col) => col.accessorKey === columnName,
+          );
+          if (columnIndex >= 0) {
+            const adjustedColumnIndex = columnIndex + 1; // +1 because number column is first
+            if (!columnWithSomeSelectedCell.includes(adjustedColumnIndex)) {
+              columnWithSomeSelectedCell.push(adjustedColumnIndex);
+            }
+          }
+
+          // Find row index
+          const rowIndex = sampleData.findIndex((row) => row.id === rowId);
+          if (rowIndex >= 0) {
+            const adjustedRowIndex = rowIndex + 1; // +1 for 1-based indexing
+            if (!rowWithSomeSelectedCell.includes(adjustedRowIndex)) {
+              rowWithSomeSelectedCell.push(adjustedRowIndex);
+            }
+          }
+        });
+
         const clearSelection = () => {
           cellSelectionSignal.value = [];
         };
@@ -313,10 +350,11 @@
                         row={row}
                         rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                       />
-                      {columns.map((col) => (
+                      {columns.map((col, colIndex) => (
                         <DatabaseTableCell
                           key={`${row.id}-${col.id}`}
                           columnName={col.accessorKey}
+                          columnIndex={colIndex + 1} // +1 because number column is first
                           row={row}
                           value={row[col.accessorKey]}
                         />
