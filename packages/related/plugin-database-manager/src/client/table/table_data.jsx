@@ -98,10 +98,24 @@ export const TableData = ({ table, rows }) => {
   const rowIsSelected = (row) => rowSelection.includes(row.id);
   const tableRef = useRef(null);
 
+  useFocusGroup(tableRef);
   const [focusWithinRow, setFocusWithinRow] = useState(-1);
   const [focusWithinColumn, setFocusWithinColumn] = useState(-1);
-
-  useFocusGroup(tableRef);
+  const updateFocusPosition = (target) => {
+    const [row, column] = getCellPosition(tableRef.current, target);
+    setFocusWithinRow(row);
+    setFocusWithinColumn(column);
+  };
+  const handleTableFocusIn = (event) => {
+    updateFocusPosition(event.target);
+  };
+  const handleTableFocusOut = (event) => {
+    const table = tableRef.current;
+    if (!table) {
+      return;
+    }
+    updateFocusPosition(event.relatedTarget);
+  };
 
   const { schemaColumns } = table.meta;
   const numberColumn = {
@@ -121,7 +135,6 @@ export const TableData = ({ table, rows }) => {
       );
     },
   };
-
   const columns = schemaColumns.map((column, index) => {
     const columnName = column.column_name;
     const columnIndex = index + 1; // +1 because number column is first
@@ -168,28 +181,6 @@ export const TableData = ({ table, rows }) => {
 
   const data = rows;
 
-  const updateFocusPosition = (target) => {
-    const [row, column] = getCellPosition(tableRef.current, target);
-    setFocusWithinRow(row);
-    setFocusWithinColumn(column);
-  };
-
-  // Track focus changes within the table
-  const handleTableFocusIn = (event) => {
-    updateFocusPosition(event.target);
-  };
-
-  const handleTableFocusOut = (event) => {
-    const table = tableRef.current;
-    // Only clear focus if we're leaving the table entirely
-    if (!table.contains(event.relatedTarget)) {
-      setFocusWithinColumn(-1);
-      setFocusWithinRow(-1);
-      return;
-    }
-    updateFocusPosition(event.relatedTarget);
-  };
-
   return (
     <div>
       <Table
@@ -215,6 +206,10 @@ export const TableData = ({ table, rows }) => {
 
 // Function to find cell position from DOM element
 const getCellPosition = (table, elementFocusedOrReceivingFocus) => {
+  // Only clear focus if we're leaving the table entirely
+  if (!table.contains(elementFocusedOrReceivingFocus)) {
+    return [-1, -1];
+  }
   const cellElement = elementFocusedOrReceivingFocus.closest("td");
   if (!cellElement) {
     return [-1, -1];
