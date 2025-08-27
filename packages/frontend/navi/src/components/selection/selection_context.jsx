@@ -61,9 +61,6 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
       const registry = registryRef.current;
       registry.delete(element);
     },
-    updateElementPosition: () => {
-      // No-op for grid since position is determined by DOM structure
-    },
     setAnchorElement: (element) => {
       anchorRef.current = element;
     },
@@ -317,9 +314,6 @@ const LinearSelectionProvider = ({
       const registry = registryRef.current;
       registry.delete(element);
     },
-    updateElementPosition: () => {
-      // No-op for linear layout since elements are already tracked
-    },
     setAnchorElement: (element) => {
       anchorRef.current = element;
     },
@@ -548,26 +542,17 @@ export const useSelectionContext = () => {
   return useContext(SelectionContext);
 };
 
-export const useRegisterSelectionElement = () => {
+export const useRegisterSelectionElement = (elementRef) => {
   const selectionContext = useSelectionContext();
-  const elementRef = useRef(null);
 
   useLayoutEffect(() => {
     if (selectionContext && elementRef.current) {
-      selectionContext.registerElement(elementRef.current);
-      return () => selectionContext.unregisterElement(elementRef.current);
+      const element = elementRef.current;
+      selectionContext.registerElement(element);
+      return () => selectionContext.unregisterElement(element);
     }
     return undefined;
   }, [selectionContext]);
-
-  // Update element reference when it changes
-  useLayoutEffect(() => {
-    if (selectionContext && elementRef.current) {
-      selectionContext.updateElementPosition();
-    }
-  }, [selectionContext]);
-
-  return elementRef;
 };
 
 export const clickToSelect = (clickEvent, { selectionContext, element }) => {
