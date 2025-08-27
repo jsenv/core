@@ -45,6 +45,13 @@ import.meta.css = /* css */ `
     padding: 0;
   }
 
+  .database_table[data-multi-selection] .database_table_cell[data-selected] {
+    background-color: light-dark(
+      rgba(0, 120, 212, 0.08),
+      rgba(59, 130, 246, 0.15)
+    );
+  }
+
   .database_table_cell:focus {
     /* Table cell border size impacts the visual appeareance of the outline */
     /* (It's kinda melted into the table border, as if it was 1.5 px instead of 2) */
@@ -235,6 +242,7 @@ export const TableData = ({ table, rows }) => {
               className="database_table"
               columns={columns}
               data={data}
+              data-multi-selection={selectionLength > 1 ? "" : undefined}
               style={{ height: "fit-content" }}
               onFocusIn={(event) => {
                 handleTableFocusIn(event);
