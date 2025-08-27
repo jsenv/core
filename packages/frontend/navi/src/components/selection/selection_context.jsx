@@ -49,7 +49,7 @@ const GridSelectionProvider = ({ value = [], onChange, children }) => {
       const registry = registryRef.current;
       registry.delete(value);
     },
-    updateCoordinates: (value, { x, y }) => {
+    updatePosition: (value, { x, y }) => {
       const registry = registryRef.current;
       const existing = registry.get(value);
       if (!existing) return;
@@ -255,7 +255,7 @@ const LinearSelectionProvider = ({
   children,
 }) => {
   const selection = value || [];
-  const registryRef = useRef(new Map()); // Map<value, {position, element}>
+  const registryRef = useRef(new Map()); // Map<value, {index, element}>
   const anchorRef = useRef(null);
 
   if (!["horizontal", "vertical"].includes(axis)) {
@@ -268,32 +268,32 @@ const LinearSelectionProvider = ({
     selection,
     layout: axis,
 
-    register: (value, position, element = null) => {
-      if (typeof position !== "number") {
+    register: (value, index, element = null) => {
+      if (typeof index !== "number") {
         throw new Error(
-          `LinearSelectionProvider: Position must be a number for value "${value}".`,
+          `LinearSelectionProvider: index must be a number for value "${value}".`,
         );
       }
 
       const registry = registryRef.current;
-      registry.set(value, { position, element });
+      registry.set(value, { index, element });
     },
     unregister: (value) => {
       const registry = registryRef.current;
       registry.delete(value);
     },
-    updateCoordinates: (value, position) => {
+    updatePosition: (value, index) => {
       const registry = registryRef.current;
       const existing = registry.get(value);
       if (!existing) return;
 
-      if (typeof position !== "number") {
+      if (typeof index !== "number") {
         throw new Error(
-          `LinearSelectionProvider: Position must be a number for value "${value}".`,
+          `LinearSelectionProvider: index must be a number for value "${value}".`,
         );
       }
 
-      registry.set(value, { ...existing, position });
+      registry.set(value, { ...existing, index });
     },
     setAnchor: (value) => {
       anchorRef.current = value;
@@ -306,7 +306,7 @@ const LinearSelectionProvider = ({
     },
     getItemCoordinates: (value) => {
       const item = registryRef.current.get(value);
-      return item ? { position: item.position } : null;
+      return item ? { index: item.index } : null;
     },
     getRange: (fromValue, toValue) => {
       const registry = registryRef.current;
@@ -317,14 +317,14 @@ const LinearSelectionProvider = ({
         return [];
       }
 
-      const { position: fromPos } = fromItem;
-      const { position: toPos } = toItem;
+      const { index: fromPos } = fromItem;
+      const { index: toPos } = toItem;
       const minPos = Math.min(fromPos, toPos);
       const maxPos = Math.max(fromPos, toPos);
 
       const itemsInRange = [];
-      for (const [value, { position }] of registry) {
-        if (position >= minPos && position <= maxPos) {
+      for (const [value, { index }] of registry) {
+        if (index >= minPos && index <= maxPos) {
           itemsInRange.push(value);
         }
       }
@@ -338,11 +338,11 @@ const LinearSelectionProvider = ({
       const currentItem = registry.get(value);
       if (!currentItem) return null;
 
-      const { position } = currentItem;
-      const nextPos = position + 1;
+      const { index } = currentItem;
+      const nextPos = index + 1;
 
       for (const [candidateValue, item] of registry) {
-        if (item.position === nextPos) {
+        if (item.index === nextPos) {
           return candidateValue;
         }
       }
@@ -353,11 +353,11 @@ const LinearSelectionProvider = ({
       const currentItem = registry.get(value);
       if (!currentItem) return null;
 
-      const { position } = currentItem;
-      const prevPos = position - 1;
+      const { index } = currentItem;
+      const prevPos = index - 1;
 
       for (const [candidateValue, item] of registry) {
-        if (item.position === prevPos) {
+        if (item.index === prevPos) {
           return candidateValue;
         }
       }
@@ -452,24 +452,24 @@ export const useSelectionContext = () => {
   return useContext(SelectionContext);
 };
 
-export const useRegisterSelectionValue = (value, coordinatesOrIndex) => {
+export const useRegisterSelectionValue = (value, position) => {
   const selectionContext = useSelectionContext();
   const elementRef = useRef(null);
 
   useLayoutEffect(() => {
     if (selectionContext) {
-      selectionContext.register(value, coordinatesOrIndex, elementRef.current);
+      selectionContext.register(value, position, elementRef.current);
       return () => selectionContext.unregister(value);
     }
     return undefined;
-  }, [selectionContext, value, coordinatesOrIndex]);
+  }, [selectionContext, value, position]);
 
-  // Update coordinates if they change
+  // Update position if it changes
   useLayoutEffect(() => {
     if (selectionContext) {
-      selectionContext.updateCoordinates(value, coordinatesOrIndex);
+      selectionContext.updatePosition(value, position);
     }
-  }, [selectionContext, value, coordinatesOrIndex]);
+  }, [selectionContext, value, position]);
 
   return elementRef;
 };
