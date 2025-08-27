@@ -117,12 +117,12 @@ export const TableData = ({ table, rows }) => {
   const [focusWithinColumn, setFocusWithinColumn] = useState(-1);
 
   const updateFocusPosition = (elementFocusedOrReceivingFocus) => {
-    const [row, column] = getCellPosition(
+    const [column, row] = getCellPosition(
       tableRef.current,
       elementFocusedOrReceivingFocus,
     );
-    setFocusWithinRow(row);
     setFocusWithinColumn(column);
+    setFocusWithinRow(row);
   };
   const handleTableFocusIn = (event) => {
     updateFocusPosition(event.target);
@@ -237,8 +237,8 @@ const getCellPosition = (table, element) => {
     return [-1, -1];
   }
   const row = cellElement.parentElement;
-  const rowIndex = Array.from(table.rows).indexOf(row);
   const columnIndex = Array.from(row.cells).indexOf(cellElement);
+  const rowIndex = Array.from(table.rows).indexOf(row);
   return [columnIndex, rowIndex];
 };
 
@@ -252,7 +252,7 @@ const NumberColumnCell = ({ row }) => {
   return (
     <DatabaseTableClientCell
       style={{ textAlign: "center" }}
-      data-focus-within={focusWithinRow === row.index ? "" : undefined}
+      data-focus-within={focusWithinRow === row.index + 1 ? "" : undefined}
     >
       {row.original.index}
     </DatabaseTableClientCell>
