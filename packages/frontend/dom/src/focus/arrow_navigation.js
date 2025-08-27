@@ -206,14 +206,14 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
 
   const currentRow = currentCell.parentElement; // tr
   const rows = Array.from(table.rows);
-  const rowIndex = /** @type {HTMLTableRowElement} */ (currentRow).rowIndex;
-  const cellIndex = /** @type {HTMLTableCellElement} */ (currentCell).cellIndex;
+  const y = /** @type {HTMLTableRowElement} */ (currentRow).rowIndex; // row index
+  const x = /** @type {HTMLTableCellElement} */ (currentCell).cellIndex; // column index
 
   // Iterate over subsequent cells in arrow direction and return the first focusable descendant
   const cellIterator = createCellIterator(key, rows, {
-    rowIndex,
-    cellIndex,
-    originalCellIndex: cellIndex,
+    y,
+    x,
+    originalX: x,
     loop,
   });
   for (const cell of cellIterator) {
@@ -226,36 +226,32 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
 };
 
 // Create an iterator over cells in a table following arrow key direction
-const createCellIterator = function* (
-  key,
-  rows,
-  { rowIndex, cellIndex, originalCellIndex, loop },
-) {
+const createCellIterator = function* (key, rows, { y, x, originalX, loop }) {
   if (!rows.length) {
     return;
   }
 
-  const getNext = (r, c) =>
-    getNextPositionInTable(key, rows, r, c, originalCellIndex, loop);
+  const getNext = (y0, x0) =>
+    getNextPositionInTable(key, rows, y0, x0, originalX, loop);
 
   // Compute the first candidate position from the current one
-  let next = getNext(rowIndex, cellIndex);
+  let next = getNext(y, x);
   if (!next) {
     return; // cannot move in this direction without loop
   }
-  const start = `${next.rowIndex}:${next.cellIndex}`;
+  const start = `${next.y}:${next.x}`;
 
   while (true) {
-    const row = rows[next.rowIndex];
-    const cell = row?.cells?.[next.cellIndex];
+    const row = rows[next.y];
+    const cell = row?.cells?.[next.x];
     if (cell) {
       yield cell;
     }
-    next = getNext(next.rowIndex, next.cellIndex);
+    next = getNext(next.y, next.x);
     if (!next) {
       return; // reached boundary and no loop
     }
-    const keyPos = `${next.rowIndex}:${next.cellIndex}`;
+    const keyPos = `${next.y}:${next.x}`;
     if (keyPos === start) {
       return; // completed a full loop
     }
@@ -263,71 +259,66 @@ const createCellIterator = function* (
 };
 
 // Compute the next row/cell indices when moving in a table for a given arrow key
-const getNextPositionInTable = (
-  key,
-  rows,
-  rowIndex,
-  cellIndex,
-  originalCellIndex,
-  loop,
-) => {
-  if (key === "ArrowRight") {
-    const currentRowCells = rows[rowIndex]?.cells || [];
-    const nextCellIndex = cellIndex + 1;
-    if (nextCellIndex < currentRowCells.length) {
-      return { rowIndex, cellIndex: nextCellIndex };
+const getNextPositionInTable = (keyboardKey, rows, y, x, originalX, loop) => {
+  if (keyboardKey === "ArrowRight") {
+    const currentRowCells = rows[y]?.cells || [];
+    const nextX = x + 1;
+    if (nextX < currentRowCells.length) {
+      return { y, x: nextX };
     }
     // move to first cell of next row (or wrap)
-    let nextRowIndex = rowIndex + 1;
-    if (nextRowIndex >= rows.length) {
-      if (!loop) return null;
-      nextRowIndex = 0;
+    let nextY = y + 1;
+    if (nextY >= rows.length) {
+      if (!loop) {
+        return null;
+      }
+      nextY = 0;
     }
-    return { rowIndex: nextRowIndex, cellIndex: 0 };
+    return { y: nextY, x: 0 };
   }
 
-  if (key === "ArrowLeft") {
-    const prevCellIndex = cellIndex - 1;
-    if (prevCellIndex >= 0) {
-      return { rowIndex, cellIndex: prevCellIndex };
+  if (keyboardKey === "ArrowLeft") {
+    const prevX = x - 1;
+    if (prevX >= 0) {
+      return { y, x: prevX };
     }
     // move to last cell of previous row (or wrap)
-    let prevRowIndex = rowIndex - 1;
-    if (prevRowIndex < 0) {
-      if (!loop) return null;
-      prevRowIndex = rows.length - 1;
+    let prevY = y - 1;
+    if (prevY < 0) {
+      if (!loop) {
+        return null;
+      }
+      prevY = rows.length - 1;
     }
-    const prevRowCells = rows[prevRowIndex]?.cells || [];
-    const lastIndex = Math.max(0, prevRowCells.length - 1);
-    return { rowIndex: prevRowIndex, cellIndex: lastIndex };
+    const prevRowCells = rows[prevY]?.cells || [];
+    const lastX = Math.max(0, prevRowCells.length - 1);
+    return { y: prevY, x: lastX };
   }
 
-  if (key === "ArrowDown") {
-    let nextRowIndex = rowIndex + 1;
-    if (nextRowIndex >= rows.length) {
-      if (!loop) return null;
-      nextRowIndex = 0;
+  if (keyboardKey === "ArrowDown") {
+    let nextY = y + 1;
+    if (nextY >= rows.length) {
+      if (!loop) {
+        return null;
+      }
+      nextY = 0;
     }
-    const targetRowCells = rows[nextRowIndex]?.cells || [];
-    const nextCellIndex = Math.min(
-      originalCellIndex,
-      Math.max(0, targetRowCells.length - 1),
-    );
-    return { rowIndex: nextRowIndex, cellIndex: nextCellIndex };
+    const targetRowCells = rows[nextY]?.cells || [];
+    const nextX = Math.min(originalX, Math.max(0, targetRowCells.length - 1));
+    return { y: nextY, x: nextX };
   }
 
-  if (key === "ArrowUp") {
-    let prevRowIndex = rowIndex - 1;
-    if (prevRowIndex < 0) {
-      if (!loop) return null;
-      prevRowIndex = rows.length - 1;
+  if (keyboardKey === "ArrowUp") {
+    let prevY = y - 1;
+    if (prevY < 0) {
+      if (!loop) {
+        return null;
+      }
+      prevY = rows.length - 1;
     }
-    const targetRowCells = rows[prevRowIndex]?.cells || [];
-    const nextCellIndex = Math.min(
-      originalCellIndex,
-      Math.max(0, targetRowCells.length - 1),
-    );
-    return { rowIndex: prevRowIndex, cellIndex: nextCellIndex };
+    const targetRowCells = rows[prevY]?.cells || [];
+    const nextX = Math.min(originalX, Math.max(0, targetRowCells.length - 1));
+    return { y: prevY, x: nextX };
   }
 
   return null;
