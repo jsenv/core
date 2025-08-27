@@ -132,16 +132,15 @@
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
-      import { render, h, createContext } from "preact";
+      import { render, createContext } from "preact";
       import { useRef, useState, useMemo, useContext } from "preact/hooks";
       import { signal } from "@preact/signals";
       import {
+        // eslint-disable-next-line no-unused-vars
         SelectionProvider,
         useSelectionContext,
         clickToSelect,
         keydownToSelect,
-        // eslint-disable-next-line no-unused-vars
-        Table,
       } from "@jsenv/navi";
 
       // Table State Context for focus management (keeping this one as it's specific to this demo)
@@ -202,60 +201,66 @@
       };
 
       // Components
+      // eslint-disable-next-line no-unused-vars
       const NumberColumnHeader = () => {
-        return h("th", { className: "number-column" }, "#");
+        return <th className="number-column">#</th>;
       };
 
+      // eslint-disable-next-line no-unused-vars
       const NumberColumnCell = ({ row }) => {
         const { focusWithinRow } = useContext(TableStateContext) || {};
-        return h(
-          "td",
-          {
-            "className": "database_table_cell number-column",
-            "tabIndex": 0,
-            "data-focus-within": focusWithinRow === row.index ? "" : undefined,
-          },
-          row.index,
+        return (
+          <td
+            className="database_table_cell number-column"
+            tabIndex={0}
+            data-focus-within={focusWithinRow === row.index ? "" : undefined}
+          >
+            {row.index}
+          </td>
         );
       };
 
+      // eslint-disable-next-line no-unused-vars
       const DatabaseTableHeaderCell = ({ columnName, columnIndex }) => {
         const { focusWithinColumn } = useContext(TableStateContext) || {};
-        return h(
-          "th",
-          {
-            "data-focus-within":
-              focusWithinColumn === columnIndex ? "" : undefined,
-          },
-          h("span", null, columnName),
+        return (
+          <th
+            data-focus-within={
+              focusWithinColumn === columnIndex ? "" : undefined
+            }
+          >
+            <span>{columnName}</span>
+          </th>
         );
       };
 
+      // eslint-disable-next-line no-unused-vars
       const DatabaseTableCell = ({ columnName, row, value }) => {
         const cellId = `${columnName}:${row.id}`;
         const selectionContext = useSelectionContext();
         const isSelected = selectionContext.isSelected(cellId);
 
-        return h(
-          "td",
-          {
-            "className": "database_table_cell",
-            "tabIndex": 0,
-            "data-with-selection": "",
-            "data-selected": isSelected ? "" : undefined,
-            "onClick": (e) =>
-              clickToSelect(e, { selectionContext, value: cellId }),
-            "onKeyDown": (e) =>
-              keydownToSelect(e, { selectionContext, value: cellId }),
-          },
-          h(
-            "div",
-            { className: "database_table_cell_content" },
-            h("div", { className: "database_table_cell_value" }, value),
-          ),
+        return (
+          <td
+            className="database_table_cell"
+            tabIndex={0}
+            data-with-selection=""
+            data-selected={isSelected ? "" : undefined}
+            onClick={(e) =>
+              clickToSelect(e, { selectionContext, value: cellId })
+            }
+            onKeyDown={(e) =>
+              keydownToSelect(e, { selectionContext, value: cellId })
+            }
+          >
+            <div className="database_table_cell_content">
+              <div className="database_table_cell_value">{value}</div>
+            </div>
+          </td>
         );
       };
 
+      // eslint-disable-next-line no-unused-vars
       const TableDemo = () => {
         const tableRef = useRef(null);
         const [focusWithinRow, setFocusWithinRow] = useState(-1);
@@ -316,114 +321,87 @@
           });
         };
 
-        return h(
-          SelectionProvider,
-          {
-            value: cellSelectionSignal.value,
-            onChange: (value) => {
+        return (
+          <SelectionProvider
+            value={cellSelectionSignal.value}
+            onChange={(value) => {
               cellSelectionSignal.value = value;
-            },
-          },
-          h(
-            TableStateContext.Provider,
-            { value: tableState },
-            h(
-              "div",
-              { className: "demo-container" },
-              h("h1", null, "Table Cell Selection Demo - Preact"),
-              h(
-                "p",
-                null,
-                "Click cells to select/deselect. Use Cmd/Ctrl+click for multi-select. Use Tab and arrow keys to navigate.",
-              ),
+            }}
+          >
+            <TableStateContext.Provider value={tableState}>
+              <div className="demo-container">
+                <h1>Table Cell Selection Demo - Preact</h1>
+                <p>
+                  Click cells to select/deselect. Use Cmd/Ctrl+click for
+                  multi-select. Use Tab and arrow keys to navigate.
+                </p>
 
-              h(
-                "table",
-                {
-                  "ref": tableRef,
-                  "className": "database_table",
-                  "data-multi-selection": selectionLength > 1 ? "" : undefined,
-                  "onFocusIn": handleTableFocusIn,
-                  "onFocusOut": handleTableFocusOut,
-                },
-                h(
-                  "thead",
-                  null,
-                  h(
-                    "tr",
-                    null,
-                    h(NumberColumnHeader),
-                    ...columns.map((col, index) =>
-                      h(DatabaseTableHeaderCell, {
-                        key: col.id,
-                        columnName: col.header,
-                        columnIndex: index + 1,
-                      }),
-                    ),
-                  ),
-                ),
-                h(
-                  "tbody",
-                  null,
-                  ...sampleData.map((row) =>
-                    h(
-                      "tr",
-                      { "key": row.id, "data-row-id": row.id },
-                      h(NumberColumnCell, { row }),
-                      ...columns.map((col) =>
-                        h(DatabaseTableCell, {
-                          key: `${row.id}-${col.id}`,
-                          columnName: col.accessorKey,
-                          row,
-                          value: row[col.accessorKey],
-                        }),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+                <table
+                  ref={tableRef}
+                  className="database_table"
+                  data-multi-selection={selectionLength > 1 ? "" : undefined}
+                  onFocusIn={handleTableFocusIn}
+                  onFocusOut={handleTableFocusOut}
+                >
+                  <thead>
+                    <tr>
+                      <NumberColumnHeader />
+                      {columns.map((col, index) => (
+                        <DatabaseTableHeaderCell
+                          key={col.id}
+                          columnName={col.header}
+                          columnIndex={index + 1}
+                        />
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sampleData.map((row) => (
+                      <tr key={row.id} data-row-id={row.id}>
+                        <NumberColumnCell row={row} />
+                        {columns.map((col) => (
+                          <DatabaseTableCell
+                            key={`${row.id}-${col.id}`}
+                            columnName={col.accessorKey}
+                            row={row}
+                            value={row[col.accessorKey]}
+                          />
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-              h(
-                "div",
-                { className: "status" },
-                h(
-                  "div",
-                  null,
-                  "Selected cells: ",
-                  h("span", null, JSON.stringify(cellSelectionSignal.value)),
-                ),
-                h(
-                  "div",
-                  null,
-                  "Selection count: ",
-                  h("span", null, selectionLength),
-                ),
-                h(
-                  "div",
-                  null,
-                  "Focus position: ",
-                  h(
-                    "span",
-                    null,
-                    `Row: ${focusWithinRow}, Column: ${focusWithinColumn}`,
-                  ),
-                ),
-              ),
+                <div className="status">
+                  <div>
+                    Selected cells:
+                    <span>{JSON.stringify(cellSelectionSignal.value)}</span>
+                  </div>
+                  <div>
+                    Selection count:
+                    <span>{selectionLength}</span>
+                  </div>
+                  <div>
+                    Focus position:
+                    <span>
+                      {`Row: ${focusWithinRow}, Column: ${focusWithinColumn}`}
+                    </span>
+                  </div>
+                </div>
 
-              h(
-                "div",
-                { className: "actions" },
-                h("button", { onClick: clearSelection }, "Clear Selection"),
-                h("button", { onClick: selectAll }, "Select All"),
-                h("button", { onClick: logState }, "Log State"),
-              ),
-            ),
-          ),
+                <div className="actions">
+                  <button onClick={clearSelection}>Clear Selection</button>
+                  <button onClick={selectAll}>Select All</button>
+                  <button onClick={logState}>Log State</button>
+                </div>
+              </div>
+            </TableStateContext.Provider>
+          </SelectionProvider>
         );
       };
 
       // Render the app
-      render(h(TableDemo), document.getElementById("root"));
+      render(<TableDemo />, document.getElementById("root"));
 
       console.log("Preact Table selection demo loaded. Try:");
       console.log("- Click cells to select/deselect");
