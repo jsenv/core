@@ -4,8 +4,19 @@ import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 const SelectionContext = createContext(null);
 
+// Helper function to extract value from an element
+const getElementValue = (element) => {
+  if (element.value !== undefined) {
+    return element.value;
+  }
+  if (element.hasAttribute("data-value")) {
+    return element.getAttribute("data-value");
+  }
+  return element;
+};
+
 export const SelectionProvider = ({
-  selectedElements = [],
+  selectedValues = [],
   onChange,
   layout = "vertical",
   children,
@@ -13,7 +24,7 @@ export const SelectionProvider = ({
   if (layout === "grid") {
     return (
       <GridSelectionProvider
-        selectedElements={selectedElements}
+        selectedValues={selectedValues}
         onChange={onChange}
       >
         {children}
@@ -23,7 +34,7 @@ export const SelectionProvider = ({
 
   return (
     <LinearSelectionProvider
-      selectedElements={selectedElements}
+      selectedValues={selectedValues}
       onChange={onChange}
       axis={layout}
     >
@@ -33,12 +44,8 @@ export const SelectionProvider = ({
 };
 
 // Grid Selection Provider - for 2D layouts like tables
-const GridSelectionProvider = ({
-  selectedElements = [],
-  onChange,
-  children,
-}) => {
-  const selection = selectedElements || [];
+const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
+  const selection = selectedValues || [];
   const registryRef = useRef(new Set()); // Set<element>
   const anchorRef = useRef(null);
 
@@ -61,7 +68,8 @@ const GridSelectionProvider = ({
       anchorRef.current = element;
     },
     isElementSelected: (element) => {
-      return selection.includes(element);
+      const value = getElementValue(element);
+      return selection.includes(value);
     },
     getAllElements: () => {
       return Array.from(registryRef.current);
@@ -102,7 +110,7 @@ const GridSelectionProvider = ({
       const maxY = Math.max(fromY, toY);
 
       // Find all registered elements within the rectangular area
-      const itemsInRange = [];
+      const valuesInRange = [];
       for (const element of registryRef.current) {
         const pos = contextValue.getElementPosition(element);
         if (
@@ -112,11 +120,11 @@ const GridSelectionProvider = ({
           pos.y >= minY &&
           pos.y <= maxY
         ) {
-          itemsInRange.push(element);
+          valuesInRange.push(getElementValue(element));
         }
       }
 
-      return itemsInRange;
+      return valuesInRange;
     },
 
     // Navigation methods for grid
@@ -189,69 +197,87 @@ const GridSelectionProvider = ({
     setSelection: (newSelection, event = null) => {
       if (
         newSelection.length === selection.length &&
-        newSelection.every((element, index) => element === selection[index])
+        newSelection.every((value, index) => value === selection[index])
       ) {
         return;
       }
       if (newSelection.length > 0) {
-        anchorRef.current = newSelection[newSelection.length - 1];
+        // Find the element for the last selected value to set as anchor
+        const lastValue = newSelection[newSelection.length - 1];
+        for (const element of registryRef.current) {
+          if (getElementValue(element) === lastValue) {
+            anchorRef.current = element;
+            break;
+          }
+        }
       }
       onChange?.(newSelection, event);
     },
-    addToSelection: (arrayOfElementsToAdd, event = null) => {
-      const selectionWithElements = [...selection];
+    addToSelection: (arrayOfValuesToAdd, event = null) => {
+      const selectionWithValues = [...selection];
       let modified = false;
-      let lastAdded = null;
+      let lastAddedElement = null;
 
-      for (const elementToAdd of arrayOfElementsToAdd) {
-        if (!selectionWithElements.includes(elementToAdd)) {
+      for (const valueToAdd of arrayOfValuesToAdd) {
+        if (!selectionWithValues.includes(valueToAdd)) {
           modified = true;
-          selectionWithElements.push(elementToAdd);
-          lastAdded = elementToAdd;
+          selectionWithValues.push(valueToAdd);
+          // Find the element for this value
+          for (const element of registryRef.current) {
+            if (getElementValue(element) === valueToAdd) {
+              lastAddedElement = element;
+              break;
+            }
+          }
         }
       }
 
       if (modified) {
-        if (lastAdded) {
-          anchorRef.current = lastAdded;
+        if (lastAddedElement) {
+          anchorRef.current = lastAddedElement;
         }
-        onChange?.(selectionWithElements, event);
+        onChange?.(selectionWithValues, event);
       }
     },
-    removeFromSelection: (arrayOfElementsToRemove, event = null) => {
+    removeFromSelection: (arrayOfValuesToRemove, event = null) => {
       let modified = false;
-      const selectionWithoutElements = [];
+      const selectionWithoutValues = [];
 
-      for (const element of selection) {
-        if (arrayOfElementsToRemove.includes(element)) {
+      for (const value of selection) {
+        if (arrayOfValuesToRemove.includes(value)) {
           modified = true;
-          if (element === anchorRef.current) {
+          // Check if we're removing the anchor element
+          if (
+            anchorRef.current &&
+            getElementValue(anchorRef.current) === value
+          ) {
             anchorRef.current = null;
           }
         } else {
-          selectionWithoutElements.push(element);
+          selectionWithoutValues.push(value);
         }
       }
 
       if (modified) {
-        onChange?.(selectionWithoutElements, event);
+        onChange?.(selectionWithoutValues, event);
       }
     },
     toggleElement: (element, event = null) => {
-      if (selection.includes(element)) {
-        contextValue.removeFromSelection([element], event);
+      const value = getElementValue(element);
+      if (selection.includes(value)) {
+        contextValue.removeFromSelection([value], event);
       } else {
-        contextValue.addToSelection([element], event);
+        contextValue.addToSelection([value], event);
       }
     },
     selectFromAnchorTo: (element, event = null) => {
       const anchorElement = anchorRef.current;
 
-      if (anchorElement && selection.includes(anchorElement)) {
+      if (anchorElement && selection.includes(getElementValue(anchorElement))) {
         const range = contextValue.getElementRange(anchorElement, element);
         contextValue.setSelection(range, event);
       } else {
-        contextValue.setSelection([element], event);
+        contextValue.setSelection([getElementValue(element)], event);
       }
     },
   };
@@ -264,12 +290,12 @@ const GridSelectionProvider = ({
 };
 // Linear Selection Provider - for 1D layouts like lists
 const LinearSelectionProvider = ({
-  selectedElements = [],
+  selectedValues = [],
   onChange,
   axis = "vertical", // "horizontal" or "vertical"
   children,
 }) => {
-  const selection = selectedElements || [];
+  const selection = selectedValues || [];
   const registryRef = useRef(new Set()); // Set<element>
   const anchorRef = useRef(null);
 
@@ -298,7 +324,8 @@ const LinearSelectionProvider = ({
       anchorRef.current = element;
     },
     isElementSelected: (element) => {
-      return selection.includes(element);
+      const value = getElementValue(element);
+      return selection.includes(value);
     },
     getAllElements: () => {
       return Array.from(registryRef.current);
@@ -328,10 +355,10 @@ const LinearSelectionProvider = ({
         endElement = fromElement;
       } else {
         // Same element
-        return [fromElement];
+        return [getElementValue(fromElement)];
       }
 
-      const elementsInRange = [];
+      const valuesInRange = [];
 
       // Check all registered elements to see if they're in the range
       for (const element of registry) {
@@ -348,11 +375,11 @@ const LinearSelectionProvider = ({
           element === endElement ||
           (afterStart && beforeEnd)
         ) {
-          elementsInRange.push(element);
+          valuesInRange.push(getElementValue(element));
         }
       }
 
-      return elementsInRange;
+      return valuesInRange;
     },
 
     // Navigation methods for linear layout using DOM order
@@ -425,69 +452,87 @@ const LinearSelectionProvider = ({
     setSelection: (newSelection, event = null) => {
       if (
         newSelection.length === selection.length &&
-        newSelection.every((element, index) => element === selection[index])
+        newSelection.every((value, index) => value === selection[index])
       ) {
         return;
       }
       if (newSelection.length > 0) {
-        anchorRef.current = newSelection[newSelection.length - 1];
+        // Find the element for the last selected value to set as anchor
+        const lastValue = newSelection[newSelection.length - 1];
+        for (const element of registryRef.current) {
+          if (getElementValue(element) === lastValue) {
+            anchorRef.current = element;
+            break;
+          }
+        }
       }
       onChange?.(newSelection, event);
     },
-    addToSelection: (arrayOfElementsToAdd, event = null) => {
-      const selectionWithElements = [...selection];
+    addToSelection: (arrayOfValuesToAdd, event = null) => {
+      const selectionWithValues = [...selection];
       let modified = false;
-      let lastAdded = null;
+      let lastAddedElement = null;
 
-      for (const elementToAdd of arrayOfElementsToAdd) {
-        if (!selectionWithElements.includes(elementToAdd)) {
+      for (const valueToAdd of arrayOfValuesToAdd) {
+        if (!selectionWithValues.includes(valueToAdd)) {
           modified = true;
-          selectionWithElements.push(elementToAdd);
-          lastAdded = elementToAdd;
+          selectionWithValues.push(valueToAdd);
+          // Find the element for this value
+          for (const element of registryRef.current) {
+            if (getElementValue(element) === valueToAdd) {
+              lastAddedElement = element;
+              break;
+            }
+          }
         }
       }
 
       if (modified) {
-        if (lastAdded) {
-          anchorRef.current = lastAdded;
+        if (lastAddedElement) {
+          anchorRef.current = lastAddedElement;
         }
-        onChange?.(selectionWithElements, event);
+        onChange?.(selectionWithValues, event);
       }
     },
-    removeFromSelection: (arrayOfElementsToRemove, event = null) => {
+    removeFromSelection: (arrayOfValuesToRemove, event = null) => {
       let modified = false;
-      const selectionWithoutElements = [];
+      const selectionWithoutValues = [];
 
-      for (const element of selection) {
-        if (arrayOfElementsToRemove.includes(element)) {
+      for (const value of selection) {
+        if (arrayOfValuesToRemove.includes(value)) {
           modified = true;
-          if (element === anchorRef.current) {
+          // Check if we're removing the anchor element
+          if (
+            anchorRef.current &&
+            getElementValue(anchorRef.current) === value
+          ) {
             anchorRef.current = null;
           }
         } else {
-          selectionWithoutElements.push(element);
+          selectionWithoutValues.push(value);
         }
       }
 
       if (modified) {
-        onChange?.(selectionWithoutElements, event);
+        onChange?.(selectionWithoutValues, event);
       }
     },
     toggleElement: (element, event = null) => {
-      if (selection.includes(element)) {
-        contextValue.removeFromSelection([element], event);
+      const value = getElementValue(element);
+      if (selection.includes(value)) {
+        contextValue.removeFromSelection([value], event);
       } else {
-        contextValue.addToSelection([element], event);
+        contextValue.addToSelection([value], event);
       }
     },
     selectFromAnchorTo: (element, event = null) => {
       const anchorElement = anchorRef.current;
 
-      if (anchorElement && selection.includes(anchorElement)) {
+      if (anchorElement && selection.includes(getElementValue(anchorElement))) {
         const range = contextValue.getElementRange(anchorElement, element);
         contextValue.setSelection(range, event);
       } else {
-        contextValue.setSelection([element], event);
+        contextValue.setSelection([getElementValue(element)], event);
       }
     },
   };
@@ -575,10 +620,8 @@ export const keydownToSelect = (
       return;
     }
     keydownEvent.preventDefault(); // prevent default select all text behavior
-    selectionContext.setSelection(
-      selectionContext.getAllElements(),
-      keydownEvent,
-    );
+    const allValues = selectionContext.getAllElements().map(getElementValue);
+    selectionContext.setSelection(allValues, keydownEvent);
     return;
   }
 
@@ -596,10 +639,13 @@ export const keydownToSelect = (
       return;
     }
     if (isMultiSelect) {
-      selectionContext.addToSelection([nextElement], keydownEvent);
+      selectionContext.addToSelection(
+        [getElementValue(nextElement)],
+        keydownEvent,
+      );
       return;
     }
-    selectionContext.setSelection([nextElement], keydownEvent);
+    selectionContext.setSelection([getElementValue(nextElement)], keydownEvent);
     return;
   }
 
@@ -617,10 +663,16 @@ export const keydownToSelect = (
       return;
     }
     if (isMultiSelect) {
-      selectionContext.addToSelection([previousElement], keydownEvent);
+      selectionContext.addToSelection(
+        [getElementValue(previousElement)],
+        keydownEvent,
+      );
       return;
     }
-    selectionContext.setSelection([previousElement], keydownEvent);
+    selectionContext.setSelection(
+      [getElementValue(previousElement)],
+      keydownEvent,
+    );
     return;
   }
 
@@ -638,10 +690,16 @@ export const keydownToSelect = (
       return;
     }
     if (isMultiSelect) {
-      selectionContext.addToSelection([previousElement], keydownEvent);
+      selectionContext.addToSelection(
+        [getElementValue(previousElement)],
+        keydownEvent,
+      );
       return;
     }
-    selectionContext.setSelection([previousElement], keydownEvent);
+    selectionContext.setSelection(
+      [getElementValue(previousElement)],
+      keydownEvent,
+    );
     return;
   }
 
@@ -659,10 +717,13 @@ export const keydownToSelect = (
       return;
     }
     if (isMultiSelect) {
-      selectionContext.addToSelection([nextElement], keydownEvent);
+      selectionContext.addToSelection(
+        [getElementValue(nextElement)],
+        keydownEvent,
+      );
       return;
     }
-    selectionContext.setSelection([nextElement], keydownEvent);
+    selectionContext.setSelection([getElementValue(nextElement)], keydownEvent);
     return;
   }
 };
