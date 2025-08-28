@@ -160,10 +160,9 @@ export const useTableSelectionBorders = (
 
     const computedStyle = getComputedStyle(table);
     const tableBorderWidth = parseFloat(computedStyle.borderWidth) || 0;
-    const selectionBorderWidth = parseFloat(size) || 2;
 
     // Calculate inset to position selection border over table borders
-    const inset = -(tableBorderWidth + selectionBorderWidth);
+    const inset = -tableBorderWidth;
 
     table.style.setProperty("--selection-border-color", color);
     table.style.setProperty("--selection-border-size", `${size}px`);

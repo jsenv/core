@@ -26,7 +26,7 @@
       .database_table {
         width: 100%;
         border-collapse: collapse;
-        border: 1px solid #e0e0e0;
+        border: 2px solid #e0e0e0;
         border-radius: 2px;
       }
 
@@ -474,7 +474,11 @@
                     })}
                   </tbody>
                 </table>
-                <TableSelectionBorders tableRef={tableRef} color="#ff6b35" />
+                <TableSelectionBorders
+                  tableRef={tableRef}
+                  color="#ff6b35"
+                  size="2"
+                />
               </div>
 
               <div className="status">
