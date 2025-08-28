@@ -401,6 +401,7 @@
         // Single selection provider that handles both cells and rows
         // eslint-disable-next-line no-unused-vars
         const SelectionProvider = useSelectionProvider({
+          elementRef: tableRef,
           layout: "grid",
           value: selection,
           onChange: (value) => {

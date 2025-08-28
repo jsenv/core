@@ -34,10 +34,10 @@ const SelectionProvider = ({ selection, children }) => {
   );
 };
 export const useSelectionProvider = ({
+  elementRef,
   layout,
   value,
   onChange,
-  rootElement,
 }) => {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -57,9 +57,9 @@ export const useSelectionProvider = ({
       value,
       onChange,
       axis: layout,
-      rootElement,
+      elementRef,
     });
-  }, [layout, rootElement]);
+  }, [layout, elementRef]);
 
   // Update the selection's internal values when external value changes
   useEffect(() => {
@@ -517,7 +517,7 @@ const createLinearSelection = ({
   value = [],
   onChange,
   axis = "vertical", // "horizontal" or "vertical"
-  rootElement = document.body, // Root element to scope DOM traversal
+  elementRef, // Root element to scope DOM traversal
 }) => {
   if (!["horizontal", "vertical"].includes(axis)) {
     throw new Error(
@@ -615,7 +615,7 @@ const createLinearSelection = ({
           );
         },
         {
-          root: rootElement,
+          root: elementRef.current || document.body,
         },
       );
 
@@ -625,7 +625,7 @@ const createLinearSelection = ({
 
       // Fallback: if no same-selection-name element found, find any registered element
       const fallbackElement = findAfter(element, isRegisteredElement, {
-        root: rootElement,
+        root: elementRef.current || document.body,
       });
 
       return fallbackElement;
@@ -653,7 +653,7 @@ const createLinearSelection = ({
           );
         },
         {
-          root: rootElement,
+          root: elementRef.current || document.body,
         },
       );
 
@@ -663,7 +663,7 @@ const createLinearSelection = ({
 
       // Fallback: if no same-selection-name element found, find any registered element
       const fallbackElement = findBefore(element, isRegisteredElement, {
-        root: rootElement,
+        root: elementRef.current || document.body,
       });
 
       return fallbackElement;
