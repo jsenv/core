@@ -191,9 +191,9 @@
 
       // eslint-disable-next-line no-unused-vars
       const NumberColumnCell = ({ row, rowWithSomeSelectedCell }) => {
-        const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(row.id)
-          ? ""
-          : undefined;
+        const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(
+          row.id,
+        );
         return (
           <td
             className="database_table_cell number-column"
@@ -212,12 +212,8 @@
         columnName,
         columnWithSomeSelectedCell,
       }) => {
-        const columnContainsSelectedCell = columnWithSomeSelectedCell.includes(
-          columnName,
-        )
-          ? ""
-          : undefined;
-
+        const columnContainsSelectedCell =
+          columnWithSomeSelectedCell.includes(columnName);
         return (
           <th
             data-column-contains-selected={
@@ -267,8 +263,7 @@
         // Compute which rows and columns have selected cells
         const rowWithSomeSelectedCell = [];
         const columnWithSomeSelectedCell = [];
-
-        cellSelection.forEach((cellId) => {
+        for (const cellId of cellSelection) {
           // Parse cellId to extract row and column information
           // cellId format: "columnName:rowId"
           const [columnName, rowId] = cellId.split(":");
@@ -278,7 +273,7 @@
           if (!rowWithSomeSelectedCell.includes(rowId)) {
             rowWithSomeSelectedCell.push(rowId);
           }
-        });
+        }
 
         const clearSelection = () => {
           cellSelectionSignal.value = [];
