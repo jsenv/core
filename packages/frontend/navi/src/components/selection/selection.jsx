@@ -293,7 +293,6 @@ const createGridSelection = ({ value = [], onChange }) => {
           lastValue,
         );
         for (const element of registry) {
-          element.setAttribute("aria-selected", "true");
           if (getElementValue(element) === lastValue) {
             debug(
               "selection",
@@ -722,6 +721,12 @@ export const useSelection = () => {
 
 export const useSelectableElement = (elementRef) => {
   const selection = useSelection();
+  if (!selection) {
+    throw new Error(
+      "useSelectableElement must be used within a SelectionProvider",
+    );
+  }
+
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
@@ -749,17 +754,58 @@ export const useSelectableElement = (elementRef) => {
   }, [selection]);
 
   const [selected, setSelected] = useState(false);
+  debug(
+    "registration",
+    "useSelectableElement: initial selected state:",
+    selected,
+  );
 
   // Update selected state when selection changes
   useLayoutEffect(() => {
     const element = elementRef.current;
-    if (!element || !selection) {
+    debug(
+      "selection",
+      "useSelectableElement: selection change effect triggered",
+      {
+        element,
+        selection,
+        selectionValues: selection?.values,
+      },
+    );
+
+    if (!element) {
+      debug(
+        "selection",
+        "useSelectableElement: no element, setting selected to false",
+      );
       setSelected(false);
       return;
     }
+
     const isSelected = selection.isElementSelected(element);
-    setSelected(isSelected);
-  }, [selection, selection?.values]); // React to changes in selection.values
+    const elementValue = getElementValue(element);
+    debug("selection", "useSelectableElement: checking element selection", {
+      element,
+      elementValue,
+      isSelected,
+      currentSelected: selected,
+      selectionValues: selection?.values,
+    });
+
+    if (isSelected !== selected) {
+      debug("selection", "useSelectableElement: updating selected state", {
+        from: selected,
+        to: isSelected,
+        elementValue,
+      });
+      setSelected(isSelected);
+    } else {
+      debug("selection", "useSelectableElement: selected state unchanged", {
+        selected,
+        elementValue,
+      });
+    }
+  }, [selection, selection.values]);
 
   return {
     selected,
