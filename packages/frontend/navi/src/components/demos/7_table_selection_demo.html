@@ -49,9 +49,18 @@
         position: relative;
       }
 
-      .database_table [data-selected-within] {
+      .database_table [data-row-contains-selected],
+      .database_table [data-column-contains-selected] {
         background-color: rgba(0, 120, 212, 0.08);
       }
+
+      td[data-row-contains-selected] {
+        font-weight: bold;
+      }
+      th[data-column-contains-selected] {
+        font-weight: bold;
+      }
+
       .database_table[data-multiselection]
         .database_table_cell[aria-selected="true"] {
         background-color: rgba(0, 120, 212, 0.08);
@@ -182,12 +191,15 @@
 
       // eslint-disable-next-line no-unused-vars
       const NumberColumnCell = ({ row, rowWithSomeSelectedCell }) => {
+        const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(row.id)
+          ? ""
+          : undefined;
         return (
           <td
             className="database_table_cell number-column"
             tabIndex={0}
-            data-selected-within={
-              rowWithSomeSelectedCell.includes(row.index) ? "" : undefined
+            data-row-contains-selected={
+              rowContainsSelectedCell ? "" : undefined
             }
           >
             {row.index}
@@ -198,13 +210,18 @@
       // eslint-disable-next-line no-unused-vars
       const DatabaseTableHeaderCell = ({
         columnName,
-        columnIndex,
         columnWithSomeSelectedCell,
       }) => {
+        const columnContainsSelectedCell = columnWithSomeSelectedCell.includes(
+          columnName,
+        )
+          ? ""
+          : undefined;
+
         return (
           <th
-            data-selected-within={
-              columnWithSomeSelectedCell.includes(columnIndex) ? "" : undefined
+            data-column-contains-selected={
+              columnContainsSelectedCell ? "" : undefined
             }
           >
             <span>{columnName}</span>
@@ -255,25 +272,11 @@
           // Parse cellId to extract row and column information
           // cellId format: "columnName:rowId"
           const [columnName, rowId] = cellId.split(":");
-
-          // Find column index
-          const columnIndex = columns.findIndex(
-            (col) => col.accessorKey === columnName,
-          );
-          if (columnIndex >= 0) {
-            const adjustedColumnIndex = columnIndex + 1; // +1 because number column is first
-            if (!columnWithSomeSelectedCell.includes(adjustedColumnIndex)) {
-              columnWithSomeSelectedCell.push(adjustedColumnIndex);
-            }
+          if (!columnWithSomeSelectedCell.includes(columnName)) {
+            columnWithSomeSelectedCell.push(columnName);
           }
-
-          // Find row index
-          const rowIndex = sampleData.findIndex((row) => row.id === rowId);
-          if (rowIndex >= 0) {
-            const adjustedRowIndex = rowIndex + 1; // +1 for 1-based indexing
-            if (!rowWithSomeSelectedCell.includes(adjustedRowIndex)) {
-              rowWithSomeSelectedCell.push(adjustedRowIndex);
-            }
+          if (!rowWithSomeSelectedCell.includes(rowId)) {
+            rowWithSomeSelectedCell.push(rowId);
           }
         });
 
