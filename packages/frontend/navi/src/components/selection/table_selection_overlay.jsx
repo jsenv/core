@@ -4,12 +4,11 @@ export const TableSelectionOverlay = ({ tableRef }) => {
   const [rectangles, setRectangles] = useState([]);
 
   useLayoutEffect(() => {
-    if (!tableRef.current) {
+    const table = tableRef.current;
+    if (!table) {
       setRectangles([]);
       return null;
     }
-
-    const table = tableRef.current;
 
     // eslint-disable-next-line consistent-return
     const calculateRectangles = () => {
@@ -162,7 +161,6 @@ const getTableInfoFromDOM = (table) => {
     isBorderCollapse,
   };
 };
-
 const findContiguousRectangle = (
   startCellId,
   cellPositions,
@@ -263,7 +261,6 @@ const findContiguousRectangle = (
     height: maxBottom - minTop,
   };
 };
-
 // Helper function to determine if selection touches table edges
 const getTableEdges = (connectedCells, cellPositions, tableInfo) => {
   let minRow = Infinity;
