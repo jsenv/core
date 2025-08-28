@@ -3,12 +3,16 @@ import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 const DEBUG = {
-  registration: false,
-  interaction: true,
-}; // Set to true to enable debug logs
-const log = (...args) => {
-  if (DEBUG) {
-    console.debug("[SelectionContext]", ...args);
+  registration: false, // Element registration/unregistration
+  interaction: true, // Click and keyboard interactions
+  selection: false, // Selection state changes (set, add, remove, toggle)
+  navigation: true, // Arrow key navigation and element finding
+  valueExtraction: false, // Value extraction from elements
+};
+
+const debug = (category, ...args) => {
+  if (DEBUG[category]) {
+    console.debug(`[SelectionContext:${category}]`, ...args);
   }
 };
 
@@ -24,6 +28,7 @@ const getElementValue = (element) => {
   } else {
     value = element;
   }
+  debug("valueExtraction", "getElementValue:", element, "->", value);
   return value;
 };
 
@@ -67,7 +72,8 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
     registerElement: (element) => {
       const registry = registryRef.current;
       const value = getElementValue(element);
-      log(
+      debug(
+        "registration",
         "Grid registerElement:",
         element,
         "value:",
@@ -76,12 +82,17 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
         registry.size,
       );
       registry.add(element);
-      log("Grid registerElement: registry size after:", registry.size);
+      debug(
+        "registration",
+        "Grid registerElement: registry size after:",
+        registry.size,
+      );
     },
     unregisterElement: (element) => {
       const registry = registryRef.current;
       const value = getElementValue(element);
-      log(
+      debug(
+        "registration",
         "Grid unregisterElement:",
         element,
         "value:",
@@ -90,11 +101,15 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
         registry.size,
       );
       registry.delete(element);
-      log("Grid unregisterElement: registry size after:", registry.size);
+      debug(
+        "registration",
+        "Grid unregisterElement: registry size after:",
+        registry.size,
+      );
     },
     setAnchorElement: (element) => {
       const value = getElementValue(element);
-      log("Grid setAnchorElement:", element, "value:", value);
+      debug("selection", "Grid setAnchorElement:", element, "value:", value);
       anchorRef.current = element;
     },
     isElementSelected: (element) => {
@@ -230,7 +245,8 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
 
     // Selection manipulation methods
     setSelection: (newSelection, event = null) => {
-      log(
+      debug(
+        "selection",
         "Grid setSelection called with:",
         newSelection,
         "current selection:",
@@ -240,29 +256,45 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
         newSelection.length === selection.length &&
         newSelection.every((value, index) => value === selection[index])
       ) {
-        log("Grid setSelection: no change, returning early");
+        debug("selection", "Grid setSelection: no change, returning early");
         return;
       }
       if (newSelection.length > 0) {
         // Find the element for the last selected value to set as anchor
         const lastValue = newSelection[newSelection.length - 1];
-        log("Grid setSelection: finding element for anchor value:", lastValue);
+        debug(
+          "selection",
+          "Grid setSelection: finding element for anchor value:",
+          lastValue,
+        );
         for (const element of registryRef.current) {
           if (getElementValue(element) === lastValue) {
-            log("Grid setSelection: setting anchor element:", element);
+            debug(
+              "selection",
+              "Grid setSelection: setting anchor element:",
+              element,
+            );
             anchorRef.current = element;
             break;
           }
         }
       } else {
-        log("Grid setSelection: clearing anchor (empty selection)");
+        debug(
+          "selection",
+          "Grid setSelection: clearing anchor (empty selection)",
+        );
         anchorRef.current = null;
       }
-      log("Grid setSelection: calling onChange with:", newSelection);
+      debug(
+        "selection",
+        "Grid setSelection: calling onChange with:",
+        newSelection,
+      );
       onChange?.(newSelection, event);
     },
     addToSelection: (arrayOfValuesToAdd, event = null) => {
-      log(
+      debug(
+        "selection",
         "Grid addToSelection called with:",
         arrayOfValuesToAdd,
         "current selection:",
@@ -276,12 +308,16 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
         if (!selectionWithValues.includes(valueToAdd)) {
           modified = true;
           selectionWithValues.push(valueToAdd);
-          log("Grid addToSelection: adding value:", valueToAdd);
+          debug("selection", "Grid addToSelection: adding value:", valueToAdd);
           // Find the element for this value
           for (const element of registryRef.current) {
             if (getElementValue(element) === valueToAdd) {
               lastAddedElement = element;
-              log("Grid addToSelection: found element for value:", element);
+              debug(
+                "selection",
+                "Grid addToSelection: found element for value:",
+                element,
+              );
               break;
             }
           }
@@ -290,13 +326,21 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
 
       if (modified) {
         if (lastAddedElement) {
-          log("Grid addToSelection: setting anchor element:", lastAddedElement);
+          debug(
+            "selection",
+            "Grid addToSelection: setting anchor element:",
+            lastAddedElement,
+          );
           anchorRef.current = lastAddedElement;
         }
-        log("Grid addToSelection: calling onChange with:", selectionWithValues);
+        debug(
+          "selection",
+          "Grid addToSelection: calling onChange with:",
+          selectionWithValues,
+        );
         onChange?.(selectionWithValues, event);
       } else {
-        log("Grid addToSelection: no changes made");
+        debug("selection", "Grid addToSelection: no changes made");
       }
     },
     removeFromSelection: (arrayOfValuesToRemove, event = null) => {
@@ -372,7 +416,8 @@ const LinearSelectionProvider = ({
     registerElement: (element) => {
       const registry = registryRef.current;
       const value = getElementValue(element);
-      log(
+      debug(
+        "registration",
         "Linear registerElement:",
         element,
         "value:",
@@ -381,12 +426,17 @@ const LinearSelectionProvider = ({
         registry.size,
       );
       registry.add(element);
-      log("Linear registerElement: registry size after:", registry.size);
+      debug(
+        "registration",
+        "Linear registerElement: registry size after:",
+        registry.size,
+      );
     },
     unregisterElement: (element) => {
       const registry = registryRef.current;
       const value = getElementValue(element);
-      log(
+      debug(
+        "registration",
         "Linear unregisterElement:",
         element,
         "value:",
@@ -395,11 +445,15 @@ const LinearSelectionProvider = ({
         registry.size,
       );
       registry.delete(element);
-      log("Linear unregisterElement: registry size after:", registry.size);
+      debug(
+        "registration",
+        "Linear unregisterElement: registry size after:",
+        registry.size,
+      );
     },
     setAnchorElement: (element) => {
       const value = getElementValue(element);
-      log("Linear setAnchorElement:", element, "value:", value);
+      debug("selection", "Linear setAnchorElement:", element, "value:", value);
       anchorRef.current = element;
     },
     isElementSelected: (element) => {
@@ -639,7 +693,8 @@ export const useRegisterSelectableElement = (elementRef) => {
     if (selectionContext && elementRef.current) {
       const element = elementRef.current;
       const value = getElementValue(element);
-      log(
+      debug(
+        "registration",
         "useRegisterSelectableElement: registering element:",
         element,
         "value:",
@@ -647,7 +702,8 @@ export const useRegisterSelectableElement = (elementRef) => {
       );
       selectionContext.registerElement(element);
       return () => {
-        log(
+        debug(
+          "registration",
           "useRegisterSelectableElement: unregistering element:",
           element,
           "value:",
@@ -672,7 +728,7 @@ export const useRegisterSelectableElement = (elementRef) => {
 export const clickToSelect = (clickEvent, { selectionContext, element }) => {
   if (clickEvent.defaultPrevented) {
     // If the click was prevented by another handler, do not interfere
-    log("clickToSelect: event already prevented, skipping");
+    debug("interaction", "clickToSelect: event already prevented, skipping");
     return;
   }
 
@@ -681,7 +737,7 @@ export const clickToSelect = (clickEvent, { selectionContext, element }) => {
   const isSingleSelect = !isMultiSelect && !isShiftSelect;
   const value = getElementValue(element);
 
-  log("clickToSelect:", {
+  debug("interaction", "clickToSelect:", {
     element,
     value,
     isMultiSelect,
@@ -692,20 +748,27 @@ export const clickToSelect = (clickEvent, { selectionContext, element }) => {
 
   if (isSingleSelect) {
     // Single select - replace entire selection with just this item
-    log("clickToSelect: single select, setting selection to:", [value]);
+    debug(
+      "interaction",
+      "clickToSelect: single select, setting selection to:",
+      [value],
+    );
     selectionContext.setSelection([value], clickEvent);
     return;
   }
   if (isMultiSelect) {
     // here no need to prevent nav on <a> but it means cmd + click will both multi select
     // and open in a new tab
-    log("clickToSelect: multi select, toggling element");
+    debug("interaction", "clickToSelect: multi select, toggling element");
     selectionContext.toggleElement(element, clickEvent);
     return;
   }
   if (isShiftSelect) {
     clickEvent.preventDefault(); // Prevent navigation
-    log("clickToSelect: shift select, selecting from anchor to element");
+    debug(
+      "interaction",
+      "clickToSelect: shift select, selecting from anchor to element",
+    );
     selectionContext.selectFromAnchorTo(element, clickEvent);
     return;
   }
@@ -716,12 +779,12 @@ export const keydownToSelect = (
   { selectionContext, element },
 ) => {
   if (!canInterceptKeys(keydownEvent)) {
-    log("keydownToSelect: cannot intercept keys, skipping");
+    debug("interaction", "keydownToSelect: cannot intercept keys, skipping");
     return;
   }
 
   const value = getElementValue(element);
-  log("keydownToSelect:", {
+  debug("interaction", "keydownToSelect:", {
     key: keydownEvent.key,
     element,
     value,
@@ -730,7 +793,7 @@ export const keydownToSelect = (
   });
 
   if (keydownEvent.key === "Shift") {
-    log("keydownToSelect: Shift key, setting anchor element");
+    debug("interaction", "keydownToSelect: Shift key, setting anchor element");
     selectionContext.setAnchorElement(element);
     return;
   }
@@ -741,12 +804,16 @@ export const keydownToSelect = (
 
   if (key === "a") {
     if (!isMultiSelect) {
-      log('keydownToSelect: "a" key without multi-select modifier, skipping');
+      debug(
+        "interaction",
+        'keydownToSelect: "a" key without multi-select modifier, skipping',
+      );
       return;
     }
     keydownEvent.preventDefault(); // prevent default select all text behavior
     const allValues = selectionContext.getAllElements().map(getElementValue);
-    log(
+    debug(
+      "interaction",
       "keydownToSelect: Select All - setting selection to all values:",
       allValues,
     );
@@ -756,16 +823,20 @@ export const keydownToSelect = (
 
   if (key === "ArrowDown") {
     if (selectionContext.layout === "horizontal") {
-      log("keydownToSelect: ArrowDown in horizontal layout, skipping");
+      debug(
+        "navigation",
+        "keydownToSelect: ArrowDown in horizontal layout, skipping",
+      );
       return; // No down navigation in horizontal layout
     }
     const nextElement = selectionContext.getElementBelow(element);
     if (!nextElement) {
-      log("keydownToSelect: ArrowDown - no next element found");
+      debug("navigation", "keydownToSelect: ArrowDown - no next element found");
       return; // No next element to select
     }
     const nextValue = getElementValue(nextElement);
-    log(
+    debug(
+      "navigation",
       "keydownToSelect: ArrowDown - found next element:",
       nextElement,
       "value:",
@@ -773,18 +844,25 @@ export const keydownToSelect = (
     );
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      log(
+      debug(
+        "interaction",
         "keydownToSelect: ArrowDown with Shift - selecting from anchor to next element",
       );
       selectionContext.selectFromAnchorTo(nextElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      log("keydownToSelect: ArrowDown with multi-select - adding to selection");
+      debug(
+        "interaction",
+        "keydownToSelect: ArrowDown with multi-select - adding to selection",
+      );
       selectionContext.addToSelection([nextValue], keydownEvent);
       return;
     }
-    log("keydownToSelect: ArrowDown - setting selection to next element");
+    debug(
+      "interaction",
+      "keydownToSelect: ArrowDown - setting selection to next element",
+    );
     selectionContext.setSelection([nextValue], keydownEvent);
     return;
   }
