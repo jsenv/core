@@ -1,6 +1,12 @@
 import { canInterceptKeys } from "@jsenv/dom";
 import { createContext } from "preact";
-import { useContext, useLayoutEffect, useRef } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "preact/hooks";
 
 const DEBUG = {
   registration: false, // Element registration/unregistration
@@ -25,13 +31,43 @@ const SelectionProvider = ({ selection, children }) => {
   );
 };
 export const useSelectionProvider = ({ layout, value, onChange }) => {
-  if (layout === "grid") {
-    return useGridSelection({ value, onChange });
-  }
-  return useLinearSelection({ value, onChange, axis: layout });
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const selection = useMemo(() => {
+    const onChange = (...args) => {
+      onChangeRef.current(...args);
+    };
+
+    if (layout === "grid") {
+      return createGridSelection({
+        value,
+        onChange,
+      });
+    }
+    return createLinearSelection({
+      value,
+      onChange,
+      axis: layout,
+    });
+  }, [layout]);
+  useEffect(() => {
+    selection.setSelection(value);
+  }, [selection, value]);
+
+  const LocalSelectionProvider = useMemo(() => {
+    const Stuff = ({ children }) => {
+      return (
+        <SelectionProvider selection={selection}>{children}</SelectionProvider>
+      );
+    };
+    return Stuff;
+  }, [selection]);
+
+  return LocalSelectionProvider;
 };
 // Grid Selection Provider - for 2D layouts like tables
-const useGridSelection = ({ value = [], onChange }) => {
+const createGridSelection = ({ value = [], onChange }) => {
   const values = value;
   const registryRef = useRef(new Set()); // Set<element>
   const anchorRef = useRef(null);
@@ -370,7 +406,7 @@ const useGridSelection = ({ value = [], onChange }) => {
   return gridSelection;
 };
 // Linear Selection Provider - for 1D layouts like lists
-const useLinearSelection = ({
+const createLinearSelection = ({
   value = [],
   onChange,
   axis = "vertical", // "horizontal" or "vertical"
