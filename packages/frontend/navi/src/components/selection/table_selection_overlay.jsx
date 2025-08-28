@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
-export const TableSelectionOverlay = ({ tableRef, selectedCells }) => {
+export const TableSelectionOverlay = ({ tableRef }) => {
   const [rectangles, setRectangles] = useState([]);
 
   useLayoutEffect(() => {
@@ -13,6 +13,9 @@ export const TableSelectionOverlay = ({ tableRef, selectedCells }) => {
 
     // eslint-disable-next-line consistent-return
     const calculateRectangles = () => {
+      // Find all selected cells by aria-selected attribute
+      const selectedCells = table.querySelectorAll('[aria-selected="true"]');
+
       if (selectedCells.length === 0) {
         setRectangles([]);
         return null;
@@ -24,21 +27,24 @@ export const TableSelectionOverlay = ({ tableRef, selectedCells }) => {
       const cellPositions = new Map();
 
       // Get positions of all selected cells
-      selectedCells.forEach((cellId) => {
-        const cell = table.querySelector(`[data-value="${cellId}"]`);
-        if (cell) {
-          const cellRect = cell.getBoundingClientRect();
-          const [columnName, rowId] = cellId.split(":");
+      selectedCells.forEach((cell) => {
+        const cellRect = cell.getBoundingClientRect();
 
-          cellPositions.set(cellId, {
-            left: cellRect.left - tableRect.left,
-            top: cellRect.top - tableRect.top,
-            width: cellRect.width,
-            height: cellRect.height,
-            row: rowId,
-            column: columnName,
-          });
-        }
+        // Get row and column indices from DOM position
+        const row = cell.closest("tr");
+        const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+        const columnIndex = Array.from(row.children).indexOf(cell);
+
+        const cellId = `${columnIndex}:${rowIndex}`;
+
+        cellPositions.set(cellId, {
+          left: cellRect.left - tableRect.left,
+          top: cellRect.top - tableRect.top,
+          width: cellRect.width,
+          height: cellRect.height,
+          row: rowIndex,
+          column: columnIndex,
+        });
       });
 
       // Group contiguous cells into rectangles
@@ -55,6 +61,7 @@ export const TableSelectionOverlay = ({ tableRef, selectedCells }) => {
           cellId,
           cellPositions,
           processedCells,
+          table,
         );
         if (rectangle) {
           newRectangles.push(rectangle);
@@ -66,6 +73,31 @@ export const TableSelectionOverlay = ({ tableRef, selectedCells }) => {
 
     // Calculate rectangles initially
     calculateRectangles();
+
+    // Set up MutationObserver to watch for aria-selected changes
+    const mutationObserver = new MutationObserver((mutations) => {
+      let shouldRecalculate = false;
+
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "aria-selected"
+        ) {
+          shouldRecalculate = true;
+        }
+      });
+
+      if (shouldRecalculate) {
+        calculateRectangles();
+      }
+    });
+
+    // Observe the table for aria-selected attribute changes
+    mutationObserver.observe(table, {
+      attributes: true,
+      attributeFilter: ["aria-selected"],
+      subtree: true,
+    });
 
     // Set up ResizeObserver to watch for table dimension changes
     const resizeObserver = new ResizeObserver(() => {
@@ -84,10 +116,11 @@ export const TableSelectionOverlay = ({ tableRef, selectedCells }) => {
 
     // Cleanup function
     return () => {
+      mutationObserver.disconnect();
       resizeObserver.disconnect();
       window.removeEventListener("resize", handleWindowResize);
     };
-  }, [selectedCells, tableRef]);
+  }, [tableRef]);
 
   return (
     <div className="selection-overlay">
@@ -107,20 +140,46 @@ export const TableSelectionOverlay = ({ tableRef, selectedCells }) => {
   );
 };
 
+// Helper function to extract table information from DOM
+const getTableInfoFromDOM = (table) => {
+  // Get columns from table header
+  const headerCells = table.querySelectorAll("thead th");
+  const columnCount = headerCells.length;
+
+  // Get border width from computed styles
+  const computedStyle = window.getComputedStyle(table);
+  const borderWidth = parseFloat(computedStyle.borderWidth) || 1;
+  const isBorderCollapse = computedStyle.borderCollapse === "collapse";
+
+  // Get table data from DOM
+  const dataRows = table.querySelectorAll("tbody tr");
+  const rowCount = dataRows.length;
+
+  return {
+    columnCount,
+    rowCount,
+    borderWidth,
+    isBorderCollapse,
+  };
+};
+
 const findContiguousRectangle = (
   startCellId,
   cellPositions,
   processedCells,
+  table,
 ) => {
   const startPos = cellPositions.get(startCellId);
   if (!startPos) return null;
+
+  // Get table structure from DOM
+  const tableInfo = getTableInfoFromDOM(table);
 
   // Build a grid map of all selected cells by their row/column coordinates
   const gridMap = new Map();
   cellPositions.forEach((pos, cellId) => {
     if (!processedCells.has(cellId)) {
-      const key = `${pos.row}-${pos.column}`;
-      gridMap.set(key, { cellId, pos });
+      gridMap.set(cellId, { cellId, pos });
     }
   });
 
@@ -136,10 +195,10 @@ const findContiguousRectangle = (
 
     // Check all 4 adjacent positions (up, down, left, right)
     const adjacentPositions = [
-      `${parseInt(currentPos.row) - 1}-${currentPos.column}`, // up
-      `${parseInt(currentPos.row) + 1}-${currentPos.column}`, // down
-      `${currentPos.row}-${getAdjacentColumn(currentPos.column, -1)}`, // left
-      `${currentPos.row}-${getAdjacentColumn(currentPos.column, 1)}`, // right
+      `${currentPos.column}:${currentPos.row - 1}`, // up
+      `${currentPos.column}:${currentPos.row + 1}`, // down
+      `${currentPos.column - 1}:${currentPos.row}`, // left
+      `${currentPos.column + 1}:${currentPos.row}`, // right
     ];
 
     adjacentPositions.forEach((adjKey) => {
@@ -171,48 +230,42 @@ const findContiguousRectangle = (
   });
 
   // Adjust for border collapse - we need to account for shared borders
-  // In a collapsed border table, adjacent cells share borders
-  const borderWidth = 1; // Based on CSS: border: 1px solid #e0e0e0
+  const borderWidth = tableInfo.borderWidth;
+  const isBorderCollapse = tableInfo.isBorderCollapse;
 
-  // Calculate border adjustments
-  // For left/top borders: only adjust if we're not at the table edge
-  // For right/bottom borders: always adjust inward to follow collapsed borders
+  if (isBorderCollapse) {
+    // Check if selection touches table edges
+    const tableEdges = getTableEdges(connectedCells, cellPositions, tableInfo);
 
-  // Check if selection touches table edges
-  const tableEdges = getTableEdges(connectedCells, cellPositions);
+    const adjustedRect = {
+      left: minLeft + (tableEdges.left ? 0 : borderWidth / 2),
+      top: minTop + (tableEdges.top ? 0 : borderWidth / 2),
+      width:
+        maxRight -
+        minLeft -
+        (tableEdges.left ? borderWidth / 2 : borderWidth) -
+        (tableEdges.right ? borderWidth / 2 : borderWidth),
+      height:
+        maxBottom -
+        minTop -
+        (tableEdges.top ? borderWidth / 2 : borderWidth) -
+        (tableEdges.bottom ? borderWidth / 2 : borderWidth),
+    };
 
-  const adjustedRect = {
-    left: minLeft + (tableEdges.left ? 0 : borderWidth / 2),
-    top: minTop + (tableEdges.top ? 0 : borderWidth / 2),
-    width:
-      maxRight -
-      minLeft -
-      (tableEdges.left ? borderWidth / 2 : borderWidth) -
-      (tableEdges.right ? borderWidth / 2 : borderWidth),
-    height:
-      maxBottom -
-      minTop -
-      (tableEdges.top ? borderWidth / 2 : borderWidth) -
-      (tableEdges.bottom ? borderWidth / 2 : borderWidth),
-  };
-
-  return adjustedRect;
-};
-
-// Helper function to get adjacent column name
-const getAdjacentColumn = (columnName, offset) => {
-  const columnIndex = columns.findIndex(
-    (col) => col.accessorKey === columnName,
-  );
-  const newIndex = columnIndex + offset;
-  if (newIndex >= 0 && newIndex < columns.length) {
-    return columns[newIndex].accessorKey;
+    return adjustedRect;
   }
-  return null;
+
+  // For non-collapsed borders, use the raw rectangle
+  return {
+    left: minLeft,
+    top: minTop,
+    width: maxRight - minLeft,
+    height: maxBottom - minTop,
+  };
 };
 
 // Helper function to determine if selection touches table edges
-const getTableEdges = (connectedCells, cellPositions) => {
+const getTableEdges = (connectedCells, cellPositions, tableInfo) => {
   let minRow = Infinity;
   let maxRow = -Infinity;
   let minCol = Infinity;
@@ -221,24 +274,18 @@ const getTableEdges = (connectedCells, cellPositions) => {
   connectedCells.forEach((cellId) => {
     const pos = cellPositions.get(cellId);
     if (pos) {
-      const rowNum = parseInt(pos.row);
-      const colIndex = columns.findIndex(
-        (col) => col.accessorKey === pos.column,
-      );
-
-      minRow = Math.min(minRow, rowNum);
-      maxRow = Math.max(maxRow, rowNum);
-      minCol = Math.min(minCol, colIndex);
-      maxCol = Math.max(maxCol, colIndex);
+      minRow = Math.min(minRow, pos.row);
+      maxRow = Math.max(maxRow, pos.row);
+      minCol = Math.min(minCol, pos.column);
+      maxCol = Math.max(maxCol, pos.column);
     }
   });
 
   // Determine table boundaries
-  const allRowIds = sampleData.map((row) => parseInt(row.id));
-  const tableMinRow = Math.min(...allRowIds);
-  const tableMaxRow = Math.max(...allRowIds);
+  const tableMinRow = 0;
+  const tableMaxRow = tableInfo.rowCount - 1;
   const tableMinCol = 0;
-  const tableMaxCol = columns.length - 1;
+  const tableMaxCol = tableInfo.columnCount - 1;
 
   return {
     top: minRow <= tableMinRow,
