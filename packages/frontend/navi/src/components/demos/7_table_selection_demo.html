@@ -134,10 +134,9 @@
       import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
-        // eslint-disable-next-line no-unused-vars
-        SelectionProvider,
-        useSelectionContext,
+        useSelection,
         useRegisterSelectableElement,
+        useSelectionProvider,
       } from "@jsenv/navi";
 
       // Sample data
@@ -220,8 +219,8 @@
       // eslint-disable-next-line no-unused-vars
       const DatabaseTableCell = ({ columnName, row, value, columnIndex }) => {
         const cellId = `${columnName}:${row.id}`;
-        const selectionContext = useSelectionContext();
-        const isSelected = selectionContext.isValueSelected(cellId);
+        const selection = useSelection();
+        const isSelected = selection.isValueSelected(cellId);
 
         // Register this cell with its coordinates (x = columnIndex, y = row.index - 1)
         const cellRef = useRef();
@@ -309,14 +308,17 @@
           });
         };
 
+        // eslint-disable-next-line no-unused-vars
+        const SelectionProvider = useSelectionProvider({
+          layout: "grid",
+          value: cellSelectionSignal.value,
+          onChange: (value) => {
+            cellSelectionSignal.value = value;
+          },
+        });
+
         return (
-          <SelectionProvider
-            layout="grid"
-            value={cellSelectionSignal.value}
-            onChange={(value) => {
-              cellSelectionSignal.value = value;
-            }}
-          >
+          <SelectionProvider>
             <div className="demo-container">
               <h1>Table Cell Selection Demo - Preact</h1>
               <p>

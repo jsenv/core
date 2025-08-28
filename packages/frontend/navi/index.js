@@ -46,11 +46,9 @@ export { Select } from "./src/components/input/select.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
 export {
-  SelectionProvider,
-  clickToSelect,
-  keydownToSelect,
   useRegisterSelectableElement,
-  useSelectionContext,
+  useSelection,
+  useSelectionProvider,
 } from "./src/components/selection/selection.js";
 export { Table } from "./src/components/table/table.jsx";
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";

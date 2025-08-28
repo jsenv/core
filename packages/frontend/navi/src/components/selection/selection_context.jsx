@@ -17,57 +17,48 @@ const debug = (category, ...args) => {
 };
 
 const SelectionContext = createContext(null);
-
-// Helper function to extract value from an element
-const getElementValue = (element) => {
-  let value;
-  if (element.value !== undefined) {
-    value = element.value;
-  } else if (element.hasAttribute("data-value")) {
-    value = element.getAttribute("data-value");
-  } else {
-    value = element;
-  }
-  debug("valueExtraction", "getElementValue:", element, "->", value);
-  return value;
-};
-
-export const SelectionProvider = ({
-  selectedValues = [],
-  onChange,
-  layout = "vertical",
-  children,
-}) => {
-  if (layout === "grid") {
-    return (
-      <GridSelectionProvider
-        selectedValues={selectedValues}
-        onChange={onChange}
-      >
-        {children}
-      </GridSelectionProvider>
-    );
-  }
-
+const SelectionProvider = ({ selection, children }) => {
   return (
-    <LinearSelectionProvider
-      selectedValues={selectedValues}
-      onChange={onChange}
-      axis={layout}
-    >
+    <SelectionContext.Provider value={selection}>
       {children}
-    </LinearSelectionProvider>
+    </SelectionContext.Provider>
   );
 };
+export const useSelectionProvider = ({ layout, value, onChange }) => {
+  if (layout === "grid") {
+    return useGridSelection({ value, onChange });
+  }
+  return useLinearSelection({ value, onChange, axis: layout });
+};
 // Grid Selection Provider - for 2D layouts like tables
-const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
-  const selection = selectedValues || [];
+const useGridSelection = ({ value = [], onChange }) => {
+  const values = value;
   const registryRef = useRef(new Set()); // Set<element>
   const anchorRef = useRef(null);
 
-  const contextValue = {
-    selection,
-    layout: "grid",
+  const getElementPosition = (element) => {
+    // Get position by checking element's position in table structure
+    const cell = element.closest("td, th");
+    if (!cell) return null;
+
+    const row = cell.closest("tr");
+    if (!row) return null;
+
+    const table = row.closest("table");
+    if (!table) return null;
+
+    const rows = Array.from(table.rows);
+    const cells = Array.from(row.cells);
+
+    return {
+      x: cells.indexOf(cell),
+      y: rows.indexOf(row),
+    };
+  };
+
+  const gridSelection = {
+    type: "grid",
+    values,
 
     registerElement: (element) => {
       const registry = registryRef.current;
@@ -114,38 +105,19 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
     },
     isElementSelected: (element) => {
       const value = getElementValue(element);
-      const isSelected = selection.includes(value);
+      const isSelected = values.includes(value);
       return isSelected;
     },
     isValueSelected: (value) => {
-      const isSelected = selection.includes(value);
+      const isSelected = values.includes(value);
       return isSelected;
     },
     getAllElements: () => {
       return Array.from(registryRef.current);
     },
-    getElementPosition: (element) => {
-      // Get position by checking element's position in table structure
-      const cell = element.closest("td, th");
-      if (!cell) return null;
-
-      const row = cell.closest("tr");
-      if (!row) return null;
-
-      const table = row.closest("table");
-      if (!table) return null;
-
-      const rows = Array.from(table.rows);
-      const cells = Array.from(row.cells);
-
-      return {
-        x: cells.indexOf(cell),
-        y: rows.indexOf(row),
-      };
-    },
     getElementRange: (fromElement, toElement) => {
-      const fromPos = contextValue.getElementPosition(fromElement);
-      const toPos = contextValue.getElementPosition(toElement);
+      const fromPos = getElementPosition(fromElement);
+      const toPos = getElementPosition(toElement);
 
       if (!fromPos || !toPos) {
         return [];
@@ -162,7 +134,7 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
       // Find all registered elements within the rectangular area
       const valuesInRange = [];
       for (const element of registryRef.current) {
-        const pos = contextValue.getElementPosition(element);
+        const pos = getElementPosition(element);
         if (
           pos &&
           pos.x >= minX &&
@@ -179,15 +151,17 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
 
     // Navigation methods for grid
     getElementAfter: (element) => {
-      const currentPos = contextValue.getElementPosition(element);
-      if (!currentPos) return null;
+      const currentPos = getElementPosition(element);
+      if (!currentPos) {
+        return null;
+      }
 
       const { x, y } = currentPos;
       const nextX = x + 1;
 
       // Find element at next position in same row
       for (const candidateElement of registryRef.current) {
-        const pos = contextValue.getElementPosition(candidateElement);
+        const pos = getElementPosition(candidateElement);
         if (pos && pos.x === nextX && pos.y === y) {
           return candidateElement;
         }
@@ -195,15 +169,17 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
       return null;
     },
     getElementBefore: (element) => {
-      const currentPos = contextValue.getElementPosition(element);
-      if (!currentPos) return null;
+      const currentPos = getElementPosition(element);
+      if (!currentPos) {
+        return null;
+      }
 
       const { x, y } = currentPos;
       const prevX = x - 1;
 
       // Find element at previous position in same row
       for (const candidateElement of registryRef.current) {
-        const pos = contextValue.getElementPosition(candidateElement);
+        const pos = getElementPosition(candidateElement);
         if (pos && pos.x === prevX && pos.y === y) {
           return candidateElement;
         }
@@ -211,15 +187,17 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
       return null;
     },
     getElementBelow: (element) => {
-      const currentPos = contextValue.getElementPosition(element);
-      if (!currentPos) return null;
+      const currentPos = getElementPosition(element);
+      if (!currentPos) {
+        return null;
+      }
 
       const { x, y } = currentPos;
       const nextY = y + 1;
 
       // Find element at next position in same column
       for (const candidateElement of registryRef.current) {
-        const pos = contextValue.getElementPosition(candidateElement);
+        const pos = getElementPosition(candidateElement);
         if (pos && pos.x === x && pos.y === nextY) {
           return candidateElement;
         }
@@ -227,15 +205,17 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
       return null;
     },
     getElementAbove: (element) => {
-      const currentPos = contextValue.getElementPosition(element);
-      if (!currentPos) return null;
+      const currentPos = getElementPosition(element);
+      if (!currentPos) {
+        return null;
+      }
 
       const { x, y } = currentPos;
       const prevY = y - 1;
 
       // Find element at previous position in same column
       for (const candidateElement of registryRef.current) {
-        const pos = contextValue.getElementPosition(candidateElement);
+        const pos = getElementPosition(candidateElement);
         if (pos && pos.x === x && pos.y === prevY) {
           return candidateElement;
         }
@@ -250,11 +230,11 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
         "Grid setSelection called with:",
         newSelection,
         "current selection:",
-        selection,
+        values,
       );
       if (
-        newSelection.length === selection.length &&
-        newSelection.every((value, index) => value === selection[index])
+        newSelection.length === values.length &&
+        newSelection.every((value, index) => value === values[index])
       ) {
         debug("selection", "Grid setSelection: no change, returning early");
         return;
@@ -299,9 +279,9 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
         "Grid addToSelection called with:",
         arrayOfValuesToAdd,
         "current selection:",
-        selection,
+        values,
       );
-      const selectionWithValues = [...selection];
+      const selectionWithValues = [...values];
       let modified = false;
       let lastAddedElement = null;
 
@@ -348,7 +328,7 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
       let modified = false;
       const selectionWithoutValues = [];
 
-      for (const value of selection) {
+      for (const value of values) {
         if (arrayOfValuesToRemove.includes(value)) {
           modified = true;
           // Check if we're removing the anchor element
@@ -369,50 +349,46 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
     },
     toggleElement: (element, event = null) => {
       const value = getElementValue(element);
-      if (selection.includes(value)) {
-        contextValue.removeFromSelection([value], event);
+      if (values.includes(value)) {
+        gridSelection.removeFromSelection([value], event);
       } else {
-        contextValue.addToSelection([value], event);
+        gridSelection.addToSelection([value], event);
       }
     },
     selectFromAnchorTo: (element, event = null) => {
       const anchorElement = anchorRef.current;
 
-      if (anchorElement && selection.includes(getElementValue(anchorElement))) {
-        const range = contextValue.getElementRange(anchorElement, element);
-        contextValue.setSelection(range, event);
+      if (anchorElement && values.includes(getElementValue(anchorElement))) {
+        const range = gridSelection.getElementRange(anchorElement, element);
+        gridSelection.setSelection(range, event);
       } else {
-        contextValue.setSelection([getElementValue(element)], event);
+        gridSelection.setSelection([getElementValue(element)], event);
       }
     },
   };
 
-  return (
-    <SelectionContext.Provider value={contextValue}>
-      {children}
-    </SelectionContext.Provider>
-  );
+  return gridSelection;
 };
 // Linear Selection Provider - for 1D layouts like lists
-const LinearSelectionProvider = ({
-  selectedValues = [],
+const useLinearSelection = ({
+  value = [],
   onChange,
   axis = "vertical", // "horizontal" or "vertical"
-  children,
 }) => {
-  const selection = selectedValues || [];
+  const values = value;
   const registryRef = useRef(new Set()); // Set<element>
   const anchorRef = useRef(null);
 
   if (!["horizontal", "vertical"].includes(axis)) {
     throw new Error(
-      `LinearSelectionProvider: Invalid axis "${axis}". Must be "horizontal" or "vertical".`,
+      `useLinearSelection: Invalid axis "${axis}". Must be "horizontal" or "vertical".`,
     );
   }
 
-  const contextValue = {
-    selection,
-    layout: axis,
+  const linearSelection = {
+    type: "linear",
+    axis,
+    values,
 
     registerElement: (element) => {
       const registry = registryRef.current;
@@ -459,18 +435,15 @@ const LinearSelectionProvider = ({
     },
     isElementSelected: (element) => {
       const value = getElementValue(element);
-      const isSelected = selection.includes(value);
+      const isSelected = values.includes(value);
       return isSelected;
     },
     isValueSelected: (value) => {
-      const isSelected = selection.includes(value);
+      const isSelected = values.includes(value);
       return isSelected;
     },
     getAllElements: () => {
       return Array.from(registryRef.current);
-    },
-    getElementPosition: (element) => {
-      return registryRef.current.has(element) ? element : null;
     },
     getElementRange: (fromElement, toElement) => {
       const registry = registryRef.current;
@@ -524,7 +497,9 @@ const LinearSelectionProvider = ({
     // Navigation methods for linear layout using DOM order
     getElementAfter: (element) => {
       const registry = registryRef.current;
-      if (!registry.has(element)) return null;
+      if (!registry.has(element)) {
+        return null;
+      }
 
       let nextElement = null;
 
@@ -552,13 +527,17 @@ const LinearSelectionProvider = ({
     },
     getElementBefore: (element) => {
       const registry = registryRef.current;
-      if (!registry.has(element)) return null;
+      if (!registry.has(element)) {
+        return null;
+      }
 
       let prevElement = null;
 
       // Find the element that comes immediately before in DOM order
       for (const candidateElement of registry) {
-        if (candidateElement === element) continue;
+        if (candidateElement === element) {
+          continue;
+        }
 
         // Check if this element comes before current
         if (
@@ -579,19 +558,21 @@ const LinearSelectionProvider = ({
       return prevElement;
     },
     getElementBelow: (element) => {
-      return axis === "vertical" ? contextValue.getElementAfter(element) : null;
+      return axis === "vertical"
+        ? linearSelection.getElementAfter(element)
+        : null;
     },
     getElementAbove: (element) => {
       return axis === "vertical"
-        ? contextValue.getElementBefore(element)
+        ? linearSelection.getElementBefore(element)
         : null;
     },
 
     // Selection manipulation methods
     setSelection: (newSelection, event = null) => {
       if (
-        newSelection.length === selection.length &&
-        newSelection.every((value, index) => value === selection[index])
+        newSelection.length === values.length &&
+        newSelection.every((value, index) => value === values[index])
       ) {
         return;
       }
@@ -608,7 +589,7 @@ const LinearSelectionProvider = ({
       onChange?.(newSelection, event);
     },
     addToSelection: (arrayOfValuesToAdd, event = null) => {
-      const selectionWithValues = [...selection];
+      const selectionWithValues = [...values];
       let modified = false;
       let lastAddedElement = null;
 
@@ -637,7 +618,7 @@ const LinearSelectionProvider = ({
       let modified = false;
       const selectionWithoutValues = [];
 
-      for (const value of selection) {
+      for (const value of values) {
         if (arrayOfValuesToRemove.includes(value)) {
           modified = true;
           // Check if we're removing the anchor element
@@ -658,40 +639,49 @@ const LinearSelectionProvider = ({
     },
     toggleElement: (element, event = null) => {
       const value = getElementValue(element);
-      if (selection.includes(value)) {
-        contextValue.removeFromSelection([value], event);
+      if (values.includes(value)) {
+        linearSelection.removeFromSelection([value], event);
       } else {
-        contextValue.addToSelection([value], event);
+        linearSelection.addToSelection([value], event);
       }
     },
     selectFromAnchorTo: (element, event = null) => {
       const anchorElement = anchorRef.current;
 
-      if (anchorElement && selection.includes(getElementValue(anchorElement))) {
-        const range = contextValue.getElementRange(anchorElement, element);
-        contextValue.setSelection(range, event);
+      if (anchorElement && values.includes(getElementValue(anchorElement))) {
+        const range = linearSelection.getElementRange(anchorElement, element);
+        linearSelection.setSelection(range, event);
       } else {
-        contextValue.setSelection([getElementValue(element)], event);
+        linearSelection.setSelection([getElementValue(element)], event);
       }
     },
   };
 
-  return (
-    <SelectionContext.Provider value={contextValue}>
-      {children}
-    </SelectionContext.Provider>
-  );
+  return linearSelection;
+};
+// Helper function to extract value from an element
+const getElementValue = (element) => {
+  let value;
+  if (element.value !== undefined) {
+    value = element.value;
+  } else if (element.hasAttribute("data-value")) {
+    value = element.getAttribute("data-value");
+  } else {
+    value = element;
+  }
+  debug("valueExtraction", "getElementValue:", element, "->", value);
+  return value;
 };
 
-export const useSelectionContext = () => {
+export const useSelection = () => {
   return useContext(SelectionContext);
 };
 
 export const useRegisterSelectableElement = (elementRef) => {
-  const selectionContext = useSelectionContext();
+  const selection = useSelection();
 
   useLayoutEffect(() => {
-    if (selectionContext && elementRef.current) {
+    if (selection && elementRef.current) {
       const element = elementRef.current;
       const value = getElementValue(element);
       debug(
@@ -701,7 +691,7 @@ export const useRegisterSelectableElement = (elementRef) => {
         "value:",
         value,
       );
-      selectionContext.registerElement(element);
+      selection.registerElement(element);
       return () => {
         debug(
           "registration",
@@ -710,23 +700,22 @@ export const useRegisterSelectableElement = (elementRef) => {
           "value:",
           value,
         );
-        selectionContext.unregisterElement(element);
+        selection.unregisterElement(element);
       };
     }
     return undefined;
-  }, [selectionContext]);
+  }, [selection]);
 
   return {
     clickToSelect: (e) => {
-      clickToSelect(e, { selectionContext, element: elementRef.current });
+      clickToSelect(e, { selection, element: elementRef.current });
     },
     keydownToSelect: (e) => {
-      keydownToSelect(e, { selectionContext, element: elementRef.current });
+      keydownToSelect(e, { selection, element: elementRef.current });
     },
   };
 };
-
-export const clickToSelect = (clickEvent, { selectionContext, element }) => {
+const clickToSelect = (clickEvent, { selection, element }) => {
   if (clickEvent.defaultPrevented) {
     // If the click was prevented by another handler, do not interfere
     debug("interaction", "clickToSelect: event already prevented, skipping");
@@ -744,7 +733,7 @@ export const clickToSelect = (clickEvent, { selectionContext, element }) => {
     isMultiSelect,
     isShiftSelect,
     isSingleSelect,
-    currentSelection: selectionContext.selection,
+    currentSelection: selection,
   });
 
   if (isSingleSelect) {
@@ -754,14 +743,14 @@ export const clickToSelect = (clickEvent, { selectionContext, element }) => {
       "clickToSelect: single select, setting selection to:",
       [value],
     );
-    selectionContext.setSelection([value], clickEvent);
+    selection.setSelection([value], clickEvent);
     return;
   }
   if (isMultiSelect) {
     // here no need to prevent nav on <a> but it means cmd + click will both multi select
     // and open in a new tab
     debug("interaction", "clickToSelect: multi select, toggling element");
-    selectionContext.toggleElement(element, clickEvent);
+    selection.toggleElement(element, clickEvent);
     return;
   }
   if (isShiftSelect) {
@@ -770,15 +759,11 @@ export const clickToSelect = (clickEvent, { selectionContext, element }) => {
       "interaction",
       "clickToSelect: shift select, selecting from anchor to element",
     );
-    selectionContext.selectFromAnchorTo(element, clickEvent);
+    selection.selectFromAnchorTo(element, clickEvent);
     return;
   }
 };
-
-export const keydownToSelect = (
-  keydownEvent,
-  { selectionContext, element },
-) => {
+const keydownToSelect = (keydownEvent, { selection, element }) => {
   if (!canInterceptKeys(keydownEvent)) {
     debug("interaction", "keydownToSelect: cannot intercept keys, skipping");
     return;
@@ -789,13 +774,13 @@ export const keydownToSelect = (
     key: keydownEvent.key,
     element,
     value,
-    currentSelection: selectionContext.selection,
-    layout: selectionContext.layout,
+    currentSelection: selection,
+    type: selection.type,
   });
 
   if (keydownEvent.key === "Shift") {
     debug("interaction", "keydownToSelect: Shift key, setting anchor element");
-    selectionContext.setAnchorElement(element);
+    selection.setAnchorElement(element);
     return;
   }
 
@@ -812,25 +797,25 @@ export const keydownToSelect = (
       return;
     }
     keydownEvent.preventDefault(); // prevent default select all text behavior
-    const allValues = selectionContext.getAllElements().map(getElementValue);
+    const allValues = selection.getAllElements().map(getElementValue);
     debug(
       "interaction",
       "keydownToSelect: Select All - setting selection to all values:",
       allValues,
     );
-    selectionContext.setSelection(allValues, keydownEvent);
+    selection.setSelection(allValues, keydownEvent);
     return;
   }
 
   if (key === "ArrowDown") {
-    if (selectionContext.layout === "horizontal") {
+    if (selection.axis === "horizontal") {
       debug(
         "navigation",
         "keydownToSelect: ArrowDown in horizontal layout, skipping",
       );
       return; // No down navigation in horizontal layout
     }
-    const nextElement = selectionContext.getElementBelow(element);
+    const nextElement = selection.getElementBelow(element);
     if (!nextElement) {
       debug("navigation", "keydownToSelect: ArrowDown - no next element found");
       return; // No next element to select
@@ -849,7 +834,7 @@ export const keydownToSelect = (
         "interaction",
         "keydownToSelect: ArrowDown with Shift - selecting from anchor to next element",
       );
-      selectionContext.selectFromAnchorTo(nextElement, keydownEvent);
+      selection.selectFromAnchorTo(nextElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
@@ -857,92 +842,83 @@ export const keydownToSelect = (
         "interaction",
         "keydownToSelect: ArrowDown with multi-select - adding to selection",
       );
-      selectionContext.addToSelection([nextValue], keydownEvent);
+      selection.addToSelection([nextValue], keydownEvent);
       return;
     }
     debug(
       "interaction",
       "keydownToSelect: ArrowDown - setting selection to next element",
     );
-    selectionContext.setSelection([nextValue], keydownEvent);
+    selection.setSelection([nextValue], keydownEvent);
     return;
   }
 
   if (key === "ArrowUp") {
-    if (selectionContext.layout === "horizontal") {
+    if (selection.axis === "horizontal") {
       return; // No up navigation in horizontal layout
     }
-    const previousElement = selectionContext.getElementAbove(element);
+    const previousElement = selection.getElementAbove(element);
     if (!previousElement) {
       return; // No previous element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.selectFromAnchorTo(previousElement, keydownEvent);
+      selection.selectFromAnchorTo(previousElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selectionContext.addToSelection(
+      selection.addToSelection(
         [getElementValue(previousElement)],
         keydownEvent,
       );
       return;
     }
-    selectionContext.setSelection(
-      [getElementValue(previousElement)],
-      keydownEvent,
-    );
+    selection.setSelection([getElementValue(previousElement)], keydownEvent);
     return;
   }
 
   if (key === "ArrowLeft") {
-    if (selectionContext.layout === "vertical") {
+    if (selection.axis === "vertical") {
       return; // No left navigation in vertical layout
     }
-    const previousElement = selectionContext.getElementBefore(element);
+    const previousElement = selection.getElementBefore(element);
     if (!previousElement) {
       return; // No previous element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.selectFromAnchorTo(previousElement, keydownEvent);
+      selection.selectFromAnchorTo(previousElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selectionContext.addToSelection(
+      selection.addToSelection(
         [getElementValue(previousElement)],
         keydownEvent,
       );
       return;
     }
-    selectionContext.setSelection(
-      [getElementValue(previousElement)],
-      keydownEvent,
-    );
+    selection.setSelection([getElementValue(previousElement)], keydownEvent);
     return;
   }
 
   if (key === "ArrowRight") {
-    if (selectionContext.layout === "vertical") {
+    if (selection.axis === "vertical") {
       return; // No right navigation in vertical layout
     }
-    const nextElement = selectionContext.getElementAfter(element);
+    const nextElement = selection.getElementAfter(element);
     if (!nextElement) {
       return; // No next element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selectionContext.selectFromAnchorTo(nextElement, keydownEvent);
+      selection.selectFromAnchorTo(nextElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selectionContext.addToSelection(
-        [getElementValue(nextElement)],
-        keydownEvent,
-      );
+      selection.addToSelection([getElementValue(nextElement)], keydownEvent);
       return;
     }
-    selectionContext.setSelection([getElementValue(nextElement)], keydownEvent);
+    selection.setSelection([getElementValue(nextElement)], keydownEvent);
     return;
   }
 };
