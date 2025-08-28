@@ -15,185 +15,122 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
+  /* Common pseudo-element properties for all border combinations */
+  [data-selection-border-top]::before,
+  [data-selection-border-right]::before,
+  [data-selection-border-bottom]::before,
+  [data-selection-border-left]::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
   /* Single border cases */
   [data-selection-border-top]:not([data-selection-border-right]):not(
       [data-selection-border-bottom]
     ):not([data-selection-border-left])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-top: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-right]:not([data-selection-border-top]):not(
       [data-selection-border-bottom]
     ):not([data-selection-border-left])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-right: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-bottom]:not([data-selection-border-top]):not(
       [data-selection-border-right]
     ):not([data-selection-border-left])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-bottom: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-left]:not([data-selection-border-top]):not(
       [data-selection-border-right]
     ):not([data-selection-border-bottom])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-left: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   /* Two border combinations */
   [data-selection-border-top][data-selection-border-right]:not(
       [data-selection-border-bottom]
     ):not([data-selection-border-left])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-top: 2px solid var(--selection-border-color);
     border-right: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-top][data-selection-border-bottom]:not(
       [data-selection-border-right]
     ):not([data-selection-border-left])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-top: 2px solid var(--selection-border-color);
     border-bottom: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-top][data-selection-border-left]:not(
       [data-selection-border-right]
     ):not([data-selection-border-bottom])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-top: 2px solid var(--selection-border-color);
     border-left: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-right][data-selection-border-bottom]:not(
       [data-selection-border-top]
     ):not([data-selection-border-left])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-right: 2px solid var(--selection-border-color);
     border-bottom: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-right][data-selection-border-left]:not(
       [data-selection-border-top]
     ):not([data-selection-border-bottom])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-right: 2px solid var(--selection-border-color);
     border-left: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-bottom][data-selection-border-left]:not(
       [data-selection-border-top]
     ):not([data-selection-border-right])::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-bottom: 2px solid var(--selection-border-color);
     border-left: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   /* Three border combinations */
   [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]:not(
       [data-selection-border-left]
     )::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-top: 2px solid var(--selection-border-color);
     border-right: 2px solid var(--selection-border-color);
     border-bottom: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-top][data-selection-border-right][data-selection-border-left]:not(
       [data-selection-border-bottom]
     )::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-top: 2px solid var(--selection-border-color);
     border-right: 2px solid var(--selection-border-color);
     border-left: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]:not(
       [data-selection-border-right]
     )::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-top: 2px solid var(--selection-border-color);
     border-bottom: 2px solid var(--selection-border-color);
     border-left: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]:not(
       [data-selection-border-top]
     )::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border-right: 2px solid var(--selection-border-color);
     border-bottom: 2px solid var(--selection-border-color);
     border-left: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   /* Four border combination (full border) */
   [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
     border: 2px solid var(--selection-border-color);
-    pointer-events: none;
-    z-index: 1;
   }
 
   /* Hide borders during drag selection */
