@@ -53,6 +53,17 @@
         background-color: rgba(0, 120, 212, 0.08);
       }
 
+      /* Row selection styling */
+      .database_table tr[aria-selected="true"] {
+        background-color: rgba(0, 120, 212, 0.15);
+      }
+
+      .database_table tr[aria-selected="true"] .number-column {
+        background-color: #0078d4;
+        color: white;
+        font-weight: bold;
+      }
+
       td[data-row-contains-selected] {
         font-weight: bold;
       }
@@ -199,16 +210,28 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const NumberColumnCell = ({ row, rowWithSomeSelectedCell }) => {
+      const NumberColumnCell = ({
+        row,
+        onRowClick,
+        rowWithSomeSelectedCell,
+      }) => {
         const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(
           row.id,
         );
+        const handleClick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onRowClick(row.id);
+        };
+
         return (
           <td
             className="database_table_cell number-column"
             data-row-contains-selected={
               rowContainsSelectedCell ? "" : undefined
             }
+            onClick={handleClick}
+            style={{ cursor: "pointer" }}
           >
             {row.index}
           </td>
@@ -257,14 +280,31 @@
       // eslint-disable-next-line no-unused-vars
       const TableDemo = () => {
         const tableRef = useRef(null);
-        const cellSelectionSignal = useSignal([]);
-        const cellSelection = cellSelectionSignal.value;
-        const selectionLength = cellSelection.length;
+        const selectionSignal = useSignal([]);
+        const selection = selectionSignal.value;
 
-        // Compute which rows and columns have selected cells
+        // Detect if we have row selections by checking for values that start with "row:"
+        const rowSelections = selection.filter(
+          (value) => typeof value === "string" && value.startsWith("row:"),
+        );
+        const cellSelections = selection.filter(
+          (value) =>
+            typeof value === "string" &&
+            value.includes(":") &&
+            !value.startsWith("row:"),
+        );
+        const hasRowSelections = rowSelections.length > 0;
+        const hasCellSelections = cellSelections.length > 0;
+
+        // Extract selected row IDs
+        const selectedRowIds = rowSelections.map((value) =>
+          value.replace("row:", ""),
+        );
+
+        // Compute which rows and columns have selected cells (for cell mode)
         const rowWithSomeSelectedCell = [];
         const columnWithSomeSelectedCell = [];
-        for (const cellId of cellSelection) {
+        for (const cellId of cellSelections) {
           // Parse cellId to extract row and column information
           // cellId format: "columnName:rowId"
           const [columnName, rowId] = cellId.split(":");
@@ -276,35 +316,57 @@
           }
         }
 
+        // Row selection handler
+        const handleRowClick = (rowId) => {
+          console.log("Row clicked:", rowId);
+
+          // Use "row:" prefix to distinguish row selections from cell selections
+          const rowValue = `row:${rowId}`;
+
+          // Clear all selections and select only this row
+          selectionSignal.value = [rowValue];
+        };
+
         const clearSelection = () => {
-          cellSelectionSignal.value = [];
+          selectionSignal.value = [];
         };
 
         const selectAll = () => {
-          const allCellIds = [];
-          sampleData.forEach((row) => {
-            columns.forEach((col) => {
-              allCellIds.push(`${col.accessorKey}:${row.id}`);
+          if (hasRowSelections) {
+            // Select all rows
+            const allRowIds = sampleData.map((row) => `row:${row.id}`);
+            selectionSignal.value = allRowIds;
+          } else {
+            // Select all cells
+            const allCellIds = [];
+            sampleData.forEach((row) => {
+              columns.forEach((col) => {
+                allCellIds.push(`${col.accessorKey}:${row.id}`);
+              });
             });
-          });
-          cellSelectionSignal.value = allCellIds;
+            selectionSignal.value = allCellIds;
+          }
         };
 
         const logState = () => {
           console.log("Current state:", {
-            selection: cellSelectionSignal.value,
+            selection,
+            hasRowSelections,
+            hasCellSelections,
+            selectedRowIds,
             rowWithSomeSelectedCell,
             columnWithSomeSelectedCell,
             activeElement: document.activeElement?.textContent?.trim(),
           });
         };
 
+        // Single selection provider that handles both cells and rows
         // eslint-disable-next-line no-unused-vars
         const SelectionProvider = useSelectionProvider({
           layout: "grid",
-          value: cellSelectionSignal.value,
+          value: selection,
           onChange: (value) => {
-            cellSelectionSignal.value = value;
+            selectionSignal.value = value;
           },
         });
 
@@ -317,6 +379,8 @@
               <p>
                 Click cells to select/deselect. Use Cmd/Ctrl+click for
                 multi-select. Use Tab and arrow keys to navigate.
+                <br />
+                <strong>Click the # column to select entire rows.</strong>
               </p>
 
               <div className="table-container">
@@ -324,7 +388,7 @@
                   ref={tableRef}
                   className="database_table"
                   aria-multiselectable="true"
-                  data-multiselection={selectionLength > 1 ? "" : undefined}
+                  data-multiselection={selection.length > 1 ? "" : undefined}
                 >
                   <thead>
                     <tr>
@@ -342,23 +406,31 @@
                     </tr>
                   </thead>
                   <tbody>
-                    {sampleData.map((row) => (
-                      <tr key={row.id} data-row-id={row.id}>
-                        <NumberColumnCell
-                          row={row}
-                          rowWithSomeSelectedCell={rowWithSomeSelectedCell}
-                        />
-                        {columns.map((col, colIndex) => (
-                          <DatabaseTableCell
-                            key={`${row.id}-${col.id}`}
-                            columnName={col.accessorKey}
-                            columnIndex={colIndex + 1} // +1 because number column is first
+                    {sampleData.map((row) => {
+                      const isRowSelected = selectedRowIds.includes(row.id);
+                      return (
+                        <tr
+                          key={row.id}
+                          data-row-id={row.id}
+                          aria-selected={isRowSelected}
+                        >
+                          <NumberColumnCell
                             row={row}
-                            value={row[col.accessorKey]}
+                            rowWithSomeSelectedCell={rowWithSomeSelectedCell}
+                            onRowClick={handleRowClick}
                           />
-                        ))}
-                      </tr>
-                    ))}
+                          {columns.map((col, colIndex) => (
+                            <DatabaseTableCell
+                              key={`${row.id}-${col.id}`}
+                              columnName={col.accessorKey}
+                              columnIndex={colIndex + 1} // +1 because number column is first
+                              row={row}
+                              value={row[col.accessorKey]}
+                            />
+                          ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 <TableSelectionBorders tableRef={tableRef} />
@@ -366,21 +438,31 @@
 
               <div className="status">
                 <div>
-                  Selected cells:
-                  <span>{JSON.stringify(cellSelectionSignal.value)}</span>
+                  Selection: <span>{JSON.stringify(selection)}</span>
                 </div>
                 <div>
-                  Selected cell count:
-                  <span>{selectionLength}</span>
+                  Total selection count: <span>{selection.length}</span>
                 </div>
-                <div>
-                  Row with some selected cell:
-                  <span>{rowWithSomeSelectedCell.join(",")}</span>
-                </div>
-                <div>
-                  Column with some selected cell:
-                  <span>{columnWithSomeSelectedCell.join(",")}</span>
-                </div>
+                {hasRowSelections && (
+                  <div>
+                    Selected rows: <span>{selectedRowIds.join(", ")}</span>
+                  </div>
+                )}
+                {hasCellSelections && (
+                  <>
+                    <div>
+                      Selected cells: <span>{cellSelections.join(", ")}</span>
+                    </div>
+                    <div>
+                      Row with some selected cell:
+                      <span>{rowWithSomeSelectedCell.join(",")}</span>
+                    </div>
+                    <div>
+                      Column with some selected cell:
+                      <span>{columnWithSomeSelectedCell.join(",")}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="actions">

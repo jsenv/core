@@ -1,6 +1,8 @@
 /**
  * https://tanstack.com/table/latest/docs/framework/react/examples/basic?panel=code
  *
+ * https://supabase.com/docs/guides/database/overview
+ *
  * - Il faut pouvoir sélectionner plusieurs cellules avec shift etc
  * donc le selection provider machin doit supporter une structure en grille
  *
