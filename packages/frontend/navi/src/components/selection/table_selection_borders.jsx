@@ -243,11 +243,29 @@ const generateRowSelectionPath = (selectedCells) => {
       const topRow = group[0];
       const bottomRow = group[group.length - 1];
 
-      // Find the bounds of all cells in this row group
-      let minLeft = Math.min(...group.map((cell) => cell.left));
-      let maxRight = Math.max(...group.map((cell) => cell.right));
-      let minTop = topRow.top;
-      let maxBottom = bottomRow.bottom;
+      // For row selections, we need to find the bounds of the data cells (excluding first column)
+      // Since row selections only select the first column, we need to calculate where the data cells would be
+      const table = topRow.element.closest("table");
+      if (!table) return "";
+
+      // Find the first data cell (column 1) in the top row to get the left boundary
+      const topRowElement = table.rows[topRow.row];
+      const firstDataCell = topRowElement.cells[1]; // Skip column 0
+      if (!firstDataCell) return "";
+
+      // Find the last data cell in the row to get the right boundary
+      const lastDataCell = topRowElement.cells[topRowElement.cells.length - 1];
+      if (!lastDataCell) return "";
+
+      // Get table bounds for relative positioning
+      const tableRect = table.getBoundingClientRect();
+      const firstDataCellRect = firstDataCell.getBoundingClientRect();
+      const lastDataCellRect = lastDataCell.getBoundingClientRect();
+
+      const minLeft = firstDataCellRect.left - tableRect.left;
+      const maxRight = lastDataCellRect.right - tableRect.left;
+      const minTop = topRow.top;
+      const maxBottom = bottomRow.bottom;
 
       // Create a simple rectangular path
       return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
