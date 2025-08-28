@@ -52,8 +52,7 @@
       .database_table [data-selected-within] {
         background-color: rgba(0, 120, 212, 0.08);
       }
-      .database_table[data-multi-selection]
-        .database_table_cell[data-selected] {
+      .database_table[data-multiselection] .database_table_cell[data-selected] {
         background-color: rgba(0, 120, 212, 0.08);
       }
 
@@ -327,7 +326,8 @@
               <table
                 ref={tableRef}
                 className="database_table"
-                data-multi-selection={selectionLength > 1 ? "" : undefined}
+                aria-multiselectable="true"
+                data-multiselection={selectionLength > 1 ? "" : undefined}
               >
                 <thead>
                   <tr>
