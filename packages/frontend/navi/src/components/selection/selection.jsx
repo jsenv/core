@@ -1422,13 +1422,20 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
         "interaction",
         "keydownToSelect: ArrowDown - cross-type navigation, clearing and setting new selection",
       );
+      selection.setSelection([targetValue], keydownEvent);
+    } else if (isCrossType && !shouldClearPreviousSelection) {
+      debug(
+        "interaction",
+        "keydownToSelect: ArrowDown - cross-type navigation with Cmd, adding to selection",
+      );
+      selection.addToSelection([targetValue], keydownEvent);
     } else {
       debug(
         "interaction",
         "keydownToSelect: ArrowDown - setting selection to target element",
       );
+      selection.setSelection([targetValue], keydownEvent);
     }
-    selection.setSelection([targetValue], keydownEvent);
     return;
   }
 
@@ -1469,7 +1476,15 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       selection.addToSelection([getElementValue(targetElement)], keydownEvent);
       return;
     }
-    selection.setSelection([getElementValue(targetElement)], keydownEvent);
+
+    // Handle cross-type navigation for ArrowUp
+    if (shouldClearPreviousSelection) {
+      selection.setSelection([getElementValue(targetElement)], keydownEvent);
+    } else if (isCrossType && !shouldClearPreviousSelection) {
+      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
+    } else {
+      selection.setSelection([getElementValue(targetElement)], keydownEvent);
+    }
     return;
   }
 
@@ -1510,7 +1525,15 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       selection.addToSelection([getElementValue(targetElement)], keydownEvent);
       return;
     }
-    selection.setSelection([getElementValue(targetElement)], keydownEvent);
+
+    // Handle cross-type navigation for ArrowLeft
+    if (shouldClearPreviousSelection) {
+      selection.setSelection([getElementValue(targetElement)], keydownEvent);
+    } else if (isCrossType && !shouldClearPreviousSelection) {
+      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
+    } else {
+      selection.setSelection([getElementValue(targetElement)], keydownEvent);
+    }
     return;
   }
 
@@ -1551,7 +1574,15 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       selection.addToSelection([getElementValue(targetElement)], keydownEvent);
       return;
     }
-    selection.setSelection([getElementValue(targetElement)], keydownEvent);
+
+    // Handle cross-type navigation for ArrowRight
+    if (shouldClearPreviousSelection) {
+      selection.setSelection([getElementValue(targetElement)], keydownEvent);
+    } else if (isCrossType && !shouldClearPreviousSelection) {
+      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
+    } else {
+      selection.setSelection([getElementValue(targetElement)], keydownEvent);
+    }
     return;
   }
 };
