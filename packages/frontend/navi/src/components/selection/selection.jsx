@@ -893,12 +893,29 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     return;
   }
 
-  const isMultiSelect = keydownEvent.metaKey || keydownEvent.ctrlKey;
+  const isMetaOrCtrlPressed = keydownEvent.metaKey || keydownEvent.ctrlKey;
   const isShiftSelect = keydownEvent.shiftKey;
+  const isMultiSelect = isMetaOrCtrlPressed && isShiftSelect; // Only add to selection when BOTH are pressed
   const { key } = keydownEvent;
 
+  // If only Cmd/Ctrl is pressed (without Shift) for arrow keys, ignore the event
+  if (
+    isMetaOrCtrlPressed &&
+    !isShiftSelect &&
+    (key === "ArrowDown" ||
+      key === "ArrowUp" ||
+      key === "ArrowLeft" ||
+      key === "ArrowRight")
+  ) {
+    debug(
+      "interaction",
+      "keydownToSelect: Cmd/Ctrl without Shift on arrow key, ignoring",
+    );
+    return;
+  }
+
   if (key === "a") {
-    if (!isMultiSelect) {
+    if (!isMetaOrCtrlPressed) {
       debug(
         "interaction",
         'keydownToSelect: "a" key without multi-select modifier, skipping',
