@@ -261,7 +261,7 @@ const keyToAriaKeyMapping = {
   backspace: isMac ? "backspace" : "delete",
 };
 
-const eventIsMatchingKeyCombination = (event, keyCombination) => {
+export const eventIsMatchingKeyCombination = (event, keyCombination) => {
   const keys = keyCombination.toLowerCase().split("+");
 
   for (const key of keys) {

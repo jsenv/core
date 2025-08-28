@@ -9,6 +9,7 @@ import {
   useState,
 } from "preact/hooks";
 import { createCallbackController } from "../callback_controller.js";
+import { eventIsMatchingKeyCombination } from "../shortcut/shortcut_context.jsx";
 
 const DEBUG = {
   registration: false, // Element registration/unregistration
@@ -1166,6 +1167,40 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     keydownEvent.preventDefault(); // prevent default select all text behavior
     selection.selectAll(keydownEvent);
     return;
+  }
+
+  // toggle selection only if element has data-selection-toggle-shortcut="space"
+  const toggleShortcut = element.getAttribute("data-selection-toggle-shortcut");
+  if (toggleShortcut) {
+    if (eventIsMatchingKeyCombination(keydownEvent, toggleShortcut)) {
+      keydownEvent.preventDefault(); // Prevent scrolling
+      const elementValue = getElementValue(element);
+      const isCurrentlySelected = selection.isElementSelected(element);
+
+      debug("interaction", "keydownToSelect: Space key toggle", {
+        element,
+        elementValue,
+        isCurrentlySelected,
+        currentSelection: selection.value,
+      });
+
+      if (isCurrentlySelected) {
+        // Element is selected, remove it from selection
+        debug("interaction", "keydownToSelect: Space - deselecting element");
+        selection.removeFromSelection([elementValue], keydownEvent);
+      } else {
+        // Element is not selected, add it to selection
+        debug("interaction", "keydownToSelect: Space - selecting element");
+        if (isMultiSelect) {
+          // Multi-select mode: add to existing selection
+          selection.addToSelection([elementValue], keydownEvent);
+        } else {
+          // Normal mode: replace selection with this element
+          selection.setSelection([elementValue], keydownEvent);
+        }
+      }
+      return;
+    }
   }
 
   if (key === "ArrowDown") {
