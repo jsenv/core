@@ -527,11 +527,6 @@ const createLinearSelection = ({
 
   const registry = new Set();
 
-  // Helper function to check if an element is registered and get its selection info
-  const isRegisteredElement = (element) => {
-    return registry.has(element);
-  };
-
   // Define navigation methods that need access to registry
   const navigationMethods = {
     getElementRange: (fromElement, toElement) => {
@@ -598,37 +593,31 @@ const createLinearSelection = ({
       }
 
       const currentSelectionName = getElementSelectionName(element);
+      let fallbackElement = null;
 
-      // Use efficient DOM traversal instead of iterating through the entire registry.
-      // This approach:
-      // 1. Uses findAfter() which stops as soon as it finds a match
-      // 2. Scopes the search to rootElement to avoid searching the entire document
-      // 3. Prioritizes same-selection-name elements first, then falls back to any registered element
-
-      // First, try to find the next registered element with the same selection name
       const sameTypeElement = findAfter(
         element,
         (candidate) => {
-          return (
-            registry.has(candidate) &&
-            getElementSelectionName(candidate) === currentSelectionName
-          );
+          if (!registry.has(candidate)) {
+            return false;
+          }
+          const candidateSelectionName = getElementSelectionName(candidate);
+          // If same selection name, this is our preferred result
+          if (candidateSelectionName === currentSelectionName) {
+            return true;
+          }
+          // Different selection name - store as fallback but keep searching
+          if (!fallbackElement) {
+            fallbackElement = candidate;
+          }
+          return false;
         },
         {
           root: elementRef.current || document.body,
         },
       );
 
-      if (sameTypeElement) {
-        return sameTypeElement;
-      }
-
-      // Fallback: if no same-selection-name element found, find any registered element
-      const fallbackElement = findAfter(element, isRegisteredElement, {
-        root: elementRef.current || document.body,
-      });
-
-      return fallbackElement;
+      return sameTypeElement || fallbackElement;
     },
     getElementBefore: (element) => {
       if (!registry.has(element)) {
@@ -637,36 +626,30 @@ const createLinearSelection = ({
 
       const currentSelectionName = getElementSelectionName(element);
 
-      // Use efficient DOM traversal instead of iterating through the entire registry.
-      // This approach:
-      // 1. Uses findBefore() which stops as soon as it finds a match
-      // 2. Scopes the search to rootElement to avoid searching the entire document
-      // 3. Prioritizes same-selection-name elements first, then falls back to any registered element
-
-      // First, try to find the previous registered element with the same selection name
+      let fallbackElement = null;
       const sameTypeElement = findBefore(
         element,
         (candidate) => {
-          return (
-            registry.has(candidate) &&
-            getElementSelectionName(candidate) === currentSelectionName
-          );
+          if (!registry.has(candidate)) {
+            return false;
+          }
+          const candidateSelectionName = getElementSelectionName(candidate);
+          // If same selection name, this is our preferred result
+          if (candidateSelectionName === currentSelectionName) {
+            return true;
+          }
+          // Different selection name - store as fallback but keep searching
+          if (!fallbackElement) {
+            fallbackElement = candidate;
+          }
+          return false;
         },
         {
           root: elementRef.current || document.body,
         },
       );
 
-      if (sameTypeElement) {
-        return sameTypeElement;
-      }
-
-      // Fallback: if no same-selection-name element found, find any registered element
-      const fallbackElement = findBefore(element, isRegisteredElement, {
-        root: elementRef.current || document.body,
-      });
-
-      return fallbackElement;
+      return sameTypeElement || fallbackElement;
     },
     // Add axis-dependent methods
     getElementBelow: (element) => {
