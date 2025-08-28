@@ -189,13 +189,17 @@ const generateSelectionBorderPath = (selectedCells) => {
     return "";
   }
 
-  // Group cells by their type (check if they have data-selection-name="row")
+  // Group cells by their type
   const rowCells = selectedCells.filter(
     (cell) => cell.element.getAttribute("data-selection-name") === "row",
   );
-  const cellCells = selectedCells.filter(
-    (cell) => cell.element.getAttribute("data-selection-name") !== "row",
+  const columnCells = selectedCells.filter(
+    (cell) => cell.element.getAttribute("data-selection-name") === "column",
   );
+  const cellCells = selectedCells.filter((cell) => {
+    const selectionName = cell.element.getAttribute("data-selection-name");
+    return selectionName !== "row" && selectionName !== "column";
+  });
 
   let paths = [];
 
@@ -204,12 +208,84 @@ const generateSelectionBorderPath = (selectedCells) => {
     paths.push(generateRowSelectionPath(rowCells));
   }
 
+  // Handle column selections - create rectangular outlines for each contiguous group of columns
+  if (columnCells.length > 0) {
+    paths.push(generateColumnSelectionPath(columnCells));
+  }
+
   // Handle cell selections - use the original algorithm
   if (cellCells.length > 0) {
     paths.push(generateCellSelectionPath(cellCells));
   }
 
   return paths.filter((p) => p).join(" ");
+};
+
+// Generate path for column selections - creates simple rectangular outlines
+const generateColumnSelectionPath = (selectedCells) => {
+  if (selectedCells.length === 0) return "";
+
+  // Group consecutive columns
+  const columnGroups = [];
+  const sortedCells = selectedCells.sort((a, b) => a.column - b.column);
+
+  let currentGroup = [sortedCells[0]];
+
+  for (let i = 1; i < sortedCells.length; i++) {
+    const currentCell = sortedCells[i];
+    const lastCell = currentGroup[currentGroup.length - 1];
+
+    if (currentCell.column === lastCell.column + 1) {
+      // Consecutive column, add to current group
+      currentGroup.push(currentCell);
+    } else {
+      // Non-consecutive, start new group
+      columnGroups.push(currentGroup);
+      currentGroup = [currentCell];
+    }
+  }
+  columnGroups.push(currentGroup);
+
+  // Create a rectangular path for each group of consecutive columns
+  return columnGroups
+    .map((group) => {
+      const leftColumn = group[0];
+      const rightColumn = group[group.length - 1];
+
+      // For column selections, we need to find the bounds of the data cells in that column
+      const table = leftColumn.element.closest("table");
+      if (!table) return "";
+
+      // Find the first data row (skip header) to get the top boundary
+      const firstDataRow = table.rows[1]; // Skip header row (row 0)
+      if (!firstDataRow) return "";
+
+      // Find the last data row to get the bottom boundary
+      const lastDataRow = table.rows[table.rows.length - 1];
+      if (!lastDataRow) return "";
+
+      // Get the cells in the selected columns for the first and last rows
+      const leftColumnCell = firstDataRow.cells[leftColumn.column];
+      const rightColumnCell = firstDataRow.cells[rightColumn.column];
+      const lastRowLeftCell = lastDataRow.cells[leftColumn.column];
+
+      if (!leftColumnCell || !rightColumnCell || !lastRowLeftCell) return "";
+
+      // Get table bounds for relative positioning
+      const tableRect = table.getBoundingClientRect();
+      const leftColumnRect = leftColumnCell.getBoundingClientRect();
+      const rightColumnRect = rightColumnCell.getBoundingClientRect();
+      const lastRowRect = lastRowLeftCell.getBoundingClientRect();
+
+      const minLeft = leftColumnRect.left - tableRect.left + 1; // 1px inset
+      const maxRight = rightColumnRect.right - tableRect.left - 1; // 1px inset
+      const minTop = leftColumnRect.top - tableRect.top + 1; // 1px inset
+      const maxBottom = lastRowRect.bottom - tableRect.top - 1; // 1px inset
+
+      // Create a rectangular path with all borders
+      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
+    })
+    .join(" ");
 };
 
 // Generate path for row selections - creates simple rectangular outlines

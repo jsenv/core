@@ -54,6 +54,12 @@
         font-weight: bold;
       }
 
+      /* Column selection styling */
+      .database_table th[aria-selected="true"] {
+        background-color: rgba(0, 120, 212, 0.2);
+        font-weight: bold;
+      }
+
       /* Selected row number column when focused - use a darker blue background */
       .database_table tr[aria-selected="true"] .number-column:focus {
         background-color: rgba(0, 120, 212, 0.08);
@@ -258,13 +264,23 @@
         columnAccessorKey,
         columnWithSomeSelectedCell,
       }) => {
+        const cellRef = useRef();
+        const columnValue = `column:${columnAccessorKey}`;
+        const { selected } = useSelectableElement(cellRef);
+
         const columnContainsSelectedCell =
           columnWithSomeSelectedCell.includes(columnAccessorKey);
         return (
           <th
+            ref={cellRef}
             data-column-contains-selected={
               columnContainsSelectedCell ? "" : undefined
             }
+            data-value={columnValue}
+            data-selection-name="column"
+            aria-selected={selected}
+            style={{ cursor: "pointer" }}
+            tabIndex={0}
           >
             <span>{columnName}</span>
           </th>
@@ -297,22 +313,30 @@
         const selectionSignal = useSignal([]);
         const selection = selectionSignal.value;
 
-        // Detect if we have row selections by checking for values that start with "row:"
+        // Detect selection types
         const rowSelections = selection.filter(
           (value) => typeof value === "string" && value.startsWith("row:"),
+        );
+        const columnSelections = selection.filter(
+          (value) => typeof value === "string" && value.startsWith("column:"),
         );
         const cellSelections = selection.filter(
           (value) =>
             typeof value === "string" &&
             value.includes(":") &&
-            !value.startsWith("row:"),
+            !value.startsWith("row:") &&
+            !value.startsWith("column:"),
         );
         const hasRowSelections = rowSelections.length > 0;
+        const hasColumnSelections = columnSelections.length > 0;
         const hasCellSelections = cellSelections.length > 0;
 
-        // Extract selected row IDs
+        // Extract selected IDs
         const selectedRowIds = rowSelections.map((value) =>
           value.replace("row:", ""),
+        );
+        const selectedColumnIds = columnSelections.map((value) =>
+          value.replace("column:", ""),
         );
 
         // Compute which rows and columns have selected cells (for cell mode)
@@ -339,6 +363,12 @@
             // Select all rows
             const allRowIds = sampleData.map((row) => `row:${row.id}`);
             selectionSignal.value = allRowIds;
+          } else if (hasColumnSelections) {
+            // Select all columns
+            const allColumnIds = columns.map(
+              (col) => `column:${col.accessorKey}`,
+            );
+            selectionSignal.value = allColumnIds;
           } else {
             // Select all cells
             const allCellIds = [];
@@ -355,8 +385,10 @@
           console.log("Current state:", {
             selection,
             hasRowSelections,
+            hasColumnSelections,
             hasCellSelections,
             selectedRowIds,
+            selectedColumnIds,
             rowWithSomeSelectedCell,
             columnWithSomeSelectedCell,
             activeElement: document.activeElement?.textContent?.trim(),
@@ -384,6 +416,8 @@
                 multi-select. Use Tab and arrow keys to navigate.
                 <br />
                 <strong>Click the # column to select entire rows.</strong>
+                <br />
+                <strong>Click column headers to select entire columns.</strong>
               </p>
 
               <div className="table-container">
@@ -449,6 +483,12 @@
                 {hasRowSelections && (
                   <div>
                     Selected rows: <span>{selectedRowIds.join(", ")}</span>
+                  </div>
+                )}
+                {hasColumnSelections && (
+                  <div>
+                    Selected columns:{" "}
+                    <span>{selectedColumnIds.join(", ")}</span>
                   </div>
                 )}
                 {hasCellSelections && (
