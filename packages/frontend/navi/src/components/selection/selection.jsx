@@ -765,19 +765,7 @@ export const useSelectableElement = (elementRef) => {
           targetElement = targetElement.parentElement;
         }
 
-        if (
-          targetElement &&
-          selection.registry &&
-          selection.registry.has(targetElement)
-        ) {
-          // Simulate shift-select behavior from drag start to current element
-          const syntheticEvent = {
-            shiftKey: true,
-            metaKey: false,
-            ctrlKey: false,
-            preventDefault: () => {},
-          };
-
+        if (targetElement && selection.registry.has(targetElement)) {
           // Set anchor to drag start if not already set
           if (
             !selection.anchorElement ||
@@ -786,8 +774,7 @@ export const useSelectableElement = (elementRef) => {
           ) {
             selection.setAnchorElement(dragStartElement);
           }
-
-          selection.selectFromAnchorTo(targetElement, syntheticEvent);
+          selection.selectFromAnchorTo(targetElement, e);
         }
       };
 
