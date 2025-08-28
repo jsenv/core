@@ -773,8 +773,16 @@ export const useSelectableElement = (elementRef) => {
     }
     const isSelected = selection.isElementSelected(element);
     setSelected(isSelected);
-    return selection.channels.change.add(() => {
+    return selection.channels.change.add((value) => {
       const isSelected = selection.isElementSelected(element);
+      debug(
+        "selection",
+        "selection changed to",
+        value,
+        "element is selected:",
+        isSelected,
+        element,
+      );
       setSelected(isSelected);
     });
   }, [selection]);
