@@ -25,7 +25,7 @@ import.meta.css = /* css */ `
     inset: -2px;
     pointer-events: none;
     z-index: 1;
-    border: 2px solid var(--selection-border-color);
+    border: 1px solid var(--selection-border-color);
     border-style: none;
   }
 
