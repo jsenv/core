@@ -3,16 +3,8 @@
  *
  * https://supabase.com/docs/guides/database/overview
  *
- * - Il faut pouvoir sélectionner plusieurs cellules avec shift etc
- * donc le selection provider machin doit supporter une structure en grille
- *
- * - Il faut surement pouvoir support différent type de selection
- * on peut selectionner N cellules ou N lignes/colonnes
- * Dans le cas des lignes et colonnes on change des trucs
  *
  * Next step:
- * 2. row selection (take inspitation from the way it's done in the explorer)
- *    selected row should have a special background
  * 3. A last row with buttons like a delete button with a delete icon
  * 4. Ability to delete a row (button + a shortcut key cmd + delete) with a confirmation message
  * 5. Ability to update a cell (double click to edit, enter to validate, esc to cancel)
