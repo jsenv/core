@@ -50,7 +50,7 @@ export const useSelectionProvider = ({ layout, value, onChange }) => {
       onChange,
       axis: layout,
     });
-  }, [layout, value]);
+  }, [layout]);
 
   // Update the selection's internal values when external value changes
   useEffect(() => {
@@ -72,9 +72,9 @@ export const useSelectionProvider = ({ layout, value, onChange }) => {
 };
 // Grid Selection Provider - for 2D layouts like tables
 const createGridSelection = ({ value = [], onChange }) => {
-  const valuesRef = useRef(value);
-  const registryRef = useRef(new Set()); // Set<element>
-  const anchorRef = useRef(null);
+  let values = value;
+  const registry = new Set(); // Set<element>
+  let anchorElement = null;
 
   const getElementPosition = (element) => {
     // Get position by checking element's position in table structure
@@ -99,15 +99,14 @@ const createGridSelection = ({ value = [], onChange }) => {
   const gridSelection = {
     type: "grid",
     get values() {
-      return valuesRef.current;
+      return values;
     },
     updateValues: (newValues) => {
-      valuesRef.current = newValues;
+      values = newValues;
       debug("selection", "Grid updateValues:", newValues);
     },
 
     registerElement: (element) => {
-      const registry = registryRef.current;
       const value = getElementValue(element);
       debug(
         "registration",
@@ -126,7 +125,6 @@ const createGridSelection = ({ value = [], onChange }) => {
       );
     },
     unregisterElement: (element) => {
-      const registry = registryRef.current;
       const value = getElementValue(element);
       debug(
         "registration",
@@ -147,7 +145,7 @@ const createGridSelection = ({ value = [], onChange }) => {
     setAnchorElement: (element) => {
       const value = getElementValue(element);
       debug("selection", "Grid setAnchorElement:", element, "value:", value);
-      anchorRef.current = element;
+      anchorElement = element;
     },
     isElementSelected: (element) => {
       const value = getElementValue(element);
@@ -159,7 +157,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       return isSelected;
     },
     getAllElements: () => {
-      return Array.from(registryRef.current);
+      return Array.from(registry);
     },
     getElementRange: (fromElement, toElement) => {
       const fromPos = getElementPosition(fromElement);
@@ -179,7 +177,7 @@ const createGridSelection = ({ value = [], onChange }) => {
 
       // Find all registered elements within the rectangular area
       const valuesInRange = [];
-      for (const element of registryRef.current) {
+      for (const element of registry) {
         const pos = getElementPosition(element);
         if (
           pos &&
@@ -206,7 +204,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       const nextX = x + 1;
 
       // Find element at next position in same row
-      for (const candidateElement of registryRef.current) {
+      for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         if (pos && pos.x === nextX && pos.y === y) {
           return candidateElement;
@@ -224,7 +222,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       const prevX = x - 1;
 
       // Find element at previous position in same row
-      for (const candidateElement of registryRef.current) {
+      for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         if (pos && pos.x === prevX && pos.y === y) {
           return candidateElement;
@@ -242,7 +240,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       const nextY = y + 1;
 
       // Find element at next position in same column
-      for (const candidateElement of registryRef.current) {
+      for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         if (pos && pos.x === x && pos.y === nextY) {
           return candidateElement;
@@ -260,7 +258,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       const prevY = y - 1;
 
       // Find element at previous position in same column
-      for (const candidateElement of registryRef.current) {
+      for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         if (pos && pos.x === x && pos.y === prevY) {
           return candidateElement;
@@ -295,7 +293,7 @@ const createGridSelection = ({ value = [], onChange }) => {
           "Grid setSelection: finding element for anchor value:",
           lastValue,
         );
-        for (const element of registryRef.current) {
+        for (const element of registry) {
           element.setAttribute("aria-selected", "true");
           if (getElementValue(element) === lastValue) {
             debug(
@@ -303,7 +301,7 @@ const createGridSelection = ({ value = [], onChange }) => {
               "Grid setSelection: setting anchor element:",
               element,
             );
-            anchorRef.current = element;
+            anchorElement = element;
             break;
           }
         }
@@ -312,7 +310,7 @@ const createGridSelection = ({ value = [], onChange }) => {
           "selection",
           "Grid setSelection: clearing anchor (empty selection)",
         );
-        anchorRef.current = null;
+        anchorElement = null;
       }
       debug(
         "selection",
@@ -339,7 +337,7 @@ const createGridSelection = ({ value = [], onChange }) => {
           selectionWithValues.push(valueToAdd);
           debug("selection", "Grid addToSelection: adding value:", valueToAdd);
           // Find the element for this value
-          for (const element of registryRef.current) {
+          for (const element of registry) {
             if (getElementValue(element) === valueToAdd) {
               lastAddedElement = element;
               debug(
@@ -360,7 +358,7 @@ const createGridSelection = ({ value = [], onChange }) => {
             "Grid addToSelection: setting anchor element:",
             lastAddedElement,
           );
-          anchorRef.current = lastAddedElement;
+          anchorElement = lastAddedElement;
         }
         debug(
           "selection",
@@ -380,11 +378,8 @@ const createGridSelection = ({ value = [], onChange }) => {
         if (arrayOfValuesToRemove.includes(value)) {
           modified = true;
           // Check if we're removing the anchor element
-          if (
-            anchorRef.current &&
-            getElementValue(anchorRef.current) === value
-          ) {
-            anchorRef.current = null;
+          if (anchorElement && getElementValue(anchorElement) === value) {
+            anchorElement = null;
           }
         } else {
           selectionWithoutValues.push(value);
@@ -404,8 +399,6 @@ const createGridSelection = ({ value = [], onChange }) => {
       }
     },
     selectFromAnchorTo: (element, event = null) => {
-      const anchorElement = anchorRef.current;
-
       if (
         anchorElement &&
         gridSelection.values.includes(getElementValue(anchorElement))
@@ -426,9 +419,9 @@ const createLinearSelection = ({
   onChange,
   axis = "vertical", // "horizontal" or "vertical"
 }) => {
-  const valuesRef = useRef(value);
-  const registryRef = useRef(new Set()); // Set<element>
-  const anchorRef = useRef(null);
+  let values = value;
+  const registry = new Set(); // Set<element>
+  let anchorElement = null;
 
   if (!["horizontal", "vertical"].includes(axis)) {
     throw new Error(
@@ -440,15 +433,14 @@ const createLinearSelection = ({
     type: "linear",
     axis,
     get values() {
-      return valuesRef.current;
+      return values;
     },
     updateValues: (newValues) => {
-      valuesRef.current = newValues;
+      values = newValues;
       debug("selection", "Linear updateValues:", newValues);
     },
 
     registerElement: (element) => {
-      const registry = registryRef.current;
       const value = getElementValue(element);
       debug(
         "registration",
@@ -467,7 +459,6 @@ const createLinearSelection = ({
       );
     },
     unregisterElement: (element) => {
-      const registry = registryRef.current;
       const value = getElementValue(element);
       debug(
         "registration",
@@ -488,7 +479,7 @@ const createLinearSelection = ({
     setAnchorElement: (element) => {
       const value = getElementValue(element);
       debug("selection", "Linear setAnchorElement:", element, "value:", value);
-      anchorRef.current = element;
+      anchorElement = element;
     },
     isElementSelected: (element) => {
       const value = getElementValue(element);
@@ -500,11 +491,9 @@ const createLinearSelection = ({
       return isSelected;
     },
     getAllElements: () => {
-      return Array.from(registryRef.current);
+      return Array.from(registry);
     },
     getElementRange: (fromElement, toElement) => {
-      const registry = registryRef.current;
-
       if (!registry.has(fromElement) || !registry.has(toElement)) {
         return [];
       }
@@ -553,7 +542,6 @@ const createLinearSelection = ({
 
     // Navigation methods for linear layout using DOM order
     getElementAfter: (element) => {
-      const registry = registryRef.current;
       if (!registry.has(element)) {
         return null;
       }
@@ -583,7 +571,6 @@ const createLinearSelection = ({
       return nextElement;
     },
     getElementBefore: (element) => {
-      const registry = registryRef.current;
       if (!registry.has(element)) {
         return null;
       }
@@ -638,9 +625,9 @@ const createLinearSelection = ({
       if (newSelection.length > 0) {
         // Find the element for the last selected value to set as anchor
         const lastValue = newSelection[newSelection.length - 1];
-        for (const element of registryRef.current) {
+        for (const element of registry) {
           if (getElementValue(element) === lastValue) {
-            anchorRef.current = element;
+            anchorElement = element;
             break;
           }
         }
@@ -657,7 +644,7 @@ const createLinearSelection = ({
           modified = true;
           selectionWithValues.push(valueToAdd);
           // Find the element for this value
-          for (const element of registryRef.current) {
+          for (const element of registry) {
             if (getElementValue(element) === valueToAdd) {
               lastAddedElement = element;
               break;
@@ -668,7 +655,7 @@ const createLinearSelection = ({
 
       if (modified) {
         if (lastAddedElement) {
-          anchorRef.current = lastAddedElement;
+          anchorElement = lastAddedElement;
         }
         onChange?.(selectionWithValues, event);
       }
@@ -681,11 +668,8 @@ const createLinearSelection = ({
         if (arrayOfValuesToRemove.includes(value)) {
           modified = true;
           // Check if we're removing the anchor element
-          if (
-            anchorRef.current &&
-            getElementValue(anchorRef.current) === value
-          ) {
-            anchorRef.current = null;
+          if (anchorElement && getElementValue(anchorElement) === value) {
+            anchorElement = null;
           }
         } else {
           selectionWithoutValues.push(value);
@@ -705,8 +689,6 @@ const createLinearSelection = ({
       }
     },
     selectFromAnchorTo: (element, event = null) => {
-      const anchorElement = anchorRef.current;
-
       if (
         anchorElement &&
         linearSelection.values.includes(getElementValue(anchorElement))
