@@ -18,6 +18,38 @@ import.meta.css = /* css */ `
   }
 `;
 
+export const TableSelectionOverlay = ({ tableRef }) => {
+  const [rectangles, setRectangles] = useState([]);
+
+  useLayoutEffect(() => {
+    const tableSelectionObserver = createTableSelectionObserver(
+      tableRef.current,
+    );
+    setRectangles(tableSelectionObserver.rectangles);
+    tableSelectionObserver.onChange = () => {
+      setRectangles(tableSelectionObserver.rectangles);
+    };
+    return tableSelectionObserver.cleanup;
+  }, [tableRef]);
+
+  return (
+    <div className="selection-overlay">
+      {rectangles.map((rect, index) => (
+        <div
+          key={index}
+          className="selection-rectangle"
+          style={{
+            left: `${rect.left}px`,
+            top: `${rect.top}px`,
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 const NO_RECTANGLES = [];
 const createTableSelectionObserver = (table) => {
   const cleanupCallbackSet = new Set();
@@ -153,48 +185,18 @@ const createTableSelectionObserver = (table) => {
   return tableSelection;
 };
 
-export const TableSelectionOverlay = ({ tableRef }) => {
-  const [rectangles, setRectangles] = useState([]);
-
-  useLayoutEffect(() => {
-    const tableSelectionObserver = createTableSelectionObserver(
-      tableRef.current,
-    );
-    setRectangles(tableSelectionObserver.rectangles);
-    tableSelectionObserver.onChange = () => {
-      setRectangles(tableSelectionObserver.rectangles);
-    };
-    return tableSelectionObserver.cleanup;
-  }, [tableRef]);
-
-  return (
-    <div className="selection-overlay">
-      {rectangles.map((rect, index) => (
-        <div
-          key={index}
-          className="selection-rectangle"
-          style={{
-            left: `${rect.left}px`,
-            top: `${rect.top}px`,
-            width: `${rect.width}px`,
-            height: `${rect.height}px`,
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
 // Helper function to extract table information from DOM
 const getTableInfoFromDOM = (table) => {
   // Get columns from table header
   const headerCells = table.querySelectorAll("thead th");
   const columnCount = headerCells.length;
 
-  // Get border width from computed styles
-  const computedStyle = window.getComputedStyle(table);
+  // Get border width from a cell's computed styles (more accurate than table)
+  const firstCell = table.querySelector("td") || table.querySelector("th");
+  const computedStyle = window.getComputedStyle(firstCell || table);
   const borderWidth = parseFloat(computedStyle.borderWidth) || 1;
-  const isBorderCollapse = computedStyle.borderCollapse === "collapse";
+  const isBorderCollapse =
+    window.getComputedStyle(table).borderCollapse === "collapse";
 
   // Get table data from DOM
   const dataRows = table.querySelectorAll("tbody tr");
@@ -278,22 +280,24 @@ const findContiguousRectangle = (
   const isBorderCollapse = tableInfo.isBorderCollapse;
 
   if (isBorderCollapse) {
+    // For collapsed borders, the border is shared between adjacent cells
+    // We want the selection overlay to cover the entire selected area including borders
+
     // Check if selection touches table edges
     const tableEdges = getTableEdges(connectedCells, cellPositions, tableInfo);
 
+    // Extend the rectangle to include the shared borders
+    // Only extend inward if we're not at the table edge
+    const leftAdjust = tableEdges.left ? 0 : borderWidth / 2;
+    const topAdjust = tableEdges.top ? 0 : borderWidth / 2;
+    const rightAdjust = tableEdges.right ? 0 : borderWidth / 2;
+    const bottomAdjust = tableEdges.bottom ? 0 : borderWidth / 2;
+
     const adjustedRect = {
-      left: minLeft + (tableEdges.left ? 0 : borderWidth / 2),
-      top: minTop + (tableEdges.top ? 0 : borderWidth / 2),
-      width:
-        maxRight -
-        minLeft -
-        (tableEdges.left ? borderWidth / 2 : borderWidth) -
-        (tableEdges.right ? borderWidth / 2 : borderWidth),
-      height:
-        maxBottom -
-        minTop -
-        (tableEdges.top ? borderWidth / 2 : borderWidth) -
-        (tableEdges.bottom ? borderWidth / 2 : borderWidth),
+      left: minLeft - leftAdjust,
+      top: minTop - topAdjust,
+      width: maxRight - minLeft + leftAdjust + rightAdjust,
+      height: maxBottom - minTop + topAdjust + bottomAdjust,
     };
 
     return adjustedRect;
