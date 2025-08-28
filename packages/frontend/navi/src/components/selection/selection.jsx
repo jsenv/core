@@ -274,10 +274,7 @@ const createBaseSelection = ({
     }
   };
   const selectFromAnchorTo = (element, event = null) => {
-    if (
-      anchorElement &&
-      baseSelection.value.includes(getElementValue(anchorElement))
-    ) {
+    if (anchorElement) {
       const range = getElementRange(anchorElement, element);
       baseSelection.setSelection(range, event);
     } else {
@@ -799,15 +796,6 @@ export const useSelectableElement = (elementRef) => {
         }
 
         if (targetElement && selection.registry.has(targetElement)) {
-          // Set anchor to drag start if not already set
-          if (
-            !selection.anchorElement ||
-            getElementValue(selection.anchorElement) !==
-              getElementValue(dragStartElement)
-          ) {
-            selection.setAnchorElement(dragStartElement);
-          }
-
           // Get the range from anchor to current target
           const rangeValues = selection.getElementRange(
             dragStartElement,
