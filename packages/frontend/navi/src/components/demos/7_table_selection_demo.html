@@ -279,54 +279,89 @@
         const [rectangles, setRectangles] = useState([]);
 
         useLayoutEffect(() => {
-          if (!tableRef.current || selectedCells.length === 0) {
+          if (!tableRef.current) {
             setRectangles([]);
-            return;
+            return null;
           }
 
           const table = tableRef.current;
-          const tableRect = table.getBoundingClientRect();
 
-          // Calculate selection rectangles
-          const cellPositions = new Map();
-
-          // Get positions of all selected cells
-          selectedCells.forEach((cellId) => {
-            const cell = table.querySelector(`[data-value="${cellId}"]`);
-            if (cell) {
-              const cellRect = cell.getBoundingClientRect();
-              const [columnName, rowId] = cellId.split(":");
-
-              cellPositions.set(cellId, {
-                left: cellRect.left - tableRect.left,
-                top: cellRect.top - tableRect.top,
-                width: cellRect.width,
-                height: cellRect.height,
-                row: rowId,
-                column: columnName,
-              });
+          // eslint-disable-next-line consistent-return
+          const calculateRectangles = () => {
+            if (selectedCells.length === 0) {
+              setRectangles([]);
+              return null;
             }
+
+            const tableRect = table.getBoundingClientRect();
+
+            // Calculate selection rectangles
+            const cellPositions = new Map();
+
+            // Get positions of all selected cells
+            selectedCells.forEach((cellId) => {
+              const cell = table.querySelector(`[data-value="${cellId}"]`);
+              if (cell) {
+                const cellRect = cell.getBoundingClientRect();
+                const [columnName, rowId] = cellId.split(":");
+
+                cellPositions.set(cellId, {
+                  left: cellRect.left - tableRect.left,
+                  top: cellRect.top - tableRect.top,
+                  width: cellRect.width,
+                  height: cellRect.height,
+                  row: rowId,
+                  column: columnName,
+                });
+              }
+            });
+
+            // Group contiguous cells into rectangles
+            const newRectangles = [];
+            const processedCells = new Set();
+
+            cellPositions.forEach((pos, cellId) => {
+              if (processedCells.has(cellId)) {
+                return;
+              }
+
+              // Find all contiguous cells starting from this cell
+              const rectangle = findContiguousRectangle(
+                cellId,
+                cellPositions,
+                processedCells,
+              );
+              if (rectangle) {
+                newRectangles.push(rectangle);
+              }
+            });
+
+            setRectangles(newRectangles);
+          };
+
+          // Calculate rectangles initially
+          calculateRectangles();
+
+          // Set up ResizeObserver to watch for table dimension changes
+          const resizeObserver = new ResizeObserver(() => {
+            calculateRectangles();
           });
 
-          // Group contiguous cells into rectangles
-          const newRectangles = [];
-          const processedCells = new Set();
+          // Observe the table for size changes
+          resizeObserver.observe(table);
 
-          cellPositions.forEach((pos, cellId) => {
-            if (processedCells.has(cellId)) return;
+          // Also listen for window resize events for additional coverage
+          const handleWindowResize = () => {
+            calculateRectangles();
+          };
 
-            // Find all contiguous cells starting from this cell
-            const rectangle = findContiguousRectangle(
-              cellId,
-              cellPositions,
-              processedCells,
-            );
-            if (rectangle) {
-              newRectangles.push(rectangle);
-            }
-          });
+          window.addEventListener("resize", handleWindowResize);
 
-          setRectangles(newRectangles);
+          // Cleanup function
+          return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener("resize", handleWindowResize);
+          };
         }, [selectedCells, tableRef]);
 
         const findContiguousRectangle = (
