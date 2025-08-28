@@ -275,8 +275,11 @@ const createBaseSelection = ({
   };
   const selectFromAnchorTo = (element, event = null) => {
     if (anchorElement) {
+      const currentAnchor = anchorElement; // Preserve the current anchor
       const range = getElementRange(anchorElement, element);
       baseSelection.setSelection(range, event);
+      // Restore the original anchor (setSelection changes it to the last element)
+      anchorElement = currentAnchor;
     } else {
       baseSelection.setSelection([getElementValue(element)], event);
     }
