@@ -7,102 +7,201 @@ import.meta.css = /* css */ `
     --selection-border-color: #0078d4;
   }
 
-  /* Selection border styles using data attributes and box-shadow */
-  [data-selection-border-top] {
-    box-shadow: inset 0 2px 0 0 var(--selection-border-color);
-  }
-
-  [data-selection-border-right] {
-    box-shadow: inset -2px 0 0 0 var(--selection-border-color);
-  }
-
-  [data-selection-border-bottom] {
-    box-shadow: inset 0 -2px 0 0 var(--selection-border-color);
-  }
-
+  /* All selection border elements need relative positioning for pseudo-elements */
+  [data-selection-border-top],
+  [data-selection-border-right],
+  [data-selection-border-bottom],
   [data-selection-border-left] {
-    box-shadow: inset 2px 0 0 0 var(--selection-border-color);
+    position: relative;
   }
 
-  /* Combine multiple box-shadow when cell has multiple borders */
-  [data-selection-border-top][data-selection-border-right] {
-    box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color),
-      inset -2px 0 0 0 var(--selection-border-color);
+  /* Single border cases */
+  [data-selection-border-top]:not([data-selection-border-right]):not(
+      [data-selection-border-bottom]
+    ):not([data-selection-border-left])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-top: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-top][data-selection-border-bottom] {
-    box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color),
-      inset 0 -2px 0 0 var(--selection-border-color);
+  [data-selection-border-right]:not([data-selection-border-top]):not(
+      [data-selection-border-bottom]
+    ):not([data-selection-border-left])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-right: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-top][data-selection-border-left] {
-    box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color),
-      inset 2px 0 0 0 var(--selection-border-color);
+  [data-selection-border-bottom]:not([data-selection-border-top]):not(
+      [data-selection-border-right]
+    ):not([data-selection-border-left])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-bottom: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-right][data-selection-border-bottom] {
-    box-shadow:
-      inset -2px 0 0 0 var(--selection-border-color),
-      inset 0 -2px 0 0 var(--selection-border-color);
+  [data-selection-border-left]:not([data-selection-border-top]):not(
+      [data-selection-border-right]
+    ):not([data-selection-border-bottom])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-left: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-right][data-selection-border-left] {
-    box-shadow:
-      inset -2px 0 0 0 var(--selection-border-color),
-      inset 2px 0 0 0 var(--selection-border-color);
+  /* Two border combinations */
+  [data-selection-border-top][data-selection-border-right]:not(
+      [data-selection-border-bottom]
+    ):not([data-selection-border-left])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-top: 2px solid var(--selection-border-color);
+    border-right: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-bottom][data-selection-border-left] {
-    box-shadow:
-      inset 0 -2px 0 0 var(--selection-border-color),
-      inset 2px 0 0 0 var(--selection-border-color);
+  [data-selection-border-top][data-selection-border-bottom]:not(
+      [data-selection-border-right]
+    ):not([data-selection-border-left])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-top: 2px solid var(--selection-border-color);
+    border-bottom: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom] {
-    box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color),
-      inset -2px 0 0 0 var(--selection-border-color),
-      inset 0 -2px 0 0 var(--selection-border-color);
+  [data-selection-border-top][data-selection-border-left]:not(
+      [data-selection-border-right]
+    ):not([data-selection-border-bottom])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-top: 2px solid var(--selection-border-color);
+    border-left: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-top][data-selection-border-right][data-selection-border-left] {
-    box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color),
-      inset -2px 0 0 0 var(--selection-border-color),
-      inset 2px 0 0 0 var(--selection-border-color);
+  [data-selection-border-right][data-selection-border-bottom]:not(
+      [data-selection-border-top]
+    ):not([data-selection-border-left])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-right: 2px solid var(--selection-border-color);
+    border-bottom: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-top][data-selection-border-bottom][data-selection-border-left] {
-    box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color),
-      inset 0 -2px 0 0 var(--selection-border-color),
-      inset 2px 0 0 0 var(--selection-border-color);
+  [data-selection-border-right][data-selection-border-left]:not(
+      [data-selection-border-top]
+    ):not([data-selection-border-bottom])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-right: 2px solid var(--selection-border-color);
+    border-left: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-right][data-selection-border-bottom][data-selection-border-left] {
-    box-shadow:
-      inset -2px 0 0 0 var(--selection-border-color),
-      inset 0 -2px 0 0 var(--selection-border-color),
-      inset 2px 0 0 0 var(--selection-border-color);
+  [data-selection-border-bottom][data-selection-border-left]:not(
+      [data-selection-border-top]
+    ):not([data-selection-border-right])::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-bottom: 2px solid var(--selection-border-color);
+    border-left: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
-  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left] {
-    box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color),
-      inset -2px 0 0 0 var(--selection-border-color),
-      inset 0 -2px 0 0 var(--selection-border-color),
-      inset 2px 0 0 0 var(--selection-border-color);
+  /* Three border combinations */
+  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]:not(
+      [data-selection-border-left]
+    )::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-top: 2px solid var(--selection-border-color);
+    border-right: 2px solid var(--selection-border-color);
+    border-bottom: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  [data-selection-border-top][data-selection-border-right][data-selection-border-left]:not(
+      [data-selection-border-bottom]
+    )::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-top: 2px solid var(--selection-border-color);
+    border-right: 2px solid var(--selection-border-color);
+    border-left: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]:not(
+      [data-selection-border-right]
+    )::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-top: 2px solid var(--selection-border-color);
+    border-bottom: 2px solid var(--selection-border-color);
+    border-left: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]:not(
+      [data-selection-border-top]
+    )::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-right: 2px solid var(--selection-border-color);
+    border-bottom: 2px solid var(--selection-border-color);
+    border-left: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Four border combination (full border) */
+  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border: 2px solid var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting] [data-selection-border-top],
-  table[data-drag-selecting] [data-selection-border-right],
-  table[data-drag-selecting] [data-selection-border-bottom],
-  table[data-drag-selecting] [data-selection-border-left] {
-    box-shadow: none;
+  table[data-drag-selecting] [data-selection-border-top]::before,
+  table[data-drag-selecting] [data-selection-border-right]::before,
+  table[data-drag-selecting] [data-selection-border-bottom]::before,
+  table[data-drag-selecting] [data-selection-border-left]::before {
+    display: none;
   }
 `;
 
