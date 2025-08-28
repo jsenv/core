@@ -108,6 +108,7 @@
         padding: 0;
         position: relative;
         padding: 8px;
+        user-select: none;
       }
 
       .database_table_cell:focus {
@@ -216,7 +217,11 @@
       // Components
       // eslint-disable-next-line no-unused-vars
       const NumberColumnHeader = ({ rowWithSomeSelectedCell }) => {
-        return <th className="number-column">#</th>;
+        return (
+          <th className="number-column" style={{ textAlign: "center" }}>
+            #
+          </th>
+        );
       };
 
       // eslint-disable-next-line no-unused-vars
