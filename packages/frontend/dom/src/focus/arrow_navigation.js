@@ -68,6 +68,14 @@ const getTargetInLinearFocusGroup = (
   { direction, loop, name },
 ) => {
   const activeElement = document.activeElement;
+
+  // Check for Cmd/Ctrl + arrow keys for jumping to start/end of linear group
+  const isJumpToEnd = event.metaKey || event.ctrlKey;
+
+  if (isJumpToEnd) {
+    return getJumpToEndTargetLinear(event, element, direction);
+  }
+
   const isForward = isForwardArrow(event, direction);
 
   // Arrow Left/Up: move to previous focusable element in group
@@ -166,6 +174,27 @@ const delegateArrowNavigation = (event, currentElement, { name }) => {
   }
   return null;
 };
+
+// Handle Cmd/Ctrl + arrow keys for linear focus groups to jump to start/end
+const getJumpToEndTargetLinear = (event, element, direction) => {
+  // Check if this arrow key is valid for the given direction
+  if (!isForwardArrow(event, direction) && !isBackwardArrow(event, direction)) {
+    return null;
+  }
+
+  if (isBackwardArrow(event, direction)) {
+    // Jump to first focusable element in the group
+    return findDescendant(element, elementIsFocusable);
+  }
+
+  if (isForwardArrow(event, direction)) {
+    // Jump to last focusable element in the group
+    return findLastDescendant(element, elementIsFocusable);
+  }
+
+  return null;
+};
+
 const isBackwardArrow = (event, direction = "both") => {
   const backwardKeys = {
     both: ["ArrowLeft", "ArrowUp"],
@@ -214,6 +243,18 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
   const currentColumnIndex = /** @type {HTMLTableCellElement} */ (currentCell)
     .cellIndex;
 
+  // Check for Cmd/Ctrl + arrow keys for jumping to end of row/column
+  const isJumpToEnd = event.metaKey || event.ctrlKey;
+
+  if (isJumpToEnd) {
+    return getJumpToEndTarget(
+      arrowKey,
+      allRows,
+      currentRowIndex,
+      currentColumnIndex,
+    );
+  }
+
   // Create an iterator that will scan through cells in the arrow direction
   // until it finds one with a focusable element inside
   const candidateCells = createTableCellIterator(arrowKey, allRows, {
@@ -231,6 +272,70 @@ const getTargetInTableFocusGroup = (event, table, { loop }) => {
   }
 
   return null; // No focusable cell found
+};
+
+// Handle Cmd/Ctrl + arrow keys to jump to the end of row/column
+const getJumpToEndTarget = (
+  arrowKey,
+  allRows,
+  currentRowIndex,
+  currentColumnIndex,
+) => {
+  if (arrowKey === "ArrowRight") {
+    // Jump to last focusable cell in current row
+    const currentRow = allRows[currentRowIndex];
+    if (!currentRow) return null;
+
+    // Start from the last cell and work backwards to find focusable
+    const cells = Array.from(currentRow.cells);
+    for (let i = cells.length - 1; i >= 0; i--) {
+      const cell = cells[i];
+      if (elementIsFocusable(cell)) {
+        return cell;
+      }
+    }
+    return null;
+  }
+
+  if (arrowKey === "ArrowLeft") {
+    // Jump to first focusable cell in current row
+    const currentRow = allRows[currentRowIndex];
+    if (!currentRow) return null;
+
+    const cells = Array.from(currentRow.cells);
+    for (const cell of cells) {
+      if (elementIsFocusable(cell)) {
+        return cell;
+      }
+    }
+    return null;
+  }
+
+  if (arrowKey === "ArrowDown") {
+    // Jump to last focusable cell in current column
+    for (let rowIndex = allRows.length - 1; rowIndex >= 0; rowIndex--) {
+      const row = allRows[rowIndex];
+      const cell = row?.cells?.[currentColumnIndex];
+      if (cell && elementIsFocusable(cell)) {
+        return cell;
+      }
+    }
+    return null;
+  }
+
+  if (arrowKey === "ArrowUp") {
+    // Jump to first focusable cell in current column
+    for (let rowIndex = 0; rowIndex < allRows.length; rowIndex++) {
+      const row = allRows[rowIndex];
+      const cell = row?.cells?.[currentColumnIndex];
+      if (cell && elementIsFocusable(cell)) {
+        return cell;
+      }
+    }
+    return null;
+  }
+
+  return null;
 };
 
 // Create an iterator that yields table cells in the direction of arrow key movement.

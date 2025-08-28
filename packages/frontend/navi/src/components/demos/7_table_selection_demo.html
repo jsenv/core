@@ -150,6 +150,7 @@
         useSelectionProvider,
         // eslint-disable-next-line no-unused-vars
         TableSelectionBorders,
+        useFocusGroup,
       } from "@jsenv/navi";
 
       // Sample data
@@ -307,6 +308,8 @@
             cellSelectionSignal.value = value;
           },
         });
+
+        useFocusGroup(tableRef);
 
         return (
           <SelectionProvider>
