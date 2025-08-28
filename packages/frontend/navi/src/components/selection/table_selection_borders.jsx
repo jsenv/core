@@ -1,12 +1,6 @@
-/**
- * TODO: once we got row and column selection we'll also
- * want to be able draw borders around entire rows/columns
- */
-
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
-  /* Selection overlay container */
   .selection-overlay {
     position: absolute;
     inset: 0;
@@ -14,7 +8,6 @@ import.meta.css = /* css */ `
     z-index: 10;
   }
 
-  /* SVG selection borders */
   .selection-svg {
     position: absolute;
     inset: 0;
