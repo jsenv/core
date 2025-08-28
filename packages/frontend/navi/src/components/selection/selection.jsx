@@ -56,7 +56,7 @@ export const useSelectionProvider = ({ layout, value, onChange }) => {
 
   // Update the selection's internal values when external value changes
   useEffect(() => {
-    selection.updateValue(value);
+    selection.update(value);
   }, [selection, value]);
 
   const LocalSelectionProvider = useMemo(() => {
@@ -306,11 +306,6 @@ const createBaseSelection = ({
       change,
     },
     update,
-
-    updateValue: (newValue) => {
-      value = newValue;
-      debug("selection", `${type} updateValue:`, newValue);
-    },
 
     registerElement,
     unregisterElement,
@@ -620,6 +615,7 @@ const createLinearSelection = ({
     type: "linear",
     navigationMethods,
   });
+  linearSelection.axis = axis;
 
   return linearSelection;
 };
