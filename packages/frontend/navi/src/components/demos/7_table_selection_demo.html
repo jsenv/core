@@ -39,13 +39,8 @@
 
       .database_table th {
         background: #f8f9fa;
-        font-weight: 600;
+        font-weight: normal;
         padding: 12px 8px;
-      }
-
-      .database_table_cell {
-        padding: 0;
-        position: relative;
       }
 
       /* Row selection styling */
@@ -67,12 +62,37 @@
       td[data-row-contains-selected] {
         font-weight: 500;
         color: #444;
-        border-left: 4px solid rgba(128, 128, 128, 0.3);
       }
+
+      /* Absolutely positioned left border indicator for rows with selected cells */
+      td[data-row-contains-selected]::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: rgba(128, 128, 128, 0.3);
+        pointer-events: none;
+        z-index: 1;
+      }
+
       th[data-column-contains-selected] {
         font-weight: 600;
         color: #444;
-        border-top: 4px solid rgba(128, 128, 128, 0.4);
+      }
+
+      /* Absolutely positioned top border indicator for columns with selected cells */
+      th[data-column-contains-selected]::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 4px;
+        background: rgba(128, 128, 128, 0.4);
+        pointer-events: none;
+        z-index: 1;
       }
 
       .database_table_cell[aria-selected="true"] {
@@ -84,30 +104,15 @@
         position: relative;
       }
 
-      .database_table_cell:focus {
-        outline: none;
-      }
-
-      .database_table_cell:focus .database_table_cell_content {
-        outline: 2px solid #0078d4;
-        outline-offset: 0px;
-      }
-
-      .database_table_cell_content {
-        display: inline-flex;
-        flex-grow: 1;
-        width: 100%;
-        height: 100%;
-        min-height: 32px;
-        align-items: center;
-      }
-
-      .database_table_cell_value {
-        display: inline-flex;
-        flex-grow: 1;
-        user-select: none;
+      .database_table_cell {
+        padding: 0;
+        position: relative;
         padding: 8px;
-        cursor: pointer;
+      }
+
+      .database_table_cell:focus {
+        outline: 2px solid #0078d4;
+        outline-offset: -2px;
       }
 
       /* Number column specific styling */
@@ -237,7 +242,7 @@
             style={{ cursor: "pointer", textAlign: "center" }}
             tabIndex={0}
           >
-            <div className="database_table_cell_content">{row.index}</div>
+            {row.index}
           </td>
         );
       };
@@ -276,9 +281,7 @@
             data-selection-name="cell"
             aria-selected={selected}
           >
-            <div className="database_table_cell_content">
-              <div className="database_table_cell_value">{value}</div>
-            </div>
+            {value}
           </td>
         );
       };
