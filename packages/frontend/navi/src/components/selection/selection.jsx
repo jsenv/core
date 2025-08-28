@@ -1256,6 +1256,130 @@ const handleCrossTypeNavigation = (
   };
 };
 
+// Helper function to handle arrow key navigation
+const handleArrowNavigation = (
+  key,
+  selection,
+  element,
+  keydownEvent,
+  isJumpToEnd,
+  isShiftSelect,
+  isMultiSelect,
+) => {
+  // Check axis restrictions
+  if (
+    (key === "ArrowDown" || key === "ArrowUp") &&
+    selection.axis === "horizontal"
+  ) {
+    debug(
+      "navigation",
+      `keydownToSelect: ${key} in horizontal layout, skipping`,
+    );
+    return false; // Indicate navigation was not handled
+  }
+
+  if (
+    (key === "ArrowLeft" || key === "ArrowRight") &&
+    selection.axis === "vertical"
+  ) {
+    debug("navigation", `keydownToSelect: ${key} in vertical layout, skipping`);
+    return false; // Indicate navigation was not handled
+  }
+
+  // Get target element based on direction
+  let targetElement;
+  if (isJumpToEnd) {
+    targetElement = getJumpToEndElement(selection, element, key);
+    debug(
+      "navigation",
+      `keydownToSelect: ${key} with Cmd/Ctrl+Shift - jumping to end element:`,
+      targetElement,
+    );
+  } else {
+    // Normal navigation
+    switch (key) {
+      case "ArrowDown":
+        targetElement = selection.getElementBelow(element);
+        break;
+      case "ArrowUp":
+        targetElement = selection.getElementAbove(element);
+        break;
+      case "ArrowLeft":
+        targetElement = selection.getElementBefore(element);
+        break;
+      case "ArrowRight":
+        targetElement = selection.getElementAfter(element);
+        break;
+      default:
+        return false; // Unsupported key
+    }
+    debug(
+      "navigation",
+      `keydownToSelect: ${key} - found next element:`,
+      targetElement,
+    );
+  }
+
+  if (!targetElement) {
+    debug("navigation", `keydownToSelect: ${key} - no target element found`);
+    return false; // Indicate navigation was not handled
+  }
+
+  const targetValue = getElementValue(targetElement);
+  keydownEvent.preventDefault(); // Prevent default scrolling behavior
+
+  // Handle cross-type navigation
+  const { isCrossType, shouldClearPreviousSelection } =
+    handleCrossTypeNavigation(
+      element,
+      targetElement,
+      keydownEvent,
+      selection,
+      isMultiSelect,
+    );
+
+  if (isShiftSelect) {
+    debug(
+      "interaction",
+      `keydownToSelect: ${key} with Shift - selecting from anchor to target element`,
+    );
+    selection.selectFromAnchorTo(targetElement, keydownEvent);
+    return true;
+  }
+
+  if (isMultiSelect && !isCrossType) {
+    debug(
+      "interaction",
+      `keydownToSelect: ${key} with multi-select - adding to selection`,
+    );
+    selection.addToSelection([targetValue], keydownEvent);
+    return true;
+  }
+
+  // Handle cross-type navigation
+  if (shouldClearPreviousSelection) {
+    debug(
+      "interaction",
+      `keydownToSelect: ${key} - cross-type navigation, clearing and setting new selection`,
+    );
+    selection.setSelection([targetValue], keydownEvent);
+  } else if (isCrossType && !shouldClearPreviousSelection) {
+    debug(
+      "interaction",
+      `keydownToSelect: ${key} - cross-type navigation with Cmd, adding to selection`,
+    );
+    selection.addToSelection([targetValue], keydownEvent);
+  } else {
+    debug(
+      "interaction",
+      `keydownToSelect: ${key} - setting selection to target element`,
+    );
+    selection.setSelection([targetValue], keydownEvent);
+  }
+
+  return true; // Indicate navigation was handled
+};
+
 const keydownToSelect = (keydownEvent, { selection, element }) => {
   if (!canInterceptKeys(keydownEvent)) {
     debug("interaction", "keydownToSelect: cannot intercept keys, skipping");
@@ -1350,239 +1474,22 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     }
   }
 
-  if (key === "ArrowDown") {
-    if (selection.axis === "horizontal") {
-      debug(
-        "navigation",
-        "keydownToSelect: ArrowDown in horizontal layout, skipping",
-      );
-      return; // No down navigation in horizontal layout
-    }
-
-    let targetElement;
-    if (isJumpToEnd) {
-      // Jump to end behavior with Cmd/Ctrl+Shift
-      targetElement = getJumpToEndElement(selection, element, "ArrowDown");
-      debug(
-        "navigation",
-        "keydownToSelect: ArrowDown with Cmd/Ctrl+Shift - jumping to end element:",
-        targetElement,
-      );
-    } else {
-      // Normal navigation
-      targetElement = selection.getElementBelow(element);
-      debug(
-        "navigation",
-        "keydownToSelect: ArrowDown - found next element:",
-        targetElement,
-      );
-    }
-
-    if (!targetElement) {
-      debug(
-        "navigation",
-        "keydownToSelect: ArrowDown - no target element found",
-      );
-      return; // No target element to select
-    }
-
-    const targetValue = getElementValue(targetElement);
-    keydownEvent.preventDefault(); // Prevent default scrolling behavior
-
-    // Handle cross-type navigation
-    const { isCrossType, shouldClearPreviousSelection } =
-      handleCrossTypeNavigation(
-        element,
-        targetElement,
-        keydownEvent,
-        selection,
-        isMultiSelect,
-      );
-
-    if (isShiftSelect) {
-      debug(
-        "interaction",
-        "keydownToSelect: ArrowDown with Shift - selecting from anchor to target element",
-      );
-      selection.selectFromAnchorTo(targetElement, keydownEvent);
-      return;
-    }
-    if (isMultiSelect && !isCrossType) {
-      debug(
-        "interaction",
-        "keydownToSelect: ArrowDown with multi-select - adding to selection",
-      );
-      selection.addToSelection([targetValue], keydownEvent);
-      return;
-    }
-
-    // For cross-type navigation without multi-select, or regular single selection
-    if (shouldClearPreviousSelection) {
-      debug(
-        "interaction",
-        "keydownToSelect: ArrowDown - cross-type navigation, clearing and setting new selection",
-      );
-      selection.setSelection([targetValue], keydownEvent);
-    } else if (isCrossType && !shouldClearPreviousSelection) {
-      debug(
-        "interaction",
-        "keydownToSelect: ArrowDown - cross-type navigation with Cmd, adding to selection",
-      );
-      selection.addToSelection([targetValue], keydownEvent);
-    } else {
-      debug(
-        "interaction",
-        "keydownToSelect: ArrowDown - setting selection to target element",
-      );
-      selection.setSelection([targetValue], keydownEvent);
-    }
-    return;
-  }
-
-  if (key === "ArrowUp") {
-    if (selection.axis === "horizontal") {
-      return; // No up navigation in horizontal layout
-    }
-
-    let targetElement;
-    if (isJumpToEnd) {
-      // Jump to end behavior with Cmd/Ctrl+Shift
-      targetElement = getJumpToEndElement(selection, element, "ArrowUp");
-    } else {
-      // Normal navigation
-      targetElement = selection.getElementAbove(element);
-    }
-
-    if (!targetElement) {
-      return; // No target element to select
-    }
-    keydownEvent.preventDefault(); // Prevent default scrolling behavior
-
-    // Handle cross-type navigation
-    const { isCrossType, shouldClearPreviousSelection } =
-      handleCrossTypeNavigation(
-        element,
-        targetElement,
-        keydownEvent,
-        selection,
-        isMultiSelect,
-      );
-
-    if (isShiftSelect) {
-      selection.selectFromAnchorTo(targetElement, keydownEvent);
-      return;
-    }
-    if (isMultiSelect && !isCrossType) {
-      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
-      return;
-    }
-
-    // Handle cross-type navigation for ArrowUp
-    if (shouldClearPreviousSelection) {
-      selection.setSelection([getElementValue(targetElement)], keydownEvent);
-    } else if (isCrossType && !shouldClearPreviousSelection) {
-      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
-    } else {
-      selection.setSelection([getElementValue(targetElement)], keydownEvent);
-    }
-    return;
-  }
-
-  if (key === "ArrowLeft") {
-    if (selection.axis === "vertical") {
-      return; // No left navigation in vertical layout
-    }
-
-    let targetElement;
-    if (isJumpToEnd) {
-      // Jump to end behavior with Cmd/Ctrl+Shift
-      targetElement = getJumpToEndElement(selection, element, "ArrowLeft");
-    } else {
-      // Normal navigation
-      targetElement = selection.getElementBefore(element);
-    }
-
-    if (!targetElement) {
-      return; // No target element to select
-    }
-    keydownEvent.preventDefault(); // Prevent default scrolling behavior
-
-    // Handle cross-type navigation
-    const { isCrossType, shouldClearPreviousSelection } =
-      handleCrossTypeNavigation(
-        element,
-        targetElement,
-        keydownEvent,
-        selection,
-        isMultiSelect,
-      );
-
-    if (isShiftSelect) {
-      selection.selectFromAnchorTo(targetElement, keydownEvent);
-      return;
-    }
-    if (isMultiSelect && !isCrossType) {
-      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
-      return;
-    }
-
-    // Handle cross-type navigation for ArrowLeft
-    if (shouldClearPreviousSelection) {
-      selection.setSelection([getElementValue(targetElement)], keydownEvent);
-    } else if (isCrossType && !shouldClearPreviousSelection) {
-      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
-    } else {
-      selection.setSelection([getElementValue(targetElement)], keydownEvent);
-    }
-    return;
-  }
-
-  if (key === "ArrowRight") {
-    if (selection.axis === "vertical") {
-      return; // No right navigation in vertical layout
-    }
-
-    let targetElement;
-    if (isJumpToEnd) {
-      // Jump to end behavior with Cmd/Ctrl+Shift
-      targetElement = getJumpToEndElement(selection, element, "ArrowRight");
-    } else {
-      // Normal navigation
-      targetElement = selection.getElementAfter(element);
-    }
-
-    if (!targetElement) {
-      return; // No target element to select
-    }
-    keydownEvent.preventDefault(); // Prevent default scrolling behavior
-
-    // Handle cross-type navigation
-    const { isCrossType, shouldClearPreviousSelection } =
-      handleCrossTypeNavigation(
-        element,
-        targetElement,
-        keydownEvent,
-        selection,
-        isMultiSelect,
-      );
-
-    if (isShiftSelect) {
-      selection.selectFromAnchorTo(targetElement, keydownEvent);
-      return;
-    }
-    if (isMultiSelect && !isCrossType) {
-      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
-      return;
-    }
-
-    // Handle cross-type navigation for ArrowRight
-    if (shouldClearPreviousSelection) {
-      selection.setSelection([getElementValue(targetElement)], keydownEvent);
-    } else if (isCrossType && !shouldClearPreviousSelection) {
-      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
-    } else {
-      selection.setSelection([getElementValue(targetElement)], keydownEvent);
-    }
+  // Handle arrow key navigation
+  if (
+    key === "ArrowDown" ||
+    key === "ArrowUp" ||
+    key === "ArrowLeft" ||
+    key === "ArrowRight"
+  ) {
+    handleArrowNavigation(
+      key,
+      selection,
+      element,
+      keydownEvent,
+      isJumpToEnd,
+      isShiftSelect,
+      isMultiSelect,
+    );
     return;
   }
 };

@@ -51,7 +51,7 @@ export const rulesRelax = {
   "consistent-return": ["error"],
   "constructor-super": ["error"],
   "curly": ["error"],
-  "default-case": ["error"],
+  "default-case": ["off"], // not alawys needed so it's annoying
   "dot-location": ["error", "property"],
   "dot-notation": ["off"],
   "eol-last": ["off"],
