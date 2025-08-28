@@ -5,12 +5,7 @@ import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import {
-  clickToSelect,
-  keydownToSelect,
-  useRegisterSelectableElement,
-  useSelectionContext,
-} from "../selection/selection_context.jsx";
+import { useSelectableElement, useSelection } from "../selection/selection.jsx";
 import {
   ShortcutProvider,
   useShortcutContext,
@@ -45,17 +40,17 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  .navi_link[data-with-selection] {
+  .navi_link[aria-selected] {
     position: relative;
   }
 
-  .navi_link[data-with-selection] input[type="checkbox"] {
+  .navi_link[aria-selected] input[type="checkbox"] {
     position: absolute;
     opacity: 0;
   }
 
   /* Visual feedback for selected state */
-  .navi_link[data-selected] {
+  .navi_link[aria-selected="true"] {
     background-color: light-dark(#bbdefb, #2563eb);
   }
 
@@ -80,16 +75,10 @@ export const Link = forwardRef((props, ref) => {
 });
 
 const LinkBasic = forwardRef((props, ref) => {
-  const selectionContext = useSelectionContext();
+  const selection = useSelection();
 
-  if (selectionContext) {
-    return (
-      <LinkWithSelection
-        ref={ref}
-        selectionContext={selectionContext}
-        {...props}
-      />
-    );
+  if (selection) {
+    return <LinkWithSelection ref={ref} selection={selection} {...props} />;
   }
   return <LinkPlain ref={ref} {...props} />;
 });
@@ -161,41 +150,32 @@ const LinkPlain = forwardRef((props, ref) => {
 });
 
 const LinkWithSelection = forwardRef((props, ref) => {
-  const {
-    selectionContext,
-    name,
-    value,
-    children,
-    onClick,
-    onKeyDown,
-    ...rest
-  } = props;
-  const isSelected = selectionContext.isValueSelected(value);
+  const { name, value, children, onClick, onKeyDown, ...rest } = props;
 
-  useRegisterSelectableElement(ref);
+  const { selected, clickToSelect, keydownToSelect } =
+    useSelectableElement(ref);
 
   return (
     <LinkPlain
       ref={ref}
       {...rest}
       onClick={(e) => {
-        clickToSelect(e, { selectionContext, value });
+        clickToSelect(e);
         onClick?.(e);
       }}
       onKeyDown={(e) => {
-        keydownToSelect(e, { selectionContext, value });
+        keydownToSelect(e);
         onKeyDown?.(e);
       }}
-      data-with-selection=""
       data-value={value}
-      data-selected={isSelected ? "" : undefined}
+      aria-selected={selected}
     >
       <input
         className="navi_link_checkbox"
         type="checkbox"
         name={name}
         value={value}
-        checked={isSelected}
+        checked={selected}
         // Prevent direct checkbox interaction - only via link clicks or keyboard nav (arrows)
         disabled
         tabIndex={-1} // Don't interfere with link tab order (might be overkill because there is already [disabled])
