@@ -390,11 +390,19 @@ const createGridSelection = ({ value = [], onChange }) => {
 
       const { x, y } = currentPos;
       const nextX = x + 1;
+      const currentSelectionName = getElementSelectionName(element);
 
-      // Find element at next position in same row
+      // Find element at next position in same row with matching selection name
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
-        if (pos && pos.x === nextX && pos.y === y) {
+        const candidateSelectionName =
+          getElementSelectionName(candidateElement);
+        if (
+          pos &&
+          pos.x === nextX &&
+          pos.y === y &&
+          candidateSelectionName === currentSelectionName
+        ) {
           return candidateElement;
         }
       }
@@ -409,11 +417,19 @@ const createGridSelection = ({ value = [], onChange }) => {
 
       const { x, y } = currentPos;
       const prevX = x - 1;
+      const currentSelectionName = getElementSelectionName(element);
 
-      // Find element at previous position in same row
+      // Find element at previous position in same row with matching selection name
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
-        if (pos && pos.x === prevX && pos.y === y) {
+        const candidateSelectionName =
+          getElementSelectionName(candidateElement);
+        if (
+          pos &&
+          pos.x === prevX &&
+          pos.y === y &&
+          candidateSelectionName === currentSelectionName
+        ) {
           return candidateElement;
         }
       }
@@ -428,11 +444,19 @@ const createGridSelection = ({ value = [], onChange }) => {
 
       const { x, y } = currentPos;
       const nextY = y + 1;
+      const currentSelectionName = getElementSelectionName(element);
 
-      // Find element at next position in same column
+      // Find element at next position in same column with matching selection name
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
-        if (pos && pos.x === x && pos.y === nextY) {
+        const candidateSelectionName =
+          getElementSelectionName(candidateElement);
+        if (
+          pos &&
+          pos.x === x &&
+          pos.y === nextY &&
+          candidateSelectionName === currentSelectionName
+        ) {
           return candidateElement;
         }
       }
@@ -447,11 +471,19 @@ const createGridSelection = ({ value = [], onChange }) => {
 
       const { x, y } = currentPos;
       const prevY = y - 1;
+      const currentSelectionName = getElementSelectionName(element);
 
-      // Find element at previous position in same column
+      // Find element at previous position in same column with matching selection name
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
-        if (pos && pos.x === x && pos.y === prevY) {
+        const candidateSelectionName =
+          getElementSelectionName(candidateElement);
+        if (
+          pos &&
+          pos.x === x &&
+          pos.y === prevY &&
+          candidateSelectionName === currentSelectionName
+        ) {
           return candidateElement;
         }
       }
@@ -545,10 +577,19 @@ const createLinearSelection = ({
       if (!registry.has(element)) {
         return null;
       }
+
+      const currentSelectionName = getElementSelectionName(element);
       let nextElement = null;
-      // Find the element that comes immediately after in DOM order
+
+      // Find the element that comes immediately after in DOM order with matching selection name
       for (const candidateElement of registry) {
         if (candidateElement === element) {
+          continue;
+        }
+
+        const candidateSelectionName =
+          getElementSelectionName(candidateElement);
+        if (candidateSelectionName !== currentSelectionName) {
           continue;
         }
 
@@ -574,11 +615,18 @@ const createLinearSelection = ({
         return null;
       }
 
+      const currentSelectionName = getElementSelectionName(element);
       let prevElement = null;
 
-      // Find the element that comes immediately before in DOM order
+      // Find the element that comes immediately before in DOM order with matching selection name
       for (const candidateElement of registry) {
         if (candidateElement === element) {
+          continue;
+        }
+
+        const candidateSelectionName =
+          getElementSelectionName(candidateElement);
+        if (candidateSelectionName !== currentSelectionName) {
           continue;
         }
 
@@ -1034,14 +1082,18 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
   }
 
   const value = getElementValue(element);
+  const selectionName = getElementSelectionName(element);
+  const hasSpecificSelectionName = selectionName && selectionName !== "cell";
+
   debug("interaction", "keydownToSelect:", {
     key: keydownEvent.key,
     element,
     value,
+    selectionName,
+    hasSpecificSelectionName,
     currentSelection: selection.value,
     type: selection.type,
   });
-
   if (keydownEvent.key === "Shift") {
     debug("interaction", "keydownToSelect: Shift key, setting anchor element");
     selection.setAnchorElement(element);
