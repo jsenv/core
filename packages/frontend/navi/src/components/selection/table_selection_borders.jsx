@@ -267,14 +267,22 @@ const generateRowSelectionPath = (selectedCells) => {
       const minTop = topRow.top;
       const maxBottom = bottomRow.bottom;
 
-      // Create a simple rectangular path
-      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
+      // Create a rectangular path without the left border (so first column's border shows through)
+      // Path goes: top-left -> top-right -> bottom-right -> bottom-left (but no left edge back to start)
+      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom}`;
     })
     .join(" ");
 };
 
 // Generate path for cell selections - uses the original edge-tracing algorithm
 const generateCellSelectionPath = (selectedCells) => {
+  // Filter out first column cells (column 0) as they have their own visual styling
+  const filteredCells = selectedCells.filter((cell) => cell.column > 0);
+
+  if (filteredCells.length === 0) {
+    return "";
+  }
+
   // Create a grid to track selected cells
   const grid = new Map();
   let minRow = Infinity;
