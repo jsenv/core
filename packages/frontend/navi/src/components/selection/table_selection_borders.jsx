@@ -2,94 +2,99 @@ import { useLayoutEffect } from "preact/hooks";
 import { useSelection } from "./selection.jsx";
 
 import.meta.css = /* css */ `
+  /* Set default selection border color */
+  :root {
+    --selection-border-color: #0078d4;
+  }
+
   /* Selection border styles using data attributes and box-shadow */
   [data-selection-border-top] {
-    box-shadow: inset 0 2px 0 0 var(--selection-border-color, #0078d4);
+    box-shadow: inset 0 2px 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-right] {
-    box-shadow: inset -2px 0 0 0 var(--selection-border-color, #0078d4);
+    box-shadow: inset -2px 0 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-bottom] {
-    box-shadow: inset 0 -2px 0 0 var(--selection-border-color, #0078d4);
+    box-shadow: inset 0 -2px 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-left] {
-    box-shadow: inset 2px 0 0 0 var(--selection-border-color, #0078d4);
+    box-shadow: inset 2px 0 0 0 var(--selection-border-color);
   }
 
   /* Combine multiple box-shadow when cell has multiple borders */
   [data-selection-border-top][data-selection-border-right] {
     box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color, #0078d4),
-      inset -2px 0 0 0 var(--selection-border-color, #0078d4);
+      inset 0 2px 0 0 var(--selection-border-color),
+      inset -2px 0 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-top][data-selection-border-bottom] {
     box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color, #0078d4),
-      inset 0 -2px 0 0 var(--selection-border-color, #0078d4);
+      inset 0 2px 0 0 var(--selection-border-color),
+      inset 0 -2px 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-top][data-selection-border-left] {
     box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color, #0078d4),
-      inset 2px 0 0 0 var(--selection-border-color, #0078d4);
+      inset 0 2px 0 0 var(--selection-border-color),
+      inset 2px 0 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-right][data-selection-border-bottom] {
     box-shadow:
-      inset -2px 0 0 0 var(--selection-border-color, #0078d4),
-      inset 0 -2px 0 0 var(--selection-border-color, #0078d4);
+      inset -2px 0 0 0 var(--selection-border-color),
+      inset 0 -2px 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-right][data-selection-border-left] {
     box-shadow:
-      inset -2px 0 0 0 var(--selection-border-color, #0078d4),
-      inset 2px 0 0 0 var(--selection-border-color, #0078d4);
+      inset -2px 0 0 0 var(--selection-border-color),
+      inset 2px 0 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-bottom][data-selection-border-left] {
     box-shadow:
-      inset 0 -2px 0 0 var(--selection-border-color, #0078d4),
-      inset 2px 0 0 0 var(--selection-border-color, #0078d4);
+      inset 0 -2px 0 0 var(--selection-border-color),
+      inset 2px 0 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-top][data-selection-border-right][data-selection-border-bottom] {
     box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color, #0078d4),
-      inset -2px 0 0 0 var(--selection-border-color, #0078d4),
-      inset 0 -2px 0 0 var(--selection-border-color, #0078d4);
+      inset 0 2px 0 0 var(--selection-border-color),
+      inset -2px 0 0 0 var(--selection-border-color),
+      inset 0 -2px 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-top][data-selection-border-right][data-selection-border-left] {
     box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color, #0078d4),
-      inset -2px 0 0 0 var(--selection-border-color, #0078d4),
-      inset 2px 0 0 0 var(--selection-border-color, #0078d4);
+      inset 0 2px 0 0 var(--selection-border-color),
+      inset -2px 0 0 0 var(--selection-border-color),
+      inset 2px 0 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-top][data-selection-border-bottom][data-selection-border-left] {
     box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color, #0078d4),
-      inset 0 -2px 0 0 var(--selection-border-color, #0078d4),
-      inset 2px 0 0 0 var(--selection-border-color, #0078d4);
+      inset 0 2px 0 0 var(--selection-border-color),
+      inset 0 -2px 0 0 var(--selection-border-color),
+      inset 2px 0 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-right][data-selection-border-bottom][data-selection-border-left] {
     box-shadow:
-      inset -2px 0 0 0 var(--selection-border-color, #0078d4),
-      inset 0 -2px 0 0 var(--selection-border-color, #0078d4),
-      inset 2px 0 0 0 var(--selection-border-color, #0078d4);
+      inset -2px 0 0 0 var(--selection-border-color),
+      inset 0 -2px 0 0 var(--selection-border-color),
+      inset 2px 0 0 0 var(--selection-border-color);
   }
 
   [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left] {
     box-shadow:
-      inset 0 2px 0 0 var(--selection-border-color, #0078d4),
-      inset -2px 0 0 0 var(--selection-border-color, #0078d4),
-      inset 0 -2px 0 0 var(--selection-border-color, #0078d4),
-      inset 2px 0 0 0 var(--selection-border-color, #0078d4);
+      inset 0 2px 0 0 var(--selection-border-color),
+      inset -2px 0 0 0 var(--selection-border-color),
+      inset 0 -2px 0 0 var(--selection-border-color),
+      inset 2px 0 0 0 var(--selection-border-color);
   }
 
   /* Hide borders during drag selection */
