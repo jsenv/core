@@ -748,15 +748,18 @@ export const useSelectableElement = (elementRef) => {
     };
   }, [selection]);
 
-  const [selected, setSelected] = useState();
+  const [selected, setSelected] = useState(false);
+
+  // Update selected state when selection changes
   useLayoutEffect(() => {
     const element = elementRef.current;
-    if (!element) {
+    if (!element || !selection) {
       setSelected(false);
       return;
     }
-    setSelected(selection.isElementSelected(element));
-  }, []);
+    const isSelected = selection.isElementSelected(element);
+    setSelected(isSelected);
+  }, [selection, selection?.values]); // React to changes in selection.values
 
   return {
     selected,
