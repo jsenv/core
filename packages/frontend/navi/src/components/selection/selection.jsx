@@ -12,14 +12,14 @@ import {
 const DEBUG = {
   registration: false, // Element registration/unregistration
   interaction: true, // Click and keyboard interactions
-  selection: false, // Selection state changes (set, add, remove, toggle)
+  selection: true, // Selection state changes (set, add, remove, toggle)
   navigation: true, // Arrow key navigation and element finding
   valueExtraction: false, // Value extraction from elements
 };
 
 const debug = (category, ...args) => {
   if (DEBUG[category]) {
-    console.debug(`[SelectionContext:${category}]`, ...args);
+    console.debug(`[selection:${category}]`, ...args);
   }
 };
 
@@ -55,7 +55,7 @@ export const useSelectionProvider = ({ layout, value, onChange }) => {
 
   // Update the selection's internal values when external value changes
   useEffect(() => {
-    selection.updateValues(value);
+    selection.updateValue(value);
   }, [selection, value]);
 
   const LocalSelectionProvider = useMemo(() => {
@@ -71,7 +71,6 @@ export const useSelectionProvider = ({ layout, value, onChange }) => {
 };
 // Grid Selection Provider - for 2D layouts like tables
 const createGridSelection = ({ value = [], onChange }) => {
-  let values = value;
   const registry = new Set(); // Set<element>
   let anchorElement = null;
 
@@ -97,12 +96,12 @@ const createGridSelection = ({ value = [], onChange }) => {
 
   const gridSelection = {
     type: "grid",
-    get values() {
-      return values;
+    get value() {
+      return value;
     },
-    updateValues: (newValues) => {
-      values = newValues;
-      debug("selection", "Grid updateValues:", newValues);
+    updateValue: (newValue) => {
+      value = newValue;
+      debug("selection", "Grid updateValue:", newValue);
     },
 
     registerElement: (element) => {
@@ -148,11 +147,11 @@ const createGridSelection = ({ value = [], onChange }) => {
     },
     isElementSelected: (element) => {
       const value = getElementValue(element);
-      const isSelected = gridSelection.values.includes(value);
+      const isSelected = gridSelection.value.includes(value);
       return isSelected;
     },
     isValueSelected: (value) => {
-      const isSelected = gridSelection.values.includes(value);
+      const isSelected = gridSelection.value.includes(value);
       return isSelected;
     },
     getAllElements: () => {
@@ -273,12 +272,12 @@ const createGridSelection = ({ value = [], onChange }) => {
         "Grid setSelection called with:",
         newSelection,
         "current selection:",
-        gridSelection.values,
+        gridSelection.value,
       );
       if (
-        newSelection.length === gridSelection.values.length &&
+        newSelection.length === gridSelection.value.length &&
         newSelection.every(
-          (value, index) => value === gridSelection.values[index],
+          (value, index) => value === gridSelection.value[index],
         )
       ) {
         debug("selection", "Grid setSelection: no change, returning early");
@@ -323,9 +322,9 @@ const createGridSelection = ({ value = [], onChange }) => {
         "Grid addToSelection called with:",
         arrayOfValuesToAdd,
         "current selection:",
-        gridSelection.values,
+        gridSelection.value,
       );
-      const selectionWithValues = [...gridSelection.values];
+      const selectionWithValues = [...gridSelection.value];
       let modified = false;
       let lastAddedElement = null;
 
@@ -372,7 +371,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       let modified = false;
       const selectionWithoutValues = [];
 
-      for (const value of gridSelection.values) {
+      for (const value of gridSelection.value) {
         if (arrayOfValuesToRemove.includes(value)) {
           modified = true;
           // Check if we're removing the anchor element
@@ -390,7 +389,7 @@ const createGridSelection = ({ value = [], onChange }) => {
     },
     toggleElement: (element, event = null) => {
       const value = getElementValue(element);
-      if (gridSelection.values.includes(value)) {
+      if (gridSelection.value.includes(value)) {
         gridSelection.removeFromSelection([value], event);
       } else {
         gridSelection.addToSelection([value], event);
@@ -399,7 +398,7 @@ const createGridSelection = ({ value = [], onChange }) => {
     selectFromAnchorTo: (element, event = null) => {
       if (
         anchorElement &&
-        gridSelection.values.includes(getElementValue(anchorElement))
+        gridSelection.value.includes(getElementValue(anchorElement))
       ) {
         const range = gridSelection.getElementRange(anchorElement, element);
         gridSelection.setSelection(range, event);
@@ -417,7 +416,6 @@ const createLinearSelection = ({
   onChange,
   axis = "vertical", // "horizontal" or "vertical"
 }) => {
-  let values = value;
   const registry = new Set(); // Set<element>
   let anchorElement = null;
 
@@ -430,12 +428,12 @@ const createLinearSelection = ({
   const linearSelection = {
     type: "linear",
     axis,
-    get values() {
-      return values;
+    get value() {
+      return value;
     },
-    updateValues: (newValues) => {
-      values = newValues;
-      debug("selection", "Linear updateValues:", newValues);
+    updateValue: (newValue) => {
+      value = newValue;
+      debug("selection", "Linear updateValues:", newValue);
     },
 
     registerElement: (element) => {
@@ -481,11 +479,11 @@ const createLinearSelection = ({
     },
     isElementSelected: (element) => {
       const value = getElementValue(element);
-      const isSelected = linearSelection.values.includes(value);
+      const isSelected = linearSelection.value.includes(value);
       return isSelected;
     },
     isValueSelected: (value) => {
-      const isSelected = linearSelection.values.includes(value);
+      const isSelected = linearSelection.value.includes(value);
       return isSelected;
     },
     getAllElements: () => {
@@ -613,9 +611,9 @@ const createLinearSelection = ({
     // Selection manipulation methods
     setSelection: (newSelection, event = null) => {
       if (
-        newSelection.length === linearSelection.values.length &&
+        newSelection.length === linearSelection.value.length &&
         newSelection.every(
-          (value, index) => value === linearSelection.values[index],
+          (value, index) => value === linearSelection.value[index],
         )
       ) {
         return;
@@ -633,7 +631,7 @@ const createLinearSelection = ({
       onChange?.(newSelection, event);
     },
     addToSelection: (arrayOfValuesToAdd, event = null) => {
-      const selectionWithValues = [...linearSelection.values];
+      const selectionWithValues = [...linearSelection.value];
       let modified = false;
       let lastAddedElement = null;
 
@@ -662,7 +660,7 @@ const createLinearSelection = ({
       let modified = false;
       const selectionWithoutValues = [];
 
-      for (const value of linearSelection.values) {
+      for (const value of linearSelection.value) {
         if (arrayOfValuesToRemove.includes(value)) {
           modified = true;
           // Check if we're removing the anchor element
@@ -680,7 +678,7 @@ const createLinearSelection = ({
     },
     toggleElement: (element, event = null) => {
       const value = getElementValue(element);
-      if (linearSelection.values.includes(value)) {
+      if (linearSelection.value.includes(value)) {
         linearSelection.removeFromSelection([value], event);
       } else {
         linearSelection.addToSelection([value], event);
@@ -689,7 +687,7 @@ const createLinearSelection = ({
     selectFromAnchorTo: (element, event = null) => {
       if (
         anchorElement &&
-        linearSelection.values.includes(getElementValue(anchorElement))
+        linearSelection.value.includes(getElementValue(anchorElement))
       ) {
         const range = linearSelection.getElementRange(anchorElement, element);
         linearSelection.setSelection(range, event);
@@ -754,11 +752,7 @@ export const useSelectableElement = (elementRef) => {
   }, [selection]);
 
   const [selected, setSelected] = useState(false);
-  debug(
-    "registration",
-    "useSelectableElement: initial selected state:",
-    selected,
-  );
+  debug("selection", "useSelectableElement: initial selected state:", selected);
 
   // Update selected state when selection changes
   useLayoutEffect(() => {
@@ -769,7 +763,7 @@ export const useSelectableElement = (elementRef) => {
       {
         element,
         selection,
-        selectionValues: selection?.values,
+        selectionValues: selection.value,
       },
     );
 
@@ -789,7 +783,7 @@ export const useSelectableElement = (elementRef) => {
       elementValue,
       isSelected,
       currentSelected: selected,
-      selectionValues: selection?.values,
+      selectionValues: selection.value,
     });
 
     if (isSelected !== selected) {
@@ -805,7 +799,7 @@ export const useSelectableElement = (elementRef) => {
         elementValue,
       });
     }
-  }, [selection, selection.values]);
+  }, [selection, selection.value]);
 
   return {
     selected,
@@ -835,7 +829,7 @@ const clickToSelect = (clickEvent, { selection, element }) => {
     isMultiSelect,
     isShiftSelect,
     isSingleSelect,
-    currentSelection: selection.values,
+    currentSelection: selection.value,
   });
 
   if (isSingleSelect) {
@@ -876,7 +870,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     key: keydownEvent.key,
     element,
     value,
-    currentSelection: selection.values,
+    currentSelection: selection.value,
     type: selection.type,
   });
 
