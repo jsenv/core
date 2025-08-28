@@ -707,15 +707,6 @@ export const useSelectableElement = (elementRef) => {
     let isDragging = false;
     let dragStartElement = null;
 
-    const handleClick = (e) => {
-      if (isDragging) {
-        // Don't handle click if we just finished a drag
-        isDragging = false;
-        return;
-      }
-      clickToSelect(e, { selection, element });
-    };
-
     const handleKeyDown = (e) => {
       keydownToSelect(e, { selection, element });
     };
@@ -726,11 +717,20 @@ export const useSelectableElement = (elementRef) => {
         return;
       }
 
-      if (e.metaKey || e.ctrlKey) {
-        // Don't start drag if using modifier keys (let normal click behavior handle it)
+      // Handle selection change immediately (moved from click handler)
+      const isMultiSelect = e.metaKey || e.ctrlKey;
+      const isShiftSelect = e.shiftKey;
+
+      if (isMultiSelect || isShiftSelect) {
+        // For modifier key selections, handle immediately and don't start drag
+        mousedownToSelect(e, { selection, element });
         return;
       }
 
+      // For single select, handle immediately
+      mousedownToSelect(e, { selection, element });
+
+      // Now set up for potential drag selection
       dragStartElement = element;
       isDragging = false; // Will be set to true if mouse moves
 
@@ -797,23 +797,19 @@ export const useSelectableElement = (elementRef) => {
           }
         }
 
-        // Reset drag state after a small delay to allow click handler to see it
-        setTimeout(() => {
-          dragStartElement = null;
-          isDragging = false;
-        }, 0);
+        // Reset drag state
+        dragStartElement = null;
+        isDragging = false;
       };
 
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     };
 
-    element.addEventListener("click", handleClick);
     element.addEventListener("keydown", handleKeyDown);
     element.addEventListener("mousedown", handleMouseDown);
 
     return () => {
-      element.removeEventListener("click", handleClick);
       element.removeEventListener("keydown", handleKeyDown);
       element.removeEventListener("mousedown", handleMouseDown);
     };
@@ -823,15 +819,15 @@ export const useSelectableElement = (elementRef) => {
     selected,
   };
 };
-const clickToSelect = (clickEvent, { selection, element }) => {
-  if (clickEvent.defaultPrevented) {
+const mousedownToSelect = (mousedownEvent, { selection, element }) => {
+  if (mousedownEvent.defaultPrevented) {
     // If the click was prevented by another handler, do not interfere
     debug("interaction", "clickToSelect: event already prevented, skipping");
     return;
   }
 
-  const isMultiSelect = clickEvent.metaKey || clickEvent.ctrlKey;
-  const isShiftSelect = clickEvent.shiftKey;
+  const isMultiSelect = mousedownEvent.metaKey || mousedownEvent.ctrlKey;
+  const isShiftSelect = mousedownEvent.shiftKey;
   const isSingleSelect = !isMultiSelect && !isShiftSelect;
   const value = getElementValue(element);
 
@@ -851,23 +847,23 @@ const clickToSelect = (clickEvent, { selection, element }) => {
       "clickToSelect: single select, setting selection to:",
       [value],
     );
-    selection.setSelection([value], clickEvent);
+    selection.setSelection([value], mousedownEvent);
     return;
   }
   if (isMultiSelect) {
     // here no need to prevent nav on <a> but it means cmd + click will both multi select
     // and open in a new tab
     debug("interaction", "clickToSelect: multi select, toggling element");
-    selection.toggleElement(element, clickEvent);
+    selection.toggleElement(element, mousedownEvent);
     return;
   }
   if (isShiftSelect) {
-    clickEvent.preventDefault(); // Prevent navigation
+    mousedownEvent.preventDefault(); // Prevent navigation
     debug(
       "interaction",
       "clickToSelect: shift select, selecting from anchor to element",
     );
-    selection.selectFromAnchorTo(element, clickEvent);
+    selection.selectFromAnchorTo(element, mousedownEvent);
     return;
   }
 };
