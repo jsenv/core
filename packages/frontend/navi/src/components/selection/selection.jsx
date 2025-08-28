@@ -72,11 +72,17 @@ export const useSelectionProvider = ({ layout, value, onChange }) => {
 };
 // Grid Selection Provider - for 2D layouts like tables
 const createGridSelection = ({ value = [], onChange }) => {
+  const [change, triggerChange] = createCallbackController();
+  change.add(onChange);
+  const update = (newValue, event) => {
+    debug("selection", "Grid setSelection: calling onChange with:", newValue);
+    value = newValue;
+    triggerChange(value, event);
+  };
+
   const registry = new Set(); // Set<element>
   let anchorElement = null;
 
-  const [change, triggerChange] = createCallbackController();
-  change.add(onChange);
   const getElementPosition = (element) => {
     // Get position by checking element's position in table structure
     const cell = element.closest("td, th");
@@ -108,7 +114,6 @@ const createGridSelection = ({ value = [], onChange }) => {
 
     updateValue: (newValue) => {
       value = newValue;
-      debugger;
       debug("selection", "Grid updateValue:", newValue);
     },
 
@@ -317,12 +322,8 @@ const createGridSelection = ({ value = [], onChange }) => {
         );
         anchorElement = null;
       }
-      debug(
-        "selection",
-        "Grid setSelection: calling onChange with:",
-        newSelection,
-      );
-      triggerChange(newSelection, event);
+
+      update(newSelection, event);
     },
     addToSelection: (arrayOfValuesToAdd, event = null) => {
       debug(
@@ -365,12 +366,7 @@ const createGridSelection = ({ value = [], onChange }) => {
           );
           anchorElement = lastAddedElement;
         }
-        debug(
-          "selection",
-          "Grid addToSelection: calling onChange with:",
-          selectionWithValues,
-        );
-        triggerChange(selectionWithValues, event);
+        update(selectionWithValues, event);
       } else {
         debug("selection", "Grid addToSelection: no changes made");
       }
@@ -392,7 +388,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       }
 
       if (modified) {
-        triggerChange(selectionWithoutValues, event);
+        update(selectionWithoutValues, event);
       }
     },
     toggleElement: (element, event = null) => {
@@ -426,6 +422,11 @@ const createLinearSelection = ({
 }) => {
   const [change, triggerChange] = createCallbackController();
   change.add(onChange);
+  const update = (newValue, event) => {
+    value = newValue;
+    triggerChange(value, event);
+  };
+
   const registry = new Set(); // Set<element>
   let anchorElement = null;
 
@@ -639,7 +640,7 @@ const createLinearSelection = ({
           }
         }
       }
-      triggerChange(newSelection, event);
+      update(newSelection, event);
     },
     addToSelection: (arrayOfValuesToAdd, event = null) => {
       const selectionWithValues = [...linearSelection.value];
@@ -664,7 +665,7 @@ const createLinearSelection = ({
         if (lastAddedElement) {
           anchorElement = lastAddedElement;
         }
-        triggerChange(selectionWithValues, event);
+        update(selectionWithValues, event);
       }
     },
     removeFromSelection: (arrayOfValuesToRemove, event = null) => {
@@ -684,7 +685,7 @@ const createLinearSelection = ({
       }
 
       if (modified) {
-        triggerChange(selectionWithoutValues, event);
+        update(selectionWithoutValues, event);
       }
     },
     toggleElement: (element, event = null) => {
