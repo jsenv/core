@@ -189,6 +189,74 @@ const generateSelectionBorderPath = (selectedCells) => {
     return "";
   }
 
+  // Group cells by their type (check if they have data-selection-name="row")
+  const rowCells = selectedCells.filter(
+    (cell) => cell.element.getAttribute("data-selection-name") === "row",
+  );
+  const cellCells = selectedCells.filter(
+    (cell) => cell.element.getAttribute("data-selection-name") !== "row",
+  );
+
+  let paths = [];
+
+  // Handle row selections - create rectangular outlines for each contiguous group of rows
+  if (rowCells.length > 0) {
+    paths.push(generateRowSelectionPath(rowCells));
+  }
+
+  // Handle cell selections - use the original algorithm
+  if (cellCells.length > 0) {
+    paths.push(generateCellSelectionPath(cellCells));
+  }
+
+  return paths.filter((p) => p).join(" ");
+};
+
+// Generate path for row selections - creates simple rectangular outlines
+const generateRowSelectionPath = (selectedCells) => {
+  if (selectedCells.length === 0) return "";
+
+  // Group consecutive rows
+  const rowGroups = [];
+  const sortedCells = selectedCells.sort((a, b) => a.row - b.row);
+
+  let currentGroup = [sortedCells[0]];
+
+  for (let i = 1; i < sortedCells.length; i++) {
+    const currentCell = sortedCells[i];
+    const lastCell = currentGroup[currentGroup.length - 1];
+
+    if (currentCell.row === lastCell.row + 1) {
+      // Consecutive row, add to current group
+      currentGroup.push(currentCell);
+    } else {
+      // Non-consecutive, start new group
+      rowGroups.push(currentGroup);
+      currentGroup = [currentCell];
+    }
+  }
+  rowGroups.push(currentGroup);
+
+  // Create a rectangular path for each group of consecutive rows
+  return rowGroups
+    .map((group) => {
+      const topRow = group[0];
+      const bottomRow = group[group.length - 1];
+
+      // Find the bounds of all cells in this row group
+      let minLeft = Math.min(...group.map((cell) => cell.left));
+      let maxRight = Math.max(...group.map((cell) => cell.right));
+      let minTop = topRow.top;
+      let maxBottom = bottomRow.bottom;
+
+      // Create a simple rectangular path
+      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
+    })
+    .join(" ");
+};
+
+// Generate path for cell selections - uses the original edge-tracing algorithm
+const generateCellSelectionPath = (selectedCells) => {
   // Create a grid to track selected cells
   const grid = new Map();
   let minRow = Infinity;
@@ -276,21 +344,36 @@ const generateSelectionBorderPath = (selectedCells) => {
 const edgesToSVGPath = (edges) => {
   if (edges.length === 0) return "";
 
-  // Group connected edges into continuous paths
+  // Find all unique paths by tracing connected edges
   const paths = [];
   const usedEdges = new Set();
 
-  edges.forEach((startEdge, startIndex) => {
+  // Sort edges to ensure consistent path generation
+  const sortedEdges = [...edges].sort((a, b) => {
+    if (a.y1 !== b.y1) return a.y1 - b.y1;
+    if (a.x1 !== b.x1) return a.x1 - b.x1;
+    return a.type.localeCompare(b.type);
+  });
+
+  sortedEdges.forEach((startEdge) => {
+    const startIndex = edges.indexOf(startEdge);
     if (usedEdges.has(startIndex)) return;
 
-    const pathSegments = [];
+    const pathPoints = [];
+    const visitedEdges = [];
     let currentEdge = startEdge;
     let currentIndex = startIndex;
 
+    // Start the path
+    pathPoints.push({ x: currentEdge.x1, y: currentEdge.y1 });
+
     // Trace the path from this starting edge
-    do {
+    while (true) {
       usedEdges.add(currentIndex);
-      pathSegments.push(currentEdge);
+      visitedEdges.push(currentIndex);
+
+      // Add the end point of current edge
+      pathPoints.push({ x: currentEdge.x2, y: currentEdge.y2 });
 
       // Find the next connected edge
       const nextEdgeData = findNextConnectedEdge(currentEdge, edges, usedEdges);
@@ -298,27 +381,43 @@ const edgesToSVGPath = (edges) => {
 
       currentEdge = nextEdgeData.edge;
       currentIndex = nextEdgeData.index;
-    } while (!usedEdges.has(currentIndex) && currentIndex !== startIndex);
 
-    if (pathSegments.length > 0) {
-      paths.push(pathSegments);
+      // Check if we've completed a loop
+      if (visitedEdges.includes(currentIndex)) break;
+    }
+
+    if (pathPoints.length > 1) {
+      paths.push(pathPoints);
     }
   });
 
-  // Convert each path to SVG
+  // Convert each path to SVG - create one continuous path instead of multiple closed paths
+  if (paths.length === 0) return "";
+
+  // For multiple disconnected regions, we still want to create separate closed paths
+  // but we need to be smarter about it
   return paths
-    .map((pathSegments) => {
-      if (pathSegments.length === 0) return "";
+    .map((pathPoints) => {
+      if (pathPoints.length === 0) return "";
 
-      const firstEdge = pathSegments[0];
-      let pathData = `M ${firstEdge.x1} ${firstEdge.y1}`;
+      const firstPoint = pathPoints[0];
+      let pathData = `M ${firstPoint.x} ${firstPoint.y}`;
 
-      pathSegments.forEach((edge) => {
-        pathData += ` L ${edge.x2} ${edge.y2}`;
-      });
+      for (let i = 1; i < pathPoints.length; i++) {
+        const point = pathPoints[i];
+        pathData += ` L ${point.x} ${point.y}`;
+      }
 
-      // Close the path if it forms a complete loop
+      // Only close the path if the last point is different from the first
+      const lastPoint = pathPoints[pathPoints.length - 1];
+      if (
+        Math.abs(lastPoint.x - firstPoint.x) > 0.1 ||
+        Math.abs(lastPoint.y - firstPoint.y) > 0.1
+      ) {
+        pathData += ` L ${firstPoint.x} ${firstPoint.y}`;
+      }
       pathData += " Z";
+
       return pathData;
     })
     .join(" ");
