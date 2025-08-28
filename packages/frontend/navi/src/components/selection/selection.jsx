@@ -345,6 +345,13 @@ const createGridSelection = ({ value = [], onChange }) => {
         return [];
       }
 
+      // Check if we're working with row selections
+      const fromValue = getElementValue(fromElement);
+      const toValue = getElementValue(toElement);
+      const isRowSelection =
+        (typeof fromValue === "string" && fromValue.startsWith("row:")) ||
+        (typeof toValue === "string" && toValue.startsWith("row:"));
+
       // Calculate rectangular selection area
       const { x: fromX, y: fromY } = fromPos;
       const { x: toX, y: toY } = toPos;
@@ -364,7 +371,15 @@ const createGridSelection = ({ value = [], onChange }) => {
           pos.y >= minY &&
           pos.y <= maxY
         ) {
-          valuesInRange.push(getElementValue(element));
+          const elementValue = getElementValue(element);
+          const isElementRow =
+            typeof elementValue === "string" && elementValue.startsWith("row:");
+
+          // If we're doing row selection, only include row elements
+          // If we're doing cell selection, only include non-row elements
+          if (isRowSelection === isElementRow) {
+            valuesInRange.push(elementValue);
+          }
         }
       }
 
@@ -477,6 +492,13 @@ const createLinearSelection = ({
         return [];
       }
 
+      // Check if we're working with row selections
+      const fromValue = getElementValue(fromElement);
+      const toValue = getElementValue(toElement);
+      const isRowSelection =
+        (typeof fromValue === "string" && fromValue.startsWith("row:")) ||
+        (typeof toValue === "string" && toValue.startsWith("row:"));
+
       // Use compareDocumentPosition to determine order
       const comparison = fromElement.compareDocumentPosition(toElement);
       let startElement;
@@ -512,7 +534,15 @@ const createLinearSelection = ({
           element === endElement ||
           (afterStart && beforeEnd)
         ) {
-          valuesInRange.push(getElementValue(element));
+          const elementValue = getElementValue(element);
+          const isElementRow =
+            typeof elementValue === "string" && elementValue.startsWith("row:");
+
+          // If we're doing row selection, only include row elements
+          // If we're doing cell selection, only include non-row elements
+          if (isRowSelection === isElementRow) {
+            valuesInRange.push(elementValue);
+          }
         }
       }
 
@@ -766,13 +796,21 @@ export const useSelectableElement = (elementRef) => {
       return null;
     }
     const value = getElementValue(element);
+    const isRowElement = typeof value === "string" && value.startsWith("row:");
     debug(
       "registration",
       "useSelectableElement: registering element:",
       element,
       "value:",
       value,
+      "isRowElement:",
+      isRowElement,
     );
+
+    // Set tabIndex for keyboard navigation
+    // Row elements should not be focusable via tab/arrow keys
+    element.tabIndex = isRowElement ? -1 : 0;
+
     selection.registerElement(element);
     return () => {
       debug(
@@ -819,6 +857,19 @@ export const useSelectableElement = (elementRef) => {
     let dragStartElement = null;
 
     const handleKeyDown = (e) => {
+      const value = getElementValue(element);
+      const isRowElement =
+        typeof value === "string" && value.startsWith("row:");
+
+      // Skip keyboard navigation for row elements
+      if (isRowElement) {
+        debug(
+          "interaction",
+          "keydownToSelect: skipping row element keyboard navigation",
+        );
+        return;
+      }
+
       keydownToSelect(e, { selection, element });
     };
 
@@ -910,6 +961,24 @@ export const useSelectableElement = (elementRef) => {
         }
 
         if (targetElement && selection.registry.has(targetElement)) {
+          // Check if we're mixing row and cell selections
+          const dragStartValue = getElementValue(dragStartElement);
+          const targetValue = getElementValue(targetElement);
+          const isDragStartRow =
+            typeof dragStartValue === "string" &&
+            dragStartValue.startsWith("row:");
+          const isTargetRow =
+            typeof targetValue === "string" && targetValue.startsWith("row:");
+
+          // Only allow drag between elements of the same type (both rows or both cells)
+          if (isDragStartRow !== isTargetRow) {
+            debug(
+              "interaction",
+              "drag select: skipping mixed row/cell selection",
+            );
+            return;
+          }
+
           // Get the range from anchor to current target
           const rangeValues = selection.getElementRange(
             dragStartElement,

@@ -210,27 +210,24 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const NumberColumnCell = ({
-        row,
-        onRowClick,
-        rowWithSomeSelectedCell,
-      }) => {
+      const NumberColumnCell = ({ row, rowWithSomeSelectedCell }) => {
+        const cellRef = useRef();
+        const rowValue = `row:${row.id}`;
+        const { selected } = useSelectableElement(cellRef);
+
         const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(
           row.id,
         );
-        const handleClick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onRowClick(row.id);
-        };
 
         return (
           <td
+            ref={cellRef}
             className="database_table_cell number-column"
             data-row-contains-selected={
               rowContainsSelectedCell ? "" : undefined
             }
-            onClick={handleClick}
+            data-value={rowValue}
+            aria-selected={selected}
             style={{ cursor: "pointer" }}
           >
             {row.index}
@@ -315,17 +312,6 @@
             rowWithSomeSelectedCell.push(rowId);
           }
         }
-
-        // Row selection handler
-        const handleRowClick = (rowId) => {
-          console.log("Row clicked:", rowId);
-
-          // Use "row:" prefix to distinguish row selections from cell selections
-          const rowValue = `row:${rowId}`;
-
-          // Clear all selections and select only this row
-          selectionSignal.value = [rowValue];
-        };
 
         const clearSelection = () => {
           selectionSignal.value = [];
@@ -417,7 +403,6 @@
                           <NumberColumnCell
                             row={row}
                             rowWithSomeSelectedCell={rowWithSomeSelectedCell}
-                            onRowClick={handleRowClick}
                           />
                           {columns.map((col, colIndex) => (
                             <DatabaseTableCell
