@@ -393,21 +393,26 @@ const createGridSelection = ({ value = [], onChange }) => {
       const nextX = x + 1;
       const currentSelectionName = getElementSelectionName(element);
 
-      // Find element at next position in same row with matching selection name
+      let fallbackElement = null;
+
+      // Single loop: prioritize same selection name, store fallback
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         const candidateSelectionName =
           getElementSelectionName(candidateElement);
-        if (
-          pos &&
-          pos.x === nextX &&
-          pos.y === y &&
-          candidateSelectionName === currentSelectionName
-        ) {
-          return candidateElement;
+
+        if (pos && pos.x === nextX && pos.y === y) {
+          if (candidateSelectionName === currentSelectionName) {
+            // Found exact match, return immediately
+            return candidateElement;
+          } else if (!fallbackElement) {
+            // Store first fallback candidate
+            fallbackElement = candidateElement;
+          }
         }
       }
-      return null;
+
+      return fallbackElement;
     },
 
     getElementBefore: (element) => {
@@ -420,21 +425,26 @@ const createGridSelection = ({ value = [], onChange }) => {
       const prevX = x - 1;
       const currentSelectionName = getElementSelectionName(element);
 
-      // Find element at previous position in same row with matching selection name
+      let fallbackElement = null;
+
+      // Single loop: prioritize same selection name, store fallback
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         const candidateSelectionName =
           getElementSelectionName(candidateElement);
-        if (
-          pos &&
-          pos.x === prevX &&
-          pos.y === y &&
-          candidateSelectionName === currentSelectionName
-        ) {
-          return candidateElement;
+
+        if (pos && pos.x === prevX && pos.y === y) {
+          if (candidateSelectionName === currentSelectionName) {
+            // Found exact match, return immediately
+            return candidateElement;
+          } else if (!fallbackElement) {
+            // Store first fallback candidate
+            fallbackElement = candidateElement;
+          }
         }
       }
-      return null;
+
+      return fallbackElement;
     },
 
     getElementBelow: (element) => {
@@ -447,21 +457,26 @@ const createGridSelection = ({ value = [], onChange }) => {
       const nextY = y + 1;
       const currentSelectionName = getElementSelectionName(element);
 
-      // Find element at next position in same column with matching selection name
+      let fallbackElement = null;
+
+      // Single loop: prioritize same selection name, store fallback
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         const candidateSelectionName =
           getElementSelectionName(candidateElement);
-        if (
-          pos &&
-          pos.x === x &&
-          pos.y === nextY &&
-          candidateSelectionName === currentSelectionName
-        ) {
-          return candidateElement;
+
+        if (pos && pos.x === x && pos.y === nextY) {
+          if (candidateSelectionName === currentSelectionName) {
+            // Found exact match, return immediately
+            return candidateElement;
+          } else if (!fallbackElement) {
+            // Store first fallback candidate
+            fallbackElement = candidateElement;
+          }
         }
       }
-      return null;
+
+      return fallbackElement;
     },
 
     getElementAbove: (element) => {
@@ -474,21 +489,26 @@ const createGridSelection = ({ value = [], onChange }) => {
       const prevY = y - 1;
       const currentSelectionName = getElementSelectionName(element);
 
-      // Find element at previous position in same column with matching selection name
+      let fallbackElement = null;
+
+      // Single loop: prioritize same selection name, store fallback
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         const candidateSelectionName =
           getElementSelectionName(candidateElement);
-        if (
-          pos &&
-          pos.x === x &&
-          pos.y === prevY &&
-          candidateSelectionName === currentSelectionName
-        ) {
-          return candidateElement;
+
+        if (pos && pos.x === x && pos.y === prevY) {
+          if (candidateSelectionName === currentSelectionName) {
+            // Found exact match, return immediately
+            return candidateElement;
+          } else if (!fallbackElement) {
+            // Store first fallback candidate
+            fallbackElement = candidateElement;
+          }
         }
       }
-      return null;
+
+      return fallbackElement;
     },
   };
   const gridSelection = createBaseSelection({
@@ -581,8 +601,9 @@ const createLinearSelection = ({
 
       const currentSelectionName = getElementSelectionName(element);
       let nextElement = null;
+      let fallbackElement = null;
 
-      // Find the element that comes immediately after in DOM order with matching selection name
+      // Single loop: prioritize same selection name, store fallback
       for (const candidateElement of registry) {
         if (candidateElement === element) {
           continue;
@@ -590,26 +611,35 @@ const createLinearSelection = ({
 
         const candidateSelectionName =
           getElementSelectionName(candidateElement);
-        if (candidateSelectionName !== currentSelectionName) {
-          continue;
-        }
 
         // Check if this element comes after current
         if (
           element.compareDocumentPosition(candidateElement) &
           Node.DOCUMENT_POSITION_FOLLOWING
         ) {
-          // If we don't have a next element yet, or this one is closer than our current next
-          if (
-            !nextElement ||
-            candidateElement.compareDocumentPosition(nextElement) &
-              Node.DOCUMENT_POSITION_PRECEDING
-          ) {
-            nextElement = candidateElement;
+          if (candidateSelectionName === currentSelectionName) {
+            // Same selection name - find the closest one
+            if (
+              !nextElement ||
+              candidateElement.compareDocumentPosition(nextElement) &
+                Node.DOCUMENT_POSITION_PRECEDING
+            ) {
+              nextElement = candidateElement;
+            }
+          } else if (!fallbackElement) {
+            // Different selection name - store first fallback
+            if (
+              !fallbackElement ||
+              candidateElement.compareDocumentPosition(fallbackElement) &
+                Node.DOCUMENT_POSITION_PRECEDING
+            ) {
+              fallbackElement = candidateElement;
+            }
           }
         }
       }
-      return nextElement;
+
+      return nextElement || fallbackElement;
     },
     getElementBefore: (element) => {
       if (!registry.has(element)) {
@@ -619,7 +649,7 @@ const createLinearSelection = ({
       const currentSelectionName = getElementSelectionName(element);
       let prevElement = null;
 
-      // Find the element that comes immediately before in DOM order with matching selection name
+      // First try to find element with same selection name
       for (const candidateElement of registry) {
         if (candidateElement === element) {
           continue;
@@ -643,6 +673,36 @@ const createLinearSelection = ({
               Node.DOCUMENT_POSITION_PRECEDING
           ) {
             prevElement = candidateElement;
+          }
+        }
+      }
+
+      // If no element found with same selection name, fallback to different selection name
+      if (!prevElement) {
+        for (const candidateElement of registry) {
+          if (candidateElement === element) {
+            continue;
+          }
+
+          const candidateSelectionName =
+            getElementSelectionName(candidateElement);
+          if (candidateSelectionName === currentSelectionName) {
+            continue;
+          }
+
+          // Check if this element comes before current
+          if (
+            element.compareDocumentPosition(candidateElement) &
+            Node.DOCUMENT_POSITION_PRECEDING
+          ) {
+            // If we don't have a prev element yet, or this one is closer than our current prev
+            if (
+              !prevElement ||
+              prevElement.compareDocumentPosition(candidateElement) &
+                Node.DOCUMENT_POSITION_PRECEDING
+            ) {
+              prevElement = candidateElement;
+            }
           }
         }
       }
@@ -715,75 +775,109 @@ const getJumpToEndElementGrid = (selection, element, direction) => {
   if (direction === "ArrowRight") {
     // Jump to last element in current row with matching selection name
     let lastInRow = null;
+    let fallbackElement = null;
     let maxX = -1;
+    let fallbackMaxX = -1;
+
     for (const candidateElement of selection.registry) {
       const candidateSelectionName = getElementSelectionName(candidateElement);
-      if (candidateSelectionName !== currentSelectionName) {
-        continue;
-      }
-
       const pos = getElementPosition(candidateElement);
-      if (pos && pos.y === y && pos.x > maxX) {
-        maxX = pos.x;
-        lastInRow = candidateElement;
+
+      if (pos && pos.y === y) {
+        if (candidateSelectionName === currentSelectionName && pos.x > maxX) {
+          maxX = pos.x;
+          lastInRow = candidateElement;
+        } else if (
+          candidateSelectionName !== currentSelectionName &&
+          pos.x > fallbackMaxX
+        ) {
+          fallbackMaxX = pos.x;
+          fallbackElement = candidateElement;
+        }
       }
     }
-    return lastInRow;
+    return lastInRow || fallbackElement;
   }
 
   if (direction === "ArrowLeft") {
     // Jump to first element in current row with matching selection name
     let firstInRow = null;
+    let fallbackElement = null;
     let minX = Infinity;
+    let fallbackMinX = Infinity;
+
     for (const candidateElement of selection.registry) {
       const candidateSelectionName = getElementSelectionName(candidateElement);
-      if (candidateSelectionName !== currentSelectionName) continue;
-
       const pos = getElementPosition(candidateElement);
-      if (pos && pos.y === y && pos.x < minX) {
-        minX = pos.x;
-        firstInRow = candidateElement;
+
+      if (pos && pos.y === y) {
+        if (candidateSelectionName === currentSelectionName && pos.x < minX) {
+          minX = pos.x;
+          firstInRow = candidateElement;
+        } else if (
+          candidateSelectionName !== currentSelectionName &&
+          pos.x < fallbackMinX
+        ) {
+          fallbackMinX = pos.x;
+          fallbackElement = candidateElement;
+        }
       }
     }
-    return firstInRow;
+    return firstInRow || fallbackElement;
   }
 
   if (direction === "ArrowDown") {
     // Jump to last element in current column with matching selection name
     let lastInColumn = null;
+    let fallbackElement = null;
     let maxY = -1;
+    let fallbackMaxY = -1;
+
     for (const candidateElement of selection.registry) {
       const candidateSelectionName = getElementSelectionName(candidateElement);
-      if (candidateSelectionName !== currentSelectionName) {
-        continue;
-      }
-
       const pos = getElementPosition(candidateElement);
-      if (pos && pos.x === x && pos.y > maxY) {
-        maxY = pos.y;
-        lastInColumn = candidateElement;
+
+      if (pos && pos.x === x) {
+        if (candidateSelectionName === currentSelectionName && pos.y > maxY) {
+          maxY = pos.y;
+          lastInColumn = candidateElement;
+        } else if (
+          candidateSelectionName !== currentSelectionName &&
+          pos.y > fallbackMaxY
+        ) {
+          fallbackMaxY = pos.y;
+          fallbackElement = candidateElement;
+        }
       }
     }
-    return lastInColumn;
+    return lastInColumn || fallbackElement;
   }
 
   if (direction === "ArrowUp") {
     // Jump to first element in current column with matching selection name
     let firstInColumn = null;
+    let fallbackElement = null;
     let minY = Infinity;
+    let fallbackMinY = Infinity;
+
     for (const candidateElement of selection.registry) {
       const candidateSelectionName = getElementSelectionName(candidateElement);
-      if (candidateSelectionName !== currentSelectionName) {
-        continue;
-      }
-
       const pos = getElementPosition(candidateElement);
-      if (pos && pos.x === x && pos.y < minY) {
-        minY = pos.y;
-        firstInColumn = candidateElement;
+
+      if (pos && pos.x === x) {
+        if (candidateSelectionName === currentSelectionName && pos.y < minY) {
+          minY = pos.y;
+          firstInColumn = candidateElement;
+        } else if (
+          candidateSelectionName !== currentSelectionName &&
+          pos.y < fallbackMinY
+        ) {
+          fallbackMinY = pos.y;
+          fallbackElement = candidateElement;
+        }
       }
     }
-    return firstInColumn;
+    return firstInColumn || fallbackElement;
   }
 
   return null;
@@ -795,41 +889,59 @@ const getJumpToEndElementLinear = (selection, element, direction) => {
   if (direction === "ArrowDown" || direction === "ArrowRight") {
     // Jump to last element in the registry with matching selection name
     let lastElement = null;
+    let fallbackElement = null;
+
     for (const candidateElement of selection.registry) {
       const candidateSelectionName = getElementSelectionName(candidateElement);
-      if (candidateSelectionName !== currentSelectionName) {
-        continue;
-      }
 
-      if (
-        !lastElement ||
-        candidateElement.compareDocumentPosition(lastElement) &
-          Node.DOCUMENT_POSITION_FOLLOWING
-      ) {
-        lastElement = candidateElement;
+      if (candidateSelectionName === currentSelectionName) {
+        if (
+          !lastElement ||
+          candidateElement.compareDocumentPosition(lastElement) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        ) {
+          lastElement = candidateElement;
+        }
+      } else if (!fallbackElement) {
+        if (
+          !fallbackElement ||
+          candidateElement.compareDocumentPosition(fallbackElement) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        ) {
+          fallbackElement = candidateElement;
+        }
       }
     }
-    return lastElement;
+    return lastElement || fallbackElement;
   }
 
   if (direction === "ArrowUp" || direction === "ArrowLeft") {
     // Jump to first element in the registry with matching selection name
     let firstElement = null;
+    let fallbackElement = null;
+
     for (const candidateElement of selection.registry) {
       const candidateSelectionName = getElementSelectionName(candidateElement);
-      if (candidateSelectionName !== currentSelectionName) {
-        continue;
-      }
 
-      if (
-        !firstElement ||
-        firstElement.compareDocumentPosition(candidateElement) &
-          Node.DOCUMENT_POSITION_FOLLOWING
-      ) {
-        firstElement = candidateElement;
+      if (candidateSelectionName === currentSelectionName) {
+        if (
+          !firstElement ||
+          firstElement.compareDocumentPosition(candidateElement) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        ) {
+          firstElement = candidateElement;
+        }
+      } else if (!fallbackElement) {
+        if (
+          !fallbackElement ||
+          fallbackElement.compareDocumentPosition(candidateElement) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        ) {
+          fallbackElement = candidateElement;
+        }
       }
     }
-    return firstElement;
+    return firstElement || fallbackElement;
   }
 
   return null;
@@ -1109,6 +1221,41 @@ export const useSelectableElement = (elementRef) => {
     selected,
   };
 };
+
+// Helper function to handle cross-type navigation
+const handleCrossTypeNavigation = (
+  currentElement,
+  targetElement,
+  keydownEvent,
+  selection,
+  isMultiSelect,
+) => {
+  const currentSelectionName = getElementSelectionName(currentElement);
+  const targetSelectionName = getElementSelectionName(targetElement);
+
+  // Check if we're switching between different selection types
+  if (currentSelectionName !== targetSelectionName) {
+    debug(
+      "navigation",
+      "Cross-type navigation detected:",
+      currentSelectionName,
+      "->",
+      targetSelectionName,
+    );
+
+    // Return info about cross-type navigation for caller to handle
+    return {
+      isCrossType: true,
+      shouldClearPreviousSelection: !isMultiSelect,
+    };
+  }
+
+  return {
+    isCrossType: false,
+    shouldClearPreviousSelection: false,
+  };
+};
+
 const keydownToSelect = (keydownEvent, { selection, element }) => {
   if (!canInterceptKeys(keydownEvent)) {
     debug("interaction", "keydownToSelect: cannot intercept keys, skipping");
@@ -1242,6 +1389,16 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     const targetValue = getElementValue(targetElement);
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
 
+    // Handle cross-type navigation
+    const { isCrossType, shouldClearPreviousSelection } =
+      handleCrossTypeNavigation(
+        element,
+        targetElement,
+        keydownEvent,
+        selection,
+        isMultiSelect,
+      );
+
     if (isShiftSelect) {
       debug(
         "interaction",
@@ -1250,7 +1407,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       selection.selectFromAnchorTo(targetElement, keydownEvent);
       return;
     }
-    if (isMultiSelect) {
+    if (isMultiSelect && !isCrossType) {
       debug(
         "interaction",
         "keydownToSelect: ArrowDown with multi-select - adding to selection",
@@ -1258,10 +1415,19 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       selection.addToSelection([targetValue], keydownEvent);
       return;
     }
-    debug(
-      "interaction",
-      "keydownToSelect: ArrowDown - setting selection to target element",
-    );
+
+    // For cross-type navigation without multi-select, or regular single selection
+    if (shouldClearPreviousSelection) {
+      debug(
+        "interaction",
+        "keydownToSelect: ArrowDown - cross-type navigation, clearing and setting new selection",
+      );
+    } else {
+      debug(
+        "interaction",
+        "keydownToSelect: ArrowDown - setting selection to target element",
+      );
+    }
     selection.setSelection([targetValue], keydownEvent);
     return;
   }
@@ -1284,11 +1450,22 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       return; // No target element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
+
+    // Handle cross-type navigation
+    const { isCrossType, shouldClearPreviousSelection } =
+      handleCrossTypeNavigation(
+        element,
+        targetElement,
+        keydownEvent,
+        selection,
+        isMultiSelect,
+      );
+
     if (isShiftSelect) {
       selection.selectFromAnchorTo(targetElement, keydownEvent);
       return;
     }
-    if (isMultiSelect) {
+    if (isMultiSelect && !isCrossType) {
       selection.addToSelection([getElementValue(targetElement)], keydownEvent);
       return;
     }
@@ -1314,11 +1491,22 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       return; // No target element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
+
+    // Handle cross-type navigation
+    const { isCrossType, shouldClearPreviousSelection } =
+      handleCrossTypeNavigation(
+        element,
+        targetElement,
+        keydownEvent,
+        selection,
+        isMultiSelect,
+      );
+
     if (isShiftSelect) {
       selection.selectFromAnchorTo(targetElement, keydownEvent);
       return;
     }
-    if (isMultiSelect) {
+    if (isMultiSelect && !isCrossType) {
       selection.addToSelection([getElementValue(targetElement)], keydownEvent);
       return;
     }
@@ -1344,11 +1532,22 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       return; // No target element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
+
+    // Handle cross-type navigation
+    const { isCrossType, shouldClearPreviousSelection } =
+      handleCrossTypeNavigation(
+        element,
+        targetElement,
+        keydownEvent,
+        selection,
+        isMultiSelect,
+      );
+
     if (isShiftSelect) {
       selection.selectFromAnchorTo(targetElement, keydownEvent);
       return;
     }
-    if (isMultiSelect) {
+    if (isMultiSelect && !isCrossType) {
       selection.addToSelection([getElementValue(targetElement)], keydownEvent);
       return;
     }
