@@ -13,9 +13,9 @@ import { eventIsMatchingKeyCombination } from "../shortcut/shortcut_context.jsx"
 
 const DEBUG = {
   registration: false, // Element registration/unregistration
-  interaction: true, // Click and keyboard interactions
-  selection: true, // Selection state changes (set, add, remove, toggle)
-  navigation: true, // Arrow key navigation and element finding
+  interaction: false, // Click and keyboard interactions
+  selection: false, // Selection state changes (set, add, remove, toggle)
+  navigation: false, // Arrow key navigation and element finding
   valueExtraction: false, // Value extraction from elements
 };
 
