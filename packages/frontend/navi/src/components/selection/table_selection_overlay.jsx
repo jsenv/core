@@ -1,82 +1,113 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
-export const TableSelectionOverlay = ({ tableRef }) => {
-  const [rectangles, setRectangles] = useState([]);
+import.meta.css = /* css */ `
+  /* Selection overlay container */
+  .selection-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
 
-  useLayoutEffect(() => {
-    const table = tableRef.current;
-    if (!table) {
-      setRectangles([]);
-      return null;
+  /* Individual selection rectangles */
+  .selection-rectangle {
+    position: absolute;
+    border: 1px solid #0078d4;
+    pointer-events: none;
+    box-sizing: border-box;
+  }
+`;
+
+const NO_RECTANGLES = [];
+const createTableSelectionObserver = (table) => {
+  const cleanupCallbackSet = new Set();
+  const cleanup = () => {
+    for (const cb of cleanupCallbackSet) {
+      cb();
+    }
+  };
+  const tableSelection = {
+    rectangles: undefined,
+    onChange: () => {},
+    cleanup,
+  };
+
+  const updateRectangles = (newRectangles) => {
+    if (newRectangles === tableSelection.rectangles) {
+      return;
+    }
+    tableSelection.rectangles = newRectangles;
+    tableSelection.onChange();
+  };
+
+  if (!table) {
+    updateRectangles(NO_RECTANGLES);
+    return tableSelection;
+  }
+
+  const calculateRectangles = () => {
+    // Find all selected cells by aria-selected attribute
+    const selectedCells = table.querySelectorAll('[aria-selected="true"]');
+
+    if (selectedCells.length === 0) {
+      updateRectangles(NO_RECTANGLES);
+      return;
     }
 
-    // eslint-disable-next-line consistent-return
-    const calculateRectangles = () => {
-      // Find all selected cells by aria-selected attribute
-      const selectedCells = table.querySelectorAll('[aria-selected="true"]');
+    const tableRect = table.getBoundingClientRect();
 
-      if (selectedCells.length === 0) {
-        setRectangles([]);
-        return null;
+    // Calculate selection rectangles
+    const cellPositions = new Map();
+
+    // Get positions of all selected cells
+    selectedCells.forEach((cell) => {
+      const cellRect = cell.getBoundingClientRect();
+
+      // Get row and column indices from DOM position
+      const row = cell.closest("tr");
+      const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+      const columnIndex = Array.from(row.children).indexOf(cell);
+
+      const cellId = `${columnIndex}:${rowIndex}`;
+
+      cellPositions.set(cellId, {
+        left: cellRect.left - tableRect.left,
+        top: cellRect.top - tableRect.top,
+        width: cellRect.width,
+        height: cellRect.height,
+        row: rowIndex,
+        column: columnIndex,
+      });
+    });
+
+    // Group contiguous cells into rectangles
+    const newRectangles = [];
+    const processedCells = new Set();
+
+    cellPositions.forEach((pos, cellId) => {
+      if (processedCells.has(cellId)) {
+        return;
       }
 
-      const tableRect = table.getBoundingClientRect();
+      // Find all contiguous cells starting from this cell
+      const rectangle = findContiguousRectangle(
+        cellId,
+        cellPositions,
+        processedCells,
+        table,
+      );
+      if (rectangle) {
+        newRectangles.push(rectangle);
+      }
+    });
+    updateRectangles(newRectangles);
+  };
+  calculateRectangles();
 
-      // Calculate selection rectangles
-      const cellPositions = new Map();
-
-      // Get positions of all selected cells
-      selectedCells.forEach((cell) => {
-        const cellRect = cell.getBoundingClientRect();
-
-        // Get row and column indices from DOM position
-        const row = cell.closest("tr");
-        const rowIndex = Array.from(row.parentNode.children).indexOf(row);
-        const columnIndex = Array.from(row.children).indexOf(cell);
-
-        const cellId = `${columnIndex}:${rowIndex}`;
-
-        cellPositions.set(cellId, {
-          left: cellRect.left - tableRect.left,
-          top: cellRect.top - tableRect.top,
-          width: cellRect.width,
-          height: cellRect.height,
-          row: rowIndex,
-          column: columnIndex,
-        });
-      });
-
-      // Group contiguous cells into rectangles
-      const newRectangles = [];
-      const processedCells = new Set();
-
-      cellPositions.forEach((pos, cellId) => {
-        if (processedCells.has(cellId)) {
-          return;
-        }
-
-        // Find all contiguous cells starting from this cell
-        const rectangle = findContiguousRectangle(
-          cellId,
-          cellPositions,
-          processedCells,
-          table,
-        );
-        if (rectangle) {
-          newRectangles.push(rectangle);
-        }
-      });
-
-      setRectangles(newRectangles);
-    };
-
-    // Calculate rectangles initially
-    calculateRectangles();
-
+  update_on_selection_change: {
     // Set up MutationObserver to watch for aria-selected changes
     const mutationObserver = new MutationObserver((mutations) => {
       let shouldRecalculate = false;
-
       mutations.forEach((mutation) => {
         if (
           mutation.type === "attributes" &&
@@ -85,40 +116,55 @@ export const TableSelectionOverlay = ({ tableRef }) => {
           shouldRecalculate = true;
         }
       });
-
       if (shouldRecalculate) {
         calculateRectangles();
       }
     });
-
     // Observe the table for aria-selected attribute changes
     mutationObserver.observe(table, {
       attributes: true,
       attributeFilter: ["aria-selected"],
       subtree: true,
     });
+    cleanupCallbackSet.add(() => mutationObserver.disconnect());
+  }
 
+  update_on_table_resize: {
     // Set up ResizeObserver to watch for table dimension changes
     const resizeObserver = new ResizeObserver(() => {
       calculateRectangles();
     });
-
     // Observe the table for size changes
     resizeObserver.observe(table);
+    cleanupCallbackSet.add(() => resizeObserver.disconnect());
+  }
 
+  update_on_window_resize: {
     // Also listen for window resize events for additional coverage
     const handleWindowResize = () => {
       calculateRectangles();
     };
-
     window.addEventListener("resize", handleWindowResize);
+    cleanupCallbackSet.add(() =>
+      window.removeEventListener("resize", handleWindowResize),
+    );
+  }
 
-    // Cleanup function
-    return () => {
-      mutationObserver.disconnect();
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", handleWindowResize);
+  return tableSelection;
+};
+
+export const TableSelectionOverlay = ({ tableRef }) => {
+  const [rectangles, setRectangles] = useState([]);
+
+  useLayoutEffect(() => {
+    const tableSelectionObserver = createTableSelectionObserver(
+      tableRef.current,
+    );
+    setRectangles(tableSelectionObserver.rectangles);
+    tableSelectionObserver.onChange = () => {
+      setRectangles(tableSelectionObserver.rectangles);
     };
+    return tableSelectionObserver.cleanup;
   }, [tableRef]);
 
   return (
