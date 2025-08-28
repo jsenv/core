@@ -770,11 +770,8 @@ export const useSelectableElement = (elementRef) => {
 
         if (!isDragging) {
           isDragging = true;
-          // Find the table container and mark it as drag-selecting
-          const table = element.closest("table");
-          if (table) {
-            table.setAttribute("data-drag-selecting", "");
-          }
+          // mark it as drag-selecting
+          element.setAttribute("data-drag-selecting", "");
         }
 
         // Find the element under the current mouse position
@@ -850,10 +847,7 @@ export const useSelectableElement = (elementRef) => {
 
         // Remove drag-selecting state from table
         if (isDragging) {
-          const table = element.closest("table");
-          if (table) {
-            table.removeAttribute("data-drag-selecting");
-          }
+          element.removeAttribute("data-drag-selecting");
         }
 
         // Reset drag state
