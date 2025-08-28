@@ -27,8 +27,7 @@
         width: 100%;
         border-collapse: collapse;
         border: 1px solid #e0e0e0;
-        border-radius: 4px;
-        overflow: hidden;
+        border-radius: 2px;
       }
 
       .database_table th,
@@ -64,6 +63,10 @@
       .database_table[data-multiselection]
         .database_table_cell[aria-selected="true"] {
         background-color: rgba(0, 120, 212, 0.08);
+      }
+
+      .database_table_cell[aria-selected="true"] {
+        border-color: #0078d4;
       }
 
       .database_table_cell:focus {
