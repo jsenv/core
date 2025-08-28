@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+import { createCallbackController } from "../callback_controller.js";
 
 const DEBUG = {
   registration: false, // Element registration/unregistration
@@ -74,6 +75,7 @@ const createGridSelection = ({ value = [], onChange }) => {
   const registry = new Set(); // Set<element>
   let anchorElement = null;
 
+  const [change, triggerChange] = createCallbackController();
   const getElementPosition = (element) => {
     // Get position by checking element's position in table structure
     const cell = element.closest("td, th");
@@ -99,6 +101,10 @@ const createGridSelection = ({ value = [], onChange }) => {
     get value() {
       return value;
     },
+    channels: {
+      change,
+    },
+
     updateValue: (newValue) => {
       value = newValue;
       debug("selection", "Grid updateValue:", newValue);
@@ -314,7 +320,7 @@ const createGridSelection = ({ value = [], onChange }) => {
         "Grid setSelection: calling onChange with:",
         newSelection,
       );
-      onChange?.(newSelection, event);
+      triggerChange(newSelection, event);
     },
     addToSelection: (arrayOfValuesToAdd, event = null) => {
       debug(
@@ -757,49 +763,21 @@ export const useSelectableElement = (elementRef) => {
   // Update selected state when selection changes
   useLayoutEffect(() => {
     const element = elementRef.current;
-    debug(
-      "selection",
-      "useSelectableElement: selection change effect triggered",
-      {
-        element,
-        selection,
-        selectionValues: selection.value,
-      },
-    );
-
     if (!element) {
       debug(
         "selection",
         "useSelectableElement: no element, setting selected to false",
       );
       setSelected(false);
-      return;
+      return null;
     }
-
     const isSelected = selection.isElementSelected(element);
-    const elementValue = getElementValue(element);
-    debug("selection", "useSelectableElement: checking element selection", {
-      element,
-      elementValue,
-      isSelected,
-      currentSelected: selected,
-      selectionValues: selection.value,
-    });
-
-    if (isSelected !== selected) {
-      debug("selection", "useSelectableElement: updating selected state", {
-        from: selected,
-        to: isSelected,
-        elementValue,
-      });
+    setSelected(isSelected);
+    return selection.channels.change.add(() => {
+      const isSelected = selection.isElementSelected(element);
       setSelected(isSelected);
-    } else {
-      debug("selection", "useSelectableElement: selected state unchanged", {
-        selected,
-        elementValue,
-      });
-    }
-  }, [selection, selection.value]);
+    });
+  }, [selection]);
 
   return {
     selected,
