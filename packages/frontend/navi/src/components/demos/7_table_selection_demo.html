@@ -67,6 +67,21 @@
 
       .database_table_cell[aria-selected="true"] {
         border-color: #0078d4;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Ensure selected cells border wins over adjacent cells */
+      .database_table_cell[aria-selected="true"]:before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 1px solid #0078d4;
+        pointer-events: none;
+        z-index: 2;
       }
 
       .database_table_cell:focus {
