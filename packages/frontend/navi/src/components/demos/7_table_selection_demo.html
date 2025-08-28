@@ -52,7 +52,8 @@
       .database_table [data-selected-within] {
         background-color: rgba(0, 120, 212, 0.08);
       }
-      .database_table[data-multiselection] .database_table_cell[data-selected] {
+      .database_table[data-multiselection]
+        .database_table_cell[aria-selected="true"] {
         background-color: rgba(0, 120, 212, 0.08);
       }
 
@@ -233,7 +234,7 @@
             className="database_table_cell"
             tabIndex={0}
             data-value={cellId}
-            data-selected={isSelected ? "" : undefined}
+            aria-selected={isSelected}
             onClick={(e) => {
               clickToSelect(e);
             }}
