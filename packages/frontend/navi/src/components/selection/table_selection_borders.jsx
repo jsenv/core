@@ -1,560 +1,337 @@
-import { useLayoutEffect, useState } from "preact/hooks";
+import { useLayoutEffect } from "preact/hooks";
+import { useSelection } from "./selection.jsx";
 
 import.meta.css = /* css */ `
-  .selection-overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 10;
+  /* Selection border styles applied directly to cells */
+  .selection-border-top {
+    border-top: 2px solid #0078d4 !important;
   }
 
-  .selection-svg {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
+  .selection-border-right {
+    border-right: 2px solid #0078d4 !important;
   }
 
-  .selection-path {
-    fill: none;
-    stroke: #0078d4;
-    stroke-width: 1;
-    vector-effect: non-scaling-stroke;
+  .selection-border-bottom {
+    border-bottom: 2px solid #0078d4 !important;
+  }
+
+  .selection-border-left {
+    border-left: 2px solid #0078d4 !important;
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting] + * .selection-overlay {
-    display: none;
+  table[data-drag-selecting] .selection-border-top,
+  table[data-drag-selecting] .selection-border-right,
+  table[data-drag-selecting] .selection-border-bottom,
+  table[data-drag-selecting] .selection-border-left {
+    border-color: transparent !important;
   }
 `;
 
-export const TableSelectionBorders = ({ tableRef }) => {
-  const [selectionData, setSelectionData] = useState(null);
+export const useTableSelectionBorders = (tableRef) => {
+  const selection = useSelection();
 
   useLayoutEffect(() => {
-    const tableSelectionObserver = createTableSelectionObserver(
-      tableRef.current,
-    );
-    setSelectionData(tableSelectionObserver.selectionData);
-    tableSelectionObserver.onChange = () => {
-      setSelectionData(tableSelectionObserver.selectionData);
+    const table = tableRef.current;
+    if (!table || !selection) {
+      return undefined;
+    }
+
+    const updateCellBorders = () => {
+      // Don't update during drag selection
+      if (table.hasAttribute("data-drag-selecting")) {
+        return;
+      }
+
+      // Clear all existing selection borders
+      const allCells = table.querySelectorAll("td, th");
+      allCells.forEach((cell) => {
+        cell.classList.remove(
+          "selection-border-top",
+          "selection-border-right",
+          "selection-border-bottom",
+          "selection-border-left",
+        );
+      });
+
+      // Get all selected cells
+      const selectedCells = getSelectedCells(table, selection);
+      if (selectedCells.length === 0) {
+        return;
+      }
+
+      // Apply borders based on selection type and adjacent cells
+      applySelectionBorders(selectedCells);
     };
-    return tableSelectionObserver.cleanup;
-  }, [tableRef]);
 
-  if (!selectionData || selectionData.selectedCells.length === 0) {
-    return null;
-  }
+    // Initial border update
+    updateCellBorders();
 
-  const { selectedCells } = selectionData;
-  const borderPath = generateSelectionBorderPath(selectedCells);
+    // Listen for selection changes
+    const unsubscribe = selection.channels.change.add(updateCellBorders);
 
-  return (
-    <div className="selection-overlay">
-      <svg className="selection-svg" width="100%" height="100%">
-        <path className="selection-path" d={borderPath} />
-      </svg>
-    </div>
-  );
-};
-
-const NO_SELECTION = { selectedCells: [], tableRect: null };
-const createTableSelectionObserver = (table) => {
-  const cleanupCallbackSet = new Set();
-  const cleanup = () => {
-    for (const cb of cleanupCallbackSet) {
-      cb();
-    }
-  };
-  const tableSelection = {
-    selectionData: undefined,
-    onChange: () => {},
-    cleanup,
-  };
-
-  const updateSelectionData = (newData) => {
-    if (newData === tableSelection.selectionData) {
-      return;
-    }
-    tableSelection.selectionData = newData;
-    tableSelection.onChange();
-  };
-
-  if (!table) {
-    updateSelectionData(NO_SELECTION);
-    return tableSelection;
-  }
-
-  const calculateSelectionData = () => {
-    // Don't update during drag selection - wait for drag to complete
-    if (table.hasAttribute("data-drag-selecting")) {
-      return;
-    }
-
-    // Find all selected cells by aria-selected attribute
-    const selectedCells = table.querySelectorAll('[aria-selected="true"]');
-
-    if (selectedCells.length === 0) {
-      updateSelectionData(NO_SELECTION);
-      return;
-    }
-
-    const tableRect = table.getBoundingClientRect();
-
-    // Get cell information for each selected cell
-    const cellInfos = Array.from(selectedCells).map((cell) => {
-      const cellRect = cell.getBoundingClientRect();
-      const row = cell.closest("tr");
-      const rowIndex = Array.from(row.parentNode.children).indexOf(row);
-      const columnIndex = Array.from(row.children).indexOf(cell);
-
-      return {
-        element: cell,
-        row: rowIndex,
-        column: columnIndex,
-        left: cellRect.left - tableRect.left,
-        top: cellRect.top - tableRect.top,
-        width: cellRect.width,
-        height: cellRect.height,
-        right: cellRect.left - tableRect.left + cellRect.width,
-        bottom: cellRect.top - tableRect.top + cellRect.height,
-      };
-    });
-
-    updateSelectionData({
-      selectedCells: cellInfos,
-      tableRect: {
-        left: tableRect.left,
-        top: tableRect.top,
-        width: tableRect.width,
-        height: tableRect.height,
-      },
-    });
-  };
-
-  calculateSelectionData();
-
-  update_on_selection_change: {
-    // Set up MutationObserver to watch for aria-selected and drag state changes
+    // Listen for drag state changes
     const mutationObserver = new MutationObserver((mutations) => {
-      let shouldRecalculate = false;
+      let shouldUpdate = false;
       mutations.forEach((mutation) => {
         if (
           mutation.type === "attributes" &&
-          (mutation.attributeName === "aria-selected" ||
-            mutation.attributeName === "data-drag-selecting")
+          mutation.attributeName === "data-drag-selecting"
         ) {
-          shouldRecalculate = true;
+          shouldUpdate = true;
         }
       });
-      if (shouldRecalculate) {
-        calculateSelectionData();
+      if (shouldUpdate) {
+        updateCellBorders();
       }
     });
-    // Observe the table for aria-selected and drag state attribute changes
+
     mutationObserver.observe(table, {
       attributes: true,
-      attributeFilter: ["aria-selected", "data-drag-selecting"],
-      subtree: true,
+      attributeFilter: ["data-drag-selecting"],
     });
-    cleanupCallbackSet.add(() => mutationObserver.disconnect());
-  }
 
-  update_on_table_resize: {
-    // Set up ResizeObserver to watch for table dimension changes
-    const resizeObserver = new ResizeObserver(() => {
-      calculateSelectionData();
-    });
-    // Observe the table for size changes
-    resizeObserver.observe(table);
-    cleanupCallbackSet.add(() => resizeObserver.disconnect());
-  }
-
-  update_on_window_resize: {
-    // Also listen for window resize events for additional coverage
-    const handleWindowResize = () => {
-      calculateSelectionData();
+    return () => {
+      unsubscribe();
+      mutationObserver.disconnect();
+      // Clean up borders on unmount
+      const allCells = table.querySelectorAll("td, th");
+      allCells.forEach((cell) => {
+        cell.classList.remove(
+          "selection-border-top",
+          "selection-border-right",
+          "selection-border-bottom",
+          "selection-border-left",
+        );
+      });
     };
-    window.addEventListener("resize", handleWindowResize);
-    cleanupCallbackSet.add(() =>
-      window.removeEventListener("resize", handleWindowResize),
-    );
-  }
-
-  return tableSelection;
+  }, [tableRef, selection]);
 };
 
-// Generate an SVG path that follows the perimeter of the selection
-const generateSelectionBorderPath = (selectedCells) => {
-  if (selectedCells.length === 0) {
-    return "";
-  }
+// Get all selected cells based on the selection value
+const getSelectedCells = (table, selection) => {
+  const selectedCells = [];
 
-  // Group cells by their type
-  const rowCells = selectedCells.filter(
-    (cell) => cell.element.getAttribute("data-selection-name") === "row",
-  );
-  const columnCells = selectedCells.filter(
-    (cell) => cell.element.getAttribute("data-selection-name") === "column",
-  );
-  const cellCells = selectedCells.filter((cell) => {
-    const selectionName = cell.element.getAttribute("data-selection-name");
-    return selectionName !== "row" && selectionName !== "column";
+  // Get all cells in the table
+  const allCells = table.querySelectorAll("td, th");
+
+  allCells.forEach((cell) => {
+    // Check if this cell's value is in the selection
+    const cellValue = getCellValue(cell);
+    if (selection.isValueSelected(cellValue)) {
+      selectedCells.push(cell);
+    }
   });
 
-  let paths = [];
-
-  // Handle row selections - create rectangular outlines for each contiguous group of rows
-  if (rowCells.length > 0) {
-    paths.push(generateRowSelectionPath(rowCells));
-  }
-
-  // Handle column selections - create rectangular outlines for each contiguous group of columns
-  if (columnCells.length > 0) {
-    paths.push(generateColumnSelectionPath(columnCells));
-  }
-
-  // Handle cell selections - use the original algorithm
-  if (cellCells.length > 0) {
-    paths.push(generateCellSelectionPath(cellCells));
-  }
-
-  return paths.filter((p) => p).join(" ");
+  return selectedCells;
 };
 
-// Generate path for column selections - creates simple rectangular outlines
-const generateColumnSelectionPath = (selectedCells) => {
-  if (selectedCells.length === 0) return "";
-
-  // Group consecutive columns
-  const columnGroups = [];
-  const sortedCells = selectedCells.sort((a, b) => a.column - b.column);
-
-  let currentGroup = [sortedCells[0]];
-
-  for (let i = 1; i < sortedCells.length; i++) {
-    const currentCell = sortedCells[i];
-    const lastCell = currentGroup[currentGroup.length - 1];
-
-    if (currentCell.column === lastCell.column + 1) {
-      // Consecutive column, add to current group
-      currentGroup.push(currentCell);
-    } else {
-      // Non-consecutive, start new group
-      columnGroups.push(currentGroup);
-      currentGroup = [currentCell];
-    }
+// Extract value from a cell (similar to getElementValue)
+const getCellValue = (cell) => {
+  if (cell.value !== undefined) {
+    return cell.value;
   }
-  columnGroups.push(currentGroup);
-
-  // Create a rectangular path for each group of consecutive columns
-  return columnGroups
-    .map((group) => {
-      const leftColumn = group[0];
-      const rightColumn = group[group.length - 1];
-
-      // For column selections, we need to find the bounds of the data cells in that column
-      const table = leftColumn.element.closest("table");
-      if (!table) return "";
-
-      // Find the first data row (skip header) to get the top boundary
-      const firstDataRow = table.rows[1]; // Skip header row (row 0)
-      if (!firstDataRow) return "";
-
-      // Find the last data row to get the bottom boundary
-      const lastDataRow = table.rows[table.rows.length - 1];
-      if (!lastDataRow) return "";
-
-      // Get the cells in the selected columns for the first and last rows
-      const leftColumnCell = firstDataRow.cells[leftColumn.column];
-      const rightColumnCell = firstDataRow.cells[rightColumn.column];
-      const lastRowLeftCell = lastDataRow.cells[leftColumn.column];
-
-      if (!leftColumnCell || !rightColumnCell || !lastRowLeftCell) return "";
-
-      // Get table bounds for relative positioning
-      const tableRect = table.getBoundingClientRect();
-      const leftColumnRect = leftColumnCell.getBoundingClientRect();
-      const rightColumnRect = rightColumnCell.getBoundingClientRect();
-      const lastRowRect = lastRowLeftCell.getBoundingClientRect();
-
-      const minLeft = leftColumnRect.left - tableRect.left;
-      const maxRight = rightColumnRect.right - tableRect.left;
-      const minTop = leftColumnRect.top - tableRect.top;
-      const maxBottom = lastRowRect.bottom - tableRect.top;
-
-      // Create a rectangular path with all borders
-      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
-    })
-    .join(" ");
+  if (cell.hasAttribute("data-value")) {
+    return cell.getAttribute("data-value");
+  }
+  return cell;
 };
 
-// Generate path for row selections - creates simple rectangular outlines
-const generateRowSelectionPath = (selectedCells) => {
-  if (selectedCells.length === 0) return "";
+// Apply borders to selected cells based on their position and selection type
+const applySelectionBorders = (selectedCells) => {
+  if (selectedCells.length === 0) return;
 
-  // Group consecutive rows
-  const rowGroups = [];
-  const sortedCells = selectedCells.sort((a, b) => a.row - b.row);
-
-  let currentGroup = [sortedCells[0]];
-
-  for (let i = 1; i < sortedCells.length; i++) {
-    const currentCell = sortedCells[i];
-    const lastCell = currentGroup[currentGroup.length - 1];
-
-    if (currentCell.row === lastCell.row + 1) {
-      // Consecutive row, add to current group
-      currentGroup.push(currentCell);
-    } else {
-      // Non-consecutive, start new group
-      rowGroups.push(currentGroup);
-      currentGroup = [currentCell];
-    }
-  }
-  rowGroups.push(currentGroup);
-
-  // Create a rectangular path for each group of consecutive rows
-  return rowGroups
-    .map((group) => {
-      const topRow = group[0];
-      const bottomRow = group[group.length - 1];
-
-      // For row selections, we need to find the bounds of the data cells (excluding first column)
-      // Since row selections only select the first column, we need to calculate where the data cells would be
-      const table = topRow.element.closest("table");
-      if (!table) return "";
-
-      // Find the first data cell (column 1) in the top row to get the left boundary
-      const topRowElement = table.rows[topRow.row];
-      const firstDataCell = topRowElement.cells[1]; // Skip column 0
-      if (!firstDataCell) return "";
-
-      // Find the last data cell in the row to get the right boundary
-      const lastDataCell = topRowElement.cells[topRowElement.cells.length - 1];
-      if (!lastDataCell) return "";
-
-      // Get table bounds for relative positioning
-      const tableRect = table.getBoundingClientRect();
-      const firstDataCellRect = firstDataCell.getBoundingClientRect();
-      const lastDataCellRect = lastDataCell.getBoundingClientRect();
-
-      const minLeft = firstDataCellRect.left - tableRect.left;
-      const maxRight = lastDataCellRect.right - tableRect.left;
-      const minTop = topRow.top;
-      const maxBottom = bottomRow.bottom;
-
-      // Create a rectangular path with all borders including the left border
-      // Path goes: top-left -> top-right -> bottom-right -> bottom-left -> back to top-left
-      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
-    })
-    .join(" ");
-};
-
-// Generate path for cell selections - uses the original edge-tracing algorithm
-const generateCellSelectionPath = (selectedCells) => {
-  // Create a grid to track selected cells
-  const grid = new Map();
-  let minRow = Infinity;
-  let maxRow = -Infinity;
-  let minCol = Infinity;
-  let maxCol = -Infinity;
+  // Create a map of selected cells by position for quick lookup
+  const cellMap = new Map();
 
   selectedCells.forEach((cell) => {
-    const key = `${cell.column},${cell.row}`;
-    grid.set(key, cell);
-    minRow = Math.min(minRow, cell.row);
-    maxRow = Math.max(maxRow, cell.row);
-    minCol = Math.min(minCol, cell.column);
-    maxCol = Math.max(maxCol, cell.column);
+    const position = getCellPosition(cell);
+    if (position) {
+      cellMap.set(`${position.row},${position.col}`, cell);
+    }
   });
 
-  // Find all edge segments that form the outer perimeter
-  const edges = [];
+  // Group cells by selection type
+  const groupedCells = groupCellsBySelectionType(selectedCells);
 
-  for (let row = minRow; row <= maxRow; row++) {
-    for (let col = minCol; col <= maxCol; col++) {
-      const cellKey = `${col},${row}`;
-      const cell = grid.get(cellKey);
+  // Apply borders for each selection type
+  Object.entries(groupedCells).forEach(([selectionType, cells]) => {
+    if (selectionType === "row") {
+      applyRowSelectionBorders(cells, cellMap);
+    } else if (selectionType === "column") {
+      applyColumnSelectionBorders(cells, cellMap);
+    } else {
+      // Regular cell selection
+      applyCellSelectionBorders(cells, cellMap);
+    }
+  });
+};
 
-      if (!cell) continue;
+// Group cells by their data-selection-name attribute
+const groupCellsBySelectionType = (cells) => {
+  const groups = {};
 
-      const { left, top, right, bottom } = cell;
+  cells.forEach((cell) => {
+    const selectionName = cell.getAttribute("data-selection-name") || "cell";
+    if (!groups[selectionName]) {
+      groups[selectionName] = [];
+    }
+    groups[selectionName].push(cell);
+  });
 
-      // Check each side of the cell to see if it's on the perimeter
-      // Top edge - no cell above
-      if (!grid.has(`${col},${row - 1}`)) {
-        edges.push({
-          type: "horizontal",
-          x1: left,
-          y1: top,
-          x2: right,
-          y2: top,
-          direction: "top",
-        });
+  return groups;
+};
+
+// Get cell position in the table grid
+const getCellPosition = (cell) => {
+  const row = cell.closest("tr");
+  if (!row) return null;
+
+  const table = row.closest("table");
+  if (!table) return null;
+
+  const rowIndex = Array.from(table.rows).indexOf(row);
+  const colIndex = Array.from(row.cells).indexOf(cell);
+
+  return { row: rowIndex, col: colIndex };
+};
+
+// Apply borders for row selections
+const applyRowSelectionBorders = (rowCells, cellMap) => {
+  // For row selections, we apply borders to all data cells in the selected rows
+  rowCells.forEach((rowHeaderCell) => {
+    const position = getCellPosition(rowHeaderCell);
+    if (!position) return;
+
+    const table = rowHeaderCell.closest("table");
+    const row = table.rows[position.row];
+
+    // Apply borders to all data cells in this row (excluding first column)
+    Array.from(row.cells).forEach((cell, colIndex) => {
+      if (colIndex === 0) return; // Skip row header
+
+      const cellPos = { row: position.row, col: colIndex };
+
+      // Top border: if no selected row above
+      if (!hasSelectedRowAt(cellMap, cellPos.row - 1)) {
+        cell.classList.add("selection-border-top");
       }
 
-      // Bottom edge - no cell below
-      if (!grid.has(`${col},${row + 1}`)) {
-        edges.push({
-          type: "horizontal",
-          x1: left,
-          y1: bottom,
-          x2: right,
-          y2: bottom,
-          direction: "bottom",
-        });
+      // Bottom border: if no selected row below
+      if (!hasSelectedRowAt(cellMap, cellPos.row + 1)) {
+        cell.classList.add("selection-border-bottom");
       }
 
-      // Left edge - no cell to the left
-      if (!grid.has(`${col - 1},${row}`)) {
-        edges.push({
-          type: "vertical",
-          x1: left,
-          y1: top,
-          x2: left,
-          y2: bottom,
-          direction: "left",
-        });
+      // Left border: leftmost data cell
+      if (colIndex === 1) {
+        cell.classList.add("selection-border-left");
       }
 
-      // Right edge - no cell to the right
-      if (!grid.has(`${col + 1},${row}`)) {
-        edges.push({
-          type: "vertical",
-          x1: right,
-          y1: top,
-          x2: right,
-          y2: bottom,
-          direction: "right",
-        });
+      // Right border: rightmost cell
+      if (colIndex === row.cells.length - 1) {
+        cell.classList.add("selection-border-right");
+      }
+    });
+  });
+};
+
+// Apply borders for column selections
+const applyColumnSelectionBorders = (columnCells, cellMap) => {
+  // For column selections, we apply borders to all data cells in the selected columns
+  columnCells.forEach((columnHeaderCell) => {
+    const position = getCellPosition(columnHeaderCell);
+    if (!position) return;
+
+    const table = columnHeaderCell.closest("table");
+
+    // Apply borders to all data cells in this column (excluding header row)
+    Array.from(table.rows).forEach((row, rowIndex) => {
+      if (rowIndex === 0) return; // Skip header row
+
+      const cell = row.cells[position.col];
+      if (!cell) return;
+
+      // Top border: first data row
+      if (rowIndex === 1) {
+        cell.classList.add("selection-border-top");
+      }
+
+      // Bottom border: last row
+      if (rowIndex === table.rows.length - 1) {
+        cell.classList.add("selection-border-bottom");
+      }
+
+      // Left border: if no selected column to the left
+      if (!hasSelectedColumnAt(cellMap, position.col - 1)) {
+        cell.classList.add("selection-border-left");
+      }
+
+      // Right border: if no selected column to the right
+      if (!hasSelectedColumnAt(cellMap, position.col + 1)) {
+        cell.classList.add("selection-border-right");
+      }
+    });
+  });
+};
+
+// Apply borders for regular cell selections
+const applyCellSelectionBorders = (cells, cellMap) => {
+  cells.forEach((cell) => {
+    const position = getCellPosition(cell);
+    if (!position) return;
+
+    // Top border: if no selected cell above
+    if (!cellMap.has(`${position.row - 1},${position.col}`)) {
+      cell.classList.add("selection-border-top");
+    }
+
+    // Bottom border: if no selected cell below
+    if (!cellMap.has(`${position.row + 1},${position.col}`)) {
+      cell.classList.add("selection-border-bottom");
+    }
+
+    // Left border: if no selected cell to the left
+    if (!cellMap.has(`${position.row},${position.col - 1}`)) {
+      cell.classList.add("selection-border-left");
+    }
+
+    // Right border: if no selected cell to the right
+    if (!cellMap.has(`${position.row},${position.col + 1}`)) {
+      cell.classList.add("selection-border-right");
+    }
+  });
+};
+
+// Helper to check if there's a selected row at the given row index
+const hasSelectedRowAt = (cellMap, rowIndex) => {
+  for (const key of cellMap.keys()) {
+    const [row] = key.split(",").map(Number);
+    if (row === rowIndex) {
+      const cell = cellMap.get(key);
+      if (cell.getAttribute("data-selection-name") === "row") {
+        return true;
       }
     }
   }
-
-  // Convert edges to a continuous path
-  return edgesToSVGPath(edges);
+  return false;
 };
 
-// Convert edge segments into a continuous SVG path
-const edgesToSVGPath = (edges) => {
-  if (edges.length === 0) return "";
-
-  // Find all unique paths by tracing connected edges
-  const paths = [];
-  const usedEdges = new Set();
-
-  // Sort edges to ensure consistent path generation
-  const sortedEdges = [...edges].sort((a, b) => {
-    if (a.y1 !== b.y1) return a.y1 - b.y1;
-    if (a.x1 !== b.x1) return a.x1 - b.x1;
-    return a.type.localeCompare(b.type);
-  });
-
-  sortedEdges.forEach((startEdge) => {
-    const startIndex = edges.indexOf(startEdge);
-    if (usedEdges.has(startIndex)) return;
-
-    const pathPoints = [];
-    const visitedEdges = [];
-    let currentEdge = startEdge;
-    let currentIndex = startIndex;
-
-    // Start the path
-    pathPoints.push({ x: currentEdge.x1, y: currentEdge.y1 });
-
-    // Trace the path from this starting edge
-    while (true) {
-      usedEdges.add(currentIndex);
-      visitedEdges.push(currentIndex);
-
-      // Add the end point of current edge
-      pathPoints.push({ x: currentEdge.x2, y: currentEdge.y2 });
-
-      // Find the next connected edge
-      const nextEdgeData = findNextConnectedEdge(currentEdge, edges, usedEdges);
-      if (!nextEdgeData) break;
-
-      currentEdge = nextEdgeData.edge;
-      currentIndex = nextEdgeData.index;
-
-      // Check if we've completed a loop
-      if (visitedEdges.includes(currentIndex)) break;
-    }
-
-    if (pathPoints.length > 1) {
-      paths.push(pathPoints);
-    }
-  });
-
-  // Convert each path to SVG - create one continuous path instead of multiple closed paths
-  if (paths.length === 0) return "";
-
-  // For multiple disconnected regions, we still want to create separate closed paths
-  // but we need to be smarter about it
-  return paths
-    .map((pathPoints) => {
-      if (pathPoints.length === 0) return "";
-
-      const firstPoint = pathPoints[0];
-      let pathData = `M ${firstPoint.x} ${firstPoint.y}`;
-
-      for (let i = 1; i < pathPoints.length; i++) {
-        const point = pathPoints[i];
-        pathData += ` L ${point.x} ${point.y}`;
+// Helper to check if there's a selected column at the given column index
+const hasSelectedColumnAt = (cellMap, colIndex) => {
+  for (const key of cellMap.keys()) {
+    const [, col] = key.split(",").map(Number);
+    if (col === colIndex) {
+      const cell = cellMap.get(key);
+      if (cell.getAttribute("data-selection-name") === "column") {
+        return true;
       }
-
-      // Only close the path if the last point is different from the first
-      const lastPoint = pathPoints[pathPoints.length - 1];
-      if (
-        Math.abs(lastPoint.x - firstPoint.x) > 0.1 ||
-        Math.abs(lastPoint.y - firstPoint.y) > 0.1
-      ) {
-        pathData += ` L ${firstPoint.x} ${firstPoint.y}`;
-      }
-      pathData += " Z";
-
-      return pathData;
-    })
-    .join(" ");
-};
-
-// Find the next edge that connects to the current edge's endpoint
-const findNextConnectedEdge = (currentEdge, allEdges, usedEdges) => {
-  const tolerance = 0.1; // Small tolerance for floating point comparison
-  const endX = currentEdge.x2;
-  const endY = currentEdge.y2;
-
-  for (let i = 0; i < allEdges.length; i++) {
-    if (usedEdges.has(i)) continue;
-
-    const edge = allEdges[i];
-
-    // Check if this edge starts where the current edge ends
-    if (
-      Math.abs(edge.x1 - endX) < tolerance &&
-      Math.abs(edge.y1 - endY) < tolerance
-    ) {
-      return { edge, index: i };
-    }
-
-    // Also check if this edge ends where the current edge ends (for reversing)
-    if (
-      Math.abs(edge.x2 - endX) < tolerance &&
-      Math.abs(edge.y2 - endY) < tolerance
-    ) {
-      // Reverse the edge
-      return {
-        edge: {
-          ...edge,
-          x1: edge.x2,
-          y1: edge.y2,
-          x2: edge.x1,
-          y2: edge.y1,
-        },
-        index: i,
-      };
     }
   }
+  return false;
+};
 
+// Legacy component for backward compatibility - now just uses the hook
+export const TableSelectionBorders = ({ tableRef, selection }) => {
+  useTableSelectionBorders(tableRef, selection);
   return null;
 };
