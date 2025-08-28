@@ -802,14 +802,23 @@ export const useSelectableElement = (elementRef) => {
             targetElement,
           );
 
-          // Check if we're using modifier keys for additive selection
-          const isAdditive = e.metaKey || e.ctrlKey || e.shiftKey;
+          // Handle different drag behaviors based on modifier keys
+          const isShiftSelect = e.shiftKey;
+          const isMultiSelect = e.metaKey || e.ctrlKey;
 
-          if (isAdditive) {
-            // For modifier key drag, add to existing selection
+          if (isShiftSelect) {
+            // For shift drag, use selectFromAnchorTo behavior (replace selection with range from anchor)
             debug(
               "interaction",
-              "drag select with modifiers: adding range to selection",
+              "shift drag select: selecting from anchor to target",
+              rangeValues,
+            );
+            selection.selectFromAnchorTo(targetElement, e);
+          } else if (isMultiSelect) {
+            // For multi-select drag, add to existing selection
+            debug(
+              "interaction",
+              "multi-select drag: adding range to selection",
               rangeValues,
             );
             const currentSelection = [...selection.value];
