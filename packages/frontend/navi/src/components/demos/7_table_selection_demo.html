@@ -245,10 +245,11 @@
       // eslint-disable-next-line no-unused-vars
       const DatabaseTableHeaderCell = ({
         columnName,
+        columnAccessorKey,
         columnWithSomeSelectedCell,
       }) => {
         const columnContainsSelectedCell =
-          columnWithSomeSelectedCell.includes(columnName);
+          columnWithSomeSelectedCell.includes(columnAccessorKey);
         return (
           <th
             data-column-contains-selected={
@@ -391,6 +392,7 @@
                         <DatabaseTableHeaderCell
                           key={col.id}
                           columnName={col.header}
+                          columnAccessorKey={col.accessorKey}
                           columnIndex={index + 1}
                           columnWithSomeSelectedCell={
                             columnWithSomeSelectedCell
