@@ -739,7 +739,14 @@ export const useSelectableElement = (elementRef) => {
           return;
         }
 
-        isDragging = true;
+        if (!isDragging) {
+          isDragging = true;
+          // Find the table container and mark it as drag-selecting
+          const table = element.closest("table");
+          if (table) {
+            table.setAttribute("data-drag-selecting", "");
+          }
+        }
 
         // Find the element under the current mouse position
         const elementUnderMouse = document.elementFromPoint(
@@ -781,6 +788,14 @@ export const useSelectableElement = (elementRef) => {
       const handleMouseUp = () => {
         document.removeEventListener("mousemove", handleMouseMove);
         document.removeEventListener("mouseup", handleMouseUp);
+
+        // Remove drag-selecting state from table
+        if (isDragging) {
+          const table = element.closest("table");
+          if (table) {
+            table.removeAttribute("data-drag-selecting");
+          }
+        }
 
         // Reset drag state after a small delay to allow click handler to see it
         setTimeout(() => {

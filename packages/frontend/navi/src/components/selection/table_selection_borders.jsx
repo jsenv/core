@@ -16,9 +16,14 @@ import.meta.css = /* css */ `
     pointer-events: none;
     box-sizing: border-box;
   }
+
+  /* Hide borders during drag selection */
+  table[data-drag-selecting] + * .selection-overlay {
+    display: none;
+  }
 `;
 
-export const TableSelectionOverlay = ({ tableRef }) => {
+export const TableSelectionBorders = ({ tableRef }) => {
   const [rectangles, setRectangles] = useState([]);
 
   useLayoutEffect(() => {
@@ -78,6 +83,11 @@ const createTableSelectionObserver = (table) => {
   }
 
   const calculateRectangles = () => {
+    // Don't update during drag selection - wait for drag to complete
+    if (table.hasAttribute("data-drag-selecting")) {
+      return;
+    }
+
     // Find all selected cells by aria-selected attribute
     const selectedCells = table.querySelectorAll('[aria-selected="true"]');
 
@@ -137,13 +147,14 @@ const createTableSelectionObserver = (table) => {
   calculateRectangles();
 
   update_on_selection_change: {
-    // Set up MutationObserver to watch for aria-selected changes
+    // Set up MutationObserver to watch for aria-selected and drag state changes
     const mutationObserver = new MutationObserver((mutations) => {
       let shouldRecalculate = false;
       mutations.forEach((mutation) => {
         if (
           mutation.type === "attributes" &&
-          mutation.attributeName === "aria-selected"
+          (mutation.attributeName === "aria-selected" ||
+            mutation.attributeName === "data-drag-selecting")
         ) {
           shouldRecalculate = true;
         }
@@ -152,10 +163,10 @@ const createTableSelectionObserver = (table) => {
         calculateRectangles();
       }
     });
-    // Observe the table for aria-selected attribute changes
+    // Observe the table for aria-selected and drag state attribute changes
     mutationObserver.observe(table, {
       attributes: true,
-      attributeFilter: ["aria-selected"],
+      attributeFilter: ["aria-selected", "data-drag-selecting"],
       subtree: true,
     });
     cleanupCallbackSet.add(() => mutationObserver.disconnect());
