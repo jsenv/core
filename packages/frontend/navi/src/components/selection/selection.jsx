@@ -704,15 +704,23 @@ const getJumpToEndElement = (selection, element, direction) => {
 
 const getJumpToEndElementGrid = (selection, element, direction) => {
   const currentPos = getElementPosition(element);
-  if (!currentPos) return null;
+  if (!currentPos) {
+    return null;
+  }
 
   const { x, y } = currentPos;
+  const currentSelectionName = getElementSelectionName(element);
 
   if (direction === "ArrowRight") {
-    // Jump to last element in current row
+    // Jump to last element in current row with matching selection name
     let lastInRow = null;
     let maxX = -1;
     for (const candidateElement of selection.registry) {
+      const candidateSelectionName = getElementSelectionName(candidateElement);
+      if (candidateSelectionName !== currentSelectionName) {
+        continue;
+      }
+
       const pos = getElementPosition(candidateElement);
       if (pos && pos.y === y && pos.x > maxX) {
         maxX = pos.x;
@@ -723,10 +731,13 @@ const getJumpToEndElementGrid = (selection, element, direction) => {
   }
 
   if (direction === "ArrowLeft") {
-    // Jump to first element in current row
+    // Jump to first element in current row with matching selection name
     let firstInRow = null;
     let minX = Infinity;
     for (const candidateElement of selection.registry) {
+      const candidateSelectionName = getElementSelectionName(candidateElement);
+      if (candidateSelectionName !== currentSelectionName) continue;
+
       const pos = getElementPosition(candidateElement);
       if (pos && pos.y === y && pos.x < minX) {
         minX = pos.x;
@@ -737,10 +748,15 @@ const getJumpToEndElementGrid = (selection, element, direction) => {
   }
 
   if (direction === "ArrowDown") {
-    // Jump to last element in current column
+    // Jump to last element in current column with matching selection name
     let lastInColumn = null;
     let maxY = -1;
     for (const candidateElement of selection.registry) {
+      const candidateSelectionName = getElementSelectionName(candidateElement);
+      if (candidateSelectionName !== currentSelectionName) {
+        continue;
+      }
+
       const pos = getElementPosition(candidateElement);
       if (pos && pos.x === x && pos.y > maxY) {
         maxY = pos.y;
@@ -751,10 +767,15 @@ const getJumpToEndElementGrid = (selection, element, direction) => {
   }
 
   if (direction === "ArrowUp") {
-    // Jump to first element in current column
+    // Jump to first element in current column with matching selection name
     let firstInColumn = null;
     let minY = Infinity;
     for (const candidateElement of selection.registry) {
+      const candidateSelectionName = getElementSelectionName(candidateElement);
+      if (candidateSelectionName !== currentSelectionName) {
+        continue;
+      }
+
       const pos = getElementPosition(candidateElement);
       if (pos && pos.x === x && pos.y < minY) {
         minY = pos.y;
@@ -768,10 +789,17 @@ const getJumpToEndElementGrid = (selection, element, direction) => {
 };
 
 const getJumpToEndElementLinear = (selection, element, direction) => {
+  const currentSelectionName = getElementSelectionName(element);
+
   if (direction === "ArrowDown" || direction === "ArrowRight") {
-    // Jump to last element in the registry
+    // Jump to last element in the registry with matching selection name
     let lastElement = null;
     for (const candidateElement of selection.registry) {
+      const candidateSelectionName = getElementSelectionName(candidateElement);
+      if (candidateSelectionName !== currentSelectionName) {
+        continue;
+      }
+
       if (
         !lastElement ||
         candidateElement.compareDocumentPosition(lastElement) &
@@ -784,9 +812,14 @@ const getJumpToEndElementLinear = (selection, element, direction) => {
   }
 
   if (direction === "ArrowUp" || direction === "ArrowLeft") {
-    // Jump to first element in the registry
+    // Jump to first element in the registry with matching selection name
     let firstElement = null;
     for (const candidateElement of selection.registry) {
+      const candidateSelectionName = getElementSelectionName(candidateElement);
+      if (candidateSelectionName !== currentSelectionName) {
+        continue;
+      }
+
       if (
         !firstElement ||
         firstElement.compareDocumentPosition(candidateElement) &
