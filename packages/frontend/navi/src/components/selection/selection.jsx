@@ -1,4 +1,4 @@
-import { canInterceptKeys } from "@jsenv/dom";
+import { canInterceptKeys, findAfter, findBefore } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -33,7 +33,12 @@ const SelectionProvider = ({ selection, children }) => {
     </SelectionContext.Provider>
   );
 };
-export const useSelectionProvider = ({ layout, value, onChange }) => {
+export const useSelectionProvider = ({
+  layout,
+  value,
+  onChange,
+  rootElement,
+}) => {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -52,8 +57,9 @@ export const useSelectionProvider = ({ layout, value, onChange }) => {
       value,
       onChange,
       axis: layout,
+      rootElement,
     });
-  }, [layout]);
+  }, [layout, rootElement]);
 
   // Update the selection's internal values when external value changes
   useEffect(() => {
@@ -511,6 +517,7 @@ const createLinearSelection = ({
   value = [],
   onChange,
   axis = "vertical", // "horizontal" or "vertical"
+  rootElement = document.body, // Root element to scope DOM traversal
 }) => {
   if (!["horizontal", "vertical"].includes(axis)) {
     throw new Error(
@@ -519,6 +526,12 @@ const createLinearSelection = ({
   }
 
   const registry = new Set();
+
+  // Helper function to check if an element is registered and get its selection info
+  const isRegisteredElement = (element) => {
+    return registry.has(element);
+  };
+
   // Define navigation methods that need access to registry
   const navigationMethods = {
     getElementRange: (fromElement, toElement) => {
@@ -585,46 +598,37 @@ const createLinearSelection = ({
       }
 
       const currentSelectionName = getElementSelectionName(element);
-      let nextElement = null;
-      let fallbackElement = null;
 
-      // Single loop: prioritize same selection name
-      for (const candidateElement of registry) {
-        if (candidateElement === element) {
-          continue;
-        }
+      // Use efficient DOM traversal instead of iterating through the entire registry.
+      // This approach:
+      // 1. Uses findAfter() which stops as soon as it finds a match
+      // 2. Scopes the search to rootElement to avoid searching the entire document
+      // 3. Prioritizes same-selection-name elements first, then falls back to any registered element
 
-        const candidateSelectionName =
-          getElementSelectionName(candidateElement);
+      // First, try to find the next registered element with the same selection name
+      const sameTypeElement = findAfter(
+        element,
+        (candidate) => {
+          return (
+            registry.has(candidate) &&
+            getElementSelectionName(candidate) === currentSelectionName
+          );
+        },
+        {
+          root: rootElement,
+        },
+      );
 
-        // Check if this element comes after current
-        if (
-          element.compareDocumentPosition(candidateElement) &
-          Node.DOCUMENT_POSITION_FOLLOWING
-        ) {
-          if (candidateSelectionName === currentSelectionName) {
-            // Same selection name - find the closest one
-            if (
-              !nextElement ||
-              candidateElement.compareDocumentPosition(nextElement) &
-                Node.DOCUMENT_POSITION_PRECEDING
-            ) {
-              nextElement = candidateElement;
-            }
-          } else if (!fallbackElement) {
-            // Different selection name - store first fallback
-            if (
-              !fallbackElement ||
-              candidateElement.compareDocumentPosition(fallbackElement) &
-                Node.DOCUMENT_POSITION_PRECEDING
-            ) {
-              fallbackElement = candidateElement;
-            }
-          }
-        }
+      if (sameTypeElement) {
+        return sameTypeElement;
       }
 
-      return nextElement || fallbackElement;
+      // Fallback: if no same-selection-name element found, find any registered element
+      const fallbackElement = findAfter(element, isRegisteredElement, {
+        root: rootElement,
+      });
+
+      return fallbackElement;
     },
     getElementBefore: (element) => {
       if (!registry.has(element)) {
@@ -632,67 +636,37 @@ const createLinearSelection = ({
       }
 
       const currentSelectionName = getElementSelectionName(element);
-      let prevElement = null;
 
-      // First try to find element with same selection name
-      for (const candidateElement of registry) {
-        if (candidateElement === element) {
-          continue;
-        }
+      // Use efficient DOM traversal instead of iterating through the entire registry.
+      // This approach:
+      // 1. Uses findBefore() which stops as soon as it finds a match
+      // 2. Scopes the search to rootElement to avoid searching the entire document
+      // 3. Prioritizes same-selection-name elements first, then falls back to any registered element
 
-        const candidateSelectionName =
-          getElementSelectionName(candidateElement);
-        if (candidateSelectionName !== currentSelectionName) {
-          continue;
-        }
+      // First, try to find the previous registered element with the same selection name
+      const sameTypeElement = findBefore(
+        element,
+        (candidate) => {
+          return (
+            registry.has(candidate) &&
+            getElementSelectionName(candidate) === currentSelectionName
+          );
+        },
+        {
+          root: rootElement,
+        },
+      );
 
-        // Check if this element comes before current
-        if (
-          element.compareDocumentPosition(candidateElement) &
-          Node.DOCUMENT_POSITION_PRECEDING
-        ) {
-          // If we don't have a prev element yet, or this one is closer than our current prev
-          if (
-            !prevElement ||
-            prevElement.compareDocumentPosition(candidateElement) &
-              Node.DOCUMENT_POSITION_PRECEDING
-          ) {
-            prevElement = candidateElement;
-          }
-        }
+      if (sameTypeElement) {
+        return sameTypeElement;
       }
 
-      // If no element found with same selection name, fallback to different selection name
-      if (!prevElement) {
-        for (const candidateElement of registry) {
-          if (candidateElement === element) {
-            continue;
-          }
+      // Fallback: if no same-selection-name element found, find any registered element
+      const fallbackElement = findBefore(element, isRegisteredElement, {
+        root: rootElement,
+      });
 
-          const candidateSelectionName =
-            getElementSelectionName(candidateElement);
-          if (candidateSelectionName === currentSelectionName) {
-            continue;
-          }
-
-          // Check if this element comes before current
-          if (
-            element.compareDocumentPosition(candidateElement) &
-            Node.DOCUMENT_POSITION_PRECEDING
-          ) {
-            // If we don't have a prev element yet, or this one is closer than our current prev
-            if (
-              !prevElement ||
-              prevElement.compareDocumentPosition(candidateElement) &
-                Node.DOCUMENT_POSITION_PRECEDING
-            ) {
-              prevElement = candidateElement;
-            }
-          }
-        }
-      }
-
-      return prevElement;
+      return fallbackElement;
     },
     // Add axis-dependent methods
     getElementBelow: (element) => {
