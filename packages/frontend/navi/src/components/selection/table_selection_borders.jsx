@@ -5,6 +5,8 @@ import.meta.css = /* css */ `
   /* Set default selection border color */
   :root {
     --selection-border-color: #0078d4;
+    --selection-border-width: 2px;
+    --selection-border-inset: -2px;
   }
 
   /* All selection border elements need relative positioning for pseudo-elements */
@@ -16,83 +18,83 @@ import.meta.css = /* css */ `
   }
 
   /* Common pseudo-element properties for all border combinations */
-  [data-selection-border-top]::before,
-  [data-selection-border-right]::before,
-  [data-selection-border-bottom]::before,
-  [data-selection-border-left]::before {
+  [data-selection-border-top]::after,
+  [data-selection-border-right]::after,
+  [data-selection-border-bottom]::after,
+  [data-selection-border-left]::after {
     content: "";
     position: absolute;
-    inset: -2px;
+    inset: var(--selection-border-inset);
     pointer-events: none;
     z-index: 1;
-    border: 1px solid var(--selection-border-color);
+    border: var(--selection-border-size) solid var(--selection-border-color);
     border-style: none;
   }
 
   /* Single border cases */
   [data-selection-border-top]:not([data-selection-border-right]):not(
       [data-selection-border-bottom]
-    ):not([data-selection-border-left])::before {
+    ):not([data-selection-border-left])::after {
     border-top-style: solid;
   }
 
   [data-selection-border-right]:not([data-selection-border-top]):not(
       [data-selection-border-bottom]
-    ):not([data-selection-border-left])::before {
+    ):not([data-selection-border-left])::after {
     border-right-style: solid;
   }
 
   [data-selection-border-bottom]:not([data-selection-border-top]):not(
       [data-selection-border-right]
-    ):not([data-selection-border-left])::before {
+    ):not([data-selection-border-left])::after {
     border-bottom-style: solid;
   }
 
   [data-selection-border-left]:not([data-selection-border-top]):not(
       [data-selection-border-right]
-    ):not([data-selection-border-bottom])::before {
+    ):not([data-selection-border-bottom])::after {
     border-left-style: solid;
   }
 
   /* Two border combinations */
   [data-selection-border-top][data-selection-border-right]:not(
       [data-selection-border-bottom]
-    ):not([data-selection-border-left])::before {
+    ):not([data-selection-border-left])::after {
     border-top-style: solid;
     border-right-style: solid;
   }
 
   [data-selection-border-top][data-selection-border-bottom]:not(
       [data-selection-border-right]
-    ):not([data-selection-border-left])::before {
+    ):not([data-selection-border-left])::after {
     border-top-style: solid;
     border-bottom-style: solid;
   }
 
   [data-selection-border-top][data-selection-border-left]:not(
       [data-selection-border-right]
-    ):not([data-selection-border-bottom])::before {
+    ):not([data-selection-border-bottom])::after {
     border-top-style: solid;
     border-left-style: solid;
   }
 
   [data-selection-border-right][data-selection-border-bottom]:not(
       [data-selection-border-top]
-    ):not([data-selection-border-left])::before {
+    ):not([data-selection-border-left])::after {
     border-right-style: solid;
     border-bottom-style: solid;
   }
 
   [data-selection-border-right][data-selection-border-left]:not(
       [data-selection-border-top]
-    ):not([data-selection-border-bottom])::before {
+    ):not([data-selection-border-bottom])::after {
     border-right-style: solid;
     border-left-style: solid;
   }
 
   [data-selection-border-bottom][data-selection-border-left]:not(
       [data-selection-border-top]
-    ):not([data-selection-border-right])::before {
+    ):not([data-selection-border-right])::after {
     border-bottom-style: solid;
     border-left-style: solid;
   }
@@ -100,7 +102,7 @@ import.meta.css = /* css */ `
   /* Three border combinations */
   [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]:not(
       [data-selection-border-left]
-    )::before {
+    )::after {
     border-top-style: solid;
     border-right-style: solid;
     border-bottom-style: solid;
@@ -108,7 +110,7 @@ import.meta.css = /* css */ `
 
   [data-selection-border-top][data-selection-border-right][data-selection-border-left]:not(
       [data-selection-border-bottom]
-    )::before {
+    )::after {
     border-top-style: solid;
     border-right-style: solid;
     border-left-style: solid;
@@ -116,7 +118,7 @@ import.meta.css = /* css */ `
 
   [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]:not(
       [data-selection-border-right]
-    )::before {
+    )::after {
     border-top-style: solid;
     border-bottom-style: solid;
     border-left-style: solid;
@@ -124,35 +126,61 @@ import.meta.css = /* css */ `
 
   [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]:not(
       [data-selection-border-top]
-    )::before {
+    )::after {
     border-right-style: solid;
     border-bottom-style: solid;
     border-left-style: solid;
   }
 
   /* Four border combination (full border) */
-  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::before {
+  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
     border-style: solid;
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting] [data-selection-border-top]::before,
-  table[data-drag-selecting] [data-selection-border-right]::before,
-  table[data-drag-selecting] [data-selection-border-bottom]::before,
-  table[data-drag-selecting] [data-selection-border-left]::before {
+  table[data-drag-selecting] [data-selection-border-top]::after,
+  table[data-drag-selecting] [data-selection-border-right]::after,
+  table[data-drag-selecting] [data-selection-border-bottom]::after,
+  table[data-drag-selecting] [data-selection-border-left]::after {
     display: none;
   }
 `;
 
 export const useTableSelectionBorders = (
   tableRef,
-  { color = "#0078d4" } = {},
+  { color = "#0078d4", size = 1 } = {},
 ) => {
   const selection = useSelection();
+
   useLayoutEffect(() => {
     const table = tableRef.current;
     if (!table) {
-      return undefined;
+      return null;
+    }
+
+    const computedStyle = getComputedStyle(table);
+    const tableBorderWidth = parseFloat(computedStyle.borderWidth) || 0;
+    const selectionBorderWidth = parseFloat(size) || 2;
+
+    // Calculate inset to position selection border over table borders
+    const inset = -(tableBorderWidth + selectionBorderWidth);
+
+    table.style.setProperty("--selection-border-color", color);
+    table.style.setProperty("--selection-border-size", `${size}px`);
+    table.style.setProperty("--selection-border-inset", `${inset}px`);
+
+    return () => {
+      // Clean up CSS variables
+      table.style.removeProperty("--selection-border-color");
+      table.style.removeProperty("--selection-border-width");
+      table.style.removeProperty("--selection-border-inset");
+    };
+  }, [color, size]);
+
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table) {
+      return null;
     }
 
     const updateCellBorders = () => {
@@ -173,8 +201,6 @@ export const useTableSelectionBorders = (
       // Get all selected cells
       const selectedCells = getSelectedCells(table, selection);
       if (selectedCells.length === 0) {
-        // Remove border color if no cells are selected
-        table.style.removeProperty("--selection-border-color");
         return;
       }
 
@@ -200,17 +226,6 @@ export const useTableSelectionBorders = (
       });
     };
   }, [tableRef, selection]);
-
-  useLayoutEffect(() => {
-    const table = tableRef.current;
-    if (!table) {
-      return null;
-    }
-    table.style.setProperty("--selection-border-color", color);
-    return () => {
-      table.style.removeProperty("--selection-border-color");
-    };
-  }, [color]);
 };
 
 // Get all selected cells based on the selection value
