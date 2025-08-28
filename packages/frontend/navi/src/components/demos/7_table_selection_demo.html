@@ -227,6 +227,7 @@
               rowContainsSelectedCell ? "" : undefined
             }
             data-value={rowValue}
+            data-selection-name="row"
             aria-selected={selected}
             style={{ cursor: "pointer" }}
           >
@@ -265,6 +266,7 @@
             className="database_table_cell"
             tabIndex={0}
             data-value={cellId}
+            data-selection-name="cell"
             aria-selected={selected}
           >
             <div className="database_table_cell_content">
