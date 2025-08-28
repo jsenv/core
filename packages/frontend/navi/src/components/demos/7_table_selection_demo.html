@@ -67,10 +67,7 @@
       /* Selection overlay container */
       .selection-overlay {
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        inset: 0;
         pointer-events: none;
         z-index: 10;
       }
@@ -78,7 +75,7 @@
       /* Individual selection rectangles */
       .selection-rectangle {
         position: absolute;
-        border: 2px solid #0078d4;
+        border: 1px solid #0078d4;
         background-color: rgba(0, 120, 212, 0.1);
         pointer-events: none;
         box-sizing: border-box;
@@ -340,14 +337,60 @@
           const startPos = cellPositions.get(startCellId);
           if (!startPos) return null;
 
-          let minLeft = startPos.left;
-          let minTop = startPos.top;
-          let maxRight = startPos.left + startPos.width;
-          let maxBottom = startPos.top + startPos.height;
+          // Build a grid map of all selected cells by their row/column coordinates
+          const gridMap = new Map();
+          cellPositions.forEach((pos, cellId) => {
+            if (!processedCells.has(cellId)) {
+              const key = `${pos.row}-${pos.column}`;
+              gridMap.set(key, { cellId, pos });
+            }
+          });
 
-          // Simple approach: for now, just create individual rectangles for each cell
-          // This can be enhanced later to merge contiguous cells
-          processedCells.add(startCellId);
+          // Find all connected cells using flood fill algorithm
+          const connectedCells = new Set();
+          const queue = [startCellId];
+          connectedCells.add(startCellId);
+
+          while (queue.length > 0) {
+            const currentCellId = queue.shift();
+            const currentPos = cellPositions.get(currentCellId);
+            if (!currentPos) continue;
+
+            // Check all 4 adjacent positions (up, down, left, right)
+            const adjacentPositions = [
+              `${parseInt(currentPos.row) - 1}-${currentPos.column}`, // up
+              `${parseInt(currentPos.row) + 1}-${currentPos.column}`, // down
+              `${currentPos.row}-${getAdjacentColumn(currentPos.column, -1)}`, // left
+              `${currentPos.row}-${getAdjacentColumn(currentPos.column, 1)}`, // right
+            ];
+
+            adjacentPositions.forEach((adjKey) => {
+              const adjacent = gridMap.get(adjKey);
+              if (adjacent && !connectedCells.has(adjacent.cellId)) {
+                connectedCells.add(adjacent.cellId);
+                queue.push(adjacent.cellId);
+              }
+            });
+          }
+
+          // Mark all connected cells as processed
+          connectedCells.forEach((cellId) => processedCells.add(cellId));
+
+          // Calculate the bounding rectangle of all connected cells
+          let minLeft = Infinity;
+          let minTop = Infinity;
+          let maxRight = -Infinity;
+          let maxBottom = -Infinity;
+
+          connectedCells.forEach((cellId) => {
+            const pos = cellPositions.get(cellId);
+            if (pos) {
+              minLeft = Math.min(minLeft, pos.left);
+              minTop = Math.min(minTop, pos.top);
+              maxRight = Math.max(maxRight, pos.left + pos.width);
+              maxBottom = Math.max(maxBottom, pos.top + pos.height);
+            }
+          });
 
           return {
             left: minLeft,
@@ -355,6 +398,18 @@
             width: maxRight - minLeft,
             height: maxBottom - minTop,
           };
+        };
+
+        // Helper function to get adjacent column name
+        const getAdjacentColumn = (columnName, offset) => {
+          const columnIndex = columns.findIndex(
+            (col) => col.accessorKey === columnName,
+          );
+          const newIndex = columnIndex + offset;
+          if (newIndex >= 0 && newIndex < columns.length) {
+            return columns[newIndex].accessorKey;
+          }
+          return null;
         };
 
         return (
