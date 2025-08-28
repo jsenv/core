@@ -50,6 +50,7 @@ export {
   useSelection,
   useSelectionProvider,
 } from "./src/components/selection/selection.jsx";
+export { TableSelectionOverlay } from "./src/components/selection/table_selection_overlay.jsx";
 export { Table } from "./src/components/table/table.jsx";
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition.jsx";

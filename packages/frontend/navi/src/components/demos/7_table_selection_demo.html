@@ -76,7 +76,6 @@
       .selection-rectangle {
         position: absolute;
         border: 1px solid #0078d4;
-        background-color: rgba(0, 120, 212, 0.1);
         pointer-events: none;
         box-sizing: border-box;
       }
@@ -160,9 +159,14 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useState, useLayoutEffect } from "preact/hooks";
+      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
-      import { useSelectableElement, useSelectionProvider } from "@jsenv/navi";
+      import {
+        useSelectableElement,
+        useSelectionProvider,
+        // eslint-disable-next-line no-unused-vars
+        TableSelectionOverlay,
+      } from "@jsenv/navi";
 
       // Sample data
       const sampleData = [
@@ -273,198 +277,6 @@
         );
       };
 
-      // Selection Overlay Component
-      // eslint-disable-next-line no-unused-vars
-      const SelectionOverlay = ({ tableRef, selectedCells }) => {
-        const [rectangles, setRectangles] = useState([]);
-
-        useLayoutEffect(() => {
-          if (!tableRef.current) {
-            setRectangles([]);
-            return null;
-          }
-
-          const table = tableRef.current;
-
-          // eslint-disable-next-line consistent-return
-          const calculateRectangles = () => {
-            if (selectedCells.length === 0) {
-              setRectangles([]);
-              return null;
-            }
-
-            const tableRect = table.getBoundingClientRect();
-
-            // Calculate selection rectangles
-            const cellPositions = new Map();
-
-            // Get positions of all selected cells
-            selectedCells.forEach((cellId) => {
-              const cell = table.querySelector(`[data-value="${cellId}"]`);
-              if (cell) {
-                const cellRect = cell.getBoundingClientRect();
-                const [columnName, rowId] = cellId.split(":");
-
-                cellPositions.set(cellId, {
-                  left: cellRect.left - tableRect.left,
-                  top: cellRect.top - tableRect.top,
-                  width: cellRect.width,
-                  height: cellRect.height,
-                  row: rowId,
-                  column: columnName,
-                });
-              }
-            });
-
-            // Group contiguous cells into rectangles
-            const newRectangles = [];
-            const processedCells = new Set();
-
-            cellPositions.forEach((pos, cellId) => {
-              if (processedCells.has(cellId)) {
-                return;
-              }
-
-              // Find all contiguous cells starting from this cell
-              const rectangle = findContiguousRectangle(
-                cellId,
-                cellPositions,
-                processedCells,
-              );
-              if (rectangle) {
-                newRectangles.push(rectangle);
-              }
-            });
-
-            setRectangles(newRectangles);
-          };
-
-          // Calculate rectangles initially
-          calculateRectangles();
-
-          // Set up ResizeObserver to watch for table dimension changes
-          const resizeObserver = new ResizeObserver(() => {
-            calculateRectangles();
-          });
-
-          // Observe the table for size changes
-          resizeObserver.observe(table);
-
-          // Also listen for window resize events for additional coverage
-          const handleWindowResize = () => {
-            calculateRectangles();
-          };
-
-          window.addEventListener("resize", handleWindowResize);
-
-          // Cleanup function
-          return () => {
-            resizeObserver.disconnect();
-            window.removeEventListener("resize", handleWindowResize);
-          };
-        }, [selectedCells, tableRef]);
-
-        const findContiguousRectangle = (
-          startCellId,
-          cellPositions,
-          processedCells,
-        ) => {
-          const startPos = cellPositions.get(startCellId);
-          if (!startPos) return null;
-
-          // Build a grid map of all selected cells by their row/column coordinates
-          const gridMap = new Map();
-          cellPositions.forEach((pos, cellId) => {
-            if (!processedCells.has(cellId)) {
-              const key = `${pos.row}-${pos.column}`;
-              gridMap.set(key, { cellId, pos });
-            }
-          });
-
-          // Find all connected cells using flood fill algorithm
-          const connectedCells = new Set();
-          const queue = [startCellId];
-          connectedCells.add(startCellId);
-
-          while (queue.length > 0) {
-            const currentCellId = queue.shift();
-            const currentPos = cellPositions.get(currentCellId);
-            if (!currentPos) continue;
-
-            // Check all 4 adjacent positions (up, down, left, right)
-            const adjacentPositions = [
-              `${parseInt(currentPos.row) - 1}-${currentPos.column}`, // up
-              `${parseInt(currentPos.row) + 1}-${currentPos.column}`, // down
-              `${currentPos.row}-${getAdjacentColumn(currentPos.column, -1)}`, // left
-              `${currentPos.row}-${getAdjacentColumn(currentPos.column, 1)}`, // right
-            ];
-
-            adjacentPositions.forEach((adjKey) => {
-              const adjacent = gridMap.get(adjKey);
-              if (adjacent && !connectedCells.has(adjacent.cellId)) {
-                connectedCells.add(adjacent.cellId);
-                queue.push(adjacent.cellId);
-              }
-            });
-          }
-
-          // Mark all connected cells as processed
-          connectedCells.forEach((cellId) => processedCells.add(cellId));
-
-          // Calculate the bounding rectangle of all connected cells
-          let minLeft = Infinity;
-          let minTop = Infinity;
-          let maxRight = -Infinity;
-          let maxBottom = -Infinity;
-
-          connectedCells.forEach((cellId) => {
-            const pos = cellPositions.get(cellId);
-            if (pos) {
-              minLeft = Math.min(minLeft, pos.left);
-              minTop = Math.min(minTop, pos.top);
-              maxRight = Math.max(maxRight, pos.left + pos.width);
-              maxBottom = Math.max(maxBottom, pos.top + pos.height);
-            }
-          });
-
-          return {
-            left: minLeft,
-            top: minTop,
-            width: maxRight - minLeft,
-            height: maxBottom - minTop,
-          };
-        };
-
-        // Helper function to get adjacent column name
-        const getAdjacentColumn = (columnName, offset) => {
-          const columnIndex = columns.findIndex(
-            (col) => col.accessorKey === columnName,
-          );
-          const newIndex = columnIndex + offset;
-          if (newIndex >= 0 && newIndex < columns.length) {
-            return columns[newIndex].accessorKey;
-          }
-          return null;
-        };
-
-        return (
-          <div className="selection-overlay">
-            {rectangles.map((rect, index) => (
-              <div
-                key={index}
-                className="selection-rectangle"
-                style={{
-                  left: `${rect.left}px`,
-                  top: `${rect.top}px`,
-                  width: `${rect.width}px`,
-                  height: `${rect.height}px`,
-                }}
-              />
-            ))}
-          </div>
-        );
-      };
-
       // eslint-disable-next-line no-unused-vars
       const TableDemo = () => {
         const tableRef = useRef(null);
@@ -570,7 +382,7 @@
                     ))}
                   </tbody>
                 </table>
-                <SelectionOverlay
+                <TableSelectionOverlay
                   tableRef={tableRef}
                   selectedCells={cellSelection}
                 />
