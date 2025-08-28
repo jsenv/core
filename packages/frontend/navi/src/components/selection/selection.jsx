@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "preact/hooks";
 
 const DEBUG = {
@@ -721,34 +722,44 @@ export const useSelection = () => {
 
 export const useSelectableElement = (elementRef) => {
   const selection = useSelection();
-
   useLayoutEffect(() => {
-    if (selection && elementRef.current) {
-      const element = elementRef.current;
-      const value = getElementValue(element);
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+    const value = getElementValue(element);
+    debug(
+      "registration",
+      "useRegisterSelectableElement: registering element:",
+      element,
+      "value:",
+      value,
+    );
+    selection.registerElement(element);
+    return () => {
       debug(
         "registration",
-        "useRegisterSelectableElement: registering element:",
+        "useRegisterSelectableElement: unregistering element:",
         element,
         "value:",
         value,
       );
-      selection.registerElement(element);
-      return () => {
-        debug(
-          "registration",
-          "useRegisterSelectableElement: unregistering element:",
-          element,
-          "value:",
-          value,
-        );
-        selection.unregisterElement(element);
-      };
-    }
-    return undefined;
+      selection.unregisterElement(element);
+    };
   }, [selection]);
 
+  const [selected, setSelected] = useState();
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      setSelected(false);
+      return;
+    }
+    setSelected(selection.isElementSelected(element));
+  }, []);
+
   return {
+    selected,
     clickToSelect: (e) => {
       clickToSelect(e, { selection, element: elementRef.current });
     },
