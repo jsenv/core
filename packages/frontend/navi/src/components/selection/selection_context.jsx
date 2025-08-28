@@ -268,6 +268,7 @@ const GridSelectionProvider = ({ selectedValues = [], onChange, children }) => {
           lastValue,
         );
         for (const element of registryRef.current) {
+          element.setAttribute("aria-selected", "true");
           if (getElementValue(element) === lastValue) {
             debug(
               "selection",
