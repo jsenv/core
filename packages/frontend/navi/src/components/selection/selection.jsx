@@ -392,10 +392,8 @@ const createGridSelection = ({ value = [], onChange }) => {
       const { x, y } = currentPos;
       const nextX = x + 1;
       const currentSelectionName = getElementSelectionName(element);
-
       let fallbackElement = null;
-
-      // Single loop: prioritize same selection name, store fallback
+      // Single loop: prioritize same selection name
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         const candidateSelectionName =
@@ -403,15 +401,13 @@ const createGridSelection = ({ value = [], onChange }) => {
 
         if (pos && pos.x === nextX && pos.y === y) {
           if (candidateSelectionName === currentSelectionName) {
-            // Found exact match, return immediately
             return candidateElement;
-          } else if (!fallbackElement) {
-            // Store first fallback candidate
+          }
+          if (!fallbackElement) {
             fallbackElement = candidateElement;
           }
         }
       }
-
       return fallbackElement;
     },
 
@@ -424,10 +420,8 @@ const createGridSelection = ({ value = [], onChange }) => {
       const { x, y } = currentPos;
       const prevX = x - 1;
       const currentSelectionName = getElementSelectionName(element);
-
       let fallbackElement = null;
-
-      // Single loop: prioritize same selection name, store fallback
+      // Single loop: prioritize same selection name
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         const candidateSelectionName =
@@ -435,15 +429,13 @@ const createGridSelection = ({ value = [], onChange }) => {
 
         if (pos && pos.x === prevX && pos.y === y) {
           if (candidateSelectionName === currentSelectionName) {
-            // Found exact match, return immediately
             return candidateElement;
-          } else if (!fallbackElement) {
-            // Store first fallback candidate
+          }
+          if (!fallbackElement) {
             fallbackElement = candidateElement;
           }
         }
       }
-
       return fallbackElement;
     },
 
@@ -458,8 +450,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       const currentSelectionName = getElementSelectionName(element);
 
       let fallbackElement = null;
-
-      // Single loop: prioritize same selection name, store fallback
+      // Single loop: prioritize same selection name
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         const candidateSelectionName =
@@ -467,15 +458,13 @@ const createGridSelection = ({ value = [], onChange }) => {
 
         if (pos && pos.x === x && pos.y === nextY) {
           if (candidateSelectionName === currentSelectionName) {
-            // Found exact match, return immediately
             return candidateElement;
-          } else if (!fallbackElement) {
-            // Store first fallback candidate
+          }
+          if (!fallbackElement) {
             fallbackElement = candidateElement;
           }
         }
       }
-
       return fallbackElement;
     },
 
@@ -488,10 +477,8 @@ const createGridSelection = ({ value = [], onChange }) => {
       const { x, y } = currentPos;
       const prevY = y - 1;
       const currentSelectionName = getElementSelectionName(element);
-
       let fallbackElement = null;
-
-      // Single loop: prioritize same selection name, store fallback
+      // Single loop: prioritize same selection name
       for (const candidateElement of registry) {
         const pos = getElementPosition(candidateElement);
         const candidateSelectionName =
@@ -499,15 +486,13 @@ const createGridSelection = ({ value = [], onChange }) => {
 
         if (pos && pos.x === x && pos.y === prevY) {
           if (candidateSelectionName === currentSelectionName) {
-            // Found exact match, return immediately
             return candidateElement;
-          } else if (!fallbackElement) {
-            // Store first fallback candidate
+          }
+          if (!fallbackElement) {
             fallbackElement = candidateElement;
           }
         }
       }
-
       return fallbackElement;
     },
   };
@@ -603,7 +588,7 @@ const createLinearSelection = ({
       let nextElement = null;
       let fallbackElement = null;
 
-      // Single loop: prioritize same selection name, store fallback
+      // Single loop: prioritize same selection name
       for (const candidateElement of registry) {
         if (candidateElement === element) {
           continue;
