@@ -46,7 +46,7 @@ export { Select } from "./src/components/input/select.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
 export {
-  useRegisterSelectableElement,
+  useSelectableElement,
   useSelection,
   useSelectionProvider,
 } from "./src/components/selection/selection.jsx";

@@ -730,7 +730,7 @@ export const useSelectableElement = (elementRef) => {
     const value = getElementValue(element);
     debug(
       "registration",
-      "useRegisterSelectableElement: registering element:",
+      "useSelectableElement: registering element:",
       element,
       "value:",
       value,
@@ -739,7 +739,7 @@ export const useSelectableElement = (elementRef) => {
     return () => {
       debug(
         "registration",
-        "useRegisterSelectableElement: unregistering element:",
+        "useSelectableElement: unregistering element:",
         element,
         "value:",
         value,
