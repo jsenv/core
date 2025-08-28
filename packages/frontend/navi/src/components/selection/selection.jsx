@@ -290,6 +290,7 @@ const createBaseSelection = ({ value = [], onChange, type }) => {
     channels: {
       change,
     },
+    update,
 
     registerElement,
     unregisterElement,
@@ -306,7 +307,6 @@ const createBaseSelection = ({ value = [], onChange, type }) => {
 
   return baseSelection;
 };
-
 // Grid Selection Provider - for 2D layouts like tables
 const createGridSelection = ({ value = [], onChange }) => {
   const selection = createBaseSelection({
