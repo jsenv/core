@@ -302,6 +302,10 @@ const createBaseSelection = ({
     get value() {
       return value;
     },
+    registry,
+    get anchorElement() {
+      return anchorElement;
+    },
     channels: {
       change,
     },
@@ -689,26 +693,132 @@ export const useSelectableElement = (elementRef) => {
     setSelected(isSelected);
     return selection.channels.change.add(() => {
       const isSelected = selection.isElementSelected(element);
-      // debug(
-      //   "selection",
-      //   "selection changed to",
-      //   value,
-      //   "element is selected:",
-      //   isSelected,
-      //   element,
-      // );
       setSelected(isSelected);
     });
   }, [selection]);
 
+  // Add event listeners directly to the element
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+
+    let isDragging = false;
+    let dragStartElement = null;
+
+    const handleClick = (e) => {
+      if (isDragging) {
+        // Don't handle click if we just finished a drag
+        isDragging = false;
+        return;
+      }
+      clickToSelect(e, { selection, element });
+    };
+
+    const handleKeyDown = (e) => {
+      keydownToSelect(e, { selection, element });
+    };
+
+    const handleMouseDown = (e) => {
+      if (e.button !== 0) {
+        // Only handle left mouse button
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey) {
+        // Don't start drag if using modifier keys (let normal click behavior handle it)
+        return;
+      }
+
+      dragStartElement = element;
+      isDragging = false; // Will be set to true if mouse moves
+
+      const handleMouseMove = (e) => {
+        if (!dragStartElement) {
+          return;
+        }
+
+        isDragging = true;
+
+        // Find the element under the current mouse position
+        const elementUnderMouse = document.elementFromPoint(
+          e.clientX,
+          e.clientY,
+        );
+        if (!elementUnderMouse) {
+          return;
+        }
+
+        // Find the closest selectable element (look for element with data-value or in registry)
+        let targetElement = elementUnderMouse;
+        while (targetElement) {
+          if (selection.registry.has(targetElement)) {
+            break;
+          }
+          if (
+            targetElement.hasAttribute("data-value") ||
+            targetElement.hasAttribute("aria-selected")
+          ) {
+            break;
+          }
+          targetElement = targetElement.parentElement;
+        }
+
+        if (
+          targetElement &&
+          selection.registry &&
+          selection.registry.has(targetElement)
+        ) {
+          // Simulate shift-select behavior from drag start to current element
+          const syntheticEvent = {
+            shiftKey: true,
+            metaKey: false,
+            ctrlKey: false,
+            preventDefault: () => {},
+          };
+
+          // Set anchor to drag start if not already set
+          if (
+            !selection.anchorElement ||
+            getElementValue(selection.anchorElement) !==
+              getElementValue(dragStartElement)
+          ) {
+            selection.setAnchorElement(dragStartElement);
+          }
+
+          selection.selectFromAnchorTo(targetElement, syntheticEvent);
+        }
+      };
+
+      const handleMouseUp = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+
+        // Reset drag state after a small delay to allow click handler to see it
+        setTimeout(() => {
+          dragStartElement = null;
+          isDragging = false;
+        }, 0);
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    };
+
+    element.addEventListener("click", handleClick);
+    element.addEventListener("keydown", handleKeyDown);
+    element.addEventListener("mousedown", handleMouseDown);
+
+    return () => {
+      element.removeEventListener("click", handleClick);
+      element.removeEventListener("keydown", handleKeyDown);
+      element.removeEventListener("mousedown", handleMouseDown);
+    };
+  }, [selection]);
+
   return {
     selected,
-    clickToSelect: (e) => {
-      clickToSelect(e, { selection, element: elementRef.current });
-    },
-    keydownToSelect: (e) => {
-      keydownToSelect(e, { selection, element: elementRef.current });
-    },
   };
 };
 const clickToSelect = (clickEvent, { selection, element }) => {

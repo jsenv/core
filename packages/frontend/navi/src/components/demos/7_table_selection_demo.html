@@ -237,8 +237,7 @@
       const DatabaseTableCell = ({ columnName, row, value, columnIndex }) => {
         const cellId = `${columnName}:${row.id}`;
         const cellRef = useRef();
-        const { clickToSelect, keydownToSelect, selected } =
-          useSelectableElement(cellRef);
+        const { selected } = useSelectableElement(cellRef);
 
         return (
           <td
@@ -247,12 +246,6 @@
             tabIndex={0}
             data-value={cellId}
             aria-selected={selected}
-            onClick={(e) => {
-              clickToSelect(e);
-            }}
-            onKeyDown={(e) => {
-              keydownToSelect(e);
-            }}
           >
             <div className="database_table_cell_content">
               <div className="database_table_cell_value">{value}</div>
@@ -366,10 +359,7 @@
                     ))}
                   </tbody>
                 </table>
-                <TableSelectionOverlay
-                  tableRef={tableRef}
-                  selectedCells={cellSelection}
-                />
+                <TableSelectionOverlay tableRef={tableRef} />
               </div>
 
               <div className="status">
