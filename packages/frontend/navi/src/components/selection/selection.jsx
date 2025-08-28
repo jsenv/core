@@ -336,25 +336,6 @@ const createBaseSelection = ({
 // Grid Selection Provider - for 2D layouts like tables
 const createGridSelection = ({ value = [], onChange }) => {
   const registry = new Set();
-  const getElementPosition = (element) => {
-    // Get position by checking element's position in table structure
-    const cell = element.closest("td, th");
-    if (!cell) return null;
-
-    const row = cell.closest("tr");
-    if (!row) return null;
-
-    const table = row.closest("table");
-    if (!table) return null;
-
-    const rows = Array.from(table.rows);
-    const cells = Array.from(row.cells);
-
-    return {
-      x: cells.indexOf(cell),
-      y: rows.indexOf(row),
-    };
-  };
   const navigationMethods = {
     getElementRange: (fromElement, toElement) => {
       const fromPos = getElementPosition(fromElement);
@@ -637,6 +618,136 @@ const getElementValue = (element) => {
   return value;
 };
 
+// Helper functions to find end elements for jump to end functionality
+const getJumpToEndElement = (selection, element, direction) => {
+  if (selection.type === "grid") {
+    return getJumpToEndElementGrid(selection, element, direction);
+  } else if (selection.type === "linear") {
+    return getJumpToEndElementLinear(selection, element, direction);
+  }
+  return null;
+};
+
+const getJumpToEndElementGrid = (selection, element, direction) => {
+  const currentPos = getElementPosition(element);
+  if (!currentPos) return null;
+
+  const { x, y } = currentPos;
+
+  if (direction === "ArrowRight") {
+    // Jump to last element in current row
+    let lastInRow = null;
+    let maxX = -1;
+    for (const candidateElement of selection.registry) {
+      const pos = getElementPosition(candidateElement);
+      if (pos && pos.y === y && pos.x > maxX) {
+        maxX = pos.x;
+        lastInRow = candidateElement;
+      }
+    }
+    return lastInRow;
+  }
+
+  if (direction === "ArrowLeft") {
+    // Jump to first element in current row
+    let firstInRow = null;
+    let minX = Infinity;
+    for (const candidateElement of selection.registry) {
+      const pos = getElementPosition(candidateElement);
+      if (pos && pos.y === y && pos.x < minX) {
+        minX = pos.x;
+        firstInRow = candidateElement;
+      }
+    }
+    return firstInRow;
+  }
+
+  if (direction === "ArrowDown") {
+    // Jump to last element in current column
+    let lastInColumn = null;
+    let maxY = -1;
+    for (const candidateElement of selection.registry) {
+      const pos = getElementPosition(candidateElement);
+      if (pos && pos.x === x && pos.y > maxY) {
+        maxY = pos.y;
+        lastInColumn = candidateElement;
+      }
+    }
+    return lastInColumn;
+  }
+
+  if (direction === "ArrowUp") {
+    // Jump to first element in current column
+    let firstInColumn = null;
+    let minY = Infinity;
+    for (const candidateElement of selection.registry) {
+      const pos = getElementPosition(candidateElement);
+      if (pos && pos.x === x && pos.y < minY) {
+        minY = pos.y;
+        firstInColumn = candidateElement;
+      }
+    }
+    return firstInColumn;
+  }
+
+  return null;
+};
+
+const getJumpToEndElementLinear = (selection, element, direction) => {
+  if (direction === "ArrowDown" || direction === "ArrowRight") {
+    // Jump to last element in the registry
+    let lastElement = null;
+    for (const candidateElement of selection.registry) {
+      if (
+        !lastElement ||
+        candidateElement.compareDocumentPosition(lastElement) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ) {
+        lastElement = candidateElement;
+      }
+    }
+    return lastElement;
+  }
+
+  if (direction === "ArrowUp" || direction === "ArrowLeft") {
+    // Jump to first element in the registry
+    let firstElement = null;
+    for (const candidateElement of selection.registry) {
+      if (
+        !firstElement ||
+        firstElement.compareDocumentPosition(candidateElement) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ) {
+        firstElement = candidateElement;
+      }
+    }
+    return firstElement;
+  }
+
+  return null;
+};
+
+// Helper function for grid positioning (moved here from createGridSelection)
+const getElementPosition = (element) => {
+  // Get position by checking element's position in table structure
+  const cell = element.closest("td, th");
+  if (!cell) return null;
+
+  const row = cell.closest("tr");
+  if (!row) return null;
+
+  const table = row.closest("table");
+  if (!table) return null;
+
+  const rows = Array.from(table.rows);
+  const cells = Array.from(row.cells);
+
+  return {
+    x: cells.indexOf(cell),
+    y: rows.indexOf(row),
+  };
+};
+
 export const useSelection = () => {
   return useContext(SelectionContext);
 };
@@ -896,6 +1007,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
   const isMetaOrCtrlPressed = keydownEvent.metaKey || keydownEvent.ctrlKey;
   const isShiftSelect = keydownEvent.shiftKey;
   const isMultiSelect = isMetaOrCtrlPressed && isShiftSelect; // Only add to selection when BOTH are pressed
+  const isJumpToEnd = isMetaOrCtrlPressed && isShiftSelect; // Jump to end and select
   const { key } = keydownEvent;
 
   // If only Cmd/Ctrl is pressed (without Shift) for arrow keys, ignore the event
@@ -935,26 +1047,43 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       );
       return; // No down navigation in horizontal layout
     }
-    const nextElement = selection.getElementBelow(element);
-    if (!nextElement) {
-      debug("navigation", "keydownToSelect: ArrowDown - no next element found");
-      return; // No next element to select
+
+    let targetElement;
+    if (isJumpToEnd) {
+      // Jump to end behavior with Cmd/Ctrl+Shift
+      targetElement = getJumpToEndElement(selection, element, "ArrowDown");
+      debug(
+        "navigation",
+        "keydownToSelect: ArrowDown with Cmd/Ctrl+Shift - jumping to end element:",
+        targetElement,
+      );
+    } else {
+      // Normal navigation
+      targetElement = selection.getElementBelow(element);
+      debug(
+        "navigation",
+        "keydownToSelect: ArrowDown - found next element:",
+        targetElement,
+      );
     }
-    const nextValue = getElementValue(nextElement);
-    debug(
-      "navigation",
-      "keydownToSelect: ArrowDown - found next element:",
-      nextElement,
-      "value:",
-      nextValue,
-    );
+
+    if (!targetElement) {
+      debug(
+        "navigation",
+        "keydownToSelect: ArrowDown - no target element found",
+      );
+      return; // No target element to select
+    }
+
+    const targetValue = getElementValue(targetElement);
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
+
     if (isShiftSelect) {
       debug(
         "interaction",
-        "keydownToSelect: ArrowDown with Shift - selecting from anchor to next element",
+        "keydownToSelect: ArrowDown with Shift - selecting from anchor to target element",
       );
-      selection.selectFromAnchorTo(nextElement, keydownEvent);
+      selection.selectFromAnchorTo(targetElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
@@ -962,14 +1091,14 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
         "interaction",
         "keydownToSelect: ArrowDown with multi-select - adding to selection",
       );
-      selection.addToSelection([nextValue], keydownEvent);
+      selection.addToSelection([targetValue], keydownEvent);
       return;
     }
     debug(
       "interaction",
-      "keydownToSelect: ArrowDown - setting selection to next element",
+      "keydownToSelect: ArrowDown - setting selection to target element",
     );
-    selection.setSelection([nextValue], keydownEvent);
+    selection.setSelection([targetValue], keydownEvent);
     return;
   }
 
@@ -977,23 +1106,29 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     if (selection.axis === "horizontal") {
       return; // No up navigation in horizontal layout
     }
-    const previousElement = selection.getElementAbove(element);
-    if (!previousElement) {
-      return; // No previous element to select
+
+    let targetElement;
+    if (isJumpToEnd) {
+      // Jump to end behavior with Cmd/Ctrl+Shift
+      targetElement = getJumpToEndElement(selection, element, "ArrowUp");
+    } else {
+      // Normal navigation
+      targetElement = selection.getElementAbove(element);
+    }
+
+    if (!targetElement) {
+      return; // No target element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selection.selectFromAnchorTo(previousElement, keydownEvent);
+      selection.selectFromAnchorTo(targetElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selection.addToSelection(
-        [getElementValue(previousElement)],
-        keydownEvent,
-      );
+      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
       return;
     }
-    selection.setSelection([getElementValue(previousElement)], keydownEvent);
+    selection.setSelection([getElementValue(targetElement)], keydownEvent);
     return;
   }
 
@@ -1001,23 +1136,29 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     if (selection.axis === "vertical") {
       return; // No left navigation in vertical layout
     }
-    const previousElement = selection.getElementBefore(element);
-    if (!previousElement) {
-      return; // No previous element to select
+
+    let targetElement;
+    if (isJumpToEnd) {
+      // Jump to end behavior with Cmd/Ctrl+Shift
+      targetElement = getJumpToEndElement(selection, element, "ArrowLeft");
+    } else {
+      // Normal navigation
+      targetElement = selection.getElementBefore(element);
+    }
+
+    if (!targetElement) {
+      return; // No target element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selection.selectFromAnchorTo(previousElement, keydownEvent);
+      selection.selectFromAnchorTo(targetElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selection.addToSelection(
-        [getElementValue(previousElement)],
-        keydownEvent,
-      );
+      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
       return;
     }
-    selection.setSelection([getElementValue(previousElement)], keydownEvent);
+    selection.setSelection([getElementValue(targetElement)], keydownEvent);
     return;
   }
 
@@ -1025,20 +1166,29 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     if (selection.axis === "vertical") {
       return; // No right navigation in vertical layout
     }
-    const nextElement = selection.getElementAfter(element);
-    if (!nextElement) {
-      return; // No next element to select
+
+    let targetElement;
+    if (isJumpToEnd) {
+      // Jump to end behavior with Cmd/Ctrl+Shift
+      targetElement = getJumpToEndElement(selection, element, "ArrowRight");
+    } else {
+      // Normal navigation
+      targetElement = selection.getElementAfter(element);
+    }
+
+    if (!targetElement) {
+      return; // No target element to select
     }
     keydownEvent.preventDefault(); // Prevent default scrolling behavior
     if (isShiftSelect) {
-      selection.selectFromAnchorTo(nextElement, keydownEvent);
+      selection.selectFromAnchorTo(targetElement, keydownEvent);
       return;
     }
     if (isMultiSelect) {
-      selection.addToSelection([getElementValue(nextElement)], keydownEvent);
+      selection.addToSelection([getElementValue(targetElement)], keydownEvent);
       return;
     }
-    selection.setSelection([getElementValue(nextElement)], keydownEvent);
+    selection.setSelection([getElementValue(targetElement)], keydownEvent);
     return;
   }
 };
