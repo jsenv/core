@@ -167,9 +167,6 @@ const createGridSelection = ({ value = [], onChange }) => {
       const isSelected = gridSelection.value.includes(value);
       return isSelected;
     },
-    getAllElements: () => {
-      return Array.from(registry);
-    },
     getElementRange: (fromElement, toElement) => {
       const fromPos = getElementPosition(fromElement);
       const toPos = getElementPosition(toElement);
@@ -410,6 +407,18 @@ const createGridSelection = ({ value = [], onChange }) => {
         gridSelection.setSelection([getElementValue(element)], event);
       }
     },
+    selectAll: (event) => {
+      const allValues = [];
+      for (const element of registry) {
+        allValues.push(getElementValue(element));
+      }
+      debug(
+        "interaction",
+        "Select All - setting selection to all values:",
+        allValues,
+      );
+      gridSelection.setSelection(allValues, event);
+    },
   };
 
   return gridSelection;
@@ -497,9 +506,6 @@ const createLinearSelection = ({
     isValueSelected: (value) => {
       const isSelected = linearSelection.value.includes(value);
       return isSelected;
-    },
-    getAllElements: () => {
-      return Array.from(registry);
     },
     getElementRange: (fromElement, toElement) => {
       if (!registry.has(fromElement) || !registry.has(toElement)) {
@@ -707,6 +713,18 @@ const createLinearSelection = ({
         linearSelection.setSelection([getElementValue(element)], event);
       }
     },
+    selectAll: (event) => {
+      const allValues = [];
+      for (const element of registry) {
+        allValues.push(getElementValue(element));
+      }
+      debug(
+        "interaction",
+        "Select All - setting selection to all values:",
+        allValues,
+      );
+      linearSelection.setSelection(allValues, event);
+    },
   };
 
   return linearSelection;
@@ -885,13 +903,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       return;
     }
     keydownEvent.preventDefault(); // prevent default select all text behavior
-    const allValues = selection.getAllElements().map(getElementValue);
-    debug(
-      "interaction",
-      "keydownToSelect: Select All - setting selection to all values:",
-      allValues,
-    );
-    selection.setSelection(allValues, keydownEvent);
+    selection.selectAll(keydownEvent);
     return;
   }
 
