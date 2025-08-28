@@ -71,15 +71,30 @@ export const useSelectionProvider = ({ layout, value, onChange }) => {
   return LocalSelectionProvider;
 };
 // Base Selection - shared functionality between grid and linear
-const createBaseSelection = ({ value = [], onChange, type }) => {
+const createBaseSelection = ({
+  registry,
+  value = [],
+  onChange,
+  type,
+  navigationMethods: {
+    getElementRange,
+    getElementAfter,
+    getElementBefore,
+    getElementBelow,
+    getElementAbove,
+  },
+}) => {
   const [change, triggerChange] = createCallbackController();
   change.add(onChange);
   const update = (newValue, event) => {
-    debug("selection", "Grid setSelection: calling onChange with:", newValue);
+    debug(
+      "selection",
+      `${type} setSelection: calling onChange with:`,
+      newValue,
+    );
     value = newValue;
     triggerChange(value, event);
   };
-  const registry = new Set(); // Set<element>
   let anchorElement = null;
 
   // Element registration methods
@@ -263,7 +278,7 @@ const createBaseSelection = ({ value = [], onChange, type }) => {
       anchorElement &&
       baseSelection.value.includes(getElementValue(anchorElement))
     ) {
-      const range = baseSelection.getElementRange(anchorElement, element);
+      const range = getElementRange(anchorElement, element);
       baseSelection.setSelection(range, event);
     } else {
       baseSelection.setSelection([getElementValue(element)], event);
@@ -292,6 +307,11 @@ const createBaseSelection = ({ value = [], onChange, type }) => {
     },
     update,
 
+    updateValue: (newValue) => {
+      value = newValue;
+      debug("selection", `${type} updateValue:`, newValue);
+    },
+
     registerElement,
     unregisterElement,
     setAnchorElement,
@@ -303,19 +323,20 @@ const createBaseSelection = ({ value = [], onChange, type }) => {
     toggleElement,
     selectFromAnchorTo,
     selectAll,
+
+    // Navigation methods (will be overridden by specific implementations)
+    getElementRange,
+    getElementAfter,
+    getElementBefore,
+    getElementBelow,
+    getElementAbove,
   };
 
   return baseSelection;
 };
 // Grid Selection Provider - for 2D layouts like tables
 const createGridSelection = ({ value = [], onChange }) => {
-  const selection = createBaseSelection({
-    value,
-    onChange,
-    type: "grid",
-  });
-  const { registry } = selection;
-
+  const registry = new Set();
   const getElementPosition = (element) => {
     // Get position by checking element's position in table structure
     const cell = element.closest("td, th");
@@ -335,11 +356,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       y: rows.indexOf(row),
     };
   };
-
-  // Add grid-specific methods
-  const gridSelection = {
-    ...selection,
-
+  const navigationMethods = {
     getElementRange: (fromElement, toElement) => {
       const fromPos = getElementPosition(fromElement);
       const toPos = getElementPosition(toElement);
@@ -373,7 +390,7 @@ const createGridSelection = ({ value = [], onChange }) => {
 
       return valuesInRange;
     },
-    // Navigation methods for grid
+
     getElementAfter: (element) => {
       const currentPos = getElementPosition(element);
       if (!currentPos) {
@@ -392,6 +409,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       }
       return null;
     },
+
     getElementBefore: (element) => {
       const currentPos = getElementPosition(element);
       if (!currentPos) {
@@ -410,6 +428,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       }
       return null;
     },
+
     getElementBelow: (element) => {
       const currentPos = getElementPosition(element);
       if (!currentPos) {
@@ -428,6 +447,7 @@ const createGridSelection = ({ value = [], onChange }) => {
       }
       return null;
     },
+
     getElementAbove: (element) => {
       const currentPos = getElementPosition(element);
       if (!currentPos) {
@@ -447,6 +467,13 @@ const createGridSelection = ({ value = [], onChange }) => {
       return null;
     },
   };
+  const gridSelection = createBaseSelection({
+    registry,
+    value,
+    onChange,
+    type: "grid",
+    navigationMethods,
+  });
 
   return gridSelection;
 };
@@ -461,18 +488,10 @@ const createLinearSelection = ({
       `useLinearSelection: Invalid axis "${axis}". Must be "horizontal" or "vertical".`,
     );
   }
-  const selection = createBaseSelection({
-    value,
-    onChange,
-    type: "linear",
-  });
-  const { registry } = selection;
 
-  // Add linear-specific methods
-  const linearSelection = {
-    ...selection,
-    axis,
-
+  const registry = new Set();
+  // Define navigation methods that need access to registry
+  const navigationMethods = {
     getElementRange: (fromElement, toElement) => {
       if (!registry.has(fromElement) || !registry.has(toElement)) {
         return [];
@@ -519,17 +538,16 @@ const createLinearSelection = ({
 
       return valuesInRange;
     },
-    // Navigation methods for linear layout using DOM order
     getElementAfter: (element) => {
       if (!registry.has(element)) {
         return null;
       }
-
       let nextElement = null;
-
       // Find the element that comes immediately after in DOM order
       for (const candidateElement of registry) {
-        if (candidateElement === element) continue;
+        if (candidateElement === element) {
+          continue;
+        }
 
         // Check if this element comes after current
         if (
@@ -546,7 +564,6 @@ const createLinearSelection = ({
           }
         }
       }
-
       return nextElement;
     },
     getElementBefore: (element) => {
@@ -580,17 +597,29 @@ const createLinearSelection = ({
 
       return prevElement;
     },
+    // Add axis-dependent methods
     getElementBelow: (element) => {
-      return axis === "vertical"
-        ? linearSelection.getElementAfter(element)
-        : null;
+      if (axis === "vertical") {
+        return navigationMethods.getElementAfter(element);
+      }
+      return null;
     },
     getElementAbove: (element) => {
-      return axis === "vertical"
-        ? linearSelection.getElementBefore(element)
-        : null;
+      if (axis === "vertical") {
+        return navigationMethods.getElementBefore(element);
+      }
+      return null;
     },
   };
+
+  // Create base selection with navigation methods
+  const linearSelection = createBaseSelection({
+    registry,
+    value,
+    onChange,
+    type: "linear",
+    navigationMethods,
+  });
 
   return linearSelection;
 };
