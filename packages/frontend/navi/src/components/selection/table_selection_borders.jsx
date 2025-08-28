@@ -277,10 +277,10 @@ const generateColumnSelectionPath = (selectedCells) => {
       const rightColumnRect = rightColumnCell.getBoundingClientRect();
       const lastRowRect = lastRowLeftCell.getBoundingClientRect();
 
-      const minLeft = leftColumnRect.left - tableRect.left + 1; // 1px inset
-      const maxRight = rightColumnRect.right - tableRect.left - 1; // 1px inset
-      const minTop = leftColumnRect.top - tableRect.top + 1; // 1px inset
-      const maxBottom = lastRowRect.bottom - tableRect.top - 1; // 1px inset
+      const minLeft = leftColumnRect.left - tableRect.left;
+      const maxRight = rightColumnRect.right - tableRect.left;
+      const minTop = leftColumnRect.top - tableRect.top;
+      const maxBottom = lastRowRect.bottom - tableRect.top;
 
       // Create a rectangular path with all borders
       return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
