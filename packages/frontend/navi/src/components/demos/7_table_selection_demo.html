@@ -48,27 +48,31 @@
         position: relative;
       }
 
-      .database_table [data-row-contains-selected],
-      .database_table [data-column-contains-selected] {
-        background-color: rgba(0, 120, 212, 0.08);
-      }
-
       /* Row selection styling */
       .database_table tr[aria-selected="true"] {
         background-color: rgba(0, 120, 212, 0.15);
       }
 
       .database_table tr[aria-selected="true"] .number-column {
-        background-color: #0078d4;
-        color: white;
+        /* background-color: #0078d4; */
+        /* color: white; */
         font-weight: bold;
       }
 
+      /* Selected row number column when focused - use a darker blue background */
+      .database_table tr[aria-selected="true"] .number-column:focus {
+        background-color: rgba(0, 120, 212, 0.08);
+      }
+
       td[data-row-contains-selected] {
-        font-weight: bold;
+        font-weight: 500;
+        color: #444;
+        border-left: 4px solid rgba(128, 128, 128, 0.3);
       }
       th[data-column-contains-selected] {
-        font-weight: bold;
+        font-weight: 600;
+        color: #444;
+        border-top: 4px solid rgba(128, 128, 128, 0.4);
       }
 
       .database_table_cell[aria-selected="true"] {
@@ -86,7 +90,7 @@
 
       .database_table_cell:focus .database_table_cell_content {
         outline: 2px solid #0078d4;
-        outline-offset: -1px;
+        outline-offset: 0px;
       }
 
       .database_table_cell_content {
@@ -231,9 +235,9 @@
             data-selection-name="row"
             aria-selected={selected}
             style={{ cursor: "pointer", textAlign: "center" }}
-            tabIndex={-1}
+            tabIndex={0}
           >
-            {row.index}
+            <div className="database_table_cell_content">{row.index}</div>
           </td>
         );
       };
