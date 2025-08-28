@@ -54,9 +54,7 @@ export const useSelectionProvider = ({ layout, value, onChange }) => {
 
   // Update the selection's internal values when external value changes
   useEffect(() => {
-    if (selection && selection.updateValues) {
-      selection.updateValues(value);
-    }
+    selection.updateValues(value);
   }, [selection, value]);
 
   const LocalSelectionProvider = useMemo(() => {
@@ -721,7 +719,7 @@ export const useSelection = () => {
   return useContext(SelectionContext);
 };
 
-export const useRegisterSelectableElement = (elementRef) => {
+export const useSelectableElement = (elementRef) => {
   const selection = useSelection();
 
   useLayoutEffect(() => {

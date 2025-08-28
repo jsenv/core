@@ -133,11 +133,7 @@
       import { render } from "preact";
       import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
-      import {
-        useSelection,
-        useRegisterSelectableElement,
-        useSelectionProvider,
-      } from "@jsenv/navi";
+      import { useSelectableElement, useSelectionProvider } from "@jsenv/navi";
 
       // Sample data
       const sampleData = [
@@ -219,13 +215,9 @@
       // eslint-disable-next-line no-unused-vars
       const DatabaseTableCell = ({ columnName, row, value, columnIndex }) => {
         const cellId = `${columnName}:${row.id}`;
-        const selection = useSelection();
-        const isSelected = selection.isValueSelected(cellId);
-
-        // Register this cell with its coordinates (x = columnIndex, y = row.index - 1)
         const cellRef = useRef();
-        const { clickToSelect, keydownToSelect } =
-          useRegisterSelectableElement(cellRef);
+        const { clickToSelect, keydownToSelect, selected } =
+          useSelectableElement(cellRef);
 
         return (
           <td
@@ -233,7 +225,7 @@
             className="database_table_cell"
             tabIndex={0}
             data-value={cellId}
-            aria-selected={isSelected}
+            aria-selected={selected}
             onClick={(e) => {
               clickToSelect(e);
             }}

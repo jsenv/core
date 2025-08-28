@@ -49,7 +49,7 @@ export {
   useRegisterSelectableElement,
   useSelection,
   useSelectionProvider,
-} from "./src/components/selection/selection.js";
+} from "./src/components/selection/selection.jsx";
 export { Table } from "./src/components/table/table.jsx";
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition.jsx";
