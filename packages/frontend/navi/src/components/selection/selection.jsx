@@ -717,20 +717,49 @@ export const useSelectableElement = (elementRef) => {
         return;
       }
 
-      // Handle selection change immediately (moved from click handler)
-      const isMultiSelect = e.metaKey || e.ctrlKey;
-      const isShiftSelect = e.shiftKey;
-
-      if (isMultiSelect || isShiftSelect) {
-        // For modifier key selections, handle immediately and don't start drag
-        mousedownToSelect(e, { selection, element });
+      if (e.defaultPrevented) {
+        // If the event was prevented by another handler, do not interfere
+        debug("interaction", "mousedown: event already prevented, skipping");
         return;
       }
 
-      // For single select, handle immediately
-      mousedownToSelect(e, { selection, element });
+      const isMultiSelect = e.metaKey || e.ctrlKey;
+      const isShiftSelect = e.shiftKey;
+      const isSingleSelect = !isMultiSelect && !isShiftSelect;
+      const value = getElementValue(element);
 
-      // Now set up for potential drag selection
+      debug("interaction", "mousedown:", {
+        element,
+        value,
+        isMultiSelect,
+        isShiftSelect,
+        isSingleSelect,
+        currentSelection: selection.value,
+      });
+
+      // Handle immediate selection based on modifier keys
+      if (isSingleSelect) {
+        // Single select - replace entire selection with just this item
+        debug(
+          "interaction",
+          "mousedown: single select, setting selection to:",
+          [value],
+        );
+        selection.setSelection([value], e);
+      } else if (isMultiSelect && !isShiftSelect) {
+        // Multi select without shift - toggle element
+        debug("interaction", "mousedown: multi select, toggling element");
+        selection.toggleElement(element, e);
+      } else if (isShiftSelect) {
+        e.preventDefault(); // Prevent navigation
+        debug(
+          "interaction",
+          "mousedown: shift select, selecting from anchor to element",
+        );
+        selection.selectFromAnchorTo(element, e);
+      }
+
+      // Set up for potential drag selection (now works with all modifier combinations)
       dragStartElement = element;
       isDragging = false; // Will be set to true if mouse moves
 
@@ -781,7 +810,37 @@ export const useSelectableElement = (elementRef) => {
           ) {
             selection.setAnchorElement(dragStartElement);
           }
-          selection.selectFromAnchorTo(targetElement, e);
+
+          // Get the range from anchor to current target
+          const rangeValues = selection.getElementRange(
+            dragStartElement,
+            targetElement,
+          );
+
+          // Check if we're using modifier keys for additive selection
+          const isAdditive = e.metaKey || e.ctrlKey || e.shiftKey;
+
+          if (isAdditive) {
+            // For modifier key drag, add to existing selection
+            debug(
+              "interaction",
+              "drag select with modifiers: adding range to selection",
+              rangeValues,
+            );
+            const currentSelection = [...selection.value];
+            const newSelection = [
+              ...new Set([...currentSelection, ...rangeValues]),
+            ];
+            selection.setSelection(newSelection, e);
+          } else {
+            // For normal drag, replace selection
+            debug(
+              "interaction",
+              "drag select: setting selection to range",
+              rangeValues,
+            );
+            selection.setSelection(rangeValues, e);
+          }
         }
       };
 
@@ -818,54 +877,6 @@ export const useSelectableElement = (elementRef) => {
   return {
     selected,
   };
-};
-const mousedownToSelect = (mousedownEvent, { selection, element }) => {
-  if (mousedownEvent.defaultPrevented) {
-    // If the click was prevented by another handler, do not interfere
-    debug("interaction", "clickToSelect: event already prevented, skipping");
-    return;
-  }
-
-  const isMultiSelect = mousedownEvent.metaKey || mousedownEvent.ctrlKey;
-  const isShiftSelect = mousedownEvent.shiftKey;
-  const isSingleSelect = !isMultiSelect && !isShiftSelect;
-  const value = getElementValue(element);
-
-  debug("interaction", "clickToSelect:", {
-    element,
-    value,
-    isMultiSelect,
-    isShiftSelect,
-    isSingleSelect,
-    currentSelection: selection.value,
-  });
-
-  if (isSingleSelect) {
-    // Single select - replace entire selection with just this item
-    debug(
-      "interaction",
-      "clickToSelect: single select, setting selection to:",
-      [value],
-    );
-    selection.setSelection([value], mousedownEvent);
-    return;
-  }
-  if (isMultiSelect) {
-    // here no need to prevent nav on <a> but it means cmd + click will both multi select
-    // and open in a new tab
-    debug("interaction", "clickToSelect: multi select, toggling element");
-    selection.toggleElement(element, mousedownEvent);
-    return;
-  }
-  if (isShiftSelect) {
-    mousedownEvent.preventDefault(); // Prevent navigation
-    debug(
-      "interaction",
-      "clickToSelect: shift select, selecting from anchor to element",
-    );
-    selection.selectFromAnchorTo(element, mousedownEvent);
-    return;
-  }
 };
 const keydownToSelect = (keydownEvent, { selection, element }) => {
   if (!canInterceptKeys(keydownEvent)) {

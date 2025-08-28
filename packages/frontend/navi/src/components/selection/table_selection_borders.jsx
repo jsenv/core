@@ -1,3 +1,8 @@
+/**
+ * TODO: once we got row and column selection we'll also
+ * want to be able draw borders around entire rows/columns
+ */
+
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
