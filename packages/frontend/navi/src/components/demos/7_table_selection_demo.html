@@ -60,28 +60,33 @@
         font-weight: bold;
       }
 
-      .database_table[data-multiselection]
-        .database_table_cell[aria-selected="true"] {
+      .database_table_cell[aria-selected="true"] {
         background-color: rgba(0, 120, 212, 0.08);
       }
 
-      .database_table_cell[aria-selected="true"] {
-        border-color: #0078d4;
-        position: relative;
-        z-index: 1;
-      }
-
-      /* Ensure selected cells border wins over adjacent cells */
-      .database_table_cell[aria-selected="true"]:before {
-        content: "";
+      /* Selection overlay container */
+      .selection-overlay {
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        border: 1px solid #0078d4;
         pointer-events: none;
-        z-index: 2;
+        z-index: 10;
+      }
+
+      /* Individual selection rectangles */
+      .selection-rectangle {
+        position: absolute;
+        border: 2px solid #0078d4;
+        background-color: rgba(0, 120, 212, 0.1);
+        pointer-events: none;
+        box-sizing: border-box;
+      }
+
+      /* Container for table with relative positioning */
+      .table-container {
+        position: relative;
       }
 
       .database_table_cell:focus {
@@ -158,7 +163,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
+      import { useRef, useState, useLayoutEffect } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import { useSelectableElement, useSelectionProvider } from "@jsenv/navi";
 
@@ -271,6 +276,105 @@
         );
       };
 
+      // Selection Overlay Component
+      // eslint-disable-next-line no-unused-vars
+      const SelectionOverlay = ({ tableRef, selectedCells }) => {
+        const [rectangles, setRectangles] = useState([]);
+
+        useLayoutEffect(() => {
+          if (!tableRef.current || selectedCells.length === 0) {
+            setRectangles([]);
+            return;
+          }
+
+          const table = tableRef.current;
+          const tableRect = table.getBoundingClientRect();
+
+          // Calculate selection rectangles
+          const cellPositions = new Map();
+
+          // Get positions of all selected cells
+          selectedCells.forEach((cellId) => {
+            const cell = table.querySelector(`[data-value="${cellId}"]`);
+            if (cell) {
+              const cellRect = cell.getBoundingClientRect();
+              const [columnName, rowId] = cellId.split(":");
+
+              cellPositions.set(cellId, {
+                left: cellRect.left - tableRect.left,
+                top: cellRect.top - tableRect.top,
+                width: cellRect.width,
+                height: cellRect.height,
+                row: rowId,
+                column: columnName,
+              });
+            }
+          });
+
+          // Group contiguous cells into rectangles
+          const newRectangles = [];
+          const processedCells = new Set();
+
+          cellPositions.forEach((pos, cellId) => {
+            if (processedCells.has(cellId)) return;
+
+            // Find all contiguous cells starting from this cell
+            const rectangle = findContiguousRectangle(
+              cellId,
+              cellPositions,
+              processedCells,
+            );
+            if (rectangle) {
+              newRectangles.push(rectangle);
+            }
+          });
+
+          setRectangles(newRectangles);
+        }, [selectedCells, tableRef]);
+
+        const findContiguousRectangle = (
+          startCellId,
+          cellPositions,
+          processedCells,
+        ) => {
+          const startPos = cellPositions.get(startCellId);
+          if (!startPos) return null;
+
+          let minLeft = startPos.left;
+          let minTop = startPos.top;
+          let maxRight = startPos.left + startPos.width;
+          let maxBottom = startPos.top + startPos.height;
+
+          // Simple approach: for now, just create individual rectangles for each cell
+          // This can be enhanced later to merge contiguous cells
+          processedCells.add(startCellId);
+
+          return {
+            left: minLeft,
+            top: minTop,
+            width: maxRight - minLeft,
+            height: maxBottom - minTop,
+          };
+        };
+
+        return (
+          <div className="selection-overlay">
+            {rectangles.map((rect, index) => (
+              <div
+                key={index}
+                className="selection-rectangle"
+                style={{
+                  left: `${rect.left}px`,
+                  top: `${rect.top}px`,
+                  width: `${rect.width}px`,
+                  height: `${rect.height}px`,
+                }}
+              />
+            ))}
+          </div>
+        );
+      };
+
       // eslint-disable-next-line no-unused-vars
       const TableDemo = () => {
         const tableRef = useRef(null);
@@ -334,45 +438,53 @@
                 multi-select. Use Tab and arrow keys to navigate.
               </p>
 
-              <table
-                ref={tableRef}
-                className="database_table"
-                aria-multiselectable="true"
-                data-multiselection={selectionLength > 1 ? "" : undefined}
-              >
-                <thead>
-                  <tr>
-                    <NumberColumnHeader />
-                    {columns.map((col, index) => (
-                      <DatabaseTableHeaderCell
-                        key={col.id}
-                        columnName={col.header}
-                        columnIndex={index + 1}
-                        columnWithSomeSelectedCell={columnWithSomeSelectedCell}
-                      />
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sampleData.map((row) => (
-                    <tr key={row.id} data-row-id={row.id}>
-                      <NumberColumnCell
-                        row={row}
-                        rowWithSomeSelectedCell={rowWithSomeSelectedCell}
-                      />
-                      {columns.map((col, colIndex) => (
-                        <DatabaseTableCell
-                          key={`${row.id}-${col.id}`}
-                          columnName={col.accessorKey}
-                          columnIndex={colIndex + 1} // +1 because number column is first
-                          row={row}
-                          value={row[col.accessorKey]}
+              <div className="table-container">
+                <table
+                  ref={tableRef}
+                  className="database_table"
+                  aria-multiselectable="true"
+                  data-multiselection={selectionLength > 1 ? "" : undefined}
+                >
+                  <thead>
+                    <tr>
+                      <NumberColumnHeader />
+                      {columns.map((col, index) => (
+                        <DatabaseTableHeaderCell
+                          key={col.id}
+                          columnName={col.header}
+                          columnIndex={index + 1}
+                          columnWithSomeSelectedCell={
+                            columnWithSomeSelectedCell
+                          }
                         />
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {sampleData.map((row) => (
+                      <tr key={row.id} data-row-id={row.id}>
+                        <NumberColumnCell
+                          row={row}
+                          rowWithSomeSelectedCell={rowWithSomeSelectedCell}
+                        />
+                        {columns.map((col, colIndex) => (
+                          <DatabaseTableCell
+                            key={`${row.id}-${col.id}`}
+                            columnName={col.accessorKey}
+                            columnIndex={colIndex + 1} // +1 because number column is first
+                            row={row}
+                            value={row[col.accessorKey]}
+                          />
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <SelectionOverlay
+                  tableRef={tableRef}
+                  selectedCells={cellSelection}
+                />
+              </div>
 
               <div className="status">
                 <div>
