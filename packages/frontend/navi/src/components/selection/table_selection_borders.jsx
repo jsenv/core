@@ -188,14 +188,14 @@ const createSelectionBorderCanvas = (
 };
 
 // Draw borders and return the pattern name
-function drawBorder(
+const drawBorder = (
   ctx,
   canvasWidth,
   canvasHeight,
   neighborInfo,
   cellPosition,
   allCellPositions,
-) {
+) => {
   const {
     top,
     left,
@@ -643,7 +643,7 @@ function drawBorder(
 
   // Case 5: Four connections - no borders
   return "none";
-}
+};
 
 // Create borders for cell selections with smart intersection handling
 const createCellSelectionBorders = (cellPositions, color, opacity) => {
