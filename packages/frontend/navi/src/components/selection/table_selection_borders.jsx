@@ -129,11 +129,14 @@ const createSelectionBorderCanvas = (
   canvas.height = canvasHeight;
   canvas.className = "selection-border-canvas";
 
-  // Set up drawing context
+  // Set up drawing context for crisp 1px lines
   ctx.strokeStyle = borderColor;
   ctx.lineWidth = 1;
-  ctx.lineCap = "square";
+  ctx.lineCap = "butt"; // Prevent line caps from extending beyond endpoints
   ctx.lineJoin = "miter";
+
+  // Ensure pixel-perfect rendering
+  ctx.imageSmoothingEnabled = false;
 
   // Check which segments we have to adjust edge positioning
   const hasTopRightCorner = segments.includes("top-right-corner");
@@ -158,60 +161,60 @@ const createSelectionBorderCanvas = (
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "top-edge": {
-        // Draw top edge
-        const startX = hasTopLeftCorner ? 2 : topLeft ? 3 : 2;
+        // Draw top edge with pixel-perfect positioning and corner avoidance
+        const startX = hasTopLeftCorner ? 2.5 : topLeft ? 3.5 : 2.5;
         const endX = hasTopRightCorner
-          ? canvasWidth - 2
+          ? canvasWidth - 2.5
           : topRight
-            ? canvasWidth - 3
-            : canvasWidth - 2;
-        ctx.moveTo(startX, 2);
-        ctx.lineTo(endX, 2);
+            ? canvasWidth - 3.5
+            : canvasWidth - 2.5;
+        ctx.moveTo(startX, 2.5);
+        ctx.lineTo(endX, 2.5);
         break;
       }
       case "top-right-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "right-edge": {
-        // Draw right edge
-        const startY = hasTopRightCorner ? 2 : topRight ? 5 : 2;
+        // Draw right edge with pixel-perfect positioning and corner avoidance
+        const startY = hasTopRightCorner ? 2.5 : topRight ? 5.5 : 2.5;
         const endY = hasBottomRightCorner
-          ? canvasHeight - 2
+          ? canvasHeight - 2.5
           : bottomRight
-            ? canvasHeight - 5
-            : canvasHeight - 2;
-        ctx.moveTo(canvasWidth - 2, startY);
-        ctx.lineTo(canvasWidth - 2, endY);
+            ? canvasHeight - 5.5
+            : canvasHeight - 2.5;
+        ctx.moveTo(canvasWidth - 2.5, startY);
+        ctx.lineTo(canvasWidth - 2.5, endY);
         break;
       }
       case "bottom-right-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "bottom-edge": {
-        // Draw bottom edge
-        const startX = hasBottomLeftCorner ? 2 : bottomLeft ? 3 : 2;
+        // Draw bottom edge with pixel-perfect positioning and corner avoidance
+        const startX = hasBottomLeftCorner ? 2.5 : bottomLeft ? 3.5 : 2.5;
         const endX = hasBottomRightCorner
-          ? canvasWidth - 2
+          ? canvasWidth - 2.5
           : bottomRight
-            ? canvasWidth - 3
-            : canvasWidth - 2;
-        ctx.moveTo(startX, canvasHeight - 2);
-        ctx.lineTo(endX, canvasHeight - 2);
+            ? canvasWidth - 3.5
+            : canvasWidth - 2.5;
+        ctx.moveTo(startX, canvasHeight - 2.5);
+        ctx.lineTo(endX, canvasHeight - 2.5);
         break;
       }
       case "bottom-left-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "left-edge": {
-        // Draw left edge
-        const startY = hasTopLeftCorner ? 2 : topLeft ? 5 : 2;
+        // Draw left edge with pixel-perfect positioning and corner avoidance
+        const startY = hasTopLeftCorner ? 2.5 : topLeft ? 5.5 : 2.5;
         const endY = hasBottomLeftCorner
-          ? canvasHeight - 2
+          ? canvasHeight - 2.5
           : bottomLeft
-            ? canvasHeight - 5
-            : canvasHeight - 2;
-        ctx.moveTo(2, startY);
-        ctx.lineTo(2, endY);
+            ? canvasHeight - 5.5
+            : canvasHeight - 2.5;
+        ctx.moveTo(2.5, startY);
+        ctx.lineTo(2.5, endY);
         break;
       }
       default:
