@@ -250,7 +250,7 @@ function drawBorder(
     return false;
   };
 
-  // Case 1: Isolated cell (no connections) - draw all 4 borders
+  // Case 1: Isolated cell (no connections) - draw all 4 borders with corner ownership
   if (connectionCount === 0) {
     // For isolated cells, check for diagonal neighbors to shorten borders
     const hasTopLeftDiagonal = topLeft && !top && !left;
@@ -258,21 +258,21 @@ function drawBorder(
     const hasBottomLeftDiagonal = bottomLeft && !bottom && !left;
     const hasBottomRightDiagonal = bottomRight && !bottom && !right;
 
-    // Top border - shorten if diagonal neighbors exist
+    // Top border - owns top corners, adjust for diagonal neighbors
     const topStartX = hasTopLeftDiagonal ? 1 : 0;
     const topEndX = hasTopRightDiagonal ? canvasWidth - 1 : canvasWidth;
     if (topEndX > topStartX) {
       ctx.fillRect(topStartX, 0, topEndX - topStartX, 1);
     }
 
-    // Right border - shorten if diagonal neighbors exist
-    const rightStartY = hasTopRightDiagonal ? 1 : 0;
-    const rightEndY = hasBottomRightDiagonal ? canvasHeight - 1 : canvasHeight;
+    // Right border - avoid top/bottom corners (owned by top/bottom borders), adjust for diagonal neighbors
+    const rightStartY = 1; // Always start below top corner
+    const rightEndY = canvasHeight - 1;
     if (rightEndY > rightStartY) {
       ctx.fillRect(canvasWidth - 1, rightStartY, 1, rightEndY - rightStartY);
     }
 
-    // Bottom border - shorten if diagonal neighbors exist
+    // Bottom border - owns bottom corners, adjust for diagonal neighbors
     const bottomStartX = hasBottomLeftDiagonal ? 1 : 0;
     const bottomEndX = hasBottomRightDiagonal ? canvasWidth - 1 : canvasWidth;
     if (bottomEndX > bottomStartX) {
@@ -284,9 +284,9 @@ function drawBorder(
       );
     }
 
-    // Left border - shorten if diagonal neighbors exist
-    const leftStartY = hasTopLeftDiagonal ? 1 : 0;
-    const leftEndY = hasBottomLeftDiagonal ? canvasHeight - 1 : canvasHeight;
+    // Left border - avoid top/bottom corners (owned by top/bottom borders), adjust for diagonal neighbors
+    const leftStartY = 1; // Always start below top corner
+    const leftEndY = canvasHeight - 1; // Always stop above bottom corner
     if (leftEndY > leftStartY) {
       ctx.fillRect(0, leftStartY, 1, leftEndY - leftStartY);
     }
