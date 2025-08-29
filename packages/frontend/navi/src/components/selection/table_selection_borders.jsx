@@ -288,7 +288,12 @@ const drawBorder = (
     connections,
     diagonalAdjustments = {},
   ) => {
-    const { left: hasLeft, right: hasRight, bottom: hasBottom } = connections;
+    const {
+      left: hasLeft,
+      right: hasRight,
+      top: hasTop,
+      bottom: hasBottom,
+    } = connections;
 
     if (borderSide === "top") {
       let startX = hasLeft ? 1 : 0; // Avoid left junction if connected
@@ -338,12 +343,20 @@ const drawBorder = (
       };
     }
     if (borderSide === "left") {
-      let startY = 1; // Always start below top corner (top/bottom borders own corners)
+      let startY;
       let endY;
 
+      if (hasTop) {
+        // Connected on top - extend to top edge for seamless connection
+        startY = 0;
+      } else {
+        // Not connected on top - start below top corner (owned by top border)
+        startY = 1;
+      }
+
       if (hasBottom) {
-        // Connected on bottom - stop before bottom corner
-        endY = canvasHeight - 1;
+        // Connected on bottom - extend to bottom edge for seamless connection
+        endY = canvasHeight;
       } else {
         // Not connected on bottom - stop before bottom corner (owned by bottom border)
         endY = canvasHeight - 1;
@@ -362,12 +375,20 @@ const drawBorder = (
       };
     }
     if (borderSide === "right") {
-      let startY = 1; // Always start below top corner (top/bottom borders own corners)
+      let startY;
       let endY;
 
+      if (hasTop) {
+        // Connected on top - extend to top edge for seamless connection
+        startY = 0;
+      } else {
+        // Not connected on top - start below top corner (owned by top border)
+        startY = 1;
+      }
+
       if (hasBottom) {
-        // Connected on bottom - stop before bottom corner
-        endY = canvasHeight - 1;
+        // Connected on bottom - extend to bottom edge for seamless connection
+        endY = canvasHeight;
       } else {
         // Not connected on bottom - stop before bottom corner (owned by bottom border)
         endY = canvasHeight - 1;
@@ -514,24 +535,15 @@ const drawBorder = (
   // Case 3: Two connections - coordinate junction responsibility
   if (connectionCount === 2) {
     if (top && bottom) {
-      // Vertical tunnel - junction coordination for seamless borders
-      const hasNeighborBelow = allCellPositions.some(
-        ({ position }) =>
-          position.row === cellPosition.row + 1 &&
-          position.col === cellPosition.col,
-      );
-
-      // Right border
-      const rightX = canvasWidth - 1;
-      const rightStartY = 1; // Start below top connection area
-      const rightEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends into junction, bottom cell stops short
-      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
-
-      // Left border - this is the key fix!
-      const leftX = 0;
-      const leftStartY = 0; // ALWAYS start at Y=0 since there's no top border in vertical tunnels
-      const leftEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends into junction, bottom cell stops short
-      ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
+      // Vertical tunnel - No diagonal adjustments needed
+      const diagonalAdjustments = {
+        topLeft: false,
+        topRight: false,
+        bottomLeft: false,
+        bottomRight: false,
+      };
+      drawBorderSegment("left", connections, diagonalAdjustments);
+      drawBorderSegment("right", connections, diagonalAdjustments);
 
       return "left_right";
     }
