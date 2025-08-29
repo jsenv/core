@@ -27,7 +27,7 @@ import.meta.css = /* css */ `
 
 export const useTableSelectionBorders = (
   tableRef,
-  { color = "#0078d4" } = {},
+  { color = "#0078d4", opacity = 1 } = {},
 ) => {
   const selection = useSelection();
 
@@ -62,7 +62,7 @@ export const useTableSelectionBorders = (
       }
 
       // Create smart borders with proper intersection handling
-      createSmartSelectionBorders(selectedCells, color);
+      createSmartSelectionBorders(selectedCells, color, opacity);
     };
 
     // Initial border update
@@ -78,7 +78,7 @@ export const useTableSelectionBorders = (
 };
 
 // Create smart selection borders with proper intersection handling
-const createSmartSelectionBorders = (selectedCells, color) => {
+const createSmartSelectionBorders = (selectedCells, color, opacity) => {
   // Create a map of selected cells by position for quick lookup
   const cellMap = new Map();
   const cellPositions = [];
@@ -97,14 +97,15 @@ const createSmartSelectionBorders = (selectedCells, color) => {
   // Process each selection type
   Object.entries(groupedCells).forEach(([selectionType, cells]) => {
     if (selectionType === "row") {
-      createRowSelectionBorders(cells, cellMap, color);
+      createRowSelectionBorders(cells, cellMap, color, opacity);
     } else if (selectionType === "column") {
-      createColumnSelectionBorders(cells, cellMap, color);
+      createColumnSelectionBorders(cells, cellMap, color, opacity);
     } else {
       // Regular cell selection
       createCellSelectionBorders(
         cellPositions.filter((cp) => cells.includes(cp.cell)),
         color,
+        opacity,
       );
     }
   });
@@ -114,6 +115,7 @@ const createSmartSelectionBorders = (selectedCells, color) => {
 const createSelectionBorderCanvas = (
   segments,
   borderColor = "#0078d4",
+  opacity = 1,
   neighborInfo = {},
   cellRect,
 ) => {
@@ -140,6 +142,7 @@ const createSelectionBorderCanvas = (
 
   // Set up drawing context for pixel-perfect filled rectangles
   ctx.fillStyle = borderColor;
+  ctx.globalAlpha = opacity;
 
   // Ensure pixel-perfect rendering
   ctx.imageSmoothingEnabled = false;
@@ -152,6 +155,10 @@ const createSelectionBorderCanvas = (
 
   // Extract neighbor information for smart edge adjustment
   const {
+    top = false,
+    left = false,
+    right = false,
+    bottom = false,
     bottomRight = false,
     topLeft = false,
     topRight = false,
@@ -198,7 +205,9 @@ const createSelectionBorderCanvas = (
         break;
       case "bottom-edge": {
         // Draw bottom edge as a filled rectangle
-        const startX = hasBottomLeftCorner ? 0 : bottomLeft ? 1 : 0;
+        // Make gap when there's a diagonal bottom-left neighbor to avoid overlap
+        const hasBottomLeftDiagonal = bottomLeft && !left && !bottom;
+        const startX = hasBottomLeftCorner ? 0 : hasBottomLeftDiagonal ? 1 : 0;
         const endX = hasBottomRightCorner
           ? canvasWidth
           : bottomRight
@@ -233,7 +242,7 @@ const createSelectionBorderCanvas = (
 };
 
 // Create borders for cell selections with smart intersection handling
-const createCellSelectionBorders = (cellPositions, color) => {
+const createCellSelectionBorders = (cellPositions, color, opacity) => {
   if (cellPositions.length === 0) {
     return;
   }
@@ -338,6 +347,7 @@ const createCellSelectionBorders = (cellPositions, color) => {
     const canvasElement = createSelectionBorderCanvas(
       segments,
       color,
+      opacity,
       neighborInfo,
       cellRect,
     );
@@ -365,7 +375,7 @@ const createCellSelectionBorders = (cellPositions, color) => {
 };
 
 // Create borders for row selections
-const createRowSelectionBorders = (rowCells, cellMap, color) => {
+const createRowSelectionBorders = (rowCells, cellMap, color, opacity) => {
   if (rowCells.length === 0) {
     return;
   }
@@ -389,6 +399,7 @@ const createRowSelectionBorders = (rowCells, cellMap, color) => {
     const canvasElement = createSelectionBorderCanvas(
       segments,
       color,
+      opacity,
       {},
       cellRect,
     );
@@ -408,7 +419,7 @@ const createRowSelectionBorders = (rowCells, cellMap, color) => {
 };
 
 // Create borders for column selections
-const createColumnSelectionBorders = (columnCells, cellMap, color) => {
+const createColumnSelectionBorders = (columnCells, cellMap, color, opacity) => {
   if (columnCells.length === 0) {
     return;
   }
@@ -432,6 +443,7 @@ const createColumnSelectionBorders = (columnCells, cellMap, color) => {
     const canvasElement = createSelectionBorderCanvas(
       segments,
       color,
+      opacity,
       {},
       cellRect,
     );
