@@ -173,10 +173,10 @@ const createSelectionBorderCanvas = (
         // Draw top edge at the outer edge of canvas (on top of table border)
         const startX = hasTopLeftCorner ? 0.5 : topLeft ? 1.5 : 0.5;
         const endX = hasTopRightCorner
-          ? canvasWidth - 0.5
+          ? canvasWidth - 1
           : topRight
-            ? canvasWidth - 0.5
-            : canvasWidth - 0.5;
+            ? canvasWidth - 1
+            : canvasWidth - 1;
         ctx.moveTo(startX, 0.5);
         ctx.lineTo(endX, 0.5);
         break;
@@ -188,12 +188,12 @@ const createSelectionBorderCanvas = (
         // Draw right edge slightly inside to ensure visibility
         const startY = hasTopRightCorner ? 0.5 : topRight ? 3.5 : 0.5;
         const endY = hasBottomRightCorner
-          ? canvasHeight - 0.5
+          ? canvasHeight - 1
           : bottomRight
             ? canvasHeight - 3.5
-            : canvasHeight - 0.5;
-        ctx.moveTo(canvasWidth - 0.5, startY);
-        ctx.lineTo(canvasWidth - 0.5, endY);
+            : canvasHeight - 1;
+        ctx.moveTo(canvasWidth - 1, startY);
+        ctx.lineTo(canvasWidth - 1, endY);
         break;
       }
       case "bottom-right-corner":
@@ -203,12 +203,12 @@ const createSelectionBorderCanvas = (
         // Draw bottom edge at the outer edge of canvas (on top of table border)
         const startX = hasBottomLeftCorner ? 0.5 : bottomLeft ? 1.5 : 0.5;
         const endX = hasBottomRightCorner
-          ? canvasWidth - 0.5
+          ? canvasWidth - 1
           : bottomRight
-            ? canvasWidth - 0.5
-            : canvasWidth - 0.5;
-        ctx.moveTo(startX, canvasHeight - 0.5);
-        ctx.lineTo(endX, canvasHeight - 0.5);
+            ? canvasWidth - 1
+            : canvasWidth - 1;
+        ctx.moveTo(startX, canvasHeight - 1);
+        ctx.lineTo(endX, canvasHeight - 1);
         break;
       }
       case "bottom-left-corner":
@@ -218,10 +218,10 @@ const createSelectionBorderCanvas = (
         // Draw left edge at the outer edge of canvas (on top of table border)
         const startY = hasTopLeftCorner ? 0.5 : topLeft ? 3.5 : 0.5;
         const endY = hasBottomLeftCorner
-          ? canvasHeight - 0.5
+          ? canvasHeight - 1
           : bottomLeft
             ? canvasHeight - 3.5
-            : canvasHeight - 0.5;
+            : canvasHeight - 1;
         ctx.moveTo(0.5, startY);
         ctx.lineTo(0.5, endY);
         break;
