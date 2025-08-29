@@ -440,7 +440,7 @@ function drawBorder(
       // Top border (extend to right edge since we're connected on the right)
       const topY = 0;
       let topStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
-      const topEndX = canvasWidth;
+      const topEndX = canvasWidth - 1;
       if (hasTopLeftDiagonal) {
         topStartX = Math.max(topStartX, 1);
       }
