@@ -345,8 +345,8 @@ const drawBorder = (
         // Connected on bottom - stop before bottom corner
         endY = canvasHeight - 1;
       } else {
-        // Not connected on bottom - extend to bottom or into junction
-        endY = shouldExtendIntoJunction("down") ? canvasHeight : canvasHeight;
+        // Not connected on bottom - stop before bottom corner (owned by bottom border)
+        endY = canvasHeight - 1;
       }
 
       // Apply diagonal adjustments
@@ -369,8 +369,8 @@ const drawBorder = (
         // Connected on bottom - stop before bottom corner
         endY = canvasHeight - 1;
       } else {
-        // Not connected on bottom - extend to bottom or into junction
-        endY = shouldExtendIntoJunction("down") ? canvasHeight : canvasHeight;
+        // Not connected on bottom - stop before bottom corner (owned by bottom border)
+        endY = canvasHeight - 1;
       }
 
       // Apply diagonal adjustments
