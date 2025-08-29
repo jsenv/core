@@ -214,13 +214,13 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
       // Right border (only this cell draws the right edge to avoid duplication)
       const rightX = canvasWidth - 1;
       const rightStartY = 2; // Start below the connection point
-      const rightEndY = canvasHeight - 1; // Stop before bottom corner (owned by bottom border)
+      const rightEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
       // Left border (only this cell draws the left edge to avoid duplication)
       const leftX = 0;
       const leftStartY = 2; // Start below the connection point
-      const leftEndY = canvasHeight - 1; // Stop before bottom corner (owned by bottom border)
+      const leftEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
       return "bottom-edge-connection";
@@ -265,8 +265,8 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
 
       // Right border (only this cell draws the right edge to avoid duplication)
       const rightX = canvasWidth - 1;
-      const rightStartY = top ? 1 : 0; // Avoid top neighbor's responsibility
-      const rightEndY = bottom ? canvasHeight - 1 : canvasHeight; // Avoid bottom neighbor's responsibility
+      const rightStartY = 1; // Always start below top corner (owned by top border)
+      const rightEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
       return "right-edge-connection";
@@ -288,8 +288,8 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
 
       // Left border (only this cell draws the left edge to avoid duplication)
       const leftX = 0;
-      const leftStartY = top ? 1 : 0; // Avoid top neighbor's responsibility
-      const leftEndY = bottom ? canvasHeight - 1 : canvasHeight; // Avoid bottom neighbor's responsibility
+      const leftStartY = 1; // Always start below top corner (owned by top border)
+      const leftEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
       return "left-edge-connection";
