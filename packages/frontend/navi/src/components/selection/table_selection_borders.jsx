@@ -328,16 +328,17 @@ function drawBorder(
         ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
       }
 
-      // Left border (only this cell draws the left edge to avoid duplication)
+      // Left border (coordinate with neighbor above for seamless connection)
       const leftX = 0;
-      const leftStartY = 2; // Start below the connection point
-      let leftEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
+      const leftStartY = 1; // Start below the connection point
+      let leftEndY = canvasHeight - 1; // Stop above bottom border
+      const leftStartYFinal = leftStartY; // Bottom cell never extends up into junction (top cell handles it)
 
       // Adjust for diagonal neighbor
       if (hasBottomLeftDiagonal) leftEndY = canvasHeight - 1; // Stop before diagonal junction
 
-      if (leftEndY > leftStartY) {
-        ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
+      if (leftEndY > leftStartYFinal) {
+        ctx.fillRect(leftX, leftStartYFinal, 1, leftEndY - leftStartYFinal);
       }
 
       return "bottom-edge-connection";
@@ -374,10 +375,23 @@ function drawBorder(
         ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
       }
 
-      // Left border (only this cell draws the left edge to avoid duplication)
+      // Left border (coordinate with neighbor below for seamless connection)
       const leftX = 0;
-      let leftStartY = 1; // Start below top corner (owned by top border)
-      const leftEndY = canvasHeight - TABLE_BORDER_WIDTH; // Stop above the connection point
+
+      // Check if we have a neighbor below to coordinate junction (FIXED: was looking above)
+      const hasNeighborBelow =
+        cellPosition &&
+        allCellPositions &&
+        allCellPositions.some(
+          ({ position }) =>
+            position.row === cellPosition.row + 1 &&
+            position.col === cellPosition.col,
+        );
+
+      let leftStartY = hasNeighborBelow ? 0 : 1; // Start at top if neighbor below (seamless), otherwise below top border
+      const leftEndY = hasNeighborBelow
+        ? canvasHeight
+        : canvasHeight - TABLE_BORDER_WIDTH; // Extend into junction if neighbor below
 
       // Adjust for diagonal neighbor
       if (hasTopLeftDiagonal) leftStartY = Math.max(leftStartY, 1); // Start after diagonal junction
@@ -488,31 +502,23 @@ function drawBorder(
   // Case 3: Two connections - coordinate junction responsibility
   if (connectionCount === 2) {
     if (top && bottom) {
-      // Vertical tunnel - each cell draws its side borders, with junction coordination
+      // Vertical tunnel - junction coordination for seamless borders
       const hasNeighborBelow = allCellPositions.some(
         ({ position }) =>
           position.row === cellPosition.row + 1 &&
           position.col === cellPosition.col,
       );
 
-      // For vertical tunnels, we need to coordinate who draws the junction pixels
-      // Top cell: draws 1px into bottom junction
-      // Bottom cell: starts 1px above to avoid overlap
-
       // Right border
       const rightX = canvasWidth - 1;
-      const rightStartY = 1; // Always start below the top connection area
-      const rightEndY = hasNeighborBelow
-        ? canvasHeight // Top cell: extend into junction (full height)
-        : canvasHeight - 1; // Bottom cell: stop before junction
+      const rightStartY = 1; // Start below top connection area
+      const rightEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends into junction, bottom cell stops short
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
-      // Left border
+      // Left border - this is the key fix!
       const leftX = 0;
-      const leftStartY = 1; // Always start below the top connection area
-      const leftEndY = hasNeighborBelow
-        ? canvasHeight // Top cell: extend into junction (full height)
-        : canvasHeight - 1; // Bottom cell: stop before junction
+      const leftStartY = 0; // ALWAYS start at Y=0 since there's no top border in vertical tunnels
+      const leftEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends into junction, bottom cell stops short
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
       return "vertical-tunnel";
