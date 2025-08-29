@@ -1,14 +1,16 @@
 import { useLayoutEffect } from "preact/hooks";
 import { useSelection } from "./selection.jsx";
 
+const TABLE_BORDER_WIDTH = 1;
+
 import.meta.css = /* css */ `
   /* Canvas-based selection borders */
   [data-selection-borders] > .selection-border-canvas {
     position: absolute;
-    inset: -2px; /* Extend 2px to sit on cell border edge */
+    inset: -${TABLE_BORDER_WIDTH}px; /* Extend 2px to sit on cell border edge */
     pointer-events: none;
-    width: calc(100% + 4px);
-    height: calc(100% + 4px);
+    width: calc(100% + ${TABLE_BORDER_WIDTH * 2}px);
+    height: calc(100% + ${TABLE_BORDER_WIDTH * 2}px);
   }
 
   /* Hide borders during drag selection */
@@ -127,8 +129,8 @@ const createSelectionBorderCanvas = (
   const devicePixelRatio = window.devicePixelRatio || 1;
 
   // Set canvas size to cell size + 4px border extension
-  const canvasWidth = cellRect.width + 4;
-  const canvasHeight = cellRect.height + 4;
+  const canvasWidth = cellRect.width + TABLE_BORDER_WIDTH * 2;
+  const canvasHeight = cellRect.height + TABLE_BORDER_WIDTH * 2;
 
   // Set actual canvas size for high-DPI
   canvas.width = canvasWidth * devicePixelRatio;
@@ -184,113 +186,243 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
     left,
     right,
     bottom,
-    // Note: diagonal neighbors not used in junction responsibility system
+    topLeft,
+    topRight,
+    bottomLeft,
+    bottomRight,
   } = neighborInfo;
   const connectionCount = [top, left, right, bottom].filter(Boolean).length;
 
   // Case 1: Isolated cell (no connections) - draw all 4 borders
   if (connectionCount === 0) {
-    // Top border (owns top-left and top-right corners)
-    ctx.fillRect(0, 0, canvasWidth, 1);
-    // Right border (excludes corners already owned by top/bottom)
-    ctx.fillRect(canvasWidth - 1, 1, 1, canvasHeight - 2);
-    // Bottom border (owns bottom-left and bottom-right corners)
-    ctx.fillRect(0, canvasHeight - 1, canvasWidth, 1);
-    // Left border (excludes corners already owned by top/bottom)
-    ctx.fillRect(0, 1, 1, canvasHeight - 2);
-    return "isolated";
+    // For isolated cells, check for diagonal neighbors to shorten borders
+    const hasTopLeftDiagonal = topLeft && !top && !left;
+    const hasTopRightDiagonal = topRight && !top && !right;
+    const hasBottomLeftDiagonal = bottomLeft && !bottom && !left;
+    const hasBottomRightDiagonal = bottomRight && !bottom && !right;
+
+    // Top border - shorten if diagonal neighbors exist
+    const topStartX = hasTopLeftDiagonal ? 1 : 0;
+    const topEndX = hasTopRightDiagonal ? canvasWidth - 1 : canvasWidth;
+    if (topEndX > topStartX) {
+      ctx.fillRect(topStartX, 0, topEndX - topStartX, 1);
+    }
+
+    // Right border - shorten if diagonal neighbors exist
+    const rightStartY = hasTopRightDiagonal ? 1 : 0;
+    const rightEndY = hasBottomRightDiagonal ? canvasHeight - 1 : canvasHeight;
+    if (rightEndY > rightStartY) {
+      ctx.fillRect(canvasWidth - 1, rightStartY, 1, rightEndY - rightStartY);
+    }
+
+    // Bottom border - shorten if diagonal neighbors exist
+    const bottomStartX = hasBottomLeftDiagonal ? 1 : 0;
+    const bottomEndX = hasBottomRightDiagonal ? canvasWidth - 1 : canvasWidth;
+    if (bottomEndX > bottomStartX) {
+      ctx.fillRect(
+        bottomStartX,
+        canvasHeight - 1,
+        bottomEndX - bottomStartX,
+        1,
+      );
+    }
+
+    // Left border - shorten if diagonal neighbors exist
+    const leftStartY = hasTopLeftDiagonal ? 1 : 0;
+    const leftEndY = hasBottomLeftDiagonal ? canvasHeight - 1 : canvasHeight;
+    if (leftEndY > leftStartY) {
+      ctx.fillRect(0, leftStartY, 1, leftEndY - leftStartY);
+    }
+
+    return "isolated-with-diagonals";
   }
 
-  // Case 2: Single connection - draw 3 borders with junction responsibility
+  // Case 2: Single connection - draw 3 borders with junction responsibility and diagonal awareness
   if (connectionCount === 1) {
     if (top) {
       // Connected from top - draw bottom, left, right borders
+      // Check for diagonal neighbors that affect border drawing
+      const hasBottomLeftDiagonal = bottomLeft && !left;
+      const hasBottomRightDiagonal = bottomRight && !right;
+
       // Bottom border (only this cell draws the bottom edge to avoid duplication)
       const bottomY = canvasHeight - 1;
-      const bottomStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
-      const bottomEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
-      ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
+      let bottomStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
+      let bottomEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
+
+      // Adjust for diagonal neighbors
+      if (hasBottomLeftDiagonal) bottomStartX = Math.max(bottomStartX, 1);
+      if (hasBottomRightDiagonal)
+        bottomEndX = Math.min(bottomEndX, canvasWidth - 1);
+
+      if (bottomEndX > bottomStartX) {
+        ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
+      }
 
       // Right border (only this cell draws the right edge to avoid duplication)
       const rightX = canvasWidth - 1;
       const rightStartY = 2; // Start below the connection point
-      const rightEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
-      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
+      let rightEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
+
+      // Adjust for diagonal neighbor
+      if (hasBottomRightDiagonal) rightEndY = canvasHeight - 1; // Stop before diagonal junction
+
+      if (rightEndY > rightStartY) {
+        ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
+      }
 
       // Left border (only this cell draws the left edge to avoid duplication)
       const leftX = 0;
       const leftStartY = 2; // Start below the connection point
-      const leftEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
-      ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
+      let leftEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
+
+      // Adjust for diagonal neighbor
+      if (hasBottomLeftDiagonal) leftEndY = canvasHeight - 1; // Stop before diagonal junction
+
+      if (leftEndY > leftStartY) {
+        ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
+      }
 
       return "bottom-edge-connection";
     }
 
     if (bottom) {
       // Connected from bottom - draw top, left, right borders
+      // Check for diagonal neighbors that affect border drawing
+      const hasTopLeftDiagonal = topLeft && !left;
+      const hasTopRightDiagonal = topRight && !right;
+
       // Top border (only this cell draws the top edge to avoid duplication)
       const topY = 0;
-      const topStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
-      const topEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
-      ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
+      let topStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
+      let topEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
+
+      // Adjust for diagonal neighbors
+      if (hasTopLeftDiagonal) topStartX = Math.max(topStartX, 1);
+      if (hasTopRightDiagonal) topEndX = Math.min(topEndX, canvasWidth - 1);
+
+      if (topEndX > topStartX) {
+        ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
+      }
 
       // Right border (only this cell draws the right edge to avoid duplication)
       const rightX = canvasWidth - 1;
-      const rightStartY = 1; // Start below top corner (owned by top border)
+      let rightStartY = 1; // Start below top corner (owned by top border)
       const rightEndY = canvasHeight - 2; // Stop above the connection point
-      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
+
+      // Adjust for diagonal neighbor
+      if (hasTopRightDiagonal) rightStartY = Math.max(rightStartY, 1); // Start after diagonal junction
+
+      if (rightEndY > rightStartY) {
+        ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
+      }
 
       // Left border (only this cell draws the left edge to avoid duplication)
       const leftX = 0;
-      const leftStartY = 1; // Start below top corner (owned by top border)
+      let leftStartY = 1; // Start below top corner (owned by top border)
       const leftEndY = canvasHeight - 2; // Stop above the connection point
-      ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
+
+      // Adjust for diagonal neighbor
+      if (hasTopLeftDiagonal) leftStartY = Math.max(leftStartY, 1); // Start after diagonal junction
+
+      if (leftEndY > leftStartY) {
+        ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
+      }
 
       return "top-edge-connection";
     }
 
     if (left) {
       // Connected from left - draw top, bottom, right borders
+      // Check for diagonal neighbors that affect border drawing
+      const hasTopRightDiagonal = topRight && !top;
+      const hasBottomRightDiagonal = bottomRight && !bottom;
+
       // Top border (only this cell draws the top edge to avoid duplication)
       const topY = 0;
       const topStartX = 2; // Start right of the connection point
-      const topEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
-      ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
+      let topEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
+
+      // Adjust for diagonal neighbor
+      if (hasTopRightDiagonal) topEndX = Math.min(topEndX, canvasWidth - 1);
+
+      if (topEndX > topStartX) {
+        ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
+      }
 
       // Bottom border (only this cell draws the bottom edge to avoid duplication)
       const bottomY = canvasHeight - 1;
       const bottomStartX = 2; // Start right of the connection point
-      const bottomEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
-      ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
+      let bottomEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
+
+      // Adjust for diagonal neighbor
+      if (hasBottomRightDiagonal)
+        bottomEndX = Math.min(bottomEndX, canvasWidth - 1);
+
+      if (bottomEndX > bottomStartX) {
+        ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
+      }
 
       // Right border (only this cell draws the right edge to avoid duplication)
       const rightX = canvasWidth - 1;
-      const rightStartY = 1; // Always start below top corner (owned by top border)
-      const rightEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
-      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
+      let rightStartY = 1; // Always start below top corner (owned by top border)
+      let rightEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
+
+      // Adjust for diagonal neighbors
+      if (hasTopRightDiagonal) rightStartY = Math.max(rightStartY, 1);
+      if (hasBottomRightDiagonal)
+        rightEndY = Math.min(rightEndY, canvasHeight - 1);
+
+      if (rightEndY > rightStartY) {
+        ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
+      }
 
       return "right-edge-connection";
     }
 
     if (right) {
       // Connected from right - draw top, bottom, left borders
+      // Check for diagonal neighbors that affect border drawing
+      const hasTopLeftDiagonal = topLeft && !top;
+      const hasBottomLeftDiagonal = bottomLeft && !bottom;
+
       // Top border (only this cell draws the top edge to avoid duplication)
       const topY = 0;
-      const topStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
+      let topStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
       const topEndX = canvasWidth - 2; // Stop left of the connection point
-      ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
+
+      // Adjust for diagonal neighbor
+      if (hasTopLeftDiagonal) topStartX = Math.max(topStartX, 1);
+
+      if (topEndX > topStartX) {
+        ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
+      }
 
       // Bottom border (only this cell draws the bottom edge to avoid duplication)
       const bottomY = canvasHeight - 1;
-      const bottomStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
+      let bottomStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
       const bottomEndX = canvasWidth - 2; // Stop left of the connection point
-      ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
+
+      // Adjust for diagonal neighbor
+      if (hasBottomLeftDiagonal) bottomStartX = Math.max(bottomStartX, 1);
+
+      if (bottomEndX > bottomStartX) {
+        ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
+      }
 
       // Left border (only this cell draws the left edge to avoid duplication)
       const leftX = 0;
-      const leftStartY = 1; // Always start below top corner (owned by top border)
-      const leftEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
-      ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
+      let leftStartY = 1; // Always start below top corner (owned by top border)
+      let leftEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
+
+      // Adjust for diagonal neighbors
+      if (hasTopLeftDiagonal) leftStartY = Math.max(leftStartY, 1);
+      if (hasBottomLeftDiagonal)
+        leftEndY = Math.min(leftEndY, canvasHeight - 1);
+
+      if (leftEndY > leftStartY) {
+        ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
+      }
 
       return "left-edge-connection";
     }
