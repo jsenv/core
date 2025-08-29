@@ -157,6 +157,7 @@ const createSelectionBorderSVG = (
         break;
       case "top-edge": {
         // Adjust top edge to not overlap with corners or diagonal neighbors
+        // Gap of 1 for topLeft (horizontal direction) and 1 for topRight (horizontal direction)
         const topStartX = hasTopLeftCorner ? 1 : topLeft ? 1 : 0;
         const topEndX = hasTopRightCorner ? 99 : topRight ? 99 : 100;
         pathData += `M ${topStartX},0 L ${topEndX},0 L ${topEndX},1 L ${topStartX},1 Z `;
@@ -167,7 +168,9 @@ const createSelectionBorderSVG = (
         break;
       case "right-edge": {
         // Adjust right edge to not overlap with corners or diagonal neighbors
-        const rightStartY = hasTopRightCorner ? 1 : topRight ? 1 : 0;
+        // Gap of 3 for topRight (vertical direction) and 3 for bottomRight (vertical direction)
+        // 3 = table cell border (2px) + selection border (1px)
+        const rightStartY = hasTopRightCorner ? 1 : topRight ? 3 : 0;
         const rightEndY = hasBottomRightCorner ? 99 : bottomRight ? 97 : 100;
         pathData += `M 99,${rightStartY} L 100,${rightStartY} L 100,${rightEndY} L 99,${rightEndY} Z `;
         break;
@@ -177,6 +180,7 @@ const createSelectionBorderSVG = (
         break;
       case "bottom-edge": {
         // Adjust bottom edge to not overlap with corners or diagonal neighbors
+        // Gap of 1 for bottomLeft (horizontal direction) and 1 for bottomRight (horizontal direction)
         const bottomStartX = hasBottomLeftCorner ? 1 : bottomLeft ? 1 : 0;
         const bottomEndX = hasBottomRightCorner ? 99 : bottomRight ? 99 : 100;
         pathData += `M ${bottomStartX},99 L ${bottomEndX},99 L ${bottomEndX},100 L ${bottomStartX},100 Z `;
@@ -187,8 +191,10 @@ const createSelectionBorderSVG = (
         break;
       case "left-edge": {
         // Adjust left edge to not overlap with corners or diagonal neighbors
+        // Gap of 3 for topLeft (vertical direction) and 3 for bottomLeft (vertical direction)
+        // 3 = table cell border (2px) + selection border (1px)
         const leftStartY = hasTopLeftCorner ? 1 : topLeft ? 3 : 0;
-        const leftEndY = hasBottomLeftCorner ? 99 : bottomLeft ? 99 : 100;
+        const leftEndY = hasBottomLeftCorner ? 99 : bottomLeft ? 97 : 100;
         pathData += `M 0,${leftStartY} L 1,${leftStartY} L 1,${leftEndY} L 0,${leftEndY} Z `;
         break;
       }
