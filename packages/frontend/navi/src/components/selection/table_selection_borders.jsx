@@ -353,61 +353,34 @@ function drawBorder(
       const topY = 0;
       let topStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
       let topEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
-
-      // Adjust for diagonal neighbors
-      if (hasTopLeftDiagonal) topStartX = Math.max(topStartX, 1);
-      if (hasTopRightDiagonal) topEndX = Math.min(topEndX, canvasWidth - 1);
-
+      if (hasTopLeftDiagonal) {
+        topStartX = Math.max(topStartX, 1);
+      }
+      if (hasTopRightDiagonal) {
+        topEndX = Math.min(topEndX, canvasWidth - 1);
+      }
       if (topEndX > topStartX) {
         ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
       }
 
       // Right border (coordinate with neighbor below for seamless connection)
       const rightX = canvasWidth - 1;
-
-      // Check if we have a neighbor below to coordinate junction for right border
-      const hasNeighborBelowForRight =
-        cellPosition &&
-        allCellPositions &&
-        allCellPositions.some(
-          ({ position }) =>
-            position.row === cellPosition.row + 1 &&
-            position.col === cellPosition.col,
-        );
-
       let rightStartY = 1; // Start below top corner (owned by top border)
-      const rightEndY = hasNeighborBelowForRight
-        ? canvasHeight
-        : canvasHeight - TABLE_BORDER_WIDTH; // Extend into junction if neighbor below
-
-      // Adjust for diagonal neighbor
-      if (hasTopRightDiagonal) rightStartY = Math.max(rightStartY, 1); // Start after diagonal junction
-
+      const rightEndY = canvasHeight;
+      if (hasTopRightDiagonal) {
+        rightStartY = Math.max(rightStartY, 1); // Start after diagonal junction
+      }
       if (rightEndY > rightStartY) {
         ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
       }
 
       // Left border (coordinate with neighbor below for seamless connection)
       const leftX = 0;
-
-      // Check if we have a neighbor below to coordinate junction (FIXED: was looking above)
-      const hasNeighborBelow =
-        cellPosition &&
-        allCellPositions &&
-        allCellPositions.some(
-          ({ position }) =>
-            position.row === cellPosition.row + 1 &&
-            position.col === cellPosition.col,
-        );
-
       let leftStartY = 1; // Always start below top corner (owned by top border)
-      const leftEndY = hasNeighborBelow
-        ? canvasHeight
-        : canvasHeight - TABLE_BORDER_WIDTH; // Extend into junction if neighbor below
-
-      // Adjust for diagonal neighbor
-      if (hasTopLeftDiagonal) leftStartY = Math.max(leftStartY, 1); // Start after diagonal junction
-
+      const leftEndY = canvasHeight;
+      if (hasTopLeftDiagonal) {
+        leftStartY = Math.max(leftStartY, 1); // Start after diagonal junction
+      }
       if (leftEndY > leftStartY) {
         ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
       }
