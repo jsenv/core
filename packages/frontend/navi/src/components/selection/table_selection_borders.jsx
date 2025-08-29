@@ -128,7 +128,11 @@ const createSmartSelectionBorders = (selectedCells) => {
 };
 
 // Helper function to create SVG path for selection borders
-const createSelectionBorderSVG = (segments, borderColor = "#0078d4") => {
+const createSelectionBorderSVG = (
+  segments,
+  borderColor = "#0078d4",
+  neighborInfo = {},
+) => {
   let pathData = "";
 
   // Check which segments we have to adjust edge positioning
@@ -136,6 +140,14 @@ const createSelectionBorderSVG = (segments, borderColor = "#0078d4") => {
   const hasBottomRightCorner = segments.includes("bottom-right-corner");
   const hasTopLeftCorner = segments.includes("top-left-corner");
   const hasBottomLeftCorner = segments.includes("bottom-left-corner");
+
+  // Extract neighbor information for smart edge adjustment
+  const {
+    bottomRight = false,
+    topRight = false,
+    bottomLeft = false,
+    topLeft = false,
+  } = neighborInfo;
 
   // Draw each segment that's needed for this cell's contribution to the selection perimeter
   segments.forEach((segment) => {
@@ -146,7 +158,7 @@ const createSelectionBorderSVG = (segments, borderColor = "#0078d4") => {
       case "top-edge": {
         // Adjust top edge to not overlap with corners
         const topStartX = hasTopLeftCorner ? 1 : 0;
-        const topEndX = hasTopRightCorner ? 99 : 100;
+        const topEndX = hasTopRightCorner ? 99 : topRight ? 99 : 100;
         pathData += `M ${topStartX},0 L ${topEndX},0 L ${topEndX},1 L ${topStartX},1 Z `;
         break;
       }
@@ -156,7 +168,7 @@ const createSelectionBorderSVG = (segments, borderColor = "#0078d4") => {
       case "right-edge": {
         // Adjust right edge to not overlap with corners
         const rightStartY = hasTopRightCorner ? 1 : 0;
-        const rightEndY = hasBottomRightCorner ? 99 : 100;
+        const rightEndY = hasBottomRightCorner ? 99 : bottomRight ? 99 : 100;
         pathData += `M 99,${rightStartY} L 100,${rightStartY} L 100,${rightEndY} L 99,${rightEndY} Z `;
         break;
       }
@@ -165,8 +177,8 @@ const createSelectionBorderSVG = (segments, borderColor = "#0078d4") => {
         break;
       case "bottom-edge": {
         // Adjust bottom edge to not overlap with corners
-        const bottomStartX = hasBottomLeftCorner ? 1 : 0;
-        const bottomEndX = hasBottomRightCorner ? 99 : 100;
+        const bottomStartX = hasBottomLeftCorner ? 1 : bottomLeft ? 1 : 0;
+        const bottomEndX = hasBottomRightCorner ? 99 : bottomRight ? 99 : 100;
         pathData += `M ${bottomStartX},99 L ${bottomEndX},99 L ${bottomEndX},100 L ${bottomStartX},100 Z `;
         break;
       }
@@ -175,8 +187,8 @@ const createSelectionBorderSVG = (segments, borderColor = "#0078d4") => {
         break;
       case "left-edge": {
         // Adjust left edge to not overlap with corners
-        const leftStartY = hasTopLeftCorner ? 1 : 0;
-        const leftEndY = hasBottomLeftCorner ? 99 : 100;
+        const leftStartY = hasTopLeftCorner ? 1 : topLeft ? 1 : 0;
+        const leftEndY = hasBottomLeftCorner ? 99 : bottomLeft ? 99 : 100;
         pathData += `M 0,${leftStartY} L 1,${leftStartY} L 1,${leftEndY} L 0,${leftEndY} Z `;
         break;
       }
@@ -237,12 +249,27 @@ const createCellSelectionBorders = (cellPositions) => {
     const right = isPositionSelected(position.row, position.col + colSpan);
     const bottom = isPositionSelected(position.row + rowSpan, position.col);
 
+    // Check diagonal neighbors to prevent edge overlaps
+    const topRight = isPositionSelected(
+      position.row - 1,
+      position.col + colSpan,
+    );
+    const bottomRight = isPositionSelected(
+      position.row + rowSpan,
+      position.col + colSpan,
+    );
+    const bottomLeft = isPositionSelected(
+      position.row + rowSpan,
+      position.col - 1,
+    );
+    const topLeft = isPositionSelected(position.row - 1, position.col - 1);
+
     // Top-left corner: draw if no top AND no left neighbors
     if (!top && !left) {
       segments.push("top-left-corner");
     }
 
-    // Top edge: draw if no top neighbor AND we're not drawing both corners
+    // Top edge: draw if no top neighbor
     if (!top) {
       segments.push("top-edge");
     }
@@ -278,7 +305,21 @@ const createCellSelectionBorders = (cellPositions) => {
     }
 
     // Generate SVG for this cell's segments
-    const svgDataUri = createSelectionBorderSVG(segments, borderColor);
+    const neighborInfo = {
+      top,
+      left,
+      right,
+      bottom,
+      topRight,
+      bottomRight,
+      bottomLeft,
+      topLeft,
+    };
+    const svgDataUri = createSelectionBorderSVG(
+      segments,
+      borderColor,
+      neighborInfo,
+    );
 
     if (svgDataUri !== "none") {
       cell.setAttribute("data-selection-borders", "");
