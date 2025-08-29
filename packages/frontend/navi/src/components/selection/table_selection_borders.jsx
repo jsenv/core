@@ -343,24 +343,8 @@ const drawBorder = (
       };
     }
     if (borderSide === "left") {
-      let startY;
-      let endY;
-
-      if (hasTop) {
-        // Connected on top - extend to top edge for seamless connection
-        startY = 0;
-      } else {
-        // Not connected on top - start below top corner (owned by top border)
-        startY = 1;
-      }
-
-      if (hasBottom) {
-        // Connected on bottom - extend to bottom edge for seamless connection
-        endY = canvasHeight;
-      } else {
-        // Not connected on bottom - stop before bottom corner (owned by bottom border)
-        endY = canvasHeight - 1;
-      }
+      let startY = 1; // Always start below top corner (top/bottom borders own corners)
+      let endY = canvasHeight - 1; // Always stop above bottom corner (top/bottom borders own corners)
 
       // Apply diagonal adjustments
       if (diagonalAdjustments.topLeft) startY = Math.max(startY, 1);
@@ -375,24 +359,8 @@ const drawBorder = (
       };
     }
     if (borderSide === "right") {
-      let startY;
-      let endY;
-
-      if (hasTop) {
-        // Connected on top - extend to top edge for seamless connection
-        startY = 0;
-      } else {
-        // Not connected on top - start below top corner (owned by top border)
-        startY = 1;
-      }
-
-      if (hasBottom) {
-        // Connected on bottom - extend to bottom edge for seamless connection
-        endY = canvasHeight;
-      } else {
-        // Not connected on bottom - stop before bottom corner (owned by bottom border)
-        endY = canvasHeight - 1;
-      }
+      let startY = 1; // Always start below top corner (top/bottom borders own corners)
+      let endY = canvasHeight - 1; // Always stop above bottom corner (top/bottom borders own corners)
 
       // Apply diagonal adjustments
       if (diagonalAdjustments.topRight) startY = Math.max(startY, 1);
@@ -535,15 +503,24 @@ const drawBorder = (
   // Case 3: Two connections - coordinate junction responsibility
   if (connectionCount === 2) {
     if (top && bottom) {
-      // Vertical tunnel - No diagonal adjustments needed
-      const diagonalAdjustments = {
-        topLeft: false,
-        topRight: false,
-        bottomLeft: false,
-        bottomRight: false,
-      };
-      drawBorderSegment("left", connections, diagonalAdjustments);
-      drawBorderSegment("right", connections, diagonalAdjustments);
+      // Vertical tunnel - manual coordination to avoid overlaps and gaps
+      const hasNeighborBelow = allCellPositions.some(
+        ({ position }) =>
+          position.row === cellPosition.row + 1 &&
+          position.col === cellPosition.col,
+      );
+
+      // Left border - coordinate with vertical neighbors
+      const leftX = 0;
+      const leftStartY = 1; // Start below top corner to avoid overlap with top neighbor's bottom border
+      const leftEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends down, bottom cell stops short
+      ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
+
+      // Right border - coordinate with vertical neighbors
+      const rightX = canvasWidth - 1;
+      const rightStartY = 1; // Start below top corner to avoid overlap with top neighbor's bottom border
+      const rightEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends down, bottom cell stops short
+      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
       return "left_right";
     }
