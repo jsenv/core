@@ -115,7 +115,6 @@ const createSmartSelectionBorders = (selectedCells, color, opacity) => {
 
 // Helper function to create canvas element with drawn borders
 const createSelectionBorderCanvas = (
-  segments, // Keep for now for compatibility, but we'll use borderPattern instead
   borderColor = "#0078d4",
   opacity = 1,
   neighborInfo = {},
@@ -256,30 +255,31 @@ const drawBorder = (
   const shouldExtendIntoJunction = (direction) => {
     if (!cellPosition || !allCellPositions) return false;
 
-    switch (direction) {
-      case "right":
-        // Left cell extends right into horizontal junction
-        return allCellPositions.some(
-          ({ position }) =>
-            position.row === cellPosition.row &&
-            position.col === cellPosition.col + 1,
-        );
-      case "left":
-        // Right cell never extends left (left cell handles it)
-        return false;
-      case "down":
-        // Top cell extends down into vertical junction
-        return allCellPositions.some(
-          ({ position }) =>
-            position.row === cellPosition.row + 1 &&
-            position.col === cellPosition.col,
-        );
-      case "up":
-        // Bottom cell never extends up (top cell handles it)
-        return false;
-      default:
-        return false;
+    if (direction === "right") {
+      // Left cell extends right into horizontal junction
+      return allCellPositions.some(
+        ({ position }) =>
+          position.row === cellPosition.row &&
+          position.col === cellPosition.col + 1,
+      );
     }
+    if (direction === "left") {
+      // Right cell never extends left (left cell handles it)
+      return false;
+    }
+    if (direction === "down") {
+      // Top cell extends down into vertical junction
+      return allCellPositions.some(
+        ({ position }) =>
+          position.row === cellPosition.row + 1 &&
+          position.col === cellPosition.col,
+      );
+    }
+    if (direction === "up") {
+      // Bottom cell never extends up (top cell handles it)
+      return false;
+    }
+    return false;
   };
 
   // Calculate border coordinates with junction responsibility
@@ -288,12 +288,7 @@ const drawBorder = (
     connections,
     diagonalAdjustments = {},
   ) => {
-    const {
-      top: hasTop,
-      left: hasLeft,
-      right: hasRight,
-      bottom: hasBottom,
-    } = connections;
+    const { left: hasLeft, right: hasRight, bottom: hasBottom } = connections;
 
     if (borderSide === "top") {
       let startX = hasLeft ? 1 : 0; // Avoid left junction if connected
@@ -820,10 +815,7 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
     const rowSpan = parseInt(cell.getAttribute("rowspan") || "1", 10);
     const colSpan = parseInt(cell.getAttribute("colspan") || "1", 10);
 
-    // Determine which 8 segments this cell should draw based on surrounding selection
-    const segments = [];
-
-    // Check all 8 neighboring positions
+    // Check all 8 neighboring positions for border calculation
     const top = isPositionSelected(position.row - 1, position.col);
     const left = isPositionSelected(position.row, position.col - 1);
     const right = isPositionSelected(position.row, position.col + colSpan);
@@ -844,125 +836,7 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
     );
     const topLeft = isPositionSelected(position.row - 1, position.col - 1);
 
-    // Junction ownership rules to prevent multi-cell overlaps:
-    // - Each cell only draws corners where it has the "ownership" based on position priority
-    // - Priority: top-most cell owns top corners, left-most cell owns left corners
-
-    // Helper function to check if this cell should own a corner based on position priority
-    const shouldOwnCorner = (cornerRow, cornerCol) => {
-      // Find all selected cells that could potentially draw this corner
-      const competingCells = cellPositions.filter(
-        ({ position: pos, cell: c }) => {
-          const rSpan = parseInt(c.getAttribute("rowspan") || "1", 10);
-          const cSpan = parseInt(c.getAttribute("colspan") || "1", 10);
-
-          // Check if this cell's bounds include the corner position
-          const cellTouchesCorner =
-            (pos.row === cornerRow || pos.row + rSpan === cornerRow) &&
-            (pos.col === cornerCol || pos.col + cSpan === cornerCol);
-
-          return cellTouchesCorner;
-        },
-      );
-
-      // If no competition, this cell can draw the corner
-      if (competingCells.length <= 1) {
-        return true;
-      }
-
-      // For diagonal connections (cells meeting only at corners), use strict priority
-      // to ensure only one cell draws the shared corner point
-      const currentCell = { row: position.row, col: position.col };
-
-      // Check if this is a pure diagonal connection (no direct adjacency)
-      const isDiagonalConnection = competingCells.some(({ position: pos }) => {
-        return (
-          pos.row !== currentCell.row &&
-          pos.col !== currentCell.col &&
-          Math.abs(pos.row - currentCell.row) === 1 &&
-          Math.abs(pos.col - currentCell.col) === 1
-        );
-      });
-
-      if (isDiagonalConnection) {
-        // For diagonal connections, use a more aggressive priority system
-        // to prevent any overlap: top-left cell always wins
-        return competingCells.every(({ position: pos }) => {
-          return (
-            currentCell.row < pos.row ||
-            (currentCell.row === pos.row && currentCell.col < pos.col)
-          );
-        });
-      }
-
-      // For adjacent connections, use standard priority
-      return competingCells.every(({ position: pos }) => {
-        // Current cell has higher priority if it's above
-        if (currentCell.row < pos.row) return true;
-        if (currentCell.row > pos.row) return false;
-
-        // Same row - left-most wins
-        if (currentCell.col < pos.col) return true;
-        if (currentCell.col > pos.col) return false;
-
-        // Same position (shouldn't happen, but handle it)
-        return true;
-      });
-    };
-
-    // Top-left corner: draw if no top AND no left neighbors AND we own this corner
-    if (!top && !left && shouldOwnCorner(position.row, position.col)) {
-      segments.push("top-left-corner");
-    }
-
-    // Top edge: draw if no top neighbor
-    if (!top) {
-      segments.push("top-edge");
-    }
-
-    // Top-right corner: draw if no top AND no right neighbors AND we own this corner
-    if (
-      !top &&
-      !right &&
-      shouldOwnCorner(position.row, position.col + colSpan)
-    ) {
-      segments.push("top-right-corner");
-    }
-
-    // Right edge: draw if no right neighbor
-    if (!right) {
-      segments.push("right-edge");
-    }
-
-    // Bottom-right corner: draw if no bottom AND no right neighbors AND we own this corner
-    if (
-      !bottom &&
-      !right &&
-      shouldOwnCorner(position.row + rowSpan, position.col + colSpan)
-    ) {
-      segments.push("bottom-right-corner");
-    }
-
-    // Bottom edge: draw if no bottom neighbor
-    if (!bottom) {
-      segments.push("bottom-edge");
-    }
-
-    // Bottom-left corner: draw if no bottom AND no left neighbors AND we own this corner
-    if (
-      !bottom &&
-      !left &&
-      shouldOwnCorner(position.row + rowSpan, position.col)
-    ) {
-      segments.push("bottom-left-corner");
-    }
-
-    // Left edge: draw if no left neighbor
-    if (!left) {
-      segments.push("left-edge");
-    }
-
-    // Generate canvas for this cell's segments
+    // Prepare neighbor information for border calculation
     const neighborInfo = {
       top,
       left,
@@ -977,7 +851,6 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
     // Get cell dimensions for canvas sizing
     const cellRect = cell.getBoundingClientRect();
     const canvasElement = createSelectionBorderCanvas(
-      segments,
       color,
       opacity,
       neighborInfo,
@@ -1018,20 +891,8 @@ const createRowSelectionBorders = (rowCells, cellMap, color, opacity) => {
     const position = getCellPosition(rowHeaderCell);
     if (!position) return;
 
-    // Check if we need borders
-    const needsTop = !hasSelectedRowAt(cellMap, position.row - 1);
-    const needsBottom = !hasSelectedRowAt(cellMap, position.row + 1);
-
-    // Row selections always need left and right borders, top/bottom depend on adjacent rows
-    const segments = [];
-    if (needsTop) segments.push("top-edge");
-    segments.push("right-edge");
-    if (needsBottom) segments.push("bottom-edge");
-    segments.push("left-edge");
-
     const cellRect = rowHeaderCell.getBoundingClientRect();
     const canvasElement = createSelectionBorderCanvas(
-      segments,
       color,
       opacity,
       {},
@@ -1062,20 +923,8 @@ const createColumnSelectionBorders = (columnCells, cellMap, color, opacity) => {
     const position = getCellPosition(columnHeaderCell);
     if (!position) return;
 
-    // Check if we need borders
-    const needsLeft = !hasSelectedColumnAt(cellMap, position.col - 1);
-    const needsRight = !hasSelectedColumnAt(cellMap, position.col + 1);
-
-    // Column selections always need top and bottom borders, left/right depend on adjacent columns
-    const segments = [];
-    segments.push("top-edge");
-    if (needsRight) segments.push("right-edge");
-    segments.push("bottom-edge");
-    if (needsLeft) segments.push("left-edge");
-
     const cellRect = columnHeaderCell.getBoundingClientRect();
     const canvasElement = createSelectionBorderCanvas(
-      segments,
       color,
       opacity,
       {},
@@ -1152,34 +1001,6 @@ const getCellPosition = (cell) => {
   const colIndex = Array.from(row.cells).indexOf(cell);
 
   return { row: rowIndex, col: colIndex };
-};
-
-// Helper to check if there's a selected row at the given row index
-const hasSelectedRowAt = (cellMap, rowIndex) => {
-  for (const key of cellMap.keys()) {
-    const [row] = key.split(",").map(Number);
-    if (row === rowIndex) {
-      const cell = cellMap.get(key);
-      if (cell.getAttribute("data-selection-name") === "row") {
-        return true;
-      }
-    }
-  }
-  return false;
-};
-
-// Helper to check if there's a selected column at the given column index
-const hasSelectedColumnAt = (cellMap, colIndex) => {
-  for (const key of cellMap.keys()) {
-    const [, col] = key.split(",").map(Number);
-    if (col === colIndex) {
-      const cell = cellMap.get(key);
-      if (cell.getAttribute("data-selection-name") === "column") {
-        return true;
-      }
-    }
-  }
-  return false;
 };
 
 // Legacy component for backward compatibility - now just uses the hook
