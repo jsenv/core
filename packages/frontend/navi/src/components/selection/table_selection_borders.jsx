@@ -401,7 +401,7 @@ function drawBorder(
             position.col === cellPosition.col,
         );
 
-      let leftStartY = hasNeighborBelow ? 0 : 1; // Start at top if neighbor below (seamless), otherwise below top border
+      let leftStartY = 1; // Always start below top corner (owned by top border)
       const leftEndY = hasNeighborBelow
         ? canvasHeight
         : canvasHeight - TABLE_BORDER_WIDTH; // Extend into junction if neighbor below
