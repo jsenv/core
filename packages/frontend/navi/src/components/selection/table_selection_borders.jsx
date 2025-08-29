@@ -187,7 +187,48 @@ const createSelectionBorderCanvas = (
   return canvas;
 };
 
-// Draw borders and return the pattern name
+/**
+ * Draw borders and return the pattern name
+ *
+ * BORDER COORDINATION CHALLENGE:
+ * ==============================
+ *
+ * When multiple cells are selected, they form a contiguous selection area that needs
+ * a seamless 1px perimeter border. The challenge is that each cell draws its own borders
+ * independently, but they must coordinate to avoid:
+ *
+ * 1. OVERLAPS: Two adjacent cells drawing the same pixel (creates thick/dark borders)
+ * 2. GAPS: No cell drawing a required pixel (creates broken borders)
+ *
+ * JUNCTION RESPONSIBILITY SYSTEM:
+ * ==============================
+ *
+ * At the junction between two cells, exactly ONE cell must be responsible for drawing
+ * the shared border pixels. We use these rules:
+ *
+ * - CORNER OWNERSHIP: Top/bottom borders own corners (draw full width including corners)
+ *                     Left/right borders avoid corners (start at Y=1, end at Y=height-1)
+ *
+ * - JUNCTION EXTENSION: The "earlier" cell (top-left priority) extends into junction areas:
+ *   • Vertical junctions: TOP cell extends DOWN into the junction
+ *   • Horizontal junctions: LEFT cell extends RIGHT into the junction
+ *
+ * COORDINATE CALCULATION:
+ * ======================
+ *
+ * Each border segment needs precise start/end coordinates:
+ *
+ * - Normal borders: Start=0, End=canvasWidth/canvasHeight (full edge)
+ * - Connected borders: Adjust by TABLE_BORDER_WIDTH to avoid drawing over connections
+ * - Junction borders: Extend to full width/height when responsible for junction
+ *
+ * The ±1 pixel offsets are applied based on:
+ * - Whether this cell has responsibility for the junction
+ * - Which direction the connection/junction is in
+ * - Corner ownership rules to prevent overlap
+ *
+ * This creates a pixel-perfect perimeter where each pixel is drawn exactly once.
+ */
 const drawBorder = (
   ctx,
   canvasWidth,
@@ -207,6 +248,170 @@ const drawBorder = (
     bottomRight,
   } = neighborInfo;
   const connectionCount = [top, left, right, bottom].filter(Boolean).length;
+
+  // UNIFIED BORDER COORDINATE CALCULATION SYSTEM
+  // ============================================
+
+  // Helper function to determine if this cell should extend into a junction
+  const shouldExtendIntoJunction = (direction) => {
+    if (!cellPosition || !allCellPositions) return false;
+
+    switch (direction) {
+      case "right":
+        // Left cell extends right into horizontal junction
+        return allCellPositions.some(
+          ({ position }) =>
+            position.row === cellPosition.row &&
+            position.col === cellPosition.col + 1,
+        );
+      case "left":
+        // Right cell never extends left (left cell handles it)
+        return false;
+      case "down":
+        // Top cell extends down into vertical junction
+        return allCellPositions.some(
+          ({ position }) =>
+            position.row === cellPosition.row + 1 &&
+            position.col === cellPosition.col,
+        );
+      case "up":
+        // Bottom cell never extends up (top cell handles it)
+        return false;
+      default:
+        return false;
+    }
+  };
+
+  // Calculate border coordinates with junction responsibility
+  const getBorderCoordinates = (
+    borderSide,
+    connections,
+    diagonalAdjustments = {},
+  ) => {
+    const {
+      top: hasTop,
+      left: hasLeft,
+      right: hasRight,
+      bottom: hasBottom,
+    } = connections;
+
+    if (borderSide === "top") {
+      let startX = hasLeft ? 1 : 0; // Avoid left junction if connected
+      let endX;
+
+      if (hasRight) {
+        // Connected on right - extend to right edge for seamless connection
+        endX = canvasWidth;
+      } else {
+        // Not connected on right - check if we should extend into junction
+        endX = shouldExtendIntoJunction("right") ? canvasWidth : canvasWidth;
+      }
+
+      // Apply diagonal adjustments
+      if (diagonalAdjustments.topLeft) startX = Math.max(startX, 1);
+      if (diagonalAdjustments.topRight) endX = Math.min(endX, canvasWidth - 1);
+
+      return {
+        x: startX,
+        y: 0,
+        width: Math.max(0, endX - startX),
+        height: 1,
+      };
+    }
+    if (borderSide === "bottom") {
+      let startX = hasLeft ? 1 : 0; // Avoid left junction if connected
+      let endX;
+
+      if (hasRight) {
+        // Connected on right - extend to right edge for seamless connection
+        endX = canvasWidth;
+      } else {
+        // Not connected on right - check if we should extend into junction
+        endX = shouldExtendIntoJunction("right") ? canvasWidth : canvasWidth;
+      }
+
+      // Apply diagonal adjustments
+      if (diagonalAdjustments.bottomLeft) startX = Math.max(startX, 1);
+      if (diagonalAdjustments.bottomRight)
+        endX = Math.min(endX, canvasWidth - 1);
+
+      return {
+        x: startX,
+        y: canvasHeight - 1,
+        width: Math.max(0, endX - startX),
+        height: 1,
+      };
+    }
+    if (borderSide === "left") {
+      let startY = 1; // Always start below top corner (top/bottom borders own corners)
+      let endY;
+
+      if (hasBottom) {
+        // Connected on bottom - stop before bottom corner
+        endY = canvasHeight - 1;
+      } else {
+        // Not connected on bottom - extend to bottom or into junction
+        endY = shouldExtendIntoJunction("down") ? canvasHeight : canvasHeight;
+      }
+
+      // Apply diagonal adjustments
+      if (diagonalAdjustments.topLeft) startY = Math.max(startY, 1);
+      if (diagonalAdjustments.bottomLeft)
+        endY = Math.min(endY, canvasHeight - 1);
+
+      return {
+        x: 0,
+        y: startY,
+        width: 1,
+        height: Math.max(0, endY - startY),
+      };
+    }
+    if (borderSide === "right") {
+      let startY = 1; // Always start below top corner (top/bottom borders own corners)
+      let endY;
+
+      if (hasBottom) {
+        // Connected on bottom - stop before bottom corner
+        endY = canvasHeight - 1;
+      } else {
+        // Not connected on bottom - extend to bottom or into junction
+        endY = shouldExtendIntoJunction("down") ? canvasHeight : canvasHeight;
+      }
+
+      // Apply diagonal adjustments
+      if (diagonalAdjustments.topRight) startY = Math.max(startY, 1);
+      if (diagonalAdjustments.bottomRight)
+        endY = Math.min(endY, canvasHeight - 1);
+
+      return {
+        x: canvasWidth - 1,
+        y: startY,
+        width: 1,
+        height: Math.max(0, endY - startY),
+      };
+    }
+    return { x: 0, y: 0, width: 0, height: 0 };
+  };
+
+  // Helper function to draw a border with calculated coordinates
+  const drawBorderSegment = (
+    borderSide,
+    connections,
+    diagonalAdjustments = {},
+  ) => {
+    const coords = getBorderCoordinates(
+      borderSide,
+      connections,
+      diagonalAdjustments,
+    );
+
+    if (coords.width > 0 && coords.height > 0) {
+      ctx.fillRect(coords.x, coords.y, coords.width, coords.height);
+    }
+  };
+
+  // Connection state object for easy passing
+  const connections = { top, left, right, bottom };
 
   // Helper function to determine if this cell should draw junction pixels
   const shouldDrawJunction = (junctionType) => {
@@ -251,44 +456,18 @@ const drawBorder = (
 
   // Case 1: Isolated cell (no connections) - draw all 4 borders with corner ownership
   if (connectionCount === 0) {
-    // For isolated cells, check for diagonal neighbors to shorten borders
-    const hasTopLeftDiagonal = topLeft && !top && !left;
-    const hasTopRightDiagonal = topRight && !top && !right;
-    const hasBottomLeftDiagonal = bottomLeft && !bottom && !left;
-    const hasBottomRightDiagonal = bottomRight && !bottom && !right;
+    // Diagonal neighbor detection for border adjustments
+    const diagonalAdjustments = {
+      topLeft: topLeft && !top && !left,
+      topRight: topRight && !top && !right,
+      bottomLeft: bottomLeft && !bottom && !left,
+      bottomRight: bottomRight && !bottom && !right,
+    };
 
-    // Top border - owns top corners, adjust for diagonal neighbors
-    const topStartX = hasTopLeftDiagonal ? 1 : 0;
-    const topEndX = hasTopRightDiagonal ? canvasWidth - 1 : canvasWidth;
-    if (topEndX > topStartX) {
-      ctx.fillRect(topStartX, 0, topEndX - topStartX, 1);
-    }
-
-    // Right border - avoid top/bottom corners (owned by top/bottom borders), adjust for diagonal neighbors
-    const rightStartY = 1; // Always start below top corner
-    const rightEndY = canvasHeight - 1;
-    if (rightEndY > rightStartY) {
-      ctx.fillRect(canvasWidth - 1, rightStartY, 1, rightEndY - rightStartY);
-    }
-
-    // Bottom border - owns bottom corners, adjust for diagonal neighbors
-    const bottomStartX = hasBottomLeftDiagonal ? 1 : 0;
-    const bottomEndX = hasBottomRightDiagonal ? canvasWidth - 1 : canvasWidth;
-    if (bottomEndX > bottomStartX) {
-      ctx.fillRect(
-        bottomStartX,
-        canvasHeight - 1,
-        bottomEndX - bottomStartX,
-        1,
-      );
-    }
-
-    // Left border - avoid top/bottom corners (owned by top/bottom borders), adjust for diagonal neighbors
-    const leftStartY = 1; // Always start below top corner
-    const leftEndY = canvasHeight - 1; // Always stop above bottom corner
-    if (leftEndY > leftStartY) {
-      ctx.fillRect(0, leftStartY, 1, leftEndY - leftStartY);
-    }
+    // Draw all four borders using systematic coordinate calculation
+    ["top", "right", "bottom", "left"].forEach((borderSide) => {
+      drawBorderSegment(borderSide, connections, diagonalAdjustments);
+    });
 
     return "all";
   }
@@ -433,45 +612,15 @@ const drawBorder = (
 
     if (right) {
       // Connected from right - draw top, bottom, left borders
-      // Check for diagonal neighbors that affect border drawing
-      const hasTopLeftDiagonal = topLeft && !top;
-      const hasBottomLeftDiagonal = bottomLeft && !bottom;
+      const diagonalAdjustments = {
+        topLeft: topLeft && !top,
+        bottomLeft: bottomLeft && !bottom,
+      };
 
-      // Top border (extend to right edge since we're connected on the right)
-      const topY = 0;
-      let topStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
-      const topEndX = canvasWidth - 1;
-      if (hasTopLeftDiagonal) {
-        topStartX = Math.max(topStartX, 1);
-      }
-      if (topEndX > topStartX) {
-        ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
-      }
-
-      // Bottom border (extend to right edge since we're connected on the right)
-      const bottomY = canvasHeight - 1;
-      let bottomStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
-      const bottomEndX = canvasWidth; // Always extend to right edge since we're connected on the right
-      if (hasBottomLeftDiagonal) {
-        bottomStartX = Math.max(bottomStartX, 1);
-      }
-      if (bottomEndX > bottomStartX) {
-        ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
-      }
-
-      // Left border (only this cell draws the left edge to avoid duplication)
-      const leftX = 0;
-      let leftStartY = 1; // Always start below top corner (owned by top border)
-      let leftEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
-      if (hasTopLeftDiagonal) {
-        leftStartY = Math.max(leftStartY, 1);
-      }
-      if (hasBottomLeftDiagonal) {
-        leftEndY = Math.min(leftEndY, canvasHeight - 1);
-      }
-      if (leftEndY > leftStartY) {
-        ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
-      }
+      // Draw the three required borders using systematic coordinate calculation
+      ["top", "bottom", "left"].forEach((borderSide) => {
+        drawBorderSegment(borderSide, connections, diagonalAdjustments);
+      });
 
       return "top_bottom_left";
     }
