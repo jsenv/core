@@ -291,7 +291,7 @@ function drawBorder(
       ctx.fillRect(0, leftStartY, 1, leftEndY - leftStartY);
     }
 
-    return "isolated-with-diagonals";
+    return "all";
   }
 
   // Case 2: Single connection - draw 3 borders with junction responsibility and diagonal awareness
@@ -341,7 +341,7 @@ function drawBorder(
         ctx.fillRect(leftX, leftStartYFinal, 1, leftEndY - leftStartYFinal);
       }
 
-      return "bottom-edge-connection";
+      return "bottom_left_right";
     }
 
     if (bottom) {
@@ -400,7 +400,7 @@ function drawBorder(
         ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
       }
 
-      return "top-edge-connection";
+      return "top_left_right";
     }
 
     if (left) {
@@ -448,7 +448,7 @@ function drawBorder(
         ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
       }
 
-      return "right-edge-connection";
+      return "top_bottom_right";
     }
 
     if (right) {
@@ -495,7 +495,7 @@ function drawBorder(
         ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
       }
 
-      return "left-edge-connection";
+      return "top_bottom_left";
     }
   }
 
@@ -521,7 +521,7 @@ function drawBorder(
       const leftEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends into junction, bottom cell stops short
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
-      return "vertical-tunnel";
+      return "left_right";
     }
 
     if (left && right) {
@@ -556,7 +556,7 @@ function drawBorder(
 
       ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
 
-      return "horizontal-tunnel";
+      return "top_bottom";
     }
 
     if (top && left) {
@@ -573,7 +573,7 @@ function drawBorder(
       const rightEndY = canvasHeight - 1; // Stop at bottom corner (owned by bottom border)
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
-      return "bottom-right-corner";
+      return "bottom_right";
     }
 
     if (top && right) {
@@ -590,7 +590,7 @@ function drawBorder(
       const leftEndY = canvasHeight - 1; // Stop at bottom corner (owned by bottom border)
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
-      return "bottom-left-corner";
+      return "bottom_left";
     }
 
     if (bottom && left) {
@@ -607,7 +607,7 @@ function drawBorder(
       const rightEndY = canvasHeight - TABLE_BORDER_WIDTH; // Stop above bottom connection area
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
-      return "top-right-corner";
+      return "top_right";
     }
 
     if (bottom && right) {
@@ -624,7 +624,7 @@ function drawBorder(
       const leftEndY = canvasHeight - TABLE_BORDER_WIDTH; // Stop above bottom connection area
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
-      return "top-left-corner";
+      return "top_left";
     }
   }
 
@@ -636,7 +636,7 @@ function drawBorder(
       const topStartX = left ? 1 : 0; // Avoid left neighbor's junction
       const topEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's junction
       ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
-      return "top-only";
+      return "top";
     }
 
     if (!bottom) {
@@ -645,7 +645,7 @@ function drawBorder(
       const bottomStartX = left ? 1 : 0; // Avoid left neighbor's junction
       const bottomEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's junction
       ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
-      return "bottom-only";
+      return "bottom";
     }
 
     if (!left) {
@@ -654,7 +654,7 @@ function drawBorder(
       const leftStartY = top ? 1 : 0; // Avoid top neighbor's junction
       const leftEndY = bottom ? canvasHeight - 1 : canvasHeight; // Avoid bottom neighbor's junction
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
-      return "left-only";
+      return "left";
     }
 
     if (!right) {
@@ -663,12 +663,12 @@ function drawBorder(
       const rightStartY = top ? 1 : 0; // Avoid top neighbor's junction
       const rightEndY = bottom ? canvasHeight - 1 : canvasHeight; // Avoid bottom neighbor's junction
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
-      return "right-only";
+      return "right";
     }
   }
 
   // Case 5: Four connections - no borders
-  return "fully-internal";
+  return "none";
 }
 
 // Create borders for cell selections with smart intersection handling
