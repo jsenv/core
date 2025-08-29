@@ -120,6 +120,8 @@ const createSelectionBorderCanvas = (
   opacity = 1,
   neighborInfo = {},
   cellRect,
+  cellPosition = null,
+  allCellPositions = [],
 ) => {
   // Create canvas with high-DPI support for crisp rendering
   const canvas = document.createElement("canvas");
@@ -162,16 +164,23 @@ const createSelectionBorderCanvas = (
   } = neighborInfo;
 
   // Identify and draw the border pattern based on neighbor connections
-  const borderPattern = drawBorder(ctx, canvasWidth, canvasHeight, {
-    top,
-    left,
-    right,
-    bottom,
-    topLeft,
-    topRight,
-    bottomLeft,
-    bottomRight,
-  });
+  const borderPattern = drawBorder(
+    ctx,
+    canvasWidth,
+    canvasHeight,
+    {
+      top,
+      left,
+      right,
+      bottom,
+      topLeft,
+      topRight,
+      bottomLeft,
+      bottomRight,
+    },
+    cellPosition,
+    allCellPositions,
+  );
 
   // Store pattern for potential debugging (can be removed in production)
   canvas.dataset.borderPattern = borderPattern;
@@ -180,7 +189,14 @@ const createSelectionBorderCanvas = (
 };
 
 // Draw borders and return the pattern name
-function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
+function drawBorder(
+  ctx,
+  canvasWidth,
+  canvasHeight,
+  neighborInfo,
+  cellPosition,
+  allCellPositions,
+) {
   const {
     top,
     left,
@@ -192,6 +208,57 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
     bottomRight,
   } = neighborInfo;
   const connectionCount = [top, left, right, bottom].filter(Boolean).length;
+
+  // Helper function to determine if this cell should draw junction pixels
+  const shouldDrawJunction = (junctionType) => {
+    if (!cellPosition || !allCellPositions) return false;
+
+    // For vertical junctions, the top-most cell draws the junction
+    if (junctionType === "top-junction") {
+      // Find the cell above us
+      const topNeighbor = allCellPositions.find(
+        ({ position }) =>
+          position.row === cellPosition.row - 1 &&
+          position.col === cellPosition.col,
+      );
+      // We draw the top junction if we have higher priority (we're the bottom cell)
+      return topNeighbor && cellPosition.row > topNeighbor.position.row;
+    }
+
+    if (junctionType === "bottom-junction") {
+      // Find the cell below us
+      const bottomNeighbor = allCellPositions.find(
+        ({ position }) =>
+          position.row === cellPosition.row + 1 &&
+          position.col === cellPosition.col,
+      );
+      // We draw the bottom junction if we have higher priority (we're the top cell)
+      return bottomNeighbor && cellPosition.row < bottomNeighbor.position.row;
+    }
+
+    // For horizontal junctions, the left-most cell draws the junction
+    if (junctionType === "left-junction") {
+      const leftNeighbor = allCellPositions.find(
+        ({ position }) =>
+          position.row === cellPosition.row &&
+          position.col === cellPosition.col - 1,
+      );
+      // We draw the left junction if we have higher priority (we're the right cell)
+      return leftNeighbor && cellPosition.col > leftNeighbor.position.col;
+    }
+
+    if (junctionType === "right-junction") {
+      const rightNeighbor = allCellPositions.find(
+        ({ position }) =>
+          position.row === cellPosition.row &&
+          position.col === cellPosition.col + 1,
+      );
+      // We draw the right junction if we have higher priority (we're the left cell)
+      return rightNeighbor && cellPosition.col < rightNeighbor.position.col;
+    }
+
+    return false;
+  };
 
   // Case 1: Isolated cell (no connections) - draw all 4 borders
   if (connectionCount === 0) {
@@ -431,34 +498,70 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
   // Case 3: Two connections - coordinate junction responsibility
   if (connectionCount === 2) {
     if (top && bottom) {
-      // Vertical tunnel - only draw left and right borders (no junctions)
+      // Vertical tunnel - coordinate junction responsibility for seamless borders
       // Right border (only this cell draws the right edge)
       const rightX = canvasWidth - 1;
-      const rightStartY = TABLE_BORDER_WIDTH; // Avoid top connection area
-      const rightEndY = canvasHeight - TABLE_BORDER_WIDTH; // Avoid bottom connection area
+      let rightStartY = TABLE_BORDER_WIDTH; // Avoid top connection area by default
+      let rightEndY = canvasHeight - TABLE_BORDER_WIDTH; // Avoid bottom connection area by default
+
+      // Extend right border into junction areas if we're responsible
+      if (shouldDrawJunction("top-junction")) {
+        rightStartY = 0; // Draw into top junction
+      }
+      if (shouldDrawJunction("bottom-junction")) {
+        rightEndY = canvasHeight; // Draw into bottom junction
+      }
+
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
-      // Left border (only this cell draws the left edge)
+      // Left border (coordinate with neighbors for seamless connection)
       const leftX = 0;
-      const leftStartY = 2; // Avoid top connection area
-      const leftEndY = canvasHeight - 2; // Avoid bottom connection area
+      let leftStartY = 2; // Avoid top connection area by default
+      let leftEndY = canvasHeight - 2; // Avoid bottom connection area by default
+
+      // Extend left border into junction areas if we're responsible
+      if (shouldDrawJunction("top-junction")) {
+        leftStartY = 0; // Draw into top junction
+      }
+      if (shouldDrawJunction("bottom-junction")) {
+        leftEndY = canvasHeight; // Draw into bottom junction
+      }
+
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
       return "vertical-tunnel";
     }
 
     if (left && right) {
-      // Horizontal tunnel - only draw top and bottom borders (no junctions)
-      // Top border (only this cell draws the top edge)
+      // Horizontal tunnel - coordinate junction responsibility for seamless borders
+      // Top border (coordinate with neighbors for seamless connection)
       const topY = 0;
-      const topStartX = TABLE_BORDER_WIDTH; // Avoid left connection area
-      const topEndX = canvasWidth - TABLE_BORDER_WIDTH; // Avoid right connection area
+      let topStartX = TABLE_BORDER_WIDTH; // Avoid left connection area by default
+      let topEndX = canvasWidth - TABLE_BORDER_WIDTH; // Avoid right connection area by default
+
+      // Extend top border into junction areas if we're responsible
+      if (shouldDrawJunction("left-junction")) {
+        topStartX = 0; // Draw into left junction
+      }
+      if (shouldDrawJunction("right-junction")) {
+        topEndX = canvasWidth; // Draw into right junction
+      }
+
       ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
 
-      // Bottom border (only this cell draws the bottom edge)
+      // Bottom border (coordinate with neighbors for seamless connection)
       const bottomY = canvasHeight - 1;
-      const bottomStartX = TABLE_BORDER_WIDTH; // Avoid left connection area
-      const bottomEndX = canvasWidth - TABLE_BORDER_WIDTH; // Avoid right connection area
+      let bottomStartX = TABLE_BORDER_WIDTH; // Avoid left connection area by default
+      let bottomEndX = canvasWidth - TABLE_BORDER_WIDTH; // Avoid right connection area by default
+
+      // Extend bottom border into junction areas if we're responsible
+      if (shouldDrawJunction("left-junction")) {
+        bottomStartX = 0; // Draw into left junction
+      }
+      if (shouldDrawJunction("right-junction")) {
+        bottomEndX = canvasWidth; // Draw into right junction
+      }
+
       ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
 
       return "horizontal-tunnel";
@@ -763,6 +866,8 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
       opacity,
       neighborInfo,
       cellRect,
+      { row: position.row, col: position.col },
+      cellPositions,
     );
 
     if (canvasElement) {
