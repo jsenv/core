@@ -2,8 +2,8 @@ import { useLayoutEffect } from "preact/hooks";
 import { useSelection } from "./selection.jsx";
 
 import.meta.css = /* css */ `
-  /* Direct SVG injection styling */
-  [data-selection-borders] > .selection-border-svg {
+  /* Canvas-based selection borders */
+  [data-selection-borders] > .selection-border-canvas {
     position: absolute;
     inset: -2px; /* Extend 2px to sit on cell border edge */
     pointer-events: none;
@@ -12,7 +12,9 @@ import.meta.css = /* css */ `
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting] [data-selection-borders] > .selection-border-svg {
+  table[data-drag-selecting]
+    [data-selection-borders]
+    > .selection-border-canvas {
     display: none;
   }
 
@@ -36,15 +38,15 @@ export const useTableSelectionBorders = (
     }
 
     const updateCellBorders = () => {
-      // Clear all existing selection borders and injected SVGs
+      // Clear all existing selection borders and injected canvases
       const allCells = table.querySelectorAll("td, th");
       allCells.forEach((cell) => {
         cell.removeAttribute("data-selection-borders");
 
-        // Remove any injected SVG elements
-        const existingSvg = cell.querySelector(".selection-border-svg");
-        if (existingSvg) {
-          existingSvg.remove();
+        // Remove any injected canvas elements
+        const existingCanvas = cell.querySelector(".selection-border-canvas");
+        if (existingCanvas) {
+          existingCanvas.remove();
         }
       });
 
@@ -108,13 +110,30 @@ const createSmartSelectionBorders = (selectedCells, color) => {
   });
 };
 
-// Helper function to create SVG path for selection borders
-const createSelectionBorderSVG = (
+// Helper function to create canvas element with drawn borders
+const createSelectionBorderCanvas = (
   segments,
   borderColor = "#0078d4",
   neighborInfo = {},
+  cellRect,
 ) => {
-  let pathData = "";
+  // Create canvas with actual pixel dimensions
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  // Set canvas size to cell size + 4px border extension
+  const canvasWidth = cellRect.width + 4;
+  const canvasHeight = cellRect.height + 4;
+
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  canvas.className = "selection-border-canvas";
+
+  // Set up drawing context
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 1;
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
 
   // Check which segments we have to adjust edge positioning
   const hasTopRightCorner = segments.includes("top-right-corner");
@@ -130,62 +149,80 @@ const createSelectionBorderSVG = (
     bottomLeft = false,
   } = neighborInfo;
 
-  // Draw each segment that's needed for this cell's contribution to the selection perimeter
+  // Draw each segment
   segments.forEach((segment) => {
+    ctx.beginPath();
+
     switch (segment) {
       case "top-left-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "top-edge": {
-        // Extend to corners if they're present, otherwise respect diagonal gaps
-        const topStartX = hasTopLeftCorner ? 0 : topLeft ? 1 : 0;
-        const topEndX = hasTopRightCorner ? 100 : topRight ? 99 : 100;
-        pathData += `M ${topStartX},0 L ${topEndX},0 `;
+        // Draw top edge
+        const startX = hasTopLeftCorner ? 2 : topLeft ? 3 : 2;
+        const endX = hasTopRightCorner
+          ? canvasWidth - 2
+          : topRight
+            ? canvasWidth - 3
+            : canvasWidth - 2;
+        ctx.moveTo(startX, 2);
+        ctx.lineTo(endX, 2);
         break;
       }
       case "top-right-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "right-edge": {
-        // Extend to corners if they're present, otherwise respect diagonal gaps
-        const rightStartY = hasTopRightCorner ? 0 : topRight ? 3 : 0;
-        const rightEndY = hasBottomRightCorner ? 100 : bottomRight ? 97 : 100;
-        pathData += `M 100,${rightStartY} L 100,${rightEndY} `;
+        // Draw right edge
+        const startY = hasTopRightCorner ? 2 : topRight ? 5 : 2;
+        const endY = hasBottomRightCorner
+          ? canvasHeight - 2
+          : bottomRight
+            ? canvasHeight - 5
+            : canvasHeight - 2;
+        ctx.moveTo(canvasWidth - 2, startY);
+        ctx.lineTo(canvasWidth - 2, endY);
         break;
       }
       case "bottom-right-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "bottom-edge": {
-        // Extend to corners if they're present, otherwise respect diagonal gaps
-        const bottomStartX = hasBottomLeftCorner ? 0 : bottomLeft ? 1 : 0;
-        const bottomEndX = hasBottomRightCorner ? 100 : bottomRight ? 99 : 100;
-        pathData += `M ${bottomStartX},100 L ${bottomEndX},100 `;
+        // Draw bottom edge
+        const startX = hasBottomLeftCorner ? 2 : bottomLeft ? 3 : 2;
+        const endX = hasBottomRightCorner
+          ? canvasWidth - 2
+          : bottomRight
+            ? canvasWidth - 3
+            : canvasWidth - 2;
+        ctx.moveTo(startX, canvasHeight - 2);
+        ctx.lineTo(endX, canvasHeight - 2);
         break;
       }
       case "bottom-left-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "left-edge": {
-        // Extend to corners if they're present, otherwise respect diagonal gaps
-        const leftStartY = hasTopLeftCorner ? 0 : topLeft ? 3 : 0;
-        const leftEndY = hasBottomLeftCorner ? 100 : bottomLeft ? 97 : 100;
-        pathData += `M 0,${leftStartY} L 0,${leftEndY} `;
+        // Draw left edge
+        const startY = hasTopLeftCorner ? 2 : topLeft ? 5 : 2;
+        const endY = hasBottomLeftCorner
+          ? canvasHeight - 2
+          : bottomLeft
+            ? canvasHeight - 5
+            : canvasHeight - 2;
+        ctx.moveTo(2, startY);
+        ctx.lineTo(2, endY);
         break;
       }
       default:
         // Unknown segment, ignore
         break;
     }
+
+    ctx.stroke();
   });
 
-  if (!pathData) return null;
-
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none" class="selection-border-svg">
-    <path d="${pathData}" stroke="${borderColor}" stroke-width="1" fill="none" vector-effect="non-scaling-stroke" stroke-linecap="square" />
-  </svg>`;
-
-  return svg;
+  return canvas;
 };
 
 // Create borders for cell selections with smart intersection handling
@@ -277,7 +314,7 @@ const createCellSelectionBorders = (cellPositions, color) => {
       segments.push("left-edge");
     }
 
-    // Generate SVG for this cell's segments
+    // Generate canvas for this cell's segments
     const neighborInfo = {
       top,
       left,
@@ -288,25 +325,33 @@ const createCellSelectionBorders = (cellPositions, color) => {
       bottomLeft,
       topLeft,
     };
-    const svgElement = createSelectionBorderSVG(segments, color, neighborInfo);
 
-    if (svgElement) {
+    // Get cell dimensions for canvas sizing
+    const cellRect = cell.getBoundingClientRect();
+    const canvasElement = createSelectionBorderCanvas(
+      segments,
+      color,
+      neighborInfo,
+      cellRect,
+    );
+
+    if (canvasElement) {
       cell.setAttribute("data-selection-borders", "");
 
-      // Remove any existing SVG
-      const existingSvg = cell.querySelector(".selection-border-svg");
-      if (existingSvg) {
-        existingSvg.remove();
+      // Remove any existing canvas
+      const existingCanvas = cell.querySelector(".selection-border-canvas");
+      if (existingCanvas) {
+        existingCanvas.remove();
       }
 
-      // Inject the SVG directly into the cell
-      cell.insertAdjacentHTML("afterbegin", svgElement);
+      // Inject the canvas directly into the cell
+      cell.appendChild(canvasElement);
     } else {
       // Clean up if no borders needed
       cell.removeAttribute("data-selection-borders");
-      const existingSvg = cell.querySelector(".selection-border-svg");
-      if (existingSvg) {
-        existingSvg.remove();
+      const existingCanvas = cell.querySelector(".selection-border-canvas");
+      if (existingCanvas) {
+        existingCanvas.remove();
       }
     }
   });
@@ -327,16 +372,31 @@ const createRowSelectionBorders = (rowCells, cellMap, color) => {
     const needsBottom = !hasSelectedRowAt(cellMap, position.row + 1);
 
     // Row selections always need left and right borders, top/bottom depend on adjacent rows
-    const svgDataUri = createSelectionBorderSVG(
-      needsTop,
-      true,
-      needsBottom,
-      true,
+    const segments = [];
+    if (needsTop) segments.push("top-edge");
+    segments.push("right-edge");
+    if (needsBottom) segments.push("bottom-edge");
+    segments.push("left-edge");
+
+    const cellRect = rowHeaderCell.getBoundingClientRect();
+    const canvasElement = createSelectionBorderCanvas(
+      segments,
       color,
+      {},
+      cellRect,
     );
 
     rowHeaderCell.setAttribute("data-selection-borders", "");
-    rowHeaderCell.style.setProperty("--selection-border-svg", svgDataUri);
+
+    // Remove any existing canvas
+    const existingCanvas = rowHeaderCell.querySelector(
+      ".selection-border-canvas",
+    );
+    if (existingCanvas) {
+      existingCanvas.remove();
+    }
+
+    rowHeaderCell.appendChild(canvasElement);
   });
 };
 
@@ -355,16 +415,31 @@ const createColumnSelectionBorders = (columnCells, cellMap, color) => {
     const needsRight = !hasSelectedColumnAt(cellMap, position.col + 1);
 
     // Column selections always need top and bottom borders, left/right depend on adjacent columns
-    const svgDataUri = createSelectionBorderSVG(
-      true,
-      needsRight,
-      true,
-      needsLeft,
+    const segments = [];
+    segments.push("top-edge");
+    if (needsRight) segments.push("right-edge");
+    segments.push("bottom-edge");
+    if (needsLeft) segments.push("left-edge");
+
+    const cellRect = columnHeaderCell.getBoundingClientRect();
+    const canvasElement = createSelectionBorderCanvas(
+      segments,
       color,
+      {},
+      cellRect,
     );
 
     columnHeaderCell.setAttribute("data-selection-borders", "");
-    columnHeaderCell.style.setProperty("--selection-border-svg", svgDataUri);
+
+    // Remove any existing canvas
+    const existingCanvas = columnHeaderCell.querySelector(
+      ".selection-border-canvas",
+    );
+    if (existingCanvas) {
+      existingCanvas.remove();
+    }
+
+    columnHeaderCell.appendChild(canvasElement);
   });
 };
 
