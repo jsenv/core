@@ -20,90 +20,99 @@ import.meta.css = /* css */ `
   [data-selection-border-top]::before {
     content: "";
     position: absolute;
-    top: 0;
-    left: var(--border-top-start, 0);
-    width: var(--border-top-width, 100%);
+    top: calc(-1 * var(--selection-border-size));
+    left: var(--border-top-left, 0);
+    right: var(--border-top-right, 0);
     height: var(--selection-border-size);
     background-color: var(--selection-border-color);
     pointer-events: none;
     z-index: 0;
-    transform: translateY(-100%);
   }
 
-  /* Right border segments using ::after - highest priority */
+  /* Right border segments using ::after */
   [data-selection-border-right]::after {
     content: "";
     position: absolute;
-    top: var(--border-right-start, 0);
-    right: 0;
+    top: var(--border-right-top, 0);
+    right: calc(-1 * var(--selection-border-size));
+    bottom: var(--border-right-bottom, 0);
     width: var(--selection-border-size);
-    height: var(--border-right-height, 100%);
     background-color: var(--selection-border-color);
     pointer-events: none;
     z-index: 0;
-    transform: translateX(100%);
   }
 
-  /* Bottom border segments using ::before when no top border */
-  [data-selection-border-bottom]:not([data-selection-border-top])::before {
-    content: "";
+  /* Bottom border segments - need to avoid conflict with top border pseudo-element */
+  [data-selection-border-bottom] {
+    --bottom-pseudo-element: "";
+  }
+  [data-selection-border-bottom]::after {
+    content: var(--bottom-pseudo-element, "");
     position: absolute;
-    bottom: 0;
-    left: var(--border-bottom-start, 0);
-    width: var(--border-bottom-width, 100%);
+    bottom: calc(-1 * var(--selection-border-size));
+    left: var(--border-bottom-left, 0);
+    right: var(--border-bottom-right, 0);
     height: var(--selection-border-size);
     background-color: var(--selection-border-color);
     pointer-events: none;
     z-index: 0;
-    transform: translateY(100%);
   }
 
-  /* Bottom border segments using a custom approach when top border exists */
-  [data-selection-border-bottom][data-selection-border-top] {
-    box-shadow:
-      0 calc(100% + var(--selection-border-size)) 0 0
-        var(--selection-border-color),
-      var(--border-bottom-start, 0) calc(100% + var(--selection-border-size)) 0
-        0 transparent,
-      calc(var(--border-bottom-start, 0) + var(--border-bottom-width, 100%))
-        calc(100% + var(--selection-border-size)) 0 0 transparent;
+  /* Override for bottom borders when right border exists - use different approach */
+  [data-selection-border-bottom][data-selection-border-right] {
+    --bottom-pseudo-element: none;
   }
-
-  /* Left border segments using ::after when no right border, handled through transform offset */
-  [data-selection-border-left]:not([data-selection-border-right])::after {
+  [data-selection-border-bottom][data-selection-border-right]::before {
     content: "";
     position: absolute;
-    top: var(--border-left-start, 0);
-    left: 0;
-    width: var(--selection-border-size);
-    height: var(--border-left-height, 100%);
+    bottom: calc(-1 * var(--selection-border-size));
+    left: var(--border-bottom-left, 0);
+    right: var(--border-bottom-right, 0);
+    height: var(--selection-border-size);
     background-color: var(--selection-border-color);
     pointer-events: none;
     z-index: 0;
-    transform: translateX(-100%);
   }
 
-  /* Left border when right border also exists - use box-shadow approach */
+  /* Left border segments - use different pseudo-element based on conflicts */
+  [data-selection-border-left] {
+    --left-pseudo-element: "";
+  }
+  [data-selection-border-left]::after {
+    content: var(--left-pseudo-element, "");
+    position: absolute;
+    top: var(--border-left-top, 0);
+    left: calc(-1 * var(--selection-border-size));
+    bottom: var(--border-left-bottom, 0);
+    width: var(--selection-border-size);
+    background-color: var(--selection-border-color);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Override for left borders when right border exists */
   [data-selection-border-left][data-selection-border-right] {
-    box-shadow:
-      calc(-1 * var(--selection-border-size)) 0 0 0
-        var(--selection-border-color),
-      calc(-1 * var(--selection-border-size)) var(--border-left-start, 0) 0 0
-        transparent,
-      calc(-1 * var(--selection-border-size))
-        calc(var(--border-left-start, 0) + var(--border-left-height, 100%)) 0 0
-        transparent;
+    --left-pseudo-element: none;
+  }
+  [data-selection-border-left][data-selection-border-right]::before {
+    content: "";
+    position: absolute;
+    top: var(--border-left-top, 0);
+    left: calc(-1 * var(--selection-border-size));
+    bottom: var(--border-left-bottom, 0);
+    width: var(--selection-border-size);
+    background-color: var(--selection-border-color);
+    pointer-events: none;
+    z-index: 1;
   }
 
   /* Hide borders during drag selection */
   table[data-drag-selecting] [data-selection-border-top]::before,
-    table[data-drag-selecting] [data-selection-border-right]::after,
-    table[data-drag-selecting] [data-selection-border-bottom]::before,
-    /* Hide borders during drag selection */
-    table[data-drag-selecting] [data-selection-border-top]::before,
-    table[data-drag-selecting] [data-selection-border-right]::after,
-    table[data-drag-selecting] [data-selection-border-bottom]::before,
-    table[data-drag-selecting] [data-selection-border-left]::after {
+  table[data-drag-selecting] [data-selection-border-right]::after,
+  table[data-drag-selecting] [data-selection-border-bottom]::before,
+  table[data-drag-selecting] [data-selection-border-bottom]::after,
+  table[data-drag-selecting] [data-selection-border-left]::before,
+  table[data-drag-selecting] [data-selection-border-left]::after {
     display: none;
   }
 
@@ -151,14 +160,14 @@ export const useTableSelectionBorders = (
         cell.removeAttribute("data-selection-border-left");
 
         // Clear border positioning CSS variables
-        cell.style.removeProperty("--border-top-start");
-        cell.style.removeProperty("--border-top-width");
-        cell.style.removeProperty("--border-right-start");
-        cell.style.removeProperty("--border-right-height");
-        cell.style.removeProperty("--border-bottom-start");
-        cell.style.removeProperty("--border-bottom-width");
-        cell.style.removeProperty("--border-left-start");
-        cell.style.removeProperty("--border-left-height");
+        cell.style.removeProperty("--border-top-left");
+        cell.style.removeProperty("--border-top-right");
+        cell.style.removeProperty("--border-right-top");
+        cell.style.removeProperty("--border-right-bottom");
+        cell.style.removeProperty("--border-bottom-left");
+        cell.style.removeProperty("--border-bottom-right");
+        cell.style.removeProperty("--border-left-top");
+        cell.style.removeProperty("--border-left-bottom");
       });
 
       // Don't apply borders during drag selection
@@ -231,49 +240,37 @@ const createCellSelectionBorders = (cellPositions, cellMap, borderSize) => {
     const needsLeft = !cellMap.has(`${position.row},${position.col - 1}`);
     const needsRight = !cellMap.has(`${position.row},${position.col + 1}`);
 
-    // Calculate smart border positioning to avoid overlaps but maintain visual continuity
+    // Calculate smart border positioning to avoid overlaps at corners
     if (needsTop) {
-      const leftOffset = needsLeft ? borderSize : 0;
-      const rightOffset = needsRight ? borderSize : 0;
+      const leftOffset = needsLeft ? `${borderSize}px` : "0px";
+      const rightOffset = needsRight ? `${borderSize}px` : "0px";
       cell.setAttribute("data-selection-border-top", "");
-      cell.style.setProperty("--border-top-start", `${leftOffset}px`);
-      cell.style.setProperty(
-        "--border-top-width",
-        `calc(100% - ${leftOffset + rightOffset}px)`,
-      );
+      cell.style.setProperty("--border-top-left", leftOffset);
+      cell.style.setProperty("--border-top-right", rightOffset);
     }
 
     if (needsBottom) {
-      const leftOffset = needsLeft ? borderSize : 0;
-      const rightOffset = needsRight ? borderSize : 0;
+      const leftOffset = needsLeft ? `${borderSize}px` : "0px";
+      const rightOffset = needsRight ? `${borderSize}px` : "0px";
       cell.setAttribute("data-selection-border-bottom", "");
-      cell.style.setProperty("--border-bottom-start", `${leftOffset}px`);
-      cell.style.setProperty(
-        "--border-bottom-width",
-        `calc(100% - ${leftOffset + rightOffset}px)`,
-      );
+      cell.style.setProperty("--border-bottom-left", leftOffset);
+      cell.style.setProperty("--border-bottom-right", rightOffset);
     }
 
     if (needsLeft) {
-      const topOffset = needsTop ? borderSize : 0;
-      const bottomOffset = needsBottom ? borderSize : 0;
+      const topOffset = needsTop ? `${borderSize}px` : "0px";
+      const bottomOffset = needsBottom ? `${borderSize}px` : "0px";
       cell.setAttribute("data-selection-border-left", "");
-      cell.style.setProperty("--border-left-start", `${topOffset}px`);
-      cell.style.setProperty(
-        "--border-left-height",
-        `calc(100% - ${topOffset + bottomOffset}px)`,
-      );
+      cell.style.setProperty("--border-left-top", topOffset);
+      cell.style.setProperty("--border-left-bottom", bottomOffset);
     }
 
     if (needsRight) {
-      const topOffset = needsTop ? borderSize : 0;
-      const bottomOffset = needsBottom ? borderSize : 0;
+      const topOffset = needsTop ? `${borderSize}px` : "0px";
+      const bottomOffset = needsBottom ? `${borderSize}px` : "0px";
       cell.setAttribute("data-selection-border-right", "");
-      cell.style.setProperty("--border-right-start", `${topOffset}px`);
-      cell.style.setProperty(
-        "--border-right-height",
-        `calc(100% - ${topOffset + bottomOffset}px)`,
-      );
+      cell.style.setProperty("--border-right-top", topOffset);
+      cell.style.setProperty("--border-right-bottom", bottomOffset);
     }
   });
 };
@@ -291,44 +288,28 @@ const createRowSelectionBorders = (rowCells, cellMap, borderSize) => {
     // Set border attributes for the row header cell
     if (needsTop) {
       rowHeaderCell.setAttribute("data-selection-border-top", "");
-      rowHeaderCell.style.setProperty("--border-top-start", "0px");
-      rowHeaderCell.style.setProperty("--border-top-width", "100%");
+      rowHeaderCell.style.setProperty("--border-top-left", "0px");
+      rowHeaderCell.style.setProperty("--border-top-right", "0px");
     }
 
     if (needsBottom) {
       rowHeaderCell.setAttribute("data-selection-border-bottom", "");
-      rowHeaderCell.style.setProperty("--border-bottom-start", "0px");
-      rowHeaderCell.style.setProperty("--border-bottom-width", "100%");
+      rowHeaderCell.style.setProperty("--border-bottom-left", "0px");
+      rowHeaderCell.style.setProperty("--border-bottom-right", "0px");
     }
 
     // Left and right borders always needed for row selections
     rowHeaderCell.setAttribute("data-selection-border-left", "");
-    rowHeaderCell.style.setProperty(
-      "--border-left-start",
-      needsTop ? `-${borderSize}px` : "0px",
-    );
-    rowHeaderCell.style.setProperty(
-      "--border-left-height",
-      needsTop && needsBottom
-        ? `calc(100% + ${borderSize * 2}px)`
-        : needsTop || needsBottom
-          ? `calc(100% + ${borderSize}px)`
-          : "100%",
-    );
+    const leftTop = needsTop ? `-${borderSize}px` : "0px";
+    const leftBottom = needsBottom ? `-${borderSize}px` : "0px";
+    rowHeaderCell.style.setProperty("--border-left-top", leftTop);
+    rowHeaderCell.style.setProperty("--border-left-bottom", leftBottom);
 
     rowHeaderCell.setAttribute("data-selection-border-right", "");
-    rowHeaderCell.style.setProperty(
-      "--border-right-start",
-      needsTop ? `-${borderSize}px` : "0px",
-    );
-    rowHeaderCell.style.setProperty(
-      "--border-right-height",
-      needsTop && needsBottom
-        ? `calc(100% + ${borderSize * 2}px)`
-        : needsTop || needsBottom
-          ? `calc(100% + ${borderSize}px)`
-          : "100%",
-    );
+    const rightTop = needsTop ? `-${borderSize}px` : "0px";
+    const rightBottom = needsBottom ? `-${borderSize}px` : "0px";
+    rowHeaderCell.style.setProperty("--border-right-top", rightTop);
+    rowHeaderCell.style.setProperty("--border-right-bottom", rightBottom);
   });
 };
 
@@ -345,44 +326,28 @@ const createColumnSelectionBorders = (columnCells, cellMap, borderSize) => {
     // Set border attributes for the column header cell
     if (needsLeft) {
       columnHeaderCell.setAttribute("data-selection-border-left", "");
-      columnHeaderCell.style.setProperty("--border-left-start", "0px");
-      columnHeaderCell.style.setProperty("--border-left-height", "100%");
+      columnHeaderCell.style.setProperty("--border-left-top", "0px");
+      columnHeaderCell.style.setProperty("--border-left-bottom", "0px");
     }
 
     if (needsRight) {
       columnHeaderCell.setAttribute("data-selection-border-right", "");
-      columnHeaderCell.style.setProperty("--border-right-start", "0px");
-      columnHeaderCell.style.setProperty("--border-right-height", "100%");
+      columnHeaderCell.style.setProperty("--border-right-top", "0px");
+      columnHeaderCell.style.setProperty("--border-right-bottom", "0px");
     }
 
     // Top and bottom borders always needed for column selections
     columnHeaderCell.setAttribute("data-selection-border-top", "");
-    columnHeaderCell.style.setProperty(
-      "--border-top-start",
-      needsLeft ? `-${borderSize}px` : "0px",
-    );
-    columnHeaderCell.style.setProperty(
-      "--border-top-width",
-      needsLeft && needsRight
-        ? `calc(100% + ${borderSize * 2}px)`
-        : needsLeft || needsRight
-          ? `calc(100% + ${borderSize}px)`
-          : "100%",
-    );
+    const topLeft = needsLeft ? `-${borderSize}px` : "0px";
+    const topRight = needsRight ? `-${borderSize}px` : "0px";
+    columnHeaderCell.style.setProperty("--border-top-left", topLeft);
+    columnHeaderCell.style.setProperty("--border-top-right", topRight);
 
     columnHeaderCell.setAttribute("data-selection-border-bottom", "");
-    columnHeaderCell.style.setProperty(
-      "--border-bottom-start",
-      needsLeft ? `-${borderSize}px` : "0px",
-    );
-    columnHeaderCell.style.setProperty(
-      "--border-bottom-width",
-      needsLeft && needsRight
-        ? `calc(100% + ${borderSize * 2}px)`
-        : needsLeft || needsRight
-          ? `calc(100% + ${borderSize}px)`
-          : "100%",
-    );
+    const bottomLeft = needsLeft ? `-${borderSize}px` : "0px";
+    const bottomRight = needsRight ? `-${borderSize}px` : "0px";
+    columnHeaderCell.style.setProperty("--border-bottom-left", bottomLeft);
+    columnHeaderCell.style.setProperty("--border-bottom-right", bottomRight);
   });
 };
 
