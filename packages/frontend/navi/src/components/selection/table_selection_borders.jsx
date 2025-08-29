@@ -334,52 +334,42 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
   // Case 3: Two connections
   if (connectionCount === 2) {
     if (top && bottom) {
-      // Vertical tunnel - draw left, right borders
+      // Vertical tunnel - draw left, right borders (no corners to manage)
       // Right border
       const rightX = right ? canvasWidth - 2 : canvasWidth - 1;
       const rightStartY = topRight ? 2 : 2;
-      const rightEndY = bottomRight ? canvasHeight - 2 : canvasHeight;
+      const rightEndY = bottomRight ? canvasHeight - 2 : canvasHeight - 2;
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
       // Left border
       const leftX = left ? 1 : 0;
       const leftStartY = topLeft ? 2 : 2;
-      const leftEndY = bottomLeft ? canvasHeight - 1 : canvasHeight;
+      const leftEndY = bottomLeft ? canvasHeight - 1 : canvasHeight - 2;
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
       return "vertical-tunnel";
     }
 
     if (left && right) {
-      // Horizontal tunnel - draw top, bottom borders
+      // Horizontal tunnel - draw top, bottom borders (no corners to manage)
       // Top border
       const topY = top ? 1 : 0;
-      const topStartX = topLeft ? 1 : 0;
-      const topEndX = topRight ? canvasWidth - 2 : canvasWidth;
+      const topStartX = topLeft ? 1 : 2;
+      const topEndX = topRight ? canvasWidth - 2 : canvasWidth - 2;
       ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
 
       // Bottom border
       const bottomY = bottom ? canvasHeight - 2 : canvasHeight - 1;
-      const bottomStartX = bottomLeft ? 1 : 0;
-      const bottomEndX = bottomRight ? canvasWidth - 2 : canvasWidth;
+      const bottomStartX = bottomLeft ? 1 : 2;
+      const bottomEndX = bottomRight ? canvasWidth - 2 : canvasWidth - 2;
       ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
 
       return "horizontal-tunnel";
     }
 
     if (top && left) {
-      // Bottom-right corner
-      // Right border
-      const rightX = right ? canvasWidth - 2 : canvasWidth - 1;
-      const rightStartY = topRight ? 2 : 2;
-      const rightEndY = bottom
-        ? canvasHeight
-        : bottomRight
-          ? canvasHeight - 2
-          : canvasHeight;
-      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
-
-      // Bottom border
+      // Bottom-right corner - bottom border owns bottom-right corner
+      // Bottom border (owns bottom-right corner)
       const bottomY = bottom ? canvasHeight - 2 : canvasHeight - 1;
       const bottomStartX = bottomLeft ? 1 : 0;
       const bottomEndX = right
@@ -389,33 +379,43 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
           : canvasWidth;
       ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
 
+      // Right border (excludes bottom-right corner)
+      const rightX = right ? canvasWidth - 2 : canvasWidth - 1;
+      const rightStartY = topRight ? 2 : 2;
+      const rightEndY = bottom
+        ? canvasHeight - 1
+        : bottomRight
+          ? canvasHeight - 2
+          : canvasHeight - 1;
+      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
+
       return "bottom-right-corner";
     }
 
     if (top && right) {
-      // Bottom-left corner
-      // Bottom border
+      // Bottom-left corner - bottom border owns bottom-left corner
+      // Bottom border (owns bottom-left corner)
       const bottomY = bottom ? canvasHeight - 2 : canvasHeight - 1;
       const bottomStartX = left ? 2 : bottomLeft ? 1 : 0;
       const bottomEndX = bottomRight ? canvasWidth - 2 : canvasWidth;
       ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
 
-      // Left border
+      // Left border (excludes bottom-left corner)
       const leftX = left ? 1 : 0;
       const leftStartY = topLeft ? 2 : 2;
       const leftEndY = bottom
-        ? canvasHeight
+        ? canvasHeight - 1
         : bottomLeft
           ? canvasHeight - 1
-          : canvasHeight;
+          : canvasHeight - 1;
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
       return "bottom-left-corner";
     }
 
     if (bottom && left) {
-      // Top-right corner
-      // Top border
+      // Top-right corner - top border owns top-right corner
+      // Top border (owns top-right corner)
       const topY = top ? 1 : 0;
       const topStartX = topLeft ? 1 : 0;
       const topEndX = right
@@ -425,9 +425,9 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
           : canvasWidth;
       ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
 
-      // Right border
+      // Right border (excludes top-right corner)
       const rightX = right ? canvasWidth - 2 : canvasWidth - 1;
-      const rightStartY = top ? 2 : topRight ? 2 : 0;
+      const rightStartY = top ? 1 : topRight ? 2 : 1;
       const rightEndY = bottomRight ? canvasHeight - 2 : canvasHeight;
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
@@ -435,16 +435,16 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
     }
 
     if (bottom && right) {
-      // Top-left corner
-      // Top border
+      // Top-left corner - top border owns top-left corner
+      // Top border (owns top-left corner)
       const topY = top ? 1 : 0;
       const topStartX = left ? 2 : topLeft ? 1 : 0;
       const topEndX = topRight ? canvasWidth - 2 : canvasWidth;
       ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
 
-      // Left border
+      // Left border (excludes top-left corner)
       const leftX = left ? 1 : 0;
-      const leftStartY = top ? 2 : topLeft ? 2 : 0;
+      const leftStartY = top ? 1 : topLeft ? 2 : 1;
       const leftEndY = bottomLeft ? canvasHeight - 1 : canvasHeight;
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
