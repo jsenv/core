@@ -133,8 +133,6 @@ const createSelectionBorderCanvas = (
   canvas.height = canvasHeight * devicePixelRatio;
 
   // Set CSS size to desired visual size
-  canvas.style.width = `${canvasWidth}px`;
-  canvas.style.height = `${canvasHeight}px`;
   canvas.className = "selection-border-canvas";
 
   // Scale the drawing context for high-DPI
