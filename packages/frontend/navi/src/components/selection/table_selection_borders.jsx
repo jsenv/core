@@ -139,52 +139,32 @@ const createSelectionBorderSVG = (
   needsLeft,
   borderColor = "#0078d4",
 ) => {
-  const borderWidth = 1; // Border thickness in percentage of the SVG viewBox (1% for 1px visual)
-
+  // Use stroke instead of fill to avoid scaling issues
+  // Set stroke-width to a small value that won't scale with aspect ratio
   let pathData = "";
 
-  // Create SVG path for each needed border - overlapping at corners to eliminate gaps
+  // Create SVG path for each needed border using strokes
   if (needsTop) {
-    // Top border extends full width when no corner overlaps are needed
-    const x1 = 0;
-    const x2 = 100;
-    const y1 = 0;
-    const y2 = borderWidth;
-    pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
+    pathData += `M 0,0.5 L 100,0.5 `;
   }
 
   if (needsRight) {
-    // Right border extends full height, overlaps with top/bottom if they exist
-    const x1 = 100 - borderWidth;
-    const x2 = 100;
-    const y1 = 0;
-    const y2 = 100;
-    pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
+    pathData += `M 99.5,0 L 99.5,100 `;
   }
 
   if (needsBottom) {
-    // Bottom border extends full width
-    const x1 = 0;
-    const x2 = 100;
-    const y1 = 100 - borderWidth;
-    const y2 = 100;
-    pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
+    pathData += `M 0,99.5 L 100,99.5 `;
   }
 
   if (needsLeft) {
-    // Left border extends full height, overlaps with top/bottom if they exist
-    const x1 = 0;
-    const x2 = borderWidth;
-    const y1 = 0;
-    const y2 = 100;
-    pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
+    pathData += `M 0.5,0 L 0.5,100 `;
   }
 
   if (!pathData) return "none";
 
-  // Create data URI for SVG with actual color value
+  // Create data URI for SVG using stroke with vector-effect="non-scaling-stroke"
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-    <path d="${pathData}" fill="${borderColor}" />
+    <path d="${pathData}" stroke="${borderColor}" stroke-width="1" vector-effect="non-scaling-stroke" fill="none" />
   </svg>`;
 
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
