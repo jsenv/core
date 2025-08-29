@@ -363,10 +363,23 @@ function drawBorder(
         ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
       }
 
-      // Right border (only this cell draws the right edge to avoid duplication)
+      // Right border (coordinate with neighbor below for seamless connection)
       const rightX = canvasWidth - 1;
+
+      // Check if we have a neighbor below to coordinate junction for right border
+      const hasNeighborBelowForRight =
+        cellPosition &&
+        allCellPositions &&
+        allCellPositions.some(
+          ({ position }) =>
+            position.row === cellPosition.row + 1 &&
+            position.col === cellPosition.col,
+        );
+
       let rightStartY = 1; // Start below top corner (owned by top border)
-      const rightEndY = canvasHeight - TABLE_BORDER_WIDTH; // Stop above the connection point
+      const rightEndY = hasNeighborBelowForRight
+        ? canvasHeight
+        : canvasHeight - TABLE_BORDER_WIDTH; // Extend into junction if neighbor below
 
       // Adjust for diagonal neighbor
       if (hasTopRightDiagonal) rightStartY = Math.max(rightStartY, 1); // Start after diagonal junction
