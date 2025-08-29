@@ -7,20 +7,17 @@ import.meta.css = /* css */ `
     --selection-border-color: #0078d4;
   }
 
-  /* Selection border using single pseudo-element with SVG background */
-  [data-selection-borders]::before {
-    content: "";
+  /* Direct SVG injection styling */
+  [data-selection-borders] > .selection-border-svg {
     position: absolute;
     inset: -2px; /* Extend 2px to sit on cell border edge */
     pointer-events: none;
-    z-index: 1;
-    background-image: var(--selection-border-svg);
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting] [data-selection-borders]::before {
+  table[data-drag-selecting] [data-selection-borders] > .selection-border-svg {
     display: none;
   }
 
@@ -59,13 +56,16 @@ export const useTableSelectionBorders = (
     }
 
     const updateCellBorders = () => {
-      // Clear all existing selection borders and CSS custom properties
+      // Clear all existing selection borders and injected SVGs
       const allCells = table.querySelectorAll("td, th");
       allCells.forEach((cell) => {
         cell.removeAttribute("data-selection-borders");
 
-        // Clear SVG border CSS variable
-        cell.style.removeProperty("--selection-border-svg");
+        // Remove any injected SVG elements
+        const existingSvg = cell.querySelector(".selection-border-svg");
+        if (existingSvg) {
+          existingSvg.remove();
+        }
       });
 
       // Don't apply borders during drag selection
@@ -142,12 +142,7 @@ const createSelectionBorderSVG = (
   const hasBottomLeftCorner = segments.includes("bottom-left-corner");
 
   // Extract neighbor information for smart edge adjustment
-  const {
-    bottomRight = false,
-    topRight = false,
-    bottomLeft = false,
-    topLeft = false,
-  } = neighborInfo;
+  const { bottomRight = false, topLeft = false } = neighborInfo;
 
   // Draw each segment that's needed for this cell's contribution to the selection perimeter
   segments.forEach((segment) => {
@@ -156,9 +151,9 @@ const createSelectionBorderSVG = (
         pathData += `M 0,0 L 1,0 L 1,1 L 0,1 Z `;
         break;
       case "top-edge": {
-        // Adjust top edge to not overlap with corners
-        const topStartX = hasTopLeftCorner ? 1 : 0;
-        const topEndX = hasTopRightCorner ? 99 : topRight ? 99 : 100;
+        // Adjust top edge to not overlap with corners or diagonal neighbors
+        const topStartX = hasTopLeftCorner ? 1 : topLeft ? 1 : 0;
+        const topEndX = hasTopRightCorner ? 99 : 100;
         pathData += `M ${topStartX},0 L ${topEndX},0 L ${topEndX},1 L ${topStartX},1 Z `;
         break;
       }
@@ -166,9 +161,9 @@ const createSelectionBorderSVG = (
         pathData += `M 99,0 L 100,0 L 100,1 L 99,1 Z `;
         break;
       case "right-edge": {
-        // Adjust right edge to not overlap with corners
+        // Adjust right edge to not overlap with corners or diagonal neighbors
         const rightStartY = hasTopRightCorner ? 1 : 0;
-        const rightEndY = hasBottomRightCorner ? 99 : bottomRight ? 99 : 100;
+        const rightEndY = hasBottomRightCorner ? 99 : bottomRight ? 97 : 100;
         pathData += `M 99,${rightStartY} L 100,${rightStartY} L 100,${rightEndY} L 99,${rightEndY} Z `;
         break;
       }
@@ -177,8 +172,8 @@ const createSelectionBorderSVG = (
         break;
       case "bottom-edge": {
         // Adjust bottom edge to not overlap with corners
-        const bottomStartX = hasBottomLeftCorner ? 1 : bottomLeft ? 1 : 0;
-        const bottomEndX = hasBottomRightCorner ? 99 : bottomRight ? 99 : 100;
+        const bottomStartX = hasBottomLeftCorner ? 1 : 0;
+        const bottomEndX = hasBottomRightCorner ? 99 : 100;
         pathData += `M ${bottomStartX},99 L ${bottomEndX},99 L ${bottomEndX},100 L ${bottomStartX},100 Z `;
         break;
       }
@@ -187,8 +182,8 @@ const createSelectionBorderSVG = (
         break;
       case "left-edge": {
         // Adjust left edge to not overlap with corners
-        const leftStartY = hasTopLeftCorner ? 1 : topLeft ? 1 : 0;
-        const leftEndY = hasBottomLeftCorner ? 99 : bottomLeft ? 99 : 100;
+        const leftStartY = hasTopLeftCorner ? 1 : 0;
+        const leftEndY = hasBottomLeftCorner ? 99 : 100;
         pathData += `M 0,${leftStartY} L 1,${leftStartY} L 1,${leftEndY} L 0,${leftEndY} Z `;
         break;
       }
@@ -198,13 +193,13 @@ const createSelectionBorderSVG = (
     }
   });
 
-  if (!pathData) return "none";
+  if (!pathData) return null;
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none" class="selection-border-svg">
     <path d="${pathData}" fill="${borderColor}" />
   </svg>`;
 
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  return svg;
 };
 // Helper function to get the actual border color
 const getBorderColor = (element) => {
@@ -315,15 +310,30 @@ const createCellSelectionBorders = (cellPositions) => {
       bottomLeft,
       topLeft,
     };
-    const svgDataUri = createSelectionBorderSVG(
+    const svgElement = createSelectionBorderSVG(
       segments,
       borderColor,
       neighborInfo,
     );
 
-    if (svgDataUri !== "none") {
+    if (svgElement) {
       cell.setAttribute("data-selection-borders", "");
-      cell.style.setProperty("--selection-border-svg", svgDataUri);
+
+      // Remove any existing SVG
+      const existingSvg = cell.querySelector(".selection-border-svg");
+      if (existingSvg) {
+        existingSvg.remove();
+      }
+
+      // Inject the SVG directly into the cell
+      cell.insertAdjacentHTML("afterbegin", svgElement);
+    } else {
+      // Clean up if no borders needed
+      cell.removeAttribute("data-selection-borders");
+      const existingSvg = cell.querySelector(".selection-border-svg");
+      if (existingSvg) {
+        existingSvg.remove();
+      }
     }
   });
 };
