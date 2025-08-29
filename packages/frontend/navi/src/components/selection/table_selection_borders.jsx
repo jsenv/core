@@ -138,10 +138,11 @@ const createSelectionBorderSVG = (
         pathData += `M 0,0.5 L 0.5,0.5 L 0.5,0 `;
         break;
       case "top-edge": {
-        // Adjust top edge to not overlap with corners or diagonal neighbors
-        // Gap of 1 for topLeft (horizontal direction) and 1 for topRight (horizontal direction)
-        const topStartX = hasTopLeftCorner ? 1 : topLeft ? 1 : 0;
-        const topEndX = hasTopRightCorner ? 99 : topRight ? 99 : 100;
+        // Adjust top edge to connect seamlessly with corners
+        // Start after left corner if present, otherwise from edge
+        const topStartX = hasTopLeftCorner ? 0.5 : topLeft ? 1 : 0;
+        // End before right corner if present, otherwise to edge
+        const topEndX = hasTopRightCorner ? 99.5 : topRight ? 99 : 100;
         pathData += `M ${topStartX},0.5 L ${topEndX},0.5 `;
         break;
       }
@@ -150,11 +151,11 @@ const createSelectionBorderSVG = (
         pathData += `M 99.5,0 L 99.5,0.5 L 100,0.5 `;
         break;
       case "right-edge": {
-        // Adjust right edge to not overlap with corners or diagonal neighbors
-        // Gap of 3 for topRight (vertical direction) and 3 for bottomRight (vertical direction)
-        // 3 = table cell border (2px) + selection border (1px)
-        const rightStartY = hasTopRightCorner ? 1 : topRight ? 3 : 0;
-        const rightEndY = hasBottomRightCorner ? 99 : bottomRight ? 97 : 100;
+        // Adjust right edge to connect seamlessly with corners
+        // Start after top corner if present, otherwise account for diagonal gap
+        const rightStartY = hasTopRightCorner ? 0.5 : topRight ? 3 : 0;
+        // End before bottom corner if present, otherwise account for diagonal gap
+        const rightEndY = hasBottomRightCorner ? 99.5 : bottomRight ? 97 : 100;
         pathData += `M 99.5,${rightStartY} L 99.5,${rightEndY} `;
         break;
       }
@@ -163,10 +164,11 @@ const createSelectionBorderSVG = (
         pathData += `M 100,99.5 L 99.5,99.5 L 99.5,100 `;
         break;
       case "bottom-edge": {
-        // Adjust bottom edge to not overlap with corners or diagonal neighbors
-        // Gap of 1 for bottomLeft (horizontal direction) and 1 for bottomRight (horizontal direction)
-        const bottomStartX = hasBottomLeftCorner ? 1 : bottomLeft ? 1 : 0;
-        const bottomEndX = hasBottomRightCorner ? 99 : bottomRight ? 99 : 100;
+        // Adjust bottom edge to connect seamlessly with corners
+        // Start after left corner if present, otherwise account for diagonal gap
+        const bottomStartX = hasBottomLeftCorner ? 0.5 : bottomLeft ? 1 : 0;
+        // End before right corner if present, otherwise account for diagonal gap
+        const bottomEndX = hasBottomRightCorner ? 99.5 : bottomRight ? 99 : 100;
         pathData += `M ${bottomStartX},99.5 L ${bottomEndX},99.5 `;
         break;
       }
@@ -175,11 +177,11 @@ const createSelectionBorderSVG = (
         pathData += `M 0.5,100 L 0.5,99.5 L 0,99.5 `;
         break;
       case "left-edge": {
-        // Adjust left edge to not overlap with corners or diagonal neighbors
-        // Gap of 3 for topLeft (vertical direction) and 3 for bottomLeft (vertical direction)
-        // 3 = table cell border (2px) + selection border (1px)
-        const leftStartY = hasTopLeftCorner ? 1 : topLeft ? 3 : 0;
-        const leftEndY = hasBottomLeftCorner ? 99 : bottomLeft ? 97 : 100;
+        // Adjust left edge to connect seamlessly with corners
+        // Start after top corner if present, otherwise account for diagonal gap
+        const leftStartY = hasTopLeftCorner ? 0.5 : topLeft ? 3 : 0;
+        // End before bottom corner if present, otherwise account for diagonal gap
+        const leftEndY = hasBottomLeftCorner ? 99.5 : bottomLeft ? 97 : 100;
         pathData += `M 0.5,${leftStartY} L 0.5,${leftEndY} `;
         break;
       }
