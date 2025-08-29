@@ -469,10 +469,10 @@ function drawBorder(
       const hasTopLeftDiagonal = topLeft && !top;
       const hasBottomLeftDiagonal = bottomLeft && !bottom;
 
-      // Top border (only this cell draws the top edge to avoid duplication)
+      // Top border (extend to right edge since we're connected on the right)
       const topY = 0;
       let topStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
-      const topEndX = canvasWidth - TABLE_BORDER_WIDTH; // Stop left of the connection point
+      const topEndX = canvasWidth; // Always extend to right edge since we're connected on the right
 
       // Adjust for diagonal neighbor
       if (hasTopLeftDiagonal) topStartX = Math.max(topStartX, 1);
@@ -481,10 +481,10 @@ function drawBorder(
         ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
       }
 
-      // Bottom border (only this cell draws the bottom edge to avoid duplication)
+      // Bottom border (extend to right edge since we're connected on the right)
       const bottomY = canvasHeight - 1;
       let bottomStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
-      const bottomEndX = canvasWidth - TABLE_BORDER_WIDTH; // Stop left of the connection point
+      const bottomEndX = canvasWidth; // Always extend to right edge since we're connected on the right
 
       // Adjust for diagonal neighbor
       if (hasBottomLeftDiagonal) bottomStartX = Math.max(bottomStartX, 1);
