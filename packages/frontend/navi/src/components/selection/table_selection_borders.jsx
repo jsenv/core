@@ -193,14 +193,14 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
 
   // Case 1: Isolated cell (no connections) - draw all 4 borders
   if (connectionCount === 0) {
-    // Top border
+    // Top border (owns top-left and top-right corners)
     ctx.fillRect(0, 0, canvasWidth, 1);
-    // Right border
-    ctx.fillRect(canvasWidth - 1, 0, 1, canvasHeight);
-    // Bottom border
+    // Right border (excludes corners already owned by top/bottom)
+    ctx.fillRect(canvasWidth - 1, 1, 1, canvasHeight - 2);
+    // Bottom border (owns bottom-left and bottom-right corners)
     ctx.fillRect(0, canvasHeight - 1, canvasWidth, 1);
-    // Left border
-    ctx.fillRect(0, 0, 1, canvasHeight);
+    // Left border (excludes corners already owned by top/bottom)
+    ctx.fillRect(0, 1, 1, canvasHeight - 2);
     return "isolated";
   }
 
