@@ -415,7 +415,9 @@ const drawBorder = (
 
   // Helper function to determine if this cell should draw junction pixels
   const shouldDrawJunction = (junctionType) => {
-    if (!cellPosition || !allCellPositions) return false;
+    if (!cellPosition || !allCellPositions) {
+      return false;
+    }
 
     // For vertical connections: top cell extends down, bottom cell stays short
     if (junctionType === "bottom-junction") {
@@ -463,12 +465,11 @@ const drawBorder = (
       bottomLeft: bottomLeft && !bottom && !left,
       bottomRight: bottomRight && !bottom && !right,
     };
-
     // Draw all four borders using systematic coordinate calculation
-    ["top", "right", "bottom", "left"].forEach((borderSide) => {
-      drawBorderSegment(borderSide, connections, diagonalAdjustments);
-    });
-
+    drawBorderSegment("top", connections, diagonalAdjustments);
+    drawBorderSegment("right", connections, diagonalAdjustments);
+    drawBorderSegment("bottom", connections, diagonalAdjustments);
+    drawBorderSegment("left", connections, diagonalAdjustments);
     return "all";
   }
 
