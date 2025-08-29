@@ -165,121 +165,106 @@ const createSelectionBorderCanvas = (
     bottomLeft = false,
   } = neighborInfo;
 
-  // Draw each segment
-  segments.forEach((segment) => {
+  for (const segment of segments) {
     ctx.beginPath();
 
-    switch (segment) {
-      case "top-left-corner":
-        // No separate corner drawing - corners are formed by line intersections
-        break;
-      case "top-edge": {
-        // Draw top edge as a filled rectangle
-        // Top edge owns both corners, so it extends full width
-        // When there's a selected neighbor above, avoid overlap by drawing slightly inward
-        const yPos = top ? 1 : 0;
-        // When there's a selected neighbor to the left, start the border later to avoid overlap
-        const startX = hasTopLeftCorner ? 0 : left ? 2 : topLeft ? 1 : 0;
-        // Left cell draws full width to avoid gaps, right cell shortens its border
-        const endX = hasTopRightCorner
+    if (segment === "top-edge") {
+      // Draw top edge as a filled rectangle
+      // Top edge owns both corners, so it extends full width
+      // When there's a selected neighbor above, avoid overlap by drawing slightly inward
+      const yPos = top ? 1 : 0;
+      // When there's a selected neighbor to the left, start the border later to avoid overlap
+      const startX = hasTopLeftCorner ? 0 : left ? 2 : topLeft ? 1 : 0;
+      // Left cell draws full width to avoid gaps, right cell shortens its border
+      const endX = hasTopRightCorner
+        ? canvasWidth
+        : right
           ? canvasWidth
-          : right
-            ? canvasWidth
-            : topRight
-              ? canvasWidth - 1
-              : canvasWidth;
-        const width = endX - startX;
-        ctx.fillRect(startX, yPos, width, 1);
-        break;
-      }
-      case "top-right-corner":
-        // No separate corner drawing - corners are formed by line intersections
-        break;
-      case "right-edge": {
-        // Draw right edge as a filled rectangle
-        // Right edge avoids corners (owned by top/bottom edges)
-        // When there's a selected neighbor to the right, avoid overlap by drawing slightly inward
-        const xPos = right ? canvasWidth - 2 : canvasWidth - 1;
-        const startY = hasTopRightCorner ? 1 : topRight ? 1 : top ? 2 : 0;
-        // Top cell draws full height, bottom cell starts inward to avoid overlap
-        const endY = hasBottomRightCorner
-          ? canvasHeight - 1
-          : bottom
-            ? canvasHeight
-            : bottomRight
-              ? canvasHeight - 1
-              : canvasHeight;
-        const height = endY - startY;
-        ctx.fillRect(xPos, startY, 1, height);
-        break;
-      }
-      case "bottom-right-corner":
-        // No separate corner drawing - corners are formed by line intersections
-        break;
-      case "bottom-edge": {
-        // Draw bottom edge as a filled rectangle
-        // Bottom edge owns both corners, so it extends full width
-        // When there's a selected neighbor below, avoid overlap by drawing slightly inward
-        // Make gap when there's a diagonal bottom-left neighbor to avoid overlap
-        const hasBottomLeftDiagonal = bottomLeft && !left && !bottom;
-        const yPos = bottom ? canvasHeight - 2 : canvasHeight - 1;
-        // When there's a selected neighbor to the left, start the border later to avoid overlap
-        const startX = hasBottomLeftCorner
-          ? 0
-          : left
-            ? 2
-            : hasBottomLeftDiagonal
-              ? 1
-              : 0;
-        // Left cell draws full width to avoid gaps, right cell shortens its border
-        // When there's a diagonal bottom-right neighbor, end early to avoid corner overlap
-        const endX = hasBottomRightCorner
-          ? canvasWidth
-          : right
+          : topRight
             ? canvasWidth - 1
-            : bottomRight
-              ? canvasWidth - 2
-              : canvasWidth;
-        const width = endX - startX;
-        ctx.fillRect(startX, yPos, width, 1);
-        break;
-      }
-      case "bottom-left-corner":
-        // No separate corner drawing - corners are formed by line intersections
-        break;
-      case "left-edge": {
-        // Draw left edge as a filled rectangle
-        // Left edge avoids corners (owned by top/bottom edges)
-        // When there's a selected neighbor to the left, avoid overlap by drawing slightly inward
-        const xPos = left ? 1 : 0;
-        // When there's a diagonal top-right neighbor, start further down to avoid corner overlap
-        const hasTopRightDiagonal = topRight && !top && !right;
-        const startY = hasTopLeftCorner
-          ? 1
-          : topLeft
-            ? 2
-            : top
-              ? 2
-              : hasTopRightDiagonal
-                ? 2
-                : 0;
-        // Top cell draws full height, bottom cell starts inward to avoid overlap
-        const endY = hasBottomLeftCorner
-          ? canvasHeight - 1
-          : bottom
-            ? canvasHeight
-            : bottomLeft
-              ? canvasHeight - 1
-              : canvasHeight;
-        const height = endY - startY;
-        ctx.fillRect(xPos, startY, 1, height);
-        break;
-      }
-      default:
-        // Unknown segment, ignore
-        break;
+            : canvasWidth;
+      const width = endX - startX;
+      ctx.fillRect(startX, yPos, width, 1);
+      continue;
     }
-  });
+
+    if (segment === "right-edge") {
+      // Draw right edge as a filled rectangle
+      // Right edge avoids corners (owned by top/bottom edges)
+      // When there's a selected neighbor to the right, avoid overlap by drawing slightly inward
+      const xPos = right ? canvasWidth - 2 : canvasWidth - 1;
+      const startY = hasTopRightCorner ? 1 : topRight ? 1 : top ? 2 : 0;
+      // Top cell draws full height, bottom cell starts inward to avoid overlap
+      const endY = hasBottomRightCorner
+        ? canvasHeight - 1
+        : bottom
+          ? canvasHeight
+          : bottomRight
+            ? canvasHeight - 1
+            : canvasHeight;
+      const height = endY - startY;
+      ctx.fillRect(xPos, startY, 1, height);
+      continue;
+    }
+
+    if (segment === "bottom-edge") {
+      // Draw bottom edge as a filled rectangle
+      // Bottom edge owns both corners, so it extends full width
+      // When there's a selected neighbor below, avoid overlap by drawing slightly inward
+      // Make gap when there's a diagonal bottom-left neighbor to avoid overlap
+      const hasBottomLeftDiagonal = bottomLeft && !left && !bottom;
+      const yPos = bottom ? canvasHeight - 2 : canvasHeight - 1;
+      // When there's a selected neighbor to the left, start the border later to avoid overlap
+      const startX = hasBottomLeftCorner
+        ? 0
+        : left
+          ? 2
+          : hasBottomLeftDiagonal
+            ? 1
+            : 0;
+      // Left cell draws full width to avoid gaps, right cell shortens its border
+      // When there's a diagonal bottom-right neighbor, end early to avoid corner overlap
+      const endX = hasBottomRightCorner
+        ? canvasWidth
+        : right
+          ? canvasWidth - 1
+          : bottomRight
+            ? canvasWidth - 2
+            : canvasWidth;
+      const width = endX - startX;
+      ctx.fillRect(startX, yPos, width, 1);
+      continue;
+    }
+
+    if (segment === "left-edge") {
+      // Draw left edge as a filled rectangle
+      // Left edge avoids corners (owned by top/bottom edges)
+      // When there's a selected neighbor to the left, avoid overlap by drawing slightly inward
+      const xPos = left ? 1 : 0;
+      // When there's a diagonal top-right neighbor, start further down to avoid corner overlap
+      const hasTopRightDiagonal = topRight && !top && !right;
+      const startY = hasTopLeftCorner
+        ? 1
+        : topLeft
+          ? 2
+          : top
+            ? 2
+            : hasTopRightDiagonal
+              ? 2
+              : 0;
+      // Top cell draws full height, bottom cell starts inward to avoid overlap
+      const endY = hasBottomLeftCorner
+        ? canvasHeight - 1
+        : bottom
+          ? canvasHeight
+          : bottomLeft
+            ? canvasHeight - 1
+            : canvasHeight;
+      const height = endY - startY;
+      ctx.fillRect(xPos, startY, 1, height);
+      continue;
+    }
+  }
 
   return canvas;
 };
