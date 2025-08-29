@@ -164,10 +164,10 @@ const createSelectionBorderCanvas = (
         // Draw top edge at the outer edge of canvas (on top of table border)
         const startX = hasTopLeftCorner ? 0.5 : topLeft ? 1.5 : 0.5;
         const endX = hasTopRightCorner
-          ? canvasWidth - 0.5
+          ? canvasWidth - 1.5
           : topRight
             ? canvasWidth - 1.5
-            : canvasWidth - 0.5;
+            : canvasWidth - 1.5;
         ctx.moveTo(startX, 0.5);
         ctx.lineTo(endX, 0.5);
         break;
@@ -176,15 +176,15 @@ const createSelectionBorderCanvas = (
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "right-edge": {
-        // Draw right edge at the outer edge of canvas (on top of table border)
+        // Draw right edge slightly inside to ensure visibility
         const startY = hasTopRightCorner ? 0.5 : topRight ? 3.5 : 0.5;
         const endY = hasBottomRightCorner
           ? canvasHeight - 0.5
           : bottomRight
             ? canvasHeight - 3.5
             : canvasHeight - 0.5;
-        ctx.moveTo(canvasWidth - 0.5, startY);
-        ctx.lineTo(canvasWidth - 0.5, endY);
+        ctx.moveTo(canvasWidth - 1.5, startY);
+        ctx.lineTo(canvasWidth - 1.5, endY);
         break;
       }
       case "bottom-right-corner":
@@ -194,12 +194,12 @@ const createSelectionBorderCanvas = (
         // Draw bottom edge at the outer edge of canvas (on top of table border)
         const startX = hasBottomLeftCorner ? 0.5 : bottomLeft ? 1.5 : 0.5;
         const endX = hasBottomRightCorner
-          ? canvasWidth - 0.5
+          ? canvasWidth - 1.5
           : bottomRight
             ? canvasWidth - 1.5
-            : canvasWidth - 0.5;
-        ctx.moveTo(startX, canvasHeight - 0.5);
-        ctx.lineTo(endX, canvasHeight - 0.5);
+            : canvasWidth - 1.5;
+        ctx.moveTo(startX, canvasHeight - 1.5);
+        ctx.lineTo(endX, canvasHeight - 1.5);
         break;
       }
       case "bottom-left-corner":
