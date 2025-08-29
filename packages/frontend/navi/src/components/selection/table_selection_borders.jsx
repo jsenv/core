@@ -175,6 +175,7 @@ const createSelectionBorderCanvas = (
         break;
       case "top-edge": {
         // Draw top edge as a filled rectangle
+        // Top edge owns both corners, so it extends full width
         const startX = hasTopLeftCorner ? 0 : topLeft ? 1 : 0;
         const endX = hasTopRightCorner
           ? canvasWidth
@@ -190,9 +191,10 @@ const createSelectionBorderCanvas = (
         break;
       case "right-edge": {
         // Draw right edge as a filled rectangle
-        const startY = hasTopRightCorner ? 0 : topRight ? 1 : 0;
+        // Right edge avoids corners (owned by top/bottom edges)
+        const startY = hasTopRightCorner ? 1 : topRight ? 1 : 0;
         const endY = hasBottomRightCorner
-          ? canvasHeight
+          ? canvasHeight - 1
           : bottomRight
             ? canvasHeight - 1
             : canvasHeight;
@@ -205,6 +207,7 @@ const createSelectionBorderCanvas = (
         break;
       case "bottom-edge": {
         // Draw bottom edge as a filled rectangle
+        // Bottom edge owns both corners, so it extends full width
         // Make gap when there's a diagonal bottom-left neighbor to avoid overlap
         const hasBottomLeftDiagonal = bottomLeft && !left && !bottom;
         const startX = hasBottomLeftCorner ? 0 : hasBottomLeftDiagonal ? 1 : 0;
@@ -222,9 +225,10 @@ const createSelectionBorderCanvas = (
         break;
       case "left-edge": {
         // Draw left edge as a filled rectangle
-        const startY = hasTopLeftCorner ? 0 : topLeft ? 1 : 0;
+        // Left edge avoids corners (owned by top/bottom edges)
+        const startY = hasTopLeftCorner ? 1 : topLeft ? 1 : 0;
         const endY = hasBottomLeftCorner
-          ? canvasHeight
+          ? canvasHeight - 1
           : bottomLeft
             ? canvasHeight - 1
             : canvasHeight;
