@@ -139,51 +139,44 @@ const createSelectionBorderSVG = (
   needsLeft,
   borderColor = "#0078d4",
 ) => {
-  const borderWidth = 2; // Border thickness in percentage of the SVG viewBox
-
-  // Calculate border segments with smart positioning to avoid overlaps
-  // Position borders at the edges of the pseudo-element (which extends -2px beyond cell)
-  const topLeft = needsLeft ? borderWidth : 0;
-  const topRight = needsRight ? borderWidth : 0;
-  const rightTop = needsTop ? borderWidth : 0;
-  const rightBottom = needsBottom ? borderWidth : 0;
-  const bottomRight = needsRight ? borderWidth : 0;
-  const bottomLeft = needsLeft ? borderWidth : 0;
-  const leftBottom = needsBottom ? borderWidth : 0;
-  const leftTop = needsTop ? borderWidth : 0;
+  const borderWidth = 1; // Border thickness in percentage of the SVG viewBox (1% for 1px visual)
 
   let pathData = "";
 
-  // Create SVG path for each needed border at the edges of the pseudo-element
+  // Create SVG path for each needed border - overlapping at corners to eliminate gaps
   if (needsTop) {
-    const x1 = topLeft;
-    const x2 = 100 - topRight;
+    // Top border extends full width when no corner overlaps are needed
+    const x1 = 0;
+    const x2 = 100;
     const y1 = 0;
     const y2 = borderWidth;
     pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
   }
 
   if (needsRight) {
+    // Right border extends full height, overlaps with top/bottom if they exist
     const x1 = 100 - borderWidth;
     const x2 = 100;
-    const y1 = rightTop;
-    const y2 = 100 - rightBottom;
+    const y1 = 0;
+    const y2 = 100;
     pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
   }
 
   if (needsBottom) {
-    const x1 = bottomLeft;
-    const x2 = 100 - bottomRight;
+    // Bottom border extends full width
+    const x1 = 0;
+    const x2 = 100;
     const y1 = 100 - borderWidth;
     const y2 = 100;
     pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
   }
 
   if (needsLeft) {
+    // Left border extends full height, overlaps with top/bottom if they exist
     const x1 = 0;
     const x2 = borderWidth;
-    const y1 = leftTop;
-    const y2 = 100 - leftBottom;
+    const y1 = 0;
+    const y2 = 100;
     pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
   }
 
