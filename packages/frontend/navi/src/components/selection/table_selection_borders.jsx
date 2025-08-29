@@ -343,8 +343,16 @@ const drawBorder = (
       };
     }
     if (borderSide === "left") {
-      let startY = 1; // Always start below top corner (top/bottom borders own corners)
-      let endY = canvasHeight - 1; // Always stop above bottom corner (top/bottom borders own corners)
+      let startY = 1; // Start below top corner by default (top border owns corners)
+      let endY = canvasHeight - 1; // Stop above bottom corner by default (bottom border owns corners)
+
+      // For vertical connections, extend to connection points to avoid gaps
+      if (hasTop) {
+        startY = 0; // Extend to top edge for seamless connection
+      }
+      if (hasBottom) {
+        endY = canvasHeight; // Extend to bottom edge for seamless connection
+      }
 
       // Apply diagonal adjustments
       if (diagonalAdjustments.topLeft) startY = Math.max(startY, 1);
@@ -359,8 +367,16 @@ const drawBorder = (
       };
     }
     if (borderSide === "right") {
-      let startY = 1; // Always start below top corner (top/bottom borders own corners)
-      let endY = canvasHeight - 1; // Always stop above bottom corner (top/bottom borders own corners)
+      let startY = 1; // Start below top corner by default (top border owns corners)
+      let endY = canvasHeight - 1; // Stop above bottom corner by default (bottom border owns corners)
+
+      // For vertical connections, extend to connection points to avoid gaps
+      if (hasTop) {
+        startY = 0; // Extend to top edge for seamless connection
+      }
+      if (hasBottom) {
+        endY = canvasHeight; // Extend to bottom edge for seamless connection
+      }
 
       // Apply diagonal adjustments
       if (diagonalAdjustments.topRight) startY = Math.max(startY, 1);
