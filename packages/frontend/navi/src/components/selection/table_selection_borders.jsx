@@ -178,12 +178,16 @@ const createSelectionBorderCanvas = (
         // Top edge owns both corners, so it extends full width
         // When there's a selected neighbor above, avoid overlap by drawing slightly inward
         const yPos = top ? 1 : 0;
-        const startX = hasTopLeftCorner ? 0 : topLeft ? 1 : 0;
+        // When there's a selected neighbor to the left, start the border later to avoid overlap
+        const startX = hasTopLeftCorner ? 0 : left ? 2 : topLeft ? 1 : 0;
+        // Left cell draws full width to avoid gaps, right cell shortens its border
         const endX = hasTopRightCorner
           ? canvasWidth
-          : topRight
-            ? canvasWidth - 1
-            : canvasWidth;
+          : right
+            ? canvasWidth
+            : topRight
+              ? canvasWidth - 1
+              : canvasWidth;
         const width = endX - startX;
         ctx.fillRect(startX, yPos, width, 1);
         break;
@@ -216,12 +220,22 @@ const createSelectionBorderCanvas = (
         // Make gap when there's a diagonal bottom-left neighbor to avoid overlap
         const hasBottomLeftDiagonal = bottomLeft && !left && !bottom;
         const yPos = bottom ? canvasHeight - 2 : canvasHeight - 1;
-        const startX = hasBottomLeftCorner ? 0 : hasBottomLeftDiagonal ? 1 : 0;
+        // When there's a selected neighbor to the left, start the border later to avoid overlap
+        const startX = hasBottomLeftCorner
+          ? 0
+          : left
+            ? 2
+            : hasBottomLeftDiagonal
+              ? 1
+              : 0;
+        // Left cell draws full width to avoid gaps, right cell shortens its border
         const endX = hasBottomRightCorner
           ? canvasWidth
-          : bottomRight
-            ? canvasWidth - 1
-            : canvasWidth;
+          : right
+            ? canvasWidth
+            : bottomRight
+              ? canvasWidth - 1
+              : canvasWidth;
         const width = endX - startX;
         ctx.fillRect(startX, yPos, width, 1);
         break;
