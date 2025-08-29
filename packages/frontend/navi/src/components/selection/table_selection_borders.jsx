@@ -5,114 +5,33 @@ import.meta.css = /* css */ `
   /* Set default selection border color */
   :root {
     --selection-border-color: #0078d4;
-    --selection-border-size: 2px;
   }
 
-  /* All selection border elements need relative positioning for pseudo-elements */
-  [data-selection-border-top],
-  [data-selection-border-right],
-  [data-selection-border-bottom],
-  [data-selection-border-left] {
-    position: relative;
-  }
-
-  /* Top border segments using ::before */
-  [data-selection-border-top]::before {
+  /* Base pseudo-element styles */
+  .selection-border-pseudo-base {
     content: "";
     position: absolute;
-    top: calc(-1 * var(--selection-border-size));
-    left: var(--border-top-left, 0);
-    right: var(--border-top-right, 0);
-    height: var(--selection-border-size);
-    background-color: var(--selection-border-color);
     pointer-events: none;
-    z-index: 0;
+    z-index: 1; /* Above 2px cell borders */
   }
 
-  /* Right border segments using ::after */
-  [data-selection-border-right]::after {
+  /* Selection border using single pseudo-element with SVG background */
+  [data-selection-borders]::before {
     content: "";
     position: absolute;
-    top: var(--border-right-top, 0);
-    right: calc(-1 * var(--selection-border-size));
-    bottom: var(--border-right-bottom, 0);
-    width: var(--selection-border-size);
-    background-color: var(--selection-border-color);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Bottom border segments - need to avoid conflict with top border pseudo-element */
-  [data-selection-border-bottom] {
-    --bottom-pseudo-element: "";
-  }
-  [data-selection-border-bottom]::after {
-    content: var(--bottom-pseudo-element, "");
-    position: absolute;
-    bottom: calc(-1 * var(--selection-border-size));
-    left: var(--border-bottom-left, 0);
-    right: var(--border-bottom-right, 0);
-    height: var(--selection-border-size);
-    background-color: var(--selection-border-color);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Override for bottom borders when right border exists - use different approach */
-  [data-selection-border-bottom][data-selection-border-right] {
-    --bottom-pseudo-element: none;
-  }
-  [data-selection-border-bottom][data-selection-border-right]::before {
-    content: "";
-    position: absolute;
-    bottom: calc(-1 * var(--selection-border-size));
-    left: var(--border-bottom-left, 0);
-    right: var(--border-bottom-right, 0);
-    height: var(--selection-border-size);
-    background-color: var(--selection-border-color);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Left border segments - use different pseudo-element based on conflicts */
-  [data-selection-border-left] {
-    --left-pseudo-element: "";
-  }
-  [data-selection-border-left]::after {
-    content: var(--left-pseudo-element, "");
-    position: absolute;
-    top: var(--border-left-top, 0);
-    left: calc(-1 * var(--selection-border-size));
-    bottom: var(--border-left-bottom, 0);
-    width: var(--selection-border-size);
-    background-color: var(--selection-border-color);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Override for left borders when right border exists */
-  [data-selection-border-left][data-selection-border-right] {
-    --left-pseudo-element: none;
-  }
-  [data-selection-border-left][data-selection-border-right]::before {
-    content: "";
-    position: absolute;
-    top: var(--border-left-top, 0);
-    left: calc(-1 * var(--selection-border-size));
-    bottom: var(--border-left-bottom, 0);
-    width: var(--selection-border-size);
-    background-color: var(--selection-border-color);
+    top: -2px; /* Above 2px cell border */
+    left: -2px; /* Above 2px cell border */
+    right: -2px;
+    bottom: -2px;
     pointer-events: none;
     z-index: 1;
+    background-image: var(--selection-border-svg);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting] [data-selection-border-top]::before,
-  table[data-drag-selecting] [data-selection-border-right]::after,
-  table[data-drag-selecting] [data-selection-border-bottom]::before,
-  table[data-drag-selecting] [data-selection-border-bottom]::after,
-  table[data-drag-selecting] [data-selection-border-left]::before,
-  table[data-drag-selecting] [data-selection-border-left]::after {
+  table[data-drag-selecting] [data-selection-borders]::before {
     display: none;
   }
 
@@ -154,20 +73,10 @@ export const useTableSelectionBorders = (
       // Clear all existing selection borders and CSS custom properties
       const allCells = table.querySelectorAll("td, th");
       allCells.forEach((cell) => {
-        cell.removeAttribute("data-selection-border-top");
-        cell.removeAttribute("data-selection-border-right");
-        cell.removeAttribute("data-selection-border-bottom");
-        cell.removeAttribute("data-selection-border-left");
+        cell.removeAttribute("data-selection-borders");
 
-        // Clear border positioning CSS variables
-        cell.style.removeProperty("--border-top-left");
-        cell.style.removeProperty("--border-top-right");
-        cell.style.removeProperty("--border-right-top");
-        cell.style.removeProperty("--border-right-bottom");
-        cell.style.removeProperty("--border-bottom-left");
-        cell.style.removeProperty("--border-bottom-right");
-        cell.style.removeProperty("--border-left-top");
-        cell.style.removeProperty("--border-left-bottom");
+        // Clear SVG border CSS variable
+        cell.style.removeProperty("--selection-border-svg");
       });
 
       // Don't apply borders during drag selection
@@ -182,7 +91,7 @@ export const useTableSelectionBorders = (
       }
 
       // Create smart borders with proper intersection handling
-      createSmartSelectionBorders(selectedCells, size);
+      createSmartSelectionBorders(selectedCells);
     };
 
     // Initial border update
@@ -198,7 +107,7 @@ export const useTableSelectionBorders = (
 };
 
 // Create smart selection borders with proper intersection handling
-const createSmartSelectionBorders = (selectedCells, borderSize) => {
+const createSmartSelectionBorders = (selectedCells) => {
   // Create a map of selected cells by position for quick lookup
   const cellMap = new Map();
   const cellPositions = [];
@@ -217,22 +126,86 @@ const createSmartSelectionBorders = (selectedCells, borderSize) => {
   // Process each selection type
   Object.entries(groupedCells).forEach(([selectionType, cells]) => {
     if (selectionType === "row") {
-      createRowSelectionBorders(cells, cellMap, borderSize);
+      createRowSelectionBorders(cells, cellMap);
     } else if (selectionType === "column") {
-      createColumnSelectionBorders(cells, cellMap, borderSize);
+      createColumnSelectionBorders(cells, cellMap);
     } else {
       // Regular cell selection
       createCellSelectionBorders(
         cellPositions.filter((cp) => cells.includes(cp.cell)),
         cellMap,
-        borderSize,
       );
     }
   });
 };
 
+// Helper function to create SVG path for selection borders
+const createSelectionBorderSVG = (
+  needsTop,
+  needsRight,
+  needsBottom,
+  needsLeft,
+) => {
+  const borderWidth = 1; // Fixed 1px border width
+  const cellOffset = 2; // Account for 2px cell borders
+
+  // Calculate border segments with smart positioning to avoid overlaps
+  const topLeft = needsLeft ? borderWidth : 0;
+  const topRight = needsRight ? borderWidth : 0;
+  const rightTop = needsTop ? borderWidth : 0;
+  const rightBottom = needsBottom ? borderWidth : 0;
+  const bottomRight = needsRight ? borderWidth : 0;
+  const bottomLeft = needsLeft ? borderWidth : 0;
+  const leftBottom = needsBottom ? borderWidth : 0;
+  const leftTop = needsTop ? borderWidth : 0;
+
+  let pathData = "";
+
+  // Create SVG path for each needed border with smart corner handling
+  if (needsTop) {
+    const x1 = topLeft + cellOffset;
+    const x2 = 100 - topRight - cellOffset;
+    const y1 = cellOffset;
+    const y2 = cellOffset + borderWidth;
+    pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
+  }
+
+  if (needsRight) {
+    const x1 = 100 - cellOffset - borderWidth;
+    const x2 = 100 - cellOffset;
+    const y1 = rightTop + cellOffset;
+    const y2 = 100 - rightBottom - cellOffset;
+    pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
+  }
+
+  if (needsBottom) {
+    const x1 = bottomLeft + cellOffset;
+    const x2 = 100 - bottomRight - cellOffset;
+    const y1 = 100 - cellOffset - borderWidth;
+    const y2 = 100 - cellOffset;
+    pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
+  }
+
+  if (needsLeft) {
+    const x1 = cellOffset;
+    const x2 = cellOffset + borderWidth;
+    const y1 = leftTop + cellOffset;
+    const y2 = 100 - leftBottom - cellOffset;
+    pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
+  }
+
+  if (!pathData) return "none";
+
+  // Create data URI for SVG
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <path d="${pathData}" fill="var(--selection-border-color)" />
+  </svg>`;
+
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+};
+
 // Create borders for cell selections with smart intersection handling
-const createCellSelectionBorders = (cellPositions, cellMap, borderSize) => {
+const createCellSelectionBorders = (cellPositions, cellMap) => {
   cellPositions.forEach(({ cell, position }) => {
     // Check which borders this cell needs
     const needsTop = !cellMap.has(`${position.row - 1},${position.col}`);
@@ -240,43 +213,23 @@ const createCellSelectionBorders = (cellPositions, cellMap, borderSize) => {
     const needsLeft = !cellMap.has(`${position.row},${position.col - 1}`);
     const needsRight = !cellMap.has(`${position.row},${position.col + 1}`);
 
-    // Calculate smart border positioning to avoid overlaps at corners
-    if (needsTop) {
-      const leftOffset = needsLeft ? `${borderSize}px` : "0px";
-      const rightOffset = needsRight ? `${borderSize}px` : "0px";
-      cell.setAttribute("data-selection-border-top", "");
-      cell.style.setProperty("--border-top-left", leftOffset);
-      cell.style.setProperty("--border-top-right", rightOffset);
-    }
+    // Generate SVG for this cell's border configuration
+    const svgDataUri = createSelectionBorderSVG(
+      needsTop,
+      needsRight,
+      needsBottom,
+      needsLeft,
+    );
 
-    if (needsBottom) {
-      const leftOffset = needsLeft ? `${borderSize}px` : "0px";
-      const rightOffset = needsRight ? `${borderSize}px` : "0px";
-      cell.setAttribute("data-selection-border-bottom", "");
-      cell.style.setProperty("--border-bottom-left", leftOffset);
-      cell.style.setProperty("--border-bottom-right", rightOffset);
-    }
-
-    if (needsLeft) {
-      const topOffset = needsTop ? `${borderSize}px` : "0px";
-      const bottomOffset = needsBottom ? `${borderSize}px` : "0px";
-      cell.setAttribute("data-selection-border-left", "");
-      cell.style.setProperty("--border-left-top", topOffset);
-      cell.style.setProperty("--border-left-bottom", bottomOffset);
-    }
-
-    if (needsRight) {
-      const topOffset = needsTop ? `${borderSize}px` : "0px";
-      const bottomOffset = needsBottom ? `${borderSize}px` : "0px";
-      cell.setAttribute("data-selection-border-right", "");
-      cell.style.setProperty("--border-right-top", topOffset);
-      cell.style.setProperty("--border-right-bottom", bottomOffset);
+    if (svgDataUri !== "none") {
+      cell.setAttribute("data-selection-borders", "");
+      cell.style.setProperty("--selection-border-svg", svgDataUri);
     }
   });
 };
 
 // Create borders for row selections
-const createRowSelectionBorders = (rowCells, cellMap, borderSize) => {
+const createRowSelectionBorders = (rowCells, cellMap) => {
   rowCells.forEach((rowHeaderCell) => {
     const position = getCellPosition(rowHeaderCell);
     if (!position) return;
@@ -285,36 +238,21 @@ const createRowSelectionBorders = (rowCells, cellMap, borderSize) => {
     const needsTop = !hasSelectedRowAt(cellMap, position.row - 1);
     const needsBottom = !hasSelectedRowAt(cellMap, position.row + 1);
 
-    // Set border attributes for the row header cell
-    if (needsTop) {
-      rowHeaderCell.setAttribute("data-selection-border-top", "");
-      rowHeaderCell.style.setProperty("--border-top-left", "0px");
-      rowHeaderCell.style.setProperty("--border-top-right", "0px");
-    }
+    // Row selections always need left and right borders, top/bottom depend on adjacent rows
+    const svgDataUri = createSelectionBorderSVG(
+      needsTop,
+      true,
+      needsBottom,
+      true,
+    );
 
-    if (needsBottom) {
-      rowHeaderCell.setAttribute("data-selection-border-bottom", "");
-      rowHeaderCell.style.setProperty("--border-bottom-left", "0px");
-      rowHeaderCell.style.setProperty("--border-bottom-right", "0px");
-    }
-
-    // Left and right borders always needed for row selections
-    rowHeaderCell.setAttribute("data-selection-border-left", "");
-    const leftTop = needsTop ? `-${borderSize}px` : "0px";
-    const leftBottom = needsBottom ? `-${borderSize}px` : "0px";
-    rowHeaderCell.style.setProperty("--border-left-top", leftTop);
-    rowHeaderCell.style.setProperty("--border-left-bottom", leftBottom);
-
-    rowHeaderCell.setAttribute("data-selection-border-right", "");
-    const rightTop = needsTop ? `-${borderSize}px` : "0px";
-    const rightBottom = needsBottom ? `-${borderSize}px` : "0px";
-    rowHeaderCell.style.setProperty("--border-right-top", rightTop);
-    rowHeaderCell.style.setProperty("--border-right-bottom", rightBottom);
+    rowHeaderCell.setAttribute("data-selection-borders", "");
+    rowHeaderCell.style.setProperty("--selection-border-svg", svgDataUri);
   });
 };
 
 // Create borders for column selections
-const createColumnSelectionBorders = (columnCells, cellMap, borderSize) => {
+const createColumnSelectionBorders = (columnCells, cellMap) => {
   columnCells.forEach((columnHeaderCell) => {
     const position = getCellPosition(columnHeaderCell);
     if (!position) return;
@@ -323,31 +261,16 @@ const createColumnSelectionBorders = (columnCells, cellMap, borderSize) => {
     const needsLeft = !hasSelectedColumnAt(cellMap, position.col - 1);
     const needsRight = !hasSelectedColumnAt(cellMap, position.col + 1);
 
-    // Set border attributes for the column header cell
-    if (needsLeft) {
-      columnHeaderCell.setAttribute("data-selection-border-left", "");
-      columnHeaderCell.style.setProperty("--border-left-top", "0px");
-      columnHeaderCell.style.setProperty("--border-left-bottom", "0px");
-    }
+    // Column selections always need top and bottom borders, left/right depend on adjacent columns
+    const svgDataUri = createSelectionBorderSVG(
+      true,
+      needsRight,
+      true,
+      needsLeft,
+    );
 
-    if (needsRight) {
-      columnHeaderCell.setAttribute("data-selection-border-right", "");
-      columnHeaderCell.style.setProperty("--border-right-top", "0px");
-      columnHeaderCell.style.setProperty("--border-right-bottom", "0px");
-    }
-
-    // Top and bottom borders always needed for column selections
-    columnHeaderCell.setAttribute("data-selection-border-top", "");
-    const topLeft = needsLeft ? `-${borderSize}px` : "0px";
-    const topRight = needsRight ? `-${borderSize}px` : "0px";
-    columnHeaderCell.style.setProperty("--border-top-left", topLeft);
-    columnHeaderCell.style.setProperty("--border-top-right", topRight);
-
-    columnHeaderCell.setAttribute("data-selection-border-bottom", "");
-    const bottomLeft = needsLeft ? `-${borderSize}px` : "0px";
-    const bottomRight = needsRight ? `-${borderSize}px` : "0px";
-    columnHeaderCell.style.setProperty("--border-bottom-left", bottomLeft);
-    columnHeaderCell.style.setProperty("--border-bottom-right", bottomRight);
+    columnHeaderCell.setAttribute("data-selection-borders", "");
+    columnHeaderCell.style.setProperty("--selection-border-svg", svgDataUri);
   });
 };
 
