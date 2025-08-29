@@ -128,30 +128,41 @@ const createSmartSelectionBorders = (selectedCells) => {
 };
 
 // Helper function to create SVG path for selection borders
-const createSelectionBorderSVG = (
-  needsTop,
-  needsRight,
-  needsBottom,
-  needsLeft,
-  borderColor = "#0078d4",
-) => {
+const createSelectionBorderSVG = (segments, borderColor = "#0078d4") => {
   let pathData = "";
 
-  // Create precise borders that connect at corners without overlap
-  // Each border is drawn as a closed rectangle to ensure clean edges
-
-  if (needsTop) {
-    pathData += `M 0,0 L 100,0 L 100,1 L 0,1 Z `;
-  }
-  if (needsRight) {
-    pathData += `M 99,0 L 100,0 L 100,100 L 99,100 Z `;
-  }
-  if (needsBottom) {
-    pathData += `M 0,99 L 100,99 L 100,100 L 0,100 Z `;
-  }
-  if (needsLeft) {
-    pathData += `M 0,0 L 1,0 L 1,100 L 0,100 Z `;
-  }
+  // Draw each segment that's needed for this cell's contribution to the selection perimeter
+  segments.forEach((segment) => {
+    switch (segment) {
+      case "top-left-corner":
+        pathData += `M 0,0 L 1,0 L 1,1 L 0,1 Z `;
+        break;
+      case "top-edge":
+        pathData += `M 1,0 L 99,0 L 99,1 L 1,1 Z `;
+        break;
+      case "top-right-corner":
+        pathData += `M 99,0 L 100,0 L 100,1 L 99,1 Z `;
+        break;
+      case "right-edge":
+        pathData += `M 99,1 L 100,1 L 100,99 L 99,99 Z `;
+        break;
+      case "bottom-right-corner":
+        pathData += `M 99,99 L 100,99 L 100,100 L 99,100 Z `;
+        break;
+      case "bottom-edge":
+        pathData += `M 1,99 L 99,99 L 99,100 L 1,100 Z `;
+        break;
+      case "bottom-left-corner":
+        pathData += `M 0,99 L 1,99 L 1,100 L 0,100 Z `;
+        break;
+      case "left-edge":
+        pathData += `M 0,1 L 1,1 L 1,99 L 0,99 Z `;
+        break;
+      default:
+        // Unknown segment, ignore
+        break;
+    }
+  });
 
   if (!pathData) return "none";
 
@@ -195,26 +206,57 @@ const createCellSelectionBorders = (cellPositions) => {
     const rowSpan = parseInt(cell.getAttribute("rowspan") || "1", 10);
     const colSpan = parseInt(cell.getAttribute("colspan") || "1", 10);
 
-    // Check which borders this cell needs by testing the perimeter
-    const needsTop = !isPositionSelected(position.row - 1, position.col);
-    const needsBottom = !isPositionSelected(
-      position.row + rowSpan,
-      position.col,
-    );
-    const needsLeft = !isPositionSelected(position.row, position.col - 1);
-    const needsRight = !isPositionSelected(
-      position.row,
-      position.col + colSpan,
-    );
+    // Determine which 8 segments this cell should draw based on surrounding selection
+    const segments = [];
 
-    // Generate SVG for this cell's border configuration
-    const svgDataUri = createSelectionBorderSVG(
-      needsTop,
-      needsRight,
-      needsBottom,
-      needsLeft,
-      borderColor,
-    );
+    // Check all 8 neighboring positions
+    const top = isPositionSelected(position.row - 1, position.col);
+    const left = isPositionSelected(position.row, position.col - 1);
+    const right = isPositionSelected(position.row, position.col + colSpan);
+    const bottom = isPositionSelected(position.row + rowSpan, position.col);
+
+    // Top-left corner: draw if no top AND no left neighbors
+    if (!top && !left) {
+      segments.push("top-left-corner");
+    }
+
+    // Top edge: draw if no top neighbor
+    if (!top) {
+      segments.push("top-edge");
+    }
+
+    // Top-right corner: draw if no top AND no right neighbors
+    if (!top && !right) {
+      segments.push("top-right-corner");
+    }
+
+    // Right edge: draw if no right neighbor
+    if (!right) {
+      segments.push("right-edge");
+    }
+
+    // Bottom-right corner: draw if no bottom AND no right neighbors
+    if (!bottom && !right) {
+      segments.push("bottom-right-corner");
+    }
+
+    // Bottom edge: draw if no bottom neighbor
+    if (!bottom) {
+      segments.push("bottom-edge");
+    }
+
+    // Bottom-left corner: draw if no bottom AND no left neighbors
+    if (!bottom && !left) {
+      segments.push("bottom-left-corner");
+    }
+
+    // Left edge: draw if no left neighbor
+    if (!left) {
+      segments.push("left-edge");
+    }
+
+    // Generate SVG for this cell's segments
+    const svgDataUri = createSelectionBorderSVG(segments, borderColor);
 
     if (svgDataUri !== "none") {
       cell.setAttribute("data-selection-borders", "");
