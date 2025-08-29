@@ -134,8 +134,8 @@ const createSelectionBorderSVG = (
   segments.forEach((segment) => {
     switch (segment) {
       case "top-left-corner":
-        // Draw a small square corner
-        pathData += `M 0,0 L 1,0 L 1,1 L 0,1 Z `;
+        // Draw corner as L-shaped path
+        pathData += `M 0,0.5 L 0.5,0.5 L 0.5,0 `;
         break;
       case "top-edge": {
         // Adjust top edge to not overlap with corners or diagonal neighbors
@@ -146,8 +146,8 @@ const createSelectionBorderSVG = (
         break;
       }
       case "top-right-corner":
-        // Draw a small square corner
-        pathData += `M 99,0 L 100,0 L 100,1 L 99,1 Z `;
+        // Draw corner as L-shaped path
+        pathData += `M 99.5,0 L 99.5,0.5 L 100,0.5 `;
         break;
       case "right-edge": {
         // Adjust right edge to not overlap with corners or diagonal neighbors
@@ -159,8 +159,8 @@ const createSelectionBorderSVG = (
         break;
       }
       case "bottom-right-corner":
-        // Draw a small square corner
-        pathData += `M 99,99 L 100,99 L 100,100 L 99,100 Z `;
+        // Draw corner as L-shaped path
+        pathData += `M 100,99.5 L 99.5,99.5 L 99.5,100 `;
         break;
       case "bottom-edge": {
         // Adjust bottom edge to not overlap with corners or diagonal neighbors
@@ -171,8 +171,8 @@ const createSelectionBorderSVG = (
         break;
       }
       case "bottom-left-corner":
-        // Draw a small square corner
-        pathData += `M 0,99 L 1,99 L 1,100 L 0,100 Z `;
+        // Draw corner as L-shaped path
+        pathData += `M 0.5,100 L 0.5,99.5 L 0,99.5 `;
         break;
       case "left-edge": {
         // Adjust left edge to not overlap with corners or diagonal neighbors
@@ -192,7 +192,7 @@ const createSelectionBorderSVG = (
   if (!pathData) return null;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none" class="selection-border-svg">
-    <path d="${pathData}" stroke="${borderColor}" stroke-width="1" fill="none" vector-effect="non-scaling-stroke" />
+    <path d="${pathData}" stroke="${borderColor}" stroke-width="1" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="square" />
   </svg>`;
 
   return svg;
