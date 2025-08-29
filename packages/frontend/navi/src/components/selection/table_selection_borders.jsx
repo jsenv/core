@@ -125,7 +125,6 @@ const createSmartSelectionBorders = (selectedCells) => {
       // Regular cell selection
       createCellSelectionBorders(
         cellPositions.filter((cp) => cells.includes(cp.cell)),
-        cellMap,
       );
     }
   });
@@ -179,18 +178,37 @@ const getBorderColor = (element) => {
 };
 
 // Create borders for cell selections with smart intersection handling
-const createCellSelectionBorders = (cellPositions, cellMap) => {
+const createCellSelectionBorders = (cellPositions) => {
   if (cellPositions.length === 0) return;
 
   // Get the border color from CSS
   const borderColor = getBorderColor(cellPositions[0].cell);
 
+  // Helper function to check if a position is covered by any selected cell (including spans)
+  const isPositionSelected = (row, col) => {
+    return cellPositions.some(({ position, cell }) => {
+      const rowSpan = parseInt(cell.getAttribute("rowspan") || "1", 10);
+      const colSpan = parseInt(cell.getAttribute("colspan") || "1", 10);
+      
+      return (
+        row >= position.row &&
+        row < position.row + rowSpan &&
+        col >= position.col &&
+        col < position.col + colSpan
+      );
+    });
+  };
+
   cellPositions.forEach(({ cell, position }) => {
-    // Check which borders this cell needs
-    const needsTop = !cellMap.has(`${position.row - 1},${position.col}`);
-    const needsBottom = !cellMap.has(`${position.row + 1},${position.col}`);
-    const needsLeft = !cellMap.has(`${position.row},${position.col - 1}`);
-    const needsRight = !cellMap.has(`${position.row},${position.col + 1}`);
+    const rowSpan = parseInt(cell.getAttribute("rowspan") || "1", 10);
+    const colSpan = parseInt(cell.getAttribute("colspan") || "1", 10);
+    
+    // Check which borders this cell needs by testing the perimeter
+    // For cells with spans, check all edges of the spanned area
+    const needsTop = !isPositionSelected(position.row - 1, position.col);
+    const needsBottom = !isPositionSelected(position.row + rowSpan, position.col);
+    const needsLeft = !isPositionSelected(position.row, position.col - 1);
+    const needsRight = !isPositionSelected(position.row, position.col + colSpan);
 
     // Generate SVG for this cell's border configuration
     const svgDataUri = createSelectionBorderSVG(
