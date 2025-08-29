@@ -5,8 +5,7 @@ import.meta.css = /* css */ `
   /* Set default selection border color */
   :root {
     --selection-border-color: #0078d4;
-    --selection-border-width: 2px;
-    --selection-border-inset: -2px;
+    --selection-border-size: 2px;
   }
 
   /* All selection border elements need relative positioning for pseudo-elements */
@@ -17,138 +16,107 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
-  /* Common pseudo-element properties for all border combinations */
-  [data-selection-border-top]::after,
-  [data-selection-border-right]::after,
-  [data-selection-border-bottom]::after,
-  [data-selection-border-left]::after {
+  /* Top border segments using ::before */
+  [data-selection-border-top]::before {
     content: "";
     position: absolute;
-    inset: var(--selection-border-inset);
+    top: 0;
+    left: var(--border-top-start, 0);
+    width: var(--border-top-width, 100%);
+    height: var(--selection-border-size);
+    background-color: var(--selection-border-color);
     pointer-events: none;
-    z-index: 1;
-    border: var(--selection-border-size) solid var(--selection-border-color);
-    border-style: none;
+    z-index: 0;
+    transform: translateY(-100%);
   }
 
-  /* Single border cases */
-  [data-selection-border-top]:not([data-selection-border-right]):not(
-      [data-selection-border-bottom]
-    ):not([data-selection-border-left])::after {
-    border-top-style: solid;
+  /* Right border segments using ::after - highest priority */
+  [data-selection-border-right]::after {
+    content: "";
+    position: absolute;
+    top: var(--border-right-start, 0);
+    right: 0;
+    width: var(--selection-border-size);
+    height: var(--border-right-height, 100%);
+    background-color: var(--selection-border-color);
+    pointer-events: none;
+    z-index: 0;
+    transform: translateX(100%);
   }
 
-  [data-selection-border-right]:not([data-selection-border-top]):not(
-      [data-selection-border-bottom]
-    ):not([data-selection-border-left])::after {
-    border-right-style: solid;
+  /* Bottom border segments using ::before when no top border */
+  [data-selection-border-bottom]:not([data-selection-border-top])::before {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: var(--border-bottom-start, 0);
+    width: var(--border-bottom-width, 100%);
+    height: var(--selection-border-size);
+    background-color: var(--selection-border-color);
+    pointer-events: none;
+    z-index: 0;
+    transform: translateY(100%);
   }
 
-  [data-selection-border-bottom]:not([data-selection-border-top]):not(
-      [data-selection-border-right]
-    ):not([data-selection-border-left])::after {
-    border-bottom-style: solid;
+  /* Bottom border segments using a custom approach when top border exists */
+  [data-selection-border-bottom][data-selection-border-top] {
+    box-shadow:
+      0 calc(100% + var(--selection-border-size)) 0 0
+        var(--selection-border-color),
+      var(--border-bottom-start, 0) calc(100% + var(--selection-border-size)) 0
+        0 transparent,
+      calc(var(--border-bottom-start, 0) + var(--border-bottom-width, 100%))
+        calc(100% + var(--selection-border-size)) 0 0 transparent;
   }
 
-  [data-selection-border-left]:not([data-selection-border-top]):not(
-      [data-selection-border-right]
-    ):not([data-selection-border-bottom])::after {
-    border-left-style: solid;
+  /* Left border segments using ::after when no right border, handled through transform offset */
+  [data-selection-border-left]:not([data-selection-border-right])::after {
+    content: "";
+    position: absolute;
+    top: var(--border-left-start, 0);
+    left: 0;
+    width: var(--selection-border-size);
+    height: var(--border-left-height, 100%);
+    background-color: var(--selection-border-color);
+    pointer-events: none;
+    z-index: 0;
+    transform: translateX(-100%);
   }
 
-  /* Two border combinations */
-  [data-selection-border-top][data-selection-border-right]:not(
-      [data-selection-border-bottom]
-    ):not([data-selection-border-left])::after {
-    border-top-style: solid;
-    border-right-style: solid;
-  }
-
-  [data-selection-border-top][data-selection-border-bottom]:not(
-      [data-selection-border-right]
-    ):not([data-selection-border-left])::after {
-    border-top-style: solid;
-    border-bottom-style: solid;
-  }
-
-  [data-selection-border-top][data-selection-border-left]:not(
-      [data-selection-border-right]
-    ):not([data-selection-border-bottom])::after {
-    border-top-style: solid;
-    border-left-style: solid;
-  }
-
-  [data-selection-border-right][data-selection-border-bottom]:not(
-      [data-selection-border-top]
-    ):not([data-selection-border-left])::after {
-    border-right-style: solid;
-    border-bottom-style: solid;
-  }
-
-  [data-selection-border-right][data-selection-border-left]:not(
-      [data-selection-border-top]
-    ):not([data-selection-border-bottom])::after {
-    border-right-style: solid;
-    border-left-style: solid;
-  }
-
-  [data-selection-border-bottom][data-selection-border-left]:not(
-      [data-selection-border-top]
-    ):not([data-selection-border-right])::after {
-    border-bottom-style: solid;
-    border-left-style: solid;
-  }
-
-  /* Three border combinations */
-  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]:not(
-      [data-selection-border-left]
-    )::after {
-    border-top-style: solid;
-    border-right-style: solid;
-    border-bottom-style: solid;
-  }
-
-  [data-selection-border-top][data-selection-border-right][data-selection-border-left]:not(
-      [data-selection-border-bottom]
-    )::after {
-    border-top-style: solid;
-    border-right-style: solid;
-    border-left-style: solid;
-  }
-
-  [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]:not(
-      [data-selection-border-right]
-    )::after {
-    border-top-style: solid;
-    border-bottom-style: solid;
-    border-left-style: solid;
-  }
-
-  [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]:not(
-      [data-selection-border-top]
-    )::after {
-    border-right-style: solid;
-    border-bottom-style: solid;
-    border-left-style: solid;
-  }
-
-  /* Four border combination (full border) */
-  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
-    border-style: solid;
+  /* Left border when right border also exists - use box-shadow approach */
+  [data-selection-border-left][data-selection-border-right] {
+    box-shadow:
+      calc(-1 * var(--selection-border-size)) 0 0 0
+        var(--selection-border-color),
+      calc(-1 * var(--selection-border-size)) var(--border-left-start, 0) 0 0
+        transparent,
+      calc(-1 * var(--selection-border-size))
+        calc(var(--border-left-start, 0) + var(--border-left-height, 100%)) 0 0
+        transparent;
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting] [data-selection-border-top]::after,
-  table[data-drag-selecting] [data-selection-border-right]::after,
-  table[data-drag-selecting] [data-selection-border-bottom]::after,
-  table[data-drag-selecting] [data-selection-border-left]::after {
+  table[data-drag-selecting] [data-selection-border-top]::before,
+    table[data-drag-selecting] [data-selection-border-right]::after,
+    table[data-drag-selecting] [data-selection-border-bottom]::before,
+    /* Hide borders during drag selection */
+    table[data-drag-selecting] [data-selection-border-top]::before,
+    table[data-drag-selecting] [data-selection-border-right]::after,
+    table[data-drag-selecting] [data-selection-border-bottom]::before,
+    table[data-drag-selecting] [data-selection-border-left]::after {
     display: none;
+  }
+
+  /* Ensure table cells don't interfere with border positioning */
+  table td,
+  table th {
+    position: relative;
   }
 `;
 
 export const useTableSelectionBorders = (
   tableRef,
-  { color = "#0078d4", size = 1 } = {},
+  { color = "#0078d4", size = 2 } = {},
 ) => {
   const selection = useSelection();
 
@@ -158,21 +126,12 @@ export const useTableSelectionBorders = (
       return null;
     }
 
-    const computedStyle = getComputedStyle(table);
-    const tableBorderWidth = parseFloat(computedStyle.borderWidth) || 0;
-
-    // Calculate inset to position selection border over table borders
-    const inset = -tableBorderWidth;
-
+    // Set the border color CSS variable
     table.style.setProperty("--selection-border-color", color);
-    table.style.setProperty("--selection-border-size", `${size}px`);
-    table.style.setProperty("--selection-border-inset", `${inset}px`);
 
     return () => {
       // Clean up CSS variables
       table.style.removeProperty("--selection-border-color");
-      table.style.removeProperty("--selection-border-width");
-      table.style.removeProperty("--selection-border-inset");
     };
   }, [color, size]);
 
@@ -183,16 +142,26 @@ export const useTableSelectionBorders = (
     }
 
     const updateCellBorders = () => {
-      // Clear all existing selection borders
+      // Clear all existing selection borders and CSS custom properties
       const allCells = table.querySelectorAll("td, th");
       allCells.forEach((cell) => {
         cell.removeAttribute("data-selection-border-top");
         cell.removeAttribute("data-selection-border-right");
         cell.removeAttribute("data-selection-border-bottom");
         cell.removeAttribute("data-selection-border-left");
+
+        // Clear border positioning CSS variables
+        cell.style.removeProperty("--border-top-start");
+        cell.style.removeProperty("--border-top-width");
+        cell.style.removeProperty("--border-right-start");
+        cell.style.removeProperty("--border-right-height");
+        cell.style.removeProperty("--border-bottom-start");
+        cell.style.removeProperty("--border-bottom-width");
+        cell.style.removeProperty("--border-left-start");
+        cell.style.removeProperty("--border-left-height");
       });
 
-      // Don't apply borders during drag selection - CSS will hide them
+      // Don't apply borders during drag selection
       if (table.hasAttribute("data-drag-selecting")) {
         return;
       }
@@ -203,8 +172,8 @@ export const useTableSelectionBorders = (
         return;
       }
 
-      // Apply borders based on selection type and adjacent cells
-      applySelectionBorders(selectedCells);
+      // Create smart borders with proper intersection handling
+      createSmartSelectionBorders(selectedCells, size);
     };
 
     // Initial border update
@@ -215,16 +184,206 @@ export const useTableSelectionBorders = (
 
     return () => {
       unsubscribe();
-      // Clean up borders on unmount
-      const allCells = table.querySelectorAll("td, th");
-      allCells.forEach((cell) => {
-        cell.removeAttribute("data-selection-border-top");
-        cell.removeAttribute("data-selection-border-right");
-        cell.removeAttribute("data-selection-border-bottom");
-        cell.removeAttribute("data-selection-border-left");
-      });
     };
-  }, [tableRef, selection]);
+  }, [tableRef, selection, size]);
+};
+
+// Create smart selection borders with proper intersection handling
+const createSmartSelectionBorders = (selectedCells, borderSize) => {
+  // Create a map of selected cells by position for quick lookup
+  const cellMap = new Map();
+  const cellPositions = [];
+
+  selectedCells.forEach((cell) => {
+    const position = getCellPosition(cell);
+    if (position) {
+      cellMap.set(`${position.row},${position.col}`, cell);
+      cellPositions.push({ cell, position });
+    }
+  });
+
+  // Group cells by selection type
+  const groupedCells = groupCellsBySelectionType(selectedCells);
+
+  // Process each selection type
+  Object.entries(groupedCells).forEach(([selectionType, cells]) => {
+    if (selectionType === "row") {
+      createRowSelectionBorders(cells, cellMap, borderSize);
+    } else if (selectionType === "column") {
+      createColumnSelectionBorders(cells, cellMap, borderSize);
+    } else {
+      // Regular cell selection
+      createCellSelectionBorders(
+        cellPositions.filter((cp) => cells.includes(cp.cell)),
+        cellMap,
+        borderSize,
+      );
+    }
+  });
+};
+
+// Create borders for cell selections with smart intersection handling
+const createCellSelectionBorders = (cellPositions, cellMap, borderSize) => {
+  cellPositions.forEach(({ cell, position }) => {
+    // Check which borders this cell needs
+    const needsTop = !cellMap.has(`${position.row - 1},${position.col}`);
+    const needsBottom = !cellMap.has(`${position.row + 1},${position.col}`);
+    const needsLeft = !cellMap.has(`${position.row},${position.col - 1}`);
+    const needsRight = !cellMap.has(`${position.row},${position.col + 1}`);
+
+    // Calculate smart border positioning to avoid overlaps but maintain visual continuity
+    if (needsTop) {
+      const leftOffset = needsLeft ? borderSize : 0;
+      const rightOffset = needsRight ? borderSize : 0;
+      cell.setAttribute("data-selection-border-top", "");
+      cell.style.setProperty("--border-top-start", `${leftOffset}px`);
+      cell.style.setProperty(
+        "--border-top-width",
+        `calc(100% - ${leftOffset + rightOffset}px)`,
+      );
+    }
+
+    if (needsBottom) {
+      const leftOffset = needsLeft ? borderSize : 0;
+      const rightOffset = needsRight ? borderSize : 0;
+      cell.setAttribute("data-selection-border-bottom", "");
+      cell.style.setProperty("--border-bottom-start", `${leftOffset}px`);
+      cell.style.setProperty(
+        "--border-bottom-width",
+        `calc(100% - ${leftOffset + rightOffset}px)`,
+      );
+    }
+
+    if (needsLeft) {
+      const topOffset = needsTop ? borderSize : 0;
+      const bottomOffset = needsBottom ? borderSize : 0;
+      cell.setAttribute("data-selection-border-left", "");
+      cell.style.setProperty("--border-left-start", `${topOffset}px`);
+      cell.style.setProperty(
+        "--border-left-height",
+        `calc(100% - ${topOffset + bottomOffset}px)`,
+      );
+    }
+
+    if (needsRight) {
+      const topOffset = needsTop ? borderSize : 0;
+      const bottomOffset = needsBottom ? borderSize : 0;
+      cell.setAttribute("data-selection-border-right", "");
+      cell.style.setProperty("--border-right-start", `${topOffset}px`);
+      cell.style.setProperty(
+        "--border-right-height",
+        `calc(100% - ${topOffset + bottomOffset}px)`,
+      );
+    }
+  });
+};
+
+// Create borders for row selections
+const createRowSelectionBorders = (rowCells, cellMap, borderSize) => {
+  rowCells.forEach((rowHeaderCell) => {
+    const position = getCellPosition(rowHeaderCell);
+    if (!position) return;
+
+    // Check if we need borders
+    const needsTop = !hasSelectedRowAt(cellMap, position.row - 1);
+    const needsBottom = !hasSelectedRowAt(cellMap, position.row + 1);
+
+    // Set border attributes for the row header cell
+    if (needsTop) {
+      rowHeaderCell.setAttribute("data-selection-border-top", "");
+      rowHeaderCell.style.setProperty("--border-top-start", "0px");
+      rowHeaderCell.style.setProperty("--border-top-width", "100%");
+    }
+
+    if (needsBottom) {
+      rowHeaderCell.setAttribute("data-selection-border-bottom", "");
+      rowHeaderCell.style.setProperty("--border-bottom-start", "0px");
+      rowHeaderCell.style.setProperty("--border-bottom-width", "100%");
+    }
+
+    // Left and right borders always needed for row selections
+    rowHeaderCell.setAttribute("data-selection-border-left", "");
+    rowHeaderCell.style.setProperty(
+      "--border-left-start",
+      needsTop ? `-${borderSize}px` : "0px",
+    );
+    rowHeaderCell.style.setProperty(
+      "--border-left-height",
+      needsTop && needsBottom
+        ? `calc(100% + ${borderSize * 2}px)`
+        : needsTop || needsBottom
+          ? `calc(100% + ${borderSize}px)`
+          : "100%",
+    );
+
+    rowHeaderCell.setAttribute("data-selection-border-right", "");
+    rowHeaderCell.style.setProperty(
+      "--border-right-start",
+      needsTop ? `-${borderSize}px` : "0px",
+    );
+    rowHeaderCell.style.setProperty(
+      "--border-right-height",
+      needsTop && needsBottom
+        ? `calc(100% + ${borderSize * 2}px)`
+        : needsTop || needsBottom
+          ? `calc(100% + ${borderSize}px)`
+          : "100%",
+    );
+  });
+};
+
+// Create borders for column selections
+const createColumnSelectionBorders = (columnCells, cellMap, borderSize) => {
+  columnCells.forEach((columnHeaderCell) => {
+    const position = getCellPosition(columnHeaderCell);
+    if (!position) return;
+
+    // Check if we need borders
+    const needsLeft = !hasSelectedColumnAt(cellMap, position.col - 1);
+    const needsRight = !hasSelectedColumnAt(cellMap, position.col + 1);
+
+    // Set border attributes for the column header cell
+    if (needsLeft) {
+      columnHeaderCell.setAttribute("data-selection-border-left", "");
+      columnHeaderCell.style.setProperty("--border-left-start", "0px");
+      columnHeaderCell.style.setProperty("--border-left-height", "100%");
+    }
+
+    if (needsRight) {
+      columnHeaderCell.setAttribute("data-selection-border-right", "");
+      columnHeaderCell.style.setProperty("--border-right-start", "0px");
+      columnHeaderCell.style.setProperty("--border-right-height", "100%");
+    }
+
+    // Top and bottom borders always needed for column selections
+    columnHeaderCell.setAttribute("data-selection-border-top", "");
+    columnHeaderCell.style.setProperty(
+      "--border-top-start",
+      needsLeft ? `-${borderSize}px` : "0px",
+    );
+    columnHeaderCell.style.setProperty(
+      "--border-top-width",
+      needsLeft && needsRight
+        ? `calc(100% + ${borderSize * 2}px)`
+        : needsLeft || needsRight
+          ? `calc(100% + ${borderSize}px)`
+          : "100%",
+    );
+
+    columnHeaderCell.setAttribute("data-selection-border-bottom", "");
+    columnHeaderCell.style.setProperty(
+      "--border-bottom-start",
+      needsLeft ? `-${borderSize}px` : "0px",
+    );
+    columnHeaderCell.style.setProperty(
+      "--border-bottom-width",
+      needsLeft && needsRight
+        ? `calc(100% + ${borderSize * 2}px)`
+        : needsLeft || needsRight
+          ? `calc(100% + ${borderSize}px)`
+          : "100%",
+    );
+  });
 };
 
 // Get all selected cells based on the selection value
@@ -256,36 +415,6 @@ const getCellValue = (cell) => {
   return cell;
 };
 
-// Apply borders to selected cells based on their position and selection type
-const applySelectionBorders = (selectedCells) => {
-  if (selectedCells.length === 0) return;
-
-  // Create a map of selected cells by position for quick lookup
-  const cellMap = new Map();
-
-  selectedCells.forEach((cell) => {
-    const position = getCellPosition(cell);
-    if (position) {
-      cellMap.set(`${position.row},${position.col}`, cell);
-    }
-  });
-
-  // Group cells by selection type
-  const groupedCells = groupCellsBySelectionType(selectedCells);
-
-  // Apply borders for each selection type
-  Object.entries(groupedCells).forEach(([selectionType, cells]) => {
-    if (selectionType === "row") {
-      applyRowSelectionBorders(cells, cellMap);
-    } else if (selectionType === "column") {
-      applyColumnSelectionBorders(cells, cellMap);
-    } else {
-      // Regular cell selection
-      applyCellSelectionBorders(cells, cellMap);
-    }
-  });
-};
-
 // Group cells by their data-selection-name attribute
 const groupCellsBySelectionType = (cells) => {
   const groups = {};
@@ -313,112 +442,6 @@ const getCellPosition = (cell) => {
   const colIndex = Array.from(row.cells).indexOf(cell);
 
   return { row: rowIndex, col: colIndex };
-};
-
-// Apply borders for row selections
-const applyRowSelectionBorders = (rowCells, cellMap) => {
-  // For row selections, we apply borders to all data cells in the selected rows
-  rowCells.forEach((rowHeaderCell) => {
-    const position = getCellPosition(rowHeaderCell);
-    if (!position) return;
-
-    const table = rowHeaderCell.closest("table");
-    const row = table.rows[position.row];
-
-    // Apply borders to all data cells in this row (excluding first column)
-    Array.from(row.cells).forEach((cell, colIndex) => {
-      if (colIndex === 0) return; // Skip row header
-
-      const cellPos = { row: position.row, col: colIndex };
-
-      // Top border: if no selected row above
-      if (!hasSelectedRowAt(cellMap, cellPos.row - 1)) {
-        cell.setAttribute("data-selection-border-top", "");
-      }
-
-      // Bottom border: if no selected row below
-      if (!hasSelectedRowAt(cellMap, cellPos.row + 1)) {
-        cell.setAttribute("data-selection-border-bottom", "");
-      }
-
-      // Left border: leftmost data cell
-      if (colIndex === 1) {
-        cell.setAttribute("data-selection-border-left", "");
-      }
-
-      // Right border: rightmost cell
-      if (colIndex === row.cells.length - 1) {
-        cell.setAttribute("data-selection-border-right", "");
-      }
-    });
-  });
-};
-
-// Apply borders for column selections
-const applyColumnSelectionBorders = (columnCells, cellMap) => {
-  // For column selections, we apply borders to all data cells in the selected columns
-  columnCells.forEach((columnHeaderCell) => {
-    const position = getCellPosition(columnHeaderCell);
-    if (!position) return;
-
-    const table = columnHeaderCell.closest("table");
-
-    // Apply borders to all data cells in this column (excluding header row)
-    Array.from(table.rows).forEach((row, rowIndex) => {
-      if (rowIndex === 0) return; // Skip header row
-
-      const cell = row.cells[position.col];
-      if (!cell) return;
-
-      // Top border: first data row
-      if (rowIndex === 1) {
-        cell.setAttribute("data-selection-border-top", "");
-      }
-
-      // Bottom border: last row
-      if (rowIndex === table.rows.length - 1) {
-        cell.setAttribute("data-selection-border-bottom", "");
-      }
-
-      // Left border: if no selected column to the left
-      if (!hasSelectedColumnAt(cellMap, position.col - 1)) {
-        cell.setAttribute("data-selection-border-left", "");
-      }
-
-      // Right border: if no selected column to the right
-      if (!hasSelectedColumnAt(cellMap, position.col + 1)) {
-        cell.setAttribute("data-selection-border-right", "");
-      }
-    });
-  });
-};
-
-// Apply borders for regular cell selections
-const applyCellSelectionBorders = (cells, cellMap) => {
-  cells.forEach((cell) => {
-    const position = getCellPosition(cell);
-    if (!position) return;
-
-    // Top border: if no selected cell above
-    if (!cellMap.has(`${position.row - 1},${position.col}`)) {
-      cell.setAttribute("data-selection-border-top", "");
-    }
-
-    // Bottom border: if no selected cell below
-    if (!cellMap.has(`${position.row + 1},${position.col}`)) {
-      cell.setAttribute("data-selection-border-bottom", "");
-    }
-
-    // Left border: if no selected cell to the left
-    if (!cellMap.has(`${position.row},${position.col - 1}`)) {
-      cell.setAttribute("data-selection-border-left", "");
-    }
-
-    // Right border: if no selected cell to the right
-    if (!cellMap.has(`${position.row},${position.col + 1}`)) {
-      cell.setAttribute("data-selection-border-right", "");
-    }
-  });
 };
 
 // Helper to check if there's a selected row at the given row index
