@@ -493,8 +493,38 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
     );
     const topLeft = isPositionSelected(position.row - 1, position.col - 1);
 
-    // Top-left corner: draw if no top AND no left neighbors
-    if (!top && !left) {
+    // Junction ownership rules to prevent multi-cell overlaps:
+    // - Each cell only draws corners where it has the "ownership" based on position priority
+    // - Priority: top-most cell owns top corners, left-most cell owns left corners
+
+    // Helper function to check if this cell should own a corner based on position priority
+    const shouldOwnCorner = (cornerRow, cornerCol) => {
+      // Find all selected cells that could potentially draw this corner
+      const competingCells = cellPositions.filter(
+        ({ position: pos, cell: c }) => {
+          const rSpan = parseInt(c.getAttribute("rowspan") || "1", 10);
+          const cSpan = parseInt(c.getAttribute("colspan") || "1", 10);
+
+          // Check if this cell's bounds include the corner position
+          return (
+            (pos.row === cornerRow || pos.row + rSpan - 1 === cornerRow) &&
+            (pos.col === cornerCol || pos.col + cSpan - 1 === cornerCol)
+          );
+        },
+      );
+
+      // This cell owns the corner if it has the highest priority (top-most, then left-most)
+      const currentCell = { row: position.row, col: position.col };
+      return competingCells.every(({ position: pos }) => {
+        return (
+          pos.row > currentCell.row ||
+          (pos.row === currentCell.row && pos.col >= currentCell.col)
+        );
+      });
+    };
+
+    // Top-left corner: draw if no top AND no left neighbors AND we own this corner
+    if (!top && !left && shouldOwnCorner(position.row, position.col)) {
       segments.push("top-left-corner");
     }
 
@@ -503,8 +533,12 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
       segments.push("top-edge");
     }
 
-    // Top-right corner: draw if no top AND no right neighbors
-    if (!top && !right) {
+    // Top-right corner: draw if no top AND no right neighbors AND we own this corner
+    if (
+      !top &&
+      !right &&
+      shouldOwnCorner(position.row, position.col + colSpan)
+    ) {
       segments.push("top-right-corner");
     }
 
@@ -513,8 +547,12 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
       segments.push("right-edge");
     }
 
-    // Bottom-right corner: draw if no bottom AND no right neighbors
-    if (!bottom && !right) {
+    // Bottom-right corner: draw if no bottom AND no right neighbors AND we own this corner
+    if (
+      !bottom &&
+      !right &&
+      shouldOwnCorner(position.row + rowSpan, position.col + colSpan)
+    ) {
       segments.push("bottom-right-corner");
     }
 
@@ -523,8 +561,12 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
       segments.push("bottom-edge");
     }
 
-    // Bottom-left corner: draw if no bottom AND no left neighbors
-    if (!bottom && !left) {
+    // Bottom-left corner: draw if no bottom AND no left neighbors AND we own this corner
+    if (
+      !bottom &&
+      !left &&
+      shouldOwnCorner(position.row + rowSpan, position.col)
+    ) {
       segments.push("bottom-left-corner");
     }
 
