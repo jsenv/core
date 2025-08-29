@@ -506,20 +506,56 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
           const cSpan = parseInt(c.getAttribute("colspan") || "1", 10);
 
           // Check if this cell's bounds include the corner position
-          return (
-            (pos.row === cornerRow || pos.row + rSpan - 1 === cornerRow) &&
-            (pos.col === cornerCol || pos.col + cSpan - 1 === cornerCol)
-          );
+          const cellTouchesCorner =
+            (pos.row === cornerRow || pos.row + rSpan === cornerRow) &&
+            (pos.col === cornerCol || pos.col + cSpan === cornerCol);
+
+          return cellTouchesCorner;
         },
       );
 
-      // This cell owns the corner if it has the highest priority (top-most, then left-most)
+      // If no competition, this cell can draw the corner
+      if (competingCells.length <= 1) {
+        return true;
+      }
+
+      // For diagonal connections (cells meeting only at corners), use strict priority
+      // to ensure only one cell draws the shared corner point
       const currentCell = { row: position.row, col: position.col };
-      return competingCells.every(({ position: pos }) => {
+
+      // Check if this is a pure diagonal connection (no direct adjacency)
+      const isDiagonalConnection = competingCells.some(({ position: pos }) => {
         return (
-          pos.row > currentCell.row ||
-          (pos.row === currentCell.row && pos.col >= currentCell.col)
+          pos.row !== currentCell.row &&
+          pos.col !== currentCell.col &&
+          Math.abs(pos.row - currentCell.row) === 1 &&
+          Math.abs(pos.col - currentCell.col) === 1
         );
+      });
+
+      if (isDiagonalConnection) {
+        // For diagonal connections, use a more aggressive priority system
+        // to prevent any overlap: top-left cell always wins
+        return competingCells.every(({ position: pos }) => {
+          return (
+            currentCell.row < pos.row ||
+            (currentCell.row === pos.row && currentCell.col < pos.col)
+          );
+        });
+      }
+
+      // For adjacent connections, use standard priority
+      return competingCells.every(({ position: pos }) => {
+        // Current cell has higher priority if it's above
+        if (currentCell.row < pos.row) return true;
+        if (currentCell.row > pos.row) return false;
+
+        // Same row - left-most wins
+        if (currentCell.col < pos.col) return true;
+        if (currentCell.col > pos.col) return false;
+
+        // Same position (shouldn't happen, but handle it)
+        return true;
       });
     };
 
