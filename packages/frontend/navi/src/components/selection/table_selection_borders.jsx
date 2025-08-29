@@ -134,6 +134,7 @@ const createSelectionBorderSVG = (
   segments.forEach((segment) => {
     switch (segment) {
       case "top-left-corner":
+        // Draw a small square corner
         pathData += `M 0,0 L 1,0 L 1,1 L 0,1 Z `;
         break;
       case "top-edge": {
@@ -141,10 +142,11 @@ const createSelectionBorderSVG = (
         // Gap of 1 for topLeft (horizontal direction) and 1 for topRight (horizontal direction)
         const topStartX = hasTopLeftCorner ? 1 : topLeft ? 1 : 0;
         const topEndX = hasTopRightCorner ? 99 : topRight ? 99 : 100;
-        pathData += `M ${topStartX},0 L ${topEndX},0 L ${topEndX},1 L ${topStartX},1 Z `;
+        pathData += `M ${topStartX},0.5 L ${topEndX},0.5 `;
         break;
       }
       case "top-right-corner":
+        // Draw a small square corner
         pathData += `M 99,0 L 100,0 L 100,1 L 99,1 Z `;
         break;
       case "right-edge": {
@@ -153,10 +155,11 @@ const createSelectionBorderSVG = (
         // 3 = table cell border (2px) + selection border (1px)
         const rightStartY = hasTopRightCorner ? 1 : topRight ? 3 : 0;
         const rightEndY = hasBottomRightCorner ? 99 : bottomRight ? 97 : 100;
-        pathData += `M 99,${rightStartY} L 100,${rightStartY} L 100,${rightEndY} L 99,${rightEndY} Z `;
+        pathData += `M 99.5,${rightStartY} L 99.5,${rightEndY} `;
         break;
       }
       case "bottom-right-corner":
+        // Draw a small square corner
         pathData += `M 99,99 L 100,99 L 100,100 L 99,100 Z `;
         break;
       case "bottom-edge": {
@@ -164,10 +167,11 @@ const createSelectionBorderSVG = (
         // Gap of 1 for bottomLeft (horizontal direction) and 1 for bottomRight (horizontal direction)
         const bottomStartX = hasBottomLeftCorner ? 1 : bottomLeft ? 1 : 0;
         const bottomEndX = hasBottomRightCorner ? 99 : bottomRight ? 99 : 100;
-        pathData += `M ${bottomStartX},99 L ${bottomEndX},99 L ${bottomEndX},100 L ${bottomStartX},100 Z `;
+        pathData += `M ${bottomStartX},99.5 L ${bottomEndX},99.5 `;
         break;
       }
       case "bottom-left-corner":
+        // Draw a small square corner
         pathData += `M 0,99 L 1,99 L 1,100 L 0,100 Z `;
         break;
       case "left-edge": {
@@ -176,7 +180,7 @@ const createSelectionBorderSVG = (
         // 3 = table cell border (2px) + selection border (1px)
         const leftStartY = hasTopLeftCorner ? 1 : topLeft ? 3 : 0;
         const leftEndY = hasBottomLeftCorner ? 99 : bottomLeft ? 97 : 100;
-        pathData += `M 0,${leftStartY} L 1,${leftStartY} L 1,${leftEndY} L 0,${leftEndY} Z `;
+        pathData += `M 0.5,${leftStartY} L 0.5,${leftEndY} `;
         break;
       }
       default:
@@ -188,7 +192,7 @@ const createSelectionBorderSVG = (
   if (!pathData) return null;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none" class="selection-border-svg">
-    <path d="${pathData}" fill="${borderColor}" />
+    <path d="${pathData}" stroke="${borderColor}" stroke-width="1" fill="none" vector-effect="non-scaling-stroke" />
   </svg>`;
 
   return svg;
