@@ -452,10 +452,10 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
     }
   }
 
-  // Case 4: Three connections - draw single border
+  // Case 4: Three connections - draw single border (no overlaps possible)
   if (connectionCount === 3) {
     if (!top) {
-      // Top border only
+      // Top border only (owns both top corners)
       const topY = 0;
       const topStartX = left ? 2 : topLeft ? 1 : 0;
       const topEndX = right
@@ -468,7 +468,7 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
     }
 
     if (!bottom) {
-      // Bottom border only
+      // Bottom border only (owns both bottom corners)
       const bottomY = canvasHeight - 1;
       const bottomStartX = left ? 2 : bottomLeft ? 1 : 0;
       const bottomEndX = right
@@ -481,7 +481,7 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
     }
 
     if (!left) {
-      // Left border only
+      // Left border only (owns both left corners)
       const leftX = 0;
       const leftStartY = top ? 2 : topLeft ? 2 : 0;
       const leftEndY = bottom
@@ -494,7 +494,7 @@ function drawBorder(ctx, canvasWidth, canvasHeight, neighborInfo) {
     }
 
     if (!right) {
-      // Right border only
+      // Right border only (owns both right corners)
       const rightX = canvasWidth - 1;
       const rightStartY = top ? 2 : topRight ? 2 : 0;
       const rightEndY = bottom
