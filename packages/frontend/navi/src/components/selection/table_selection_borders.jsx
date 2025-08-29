@@ -167,7 +167,6 @@ const createSelectionBorderCanvas = (
 
   for (const segment of segments) {
     ctx.beginPath();
-
     if (segment === "top-edge") {
       // Draw top edge as a filled rectangle
       // Top edge owns both corners, so it extends full width
@@ -187,7 +186,6 @@ const createSelectionBorderCanvas = (
       ctx.fillRect(startX, yPos, width, 1);
       continue;
     }
-
     if (segment === "right-edge") {
       // Draw right edge as a filled rectangle
       // Right edge avoids corners (owned by top/bottom edges)
@@ -206,7 +204,6 @@ const createSelectionBorderCanvas = (
       ctx.fillRect(xPos, startY, 1, height);
       continue;
     }
-
     if (segment === "bottom-edge") {
       // Draw bottom edge as a filled rectangle
       // Bottom edge owns both corners, so it extends full width
@@ -235,7 +232,6 @@ const createSelectionBorderCanvas = (
       ctx.fillRect(startX, yPos, width, 1);
       continue;
     }
-
     if (segment === "left-edge") {
       // Draw left edge as a filled rectangle
       // Left edge avoids corners (owned by top/bottom edges)
