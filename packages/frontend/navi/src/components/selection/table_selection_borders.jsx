@@ -134,55 +134,43 @@ const createSelectionBorderSVG = (
   segments.forEach((segment) => {
     switch (segment) {
       case "top-left-corner":
-        // Draw corner as separate horizontal and vertical segments to avoid stretching
-        pathData += `M 0,0.5 L 0.5,0.5 M 0.5,0.5 L 0.5,0 `;
+        // No separate corner drawing - corners are formed by line intersections
         break;
       case "top-edge": {
-        // Adjust top edge to connect seamlessly with corners
-        // Start after left corner if present, otherwise from edge
-        const topStartX = hasTopLeftCorner ? 0.5 : topLeft ? 1 : 0;
-        // End before right corner if present, otherwise to edge
-        const topEndX = hasTopRightCorner ? 99.5 : topRight ? 99 : 100;
-        pathData += `M ${topStartX},0.5 L ${topEndX},0.5 `;
+        // Extend to corners if they're present, otherwise respect diagonal gaps
+        const topStartX = hasTopLeftCorner ? 0 : topLeft ? 1 : 0;
+        const topEndX = hasTopRightCorner ? 100 : topRight ? 99 : 100;
+        pathData += `M ${topStartX},0 L ${topEndX},0 `;
         break;
       }
       case "top-right-corner":
-        // Draw corner as separate horizontal and vertical segments to avoid stretching
-        pathData += `M 99.5,0 L 99.5,0.5 M 99.5,0.5 L 100,0.5 `;
+        // No separate corner drawing - corners are formed by line intersections
         break;
       case "right-edge": {
-        // Adjust right edge to connect seamlessly with corners
-        // Start after top corner if present, otherwise account for diagonal gap
-        const rightStartY = hasTopRightCorner ? 0.5 : topRight ? 3 : 0;
-        // End before bottom corner if present, otherwise account for diagonal gap
-        const rightEndY = hasBottomRightCorner ? 99.5 : bottomRight ? 97 : 100;
-        pathData += `M 99.5,${rightStartY} L 99.5,${rightEndY} `;
+        // Extend to corners if they're present, otherwise respect diagonal gaps
+        const rightStartY = hasTopRightCorner ? 0 : topRight ? 3 : 0;
+        const rightEndY = hasBottomRightCorner ? 100 : bottomRight ? 97 : 100;
+        pathData += `M 100,${rightStartY} L 100,${rightEndY} `;
         break;
       }
       case "bottom-right-corner":
-        // Draw corner as separate horizontal and vertical segments to avoid stretching
-        pathData += `M 100,99.5 L 99.5,99.5 M 99.5,99.5 L 99.5,100 `;
+        // No separate corner drawing - corners are formed by line intersections
         break;
       case "bottom-edge": {
-        // Adjust bottom edge to connect seamlessly with corners
-        // Start after left corner if present, otherwise account for diagonal gap
-        const bottomStartX = hasBottomLeftCorner ? 0.5 : bottomLeft ? 1 : 0;
-        // End before right corner if present, otherwise account for diagonal gap
-        const bottomEndX = hasBottomRightCorner ? 99.5 : bottomRight ? 99 : 100;
-        pathData += `M ${bottomStartX},99.5 L ${bottomEndX},99.5 `;
+        // Extend to corners if they're present, otherwise respect diagonal gaps
+        const bottomStartX = hasBottomLeftCorner ? 0 : bottomLeft ? 1 : 0;
+        const bottomEndX = hasBottomRightCorner ? 100 : bottomRight ? 99 : 100;
+        pathData += `M ${bottomStartX},100 L ${bottomEndX},100 `;
         break;
       }
       case "bottom-left-corner":
-        // Draw corner as separate horizontal and vertical segments to avoid stretching
-        pathData += `M 0.5,100 L 0.5,99.5 M 0.5,99.5 L 0,99.5 `;
+        // No separate corner drawing - corners are formed by line intersections
         break;
       case "left-edge": {
-        // Adjust left edge to connect seamlessly with corners
-        // Start after top corner if present, otherwise account for diagonal gap
-        const leftStartY = hasTopLeftCorner ? 0.5 : topLeft ? 3 : 0;
-        // End before bottom corner if present, otherwise account for diagonal gap
-        const leftEndY = hasBottomLeftCorner ? 99.5 : bottomLeft ? 97 : 100;
-        pathData += `M 0.5,${leftStartY} L 0.5,${leftEndY} `;
+        // Extend to corners if they're present, otherwise respect diagonal gaps
+        const leftStartY = hasTopLeftCorner ? 0 : topLeft ? 3 : 0;
+        const leftEndY = hasBottomLeftCorner ? 100 : bottomLeft ? 97 : 100;
+        pathData += `M 0,${leftStartY} L 0,${leftEndY} `;
         break;
       }
       default:
@@ -194,7 +182,7 @@ const createSelectionBorderSVG = (
   if (!pathData) return null;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none" class="selection-border-svg">
-    <path d="${pathData}" stroke="${borderColor}" stroke-width="1" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="square" />
+    <path d="${pathData}" stroke="${borderColor}" stroke-width="1" fill="none" vector-effect="non-scaling-stroke" stroke-linecap="square" />
   </svg>`;
 
   return svg;
