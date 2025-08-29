@@ -134,8 +134,8 @@ const createSelectionBorderSVG = (
   segments.forEach((segment) => {
     switch (segment) {
       case "top-left-corner":
-        // Draw corner as L-shaped path
-        pathData += `M 0,0.5 L 0.5,0.5 L 0.5,0 `;
+        // Draw corner as separate horizontal and vertical segments to avoid stretching
+        pathData += `M 0,0.5 L 0.5,0.5 M 0.5,0.5 L 0.5,0 `;
         break;
       case "top-edge": {
         // Adjust top edge to connect seamlessly with corners
@@ -147,8 +147,8 @@ const createSelectionBorderSVG = (
         break;
       }
       case "top-right-corner":
-        // Draw corner as L-shaped path
-        pathData += `M 99.5,0 L 99.5,0.5 L 100,0.5 `;
+        // Draw corner as separate horizontal and vertical segments to avoid stretching
+        pathData += `M 99.5,0 L 99.5,0.5 M 99.5,0.5 L 100,0.5 `;
         break;
       case "right-edge": {
         // Adjust right edge to connect seamlessly with corners
@@ -160,8 +160,8 @@ const createSelectionBorderSVG = (
         break;
       }
       case "bottom-right-corner":
-        // Draw corner as L-shaped path
-        pathData += `M 100,99.5 L 99.5,99.5 L 99.5,100 `;
+        // Draw corner as separate horizontal and vertical segments to avoid stretching
+        pathData += `M 100,99.5 L 99.5,99.5 M 99.5,99.5 L 99.5,100 `;
         break;
       case "bottom-edge": {
         // Adjust bottom edge to connect seamlessly with corners
@@ -173,8 +173,8 @@ const createSelectionBorderSVG = (
         break;
       }
       case "bottom-left-corner":
-        // Draw corner as L-shaped path
-        pathData += `M 0.5,100 L 0.5,99.5 L 0,99.5 `;
+        // Draw corner as separate horizontal and vertical segments to avoid stretching
+        pathData += `M 0.5,100 L 0.5,99.5 M 0.5,99.5 L 0,99.5 `;
         break;
       case "left-edge": {
         // Adjust left edge to connect seamlessly with corners
