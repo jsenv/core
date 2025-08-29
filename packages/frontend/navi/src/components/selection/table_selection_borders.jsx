@@ -168,7 +168,7 @@ const createSelectionBorderCanvas = (
         break;
       case "top-edge": {
         // Draw top edge as a filled rectangle
-        const startX = hasTopLeftCorner ? 0 : topLeft ? 1.5 : 0;
+        const startX = hasTopLeftCorner ? 0 : topLeft ? 1 : 0;
         const endX = hasTopRightCorner
           ? canvasWidth
           : topRight
@@ -183,11 +183,11 @@ const createSelectionBorderCanvas = (
         break;
       case "right-edge": {
         // Draw right edge as a filled rectangle
-        const startY = hasTopRightCorner ? 0 : topRight ? 3.5 : 0;
+        const startY = hasTopRightCorner ? 0 : topRight ? 1 : 0;
         const endY = hasBottomRightCorner
           ? canvasHeight
           : bottomRight
-            ? canvasHeight - 3.5
+            ? canvasHeight - 1
             : canvasHeight;
         const height = endY - startY;
         ctx.fillRect(canvasWidth - 1, startY, 1, height);
@@ -198,7 +198,7 @@ const createSelectionBorderCanvas = (
         break;
       case "bottom-edge": {
         // Draw bottom edge as a filled rectangle
-        const startX = hasBottomLeftCorner ? 0 : bottomLeft ? 1.5 : 0;
+        const startX = hasBottomLeftCorner ? 0 : bottomLeft ? 1 : 0;
         const endX = hasBottomRightCorner
           ? canvasWidth
           : bottomRight
@@ -213,11 +213,11 @@ const createSelectionBorderCanvas = (
         break;
       case "left-edge": {
         // Draw left edge as a filled rectangle
-        const startY = hasTopLeftCorner ? 0 : topLeft ? 3.5 : 0;
+        const startY = hasTopLeftCorner ? 0 : topLeft ? 1 : 0;
         const endY = hasBottomLeftCorner
           ? canvasHeight
           : bottomLeft
-            ? canvasHeight - 3.5
+            ? canvasHeight - 1
             : canvasHeight;
         const height = endY - startY;
         ctx.fillRect(0, startY, 1, height);
