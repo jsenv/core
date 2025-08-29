@@ -396,10 +396,9 @@ function drawBorder(
       const topY = 0;
       const topStartX = TABLE_BORDER_WIDTH; // Start right of the connection point
       let topEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
-
-      // Adjust for diagonal neighbor
-      if (hasTopRightDiagonal) topEndX = Math.min(topEndX, canvasWidth - 1);
-
+      if (hasTopRightDiagonal) {
+        topEndX = Math.min(topEndX, canvasWidth - 1);
+      }
       if (topEndX > topStartX) {
         ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
       }
@@ -408,11 +407,9 @@ function drawBorder(
       const bottomY = canvasHeight - 1;
       const bottomStartX = TABLE_BORDER_WIDTH; // Start right of the connection point
       let bottomEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's responsibility
-
-      // Adjust for diagonal neighbor
-      if (hasBottomRightDiagonal)
+      if (hasBottomRightDiagonal) {
         bottomEndX = Math.min(bottomEndX, canvasWidth - 1);
-
+      }
       if (bottomEndX > bottomStartX) {
         ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
       }
@@ -421,12 +418,12 @@ function drawBorder(
       const rightX = canvasWidth - 1;
       let rightStartY = 1; // Always start below top corner (owned by top border)
       let rightEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
-
-      // Adjust for diagonal neighbors
-      if (hasTopRightDiagonal) rightStartY = Math.max(rightStartY, 1);
-      if (hasBottomRightDiagonal)
+      if (hasTopRightDiagonal) {
+        rightStartY = Math.max(rightStartY, 1);
+      }
+      if (hasBottomRightDiagonal) {
         rightEndY = Math.min(rightEndY, canvasHeight - 1);
-
+      }
       if (rightEndY > rightStartY) {
         ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
       }
@@ -444,10 +441,9 @@ function drawBorder(
       const topY = 0;
       let topStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
       const topEndX = canvasWidth; // Always extend to right edge since we're connected on the right
-
-      // Adjust for diagonal neighbor
-      if (hasTopLeftDiagonal) topStartX = Math.max(topStartX, 1);
-
+      if (hasTopLeftDiagonal) {
+        topStartX = Math.max(topStartX, 1);
+      }
       if (topEndX > topStartX) {
         ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
       }
@@ -456,10 +452,9 @@ function drawBorder(
       const bottomY = canvasHeight - 1;
       let bottomStartX = left ? 1 : 0; // Avoid left neighbor's responsibility
       const bottomEndX = canvasWidth; // Always extend to right edge since we're connected on the right
-
-      // Adjust for diagonal neighbor
-      if (hasBottomLeftDiagonal) bottomStartX = Math.max(bottomStartX, 1);
-
+      if (hasBottomLeftDiagonal) {
+        bottomStartX = Math.max(bottomStartX, 1);
+      }
       if (bottomEndX > bottomStartX) {
         ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
       }
@@ -468,12 +463,12 @@ function drawBorder(
       const leftX = 0;
       let leftStartY = 1; // Always start below top corner (owned by top border)
       let leftEndY = canvasHeight - 1; // Always stop above bottom corner (owned by bottom border)
-
-      // Adjust for diagonal neighbors
-      if (hasTopLeftDiagonal) leftStartY = Math.max(leftStartY, 1);
-      if (hasBottomLeftDiagonal)
+      if (hasTopLeftDiagonal) {
+        leftStartY = Math.max(leftStartY, 1);
+      }
+      if (hasBottomLeftDiagonal) {
         leftEndY = Math.min(leftEndY, canvasHeight - 1);
-
+      }
       if (leftEndY > leftStartY) {
         ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
       }
@@ -513,7 +508,6 @@ function drawBorder(
       const topY = 0;
       let topStartX = TABLE_BORDER_WIDTH; // Avoid left connection area by default
       let topEndX = canvasWidth - TABLE_BORDER_WIDTH; // Avoid right connection area by default
-
       // Extend top border into junction areas if we're responsible
       if (shouldDrawJunction("left-junction")) {
         topStartX = 0; // Draw into left junction
@@ -521,14 +515,12 @@ function drawBorder(
       if (shouldDrawJunction("right-junction")) {
         topEndX = canvasWidth; // Draw into right junction
       }
-
       ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
 
       // Bottom border (coordinate with neighbors for seamless connection)
       const bottomY = canvasHeight - 1;
       let bottomStartX = TABLE_BORDER_WIDTH; // Avoid left connection area by default
       let bottomEndX = canvasWidth - TABLE_BORDER_WIDTH; // Avoid right connection area by default
-
       // Extend bottom border into junction areas if we're responsible
       if (shouldDrawJunction("left-junction")) {
         bottomStartX = 0; // Draw into left junction
@@ -536,7 +528,6 @@ function drawBorder(
       if (shouldDrawJunction("right-junction")) {
         bottomEndX = canvasWidth; // Draw into right junction
       }
-
       ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
 
       return "top_bottom";
