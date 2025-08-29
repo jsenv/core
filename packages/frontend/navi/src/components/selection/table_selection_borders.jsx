@@ -488,35 +488,23 @@ function drawBorder(
   // Case 3: Two connections - coordinate junction responsibility
   if (connectionCount === 2) {
     if (top && bottom) {
-      // Vertical tunnel - coordinate junction responsibility for seamless borders
-      // Right border (only this cell draws the right edge)
+      // Vertical tunnel - simple rule: top cell draws full height, bottom cell draws short
+      const hasNeighborBelow = allCellPositions.some(
+        ({ position }) =>
+          position.row === cellPosition.row + 1 &&
+          position.col === cellPosition.col,
+      );
+
+      // Right border
       const rightX = canvasWidth - 1;
-      let rightStartY = TABLE_BORDER_WIDTH; // Avoid top connection area by default
-      let rightEndY = canvasHeight - TABLE_BORDER_WIDTH; // Avoid bottom connection area by default
-
-      // Extend right border into junction areas if we're responsible
-      if (shouldDrawJunction("top-junction")) {
-        rightStartY = 0; // Draw into top junction
-      }
-      if (shouldDrawJunction("bottom-junction")) {
-        rightEndY = canvasHeight; // Draw into bottom junction
-      }
-
+      const rightStartY = 1; // Always start below top connection
+      const rightEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends down, bottom cell stops short
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
-      // Left border (coordinate with neighbors for seamless connection)
+      // Left border
       const leftX = 0;
-      let leftStartY = 2; // Avoid top connection area by default
-      let leftEndY = canvasHeight - 2; // Avoid bottom connection area by default
-
-      // Extend left border into junction areas if we're responsible
-      if (shouldDrawJunction("top-junction")) {
-        leftStartY = 0; // Draw into top junction
-      }
-      if (shouldDrawJunction("bottom-junction")) {
-        leftEndY = canvasHeight; // Draw into bottom junction
-      }
-
+      const leftStartY = 1; // Always start below top connection
+      const leftEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends down, bottom cell stops short
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
       return "vertical-tunnel";
