@@ -2,11 +2,6 @@ import { useLayoutEffect } from "preact/hooks";
 import { useSelection } from "./selection.jsx";
 
 import.meta.css = /* css */ `
-  /* Set default selection border color */
-  :root {
-    --selection-border-color: #0078d4;
-  }
-
   /* Direct SVG injection styling */
   [data-selection-borders] > .selection-border-svg {
     position: absolute;
@@ -40,21 +35,6 @@ export const useTableSelectionBorders = (
       return null;
     }
 
-    // Set the border color CSS variable
-    table.style.setProperty("--selection-border-color", color);
-
-    return () => {
-      // Clean up CSS variables
-      table.style.removeProperty("--selection-border-color");
-    };
-  }, [color]);
-
-  useLayoutEffect(() => {
-    const table = tableRef.current;
-    if (!table) {
-      return null;
-    }
-
     const updateCellBorders = () => {
       // Clear all existing selection borders and injected SVGs
       const allCells = table.querySelectorAll("td, th");
@@ -80,7 +60,7 @@ export const useTableSelectionBorders = (
       }
 
       // Create smart borders with proper intersection handling
-      createSmartSelectionBorders(selectedCells);
+      createSmartSelectionBorders(selectedCells, color);
     };
 
     // Initial border update
@@ -92,11 +72,11 @@ export const useTableSelectionBorders = (
     return () => {
       unsubscribe();
     };
-  }, [tableRef, selection]);
+  }, [tableRef, selection, color]);
 };
 
 // Create smart selection borders with proper intersection handling
-const createSmartSelectionBorders = (selectedCells) => {
+const createSmartSelectionBorders = (selectedCells, color) => {
   // Create a map of selected cells by position for quick lookup
   const cellMap = new Map();
   const cellPositions = [];
@@ -115,13 +95,14 @@ const createSmartSelectionBorders = (selectedCells) => {
   // Process each selection type
   Object.entries(groupedCells).forEach(([selectionType, cells]) => {
     if (selectionType === "row") {
-      createRowSelectionBorders(cells, cellMap);
+      createRowSelectionBorders(cells, cellMap, color);
     } else if (selectionType === "column") {
-      createColumnSelectionBorders(cells, cellMap);
+      createColumnSelectionBorders(cells, cellMap, color);
     } else {
       // Regular cell selection
       createCellSelectionBorders(
         cellPositions.filter((cp) => cells.includes(cp.cell)),
+        color,
       );
     }
   });
@@ -212,20 +193,12 @@ const createSelectionBorderSVG = (
 
   return svg;
 };
-// Helper function to get the actual border color
-const getBorderColor = (element) => {
-  const computed = getComputedStyle(element.ownerDocument.documentElement);
-  return (
-    computed.getPropertyValue("--selection-border-color").trim() || "#0078d4"
-  );
-};
 
 // Create borders for cell selections with smart intersection handling
-const createCellSelectionBorders = (cellPositions) => {
-  if (cellPositions.length === 0) return;
-
-  // Get the border color from CSS
-  const borderColor = getBorderColor(cellPositions[0].cell);
+const createCellSelectionBorders = (cellPositions, color) => {
+  if (cellPositions.length === 0) {
+    return;
+  }
 
   // Helper function to check if a position is covered by any selected cell (including spans)
   const isPositionSelected = (row, col) => {
@@ -321,11 +294,7 @@ const createCellSelectionBorders = (cellPositions) => {
       bottomLeft,
       topLeft,
     };
-    const svgElement = createSelectionBorderSVG(
-      segments,
-      borderColor,
-      neighborInfo,
-    );
+    const svgElement = createSelectionBorderSVG(segments, color, neighborInfo);
 
     if (svgElement) {
       cell.setAttribute("data-selection-borders", "");
@@ -350,11 +319,10 @@ const createCellSelectionBorders = (cellPositions) => {
 };
 
 // Create borders for row selections
-const createRowSelectionBorders = (rowCells, cellMap) => {
-  if (rowCells.length === 0) return;
-
-  // Get the border color from CSS
-  const borderColor = getBorderColor(rowCells[0]);
+const createRowSelectionBorders = (rowCells, cellMap, color) => {
+  if (rowCells.length === 0) {
+    return;
+  }
 
   rowCells.forEach((rowHeaderCell) => {
     const position = getCellPosition(rowHeaderCell);
@@ -370,7 +338,7 @@ const createRowSelectionBorders = (rowCells, cellMap) => {
       true,
       needsBottom,
       true,
-      borderColor,
+      color,
     );
 
     rowHeaderCell.setAttribute("data-selection-borders", "");
@@ -379,11 +347,10 @@ const createRowSelectionBorders = (rowCells, cellMap) => {
 };
 
 // Create borders for column selections
-const createColumnSelectionBorders = (columnCells, cellMap) => {
-  if (columnCells.length === 0) return;
-
-  // Get the border color from CSS
-  const borderColor = getBorderColor(columnCells[0]);
+const createColumnSelectionBorders = (columnCells, cellMap, color) => {
+  if (columnCells.length === 0) {
+    return;
+  }
 
   columnCells.forEach((columnHeaderCell) => {
     const position = getCellPosition(columnHeaderCell);
@@ -399,7 +366,7 @@ const createColumnSelectionBorders = (columnCells, cellMap) => {
       needsRight,
       true,
       needsLeft,
-      borderColor,
+      color,
     );
 
     columnHeaderCell.setAttribute("data-selection-borders", "");
