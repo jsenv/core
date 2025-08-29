@@ -133,42 +133,42 @@ const createSelectionBorderSVG = (
   needsRight,
   needsBottom,
   needsLeft,
-  hasTopRightNeighbor,
-  hasTopLeftNeighbor,
-  hasBottomRightNeighbor,
-  hasBottomLeftNeighbor,
   borderColor = "#0078d4",
 ) => {
   let pathData = "";
 
   // Each border takes the full cell external border by default
-  // But gets shortened when it would overlap with an adjacent cell's border
+  // Borders are shortened at corners where they would overlap with adjacent borders
 
   if (needsTop) {
-    // Top border: shorten from left if there's a top-left neighbor, from right if top-right neighbor
-    const startX = hasTopLeftNeighbor ? 2 : 0; // 2% = border width in SVG coordinates
-    const endX = hasTopRightNeighbor ? 98 : 100;
+    // Top border: shorten from left if cell also has left border (corner overlap)
+    // shorten from right if cell also has right border (corner overlap)
+    const startX = needsLeft ? 2 : 0;
+    const endX = needsRight ? 98 : 100;
     pathData += `M ${startX},1 L ${endX},1 `;
   }
 
   if (needsRight) {
-    // Right border: shorten from top if there's a top-right neighbor, from bottom if bottom-right neighbor
-    const startY = hasTopRightNeighbor ? 2 : 0;
-    const endY = hasBottomRightNeighbor ? 98 : 100;
+    // Right border: shorten from top if cell also has top border (corner overlap)
+    // shorten from bottom if cell also has bottom border (corner overlap)
+    const startY = needsTop ? 2 : 0;
+    const endY = needsBottom ? 98 : 100;
     pathData += `M 99,${startY} L 99,${endY} `;
   }
 
   if (needsBottom) {
-    // Bottom border: shorten from left if there's a bottom-left neighbor, from right if bottom-right neighbor
-    const startX = hasBottomLeftNeighbor ? 2 : 0;
-    const endX = hasBottomRightNeighbor ? 98 : 100;
+    // Bottom border: shorten from left if cell also has left border (corner overlap)
+    // shorten from right if cell also has right border (corner overlap)
+    const startX = needsLeft ? 2 : 0;
+    const endX = needsRight ? 98 : 100;
     pathData += `M ${startX},99 L ${endX},99 `;
   }
 
   if (needsLeft) {
-    // Left border: shorten from top if there's a top-left neighbor, from bottom if bottom-left neighbor
-    const startY = hasTopLeftNeighbor ? 2 : 0;
-    const endY = hasBottomLeftNeighbor ? 98 : 100;
+    // Left border: shorten from top if cell also has top border (corner overlap)
+    // shorten from bottom if cell also has bottom border (corner overlap)
+    const startY = needsTop ? 2 : 0;
+    const endY = needsBottom ? 98 : 100;
     pathData += `M 1,${startY} L 1,${endY} `;
   }
 
@@ -226,34 +226,12 @@ const createCellSelectionBorders = (cellPositions) => {
       position.col + colSpan,
     );
 
-    // Check for diagonal neighbors that would cause border overlaps
-    const hasTopLeftNeighbor = isPositionSelected(
-      position.row - 1,
-      position.col - 1,
-    );
-    const hasTopRightNeighbor = isPositionSelected(
-      position.row - 1,
-      position.col + colSpan,
-    );
-    const hasBottomLeftNeighbor = isPositionSelected(
-      position.row + rowSpan,
-      position.col - 1,
-    );
-    const hasBottomRightNeighbor = isPositionSelected(
-      position.row + rowSpan,
-      position.col + colSpan,
-    );
-
-    // Generate SVG for this cell's border configuration with overlap detection
+    // Generate SVG for this cell's border configuration
     const svgDataUri = createSelectionBorderSVG(
       needsTop,
       needsRight,
       needsBottom,
       needsLeft,
-      hasTopRightNeighbor,
-      hasTopLeftNeighbor,
-      hasBottomRightNeighbor,
-      hasBottomLeftNeighbor,
       borderColor,
     );
 
