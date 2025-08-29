@@ -117,17 +117,28 @@ const createSelectionBorderCanvas = (
   neighborInfo = {},
   cellRect,
 ) => {
-  // Create canvas with actual pixel dimensions
+  // Create canvas with high-DPI support for crisp rendering
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
+
+  // Get device pixel ratio for high-DPI displays
+  const devicePixelRatio = window.devicePixelRatio || 1;
 
   // Set canvas size to cell size + 4px border extension
   const canvasWidth = cellRect.width + 4;
   const canvasHeight = cellRect.height + 4;
 
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
+  // Set actual canvas size for high-DPI
+  canvas.width = canvasWidth * devicePixelRatio;
+  canvas.height = canvasHeight * devicePixelRatio;
+
+  // Set CSS size to desired visual size
+  canvas.style.width = `${canvasWidth}px`;
+  canvas.style.height = `${canvasHeight}px`;
   canvas.className = "selection-border-canvas";
+
+  // Scale the drawing context for high-DPI
+  ctx.scale(devicePixelRatio, devicePixelRatio);
 
   // Set up drawing context for crisp 1px lines
   ctx.strokeStyle = borderColor;
@@ -164,10 +175,10 @@ const createSelectionBorderCanvas = (
         // Draw top edge at the outer edge of canvas (on top of table border)
         const startX = hasTopLeftCorner ? 0.5 : topLeft ? 1.5 : 0.5;
         const endX = hasTopRightCorner
-          ? canvasWidth - 1.5
+          ? canvasWidth - 0.5
           : topRight
-            ? canvasWidth - 1.5
-            : canvasWidth - 1.5;
+            ? canvasWidth - 0.5
+            : canvasWidth - 0.5;
         ctx.moveTo(startX, 0.5);
         ctx.lineTo(endX, 0.5);
         break;
@@ -183,8 +194,8 @@ const createSelectionBorderCanvas = (
           : bottomRight
             ? canvasHeight - 3.5
             : canvasHeight - 0.5;
-        ctx.moveTo(canvasWidth - 1.5, startY);
-        ctx.lineTo(canvasWidth - 1.5, endY);
+        ctx.moveTo(canvasWidth - 0.5, startY);
+        ctx.lineTo(canvasWidth - 0.5, endY);
         break;
       }
       case "bottom-right-corner":
@@ -194,12 +205,12 @@ const createSelectionBorderCanvas = (
         // Draw bottom edge at the outer edge of canvas (on top of table border)
         const startX = hasBottomLeftCorner ? 0.5 : bottomLeft ? 1.5 : 0.5;
         const endX = hasBottomRightCorner
-          ? canvasWidth - 1.5
+          ? canvasWidth - 0.5
           : bottomRight
-            ? canvasWidth - 1.5
-            : canvasWidth - 1.5;
-        ctx.moveTo(startX, canvasHeight - 1.5);
-        ctx.lineTo(endX, canvasHeight - 1.5);
+            ? canvasWidth - 0.5
+            : canvasWidth - 0.5;
+        ctx.moveTo(startX, canvasHeight - 0.5);
+        ctx.lineTo(endX, canvasHeight - 0.5);
         break;
       }
       case "bottom-left-corner":
