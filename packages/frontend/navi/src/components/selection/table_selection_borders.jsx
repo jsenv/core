@@ -133,49 +133,53 @@ const createSelectionBorderSVG = (
   needsRight,
   needsBottom,
   needsLeft,
+  hasTopRightNeighbor,
+  hasTopLeftNeighbor,
+  hasBottomRightNeighbor,
+  hasBottomLeftNeighbor,
   borderColor = "#0078d4",
 ) => {
-  // Calculate smart border segments to avoid overlaps at intersections
-  // When two borders meet at a corner, each should be shortened to meet perfectly
-  const borderOffset = 2; // 2% of viewBox = space for border intersections
-
   let pathData = "";
 
-  // Create SVG path for each needed border with smart intersection handling
+  // Each border takes the full cell external border by default
+  // But gets shortened when it would overlap with an adjacent cell's border
+
   if (needsTop) {
-    const startX = needsLeft ? borderOffset : 0;
-    const endX = needsRight ? 100 - borderOffset : 100;
+    // Top border: shorten from left if there's a top-left neighbor, from right if top-right neighbor
+    const startX = hasTopLeftNeighbor ? 2 : 0; // 2% = border width in SVG coordinates
+    const endX = hasTopRightNeighbor ? 98 : 100;
     pathData += `M ${startX},1 L ${endX},1 `;
   }
 
   if (needsRight) {
-    const startY = needsTop ? borderOffset : 0;
-    const endY = needsBottom ? 100 - borderOffset : 100;
+    // Right border: shorten from top if there's a top-right neighbor, from bottom if bottom-right neighbor
+    const startY = hasTopRightNeighbor ? 2 : 0;
+    const endY = hasBottomRightNeighbor ? 98 : 100;
     pathData += `M 99,${startY} L 99,${endY} `;
   }
 
   if (needsBottom) {
-    const startX = needsLeft ? borderOffset : 0;
-    const endX = needsRight ? 100 - borderOffset : 100;
+    // Bottom border: shorten from left if there's a bottom-left neighbor, from right if bottom-right neighbor
+    const startX = hasBottomLeftNeighbor ? 2 : 0;
+    const endX = hasBottomRightNeighbor ? 98 : 100;
     pathData += `M ${startX},99 L ${endX},99 `;
   }
 
   if (needsLeft) {
-    const startY = needsTop ? borderOffset : 0;
-    const endY = needsBottom ? 100 - borderOffset : 100;
+    // Left border: shorten from top if there's a top-left neighbor, from bottom if bottom-left neighbor
+    const startY = hasTopLeftNeighbor ? 2 : 0;
+    const endY = hasBottomLeftNeighbor ? 98 : 100;
     pathData += `M 1,${startY} L 1,${endY} `;
   }
 
   if (!pathData) return "none";
 
-  // Create data URI for SVG using stroke with vector-effect="non-scaling-stroke"
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
     <path d="${pathData}" stroke="${borderColor}" stroke-width="1" vector-effect="non-scaling-stroke" fill="none" />
   </svg>`;
 
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 };
-
 // Helper function to get the actual border color
 const getBorderColor = (element) => {
   const computed = getComputedStyle(element.ownerDocument.documentElement);
@@ -211,7 +215,6 @@ const createCellSelectionBorders = (cellPositions) => {
     const colSpan = parseInt(cell.getAttribute("colspan") || "1", 10);
 
     // Check which borders this cell needs by testing the perimeter
-    // For cells with spans, check all edges of the spanned area
     const needsTop = !isPositionSelected(position.row - 1, position.col);
     const needsBottom = !isPositionSelected(
       position.row + rowSpan,
@@ -223,12 +226,34 @@ const createCellSelectionBorders = (cellPositions) => {
       position.col + colSpan,
     );
 
-    // Generate SVG for this cell's border configuration
+    // Check for diagonal neighbors that would cause border overlaps
+    const hasTopLeftNeighbor = isPositionSelected(
+      position.row - 1,
+      position.col - 1,
+    );
+    const hasTopRightNeighbor = isPositionSelected(
+      position.row - 1,
+      position.col + colSpan,
+    );
+    const hasBottomLeftNeighbor = isPositionSelected(
+      position.row + rowSpan,
+      position.col - 1,
+    );
+    const hasBottomRightNeighbor = isPositionSelected(
+      position.row + rowSpan,
+      position.col + colSpan,
+    );
+
+    // Generate SVG for this cell's border configuration with overlap detection
     const svgDataUri = createSelectionBorderSVG(
       needsTop,
       needsRight,
       needsBottom,
       needsLeft,
+      hasTopRightNeighbor,
+      hasTopLeftNeighbor,
+      hasBottomRightNeighbor,
+      hasBottomLeftNeighbor,
       borderColor,
     );
 
