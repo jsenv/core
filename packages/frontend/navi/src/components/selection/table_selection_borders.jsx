@@ -11,10 +11,7 @@ import.meta.css = /* css */ `
   [data-selection-borders]::before {
     content: "";
     position: absolute;
-    top: -2px; /* Above 2px cell border */
-    left: -2px; /* Above 2px cell border */
-    right: -2px;
-    bottom: -2px;
+    inset: -2px; /* Extend 2px to sit on cell border edge */
     pointer-events: none;
     z-index: 1;
     background-image: var(--selection-border-svg);
@@ -138,25 +135,35 @@ const createSelectionBorderSVG = (
   needsLeft,
   borderColor = "#0078d4",
 ) => {
-  // Use stroke instead of fill to avoid scaling issues
-  // Set stroke-width to a small value that won't scale with aspect ratio
+  // Calculate smart border segments to avoid overlaps at intersections
+  // When two borders meet at a corner, each should be shortened to meet perfectly
+  const borderOffset = 2; // 2% of viewBox = space for border intersections
+
   let pathData = "";
 
-  // Create SVG path for each needed border using strokes
+  // Create SVG path for each needed border with smart intersection handling
   if (needsTop) {
-    pathData += `M 0,0.5 L 100,0.5 `;
+    const startX = needsLeft ? borderOffset : 0;
+    const endX = needsRight ? 100 - borderOffset : 100;
+    pathData += `M ${startX},1 L ${endX},1 `;
   }
 
   if (needsRight) {
-    pathData += `M 99.5,0 L 99.5,100 `;
+    const startY = needsTop ? borderOffset : 0;
+    const endY = needsBottom ? 100 - borderOffset : 100;
+    pathData += `M 99,${startY} L 99,${endY} `;
   }
 
   if (needsBottom) {
-    pathData += `M 0,99.5 L 100,99.5 `;
+    const startX = needsLeft ? borderOffset : 0;
+    const endX = needsRight ? 100 - borderOffset : 100;
+    pathData += `M ${startX},99 L ${endX},99 `;
   }
 
   if (needsLeft) {
-    pathData += `M 0.5,0 L 0.5,100 `;
+    const startY = needsTop ? borderOffset : 0;
+    const endY = needsBottom ? 100 - borderOffset : 100;
+    pathData += `M 1,${startY} L 1,${endY} `;
   }
 
   if (!pathData) return "none";
@@ -189,7 +196,7 @@ const createCellSelectionBorders = (cellPositions) => {
     return cellPositions.some(({ position, cell }) => {
       const rowSpan = parseInt(cell.getAttribute("rowspan") || "1", 10);
       const colSpan = parseInt(cell.getAttribute("colspan") || "1", 10);
-      
+
       return (
         row >= position.row &&
         row < position.row + rowSpan &&
@@ -202,13 +209,19 @@ const createCellSelectionBorders = (cellPositions) => {
   cellPositions.forEach(({ cell, position }) => {
     const rowSpan = parseInt(cell.getAttribute("rowspan") || "1", 10);
     const colSpan = parseInt(cell.getAttribute("colspan") || "1", 10);
-    
+
     // Check which borders this cell needs by testing the perimeter
     // For cells with spans, check all edges of the spanned area
     const needsTop = !isPositionSelected(position.row - 1, position.col);
-    const needsBottom = !isPositionSelected(position.row + rowSpan, position.col);
+    const needsBottom = !isPositionSelected(
+      position.row + rowSpan,
+      position.col,
+    );
     const needsLeft = !isPositionSelected(position.row, position.col - 1);
-    const needsRight = !isPositionSelected(position.row, position.col + colSpan);
+    const needsRight = !isPositionSelected(
+      position.row,
+      position.col + colSpan,
+    );
 
     // Generate SVG for this cell's border configuration
     const svgDataUri = createSelectionBorderSVG(
