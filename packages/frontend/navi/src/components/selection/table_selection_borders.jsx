@@ -7,14 +7,6 @@ import.meta.css = /* css */ `
     --selection-border-color: #0078d4;
   }
 
-  /* Base pseudo-element styles */
-  .selection-border-pseudo-base {
-    content: "";
-    position: absolute;
-    pointer-events: none;
-    z-index: 1; /* Above 2px cell borders */
-  }
-
   /* Selection border using single pseudo-element with SVG background */
   [data-selection-borders]::before {
     content: "";
@@ -44,7 +36,7 @@ import.meta.css = /* css */ `
 
 export const useTableSelectionBorders = (
   tableRef,
-  { color = "#0078d4", size = 2 } = {},
+  { color = "#0078d4" } = {},
 ) => {
   const selection = useSelection();
 
@@ -61,7 +53,7 @@ export const useTableSelectionBorders = (
       // Clean up CSS variables
       table.style.removeProperty("--selection-border-color");
     };
-  }, [color, size]);
+  }, [color]);
 
   useLayoutEffect(() => {
     const table = tableRef.current;
@@ -103,7 +95,7 @@ export const useTableSelectionBorders = (
     return () => {
       unsubscribe();
     };
-  }, [tableRef, selection, size]);
+  }, [tableRef, selection]);
 };
 
 // Create smart selection borders with proper intersection handling
@@ -145,11 +137,12 @@ const createSelectionBorderSVG = (
   needsRight,
   needsBottom,
   needsLeft,
+  borderColor = "#0078d4",
 ) => {
-  const borderWidth = 1; // Fixed 1px border width
-  const cellOffset = 2; // Account for 2px cell borders
+  const borderWidth = 2; // Border thickness in percentage of the SVG viewBox
 
   // Calculate border segments with smart positioning to avoid overlaps
+  // Position borders at the edges of the pseudo-element (which extends -2px beyond cell)
   const topLeft = needsLeft ? borderWidth : 0;
   const topRight = needsRight ? borderWidth : 0;
   const rightTop = needsTop ? borderWidth : 0;
@@ -161,51 +154,64 @@ const createSelectionBorderSVG = (
 
   let pathData = "";
 
-  // Create SVG path for each needed border with smart corner handling
+  // Create SVG path for each needed border at the edges of the pseudo-element
   if (needsTop) {
-    const x1 = topLeft + cellOffset;
-    const x2 = 100 - topRight - cellOffset;
-    const y1 = cellOffset;
-    const y2 = cellOffset + borderWidth;
+    const x1 = topLeft;
+    const x2 = 100 - topRight;
+    const y1 = 0;
+    const y2 = borderWidth;
     pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
   }
 
   if (needsRight) {
-    const x1 = 100 - cellOffset - borderWidth;
-    const x2 = 100 - cellOffset;
-    const y1 = rightTop + cellOffset;
-    const y2 = 100 - rightBottom - cellOffset;
+    const x1 = 100 - borderWidth;
+    const x2 = 100;
+    const y1 = rightTop;
+    const y2 = 100 - rightBottom;
     pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
   }
 
   if (needsBottom) {
-    const x1 = bottomLeft + cellOffset;
-    const x2 = 100 - bottomRight - cellOffset;
-    const y1 = 100 - cellOffset - borderWidth;
-    const y2 = 100 - cellOffset;
+    const x1 = bottomLeft;
+    const x2 = 100 - bottomRight;
+    const y1 = 100 - borderWidth;
+    const y2 = 100;
     pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
   }
 
   if (needsLeft) {
-    const x1 = cellOffset;
-    const x2 = cellOffset + borderWidth;
-    const y1 = leftTop + cellOffset;
-    const y2 = 100 - leftBottom - cellOffset;
+    const x1 = 0;
+    const x2 = borderWidth;
+    const y1 = leftTop;
+    const y2 = 100 - leftBottom;
     pathData += `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z `;
   }
 
   if (!pathData) return "none";
 
-  // Create data URI for SVG
+  // Create data URI for SVG with actual color value
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-    <path d="${pathData}" fill="var(--selection-border-color)" />
+    <path d="${pathData}" fill="${borderColor}" />
   </svg>`;
 
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 };
 
+// Helper function to get the actual border color
+const getBorderColor = (element) => {
+  const computed = getComputedStyle(element.ownerDocument.documentElement);
+  return (
+    computed.getPropertyValue("--selection-border-color").trim() || "#0078d4"
+  );
+};
+
 // Create borders for cell selections with smart intersection handling
 const createCellSelectionBorders = (cellPositions, cellMap) => {
+  if (cellPositions.length === 0) return;
+
+  // Get the border color from CSS
+  const borderColor = getBorderColor(cellPositions[0].cell);
+
   cellPositions.forEach(({ cell, position }) => {
     // Check which borders this cell needs
     const needsTop = !cellMap.has(`${position.row - 1},${position.col}`);
@@ -219,6 +225,7 @@ const createCellSelectionBorders = (cellPositions, cellMap) => {
       needsRight,
       needsBottom,
       needsLeft,
+      borderColor,
     );
 
     if (svgDataUri !== "none") {
@@ -230,6 +237,11 @@ const createCellSelectionBorders = (cellPositions, cellMap) => {
 
 // Create borders for row selections
 const createRowSelectionBorders = (rowCells, cellMap) => {
+  if (rowCells.length === 0) return;
+
+  // Get the border color from CSS
+  const borderColor = getBorderColor(rowCells[0]);
+
   rowCells.forEach((rowHeaderCell) => {
     const position = getCellPosition(rowHeaderCell);
     if (!position) return;
@@ -244,6 +256,7 @@ const createRowSelectionBorders = (rowCells, cellMap) => {
       true,
       needsBottom,
       true,
+      borderColor,
     );
 
     rowHeaderCell.setAttribute("data-selection-borders", "");
@@ -253,6 +266,11 @@ const createRowSelectionBorders = (rowCells, cellMap) => {
 
 // Create borders for column selections
 const createColumnSelectionBorders = (columnCells, cellMap) => {
+  if (columnCells.length === 0) return;
+
+  // Get the border color from CSS
+  const borderColor = getBorderColor(columnCells[0]);
+
   columnCells.forEach((columnHeaderCell) => {
     const position = getCellPosition(columnHeaderCell);
     if (!position) return;
@@ -267,6 +285,7 @@ const createColumnSelectionBorders = (columnCells, cellMap) => {
       needsRight,
       true,
       needsLeft,
+      borderColor,
     );
 
     columnHeaderCell.setAttribute("data-selection-borders", "");
