@@ -346,12 +346,12 @@ const drawBorder = (
       let startY = 1; // Start below top corner by default (top border owns corners)
       let endY = canvasHeight - 1; // Stop above bottom corner by default (bottom border owns corners)
 
-      // For vertical connections, extend to connection points to avoid gaps
-      if (hasTop) {
-        startY = 0; // Extend to top edge for seamless connection
+      // For vertical connections, use junction responsibility to avoid overlaps
+      if (hasTop && shouldExtendIntoJunction("up")) {
+        startY = 0; // Only extend up if this cell is responsible for the junction
       }
-      if (hasBottom) {
-        endY = canvasHeight; // Extend to bottom edge for seamless connection
+      if (hasBottom && shouldExtendIntoJunction("down")) {
+        endY = canvasHeight; // Only extend down if this cell is responsible for the junction
       }
 
       // Apply diagonal adjustments
@@ -370,12 +370,12 @@ const drawBorder = (
       let startY = 1; // Start below top corner by default (top border owns corners)
       let endY = canvasHeight - 1; // Stop above bottom corner by default (bottom border owns corners)
 
-      // For vertical connections, extend to connection points to avoid gaps
-      if (hasTop) {
-        startY = 0; // Extend to top edge for seamless connection
+      // For vertical connections, use junction responsibility to avoid overlaps
+      if (hasTop && shouldExtendIntoJunction("up")) {
+        startY = 0; // Only extend up if this cell is responsible for the junction
       }
-      if (hasBottom) {
-        endY = canvasHeight; // Extend to bottom edge for seamless connection
+      if (hasBottom && shouldExtendIntoJunction("down")) {
+        endY = canvasHeight; // Only extend down if this cell is responsible for the junction
       }
 
       // Apply diagonal adjustments
