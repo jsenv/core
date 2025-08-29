@@ -200,7 +200,7 @@ const createSelectionBorderCanvas = (
         // Right edge avoids corners (owned by top/bottom edges)
         // When there's a selected neighbor to the right, avoid overlap by drawing slightly inward
         const xPos = right ? canvasWidth - 2 : canvasWidth - 1;
-        const startY = hasTopRightCorner ? 1 : topRight ? 1 : top ? 1 : 0;
+        const startY = hasTopRightCorner ? 1 : topRight ? 1 : top ? 2 : 0;
         // Top cell draws full height, bottom cell starts inward to avoid overlap
         const endY = hasBottomRightCorner
           ? canvasHeight - 1
@@ -251,7 +251,7 @@ const createSelectionBorderCanvas = (
         // Left edge avoids corners (owned by top/bottom edges)
         // When there's a selected neighbor to the left, avoid overlap by drawing slightly inward
         const xPos = left ? 1 : 0;
-        const startY = hasTopLeftCorner ? 1 : topLeft ? 1 : top ? 1 : 0;
+        const startY = hasTopLeftCorner ? 1 : topLeft ? 1 : top ? 2 : 0;
         // Top cell draws full height, bottom cell starts inward to avoid overlap
         const endY = hasBottomLeftCorner
           ? canvasHeight - 1
