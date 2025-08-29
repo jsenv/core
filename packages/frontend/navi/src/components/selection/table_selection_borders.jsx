@@ -131,33 +131,55 @@ const createSmartSelectionBorders = (selectedCells) => {
 const createSelectionBorderSVG = (segments, borderColor = "#0078d4") => {
   let pathData = "";
 
+  // Check which segments we have to adjust edge positioning
+  const hasTopRightCorner = segments.includes("top-right-corner");
+  const hasBottomRightCorner = segments.includes("bottom-right-corner");
+  const hasTopLeftCorner = segments.includes("top-left-corner");
+  const hasBottomLeftCorner = segments.includes("bottom-left-corner");
+
   // Draw each segment that's needed for this cell's contribution to the selection perimeter
   segments.forEach((segment) => {
     switch (segment) {
       case "top-left-corner":
         pathData += `M 0,0 L 1,0 L 1,1 L 0,1 Z `;
         break;
-      case "top-edge":
-        pathData += `M 1,0 L 99,0 L 99,1 L 1,1 Z `;
+      case "top-edge": {
+        // Adjust top edge to not overlap with corners
+        const topStartX = hasTopLeftCorner ? 1 : 0;
+        const topEndX = hasTopRightCorner ? 99 : 100;
+        pathData += `M ${topStartX},0 L ${topEndX},0 L ${topEndX},1 L ${topStartX},1 Z `;
         break;
+      }
       case "top-right-corner":
         pathData += `M 99,0 L 100,0 L 100,1 L 99,1 Z `;
         break;
-      case "right-edge":
-        pathData += `M 99,1 L 100,1 L 100,99 L 99,99 Z `;
+      case "right-edge": {
+        // Adjust right edge to not overlap with corners
+        const rightStartY = hasTopRightCorner ? 1 : 0;
+        const rightEndY = hasBottomRightCorner ? 99 : 100;
+        pathData += `M 99,${rightStartY} L 100,${rightStartY} L 100,${rightEndY} L 99,${rightEndY} Z `;
         break;
+      }
       case "bottom-right-corner":
         pathData += `M 99,99 L 100,99 L 100,100 L 99,100 Z `;
         break;
-      case "bottom-edge":
-        pathData += `M 1,99 L 99,99 L 99,100 L 1,100 Z `;
+      case "bottom-edge": {
+        // Adjust bottom edge to not overlap with corners
+        const bottomStartX = hasBottomLeftCorner ? 1 : 0;
+        const bottomEndX = hasBottomRightCorner ? 99 : 100;
+        pathData += `M ${bottomStartX},99 L ${bottomEndX},99 L ${bottomEndX},100 L ${bottomStartX},100 Z `;
         break;
+      }
       case "bottom-left-corner":
         pathData += `M 0,99 L 1,99 L 1,100 L 0,100 Z `;
         break;
-      case "left-edge":
-        pathData += `M 0,1 L 1,1 L 1,99 L 0,99 Z `;
+      case "left-edge": {
+        // Adjust left edge to not overlap with corners
+        const leftStartY = hasTopLeftCorner ? 1 : 0;
+        const leftEndY = hasBottomLeftCorner ? 99 : 100;
+        pathData += `M 0,${leftStartY} L 1,${leftStartY} L 1,${leftEndY} L 0,${leftEndY} Z `;
         break;
+      }
       default:
         // Unknown segment, ignore
         break;
@@ -220,7 +242,7 @@ const createCellSelectionBorders = (cellPositions) => {
       segments.push("top-left-corner");
     }
 
-    // Top edge: draw if no top neighbor
+    // Top edge: draw if no top neighbor AND we're not drawing both corners
     if (!top) {
       segments.push("top-edge");
     }
