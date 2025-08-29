@@ -138,11 +138,8 @@ const createSelectionBorderCanvas = (
   // Scale the drawing context for high-DPI
   ctx.scale(devicePixelRatio, devicePixelRatio);
 
-  // Set up drawing context for crisp 1px lines
-  ctx.strokeStyle = borderColor;
-  ctx.lineWidth = 1;
-  ctx.lineCap = "butt"; // Prevent line caps from extending beyond endpoints
-  ctx.lineJoin = "miter";
+  // Set up drawing context for pixel-perfect filled rectangles
+  ctx.fillStyle = borderColor;
 
   // Ensure pixel-perfect rendering
   ctx.imageSmoothingEnabled = false;
@@ -170,68 +167,66 @@ const createSelectionBorderCanvas = (
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "top-edge": {
-        // Draw top edge at the outer edge of canvas (on top of table border)
-        const startX = hasTopLeftCorner ? 0.5 : topLeft ? 1.5 : 0.5;
+        // Draw top edge as a filled rectangle
+        const startX = hasTopLeftCorner ? 0 : topLeft ? 1.5 : 0;
         const endX = hasTopRightCorner
-          ? canvasWidth - 1
+          ? canvasWidth
           : topRight
             ? canvasWidth - 1
-            : canvasWidth - 1;
-        ctx.moveTo(startX, 0.5);
-        ctx.lineTo(endX, 0.5);
+            : canvasWidth;
+        const width = endX - startX;
+        ctx.fillRect(startX, 0, width, 1);
         break;
       }
       case "top-right-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "right-edge": {
-        // Draw right edge slightly inside to ensure visibility
-        const startY = hasTopRightCorner ? 0.5 : topRight ? 3.5 : 0.5;
+        // Draw right edge as a filled rectangle
+        const startY = hasTopRightCorner ? 0 : topRight ? 3.5 : 0;
         const endY = hasBottomRightCorner
-          ? canvasHeight - 1
+          ? canvasHeight
           : bottomRight
             ? canvasHeight - 3.5
-            : canvasHeight - 1;
-        ctx.moveTo(canvasWidth - 1, startY);
-        ctx.lineTo(canvasWidth - 1, endY);
+            : canvasHeight;
+        const height = endY - startY;
+        ctx.fillRect(canvasWidth - 1, startY, 1, height);
         break;
       }
       case "bottom-right-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "bottom-edge": {
-        // Draw bottom edge at the outer edge of canvas (on top of table border)
-        const startX = hasBottomLeftCorner ? 0.5 : bottomLeft ? 1.5 : 0.5;
+        // Draw bottom edge as a filled rectangle
+        const startX = hasBottomLeftCorner ? 0 : bottomLeft ? 1.5 : 0;
         const endX = hasBottomRightCorner
-          ? canvasWidth - 1
+          ? canvasWidth
           : bottomRight
             ? canvasWidth - 1
-            : canvasWidth - 1;
-        ctx.moveTo(startX, canvasHeight - 1);
-        ctx.lineTo(endX, canvasHeight - 1);
+            : canvasWidth;
+        const width = endX - startX;
+        ctx.fillRect(startX, canvasHeight - 1, width, 1);
         break;
       }
       case "bottom-left-corner":
         // No separate corner drawing - corners are formed by line intersections
         break;
       case "left-edge": {
-        // Draw left edge at the outer edge of canvas (on top of table border)
-        const startY = hasTopLeftCorner ? 0.5 : topLeft ? 3.5 : 0.5;
+        // Draw left edge as a filled rectangle
+        const startY = hasTopLeftCorner ? 0 : topLeft ? 3.5 : 0;
         const endY = hasBottomLeftCorner
-          ? canvasHeight - 1
+          ? canvasHeight
           : bottomLeft
             ? canvasHeight - 3.5
-            : canvasHeight - 1;
-        ctx.moveTo(0.5, startY);
-        ctx.lineTo(0.5, endY);
+            : canvasHeight;
+        const height = endY - startY;
+        ctx.fillRect(0, startY, 1, height);
         break;
       }
       default:
         // Unknown segment, ignore
         break;
     }
-
-    ctx.stroke();
   });
 
   return canvas;
