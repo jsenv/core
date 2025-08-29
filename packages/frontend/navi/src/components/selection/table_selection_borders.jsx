@@ -137,45 +137,26 @@ const createSelectionBorderSVG = (
 ) => {
   let pathData = "";
 
-  // Each border takes the full cell external border by default
-  // Borders are shortened at corners where they would overlap with adjacent borders
+  // Create precise borders that connect at corners without overlap
+  // Each border is drawn as a closed rectangle to ensure clean edges
 
   if (needsTop) {
-    // Top border: shorten from left if cell also has left border (corner overlap)
-    // shorten from right if cell also has right border (corner overlap)
-    const startX = needsLeft ? 2 : 0;
-    const endX = needsRight ? 98 : 100;
-    pathData += `M ${startX},1 L ${endX},1 `;
+    pathData += `M 0,0 L 100,0 L 100,1 L 0,1 Z `;
   }
-
   if (needsRight) {
-    // Right border: shorten from top if cell also has top border (corner overlap)
-    // shorten from bottom if cell also has bottom border (corner overlap)
-    const startY = needsTop ? 2 : 0;
-    const endY = needsBottom ? 98 : 100;
-    pathData += `M 99,${startY} L 99,${endY} `;
+    pathData += `M 99,0 L 100,0 L 100,100 L 99,100 Z `;
   }
-
   if (needsBottom) {
-    // Bottom border: shorten from left if cell also has left border (corner overlap)
-    // shorten from right if cell also has right border (corner overlap)
-    const startX = needsLeft ? 2 : 0;
-    const endX = needsRight ? 98 : 100;
-    pathData += `M ${startX},99 L ${endX},99 `;
+    pathData += `M 0,99 L 100,99 L 100,100 L 0,100 Z `;
   }
-
   if (needsLeft) {
-    // Left border: shorten from top if cell also has top border (corner overlap)
-    // shorten from bottom if cell also has bottom border (corner overlap)
-    const startY = needsTop ? 2 : 0;
-    const endY = needsBottom ? 98 : 100;
-    pathData += `M 1,${startY} L 1,${endY} `;
+    pathData += `M 0,0 L 1,0 L 1,100 L 0,100 Z `;
   }
 
   if (!pathData) return "none";
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-    <path d="${pathData}" stroke="${borderColor}" stroke-width="1" vector-effect="non-scaling-stroke" fill="none" />
+    <path d="${pathData}" fill="${borderColor}" />
   </svg>`;
 
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
