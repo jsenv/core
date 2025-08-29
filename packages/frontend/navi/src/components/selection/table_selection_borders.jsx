@@ -142,7 +142,12 @@ const createSelectionBorderSVG = (
   const hasBottomLeftCorner = segments.includes("bottom-left-corner");
 
   // Extract neighbor information for smart edge adjustment
-  const { bottomRight = false, topLeft = false } = neighborInfo;
+  const {
+    bottomRight = false,
+    topLeft = false,
+    topRight = false,
+    bottomLeft = false,
+  } = neighborInfo;
 
   // Draw each segment that's needed for this cell's contribution to the selection perimeter
   segments.forEach((segment) => {
@@ -153,7 +158,7 @@ const createSelectionBorderSVG = (
       case "top-edge": {
         // Adjust top edge to not overlap with corners or diagonal neighbors
         const topStartX = hasTopLeftCorner ? 1 : topLeft ? 1 : 0;
-        const topEndX = hasTopRightCorner ? 99 : 100;
+        const topEndX = hasTopRightCorner ? 99 : topRight ? 99 : 100;
         pathData += `M ${topStartX},0 L ${topEndX},0 L ${topEndX},1 L ${topStartX},1 Z `;
         break;
       }
@@ -162,7 +167,7 @@ const createSelectionBorderSVG = (
         break;
       case "right-edge": {
         // Adjust right edge to not overlap with corners or diagonal neighbors
-        const rightStartY = hasTopRightCorner ? 1 : 0;
+        const rightStartY = hasTopRightCorner ? 1 : topRight ? 1 : 0;
         const rightEndY = hasBottomRightCorner ? 99 : bottomRight ? 97 : 100;
         pathData += `M 99,${rightStartY} L 100,${rightStartY} L 100,${rightEndY} L 99,${rightEndY} Z `;
         break;
@@ -171,9 +176,9 @@ const createSelectionBorderSVG = (
         pathData += `M 99,99 L 100,99 L 100,100 L 99,100 Z `;
         break;
       case "bottom-edge": {
-        // Adjust bottom edge to not overlap with corners
-        const bottomStartX = hasBottomLeftCorner ? 1 : 0;
-        const bottomEndX = hasBottomRightCorner ? 99 : 100;
+        // Adjust bottom edge to not overlap with corners or diagonal neighbors
+        const bottomStartX = hasBottomLeftCorner ? 1 : bottomLeft ? 1 : 0;
+        const bottomEndX = hasBottomRightCorner ? 99 : bottomRight ? 99 : 100;
         pathData += `M ${bottomStartX},99 L ${bottomEndX},99 L ${bottomEndX},100 L ${bottomStartX},100 Z `;
         break;
       }
@@ -181,9 +186,9 @@ const createSelectionBorderSVG = (
         pathData += `M 0,99 L 1,99 L 1,100 L 0,100 Z `;
         break;
       case "left-edge": {
-        // Adjust left edge to not overlap with corners
-        const leftStartY = hasTopLeftCorner ? 1 : 0;
-        const leftEndY = hasBottomLeftCorner ? 99 : 100;
+        // Adjust left edge to not overlap with corners or diagonal neighbors
+        const leftStartY = hasTopLeftCorner ? 1 : topLeft ? 3 : 0;
+        const leftEndY = hasBottomLeftCorner ? 99 : bottomLeft ? 99 : 100;
         pathData += `M 0,${leftStartY} L 1,${leftStartY} L 1,${leftEndY} L 0,${leftEndY} Z `;
         break;
       }
