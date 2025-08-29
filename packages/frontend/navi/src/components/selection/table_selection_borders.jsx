@@ -232,12 +232,13 @@ const createSelectionBorderCanvas = (
               ? 1
               : 0;
         // Left cell draws full width to avoid gaps, right cell shortens its border
+        // When there's a diagonal bottom-right neighbor, end early to avoid corner overlap
         const endX = hasBottomRightCorner
           ? canvasWidth
           : right
-            ? canvasWidth
+            ? canvasWidth - 1
             : bottomRight
-              ? canvasWidth - 1
+              ? canvasWidth - 2
               : canvasWidth;
         const width = endX - startX;
         ctx.fillRect(startX, yPos, width, 1);
@@ -251,7 +252,17 @@ const createSelectionBorderCanvas = (
         // Left edge avoids corners (owned by top/bottom edges)
         // When there's a selected neighbor to the left, avoid overlap by drawing slightly inward
         const xPos = left ? 1 : 0;
-        const startY = hasTopLeftCorner ? 1 : topLeft ? 1 : top ? 2 : 0;
+        // When there's a diagonal top-right neighbor, start further down to avoid corner overlap
+        const hasTopRightDiagonal = topRight && !top && !right;
+        const startY = hasTopLeftCorner
+          ? 1
+          : topLeft
+            ? 2
+            : top
+              ? 2
+              : hasTopRightDiagonal
+                ? 2
+                : 0;
         // Top cell draws full height, bottom cell starts inward to avoid overlap
         const endY = hasBottomLeftCorner
           ? canvasHeight - 1
