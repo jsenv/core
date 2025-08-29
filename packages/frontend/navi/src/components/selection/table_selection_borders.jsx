@@ -213,18 +213,7 @@ function drawBorder(
   const shouldDrawJunction = (junctionType) => {
     if (!cellPosition || !allCellPositions) return false;
 
-    // For vertical junctions, the top-most cell draws the junction
-    if (junctionType === "top-junction") {
-      // Find the cell above us
-      const topNeighbor = allCellPositions.find(
-        ({ position }) =>
-          position.row === cellPosition.row - 1 &&
-          position.col === cellPosition.col,
-      );
-      // We draw the top junction if we have higher priority (we're the bottom cell)
-      return topNeighbor && cellPosition.row > topNeighbor.position.row;
-    }
-
+    // For vertical connections: top cell extends down, bottom cell stays short
     if (junctionType === "bottom-junction") {
       // Find the cell below us
       const bottomNeighbor = allCellPositions.find(
@@ -232,29 +221,30 @@ function drawBorder(
           position.row === cellPosition.row + 1 &&
           position.col === cellPosition.col,
       );
-      // We draw the bottom junction if we have higher priority (we're the top cell)
-      return bottomNeighbor && cellPosition.row < bottomNeighbor.position.row;
+      // Top cell draws the bottom junction (extends down into neighbor)
+      return bottomNeighbor !== undefined;
     }
 
-    // For horizontal junctions, the left-most cell draws the junction
-    if (junctionType === "left-junction") {
-      const leftNeighbor = allCellPositions.find(
-        ({ position }) =>
-          position.row === cellPosition.row &&
-          position.col === cellPosition.col - 1,
-      );
-      // We draw the left junction if we have higher priority (we're the right cell)
-      return leftNeighbor && cellPosition.col > leftNeighbor.position.col;
+    if (junctionType === "top-junction") {
+      // Bottom cell never draws into top junction (top cell handles it)
+      return false;
     }
 
+    // For horizontal connections: left cell extends right, right cell stays short
     if (junctionType === "right-junction") {
+      // Find the cell to the right of us
       const rightNeighbor = allCellPositions.find(
         ({ position }) =>
           position.row === cellPosition.row &&
           position.col === cellPosition.col + 1,
       );
-      // We draw the right junction if we have higher priority (we're the left cell)
-      return rightNeighbor && cellPosition.col < rightNeighbor.position.col;
+      // Left cell draws the right junction (extends right into neighbor)
+      return rightNeighbor !== undefined;
+    }
+
+    if (junctionType === "left-junction") {
+      // Right cell never draws into left junction (left cell handles it)
+      return false;
     }
 
     return false;
