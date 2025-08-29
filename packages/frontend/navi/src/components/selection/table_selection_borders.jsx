@@ -488,23 +488,31 @@ function drawBorder(
   // Case 3: Two connections - coordinate junction responsibility
   if (connectionCount === 2) {
     if (top && bottom) {
-      // Vertical tunnel - simple rule: top cell draws full height, bottom cell draws short
+      // Vertical tunnel - each cell draws its side borders, with junction coordination
       const hasNeighborBelow = allCellPositions.some(
         ({ position }) =>
           position.row === cellPosition.row + 1 &&
           position.col === cellPosition.col,
       );
 
+      // For vertical tunnels, we need to coordinate who draws the junction pixels
+      // Top cell: draws 1px into bottom junction
+      // Bottom cell: starts 1px above to avoid overlap
+
       // Right border
       const rightX = canvasWidth - 1;
-      const rightStartY = 1; // Always start below top connection
-      const rightEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends down, bottom cell stops short
+      const rightStartY = 1; // Always start below the top connection area
+      const rightEndY = hasNeighborBelow
+        ? canvasHeight // Top cell: extend into junction (full height)
+        : canvasHeight - 1; // Bottom cell: stop before junction
       ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
 
       // Left border
       const leftX = 0;
-      const leftStartY = 1; // Always start below top connection
-      const leftEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends down, bottom cell stops short
+      const leftStartY = 1; // Always start below the top connection area
+      const leftEndY = hasNeighborBelow
+        ? canvasHeight // Top cell: extend into junction (full height)
+        : canvasHeight - 1; // Bottom cell: stop before junction
       ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
 
       return "vertical-tunnel";
