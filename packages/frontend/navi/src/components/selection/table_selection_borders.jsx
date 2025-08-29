@@ -183,8 +183,7 @@ const createSelectionBorderCanvas = (
   );
 
   // Store pattern for potential debugging (can be removed in production)
-  canvas.dataset.borderPattern = borderPattern;
-
+  canvas.setAttribute("data-border", borderPattern);
   return canvas;
 };
 
