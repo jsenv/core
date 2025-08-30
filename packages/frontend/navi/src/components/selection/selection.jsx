@@ -733,7 +733,6 @@ const getJumpToEndElement = (selection, element, direction) => {
   }
   return null;
 };
-
 const getJumpToEndElementGrid = (selection, element, direction) => {
   const currentPos = getElementPosition(element);
   if (!currentPos) {
@@ -853,7 +852,6 @@ const getJumpToEndElementGrid = (selection, element, direction) => {
 
   return null;
 };
-
 const getJumpToEndElementLinear = (selection, element, direction) => {
   const currentSelectionName = getElementSelectionName(element);
 
@@ -942,7 +940,6 @@ const getElementPosition = (element) => {
 export const useSelection = () => {
   return useContext(SelectionContext);
 };
-
 export const useSelectableElement = (elementRef) => {
   const selection = useSelection();
   if (!selection) {
@@ -1224,7 +1221,6 @@ const handleCrossTypeNavigation = (
     shouldClearPreviousSelection: false,
   };
 };
-
 const keydownToSelect = (keydownEvent, { selection, element }) => {
   const value = getElementValue(element);
   const selectionName = getElementSelectionName(element);
