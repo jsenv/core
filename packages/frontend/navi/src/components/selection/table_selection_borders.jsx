@@ -241,21 +241,21 @@ const generateColumnSelectionPath = (selectedCells) => {
       const leftColumn = group[0];
       const rightColumn = group[group.length - 1];
 
-      // For column selections, we need to find the bounds of the data cells in that column
+      // For column selections, we need to find the bounds of all cells in that column
       const table = leftColumn.element.closest("table");
       if (!table) return "";
 
-      // Find the first data row (skip header) to get the top boundary
-      const firstDataRow = table.rows[1]; // Skip header row (row 0)
-      if (!firstDataRow) return "";
+      // Start from the first row (including header) to get the top boundary
+      const firstRow = table.rows[0];
+      if (!firstRow) return "";
 
       // Find the last data row to get the bottom boundary
       const lastDataRow = table.rows[table.rows.length - 1];
       if (!lastDataRow) return "";
 
       // Get the cells in the selected columns for the first and last rows
-      const leftColumnCell = firstDataRow.cells[leftColumn.column];
-      const rightColumnCell = firstDataRow.cells[rightColumn.column];
+      const leftColumnCell = firstRow.cells[leftColumn.column];
+      const rightColumnCell = firstRow.cells[rightColumn.column];
       const lastRowLeftCell = lastDataRow.cells[leftColumn.column];
 
       if (!leftColumnCell || !rightColumnCell || !lastRowLeftCell) return "";
@@ -272,7 +272,7 @@ const generateColumnSelectionPath = (selectedCells) => {
       const maxBottom = lastRowRect.bottom - tableRect.top;
 
       // Create a rectangular path with all borders
-      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
+      return `M ${minLeft + 0.5} ${minTop + 0.5} L ${maxRight - 0.5} ${minTop + 0.5} L ${maxRight - 0.5} ${maxBottom - 0.5} L ${minLeft + 0.5} ${maxBottom - 0.5} Z`;
     })
     .join(" ");
 };
