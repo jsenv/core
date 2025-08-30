@@ -8,91 +8,117 @@ import {
 import { useFocusGroup } from "../use_focus_group.js";
 import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
-const RowNumberHeaderCell = () => {
-  return (
-    <th className="number-column" style={{ textAlign: "center" }}>
-      #
-    </th>
-  );
-};
+import.meta.css = /* css */ `
+  .navi_table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+  }
 
-const RowNumberCell = ({ row, columns, rowWithSomeSelectedCell }) => {
-  const cellRef = useRef();
-  const rowValue = `row:${row.id}`;
-  const { selected } = useSelectableElement(cellRef, {
-    selectionImpact: () => {
-      // Return all data cells in this row that should be impacted
-      return columns.map((col) => `${col.accessorKey}:${row.id}`);
-    },
-  });
+  .navi_table th,
+  .navi_table td {
+    border: 1px solid #e0e0e0;
+    text-align: left;
+    position: relative;
+  }
 
-  const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(row.id);
+  .navi_table th {
+    background: #f8f9fa;
+    font-weight: normal;
+    padding: 12px 8px;
+  }
 
-  return (
-    <td
-      ref={cellRef}
-      className="database_table_cell number-column"
-      data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
-      data-value={rowValue}
-      data-selection-name="row"
-      data-selection-toggle-shortcut="space"
-      aria-selected={selected}
-      style={{ cursor: "pointer", textAlign: "center" }}
-      tabIndex={-1}
-    >
-      {row.index}
-    </td>
-  );
-};
+  /* Row selection styling - removed since we now only style individual cells */
 
-const HeaderCell = ({
-  columnName,
-  columnAccessorKey,
-  columnWithSomeSelectedCell,
-}) => {
-  const cellRef = useRef();
-  const columnValue = `column:${columnAccessorKey}`;
-  const { selected } = useSelectableElement(cellRef);
+  /* Column selection styling */
+  .navi_table th[aria-selected="true"] {
+    background-color: rgba(0, 120, 212, 0.2);
+    font-weight: bold;
+  }
 
-  const columnContainsSelectedCell =
-    columnWithSomeSelectedCell.includes(columnAccessorKey);
-  return (
-    <th
-      ref={cellRef}
-      className="database_table_cell"
-      data-column-contains-selected={
-        columnContainsSelectedCell ? "" : undefined
-      }
-      data-value={columnValue}
-      data-selection-name="column"
-      data-selection-toggle-shortcut="space"
-      aria-selected={selected}
-      style={{ cursor: "pointer" }}
-      tabIndex={-1}
-    >
-      <span>{columnName}</span>
-    </th>
-  );
-};
+  /* Selected row number column when focused - use a darker blue background */
+  .navi_table tr[aria-selected="true"] .:focus {
+    background-color: rgba(0, 120, 212, 0.08);
+  }
 
-const DataCell = ({ columnName, row, value }) => {
-  const cellId = `${columnName}:${row.id}`;
-  const cellRef = useRef();
-  const { selected } = useSelectableElement(cellRef);
+  td[data-row-contains-selected] {
+    font-weight: 500;
+    color: #444;
+  }
 
-  return (
-    <td
-      ref={cellRef}
-      className="database_table_cell"
-      tabIndex={-1}
-      data-value={cellId}
-      data-selection-name="cell"
-      aria-selected={selected}
-    >
-      {value}
-    </td>
-  );
-};
+  /* Absolutely positioned left border indicator for rows with selected cells */
+  td[data-row-contains-selected]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: rgba(128, 128, 128, 0.3);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  th[data-column-contains-selected] {
+    font-weight: 600;
+    color: #444;
+  }
+
+  /* Absolutely positioned top border indicator for columns with selected cells */
+  th[data-column-contains-selected]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 4px;
+    background: rgba(128, 128, 128, 0.4);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .navi_table_cell[aria-selected="true"] {
+    background-color: rgba(0, 120, 212, 0.08);
+  }
+
+  /* Container for table with relative positioning */
+  .table_container {
+    position: relative;
+  }
+
+  .navi_table_cell {
+    padding: 0;
+    position: relative;
+    padding: 8px;
+    user-select: none;
+  }
+
+  .navi_table_cell:focus {
+    outline: 2px solid #0078d4;
+    outline-offset: -1.5px;
+    z-index: 1;
+  }
+
+  /* Number column specific styling */
+  .navi_row_number_cell {
+    width: 50px;
+    text-align: center;
+    background: #fafafa;
+    font-weight: 500;
+    color: #666;
+    user-select: none;
+  }
+
+  .navi_header_cell_bold_clone {
+    font-weight: 600; /* force bold to compute max width */
+    visibility: hidden; /* not visible */
+    display: block; /* in-flow so it contributes to width */
+    height: 0; /* zero height so it doesn't change layout height */
+    overflow: hidden; /* avoid any accidental height */
+    pointer-events: none; /* inert */
+  }
+`;
 
 export const Table = forwardRef((props, ref) => {
   let { columns, data, selection = [], onSelectionChange } = props;
@@ -172,11 +198,11 @@ export const Table = forwardRef((props, ref) => {
   useFocusGroup(innerRef);
 
   return (
-    <div className="table-container">
+    <div className="table_container">
       <SelectionProvider>
         <table
           ref={innerRef}
-          className="database_table"
+          className="navi_table"
           aria-multiselectable="true"
           data-multiselection={selection.length > 1 ? "" : undefined}
         >
@@ -227,3 +253,92 @@ export const Table = forwardRef((props, ref) => {
     </div>
   );
 });
+
+const RowNumberHeaderCell = () => {
+  return (
+    <th
+      className="navi_table_cell navi_row_number_header_cell"
+      style={{ textAlign: "center" }}
+    >
+      #
+    </th>
+  );
+};
+const RowNumberCell = ({ row, columns, rowWithSomeSelectedCell }) => {
+  const cellRef = useRef();
+  const rowValue = `row:${row.id}`;
+  const { selected } = useSelectableElement(cellRef, {
+    selectionImpact: () => {
+      // Return all data cells in this row that should be impacted
+      return columns.map((col) => `${col.accessorKey}:${row.id}`);
+    },
+  });
+
+  const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(row.id);
+
+  return (
+    <td
+      ref={cellRef}
+      className="navi_table_cell navi_row_number_cell"
+      data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
+      data-value={rowValue}
+      data-selection-name="row"
+      data-selection-toggle-shortcut="space"
+      aria-selected={selected}
+      style={{ cursor: "pointer", textAlign: "center" }}
+      tabIndex={-1}
+    >
+      {row.index}
+    </td>
+  );
+};
+const HeaderCell = ({
+  columnName,
+  columnAccessorKey,
+  columnWithSomeSelectedCell,
+}) => {
+  const cellRef = useRef();
+  const columnValue = `column:${columnAccessorKey}`;
+  const { selected } = useSelectableElement(cellRef);
+
+  const columnContainsSelectedCell =
+    columnWithSomeSelectedCell.includes(columnAccessorKey);
+  return (
+    <th
+      ref={cellRef}
+      className="navi_table_cell navi_header_cell"
+      data-column-contains-selected={
+        columnContainsSelectedCell ? "" : undefined
+      }
+      data-value={columnValue}
+      data-selection-name="column"
+      data-selection-toggle-shortcut="space"
+      aria-selected={selected}
+      style={{ cursor: "pointer" }}
+      tabIndex={-1}
+    >
+      <span>{columnName}</span>
+      <span className="navi_header_cell_bold_clone" aria-hidden="true">
+        {columnName}
+      </span>
+    </th>
+  );
+};
+const DataCell = ({ columnName, row, value }) => {
+  const cellId = `${columnName}:${row.id}`;
+  const cellRef = useRef();
+  const { selected } = useSelectableElement(cellRef);
+
+  return (
+    <td
+      ref={cellRef}
+      className="navi_table_cell navi_data_cell"
+      tabIndex={-1}
+      data-value={cellId}
+      data-selection-name="cell"
+      aria-selected={selected}
+    >
+      {value}
+    </td>
+  );
+};
