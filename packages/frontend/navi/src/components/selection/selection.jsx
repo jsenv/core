@@ -153,6 +153,7 @@ const createBaseSelection = ({
     triggerChange(value, event);
   };
   let anchorElement = null;
+  let activeElement = null;
 
   const registerElement = (element, options = {}) => {
     const elementValue = getElementValue(element);
@@ -194,6 +195,9 @@ const createBaseSelection = ({
       registry.size,
     );
   };
+  const setActiveElement = (element) => {
+    activeElement = element;
+  };
   const setAnchorElement = (element) => {
     const elementValue = getElementValue(element);
     debug(
@@ -230,14 +234,6 @@ const createBaseSelection = ({
       debug("selection", `${type} setSelection: no change, returning early`);
       return;
     }
-    if (newSelection.length === 0) {
-      debug(
-        "selection",
-        `${type} setSelection: clearing anchor (empty selection)`,
-      );
-      anchorElement = null;
-    }
-
     update(newSelection, event);
   };
   const addToSelection = (arrayOfValuesToAdd, event = null) => {
@@ -250,37 +246,16 @@ const createBaseSelection = ({
     );
     const selectionWithValues = [...baseSelection.value];
     let modified = false;
-    let lastAddedElement = null;
 
     for (const valueToAdd of arrayOfValuesToAdd) {
       if (!selectionWithValues.includes(valueToAdd)) {
         modified = true;
         selectionWithValues.push(valueToAdd);
         debug("selection", `${type} addToSelection: adding value:`, valueToAdd);
-        // Find the element for this value
-        for (const element of registry) {
-          if (getElementValue(element) === valueToAdd) {
-            lastAddedElement = element;
-            debug(
-              "selection",
-              `${type} addToSelection: found element for value:`,
-              element,
-            );
-            break;
-          }
-        }
       }
     }
 
     if (modified) {
-      if (lastAddedElement) {
-        debug(
-          "selection",
-          `${type} addToSelection: setting anchor element:`,
-          lastAddedElement,
-        );
-        anchorElement = lastAddedElement;
-      }
       update(selectionWithValues, event);
     } else {
       debug("selection", `${type} addToSelection: no changes made`);
@@ -293,10 +268,6 @@ const createBaseSelection = ({
     for (const elementValue of baseSelection.value) {
       if (arrayOfValuesToRemove.includes(elementValue)) {
         modified = true;
-        // Check if we're removing the anchor element
-        if (anchorElement && getElementValue(anchorElement) === elementValue) {
-          anchorElement = null;
-        }
       } else {
         selectionWithoutValues.push(elementValue);
       }
@@ -347,6 +318,9 @@ const createBaseSelection = ({
     get anchorElement() {
       return anchorElement;
     },
+    get activeElement() {
+      return activeElement;
+    },
     channels: {
       change,
     },
@@ -355,6 +329,7 @@ const createBaseSelection = ({
     registerElement,
     unregisterElement,
     setAnchorElement,
+    setActiveElement,
     isElementSelected,
     isValueSelected,
     setSelection,
@@ -1272,6 +1247,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
         "interaction",
         `keydownToSelect: ${key} with Shift - selecting from anchor to target element`,
       );
+      selection.setActiveElement(elementToSelect);
       selection.selectFromAnchorTo(elementToSelect, keydownEvent);
       return true;
     }
@@ -1354,7 +1330,9 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
         key: "left",
         enabled: selection.axis !== "vertical",
         action: () => {
-          const targetElement = selection.getElementBefore(element);
+          const targetElement = selection.getElementBefore(
+            selection.activeElement || element,
+          );
           return onElementToSelect(targetElement);
         },
       },
