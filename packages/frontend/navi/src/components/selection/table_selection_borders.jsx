@@ -1,19 +1,20 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
-  .selection-overlay {
+  .table_selection_overlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
   }
 
-  .selection-svg {
+  .table_selection_overlay svg {
     position: absolute;
     inset: 0;
     pointer-events: none;
+    overflow: visible; /* because svg is not taking the table dimensions */
   }
 
-  .selection-path {
+  .table_selection_overlay svg path {
     fill: none;
     stroke: #0078d4;
     stroke-width: 1;
@@ -21,7 +22,7 @@ import.meta.css = /* css */ `
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting] + * .selection-overlay {
+  table[data-drag-selecting] + .table_selection_overlay {
     display: none;
   }
 `;
@@ -48,9 +49,9 @@ export const TableSelectionBorders = ({ tableRef }) => {
   const borderPath = generateSelectionBorderPath(selectedCells);
 
   return (
-    <div className="selection-overlay">
-      <svg className="selection-svg" width="100%" height="100%">
-        <path className="selection-path" d={borderPath} />
+    <div className="table_selection_overlay">
+      <svg>
+        <path d={borderPath} />
       </svg>
     </div>
   );

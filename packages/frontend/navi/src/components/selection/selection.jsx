@@ -51,6 +51,7 @@ export const useSelectionProvider = ({
       return createGridSelection({
         value,
         onChange,
+        elementRef,
       });
     }
     return createLinearSelection({
@@ -63,6 +64,7 @@ export const useSelectionProvider = ({
 
   // Update the selection's internal values when external value changes
   useEffect(() => {
+    selection.element = elementRef.current;
     selection.update(value);
   }, [selection, value]);
 
@@ -1048,7 +1050,7 @@ export const useSelectableElement = (elementRef) => {
         if (!isDragging) {
           isDragging = true;
           // mark it as drag-selecting
-          element.setAttribute("data-drag-selecting", "");
+          selection.element.setAttribute("data-drag-selecting", "");
         }
 
         // Find the element under the current mouse position
@@ -1138,7 +1140,7 @@ export const useSelectableElement = (elementRef) => {
 
         // Remove drag-selecting state from table
         if (isDragging) {
-          element.removeAttribute("data-drag-selecting");
+          selection.element.removeAttribute("data-drag-selecting");
         }
 
         // Reset drag state
