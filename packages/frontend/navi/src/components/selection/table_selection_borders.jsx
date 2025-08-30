@@ -413,49 +413,6 @@ const drawBorder = (
   // Connection state object for easy passing
   const connections = { top, left, right, bottom };
 
-  // Helper function to determine if this cell should draw junction pixels
-  const shouldDrawJunction = (junctionType) => {
-    if (!cellPosition || !allCellPositions) {
-      return false;
-    }
-
-    // For vertical connections: top cell extends down, bottom cell stays short
-    if (junctionType === "bottom-junction") {
-      // Find the cell below us
-      const bottomNeighbor = allCellPositions.find(
-        ({ position }) =>
-          position.row === cellPosition.row + 1 &&
-          position.col === cellPosition.col,
-      );
-      // Top cell draws the bottom junction (extends down into neighbor)
-      return bottomNeighbor !== undefined;
-    }
-
-    if (junctionType === "top-junction") {
-      // Bottom cell never draws into top junction (top cell handles it)
-      return false;
-    }
-
-    // For horizontal connections: left cell extends right, right cell stays short
-    if (junctionType === "right-junction") {
-      // Find the cell to the right of us
-      const rightNeighbor = allCellPositions.find(
-        ({ position }) =>
-          position.row === cellPosition.row &&
-          position.col === cellPosition.col + 1,
-      );
-      // Left cell draws the right junction (extends right into neighbor)
-      return rightNeighbor !== undefined;
-    }
-
-    if (junctionType === "left-junction") {
-      // Right cell never draws into left junction (left cell handles it)
-      return false;
-    }
-
-    return false;
-  };
-
   // Case 1: Isolated cell (no connections) - draw all 4 borders with corner ownership
   if (connectionCount === 0) {
     const diagonalAdjustments = {
@@ -542,101 +499,57 @@ const drawBorder = (
     }
 
     if (left && right) {
-      // Horizontal tunnel - coordinate junction responsibility for seamless borders
-      // Top border (coordinate with neighbors for seamless connection)
-      const topY = 0;
-      let topStartX = TABLE_BORDER_WIDTH; // Avoid left connection area by default
-      let topEndX = canvasWidth - TABLE_BORDER_WIDTH; // Avoid right connection area by default
-      // Extend top border into junction areas if we're responsible
-      if (shouldDrawJunction("left-junction")) {
-        topStartX = 0; // Draw into left junction
-      }
-      if (shouldDrawJunction("right-junction")) {
-        topEndX = canvasWidth; // Draw into right junction
-      }
-      ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
-
-      // Bottom border (coordinate with neighbors for seamless connection)
-      const bottomY = canvasHeight - 1;
-      let bottomStartX = TABLE_BORDER_WIDTH; // Avoid left connection area by default
-      let bottomEndX = canvasWidth - TABLE_BORDER_WIDTH; // Avoid right connection area by default
-      // Extend bottom border into junction areas if we're responsible
-      if (shouldDrawJunction("left-junction")) {
-        bottomStartX = 0; // Draw into left junction
-      }
-      if (shouldDrawJunction("right-junction")) {
-        bottomEndX = canvasWidth; // Draw into right junction
-      }
-      ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
-
+      // Horizontal tunnel - draw top and bottom borders
+      const diagonalAdjustments = {
+        topLeft: false, // No diagonal adjustments needed for horizontal tunnels
+        topRight: false,
+        bottomLeft: false,
+        bottomRight: false,
+      };
+      drawBorderSegment("top", connections, diagonalAdjustments);
+      drawBorderSegment("bottom", connections, diagonalAdjustments);
       return "top_bottom";
     }
 
     if (top && left) {
-      // Bottom-right corner - only draw non-connected borders
-      // Bottom border (only this cell draws the bottom edge)
-      const bottomY = canvasHeight - 1;
-      const bottomStartX = 0; // Start from left edge
-      const bottomEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor
-      ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
-
-      // Right border (only this cell draws the right edge)
-      const rightX = canvasWidth - 1;
-      const rightStartY = TABLE_BORDER_WIDTH; // Start below top connection area
-      const rightEndY = canvasHeight - 1; // Stop at bottom corner (owned by bottom border)
-      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
-
+      // Connected to top and left - draw bottom and right borders
+      const diagonalAdjustments = {
+        bottomRight: bottomRight && !bottom && !right,
+      };
+      drawBorderSegment("bottom", connections, diagonalAdjustments);
+      drawBorderSegment("right", connections, diagonalAdjustments);
       return "bottom_right";
     }
 
     if (top && right) {
-      // Bottom-left corner - only draw non-connected borders
-      // Bottom border (only this cell draws the bottom edge)
-      const bottomY = canvasHeight - 1;
-      const bottomStartX = left ? 1 : 0; // Avoid left neighbor
-      const bottomEndX = canvasWidth - 1;
-      ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
-
-      // Left border (only this cell draws the left edge)
-      const leftX = 0;
-      const leftStartY = 1;
-      const leftEndY = canvasHeight - 1; // Stop at bottom corner (owned by bottom border)
-      ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
-
+      // Connected to top and right - draw bottom and left borders
+      const diagonalAdjustments = {
+        bottomLeft: bottomLeft && !bottom && !left,
+      };
+      drawBorderSegment("bottom", connections, diagonalAdjustments);
+      drawBorderSegment("left", connections, diagonalAdjustments);
       return "bottom_left";
     }
 
     if (bottom && left) {
-      // Top-right corner - only draw non-connected borders
-      // Top border (only this cell draws the top edge)
-      const topY = 0;
-      const topStartX = 1; // Start from left edge
-      const topEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor
-      ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
+      // Connected to bottom and left - draw top and right borders
+      const diagonalAdjustments = {
+        topRight: topRight && !top && !right,
+      };
 
-      // Right border (only this cell draws the right edge)
-      const rightX = canvasWidth - 1;
-      const rightStartY = 1; // Start below top corner (owned by top border)
-      const rightEndY = canvasHeight;
-      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
-
+      drawBorderSegment("top", connections, diagonalAdjustments);
+      drawBorderSegment("right", connections, diagonalAdjustments);
       return "top_right";
     }
 
     if (bottom && right) {
-      // Top-left corner - only draw non-connected borders
-      // Top border (only this cell draws the top edge)
-      const topY = 0;
-      const topStartX = left ? 1 : 0; // Avoid left neighbor
-      const topEndX = canvasWidth - 1; // Extend to right edge
-      ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
+      // Connected to bottom and right - draw top and left borders
+      const diagonalAdjustments = {
+        topLeft: topLeft && !top && !left,
+      };
 
-      // Left border (only this cell draws the left edge)
-      const leftX = 0;
-      const leftStartY = 1; // Start below top corner (owned by top border)
-      const leftEndY = canvasHeight; // Stop above bottom connection area
-      ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
-
+      drawBorderSegment("top", connections, diagonalAdjustments);
+      drawBorderSegment("left", connections, diagonalAdjustments);
       return "top_left";
     }
   }
