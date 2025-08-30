@@ -111,19 +111,17 @@ const createBaseSelection = ({
       return;
     }
 
-    const selectedSet = new Set(value);
-    for (const item of newValue) {
-      selectedSet.add(item);
-    }
+    const oldSelectedSet = new Set(value);
+    const newSelectedSet = new Set(newValue);
     const willBeUnselectedSet = new Set();
-    for (const item of value) {
-      if (!selectedSet.has(item)) {
+    for (const item of oldSelectedSet) {
+      if (!newSelectedSet.has(item)) {
         willBeUnselectedSet.add(item);
       }
     }
     const selectionSet = new Set(newValue);
-    for (const selected of value) {
-      const element = getElementByValue(selected);
+    for (const newSelected of newSelectedSet) {
+      const element = getElementByValue(newSelected);
       if (element._selectionImpact) {
         const impactedValues = element._selectionImpact();
         for (const impactedValue of impactedValues) {
