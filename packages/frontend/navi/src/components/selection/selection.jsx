@@ -1085,7 +1085,12 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
 
       // Set up for potential drag selection (now works with all modifier combinations)
       dragStartElement = element;
-      isDragging = false; // Will be set to true if mouse moves
+      isDragging = false; // Will be set to true if mouse moves beyond threshold
+
+      // Store initial mouse position for drag threshold
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const dragThreshold = 5; // pixels
 
       const handleMouseMove = (e) => {
         if (!dragStartElement) {
@@ -1093,6 +1098,15 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
         }
 
         if (!isDragging) {
+          // Check if we've exceeded the drag threshold
+          const deltaX = Math.abs(e.clientX - startX);
+          const deltaY = Math.abs(e.clientY - startY);
+          const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+          if (distance < dragThreshold) {
+            return; // Don't start dragging yet
+          }
+
           isDragging = true;
           // mark it as drag-selecting
           selection.element.setAttribute("data-drag-selecting", "");
