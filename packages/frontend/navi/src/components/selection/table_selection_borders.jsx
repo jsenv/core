@@ -1,29 +1,47 @@
 import { useLayoutEffect } from "preact/hooks";
 import { useSelection } from "./selection.jsx";
 
-const TABLE_BORDER_WIDTH = 1;
-
 import.meta.css = /* css */ `
-  /* Canvas-based selection borders */
-  [data-selection-borders] > .selection-border-canvas {
-    position: absolute;
-    inset: -${TABLE_BORDER_WIDTH}px; /* Extend 2px to sit on cell border edge */
-    pointer-events: none;
-    width: calc(100% + ${TABLE_BORDER_WIDTH * 2}px);
-    height: calc(100% + ${TABLE_BORDER_WIDTH * 2}px);
+  /* CSS-based selection borders using data attributes */
+
+  /* Base border styles - these will be overridden when selection borders are active */
+  table[data-selection-borders] {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  /* Selection border colors using data attributes */
+  [data-selection-border-top] {
+    border-top: 1px solid var(--selection-border-color, #0078d4) !important;
+  }
+
+  [data-selection-border-right] {
+    border-right: 1px solid var(--selection-border-color, #0078d4) !important;
+  }
+
+  [data-selection-border-bottom] {
+    border-bottom: 1px solid var(--selection-border-color, #0078d4) !important;
+  }
+
+  [data-selection-border-left] {
+    border-left: 1px solid var(--selection-border-color, #0078d4) !important;
+  }
+
+  /* Opacity control */
+  [data-selection-border-top],
+  [data-selection-border-right],
+  [data-selection-border-bottom],
+  [data-selection-border-left] {
+    --selection-border-opacity: 1;
+    opacity: var(--selection-border-opacity);
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting]
-    [data-selection-borders]
-    > .selection-border-canvas {
-    display: none;
-  }
-
-  /* Ensure table cells don't interfere with border positioning */
-  table td,
-  table th {
-    position: relative;
+  table[data-drag-selecting] [data-selection-border-top],
+  table[data-drag-selecting] [data-selection-border-right],
+  table[data-drag-selecting] [data-selection-border-bottom],
+  table[data-drag-selecting] [data-selection-border-left] {
+    border-color: transparent !important;
   }
 `;
 
@@ -40,17 +58,19 @@ export const useTableSelectionBorders = (
     }
 
     const updateCellBorders = () => {
-      // Clear all existing selection borders and injected canvases
+      // Clear all existing selection border attributes
       const allCells = table.querySelectorAll("td, th");
       allCells.forEach((cell) => {
-        cell.removeAttribute("data-selection-borders");
-
-        // Remove any injected canvas elements
-        const existingCanvas = cell.querySelector(".selection-border-canvas");
-        if (existingCanvas) {
-          existingCanvas.remove();
-        }
+        cell.removeAttribute("data-selection-border-top");
+        cell.removeAttribute("data-selection-border-right");
+        cell.removeAttribute("data-selection-border-bottom");
+        cell.removeAttribute("data-selection-border-left");
+        cell.style.removeProperty("--selection-border-color");
+        cell.style.removeProperty("--selection-border-opacity");
       });
+
+      // Remove table-level selection marker
+      table.removeAttribute("data-selection-borders");
 
       // Don't apply borders during drag selection
       if (table.hasAttribute("data-drag-selecting")) {
@@ -62,6 +82,9 @@ export const useTableSelectionBorders = (
       if (selectedCells.length === 0) {
         return;
       }
+
+      // Mark table as having selection borders
+      table.setAttribute("data-selection-borders", "");
 
       // Create smart borders with proper intersection handling
       createSmartSelectionBorders(selectedCells, color, opacity);
@@ -76,7 +99,7 @@ export const useTableSelectionBorders = (
     return () => {
       unsubscribe();
     };
-  }, [tableRef, selection, color]);
+  }, [tableRef, selection, color, opacity]);
 };
 
 // Create smart selection borders with proper intersection handling
@@ -113,488 +136,35 @@ const createSmartSelectionBorders = (selectedCells, color, opacity) => {
   });
 };
 
-// Helper function to create canvas element with drawn borders
-const createSelectionBorderCanvas = (
-  borderColor = "#0078d4",
-  opacity = 1,
-  neighborInfo = {},
-  cellRect,
-  cellPosition = null,
-  allCellPositions = [],
-) => {
-  // Create canvas with high-DPI support for crisp rendering
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
+// Helper function to apply CSS border attributes to a cell
+const applyCellBorders = (cell, borderInfo, color, opacity) => {
+  const { top, right, bottom, left } = borderInfo;
 
-  // Get device pixel ratio for high-DPI displays
-  const devicePixelRatio = window.devicePixelRatio || 1;
+  // Set CSS custom properties for color and opacity
+  cell.style.setProperty("--selection-border-color", color);
+  cell.style.setProperty("--selection-border-opacity", opacity);
 
-  // Set canvas size to cell size + 4px border extension
-  const canvasWidth = cellRect.width + TABLE_BORDER_WIDTH * 2;
-  const canvasHeight = cellRect.height + TABLE_BORDER_WIDTH * 2;
-
-  // Set actual canvas size for high-DPI
-  canvas.width = canvasWidth * devicePixelRatio;
-  canvas.height = canvasHeight * devicePixelRatio;
-
-  // Set CSS size to desired visual size
-  canvas.className = "selection-border-canvas";
-
-  // Scale the drawing context for high-DPI
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-
-  // Set up drawing context for pixel-perfect filled rectangles
-  ctx.fillStyle = borderColor;
-  ctx.globalAlpha = opacity;
-
-  // Ensure pixel-perfect rendering
-  ctx.imageSmoothingEnabled = false;
-
-  // Extract neighbor information for pattern identification
-  const {
-    top = false,
-    left = false,
-    right = false,
-    bottom = false,
-    bottomRight = false,
-    topLeft = false,
-    topRight = false,
-    bottomLeft = false,
-  } = neighborInfo;
-
-  // Identify and draw the border pattern based on neighbor connections
-  const borderPattern = drawBorder(
-    ctx,
-    canvasWidth,
-    canvasHeight,
-    {
-      top,
-      left,
-      right,
-      bottom,
-      topLeft,
-      topRight,
-      bottomLeft,
-      bottomRight,
-    },
-    cellPosition,
-    allCellPositions,
-  );
-
-  // Store pattern for potential debugging (can be removed in production)
-  canvas.setAttribute("data-border", borderPattern);
-  return canvas;
+  // Apply border data attributes based on which borders should be shown
+  if (top) cell.setAttribute("data-selection-border-top", "");
+  if (right) cell.setAttribute("data-selection-border-right", "");
+  if (bottom) cell.setAttribute("data-selection-border-bottom", "");
+  if (left) cell.setAttribute("data-selection-border-left", "");
 };
 
-/**
- * Draw borders and return the pattern name
- *
- * BORDER COORDINATION CHALLENGE:
- * ==============================
- *
- * When multiple cells are selected, they form a contiguous selection area that needs
- * a seamless 1px perimeter border. The challenge is that each cell draws its own borders
- * independently, but they must coordinate to avoid:
- *
- * 1. OVERLAPS: Two adjacent cells drawing the same pixel (creates thick/dark borders)
- * 2. GAPS: No cell drawing a required pixel (creates broken borders)
- *
- * JUNCTION RESPONSIBILITY SYSTEM:
- * ==============================
- *
- * At the junction between two cells, exactly ONE cell must be responsible for drawing
- * the shared border pixels. We use these rules:
- *
- * - CORNER OWNERSHIP: Top/bottom borders own corners (draw full width including corners)
- *                     Left/right borders avoid corners (start at Y=1, end at Y=height-1)
- *
- * - JUNCTION EXTENSION: The "earlier" cell (top-left priority) extends into junction areas:
- *   • Vertical junctions: TOP cell extends DOWN into the junction
- *   • Horizontal junctions: LEFT cell extends RIGHT into the junction
- *
- * COORDINATE CALCULATION:
- * ======================
- *
- * Each border segment needs precise start/end coordinates:
- *
- * - Normal borders: Start=0, End=canvasWidth/canvasHeight (full edge)
- * - Connected borders: Adjust by TABLE_BORDER_WIDTH to avoid drawing over connections
- * - Junction borders: Extend to full width/height when responsible for junction
- *
- * The ±1 pixel offsets are applied based on:
- * - Whether this cell has responsibility for the junction
- * - Which direction the connection/junction is in
- * - Corner ownership rules to prevent overlap
- *
- * This creates a pixel-perfect perimeter where each pixel is drawn exactly once.
- */
-const drawBorder = (
-  ctx,
-  canvasWidth,
-  canvasHeight,
-  neighborInfo,
-  cellPosition,
-  allCellPositions,
-) => {
-  const {
-    top,
-    left,
-    right,
-    bottom,
-    topLeft,
-    topRight,
-    bottomLeft,
-    bottomRight,
-  } = neighborInfo;
-  const connectionCount = [top, left, right, bottom].filter(Boolean).length;
+// Determine which borders a cell should have based on neighbor connections
+const calculateCellBorders = (neighborInfo) => {
+  const { top, left, right, bottom } = neighborInfo;
 
-  // UNIFIED BORDER COORDINATE CALCULATION SYSTEM
-  // ============================================
+  // Default: show all borders for isolated cells
+  let borders = { top: true, right: true, bottom: true, left: true };
 
-  // Helper function to determine if this cell should extend into a junction
-  const shouldExtendIntoJunction = (direction) => {
-    if (!cellPosition || !allCellPositions) return false;
+  // Remove borders where we're connected to neighbors
+  if (top) borders.top = false;
+  if (right) borders.right = false;
+  if (bottom) borders.bottom = false;
+  if (left) borders.left = false;
 
-    if (direction === "right") {
-      // Left cell extends right into horizontal junction
-      return allCellPositions.some(
-        ({ position }) =>
-          position.row === cellPosition.row &&
-          position.col === cellPosition.col + 1,
-      );
-    }
-    if (direction === "left") {
-      // Right cell never extends left (left cell handles it)
-      return false;
-    }
-    if (direction === "down") {
-      // Top cell extends down into vertical junction
-      return allCellPositions.some(
-        ({ position }) =>
-          position.row === cellPosition.row + 1 &&
-          position.col === cellPosition.col,
-      );
-    }
-    if (direction === "up") {
-      // Bottom cell never extends up (top cell handles it)
-      return false;
-    }
-    return false;
-  };
-
-  // Calculate border coordinates with junction responsibility
-  const getBorderCoordinates = (
-    borderSide,
-    connections,
-    diagonalAdjustments = {},
-  ) => {
-    const {
-      left: hasLeft,
-      right: hasRight,
-      top: hasTop,
-      bottom: hasBottom,
-    } = connections;
-
-    if (borderSide === "top") {
-      let startX = hasLeft ? 1 : 0; // Avoid left junction if connected
-      let endX;
-
-      if (hasRight) {
-        // Connected on right - extend to right edge for seamless connection
-        endX = canvasWidth;
-      } else {
-        // Not connected on right - check if we should extend into junction
-        endX = shouldExtendIntoJunction("right") ? canvasWidth : canvasWidth;
-      }
-
-      // Apply diagonal adjustments
-      if (diagonalAdjustments.topLeft) startX = Math.max(startX, 1);
-      if (diagonalAdjustments.topRight) endX = Math.min(endX, canvasWidth - 1);
-
-      return {
-        x: startX,
-        y: 0,
-        width: Math.max(0, endX - startX),
-        height: 1,
-      };
-    }
-    if (borderSide === "bottom") {
-      let startX = hasLeft ? 1 : 0; // Avoid left junction if connected
-      let endX;
-
-      if (hasRight) {
-        // Connected on right - extend to right edge for seamless connection
-        endX = canvasWidth;
-      } else {
-        // Not connected on right - check if we should extend into junction
-        endX = shouldExtendIntoJunction("right") ? canvasWidth : canvasWidth;
-      }
-
-      // Apply diagonal adjustments
-      if (diagonalAdjustments.bottomLeft) startX = Math.max(startX, 1);
-      if (diagonalAdjustments.bottomRight)
-        endX = Math.min(endX, canvasWidth - 1);
-
-      return {
-        x: startX,
-        y: canvasHeight - 1,
-        width: Math.max(0, endX - startX),
-        height: 1,
-      };
-    }
-    if (borderSide === "left") {
-      let startY = 1; // Start below top corner by default (top border owns corners)
-      let endY = canvasHeight - 1; // Stop above bottom corner by default (bottom border owns corners)
-
-      // For vertical connections, use junction responsibility to avoid overlaps
-      if (hasTop && shouldExtendIntoJunction("up")) {
-        startY = 0; // Only extend up if this cell is responsible for the junction
-      }
-      if (hasBottom && shouldExtendIntoJunction("down")) {
-        endY = canvasHeight; // Only extend down if this cell is responsible for the junction
-      }
-
-      // Apply diagonal adjustments
-      if (diagonalAdjustments.topLeft) startY = Math.max(startY, 1);
-      if (diagonalAdjustments.bottomLeft)
-        endY = Math.min(endY, canvasHeight - 1);
-
-      return {
-        x: 0,
-        y: startY,
-        width: 1,
-        height: Math.max(0, endY - startY),
-      };
-    }
-    if (borderSide === "right") {
-      let startY = 1; // Start below top corner by default (top border owns corners)
-      let endY = canvasHeight - 1; // Stop above bottom corner by default (bottom border owns corners)
-
-      // For vertical connections, use junction responsibility to avoid overlaps
-      if (hasTop && shouldExtendIntoJunction("up")) {
-        startY = 0; // Only extend up if this cell is responsible for the junction
-      }
-      if (hasBottom && shouldExtendIntoJunction("down")) {
-        endY = canvasHeight; // Only extend down if this cell is responsible for the junction
-      }
-
-      // Apply diagonal adjustments
-      if (diagonalAdjustments.topRight) startY = Math.max(startY, 1);
-      if (diagonalAdjustments.bottomRight)
-        endY = Math.min(endY, canvasHeight - 1);
-
-      return {
-        x: canvasWidth - 1,
-        y: startY,
-        width: 1,
-        height: Math.max(0, endY - startY),
-      };
-    }
-    return { x: 0, y: 0, width: 0, height: 0 };
-  };
-
-  // Helper function to draw a border with calculated coordinates
-  const drawBorderSegment = (
-    borderSide,
-    connections,
-    diagonalAdjustments = {},
-  ) => {
-    const coords = getBorderCoordinates(
-      borderSide,
-      connections,
-      diagonalAdjustments,
-    );
-
-    if (coords.width > 0 && coords.height > 0) {
-      ctx.fillRect(coords.x, coords.y, coords.width, coords.height);
-    }
-  };
-
-  // Connection state object for easy passing
-  const connections = { top, left, right, bottom };
-
-  // Case 1: Isolated cell (no connections) - draw all 4 borders with corner ownership
-  if (connectionCount === 0) {
-    const diagonalAdjustments = {
-      topLeft: topLeft && !top && !left,
-      topRight: topRight && !top && !right,
-      bottomLeft: bottomLeft && !bottom && !left,
-      bottomRight: bottomRight && !bottom && !right,
-    };
-    drawBorderSegment("top", connections, diagonalAdjustments);
-    drawBorderSegment("right", connections, diagonalAdjustments);
-    drawBorderSegment("bottom", connections, diagonalAdjustments);
-    drawBorderSegment("left", connections, diagonalAdjustments);
-    return "all";
-  }
-
-  // Case 2: Single connection - draw 3 borders with junction responsibility and diagonal awareness
-  if (connectionCount === 1) {
-    if (top) {
-      const diagonalAdjustments = {
-        bottomLeft: bottomLeft && !left,
-        bottomRight: bottomRight && !right,
-      };
-      drawBorderSegment("bottom", connections, diagonalAdjustments);
-      drawBorderSegment("left", connections, diagonalAdjustments);
-      drawBorderSegment("right", connections, diagonalAdjustments);
-      return "bottom_left_right";
-    }
-
-    if (bottom) {
-      const diagonalAdjustments = {
-        topLeft: topLeft && !left,
-        topRight: topRight && !right,
-      };
-      drawBorderSegment("top", connections, diagonalAdjustments);
-      drawBorderSegment("left", connections, diagonalAdjustments);
-      drawBorderSegment("right", connections, diagonalAdjustments);
-      return "top_left_right";
-    }
-    if (left) {
-      const diagonalAdjustments = {
-        topRight: topRight && !top,
-        bottomRight: bottomRight && !bottom,
-      };
-      drawBorderSegment("top", connections, diagonalAdjustments);
-      drawBorderSegment("bottom", connections, diagonalAdjustments);
-      drawBorderSegment("right", connections, diagonalAdjustments);
-      return "top_bottom_right";
-    }
-    if (right) {
-      const diagonalAdjustments = {
-        topLeft: topLeft && !top,
-        bottomLeft: bottomLeft && !bottom,
-      };
-      drawBorderSegment("top", connections, diagonalAdjustments);
-      drawBorderSegment("bottom", connections, diagonalAdjustments);
-      drawBorderSegment("left", connections, diagonalAdjustments);
-      return "top_bottom_left";
-    }
-  }
-
-  // Case 3: Two connections - coordinate junction responsibility
-  if (connectionCount === 2) {
-    if (top && bottom) {
-      // Vertical tunnel - manual coordination to avoid overlaps and gaps
-      const hasNeighborBelow = allCellPositions.some(
-        ({ position }) =>
-          position.row === cellPosition.row + 1 &&
-          position.col === cellPosition.col,
-      );
-
-      // Left border - coordinate with vertical neighbors
-      const leftX = 0;
-      const leftStartY = 1; // Start below top corner to avoid overlap with top neighbor's bottom border
-      const leftEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends down, bottom cell stops short
-      ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
-
-      // Right border - coordinate with vertical neighbors
-      const rightX = canvasWidth - 1;
-      const rightStartY = 1; // Start below top corner to avoid overlap with top neighbor's bottom border
-      const rightEndY = hasNeighborBelow ? canvasHeight : canvasHeight - 1; // Top cell extends down, bottom cell stops short
-      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
-
-      return "left_right";
-    }
-
-    if (left && right) {
-      // Horizontal tunnel - draw top and bottom borders
-      const diagonalAdjustments = {
-        topLeft: false, // No diagonal adjustments needed for horizontal tunnels
-        topRight: false,
-        bottomLeft: false,
-        bottomRight: false,
-      };
-      drawBorderSegment("top", connections, diagonalAdjustments);
-      drawBorderSegment("bottom", connections, diagonalAdjustments);
-      return "top_bottom";
-    }
-
-    if (top && left) {
-      // Connected to top and left - draw bottom and right borders
-      const diagonalAdjustments = {
-        bottomRight: bottomRight && !bottom && !right,
-      };
-      drawBorderSegment("bottom", connections, diagonalAdjustments);
-      drawBorderSegment("right", connections, diagonalAdjustments);
-      return "bottom_right";
-    }
-
-    if (top && right) {
-      // Connected to top and right - draw bottom and left borders
-      const diagonalAdjustments = {
-        bottomLeft: bottomLeft && !bottom && !left,
-      };
-      drawBorderSegment("bottom", connections, diagonalAdjustments);
-      drawBorderSegment("left", connections, diagonalAdjustments);
-      return "bottom_left";
-    }
-
-    if (bottom && left) {
-      // Connected to bottom and left - draw top and right borders
-      const diagonalAdjustments = {
-        topRight: topRight && !top && !right,
-      };
-
-      drawBorderSegment("top", connections, diagonalAdjustments);
-      drawBorderSegment("right", connections, diagonalAdjustments);
-      return "top_right";
-    }
-
-    if (bottom && right) {
-      // Connected to bottom and right - draw top and left borders
-      const diagonalAdjustments = {
-        topLeft: topLeft && !top && !left,
-      };
-
-      drawBorderSegment("top", connections, diagonalAdjustments);
-      drawBorderSegment("left", connections, diagonalAdjustments);
-      return "top_left";
-    }
-  }
-
-  // Case 4: Three connections - draw single border with junction responsibility
-  if (connectionCount === 3) {
-    if (!top) {
-      // Top border only (avoid neighbor junction areas)
-      const topY = 0;
-      const topStartX = left ? 1 : 0; // Avoid left neighbor's junction
-      const topEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's junction
-      ctx.fillRect(topStartX, topY, topEndX - topStartX, 1);
-      return "top";
-    }
-
-    if (!bottom) {
-      // Bottom border only (avoid neighbor junction areas)
-      const bottomY = canvasHeight - 1;
-      const bottomStartX = left ? 1 : 0; // Avoid left neighbor's junction
-      const bottomEndX = right ? canvasWidth - 1 : canvasWidth; // Avoid right neighbor's junction
-      ctx.fillRect(bottomStartX, bottomY, bottomEndX - bottomStartX, 1);
-      return "bottom";
-    }
-
-    if (!left) {
-      // Left border only (avoid neighbor junction areas)
-      const leftX = 0;
-      const leftStartY = top ? 1 : 0; // Avoid top neighbor's junction
-      const leftEndY = canvasHeight;
-      ctx.fillRect(leftX, leftStartY, 1, leftEndY - leftStartY);
-      return "left";
-    }
-
-    if (!right) {
-      // Right border only (avoid neighbor junction areas)
-      const rightX = canvasWidth - 1;
-      const rightStartY = top ? 1 : 0; // Avoid top neighbor's junction
-      const rightEndY = canvasHeight;
-      ctx.fillRect(rightX, rightStartY, 1, rightEndY - rightStartY);
-      return "right";
-    }
-  }
-
-  // Case 5: Four connections - no borders
-  return "none";
+  return borders;
 };
 
 // Create borders for cell selections with smart intersection handling
@@ -655,36 +225,11 @@ const createCellSelectionBorders = (cellPositions, color, opacity) => {
       topLeft,
     };
 
-    // Get cell dimensions for canvas sizing
-    const cellRect = cell.getBoundingClientRect();
-    const canvasElement = createSelectionBorderCanvas(
-      color,
-      opacity,
-      neighborInfo,
-      cellRect,
-      { row: position.row, col: position.col },
-      cellPositions,
-    );
+    // Calculate which borders this cell should display
+    const borderInfo = calculateCellBorders(neighborInfo);
 
-    if (canvasElement) {
-      cell.setAttribute("data-selection-borders", "");
-
-      // Remove any existing canvas
-      const existingCanvas = cell.querySelector(".selection-border-canvas");
-      if (existingCanvas) {
-        existingCanvas.remove();
-      }
-
-      // Inject the canvas directly into the cell
-      cell.appendChild(canvasElement);
-    } else {
-      // Clean up if no borders needed
-      cell.removeAttribute("data-selection-borders");
-      const existingCanvas = cell.querySelector(".selection-border-canvas");
-      if (existingCanvas) {
-        existingCanvas.remove();
-      }
-    }
+    // Apply CSS border attributes to the cell
+    applyCellBorders(cell, borderInfo, color, opacity);
   });
 };
 
@@ -695,28 +240,9 @@ const createRowSelectionBorders = (rowCells, cellMap, color, opacity) => {
   }
 
   rowCells.forEach((rowHeaderCell) => {
-    const position = getCellPosition(rowHeaderCell);
-    if (!position) return;
-
-    const cellRect = rowHeaderCell.getBoundingClientRect();
-    const canvasElement = createSelectionBorderCanvas(
-      color,
-      opacity,
-      {},
-      cellRect,
-    );
-
-    rowHeaderCell.setAttribute("data-selection-borders", "");
-
-    // Remove any existing canvas
-    const existingCanvas = rowHeaderCell.querySelector(
-      ".selection-border-canvas",
-    );
-    if (existingCanvas) {
-      existingCanvas.remove();
-    }
-
-    rowHeaderCell.appendChild(canvasElement);
+    // For row selections, show all borders since they're independent
+    const borderInfo = { top: true, right: true, bottom: true, left: true };
+    applyCellBorders(rowHeaderCell, borderInfo, color, opacity);
   });
 };
 
@@ -727,28 +253,9 @@ const createColumnSelectionBorders = (columnCells, cellMap, color, opacity) => {
   }
 
   columnCells.forEach((columnHeaderCell) => {
-    const position = getCellPosition(columnHeaderCell);
-    if (!position) return;
-
-    const cellRect = columnHeaderCell.getBoundingClientRect();
-    const canvasElement = createSelectionBorderCanvas(
-      color,
-      opacity,
-      {},
-      cellRect,
-    );
-
-    columnHeaderCell.setAttribute("data-selection-borders", "");
-
-    // Remove any existing canvas
-    const existingCanvas = columnHeaderCell.querySelector(
-      ".selection-border-canvas",
-    );
-    if (existingCanvas) {
-      existingCanvas.remove();
-    }
-
-    columnHeaderCell.appendChild(canvasElement);
+    // For column selections, show all borders since they're independent
+    const borderInfo = { top: true, right: true, bottom: true, left: true };
+    applyCellBorders(columnHeaderCell, borderInfo, color, opacity);
   });
 };
 
