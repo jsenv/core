@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { createCallbackController } from "../callback_controller.js";
 import { appplyKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 
@@ -106,10 +107,16 @@ const createBaseSelection = ({
   const [change, triggerChange] = createCallbackController();
   change.add(onChange);
   const update = (newValue, event) => {
+    if (compareTwoJsValues(newValue, value)) {
+      return;
+    }
     if (sideEffect) {
-      const sideEffectResult = sideEffect(newValue, value, event);
+      const sideEffectResult = sideEffect(newValue, value, { event });
       if (sideEffectResult !== undefined) {
         newValue = sideEffectResult;
+        if (compareTwoJsValues(newValue, value)) {
+          return;
+        }
       }
     }
 

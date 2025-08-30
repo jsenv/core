@@ -418,8 +418,6 @@
 
             const oldSelections = extractRowsAndColumns(oldValue);
             const newSelections = extractRowsAndColumns(newValue);
-
-            // Start with new selection as a Set for efficient operations
             const finalSelection = new Set(newValue);
 
             // Process row changes
@@ -463,17 +461,8 @@
                 finalSelection.delete(`${columnId}:${row.id}`);
               }
             }
-
-            // Convert back to array and return if changed
             const finalArray = [...finalSelection];
-            if (
-              finalArray.length !== newValue.length ||
-              !finalArray.every((item) => newValue.includes(item))
-            ) {
-              return finalArray;
-            }
-
-            return newValue;
+            return finalArray;
           },
         });
 
