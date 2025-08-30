@@ -6,12 +6,11 @@ import {
   findLastDescendant,
 } from "../traversal.js";
 import { elementIsFocusable } from "./element_is_focusable.js";
-import { createEventMarker } from "./event_marker.js";
 import { getFocusGroup } from "./focus_group_registry.js";
+import { markFocusNav } from "./focus_nav_event_marker.js";
 
 const DEBUG = false;
 
-const arrowFocusNavEventMarker = createEventMarker("arrow_focus_nav");
 export const performArrowNavigation = (
   event,
   element,
@@ -20,11 +19,6 @@ export const performArrowNavigation = (
   if (!canInterceptKeys(event)) {
     return false;
   }
-  if (arrowFocusNavEventMarker.isMarked(event)) {
-    // Prevent double handling of the same event
-    return false;
-  }
-
   const activeElement = document.activeElement;
 
   const onTargetToFocus = (targetToFocus) => {
@@ -35,7 +29,7 @@ export const performArrowNavigation = (
       targetToFocus,
     );
     event.preventDefault();
-    arrowFocusNavEventMarker.mark(event);
+    markFocusNav(event);
     targetToFocus.focus();
   };
 
@@ -215,10 +209,6 @@ const isForwardArrow = (event, direction = "both") => {
 // Handle arrow navigation inside an HTMLTableElement as a grid.
 // Moves focus to adjacent cell in the direction of the arrow key.
 const getTargetInTableFocusGroup = (event, table, { loop }) => {
-  if (event.shiftKey) {
-    return null;
-  }
-
   const arrowKey = event.key;
 
   // Only handle arrow keys

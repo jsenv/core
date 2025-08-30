@@ -5,20 +5,14 @@ import {
   findLastDescendant,
 } from "../traversal.js";
 import { elementIsFocusable } from "./element_is_focusable.js";
-import { createEventMarker } from "./event_marker.js";
+import { markFocusNav } from "./focus_nav_event_marker.js";
 
 const DEBUG = true;
 
-const tabFocusNavEventMarker = createEventMarker("tab_focus_nav");
 export const performTabNavigation = (
   event,
   { rootElement = document.body, outsideOfElement = null } = {},
 ) => {
-  if (tabFocusNavEventMarker.isMarked(event)) {
-    // Also prevent tab within nested focus group to be handled twice
-    return false;
-  }
-
   if (!isTabEvent(event)) {
     return false;
   }
@@ -33,7 +27,7 @@ export const performTabNavigation = (
       targetToFocus,
     );
     event.preventDefault();
-    tabFocusNavEventMarker.mark(event);
+    markFocusNav(event);
     targetToFocus.focus();
   };
 

@@ -9,6 +9,7 @@
 
 import { performArrowNavigation } from "./arrow_navigation.js";
 import { setFocusGroup } from "./focus_group_registry.js";
+import { isFocusNavMarked } from "./focus_nav_event_marker.js";
 import { performTabNavigation } from "./tab_navigation.js";
 
 export const initFocusGroup = (
@@ -42,6 +43,10 @@ export const initFocusGroup = (
       break tab;
     }
     const handleTabKeyDown = (event) => {
+      if (isFocusNavMarked(event)) {
+        // Prevent double handling of the same event + allow preventing focus nav from outside
+        return;
+      }
       performTabNavigation(event, { outsideOfElement: element });
     };
     // Handle Tab navigation (exit group)
@@ -60,6 +65,10 @@ export const initFocusGroup = (
   // Handle Arrow key navigation (within group)
   arrow_keys: {
     const handleArrowKeyDown = (event) => {
+      if (isFocusNavMarked(event)) {
+        // Prevent double handling of the same event + allow preventing focus nav from outside
+        return;
+      }
       performArrowNavigation(event, element, { direction, loop, name });
     };
     element.addEventListener("keydown", handleArrowKeyDown, {

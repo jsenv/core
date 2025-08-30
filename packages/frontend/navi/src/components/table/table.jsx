@@ -119,25 +119,25 @@ export const Table = forwardRef((props, ref) => {
 
   const selectionSignal = useSignal(selection);
   selection = selectionSignal.value;
-  // After expansion, everything is cell selections
-  const cellSelections = selection.filter(
-    (value) =>
-      typeof value === "string" &&
-      value.includes(":") &&
-      !value.startsWith("row:") &&
-      !value.startsWith("column:"),
-  );
-
-  // Analyze selected cells to determine if they represent full row/column selections
   const rowWithSomeSelectedCell = [];
   const columnWithSomeSelectedCell = [];
   const selectedRowIds = [];
   const selectedColumnIds = [];
-  // Group selected cells by row and column
   const cellsByRow = new Map();
   const cellsByColumn = new Map();
-  for (const cellId of cellSelections) {
-    const [columnName, rowId] = cellId.split(":");
+  for (const item of selection) {
+    if (item.startsWith("row:")) {
+      const rowId = item.slice(4);
+      selectedRowIds.push(rowId);
+      continue;
+    }
+    if (item.startsWith("column:")) {
+      const columnId = item.slice(7);
+      selectedColumnIds.push(columnId);
+      continue;
+    }
+
+    const [columnName, rowId] = item.split(":");
 
     // Track cells by row
     if (!cellsByRow.has(rowId)) {
@@ -157,18 +157,6 @@ export const Table = forwardRef((props, ref) => {
     }
     if (!columnWithSomeSelectedCell.includes(columnName)) {
       columnWithSomeSelectedCell.push(columnName);
-    }
-  }
-  // Check for complete row selections (all columns in a row selected)
-  for (const [rowId, selectedColumns] of cellsByRow) {
-    if (selectedColumns.length === columns.length) {
-      selectedRowIds.push(rowId);
-    }
-  }
-  // Check for complete column selections (all rows in a column selected)
-  for (const [columnName, selectedRows] of cellsByColumn) {
-    if (selectedRows.length === data.length) {
-      selectedColumnIds.push(columnName);
     }
   }
 
