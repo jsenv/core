@@ -403,28 +403,73 @@
             selectionSignal.value = value;
           },
           sideEffect: (newValue, oldValue) => {
-            const extractSelectedRowsAndColumns = (value) => {
-              const rowSelectedSet = new Set();
-              const columnSelectedSet = new Set();
+            const extractRowsAndColumns = (value) => {
+              const rows = new Set();
+              const columns = new Set();
               for (const item of value) {
                 if (item.startsWith("row:")) {
-                  const rowId = item.replace("row:", "");
-                  rowSelectedSet.add(rowId);
-                  continue;
-                }
-                if (item.startsWith("column:")) {
-                  const columnId = item.replace("column:", "");
-                  columnSelectedSet.add(columnId);
-                  continue;
+                  rows.add(item.replace("row:", ""));
+                } else if (item.startsWith("column:")) {
+                  columns.add(item.replace("column:", ""));
                 }
               }
-              return [rowSelectedSet, columnSelectedSet];
+              return { rows, columns };
             };
 
-            const [rowSelectedOldSet, columnSelectedOldSet] =
-              extractSelectedRowsAndColumns(oldValue);
-            const [rowSelectedNewSet, columnSelectedNewSet] =
-              extractSelectedRowsAndColumns(newValue);
+            const oldSelections = extractRowsAndColumns(oldValue);
+            const newSelections = extractRowsAndColumns(newValue);
+
+            // Start with new selection as a Set for efficient operations
+            const finalSelection = new Set(newValue);
+
+            // Process row changes
+            for (const rowId of newSelections.rows) {
+              if (!oldSelections.rows.has(rowId)) {
+                // Newly selected row - add all data cells
+                for (const col of columns) {
+                  finalSelection.add(`${col.accessorKey}:${rowId}`);
+                }
+              }
+            }
+
+            for (const rowId of oldSelections.rows) {
+              if (!newSelections.rows.has(rowId)) {
+                // Newly unselected row - remove all data cells
+                for (const col of columns) {
+                  finalSelection.delete(`${col.accessorKey}:${rowId}`);
+                }
+              }
+            }
+
+            // Process column changes
+            for (const columnId of newSelections.columns) {
+              if (!oldSelections.columns.has(columnId)) {
+                // Newly selected column - add all data cells
+                for (const row of sampleData) {
+                  finalSelection.add(`${columnId}:${row.id}`);
+                }
+              }
+            }
+
+            for (const columnId of oldSelections.columns) {
+              if (!newSelections.columns.has(columnId)) {
+                // Newly unselected column - remove all data cells
+                for (const row of sampleData) {
+                  finalSelection.delete(`${columnId}:${row.id}`);
+                }
+              }
+            }
+
+            // Convert back to array and return if changed
+            const finalArray = [...finalSelection];
+            if (
+              finalArray.length !== newValue.length ||
+              !finalArray.every((item) => newValue.includes(item))
+            ) {
+              return finalArray;
+            }
+
+            return newValue;
           },
         });
 
