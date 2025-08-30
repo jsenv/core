@@ -39,20 +39,13 @@ export const useSelectionProvider = ({
   layout,
   value,
   onChange,
-  sideEffect,
 }) => {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  const sideEffectRef = useRef(sideEffect);
-  sideEffectRef.current = sideEffect;
-
   const selection = useMemo(() => {
     const onChange = (...args) => {
       onChangeRef.current(...args);
-    };
-    const sideEffect = (value, event) => {
-      return sideEffectRef.current?.(value, event);
     };
 
     if (layout === "grid") {
@@ -60,7 +53,6 @@ export const useSelectionProvider = ({
         value,
         onChange,
         elementRef,
-        sideEffect,
       });
     }
     return createLinearSelection({
@@ -68,7 +60,6 @@ export const useSelectionProvider = ({
       onChange,
       axis: layout,
       elementRef,
-      sideEffect,
     });
   }, [layout, elementRef]);
 
@@ -94,7 +85,6 @@ const createBaseSelection = ({
   registry,
   value = [],
   onChange,
-  sideEffect,
   type,
   navigationMethods: {
     getElementRange,
@@ -106,32 +96,66 @@ const createBaseSelection = ({
 }) => {
   const [change, triggerChange] = createCallbackController();
   change.add(onChange);
-  const update = (newValue, event) => {
-    if (compareTwoJsValues(newValue, value)) {
-      return;
-    }
-    if (sideEffect) {
-      const sideEffectResult = sideEffect(newValue, value, { event });
-      if (sideEffectResult !== undefined) {
-        newValue = sideEffectResult;
-        if (compareTwoJsValues(newValue, value)) {
-          return;
+  // Helper to extend selection based on element extenders
+  const extendSelection = (intendedSelection, event) => {
+    let extendedSelection = [...intendedSelection];
+    const oldSet = new Set(value);
+    const intendedSet = new Set(intendedSelection);
+
+    // Find elements that are changing state (being selected or unselected)
+    for (const element of registry) {
+      const elementValue = getElementValue(element);
+      const wasSelected = oldSet.has(elementValue);
+      const willBeSelected = intendedSet.has(elementValue);
+
+      // If element state is changing and it has a selectionExtender
+      if (wasSelected !== willBeSelected && element._selectionExtender) {
+        try {
+          const result = element._selectionExtender(
+            willBeSelected,
+            elementValue,
+            {
+              event,
+              oldSelection: value,
+              intendedSelection,
+              currentExtendedSelection: extendedSelection,
+            },
+          );
+
+          // If the extender returns a new selection, use it
+          if (Array.isArray(result)) {
+            extendedSelection = result;
+          }
+        } catch (error) {
+          console.error("Error in selectionExtender callback:", error);
         }
       }
     }
 
+    return extendedSelection;
+  };
+
+  const update = (newValue, event) => {
+    if (compareTwoJsValues(newValue, value)) {
+      return;
+    }
+
+    // Apply selection extension before final update
+    const extendedValue = extendSelection(newValue, event);
+
     debug(
       "selection",
       `${type} setSelection: calling onChange with:`,
-      newValue,
+      extendedValue,
     );
-    value = newValue;
+
+    value = extendedValue;
     triggerChange(value, event);
   };
   let anchorElement = null;
 
   // Element registration methods
-  const registerElement = (element) => {
+  const registerElement = (element, options = {}) => {
     const elementValue = getElementValue(element);
     debug(
       "registration",
@@ -143,6 +167,10 @@ const createBaseSelection = ({
       registry.size,
     );
     registry.add(element);
+    // Store the selectionExtender callback if provided
+    if (options.selectionExtender) {
+      element._selectionExtender = options.selectionExtender;
+    }
     debug(
       "registration",
       `${type} registerElement: registry size after:`,
@@ -367,7 +395,7 @@ const createBaseSelection = ({
   return baseSelection;
 };
 // Grid Selection Provider - for 2D layouts like tables
-const createGridSelection = ({ value = [], onChange, sideEffect }) => {
+const createGridSelection = ({ value = [], onChange }) => {
   const registry = new Set();
   const navigationMethods = {
     getElementRange: (fromElement, toElement) => {
@@ -532,7 +560,6 @@ const createGridSelection = ({ value = [], onChange, sideEffect }) => {
     registry,
     value,
     onChange,
-    sideEffect,
     type: "grid",
     navigationMethods,
   });
@@ -543,7 +570,6 @@ const createGridSelection = ({ value = [], onChange, sideEffect }) => {
 const createLinearSelection = ({
   value = [],
   onChange,
-  sideEffect,
   axis = "vertical", // "horizontal" or "vertical"
   elementRef, // Root element to scope DOM traversal
 }) => {
@@ -699,7 +725,6 @@ const createLinearSelection = ({
     registry,
     value,
     onChange,
-    sideEffect,
     type: "linear",
     navigationMethods,
   });
@@ -940,7 +965,10 @@ const getElementPosition = (element) => {
 export const useSelection = () => {
   return useContext(SelectionContext);
 };
-export const useSelectableElement = (elementRef) => {
+export const useSelectableElement = (
+  elementRef,
+  { selectionExtender } = {},
+) => {
   const selection = useSelection();
   if (!selection) {
     throw new Error(
@@ -965,7 +993,7 @@ export const useSelectableElement = (elementRef) => {
       selectionName,
     );
 
-    selection.registerElement(element);
+    selection.registerElement(element, { selectionExtender });
     return () => {
       debug(
         "registration",
@@ -976,7 +1004,7 @@ export const useSelectableElement = (elementRef) => {
       );
       selection.unregisterElement(element);
     };
-  }, [selection]);
+  }, [selection, selectionExtender]);
 
   const [selected, setSelected] = useState(false);
   debug("selection", "useSelectableElement: initial selected state:", selected);

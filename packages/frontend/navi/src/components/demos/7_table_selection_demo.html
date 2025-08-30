@@ -226,7 +226,28 @@
       const NumberColumnCell = ({ row, rowWithSomeSelectedCell }) => {
         const cellRef = useRef();
         const rowValue = `row:${row.id}`;
-        const { selected } = useSelectableElement(cellRef);
+        const { selected } = useSelectableElement(cellRef, {
+          selectionExtender: (
+            willBeSelected,
+            elementValue,
+            { currentExtendedSelection },
+          ) => {
+            if (willBeSelected) {
+              // Row is being selected - add all cells in this row
+              const cellsToAdd = columns.map(
+                (col) => `${col.accessorKey}:${row.id}`,
+              );
+              return [...new Set([...currentExtendedSelection, ...cellsToAdd])];
+            }
+            // Row is being unselected - remove all cells in this row
+            const cellsToRemove = columns.map(
+              (col) => `${col.accessorKey}:${row.id}`,
+            );
+            return currentExtendedSelection.filter(
+              (item) => !cellsToRemove.includes(item),
+            );
+          },
+        });
 
         const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(
           row.id,
@@ -401,68 +422,6 @@
           value: selection,
           onChange: (value) => {
             selectionSignal.value = value;
-          },
-          sideEffect: (newValue, oldValue) => {
-            const extractRowsAndColumns = (value) => {
-              const rows = new Set();
-              const columns = new Set();
-              for (const item of value) {
-                if (item.startsWith("row:")) {
-                  rows.add(item.replace("row:", ""));
-                } else if (item.startsWith("column:")) {
-                  columns.add(item.replace("column:", ""));
-                }
-              }
-              return { rows, columns };
-            };
-
-            const oldSelections = extractRowsAndColumns(oldValue);
-            const newSelections = extractRowsAndColumns(newValue);
-            const finalSelection = new Set(newValue);
-
-            // Process row changes
-            for (const rowId of newSelections.rows) {
-              if (oldSelections.rows.has(rowId)) {
-                continue;
-              }
-              // Newly selected row - add all data cells
-              for (const col of columns) {
-                finalSelection.add(`${col.accessorKey}:${rowId}`);
-              }
-            }
-
-            for (const rowId of oldSelections.rows) {
-              if (newSelections.rows.has(rowId)) {
-                continue;
-              }
-              // Newly unselected row - remove all data cells
-              for (const col of columns) {
-                finalSelection.delete(`${col.accessorKey}:${rowId}`);
-              }
-            }
-
-            // Process column changes
-            for (const columnId of newSelections.columns) {
-              if (oldSelections.columns.has(columnId)) {
-                continue;
-              }
-              // Newly selected column - add all data cells
-              for (const row of sampleData) {
-                finalSelection.add(`${columnId}:${row.id}`);
-              }
-            }
-
-            for (const columnId of oldSelections.columns) {
-              if (newSelections.columns.has(columnId)) {
-                continue;
-              }
-              // Newly unselected column - remove all data cells
-              for (const row of sampleData) {
-                finalSelection.delete(`${columnId}:${row.id}`);
-              }
-            }
-            const finalArray = [...finalSelection];
-            return finalArray;
           },
         });
 
