@@ -424,39 +424,43 @@
 
             // Process row changes
             for (const rowId of newSelections.rows) {
-              if (!oldSelections.rows.has(rowId)) {
-                // Newly selected row - add all data cells
-                for (const col of columns) {
-                  finalSelection.add(`${col.accessorKey}:${rowId}`);
-                }
+              if (oldSelections.rows.has(rowId)) {
+                continue;
+              }
+              // Newly selected row - add all data cells
+              for (const col of columns) {
+                finalSelection.add(`${col.accessorKey}:${rowId}`);
               }
             }
 
             for (const rowId of oldSelections.rows) {
-              if (!newSelections.rows.has(rowId)) {
-                // Newly unselected row - remove all data cells
-                for (const col of columns) {
-                  finalSelection.delete(`${col.accessorKey}:${rowId}`);
-                }
+              if (newSelections.rows.has(rowId)) {
+                continue;
+              }
+              // Newly unselected row - remove all data cells
+              for (const col of columns) {
+                finalSelection.delete(`${col.accessorKey}:${rowId}`);
               }
             }
 
             // Process column changes
             for (const columnId of newSelections.columns) {
-              if (!oldSelections.columns.has(columnId)) {
-                // Newly selected column - add all data cells
-                for (const row of sampleData) {
-                  finalSelection.add(`${columnId}:${row.id}`);
-                }
+              if (oldSelections.columns.has(columnId)) {
+                continue;
+              }
+              // Newly selected column - add all data cells
+              for (const row of sampleData) {
+                finalSelection.add(`${columnId}:${row.id}`);
               }
             }
 
             for (const columnId of oldSelections.columns) {
-              if (!newSelections.columns.has(columnId)) {
-                // Newly unselected column - remove all data cells
-                for (const row of sampleData) {
-                  finalSelection.delete(`${columnId}:${row.id}`);
-                }
+              if (newSelections.columns.has(columnId)) {
+                continue;
+              }
+              // Newly unselected column - remove all data cells
+              for (const row of sampleData) {
+                finalSelection.delete(`${columnId}:${row.id}`);
               }
             }
 
