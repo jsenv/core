@@ -96,43 +96,14 @@ const createBaseSelection = ({
 }) => {
   const [change, triggerChange] = createCallbackController();
   change.add(onChange);
-  // Helper to extend selection based on element extenders
-  const extendSelection = (intendedSelection, event) => {
-    let extendedSelection = [...intendedSelection];
-    const oldSet = new Set(value);
-    const intendedSet = new Set(intendedSelection);
 
-    // Find elements that are changing state (being selected or unselected)
+  const getElementByValue = (valueToFind) => {
     for (const element of registry) {
-      const elementValue = getElementValue(element);
-      const wasSelected = oldSet.has(elementValue);
-      const willBeSelected = intendedSet.has(elementValue);
-
-      // If element state is changing and it has a selectionExtender
-      if (wasSelected !== willBeSelected && element._selectionExtender) {
-        try {
-          const result = element._selectionExtender(
-            willBeSelected,
-            elementValue,
-            {
-              event,
-              oldSelection: value,
-              intendedSelection,
-              currentExtendedSelection: extendedSelection,
-            },
-          );
-
-          // If the extender returns a new selection, use it
-          if (Array.isArray(result)) {
-            extendedSelection = result;
-          }
-        } catch (error) {
-          console.error("Error in selectionExtender callback:", error);
-        }
+      if (getElementValue(element) === valueToFind) {
+        return element;
       }
     }
-
-    return extendedSelection;
+    return null;
   };
 
   const update = (newValue, event) => {
@@ -140,16 +111,43 @@ const createBaseSelection = ({
       return;
     }
 
-    // Apply selection extension before final update
-    const extendedValue = extendSelection(newValue, event);
+    const selectedSet = new Set(value);
+    for (const item of newValue) {
+      selectedSet.add(item);
+    }
+    const willBeUnselectedSet = new Set();
+    for (const item of value) {
+      if (!selectedSet.has(item)) {
+        willBeUnselectedSet.add(item);
+      }
+    }
+    const selectionSet = new Set(newValue);
+    for (const selected of value) {
+      const element = getElementByValue(selected);
+      if (element._selectionImpact) {
+        const impactedValues = element._selectionImpact();
+        for (const impactedValue of impactedValues) {
+          selectionSet.add(impactedValue);
+        }
+      }
+    }
+    for (const willBeUnselected of willBeUnselectedSet) {
+      const element = getElementByValue(willBeUnselected);
+      if (element._selectionImpact) {
+        const impactedValues = element._selectionImpact();
+        for (const impactedValue of impactedValues) {
+          selectionSet.delete(impactedValue);
+        }
+      }
+    }
 
+    const finalValue = Array.from(selectionSet);
     debug(
       "selection",
       `${type} setSelection: calling onChange with:`,
-      extendedValue,
+      finalValue,
     );
-
-    value = extendedValue;
+    value = finalValue;
     triggerChange(value, event);
   };
   let anchorElement = null;
@@ -167,9 +165,9 @@ const createBaseSelection = ({
       registry.size,
     );
     registry.add(element);
-    // Store the selectionExtender callback if provided
-    if (options.selectionExtender) {
-      element._selectionExtender = options.selectionExtender;
+    // Store the selectionImpact callback if provided
+    if (options.selectionImpact) {
+      element._selectionImpact = options.selectionImpact;
     }
     debug(
       "registration",
@@ -965,10 +963,7 @@ const getElementPosition = (element) => {
 export const useSelection = () => {
   return useContext(SelectionContext);
 };
-export const useSelectableElement = (
-  elementRef,
-  { selectionExtender } = {},
-) => {
+export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
   const selection = useSelection();
   if (!selection) {
     throw new Error(
@@ -993,7 +988,7 @@ export const useSelectableElement = (
       selectionName,
     );
 
-    selection.registerElement(element, { selectionExtender });
+    selection.registerElement(element, { selectionImpact });
     return () => {
       debug(
         "registration",
@@ -1004,7 +999,7 @@ export const useSelectableElement = (
       );
       selection.unregisterElement(element);
     };
-  }, [selection, selectionExtender]);
+  }, [selection, selectionImpact]);
 
   const [selected, setSelected] = useState(false);
   debug("selection", "useSelectableElement: initial selected state:", selected);

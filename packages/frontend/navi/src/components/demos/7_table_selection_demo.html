@@ -227,25 +227,9 @@
         const cellRef = useRef();
         const rowValue = `row:${row.id}`;
         const { selected } = useSelectableElement(cellRef, {
-          selectionExtender: (
-            willBeSelected,
-            elementValue,
-            { currentExtendedSelection },
-          ) => {
-            if (willBeSelected) {
-              // Row is being selected - add all cells in this row
-              const cellsToAdd = columns.map(
-                (col) => `${col.accessorKey}:${row.id}`,
-              );
-              return [...new Set([...currentExtendedSelection, ...cellsToAdd])];
-            }
-            // Row is being unselected - remove all cells in this row
-            const cellsToRemove = columns.map(
-              (col) => `${col.accessorKey}:${row.id}`,
-            );
-            return currentExtendedSelection.filter(
-              (item) => !cellsToRemove.includes(item),
-            );
+          selectionImpact: () => {
+            // Return all data cells in this row that should be impacted
+            return columns.map((col) => `${col.accessorKey}:${row.id}`);
           },
         });
 
