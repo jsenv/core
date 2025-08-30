@@ -1330,9 +1330,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
         key: "left",
         enabled: selection.axis !== "vertical",
         action: () => {
-          const targetElement = selection.getElementBefore(
-            selection.activeElement || element,
-          );
+          const targetElement = selection.getElementBefore(element);
           return onElementToSelect(targetElement);
         },
       },
