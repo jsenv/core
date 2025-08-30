@@ -38,13 +38,20 @@ export const useSelectionProvider = ({
   layout,
   value,
   onChange,
+  sideEffect,
 }) => {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
+  const sideEffectRef = useRef(sideEffect);
+  sideEffectRef.current = sideEffect;
+
   const selection = useMemo(() => {
     const onChange = (...args) => {
       onChangeRef.current(...args);
+    };
+    const sideEffect = (value, event) => {
+      return sideEffectRef.current?.(value, event);
     };
 
     if (layout === "grid") {
@@ -52,6 +59,7 @@ export const useSelectionProvider = ({
         value,
         onChange,
         elementRef,
+        sideEffect,
       });
     }
     return createLinearSelection({
@@ -59,6 +67,7 @@ export const useSelectionProvider = ({
       onChange,
       axis: layout,
       elementRef,
+      sideEffect,
     });
   }, [layout, elementRef]);
 
@@ -84,6 +93,7 @@ const createBaseSelection = ({
   registry,
   value = [],
   onChange,
+  sideEffect,
   type,
   navigationMethods: {
     getElementRange,
@@ -96,6 +106,13 @@ const createBaseSelection = ({
   const [change, triggerChange] = createCallbackController();
   change.add(onChange);
   const update = (newValue, event) => {
+    if (sideEffect) {
+      const sideEffectResult = sideEffect(newValue, value, event);
+      if (sideEffectResult !== undefined) {
+        newValue = sideEffectResult;
+      }
+    }
+
     debug(
       "selection",
       `${type} setSelection: calling onChange with:`,
@@ -343,7 +360,7 @@ const createBaseSelection = ({
   return baseSelection;
 };
 // Grid Selection Provider - for 2D layouts like tables
-const createGridSelection = ({ value = [], onChange }) => {
+const createGridSelection = ({ value = [], onChange, sideEffect }) => {
   const registry = new Set();
   const navigationMethods = {
     getElementRange: (fromElement, toElement) => {
@@ -508,6 +525,7 @@ const createGridSelection = ({ value = [], onChange }) => {
     registry,
     value,
     onChange,
+    sideEffect,
     type: "grid",
     navigationMethods,
   });
@@ -518,6 +536,7 @@ const createGridSelection = ({ value = [], onChange }) => {
 const createLinearSelection = ({
   value = [],
   onChange,
+  sideEffect,
   axis = "vertical", // "horizontal" or "vertical"
   elementRef, // Root element to scope DOM traversal
 }) => {
@@ -673,6 +692,7 @@ const createLinearSelection = ({
     registry,
     value,
     onChange,
+    sideEffect,
     type: "linear",
     navigationMethods,
   });

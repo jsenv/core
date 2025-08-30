@@ -400,32 +400,31 @@
           layout: "grid",
           value: selection,
           onChange: (value) => {
-            // When row/column selectors are clicked, expand to select all data cells
-            const expandedSelection = [];
-
-            for (const item of value) {
-              if (typeof item === "string" && item.startsWith("row:")) {
-                // Row selection: select all data cells in this row
-                const rowId = item.replace("row:", "");
-                for (const col of columns) {
-                  expandedSelection.push(`${col.accessorKey}:${rowId}`);
+            selectionSignal.value = value;
+          },
+          sideEffect: (newValue, oldValue) => {
+            const extractSelectedRowsAndColumns = (value) => {
+              const rowSelectedSet = new Set();
+              const columnSelectedSet = new Set();
+              for (const item of value) {
+                if (item.startsWith("row:")) {
+                  const rowId = item.replace("row:", "");
+                  rowSelectedSet.add(rowId);
+                  continue;
                 }
-              } else if (
-                typeof item === "string" &&
-                item.startsWith("column:")
-              ) {
-                // Column selection: select all data cells in this column
-                const columnId = item.replace("column:", "");
-                for (const row of sampleData) {
-                  expandedSelection.push(`${columnId}:${row.id}`);
+                if (item.startsWith("column:")) {
+                  const columnId = item.replace("column:", "");
+                  columnSelectedSet.add(columnId);
+                  continue;
                 }
-              } else {
-                // Regular cell selection: keep as is
-                expandedSelection.push(item);
               }
-            }
+              return [rowSelectedSet, columnSelectedSet];
+            };
 
-            selectionSignal.value = expandedSelection;
+            const [rowSelectedOldSet, columnSelectedOldSet] =
+              extractSelectedRowsAndColumns(oldValue);
+            const [rowSelectedNewSet, columnSelectedNewSet] =
+              extractSelectedRowsAndColumns(newValue);
           },
         });
 
