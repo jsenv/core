@@ -44,13 +44,8 @@
       }
 
       /* Row selection styling */
-      .database_table tr[aria-selected="true"] {
-        background-color: rgba(0, 120, 212, 0.15);
-      }
-
       .database_table tr[aria-selected="true"] .number-column {
-        /* background-color: #0078d4; */
-        /* color: white; */
+        background-color: rgba(0, 120, 212, 0.2);
         font-weight: bold;
       }
 
@@ -317,7 +312,7 @@
         const selectionSignal = useSignal([]);
         const selection = selectionSignal.value;
 
-        // Detect selection types
+        // Detect selection types - restore proper detection of row/column/cell selections
         const rowSelections = selection.filter(
           (value) => typeof value === "string" && value.startsWith("row:"),
         );
@@ -343,18 +338,25 @@
           value.replace("column:", ""),
         );
 
-        // Compute which rows and columns have selected cells (for cell mode)
+        // Compute which rows and columns have selected cells (for individual cell selections only)
         const rowWithSomeSelectedCell = [];
         const columnWithSomeSelectedCell = [];
         for (const cellId of cellSelections) {
-          // Parse cellId to extract row and column information
-          // cellId format: "columnName:rowId"
+          // Only count cells that are NOT part of row/column selections
           const [columnName, rowId] = cellId.split(":");
-          if (!columnWithSomeSelectedCell.includes(columnName)) {
-            columnWithSomeSelectedCell.push(columnName);
-          }
-          if (!rowWithSomeSelectedCell.includes(rowId)) {
-            rowWithSomeSelectedCell.push(rowId);
+
+          // Skip if this cell is part of a row or column selection
+          const isPartOfRowSelection = selectedRowIds.includes(rowId);
+          const isPartOfColumnSelection =
+            selectedColumnIds.includes(columnName);
+
+          if (!isPartOfRowSelection && !isPartOfColumnSelection) {
+            if (!columnWithSomeSelectedCell.includes(columnName)) {
+              columnWithSomeSelectedCell.push(columnName);
+            }
+            if (!rowWithSomeSelectedCell.includes(rowId)) {
+              rowWithSomeSelectedCell.push(rowId);
+            }
           }
         }
 
@@ -363,26 +365,14 @@
         };
 
         const selectAll = () => {
-          if (hasRowSelections) {
-            // Select all rows
-            const allRowIds = sampleData.map((row) => `row:${row.id}`);
-            selectionSignal.value = allRowIds;
-          } else if (hasColumnSelections) {
-            // Select all columns
-            const allColumnIds = columns.map(
-              (col) => `column:${col.accessorKey}`,
-            );
-            selectionSignal.value = allColumnIds;
-          } else {
-            // Select all cells
-            const allCellIds = [];
-            sampleData.forEach((row) => {
-              columns.forEach((col) => {
-                allCellIds.push(`${col.accessorKey}:${row.id}`);
-              });
+          // Select all data cells (not row/column selectors)
+          const allCellIds = [];
+          sampleData.forEach((row) => {
+            columns.forEach((col) => {
+              allCellIds.push(`${col.accessorKey}:${row.id}`);
             });
-            selectionSignal.value = allCellIds;
-          }
+          });
+          selectionSignal.value = allCellIds;
         };
 
         const logState = () => {
@@ -490,14 +480,15 @@
                 <div>
                   Total selection count: <span>{selection.length}</span>
                 </div>
-                {hasRowSelections && (
+                {selectedRowIds.length > 0 && (
                   <div>
-                    Selected rows: <span>{selectedRowIds.join(", ")}</span>
+                    Fully selected rows:{" "}
+                    <span>{selectedRowIds.join(", ")}</span>
                   </div>
                 )}
-                {hasColumnSelections && (
+                {selectedColumnIds.length > 0 && (
                   <div>
-                    Selected columns:{" "}
+                    Fully selected columns:{" "}
                     <span>{selectedColumnIds.join(", ")}</span>
                   </div>
                 )}

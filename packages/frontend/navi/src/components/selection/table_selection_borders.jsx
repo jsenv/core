@@ -178,7 +178,7 @@ const generateSelectionBorderPath = (selectedCells) => {
     return "";
   }
 
-  // Group cells by their type
+  // Group cells by their type to handle them appropriately
   const rowCells = selectedCells.filter(
     (cell) => cell.element.getAttribute("data-selection-name") === "row",
   );
