@@ -308,26 +308,29 @@ const generateRowSelectionPath = (selectedCells) => {
       const topRow = group[0];
       const bottomRow = group[group.length - 1];
 
-      // For row selections, use the selected cell's right edge as the starting point
-      // This removes the border between the first column and data columns
+      // For row selections, start from the second column to avoid border between first and second column
       const table = topRow.element.closest("table");
       if (!table) return "";
 
       const topRowElement = table.rows[topRow.row];
+      const firstDataCell = topRowElement.cells[1]; // Start from second column
+      if (!firstDataCell) return "";
+
       const lastDataCell = topRowElement.cells[topRowElement.cells.length - 1];
       if (!lastDataCell) return "";
 
       // Get table bounds for relative positioning
       const tableRect = table.getBoundingClientRect();
+      const firstDataCellRect = firstDataCell.getBoundingClientRect();
       const lastDataCellRect = lastDataCell.getBoundingClientRect();
 
-      // Start from the right edge of the selected cell (first column)
-      const minLeft = topRow.right; // Use the selected cell's right edge
+      // Start from the left edge of the second column (no border between first and second column)
+      const minLeft = firstDataCellRect.left - tableRect.left;
       const maxRight = lastDataCellRect.right - tableRect.left;
       const minTop = topRow.top;
       const maxBottom = bottomRow.bottom;
 
-      // Create a rectangular path without the left border (no border between columns)
+      // Create a rectangular path starting from second column
       return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
     })
     .join(" ");
