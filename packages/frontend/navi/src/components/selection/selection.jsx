@@ -1170,8 +1170,6 @@ export const useSelectableElement = (elementRef) => {
 const handleCrossTypeNavigation = (
   currentElement,
   targetElement,
-  keydownEvent,
-  selection,
   isMultiSelect,
 ) => {
   const currentSelectionName = getElementSelectionName(currentElement);
@@ -1224,15 +1222,8 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     }
     keydownEvent.preventDefault();
     const targetValue = getElementValue(elementToSelect);
-    // Handle cross-type navigation
     const { isCrossType, shouldClearPreviousSelection } =
-      handleCrossTypeNavigation(
-        element,
-        elementToSelect,
-        keydownEvent,
-        selection,
-        isMultiSelect,
-      );
+      handleCrossTypeNavigation(element, elementToSelect, isMultiSelect);
 
     if (isShiftSelect) {
       debug(
@@ -1319,7 +1310,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       },
       {
         key: "left",
-        enabled: selection.axis === "vertical",
+        enabled: selection.axis !== "vertical",
         action: () => {
           const targetElement = selection.getElementBefore(element);
           return onElementToSelect(targetElement);
@@ -1327,7 +1318,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       },
       {
         key: "command+shift+right",
-        enabled: selection.axis === "vertical",
+        enabled: selection.axis !== "vertical",
         action: () => {
           const targetElement = getJumpToEndElement(selection, element, key);
           return onElementToSelect(targetElement);
@@ -1335,7 +1326,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
       },
       {
         key: "right",
-        enabled: selection.axis === "vertical",
+        enabled: selection.axis !== "vertical",
         action: () => {
           const targetElement = selection.getElementAfter(element);
           return onElementToSelect(targetElement);

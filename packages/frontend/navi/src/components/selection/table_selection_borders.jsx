@@ -308,32 +308,26 @@ const generateRowSelectionPath = (selectedCells) => {
       const topRow = group[0];
       const bottomRow = group[group.length - 1];
 
-      // For row selections, we need to find the bounds of the data cells (excluding first column)
-      // Since row selections only select the first column, we need to calculate where the data cells would be
+      // For row selections, use the selected cell's right edge as the starting point
+      // This removes the border between the first column and data columns
       const table = topRow.element.closest("table");
       if (!table) return "";
 
-      // Find the first data cell (column 1) in the top row to get the left boundary
       const topRowElement = table.rows[topRow.row];
-      const firstDataCell = topRowElement.cells[1]; // Skip column 0
-      if (!firstDataCell) return "";
-
-      // Find the last data cell in the row to get the right boundary
       const lastDataCell = topRowElement.cells[topRowElement.cells.length - 1];
       if (!lastDataCell) return "";
 
       // Get table bounds for relative positioning
       const tableRect = table.getBoundingClientRect();
-      const firstDataCellRect = firstDataCell.getBoundingClientRect();
       const lastDataCellRect = lastDataCell.getBoundingClientRect();
 
-      const minLeft = firstDataCellRect.left - tableRect.left;
+      // Start from the right edge of the selected cell (first column)
+      const minLeft = topRow.right; // Use the selected cell's right edge
       const maxRight = lastDataCellRect.right - tableRect.left;
       const minTop = topRow.top;
       const maxBottom = bottomRow.bottom;
 
-      // Create a rectangular path with all borders including the left border
-      // Path goes: top-left -> top-right -> bottom-right -> bottom-left -> back to top-left
+      // Create a rectangular path without the left border (no border between columns)
       return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
     })
     .join(" ");
