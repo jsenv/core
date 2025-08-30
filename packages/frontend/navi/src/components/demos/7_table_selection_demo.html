@@ -43,11 +43,7 @@
         padding: 12px 8px;
       }
 
-      /* Row selection styling */
-      .database_table tr[aria-selected="true"] .number-column {
-        background-color: rgba(0, 120, 212, 0.2);
-        font-weight: bold;
-      }
+      /* Row selection styling - removed since we now only style individual cells */
 
       /* Column selection styling */
       .database_table th[aria-selected="true"] {
@@ -312,13 +308,7 @@
         const selectionSignal = useSignal([]);
         const selection = selectionSignal.value;
 
-        // Detect selection types - restore proper detection of row/column/cell selections
-        const rowSelections = selection.filter(
-          (value) => typeof value === "string" && value.startsWith("row:"),
-        );
-        const columnSelections = selection.filter(
-          (value) => typeof value === "string" && value.startsWith("column:"),
-        );
+        // After expansion, everything is cell selections
         const cellSelections = selection.filter(
           (value) =>
             typeof value === "string" &&
@@ -326,37 +316,53 @@
             !value.startsWith("row:") &&
             !value.startsWith("column:"),
         );
-        const hasRowSelections = rowSelections.length > 0;
-        const hasColumnSelections = columnSelections.length > 0;
         const hasCellSelections = cellSelections.length > 0;
 
-        // Extract selected IDs
-        const selectedRowIds = rowSelections.map((value) =>
-          value.replace("row:", ""),
-        );
-        const selectedColumnIds = columnSelections.map((value) =>
-          value.replace("column:", ""),
-        );
-
-        // Compute which rows and columns have selected cells (for individual cell selections only)
+        // Analyze selected cells to determine if they represent full row/column selections
         const rowWithSomeSelectedCell = [];
         const columnWithSomeSelectedCell = [];
+        const selectedRowIds = [];
+        const selectedColumnIds = [];
+
+        // Group selected cells by row and column
+        const cellsByRow = new Map();
+        const cellsByColumn = new Map();
+
         for (const cellId of cellSelections) {
-          // Only count cells that are NOT part of row/column selections
           const [columnName, rowId] = cellId.split(":");
 
-          // Skip if this cell is part of a row or column selection
-          const isPartOfRowSelection = selectedRowIds.includes(rowId);
-          const isPartOfColumnSelection =
-            selectedColumnIds.includes(columnName);
+          // Track cells by row
+          if (!cellsByRow.has(rowId)) {
+            cellsByRow.set(rowId, []);
+          }
+          cellsByRow.get(rowId).push(columnName);
 
-          if (!isPartOfRowSelection && !isPartOfColumnSelection) {
-            if (!columnWithSomeSelectedCell.includes(columnName)) {
-              columnWithSomeSelectedCell.push(columnName);
-            }
-            if (!rowWithSomeSelectedCell.includes(rowId)) {
-              rowWithSomeSelectedCell.push(rowId);
-            }
+          // Track cells by column
+          if (!cellsByColumn.has(columnName)) {
+            cellsByColumn.set(columnName, []);
+          }
+          cellsByColumn.get(columnName).push(rowId);
+
+          // Add to some-selected tracking
+          if (!rowWithSomeSelectedCell.includes(rowId)) {
+            rowWithSomeSelectedCell.push(rowId);
+          }
+          if (!columnWithSomeSelectedCell.includes(columnName)) {
+            columnWithSomeSelectedCell.push(columnName);
+          }
+        }
+
+        // Check for complete row selections (all columns in a row selected)
+        for (const [rowId, selectedColumns] of cellsByRow) {
+          if (selectedColumns.length === columns.length) {
+            selectedRowIds.push(rowId);
+          }
+        }
+
+        // Check for complete column selections (all rows in a column selected)
+        for (const [columnName, selectedRows] of cellsByColumn) {
+          if (selectedRows.length === sampleData.length) {
+            selectedColumnIds.push(columnName);
           }
         }
 
@@ -378,8 +384,6 @@
         const logState = () => {
           console.log("Current state:", {
             selection,
-            hasRowSelections,
-            hasColumnSelections,
             hasCellSelections,
             selectedRowIds,
             selectedColumnIds,
@@ -396,7 +400,32 @@
           layout: "grid",
           value: selection,
           onChange: (value) => {
-            selectionSignal.value = value;
+            // When row/column selectors are clicked, expand to select all data cells
+            const expandedSelection = [];
+
+            for (const item of value) {
+              if (typeof item === "string" && item.startsWith("row:")) {
+                // Row selection: select all data cells in this row
+                const rowId = item.replace("row:", "");
+                for (const col of columns) {
+                  expandedSelection.push(`${col.accessorKey}:${rowId}`);
+                }
+              } else if (
+                typeof item === "string" &&
+                item.startsWith("column:")
+              ) {
+                // Column selection: select all data cells in this column
+                const columnId = item.replace("column:", "");
+                for (const row of sampleData) {
+                  expandedSelection.push(`${columnId}:${row.id}`);
+                }
+              } else {
+                // Regular cell selection: keep as is
+                expandedSelection.push(item);
+              }
+            }
+
+            selectionSignal.value = expandedSelection;
           },
         });
 
