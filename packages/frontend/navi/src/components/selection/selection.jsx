@@ -1,4 +1,4 @@
-import { canInterceptKeys, findAfter, findBefore } from "@jsenv/dom";
+import { findAfter, findBefore } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -9,7 +9,7 @@ import {
   useState,
 } from "preact/hooks";
 import { createCallbackController } from "../callback_controller.js";
-import { keyboardEventIsMatchingKeyCombination } from "../keyboard_shortcuts/keyboard_shortcuts.js";
+import { appplyKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 
 const DEBUG = {
   registration: false, // Element registration/unregistration
@@ -1198,140 +1198,10 @@ const handleCrossTypeNavigation = (
   };
 };
 
-// Helper function to handle arrow key navigation
-const handleArrowNavigation = (
-  key,
-  selection,
-  element,
-  keydownEvent,
-  isJumpToEnd,
-  isShiftSelect,
-  isMultiSelect,
-) => {
-  // Check axis restrictions
-  if (
-    (key === "ArrowDown" || key === "ArrowUp") &&
-    selection.axis === "horizontal"
-  ) {
-    debug(
-      "navigation",
-      `keydownToSelect: ${key} in horizontal layout, skipping`,
-    );
-    return false; // Indicate navigation was not handled
-  }
-
-  if (
-    (key === "ArrowLeft" || key === "ArrowRight") &&
-    selection.axis === "vertical"
-  ) {
-    debug("navigation", `keydownToSelect: ${key} in vertical layout, skipping`);
-    return false; // Indicate navigation was not handled
-  }
-
-  // Get target element based on direction
-  let targetElement;
-  if (isJumpToEnd) {
-    targetElement = getJumpToEndElement(selection, element, key);
-    debug(
-      "navigation",
-      `keydownToSelect: ${key} with Cmd/Ctrl+Shift - jumping to end element:`,
-      targetElement,
-    );
-  } else {
-    // Normal navigation
-    switch (key) {
-      case "ArrowDown":
-        targetElement = selection.getElementBelow(element);
-        break;
-      case "ArrowUp":
-        targetElement = selection.getElementAbove(element);
-        break;
-      case "ArrowLeft":
-        targetElement = selection.getElementBefore(element);
-        break;
-      case "ArrowRight":
-        targetElement = selection.getElementAfter(element);
-        break;
-      default:
-        return false; // Unsupported key
-    }
-    debug(
-      "navigation",
-      `keydownToSelect: ${key} - found next element:`,
-      targetElement,
-    );
-  }
-
-  if (!targetElement) {
-    debug("navigation", `keydownToSelect: ${key} - no target element found`);
-    return false; // Indicate navigation was not handled
-  }
-
-  const targetValue = getElementValue(targetElement);
-  keydownEvent.preventDefault(); // Prevent default scrolling behavior
-
-  // Handle cross-type navigation
-  const { isCrossType, shouldClearPreviousSelection } =
-    handleCrossTypeNavigation(
-      element,
-      targetElement,
-      keydownEvent,
-      selection,
-      isMultiSelect,
-    );
-
-  if (isShiftSelect) {
-    debug(
-      "interaction",
-      `keydownToSelect: ${key} with Shift - selecting from anchor to target element`,
-    );
-    selection.selectFromAnchorTo(targetElement, keydownEvent);
-    return true;
-  }
-
-  if (isMultiSelect && !isCrossType) {
-    debug(
-      "interaction",
-      `keydownToSelect: ${key} with multi-select - adding to selection`,
-    );
-    selection.addToSelection([targetValue], keydownEvent);
-    return true;
-  }
-
-  // Handle cross-type navigation
-  if (shouldClearPreviousSelection) {
-    debug(
-      "interaction",
-      `keydownToSelect: ${key} - cross-type navigation, clearing and setting new selection`,
-    );
-    selection.setSelection([targetValue], keydownEvent);
-  } else if (isCrossType && !shouldClearPreviousSelection) {
-    debug(
-      "interaction",
-      `keydownToSelect: ${key} - cross-type navigation with Cmd, adding to selection`,
-    );
-    selection.addToSelection([targetValue], keydownEvent);
-  } else {
-    debug(
-      "interaction",
-      `keydownToSelect: ${key} - setting selection to target element`,
-    );
-    selection.setSelection([targetValue], keydownEvent);
-  }
-
-  return true; // Indicate navigation was handled
-};
-
 const keydownToSelect = (keydownEvent, { selection, element }) => {
-  if (!canInterceptKeys(keydownEvent)) {
-    debug("interaction", "keydownToSelect: cannot intercept keys, skipping");
-    return;
-  }
-
   const value = getElementValue(element);
   const selectionName = getElementSelectionName(element);
   const hasSpecificSelectionName = selectionName && selectionName !== "cell";
-
   debug("interaction", "keydownToSelect:", {
     key: keydownEvent.key,
     element,
@@ -1341,97 +1211,168 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     currentSelection: selection.value,
     type: selection.type,
   });
-  if (keydownEvent.key === "Shift") {
-    debug("interaction", "keydownToSelect: Shift key, setting anchor element");
-    selection.setAnchorElement(element);
-    return;
-  }
 
+  const { key } = keydownEvent;
   const isMetaOrCtrlPressed = keydownEvent.metaKey || keydownEvent.ctrlKey;
   const isShiftSelect = keydownEvent.shiftKey;
   const isMultiSelect = isMetaOrCtrlPressed && isShiftSelect; // Only add to selection when BOTH are pressed
-  const isJumpToEnd = isMetaOrCtrlPressed && isShiftSelect; // Jump to end and select
-  const { key } = keydownEvent;
+  const onElementToSelect = (elementToSelect) => {
+    if (!elementToSelect) {
+      return false;
+    }
+    keydownEvent.preventDefault();
+    const targetValue = getElementValue(elementToSelect);
+    // Handle cross-type navigation
+    const { isCrossType, shouldClearPreviousSelection } =
+      handleCrossTypeNavigation(
+        element,
+        elementToSelect,
+        keydownEvent,
+        selection,
+        isMultiSelect,
+      );
 
-  // If only Cmd/Ctrl is pressed (without Shift) for arrow keys, ignore the event
-  if (
-    isMetaOrCtrlPressed &&
-    !isShiftSelect &&
-    (key === "ArrowDown" ||
-      key === "ArrowUp" ||
-      key === "ArrowLeft" ||
-      key === "ArrowRight")
-  ) {
-    debug(
-      "interaction",
-      "keydownToSelect: Cmd/Ctrl without Shift on arrow key, ignoring",
-    );
-    return;
-  }
-
-  if (key === "a") {
-    if (!isMetaOrCtrlPressed) {
+    if (isShiftSelect) {
       debug(
         "interaction",
-        'keydownToSelect: "a" key without multi-select modifier, skipping',
+        `keydownToSelect: ${key} with Shift - selecting from anchor to target element`,
       );
-      return;
+      selection.selectFromAnchorTo(elementToSelect, keydownEvent);
+      return true;
     }
-    keydownEvent.preventDefault(); // prevent default select all text behavior
-    selection.selectAll(keydownEvent);
-    return;
-  }
-
-  // toggle selection only if element has data-selection-toggle-shortcut="space"
-  const toggleShortcut = element.getAttribute("data-selection-toggle-shortcut");
-  if (toggleShortcut) {
-    if (keyboardEventIsMatchingKeyCombination(keydownEvent, toggleShortcut)) {
-      keydownEvent.preventDefault(); // Prevent scrolling
-      const elementValue = getElementValue(element);
-      const isCurrentlySelected = selection.isElementSelected(element);
-
-      debug("interaction", "keydownToSelect: Space key toggle", {
-        element,
-        elementValue,
-        isCurrentlySelected,
-        currentSelection: selection.value,
-      });
-
-      if (isCurrentlySelected) {
-        // Element is selected, remove it from selection
-        debug("interaction", "keydownToSelect: Space - deselecting element");
-        selection.removeFromSelection([elementValue], keydownEvent);
-      } else {
-        // Element is not selected, add it to selection
-        debug("interaction", "keydownToSelect: Space - selecting element");
-        if (isMultiSelect) {
-          // Multi-select mode: add to existing selection
-          selection.addToSelection([elementValue], keydownEvent);
-        } else {
-          // Normal mode: replace selection with this element
-          selection.setSelection([elementValue], keydownEvent);
-        }
-      }
-      return;
+    if (isMultiSelect && !isCrossType) {
+      debug(
+        "interaction",
+        `keydownToSelect: ${key} with multi-select - adding to selection`,
+      );
+      selection.addToSelection([targetValue], keydownEvent);
+      return true;
     }
-  }
-
-  // Handle arrow key navigation
-  if (
-    key === "ArrowDown" ||
-    key === "ArrowUp" ||
-    key === "ArrowLeft" ||
-    key === "ArrowRight"
-  ) {
-    handleArrowNavigation(
-      key,
-      selection,
-      element,
-      keydownEvent,
-      isJumpToEnd,
-      isShiftSelect,
-      isMultiSelect,
+    // Handle cross-type navigation
+    if (shouldClearPreviousSelection) {
+      debug(
+        "interaction",
+        `keydownToSelect: ${key} - cross-type navigation, clearing and setting new selection`,
+      );
+      selection.setSelection([targetValue], keydownEvent);
+      return true;
+    }
+    if (isCrossType && !shouldClearPreviousSelection) {
+      debug(
+        "interaction",
+        `keydownToSelect: ${key} - cross-type navigation with Cmd, adding to selection`,
+      );
+      selection.addToSelection([targetValue], keydownEvent);
+      return true;
+    }
+    debug(
+      "interaction",
+      `keydownToSelect: ${key} - setting selection to target element`,
     );
-    return;
-  }
+    selection.setSelection([targetValue], keydownEvent);
+    return true;
+  };
+  const toggleShortcut = element.getAttribute("data-selection-toggle-shortcut");
+  appplyKeyboardShortcuts(
+    [
+      {
+        key: "command+shift+up",
+        enabled: selection.axis !== "horizontal",
+        action: () => {
+          const targetElement = getJumpToEndElement(selection, element, key);
+          return onElementToSelect(targetElement);
+        },
+      },
+      {
+        key: "up",
+        enabled: selection.axis !== "horizontal",
+        action: () => {
+          const targetElement = selection.getElementAbove(element);
+          return onElementToSelect(targetElement);
+        },
+      },
+      {
+        key: "command+shift+down",
+        enabled: selection.axis !== "horizontal",
+        action: () => {
+          const targetElement = getJumpToEndElement(selection, element, key);
+          return onElementToSelect(targetElement);
+        },
+      },
+      {
+        key: "down",
+        enabled: selection.axis !== "horizontal",
+        action: () => {
+          const targetElement = selection.getElementBelow(element);
+          return onElementToSelect(targetElement);
+        },
+      },
+      {
+        key: "command+shift+left",
+        enabled: selection.axis !== "horizontal",
+        action: () => {
+          const targetElement = getJumpToEndElement(selection, element, key);
+          return onElementToSelect(targetElement);
+        },
+      },
+      {
+        key: "left",
+        enabled: selection.axis === "vertical",
+        action: () => {
+          const targetElement = selection.getElementBefore(element);
+          return onElementToSelect(targetElement);
+        },
+      },
+      {
+        key: "command+shift+right",
+        enabled: selection.axis === "vertical",
+        action: () => {
+          const targetElement = getJumpToEndElement(selection, element, key);
+          return onElementToSelect(targetElement);
+        },
+      },
+      {
+        key: "right",
+        enabled: selection.axis === "vertical",
+        action: () => {
+          const targetElement = selection.getElementAfter(element);
+          return onElementToSelect(targetElement);
+        },
+      },
+      {
+        key: "shift",
+        action: () => {
+          selection.setAnchorElement(element);
+          return true;
+        },
+      },
+      {
+        key: "command+a",
+        action: () => {
+          selection.selectAll(keydownEvent);
+          return true;
+        },
+      },
+      // toggle selection only if element has [data-selection-toggle-shortcut] (usually "space")
+      ...(toggleShortcut
+        ? [
+            {
+              key: toggleShortcut,
+              action: () => {
+                const elementValue = getElementValue(element);
+                const isCurrentlySelected =
+                  selection.isElementSelected(element);
+                if (isCurrentlySelected) {
+                  selection.removeFromSelection([elementValue], keydownEvent);
+                  return true;
+                }
+                selection.addToSelection([elementValue], keydownEvent);
+                return true;
+              },
+            },
+          ]
+        : []),
+    ],
+    keydownEvent,
+  );
 };
