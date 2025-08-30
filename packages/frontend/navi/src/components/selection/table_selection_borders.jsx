@@ -185,9 +185,21 @@ const generateSelectionBorderPath = (selectedCells) => {
   const columnCells = selectedCells.filter(
     (cell) => cell.element.getAttribute("data-selection-name") === "column",
   );
+
+  // Auto-detect row selections: cells in column 0 without explicit selection name
+  const autoDetectedRowCells = selectedCells.filter(
+    (cell) =>
+      cell.column === 0 &&
+      cell.element.getAttribute("data-selection-name") !== "row",
+  );
+
   const cellCells = selectedCells.filter((cell) => {
     const selectionName = cell.element.getAttribute("data-selection-name");
-    return selectionName !== "row" && selectionName !== "column";
+    // Only include in cell selections if it's not a row or column selection
+    // AND if it's not in the first column (which would be a row selector)
+    return (
+      selectionName !== "row" && selectionName !== "column" && cell.column !== 0
+    );
   });
 
   let paths = [];
@@ -195,6 +207,11 @@ const generateSelectionBorderPath = (selectedCells) => {
   // Handle row selections - create rectangular outlines for each contiguous group of rows
   if (rowCells.length > 0) {
     paths.push(generateRowSelectionPath(rowCells));
+  }
+
+  // Handle auto-detected row selections
+  if (autoDetectedRowCells.length > 0) {
+    paths.push(generateRowSelectionPath(autoDetectedRowCells));
   }
 
   // Handle column selections - create rectangular outlines for each contiguous group of columns
@@ -308,14 +325,21 @@ const generateRowSelectionPath = (selectedCells) => {
       const topRow = group[0];
       const bottomRow = group[group.length - 1];
 
-      // For row selections, start from the second column to avoid border between first and second column
+      // For row selections, we need to find the data cells in the same row as the selected row selector
       const table = topRow.element.closest("table");
       if (!table) return "";
 
-      const topRowElement = table.rows[topRow.row];
+      // Get the actual table row element from the selected row selector cell
+      const topRowElement = topRow.element.closest("tr");
+      const bottomRowElement = bottomRow.element.closest("tr");
+
+      if (!topRowElement || !bottomRowElement) return "";
+
+      // Find the first data cell (skip the row selector column)
       const firstDataCell = topRowElement.cells[1]; // Start from second column
       if (!firstDataCell) return "";
 
+      // Find the last data cell in the row
       const lastDataCell = topRowElement.cells[topRowElement.cells.length - 1];
       if (!lastDataCell) return "";
 
@@ -323,15 +347,17 @@ const generateRowSelectionPath = (selectedCells) => {
       const tableRect = table.getBoundingClientRect();
       const firstDataCellRect = firstDataCell.getBoundingClientRect();
       const lastDataCellRect = lastDataCell.getBoundingClientRect();
+      const topRowRect = topRowElement.getBoundingClientRect();
+      const bottomRowRect = bottomRowElement.getBoundingClientRect();
 
-      // Start from the left edge of the second column (no border between first and second column)
+      // Calculate the border coordinates
       const minLeft = firstDataCellRect.left - tableRect.left;
       const maxRight = lastDataCellRect.right - tableRect.left;
-      const minTop = topRow.top;
-      const maxBottom = bottomRow.bottom;
+      const minTop = topRowRect.top - tableRect.top;
+      const maxBottom = bottomRowRect.bottom - tableRect.top;
 
-      // Create a rectangular path starting from second column
-      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
+      // Create a path with top, right, and bottom borders only (no left border to avoid border between row selector and data)
+      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom}`;
     })
     .join(" ");
 };
