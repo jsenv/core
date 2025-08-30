@@ -1,5 +1,72 @@
+import { canInterceptKeys } from "@jsenv/dom";
 import { keyMapping } from "./keyboard_key_meta.js";
 import { isMac } from "./os.js";
+
+export const appplyKeyboardShortcuts = (keyboardEvent, shortcuts) => {
+  if (!canInterceptKeys(keyboardEvent)) {
+    return null;
+  }
+  for (const shortcutCandidate of shortcuts) {
+    const { enabled = true, key } = shortcutCandidate;
+    if (!enabled) {
+      continue;
+    }
+
+    // Handle platform-specific combination objects
+    let actualCombination;
+    let crossPlatformCombination;
+    if (typeof key === "object" && key !== null) {
+      actualCombination = isMac ? key.mac : key.other;
+    } else {
+      actualCombination = key;
+      if (containsPlatformSpecificKeys(key)) {
+        crossPlatformCombination = generateCrossPlatformCombination(key);
+      }
+    }
+
+    // Check both the actual combination and cross-platform combination
+    const matchesActual =
+      actualCombination &&
+      keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
+    const matchesCrossPlatform =
+      crossPlatformCombination &&
+      crossPlatformCombination !== actualCombination &&
+      keyboardEventIsMatchingKeyCombination(
+        keyboardEvent,
+        crossPlatformCombination,
+      );
+
+    if (!matchesActual && !matchesCrossPlatform) {
+      continue;
+    }
+    if (shortcutCandidate.when && !shortcutCandidate.when(keyboardEvent)) {
+      continue;
+    }
+    keyboardEvent.preventDefault();
+    shortcutCandidate.action(keyboardEvent);
+    return shortcutCandidate;
+  }
+  return null;
+};
+const containsPlatformSpecificKeys = (combination) => {
+  const lowerCombination = combination.toLowerCase();
+  const macSpecificKeys = ["command", "cmd"];
+
+  return macSpecificKeys.some((key) => lowerCombination.includes(key));
+};
+const generateCrossPlatformCombination = (combination) => {
+  let crossPlatform = combination;
+
+  if (isMac) {
+    // No need to convert anything TO Windows/Linux-specific format since we're on Mac
+    return null;
+  }
+  // If not on Mac but combination contains Mac-specific keys, generate Windows equivalent
+  crossPlatform = crossPlatform.replace(/\bcommand\b/gi, "control");
+  crossPlatform = crossPlatform.replace(/\bcmd\b/gi, "control");
+
+  return crossPlatform;
+};
 
 export const keyboardEventIsMatchingKeyCombination = (
   event,

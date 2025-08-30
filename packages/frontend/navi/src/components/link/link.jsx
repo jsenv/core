@@ -4,12 +4,12 @@ import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useSelectableElement, useSelection } from "../selection/selection.jsx";
 import {
   ShortcutProvider,
   useShortcutContext,
-} from "../shortcut/shortcut_context.jsx";
+} from "../keyboard_shortcuts/shortcut_context.jsx";
+import { LoaderBackground } from "../loader/loader_background.jsx";
+import { useSelectableElement, useSelection } from "../selection/selection.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 /*

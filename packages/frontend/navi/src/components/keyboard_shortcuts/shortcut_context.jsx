@@ -1,4 +1,3 @@
-import { canInterceptKeys } from "@jsenv/dom";
 import { requestAction } from "@jsenv/validation";
 import { createContext } from "preact";
 import { useContext, useEffect, useRef, useState } from "preact/hooks";
@@ -6,8 +5,7 @@ import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
 import { generateAriaKeyShortcuts } from "./aria_key_shortcuts.js";
-import { keyboardEventIsMatchingKeyCombination } from "./keyboard_shortcuts.js";
-import { isMac } from "./os.js";
+import { appplyKeyboardShortcuts } from "./keyboard_shortcuts.js";
 
 import.meta.css = /* css */ `
   .navi_shortcut_container {
@@ -162,59 +160,17 @@ export const useKeyboardShortcuts = (elementRef, shortcuts, onShortcut) => {
 
   useEffect(() => {
     const element = elementRef.current;
-
     const onKeydown = (event) => {
-      if (!canInterceptKeys(event)) {
-        return;
-      }
-
-      let shortcutFound;
+      const shortcutsCopy = [];
       for (const shortcutCandidate of shortcutsRef.current) {
-        const { enabled = true, key } = shortcutCandidate;
-        if (!enabled) {
-          continue;
-        }
-
-        // Handle platform-specific combination objects
-        let actualCombination;
-        let crossPlatformCombination;
-
-        if (typeof key === "object" && key !== null) {
-          actualCombination = isMac ? key.mac : key.other;
-        } else {
-          actualCombination = key;
-
-          // Auto-generate cross-platform combination if needed
-          if (containsPlatformSpecificKeys(key)) {
-            crossPlatformCombination = generateCrossPlatformCombination(key);
-          }
-        }
-
-        // Check both the actual combination and cross-platform combination
-        const matchesActual =
-          actualCombination &&
-          keyboardEventIsMatchingKeyCombination(event, actualCombination);
-        const matchesCrossPlatform =
-          crossPlatformCombination &&
-          crossPlatformCombination !== actualCombination &&
-          keyboardEventIsMatchingKeyCombination(
-            event,
-            crossPlatformCombination,
-          );
-
-        if (!matchesActual && !matchesCrossPlatform) {
-          continue;
-        }
-        if (shortcutCandidate.when && !shortcutCandidate.when(event)) {
-          continue;
-        }
-        shortcutFound = shortcutCandidate;
-        break;
+        shortcutsCopy.push({
+          ...shortcutCandidate,
+          action: () => {
+            onShortcutRef.current(shortcutCandidate, event);
+          },
+        });
       }
-      if (!shortcutFound) {
-        return;
-      }
-      onShortcutRef.current(shortcutFound, event);
+      appplyKeyboardShortcuts(shortcutsCopy, event);
     };
 
     element.addEventListener("keydown", onKeydown);
@@ -222,26 +178,4 @@ export const useKeyboardShortcuts = (elementRef, shortcuts, onShortcut) => {
       element.removeEventListener("keydown", onKeydown);
     };
   }, []);
-};
-
-const containsPlatformSpecificKeys = (combination) => {
-  const lowerCombination = combination.toLowerCase();
-  const macSpecificKeys = ["command", "cmd"];
-
-  return macSpecificKeys.some((key) => lowerCombination.includes(key));
-};
-
-const generateCrossPlatformCombination = (combination) => {
-  let crossPlatform = combination;
-
-  if (isMac) {
-    // No need to convert anything TO Windows/Linux-specific format since we're on Mac
-    return null;
-  }
-
-  // If not on Mac but combination contains Mac-specific keys, generate Windows equivalent
-  crossPlatform = crossPlatform.replace(/\bcommand\b/gi, "control");
-  crossPlatform = crossPlatform.replace(/\bcmd\b/gi, "control");
-
-  return crossPlatform;
 };

@@ -9,7 +9,7 @@ import {
   useState,
 } from "preact/hooks";
 import { createCallbackController } from "../callback_controller.js";
-import { eventIsMatchingKeyCombination } from "../shortcut/shortcut_context.jsx";
+import { keyboardEventIsMatchingKeyCombination } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 
 const DEBUG = {
   registration: false, // Element registration/unregistration
@@ -1385,7 +1385,7 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
   // toggle selection only if element has data-selection-toggle-shortcut="space"
   const toggleShortcut = element.getAttribute("data-selection-toggle-shortcut");
   if (toggleShortcut) {
-    if (eventIsMatchingKeyCombination(keydownEvent, toggleShortcut)) {
+    if (keyboardEventIsMatchingKeyCombination(keydownEvent, toggleShortcut)) {
       keydownEvent.preventDefault(); // Prevent scrolling
       const elementValue = getElementValue(element);
       const isCurrentlySelected = selection.isElementSelected(element);
