@@ -4,36 +4,45 @@ import { useSelection } from "./selection.jsx";
 import.meta.css = /* css */ `
   /* CSS-based selection borders using data attributes */
 
-  /* Base border styles - these will be overridden when selection borders are active */
-  table[data-selection-borders] {
-    border-collapse: separate;
-    border-spacing: 0;
-  }
-
-  /* Selection border colors using data attributes */
+  /* Selection border colors using data attributes with opacity control */
   [data-selection-border-top] {
-    border-top: 1px solid var(--selection-border-color, #0078d4) !important;
+    border-top: 1px solid
+      color-mix(
+        in srgb,
+        var(--selection-border-color)
+          calc(var(--selection-border-opacity) * 100%),
+        transparent
+      ) !important;
   }
 
   [data-selection-border-right] {
-    border-right: 1px solid var(--selection-border-color, #0078d4) !important;
+    border-right: 1px solid
+      color-mix(
+        in srgb,
+        var(--selection-border-color)
+          calc(var(--selection-border-opacity) * 100%),
+        transparent
+      ) !important;
   }
 
   [data-selection-border-bottom] {
-    border-bottom: 1px solid var(--selection-border-color, #0078d4) !important;
+    border-bottom: 1px solid
+      color-mix(
+        in srgb,
+        var(--selection-border-color)
+          calc(var(--selection-border-opacity) * 100%),
+        transparent
+      ) !important;
   }
 
   [data-selection-border-left] {
-    border-left: 1px solid var(--selection-border-color, #0078d4) !important;
-  }
-
-  /* Opacity control */
-  [data-selection-border-top],
-  [data-selection-border-right],
-  [data-selection-border-bottom],
-  [data-selection-border-left] {
-    --selection-border-opacity: 1;
-    opacity: var(--selection-border-opacity);
+    border-left: 1px solid
+      color-mix(
+        in srgb,
+        var(--selection-border-color)
+          calc(var(--selection-border-opacity) * 100%),
+        transparent
+      ) !important;
   }
 
   /* Hide borders during drag selection */
@@ -44,7 +53,6 @@ import.meta.css = /* css */ `
     border-color: transparent !important;
   }
 `;
-
 export const useTableSelectionBorders = (
   tableRef,
   { color = "#0078d4", opacity = 1 } = {},
@@ -65,12 +73,12 @@ export const useTableSelectionBorders = (
         cell.removeAttribute("data-selection-border-right");
         cell.removeAttribute("data-selection-border-bottom");
         cell.removeAttribute("data-selection-border-left");
-        cell.style.removeProperty("--selection-border-color");
-        cell.style.removeProperty("--selection-border-opacity");
+        // Always set CSS variables even when clearing to avoid fallbacks
+        cell.style.setProperty("--selection-border-color", color);
+        cell.style.setProperty("--selection-border-opacity", opacity);
       });
 
-      // Remove table-level selection marker
-      table.removeAttribute("data-selection-borders");
+      // Remove table-level selection marker (no longer needed)
 
       // Don't apply borders during drag selection
       if (table.hasAttribute("data-drag-selecting")) {
@@ -82,9 +90,6 @@ export const useTableSelectionBorders = (
       if (selectedCells.length === 0) {
         return;
       }
-
-      // Mark table as having selection borders
-      table.setAttribute("data-selection-borders", "");
 
       // Create smart borders with proper intersection handling
       createSmartSelectionBorders(selectedCells, color, opacity);
