@@ -1,329 +1,548 @@
-import { useLayoutEffect } from "preact/hooks";
-import { useSelection } from "./selection.jsx";
+import { useLayoutEffect, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
-  /* CSS-based selection borders using data attributes */
-
-  /* Selection border colors using data attributes with opacity control */
-  [data-selection-border-top] {
-    border-top: 1px solid
-      color-mix(
-        in srgb,
-        var(--selection-border-color)
-          calc(var(--selection-border-opacity) * 100%),
-        transparent
-      ) !important;
+  .selection-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
   }
 
-  [data-selection-border-right] {
-    border-right: 1px solid
-      color-mix(
-        in srgb,
-        var(--selection-border-color)
-          calc(var(--selection-border-opacity) * 100%),
-        transparent
-      ) !important;
+  .selection-svg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
   }
 
-  [data-selection-border-bottom] {
-    border-bottom: 1px solid
-      color-mix(
-        in srgb,
-        var(--selection-border-color)
-          calc(var(--selection-border-opacity) * 100%),
-        transparent
-      ) !important;
-  }
-
-  [data-selection-border-left] {
-    border-left: 1px solid
-      color-mix(
-        in srgb,
-        var(--selection-border-color)
-          calc(var(--selection-border-opacity) * 100%),
-        transparent
-      ) !important;
+  .selection-path {
+    fill: none;
+    stroke: #0078d4;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
   }
 
   /* Hide borders during drag selection */
-  table[data-drag-selecting] [data-selection-border-top],
-  table[data-drag-selecting] [data-selection-border-right],
-  table[data-drag-selecting] [data-selection-border-bottom],
-  table[data-drag-selecting] [data-selection-border-left] {
-    border-color: transparent !important;
+  table[data-drag-selecting] + * .selection-overlay {
+    display: none;
   }
 `;
-export const useTableSelectionBorders = (
-  tableRef,
-  { color = "#0078d4", opacity = 1 } = {},
-) => {
-  const selection = useSelection();
+
+export const TableSelectionBorders = ({ tableRef }) => {
+  const [selectionData, setSelectionData] = useState(null);
 
   useLayoutEffect(() => {
-    const table = tableRef.current;
-    if (!table) {
-      return null;
-    }
-
-    const updateCellBorders = () => {
-      // Clear all existing selection border attributes
-      const allCells = table.querySelectorAll("td, th");
-      allCells.forEach((cell) => {
-        cell.removeAttribute("data-selection-border-top");
-        cell.removeAttribute("data-selection-border-right");
-        cell.removeAttribute("data-selection-border-bottom");
-        cell.removeAttribute("data-selection-border-left");
-        // Always set CSS variables even when clearing to avoid fallbacks
-        cell.style.setProperty("--selection-border-color", color);
-        cell.style.setProperty("--selection-border-opacity", opacity);
-      });
-
-      // Remove table-level selection marker (no longer needed)
-
-      // Don't apply borders during drag selection
-      if (table.hasAttribute("data-drag-selecting")) {
-        return;
-      }
-
-      // Get all selected cells
-      const selectedCells = getSelectedCells(table, selection);
-      if (selectedCells.length === 0) {
-        return;
-      }
-
-      // Create smart borders with proper intersection handling
-      createSmartSelectionBorders(selectedCells, color, opacity);
+    const tableSelectionObserver = createTableSelectionObserver(
+      tableRef.current,
+    );
+    setSelectionData(tableSelectionObserver.selectionData);
+    tableSelectionObserver.onChange = () => {
+      setSelectionData(tableSelectionObserver.selectionData);
     };
+    return tableSelectionObserver.cleanup;
+  }, [tableRef]);
 
-    // Initial border update
-    updateCellBorders();
-
-    // Listen for selection changes
-    const unsubscribe = selection.channels.change.add(updateCellBorders);
-
-    return () => {
-      unsubscribe();
-    };
-  }, [tableRef, selection, color, opacity]);
-};
-
-// Create smart selection borders with proper intersection handling
-const createSmartSelectionBorders = (selectedCells, color, opacity) => {
-  // Create a map of selected cells by position for quick lookup
-  const cellMap = new Map();
-  const cellPositions = [];
-
-  selectedCells.forEach((cell) => {
-    const position = getCellPosition(cell);
-    if (position) {
-      cellMap.set(`${position.row},${position.col}`, cell);
-      cellPositions.push({ cell, position });
-    }
-  });
-
-  // Group cells by selection type
-  const groupedCells = groupCellsBySelectionType(selectedCells);
-
-  // Process each selection type
-  Object.entries(groupedCells).forEach(([selectionType, cells]) => {
-    if (selectionType === "row") {
-      createRowSelectionBorders(cells, cellMap, color, opacity);
-    } else if (selectionType === "column") {
-      createColumnSelectionBorders(cells, cellMap, color, opacity);
-    } else {
-      // Regular cell selection
-      createCellSelectionBorders(
-        cellPositions.filter((cp) => cells.includes(cp.cell)),
-        color,
-        opacity,
-      );
-    }
-  });
-};
-
-// Helper function to apply CSS border attributes to a cell
-const applyCellBorders = (cell, borderInfo, color, opacity) => {
-  const { top, right, bottom, left } = borderInfo;
-
-  // Set CSS custom properties for color and opacity
-  cell.style.setProperty("--selection-border-color", color);
-  cell.style.setProperty("--selection-border-opacity", opacity);
-
-  // Apply border data attributes based on which borders should be shown
-  if (top) cell.setAttribute("data-selection-border-top", "");
-  if (right) cell.setAttribute("data-selection-border-right", "");
-  if (bottom) cell.setAttribute("data-selection-border-bottom", "");
-  if (left) cell.setAttribute("data-selection-border-left", "");
-};
-
-// Determine which borders a cell should have based on neighbor connections
-const calculateCellBorders = (neighborInfo) => {
-  const { top, left, right, bottom } = neighborInfo;
-
-  // Default: show all borders for isolated cells
-  let borders = { top: true, right: true, bottom: true, left: true };
-
-  // Remove borders where we're connected to neighbors
-  if (top) borders.top = false;
-  if (right) borders.right = false;
-  if (bottom) borders.bottom = false;
-  if (left) borders.left = false;
-
-  return borders;
-};
-
-// Create borders for cell selections with smart intersection handling
-const createCellSelectionBorders = (cellPositions, color, opacity) => {
-  if (cellPositions.length === 0) {
-    return;
+  if (!selectionData || selectionData.selectedCells.length === 0) {
+    return null;
   }
 
-  // Helper function to check if a position is covered by any selected cell (including spans)
-  const isPositionSelected = (row, col) => {
-    return cellPositions.some(({ position, cell }) => {
-      const rowSpan = parseInt(cell.getAttribute("rowspan") || "1", 10);
-      const colSpan = parseInt(cell.getAttribute("colspan") || "1", 10);
+  const { selectedCells } = selectionData;
+  const borderPath = generateSelectionBorderPath(selectedCells);
 
-      return (
-        row >= position.row &&
-        row < position.row + rowSpan &&
-        col >= position.col &&
-        col < position.col + colSpan
-      );
+  return (
+    <div className="selection-overlay">
+      <svg className="selection-svg" width="100%" height="100%">
+        <path className="selection-path" d={borderPath} />
+      </svg>
+    </div>
+  );
+};
+
+const NO_SELECTION = { selectedCells: [], tableRect: null };
+const createTableSelectionObserver = (table) => {
+  const cleanupCallbackSet = new Set();
+  const cleanup = () => {
+    for (const cb of cleanupCallbackSet) {
+      cb();
+    }
+  };
+  const tableSelection = {
+    selectionData: undefined,
+    onChange: () => {},
+    cleanup,
+  };
+
+  const updateSelectionData = (newData) => {
+    if (newData === tableSelection.selectionData) {
+      return;
+    }
+    tableSelection.selectionData = newData;
+    tableSelection.onChange();
+  };
+
+  if (!table) {
+    updateSelectionData(NO_SELECTION);
+    return tableSelection;
+  }
+
+  const calculateSelectionData = () => {
+    // Don't update during drag selection - wait for drag to complete
+    if (table.hasAttribute("data-drag-selecting")) {
+      return;
+    }
+
+    // Find all selected cells by aria-selected attribute
+    const selectedCells = table.querySelectorAll('[aria-selected="true"]');
+
+    if (selectedCells.length === 0) {
+      updateSelectionData(NO_SELECTION);
+      return;
+    }
+
+    const tableRect = table.getBoundingClientRect();
+
+    // Get cell information for each selected cell
+    const cellInfos = Array.from(selectedCells).map((cell) => {
+      const cellRect = cell.getBoundingClientRect();
+      const row = cell.closest("tr");
+      const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+      const columnIndex = Array.from(row.children).indexOf(cell);
+
+      return {
+        element: cell,
+        row: rowIndex,
+        column: columnIndex,
+        left: cellRect.left - tableRect.left,
+        top: cellRect.top - tableRect.top,
+        width: cellRect.width,
+        height: cellRect.height,
+        right: cellRect.left - tableRect.left + cellRect.width,
+        bottom: cellRect.top - tableRect.top + cellRect.height,
+      };
+    });
+
+    updateSelectionData({
+      selectedCells: cellInfos,
+      tableRect: {
+        left: tableRect.left,
+        top: tableRect.top,
+        width: tableRect.width,
+        height: tableRect.height,
+      },
     });
   };
 
-  cellPositions.forEach(({ cell, position }) => {
-    const rowSpan = parseInt(cell.getAttribute("rowspan") || "1", 10);
-    const colSpan = parseInt(cell.getAttribute("colspan") || "1", 10);
+  calculateSelectionData();
 
-    // Check all 8 neighboring positions for border calculation
-    const top = isPositionSelected(position.row - 1, position.col);
-    const left = isPositionSelected(position.row, position.col - 1);
-    const right = isPositionSelected(position.row, position.col + colSpan);
-    const bottom = isPositionSelected(position.row + rowSpan, position.col);
+  update_on_selection_change: {
+    // Set up MutationObserver to watch for aria-selected and drag state changes
+    const mutationObserver = new MutationObserver(() => {
+      calculateSelectionData();
+    });
+    // Observe the table for aria-selected and drag state attribute changes
+    mutationObserver.observe(table, {
+      attributes: true,
+      attributeFilter: ["aria-selected", "data-drag-selecting"],
+      subtree: true,
+      characterData: true,
+    });
+    cleanupCallbackSet.add(() => mutationObserver.disconnect());
+  }
 
-    // Check diagonal neighbors to prevent edge overlaps
-    const topRight = isPositionSelected(
-      position.row - 1,
-      position.col + colSpan,
-    );
-    const bottomRight = isPositionSelected(
-      position.row + rowSpan,
-      position.col + colSpan,
-    );
-    const bottomLeft = isPositionSelected(
-      position.row + rowSpan,
-      position.col - 1,
-    );
-    const topLeft = isPositionSelected(position.row - 1, position.col - 1);
+  update_on_table_resize: {
+    // Set up ResizeObserver to watch for table dimension changes
+    const resizeObserver = new ResizeObserver(() => {
+      calculateSelectionData();
+    });
+    // Observe the table for size changes
+    resizeObserver.observe(table);
+    cleanupCallbackSet.add(() => resizeObserver.disconnect());
+  }
 
-    // Prepare neighbor information for border calculation
-    const neighborInfo = {
-      top,
-      left,
-      right,
-      bottom,
-      topRight,
-      bottomRight,
-      bottomLeft,
-      topLeft,
+  update_on_window_resize: {
+    // Also listen for window resize events for additional coverage
+    const handleWindowResize = () => {
+      calculateSelectionData();
     };
-
-    // Calculate which borders this cell should display
-    const borderInfo = calculateCellBorders(neighborInfo);
-
-    // Apply CSS border attributes to the cell
-    applyCellBorders(cell, borderInfo, color, opacity);
-  });
-};
-
-// Create borders for row selections
-const createRowSelectionBorders = (rowCells, cellMap, color, opacity) => {
-  if (rowCells.length === 0) {
-    return;
+    window.addEventListener("resize", handleWindowResize);
+    cleanupCallbackSet.add(() =>
+      window.removeEventListener("resize", handleWindowResize),
+    );
   }
 
-  rowCells.forEach((rowHeaderCell) => {
-    // For row selections, show all borders since they're independent
-    const borderInfo = { top: true, right: true, bottom: true, left: true };
-    applyCellBorders(rowHeaderCell, borderInfo, color, opacity);
-  });
+  return tableSelection;
 };
 
-// Create borders for column selections
-const createColumnSelectionBorders = (columnCells, cellMap, color, opacity) => {
-  if (columnCells.length === 0) {
-    return;
+// Generate an SVG path that follows the perimeter of the selection
+const generateSelectionBorderPath = (selectedCells) => {
+  if (selectedCells.length === 0) {
+    return "";
   }
 
-  columnCells.forEach((columnHeaderCell) => {
-    // For column selections, show all borders since they're independent
-    const borderInfo = { top: true, right: true, bottom: true, left: true };
-    applyCellBorders(columnHeaderCell, borderInfo, color, opacity);
+  // Group cells by their type
+  const rowCells = selectedCells.filter(
+    (cell) => cell.element.getAttribute("data-selection-name") === "row",
+  );
+  const columnCells = selectedCells.filter(
+    (cell) => cell.element.getAttribute("data-selection-name") === "column",
+  );
+  const cellCells = selectedCells.filter((cell) => {
+    const selectionName = cell.element.getAttribute("data-selection-name");
+    return selectionName !== "row" && selectionName !== "column";
   });
+
+  let paths = [];
+
+  // Handle row selections - create rectangular outlines for each contiguous group of rows
+  if (rowCells.length > 0) {
+    paths.push(generateRowSelectionPath(rowCells));
+  }
+
+  // Handle column selections - create rectangular outlines for each contiguous group of columns
+  if (columnCells.length > 0) {
+    paths.push(generateColumnSelectionPath(columnCells));
+  }
+
+  // Handle cell selections - use the original algorithm
+  if (cellCells.length > 0) {
+    paths.push(generateCellSelectionPath(cellCells));
+  }
+
+  return paths.filter((p) => p).join(" ");
 };
 
-// Get all selected cells based on the selection value
-const getSelectedCells = (table, selection) => {
-  const selectedCells = [];
+// Generate path for column selections - creates simple rectangular outlines
+const generateColumnSelectionPath = (selectedCells) => {
+  if (selectedCells.length === 0) return "";
 
-  // Get all cells in the table
-  const allCells = table.querySelectorAll("td, th");
+  // Group consecutive columns
+  const columnGroups = [];
+  const sortedCells = selectedCells.sort((a, b) => a.column - b.column);
 
-  allCells.forEach((cell) => {
-    // Check if this cell's value is in the selection
-    const cellValue = getCellValue(cell);
-    if (selection.isValueSelected(cellValue)) {
-      selectedCells.push(cell);
+  let currentGroup = [sortedCells[0]];
+
+  for (let i = 1; i < sortedCells.length; i++) {
+    const currentCell = sortedCells[i];
+    const lastCell = currentGroup[currentGroup.length - 1];
+
+    if (currentCell.column === lastCell.column + 1) {
+      // Consecutive column, add to current group
+      currentGroup.push(currentCell);
+    } else {
+      // Non-consecutive, start new group
+      columnGroups.push(currentGroup);
+      currentGroup = [currentCell];
+    }
+  }
+  columnGroups.push(currentGroup);
+
+  // Create a rectangular path for each group of consecutive columns
+  return columnGroups
+    .map((group) => {
+      const leftColumn = group[0];
+      const rightColumn = group[group.length - 1];
+
+      // For column selections, we need to find the bounds of the data cells in that column
+      const table = leftColumn.element.closest("table");
+      if (!table) return "";
+
+      // Find the first data row (skip header) to get the top boundary
+      const firstDataRow = table.rows[1]; // Skip header row (row 0)
+      if (!firstDataRow) return "";
+
+      // Find the last data row to get the bottom boundary
+      const lastDataRow = table.rows[table.rows.length - 1];
+      if (!lastDataRow) return "";
+
+      // Get the cells in the selected columns for the first and last rows
+      const leftColumnCell = firstDataRow.cells[leftColumn.column];
+      const rightColumnCell = firstDataRow.cells[rightColumn.column];
+      const lastRowLeftCell = lastDataRow.cells[leftColumn.column];
+
+      if (!leftColumnCell || !rightColumnCell || !lastRowLeftCell) return "";
+
+      // Get table bounds for relative positioning
+      const tableRect = table.getBoundingClientRect();
+      const leftColumnRect = leftColumnCell.getBoundingClientRect();
+      const rightColumnRect = rightColumnCell.getBoundingClientRect();
+      const lastRowRect = lastRowLeftCell.getBoundingClientRect();
+
+      const minLeft = leftColumnRect.left - tableRect.left;
+      const maxRight = rightColumnRect.right - tableRect.left;
+      const minTop = leftColumnRect.top - tableRect.top;
+      const maxBottom = lastRowRect.bottom - tableRect.top;
+
+      // Create a rectangular path with all borders
+      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
+    })
+    .join(" ");
+};
+
+// Generate path for row selections - creates simple rectangular outlines
+const generateRowSelectionPath = (selectedCells) => {
+  if (selectedCells.length === 0) return "";
+
+  // Group consecutive rows
+  const rowGroups = [];
+  const sortedCells = selectedCells.sort((a, b) => a.row - b.row);
+
+  let currentGroup = [sortedCells[0]];
+
+  for (let i = 1; i < sortedCells.length; i++) {
+    const currentCell = sortedCells[i];
+    const lastCell = currentGroup[currentGroup.length - 1];
+
+    if (currentCell.row === lastCell.row + 1) {
+      // Consecutive row, add to current group
+      currentGroup.push(currentCell);
+    } else {
+      // Non-consecutive, start new group
+      rowGroups.push(currentGroup);
+      currentGroup = [currentCell];
+    }
+  }
+  rowGroups.push(currentGroup);
+
+  // Create a rectangular path for each group of consecutive rows
+  return rowGroups
+    .map((group) => {
+      const topRow = group[0];
+      const bottomRow = group[group.length - 1];
+
+      // For row selections, we need to find the bounds of the data cells (excluding first column)
+      // Since row selections only select the first column, we need to calculate where the data cells would be
+      const table = topRow.element.closest("table");
+      if (!table) return "";
+
+      // Find the first data cell (column 1) in the top row to get the left boundary
+      const topRowElement = table.rows[topRow.row];
+      const firstDataCell = topRowElement.cells[1]; // Skip column 0
+      if (!firstDataCell) return "";
+
+      // Find the last data cell in the row to get the right boundary
+      const lastDataCell = topRowElement.cells[topRowElement.cells.length - 1];
+      if (!lastDataCell) return "";
+
+      // Get table bounds for relative positioning
+      const tableRect = table.getBoundingClientRect();
+      const firstDataCellRect = firstDataCell.getBoundingClientRect();
+      const lastDataCellRect = lastDataCell.getBoundingClientRect();
+
+      const minLeft = firstDataCellRect.left - tableRect.left;
+      const maxRight = lastDataCellRect.right - tableRect.left;
+      const minTop = topRow.top;
+      const maxBottom = bottomRow.bottom;
+
+      // Create a rectangular path with all borders including the left border
+      // Path goes: top-left -> top-right -> bottom-right -> bottom-left -> back to top-left
+      return `M ${minLeft} ${minTop} L ${maxRight} ${minTop} L ${maxRight} ${maxBottom} L ${minLeft} ${maxBottom} Z`;
+    })
+    .join(" ");
+};
+
+// Generate path for cell selections - uses the original edge-tracing algorithm
+const generateCellSelectionPath = (selectedCells) => {
+  // Create a grid to track selected cells
+  const grid = new Map();
+  let minRow = Infinity;
+  let maxRow = -Infinity;
+  let minCol = Infinity;
+  let maxCol = -Infinity;
+
+  selectedCells.forEach((cell) => {
+    const key = `${cell.column},${cell.row}`;
+    grid.set(key, cell);
+    minRow = Math.min(minRow, cell.row);
+    maxRow = Math.max(maxRow, cell.row);
+    minCol = Math.min(minCol, cell.column);
+    maxCol = Math.max(maxCol, cell.column);
+  });
+
+  // Find all edge segments that form the outer perimeter
+  const edges = [];
+
+  for (let row = minRow; row <= maxRow; row++) {
+    for (let col = minCol; col <= maxCol; col++) {
+      const cellKey = `${col},${row}`;
+      const cell = grid.get(cellKey);
+
+      if (!cell) continue;
+
+      const { left, top, right, bottom } = cell;
+
+      // Check each side of the cell to see if it's on the perimeter
+      // Top edge - no cell above
+      if (!grid.has(`${col},${row - 1}`)) {
+        edges.push({
+          type: "horizontal",
+          x1: left,
+          y1: top,
+          x2: right,
+          y2: top,
+          direction: "top",
+        });
+      }
+
+      // Bottom edge - no cell below
+      if (!grid.has(`${col},${row + 1}`)) {
+        edges.push({
+          type: "horizontal",
+          x1: left,
+          y1: bottom,
+          x2: right,
+          y2: bottom,
+          direction: "bottom",
+        });
+      }
+
+      // Left edge - no cell to the left
+      if (!grid.has(`${col - 1},${row}`)) {
+        edges.push({
+          type: "vertical",
+          x1: left,
+          y1: top,
+          x2: left,
+          y2: bottom,
+          direction: "left",
+        });
+      }
+
+      // Right edge - no cell to the right
+      if (!grid.has(`${col + 1},${row}`)) {
+        edges.push({
+          type: "vertical",
+          x1: right,
+          y1: top,
+          x2: right,
+          y2: bottom,
+          direction: "right",
+        });
+      }
+    }
+  }
+
+  // Convert edges to a continuous path
+  return edgesToSVGPath(edges);
+};
+
+// Convert edge segments into a continuous SVG path
+const edgesToSVGPath = (edges) => {
+  if (edges.length === 0) return "";
+
+  // Find all unique paths by tracing connected edges
+  const paths = [];
+  const usedEdges = new Set();
+
+  // Sort edges to ensure consistent path generation
+  const sortedEdges = [...edges].sort((a, b) => {
+    if (a.y1 !== b.y1) return a.y1 - b.y1;
+    if (a.x1 !== b.x1) return a.x1 - b.x1;
+    return a.type.localeCompare(b.type);
+  });
+
+  sortedEdges.forEach((startEdge) => {
+    const startIndex = edges.indexOf(startEdge);
+    if (usedEdges.has(startIndex)) return;
+
+    const pathPoints = [];
+    const visitedEdges = [];
+    let currentEdge = startEdge;
+    let currentIndex = startIndex;
+
+    // Start the path
+    pathPoints.push({ x: currentEdge.x1, y: currentEdge.y1 });
+
+    // Trace the path from this starting edge
+    while (true) {
+      usedEdges.add(currentIndex);
+      visitedEdges.push(currentIndex);
+
+      // Add the end point of current edge
+      pathPoints.push({ x: currentEdge.x2, y: currentEdge.y2 });
+
+      // Find the next connected edge
+      const nextEdgeData = findNextConnectedEdge(currentEdge, edges, usedEdges);
+      if (!nextEdgeData) break;
+
+      currentEdge = nextEdgeData.edge;
+      currentIndex = nextEdgeData.index;
+
+      // Check if we've completed a loop
+      if (visitedEdges.includes(currentIndex)) break;
+    }
+
+    if (pathPoints.length > 1) {
+      paths.push(pathPoints);
     }
   });
 
-  return selectedCells;
+  // Convert each path to SVG - create one continuous path instead of multiple closed paths
+  if (paths.length === 0) return "";
+
+  // For multiple disconnected regions, we still want to create separate closed paths
+  // but we need to be smarter about it
+  return paths
+    .map((pathPoints) => {
+      if (pathPoints.length === 0) return "";
+
+      const firstPoint = pathPoints[0];
+      let pathData = `M ${firstPoint.x} ${firstPoint.y}`;
+
+      for (let i = 1; i < pathPoints.length; i++) {
+        const point = pathPoints[i];
+        pathData += ` L ${point.x} ${point.y}`;
+      }
+
+      // Only close the path if the last point is different from the first
+      const lastPoint = pathPoints[pathPoints.length - 1];
+      if (
+        Math.abs(lastPoint.x - firstPoint.x) > 0.1 ||
+        Math.abs(lastPoint.y - firstPoint.y) > 0.1
+      ) {
+        pathData += ` L ${firstPoint.x} ${firstPoint.y}`;
+      }
+      pathData += " Z";
+
+      return pathData;
+    })
+    .join(" ");
 };
 
-// Extract value from a cell (similar to getElementValue)
-const getCellValue = (cell) => {
-  if (cell.value !== undefined) {
-    return cell.value;
-  }
-  if (cell.hasAttribute("data-value")) {
-    return cell.getAttribute("data-value");
-  }
-  return cell;
-};
+// Find the next edge that connects to the current edge's endpoint
+const findNextConnectedEdge = (currentEdge, allEdges, usedEdges) => {
+  const tolerance = 0.1; // Small tolerance for floating point comparison
+  const endX = currentEdge.x2;
+  const endY = currentEdge.y2;
 
-// Group cells by their data-selection-name attribute
-const groupCellsBySelectionType = (cells) => {
-  const groups = {};
+  for (let i = 0; i < allEdges.length; i++) {
+    if (usedEdges.has(i)) continue;
 
-  cells.forEach((cell) => {
-    const selectionName = cell.getAttribute("data-selection-name") || "cell";
-    if (!groups[selectionName]) {
-      groups[selectionName] = [];
+    const edge = allEdges[i];
+
+    // Check if this edge starts where the current edge ends
+    if (
+      Math.abs(edge.x1 - endX) < tolerance &&
+      Math.abs(edge.y1 - endY) < tolerance
+    ) {
+      return { edge, index: i };
     }
-    groups[selectionName].push(cell);
-  });
 
-  return groups;
-};
+    // Also check if this edge ends where the current edge ends (for reversing)
+    if (
+      Math.abs(edge.x2 - endX) < tolerance &&
+      Math.abs(edge.y2 - endY) < tolerance
+    ) {
+      // Reverse the edge
+      return {
+        edge: {
+          ...edge,
+          x1: edge.x2,
+          y1: edge.y2,
+          x2: edge.x1,
+          y2: edge.y1,
+        },
+        index: i,
+      };
+    }
+  }
 
-// Get cell position in the table grid
-const getCellPosition = (cell) => {
-  const row = cell.closest("tr");
-  if (!row) return null;
-
-  const table = row.closest("table");
-  if (!table) return null;
-
-  const rowIndex = Array.from(table.rows).indexOf(row);
-  const colIndex = Array.from(row.cells).indexOf(cell);
-
-  return { row: rowIndex, col: colIndex };
-};
-
-// Legacy component for backward compatibility - now just uses the hook
-export const TableSelectionBorders = ({ tableRef, ...options }) => {
-  useTableSelectionBorders(tableRef, options);
   return null;
 };
