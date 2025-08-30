@@ -215,6 +215,10 @@ const isForwardArrow = (event, direction = "both") => {
 // Handle arrow navigation inside an HTMLTableElement as a grid.
 // Moves focus to adjacent cell in the direction of the arrow key.
 const getTargetInTableFocusGroup = (event, table, { loop }) => {
+  if (event.shiftKey) {
+    return null;
+  }
+
   const arrowKey = event.key;
 
   // Only handle arrow keys

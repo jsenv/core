@@ -154,7 +154,6 @@ const createBaseSelection = ({
   };
   let anchorElement = null;
 
-  // Element registration methods
   const registerElement = (element, options = {}) => {
     const elementValue = getElementValue(element);
     debug(
@@ -231,26 +230,7 @@ const createBaseSelection = ({
       debug("selection", `${type} setSelection: no change, returning early`);
       return;
     }
-    if (newSelection.length > 0) {
-      // Find the element for the last selected value to set as anchor
-      const lastValue = newSelection[newSelection.length - 1];
-      debug(
-        "selection",
-        `${type} setSelection: finding element for anchor value:`,
-        lastValue,
-      );
-      for (const element of registry) {
-        if (getElementValue(element) === lastValue) {
-          debug(
-            "selection",
-            `${type} setSelection: setting anchor element:`,
-            element,
-          );
-          anchorElement = element;
-          break;
-        }
-      }
-    } else {
+    if (newSelection.length === 0) {
       debug(
         "selection",
         `${type} setSelection: clearing anchor (empty selection)`,
