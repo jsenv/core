@@ -163,18 +163,14 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
-      import { useSignal } from "@preact/signals";
+      import { useRef, useState } from "preact/hooks";
       import {
-        useSelectableElement,
-        useSelectionProvider,
         // eslint-disable-next-line no-unused-vars
-        TableSelectionBorders,
-        useFocusGroup,
+        Table,
       } from "@jsenv/navi";
 
       // Sample data
-      const sampleData = [
+      const data = [
         {
           id: "1",
           index: 1,
@@ -212,319 +208,59 @@
         { id: "status", accessorKey: "status", header: "Status" },
       ];
 
-      // Components
-      // eslint-disable-next-line no-unused-vars
-      const NumberColumnHeader = ({ rowWithSomeSelectedCell }) => {
-        return (
-          <th className="number-column" style={{ textAlign: "center" }}>
-            #
-          </th>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const NumberColumnCell = ({ row, rowWithSomeSelectedCell }) => {
-        const cellRef = useRef();
-        const rowValue = `row:${row.id}`;
-        const { selected } = useSelectableElement(cellRef, {
-          selectionImpact: () => {
-            // Return all data cells in this row that should be impacted
-            return columns.map((col) => `${col.accessorKey}:${row.id}`);
-          },
-        });
-
-        const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(
-          row.id,
-        );
-
-        return (
-          <td
-            ref={cellRef}
-            className="database_table_cell number-column"
-            data-row-contains-selected={
-              rowContainsSelectedCell ? "" : undefined
-            }
-            data-value={rowValue}
-            data-selection-name="row"
-            data-selection-toggle-shortcut="space"
-            aria-selected={selected}
-            style={{ cursor: "pointer", textAlign: "center" }}
-            tabIndex={-1}
-          >
-            {row.index}
-          </td>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const DatabaseTableHeaderCell = ({
-        columnName,
-        columnAccessorKey,
-        columnWithSomeSelectedCell,
-      }) => {
-        const cellRef = useRef();
-        const columnValue = `column:${columnAccessorKey}`;
-        const { selected } = useSelectableElement(cellRef);
-
-        const columnContainsSelectedCell =
-          columnWithSomeSelectedCell.includes(columnAccessorKey);
-        return (
-          <th
-            ref={cellRef}
-            className="database_table_cell"
-            data-column-contains-selected={
-              columnContainsSelectedCell ? "" : undefined
-            }
-            data-value={columnValue}
-            data-selection-name="column"
-            data-selection-toggle-shortcut="space"
-            aria-selected={selected}
-            style={{ cursor: "pointer" }}
-            tabIndex={-1}
-          >
-            <span>{columnName}</span>
-          </th>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const DatabaseTableCell = ({ columnName, row, value, columnIndex }) => {
-        const cellId = `${columnName}:${row.id}`;
-        const cellRef = useRef();
-        const { selected } = useSelectableElement(cellRef);
-
-        return (
-          <td
-            ref={cellRef}
-            className="database_table_cell"
-            tabIndex={-1}
-            data-value={cellId}
-            data-selection-name="cell"
-            aria-selected={selected}
-          >
-            {value}
-          </td>
-        );
-      };
-
       // eslint-disable-next-line no-unused-vars
       const TableDemo = () => {
         const tableRef = useRef(null);
-        const selectionSignal = useSignal([]);
-        const selection = selectionSignal.value;
-
-        // After expansion, everything is cell selections
-        const cellSelections = selection.filter(
-          (value) =>
-            typeof value === "string" &&
-            value.includes(":") &&
-            !value.startsWith("row:") &&
-            !value.startsWith("column:"),
-        );
-        const hasCellSelections = cellSelections.length > 0;
-
-        // Analyze selected cells to determine if they represent full row/column selections
-        const rowWithSomeSelectedCell = [];
-        const columnWithSomeSelectedCell = [];
-        const selectedRowIds = [];
-        const selectedColumnIds = [];
-
-        // Group selected cells by row and column
-        const cellsByRow = new Map();
-        const cellsByColumn = new Map();
-
-        for (const cellId of cellSelections) {
-          const [columnName, rowId] = cellId.split(":");
-
-          // Track cells by row
-          if (!cellsByRow.has(rowId)) {
-            cellsByRow.set(rowId, []);
-          }
-          cellsByRow.get(rowId).push(columnName);
-
-          // Track cells by column
-          if (!cellsByColumn.has(columnName)) {
-            cellsByColumn.set(columnName, []);
-          }
-          cellsByColumn.get(columnName).push(rowId);
-
-          // Add to some-selected tracking
-          if (!rowWithSomeSelectedCell.includes(rowId)) {
-            rowWithSomeSelectedCell.push(rowId);
-          }
-          if (!columnWithSomeSelectedCell.includes(columnName)) {
-            columnWithSomeSelectedCell.push(columnName);
-          }
-        }
-
-        // Check for complete row selections (all columns in a row selected)
-        for (const [rowId, selectedColumns] of cellsByRow) {
-          if (selectedColumns.length === columns.length) {
-            selectedRowIds.push(rowId);
-          }
-        }
-
-        // Check for complete column selections (all rows in a column selected)
-        for (const [columnName, selectedRows] of cellsByColumn) {
-          if (selectedRows.length === sampleData.length) {
-            selectedColumnIds.push(columnName);
-          }
-        }
-
-        const clearSelection = () => {
-          selectionSignal.value = [];
-        };
-
-        const selectAll = () => {
-          // Select all data cells (not row/column selectors)
-          const allCellIds = [];
-          sampleData.forEach((row) => {
-            columns.forEach((col) => {
-              allCellIds.push(`${col.accessorKey}:${row.id}`);
-            });
-          });
-          selectionSignal.value = allCellIds;
-        };
-
-        const logState = () => {
-          console.log("Current state:", {
-            selection,
-            hasCellSelections,
-            selectedRowIds,
-            selectedColumnIds,
-            rowWithSomeSelectedCell,
-            columnWithSomeSelectedCell,
-            activeElement: document.activeElement?.textContent?.trim(),
-          });
-        };
-
-        // Single selection provider that handles both cells and rows
-        // eslint-disable-next-line no-unused-vars
-        const SelectionProvider = useSelectionProvider({
-          elementRef: tableRef,
-          layout: "grid",
-          value: selection,
-          onChange: (value) => {
-            selectionSignal.value = value;
-          },
-        });
-
-        useFocusGroup(tableRef);
+        const [selection, setSelection] = useState([]);
 
         return (
-          <SelectionProvider>
-            <div className="demo-container">
-              <h1>Table Cell Selection Demo - Preact</h1>
-              <p>
-                Click cells to select/deselect. Use Cmd/Ctrl+click for
-                multi-select. Use Tab and arrow keys to navigate.
-                <br />
-                <strong>Click the # column to select entire rows.</strong>
-                <br />
-                <strong>Click column headers to select entire columns.</strong>
-              </p>
+          <div className="demo-container">
+            <h1>Table Cell Selection Demo - Preact</h1>
+            <p>
+              Click cells to select/deselect. Use Cmd/Ctrl+click for
+              multi-select. Use Tab and arrow keys to navigate.
+              <br />
+              <strong>Click the # column to select entire rows.</strong>
+              <br />
+              <strong>Click column headers to select entire columns.</strong>
+            </p>
 
-              <div className="table-container">
-                <table
-                  ref={tableRef}
-                  className="database_table"
-                  aria-multiselectable="true"
-                  data-multiselection={selection.length > 1 ? "" : undefined}
-                >
-                  <thead>
-                    <tr>
-                      <NumberColumnHeader />
-                      {columns.map((col, index) => (
-                        <DatabaseTableHeaderCell
-                          key={col.id}
-                          columnName={col.header}
-                          columnAccessorKey={col.accessorKey}
-                          columnIndex={index + 1}
-                          columnWithSomeSelectedCell={
-                            columnWithSomeSelectedCell
-                          }
-                        />
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sampleData.map((row) => {
-                      const isRowSelected = selectedRowIds.includes(row.id);
-                      return (
-                        <tr
-                          key={row.id}
-                          data-row-id={row.id}
-                          aria-selected={isRowSelected}
-                        >
-                          <NumberColumnCell
-                            row={row}
-                            rowWithSomeSelectedCell={rowWithSomeSelectedCell}
-                          />
-                          {columns.map((col, colIndex) => (
-                            <DatabaseTableCell
-                              key={`${row.id}-${col.id}`}
-                              columnName={col.accessorKey}
-                              columnIndex={colIndex + 1} // +1 because number column is first
-                              row={row}
-                              value={row[col.accessorKey]}
-                            />
-                          ))}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <TableSelectionBorders
-                  tableRef={tableRef}
-                  opacity={0.5}
-                  // color="#ff6b35"
-                  // size="2"
-                />
+            <Table
+              ref={tableRef}
+              data={data}
+              columns={columns}
+              selection={selection}
+              onSelectionChange={(value) => {
+                setSelection(value);
+              }}
+            />
+
+            <div className="status">
+              <div>
+                Selection: <span>{JSON.stringify(selection)}</span>
               </div>
-
-              <div className="status">
-                <div>
-                  Selection: <span>{JSON.stringify(selection)}</span>
-                </div>
-                <div>
-                  Total selection count: <span>{selection.length}</span>
-                </div>
-                {selectedRowIds.length > 0 && (
-                  <div>
-                    Fully selected rows:{" "}
-                    <span>{selectedRowIds.join(", ")}</span>
-                  </div>
-                )}
-                {selectedColumnIds.length > 0 && (
-                  <div>
-                    Fully selected columns:{" "}
-                    <span>{selectedColumnIds.join(", ")}</span>
-                  </div>
-                )}
-                {hasCellSelections && (
-                  <>
-                    <div>
-                      Selected cells: <span>{cellSelections.join(", ")}</span>
-                    </div>
-                    <div>
-                      Row with some selected cell:
-                      <span>{rowWithSomeSelectedCell.join(",")}</span>
-                    </div>
-                    <div>
-                      Column with some selected cell:
-                      <span>{columnWithSomeSelectedCell.join(",")}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="actions">
-                <button onClick={clearSelection}>Clear Selection</button>
-                <button onClick={selectAll}>Select All</button>
-                <button onClick={logState}>Log State</button>
+              <div>
+                Total selection count: <span>{selection.length}</span>
               </div>
             </div>
-          </SelectionProvider>
+
+            <div className="actions">
+              <button
+                onClick={() => {
+                  tableRef.current.clearSelection();
+                }}
+              >
+                Clear Selection
+              </button>
+              <button
+                onClick={() => {
+                  tableRef.current.selectAll();
+                }}
+              >
+                Select All
+              </button>
+            </div>
+          </div>
         );
       };
 
