@@ -1,135 +1,172 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
-  /* Selection border styling using box-shadow override */
+  /* Selection border styling using ::after pseudo-elements */
+  /* This overrides the table borders (::before) with selection colors */
 
-  /* Single selection borders - preserve table borders but override specific sides */
-  [data-selection-border-top]:not([data-selection-border-right]):not(
-      [data-selection-border-bottom]
-    ):not([data-selection-border-left]) {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset 0 -1px 0 0 var(--border-color),
-      /* Bottom table border */ inset -1px 0 0 0 var(--border-color) !important; /* Right table border */
-  }
-  [data-selection-border-right]:not([data-selection-border-top]):not(
-      [data-selection-border-bottom]
-    ):not([data-selection-border-left]) {
-    box-shadow:
-      inset 0 -1px 0 0 var(--border-color),
-      /* Bottom table border */ inset -1px 0 0 0 var(--selection-border-color) !important; /* Right selection border */
-  }
-  [data-selection-border-bottom]:not([data-selection-border-top]):not(
-      [data-selection-border-right]
-    ):not([data-selection-border-left]) {
-    box-shadow:
-      inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ inset -1px 0 0 0 var(--border-color) !important; /* Right table border */
-  }
-  [data-selection-border-left]:not([data-selection-border-top]):not(
-      [data-selection-border-right]
-    ):not([data-selection-border-bottom]) {
-    box-shadow:
-      inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset 0 -1px 0 0 var(--border-color),
-      /* Bottom table border */ inset -1px 0 0 0 var(--border-color) !important; /* Right table border */
+  /* Hide table borders for selected cells by making ::before transparent */
+  [data-selection-border-top]::before,
+  [data-selection-border-right]::before,
+  [data-selection-border-bottom]::before,
+  [data-selection-border-left]::before {
+    display: none; /* Hide table borders for selected cells */
   }
 
-  /* Two border combinations */
-  [data-selection-border-top][data-selection-border-right]:not(
-      [data-selection-border-bottom]
-    ):not([data-selection-border-left]) {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection */ inset 0 -1px 0 0 var(--border-color) !important; /* Bottom table */
-  }
-  [data-selection-border-top][data-selection-border-left]:not(
-      [data-selection-border-bottom]
-    ):not([data-selection-border-right]) {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection */ inset 0 -1px 0 0 var(--border-color),
-      /* Bottom table */ inset -1px 0 0 0 var(--border-color) !important; /* Right table */
-  }
-  [data-selection-border-bottom][data-selection-border-right]:not(
-      [data-selection-border-top]
-    ):not([data-selection-border-left]) {
-    box-shadow:
-      inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection */ inset -1px 0 0 0 var(--selection-border-color) !important; /* Right selection */
-  }
-  [data-selection-border-bottom][data-selection-border-left]:not(
-      [data-selection-border-top]
-    ):not([data-selection-border-right]) {
-    box-shadow:
-      inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection */ inset -1px 0 0 0 var(--border-color) !important; /* Right table */
+  /* Selection borders using ::after pseudo-elements */
+  [data-selection-border-top]::after,
+  [data-selection-border-right]::after,
+  [data-selection-border-bottom]::after,
+  [data-selection-border-left]::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    z-index: 1; /* Above table borders */
   }
 
-  /* Three border combinations */
-  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]:not(
-      [data-selection-border-left]
-    ) {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection */ inset 0 -1px 0 0 var(--selection-border-color) !important; /* Bottom selection */
-  }
-  [data-selection-border-top][data-selection-border-right][data-selection-border-left]:not(
-      [data-selection-border-bottom]
-    ) {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection */ inset 0 -1px 0 0 var(--border-color) !important; /* Bottom table */
-  }
-  [data-selection-border-bottom][data-selection-border-right][data-selection-border-left]:not(
-      [data-selection-border-top]
-    ) {
-    box-shadow:
-      inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection */ inset 1px 0 0 0 var(--selection-border-color) !important; /* Left selection */
-  }
-  [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]:not(
-      [data-selection-border-right]
-    ) {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection */ inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection */ inset -1px 0 0 0 var(--border-color) !important; /* Right table */
+  /* Top border */
+  [data-selection-border-top]::after {
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--selection-border-color);
   }
 
-  /* All four borders - all selection color */
-  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left] {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection */ inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection */ inset 1px 0 0 0 var(--selection-border-color) !important; /* Left selection */
+  /* Right border */
+  [data-selection-border-right]::after {
+    top: 0;
+    right: -1px;
+    bottom: 0;
+    width: 1px;
+    background: var(--selection-border-color);
   }
 
-  /* Handle special cases for first row and first column that have different base shadows */
-  .navi_table tr:first-child [data-selection-border-top] {
-    /* First row cells already have top border from table CSS */
+  /* Bottom border */
+  [data-selection-border-bottom]::after {
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--selection-border-color);
   }
-  .navi_table [data-selection-border-left]:first-child {
-    /* First column cells already have left border from table CSS */
+
+  /* Left border */
+  [data-selection-border-left]::after {
+    top: 0;
+    left: -1px;
+    bottom: 0;
+    width: 1px;
+    background: var(--selection-border-color);
+  }
+
+  /* Multiple selection borders - combine borders */
+  [data-selection-border-top][data-selection-border-right]::after {
+    top: -1px;
+    right: -1px;
+    bottom: 0;
+    left: 0;
+    background:
+      linear-gradient(
+          to right,
+          var(--selection-border-color) 0%,
+          var(--selection-border-color) 100%
+        )
+        top/100% 1px no-repeat,
+      linear-gradient(
+          to bottom,
+          var(--selection-border-color) 0%,
+          var(--selection-border-color) 100%
+        )
+        right/1px 100% no-repeat;
+  }
+
+  [data-selection-border-top][data-selection-border-left]::after {
+    top: -1px;
+    left: -1px;
+    bottom: 0;
+    right: 0;
+    background:
+      linear-gradient(
+          to right,
+          var(--selection-border-color) 0%,
+          var(--selection-border-color) 100%
+        )
+        top/100% 1px no-repeat,
+      linear-gradient(
+          to bottom,
+          var(--selection-border-color) 0%,
+          var(--selection-border-color) 100%
+        )
+        left/1px 100% no-repeat;
+  }
+
+  [data-selection-border-bottom][data-selection-border-right]::after {
+    bottom: -1px;
+    right: -1px;
+    top: 0;
+    left: 0;
+    background:
+      linear-gradient(
+          to right,
+          var(--selection-border-color) 0%,
+          var(--selection-border-color) 100%
+        )
+        bottom/100% 1px no-repeat,
+      linear-gradient(
+          to bottom,
+          var(--selection-border-color) 0%,
+          var(--selection-border-color) 100%
+        )
+        right/1px 100% no-repeat;
+  }
+
+  [data-selection-border-bottom][data-selection-border-left]::after {
+    bottom: -1px;
+    left: -1px;
+    top: 0;
+    right: 0;
+    background:
+      linear-gradient(
+          to right,
+          var(--selection-border-color) 0%,
+          var(--selection-border-color) 100%
+        )
+        bottom/100% 1px no-repeat,
+      linear-gradient(
+          to bottom,
+          var(--selection-border-color) 0%,
+          var(--selection-border-color) 100%
+        )
+        left/1px 100% no-repeat;
+  }
+
+  /* Three and four border combinations */
+  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after,
+  [data-selection-border-top][data-selection-border-right][data-selection-border-left]::after,
+  [data-selection-border-bottom][data-selection-border-right][data-selection-border-left]::after,
+  [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after,
+  [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
+    top: -1px;
+    right: -1px;
+    bottom: -1px;
+    left: -1px;
+    border: 1px solid var(--selection-border-color);
+    background: none;
   }
 
   /* Hide selection borders during drag selection - restore table borders */
-  table[data-drag-selecting] [data-selection-border-top],
-  table[data-drag-selecting] [data-selection-border-right],
-  table[data-drag-selecting] [data-selection-border-bottom],
-  table[data-drag-selecting] [data-selection-border-left] {
-    box-shadow:
-      inset 0 -1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color) !important;
+  .navi_table[data-drag-selecting] [data-selection-border-top]::before,
+  .navi_table[data-drag-selecting] [data-selection-border-right]::before,
+  .navi_table[data-drag-selecting] [data-selection-border-bottom]::before,
+  .navi_table[data-drag-selecting] [data-selection-border-left]::before {
+    display: block; /* Restore table borders during drag */
+  }
+
+  .navi_table[data-drag-selecting] [data-selection-border-top]::after,
+  .navi_table[data-drag-selecting] [data-selection-border-right]::after,
+  .navi_table[data-drag-selecting] [data-selection-border-bottom]::after,
+  .navi_table[data-drag-selecting] [data-selection-border-left]::after {
+    display: none; /* Hide selection borders during drag */
   }
 `;
 export const TableSelectionBorders = ({ tableRef, color }) => {

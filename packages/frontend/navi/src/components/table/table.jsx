@@ -53,75 +53,125 @@ import.meta.css = /* css */ `
   .navi_table {
     border-radius: 2px;
     border-spacing: 0; /* Required for manual border collapse */
+    border: 1px solid var(--border-color); /* Outer table border */
   }
 
   .navi_table th,
   .navi_table td {
-    border: none; /* Remove default borders - we'll use box-shadow */
-    box-shadow:
-      inset 0 -1px 0 0 var(--border-color),
-      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+    border: none; /* Remove default borders - we'll use pseudo-elements */
+    position: relative; /* Required for pseudo-element positioning */
     white-space: nowrap;
   }
 
-  /* First row gets top border */
-  .navi_table tr:first-child th,
-  .navi_table tr:first-child td {
+  /* Table borders using ::before pseudo-elements */
+  .navi_table th::before,
+  .navi_table td::before {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    /* Default: bottom and right borders (owned by this cell) */
+    bottom: 0;
+    right: 0;
+    width: 1px;
+    height: 1px;
     box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border */ inset 0 -1px 0 0 var(--border-color),
-      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+      0 0 0 0 var(--border-color),
+      /* Placeholder for top */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+  }
+
+  /* First row gets top border */
+  .navi_table tr:first-child th::before,
+  .navi_table tr:first-child td::before {
+    /* Extend to include top border */
+    top: 0;
+    height: 100%;
+    box-shadow:
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 calc(100% + 1px) 0 0 var(--border-color),
+      /* Bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
   }
 
   /* First column gets left border */
-  .navi_table th:first-child,
-  .navi_table td:first-child {
+  .navi_table th:first-child::before,
+  .navi_table td:first-child::before {
+    /* Extend to include left border */
+    left: 0;
+    width: 100%;
     box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      /* Left border */ inset 0 -1px 0 0 var(--border-color),
-      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+      0 0 0 0 var(--border-color),
+      /* Placeholder for top */ calc(100% + 1px) 0 0 0 var(--border-color),
+      /* Right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
 
   /* First row first column gets all borders */
-  .navi_table tr:first-child th:first-child,
-  .navi_table tr:first-child td:first-child {
+  .navi_table tr:first-child th:first-child::before,
+  .navi_table tr:first-child td:first-child::before {
+    /* Cover entire cell with all borders */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      /* Left border */ inset 0 1px 0 0 var(--border-color),
-      /* Top border */ inset 0 -1px 0 0 var(--border-color),
-      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ calc(100% + 1px) 0 0 0 var(--border-color),
+      /* Right border */ 0 calc(100% + 1px) 0 0 var(--border-color),
+      /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
 
   /* Last column cells don't need right border (table border handles it) */
-  .navi_table th:last-child,
-  .navi_table td:last-child {
-    box-shadow: inset 0 -1px 0 0 var(--border-color); /* Only bottom border */
+  .navi_table th:last-child::before,
+  .navi_table td:last-child::before {
+    box-shadow:
+      0 0 0 0 var(--border-color),
+      /* Placeholder for top */ 0 0 0 0 var(--border-color),
+      /* No right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
   }
 
   /* Last row cells don't need bottom border (table border handles it) */
-  .navi_table tr:last-child th,
-  .navi_table tr:last-child td {
-    box-shadow: inset -1px 0 0 0 var(--border-color); /* Only right border */
+  .navi_table tr:last-child th::before,
+  .navi_table tr:last-child td::before {
+    box-shadow:
+      0 0 0 0 var(--border-color),
+      /* Placeholder for top */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 0 0 0 var(--border-color),
+      /* No bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
   }
 
   /* Last row last column needs no inner borders */
-  .navi_table tr:last-child th:last-child,
-  .navi_table tr:last-child td:last-child {
+  .navi_table tr:last-child th:last-child::before,
+  .navi_table tr:last-child td:last-child::before {
     box-shadow: none;
   }
 
   /* Adjust first row last column */
-  .navi_table tr:first-child th:last-child,
-  .navi_table tr:first-child td:last-child {
+  .navi_table tr:first-child th:last-child::before,
+  .navi_table tr:first-child td:last-child::before {
+    /* Top and bottom borders only */
+    top: 0;
+    height: 100%;
     box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border */ inset 0 -1px 0 0 var(--border-color); /* Bottom border */
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 0 0 0 0 var(--border-color),
+      /* No right border */ 0 calc(100% + 1px) 0 0 var(--border-color),
+      /* Bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
   }
 
   /* Adjust last row first column */
-  .navi_table tr:last-child th:first-child,
-  .navi_table tr:last-child td:first-child {
-    box-shadow: inset 1px 0 0 0 var(--border-color); /* Only left border */
+  .navi_table tr:last-child th:first-child::before,
+  .navi_table tr:last-child td:first-child::before {
+    /* Left border only */
+    left: 0;
+    width: 100%;
+    box-shadow:
+      0 0 0 0 var(--border-color),
+      /* Placeholder for top */ 0 0 0 0 var(--border-color),
+      /* No right border */ 0 0 0 0 var(--border-color),
+      /* No bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
 
   .navi_table th,
@@ -206,34 +256,34 @@ import.meta.css = /* css */ `
     color: #444;
   }
   /* Absolutely positioned left border indicator for rows with selected cells */
-  td[data-row-contains-selected]::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: rgba(128, 128, 128, 0.3);
-    pointer-events: none;
-    z-index: 1;
-  }
+  /* td[data-row-contains-selected]::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: rgba(128, 128, 128, 0.3);
+        pointer-events: none;
+        z-index: 1;
+      } */
   th[data-column-contains-selected] {
     position: relative;
     font-weight: 600;
     color: #444;
   }
   /* Absolutely positioned top border indicator for columns with selected cells */
-  th[data-column-contains-selected]::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 4px;
-    background: rgba(128, 128, 128, 0.4);
-    pointer-events: none;
-    z-index: 1;
-  }
+  /* th[data-column-contains-selected]::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 4px;
+        background: rgba(128, 128, 128, 0.4);
+        pointer-events: none;
+        z-index: 1;
+      } */
 
   /* Stickyness */
   .navi_table tr[data-sticky] {
