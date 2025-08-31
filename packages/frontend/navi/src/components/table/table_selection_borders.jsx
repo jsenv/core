@@ -204,9 +204,29 @@ const generateCellSelectionPath = (selectedCells) => {
     maxCol = Math.max(maxCol, cell.column);
   });
 
-  // Helper function to check if a cell at given coordinates is selected
+  // Get the table element to check actual table structure
+  const table = selectedCells[0]?.element?.closest("table");
+  if (!table) return "";
+
+  // Create a map of all cells in the table (both selected and unselected)
+  const allTableCells = table.querySelectorAll("td, th");
+  const tableCellGrid = new Map();
+
+  allTableCells.forEach((cellElement) => {
+    const row = cellElement.closest("tr");
+    const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+    const columnIndex = Array.from(row.children).indexOf(cellElement);
+    const key = `${columnIndex},${rowIndex}`;
+    tableCellGrid.set(key, {
+      element: cellElement,
+      selected: grid.has(key),
+    });
+  });
+
+  // Helper function to check if a cell at given coordinates exists and is selected
   const isCellSelected = (col, row) => {
-    return grid.has(`${col},${row}`);
+    const cell = tableCellGrid.get(`${col},${row}`);
+    return cell && cell.selected;
   };
 
   // Find all edge segments that form the outer perimeter
@@ -217,7 +237,7 @@ const generateCellSelectionPath = (selectedCells) => {
     const { left, top, right, bottom, row, column } = cell;
 
     // Check each side of the cell to see if it's on the perimeter
-    // Top edge - no selected cell above
+    // Top edge - no selected cell above (cell doesn't exist OR exists but not selected)
     if (!isCellSelected(column, row - 1)) {
       edges.push({
         type: "horizontal",
@@ -229,7 +249,7 @@ const generateCellSelectionPath = (selectedCells) => {
       });
     }
 
-    // Bottom edge - no selected cell below
+    // Bottom edge - no selected cell below (cell doesn't exist OR exists but not selected)
     if (!isCellSelected(column, row + 1)) {
       edges.push({
         type: "horizontal",
@@ -241,7 +261,7 @@ const generateCellSelectionPath = (selectedCells) => {
       });
     }
 
-    // Left edge - no selected cell to the left
+    // Left edge - no selected cell to the left (cell doesn't exist OR exists but not selected)
     if (!isCellSelected(column - 1, row)) {
       edges.push({
         type: "vertical",
@@ -253,7 +273,7 @@ const generateCellSelectionPath = (selectedCells) => {
       });
     }
 
-    // Right edge - no selected cell to the right
+    // Right edge - no selected cell to the right (cell doesn't exist OR exists but not selected)
     if (!isCellSelected(column + 1, row)) {
       edges.push({
         type: "vertical",
