@@ -35,10 +35,10 @@ import.meta.css = /* css */ `
   .navi_table_container {
     --border-color: #e0e0e0;
 
-    --z-index-focused: 2; /* must be above selection and anything else  */
-    --z-index-sticky-cell: 3; /* must be above selection  */
-    --z-index-sticky-row: 4; /* must be above selection sticky cell  */
-    --z-index-sticky-corner: 6; /* must be above first column and first row  */
+    --z-index-focused: 0; /* must be above selection and anything else  */
+    --z-index-sticky-cell: 1; /* must be above selection  */
+    --z-index-sticky-row: 2; /* must be above selection sticky cell  */
+    --z-index-sticky-corner: 3; /* must be above first column and first row  */
 
     position: relative;
   }
@@ -87,8 +87,7 @@ import.meta.css = /* css */ `
 
   .navi_table td:focus,
   .navi_table th:focus {
-    outline: 2px solid #0078d4;
-    outline-offset: -1.5px;
+    box-shadow: inset 0 0 0 2px #0078d4;
     z-index: var(--z-index-focused);
   }
 
