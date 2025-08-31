@@ -74,8 +74,6 @@ import.meta.css = /* css */ `
   .navi_table th[data-sticky] {
     position: sticky;
     left: 0;
-    /* Sticky is above cell selection */
-    /* z-index: 1;  */
   }
 
   .navi_table tr[data-sticky] {
