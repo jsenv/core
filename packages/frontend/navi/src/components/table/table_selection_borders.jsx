@@ -251,41 +251,24 @@ const drawSelectionBorders = (
    *   • Horizontal junctions: LEFT cell extends RIGHT into the junction
    */
 
-  // Helper function to determine if this cell should extend into a junction
-  const shouldExtendIntoJunction = (cell, direction) => {
-    const { row, column } = cell;
-
-    if (direction === "right") {
-      // Left cell extends right into horizontal junction
-      return isCellSelected(column + 1, row);
-    }
-    if (direction === "down") {
-      // Top cell extends down into vertical junction
-      return isCellSelected(column, row + 1);
-    }
-    return false;
-  };
-
   // Draw top border with junction responsibility
   const drawTopBorder = (cell, connections, diagonalConnections = {}) => {
     const { left, top, right } = cell;
     const { left: hasLeft, right: hasRight } = connections;
 
-    let startX = left; // Include left corner by default (top border owns corners)
-    let endX = right; // Include right corner by default (top border owns corners)
+    let startX = left; // Start at left edge
+    let endX = right; // End at right edge
 
-    // For horizontal connections, apply junction responsibility
-    if (hasLeft) {
-      // This cell is connected to the left, so it's the right cell
-      // The left cell is responsible for the junction, so this cell starts after the junction
-      startX = left + 1;
+    // For horizontal connections, the LEFT cell is responsible for the shared border
+    // because it owns the right border in CSS, while the right cell has no left border
+    if (hasRight) {
+      // This cell has a right neighbor, so this cell (left) is responsible
+      // We keep endX = right (draw the full width including the border area)
     }
-    // Note: If hasRight, this is the left cell and should extend to cover the junction
-    // So we keep endX = right (no change needed)
-
-    // Also check if we should extend into junction when not directly connected
-    if (!hasRight && shouldExtendIntoJunction(cell, "right")) {
-      endX = right;
+    if (hasLeft) {
+      // This cell has a left neighbor, so the left cell is responsible
+      // This cell should not draw in the border area, start after it
+      startX = left + 1;
     }
 
     // Apply diagonal adjustments
@@ -305,21 +288,19 @@ const drawSelectionBorders = (
     const { left, bottom, right } = cell;
     const { left: hasLeft, right: hasRight } = connections;
 
-    let startX = left; // Include left corner by default (bottom border owns corners)
-    let endX = right; // Include right corner by default (bottom border owns corners)
+    let startX = left; // Start at left edge
+    let endX = right; // End at right edge
 
-    // For horizontal connections, apply junction responsibility
-    if (hasLeft) {
-      // This cell is connected to the left, so it's the right cell
-      // The left cell is responsible for the junction, so this cell starts after the junction
-      startX = left + 1;
+    // For horizontal connections, the LEFT cell is responsible for the shared border
+    // because it owns the right border in CSS, while the right cell has no left border
+    if (hasRight) {
+      // This cell has a right neighbor, so this cell (left) is responsible
+      // We keep endX = right (draw the full width including the border area)
     }
-    // Note: If hasRight, this is the left cell and should extend to cover the junction
-    // So we keep endX = right (no change needed)
-
-    // Also check if we should extend into junction when not directly connected
-    if (!hasRight && shouldExtendIntoJunction(cell, "right")) {
-      endX = right;
+    if (hasLeft) {
+      // This cell has a left neighbor, so the left cell is responsible
+      // This cell should not draw in the border area, start after it
+      startX = left + 1;
     }
 
     // Apply diagonal adjustments
@@ -342,21 +323,17 @@ const drawSelectionBorders = (
     let startY = top + 1; // Start below top corner by default (top border owns corners)
     let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
 
-    // For vertical connections, the top cell extends down into the junction
-    if (hasTop) {
-      // This cell is connected to the top, so it's the bottom cell
-      // The top cell should extend down, so this cell starts from the very top
-      startY = top;
-    }
+    // For vertical connections, the TOP cell is responsible for the shared border
+    // because it owns the bottom border in CSS, while the bottom cell has no top border
     if (hasBottom) {
-      // This cell is connected to the bottom, so it's the top cell
-      // This cell should extend down into the junction
+      // This cell has a bottom neighbor, so this cell (top) is responsible
+      // We extend down to cover the full border area
       endY = bottom;
     }
-
-    // Also check if we should extend into junction when not directly connected
-    if (!hasBottom && shouldExtendIntoJunction(cell, "down")) {
-      endY = bottom;
+    if (hasTop) {
+      // This cell has a top neighbor, so the top cell is responsible
+      // This cell should not draw in the border area, start below it
+      startY = top + 1;
     }
 
     // Apply diagonal adjustments
@@ -379,21 +356,17 @@ const drawSelectionBorders = (
     let startY = top + 1; // Start below top corner by default (top border owns corners)
     let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
 
-    // For vertical connections, the top cell extends down into the junction
-    if (hasTop) {
-      // This cell is connected to the top, so it's the bottom cell
-      // The top cell should extend down, so this cell starts from the very top
-      startY = top;
-    }
+    // For vertical connections, the TOP cell is responsible for the shared border
+    // because it owns the bottom border in CSS, while the bottom cell has no top border
     if (hasBottom) {
-      // This cell is connected to the bottom, so it's the top cell
-      // This cell should extend down into the junction
+      // This cell has a bottom neighbor, so this cell (top) is responsible
+      // We extend down to cover the full border area
       endY = bottom;
     }
-
-    // Also check if we should extend into junction when not directly connected
-    if (!hasBottom && shouldExtendIntoJunction(cell, "down")) {
-      endY = bottom;
+    if (hasTop) {
+      // This cell has a top neighbor, so the top cell is responsible
+      // This cell should not draw in the border area, start below it
+      startY = top + 1;
     }
 
     // Apply diagonal adjustments
