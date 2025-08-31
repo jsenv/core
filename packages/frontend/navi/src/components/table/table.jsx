@@ -30,27 +30,15 @@ import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
 import.meta.css = /* css */ `
   .navi_table {
-    width: 100%;
     border-collapse: collapse;
     border: 1px solid #e0e0e0;
     border-radius: 2px;
-  }
-
-  /* Remove table's left border when first column is sticky */
-  .navi_table:has(td[data-sticky]:first-child, th[data-sticky]:first-child) {
-    border-left: none;
   }
 
   .navi_table th,
   .navi_table td {
     border: 1px solid #e0e0e0;
     text-align: left;
-  }
-
-  /* Remove left border from cells that come after a sticky column */
-  .navi_table td[data-sticky] + td,
-  .navi_table th[data-sticky] + th {
-    border-left: none;
   }
 
   .navi_table th {
@@ -77,42 +65,14 @@ import.meta.css = /* css */ `
   .navi_table th[data-sticky] {
     position: sticky;
     left: 0;
-    border-left-color: transparent;
-    border-right-color: transparent;
-    z-index: 10; /* Ensure sticky elements stay above regular cells */
   }
 
-  /* Left border using ::before pseudo-element with proper border */
-  .navi_table td[data-sticky]::before,
-  .navi_table th[data-sticky]::before {
-    content: "";
-    position: absolute;
-    inset: -1px; /* Cover full height and position at left edge */
-    border-left: 1px solid #e0e0e0;
-    border-right: 1px solid #e0e0e0;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  /* Hide left border on next sibling when both also sticky (border collapse) */
-  .navi_table td[data-sticky] + td[data-sticky]::before,
-  .navi_table th[data-sticky] + th[data-sticky]::before {
-    border-left: none;
-  }
-
-  /* Ensure content appears above pseudo-element borders */
-  .navi_table td[data-sticky] > *,
-  .navi_table th[data-sticky] > * {
-    position: relative;
-    z-index: 2;
-  }
-
-  .navi_table thead[data-sticky] {
+  .navi_table tr[data-sticky] {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 10;
   }
-  .navi_table thead[data-sticky] th[data-sticky] {
+  .navi_table tr[data-sticky] th[data-sticky] {
     position: sticky;
     top: 0;
   }
@@ -364,11 +324,12 @@ export const Table = forwardRef((props, ref) => {
           aria-multiselectable="true"
           data-multiselection={selection.length > 1 ? "" : undefined}
         >
-          <thead data-sticky="">
-            <tr>
+          <thead>
+            <tr data-sticky="">
               <RowNumberHeaderCell sticky />
               {columns.map((col, index) => (
                 <HeaderCell
+                  sticky={col.sticky}
                   key={col.id}
                   columnName={col.header}
                   columnAccessorKey={col.accessorKey}
@@ -460,6 +421,7 @@ const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
   );
 };
 const HeaderCell = ({
+  sticky,
   columnName,
   columnAccessorKey,
   columnWithSomeSelectedCell,
@@ -486,6 +448,7 @@ const HeaderCell = ({
       data-selection-name="column"
       data-selection-toggle-shortcut="space"
       aria-selected={selected}
+      data-sticky={sticky ? "" : undefined}
       style={{ cursor: "pointer" }}
       tabIndex={-1}
     >
