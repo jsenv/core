@@ -58,12 +58,77 @@ import.meta.css = /* css */ `
   .navi_table {
     border-radius: 2px;
     border-spacing: 0; /* Required for manual border collapse */
+    /* Add outer border to the table itself for right and bottom edges */
+    border: 1px solid var(--border-color);
   }
 
   .navi_table th,
   .navi_table td {
-    border: 1px solid var(--border-color);
+    border: none; /* Remove default borders - we'll use box-shadow */
+    box-shadow:
+      inset 0 -1px 0 0 var(--border-color),
+      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
     white-space: nowrap;
+  }
+
+  /* First row gets top border */
+  .navi_table tr:first-child th,
+  .navi_table tr:first-child td {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      /* Top border */ inset 0 -1px 0 0 var(--border-color),
+      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+  }
+
+  /* First column gets left border */
+  .navi_table th:first-child,
+  .navi_table td:first-child {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      /* Left border */ inset 0 -1px 0 0 var(--border-color),
+      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+  }
+
+  /* First row first column gets all borders */
+  .navi_table tr:first-child th:first-child,
+  .navi_table tr:first-child td:first-child {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      /* Left border */ inset 0 1px 0 0 var(--border-color),
+      /* Top border */ inset 0 -1px 0 0 var(--border-color),
+      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+  }
+
+  /* Last column cells don't need right border (table border handles it) */
+  .navi_table th:last-child,
+  .navi_table td:last-child {
+    box-shadow: inset 0 -1px 0 0 var(--border-color); /* Only bottom border */
+  }
+
+  /* Last row cells don't need bottom border (table border handles it) */
+  .navi_table tr:last-child th,
+  .navi_table tr:last-child td {
+    box-shadow: inset -1px 0 0 0 var(--border-color); /* Only right border */
+  }
+
+  /* Last row last column needs no inner borders */
+  .navi_table tr:last-child th:last-child,
+  .navi_table tr:last-child td:last-child {
+    box-shadow: none;
+  }
+
+  /* Adjust first row last column */
+  .navi_table tr:first-child th:last-child,
+  .navi_table tr:first-child td:last-child {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      /* Top border */ inset 0 -1px 0 0 var(--border-color); /* Bottom border */
+  }
+
+  /* Adjust last row first column */
+  .navi_table tr:last-child th:first-child,
+  .navi_table tr:last-child td:first-child {
+    box-shadow: inset 1px 0 0 0 var(--border-color); /* Only left border */
   }
 
   .navi_table th,
