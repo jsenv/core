@@ -20,7 +20,7 @@
 
 import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import {
   useSelectableElement,
   useSelectionProvider,
@@ -43,7 +43,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_table th {
-    background: #f8f9fa;
+    /* background: #lightgrey; */
     font-weight: normal;
     padding: 12px 8px;
   }
@@ -66,6 +66,15 @@ import.meta.css = /* css */ `
   .navi_table th[data-sticky] {
     position: sticky;
     left: 0;
+  }
+
+  /* When sticky elements are actually stuck, use outline for borders to avoid doubling */
+  .navi_table td[data-sticky][data-stuck],
+  .navi_table th[data-sticky][data-stuck] {
+    border-left: none;
+    border-right: none;
+    outline: 1px solid #e0e0e0;
+    outline-offset: -1px;
   }
 
   .navi_table thead[data-sticky] {
@@ -105,7 +114,7 @@ import.meta.css = /* css */ `
   /* Column selection styling */
   .navi_table .navi_row_number_cell[aria-selected="true"],
   .navi_table th[aria-selected="true"] {
-    background-color: rgba(0, 120, 212, 0.2);
+    background-color: lightgrey;
     font-weight: bold;
   }
 
@@ -147,6 +156,71 @@ import.meta.css = /* css */ `
     position: relative;
   }
 `;
+
+// Custom hook to detect when a sticky element becomes stuck
+const useStickyDetection = (elementRef) => {
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
+    return initDataStuck(element);
+  }, []);
+};
+const initDataStuck = (element) => {
+  const checkSticky = () => {
+    const rect = element.getBoundingClientRect();
+    const parent = element.parentElement;
+    const parentRect = parent?.getBoundingClientRect();
+
+    if (!parentRect) return;
+
+    let isStuck = false;
+
+    if (direction === "left") {
+      // For left sticky: element is stuck when it's at left edge despite parent scrolling
+      const expectedLeft = parentRect.left;
+      isStuck = Math.abs(rect.left - expectedLeft) > 10; // Threshold for being "stuck"
+    } else if (direction === "top") {
+      const expectedTop = parentRect.top;
+      isStuck = Math.abs(rect.top - expectedTop) > 10;
+    }
+
+    element.toggleAttribute("data-stuck", isStuck);
+  };
+
+  // Find scrollable ancestor
+  let scrollParent = element.parentElement;
+  while (scrollParent) {
+    const style = getComputedStyle(scrollParent);
+    if (
+      style.overflow === "auto" ||
+      style.overflow === "scroll" ||
+      style.overflowX === "auto" ||
+      style.overflowX === "scroll"
+    ) {
+      break;
+    }
+    scrollParent = scrollParent.parentElement;
+  }
+
+  const handleScroll = checkSticky;
+
+  // Initial check
+  checkSticky();
+
+  // Add listeners
+  if (scrollParent) {
+    scrollParent.addEventListener("scroll", handleScroll, { passive: true });
+  }
+  window.addEventListener("scroll", handleScroll, { passive: true });
+  return () => {
+    if (scrollParent) {
+      scrollParent.removeEventListener("scroll", handleScroll);
+    }
+    window.removeEventListener("scroll", handleScroll);
+  };
+};
 
 export const Table = forwardRef((props, ref) => {
   let { columns, data, selection = [], onSelectionChange } = props;
@@ -299,6 +373,10 @@ const RowNumberHeaderCell = ({ sticky }) => {
 };
 const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
   const cellRef = useRef();
+
+  // Detect when this sticky element becomes stuck
+  useStickyDetection(cellRef);
+
   const rowValue = `row:${row.id}`;
   const { selected } = useSelectableElement(cellRef, {
     selectionImpact: () => {
@@ -363,15 +441,22 @@ const HeaderCell = ({
     </th>
   );
 };
-const DataCell = ({ columnName, row, value }) => {
+const DataCell = ({ sticky, columnName, row, value }) => {
   const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
+
+  // Detect when this sticky element becomes stuck
+  if (sticky) {
+    useStickyDetection(cellRef);
+  }
+
   const { selected } = useSelectableElement(cellRef);
 
   return (
     <td
       ref={cellRef}
       className="navi_data_cell"
+      data-sticky={sticky ? "" : undefined}
       tabIndex={-1}
       data-value={cellId}
       data-selection-name="cell"
