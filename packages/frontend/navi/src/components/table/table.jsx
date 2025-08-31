@@ -31,7 +31,6 @@ import { TableSelectionBorders } from "./table_selection_borders.jsx";
 import.meta.css = /* css */ `
   .navi_table_container {
     --border-color: #e0e0e0;
-    border: 1px solid var(--border-color);
     position: relative;
   }
 
@@ -44,10 +43,6 @@ import.meta.css = /* css */ `
   .navi_table td {
     border: 1px solid var(--border-color);
     white-space: nowrap;
-  }
-
-  .navi_table tr:last-child td {
-    border-bottom: none;
   }
 
   .navi_table th,
