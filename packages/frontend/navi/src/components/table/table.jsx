@@ -65,40 +65,51 @@ import.meta.css = /* css */ `
   }
 
   /* Table borders using ::before pseudo-elements */
-  /* Each cell will have a ::before pseudo-element that draws the borders using box-shadow */
+  /* Default: each cell draws all its own borders (no border-collapse) */
   .navi_table th::before,
   .navi_table td::before {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
-    /* Default: only right and bottom borders */
+    /* All four borders for each cell */
+    box-shadow:
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ -1px 0 0 0 var(--border-color),
+      /* Left border */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
+  }
+
+  /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
+  .navi_table[data-border-collapse] th::before,
+  .navi_table[data-border-collapse] td::before {
+    /* Default: only right and bottom borders (each cell owns these) */
     box-shadow:
       1px 0 0 0 var(--border-color),
       /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
   }
 
-  /* First row cells also get top border */
-  .navi_table tr:first-child th::before,
-  .navi_table tr:first-child td::before {
+  /* Border-collapse: First row gets top border in addition to right and bottom */
+  .navi_table[data-border-collapse] tr:first-child th::before,
+  .navi_table[data-border-collapse] tr:first-child td::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
       /* Top border */ 1px 0 0 0 var(--border-color),
       /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
   }
 
-  /* First column cells also get left border */
-  .navi_table th:first-child::before,
-  .navi_table td:first-child::before {
+  /* Border-collapse: First column gets left border in addition to right and bottom */
+  .navi_table[data-border-collapse] th:first-child::before,
+  .navi_table[data-border-collapse] td:first-child::before {
     box-shadow:
       -1px 0 0 0 var(--border-color),
       /* Left border */ 1px 0 0 0 var(--border-color),
       /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
   }
 
-  /* First row first column gets all four borders */
-  .navi_table tr:first-child th:first-child::before,
-  .navi_table tr:first-child td:first-child::before {
+  /* Border-collapse: First row first column gets all four borders */
+  .navi_table[data-border-collapse] tr:first-child th:first-child::before,
+  .navi_table[data-border-collapse] tr:first-child td:first-child::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
       /* Top border */ -1px 0 0 0 var(--border-color),
@@ -235,30 +246,32 @@ import.meta.css = /* css */ `
     z-index: var(--z-index-sticky-cell);
   }
 
-  /* Sticky columns/rows border collapse using box-shadow on ::before pseudo-elements */
-  /* Border collapse simulation: each cell owns its bottom and right borders */
-  /* When adjacent to sticky cells, we need to adjust the box-shadow to maintain borders */
+  /* Border-collapse mode: Sticky columns/rows border adjustments */
+  /* These rules only apply when border-collapse is enabled */
 
-  /* Cells after sticky rows need top border restored */
-  .navi_table tr[data-sticky] + tr td::before,
-  .navi_table tr[data-sticky] + tr th::before {
+  /* Border-collapse: Cells after sticky rows need top border restored */
+  .navi_table[data-border-collapse] tr[data-sticky] + tr td::before,
+  .navi_table[data-border-collapse] tr[data-sticky] + tr th::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
       /* Top border */ 1px 0 0 0 var(--border-color),
       /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
   }
 
-  /* Cells after sticky columns need left border restored */
-  .navi_table th[data-sticky] + th::before,
-  .navi_table td[data-sticky] + td::before {
+  /* Border-collapse: Cells after sticky columns need left border restored */
+  .navi_table[data-border-collapse] th[data-sticky] + th::before,
+  .navi_table[data-border-collapse] td[data-sticky] + td::before {
     box-shadow:
       -1px 0 0 0 var(--border-color),
       /* Left border */ 1px 0 0 0 var(--border-color),
       /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
   }
 
-  /* Header row cells after sticky columns need top + left border */
-  .navi_table tr:first-child th[data-sticky] + th::before {
+  /* Border-collapse: Header row cells after sticky columns need top + left border */
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th[data-sticky]
+    + th::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
       /* Top border */ -1px 0 0 0 var(--border-color),
@@ -266,7 +279,9 @@ import.meta.css = /* css */ `
       /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
   }
 
-  /* Sticky border styling */
+  /* Sticky border styling - works in both normal and border-collapse modes */
+
+  /* Default mode: sticky cells with all borders + thick sticky border */
   .navi_table td[data-sticky]:first-child::before,
   .navi_table th[data-sticky]:first-child::before {
     box-shadow:
@@ -311,7 +326,7 @@ import.meta.css = /* css */ `
         var(--sticky-border-color) !important; /* Thick right border inside */
   }
 
-  /* Corner cell (sticky row + sticky column) gets thick borders on both right and bottom - FINAL RULE */
+  /* Corner cell (sticky row + sticky column) gets thick borders on both right and bottom */
   .navi_table tr[data-sticky]:first-child th[data-sticky]:first-child::before,
   .navi_table tr[data-sticky]:first-child td[data-sticky]:first-child::before {
     box-shadow:
@@ -424,6 +439,7 @@ export const Table = forwardRef((props, ref) => {
     selectionColor,
     selectionOpacity,
     onSelectionChange,
+    borderCollapse = false,
   } = props;
 
   const innerRef = useRef();
@@ -509,6 +525,7 @@ export const Table = forwardRef((props, ref) => {
           className="navi_table"
           aria-multiselectable="true"
           data-multiselection={selection.length > 1 ? "" : undefined}
+          data-border-collapse={borderCollapse ? "" : undefined}
         >
           <thead>
             <tr
