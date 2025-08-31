@@ -71,10 +71,9 @@ import.meta.css = /* css */ `
   /* When sticky elements are actually stuck, use outline for borders to avoid doubling */
   .navi_table td[data-sticky][data-stuck],
   .navi_table th[data-sticky][data-stuck] {
-    border-left: none;
-    border-right: none;
     outline: 1px solid #e0e0e0;
     outline-offset: -1px;
+    z-index: 2; /* above cell selection */
   }
 
   .navi_table thead[data-sticky] {
