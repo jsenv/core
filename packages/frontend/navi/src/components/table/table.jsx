@@ -94,10 +94,10 @@ import.meta.css = /* css */ `
     z-index: 1;
   }
 
-  /* Hide right border when next sibling is also sticky (avoid doubling) */
+  /* Hide left border on next sibling when both also sticky (border collapse) */
   .navi_table td[data-sticky] + td[data-sticky]::before,
   .navi_table th[data-sticky] + th[data-sticky]::before {
-    border-right: none;
+    border-left: none;
   }
 
   /* Ensure content appears above pseudo-element borders */
