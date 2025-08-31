@@ -34,6 +34,7 @@ import.meta.css = /* css */ `
     border-collapse: collapse;
     border: 1px solid #e0e0e0;
     border-radius: 2px;
+    border-left: none;
   }
 
   .navi_table th,
