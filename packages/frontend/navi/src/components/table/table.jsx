@@ -239,22 +239,44 @@ import.meta.css = /* css */ `
       /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
 
-  /* Sticky cells get thicker borders using box-shadow on ::before */
-  .navi_table td[data-sticky]::before,
-  .navi_table th[data-sticky]::before {
+  /* Sticky column cells (first column) get thick right border and normal top/bottom */
+  .navi_table td[data-sticky]:first-child::before,
+  .navi_table th[data-sticky]:first-child::before {
     box-shadow:
       0 0 0 0 var(--border-color),
       /* Placeholder for top */ 5px 0 0 0 var(--border-color),
       /* Thick right border */ 0 1px 0 0 var(--border-color),
-      /* Bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+      /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
-  .navi_table tr[data-sticky] th::before,
-  .navi_table tr[data-sticky] td::before {
+
+  /* Sticky row cells (first row) get thick bottom border and normal left/right */
+  .navi_table tr[data-sticky]:first-child th::before,
+  .navi_table tr[data-sticky]:first-child td::before {
     box-shadow:
-      0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 1px 0 0 0 var(--border-color),
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
       /* Right border */ 0 5px 0 0 var(--border-color),
       /* Thick bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+  }
+
+  /* Corner cell (sticky row + sticky column) gets thick borders on both right and bottom */
+  .navi_table tr[data-sticky]:first-child th[data-sticky]:first-child::before,
+  .navi_table tr[data-sticky]:first-child td[data-sticky]:first-child::before {
+    box-shadow:
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 5px 0 0 0 var(--border-color),
+      /* Thick right border */ 0 5px 0 0 var(--border-color),
+      /* Thick bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
+  }
+
+  /* Sticky column cells after first row need top border */
+  .navi_table tr:not(:first-child) td[data-sticky]:first-child::before,
+  .navi_table tr:not(:first-child) th[data-sticky]:first-child::before {
+    box-shadow:
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 5px 0 0 0 var(--border-color),
+      /* Thick right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
 `;
 
