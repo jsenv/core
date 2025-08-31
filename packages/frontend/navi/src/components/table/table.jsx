@@ -168,6 +168,31 @@ const useStickyDetection = (elementRef) => {
   }, []);
 };
 const initDataStuck = (element) => {
+  // Detect sticky direction from computed styles
+  const computedStyle = getComputedStyle(element);
+  const left = computedStyle.left;
+  const top = computedStyle.top;
+
+  // Determine direction based on which sticky property is set
+  let direction = "left"; // default
+  if (top !== "auto" && top !== "0px" && computedStyle.position === "sticky") {
+    direction = "top";
+  } else if (
+    left !== "auto" &&
+    left !== "0px" &&
+    computedStyle.position === "sticky"
+  ) {
+    direction = "left";
+  } else if (computedStyle.position === "sticky") {
+    // If position is sticky but no explicit left/top, check which is more likely
+    // For table cells, left sticky is more common for first column
+    if (element.tagName === "TH" && element.closest("thead")) {
+      direction = "top";
+    } else {
+      direction = "left";
+    }
+  }
+
   const checkSticky = () => {
     const rect = element.getBoundingClientRect();
     const parent = element.parentElement;
