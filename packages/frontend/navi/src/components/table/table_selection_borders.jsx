@@ -435,9 +435,11 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
       drawBorderSegment(cell, "right", connections, diagonalAdjustments);
       drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
       drawBorderSegment(cell, "left", connections, diagonalAdjustments);
+      return;
     }
+
     // Case 2: Single connection - draw 3 borders with junction responsibility
-    else if (connectionCount === 1) {
+    if (connectionCount === 1) {
       if (top) {
         const diagonalAdjustments = {
           bottomLeft,
@@ -446,7 +448,9 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
         drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
         drawBorderSegment(cell, "left", connections, diagonalAdjustments);
         drawBorderSegment(cell, "right", connections, diagonalAdjustments);
-      } else if (bottom) {
+        return;
+      }
+      if (bottom) {
         const diagonalAdjustments = {
           topLeft,
           topRight,
@@ -454,7 +458,9 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
         drawBorderSegment(cell, "top", connections, diagonalAdjustments);
         drawBorderSegment(cell, "left", connections, diagonalAdjustments);
         drawBorderSegment(cell, "right", connections, diagonalAdjustments);
-      } else if (left) {
+        return;
+      }
+      if (left) {
         const diagonalAdjustments = {
           topRight,
           bottomRight,
@@ -462,7 +468,9 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
         drawBorderSegment(cell, "top", connections, diagonalAdjustments);
         drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
         drawBorderSegment(cell, "right", connections, diagonalAdjustments);
-      } else if (right) {
+        return;
+      }
+      if (right) {
         const diagonalAdjustments = {
           topLeft,
           bottomLeft,
@@ -471,9 +479,11 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
         drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
         drawBorderSegment(cell, "left", connections, diagonalAdjustments);
       }
+      return;
     }
+
     // Case 3: Two connections - coordinate junction responsibility
-    else if (connectionCount === 2) {
+    if (connectionCount === 2) {
       if (top && bottom) {
         // Vertical tunnel - draw left and right borders with special coordination
         const hasNeighborBelow = isCellSelected(column, row + 1);
@@ -484,39 +494,48 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
         if (leftEndY > leftStartY) {
           ctx.fillRect(left, leftStartY, 1, leftEndY - leftStartY);
         }
-
         // Right border - coordinate with vertical neighbors
         const rightStartY = top + 1; // Start below top corner
         const rightEndY = hasNeighborBelow ? bottom : bottom - 1; // Top cell extends down
         if (rightEndY > rightStartY) {
           ctx.fillRect(right - 1, rightStartY, 1, rightEndY - rightStartY);
         }
-      } else if (left && right) {
+        return;
+      }
+      if (left && right) {
         // Horizontal tunnel - draw top and bottom borders
         drawBorderSegment(cell, "top", connections);
         drawBorderSegment(cell, "bottom", connections);
-      } else if (top && left) {
+        return;
+      }
+      if (top && left) {
         // Connected to top and left - draw bottom and right borders
         const diagonalAdjustments = {
           bottomRight,
         };
         drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
         drawBorderSegment(cell, "right", connections, diagonalAdjustments);
-      } else if (top && right) {
+        return;
+      }
+      if (top && right) {
         // Connected to top and right - draw bottom and left borders
         const diagonalAdjustments = {
           bottomLeft,
         };
         drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
         drawBorderSegment(cell, "left", connections, diagonalAdjustments);
-      } else if (bottom && left) {
+        return;
+      }
+      if (bottom && left) {
         // Connected to bottom and left - draw top and right borders
         const diagonalAdjustments = {
           topRight,
         };
         drawBorderSegment(cell, "top", connections, diagonalAdjustments);
         drawBorderSegment(cell, "right", connections, diagonalAdjustments);
-      } else if (bottom && right) {
+        return;
+      }
+      if (bottom && right) {
         // Connected to bottom and right - draw top and left borders
         const diagonalAdjustments = {
           topLeft,
@@ -524,9 +543,11 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
         drawBorderSegment(cell, "top", connections, diagonalAdjustments);
         drawBorderSegment(cell, "left", connections, diagonalAdjustments);
       }
+      return;
     }
+
     // Case 4: Three connections - draw single border with junction responsibility
-    else if (connectionCount === 3) {
+    if (connectionCount === 3) {
       if (!top) {
         // Top border only
         const startX = left ? left + 1 : left;
@@ -534,21 +555,27 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
         if (endX > startX) {
           ctx.fillRect(startX, top, endX - startX, 1);
         }
-      } else if (!bottom) {
+        return;
+      }
+      if (!bottom) {
         // Bottom border only
         const startX = left ? left + 1 : left;
         const endX = right ? right - 1 : right;
         if (endX > startX) {
           ctx.fillRect(startX, bottom - 1, endX - startX, 1);
         }
-      } else if (!left) {
+        return;
+      }
+      if (!left) {
         // Left border only
         const startY = top ? top + 1 : top;
         const endY = bottom ? bottom - 1 : bottom;
         if (endY > startY) {
           ctx.fillRect(left, startY, 1, endY - startY);
         }
-      } else if (!right) {
+        return;
+      }
+      if (!right) {
         // Right border only
         const startY = top ? top + 1 : top;
         const endY = bottom ? bottom - 1 : bottom;
@@ -556,7 +583,9 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
           ctx.fillRect(right - 1, startY, 1, endY - startY);
         }
       }
+      return;
     }
+
     // Case 5: Four connections - no borders needed
   });
 };
