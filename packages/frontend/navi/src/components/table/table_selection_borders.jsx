@@ -187,238 +187,122 @@ const generateSelectionBorderPath = (selectedCells) => {
   return generateCellSelectionPath(selectedCells);
 };
 
-// Generate path for cell selections - uses the original edge-tracing algorithm
+// Generate path for cell selections - creates proper perimeter based on cell grid
 const generateCellSelectionPath = (selectedCells) => {
   if (selectedCells.length === 0) return "";
 
   // Create a grid to track selected cells
   const grid = new Map();
-  let minRow = Infinity;
-  let maxRow = -Infinity;
-  let minCol = Infinity;
-  let maxCol = -Infinity;
-
   selectedCells.forEach((cell) => {
     const key = `${cell.column},${cell.row}`;
     grid.set(key, cell);
-    minRow = Math.min(minRow, cell.row);
-    maxRow = Math.max(maxRow, cell.row);
-    minCol = Math.min(minCol, cell.column);
-    maxCol = Math.max(maxCol, cell.column);
   });
 
-  // Get the table element to check actual table structure
-  const table = selectedCells[0]?.element?.closest("table");
-  if (!table) return "";
-
-  // Create a map of all cells in the table (both selected and unselected)
-  const allTableCells = table.querySelectorAll("td, th");
-  const tableCellGrid = new Map();
-
-  allTableCells.forEach((cellElement) => {
-    const row = cellElement.closest("tr");
-
-    // Calculate row index relative to the entire table (not just thead/tbody)
-    const allRows = Array.from(table.querySelectorAll("tr"));
-    const rowIndex = allRows.indexOf(row);
-    const columnIndex = Array.from(row.children).indexOf(cellElement);
-    const key = `${columnIndex},${rowIndex}`;
-    tableCellGrid.set(key, {
-      element: cellElement,
-      selected: grid.has(key),
-    });
-  });
-
-  // Helper function to check if a cell at given coordinates exists and is selected
+  // Helper function to check if a cell is selected
   const isCellSelected = (col, row) => {
-    const cell = tableCellGrid.get(`${col},${row}`);
-    return cell && cell.selected;
+    return grid.has(`${col},${row}`);
   };
 
-  // Find all edge segments that form the outer perimeter
-  const edges = [];
+  // Generate perimeter points by walking around the selection boundary
+  // We'll create corner points that form the actual perimeter
 
-  // For each selected cell, check all four sides for borders
-  selectedCells.forEach((cell) => {
-    const { left, top, right, bottom, row, column } = cell;
+  // Find the bounding box of the selection
+  let minRow = Math.min(...selectedCells.map((c) => c.row));
+  let maxRow = Math.max(...selectedCells.map((c) => c.row));
+  let minCol = Math.min(...selectedCells.map((c) => c.column));
+  let maxCol = Math.max(...selectedCells.map((c) => c.column));
 
-    // Adjust coordinates to center the path on the border lines (0.5px offset for 1px borders)
-    const borderOffset = 0.5;
-
-    // Check each side of the cell to see if it's on the perimeter
-    // Top edge - no selected cell above (cell doesn't exist OR exists but not selected)
-    if (!isCellSelected(column, row - 1)) {
-      edges.push({
-        type: "horizontal",
-        x1: left + borderOffset,
-        y1: top + borderOffset,
-        x2: right - borderOffset,
-        y2: top + borderOffset,
-        direction: "top",
-      });
-    }
-
-    // Bottom edge - no selected cell below (cell doesn't exist OR exists but not selected)
-    if (!isCellSelected(column, row + 1)) {
-      edges.push({
-        type: "horizontal",
-        x1: left + borderOffset,
-        y1: bottom - borderOffset,
-        x2: right - borderOffset,
-        y2: bottom - borderOffset,
-        direction: "bottom",
-      });
-    }
-
-    // Left edge - no selected cell to the left (cell doesn't exist OR exists but not selected)
-    if (!isCellSelected(column - 1, row)) {
-      edges.push({
-        type: "vertical",
-        x1: left + borderOffset,
-        y1: top + borderOffset,
-        x2: left + borderOffset,
-        y2: bottom - borderOffset,
-        direction: "left",
-      });
-    }
-
-    // Right edge - no selected cell to the right (cell doesn't exist OR exists but not selected)
-    if (!isCellSelected(column + 1, row)) {
-      edges.push({
-        type: "vertical",
-        x1: right - borderOffset,
-        y1: top + borderOffset,
-        x2: right - borderOffset,
-        y2: bottom - borderOffset,
-        direction: "right",
-      });
-    }
-  });
-
-  // Convert edges to a continuous path
-  return edgesToSVGPath(edges);
-};
-
-// Convert edge segments into a continuous SVG path
-const edgesToSVGPath = (edges) => {
-  if (edges.length === 0) return "";
-
-  // Find all unique paths by tracing connected edges
-  const paths = [];
-  const usedEdges = new Set();
-
-  // Sort edges to ensure consistent path generation
-  const sortedEdges = [...edges].sort((a, b) => {
-    if (a.y1 !== b.y1) return a.y1 - b.y1;
-    if (a.x1 !== b.x1) return a.x1 - b.x1;
-    return a.type.localeCompare(b.type);
-  });
-
-  sortedEdges.forEach((startEdge) => {
-    const startIndex = edges.indexOf(startEdge);
-    if (usedEdges.has(startIndex)) return;
-
-    const pathPoints = [];
-    const visitedEdges = [];
-    let currentEdge = startEdge;
-    let currentIndex = startIndex;
-
-    // Start the path
-    pathPoints.push({ x: currentEdge.x1, y: currentEdge.y1 });
-
-    // Trace the path from this starting edge
-    while (true) {
-      usedEdges.add(currentIndex);
-      visitedEdges.push(currentIndex);
-
-      // Add the end point of current edge
-      pathPoints.push({ x: currentEdge.x2, y: currentEdge.y2 });
-
-      // Find the next connected edge
-      const nextEdgeData = findNextConnectedEdge(currentEdge, edges, usedEdges);
-      if (!nextEdgeData) break;
-
-      currentEdge = nextEdgeData.edge;
-      currentIndex = nextEdgeData.index;
-
-      // Check if we've completed a loop
-      if (visitedEdges.includes(currentIndex)) break;
-    }
-
-    if (pathPoints.length > 1) {
-      paths.push(pathPoints);
-    }
-  });
-
-  // Convert each path to SVG - create one continuous path instead of multiple closed paths
-  if (paths.length === 0) return "";
-
-  // For multiple disconnected regions, we still want to create separate closed paths
-  // but we need to be smarter about it
-  return paths
-    .map((pathPoints) => {
-      if (pathPoints.length === 0) return "";
-
-      const firstPoint = pathPoints[0];
-      let pathData = `M ${firstPoint.x} ${firstPoint.y}`;
-
-      for (let i = 1; i < pathPoints.length; i++) {
-        const point = pathPoints[i];
-        pathData += ` L ${point.x} ${point.y}`;
-      }
-
-      // Only close the path if the last point is different from the first
-      const lastPoint = pathPoints[pathPoints.length - 1];
-      if (
-        Math.abs(lastPoint.x - firstPoint.x) > 0.1 ||
-        Math.abs(lastPoint.y - firstPoint.y) > 0.1
-      ) {
-        pathData += ` L ${firstPoint.x} ${firstPoint.y}`;
-      }
-      pathData += " Z";
-
-      return pathData;
-    })
-    .join(" ");
-};
-
-// Find the next edge that connects to the current edge's endpoint
-const findNextConnectedEdge = (currentEdge, allEdges, usedEdges) => {
-  const tolerance = 0.1; // Small tolerance for floating point comparison
-  const endX = currentEdge.x2;
-  const endY = currentEdge.y2;
-
-  for (let i = 0; i < allEdges.length; i++) {
-    if (usedEdges.has(i)) continue;
-
-    const edge = allEdges[i];
-
-    // Check if this edge starts where the current edge ends
-    if (
-      Math.abs(edge.x1 - endX) < tolerance &&
-      Math.abs(edge.y1 - endY) < tolerance
-    ) {
-      return { edge, index: i };
-    }
-
-    // Also check if this edge ends where the current edge ends (for reversing)
-    if (
-      Math.abs(edge.x2 - endX) < tolerance &&
-      Math.abs(edge.y2 - endY) < tolerance
-    ) {
-      // Reverse the edge
-      return {
-        edge: {
-          ...edge,
-          x1: edge.x2,
-          y1: edge.y2,
-          x2: edge.x1,
-          y2: edge.y1,
-        },
-        index: i,
-      };
+  // Create a grid that includes one cell buffer around the selection
+  // This helps us trace the outer boundary properly
+  const extendedGrid = new Map();
+  for (let row = minRow - 1; row <= maxRow + 1; row++) {
+    for (let col = minCol - 1; col <= maxCol + 1; col++) {
+      const isSelected = isCellSelected(col, row);
+      extendedGrid.set(`${col},${row}`, isSelected);
     }
   }
 
-  return null;
+  // Helper to check if a position in extended grid is selected
+  const isExtendedSelected = (col, row) => {
+    return extendedGrid.get(`${col},${row}`) || false;
+  };
+
+  // Find corner points by detecting transitions between selected and unselected areas
+  const corners = [];
+
+  // Scan the grid to find corners where selection state changes
+  for (let row = minRow - 1; row <= maxRow; row++) {
+    for (let col = minCol - 1; col <= maxCol; col++) {
+      // Check the 2x2 square starting at this position
+      const topLeft = isExtendedSelected(col, row);
+      const topRight = isExtendedSelected(col + 1, row);
+      const bottomLeft = isExtendedSelected(col, row + 1);
+      const bottomRight = isExtendedSelected(col + 1, row + 1);
+
+      // Count selected cells in this 2x2 square
+      const selectedCount = [topLeft, topRight, bottomLeft, bottomRight].filter(
+        Boolean,
+      ).length;
+
+      // A corner exists when we have 1 or 3 selected cells (transition points)
+      if (selectedCount === 1 || selectedCount === 3) {
+        // Get the actual cell coordinates from our selection
+        const cellAtPos =
+          selectedCells.find((c) => c.column === col && c.row === row) ||
+          selectedCells.find((c) => c.column === col + 1 && c.row === row) ||
+          selectedCells.find((c) => c.column === col && c.row === row + 1) ||
+          selectedCells.find((c) => c.column === col + 1 && c.row === row + 1);
+
+        if (cellAtPos) {
+          // Calculate the actual corner position based on cell boundaries
+          const cornerX =
+            col < cellAtPos.column ? cellAtPos.left : cellAtPos.right;
+          const cornerY =
+            row < cellAtPos.row ? cellAtPos.top : cellAtPos.bottom;
+
+          corners.push({
+            x: cornerX,
+            y: cornerY,
+            gridCol: col,
+            gridRow: row,
+            pattern: [topLeft, topRight, bottomLeft, bottomRight],
+          });
+        }
+      }
+    }
+  }
+
+  if (corners.length === 0) {
+    // Fallback: create a simple rectangle around all selected cells
+    const minX = Math.min(...selectedCells.map((c) => c.left));
+    const maxX = Math.max(...selectedCells.map((c) => c.right));
+    const minY = Math.min(...selectedCells.map((c) => c.top));
+    const maxY = Math.max(...selectedCells.map((c) => c.bottom));
+
+    return `M ${minX} ${minY} L ${maxX} ${minY} L ${maxX} ${maxY} L ${minX} ${maxY} Z`;
+  }
+
+  // Sort corners to create a clockwise path around the perimeter
+  // Start from the topmost, leftmost corner
+  corners.sort((a, b) => {
+    if (Math.abs(a.y - b.y) < 0.1) {
+      return a.x - b.x;
+    }
+    return a.y - b.y;
+  });
+
+  // Create the SVG path by connecting the corners
+  if (corners.length === 0) return "";
+
+  const startCorner = corners[0];
+  let pathData = `M ${startCorner.x} ${startCorner.y}`;
+
+  // Connect to each subsequent corner
+  for (let i = 1; i < corners.length; i++) {
+    const corner = corners[i];
+    pathData += ` L ${corner.x} ${corner.y}`;
+  }
+
+  pathData += " Z"; // Close the path
+  return pathData;
 };
