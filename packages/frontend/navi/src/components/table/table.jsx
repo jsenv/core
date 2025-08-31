@@ -70,9 +70,12 @@ import.meta.css = /* css */ `
   .navi_table td::before {
     content: "";
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     pointer-events: none;
-    /* All four borders for each cell */
+    /* All four borders for each cell - explicit positioning */
     box-shadow:
       0 -1px 0 0 var(--border-color),
       /* Top border */ -1px 0 0 0 var(--border-color),
@@ -128,10 +131,13 @@ import.meta.css = /* css */ `
     padding: 12px 8px;
   }
 
-  .navi_table td,
+  .navi_table td {
+    padding: 12px 8px;
+    user-select: none;
+    position: relative;
+  }
+
   .navi_table th {
-    padding: 0;
-    padding: 8px;
     user-select: none;
     position: relative;
   }
