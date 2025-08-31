@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Table Fixed Headers Demo - Large Dataset</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        margin: 20px;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Container with fixed size to force scrolling */
+      .table-container {
+        height: 400px;
+        width: 600px;
+        border: 2px solid #e0e0e0;
+        overflow: auto;
+        margin: 20px 0;
+      }
+
+      /* Status display */
+      .status {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f0f8ff;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+
+      .actions {
+        margin-top: 15px;
+      }
+
+      button {
+        background: #0078d4;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 8px;
+      }
+
+      button:hover {
+        background: #106ebe;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .info {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 15px;
+        margin: 15px 0;
+      }
+
+      .info h3 {
+        margin-top: 0;
+        color: #856404;
+      }
+
+      .info p {
+        margin-bottom: 0;
+        color: #856404;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import {
+        // eslint-disable-next-line no-unused-vars
+        Table,
+      } from "@jsenv/navi";
+
+      // Generate large dataset to force scrolling
+      const generateLargeDataset = (rows = 50, cols = 10) => {
+        const data = [];
+        for (let i = 1; i <= rows; i++) {
+          const row = { id: `row-${i}`, index: i };
+          for (let j = 1; j <= cols; j++) {
+            row[`col${j}`] = `Cell ${i}-${j}`;
+          }
+          data.push(row);
+        }
+        return data;
+      };
+
+      // Generate column definitions
+      const generateColumns = (count = 10) => {
+        const columns = [];
+        for (let i = 1; i <= count; i++) {
+          columns.push({
+            id: `col${i}`,
+            accessorKey: `col${i}`,
+            header: `Column ${i}`,
+          });
+        }
+        return columns;
+      };
+
+      // Create large dataset (50 rows x 10 columns = 500 cells)
+      const data = generateLargeDataset(50, 10);
+      const columns = generateColumns(10);
+
+      // eslint-disable-next-line no-unused-vars
+      const FixedHeadersDemo = () => {
+        const tableRef = useRef(null);
+        const [selection, setSelection] = useState([]);
+
+        return (
+          <div className="demo-container">
+            <h1>Table Fixed Headers Demo - Large Dataset</h1>
+
+            <div className="info">
+              <h3>Testing Fixed Row/Column Headers</h3>
+              <p>
+                This demo contains a large dataset (50 rows × 10 columns = 500
+                cells) in a constrained container to force scrolling. The goal
+                is to test and implement fixed first row (header) and first
+                column behavior.
+              </p>
+            </div>
+
+            <p>
+              <strong>Current behavior:</strong> The table will scroll normally.
+              <br />
+              <strong>Desired behavior:</strong> First row and first column
+              should remain fixed while scrolling.
+            </p>
+
+            <div className="table-container">
+              <Table
+                ref={tableRef}
+                data={data}
+                columns={columns}
+                selection={selection}
+                onSelectionChange={(value) => {
+                  setSelection(value);
+                }}
+              />
+            </div>
+
+            <div className="status">
+              <div>
+                Dataset size:{" "}
+                <span>
+                  {data.length} rows × {columns.length} columns ={" "}
+                  {data.length * columns.length} cells
+                </span>
+              </div>
+              <div>
+                Selection:{" "}
+                <span>
+                  {JSON.stringify(selection.slice(0, 5))}
+                  {selection.length > 5
+                    ? `... (+${selection.length - 5} more)`
+                    : ""}
+                </span>
+              </div>
+              <div>
+                Total selection count: <span>{selection.length}</span>
+              </div>
+            </div>
+
+            <div className="actions">
+              <button
+                onClick={() => {
+                  tableRef.current.clearSelection();
+                }}
+              >
+                Clear Selection
+              </button>
+              <button
+                onClick={() => {
+                  tableRef.current.selectAll();
+                }}
+              >
+                Select All ({data.length * columns.length} cells)
+              </button>
+              <button
+                onClick={() => {
+                  // Select first row
+                  const firstRowCells = columns.map(
+                    (col) => `${col.accessorKey}:row-1`,
+                  );
+                  setSelection(firstRowCells);
+                }}
+              >
+                Select First Row
+              </button>
+              <button
+                onClick={() => {
+                  // Select first column
+                  const firstColCells = data.map((row) => `col1:${row.id}`);
+                  setSelection(firstColCells);
+                }}
+              >
+                Select First Column
+              </button>
+            </div>
+
+            <div className="info">
+              <h3>Instructions for Testing</h3>
+              <p>
+                1. Scroll the table horizontally and vertically
+                <br />
+                2. Observe how headers behave during scrolling
+                <br />
+                3. Test selection behavior while scrolled
+                <br />
+                4. Check if borders and selection overlay work correctly with
+                fixed headers
+              </p>
+            </div>
+          </div>
+        );
+      };
+
+      // Render the app
+      render(<FixedHeadersDemo />, document.getElementById("root"));
+
+      console.log("Fixed Headers Demo loaded with large dataset:");
+      console.log(
+        `- ${data.length} rows × ${columns.length} columns = ${data.length * columns.length} total cells`,
+      );
+      console.log("- Scroll the table to test fixed header behavior");
+      console.log(
+        "- Use selection features to test interaction with scrolling",
+      );
+    </script>
+  </body>
+</html>
