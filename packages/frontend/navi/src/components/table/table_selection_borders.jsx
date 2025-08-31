@@ -116,16 +116,39 @@ const createTableSelectionObserver = (table) => {
       const rowIndex = allRows.indexOf(row);
       const columnIndex = Array.from(row.children).indexOf(cell);
 
+      // Base coordinates from getBoundingClientRect (relative to table)
+      let left = cellRect.left - tableRect.left;
+      let top = cellRect.top - tableRect.top;
+      let right = left + cellRect.width;
+      let bottom = top + cellRect.height;
+
+      // COORDINATE FAKING: Allow cells to "steal" border space they don't own
+      // This ensures seamless selection areas without gaps
+
+      // Horizontal border stealing: cells can extend left if they don't own the left border
+      if (columnIndex > 0) {
+        // This cell doesn't own its left border (only first column does)
+        // Allow it to extend 1px left to "steal" the border from the left cell
+        left -= 1;
+      }
+
+      // Vertical border stealing: cells can extend up if they don't own the top border
+      if (rowIndex > 0) {
+        // This cell doesn't own its top border (only first row does)
+        // Allow it to extend 1px up to "steal" the border from the top cell
+        top -= 1;
+      }
+
       return {
         element: cell,
         row: rowIndex,
         column: columnIndex,
-        left: cellRect.left - tableRect.left,
-        top: cellRect.top - tableRect.top,
-        width: cellRect.width,
-        height: cellRect.height,
-        right: cellRect.left - tableRect.left + cellRect.width,
-        bottom: cellRect.top - tableRect.top + cellRect.height,
+        left,
+        top,
+        width: right - left, // Recalculate width after coordinate adjustment
+        height: bottom - top, // Recalculate height after coordinate adjustment
+        right,
+        bottom,
       };
     });
 
@@ -227,47 +250,35 @@ const drawSelectionBorders = (
   };
 
   /**
-   * BORDER COORDINATION CHALLENGE:
-   * ==============================
+   * SEAMLESS BORDER COORDINATION:
+   * ============================
    *
    * When multiple cells are selected, they form a contiguous selection area that needs
-   * a seamless 1px perimeter border. The challenge is that each cell draws its own borders
-   * independently, but they must coordinate to avoid:
+   * a seamless 1px perimeter border. We use a two-step approach:
    *
-   * 1. OVERLAPS: Two adjacent cells drawing the same pixel (creates thick/dark borders)
-   * 2. GAPS: No cell drawing a required pixel (creates broken borders)
+   * 1. COORDINATE FAKING: During coordinate computation, cells "steal" border space
+   *    they don't own by extending their coordinates. This ensures seamless coverage
+   *    without gaps caused by CSS border ownership differences.
    *
-   * JUNCTION RESPONSIBILITY SYSTEM:
-   * ==============================
-   *
-   * At the junction between two cells, exactly ONE cell must be responsible for drawing
-   * the shared border pixels. We use these rules:
-   *
-   * - CORNER OWNERSHIP: Top/bottom borders own corners (draw full width including corners)
-   *                     Left/right borders avoid corners (start at Y=1, end at Y=height-1)
-   *
-   * - JUNCTION EXTENSION: The "earlier" cell (top-left priority) extends into junction areas:
-   *   • Vertical junctions: TOP cell extends DOWN into the junction
-   *   • Horizontal junctions: LEFT cell extends RIGHT into the junction
+   * 2. SHARED SPACE RESPONSIBILITY: During border drawing, only one cell draws in
+   *    each shared pixel to prevent overlaps:
+   *    • Horizontal shared spaces: LEFT cell is responsible
+   *    • Vertical shared spaces: TOP cell is responsible
+   *    • Corner ownership: Top/bottom borders own corners (full width)
    */
 
-  // Draw top border with junction responsibility
+  // Draw top border with shared space responsibility
   const drawTopBorder = (cell, connections, diagonalConnections = {}) => {
     const { left, top, right } = cell;
     const { left: hasLeft, right: hasRight } = connections;
 
-    let startX = left; // Start at left edge
-    let endX = right; // End at right edge
+    let startX = left;
+    let endX = right;
 
-    // For horizontal connections, the LEFT cell is responsible for the shared border
-    // because it owns the right border in CSS, while the right cell has no left border
-    if (hasRight) {
-      // This cell has a right neighbor, so this cell (left) is responsible
-      // We keep endX = right (draw the full width including the border area)
-    }
+    // Shared space responsibility: only the LEFT cell draws in horizontal shared spaces
     if (hasLeft) {
-      // This cell has a left neighbor, so the left cell is responsible
-      // This cell should not draw in the border area, start after it
+      // This cell has a left neighbor, so the left cell should draw the shared space
+      // This cell starts after the shared pixel
       startX = left + 1;
     }
 
@@ -283,23 +294,18 @@ const drawSelectionBorders = (
     }
   };
 
-  // Draw bottom border with junction responsibility
+  // Draw bottom border with shared space responsibility
   const drawBottomBorder = (cell, connections, diagonalConnections = {}) => {
     const { left, bottom, right } = cell;
     const { left: hasLeft, right: hasRight } = connections;
 
-    let startX = left; // Start at left edge
-    let endX = right; // End at right edge
+    let startX = left;
+    let endX = right;
 
-    // For horizontal connections, the LEFT cell is responsible for the shared border
-    // because it owns the right border in CSS, while the right cell has no left border
-    if (hasRight) {
-      // This cell has a right neighbor, so this cell (left) is responsible
-      // We keep endX = right (draw the full width including the border area)
-    }
+    // Shared space responsibility: only the LEFT cell draws in horizontal shared spaces
     if (hasLeft) {
-      // This cell has a left neighbor, so the left cell is responsible
-      // This cell should not draw in the border area, start after it
+      // This cell has a left neighbor, so the left cell should draw the shared space
+      // This cell starts after the shared pixel
       startX = left + 1;
     }
 
@@ -315,24 +321,18 @@ const drawSelectionBorders = (
     }
   };
 
-  // Draw left border with junction responsibility
+  // Draw left border with shared space responsibility
   const drawLeftBorder = (cell, connections, diagonalConnections = {}) => {
     const { left, top, bottom } = cell;
     const { top: hasTop, bottom: hasBottom } = connections;
 
-    let startY = top + 1; // Start below top corner by default (top border owns corners)
-    let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
+    let startY = top + 1; // Start below top corner (top border owns corners)
+    let endY = bottom - 1; // Stop above bottom corner (bottom border owns corners)
 
-    // For vertical connections, the TOP cell is responsible for the shared border
-    // because it owns the bottom border in CSS, while the bottom cell has no top border
-    if (hasBottom) {
-      // This cell has a bottom neighbor, so this cell (top) is responsible
-      // We extend down to cover the full border area
-      endY = bottom;
-    }
+    // Shared space responsibility: only the TOP cell draws in vertical shared spaces
     if (hasTop) {
-      // This cell has a top neighbor, so the top cell is responsible
-      // This cell should not draw in the border area, start below it
+      // This cell has a top neighbor, so the top cell should draw the shared space
+      // This cell starts after the shared pixel
       startY = top + 1;
     }
 
@@ -348,24 +348,18 @@ const drawSelectionBorders = (
     }
   };
 
-  // Draw right border with junction responsibility
+  // Draw right border with shared space responsibility
   const drawRightBorder = (cell, connections, diagonalConnections = {}) => {
     const { right, top, bottom } = cell;
     const { top: hasTop, bottom: hasBottom } = connections;
 
-    let startY = top + 1; // Start below top corner by default (top border owns corners)
-    let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
+    let startY = top + 1; // Start below top corner (top border owns corners)
+    let endY = bottom - 1; // Stop above bottom corner (bottom border owns corners)
 
-    // For vertical connections, the TOP cell is responsible for the shared border
-    // because it owns the bottom border in CSS, while the bottom cell has no top border
-    if (hasBottom) {
-      // This cell has a bottom neighbor, so this cell (top) is responsible
-      // We extend down to cover the full border area
-      endY = bottom;
-    }
+    // Shared space responsibility: only the TOP cell draws in vertical shared spaces
     if (hasTop) {
-      // This cell has a top neighbor, so the top cell is responsible
-      // This cell should not draw in the border area, start below it
+      // This cell has a top neighbor, so the top cell should draw the shared space
+      // This cell starts after the shared pixel
       startY = top + 1;
     }
 
