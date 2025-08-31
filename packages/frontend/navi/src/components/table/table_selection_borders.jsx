@@ -215,14 +215,36 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
     return allCellsMap.get(`${column},${row}`);
   };
 
-  // Helper function to check if a cell has a computed border
+  // Helper function to check if a cell has a computed border (box-shadow based)
   const hasBorder = (element, side) => {
     const computedStyle = getComputedStyle(element);
-    const borderWidth = computedStyle.getPropertyValue(`border-${side}-width`);
-    const borderStyle = computedStyle.getPropertyValue(`border-${side}-style`);
+    const boxShadow = computedStyle.getPropertyValue("box-shadow");
 
-    // A border exists if it has non-zero width and is not "none"
-    return borderWidth !== "0px" && borderStyle !== "none";
+    // If no box-shadow, no borders
+    if (!boxShadow || boxShadow === "none") {
+      return false;
+    }
+
+    // Parse box-shadow to detect inset borders
+    // Box-shadow format: inset x y blur spread color
+    // We're looking for inset shadows that simulate borders
+
+    switch (side) {
+      case "top":
+        // Top border: inset 0 1px 0 0 color (positive Y offset)
+        return /inset\s+0\s+1px\s+0\s+0/.test(boxShadow);
+      case "right":
+        // Right border: inset -1px 0 0 0 color (negative X offset)
+        return /inset\s+-\d+px\s+0\s+0\s+0/.test(boxShadow);
+      case "bottom":
+        // Bottom border: inset 0 -1px 0 0 color (negative Y offset)
+        return /inset\s+0\s+-\d+px\s+0\s+0/.test(boxShadow);
+      case "left":
+        // Left border: inset 1px 0 0 0 color (positive X offset)
+        return /inset\s+1px\s+0\s+0\s+0/.test(boxShadow);
+      default:
+        return false;
+    }
   };
 
   // Apply border attributes only for perimeter borders

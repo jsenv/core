@@ -31,17 +31,12 @@ import {
 import { useFocusGroup } from "../use_focus_group.js";
 import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
-/* Border collapse */
-/* .navi_table tbody td {
-    border-top: none;
-}
-.navi_table thead tr:not(:first-child) th {
-    border-top: none;
-}
-.navi_table th:not(:first-child),
-.navi_table td:not(:first-child) {
-    border-left: none;
-} */
+/* Border collapse using box-shadow */
+/* Each cell owns its bottom and right borders via box-shadow */
+/* This simulates border-collapse: collapse behavior */
+/* .navi_table tbody td: only bottom and right borders */
+/* .navi_table thead tr:not(:first-child) th: no top border (owned by row above) */
+/* .navi_table th:not(:first-child), .navi_table td:not(:first-child): no left border (owned by cell to left) */
 
 import.meta.css = /* css */ `
   .navi_table_container {
@@ -150,9 +145,45 @@ import.meta.css = /* css */ `
 
   .navi_table td:focus,
   .navi_table th:focus {
-    outline: 2px solid #0078d4;
-    outline-offset: -2px;
+    outline: none; /* Remove default outline */
     z-index: var(--z-index-focused);
+  }
+
+  .navi_table td:focus::after,
+  .navi_table th:focus::after {
+    content: "";
+    position: absolute;
+    /* Default: include bottom and right borders (owned by this cell) */
+    top: 0;
+    left: 0;
+    right: 0px;
+    bottom: 0px;
+    border: 2px solid #0078d4;
+    pointer-events: none;
+  }
+
+  /* First row cells: include top border */
+  .navi_table tr + tr td:focus::after,
+  .navi_table tr + tr th:focus::after {
+    top: -1px; /* Include top border */
+  }
+
+  /* First column cells: include left border */
+  .navi_table td + td:focus::after,
+  .navi_table th + th:focus::after {
+    left: -1px; /* Include left border */
+  }
+
+  /* Last column cells: don't extend right (no right border) */
+  .navi_table td:last-child:focus::after,
+  .navi_table th:last-child:focus::after {
+    right: 0; /* Don't include right border */
+  }
+
+  /* Last row cells: don't extend bottom (no bottom border) */
+  .navi_table tr:last-child td:focus::after,
+  .navi_table tr:last-child th:focus::after {
+    bottom: 0; /* Don't include bottom border */
   }
 
   /* Number column specific styling */
@@ -242,29 +273,40 @@ import.meta.css = /* css */ `
     z-index: var(--z-index-sticky-cell);
   }
 
-  /* Stickly columns/rows needs their border to carry them while scrolling */
-  /* But because of that the cell to the right/bottom has no borders preventing */
-  /* The selection shapes to follow the theorical collapsed border of the adjacent cell */
-  /* So we add back the border for those adjacent cells */
-  /* To make this "beautiful" we add a thick border for sticky row/columns */
-  /* And we restore the cell borders */
+  /* Sticky columns/rows border collapse using box-shadow */
+  /* Border collapse simulation: each cell owns its bottom and right borders */
+  /* When adjacent to sticky cells, we need to adjust the box-shadow to maintain borders */
+
+  /* Cells after sticky rows need top border restored */
   .navi_table tr[data-sticky] + tr td,
-  .navi_table tr[data-sticky] + tr th,
-  .navi_table tbody tr:first-child td {
-    border-top: 1px solid var(--border-color);
-  }
-  .navi_table th[data-sticky] + th,
-  .navi_table td[data-sticky] + td {
-    border-left: 1px solid var(--border-color);
+  .navi_table tr[data-sticky] + tr th {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      /* Top border */ inset 0 -1px 0 0 var(--border-color),
+      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
   }
 
+  /* Cells after sticky columns need left border restored */
+  .navi_table th[data-sticky] + th,
+  .navi_table td[data-sticky] + td {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      /* Left border */ inset 0 -1px 0 0 var(--border-color),
+      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+  }
+
+  /* Sticky cells get thicker borders using box-shadow */
   .navi_table td[data-sticky],
   .navi_table th[data-sticky] {
-    border-right-width: 5px;
+    box-shadow:
+      inset 0 -1px 0 0 var(--border-color),
+      /* Bottom border */ inset -5px 0 0 0 var(--border-color); /* Thick right border */
   }
   .navi_table tr[data-sticky] th,
   .navi_table tr[data-sticky] td {
-    border-bottom-width: 5px;
+    box-shadow:
+      inset 0 -5px 0 0 var(--border-color),
+      /* Thick bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
   }
 `;
 
