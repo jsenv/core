@@ -186,22 +186,35 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
 
     // SHARED BORDER RESPONSIBILITY: Handle cases where the current cell doesn't own
     // a border, but a neighbor does and needs to show the selection perimeter
+    // IMPORTANT: Only set borders if the neighbor is also on the perimeter (no neighbors beyond it)
 
     // Handle TOP shared borders: If this cell has a top neighbor and doesn't own its top border,
-    // the neighbor above should color its bottom border
+    // the neighbor above should color its bottom border ONLY if it's on the bottom perimeter
     if (hasTopNeighbor && !hasBorder(element, "top")) {
       const topCell = selectedCellsMap.get(`${column},${row - 1}`);
       if (topCell && hasBorder(topCell.element, "bottom")) {
-        topCell.element.setAttribute("data-selection-border-bottom", "");
+        // Check if the top neighbor is on the bottom perimeter by checking if it has a selected cell below it
+        const topNeighborHasBottomNeighbor = isCellSelected(
+          column,
+          row - 1 + 1,
+        ); // Check cell below the top neighbor
+        if (!topNeighborHasBottomNeighbor) {
+          topCell.element.setAttribute("data-selection-border-bottom", "");
+        }
       }
     }
 
     // Handle LEFT shared borders: If this cell has a left neighbor and doesn't own its left border,
-    // the neighbor to the left should color its right border
+    // the neighbor to the left should color its right border ONLY if the neighbor is also on perimeter
     if (hasLeftNeighbor && !hasBorder(element, "left")) {
       const leftCell = selectedCellsMap.get(`${column - 1},${row}`);
       if (leftCell && hasBorder(leftCell.element, "right")) {
-        leftCell.element.setAttribute("data-selection-border-right", "");
+        // Check if the left neighbor is on the left perimeter (no selected cell to its left)
+        const leftNeighborHasLeftNeighbor = isCellSelected(column - 2, row);
+        if (!leftNeighborHasLeftNeighbor) {
+          // Left neighbor is on perimeter - it should have colored right border
+          leftCell.element.setAttribute("data-selection-border-right", "");
+        }
       }
     }
   });

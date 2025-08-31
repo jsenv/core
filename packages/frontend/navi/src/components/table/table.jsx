@@ -186,7 +186,8 @@ import.meta.css = /* css */ `
   /* To make this "beautiful" we add a thick border for sticky row/columns */
   /* And we restore the cell borders */
   .navi_table tr[data-sticky] + tr td,
-  .navi_table tr[data-sticky] + tr th {
+  .navi_table tr[data-sticky] + tr th,
+  .navi_table tbody tr:first-child td {
     border-top: 1px solid var(--border-color);
   }
   .navi_table th[data-sticky] + th,
