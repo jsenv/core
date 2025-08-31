@@ -41,6 +41,7 @@ import { TableSelectionBorders } from "./table_selection_borders.jsx";
 import.meta.css = /* css */ `
   .navi_table_container {
     --border-color: #e0e0e0;
+    --sticky-border-size: 5px;
 
     --z-index-focused: 0; /* must be above selection and anything else  */
     --z-index-sticky-cell: 1; /* must be above selection  */
@@ -239,24 +240,44 @@ import.meta.css = /* css */ `
       /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
 
-  /* Sticky column cells (first column) get thick right border and normal top/bottom */
+  /* Header row cells after sticky columns need top + left border */
+  .navi_table tr:first-child th[data-sticky] + th::before {
+    box-shadow:
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
+  }
+
+  /* Sticky column cells (first column) get thick right border */
   .navi_table td[data-sticky]:first-child::before,
   .navi_table th[data-sticky]:first-child::before {
     box-shadow:
       0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 5px 0 0 0 var(--border-color),
+      /* Placeholder for top */ var(--sticky-border-size) 0 0 0
+        var(--border-color),
       /* Thick right border */ 0 1px 0 0 var(--border-color),
       /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
 
-  /* Sticky row cells (first row) get thick bottom border and normal left/right */
+  /* Sticky row cells (first row) get thick bottom border */
   .navi_table tr[data-sticky]:first-child th::before,
   .navi_table tr[data-sticky]:first-child td::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
       /* Top border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 5px 0 0 var(--border-color),
+      /* Right border */ 0 var(--sticky-border-size) 0 0 var(--border-color),
       /* Thick bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+  }
+
+  /* First row sticky cells also need left border */
+  .navi_table tr[data-sticky]:first-child th:first-child::before,
+  .navi_table tr[data-sticky]:first-child td:first-child::before {
+    box-shadow:
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 var(--sticky-border-size) 0 0 var(--border-color),
+      /* Thick bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
 
   /* Corner cell (sticky row + sticky column) gets thick borders on both right and bottom */
@@ -264,9 +285,10 @@ import.meta.css = /* css */ `
   .navi_table tr[data-sticky]:first-child td[data-sticky]:first-child::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
-      /* Top border */ 5px 0 0 0 var(--border-color),
-      /* Thick right border */ 0 5px 0 0 var(--border-color),
-      /* Thick bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
+      /* Top border */ var(--sticky-border-size) 0 0 0 var(--border-color),
+      /* Thick right border */ 0 var(--sticky-border-size) 0 0
+        var(--border-color),
+      /* Thick bottom border */ -1px 0 0 var(--border-color); /* Left border */
   }
 
   /* Sticky column cells after first row need top border */
@@ -274,7 +296,7 @@ import.meta.css = /* css */ `
   .navi_table tr:not(:first-child) th[data-sticky]:first-child::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
-      /* Top border */ 5px 0 0 0 var(--border-color),
+      /* Top border */ var(--sticky-border-size) 0 0 0 var(--border-color),
       /* Thick right border */ 0 1px 0 0 var(--border-color),
       /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
