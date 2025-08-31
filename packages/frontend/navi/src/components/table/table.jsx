@@ -40,7 +40,7 @@ import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
 import.meta.css = /* css */ `
   .navi_table_container {
-    --border-color: #e0e0e0;
+    --border-color: red;
     --sticky-border-size: 5px;
     --sticky-border-color: yellow;
 
@@ -76,12 +76,12 @@ import.meta.css = /* css */ `
     right: 0;
     bottom: 0;
     pointer-events: none;
-    /* All four borders for each cell - explicit positioning */
+    /* All four borders for each cell - ALL DRAWN INSIDE THE CELL using inset */
     box-shadow:
-      0 -1px 0 0 var(--border-color),
-      /* Top border */ -1px 0 0 0 var(--border-color),
-      /* Left border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top border */ inset -1px 0 0 0 var(--border-color),
+      /* Left border */ inset 1px 0 0 0 var(--border-color),
+      /* Right border */ inset 0 1px 0 0 var(--border-color); /* Bottom border */
   }
 
   /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
