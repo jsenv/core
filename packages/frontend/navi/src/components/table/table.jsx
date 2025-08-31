@@ -273,58 +273,62 @@ import.meta.css = /* css */ `
   .navi_table td[data-sticky]:first-child::before,
   .navi_table th[data-sticky]:first-child::before {
     box-shadow:
-      0 0 0 0 var(--border-color), /* Placeholder for top */
-      1px 0 0 0 var(--border-color), /* Normal right border */
-      0 1px 0 0 var(--border-color), /* Bottom border */
-      -1px 0 0 0 var(--border-color), /* Left border */
-      inset calc(-1 * var(--sticky-border-size)) 0 0 0 var(--sticky-border-color); /* Thick right border inside */
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
+      /* Normal right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ -1px 0 0 0 var(--border-color),
+      /* Left border */ inset calc(-1 * var(--sticky-border-size)) 0 0 0
+        var(--sticky-border-color); /* Thick right border inside */
   }
 
   /* Sticky row cells (first row) get thick bottom border */
   .navi_table tr[data-sticky]:first-child th::before,
   .navi_table tr[data-sticky]:first-child td::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color), /* Top border */
-      1px 0 0 0 var(--border-color), /* Right border */
-      0 1px 0 0 var(--border-color), /* Normal bottom border */
-      0 0 0 0 var(--border-color), /* Placeholder for left */
-      inset 0 calc(-1 * var(--sticky-border-size)) 0 0 var(--sticky-border-color); /* Thick bottom border inside */
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 1px 0 0 var(--border-color),
+      /* Normal bottom border */ -1px 0 0 0 var(--border-color),
+      /* Left border */ inset 0 calc(-1 * var(--sticky-border-size)) 0 0
+        var(--sticky-border-color); /* Thick bottom border inside */
   }
 
   /* First row sticky cells also need left border */
   .navi_table tr[data-sticky]:first-child th:first-child::before,
   .navi_table tr[data-sticky]:first-child td:first-child::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color), /* Top border */
-      1px 0 0 0 var(--border-color), /* Right border */
-      0 1px 0 0 var(--border-color), /* Normal bottom border */
-      -1px 0 0 0 var(--border-color), /* Left border */
-      inset 0 calc(-1 * var(--sticky-border-size)) 0 0 var(--sticky-border-color); /* Thick bottom border inside */
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 1px 0 0 var(--border-color),
+      /* Normal bottom border */ -1px 0 0 0 var(--border-color),
+      /* Left border */ inset 0 calc(-1 * var(--sticky-border-size)) 0 0
+        var(--sticky-border-color); /* Thick bottom border inside */
   }
 
   /* Corner cell (sticky row + sticky column) gets thick borders on both right and bottom */
   .navi_table tr[data-sticky]:first-child th[data-sticky]:first-child::before,
   .navi_table tr[data-sticky]:first-child td[data-sticky]:first-child::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color), /* Top border */
-      1px 0 0 0 var(--border-color), /* Normal right border */
-      0 1px 0 0 var(--border-color), /* Normal bottom border */
-      -1px 0 0 0 var(--border-color), /* Left border */
-      inset calc(-1 * var(--sticky-border-size)) 0 0 0 var(--sticky-border-color), /* Thick right border inside */
-      inset 0 calc(-1 * var(--sticky-border-size)) 0 0 var(--sticky-border-color); /* Thick bottom border inside */
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
+      /* Normal right border */ 0 1px 0 0 var(--border-color),
+      /* Normal bottom border */ -1px 0 0 0 var(--border-color),
+      /* Left border */ inset calc(-1 * var(--sticky-border-size)) 0 0 0
+        var(--sticky-border-color),
+      /* Thick right border inside */ inset 0
+        calc(-1 * var(--sticky-border-size)) 0 0 var(--sticky-border-color); /* Thick bottom border inside */
   }
 
   /* Sticky column cells after first row need top border */
   .navi_table tr:not(:first-child) td[data-sticky]:first-child::before,
   .navi_table tr:not(:first-child) th[data-sticky]:first-child::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color), /* Top border */
-      1px 0 0 0 var(--border-color), /* Normal right border */
-      0 1px 0 0 var(--border-color), /* Bottom border */
-      -1px 0 0 0 var(--border-color), /* Left border */
-      inset calc(-1 * var(--sticky-border-size)) 0 0 0 var(--sticky-border-color); /* Thick right border inside */
-  }
-      /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
+      /* Normal right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ -1px 0 0 0 var(--border-color),
+      /* Left border */ inset calc(-1 * var(--sticky-border-size)) 0 0 0
+        var(--sticky-border-color); /* Thick right border inside */
   }
 `;
 
