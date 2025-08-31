@@ -205,7 +205,7 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
 
   // Set up drawing context
   ctx.fillStyle = "#0078d4";
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = 0.5;
   ctx.imageSmoothingEnabled = false;
 
   // Create a grid to track selected cells
@@ -331,12 +331,16 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
       let startY = top + 1; // Start below top corner by default (top border owns corners)
       let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
 
-      // For vertical connections, use junction responsibility to avoid overlaps
-      if (hasTop && shouldExtendIntoJunction(cell, "up")) {
-        startY = top; // Only extend up if this cell is responsible for the junction
+      // For vertical connections, the top cell extends down into the junction
+      if (hasTop) {
+        // This cell is connected to the top, so it's the bottom cell
+        // The top cell should extend down, so this cell starts from the very top
+        startY = top;
       }
-      if (hasBottom && shouldExtendIntoJunction(cell, "down")) {
-        endY = bottom; // Only extend down if this cell is responsible for the junction
+      if (hasBottom) {
+        // This cell is connected to the bottom, so it's the top cell
+        // This cell should extend down into the junction
+        endY = bottom;
       }
 
       // Apply diagonal adjustments
@@ -357,12 +361,16 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
       let startY = top + 1; // Start below top corner by default (top border owns corners)
       let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
 
-      // For vertical connections, use junction responsibility to avoid overlaps
-      if (hasTop && shouldExtendIntoJunction(cell, "up")) {
-        startY = top; // Only extend up if this cell is responsible for the junction
+      // For vertical connections, the top cell extends down into the junction
+      if (hasTop) {
+        // This cell is connected to the top, so it's the bottom cell
+        // The top cell should extend down, so this cell starts from the very top
+        startY = top;
       }
-      if (hasBottom && shouldExtendIntoJunction(cell, "down")) {
-        endY = bottom; // Only extend down if this cell is responsible for the junction
+      if (hasBottom) {
+        // This cell is connected to the bottom, so it's the top cell
+        // This cell should extend down into the junction
+        endY = bottom;
       }
 
       // Apply diagonal adjustments
