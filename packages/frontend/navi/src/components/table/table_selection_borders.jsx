@@ -266,180 +266,145 @@ const drawSelectionBorders = (
     return false;
   };
 
-  // Calculate border coordinates with junction responsibility
-  const getBorderCoordinates = (
-    cell,
-    borderSide,
-    connections,
-    diagonalConnections = {},
-  ) => {
-    const { left, top, right, bottom } = cell;
-    const {
-      left: hasLeft,
-      right: hasRight,
-      top: hasTop,
-      bottom: hasBottom,
-    } = connections;
+  // Draw top border with junction responsibility
+  const drawTopBorder = (cell, connections, diagonalConnections = {}) => {
+    const { left, top, right } = cell;
+    const { left: hasLeft, right: hasRight } = connections;
 
-    if (borderSide === "top") {
-      let startX = left; // Include left corner by default (top border owns corners)
-      let endX = right; // Include right corner by default (top border owns corners)
+    let startX = left; // Include left corner by default (top border owns corners)
+    let endX = right; // Include right corner by default (top border owns corners)
 
-      // For horizontal connections, apply junction responsibility
-      if (hasLeft) {
-        // This cell is connected to the left, so it's the right cell
-        // The left cell is responsible for the junction, so this cell starts after the junction
-        startX = left + 1;
-      }
-      if (hasRight) {
-        // This cell is connected to the right, so it's the left cell
-        // This cell is responsible for the junction, so it extends into it
-        endX = right; // Keep full width to cover junction
-      }
+    // For horizontal connections, apply junction responsibility
+    if (hasLeft) {
+      // This cell is connected to the left, so it's the right cell
+      // The left cell is responsible for the junction, so this cell starts after the junction
+      startX = left + 1;
+    }
+    // Note: If hasRight, this is the left cell and should extend to cover the junction
+    // So we keep endX = right (no change needed)
 
-      // Also check if we should extend into junction when not directly connected
-      if (!hasRight && shouldExtendIntoJunction(cell, "right")) {
-        endX = right;
-      }
-
-      // Apply diagonal adjustments
-      if (diagonalConnections.topLeft && !hasLeft)
-        startX = Math.max(startX, left + 1);
-      if (diagonalConnections.topRight && !hasRight)
-        endX = Math.min(endX, right - 1);
-
-      return {
-        x: startX,
-        y: top,
-        width: Math.max(0, endX - startX),
-        height: 1,
-      };
+    // Also check if we should extend into junction when not directly connected
+    if (!hasRight && shouldExtendIntoJunction(cell, "right")) {
+      endX = right;
     }
 
-    if (borderSide === "bottom") {
-      let startX = left; // Include left corner by default (bottom border owns corners)
-      let endX = right; // Include right corner by default (bottom border owns corners)
+    // Apply diagonal adjustments
+    if (diagonalConnections.topLeft && !hasLeft)
+      startX = Math.max(startX, left + 1);
+    if (diagonalConnections.topRight && !hasRight)
+      endX = Math.min(endX, right - 1);
 
-      // For horizontal connections, apply junction responsibility
-      if (hasLeft) {
-        // This cell is connected to the left, so it's the right cell
-        // The left cell is responsible for the junction, so this cell starts after the junction
-        startX = left + 1;
-      }
-      if (hasRight) {
-        // This cell is connected to the right, so it's the left cell
-        // This cell is responsible for the junction, so it extends into it
-        endX = right; // Keep full width to cover junction
-      }
-
-      // Also check if we should extend into junction when not directly connected
-      if (!hasRight && shouldExtendIntoJunction(cell, "right")) {
-        endX = right;
-      }
-
-      // Apply diagonal adjustments
-      if (diagonalConnections.bottomLeft && !hasLeft)
-        startX = Math.max(startX, left + 1);
-      if (diagonalConnections.bottomRight && !hasRight)
-        endX = Math.min(endX, right - 1);
-
-      return {
-        x: startX,
-        y: bottom - 1,
-        width: Math.max(0, endX - startX),
-        height: 1,
-      };
+    const width = Math.max(0, endX - startX);
+    if (width > 0) {
+      ctx.fillRect(startX, top, width, 1);
     }
-
-    if (borderSide === "left") {
-      let startY = top + 1; // Start below top corner by default (top border owns corners)
-      let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
-
-      // For vertical connections, the top cell extends down into the junction
-      if (hasTop) {
-        // This cell is connected to the top, so it's the bottom cell
-        // The top cell should extend down, so this cell starts from the very top
-        startY = top;
-      }
-      if (hasBottom) {
-        // This cell is connected to the bottom, so it's the top cell
-        // This cell should extend down into the junction
-        endY = bottom;
-      }
-
-      // Also check if we should extend into junction when not directly connected
-      if (!hasBottom && shouldExtendIntoJunction(cell, "down")) {
-        endY = bottom;
-      }
-
-      // Apply diagonal adjustments
-      if (diagonalConnections.topLeft && !hasTop)
-        startY = Math.max(startY, top + 1);
-      if (diagonalConnections.bottomLeft && !hasBottom)
-        endY = Math.min(endY, bottom - 1);
-
-      return {
-        x: left,
-        y: startY,
-        width: 1,
-        height: Math.max(0, endY - startY),
-      };
-    }
-
-    if (borderSide === "right") {
-      let startY = top + 1; // Start below top corner by default (top border owns corners)
-      let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
-
-      // For vertical connections, the top cell extends down into the junction
-      if (hasTop) {
-        // This cell is connected to the top, so it's the bottom cell
-        // The top cell should extend down, so this cell starts from the very top
-        startY = top;
-      }
-      if (hasBottom) {
-        // This cell is connected to the bottom, so it's the top cell
-        // This cell should extend down into the junction
-        endY = bottom;
-      }
-
-      // Also check if we should extend into junction when not directly connected
-      if (!hasBottom && shouldExtendIntoJunction(cell, "down")) {
-        endY = bottom;
-      }
-
-      // Apply diagonal adjustments
-      if (diagonalConnections.topRight && !hasTop)
-        startY = Math.max(startY, top + 1);
-      if (diagonalConnections.bottomRight && !hasBottom)
-        endY = Math.min(endY, bottom - 1);
-
-      return {
-        x: right - 1,
-        y: startY,
-        width: 1,
-        height: Math.max(0, endY - startY),
-      };
-    }
-
-    return { x: 0, y: 0, width: 0, height: 0 };
   };
 
-  // Helper function to draw a border with calculated coordinates
-  const drawBorderSegment = (
-    cell,
-    borderSide,
-    connections,
-    diagonalConnections = {},
-  ) => {
-    const coords = getBorderCoordinates(
-      cell,
-      borderSide,
-      connections,
-      diagonalConnections,
-    );
+  // Draw bottom border with junction responsibility
+  const drawBottomBorder = (cell, connections, diagonalConnections = {}) => {
+    const { left, bottom, right } = cell;
+    const { left: hasLeft, right: hasRight } = connections;
 
-    if (coords.width > 0 && coords.height > 0) {
-      ctx.fillRect(coords.x, coords.y, coords.width, coords.height);
+    let startX = left; // Include left corner by default (bottom border owns corners)
+    let endX = right; // Include right corner by default (bottom border owns corners)
+
+    // For horizontal connections, apply junction responsibility
+    if (hasLeft) {
+      // This cell is connected to the left, so it's the right cell
+      // The left cell is responsible for the junction, so this cell starts after the junction
+      startX = left + 1;
+    }
+    // Note: If hasRight, this is the left cell and should extend to cover the junction
+    // So we keep endX = right (no change needed)
+
+    // Also check if we should extend into junction when not directly connected
+    if (!hasRight && shouldExtendIntoJunction(cell, "right")) {
+      endX = right;
+    }
+
+    // Apply diagonal adjustments
+    if (diagonalConnections.bottomLeft && !hasLeft)
+      startX = Math.max(startX, left + 1);
+    if (diagonalConnections.bottomRight && !hasRight)
+      endX = Math.min(endX, right - 1);
+
+    const width = Math.max(0, endX - startX);
+    if (width > 0) {
+      ctx.fillRect(startX, bottom - 1, width, 1);
+    }
+  };
+
+  // Draw left border with junction responsibility
+  const drawLeftBorder = (cell, connections, diagonalConnections = {}) => {
+    const { left, top, bottom } = cell;
+    const { top: hasTop, bottom: hasBottom } = connections;
+
+    let startY = top + 1; // Start below top corner by default (top border owns corners)
+    let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
+
+    // For vertical connections, the top cell extends down into the junction
+    if (hasTop) {
+      // This cell is connected to the top, so it's the bottom cell
+      // The top cell should extend down, so this cell starts from the very top
+      startY = top;
+    }
+    if (hasBottom) {
+      // This cell is connected to the bottom, so it's the top cell
+      // This cell should extend down into the junction
+      endY = bottom;
+    }
+
+    // Also check if we should extend into junction when not directly connected
+    if (!hasBottom && shouldExtendIntoJunction(cell, "down")) {
+      endY = bottom;
+    }
+
+    // Apply diagonal adjustments
+    if (diagonalConnections.topLeft && !hasTop)
+      startY = Math.max(startY, top + 1);
+    if (diagonalConnections.bottomLeft && !hasBottom)
+      endY = Math.min(endY, bottom - 1);
+
+    const height = Math.max(0, endY - startY);
+    if (height > 0) {
+      ctx.fillRect(left, startY, 1, height);
+    }
+  };
+
+  // Draw right border with junction responsibility
+  const drawRightBorder = (cell, connections, diagonalConnections = {}) => {
+    const { right, top, bottom } = cell;
+    const { top: hasTop, bottom: hasBottom } = connections;
+
+    let startY = top + 1; // Start below top corner by default (top border owns corners)
+    let endY = bottom - 1; // Stop above bottom corner by default (bottom border owns corners)
+
+    // For vertical connections, the top cell extends down into the junction
+    if (hasTop) {
+      // This cell is connected to the top, so it's the bottom cell
+      // The top cell should extend down, so this cell starts from the very top
+      startY = top;
+    }
+    if (hasBottom) {
+      // This cell is connected to the bottom, so it's the top cell
+      // This cell should extend down into the junction
+      endY = bottom;
+    }
+
+    // Also check if we should extend into junction when not directly connected
+    if (!hasBottom && shouldExtendIntoJunction(cell, "down")) {
+      endY = bottom;
+    }
+
+    // Apply diagonal adjustments
+    if (diagonalConnections.topRight && !hasTop)
+      startY = Math.max(startY, top + 1);
+    if (diagonalConnections.bottomRight && !hasBottom)
+      endY = Math.min(endY, bottom - 1);
+
+    const height = Math.max(0, endY - startY);
+    if (height > 0) {
+      ctx.fillRect(right - 1, startY, 1, height);
     }
   };
 
@@ -473,10 +438,10 @@ const drawSelectionBorders = (
         bottomLeft,
         bottomRight,
       };
-      drawBorderSegment(cell, "top", connections, diagonalAdjustments);
-      drawBorderSegment(cell, "right", connections, diagonalAdjustments);
-      drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
-      drawBorderSegment(cell, "left", connections, diagonalAdjustments);
+      drawTopBorder(cell, connections, diagonalAdjustments);
+      drawRightBorder(cell, connections, diagonalAdjustments);
+      drawBottomBorder(cell, connections, diagonalAdjustments);
+      drawLeftBorder(cell, connections, diagonalAdjustments);
       return;
     }
 
@@ -487,9 +452,9 @@ const drawSelectionBorders = (
           bottomLeft,
           bottomRight,
         };
-        drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "left", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "right", connections, diagonalAdjustments);
+        drawBottomBorder(cell, connections, diagonalAdjustments);
+        drawLeftBorder(cell, connections, diagonalAdjustments);
+        drawRightBorder(cell, connections, diagonalAdjustments);
         return;
       }
       if (bottom) {
@@ -497,9 +462,9 @@ const drawSelectionBorders = (
           topLeft,
           topRight,
         };
-        drawBorderSegment(cell, "top", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "left", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "right", connections, diagonalAdjustments);
+        drawTopBorder(cell, connections, diagonalAdjustments);
+        drawLeftBorder(cell, connections, diagonalAdjustments);
+        drawRightBorder(cell, connections, diagonalAdjustments);
         return;
       }
       if (left) {
@@ -507,9 +472,9 @@ const drawSelectionBorders = (
           topRight,
           bottomRight,
         };
-        drawBorderSegment(cell, "top", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "right", connections, diagonalAdjustments);
+        drawTopBorder(cell, connections, diagonalAdjustments);
+        drawBottomBorder(cell, connections, diagonalAdjustments);
+        drawRightBorder(cell, connections, diagonalAdjustments);
         return;
       }
       if (right) {
@@ -517,9 +482,9 @@ const drawSelectionBorders = (
           topLeft,
           bottomLeft,
         };
-        drawBorderSegment(cell, "top", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "left", connections, diagonalAdjustments);
+        drawTopBorder(cell, connections, diagonalAdjustments);
+        drawBottomBorder(cell, connections, diagonalAdjustments);
+        drawLeftBorder(cell, connections, diagonalAdjustments);
       }
       return;
     }
@@ -546,8 +511,8 @@ const drawSelectionBorders = (
       }
       if (left && right) {
         // Horizontal tunnel - draw top and bottom borders
-        drawBorderSegment(cell, "top", connections);
-        drawBorderSegment(cell, "bottom", connections);
+        drawTopBorder(cell, connections);
+        drawBottomBorder(cell, connections);
         return;
       }
       if (top && left) {
@@ -555,8 +520,8 @@ const drawSelectionBorders = (
         const diagonalAdjustments = {
           bottomRight,
         };
-        drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "right", connections, diagonalAdjustments);
+        drawBottomBorder(cell, connections, diagonalAdjustments);
+        drawRightBorder(cell, connections, diagonalAdjustments);
         return;
       }
       if (top && right) {
@@ -564,8 +529,8 @@ const drawSelectionBorders = (
         const diagonalAdjustments = {
           bottomLeft,
         };
-        drawBorderSegment(cell, "bottom", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "left", connections, diagonalAdjustments);
+        drawBottomBorder(cell, connections, diagonalAdjustments);
+        drawLeftBorder(cell, connections, diagonalAdjustments);
         return;
       }
       if (bottom && left) {
@@ -573,8 +538,8 @@ const drawSelectionBorders = (
         const diagonalAdjustments = {
           topRight,
         };
-        drawBorderSegment(cell, "top", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "right", connections, diagonalAdjustments);
+        drawTopBorder(cell, connections, diagonalAdjustments);
+        drawRightBorder(cell, connections, diagonalAdjustments);
         return;
       }
       if (bottom && right) {
@@ -582,8 +547,8 @@ const drawSelectionBorders = (
         const diagonalAdjustments = {
           topLeft,
         };
-        drawBorderSegment(cell, "top", connections, diagonalAdjustments);
-        drawBorderSegment(cell, "left", connections, diagonalAdjustments);
+        drawTopBorder(cell, connections, diagonalAdjustments);
+        drawLeftBorder(cell, connections, diagonalAdjustments);
       }
       return;
     }
@@ -591,39 +556,19 @@ const drawSelectionBorders = (
     // Case 4: Three connections - draw single border with junction responsibility
     if (connectionCount === 3) {
       if (!top) {
-        // Top border only
-        const startX = left ? left + 1 : left;
-        const endX = right ? right - 1 : right;
-        if (endX > startX) {
-          ctx.fillRect(startX, top, endX - startX, 1);
-        }
+        drawTopBorder(cell, connections);
         return;
       }
       if (!bottom) {
-        // Bottom border only
-        const startX = left ? left + 1 : left;
-        const endX = right ? right - 1 : right;
-        if (endX > startX) {
-          ctx.fillRect(startX, bottom - 1, endX - startX, 1);
-        }
+        drawBottomBorder(cell, connections);
         return;
       }
       if (!left) {
-        // Left border only
-        const startY = top ? top + 1 : top;
-        const endY = bottom ? bottom - 1 : bottom;
-        if (endY > startY) {
-          ctx.fillRect(left, startY, 1, endY - startY);
-        }
+        drawLeftBorder(cell, connections);
         return;
       }
       if (!right) {
-        // Right border only
-        const startY = top ? top + 1 : top;
-        const endY = bottom ? bottom - 1 : bottom;
-        if (endY > startY) {
-          ctx.fillRect(right - 1, startY, 1, endY - startY);
-        }
+        drawRightBorder(cell, connections);
       }
       return;
     }
