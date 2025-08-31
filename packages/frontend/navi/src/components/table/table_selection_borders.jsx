@@ -106,7 +106,10 @@ const createTableSelectionObserver = (table) => {
     const cellInfos = Array.from(selectedCells).map((cell) => {
       const cellRect = cell.getBoundingClientRect();
       const row = cell.closest("tr");
-      const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+
+      // Calculate row index relative to the entire table (not just thead/tbody)
+      const allRows = Array.from(table.querySelectorAll("tr"));
+      const rowIndex = allRows.indexOf(row);
       const columnIndex = Array.from(row.children).indexOf(cell);
 
       return {
@@ -214,7 +217,10 @@ const generateCellSelectionPath = (selectedCells) => {
 
   allTableCells.forEach((cellElement) => {
     const row = cellElement.closest("tr");
-    const rowIndex = Array.from(row.parentNode.children).indexOf(row);
+
+    // Calculate row index relative to the entire table (not just thead/tbody)
+    const allRows = Array.from(table.querySelectorAll("tr"));
+    const rowIndex = allRows.indexOf(row);
     const columnIndex = Array.from(row.children).indexOf(cellElement);
     const key = `${columnIndex},${rowIndex}`;
     tableCellGrid.set(key, {
@@ -284,7 +290,9 @@ const generateCellSelectionPath = (selectedCells) => {
         direction: "right",
       });
     }
-  }); // Convert edges to a continuous path
+  });
+
+  // Convert edges to a continuous path
   return edgesToSVGPath(edges);
 };
 
