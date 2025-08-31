@@ -40,7 +40,6 @@ import.meta.css = /* css */ `
   .navi_table td {
     border: 1px solid #e0e0e0;
     text-align: left;
-    position: relative;
   }
 
   .navi_table th {
@@ -52,7 +51,6 @@ import.meta.css = /* css */ `
   .navi_table td,
   .navi_table th {
     padding: 0;
-    position: relative;
     padding: 8px;
     user-select: none;
   }
@@ -62,6 +60,11 @@ import.meta.css = /* css */ `
     outline: 2px solid #0078d4;
     outline-offset: -1.5px;
     z-index: 1;
+  }
+
+  .navi_table td[data-sticky] {
+    position: sticky;
+    left: 0;
   }
 
   /* Number column specific styling */
@@ -223,7 +226,7 @@ export const Table = forwardRef((props, ref) => {
         >
           <thead>
             <tr>
-              <RowNumberHeaderCell />
+              <RowNumberHeaderCell sticky />
               {columns.map((col, index) => (
                 <HeaderCell
                   key={col.id}
@@ -246,12 +249,14 @@ export const Table = forwardRef((props, ref) => {
                   aria-selected={isRowSelected}
                 >
                   <RowNumberCell
+                    sticky={true}
                     row={row}
                     rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                     columns={columns}
                   />
                   {columns.map((col, colIndex) => (
                     <DataCell
+                      sticky={col.sticky}
                       key={`${row.id}-${col.id}`}
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
@@ -270,14 +275,18 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 
-const RowNumberHeaderCell = () => {
+const RowNumberHeaderCell = ({ sticky }) => {
   return (
-    <th className="navi_row_number_cell" style={{ textAlign: "center" }}>
+    <th
+      className="navi_row_number_cell"
+      data-sticky={sticky ? "" : undefined}
+      style={{ textAlign: "center" }}
+    >
       #
     </th>
   );
 };
-const RowNumberCell = ({ row, columns, rowWithSomeSelectedCell }) => {
+const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
   const cellRef = useRef();
   const rowValue = `row:${row.id}`;
   const { selected } = useSelectableElement(cellRef, {
@@ -292,6 +301,7 @@ const RowNumberCell = ({ row, columns, rowWithSomeSelectedCell }) => {
   return (
     <td
       ref={cellRef}
+      data-sticky={sticky ? "" : undefined}
       className="navi_row_number_cell"
       data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
       data-value={rowValue}
