@@ -62,7 +62,8 @@ import.meta.css = /* css */ `
     z-index: 1;
   }
 
-  .navi_table td[data-sticky] {
+  .navi_table td[data-sticky],
+  .navi_table th[data-sticky] {
     position: sticky;
     left: 0;
   }
