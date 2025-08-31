@@ -215,40 +215,46 @@ import.meta.css = /* css */ `
     z-index: var(--z-index-sticky-cell);
   }
 
-  /* Sticky columns/rows border collapse using box-shadow */
+  /* Sticky columns/rows border collapse using box-shadow on ::before pseudo-elements */
   /* Border collapse simulation: each cell owns its bottom and right borders */
   /* When adjacent to sticky cells, we need to adjust the box-shadow to maintain borders */
 
   /* Cells after sticky rows need top border restored */
-  .navi_table tr[data-sticky] + tr td,
-  .navi_table tr[data-sticky] + tr th {
+  .navi_table tr[data-sticky] + tr td::before,
+  .navi_table tr[data-sticky] + tr th::before {
     box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border */ inset 0 -1px 0 0 var(--border-color),
-      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+      0 -1px 0 0 var(--border-color),
+      /* Top border */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
   }
 
   /* Cells after sticky columns need left border restored */
-  .navi_table th[data-sticky] + th,
-  .navi_table td[data-sticky] + td {
+  .navi_table th[data-sticky] + th::before,
+  .navi_table td[data-sticky] + td::before {
     box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      /* Left border */ inset 0 -1px 0 0 var(--border-color),
-      /* Bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+      0 0 0 0 var(--border-color),
+      /* Placeholder for top */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ -1px 0 0 0 var(--border-color); /* Left border */
   }
 
-  /* Sticky cells get thicker borders using box-shadow */
-  .navi_table td[data-sticky],
-  .navi_table th[data-sticky] {
+  /* Sticky cells get thicker borders using box-shadow on ::before */
+  .navi_table td[data-sticky]::before,
+  .navi_table th[data-sticky]::before {
     box-shadow:
-      inset 0 -1px 0 0 var(--border-color),
-      /* Bottom border */ inset -5px 0 0 0 var(--border-color); /* Thick right border */
+      0 0 0 0 var(--border-color),
+      /* Placeholder for top */ 5px 0 0 0 var(--border-color),
+      /* Thick right border */ 0 1px 0 0 var(--border-color),
+      /* Bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
   }
-  .navi_table tr[data-sticky] th,
-  .navi_table tr[data-sticky] td {
+  .navi_table tr[data-sticky] th::before,
+  .navi_table tr[data-sticky] td::before {
     box-shadow:
-      inset 0 -5px 0 0 var(--border-color),
-      /* Thick bottom border */ inset -1px 0 0 0 var(--border-color); /* Right border */
+      0 0 0 0 var(--border-color),
+      /* Placeholder for top */ 1px 0 0 0 var(--border-color),
+      /* Right border */ 0 5px 0 0 var(--border-color),
+      /* Thick bottom border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
   }
 `;
 
