@@ -43,7 +43,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_table th {
-    /* background: #lightgrey; */
+    background: lightgrey;
     font-weight: normal;
     padding: 12px 8px;
   }
@@ -68,21 +68,62 @@ import.meta.css = /* css */ `
     left: 0;
   }
 
-  /* When sticky elements are actually stuck, use outline for borders to avoid doubling */
-  .navi_table td[data-sticky][data-stuck],
-  .navi_table th[data-sticky][data-stuck] {
-    outline: 1px solid #e0e0e0;
-    outline-offset: -1px;
+  /* When sticky elements are actually stuck, remove natural borders and use pseudo-elements */
+  .navi_table td[data-sticky],
+  .navi_table th[data-sticky] {
+    border-left: none;
+    border-right: none;
     z-index: 2; /* above cell selection */
+  }
+
+  /* Left border using ::before pseudo-element */
+  .navi_table td[data-sticky]::before,
+  .navi_table th[data-sticky]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #e0e0e0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Right border using ::after pseudo-element */
+  .navi_table td[data-sticky]::after,
+  .navi_table th[data-sticky]::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #e0e0e0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Hide right border when next sibling is also stuck (avoid doubling) */
+  .navi_table td[data-sticky] + td[data-sticky]::before,
+  .navi_table th[data-sticky] + th[data-sticky]::before {
+    display: none;
+  }
+
+  /* Ensure content appears above pseudo-element borders */
+  .navi_table td[data-sticky] > *,
+  .navi_table th[data-sticky] > * {
+    position: relative;
+    z-index: 2;
   }
 
   .navi_table thead[data-sticky] {
     position: sticky;
     top: 0;
+    z-index: 20;
   }
   .navi_table thead[data-sticky] th[data-sticky] {
-    position: static;
-    left: 0;
+    position: sticky;
     top: 0;
   }
 
@@ -358,7 +399,7 @@ export const Table = forwardRef((props, ref) => {
                   aria-selected={isRowSelected}
                 >
                   <RowNumberCell
-                    sticky={true}
+                    sticky
                     row={row}
                     rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                     columns={columns}
