@@ -40,6 +40,7 @@ export const useSelectionProvider = ({
   value,
   onChange,
   multiple,
+  selectAllName,
 }) => {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -55,6 +56,7 @@ export const useSelectionProvider = ({
         onChange,
         elementRef,
         multiple,
+        selectAllName,
       });
     }
     return createLinearSelection({
@@ -63,6 +65,7 @@ export const useSelectionProvider = ({
       axis: layout,
       elementRef,
       multiple,
+      selectAllName,
     });
   }, [layout, multiple, elementRef]);
 
@@ -90,6 +93,7 @@ const createBaseSelection = ({
   onChange,
   type,
   multiple,
+  selectAllName,
   navigationMethods: {
     getElementRange,
     getElementAfter,
@@ -305,7 +309,11 @@ const createBaseSelection = ({
   const selectAll = (event) => {
     const allValues = [];
     for (const element of registry) {
-      allValues.push(getElementValue(element));
+      if (selectAllName && getElementSelectionName(element) !== selectAllName) {
+        continue;
+      }
+      const value = getElementValue(element);
+      allValues.push(value);
     }
     debug(
       "interaction",

@@ -188,6 +188,7 @@ export const Table = forwardRef((props, ref) => {
       selectionSignal.value = value;
       onSelectionChange(value);
     },
+    selectAllName: "cell",
   });
   useFocusGroup(innerRef);
 
