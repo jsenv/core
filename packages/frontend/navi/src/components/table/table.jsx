@@ -70,6 +70,7 @@ import.meta.css = /* css */ `
   .navi_table td::before {
     content: "";
     position: absolute;
+    z-index: 1; /* Above background */
     top: 0;
     left: 0;
     right: 0;
