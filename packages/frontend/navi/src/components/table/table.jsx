@@ -31,6 +31,18 @@ import {
 import { useFocusGroup } from "../use_focus_group.js";
 import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
+/* Border collapse */
+/* .navi_table tbody td {
+    border-top: none;
+}
+.navi_table thead tr:not(:first-child) th {
+    border-top: none;
+}
+.navi_table th:not(:first-child),
+.navi_table td:not(:first-child) {
+    border-left: none;
+} */
+
 import.meta.css = /* css */ `
   .navi_table_container {
     --border-color: #e0e0e0;
@@ -54,18 +66,6 @@ import.meta.css = /* css */ `
     white-space: nowrap;
   }
 
-  /* Border collapsing */
-  .navi_table tbody td {
-    border-top: none;
-  }
-  .navi_table thead tr:not(:first-child) th {
-    border-top: none;
-  }
-  .navi_table th:not(:first-child),
-  .navi_table td:not(:first-child) {
-    border-left: none;
-  }
-
   .navi_table th,
   .navi_table td {
     text-align: left;
@@ -87,7 +87,8 @@ import.meta.css = /* css */ `
 
   .navi_table td:focus,
   .navi_table th:focus {
-    box-shadow: inset 0 0 0 2px #0078d4;
+    outline: 2px solid #0078d4;
+    outline-offset: -2px;
     z-index: var(--z-index-focused);
   }
 
