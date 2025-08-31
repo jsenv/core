@@ -46,7 +46,7 @@ export const TableSelectionBorders = ({ tableRef }) => {
       return;
     }
 
-    drawSelectionBorders(canvas, selectionData.selectedCells);
+    drawSelectionBorders(canvas, selectionData.selectedCells, selectionData.tableRect);
   }, [selectionData]);
 
   return (
@@ -177,15 +177,21 @@ const createTableSelectionObserver = (table) => {
 };
 
 // Draw selection borders on canvas using filled rectangles
-const drawSelectionBorders = (canvas, selectedCells) => {
+const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
   const ctx = canvas.getContext("2d");
   const devicePixelRatio = window.devicePixelRatio || 1;
 
-  // Set canvas size for high-DPI displays
-  const displayWidth = canvas.width;
-  const displayHeight = canvas.height;
+  // Use table dimensions as logical canvas size (not affected by zoom)
+  const displayWidth = tableRect.width;
+  const displayHeight = tableRect.height;
+  
+  // Set actual canvas size for high-DPI displays
   canvas.width = displayWidth * devicePixelRatio;
   canvas.height = displayHeight * devicePixelRatio;
+  
+  // Set CSS size to logical dimensions
+  canvas.style.width = `${displayWidth}px`;
+  canvas.style.height = `${displayHeight}px`;
 
   // Scale context for high-DPI
   ctx.scale(devicePixelRatio, devicePixelRatio);
