@@ -206,8 +206,8 @@ import.meta.css = /* css */ `
     /* Default: include bottom and right borders (owned by this cell) */
     top: 0;
     left: 0;
-    right: 0px;
-    bottom: 0px;
+    right: 0;
+    bottom: 0;
     border: 2px solid #0078d4;
     pointer-events: none;
   }
@@ -257,16 +257,16 @@ import.meta.css = /* css */ `
   }
   /* Absolutely positioned left border indicator for rows with selected cells */
   /* td[data-row-contains-selected]::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: rgba(128, 128, 128, 0.3);
-        pointer-events: none;
-        z-index: 1;
-      } */
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: rgba(128, 128, 128, 0.3);
+          pointer-events: none;
+          z-index: 1;
+        } */
   th[data-column-contains-selected] {
     position: relative;
     font-weight: 600;
@@ -274,16 +274,16 @@ import.meta.css = /* css */ `
   }
   /* Absolutely positioned top border indicator for columns with selected cells */
   /* th[data-column-contains-selected]::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 0;
-        height: 4px;
-        background: rgba(128, 128, 128, 0.4);
-        pointer-events: none;
-        z-index: 1;
-      } */
+          content: "";
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 0;
+          height: 4px;
+          background: rgba(128, 128, 128, 0.4);
+          pointer-events: none;
+          z-index: 1;
+        } */
 
   /* Stickyness */
   .navi_table tr[data-sticky] {
