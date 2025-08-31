@@ -282,15 +282,24 @@ const drawSelectionBorders = (
     } = connections;
 
     if (borderSide === "top") {
-      let startX = hasLeft ? left + 1 : left; // Avoid left junction if connected
-      let endX;
+      let startX = left; // Include left corner by default (top border owns corners)
+      let endX = right; // Include right corner by default (top border owns corners)
 
+      // For horizontal connections, apply junction responsibility
+      if (hasLeft) {
+        // This cell is connected to the left, so it's the right cell
+        // The left cell is responsible for the junction, so this cell starts after the junction
+        startX = left + 1;
+      }
       if (hasRight) {
-        // Connected on right - extend to right edge for seamless connection
+        // This cell is connected to the right, so it's the left cell
+        // This cell is responsible for the junction, so it extends into it
+        endX = right; // Keep full width to cover junction
+      }
+
+      // Also check if we should extend into junction when not directly connected
+      if (!hasRight && shouldExtendIntoJunction(cell, "right")) {
         endX = right;
-      } else {
-        // Not connected on right - check if we should extend into junction
-        endX = shouldExtendIntoJunction(cell, "right") ? right : right;
       }
 
       // Apply diagonal adjustments
@@ -308,15 +317,24 @@ const drawSelectionBorders = (
     }
 
     if (borderSide === "bottom") {
-      let startX = hasLeft ? left + 1 : left; // Avoid left junction if connected
-      let endX;
+      let startX = left; // Include left corner by default (bottom border owns corners)
+      let endX = right; // Include right corner by default (bottom border owns corners)
 
+      // For horizontal connections, apply junction responsibility
+      if (hasLeft) {
+        // This cell is connected to the left, so it's the right cell
+        // The left cell is responsible for the junction, so this cell starts after the junction
+        startX = left + 1;
+      }
       if (hasRight) {
-        // Connected on right - extend to right edge for seamless connection
+        // This cell is connected to the right, so it's the left cell
+        // This cell is responsible for the junction, so it extends into it
+        endX = right; // Keep full width to cover junction
+      }
+
+      // Also check if we should extend into junction when not directly connected
+      if (!hasRight && shouldExtendIntoJunction(cell, "right")) {
         endX = right;
-      } else {
-        // Not connected on right - check if we should extend into junction
-        endX = shouldExtendIntoJunction(cell, "right") ? right : right;
       }
 
       // Apply diagonal adjustments
@@ -349,6 +367,11 @@ const drawSelectionBorders = (
         endY = bottom;
       }
 
+      // Also check if we should extend into junction when not directly connected
+      if (!hasBottom && shouldExtendIntoJunction(cell, "down")) {
+        endY = bottom;
+      }
+
       // Apply diagonal adjustments
       if (diagonalConnections.topLeft && !hasTop)
         startY = Math.max(startY, top + 1);
@@ -376,6 +399,11 @@ const drawSelectionBorders = (
       if (hasBottom) {
         // This cell is connected to the bottom, so it's the top cell
         // This cell should extend down into the junction
+        endY = bottom;
+      }
+
+      // Also check if we should extend into junction when not directly connected
+      if (!hasBottom && shouldExtendIntoJunction(cell, "down")) {
         endY = bottom;
       }
 
