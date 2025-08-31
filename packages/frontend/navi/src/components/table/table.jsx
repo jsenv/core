@@ -29,72 +29,16 @@ import.meta.css = /* css */ `
     padding: 12px 8px;
   }
 
-  /* Row selection styling - removed since we now only style individual cells */
-
-  /* Column selection styling */
-  .navi_table th[aria-selected="true"] {
-    background-color: rgba(0, 120, 212, 0.2);
-    font-weight: bold;
-  }
-
-  /* Selected row number column when focused - use a darker blue background */
-  .navi_table tr[aria-selected="true"] .:focus {
-    background-color: rgba(0, 120, 212, 0.08);
-  }
-
-  td[data-row-contains-selected] {
-    font-weight: 500;
-    color: #444;
-  }
-
-  /* Absolutely positioned left border indicator for rows with selected cells */
-  td[data-row-contains-selected]::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: rgba(128, 128, 128, 0.3);
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  th[data-column-contains-selected] {
-    font-weight: 600;
-    color: #444;
-  }
-
-  /* Absolutely positioned top border indicator for columns with selected cells */
-  th[data-column-contains-selected]::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 4px;
-    background: rgba(128, 128, 128, 0.4);
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  .navi_table_cell[aria-selected="true"] {
-    background-color: rgba(0, 120, 212, 0.08);
-  }
-
-  /* Container for table with relative positioning */
-  .table_container {
-    position: relative;
-  }
-
-  .navi_table_cell {
+  .navi_table td,
+  .navi_table th {
     padding: 0;
     position: relative;
     padding: 8px;
     user-select: none;
   }
 
-  .navi_table_cell:focus {
+  .navi_table td:focus,
+  .navi_table th:focus {
     outline: 2px solid #0078d4;
     outline-offset: -1.5px;
     z-index: 1;
@@ -110,13 +54,63 @@ import.meta.css = /* css */ `
     user-select: none;
   }
 
-  .navi_header_cell_bold_clone {
+  .navi_table_cell_content_bold_clone {
     font-weight: 600; /* force bold to compute max width */
     visibility: hidden; /* not visible */
     display: block; /* in-flow so it contributes to width */
     height: 0; /* zero height so it doesn't change layout height */
     overflow: hidden; /* avoid any accidental height */
     pointer-events: none; /* inert */
+  }
+
+  .navi_table td[aria-selected="true"],
+  .navi_table th[aria-selected="true"] {
+    background-color: rgba(0, 120, 212, 0.08);
+  }
+
+  /* Column selection styling */
+  .navi_table .navi_row_number_cell[aria-selected="true"],
+  .navi_table th[aria-selected="true"] {
+    background-color: rgba(0, 120, 212, 0.2);
+    font-weight: bold;
+  }
+
+  td[data-row-contains-selected] {
+    font-weight: 500;
+    color: #444;
+  }
+  /* Absolutely positioned left border indicator for rows with selected cells */
+  td[data-row-contains-selected]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: rgba(128, 128, 128, 0.3);
+    pointer-events: none;
+    z-index: 1;
+  }
+  th[data-column-contains-selected] {
+    font-weight: 600;
+    color: #444;
+  }
+  /* Absolutely positioned top border indicator for columns with selected cells */
+  th[data-column-contains-selected]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 4px;
+    background: rgba(128, 128, 128, 0.4);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Container for table with relative positioning */
+  .table_container {
+    position: relative;
   }
 `;
 
@@ -216,6 +210,7 @@ export const Table = forwardRef((props, ref) => {
                   columnAccessorKey={col.accessorKey}
                   columnIndex={index + 1}
                   columnWithSomeSelectedCell={columnWithSomeSelectedCell}
+                  data={data}
                 />
               ))}
             </tr>
@@ -296,17 +291,22 @@ const HeaderCell = ({
   columnName,
   columnAccessorKey,
   columnWithSomeSelectedCell,
+  data,
 }) => {
   const cellRef = useRef();
   const columnValue = `column:${columnAccessorKey}`;
-  const { selected } = useSelectableElement(cellRef);
+  const { selected } = useSelectableElement(cellRef, {
+    selectionImpact: () => {
+      // Return all data cells in this column that should be impacted
+      return data.map((row) => `${columnAccessorKey}:${row.id}`);
+    },
+  });
 
   const columnContainsSelectedCell =
     columnWithSomeSelectedCell.includes(columnAccessorKey);
   return (
     <th
       ref={cellRef}
-      className="navi_table_cell navi_header_cell"
       data-column-contains-selected={
         columnContainsSelectedCell ? "" : undefined
       }
@@ -318,7 +318,7 @@ const HeaderCell = ({
       tabIndex={-1}
     >
       <span>{columnName}</span>
-      <span className="navi_header_cell_bold_clone" aria-hidden="true">
+      <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {columnName}
       </span>
     </th>
