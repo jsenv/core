@@ -294,8 +294,8 @@ const HeaderCell = ({
   const columnValue = `column:${columnAccessorKey}`;
   const { selected } = useSelectableElement(cellRef, {
     selectionImpact: () => {
-      // Return all data cells in this column that should be impacted
-      return data.map((row) => `${columnAccessorKey}:${row.id}`);
+      const columnCells = data.map((row) => `${columnAccessorKey}:${row.id}`);
+      return columnCells;
     },
   });
 

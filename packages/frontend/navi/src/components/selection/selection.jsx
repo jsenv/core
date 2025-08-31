@@ -138,8 +138,10 @@ const createBaseSelection = ({
       if (element._selectionImpact) {
         const impactedValues = element._selectionImpact();
         for (const impactedValue of impactedValues) {
-          if (newSelectedSet.has(impactedValue)) {
-            // it explicitely wants to be selected, keep it
+          if (selectionSet.has(impactedValue)) {
+            // want to be selected -> keep it
+            // - might be explicit : initially part of newValue/selectionSet)
+            // - or implicit: added to selectionSet by selectionImpact
             continue;
           }
           selectionSet.delete(impactedValue);
