@@ -173,19 +173,17 @@ import.meta.css = /* css */ `
     content: "";
     position: absolute;
     /* Default: include bottom and right borders (owned by this cell) */
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     border: 2px solid #0078d4;
     pointer-events: none;
+    z-index: 2;
   }
-  .navi_table tr + tr td:focus::after,
-  .navi_table tr + tr th:focus::after {
+  .navi_table[data-border-collapse] tr + tr td:focus::after,
+  .navi_table[data-border-collapse] tr + tr th:focus::after {
     top: -1px; /* Include top border */
   }
-  .navi_table td + td:focus::after,
-  .navi_table th + th:focus::after {
+  .navi_table[data-border-collapse] td + td:focus::after,
+  .navi_table[data-border-collapse] th + th:focus::after {
     left: -1px; /* Include left border */
   }
 
