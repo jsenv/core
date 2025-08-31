@@ -29,14 +29,21 @@ import { useFocusGroup } from "../use_focus_group.js";
 import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
 import.meta.css = /* css */ `
-  .navi_table {
+  .navi_table_container {
     --border-color: #e0e0e0;
+    border: 1px solid var(--border-color);
+    position: relative;
+  }
+
+  .navi_table {
     border-radius: 2px;
+    border-spacing: 0;
   }
 
   .navi_table th,
   .navi_table td {
-    border-bottom: 1px solid var(--border-color);
+    border: 1px solid var(--border-color);
+    white-space: nowrap;
   }
 
   .navi_table tr:last-child td {
@@ -72,12 +79,14 @@ import.meta.css = /* css */ `
   .navi_table th[data-sticky] {
     position: sticky;
     left: 0;
+    /* Sticky is above cell selection */
+    /* z-index: 1;  */
   }
 
   .navi_table tr[data-sticky] {
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 2;
   }
   .navi_table tr[data-sticky] th[data-sticky] {
     position: sticky;
@@ -323,7 +332,7 @@ export const Table = forwardRef((props, ref) => {
   useFocusGroup(innerRef);
 
   return (
-    <div className="table_container">
+    <div className="navi_table_container">
       <SelectionProvider>
         <table
           ref={innerRef}
