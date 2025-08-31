@@ -292,7 +292,14 @@ const initDataStuck = (element) => {
 };
 
 export const Table = forwardRef((props, ref) => {
-  let { columns, data, selection = [], onSelectionChange } = props;
+  let {
+    columns,
+    data,
+    selection = [],
+    selectionColor,
+    selectionOpacity,
+    onSelectionChange,
+  } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => {
@@ -425,7 +432,11 @@ export const Table = forwardRef((props, ref) => {
           </tbody>
         </table>
       </SelectionProvider>
-      <TableSelectionBorders tableRef={innerRef} />
+      <TableSelectionBorders
+        tableRef={innerRef}
+        color={selectionColor}
+        opacity={selectionOpacity}
+      />
     </div>
   );
 });

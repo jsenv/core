@@ -19,7 +19,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableSelectionBorders = ({ tableRef }) => {
+export const TableSelectionBorders = ({ tableRef, color, opacity }) => {
   const [selectionData, setSelectionData] = useState(null);
   const canvasRef = useRef(null);
 
@@ -50,8 +50,9 @@ export const TableSelectionBorders = ({ tableRef }) => {
       canvas,
       selectionData.selectedCells,
       selectionData.tableRect,
+      { color, opacity },
     );
-  }, [selectionData]);
+  }, [selectionData, color, opacity]);
 
   return (
     <div className="table_selection_overlay">
@@ -181,7 +182,12 @@ const createTableSelectionObserver = (table) => {
 };
 
 // Draw selection borders on canvas using filled rectangles with sophisticated border coordination
-const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
+const drawSelectionBorders = (
+  canvas,
+  selectedCells,
+  tableRect,
+  { color = "#0078d4", opacity = 1 } = {},
+) => {
   const ctx = canvas.getContext("2d");
   const devicePixelRatio = window.devicePixelRatio || 1;
 
@@ -204,8 +210,8 @@ const drawSelectionBorders = (canvas, selectedCells, tableRect) => {
   ctx.clearRect(0, 0, displayWidth, displayHeight);
 
   // Set up drawing context
-  ctx.fillStyle = "#0078d4";
-  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = color;
+  ctx.globalAlpha = opacity;
   ctx.imageSmoothingEnabled = false;
 
   // Create a grid to track selected cells
