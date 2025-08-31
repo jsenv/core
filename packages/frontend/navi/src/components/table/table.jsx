@@ -30,14 +30,21 @@ import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
 import.meta.css = /* css */ `
   .navi_table {
-    border-collapse: collapse;
-    border: 1px solid #e0e0e0;
+    --border-color: #e0e0e0;
     border-radius: 2px;
   }
 
   .navi_table th,
   .navi_table td {
-    border: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .navi_table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .navi_table th,
+  .navi_table td {
     text-align: left;
   }
 
