@@ -242,15 +242,18 @@ const generateCellSelectionPath = (selectedCells) => {
   selectedCells.forEach((cell) => {
     const { left, top, right, bottom, row, column } = cell;
 
+    // Adjust coordinates to center the path on the border lines (0.5px offset for 1px borders)
+    const borderOffset = 0.5;
+
     // Check each side of the cell to see if it's on the perimeter
     // Top edge - no selected cell above (cell doesn't exist OR exists but not selected)
     if (!isCellSelected(column, row - 1)) {
       edges.push({
         type: "horizontal",
-        x1: left,
-        y1: top,
-        x2: right,
-        y2: top,
+        x1: left + borderOffset,
+        y1: top + borderOffset,
+        x2: right - borderOffset,
+        y2: top + borderOffset,
         direction: "top",
       });
     }
@@ -259,10 +262,10 @@ const generateCellSelectionPath = (selectedCells) => {
     if (!isCellSelected(column, row + 1)) {
       edges.push({
         type: "horizontal",
-        x1: left,
-        y1: bottom,
-        x2: right,
-        y2: bottom,
+        x1: left + borderOffset,
+        y1: bottom - borderOffset,
+        x2: right - borderOffset,
+        y2: bottom - borderOffset,
         direction: "bottom",
       });
     }
@@ -271,10 +274,10 @@ const generateCellSelectionPath = (selectedCells) => {
     if (!isCellSelected(column - 1, row)) {
       edges.push({
         type: "vertical",
-        x1: left,
-        y1: top,
-        x2: left,
-        y2: bottom,
+        x1: left + borderOffset,
+        y1: top + borderOffset,
+        x2: left + borderOffset,
+        y2: bottom - borderOffset,
         direction: "left",
       });
     }
@@ -283,10 +286,10 @@ const generateCellSelectionPath = (selectedCells) => {
     if (!isCellSelected(column + 1, row)) {
       edges.push({
         type: "vertical",
-        x1: right,
-        y1: top,
-        x2: right,
-        y2: bottom,
+        x1: right - borderOffset,
+        y1: top + borderOffset,
+        x2: right - borderOffset,
+        y2: bottom - borderOffset,
         direction: "right",
       });
     }

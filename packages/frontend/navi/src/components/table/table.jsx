@@ -31,18 +31,36 @@ import { TableSelectionBorders } from "./table_selection_borders.jsx";
 import.meta.css = /* css */ `
   .navi_table_container {
     --border-color: #e0e0e0;
+
+    --z-index-focused: 2; /* must be above selection and anything else  */
+    --z-index-sticky-cell: 3; /* must be above selection  */
+    --z-index-sticky-row: 4; /* must be above selection sticky cell  */
+    --z-index-sticky-corner: 6; /* must be above first column and first row  */
+
     position: relative;
   }
 
   .navi_table {
     border-radius: 2px;
-    border-spacing: 0;
+    border-spacing: 0; /* Required for manual border collapse */
   }
 
   .navi_table th,
   .navi_table td {
     border: 1px solid var(--border-color);
     white-space: nowrap;
+  }
+
+  /* Border collapsing */
+  .navi_table tbody td {
+    border-top: none;
+  }
+  .navi_table thead tr:not(:first-child) th {
+    border-top: none;
+  }
+  .navi_table th:not(:first-child),
+  .navi_table td:not(:first-child) {
+    border-left: none;
   }
 
   .navi_table th,
@@ -61,32 +79,14 @@ import.meta.css = /* css */ `
     padding: 0;
     padding: 8px;
     user-select: none;
+    position: relative;
   }
 
   .navi_table td:focus,
   .navi_table th:focus {
     outline: 2px solid #0078d4;
     outline-offset: -1.5px;
-    z-index: 1;
-  }
-
-  .navi_table td[data-sticky],
-  .navi_table th[data-sticky] {
-    position: sticky;
-    left: 0;
-  }
-
-  .navi_table tr[data-sticky] {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-  .navi_table tr[data-sticky] th[data-sticky] {
-    position: sticky;
-    top: 0;
-  }
-  .navi_table th[data-sticky] {
-    z-index: 3;
+    z-index: var(--z-index-focused);
   }
 
   /* Number column specific styling */
@@ -108,18 +108,17 @@ import.meta.css = /* css */ `
     pointer-events: none; /* inert */
   }
 
+  /* Selection */
   .navi_table td[aria-selected="true"],
   .navi_table th[aria-selected="true"] {
     background-color: rgba(0, 120, 212, 0.08);
   }
-
   /* Column selection styling */
   .navi_table .navi_row_number_cell[aria-selected="true"],
   .navi_table th[aria-selected="true"] {
     background-color: lightgrey;
     font-weight: bold;
   }
-
   td[data-row-contains-selected] {
     position: relative;
     font-weight: 500;
@@ -153,6 +152,52 @@ import.meta.css = /* css */ `
     background: rgba(128, 128, 128, 0.4);
     pointer-events: none;
     z-index: 1;
+  }
+
+  /* Stickyness */
+  .navi_table tr[data-sticky] {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-index-sticky-row);
+  }
+  .navi_table tr[data-sticky] th[data-sticky] {
+    position: sticky;
+    top: 0;
+  }
+  .navi_table th[data-sticky] {
+    z-index: var(--z-index-sticky-corner);
+  }
+  .navi_table td[data-sticky],
+  .navi_table th[data-sticky] {
+    position: sticky;
+    left: 0;
+  }
+  .navi_table td[data-sticky] {
+    z-index: var(--z-index-sticky-cell);
+  }
+
+  /* Stickly columns/rows needs their border to carry them while scrolling */
+  /* But because of that the cell to the right/bottom has no borders preventing */
+  /* The selection shapes to follow the theorical collapsed border of the adjacent cell */
+  /* So we add back the border for those adjacent cells */
+  /* To make this "beautiful" we add a thick border for sticky row/columns */
+  /* And we restore the cell borders */
+  .navi_table tr[data-sticky] + tr td,
+  .navi_table tr[data-sticky] + tr th {
+    border-top: 1px solid var(--border-color);
+  }
+  .navi_table th[data-sticky] + th,
+  .navi_table td[data-sticky] + td {
+    border-left: 1px solid var(--border-color);
+  }
+
+  .navi_table td[data-sticky],
+  .navi_table th[data-sticky] {
+    border-right-width: 5px;
+  }
+  .navi_table tr[data-sticky] th,
+  .navi_table tr[data-sticky] td {
+    border-bottom-width: 5px;
   }
 `;
 
