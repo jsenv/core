@@ -16,6 +16,9 @@
  * - Ability to delete a row (button + a shortcut key cmd + delete) with a confirmation message
  * - Ability to update a cell (double click to edit, enter to validate, esc to cancel)
  *
+ * border-block-end might be the solution to fill partial borders
+ * maybe also https://developer.mozilla.org/fr/docs/Web/CSS/border-inline-start-color
+ *
  */
 
 import { useSignal } from "@preact/signals";
