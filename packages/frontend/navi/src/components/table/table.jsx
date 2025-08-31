@@ -68,6 +68,16 @@ import.meta.css = /* css */ `
     left: 0;
   }
 
+  .navi_table thead[data-sticky] {
+    position: sticky;
+    top: 0;
+  }
+  .navi_table thead[data-sticky] th[data-sticky] {
+    position: static;
+    left: 0;
+    top: 0;
+  }
+
   /* Number column specific styling */
   .navi_row_number_cell {
     width: 50px;
@@ -225,7 +235,7 @@ export const Table = forwardRef((props, ref) => {
           aria-multiselectable="true"
           data-multiselection={selection.length > 1 ? "" : undefined}
         >
-          <thead>
+          <thead data-sticky="">
             <tr>
               <RowNumberHeaderCell sticky />
               {columns.map((col, index) => (
