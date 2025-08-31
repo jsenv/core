@@ -161,29 +161,13 @@ import.meta.css = /* css */ `
     border: 2px solid #0078d4;
     pointer-events: none;
   }
-
-  /* First row cells: include top border */
   .navi_table tr + tr td:focus::after,
   .navi_table tr + tr th:focus::after {
     top: -1px; /* Include top border */
   }
-
-  /* First column cells: include left border */
   .navi_table td + td:focus::after,
   .navi_table th + th:focus::after {
     left: -1px; /* Include left border */
-  }
-
-  /* Last column cells: don't extend right (no right border) */
-  .navi_table td:last-child:focus::after,
-  .navi_table th:last-child:focus::after {
-    right: 0; /* Don't include right border */
-  }
-
-  /* Last row cells: don't extend bottom (no bottom border) */
-  .navi_table tr:last-child td:focus::after,
-  .navi_table tr:last-child th:focus::after {
-    bottom: 0; /* Don't include bottom border */
   }
 
   /* Number column specific styling */
