@@ -91,7 +91,9 @@ const createTableSelectionObserver = (table) => {
     }
 
     // Find all selected cells by aria-selected attribute
-    const selectedCells = table.querySelectorAll('[aria-selected="true"]');
+    const selectedCells = table.querySelectorAll(
+      'td[aria-selected="true"], th[aria-selected="true"]',
+    );
 
     if (selectedCells.length === 0) {
       updateSelectionData(NO_SELECTION);
