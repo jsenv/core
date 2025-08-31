@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
-  /* Selection border styling using data attributes */
+  /* Selection border styling using border-color - simple and precise */
   [data-selection-border-top] {
     border-top-color: var(--selection-border-color) !important;
   }
@@ -26,7 +26,6 @@ import.meta.css = /* css */ `
     border-left-color: var(--border-color) !important;
   }
 `;
-
 export const TableSelectionBorders = ({ tableRef, color }) => {
   const [selectionData, setSelectionData] = useState(null);
 
@@ -140,8 +139,12 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
       } else {
         // This cell doesn't have a top border - check if cell above owns the shared border
         const cellAbove = getCell(column, row - 1);
-        if (cellAbove && hasBorder(cellAbove.element, "bottom")) {
-          // Cell above has bottom border - it owns the shared border
+        if (
+          cellAbove &&
+          !isCellSelected(column, row - 1) &&
+          hasBorder(cellAbove.element, "bottom")
+        ) {
+          // Cell above is unselected and owns the border - color it
           cellAbove.element.setAttribute("data-selection-border-bottom", "");
         } else {
           // Fallback: color this cell's top border
@@ -166,8 +169,12 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
       } else {
         // This cell doesn't have a left border - check if cell to left owns the shared border
         const cellToLeft = getCell(column - 1, row);
-        if (cellToLeft && hasBorder(cellToLeft.element, "right")) {
-          // Cell to left has right border - it owns the shared border
+        if (
+          cellToLeft &&
+          !isCellSelected(column - 1, row) &&
+          hasBorder(cellToLeft.element, "right")
+        ) {
+          // Cell to left is unselected and owns the border - color it
           cellToLeft.element.setAttribute("data-selection-border-right", "");
         } else {
           // Fallback: color this cell's left border
@@ -186,38 +193,33 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
 
     // SHARED BORDER RESPONSIBILITY: Handle cases where the current cell doesn't own
     // a border, but a neighbor does and needs to show the selection perimeter
-    // IMPORTANT: Only set borders if the neighbor is also on the perimeter (no neighbors beyond it)
+    // IMPORTANT: Only set borders on unselected neighbors that own shared borders
 
     // Handle TOP shared borders: If this cell has a top neighbor and doesn't own its top border,
-    // the neighbor above should color its bottom border ONLY if it's on the bottom perimeter
+    // check if there's an unselected cell above that should show the border
     if (hasTopNeighbor && !hasBorder(element, "top")) {
-      const topCell = selectedCellsMap.get(`${column},${row - 1}`);
-      if (topCell && hasBorder(topCell.element, "bottom")) {
-        // Check if the top neighbor is on the bottom perimeter by checking if it has a selected cell below it
-        const topNeighborHasBottomNeighbor = isCellSelected(
-          column,
-          row - 1 + 1,
-        ); // Check cell below the top neighbor
-        if (!topNeighborHasBottomNeighbor) {
-          topCell.element.setAttribute("data-selection-border-bottom", "");
-        }
+      const cellAbove = getCell(column, row - 1);
+      if (
+        cellAbove &&
+        !isCellSelected(column, row - 1) &&
+        hasBorder(cellAbove.element, "bottom")
+      ) {
+        // Cell above is unselected and owns the border - color it
+        cellAbove.element.setAttribute("data-selection-border-bottom", "");
       }
     }
 
     // Handle LEFT shared borders: If this cell has a left neighbor and doesn't own its left border,
-    // the neighbor to the left should color its right border ONLY if it's on the right perimeter
+    // check if there's an unselected cell to the left that should show the border
     if (hasLeftNeighbor && !hasBorder(element, "left")) {
-      const leftCell = selectedCellsMap.get(`${column - 1},${row}`);
-      if (leftCell && hasBorder(leftCell.element, "right")) {
-        // Check if the left neighbor is on the right perimeter by checking if it has a selected cell to its right
-        const leftNeighborHasRightNeighbor = isCellSelected(
-          column - 1 + 1,
-          row,
-        ); // Check cell to the right of the left neighbor
-        if (!leftNeighborHasRightNeighbor) {
-          // Left neighbor is on right perimeter - it should have colored right border
-          leftCell.element.setAttribute("data-selection-border-right", "");
-        }
+      const cellToLeft = getCell(column - 1, row);
+      if (
+        cellToLeft &&
+        !isCellSelected(column - 1, row) &&
+        hasBorder(cellToLeft.element, "right")
+      ) {
+        // Cell to left is unselected and owns the border - color it
+        cellToLeft.element.setAttribute("data-selection-border-right", "");
       }
     }
   });
