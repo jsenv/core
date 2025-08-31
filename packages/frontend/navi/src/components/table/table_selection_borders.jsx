@@ -202,93 +202,67 @@ const generateCellSelectionPath = (selectedCells) => {
     maxCol = Math.max(maxCol, cell.column);
   });
 
-  // Get the table element to check actual table structure
-  const table = selectedCells[0]?.element?.closest("table");
-  const allCells = table ? Array.from(table.querySelectorAll("td, th")) : [];
-
-  // Create a map of all cells in the table (both selected and unselected)
-  const tableCellGrid = new Map();
-  allCells.forEach((cellElement) => {
-    const row = cellElement.closest("tr");
-    const rowIndex = Array.from(row.parentNode.children).indexOf(row);
-    const columnIndex = Array.from(row.children).indexOf(cellElement);
-    const key = `${columnIndex},${rowIndex}`;
-    tableCellGrid.set(key, {
-      element: cellElement,
-      row: rowIndex,
-      column: columnIndex,
-      selected: grid.has(key),
-    });
-  });
+  // Helper function to check if a cell at given coordinates is selected
+  const isCellSelected = (col, row) => {
+    return grid.has(`${col},${row}`);
+  };
 
   // Find all edge segments that form the outer perimeter
   const edges = [];
 
-  for (let row = minRow; row <= maxRow; row++) {
-    for (let col = minCol; col <= maxCol; col++) {
-      const cellKey = `${col},${row}`;
-      const cell = grid.get(cellKey);
+  // For each selected cell, check all four sides for borders
+  selectedCells.forEach((cell) => {
+    const { left, top, right, bottom, row, column } = cell;
 
-      if (!cell) continue;
-
-      const { left, top, right, bottom } = cell;
-
-      // Check each side of the cell to see if it's on the perimeter
-      // Top edge - no selected cell above OR unselected cell above
-      const cellAbove = tableCellGrid.get(`${col},${row - 1}`);
-      if (!cellAbove || !cellAbove.selected) {
-        edges.push({
-          type: "horizontal",
-          x1: left,
-          y1: top,
-          x2: right,
-          y2: top,
-          direction: "top",
-        });
-      }
-
-      // Bottom edge - no selected cell below OR unselected cell below
-      const cellBelow = tableCellGrid.get(`${col},${row + 1}`);
-      if (!cellBelow || !cellBelow.selected) {
-        edges.push({
-          type: "horizontal",
-          x1: left,
-          y1: bottom,
-          x2: right,
-          y2: bottom,
-          direction: "bottom",
-        });
-      }
-
-      // Left edge - no selected cell to the left OR unselected cell to the left
-      const cellLeft = tableCellGrid.get(`${col - 1},${row}`);
-      if (!cellLeft || !cellLeft.selected) {
-        edges.push({
-          type: "vertical",
-          x1: left,
-          y1: top,
-          x2: left,
-          y2: bottom,
-          direction: "left",
-        });
-      }
-
-      // Right edge - no selected cell to the right OR unselected cell to the right
-      const cellRight = tableCellGrid.get(`${col + 1},${row}`);
-      if (!cellRight || !cellRight.selected) {
-        edges.push({
-          type: "vertical",
-          x1: right,
-          y1: top,
-          x2: right,
-          y2: bottom,
-          direction: "right",
-        });
-      }
+    // Check each side of the cell to see if it's on the perimeter
+    // Top edge - no selected cell above
+    if (!isCellSelected(column, row - 1)) {
+      edges.push({
+        type: "horizontal",
+        x1: left,
+        y1: top,
+        x2: right,
+        y2: top,
+        direction: "top",
+      });
     }
-  }
 
-  // Convert edges to a continuous path
+    // Bottom edge - no selected cell below
+    if (!isCellSelected(column, row + 1)) {
+      edges.push({
+        type: "horizontal",
+        x1: left,
+        y1: bottom,
+        x2: right,
+        y2: bottom,
+        direction: "bottom",
+      });
+    }
+
+    // Left edge - no selected cell to the left
+    if (!isCellSelected(column - 1, row)) {
+      edges.push({
+        type: "vertical",
+        x1: left,
+        y1: top,
+        x2: left,
+        y2: bottom,
+        direction: "left",
+      });
+    }
+
+    // Right edge - no selected cell to the right
+    if (!isCellSelected(column + 1, row)) {
+      edges.push({
+        type: "vertical",
+        x1: right,
+        y1: top,
+        x2: right,
+        y2: bottom,
+        direction: "right",
+      });
+    }
+  }); // Convert edges to a continuous path
   return edgesToSVGPath(edges);
 };
 
