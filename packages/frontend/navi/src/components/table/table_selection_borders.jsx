@@ -205,14 +205,17 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
     }
 
     // Handle LEFT shared borders: If this cell has a left neighbor and doesn't own its left border,
-    // the neighbor to the left should color its right border ONLY if the neighbor is also on perimeter
+    // the neighbor to the left should color its right border ONLY if it's on the right perimeter
     if (hasLeftNeighbor && !hasBorder(element, "left")) {
       const leftCell = selectedCellsMap.get(`${column - 1},${row}`);
       if (leftCell && hasBorder(leftCell.element, "right")) {
-        // Check if the left neighbor is on the left perimeter (no selected cell to its left)
-        const leftNeighborHasLeftNeighbor = isCellSelected(column - 2, row);
-        if (!leftNeighborHasLeftNeighbor) {
-          // Left neighbor is on perimeter - it should have colored right border
+        // Check if the left neighbor is on the right perimeter by checking if it has a selected cell to its right
+        const leftNeighborHasRightNeighbor = isCellSelected(
+          column - 1 + 1,
+          row,
+        ); // Check cell to the right of the left neighbor
+        if (!leftNeighborHasRightNeighbor) {
+          // Left neighbor is on right perimeter - it should have colored right border
           leftCell.element.setAttribute("data-selection-border-right", "");
         }
       }
