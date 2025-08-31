@@ -125,6 +125,7 @@ import.meta.css = /* css */ `
   }
 
   td[data-row-contains-selected] {
+    position: relative;
     font-weight: 500;
     color: #444;
   }
@@ -141,6 +142,7 @@ import.meta.css = /* css */ `
     z-index: 1;
   }
   th[data-column-contains-selected] {
+    position: relative;
     font-weight: 600;
     color: #444;
   }
@@ -155,11 +157,6 @@ import.meta.css = /* css */ `
     background: rgba(128, 128, 128, 0.4);
     pointer-events: none;
     z-index: 1;
-  }
-
-  /* Container for table with relative positioning */
-  .table_container {
-    position: relative;
   }
 `;
 
