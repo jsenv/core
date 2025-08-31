@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import.meta.css = /* css */ `
   .table_selection_overlay {
@@ -7,18 +7,10 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  .table_selection_overlay svg {
+  .table_selection_overlay canvas {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    overflow: visible; /* because svg is not taking the table dimensions */
-  }
-
-  .table_selection_overlay svg path {
-    fill: none;
-    stroke: #0078d4;
-    stroke-width: 1;
-    vector-effect: non-scaling-stroke;
   }
 
   /* Hide borders during drag selection */
@@ -29,6 +21,7 @@ import.meta.css = /* css */ `
 
 export const TableSelectionBorders = ({ tableRef }) => {
   const [selectionData, setSelectionData] = useState(null);
+  const canvasRef = useRef(null);
 
   useLayoutEffect(() => {
     const tableSelectionObserver = createTableSelectionObserver(
@@ -41,18 +34,24 @@ export const TableSelectionBorders = ({ tableRef }) => {
     return tableSelectionObserver.cleanup;
   }, [tableRef]);
 
-  if (!selectionData || selectionData.selectedCells.length === 0) {
-    return null;
-  }
+  // Draw the selection borders on canvas whenever selection data changes
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !selectionData || selectionData.selectedCells.length === 0) {
+      if (canvas) {
+        // Clear canvas if no selection
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      return;
+    }
 
-  const { selectedCells } = selectionData;
-  const borderPath = generateSelectionBorderPath(selectedCells);
+    drawSelectionBorders(canvas, selectionData.selectedCells);
+  }, [selectionData]);
 
   return (
     <div className="table_selection_overlay">
-      <svg>
-        <path d={borderPath} />
-      </svg>
+      <canvas ref={canvasRef} />
     </div>
   );
 };
@@ -177,19 +176,27 @@ const createTableSelectionObserver = (table) => {
   return tableSelection;
 };
 
-// Generate an SVG path that follows the perimeter of the selection
-const generateSelectionBorderPath = (selectedCells) => {
-  if (selectedCells.length === 0) {
-    return "";
-  }
+// Draw selection borders on canvas using filled rectangles
+const drawSelectionBorders = (canvas, selectedCells) => {
+  const ctx = canvas.getContext("2d");
+  const devicePixelRatio = window.devicePixelRatio || 1;
 
-  // Simple approach: treat all selected cells equally and use edge-tracing
-  return generateCellSelectionPath(selectedCells);
-};
+  // Set canvas size for high-DPI displays
+  const displayWidth = canvas.width;
+  const displayHeight = canvas.height;
+  canvas.width = displayWidth * devicePixelRatio;
+  canvas.height = displayHeight * devicePixelRatio;
 
-// Generate path for cell selections - creates proper perimeter based on cell grid
-const generateCellSelectionPath = (selectedCells) => {
-  if (selectedCells.length === 0) return "";
+  // Scale context for high-DPI
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+
+  // Clear canvas
+  ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+  // Set up drawing context
+  ctx.fillStyle = "#0078d4";
+  ctx.globalAlpha = 0.5;
+  ctx.imageSmoothingEnabled = false;
 
   // Create a grid to track selected cells
   const grid = new Map();
@@ -203,186 +210,28 @@ const generateCellSelectionPath = (selectedCells) => {
     return grid.has(`${col},${row}`);
   };
 
-  // Find all boundary edges that form the perimeter
-  const edges = [];
-
+  // Draw borders for each selected cell
   selectedCells.forEach((cell) => {
     const { left, top, right, bottom, row, column } = cell;
 
-    // Check each side of the cell to see if it's on the perimeter
-    // Top edge - no selected cell above
-    if (!isCellSelected(column, row - 1)) {
-      edges.push({
-        x1: left,
-        y1: top,
-        x2: right,
-        y2: top,
-        type: "horizontal",
-        direction: "top",
-      });
-    }
+    // Check each side of the cell to see if it needs a border
+    const needsTopBorder = !isCellSelected(column, row - 1);
+    const needsBottomBorder = !isCellSelected(column, row + 1);
+    const needsLeftBorder = !isCellSelected(column - 1, row);
+    const needsRightBorder = !isCellSelected(column + 1, row);
 
-    // Bottom edge - no selected cell below
-    if (!isCellSelected(column, row + 1)) {
-      edges.push({
-        x1: left,
-        y1: bottom,
-        x2: right,
-        y2: bottom,
-        type: "horizontal",
-        direction: "bottom",
-      });
+    // Draw borders as filled rectangles (1px thick)
+    if (needsTopBorder) {
+      ctx.fillRect(left, top, right - left, 1);
     }
-
-    // Left edge - no selected cell to the left
-    if (!isCellSelected(column - 1, row)) {
-      edges.push({
-        x1: left,
-        y1: top,
-        x2: left,
-        y2: bottom,
-        type: "vertical",
-        direction: "left",
-      });
+    if (needsBottomBorder) {
+      ctx.fillRect(left, bottom - 1, right - left, 1);
     }
-
-    // Right edge - no selected cell to the right
-    if (!isCellSelected(column + 1, row)) {
-      edges.push({
-        x1: right,
-        y1: top,
-        x2: right,
-        y2: bottom,
-        type: "vertical",
-        direction: "right",
-      });
+    if (needsLeftBorder) {
+      ctx.fillRect(left, top, 1, bottom - top);
+    }
+    if (needsRightBorder) {
+      ctx.fillRect(right - 1, top, 1, bottom - top);
     }
   });
-
-  if (edges.length === 0) return "";
-
-  // Trace the perimeter by following connected edges
-  const usedEdges = new Set();
-  let pathData = "";
-
-  // Find a starting edge (leftmost top edge)
-  const sortedEdges = edges.sort((a, b) => {
-    if (Math.abs(a.y1 - b.y1) < 0.1) {
-      return a.x1 - b.x1;
-    }
-    return a.y1 - b.y1;
-  });
-
-  let currentEdge = sortedEdges[0];
-  let currentIndex = edges.indexOf(currentEdge);
-
-  if (!currentEdge) return "";
-
-  // Start the path
-  pathData = `M ${currentEdge.x1} ${currentEdge.y1}`;
-  const startX = currentEdge.x1;
-  const startY = currentEdge.y1;
-
-  while (currentEdge && !usedEdges.has(currentIndex)) {
-    usedEdges.add(currentIndex);
-
-    // Add the end point of current edge
-    pathData += ` L ${currentEdge.x2} ${currentEdge.y2}`;
-
-    // Find the next connected edge
-    const nextEdge = findNextConnectedEdge(currentEdge, edges, usedEdges);
-
-    if (!nextEdge) {
-      // No more edges found - check if we can close the path
-      if (
-        Math.abs(currentEdge.x2 - startX) < 0.1 &&
-        Math.abs(currentEdge.y2 - startY) < 0.1
-      ) {
-        break; // Path is already closed
-      }
-
-      // Try to find any edge that connects back to start
-      for (let i = 0; i < edges.length; i++) {
-        if (usedEdges.has(i)) continue;
-
-        const edge = edges[i];
-        if (
-          Math.abs(edge.x1 - currentEdge.x2) < 0.1 &&
-          Math.abs(edge.y1 - currentEdge.y2) < 0.1
-        ) {
-          currentEdge = edge;
-          currentIndex = i;
-          break;
-        }
-        if (
-          Math.abs(edge.x2 - currentEdge.x2) < 0.1 &&
-          Math.abs(edge.y2 - currentEdge.y2) < 0.1
-        ) {
-          // Reverse the edge
-          currentEdge = {
-            x1: edge.x2,
-            y1: edge.y2,
-            x2: edge.x1,
-            y2: edge.y1,
-            type: edge.type,
-            direction: edge.direction,
-          };
-          currentIndex = i;
-          break;
-        }
-      }
-
-      if (!currentEdge || usedEdges.has(currentIndex)) break;
-    } else {
-      currentEdge = nextEdge.edge;
-      currentIndex = nextEdge.index;
-    }
-
-    // Safety check to prevent infinite loops
-    if (usedEdges.size > edges.length) break;
-  }
-
-  pathData += " Z"; // Close the path
-  return pathData;
-};
-
-// Find the next edge that connects to the current edge's endpoint
-const findNextConnectedEdge = (currentEdge, allEdges, usedEdges) => {
-  const tolerance = 0.1;
-  const endX = currentEdge.x2;
-  const endY = currentEdge.y2;
-
-  for (let i = 0; i < allEdges.length; i++) {
-    if (usedEdges.has(i)) continue;
-
-    const edge = allEdges[i];
-
-    // Check if this edge starts where the current edge ends
-    if (
-      Math.abs(edge.x1 - endX) < tolerance &&
-      Math.abs(edge.y1 - endY) < tolerance
-    ) {
-      return { edge, index: i };
-    }
-
-    // Check if this edge ends where the current edge ends (reverse it)
-    if (
-      Math.abs(edge.x2 - endX) < tolerance &&
-      Math.abs(edge.y2 - endY) < tolerance
-    ) {
-      return {
-        edge: {
-          x1: edge.x2,
-          y1: edge.y2,
-          x2: edge.x1,
-          y2: edge.y1,
-          type: edge.type,
-          direction: edge.direction,
-        },
-        index: i,
-      };
-    }
-  }
-
-  return null;
 };
