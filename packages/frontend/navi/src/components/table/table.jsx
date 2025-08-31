@@ -251,10 +251,7 @@ export const Table = forwardRef((props, ref) => {
 
 const RowNumberHeaderCell = () => {
   return (
-    <th
-      className="navi_table_cell navi_row_number_header_cell"
-      style={{ textAlign: "center" }}
-    >
+    <th className="navi_row_number_cell" style={{ textAlign: "center" }}>
       #
     </th>
   );
@@ -274,7 +271,7 @@ const RowNumberCell = ({ row, columns, rowWithSomeSelectedCell }) => {
   return (
     <td
       ref={cellRef}
-      className="navi_table_cell navi_row_number_cell"
+      className="navi_row_number_cell"
       data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
       data-value={rowValue}
       data-selection-name="row"
@@ -332,7 +329,7 @@ const DataCell = ({ columnName, row, value }) => {
   return (
     <td
       ref={cellRef}
-      className="navi_table_cell navi_data_cell"
+      className="navi_data_cell"
       tabIndex={-1}
       data-value={cellId}
       data-selection-name="cell"
