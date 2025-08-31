@@ -39,6 +39,7 @@ export const useSelectionProvider = ({
   layout,
   value,
   onChange,
+  multiple,
 }) => {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -53,6 +54,7 @@ export const useSelectionProvider = ({
         value,
         onChange,
         elementRef,
+        multiple,
       });
     }
     return createLinearSelection({
@@ -60,8 +62,9 @@ export const useSelectionProvider = ({
       onChange,
       axis: layout,
       elementRef,
+      multiple,
     });
-  }, [layout, elementRef]);
+  }, [layout, multiple, elementRef]);
 
   // Update the selection's internal values when external value changes
   useEffect(() => {
@@ -82,10 +85,11 @@ export const useSelectionProvider = ({
 };
 // Base Selection - shared functionality between grid and linear
 const createBaseSelection = ({
-  registry,
   value = [],
+  registry,
   onChange,
   type,
+  multiple,
   navigationMethods: {
     getElementRange,
     getElementAfter,
@@ -311,6 +315,7 @@ const createBaseSelection = ({
 
   const baseSelection = {
     type,
+    multiple,
     get value() {
       return value;
     },
@@ -350,7 +355,7 @@ const createBaseSelection = ({
   return baseSelection;
 };
 // Grid Selection Provider - for 2D layouts like tables
-const createGridSelection = ({ value = [], onChange }) => {
+const createGridSelection = ({ ...options }) => {
   const registry = new Set();
   const navigationMethods = {
     getElementRange: (fromElement, toElement) => {
@@ -512,9 +517,8 @@ const createGridSelection = ({ value = [], onChange }) => {
     },
   };
   const gridSelection = createBaseSelection({
+    ...options,
     registry,
-    value,
-    onChange,
     type: "grid",
     navigationMethods,
   });
@@ -523,10 +527,9 @@ const createGridSelection = ({ value = [], onChange }) => {
 };
 // Linear Selection Provider - for 1D layouts like lists
 const createLinearSelection = ({
-  value = [],
-  onChange,
   axis = "vertical", // "horizontal" or "vertical"
   elementRef, // Root element to scope DOM traversal
+  ...options
 }) => {
   if (!["horizontal", "vertical"].includes(axis)) {
     throw new Error(
@@ -677,9 +680,8 @@ const createLinearSelection = ({
 
   // Create base selection with navigation methods
   const linearSelection = createBaseSelection({
+    ...options,
     registry,
-    value,
-    onChange,
     type: "linear",
     navigationMethods,
   });
