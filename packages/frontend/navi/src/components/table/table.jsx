@@ -126,6 +126,25 @@ import.meta.css = /* css */ `
     position: relative;
   }
 
+  /* Sticky column cells need extra padding-right for thick border */
+  .navi_table td[data-sticky]:first-child,
+  .navi_table th[data-sticky]:first-child {
+    padding-right: calc(8px + var(--sticky-border-size));
+  }
+
+  /* Sticky row cells need extra padding-bottom for thick border */
+  .navi_table tr[data-sticky]:first-child th,
+  .navi_table tr[data-sticky]:first-child td {
+    padding-bottom: calc(8px + var(--sticky-border-size));
+  }
+
+  /* Corner cell (sticky row + sticky column) needs both extra paddings */
+  .navi_table tr[data-sticky]:first-child th[data-sticky]:first-child,
+  .navi_table tr[data-sticky]:first-child td[data-sticky]:first-child {
+    padding-right: calc(8px + var(--sticky-border-size));
+    padding-bottom: calc(8px + var(--sticky-border-size));
+  }
+
   .navi_table td:focus,
   .navi_table th:focus {
     outline: none; /* Remove default outline */
