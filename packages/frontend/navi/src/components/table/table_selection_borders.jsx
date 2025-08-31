@@ -262,8 +262,22 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
     // BOTTOM BORDER: Color if no selected cell below (perimeter edge)
     if (!hasBottomNeighbor) {
       if (hasBorder(element, "bottom")) {
-        // This cell has a bottom border - color it
+        // This cell has a bottom border - it owns the border
         element.setAttribute("data-selection-border-bottom", "");
+      } else {
+        // This cell doesn't have a bottom border - check if cell below owns the shared border
+        const cellBelow = getCell(column, row + 1);
+        if (
+          cellBelow &&
+          !isCellSelected(column, row + 1) &&
+          hasBorder(cellBelow.element, "top")
+        ) {
+          // Cell below is unselected and owns the border - color it
+          cellBelow.element.setAttribute("data-selection-border-top", "");
+        } else {
+          // Fallback: color this cell's bottom border
+          element.setAttribute("data-selection-border-bottom", "");
+        }
       }
     }
 
@@ -292,8 +306,22 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
     // RIGHT BORDER: Color if no selected cell to the right (perimeter edge)
     if (!hasRightNeighbor) {
       if (hasBorder(element, "right")) {
-        // This cell has a right border - color it
+        // This cell has a right border - it owns the border
         element.setAttribute("data-selection-border-right", "");
+      } else {
+        // This cell doesn't have a right border - check if cell to right owns the shared border
+        const cellToRight = getCell(column + 1, row);
+        if (
+          cellToRight &&
+          !isCellSelected(column + 1, row) &&
+          hasBorder(cellToRight.element, "left")
+        ) {
+          // Cell to right is unselected and owns the border - color it
+          cellToRight.element.setAttribute("data-selection-border-left", "");
+        } else {
+          // Fallback: color this cell's right border
+          element.setAttribute("data-selection-border-right", "");
+        }
       }
     }
 
@@ -326,6 +354,34 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
       ) {
         // Cell to left is unselected and owns the border - color it
         cellToLeft.element.setAttribute("data-selection-border-right", "");
+      }
+    }
+
+    // Handle BOTTOM shared borders: If this cell has a bottom neighbor and doesn't own its bottom border,
+    // check if there's an unselected cell below that should show the border
+    if (hasBottomNeighbor && !hasBorder(element, "bottom")) {
+      const cellBelow = getCell(column, row + 1);
+      if (
+        cellBelow &&
+        !isCellSelected(column, row + 1) &&
+        hasBorder(cellBelow.element, "top")
+      ) {
+        // Cell below is unselected and owns the border - color it
+        cellBelow.element.setAttribute("data-selection-border-top", "");
+      }
+    }
+
+    // Handle RIGHT shared borders: If this cell has a right neighbor and doesn't own its right border,
+    // check if there's an unselected cell to the right that should show the border
+    if (hasRightNeighbor && !hasBorder(element, "right")) {
+      const cellToRight = getCell(column + 1, row);
+      if (
+        cellToRight &&
+        !isCellSelected(column + 1, row) &&
+        hasBorder(cellToRight.element, "left")
+      ) {
+        // Cell to right is unselected and owns the border - color it
+        cellToRight.element.setAttribute("data-selection-border-left", "");
       }
     }
   });

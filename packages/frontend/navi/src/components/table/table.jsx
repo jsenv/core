@@ -58,8 +58,6 @@ import.meta.css = /* css */ `
   .navi_table {
     border-radius: 2px;
     border-spacing: 0; /* Required for manual border collapse */
-    /* Add outer border to the table itself for right and bottom edges */
-    border: 1px solid var(--border-color);
   }
 
   .navi_table th,
