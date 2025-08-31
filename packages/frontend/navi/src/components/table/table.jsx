@@ -87,6 +87,9 @@ import.meta.css = /* css */ `
     position: sticky;
     top: 0;
   }
+  .navi_table th[data-sticky] {
+    z-index: 3;
+  }
 
   /* Number column specific styling */
   .navi_row_number_cell {
