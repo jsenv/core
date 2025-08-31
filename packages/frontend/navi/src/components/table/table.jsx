@@ -2,6 +2,12 @@
  *
  * Next steps:
  *
+ * - Vérifier commen ça rend avec sticky + sans border collapse
+ *
+ * - Si on est satisfait on va essayer d'implementer le border collapse
+ *
+ *
+ *
  * - Fixed first row
  * - Fixed first column
  * - Shortcuts to act on selection
@@ -15,9 +21,6 @@
  * - A last row with buttons like a delete button with a delete icon
  * - Ability to delete a row (button + a shortcut key cmd + delete) with a confirmation message
  * - Ability to update a cell (double click to edit, enter to validate, esc to cancel)
- *
- * border-block-end might be the solution to fill partial borders
- * maybe also https://developer.mozilla.org/fr/docs/Web/CSS/border-inline-start-color
  *
  */
 
