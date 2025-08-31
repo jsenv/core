@@ -4,150 +4,139 @@ import.meta.css = /* css */ `
   /* Selection border styling using box-shadow to override table borders */
   /* Higher specificity than table ::before pseudo-elements */
 
-  /* Single border selections */
+  /* Default mode: each cell has all inset borders, selection only overrides selected cell borders */
+  /* Adjacent cells keep their red borders, selected cell gets blue borders */
+
+  /* Single border selections - Default mode */
   .navi_table [data-selection-border-top]::before {
     box-shadow:
-      0 -1px 0 0 var(--selection-border-color),
-      /* Top selection border */ 1px 0 0 0 var(--border-color),
-      /* Right table border */ 0 1px 0 0 var(--border-color),
-      /* Bottom table border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      /* Top selection border */ inset -1px 0 0 0 var(--border-color),
+      /* Left table border */ inset 1px 0 0 0 var(--border-color),
+      /* Right table border */ inset 0 1px 0 0 var(--border-color); /* Bottom table border */
   }
 
   .navi_table [data-selection-border-right]::before {
     box-shadow:
-      0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ 0 1px 0 0 var(--border-color),
-      /* Bottom table border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top table border */ inset -1px 0 0 0 var(--border-color),
+      /* Left table border */ inset 1px 0 0 0 var(--selection-border-color),
+      /* Right selection border */ inset 0 1px 0 0 var(--border-color); /* Bottom table border */
   }
 
   .navi_table [data-selection-border-bottom]::before {
     box-shadow:
-      0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 1px 0 0 0 var(--border-color),
-      /* Right table border */ 0 1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top table border */ inset -1px 0 0 0 var(--border-color),
+      /* Left table border */ inset 1px 0 0 0 var(--border-color),
+      /* Right table border */ inset 0 1px 0 0 var(--selection-border-color); /* Bottom selection border */
   }
 
   .navi_table [data-selection-border-left]::before {
     box-shadow:
-      0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 1px 0 0 0 var(--border-color),
-      /* Right table border */ 0 1px 0 0 var(--border-color),
-      /* Bottom table border */ -1px 0 0 0 var(--selection-border-color); /* Left selection border */
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top table border */ inset -1px 0 0 0 var(--selection-border-color),
+      /* Left selection border */ inset 1px 0 0 0 var(--border-color),
+      /* Right table border */ inset 0 1px 0 0 var(--border-color); /* Bottom table border */
   }
 
   /* Two border combinations */
   .navi_table [data-selection-border-top][data-selection-border-right]::before {
     box-shadow:
-      0 -1px 0 0 var(--selection-border-color),
-      /* Top selection border */ 1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ 0 1px 0 0 var(--border-color),
-      /* Bottom table border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      /* Top selection border */ inset -1px 0 0 0 var(--border-color),
+      /* Left table border */ inset 1px 0 0 0 var(--selection-border-color),
+      /* Right selection border */ inset 0 1px 0 0 var(--border-color); /* Bottom table border */
   }
 
   .navi_table
     [data-selection-border-top][data-selection-border-bottom]::before {
     box-shadow:
-      0 -1px 0 0 var(--selection-border-color),
-      /* Top selection border */ 1px 0 0 0 var(--border-color),
-      /* Right table border */ 0 1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      /* Top selection border */ inset -1px 0 0 0 var(--border-color),
+      /* Left table border */ inset 1px 0 0 0 var(--border-color),
+      /* Right table border */ inset 0 1px 0 0 var(--selection-border-color); /* Bottom selection border */
   }
 
   .navi_table [data-selection-border-top][data-selection-border-left]::before {
     box-shadow:
-      0 -1px 0 0 var(--selection-border-color),
-      /* Top selection border */ 1px 0 0 0 var(--border-color),
-      /* Right table border */ 0 1px 0 0 var(--border-color),
-      /* Bottom table border */ -1px 0 0 0 var(--selection-border-color); /* Left selection border */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      /* Top selection border */ inset -1px 0 0 0 var(--selection-border-color),
+      /* Left selection border */ inset 1px 0 0 0 var(--border-color),
+      /* Right table border */ inset 0 1px 0 0 var(--border-color); /* Bottom table border */
   }
 
   .navi_table
     [data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
-      0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ 0 1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top table border */ inset -1px 0 0 0 var(--border-color),
+      /* Left table border */ inset 1px 0 0 0 var(--selection-border-color),
+      /* Right selection border */ inset 0 1px 0 0 var(--selection-border-color); /* Bottom selection border */
   }
 
   .navi_table
     [data-selection-border-right][data-selection-border-left]::before {
     box-shadow:
-      0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ 0 1px 0 0 var(--border-color),
-      /* Bottom table border */ -1px 0 0 0 var(--selection-border-color); /* Left selection border */
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top table border */ inset -1px 0 0 0 var(--selection-border-color),
+      /* Left selection border */ inset 1px 0 0 0 var(--selection-border-color),
+      /* Right selection border */ inset 0 1px 0 0 var(--border-color); /* Bottom table border */
   }
 
   .navi_table
     [data-selection-border-bottom][data-selection-border-left]::before {
     box-shadow:
-      0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 1px 0 0 0 var(--border-color),
-      /* Right table border */ 0 1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ -1px 0 0 0 var(--selection-border-color); /* Left selection border */
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top table border */ inset -1px 0 0 0 var(--selection-border-color),
+      /* Left selection border */ inset 1px 0 0 0 var(--border-color),
+      /* Right table border */ inset 0 1px 0 0 var(--selection-border-color); /* Bottom selection border */
   }
-
   /* Three border combinations */
   .navi_table
     [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
-      0 -1px 0 0 var(--selection-border-color),
-      /* Top selection border */ 1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ 0 1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
-  }
-
-  .navi_table
-    [data-selection-border-top][data-selection-border-right][data-selection-border-left]::before {
-    box-shadow:
-      0 -1px 0 0 var(--selection-border-color),
-      /* Top selection border */ 1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ 0 1px 0 0 var(--border-color),
-      /* Bottom table border */ -1px 0 0 0 var(--selection-border-color); /* Left selection border */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      /* Top selection border */ inset -1px 0 0 0 var(--border-color),
+      /* Left table border */ inset 1px 0 0 0 var(--selection-border-color),
+      /* Right selection border */ inset 0 1px 0 0 var(--selection-border-color); /* Bottom selection border */
   }
 
   .navi_table
     [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::before {
     box-shadow:
-      0 -1px 0 0 var(--selection-border-color),
-      /* Top selection border */ 1px 0 0 0 var(--border-color),
-      /* Right table border */ 0 1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ -1px 0 0 0 var(--selection-border-color); /* Left selection border */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      /* Top selection border */ inset -1px 0 0 0 var(--selection-border-color),
+      /* Left selection border */ inset 1px 0 0 0 var(--border-color),
+      /* Right table border */ inset 0 1px 0 0 var(--selection-border-color); /* Bottom selection border */
   }
 
   .navi_table
     [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::before {
     box-shadow:
-      0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ 0 1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ -1px 0 0 0 var(--selection-border-color); /* Left selection border */
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top table border */ inset -1px 0 0 0 var(--selection-border-color),
+      /* Left selection border */ inset 1px 0 0 0 var(--selection-border-color),
+      /* Right selection border */ inset 0 1px 0 0 var(--selection-border-color); /* Bottom selection border */
   }
 
-  /* All four borders - complete selection border */
+  .navi_table
+    [data-selection-border-top][data-selection-border-right][data-selection-border-left]::before {
+    box-shadow:
+      inset 0 -1px 0 0 var(--selection-border-color),
+      /* Top selection border */ inset -1px 0 0 0 var(--selection-border-color),
+      /* Left selection border */ inset 1px 0 0 0 var(--selection-border-color),
+      /* Right selection border */ inset 0 1px 0 0 var(--border-color); /* Bottom table border */
+  }
+
+  /* Four border combination */
   .navi_table
     [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::before {
     box-shadow:
-      0 -1px 0 0 var(--selection-border-color),
-      /* Top selection border */ 1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ 0 1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ -1px 0 0 0 var(--selection-border-color); /* Left selection border */
-  }
-
-  /* Hide selection borders during drag selection - restore table borders */
-  .navi_table[data-drag-selecting] [data-selection-border-top]::before,
-  .navi_table[data-drag-selecting] [data-selection-border-right]::before,
-  .navi_table[data-drag-selecting] [data-selection-border-bottom]::before,
-  .navi_table[data-drag-selecting] [data-selection-border-left]::before {
-    /* Restore original table borders during drag */
-    box-shadow:
-      0 0 0 0 var(--border-color),
-      /* Placeholder for top */ 1px 0 0 0 var(--border-color),
-      /* Right table border */ 0 1px 0 0 var(--border-color),
-      /* Bottom table border */ 0 0 0 0 var(--border-color); /* Placeholder for left */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      /* Top selection border */ inset -1px 0 0 0 var(--selection-border-color),
+      /* Left selection border */ inset 1px 0 0 0 var(--selection-border-color),
+      /* Right selection border */ inset 0 1px 0 0 var(--selection-border-color); /* Bottom selection border */
   }
 `;
 export const TableSelectionBorders = ({ tableRef, color }) => {
