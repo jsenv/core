@@ -34,6 +34,10 @@ import.meta.css = /* css */ `
     border-collapse: collapse;
     border: 1px solid #e0e0e0;
     border-radius: 2px;
+  }
+
+  /* Remove table's left border when first column is sticky */
+  .navi_table:has(td[data-sticky]:first-child, th[data-sticky]:first-child) {
     border-left: none;
   }
 
@@ -41,6 +45,12 @@ import.meta.css = /* css */ `
   .navi_table td {
     border: 1px solid #e0e0e0;
     text-align: left;
+  }
+
+  /* Remove left border from cells that come after a sticky column */
+  .navi_table td[data-sticky] + td,
+  .navi_table th[data-sticky] + th {
+    border-left: none;
   }
 
   .navi_table th {
@@ -67,48 +77,27 @@ import.meta.css = /* css */ `
   .navi_table th[data-sticky] {
     position: sticky;
     left: 0;
+    border-left-color: transparent;
+    border-right-color: transparent;
+    z-index: 10; /* Ensure sticky elements stay above regular cells */
   }
 
-  /* When sticky elements are actually stuck, remove natural borders and use pseudo-elements */
-  .navi_table td[data-sticky],
-  .navi_table th[data-sticky] {
-    border-left: none;
-    border-right: none;
-    z-index: 2; /* above cell selection */
-  }
-
-  /* Left border using ::before pseudo-element */
+  /* Left border using ::before pseudo-element with proper border */
   .navi_table td[data-sticky]::before,
   .navi_table th[data-sticky]::before {
     content: "";
     position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: #e0e0e0;
+    inset: -1px; /* Cover full height and position at left edge */
+    border-left: 1px solid #e0e0e0;
+    border-right: 1px solid #e0e0e0;
     pointer-events: none;
     z-index: 1;
   }
 
-  /* Right border using ::after pseudo-element */
-  .navi_table td[data-sticky]::after,
-  .navi_table th[data-sticky]::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: #e0e0e0;
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  /* Hide right border when next sibling is also stuck (avoid doubling) */
+  /* Hide right border when next sibling is also sticky (avoid doubling) */
   .navi_table td[data-sticky] + td[data-sticky]::before,
   .navi_table th[data-sticky] + th[data-sticky]::before {
-    display: none;
+    border-right: none;
   }
 
   /* Ensure content appears above pseudo-element borders */
