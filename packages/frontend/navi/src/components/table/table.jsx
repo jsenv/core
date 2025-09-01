@@ -298,34 +298,20 @@ import.meta.css = /* css */ `
   .navi_table td[data-sticky]:first-child::before,
   .navi_table th[data-sticky]:first-child::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color),
-      /* Top border */ -1px 0 0 0 var(--border-color),
-      /* Left border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
-  }
-
-  /* Sticky column yellow right border overlay */
-  .navi_table td[data-sticky]:first-child::after,
-  .navi_table th[data-sticky]:first-child::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    box-shadow: inset calc(-1 * var(--sticky-border-size)) 0 0 0
-      var(--sticky-border-color); /* Thick yellow right border inside */
-    z-index: calc(var(--z-index-sticky-row-box-shadow) + 1);
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top border */ inset -1px 0 0 0 var(--border-color),
+      /* Left border */ inset var(--sticky-border-size) 0 0 0
+        var(--sticky-border-color),
+      /* Thick yellow right border inside */ inset 0 1px 0 0 var(--border-color); /* Bottom border */
   }
 
   .navi_table tr[data-sticky]:first-child th::before,
   .navi_table tr[data-sticky]:first-child td::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color),
-      /* Top border */ -1px 0 0 0 var(--border-color),
-      /* Left border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ inset 0 calc(-1 * var(--sticky-border-size)) 0 0
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top border */ inset -1px 0 0 0 var(--border-color),
+      /* Left border */ inset 1px 0 0 0 var(--border-color),
+      /* Right border */ inset 0 var(--sticky-border-size) 0 0
         var(--sticky-border-color); /* Thick yellow bottom border inside */
     z-index: var(--z-index-sticky-row-box-shadow);
   }
@@ -333,37 +319,23 @@ import.meta.css = /* css */ `
   .navi_table tr[data-sticky]:first-child th:first-child::before,
   .navi_table tr[data-sticky]:first-child td:first-child::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color),
-      /* Top border */ -1px 0 0 0 var(--border-color),
-      /* Left border */ inset calc(-1 * var(--sticky-border-size)) 0 0 0
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top border */ inset -1px 0 0 0 var(--border-color),
+      /* Left border */ inset var(--sticky-border-size) 0 0 0
         var(--sticky-border-color),
-      /* Thick yellow right border inside */ inset 0
-        calc(-1 * var(--sticky-border-size)) 0 0 var(--sticky-border-color); /* Thick yellow bottom border inside */
+      /* Thick yellow right border inside */ inset 0 var(--sticky-border-size) 0
+        0 var(--sticky-border-color); /* Thick yellow bottom border inside */
     z-index: var(--z-index-sticky-row-box-shadow);
   }
 
   .navi_table tr:not(:first-child) td[data-sticky]:first-child::before,
   .navi_table tr:not(:first-child) th[data-sticky]:first-child::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color),
-      /* Top border */ -1px 0 0 0 var(--border-color),
-      /* Left border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
-  }
-
-  /* Sticky column yellow right border overlay for non-header rows */
-  .navi_table tr:not(:first-child) td[data-sticky]:first-child::after,
-  .navi_table tr:not(:first-child) th[data-sticky]:first-child::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    box-shadow: inset calc(-1 * var(--sticky-border-size)) 0 0 0
-      var(--sticky-border-color); /* Thick yellow right border inside */
-    z-index: calc(var(--z-index-sticky-row-box-shadow) + 1);
+      inset 0 -1px 0 0 var(--border-color),
+      /* Top border */ inset -1px 0 0 0 var(--border-color),
+      /* Left border */ inset var(--sticky-border-size) 0 0 0
+        var(--sticky-border-color),
+      /* Thick yellow right border inside */ inset 0 1px 0 0 var(--border-color); /* Bottom border */
   }
 `;
 
