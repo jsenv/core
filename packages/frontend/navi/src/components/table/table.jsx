@@ -26,7 +26,7 @@
 
 import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
+import { useImperativeHandle, useRef } from "preact/hooks";
 import {
   useSelectableElement,
   useSelectionProvider,
@@ -48,9 +48,11 @@ import.meta.css = /* css */ `
     --sticky-border-color: yellow;
 
     --z-index-focused: 0; /* must be above selection and anything else  */
-    --z-index-sticky-cell: 1; /* must be above selection  */
-    --z-index-sticky-row: 2; /* must be above selection sticky cell  */
-    --z-index-sticky-corner: 3; /* must be above first column and first row  */
+    --z-index-sticky-cell: 0; /* must be above selection  */
+    --z-index-sticky-row: 1; /* must be above selection sticky cell */
+    --z-index-sticky-row-box-shadow: 2;
+    --z-index-sticky-corner: 0; /* must be above first column and first row  */
+    --z-index-box-shadow-border: 0;
 
     position: relative;
   }
@@ -73,7 +75,7 @@ import.meta.css = /* css */ `
   .navi_table td::before {
     content: "";
     position: absolute;
-    z-index: 1; /* Above background */
+    z-index: var(--z-index-box-shadow-border); /* Above background */
     top: 0;
     left: 0;
     right: 0;
@@ -238,6 +240,9 @@ import.meta.css = /* css */ `
     top: 0;
     z-index: var(--z-index-sticky-row);
   }
+  .navi_table tr[data-sticky] th::before {
+    z-index: var(--z-index-sticky-row-box-shadow);
+  }
   .navi_table tr[data-sticky] th[data-sticky] {
     position: sticky;
     top: 0;
@@ -349,96 +354,6 @@ import.meta.css = /* css */ `
   }
 `;
 
-// Custom hook to detect when a sticky element becomes stuck
-const useStickyDetection = (elementRef) => {
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-    if (!element) {
-      return null;
-    }
-    return initDataStuck(element);
-  }, []);
-};
-const initDataStuck = (element) => {
-  // Detect sticky direction from computed styles
-  const computedStyle = getComputedStyle(element);
-  const left = computedStyle.left;
-  const top = computedStyle.top;
-
-  // Determine direction based on which sticky property is set
-  let direction = "left"; // default
-  if (top !== "auto" && top !== "0px" && computedStyle.position === "sticky") {
-    direction = "top";
-  } else if (
-    left !== "auto" &&
-    left !== "0px" &&
-    computedStyle.position === "sticky"
-  ) {
-    direction = "left";
-  } else if (computedStyle.position === "sticky") {
-    // If position is sticky but no explicit left/top, check which is more likely
-    // For table cells, left sticky is more common for first column
-    if (element.tagName === "TH" && element.closest("thead")) {
-      direction = "top";
-    } else {
-      direction = "left";
-    }
-  }
-
-  const checkSticky = () => {
-    const rect = element.getBoundingClientRect();
-    const parent = element.parentElement;
-    const parentRect = parent?.getBoundingClientRect();
-
-    if (!parentRect) return;
-
-    let isStuck = false;
-
-    if (direction === "left") {
-      // For left sticky: element is stuck when it's at left edge despite parent scrolling
-      const expectedLeft = parentRect.left;
-      isStuck = Math.abs(rect.left - expectedLeft) > 10; // Threshold for being "stuck"
-    } else if (direction === "top") {
-      const expectedTop = parentRect.top;
-      isStuck = Math.abs(rect.top - expectedTop) > 10;
-    }
-
-    element.toggleAttribute("data-stuck", isStuck);
-  };
-
-  // Find scrollable ancestor
-  let scrollParent = element.parentElement;
-  while (scrollParent) {
-    const style = getComputedStyle(scrollParent);
-    if (
-      style.overflow === "auto" ||
-      style.overflow === "scroll" ||
-      style.overflowX === "auto" ||
-      style.overflowX === "scroll"
-    ) {
-      break;
-    }
-    scrollParent = scrollParent.parentElement;
-  }
-
-  const handleScroll = checkSticky;
-
-  // Initial check
-  checkSticky();
-
-  // Add listeners
-  if (scrollParent) {
-    scrollParent.addEventListener("scroll", handleScroll, { passive: true });
-  }
-  window.addEventListener("scroll", handleScroll, { passive: true });
-  return () => {
-    if (scrollParent) {
-      scrollParent.removeEventListener("scroll", handleScroll);
-    }
-    window.removeEventListener("scroll", handleScroll);
-  };
-};
-
 export const Table = forwardRef((props, ref) => {
   let {
     columns,
@@ -536,12 +451,8 @@ export const Table = forwardRef((props, ref) => {
           data-border-collapse={borderCollapse ? "" : undefined}
         >
           <thead>
-            <tr
-            // data-sticky=""
-            >
-              <RowNumberHeaderCell
-              // sticky
-              />
+            <tr data-sticky="">
+              <RowNumberHeaderCell sticky />
               {columns.map((col, index) => (
                 <HeaderCell
                   sticky={col.sticky}
@@ -608,9 +519,6 @@ const RowNumberHeaderCell = ({ sticky }) => {
 };
 const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
   const cellRef = useRef();
-
-  // Detect when this sticky element becomes stuck
-  useStickyDetection(cellRef);
 
   const rowValue = `row:${row.id}`;
   const { selected } = useSelectableElement(cellRef, {
@@ -681,12 +589,6 @@ const HeaderCell = ({
 const DataCell = ({ sticky, columnName, row, value }) => {
   const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
-
-  // Detect when this sticky element becomes stuck
-  if (sticky) {
-    useStickyDetection(cellRef);
-  }
-
   const { selected } = useSelectableElement(cellRef);
 
   return (
