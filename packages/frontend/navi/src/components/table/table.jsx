@@ -349,27 +349,11 @@ import.meta.css = /* css */ `
     box-shadow:
       0 -1px 0 0 var(--border-color),
       /* Top border */ -1px 0 0 0 var(--border-color),
-      /* Left border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
-    z-index: var(--z-index-sticky-row-box-shadow);
-  }
-
-  /* Corner cell yellow sticky border overlay */
-  .navi_table tr[data-sticky]:first-child th:first-child::after,
-  .navi_table tr[data-sticky]:first-child td:first-child::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    box-shadow:
-      inset calc(-1 * var(--sticky-border-size)) 0 0 0
+      /* Left border */ inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
       /* Thick yellow right border inside */ inset 0
         calc(-1 * var(--sticky-border-size)) 0 0 var(--sticky-border-color); /* Thick yellow bottom border inside */
-    z-index: calc(var(--z-index-sticky-row-box-shadow) + 1);
+    z-index: var(--z-index-sticky-row-box-shadow);
   }
 
   .navi_table tr:not(:first-child) td[data-sticky]:first-child::before,
