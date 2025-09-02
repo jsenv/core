@@ -238,16 +238,16 @@ import.meta.css = /* css */ `
     top: 0;
     z-index: var(--z-index-sticky-row);
   }
+  .navi_table th[data-sticky-x] {
+    position: sticky;
+    left: 0;
+    z-index: var(--z-index-sticky-column);
+  }
   .navi_table th[data-sticky-x][data-sticky-y] {
     position: sticky;
     top: 0;
     left: 0;
     z-index: var(--z-index-sticky-corner);
-  }
-  .navi_table th[data-sticky-x] {
-    position: sticky;
-    left: 0;
-    z-index: var(--z-index-sticky-column);
   }
   .navi_table td[data-sticky-x] {
     position: sticky;
