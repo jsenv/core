@@ -457,8 +457,7 @@ export const Table = forwardRef((props, ref) => {
           data-multiselection={selection.length > 1 ? "" : undefined}
           data-border-collapse={borderCollapse ? "" : undefined}
         >
-          <thead></thead>
-          <tbody>
+          <thead>
             <tr>
               <RowNumberHeaderCell
                 sticky
@@ -478,6 +477,8 @@ export const Table = forwardRef((props, ref) => {
                 />
               ))}
             </tr>
+          </thead>
+          <tbody>
             {data.map((row) => {
               const isRowSelected = selectedRowIds.includes(row.id);
               return (
@@ -519,13 +520,53 @@ export const Table = forwardRef((props, ref) => {
 
 const RowNumberHeaderCell = ({ sticky, ...rest }) => {
   return (
-    <td
+    <th
       className="navi_row_number_cell"
       data-sticky-x={sticky ? "" : undefined}
       data-sticky-y={sticky ? "" : undefined}
       style={{ textAlign: "center" }}
       {...rest}
-    ></td>
+    ></th>
+  );
+};
+const HeaderCell = ({
+  sticky,
+  columnName,
+  columnAccessorKey,
+  columnWithSomeSelectedCell,
+  data,
+}) => {
+  const cellRef = useRef();
+  const columnValue = `column:${columnAccessorKey}`;
+  const { selected } = useSelectableElement(cellRef, {
+    selectionImpact: () => {
+      const columnCells = data.map((row) => `${columnAccessorKey}:${row.id}`);
+      return columnCells;
+    },
+  });
+
+  const columnContainsSelectedCell =
+    columnWithSomeSelectedCell.includes(columnAccessorKey);
+  return (
+    <th
+      ref={cellRef}
+      data-column-contains-selected={
+        columnContainsSelectedCell ? "" : undefined
+      }
+      data-value={columnValue}
+      data-selection-name="column"
+      data-selection-toggle-shortcut="space"
+      aria-selected={selected}
+      data-sticky-x={sticky ? "" : undefined}
+      data-sticky-y=""
+      style={{ cursor: "pointer" }}
+      tabIndex={-1}
+    >
+      <span>{columnName}</span>
+      <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
+        {columnName}
+      </span>
+    </th>
   );
 };
 const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
@@ -558,46 +599,7 @@ const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
     </td>
   );
 };
-const HeaderCell = ({
-  sticky,
-  columnName,
-  columnAccessorKey,
-  columnWithSomeSelectedCell,
-  data,
-}) => {
-  const cellRef = useRef();
-  const columnValue = `column:${columnAccessorKey}`;
-  const { selected } = useSelectableElement(cellRef, {
-    selectionImpact: () => {
-      const columnCells = data.map((row) => `${columnAccessorKey}:${row.id}`);
-      return columnCells;
-    },
-  });
 
-  const columnContainsSelectedCell =
-    columnWithSomeSelectedCell.includes(columnAccessorKey);
-  return (
-    <td
-      ref={cellRef}
-      data-column-contains-selected={
-        columnContainsSelectedCell ? "" : undefined
-      }
-      data-value={columnValue}
-      data-selection-name="column"
-      data-selection-toggle-shortcut="space"
-      aria-selected={selected}
-      data-sticky-x={sticky ? "" : undefined}
-      data-sticky-y=""
-      style={{ cursor: "pointer" }}
-      tabIndex={-1}
-    >
-      <span>{columnName}</span>
-      <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
-        {columnName}
-      </span>
-    </td>
-  );
-};
 const DataCell = ({ sticky, columnName, row, value }) => {
   const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
