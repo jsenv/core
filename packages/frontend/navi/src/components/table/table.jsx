@@ -284,6 +284,12 @@ import.meta.css = /* css */ `
     left: 0;
     z-index: var(--z-index-sticky-column);
   }
+  .navi_table td[data-sticky] + td[data-sticky] {
+    left: 41px;
+  }
+  .navi_table td[data-sticky] + th[data-sticky] {
+    left: 41px;
+  }
 
   /* Border-collapse mode: Sticky columns/rows border adjustments */
   /* These rules only apply when border-collapse is enabled */
