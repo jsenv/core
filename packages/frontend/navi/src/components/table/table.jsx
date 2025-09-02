@@ -129,6 +129,7 @@ import.meta.css = /* css */ `
   .navi_table th,
   .navi_table td {
     text-align: left;
+    background: white;
   }
 
   .navi_table th {
@@ -253,11 +254,9 @@ import.meta.css = /* css */ `
     left: 0;
     z-index: var(--z-index-sticky-column);
   }
+  .navi_table td[data-sticky-x] + th[data-sticky-x],
   .navi_table td[data-sticky-x] + td[data-sticky-x] {
-    left: 41px;
-  }
-  .navi_table td[data-sticky-x] + th[data-sticky-x] {
-    left: 41px;
+    left: 41.5px;
   }
 
   /* Sticky border styling - works in both normal and border-collapse modes */
