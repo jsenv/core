@@ -183,20 +183,20 @@ import.meta.css = /* css */ `
   }
 
   /* Sticky column cells need extra padding-right for thick border */
-  .navi_table td[data-sticky]:first-child,
-  .navi_table th[data-sticky]:first-child {
+  .navi_table td[data-sticky-x]:first-child,
+  .navi_table th[data-sticky-x]:first-child {
     padding-right: calc(8px + var(--sticky-border-size));
   }
 
   /* Sticky row cells need extra padding-bottom for thick border */
-  .navi_table tr[data-sticky]:first-child th,
-  .navi_table tr[data-sticky]:first-child td {
+  .navi_table tr[data-sticky-y]:first-child th,
+  .navi_table tr[data-sticky-y]:first-child td {
     padding-bottom: calc(8px + var(--sticky-border-size));
   }
 
   /* Corner cell (sticky row + sticky column) needs both extra paddings */
-  .navi_table tr[data-sticky]:first-child th[data-sticky]:first-child,
-  .navi_table tr[data-sticky]:first-child td[data-sticky]:first-child {
+  .navi_table tr[data-sticky-y]:first-child th[data-sticky-x]:first-child,
+  .navi_table tr[data-sticky-y]:first-child td[data-sticky-x]:first-child {
     padding-right: calc(8px + var(--sticky-border-size));
     padding-bottom: calc(8px + var(--sticky-border-size));
   }
@@ -268,26 +268,31 @@ import.meta.css = /* css */ `
   }
 
   /* Stickyness */
-  .navi_table tr[data-sticky] {
+  .navi_table th[data-sticky-y] {
     position: sticky;
     top: 0;
     z-index: var(--z-index-sticky-row);
   }
-  .navi_table th[data-sticky] {
+  .navi_table th[data-sticky-x][data-sticky-y] {
     position: sticky;
     top: 0;
     left: 0;
     z-index: var(--z-index-sticky-corner);
   }
-  .navi_table td[data-sticky] {
+  .navi_table th[data-sticky-x] {
     position: sticky;
     left: 0;
     z-index: var(--z-index-sticky-column);
   }
-  .navi_table td[data-sticky] + td[data-sticky] {
+  .navi_table td[data-sticky-x] {
+    position: sticky;
+    left: 0;
+    z-index: var(--z-index-sticky-column);
+  }
+  .navi_table td[data-sticky-x] + td[data-sticky-x] {
     left: 41px;
   }
-  .navi_table td[data-sticky] + th[data-sticky] {
+  .navi_table td[data-sticky-x] + th[data-sticky-x] {
     left: 41px;
   }
 
@@ -295,8 +300,8 @@ import.meta.css = /* css */ `
   /* These rules only apply when border-collapse is enabled */
 
   /* Border-collapse: Cells after sticky rows need top border restored */
-  .navi_table[data-border-collapse] tr[data-sticky] + tr td::before,
-  .navi_table[data-border-collapse] tr[data-sticky] + tr th::before {
+  .navi_table[data-border-collapse] th[data-sticky-y] + th::before,
+  .navi_table[data-border-collapse] td[data-sticky-y] + td::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
       1px 0 0 0 var(--border-color),
@@ -304,8 +309,8 @@ import.meta.css = /* css */ `
   }
 
   /* Border-collapse: Cells after sticky columns need left border restored */
-  .navi_table[data-border-collapse] th[data-sticky] + th::before,
-  .navi_table[data-border-collapse] td[data-sticky] + td::before {
+  .navi_table[data-border-collapse] th[data-sticky-x] + th::before,
+  .navi_table[data-border-collapse] td[data-sticky-x] + td::before {
     box-shadow:
       -1px 0 0 0 var(--border-color),
       1px 0 0 0 var(--border-color),
@@ -315,7 +320,7 @@ import.meta.css = /* css */ `
   /* Border-collapse: Header row cells after sticky columns need top + left border */
   .navi_table[data-border-collapse]
     tr:first-child
-    th[data-sticky]
+    th[data-sticky-x]
     + th::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
@@ -327,8 +332,8 @@ import.meta.css = /* css */ `
   /* Sticky border styling - works in both normal and border-collapse modes */
 
   /* Default mode: sticky cells with all borders + thick sticky border */
-  .navi_table td[data-sticky]:first-child::before,
-  .navi_table th[data-sticky]:first-child::before {
+  .navi_table td[data-sticky-x]:first-child::before,
+  .navi_table th[data-sticky-x]:first-child::before {
     box-shadow:
       inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
@@ -337,8 +342,8 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  .navi_table tr[data-sticky]:first-child th::before,
-  .navi_table tr[data-sticky]:first-child td::before {
+  .navi_table th[data-sticky-y]:first-child::before,
+  .navi_table td[data-sticky-y]:first-child::before {
     box-shadow:
       inset 0 calc(-1 * var(--sticky-border-size)) 0 0
         var(--sticky-border-color),
@@ -347,8 +352,8 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--border-color);
   }
 
-  .navi_table tr[data-sticky]:first-child th:first-child::before,
-  .navi_table tr[data-sticky]:first-child td:first-child::before {
+  .navi_table th[data-sticky-x][data-sticky-y]:first-child::before,
+  .navi_table td[data-sticky-x][data-sticky-y]:first-child::before {
     box-shadow:
       inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
@@ -358,8 +363,8 @@ import.meta.css = /* css */ `
       inset 1px 0 0 0 var(--border-color);
   }
 
-  .navi_table tr:not(:first-child) td[data-sticky]:first-child::before,
-  .navi_table tr:not(:first-child) th[data-sticky]:first-child::before {
+  .navi_table tr:not(:first-child) td[data-sticky-x]:first-child::before,
+  .navi_table tr:not(:first-child) th[data-sticky-x]:first-child::before {
     box-shadow:
       inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
@@ -466,7 +471,7 @@ export const Table = forwardRef((props, ref) => {
           data-border-collapse={borderCollapse ? "" : undefined}
         >
           <thead>
-            <tr data-sticky="">
+            <tr>
               <RowNumberHeaderCell sticky />
               {columns.map((col, index) => (
                 <HeaderCell
@@ -525,7 +530,8 @@ const RowNumberHeaderCell = ({ sticky }) => {
   return (
     <th
       className="navi_row_number_cell"
-      data-sticky={sticky ? "" : undefined}
+      data-sticky-x={sticky ? "" : undefined}
+      data-sticky-y={sticky ? "" : undefined}
       style={{ textAlign: "center" }}
     >
       #
@@ -548,7 +554,7 @@ const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
   return (
     <td
       ref={cellRef}
-      data-sticky={sticky ? "" : undefined}
+      data-sticky-x={sticky ? "" : undefined}
       className="navi_row_number_cell"
       data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
       data-value={rowValue}
@@ -590,7 +596,7 @@ const HeaderCell = ({
       data-selection-name="column"
       data-selection-toggle-shortcut="space"
       aria-selected={selected}
-      data-sticky={sticky ? "" : undefined}
+      data-sticky-y={sticky ? "" : undefined}
       style={{ cursor: "pointer" }}
       tabIndex={-1}
     >
@@ -610,7 +616,7 @@ const DataCell = ({ sticky, columnName, row, value }) => {
     <td
       ref={cellRef}
       className="navi_data_cell"
-      data-sticky={sticky ? "" : undefined}
+      data-sticky-x={sticky ? "" : undefined}
       tabIndex={-1}
       data-value={cellId}
       data-selection-name="cell"
