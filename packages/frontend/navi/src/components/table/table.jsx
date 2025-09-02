@@ -1,13 +1,45 @@
 /**
+ * Table Component with Custom Border and Selection System
+ *
+ * PROBLEM: We want to draw selected table cells with a clear visual perimeter
+ *
+ * ATTEMPTED SOLUTIONS & THEIR ISSUES:
+ *
+ * 1. Drawing selection outside the table:
+ *    - z-index issues: Hard to ensure selection appears above all table elements
+ *    - Performance issues: Constant recalculation during resizing, scrolling, etc.
+ *    - Positioning complexity: Managing absolute positioning relative to table cells
+ *
+ * 2. Using native CSS table cell borders:
+ *    - Border rendering artifacts: CSS borders are not rendered as straight lines,
+ *      making selection perimeter imperfect (especially with thick borders)
+ *    - Border-collapse compatibility: Native border-collapse causes sticky elements
+ *      to lose borders while scrolling in some browsers
+ *    - Dimension changes: Custom border-collapse (manually disabling adjacent borders)
+ *      changes cell dimensions, making selection outline visible and inconsistent
+ *
+ * SOLUTION: Custom border system using box-shadow
+ *
+ * KEY PRINCIPLES:
+ * - Use inset box-shadow to ensure borders appear above table cell backgrounds
+ * - Use ::before pseudo-elements with position: absolute for flexible positioning
+ * - Each cell draws its own borders independently (no border-collapse by default)
+ * - Selection borders override table borders using higher CSS specificity
+ * - Sticky borders use thicker box-shadows in accent color (yellow)
+ *
+ * TECHNICAL IMPLEMENTATION:
+ * - All borders use inset box-shadow with specific directional mapping:
+ *   * Top: inset 0 1px 0 0
+ *   * Right: inset -1px 0 0 0
+ *   * Bottom: inset 0 -1px 0 0
+ *   * Left: inset 1px 0 0 0
+ * - Selection borders (blue) override table borders (red) in same pseudo-element
+ * - Sticky borders replace regular borders with thicker colored variants
+ * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
- *
- * - Vérifier commen ça rend avec sticky + sans border collapse
- *
+ * - Vérifier comment ça rend avec sticky + sans border collapse
  * - Si on est satisfait on va essayer d'implementer le border collapse
- *
- *
- *
  * - Fixed first row
  * - Fixed first column
  * - Shortcuts to act on selection
@@ -21,7 +53,6 @@
  * - A last row with buttons like a delete button with a delete icon
  * - Ability to delete a row (button + a shortcut key cmd + delete) with a confirmation message
  * - Ability to update a cell (double click to edit, enter to validate, esc to cancel)
- *
  */
 
 import { useSignal } from "@preact/signals";
