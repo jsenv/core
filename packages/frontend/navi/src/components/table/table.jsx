@@ -63,6 +63,7 @@ import {
   useSelectionProvider,
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
+import { useStickyGroup } from "./sticky_group.js";
 import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
 /*
@@ -251,10 +252,6 @@ import.meta.css = /* css */ `
     top: 0;
     left: 0;
     z-index: var(--z-index-sticky-corner);
-  }
-  .navi_table th[data-sticky-x] + th[data-sticky-x],
-  .navi_table td[data-sticky-x] + td[data-sticky-x] {
-    left: 41.5px;
   }
 
   /* Sticky border styling - works in both normal and border-collapse modes */
@@ -446,6 +443,7 @@ export const Table = forwardRef((props, ref) => {
     selectAllName: "cell",
   });
   useFocusGroup(innerRef);
+  useStickyGroup(innerRef);
 
   return (
     <div className="navi_table_container">
