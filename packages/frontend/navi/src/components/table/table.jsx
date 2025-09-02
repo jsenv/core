@@ -361,6 +361,7 @@ import.meta.css = /* css */ `
 export const Table = forwardRef((props, ref) => {
   let {
     columns,
+    rows = [],
     data,
     selection = [],
     selectionColor,
@@ -477,7 +478,8 @@ export const Table = forwardRef((props, ref) => {
             </tr>
           </thead>
           <tbody>
-            {data.map((row) => {
+            {data.map((row, i) => {
+              const rowOptions = rows[i] || {};
               const isRowSelected = selectedRowIds.includes(row.id);
               return (
                 <tr
@@ -493,7 +495,8 @@ export const Table = forwardRef((props, ref) => {
                   />
                   {columns.map((col, colIndex) => (
                     <DataCell
-                      sticky={col.sticky}
+                      stickyX={col.sticky}
+                      stickyY={rowOptions.sticky}
                       key={`${row.id}-${col.id}`}
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
@@ -598,7 +601,7 @@ const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
   );
 };
 
-const DataCell = ({ sticky, columnName, row, value }) => {
+const DataCell = ({ stickyX, stickyY, columnName, row, value }) => {
   const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
   const { selected } = useSelectableElement(cellRef);
@@ -607,7 +610,8 @@ const DataCell = ({ sticky, columnName, row, value }) => {
     <td
       ref={cellRef}
       className="navi_data_cell"
-      data-sticky-x={sticky ? "" : undefined}
+      data-sticky-x={stickyX ? "" : undefined}
+      data-sticky-y={stickyY ? "" : undefined}
       tabIndex={-1}
       data-value={cellId}
       data-selection-name="cell"
