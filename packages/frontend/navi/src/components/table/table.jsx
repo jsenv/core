@@ -256,9 +256,9 @@ import.meta.css = /* css */ `
 
   /* Sticky border styling - works in both normal and border-collapse modes */
 
-  /* Default mode: sticky cells with all borders + thick sticky border */
-  .navi_table td[data-sticky-x]::before,
-  .navi_table th[data-sticky-x]::before {
+  /* Default mode: only last sticky elements get thick yellow borders */
+  .navi_table td[data-sticky-x][data-last-sticky-column]::before,
+  .navi_table th[data-sticky-x][data-last-sticky-column]::before {
     box-shadow:
       inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
@@ -267,8 +267,8 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  .navi_table th[data-sticky-y]::before,
-  .navi_table td[data-sticky-y]::before {
+  .navi_table th[data-sticky-y][data-last-sticky-row]::before,
+  .navi_table td[data-sticky-y][data-last-sticky-row]::before {
     box-shadow:
       inset 0 calc(-1 * var(--sticky-border-size)) 0 0
         var(--sticky-border-color),
@@ -277,8 +277,10 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--border-color);
   }
 
-  .navi_table th[data-sticky-x][data-sticky-y]::before,
-  .navi_table td[data-sticky-x][data-sticky-y]::before {
+  .navi_table
+    th[data-sticky-x][data-sticky-y][data-last-sticky-column][data-last-sticky-row]::before,
+  .navi_table
+    td[data-sticky-x][data-sticky-y][data-last-sticky-column][data-last-sticky-row]::before {
     box-shadow:
       inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
@@ -446,6 +448,16 @@ export const Table = forwardRef((props, ref) => {
   useFocusGroup(innerRef);
   useStickyGroup(innerRef);
 
+  // Calculate last sticky column and row indexes
+  const lastStickyColumnIndex = columns.reduce((lastIndex, col, index) => {
+    return col.sticky ? index : lastIndex;
+  }, -1);
+
+  const lastStickyRowIndex = data.reduce((lastIndex, row, index) => {
+    const rowOptions = rows[index] || {};
+    return rowOptions.sticky ? index : lastIndex;
+  }, -1);
+
   return (
     <div className="navi_table_container">
       <SelectionProvider>
@@ -460,6 +472,8 @@ export const Table = forwardRef((props, ref) => {
             <tr>
               <RowNumberHeaderCell
                 sticky
+                isLastStickyColumn={lastStickyColumnIndex === -1} // Only sticky if no other columns are sticky
+                isLastStickyRow={lastStickyRowIndex === -1} // Only sticky if no other rows are sticky
                 onClick={() => {
                   ref.current.selectAll();
                 }}
@@ -467,6 +481,8 @@ export const Table = forwardRef((props, ref) => {
               {columns.map((col, index) => (
                 <HeaderCell
                   sticky={col.sticky}
+                  isLastStickyColumn={index === lastStickyColumnIndex}
+                  isLastStickyRow={true} // Header row is always the last (and only) sticky row in header
                   key={col.id}
                   columnName={col.header}
                   columnAccessorKey={col.accessorKey}
@@ -478,9 +494,11 @@ export const Table = forwardRef((props, ref) => {
             </tr>
           </thead>
           <tbody>
-            {data.map((row, i) => {
-              const rowOptions = rows[i] || {};
+            {data.map((row, rowIndex) => {
+              const rowOptions = rows[rowIndex] || {};
               const isRowSelected = selectedRowIds.includes(row.id);
+              const isLastStickyRow = rowIndex === lastStickyRowIndex;
+
               return (
                 <tr
                   key={row.id}
@@ -490,6 +508,8 @@ export const Table = forwardRef((props, ref) => {
                   <RowNumberCell
                     stickyX={true}
                     stickyY={rowOptions.sticky}
+                    isLastStickyColumn={lastStickyColumnIndex === -1} // Only if no data columns are sticky
+                    isLastStickyRow={isLastStickyRow}
                     row={row}
                     rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                     columns={columns}
@@ -498,6 +518,8 @@ export const Table = forwardRef((props, ref) => {
                     <DataCell
                       stickyX={col.sticky}
                       stickyY={rowOptions.sticky}
+                      isLastStickyColumn={colIndex === lastStickyColumnIndex}
+                      isLastStickyRow={isLastStickyRow}
                       key={`${row.id}-${col.id}`}
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
@@ -520,12 +542,19 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 
-const RowNumberHeaderCell = ({ sticky, ...rest }) => {
+const RowNumberHeaderCell = ({
+  sticky,
+  isLastStickyColumn,
+  isLastStickyRow,
+  ...rest
+}) => {
   return (
     <th
       className="navi_row_number_cell"
       data-sticky-x={sticky ? "" : undefined}
       data-sticky-y={sticky ? "" : undefined}
+      data-last-sticky-column={sticky && isLastStickyColumn ? "" : undefined}
+      data-last-sticky-row={sticky && isLastStickyRow ? "" : undefined}
       style={{ textAlign: "center" }}
       {...rest}
     ></th>
@@ -533,6 +562,8 @@ const RowNumberHeaderCell = ({ sticky, ...rest }) => {
 };
 const HeaderCell = ({
   sticky,
+  isLastStickyColumn,
+  isLastStickyRow,
   columnName,
   columnAccessorKey,
   columnWithSomeSelectedCell,
@@ -561,6 +592,8 @@ const HeaderCell = ({
       aria-selected={selected}
       data-sticky-x={sticky ? "" : undefined}
       data-sticky-y=""
+      data-last-sticky-column={sticky && isLastStickyColumn ? "" : undefined}
+      data-last-sticky-row={isLastStickyRow ? "" : undefined}
       style={{ cursor: "pointer" }}
       tabIndex={-1}
     >
@@ -574,6 +607,8 @@ const HeaderCell = ({
 const RowNumberCell = ({
   stickyX,
   stickyY,
+  isLastStickyColumn,
+  isLastStickyRow,
   row,
   columns,
   rowWithSomeSelectedCell,
@@ -595,6 +630,8 @@ const RowNumberCell = ({
       ref={cellRef}
       data-sticky-x={stickyX ? "" : undefined}
       data-sticky-y={stickyY ? "" : undefined}
+      data-last-sticky-column={stickyX && isLastStickyColumn ? "" : undefined}
+      data-last-sticky-row={stickyY && isLastStickyRow ? "" : undefined}
       className="navi_row_number_cell"
       data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
       data-value={rowValue}
@@ -609,7 +646,15 @@ const RowNumberCell = ({
   );
 };
 
-const DataCell = ({ stickyX, stickyY, columnName, row, value }) => {
+const DataCell = ({
+  stickyX,
+  stickyY,
+  isLastStickyColumn,
+  isLastStickyRow,
+  columnName,
+  row,
+  value,
+}) => {
   const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
   const { selected } = useSelectableElement(cellRef);
@@ -620,6 +665,8 @@ const DataCell = ({ stickyX, stickyY, columnName, row, value }) => {
       className="navi_data_cell"
       data-sticky-x={stickyX ? "" : undefined}
       data-sticky-y={stickyY ? "" : undefined}
+      data-last-sticky-column={stickyX && isLastStickyColumn ? "" : undefined}
+      data-last-sticky-row={stickyY && isLastStickyRow ? "" : undefined}
       tabIndex={-1}
       data-value={cellId}
       data-selection-name="cell"
