@@ -126,42 +126,6 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
-  .navi_table[data-border-collapse] th::before,
-  .navi_table[data-border-collapse] td::before {
-    box-shadow:
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
-  }
-
-  /* Border-collapse: First row gets top border in addition to right and bottom */
-  .navi_table[data-border-collapse] tr:first-child th::before,
-  .navi_table[data-border-collapse] tr:first-child td::before {
-    box-shadow:
-      0 -1px 0 0 var(--border-color),
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
-  }
-
-  /* Border-collapse: First column gets left border in addition to right and bottom */
-  .navi_table[data-border-collapse] th:first-child::before,
-  .navi_table[data-border-collapse] td:first-child::before {
-    box-shadow:
-      -1px 0 0 0 var(--border-color),
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
-  }
-
-  /* Border-collapse: First row first column gets all four borders */
-  .navi_table[data-border-collapse] tr:first-child th:first-child::before,
-  .navi_table[data-border-collapse] tr:first-child td:first-child::before {
-    box-shadow:
-      0 -1px 0 0 var(--border-color),
-      -1px 0 0 0 var(--border-color),
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
-  }
-
   .navi_table th,
   .navi_table td {
     text-align: left;
@@ -296,8 +260,78 @@ import.meta.css = /* css */ `
     left: 41px;
   }
 
+  /* Sticky border styling - works in both normal and border-collapse modes */
+
+  /* Default mode: sticky cells with all borders + thick sticky border */
+  .navi_table td[data-sticky-x]::before,
+  .navi_table th[data-sticky-x]::before {
+    box-shadow:
+      inset calc(-1 * var(--sticky-border-size)) 0 0 0
+        var(--sticky-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table th[data-sticky-y]::before,
+  .navi_table td[data-sticky-y]::before {
+    box-shadow:
+      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
+        var(--sticky-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color);
+  }
+
+  .navi_table th[data-sticky-x][data-sticky-y]::before,
+  .navi_table td[data-sticky-x][data-sticky-y]::before {
+    box-shadow:
+      inset calc(-1 * var(--sticky-border-size)) 0 0 0
+        var(--sticky-border-color),
+      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
+        var(--sticky-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color);
+  }
+
   /* Border-collapse mode: Sticky columns/rows border adjustments */
   /* These rules only apply when border-collapse is enabled */
+
+  /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
+  .navi_table[data-border-collapse] th::before,
+  .navi_table[data-border-collapse] td::before {
+    box-shadow:
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
+  }
+
+  /* Border-collapse: First row gets top border in addition to right and bottom */
+  .navi_table[data-border-collapse] tr:first-child th::before,
+  .navi_table[data-border-collapse] tr:first-child td::before {
+    box-shadow:
+      0 -1px 0 0 var(--border-color),
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
+  }
+
+  /* Border-collapse: First column gets left border in addition to right and bottom */
+  .navi_table[data-border-collapse] th:first-child::before,
+  .navi_table[data-border-collapse] td:first-child::before {
+    box-shadow:
+      -1px 0 0 0 var(--border-color),
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
+  }
+
+  /* Border-collapse: First row first column gets all four borders */
+  .navi_table[data-border-collapse] tr:first-child th:first-child::before,
+  .navi_table[data-border-collapse] tr:first-child td:first-child::before {
+    box-shadow:
+      0 -1px 0 0 var(--border-color),
+      -1px 0 0 0 var(--border-color),
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
+  }
 
   /* Border-collapse: Cells after sticky rows need top border restored */
   .navi_table[data-border-collapse] th[data-sticky-y] + th::before,
@@ -327,50 +361,6 @@ import.meta.css = /* css */ `
       -1px 0 0 0 var(--border-color),
       1px 0 0 0 var(--border-color),
       0 1px 0 0 var(--border-color);
-  }
-
-  /* Sticky border styling - works in both normal and border-collapse modes */
-
-  /* Default mode: sticky cells with all borders + thick sticky border */
-  .navi_table td[data-sticky-x]:first-child::before,
-  .navi_table th[data-sticky-x]:first-child::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-border-size)) 0 0 0
-        var(--sticky-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table th[data-sticky-y]:first-child::before,
-  .navi_table td[data-sticky-y]:first-child::before {
-    box-shadow:
-      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
-        var(--sticky-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color);
-  }
-
-  .navi_table th[data-sticky-x][data-sticky-y]:first-child::before,
-  .navi_table td[data-sticky-x][data-sticky-y]:first-child::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-border-size)) 0 0 0
-        var(--sticky-border-color),
-      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
-        var(--sticky-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color);
-  }
-
-  .navi_table tr:not(:first-child) td[data-sticky-x]:first-child::before,
-  .navi_table tr:not(:first-child) th[data-sticky-x]:first-child::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-border-size)) 0 0 0
-        var(--sticky-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
   }
 `;
 
@@ -596,7 +586,8 @@ const HeaderCell = ({
       data-selection-name="column"
       data-selection-toggle-shortcut="space"
       aria-selected={selected}
-      data-sticky-y={sticky ? "" : undefined}
+      data-sticky-x={sticky ? "" : undefined}
+      data-sticky-y=""
       style={{ cursor: "pointer" }}
       tabIndex={-1}
     >
