@@ -106,7 +106,8 @@ import.meta.css = /* css */ `
   .navi_table th,
   .navi_table td {
     border: none; /* Remove default borders - we'll use pseudo-elements */
-    position: relative; /* Required for pseudo-element positioning */
+    /* Required for pseudo-element positioning */
+    position: relative;
   }
 
   .navi_table th::before,
@@ -268,24 +269,20 @@ import.meta.css = /* css */ `
 
   /* Stickyness */
   .navi_table tr[data-sticky] {
-    /* z-index: var(--z-index-sticky-row); */
     position: sticky;
     top: 0;
+    z-index: var(--z-index-sticky-row);
   }
-  .navi_table tr[data-sticky] th[data-sticky] {
-    position: sticky;
-    top: 0;
-  }
-  .navi_table td[data-sticky],
   .navi_table th[data-sticky] {
     position: sticky;
+    top: 0;
     left: 0;
+    z-index: var(--z-index-sticky-corner);
   }
-  /* .navi_table th[data-sticky] {
-              z-index: var(--z-index-sticky-row);
-            } */
   .navi_table td[data-sticky] {
-    /* z-index: var(--z-index-sticky-column); */
+    position: sticky;
+    left: 0;
+    z-index: var(--z-index-sticky-column);
   }
 
   /* Border-collapse mode: Sticky columns/rows border adjustments */
