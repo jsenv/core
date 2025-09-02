@@ -79,11 +79,8 @@ import.meta.css = /* css */ `
     --sticky-border-color: yellow;
 
     --z-index-focused: 0; /* must be above selection and anything else  */
-    --z-index-sticky-cell: 0; /* must be above selection  */
-    --z-index-sticky-row: 1; /* must be above selection sticky cell */
-    --z-index-sticky-row-box-shadow: 2;
-    --z-index-sticky-corner: 0; /* must be above first column and first row  */
-    --z-index-box-shadow-border: 0;
+    --z-index-sticky: 1; /* needed because cell uses position:relative, sticky must win even if before in DOM order */
+    --z-index-sticky-corner: 0;
 
     position: relative;
   }
@@ -106,7 +103,6 @@ import.meta.css = /* css */ `
   .navi_table td::before {
     content: "";
     position: absolute;
-    z-index: var(--z-index-box-shadow-border); /* Above background */
     top: 0;
     left: 0;
     right: 0;
@@ -171,12 +167,10 @@ import.meta.css = /* css */ `
   .navi_table td {
     padding: 12px 8px;
     user-select: none;
-    position: relative;
   }
 
   .navi_table th {
     user-select: none;
-    position: relative;
   }
 
   /* Sticky column cells need extra padding-right for thick border */
@@ -212,7 +206,6 @@ import.meta.css = /* css */ `
     inset: 0;
     border: 2px solid #0078d4;
     pointer-events: none;
-    z-index: 2;
   }
   .navi_table[data-border-collapse] tr + tr td:focus::after,
   .navi_table[data-border-collapse] tr + tr th:focus::after {
@@ -267,9 +260,9 @@ import.meta.css = /* css */ `
 
   /* Stickyness */
   .navi_table tr[data-sticky] {
+    z-index: var(--z-index-sticky);
     position: sticky;
     top: 0;
-    z-index: var(--z-index-sticky-row);
   }
   .navi_table tr[data-sticky] th::before {
     z-index: var(--z-index-sticky-row-box-shadow);
@@ -283,11 +276,9 @@ import.meta.css = /* css */ `
   }
   .navi_table td[data-sticky],
   .navi_table th[data-sticky] {
+    z-index: var(--z-index-sticky);
     position: sticky;
     left: 0;
-  }
-  .navi_table td[data-sticky] {
-    z-index: var(--z-index-sticky-cell);
   }
 
   /* Border-collapse mode: Sticky columns/rows border adjustments */
@@ -345,7 +336,6 @@ import.meta.css = /* css */ `
       /* Left border */ inset -1px 0 0 0 var(--border-color),
       /* Right border */ inset 0 calc(-1 * var(--sticky-border-size)) 0 0
         var(--sticky-border-color); /* Thick yellow bottom border inside */
-    z-index: var(--z-index-sticky-row-box-shadow);
   }
 
   .navi_table tr[data-sticky]:first-child th:first-child::before,
@@ -357,7 +347,6 @@ import.meta.css = /* css */ `
         var(--sticky-border-color),
       /* Thick yellow right border inside */ inset 0 var(--sticky-border-size) 0
         0 var(--sticky-border-color); /* Thick yellow bottom border inside */
-    z-index: var(--z-index-sticky-row-box-shadow);
   }
 
   .navi_table tr:not(:first-child) td[data-sticky]:first-child::before,
