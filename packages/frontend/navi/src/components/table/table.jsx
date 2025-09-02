@@ -488,7 +488,8 @@ export const Table = forwardRef((props, ref) => {
                   aria-selected={isRowSelected}
                 >
                   <RowNumberCell
-                    sticky
+                    stickyX={true}
+                    stickyY={rowOptions.sticky}
                     row={row}
                     rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                     columns={columns}
@@ -570,7 +571,13 @@ const HeaderCell = ({
     </th>
   );
 };
-const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
+const RowNumberCell = ({
+  stickyX,
+  stickyY,
+  row,
+  columns,
+  rowWithSomeSelectedCell,
+}) => {
   const cellRef = useRef();
 
   const rowValue = `row:${row.id}`;
@@ -586,7 +593,8 @@ const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
   return (
     <td
       ref={cellRef}
-      data-sticky-x={sticky ? "" : undefined}
+      data-sticky-x={stickyX ? "" : undefined}
+      data-sticky-y={stickyY ? "" : undefined}
       className="navi_row_number_cell"
       data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
       data-value={rowValue}
