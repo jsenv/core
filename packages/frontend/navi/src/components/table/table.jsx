@@ -233,28 +233,26 @@ import.meta.css = /* css */ `
   }
 
   /* Stickyness */
-  .navi_table th[data-sticky-y] {
+  .navi_table th[data-sticky-y],
+  .navi_table td[data-sticky-y] {
     position: sticky;
     top: 0;
     z-index: var(--z-index-sticky-row);
   }
-  .navi_table th[data-sticky-x] {
-    position: sticky;
-    left: 0;
-    z-index: var(--z-index-sticky-column);
-  }
-  .navi_table th[data-sticky-x][data-sticky-y] {
-    position: sticky;
-    top: 0;
-    left: 0;
-    z-index: var(--z-index-sticky-corner);
-  }
+  .navi_table th[data-sticky-x],
   .navi_table td[data-sticky-x] {
     position: sticky;
     left: 0;
     z-index: var(--z-index-sticky-column);
   }
-  .navi_table td[data-sticky-x] + th[data-sticky-x],
+  .navi_table th[data-sticky-x][data-sticky-y],
+  .navi_table td[data-sticky-x][data-sticky-y] {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: var(--z-index-sticky-corner);
+  }
+  .navi_table th[data-sticky-x] + th[data-sticky-x],
   .navi_table td[data-sticky-x] + td[data-sticky-x] {
     left: 41.5px;
   }
@@ -459,7 +457,8 @@ export const Table = forwardRef((props, ref) => {
           data-multiselection={selection.length > 1 ? "" : undefined}
           data-border-collapse={borderCollapse ? "" : undefined}
         >
-          <thead>
+          <thead></thead>
+          <tbody>
             <tr>
               <RowNumberHeaderCell
                 sticky
@@ -479,8 +478,6 @@ export const Table = forwardRef((props, ref) => {
                 />
               ))}
             </tr>
-          </thead>
-          <tbody>
             {data.map((row) => {
               const isRowSelected = selectedRowIds.includes(row.id);
               return (
@@ -522,13 +519,13 @@ export const Table = forwardRef((props, ref) => {
 
 const RowNumberHeaderCell = ({ sticky, ...rest }) => {
   return (
-    <th
+    <td
       className="navi_row_number_cell"
       data-sticky-x={sticky ? "" : undefined}
       data-sticky-y={sticky ? "" : undefined}
       style={{ textAlign: "center" }}
       {...rest}
-    ></th>
+    ></td>
   );
 };
 const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
@@ -580,7 +577,7 @@ const HeaderCell = ({
   const columnContainsSelectedCell =
     columnWithSomeSelectedCell.includes(columnAccessorKey);
   return (
-    <th
+    <td
       ref={cellRef}
       data-column-contains-selected={
         columnContainsSelectedCell ? "" : undefined
@@ -598,7 +595,7 @@ const HeaderCell = ({
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {columnName}
       </span>
-    </th>
+    </td>
   );
 };
 const DataCell = ({ sticky, columnName, row, value }) => {
