@@ -449,17 +449,28 @@ export const Table = forwardRef((props, ref) => {
   useStickyGroup(innerRef);
 
   // Calculate frontier sticky column and row indexes (boundary between sticky and non-sticky)
-  const stickyColumnFrontierIndex = columns.reduce(
-    (frontierIndex, col, index) => {
-      return col.sticky ? index : frontierIndex;
-    },
-    -1,
-  );
-
-  const stickyRowFrontierIndex = data.reduce((frontierIndex, row, index) => {
-    const rowOptions = rows[index] || {};
-    return rowOptions.sticky ? index : frontierIndex;
-  }, -1);
+  let columnIndex = 0;
+  let stickyColumnFrontierIndex = 0;
+  while (columnIndex < columns.length) {
+    const column = columns[columnIndex];
+    columnIndex++;
+    if (column.sticky) {
+      stickyColumnFrontierIndex = columnIndex;
+    } else {
+      break;
+    }
+  }
+  let stickyRowFrontierIndex = 0;
+  let rowIndex = 0;
+  while (rowIndex < rows.length) {
+    const { sticky } = rows[rowIndex];
+    rowIndex++;
+    if (sticky) {
+      stickyRowFrontierIndex = rowIndex;
+    } else {
+      break;
+    }
+  }
 
   return (
     <div className="navi_table_container">
@@ -475,8 +486,8 @@ export const Table = forwardRef((props, ref) => {
             <tr>
               <RowNumberHeaderCell
                 sticky
-                isStickyXFrontier={stickyColumnFrontierIndex === -1} // Only frontier if no other columns are sticky
-                isStickyYFrontier={stickyRowFrontierIndex === -1} // Only frontier if no other rows are sticky
+                isStickyXFrontier={stickyColumnFrontierIndex === 0} // Only frontier if no other columns are sticky
+                isStickyYFrontier={stickyRowFrontierIndex === 0} // Only frontier if no other rows are sticky
                 onClick={() => {
                   ref.current.selectAll();
                 }}
@@ -484,8 +495,8 @@ export const Table = forwardRef((props, ref) => {
               {columns.map((col, index) => (
                 <HeaderCell
                   sticky={col.sticky}
-                  isStickyXFrontier={index === stickyColumnFrontierIndex}
-                  isStickyYFrontier={true} // Header row is always the frontier (no rows above it)
+                  isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
+                  isStickyYFrontier={stickyRowFrontierIndex === 0} // Header row is always the frontier (no rows above it)
                   key={col.id}
                   columnName={col.header}
                   columnAccessorKey={col.accessorKey}
@@ -500,7 +511,7 @@ export const Table = forwardRef((props, ref) => {
             {data.map((row, rowIndex) => {
               const rowOptions = rows[rowIndex] || {};
               const isRowSelected = selectedRowIds.includes(row.id);
-              const isStickyYFrontier = rowIndex === stickyRowFrontierIndex;
+              const isStickyYFrontier = stickyRowFrontierIndex === rowIndex + 1;
 
               return (
                 <tr
@@ -511,7 +522,7 @@ export const Table = forwardRef((props, ref) => {
                   <RowNumberCell
                     stickyX={true}
                     stickyY={rowOptions.sticky}
-                    isStickyXFrontier={stickyColumnFrontierIndex === -1} // Only if no data columns are sticky
+                    isStickyXFrontier={stickyColumnFrontierIndex === 0} // Only if no data columns are sticky
                     isStickyYFrontier={isStickyYFrontier}
                     row={row}
                     rowWithSomeSelectedCell={rowWithSomeSelectedCell}
@@ -521,7 +532,9 @@ export const Table = forwardRef((props, ref) => {
                     <DataCell
                       stickyX={col.sticky}
                       stickyY={rowOptions.sticky}
-                      isStickyXFrontier={colIndex === stickyColumnFrontierIndex}
+                      isStickyXFrontier={
+                        stickyColumnFrontierIndex === colIndex + 1
+                      }
                       isStickyYFrontier={isStickyYFrontier}
                       key={`${row.id}-${col.id}`}
                       columnName={col.accessorKey}
