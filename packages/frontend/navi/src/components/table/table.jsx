@@ -82,8 +82,10 @@ import.meta.css = /* css */ `
     --sticky-border-color: yellow;
 
     --z-index-focused: 0; /* must be above selection and anything else  */
-    --z-index-sticky: 1; /* needed because cell uses position:relative, sticky must win even if before in DOM order */
-    --z-index-sticky-corner: 0;
+    /* needed because cell uses position:relative, sticky must win even if before in DOM order */
+    --z-index-sticky-row: 100;
+    --z-index-sticky-column: 1000;
+    --z-index-sticky-corner: 10000;
 
     position: relative;
   }
@@ -261,25 +263,24 @@ import.meta.css = /* css */ `
 
   /* Stickyness */
   .navi_table tr[data-sticky] {
-    z-index: var(--z-index-sticky);
+    z-index: var(--z-index-sticky-row);
     position: sticky;
     top: 0;
-  }
-  .navi_table tr[data-sticky] th::before {
-    z-index: var(--z-index-sticky-row-box-shadow);
   }
   .navi_table tr[data-sticky] th[data-sticky] {
     position: sticky;
     top: 0;
   }
-  .navi_table th[data-sticky] {
-    z-index: var(--z-index-sticky-corner);
-  }
   .navi_table td[data-sticky],
   .navi_table th[data-sticky] {
-    z-index: var(--z-index-sticky);
     position: sticky;
     left: 0;
+  }
+  /* .navi_table th[data-sticky] {
+      z-index: var(--z-index-sticky-row);
+    } */
+  .navi_table td[data-sticky] {
+    z-index: var(--z-index-sticky-column);
   }
 
   /* Border-collapse mode: Sticky columns/rows border adjustments */
@@ -321,41 +322,41 @@ import.meta.css = /* css */ `
   .navi_table td[data-sticky]:first-child::before,
   .navi_table th[data-sticky]:first-child::before {
     box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
       inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
 
   .navi_table tr[data-sticky]:first-child th::before,
   .navi_table tr[data-sticky]:first-child td::before {
     box-shadow:
+      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
+        var(--sticky-border-color),
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
-        var(--sticky-border-color);
+      inset -1px 0 0 0 var(--border-color);
   }
 
   .navi_table tr[data-sticky]:first-child th:first-child::before,
   .navi_table tr[data-sticky]:first-child td:first-child::before {
     box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
       inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
       inset 0 calc(-1 * var(--sticky-border-size)) 0 0
-        var(--sticky-border-color);
+        var(--sticky-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color);
   }
 
   .navi_table tr:not(:first-child) td[data-sticky]:first-child::before,
   .navi_table tr:not(:first-child) th[data-sticky]:first-child::before {
     box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
       inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
 `;
@@ -482,7 +483,7 @@ export const Table = forwardRef((props, ref) => {
                   aria-selected={isRowSelected}
                 >
                   <RowNumberCell
-                    // sticky
+                    sticky
                     row={row}
                     rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                     columns={columns}
