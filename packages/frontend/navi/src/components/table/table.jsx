@@ -462,7 +462,12 @@ export const Table = forwardRef((props, ref) => {
         >
           <thead>
             <tr>
-              <RowNumberHeaderCell sticky />
+              <RowNumberHeaderCell
+                sticky
+                onClick={() => {
+                  ref.current.selectAll();
+                }}
+              />
               {columns.map((col, index) => (
                 <HeaderCell
                   sticky={col.sticky}
@@ -516,16 +521,15 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 
-const RowNumberHeaderCell = ({ sticky }) => {
+const RowNumberHeaderCell = ({ sticky, ...rest }) => {
   return (
     <th
       className="navi_row_number_cell"
       data-sticky-x={sticky ? "" : undefined}
       data-sticky-y={sticky ? "" : undefined}
       style={{ textAlign: "center" }}
-    >
-      #
-    </th>
+      {...rest}
+    ></th>
   );
 };
 const RowNumberCell = ({ sticky, row, columns, rowWithSomeSelectedCell }) => {
