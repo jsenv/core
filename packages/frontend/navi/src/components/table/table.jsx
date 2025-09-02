@@ -65,12 +65,15 @@ import {
 import { useFocusGroup } from "../use_focus_group.js";
 import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
-/* Border collapse using box-shadow */
-/* Each cell owns its bottom and right borders via box-shadow */
-/* This simulates border-collapse: collapse behavior */
-/* .navi_table tbody td: only bottom and right borders */
-/* .navi_table thead tr:not(:first-child) th: no top border (owned by row above) */
-/* .navi_table th:not(:first-child), .navi_table td:not(:first-child): no left border (owned by cell to left) */
+/*
+ * Box-shadow border mapping template:
+ *
+ * box-shadow:
+ *   inset 0 1px 0 0 color,    // Top border
+ *   inset 1px 0 0 0 color,    // Left border
+ *   inset -1px 0 0 0 color,   // Right border
+ *   inset 0 -1px 0 0 color;   // Bottom border
+ */
 
 import.meta.css = /* css */ `
   .navi_table_container {
@@ -108,21 +111,19 @@ import.meta.css = /* css */ `
     right: 0;
     bottom: 0;
     pointer-events: none;
-    /* All four borders for each cell - ALL DRAWN INSIDE THE CELL using inset */
     box-shadow:
-      inset 0 -1px 0 0 var(--border-color),
-      /* Top border */ inset -1px 0 0 0 var(--border-color),
-      /* Left border */ inset 1px 0 0 0 var(--border-color),
-      /* Right border */ inset 0 1px 0 0 var(--border-color); /* Bottom border */
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
   .navi_table[data-border-collapse] th::before,
   .navi_table[data-border-collapse] td::before {
-    /* Default: only right and bottom borders (each cell owns these) */
     box-shadow:
       1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
+      0 1px 0 0 var(--border-color);
   }
 
   /* Border-collapse: First row gets top border in addition to right and bottom */
@@ -130,8 +131,8 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] tr:first-child td::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
-      /* Top border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
   }
 
   /* Border-collapse: First column gets left border in addition to right and bottom */
@@ -139,8 +140,8 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] td:first-child::before {
     box-shadow:
       -1px 0 0 0 var(--border-color),
-      /* Left border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
   }
 
   /* Border-collapse: First row first column gets all four borders */
@@ -148,9 +149,9 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] tr:first-child td:first-child::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
-      /* Top border */ -1px 0 0 0 var(--border-color),
-      /* Left border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
+      -1px 0 0 0 var(--border-color),
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
   }
 
   .navi_table th,
@@ -289,8 +290,8 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] tr[data-sticky] + tr th::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
-      /* Top border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
   }
 
   /* Border-collapse: Cells after sticky columns need left border restored */
@@ -298,8 +299,8 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] td[data-sticky] + td::before {
     box-shadow:
       -1px 0 0 0 var(--border-color),
-      /* Left border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
   }
 
   /* Border-collapse: Header row cells after sticky columns need top + left border */
@@ -309,9 +310,9 @@ import.meta.css = /* css */ `
     + th::before {
     box-shadow:
       0 -1px 0 0 var(--border-color),
-      /* Top border */ -1px 0 0 0 var(--border-color),
-      /* Left border */ 1px 0 0 0 var(--border-color),
-      /* Right border */ 0 1px 0 0 var(--border-color); /* Bottom border */
+      -1px 0 0 0 var(--border-color),
+      1px 0 0 0 var(--border-color),
+      0 1px 0 0 var(--border-color);
   }
 
   /* Sticky border styling - works in both normal and border-collapse modes */
@@ -321,43 +322,41 @@ import.meta.css = /* css */ `
   .navi_table th[data-sticky]:first-child::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
-      /* Top border */ inset 1px 0 0 0 var(--border-color),
-      /* Left border */ inset calc(-1 * var(--sticky-border-size)) 0 0 0
+      inset 1px 0 0 0 var(--border-color),
+      inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
-      /* Thick yellow right border inside */ inset 0 -1px 0 0
-        var(--border-color); /* Bottom border */
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   .navi_table tr[data-sticky]:first-child th::before,
   .navi_table tr[data-sticky]:first-child td::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
-      /* Top border */ inset 1px 0 0 0 var(--border-color),
-      /* Left border */ inset -1px 0 0 0 var(--border-color),
-      /* Right border */ inset 0 calc(-1 * var(--sticky-border-size)) 0 0
-        var(--sticky-border-color); /* Thick yellow bottom border inside */
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
+        var(--sticky-border-color);
   }
 
   .navi_table tr[data-sticky]:first-child th:first-child::before,
   .navi_table tr[data-sticky]:first-child td:first-child::before {
     box-shadow:
-      inset 0 -1px 0 0 var(--border-color),
-      /* Top border */ inset -1px 0 0 0 var(--border-color),
-      /* Left border */ inset var(--sticky-border-size) 0 0 0
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
-      /* Thick yellow right border inside */ inset 0 var(--sticky-border-size) 0
-        0 var(--sticky-border-color); /* Thick yellow bottom border inside */
+      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
+        var(--sticky-border-color);
   }
 
   .navi_table tr:not(:first-child) td[data-sticky]:first-child::before,
   .navi_table tr:not(:first-child) th[data-sticky]:first-child::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
-      /* Top border */ inset 1px 0 0 0 var(--border-color),
-      /* Left border */ inset calc(-1 * var(--sticky-border-size)) 0 0 0
+      inset 1px 0 0 0 var(--border-color),
+      inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
-      /* Thick yellow right border inside */ inset 0 -1px 0 0
-        var(--border-color); /* Bottom border */
+      inset 0 -1px 0 0 var(--border-color);
   }
 `;
 
