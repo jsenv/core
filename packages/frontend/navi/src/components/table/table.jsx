@@ -237,20 +237,20 @@ import.meta.css = /* css */ `
   .navi_table th[data-sticky-y],
   .navi_table td[data-sticky-y] {
     position: sticky;
-    top: 0;
+    top: var(--sticky-group-top, 0);
     z-index: var(--z-index-sticky-row);
   }
   .navi_table th[data-sticky-x],
   .navi_table td[data-sticky-x] {
     position: sticky;
-    left: 0;
+    left: var(--sticky-group-left, 0);
     z-index: var(--z-index-sticky-column);
   }
   .navi_table th[data-sticky-x][data-sticky-y],
   .navi_table td[data-sticky-x][data-sticky-y] {
     position: sticky;
-    top: 0;
-    left: 0;
+    top: var(--sticky-group-top, 0);
+    left: var(--sticky-group-left, 0);
     z-index: var(--z-index-sticky-corner);
   }
 

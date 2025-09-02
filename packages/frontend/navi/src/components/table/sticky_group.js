@@ -8,6 +8,9 @@ export const useStickyGroup = (elementRef) => {
   }, []);
 };
 
+const LEFT_CSS_VAR = "--sticky-group-left";
+const TOP_CSS_VAR = "--sticky-group-top";
+
 /**
  * Creates a sticky group that manages positioning for multiple sticky elements
  * that need to be aware of each other's dimensions.
@@ -40,14 +43,16 @@ const initStickyGroup = (container) => {
   const updateTableColumns = () => {
     // Find all sticky columns by checking the first row
     const headerRow = container.querySelector("thead tr");
-    if (!headerRow) return;
-
+    if (!headerRow) {
+      return;
+    }
     const stickyColumns = Array.from(headerRow.children).filter((cell) =>
       cell.hasAttribute("data-sticky-x"),
     );
-
     // Only proceed if we have more than one sticky column
-    if (stickyColumns.length <= 1) return;
+    if (stickyColumns.length <= 1) {
+      return;
+    }
 
     let cumulativeWidth = 0;
 
@@ -56,7 +61,7 @@ const initStickyGroup = (container) => {
 
       if (index === 0) {
         // First sticky column stays at left: 0, set CSS variable
-        headerCell.style.setProperty("--cumulative-left", "0px");
+        headerCell.style.setProperty(LEFT_CSS_VAR, "0px");
         cumulativeWidth = headerCell.getBoundingClientRect().width;
       } else {
         // Subsequent columns use cumulative positioning
@@ -67,7 +72,7 @@ const initStickyGroup = (container) => {
           `th:nth-child(${columnIndex + 1})[data-sticky-x], td:nth-child(${columnIndex + 1})[data-sticky-x]`,
         );
         columnCells.forEach((cell) => {
-          cell.style.setProperty("--cumulative-left", `${leftPosition}px`);
+          cell.style.setProperty(LEFT_CSS_VAR, `${leftPosition}px`);
         });
 
         // Add this column's width to cumulative width for next column
@@ -77,30 +82,47 @@ const initStickyGroup = (container) => {
   };
 
   const updateTableRows = () => {
-    // Handle sticky rows (if any)
-    const stickyRows = container.querySelectorAll("tr[data-sticky-y]");
+    // Handle sticky rows by finding cells with data-sticky-y and grouping by row
+    const stickyCells = container.querySelectorAll(
+      "th[data-sticky-y], td[data-sticky-y]",
+    );
+    if (stickyCells.length === 0) return;
+
+    // Group cells by their parent row
+    const rowsWithStickyCells = new Map();
+    stickyCells.forEach((cell) => {
+      const row = cell.parentElement;
+      if (!rowsWithStickyCells.has(row)) {
+        rowsWithStickyCells.set(row, []);
+      }
+      rowsWithStickyCells.get(row).push(cell);
+    });
+
+    // Convert to array and sort by row position in DOM
+    const stickyRows = Array.from(rowsWithStickyCells.keys()).sort((a, b) => {
+      const aIndex = Array.from(container.querySelectorAll("tr")).indexOf(a);
+      const bIndex = Array.from(container.querySelectorAll("tr")).indexOf(b);
+      return aIndex - bIndex;
+    });
+
     if (stickyRows.length <= 1) return;
 
     let cumulativeHeight = 0;
 
     stickyRows.forEach((row, index) => {
+      const rowCells = rowsWithStickyCells.get(row);
+
       if (index === 0) {
         // First sticky row stays at top: 0
-        const rowCells = row.querySelectorAll(
-          "th[data-sticky-y], td[data-sticky-y]",
-        );
         rowCells.forEach((cell) => {
-          cell.style.setProperty("--cumulative-top", "0px");
+          cell.style.setProperty(TOP_CSS_VAR, "0px");
         });
         cumulativeHeight = row.getBoundingClientRect().height;
       } else {
         // Subsequent rows use cumulative positioning
         const topPosition = cumulativeHeight;
-        const rowCells = row.querySelectorAll(
-          "th[data-sticky-y], td[data-sticky-y]",
-        );
         rowCells.forEach((cell) => {
-          cell.style.setProperty("--cumulative-top", `${topPosition}px`);
+          cell.style.setProperty(TOP_CSS_VAR, `${topPosition}px`);
         });
         cumulativeHeight += row.getBoundingClientRect().height;
       }
@@ -117,9 +139,7 @@ const initStickyGroup = (container) => {
     const firstElement = stickyElements[0];
     const isHorizontal = firstElement.hasAttribute("data-sticky-x");
     const dimensionProperty = isHorizontal ? "width" : "height";
-    const cssVariableName = isHorizontal
-      ? "--cumulative-left"
-      : "--cumulative-top";
+    const cssVariableName = isHorizontal ? LEFT_CSS_VAR : TOP_CSS_VAR;
 
     let cumulativeSize = 0;
 
