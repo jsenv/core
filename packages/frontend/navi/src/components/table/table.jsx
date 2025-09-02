@@ -93,17 +93,22 @@ import.meta.css = /* css */ `
   .navi_table {
     border-radius: 2px;
     border-spacing: 0; /* Required for manual border collapse */
+    contain: layout style;
   }
 
   .navi_table th,
   .navi_table td {
-    border: none; /* Remove default borders - we'll use pseudo-elements */
-    position: relative; /* Required for pseudo-element positioning */
     white-space: nowrap;
   }
 
   /* Table borders using ::before pseudo-elements */
   /* Default: each cell draws all its own borders (no border-collapse) */
+  .navi_table th,
+  .navi_table td {
+    border: none; /* Remove default borders - we'll use pseudo-elements */
+    position: relative; /* Required for pseudo-element positioning */
+  }
+
   .navi_table th::before,
   .navi_table td::before {
     content: "";
@@ -263,7 +268,7 @@ import.meta.css = /* css */ `
 
   /* Stickyness */
   .navi_table tr[data-sticky] {
-    z-index: var(--z-index-sticky-row);
+    /* z-index: var(--z-index-sticky-row); */
     position: sticky;
     top: 0;
   }
@@ -277,10 +282,10 @@ import.meta.css = /* css */ `
     left: 0;
   }
   /* .navi_table th[data-sticky] {
-      z-index: var(--z-index-sticky-row);
-    } */
+              z-index: var(--z-index-sticky-row);
+            } */
   .navi_table td[data-sticky] {
-    z-index: var(--z-index-sticky-column);
+    /* z-index: var(--z-index-sticky-column); */
   }
 
   /* Border-collapse mode: Sticky columns/rows border adjustments */
