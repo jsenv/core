@@ -38,10 +38,7 @@
  * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
- * - Vérifier comment ça rend avec sticky + sans border collapse
- * - Si on est satisfait on va essayer d'implementer le border collapse
- * - Fixed first row
- * - Fixed first column
+ * - Now border collapse
  * - Shortcuts to act on selection
  * - Resizing columns
  * - Resizing rows
