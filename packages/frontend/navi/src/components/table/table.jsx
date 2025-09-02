@@ -298,20 +298,21 @@ import.meta.css = /* css */ `
   .navi_table td[data-sticky]:first-child::before,
   .navi_table th[data-sticky]:first-child::before {
     box-shadow:
-      inset 0 -1px 0 0 var(--border-color),
-      /* Top border */ inset -1px 0 0 0 var(--border-color),
-      /* Left border */ inset var(--sticky-border-size) 0 0 0
+      inset 0 1px 0 0 var(--border-color),
+      /* Top border */ inset 1px 0 0 0 var(--border-color),
+      /* Left border */ inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
-      /* Thick yellow right border inside */ inset 0 1px 0 0 var(--border-color); /* Bottom border */
+      /* Thick yellow right border inside */ inset 0 -1px 0 0
+        var(--border-color); /* Bottom border */
   }
 
   .navi_table tr[data-sticky]:first-child th::before,
   .navi_table tr[data-sticky]:first-child td::before {
     box-shadow:
-      inset 0 -1px 0 0 var(--border-color),
-      /* Top border */ inset -1px 0 0 0 var(--border-color),
-      /* Left border */ inset 1px 0 0 0 var(--border-color),
-      /* Right border */ inset 0 var(--sticky-border-size) 0 0
+      inset 0 1px 0 0 var(--border-color),
+      /* Top border */ inset 1px 0 0 0 var(--border-color),
+      /* Left border */ inset -1px 0 0 0 var(--border-color),
+      /* Right border */ inset 0 calc(-1 * var(--sticky-border-size)) 0 0
         var(--sticky-border-color); /* Thick yellow bottom border inside */
     z-index: var(--z-index-sticky-row-box-shadow);
   }
@@ -331,11 +332,12 @@ import.meta.css = /* css */ `
   .navi_table tr:not(:first-child) td[data-sticky]:first-child::before,
   .navi_table tr:not(:first-child) th[data-sticky]:first-child::before {
     box-shadow:
-      inset 0 -1px 0 0 var(--border-color),
-      /* Top border */ inset -1px 0 0 0 var(--border-color),
-      /* Left border */ inset var(--sticky-border-size) 0 0 0
+      inset 0 1px 0 0 var(--border-color),
+      /* Top border */ inset 1px 0 0 0 var(--border-color),
+      /* Left border */ inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
-      /* Thick yellow right border inside */ inset 0 1px 0 0 var(--border-color); /* Bottom border */
+      /* Thick yellow right border inside */ inset 0 -1px 0 0
+        var(--border-color); /* Bottom border */
   }
 `;
 
