@@ -151,9 +151,8 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  /* First row - adds top border */
-  .navi_table[data-border-collapse] tr:first-child th::before,
-  .navi_table[data-border-collapse] tr:first-child td::before {
+  /* Header row (thead tr) - adds top border */
+  .navi_table[data-border-collapse] thead tr th::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
@@ -169,9 +168,8 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  /* First row first column - all borders */
-  .navi_table[data-border-collapse] tr:first-child th:first-child::before,
-  .navi_table[data-border-collapse] tr:first-child td:first-child::before {
+  /* Header first column - all borders */
+  .navi_table[data-border-collapse] thead tr th:first-child::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
@@ -201,9 +199,10 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--selection-border-color);
   }
 
-  /* First row with selections */
+  /* Header row with selections */
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     [data-selection-border-top]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -212,7 +211,8 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     [data-selection-border-right]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -221,7 +221,8 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     [data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -230,7 +231,8 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     [data-selection-border-top][data-selection-border-right]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -239,7 +241,8 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     [data-selection-border-top][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -248,7 +251,8 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     [data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -257,7 +261,8 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -338,10 +343,12 @@ import.meta.css = /* css */ `
 
   /* First row first column with selections */
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-top]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-top]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -351,10 +358,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-left]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-left]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -364,10 +373,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-right]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-right]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -377,10 +388,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-bottom]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -390,10 +403,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-top][data-selection-border-left]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-top][data-selection-border-left]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -403,10 +418,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-top][data-selection-border-right]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-top][data-selection-border-right]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -416,10 +433,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-top][data-selection-border-bottom]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-top][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -429,10 +448,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-left][data-selection-border-right]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-left][data-selection-border-right]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -442,10 +463,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-left][data-selection-border-bottom]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-left][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -455,10 +478,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-right][data-selection-border-bottom]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -468,10 +493,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -481,10 +508,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-bottom]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -494,10 +523,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -507,10 +538,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -520,10 +553,12 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     th:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before,
   .navi_table[data-border-collapse]
-    tr:first-child
+    thead
+    tr
     td:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
