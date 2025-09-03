@@ -115,7 +115,7 @@
         const columns = [];
         for (let i = 1; i <= count; i++) {
           columns.push({
-            sticky: i === 1,
+            // sticky: i === 1,
             id: `col${i}`,
             accessorKey: `col${i}`,
             header: `Column ${i}`,
@@ -164,7 +164,10 @@
                   setSelection(value);
                 }}
                 selectionOpacity={0.5}
-                rows={[{ sticky: true }]}
+                stickyHeader={false}
+                rowColumnSticky={false}
+                // rows={[{ sticky: true }]}
+                borderCollapse
               />
             </div>
 

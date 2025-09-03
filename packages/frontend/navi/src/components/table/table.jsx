@@ -325,40 +325,12 @@ import.meta.css = /* css */ `
       1px 0 0 0 var(--border-color),
       0 1px 0 0 var(--border-color);
   }
-
-  /* Border-collapse: Cells after sticky rows need top border restored */
-  .navi_table[data-border-collapse] th[data-sticky-y] + th::before,
-  .navi_table[data-border-collapse] td[data-sticky-y] + td::before {
-    box-shadow:
-      0 -1px 0 0 var(--border-color),
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
-  }
-
-  /* Border-collapse: Cells after sticky columns need left border restored */
-  .navi_table[data-border-collapse] th[data-sticky-x] + th::before,
-  .navi_table[data-border-collapse] td[data-sticky-x] + td::before {
-    box-shadow:
-      -1px 0 0 0 var(--border-color),
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
-  }
-
-  /* Border-collapse: Header row cells after sticky columns need top + left border */
-  .navi_table[data-border-collapse]
-    tr:first-child
-    th[data-sticky-x]
-    + th::before {
-    box-shadow:
-      0 -1px 0 0 var(--border-color),
-      -1px 0 0 0 var(--border-color),
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
-  }
 `;
 
 export const Table = forwardRef((props, ref) => {
   let {
+    stickyHeader = true,
+    rowColumnSticky = true,
     columns,
     rows = [],
     data,
@@ -482,18 +454,24 @@ export const Table = forwardRef((props, ref) => {
           <thead>
             <tr>
               <RowNumberHeaderCell
-                sticky
-                isStickyXFrontier={stickyColumnFrontierIndex === 0} // Only frontier if no other columns are sticky
-                isStickyYFrontier={stickyRowFrontierIndex === 0} // Only frontier if no other rows are sticky
+                stickyX={rowColumnSticky}
+                stickyY={stickyHeader}
+                isStickyXFrontier={
+                  rowColumnSticky && stickyColumnFrontierIndex === 0
+                } // Only frontier if no other columns are sticky
+                isStickyYFrontier={stickyHeader && stickyRowFrontierIndex === 0} // Only frontier if no other rows are sticky
                 onClick={() => {
                   ref.current.selectAll();
                 }}
               />
               {columns.map((col, index) => (
                 <HeaderCell
-                  sticky={col.sticky}
+                  stickyX={col.sticky}
+                  stickyY={stickyHeader}
                   isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
-                  isStickyYFrontier={stickyRowFrontierIndex === 0} // Header row is always the frontier (no rows above it)
+                  isStickyYFrontier={
+                    stickyHeader && stickyRowFrontierIndex === 0
+                  } // Header row is always the frontier (no rows above it)
                   key={col.id}
                   columnName={col.header}
                   columnAccessorKey={col.accessorKey}
@@ -517,7 +495,7 @@ export const Table = forwardRef((props, ref) => {
                   aria-selected={isRowSelected}
                 >
                   <RowNumberCell
-                    stickyX={true}
+                    stickyX={rowColumnSticky}
                     stickyY={rowOptions.sticky}
                     isStickyXFrontier={stickyColumnFrontierIndex === 0} // Only if no data columns are sticky
                     isStickyYFrontier={isStickyYFrontier}
@@ -556,7 +534,8 @@ export const Table = forwardRef((props, ref) => {
 });
 
 const RowNumberHeaderCell = ({
-  sticky,
+  stickyX,
+  stickyY,
   isStickyXFrontier,
   isStickyYFrontier,
   ...rest
@@ -564,17 +543,18 @@ const RowNumberHeaderCell = ({
   return (
     <th
       className="navi_row_number_cell"
-      data-sticky-x={sticky ? "" : undefined}
-      data-sticky-y={sticky ? "" : undefined}
-      data-sticky-x-frontier={sticky && isStickyXFrontier ? "" : undefined}
-      data-sticky-y-frontier={sticky && isStickyYFrontier ? "" : undefined}
+      data-sticky-x={stickyX ? "" : undefined}
+      data-sticky-y={stickyY ? "" : undefined}
+      data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
+      data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       style={{ textAlign: "center" }}
       {...rest}
     ></th>
   );
 };
 const HeaderCell = ({
-  sticky,
+  stickyX,
+  stickyY,
   isStickyXFrontier,
   isStickyYFrontier,
   columnName,
@@ -603,10 +583,10 @@ const HeaderCell = ({
       data-selection-name="column"
       data-selection-toggle-shortcut="space"
       aria-selected={selected}
-      data-sticky-x={sticky ? "" : undefined}
-      data-sticky-y=""
-      data-sticky-x-frontier={sticky && isStickyXFrontier ? "" : undefined}
-      data-sticky-y-frontier={isStickyYFrontier ? "" : undefined}
+      data-sticky-x={stickyX ? "" : undefined}
+      data-sticky-y={stickyY ? "" : undefined}
+      data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
+      data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       style={{ cursor: "pointer" }}
       tabIndex={-1}
     >
