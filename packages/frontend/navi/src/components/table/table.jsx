@@ -294,36 +294,36 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] th::before,
   .navi_table[data-border-collapse] td::before {
     box-shadow:
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   /* Border-collapse: First row gets top border in addition to right and bottom */
   .navi_table[data-border-collapse] tr:first-child th::before,
   .navi_table[data-border-collapse] tr:first-child td::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color),
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   /* Border-collapse: First column gets left border in addition to right and bottom */
   .navi_table[data-border-collapse] th:first-child::before,
   .navi_table[data-border-collapse] td:first-child::before {
     box-shadow:
-      -1px 0 0 0 var(--border-color),
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   /* Border-collapse: First row first column gets all four borders */
   .navi_table[data-border-collapse] tr:first-child th:first-child::before,
   .navi_table[data-border-collapse] tr:first-child td:first-child::before {
     box-shadow:
-      0 -1px 0 0 var(--border-color),
-      -1px 0 0 0 var(--border-color),
-      1px 0 0 0 var(--border-color),
-      0 1px 0 0 var(--border-color);
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 `;
 
