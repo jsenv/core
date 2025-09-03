@@ -4,521 +4,130 @@ import.meta.css = /* css */ `
   /* Selection border styling using box-shadow to override table borders */
   /* Higher specificity than table ::before pseudo-elements */
 
-  /* Default mode: each cell has all inset borders, selection only overrides selected cell borders */
+  /* DEFAULT MODE: Each cell has all inset borders, selection only overrides selected cell borders */
   /* Adjacent cells keep their red borders, selected cell gets blue borders */
 
-  /* Single border selections - Default mode */
+  /* Single border selections */
   .navi_table [data-selection-border-top]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset 1px 0 0 0 var(--border-color),
-      /* Left table border */ inset -1px 0 0 0 var(--border-color),
-      /* Right table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   .navi_table [data-selection-border-right]::before {
     box-shadow:
       inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ inset 0 1px 0 0 var(--border-color),
-      /* Top table border */ inset 1px 0 0 0 var(--border-color),
-      /* Left table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   .navi_table [data-selection-border-bottom]::before {
     box-shadow:
       inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ inset 0 1px 0 0 var(--border-color),
-      /* Top table border */ inset 1px 0 0 0 var(--border-color),
-      /* Left table border */ inset -1px 0 0 0 var(--border-color); /* Right table border */
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color);
   }
 
   .navi_table [data-selection-border-left]::before {
     box-shadow:
       inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset 0 1px 0 0 var(--border-color),
-      /* Top table border */ inset -1px 0 0 0 var(--border-color),
-      /* Right table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
-  }
-
-  /* BORDER-COLLAPSE MODE: Specific rules that respect border ownership */
-
-  /* Border-collapse: Single border selections */
-  .navi_table[data-border-collapse] [data-selection-border-top]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset -1px 0 0 0 var(--border-color),
-      /* Right table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
-  }
-
-  .navi_table[data-border-collapse] [data-selection-border-right]::before {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
-  }
-
-  .navi_table[data-border-collapse] [data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ inset -1px 0 0 0 var(--border-color); /* Right table border */
-  }
-
-  .navi_table[data-border-collapse] [data-selection-border-left]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset -1px 0 0 0 var(--border-color),
-      /* Right table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
-  }
-
-  /* Border-collapse: Header cells (which own top borders) */
-  .navi_table[data-border-collapse] thead [data-selection-border-top]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset -1px 0 0 0 var(--border-color),
-      /* Right table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
-  }
-
-  /* Border-collapse: First column cells (which own left borders) */
-  .navi_table[data-border-collapse]
-    [data-selection-border-left]:first-child::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset -1px 0 0 0 var(--border-color),
-      /* Right table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
-  }
-
-  /* Border-collapse: Header first column (owns all borders) */
-  .navi_table[data-border-collapse]
-    thead
-    [data-selection-border-top][data-selection-border-left]:first-child::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset -1px 0 0 0 var(--border-color),
-      /* Right table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
-  }
-
-  /* BORDER-COLLAPSE MODE: Override all selection styles */
-  /* Each cell type only shows borders it actually owns, with selection colors when selected */
-
-  /* Data cells (tbody td) in non-first column - only own right and bottom borders */
-  .navi_table[data-border-collapse]
-    tbody
-    td:not(:first-child)[data-selection-border-right]::before {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    tbody
-    td:not(:first-child)[data-selection-border-bottom]::before {
-    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    tbody
-    td:not(
-      :first-child
-    )[data-selection-border-right][data-selection-border-bottom]::before {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  /* First column data cells (tbody td:first-child) - own left, right, and bottom borders */
-  .navi_table[data-border-collapse]
-    tbody
-    td:first-child[data-selection-border-left]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    tbody
-    td:first-child[data-selection-border-right]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    tbody
-    td:first-child[data-selection-border-bottom]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    tbody
-    td:first-child[data-selection-border-left][data-selection-border-right]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0
-        var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    tbody
-    td:first-child[data-selection-border-left][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    tbody
-    td:first-child[data-selection-border-right][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    tbody
-    td:first-child[data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0
-        var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  /* Header cells (thead th) in non-first column - own top, right, and bottom borders */
-  .navi_table[data-border-collapse]
-    thead
-    th:not(:first-child)[data-selection-border-top]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:not(:first-child)[data-selection-border-right]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:not(:first-child)[data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:not(
-      :first-child
-    )[data-selection-border-top][data-selection-border-right]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:not(
-      :first-child
-    )[data-selection-border-top][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:not(
-      :first-child
-    )[data-selection-border-right][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:not(
-      :first-child
-    )[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  /* First column header cells (thead th:first-child) - own all four borders */
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-top]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-left]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-right]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-top][data-selection-border-left]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-top][data-selection-border-right]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-top][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-left][data-selection-border-right]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0
-        var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-left][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-right][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0
-        var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0 var(--border-color); /* Bottom border - normal */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0 var(--border-color),
-      /* Right border - normal */ inset 0 -1px 0 0 var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset 1px 0 0 0 var(--border-color),
-      /* Left border - normal */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      /* Top border - normal */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0
-        var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom border - selected */
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      /* Top border - selected */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left border - selected */ inset -1px 0 0 0
-        var(--selection-border-color),
-      /* Right border - selected */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom border - selected */
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   /* Two border combinations */
   .navi_table [data-selection-border-top][data-selection-border-right]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ inset 1px 0 0 0 var(--border-color),
-      /* Left table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   .navi_table
     [data-selection-border-top][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ inset 1px 0 0 0 var(--border-color),
-      /* Left table border */ inset -1px 0 0 0 var(--border-color); /* Right table border */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color);
   }
 
   .navi_table [data-selection-border-top][data-selection-border-left]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset -1px 0 0 0 var(--border-color),
-      /* Right table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   .navi_table
     [data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
       inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ inset 0 -1px 0 0
-        var(--selection-border-color),
-      /* Bottom selection border */ inset 0 1px 0 0 var(--border-color),
-      /* Top table border */ inset 1px 0 0 0 var(--border-color); /* Left table border */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color);
   }
 
   .navi_table
     [data-selection-border-right][data-selection-border-left]::before {
     box-shadow:
       inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ inset 0 1px 0 0 var(--border-color),
-      /* Top table border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   .navi_table
     [data-selection-border-bottom][data-selection-border-left]::before {
     box-shadow:
       inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ inset 0 1px 0 0 var(--border-color),
-      /* Top table border */ inset -1px 0 0 0 var(--border-color); /* Right table border */
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color);
   }
+
   /* Three border combinations */
   .navi_table
     [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ inset 0 -1px 0 0
-        var(--selection-border-color),
-      /* Bottom selection border */ inset 1px 0 0 0 var(--border-color); /* Left table border */
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--border-color);
   }
 
   .navi_table
     [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset 0 -1px 0 0 var(--selection-border-color),
-      /* Bottom selection border */ inset -1px 0 0 0 var(--border-color); /* Right table border */
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color);
   }
 
   .navi_table
     [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::before {
     box-shadow:
       inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ inset 0 -1px 0 0
-        var(--selection-border-color),
-      /* Bottom selection border */ inset 0 1px 0 0 var(--border-color); /* Top table border */
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 0 1px 0 0 var(--border-color);
   }
 
   .navi_table
     [data-selection-border-top][data-selection-border-right][data-selection-border-left]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ inset 0 -1px 0 0 var(--border-color); /* Bottom table border */
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
   }
 
   /* Four border combination */
@@ -526,10 +135,401 @@ import.meta.css = /* css */ `
     [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
-      /* Top selection border */ inset 1px 0 0 0 var(--selection-border-color),
-      /* Left selection border */ inset -1px 0 0 0 var(--selection-border-color),
-      /* Right selection border */ inset 0 -1px 0 0
-        var(--selection-border-color); /* Bottom selection border */
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  /* BORDER-COLLAPSE MODE: Specific rules that respect border ownership */
+  /* Each cell type only shows borders it actually owns, with selection colors when selected */
+
+  /* Regular cells - only own right and bottom borders */
+  .navi_table[data-border-collapse] th::before,
+  .navi_table[data-border-collapse] td::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* First row - adds top border */
+  .navi_table[data-border-collapse] tr:first-child th::before,
+  .navi_table[data-border-collapse] tr:first-child td::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* First column - adds left border */
+  .navi_table[data-border-collapse] th:first-child::before,
+  .navi_table[data-border-collapse] td:first-child::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* First row first column - all borders */
+  .navi_table[data-border-collapse] tr:first-child th:first-child::before,
+  .navi_table[data-border-collapse] tr:first-child td:first-child::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Selection overrides for border-collapse mode */
+
+  /* Regular cells with selections */
+  .navi_table[data-border-collapse] [data-selection-border-right]::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse] [data-selection-border-bottom]::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    [data-selection-border-right][data-selection-border-bottom]::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  /* First row with selections */
+  .navi_table[data-border-collapse]
+    tr:first-child
+    [data-selection-border-top]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    [data-selection-border-right]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    [data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    [data-selection-border-top][data-selection-border-right]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    [data-selection-border-top][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    [data-selection-border-right][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  /* First column with selections */
+  .navi_table[data-border-collapse]
+    th:first-child[data-selection-border-left]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-selection-border-left]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    th:first-child[data-selection-border-right]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-selection-border-right]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    th:first-child[data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-selection-border-bottom]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    th:first-child[data-selection-border-left][data-selection-border-right]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-selection-border-left][data-selection-border-right]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    th:first-child[data-selection-border-left][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-selection-border-left][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    th:first-child[data-selection-border-right][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-selection-border-right][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    th:first-child[data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  /* First row first column with selections */
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-top]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-top]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-left]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-left]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-right]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-right]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-top][data-selection-border-left]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-top][data-selection-border-left]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-top][data-selection-border-right]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-top][data-selection-border-right]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-top][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-top][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-left][data-selection-border-right]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-left][data-selection-border-right]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-left][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-left][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-right][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-right][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    tr:first-child
+    th:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before,
+  .navi_table[data-border-collapse]
+    tr:first-child
+    td:first-child[data-selection-border-top][data-selection-border-left][data-selection-border-right][data-selection-border-bottom]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
   }
 `;
 export const TableSelectionBorders = ({ tableRef, color }) => {
