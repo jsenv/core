@@ -228,31 +228,32 @@ const applySelectionBorderAttributes = (table, selectedCells) => {
 
   // Helper function to check if a cell has a computed border (box-shadow based)
   const hasBorder = (element, side) => {
-    const computedStyle = getComputedStyle(element);
-    const boxShadow = computedStyle.getPropertyValue("box-shadow");
+    const table = element.closest("table");
+    const isBorderCollapse =
+      table && table.hasAttribute("data-border-collapse");
 
-    // If no box-shadow, no borders
-    if (!boxShadow || boxShadow === "none") {
-      return false;
+    if (!isBorderCollapse) {
+      // Default mode: all cells have all borders
+      return true;
     }
 
-    // Parse box-shadow to detect inset borders
-    // Box-shadow format: inset x y blur spread color
-    // We're looking for inset shadows that simulate borders
+    // Border-collapse mode: check actual border ownership based on CSS rules
+    const isInHeaderRow = element.closest("thead") !== null;
+    const isFirstColumn = element.matches(":first-child");
 
     switch (side) {
       case "top":
-        // Top border: inset 0 1px 0 0 color (positive Y offset)
-        return /inset\s+0\s+1px\s+0\s+0/.test(boxShadow);
+        // Only header cells (thead th) own top borders
+        return isInHeaderRow;
       case "right":
-        // Right border: inset -1px 0 0 0 color (negative X offset)
-        return /inset\s+-\d+px\s+0\s+0\s+0/.test(boxShadow);
+        // All cells own right borders
+        return true;
       case "bottom":
-        // Bottom border: inset 0 -1px 0 0 color (negative Y offset)
-        return /inset\s+0\s+-\d+px\s+0\s+0/.test(boxShadow);
+        // All cells own bottom borders
+        return true;
       case "left":
-        // Left border: inset 1px 0 0 0 color (positive X offset)
-        return /inset\s+1px\s+0\s+0\s+0/.test(boxShadow);
+        // Only first column cells own left borders
+        return isFirstColumn;
       default:
         return false;
     }
