@@ -298,9 +298,16 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  /* Border-collapse: First row gets top border in addition to right and bottom */
-  .navi_table[data-border-collapse] tr:first-child th::before,
-  .navi_table[data-border-collapse] tr:first-child td::before {
+  /* Border-collapse: Header row (thead) gets top border in addition to right and bottom */
+  .navi_table[data-border-collapse] thead th::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Border-collapse: Header row (thead) gets top border in addition to right and bottom */
+  .navi_table[data-border-collapse] thead th::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
@@ -316,9 +323,8 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  /* Border-collapse: First row first column gets all four borders */
-  .navi_table[data-border-collapse] tr:first-child th:first-child::before,
-  .navi_table[data-border-collapse] tr:first-child td:first-child::before {
+  /* Border-collapse: Header first column gets all four borders */
+  .navi_table[data-border-collapse] thead th:first-child::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
