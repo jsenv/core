@@ -1228,18 +1228,20 @@ export const selectionKeyboardShortcuts = (selection) => {
   const getSelectableElement = (keydownEvent) => {
     return keydownEvent.target.closest("[data-selectable]");
   };
-  const moveSelection = (actionEvent, getElementToSelect) => {
-    const keydownEvent = actionEvent.detail.event;
-    const selectableElement = getSelectableElement(keydownEvent);
-    const elementToSelect = getElementToSelect(selectableElement, keydownEvent);
+  const moveSelection = (keyboardEvent, getElementToSelect) => {
+    const selectableElement = getSelectableElement(keyboardEvent);
+    const elementToSelect = getElementToSelect(
+      selectableElement,
+      keyboardEvent,
+    );
 
     if (!elementToSelect) {
       return false;
     }
 
-    const { key } = keydownEvent;
-    const isMetaOrCtrlPressed = keydownEvent.metaKey || keydownEvent.ctrlKey;
-    const isShiftSelect = keydownEvent.shiftKey;
+    const { key } = keyboardEvent;
+    const isMetaOrCtrlPressed = keyboardEvent.metaKey || keyboardEvent.ctrlKey;
+    const isShiftSelect = keyboardEvent.shiftKey;
     const isMultiSelect = isMetaOrCtrlPressed && isShiftSelect; // Only add to selection when BOTH are pressed
     const targetValue = getElementValue(elementToSelect);
     const { isCrossType, shouldClearPreviousSelection } =
@@ -1255,7 +1257,7 @@ export const selectionKeyboardShortcuts = (selection) => {
         `keydownToSelect: ${key} with Shift - selecting from anchor to target element`,
       );
       selection.setActiveElement(elementToSelect);
-      selection.selectFromAnchorTo(elementToSelect, keydownEvent);
+      selection.selectFromAnchorTo(elementToSelect, keyboardEvent);
       return true;
     }
     if (isMultiSelect && !isCrossType) {
@@ -1263,7 +1265,7 @@ export const selectionKeyboardShortcuts = (selection) => {
         "interaction",
         `keydownToSelect: ${key} with multi-select - adding to selection`,
       );
-      selection.addToSelection([targetValue], keydownEvent);
+      selection.addToSelection([targetValue], keyboardEvent);
       return true;
     }
     // Handle cross-type navigation
@@ -1272,7 +1274,7 @@ export const selectionKeyboardShortcuts = (selection) => {
         "interaction",
         `keydownToSelect: ${key} - cross-type navigation, clearing and setting new selection`,
       );
-      selection.setSelection([targetValue], keydownEvent);
+      selection.setSelection([targetValue], keyboardEvent);
       return true;
     }
     if (isCrossType && !shouldClearPreviousSelection) {
@@ -1280,14 +1282,14 @@ export const selectionKeyboardShortcuts = (selection) => {
         "interaction",
         `keydownToSelect: ${key} - cross-type navigation with Cmd, adding to selection`,
       );
-      selection.addToSelection([targetValue], keydownEvent);
+      selection.addToSelection([targetValue], keyboardEvent);
       return true;
     }
     debug(
       "interaction",
       `keydownToSelect: ${key} - setting selection to target element`,
     );
-    selection.setSelection([targetValue], keydownEvent);
+    selection.setSelection([targetValue], keyboardEvent);
     return true;
   };
 
@@ -1295,15 +1297,15 @@ export const selectionKeyboardShortcuts = (selection) => {
     {
       key: "command+shift+up",
       enabled: selection.axis !== "horizontal",
-      action: (actionEvent) => {
-        return moveSelection(actionEvent, getJumpToEndElement);
+      handler: (keyboardEvent) => {
+        return moveSelection(keyboardEvent, getJumpToEndElement);
       },
     },
     {
       key: "up",
       enabled: selection.axis !== "horizontal",
-      action: (actionEvent) => {
-        return moveSelection(actionEvent, (selectableElement) =>
+      handler: (keyboardEvent) => {
+        return moveSelection(keyboardEvent, (selectableElement) =>
           selection.getElementAbove(selectableElement),
         );
       },
@@ -1311,15 +1313,15 @@ export const selectionKeyboardShortcuts = (selection) => {
     {
       key: "command+shift+down",
       enabled: selection.axis !== "horizontal",
-      action: (actionEvent) => {
-        return moveSelection(actionEvent, getJumpToEndElement);
+      handler: (keyboardEvent) => {
+        return moveSelection(keyboardEvent, getJumpToEndElement);
       },
     },
     {
       key: "down",
       enabled: selection.axis !== "horizontal",
-      action: (actionEvent) => {
-        return moveSelection(actionEvent, (selectableElement) => {
+      handler: (keyboardEvent) => {
+        return moveSelection(keyboardEvent, (selectableElement) => {
           return selection.getElementBelow(selectableElement);
         });
       },
@@ -1327,15 +1329,15 @@ export const selectionKeyboardShortcuts = (selection) => {
     {
       key: "command+shift+left",
       enabled: selection.axis !== "horizontal",
-      action: (actionEvent) => {
-        return moveSelection(actionEvent, getJumpToEndElement);
+      handler: (keyboardEvent) => {
+        return moveSelection(keyboardEvent, getJumpToEndElement);
       },
     },
     {
       key: "left",
       enabled: selection.axis !== "vertical",
-      action: (actionEvent) => {
-        return moveSelection(actionEvent, (selectableElement) => {
+      handler: (keyboardEvent) => {
+        return moveSelection(keyboardEvent, (selectableElement) => {
           return selection.getElementBefore(selectableElement);
         });
       },
@@ -1343,48 +1345,46 @@ export const selectionKeyboardShortcuts = (selection) => {
     {
       key: "command+shift+right",
       enabled: selection.axis !== "vertical",
-      action: (actionEvent) => {
-        return moveSelection(actionEvent, getJumpToEndElement);
+      handler: (keyboardEvent) => {
+        return moveSelection(keyboardEvent, getJumpToEndElement);
       },
     },
     {
       key: "right",
       enabled: selection.axis !== "vertical",
-      action: (actionEvent) => {
-        return moveSelection(actionEvent, (selectableElement) => {
+      handler: (keyboardEvent) => {
+        return moveSelection(keyboardEvent, (selectableElement) => {
           return selection.getElementAfter(selectableElement);
         });
       },
     },
     {
       key: "shift",
-      action: (actionEvent) => {
-        const element = getSelectableElement(actionEvent.detail.event);
+      handler: (keyboardEvent) => {
+        const element = getSelectableElement(keyboardEvent);
         selection.setAnchorElement(element);
         return true;
       },
     },
     {
       key: "command+a",
-      action: (actionEvent) => {
-        const keydownEvent = actionEvent.detail.event;
-        selection.selectAll(keydownEvent);
+      handler: (keyboardEvent) => {
+        selection.selectAll(keyboardEvent);
         return true;
       },
     },
     {
       // toggle selection only if element has [data-selection-toggle-shortcut] (usually "space")
       key: (el) => el.getAttribute("data-selection-toggle-shortcut"),
-      action: (actionEvent) => {
-        const keydownEvent = actionEvent.detail.event;
-        const element = getSelectableElement(keydownEvent);
+      handler: (keyboardEvent) => {
+        const element = getSelectableElement(keyboardEvent);
         const elementValue = getElementValue(element);
         const isCurrentlySelected = selection.isElementSelected(element);
         if (isCurrentlySelected) {
-          selection.removeFromSelection([elementValue], keydownEvent);
+          selection.removeFromSelection([elementValue], keyboardEvent);
           return true;
         }
-        selection.addToSelection([elementValue], keydownEvent);
+        selection.addToSelection([elementValue], keyboardEvent);
         return true;
       },
     },

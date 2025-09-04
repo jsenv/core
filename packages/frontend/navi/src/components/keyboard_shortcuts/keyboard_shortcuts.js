@@ -48,7 +48,7 @@ export const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
     if (typeof enabled === "function" && !enabled(keyboardEvent)) {
       continue;
     }
-    const returnValue = shortcutCandidate.action(keyboardEvent);
+    const returnValue = shortcutCandidate.handler(keyboardEvent);
     if (returnValue) {
       keyboardEvent.preventDefault();
     }

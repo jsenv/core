@@ -111,7 +111,10 @@ export const KeyboardShortcuts = ({
       for (const shortcutCandidate of shortcuts) {
         shortcutsCopy.push({
           ...shortcutCandidate,
-          action: () => {
+          handler: (keyboardEvent) => {
+            if (shortcutCandidate.handler) {
+              return shortcutCandidate.handler(keyboardEvent);
+            }
             if (shortcutActionIsBusy) {
               return false;
             }
