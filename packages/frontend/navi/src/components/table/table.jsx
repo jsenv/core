@@ -439,6 +439,27 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
+  /* Header cells after sticky-y-frontier also need left border (for border-collapse) */
+  .navi_table[data-border-collapse] th[data-after-sticky-y-frontier]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* First column cells after sticky-y-frontier need all four borders (for border-collapse) */
+  .navi_table[data-border-collapse]
+    th:first-child[data-after-sticky-y-frontier]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-after-sticky-y-frontier]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
   /* Corner case: cell after both sticky frontiers */
   .navi_table[data-border-collapse]
     th[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before,
