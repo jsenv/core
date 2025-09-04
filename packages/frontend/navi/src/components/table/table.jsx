@@ -580,7 +580,7 @@ export const Table = forwardRef((props, ref) => {
     }
   }
 
-  const SelectionProvider = useSelectionProvider({
+  const [SelectionProvider, selectionInterface] = useSelectionProvider({
     elementRef: innerRef,
     layout: "grid",
     value: selection,
@@ -604,7 +604,7 @@ export const Table = forwardRef((props, ref) => {
   }, [selectionColor]);
 
   const KeyboardShortcutsProvider = useKeyboardShortcutsProvider(innerRef, {
-    shortcuts: [...selectionKeyboardShortcuts()],
+    shortcuts: [...selectionKeyboardShortcuts(selectionInterface)],
   });
 
   // Calculate frontier sticky column and row indexes (boundary between sticky and non-sticky)

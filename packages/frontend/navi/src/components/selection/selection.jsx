@@ -83,7 +83,7 @@ export const useSelectionProvider = ({
     return Stuff;
   }, [selection]);
 
-  return LocalSelectionProvider;
+  return [LocalSelectionProvider, selection];
 };
 // Base Selection - shared functionality between grid and linear
 const createBaseSelection = ({
@@ -716,24 +716,25 @@ const getElementSelectionName = (element) => {
 };
 
 // Helper functions to find end elements for jump to end functionality
-const getJumpToEndElement = (selection, element, direction) => {
+const getJumpToEndElement = (selection, element, keydownEvent) => {
   if (selection.type === "grid") {
-    return getJumpToEndElementGrid(selection, element, direction);
+    return getJumpToEndElementGrid(selection, element, keydownEvent);
   } else if (selection.type === "linear") {
-    return getJumpToEndElementLinear(selection, element, direction);
+    return getJumpToEndElementLinear(selection, element, keydownEvent);
   }
   return null;
 };
-const getJumpToEndElementGrid = (selection, element, direction) => {
+const getJumpToEndElementGrid = (selection, element, keydownEvent) => {
   const currentPos = getElementPosition(element);
   if (!currentPos) {
     return null;
   }
+  const { key } = keydownEvent;
 
   const { x, y } = currentPos;
   const currentSelectionName = getElementSelectionName(element);
 
-  if (direction === "ArrowRight") {
+  if (key === "ArrowRight") {
     // Jump to last element in current row with matching selection name
     let lastInRow = null;
     let fallbackElement = null;
@@ -760,7 +761,7 @@ const getJumpToEndElementGrid = (selection, element, direction) => {
     return lastInRow || fallbackElement;
   }
 
-  if (direction === "ArrowLeft") {
+  if (key === "ArrowLeft") {
     // Jump to first element in current row with matching selection name
     let firstInRow = null;
     let fallbackElement = null;
@@ -787,7 +788,7 @@ const getJumpToEndElementGrid = (selection, element, direction) => {
     return firstInRow || fallbackElement;
   }
 
-  if (direction === "ArrowDown") {
+  if (key === "ArrowDown") {
     // Jump to last element in current column with matching selection name
     let lastInColumn = null;
     let fallbackElement = null;
@@ -814,7 +815,7 @@ const getJumpToEndElementGrid = (selection, element, direction) => {
     return lastInColumn || fallbackElement;
   }
 
-  if (direction === "ArrowUp") {
+  if (key === "ArrowUp") {
     // Jump to first element in current column with matching selection name
     let firstInColumn = null;
     let fallbackElement = null;
@@ -1223,27 +1224,30 @@ const handleCrossTypeNavigation = (
   };
 };
 
-export const selectionKeyboardShortcuts = () => {
-  const selection = useSelection();
+export const selectionKeyboardShortcuts = (selection) => {
   const getSelectableElement = (keydownEvent) => {
     return keydownEvent.target.closest("[data-selectable]");
   };
+  const moveSelection = (actionEvent, getElementToSelect) => {
+    const keydownEvent = actionEvent.detail.event;
+    const selectableElement = getSelectableElement(keydownEvent);
+    const elementToSelect = getElementToSelect(selectableElement, keydownEvent);
 
-  const value = getElementValue(element);
-  const selectionName = getElementSelectionName(element);
-  const hasSpecificSelectionName = selectionName && selectionName !== "cell";
-
-  const { key } = keydownEvent;
-  const isMetaOrCtrlPressed = keydownEvent.metaKey || keydownEvent.ctrlKey;
-  const isShiftSelect = keydownEvent.shiftKey;
-  const isMultiSelect = isMetaOrCtrlPressed && isShiftSelect; // Only add to selection when BOTH are pressed
-  const onElementToSelect = (elementToSelect) => {
     if (!elementToSelect) {
       return false;
     }
+
+    const { key } = keydownEvent;
+    const isMetaOrCtrlPressed = keydownEvent.metaKey || keydownEvent.ctrlKey;
+    const isShiftSelect = keydownEvent.shiftKey;
+    const isMultiSelect = isMetaOrCtrlPressed && isShiftSelect; // Only add to selection when BOTH are pressed
     const targetValue = getElementValue(elementToSelect);
     const { isCrossType, shouldClearPreviousSelection } =
-      handleCrossTypeNavigation(element, elementToSelect, isMultiSelect);
+      handleCrossTypeNavigation(
+        selectableElement,
+        elementToSelect,
+        isMultiSelect,
+      );
 
     if (isShiftSelect) {
       debug(
@@ -1292,72 +1296,64 @@ export const selectionKeyboardShortcuts = () => {
       key: "command+shift+up",
       enabled: selection.axis !== "horizontal",
       action: (actionEvent) => {
-        const element = getSelectableElement(actionEvent.detail.event);
-        const targetElement = getJumpToEndElement(selection, element, key);
-        return onElementToSelect(targetElement);
+        return moveSelection(actionEvent, getJumpToEndElement);
       },
     },
     {
       key: "up",
       enabled: selection.axis !== "horizontal",
       action: (actionEvent) => {
-        const element = getSelectableElement(actionEvent.detail.event);
-        const targetElement = selection.getElementAbove(element);
-        return onElementToSelect(targetElement);
+        return moveSelection(actionEvent, (selectableElement) =>
+          selection.getElementAbove(selectableElement),
+        );
       },
     },
     {
       key: "command+shift+down",
       enabled: selection.axis !== "horizontal",
       action: (actionEvent) => {
-        const element = getSelectableElement(actionEvent.detail.event);
-        const targetElement = getJumpToEndElement(selection, element, key);
-        return onElementToSelect(targetElement);
+        return moveSelection(actionEvent, getJumpToEndElement);
       },
     },
     {
       key: "down",
       enabled: selection.axis !== "horizontal",
       action: (actionEvent) => {
-        const element = getSelectableElement(actionEvent.detail.event);
-        const targetElement = selection.getElementBelow(element);
-        return onElementToSelect(targetElement);
+        return moveSelection(actionEvent, (selectableElement) => {
+          return selection.getElementBelow(selectableElement);
+        });
       },
     },
     {
       key: "command+shift+left",
       enabled: selection.axis !== "horizontal",
       action: (actionEvent) => {
-        const element = getSelectableElement(actionEvent.detail.event);
-        const targetElement = getJumpToEndElement(selection, element, key);
-        return onElementToSelect(targetElement);
+        return moveSelection(actionEvent, getJumpToEndElement);
       },
     },
     {
       key: "left",
       enabled: selection.axis !== "vertical",
       action: (actionEvent) => {
-        const element = getSelectableElement(actionEvent.detail.event);
-        const targetElement = selection.getElementBefore(element);
-        return onElementToSelect(targetElement);
+        return moveSelection(actionEvent, (selectableElement) => {
+          return selection.getElementBefore(selectableElement);
+        });
       },
     },
     {
       key: "command+shift+right",
       enabled: selection.axis !== "vertical",
       action: (actionEvent) => {
-        const element = getSelectableElement(actionEvent.detail.event);
-        const targetElement = getJumpToEndElement(selection, element, key);
-        return onElementToSelect(targetElement);
+        return moveSelection(actionEvent, getJumpToEndElement);
       },
     },
     {
       key: "right",
       enabled: selection.axis !== "vertical",
       action: (actionEvent) => {
-        const element = getSelectableElement(actionEvent.detail.event);
-        const targetElement = selection.getElementAfter(element);
-        return onElementToSelect(targetElement);
+        return moveSelection(actionEvent, (selectableElement) => {
+          return selection.getElementAfter(selectableElement);
+        });
       },
     },
     {
