@@ -366,8 +366,8 @@ import.meta.css = /* css */ `
     tr
     td:first-child[data-selection-border-left]::before {
     box-shadow:
-      inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--selection-border-color),
+      inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
@@ -427,8 +427,8 @@ import.meta.css = /* css */ `
     td:first-child[data-selection-border-top][data-selection-border-right]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
 
@@ -442,9 +442,9 @@ import.meta.css = /* css */ `
     td:first-child[data-selection-border-top][data-selection-border-bottom]::before {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--selection-border-color);
+      inset -1px 0 0 0 var(--border-color);
   }
 
   .navi_table[data-border-collapse]
@@ -456,9 +456,9 @@ import.meta.css = /* css */ `
     tr
     td:first-child[data-selection-border-left][data-selection-border-right]::before {
     box-shadow:
-      inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--selection-border-color),
       inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 1px 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
 
