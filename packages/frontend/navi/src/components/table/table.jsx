@@ -742,7 +742,11 @@ export const Table = forwardRef((props, ref) => {
             toggleEnabled: true,
           }),
           {
-            key: "command+delete",
+            key: "enter",
+            handler: () => {
+              // eslint-disable-next-line no-alert
+              window.alert(selection.join(", ") || "(no selection)");
+            },
           },
         ]}
       />

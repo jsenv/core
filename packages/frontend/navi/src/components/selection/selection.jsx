@@ -1377,15 +1377,16 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
-      enabled: toggleEnabled,
-      key: toggleKey,
-      when: (keyboardEvent) => {
+      enabled: (keyboardEvent) => {
+        if (!toggleEnabled) {
+          return false;
+        }
         const elementWithToggleShortcut = keyboardEvent.target.closest(
           "[data-selection-keyboard-toggle]",
         );
         return Boolean(elementWithToggleShortcut);
       },
-
+      key: toggleKey,
       handler: (keyboardEvent) => {
         const element = getSelectableElement(keyboardEvent);
         const elementValue = getElementValue(element);
