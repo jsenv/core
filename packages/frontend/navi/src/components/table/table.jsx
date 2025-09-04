@@ -78,6 +78,7 @@ import.meta.css = /* css */ `
     --border-color: red;
     --sticky-border-size: 5px;
     --sticky-border-color: yellow;
+    --focus-border-color: green;
 
     --z-index-focused: 0; /* must be above selection and anything else  */
     /* needed because cell uses position:relative, sticky must win even if before in DOM order */
@@ -176,11 +177,12 @@ import.meta.css = /* css */ `
     position: absolute;
     /* Default: include bottom and right borders (owned by this cell) */
     inset: 0;
-    border: 2px solid #0078d4;
+    border: 2px solid var(--focus-border-color);
+    box-shadow: none !important;
     pointer-events: none;
   }
-  .navi_table[data-border-collapse] tr + tr td:focus::after,
-  .navi_table[data-border-collapse] tr + tr th:focus::after {
+
+  .navi_table[data-border-collapse] td:focus::after {
     top: -1px; /* Include top border */
   }
   .navi_table[data-border-collapse] td + td:focus::after,
