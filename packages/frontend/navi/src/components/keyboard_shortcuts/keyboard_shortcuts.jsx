@@ -1,6 +1,6 @@
 import { requestAction } from "@jsenv/validation";
 import { createContext } from "preact";
-import { useContext, useEffect, useRef, useState } from "preact/hooks";
+import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
@@ -47,6 +47,7 @@ const KeyboardShortcutsContext = createContext();
 export const useKeyboardShortcutsProvider = (
   elementRef,
   {
+    context = KeyboardShortcutsContext,
     shortcuts,
     onActionPrevented,
     onActionStart,
@@ -62,29 +63,54 @@ export const useKeyboardShortcutsProvider = (
     );
   }
 
-  const shortcutElements = [];
-  shortcuts.forEach((shortcut) => {
-    const combinationString = generateAriaKeyShortcuts(shortcut.key);
-    shortcutElements.push(
-      <button
-        className="navi_shortcut_button"
-        key={combinationString}
-        aria-keyshortcuts={combinationString}
-        tabIndex="-1"
-        action={shortcut.action}
-        data-action={shortcut.action.name}
-        data-confirm-message={shortcut.confirmMessage}
-      >
-        {shortcut.description}
-      </button>,
+  const shortcutDeps = [];
+  for (const shortcut of shortcuts) {
+    shortcutDeps.push(
+      shortcut.key,
+      shortcut.description,
+      shortcut.confirmMessage,
     );
-  });
+  }
+
   const shortcutElementRef = useRef();
-  const shortcutHiddenElement = (
-    <div ref={shortcutElementRef} className="navi_shortcut_container">
-      {shortcutElements}
-    </div>
-  );
+  const KeyboardShortcutProvider = useMemo(() => {
+    const shortcutElements = [];
+    shortcuts.forEach((shortcut) => {
+      const combinationString = generateAriaKeyShortcuts(shortcut.key);
+      shortcutElements.push(
+        <button
+          className="navi_shortcut_button"
+          key={combinationString}
+          aria-keyshortcuts={combinationString}
+          tabIndex="-1"
+          action={shortcut.action}
+          data-action={shortcut.action.name}
+          data-confirm-message={shortcut.confirmMessage}
+        >
+          {shortcut.description}
+        </button>,
+      );
+    });
+    const KeyboardShortcutHiddenElement = (
+      <div ref={shortcutElementRef} className="navi_shortcut_container">
+        {shortcutElements}
+      </div>
+    );
+
+    const KeyboardShortcutProvider = ({ children }) => (
+      <context.Provider
+        value={{
+          shortcutAction: action,
+          shortcutActionIsBusy,
+        }}
+      >
+        {children}
+        {KeyboardShortcutHiddenElement}
+      </context.Provider>
+    );
+
+    return KeyboardShortcutProvider;
+  }, [...shortcutDeps]);
 
   const executeAction = useExecuteAction(shortcutElementRef);
   const [shortcutActionIsBusy, setShortcutActionIsBusy] = useState(false);
@@ -134,20 +160,6 @@ export const useKeyboardShortcutsProvider = (
       confirmMessage: shortcut.confirmMessage,
     });
   });
-
-  const KeyboardShortcutProvider = ({ children }) => {
-    return (
-      <KeyboardShortcutsContext.Provider
-        value={{
-          shortcutAction: action,
-          shortcutActionIsBusy,
-        }}
-      >
-        {children}
-        {shortcutHiddenElement}
-      </KeyboardShortcutsContext.Provider>
-    );
-  };
 
   return KeyboardShortcutProvider;
 };
