@@ -180,6 +180,11 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
+  .navi_table th:focus,
+  .navi_table td:focus {
+    z-index: 10;
+  }
+
   .navi_table td:focus::after,
   .navi_table th:focus::after {
     box-shadow:
@@ -263,8 +268,8 @@ import.meta.css = /* css */ `
   /* Sticky border styling - works in both normal and border-collapse modes */
 
   /* Default mode: only frontier sticky elements get thick yellow borders */
-  .navi_table td[data-sticky-x][data-sticky-x-frontier]::before,
-  .navi_table th[data-sticky-x][data-sticky-x-frontier]::before {
+  .navi_table th[data-sticky-x][data-sticky-x-frontier]::before,
+  .navi_table td[data-sticky-x][data-sticky-x-frontier]::before {
     box-shadow:
       inset calc(-1 * var(--sticky-border-size)) 0 0 0
         var(--sticky-border-color),
