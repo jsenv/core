@@ -2,14 +2,11 @@ import { closeValidationMessage, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import { useIsVisited } from "../../browser_integration/use_is_visited.js";
-import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import {
-  useKeyboardShortcuts,
-  useKeyboardShortcutsProvider,
-} from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
+import { KeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useSelectableElement, useSelection } from "../selection/selection.jsx";
+import { useRequestedActionStatus } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 /*
@@ -225,54 +222,43 @@ const useDimColorWhen = (elementRef, shouldDim) => {
 const LinkWithAction = forwardRef((props, ref) => {
   const {
     shortcuts = [],
+    readOnly,
     onActionPrevented,
     onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
+    children,
+    loading,
     ...rest
   } = props;
+
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const KeyboardShortcutsProvider = useKeyboardShortcutsProvider(innerRef, {
-    shortcuts,
-    onActionPrevented,
-    onActionStart,
-    onActionAbort,
-    onActionError,
-    onActionEnd,
-  });
+  const { actionPending } = useRequestedActionStatus(innerRef);
+  const innerLoading = Boolean(loading || actionPending);
 
   return (
-    <KeyboardShortcutsProvider>
-      <LinkWithShortcuts ref={innerRef} {...rest} />
-    </KeyboardShortcutsProvider>
-  );
-});
-
-const LinkWithShortcuts = forwardRef((props, ref) => {
-  const { children, readOnly, loading, ...rest } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const { shortcutAction } = useKeyboardShortcuts();
-
-  const { loading: actionLoading } = useActionStatus(shortcutAction);
-  const innerLoading = Boolean(loading || actionLoading);
-
-  return (
-    <>
-      <LinkBasic
-        ref={innerRef}
-        {...rest}
-        loading={innerLoading}
-        readOnly={readOnly || actionLoading}
-        data-readonly-silent={actionLoading && !readOnly ? "" : undefined}
-        /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
-        data-focus-visible=""
-      >
-        {children}
-      </LinkBasic>
-    </>
+    <LinkBasic
+      ref={innerRef}
+      {...rest}
+      loading={innerLoading}
+      readOnly={readOnly || actionPending}
+      data-readonly-silent={actionPending && !readOnly ? "" : undefined}
+      /* When we have keyboard shortcuts the link outline is visible on focus (not solely on focus-visible) */
+      data-focus-visible=""
+    >
+      {children}
+      <KeyboardShortcuts
+        elementRef={innerRef}
+        shortcuts={shortcuts}
+        onActionPrevented={onActionPrevented}
+        onActionStart={onActionStart}
+        onActionAbort={onActionAbort}
+        onActionError={onActionError}
+        onActionEnd={onActionEnd}
+      />
+    </LinkBasic>
   );
 });

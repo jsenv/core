@@ -38,8 +38,7 @@
  * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
- * - Shortcuts to act on selection (shortcut deviandra un element HTML je pense (qui va render des boutons hidden))
- *   genre <KeyboardShortcuts />
+ * - Shortcuts to act on selection
  * - Double click to edit (see table_data.jsx)
  *  - Space to edit with text selected
  *  - A-Z key to edit with text replaced by this key
@@ -60,7 +59,7 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { useKeyboardShortcutsProvider } from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
+import { KeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
 import {
   selectionKeyboardShortcuts,
   useSelectableElement,
@@ -603,10 +602,6 @@ export const Table = forwardRef((props, ref) => {
     }
   }, [selectionColor]);
 
-  const KeyboardShortcutsProvider = useKeyboardShortcutsProvider(innerRef, {
-    shortcuts: [...selectionKeyboardShortcuts(selectionInterface)],
-  });
-
   // Calculate frontier sticky column and row indexes (boundary between sticky and non-sticky)
   let columnIndex = 0;
   let stickyColumnFrontierIndex = 0;
@@ -726,7 +721,14 @@ export const Table = forwardRef((props, ref) => {
           </tbody>
         </table>
       </SelectionProvider>
-      <KeyboardShortcutsProvider />
+      <KeyboardShortcuts
+        elementRef={innerRef}
+        shortcuts={[
+          // toto
+          ...selectionKeyboardShortcuts(selectionInterface),
+          {},
+        ]}
+      />
     </div>
   );
 });

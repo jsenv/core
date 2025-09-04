@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "preact/hooks";
+import { useLayoutEffect, useState } from "preact/hooks";
 import { addManyEventListeners } from "../utils/add_many_event_listeners.js";
 
 export const useActionEvents = (
@@ -34,4 +34,40 @@ export const useActionEvents = (
       actionend: onEnd,
     });
   }, [onCancel, onPrevented, onAction, onStart, onError, onEnd]);
+};
+
+export const useRequestedActionStatus = (elementRef) => {
+  const [actionRequester, setActionRequester] = useState(null);
+  const [actionPending, setActionPending] = useState(false);
+  const [actionAborted, setActionAborted] = useState(false);
+  const [actionError, setActionError] = useState(null);
+
+  useActionEvents(elementRef, {
+    onAction: (actionEvent) => {
+      setActionRequester(actionEvent.detail.requester);
+    },
+    onStart: () => {
+      setActionPending(true);
+      setActionAborted(false);
+      setActionError(null);
+    },
+    onAbort: () => {
+      setActionPending(false);
+      setActionAborted(true);
+    },
+    onError: (e) => {
+      setActionPending(false);
+      setActionError(e);
+    },
+    onEnd: () => {
+      setActionPending(false);
+    },
+  });
+
+  return {
+    actionRequester,
+    actionPending,
+    actionAborted,
+    actionError,
+  };
 };

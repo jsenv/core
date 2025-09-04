@@ -15,13 +15,16 @@
 
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import { useImperativeHandle, useRef } from "preact/hooks";
 import { FormContext } from "./action_execution/form_context.js";
 import { renderActionableComponent } from "./action_execution/render_actionable_component.jsx";
 import { useFormActionBoundToFormParams } from "./action_execution/use_action.js";
 import { useExecuteAction } from "./action_execution/use_execute_action.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
-import { useActionEvents } from "./use_action_events.js";
+import {
+  useActionEvents,
+  useRequestedActionStatus,
+} from "./use_action_events.js";
 
 export const Form = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
@@ -59,47 +62,31 @@ const FormWithAction = forwardRef((props, ref) => {
 
   const [boundAction, formParamsSignal, setFormParams] =
     useFormActionBoundToFormParams(action);
-  const [formActionRequester, setFormActionRequester] = useState(null);
-  const [formIsBusy, setFormIsBusy] = useState(false);
-  const [formActionError, setFormActionError] = useState(null);
-  const [formActionAborted, setFormActionAborted] = useState(false);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const formIsReadOnly =
-    readOnly || (formIsBusy && !formAllowConcurrentActions);
 
+  const {
+    actionPending: formIsBusy,
+    actionRequester: formActionRequester,
+    actionAborted: formActionAborted,
+    actionError: formActionError,
+  } = useRequestedActionStatus(innerRef);
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
       const form = innerRef.current;
       const formElementValues = collectFormElementValues(form);
       setFormParams(formElementValues);
-
-      setFormActionRequester(actionEvent.detail.requester);
       executeAction(actionEvent);
     },
-    onStart: (e) => {
-      setFormIsBusy(true);
-      setFormActionError(null);
-      setFormActionAborted(false);
-      onActionStart?.(e);
-    },
-    onAbort: (e) => {
-      setFormIsBusy(false);
-      setFormActionAborted(true);
-      onActionAbort?.(e);
-    },
-    onError: (e) => {
-      setFormIsBusy(false);
-      setFormActionError(e);
-      onActionError?.(e);
-    },
-    onEnd: (e) => {
-      setFormIsBusy(false);
-      onActionEnd?.(e);
-    },
+    onStart: onActionStart,
+    onAbort: onActionAbort,
+    onError: onActionError,
+    onEnd: onActionEnd,
   });
+  const formIsReadOnly =
+    readOnly || (formIsBusy && !formAllowConcurrentActions);
 
   return (
     <form
