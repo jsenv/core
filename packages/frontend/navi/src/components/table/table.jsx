@@ -114,16 +114,21 @@ import.meta.css = /* css */ `
   .navi_table td::before {
     content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     pointer-events: none;
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
+  }
+  .navi_table th::after,
+  .navi_table td::after {
+    content: "";
+    position: absolute;
+    /* Default: include bottom and right borders (owned by this cell) */
+    inset: 0;
+    pointer-events: none;
   }
 
   .navi_table th,
@@ -145,34 +150,6 @@ import.meta.css = /* css */ `
 
   .navi_table th {
     user-select: none;
-  }
-
-  /* Sticky column cells need extra padding-right for thick border */
-  .navi_table td[data-sticky-x]:first-child,
-  .navi_table th[data-sticky-x]:first-child {
-    padding-right: calc(8px + var(--sticky-border-size));
-  }
-
-  /* Sticky row cells need extra padding-bottom for thick border */
-  .navi_table tr[data-sticky-y]:first-child th,
-  .navi_table tr[data-sticky-y]:first-child td {
-    padding-bottom: calc(8px + var(--sticky-border-size));
-  }
-
-  /* Corner cell (sticky row + sticky column) needs both extra paddings */
-  .navi_table tr[data-sticky-y]:first-child th[data-sticky-x]:first-child,
-  .navi_table tr[data-sticky-y]:first-child td[data-sticky-x]:first-child {
-    padding-right: calc(8px + var(--sticky-border-size));
-    padding-bottom: calc(8px + var(--sticky-border-size));
-  }
-
-  .navi_table th::after,
-  .navi_table td::after {
-    content: "";
-    position: absolute;
-    /* Default: include bottom and right borders (owned by this cell) */
-    inset: 0;
-    pointer-events: none;
   }
 
   /* Number column specific styling */
@@ -243,31 +220,27 @@ import.meta.css = /* css */ `
   /* Border-collapse mode: Sticky columns/rows border adjustments */
   /* These rules only apply when border-collapse is enabled */
 
+  /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
   .navi_table[data-border-collapse] td::after {
-    top: -1px; /* Include top border */
+    top: -1px;
   }
-  .navi_table[data-border-collapse] td + td::after,
-  .navi_table[data-border-collapse] th + th::after {
-    left: -1px; /* Include left border */
+  .navi_table[data-border-collapse] th + th::after,
+  .navi_table[data-border-collapse] td + td::after {
+    left: -1px;
   }
 
-  /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
   .navi_table[data-border-collapse] th::before,
   .navi_table[data-border-collapse] td::before {
     box-shadow:
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
-
-  /* Border-collapse: Header row (thead) gets top border in addition to right and bottom */
-  .navi_table[data-border-collapse] thead th::before {
+  .navi_table[data-border-collapse] th::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
-
-  /* Border-collapse: First column gets left border in addition to right and bottom */
   .navi_table[data-border-collapse] th:first-child::before,
   .navi_table[data-border-collapse] td:first-child::before {
     box-shadow:
@@ -275,8 +248,6 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
-
-  /* Border-collapse: Header first column gets all four borders */
   .navi_table[data-border-collapse] th:first-child::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -387,7 +358,6 @@ import.meta.css = /* css */ `
   .navi_table td:focus,
   .navi_table th:focus {
     outline: none; /* Remove default outline */
-    z-index: var(--z-index-focused) !important;
   }
 
   .navi_table td:focus::after,
