@@ -62,6 +62,7 @@ import {
 } from "preact/hooks";
 import { useKeyboardShortcutsProvider } from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
 import {
+  selectionKeyboardShortcuts,
   useSelectableElement,
   useSelectionProvider,
 } from "../selection/selection.jsx";
@@ -603,7 +604,7 @@ export const Table = forwardRef((props, ref) => {
   }, [selectionColor]);
 
   const KeyboardShortcutsProvider = useKeyboardShortcutsProvider(innerRef, {
-    shortcuts: [],
+    shortcuts: [...selectionKeyboardShortcuts()],
   });
 
   // Calculate frontier sticky column and row indexes (boundary between sticky and non-sticky)

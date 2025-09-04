@@ -5,7 +5,7 @@ import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
 import { generateAriaKeyShortcuts } from "./aria_key_shortcuts.js";
-import { appplyKeyboardShortcuts } from "./keyboard_shortcuts.js";
+import { applyKeyboardShortcuts } from "./keyboard_shortcuts.js";
 
 import.meta.css = /* css */ `
   .navi_shortcut_container {
@@ -147,19 +147,40 @@ export const useKeyboardShortcutsProvider = (
     shortcut.action = useAction(shortcut.action);
   }
 
-  useKeyboardShortcuts(elementRef, shortcuts, (shortcut, event) => {
-    if (shortcutActionIsBusy) {
-      return;
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!element) {
+      return null;
     }
-    event.preventDefault();
-    const { action } = shortcut;
-    requestAction(action, {
-      event,
-      target: shortcutElementRef.current,
-      requester: elementRef.current,
-      confirmMessage: shortcut.confirmMessage,
-    });
-  });
+
+    const onKeydown = (event) => {
+      const shortcutsCopy = [];
+      for (const shortcutCandidate of shortcuts) {
+        shortcutsCopy.push({
+          ...shortcutCandidate,
+          action: () => {
+            if (shortcutActionIsBusy) {
+              return;
+            }
+            event.preventDefault();
+            const { action } = shortcutCandidate;
+            requestAction(action, {
+              event,
+              target: shortcutElementRef.current,
+              requester: elementRef.current,
+              confirmMessage: shortcutCandidate.confirmMessage,
+            });
+          },
+        });
+      }
+      applyKeyboardShortcuts(shortcutsCopy, event);
+    };
+
+    element.addEventListener("keydown", onKeydown);
+    return () => {
+      element.removeEventListener("keydown", onKeydown);
+    };
+  }, []);
 
   return KeyboardShortcutProvider;
 };
@@ -187,7 +208,7 @@ export const useKeyboardShortcuts = (elementRef, shortcuts, onShortcut) => {
           },
         });
       }
-      appplyKeyboardShortcuts(shortcutsCopy, event);
+      applyKeyboardShortcuts(shortcutsCopy, event);
     };
 
     element.addEventListener("keydown", onKeydown);

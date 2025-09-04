@@ -2,7 +2,7 @@ import { canInterceptKeys } from "@jsenv/dom";
 import { keyMapping } from "./keyboard_key_meta.js";
 import { isMac } from "./os.js";
 
-export const appplyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
+export const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
   if (!canInterceptKeys(keyboardEvent)) {
     return null;
   }
@@ -39,7 +39,7 @@ export const appplyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
     if (!matchesActual && !matchesCrossPlatform) {
       continue;
     }
-    if (shortcutCandidate.when && !shortcutCandidate.when(keyboardEvent)) {
+    if (typeof enabled === "function" && !enabled(keyboardEvent)) {
       continue;
     }
     const returnValue = shortcutCandidate.action(keyboardEvent);

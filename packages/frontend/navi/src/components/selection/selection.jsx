@@ -10,7 +10,6 @@ import {
 } from "preact/hooks";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { createCallbackController } from "../callback_controller.js";
-import { appplyKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 
 const DEBUG = {
   registration: false, // Element registration/unregistration
@@ -958,6 +957,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
     );
 
     selection.registerElement(element, { selectionImpact });
+    element.setAttribute("data-selectable", "");
     return () => {
       debug(
         "registration",
@@ -967,6 +967,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
         value,
       );
       selection.unregisterElement(element);
+      element.removeAttribute("data-selectable");
     };
   }, [selection, selectionImpact]);
 
@@ -1001,10 +1002,6 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
 
     let isDragging = false;
     let dragStartElement = null;
-
-    const handleKeyDown = (e) => {
-      keydownToSelect(e, { selection, element });
-    };
 
     const handleMouseDown = (e) => {
       if (e.button !== 0) {
@@ -1182,11 +1179,9 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
       document.addEventListener("mouseup", handleMouseUp);
     };
 
-    element.addEventListener("keydown", handleKeyDown);
     element.addEventListener("mousedown", handleMouseDown);
 
     return () => {
-      element.removeEventListener("keydown", handleKeyDown);
       element.removeEventListener("mousedown", handleMouseDown);
     };
   }, [selection]);
@@ -1227,19 +1222,16 @@ const handleCrossTypeNavigation = (
     shouldClearPreviousSelection: false,
   };
 };
-const keydownToSelect = (keydownEvent, { selection, element }) => {
+
+export const selectionKeyboardShortcuts = () => {
+  const selection = useSelection();
+  const getSelectableElement = (keydownEvent) => {
+    return keydownEvent.target.closest("[data-selectable]");
+  };
+
   const value = getElementValue(element);
   const selectionName = getElementSelectionName(element);
   const hasSpecificSelectionName = selectionName && selectionName !== "cell";
-  debug("interaction", "keydownToSelect:", {
-    key: keydownEvent.key,
-    element,
-    value,
-    selectionName,
-    hasSpecificSelectionName,
-    currentSelection: selection.value,
-    type: selection.type,
-  });
 
   const { key } = keydownEvent;
   const isMetaOrCtrlPressed = keydownEvent.metaKey || keydownEvent.ctrlKey;
@@ -1249,7 +1241,6 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     if (!elementToSelect) {
       return false;
     }
-    keydownEvent.preventDefault();
     const targetValue = getElementValue(elementToSelect);
     const { isCrossType, shouldClearPreviousSelection } =
       handleCrossTypeNavigation(element, elementToSelect, isMultiSelect);
@@ -1295,107 +1286,111 @@ const keydownToSelect = (keydownEvent, { selection, element }) => {
     selection.setSelection([targetValue], keydownEvent);
     return true;
   };
-  const toggleShortcut = element.getAttribute("data-selection-toggle-shortcut");
-  appplyKeyboardShortcuts(
-    [
-      {
-        key: "command+shift+up",
-        enabled: selection.axis !== "horizontal",
-        action: () => {
-          const targetElement = getJumpToEndElement(selection, element, key);
-          return onElementToSelect(targetElement);
-        },
+
+  return [
+    {
+      key: "command+shift+up",
+      enabled: selection.axis !== "horizontal",
+      action: (actionEvent) => {
+        const element = getSelectableElement(actionEvent.detail.event);
+        const targetElement = getJumpToEndElement(selection, element, key);
+        return onElementToSelect(targetElement);
       },
-      {
-        key: "up",
-        enabled: selection.axis !== "horizontal",
-        action: () => {
-          const targetElement = selection.getElementAbove(element);
-          return onElementToSelect(targetElement);
-        },
+    },
+    {
+      key: "up",
+      enabled: selection.axis !== "horizontal",
+      action: (actionEvent) => {
+        const element = getSelectableElement(actionEvent.detail.event);
+        const targetElement = selection.getElementAbove(element);
+        return onElementToSelect(targetElement);
       },
-      {
-        key: "command+shift+down",
-        enabled: selection.axis !== "horizontal",
-        action: () => {
-          const targetElement = getJumpToEndElement(selection, element, key);
-          return onElementToSelect(targetElement);
-        },
+    },
+    {
+      key: "command+shift+down",
+      enabled: selection.axis !== "horizontal",
+      action: (actionEvent) => {
+        const element = getSelectableElement(actionEvent.detail.event);
+        const targetElement = getJumpToEndElement(selection, element, key);
+        return onElementToSelect(targetElement);
       },
-      {
-        key: "down",
-        enabled: selection.axis !== "horizontal",
-        action: () => {
-          const targetElement = selection.getElementBelow(element);
-          return onElementToSelect(targetElement);
-        },
+    },
+    {
+      key: "down",
+      enabled: selection.axis !== "horizontal",
+      action: (actionEvent) => {
+        const element = getSelectableElement(actionEvent.detail.event);
+        const targetElement = selection.getElementBelow(element);
+        return onElementToSelect(targetElement);
       },
-      {
-        key: "command+shift+left",
-        enabled: selection.axis !== "horizontal",
-        action: () => {
-          const targetElement = getJumpToEndElement(selection, element, key);
-          return onElementToSelect(targetElement);
-        },
+    },
+    {
+      key: "command+shift+left",
+      enabled: selection.axis !== "horizontal",
+      action: (actionEvent) => {
+        const element = getSelectableElement(actionEvent.detail.event);
+        const targetElement = getJumpToEndElement(selection, element, key);
+        return onElementToSelect(targetElement);
       },
-      {
-        key: "left",
-        enabled: selection.axis !== "vertical",
-        action: () => {
-          const targetElement = selection.getElementBefore(element);
-          return onElementToSelect(targetElement);
-        },
+    },
+    {
+      key: "left",
+      enabled: selection.axis !== "vertical",
+      action: (actionEvent) => {
+        const element = getSelectableElement(actionEvent.detail.event);
+        const targetElement = selection.getElementBefore(element);
+        return onElementToSelect(targetElement);
       },
-      {
-        key: "command+shift+right",
-        enabled: selection.axis !== "vertical",
-        action: () => {
-          const targetElement = getJumpToEndElement(selection, element, key);
-          return onElementToSelect(targetElement);
-        },
+    },
+    {
+      key: "command+shift+right",
+      enabled: selection.axis !== "vertical",
+      action: (actionEvent) => {
+        const element = getSelectableElement(actionEvent.detail.event);
+        const targetElement = getJumpToEndElement(selection, element, key);
+        return onElementToSelect(targetElement);
       },
-      {
-        key: "right",
-        enabled: selection.axis !== "vertical",
-        action: () => {
-          const targetElement = selection.getElementAfter(element);
-          return onElementToSelect(targetElement);
-        },
+    },
+    {
+      key: "right",
+      enabled: selection.axis !== "vertical",
+      action: (actionEvent) => {
+        const element = getSelectableElement(actionEvent.detail.event);
+        const targetElement = selection.getElementAfter(element);
+        return onElementToSelect(targetElement);
       },
-      {
-        key: "shift",
-        action: () => {
-          selection.setAnchorElement(element);
-          return true;
-        },
+    },
+    {
+      key: "shift",
+      action: (actionEvent) => {
+        const element = getSelectableElement(actionEvent.detail.event);
+        selection.setAnchorElement(element);
+        return true;
       },
-      {
-        key: "command+a",
-        action: () => {
-          selection.selectAll(keydownEvent);
-          return true;
-        },
+    },
+    {
+      key: "command+a",
+      action: (actionEvent) => {
+        const keydownEvent = actionEvent.detail.event;
+        selection.selectAll(keydownEvent);
+        return true;
       },
+    },
+    {
       // toggle selection only if element has [data-selection-toggle-shortcut] (usually "space")
-      ...(toggleShortcut
-        ? [
-            {
-              key: toggleShortcut,
-              action: () => {
-                const elementValue = getElementValue(element);
-                const isCurrentlySelected =
-                  selection.isElementSelected(element);
-                if (isCurrentlySelected) {
-                  selection.removeFromSelection([elementValue], keydownEvent);
-                  return true;
-                }
-                selection.addToSelection([elementValue], keydownEvent);
-                return true;
-              },
-            },
-          ]
-        : []),
-    ],
-    keydownEvent,
-  );
+      key: (el) => el.getAttribute("data-selection-toggle-shortcut"),
+      action: (actionEvent) => {
+        const keydownEvent = actionEvent.detail.event;
+        const element = getSelectableElement(keydownEvent);
+        const elementValue = getElementValue(element);
+        const isCurrentlySelected = selection.isElementSelected(element);
+        if (isCurrentlySelected) {
+          selection.removeFromSelection([elementValue], keydownEvent);
+          return true;
+        }
+        selection.addToSelection([elementValue], keydownEvent);
+        return true;
+      },
+    },
+  ];
 };
