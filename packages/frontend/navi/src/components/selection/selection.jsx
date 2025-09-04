@@ -1224,7 +1224,10 @@ const handleCrossTypeNavigation = (
   };
 };
 
-export const selectionKeyboardShortcuts = (selection) => {
+export const selectionKeyboardShortcuts = (
+  selection,
+  { toggleEnabled, toggleKey = "space" } = {},
+) => {
   const getSelectableElement = (keydownEvent) => {
     return keydownEvent.target.closest("[data-selectable]");
   };
@@ -1374,18 +1377,15 @@ export const selectionKeyboardShortcuts = (selection) => {
       },
     },
     {
-      // toggle selection only if element has [data-selection-toggle-shortcut] (usually "space")
-      key: (keyboardEvent) => {
+      enabled: toggleEnabled,
+      key: toggleKey,
+      when: (keyboardEvent) => {
         const elementWithToggleShortcut = keyboardEvent.target.closest(
-          "[data-selection-toggle-shortcut]",
+          "[data-selection-keyboard-toggle]",
         );
-        if (!elementWithToggleShortcut) {
-          return null;
-        }
-        return elementWithToggleShortcut.getAttribute(
-          "data-selection-toggle-shortcut",
-        );
+        return Boolean(elementWithToggleShortcut);
       },
+
       handler: (keyboardEvent) => {
         const element = getSelectableElement(keyboardEvent);
         const elementValue = getElementValue(element);

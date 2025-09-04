@@ -83,6 +83,7 @@ import.meta.css = /* css */ `
     --border-color: #e1e1e1;
     --selection-border-color: #0078d4;
     --focus-border-color: #0078d4;
+    --selection-background-color: #eaf1fd;
 
     /* needed because cell uses position:relative, sticky must win even if before in DOM order */
     --z-index-sticky-row: 100;
@@ -174,15 +175,9 @@ import.meta.css = /* css */ `
   }
 
   /* Selection */
-  .navi_table td[aria-selected="true"],
-  .navi_table th[aria-selected="true"] {
-    background-color: #eaf1fd;
-  }
-  /* Column selection styling */
-  .navi_table .navi_row_number_cell[aria-selected="true"],
-  .navi_table th[aria-selected="true"] {
-    background-color: lightgrey;
-    font-weight: bold;
+  .navi_table th[aria-selected="true"],
+  .navi_table td[aria-selected="true"] {
+    background-color: var(--selection-background-color);
   }
   td[data-row-contains-selected] {
     position: relative;
@@ -724,9 +719,12 @@ export const Table = forwardRef((props, ref) => {
       <KeyboardShortcuts
         elementRef={innerRef}
         shortcuts={[
-          // toto
-          ...selectionKeyboardShortcuts(selectionInterface),
-          // todo
+          ...selectionKeyboardShortcuts(selectionInterface, {
+            toggleEnabled: true,
+          }),
+          {
+            key: "command+delete",
+          },
         ]}
       />
     </div>
@@ -757,7 +755,6 @@ const updateSelectionBorders = (tableElement) => {
   const selectedCells = tableElement.querySelectorAll(
     'td[aria-selected="true"], th[aria-selected="true"]',
   );
-  console.log(selectedCells);
 
   // Clear all existing selection border attributes
   tableElement
@@ -874,7 +871,7 @@ const HeaderCell = ({
       }
       data-value={columnValue}
       data-selection-name="column"
-      data-selection-toggle-shortcut="space"
+      data-selection-keyboard-toggle
       aria-selected={selected}
       data-sticky-x={stickyX ? "" : undefined}
       data-sticky-y={stickyY ? "" : undefined}
@@ -928,7 +925,7 @@ const RowNumberCell = ({
       data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
       data-value={rowValue}
       data-selection-name="row"
-      data-selection-toggle-shortcut="space"
+      data-selection-keyboard-toggle
       aria-selected={selected}
       style={{ cursor: "pointer", textAlign: "center" }}
       tabIndex={-1}
