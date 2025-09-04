@@ -113,11 +113,10 @@ export const KeyboardShortcuts = ({
           ...shortcutCandidate,
           action: () => {
             if (shortcutActionIsBusy) {
-              return;
+              return false;
             }
-            event.preventDefault();
             const { action } = shortcutCandidate;
-            requestAction(action, {
+            return requestAction(action, {
               event,
               target: shortcutElementRef.current,
               requester: elementRef.current,

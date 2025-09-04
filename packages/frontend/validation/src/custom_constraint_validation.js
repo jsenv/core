@@ -93,7 +93,7 @@ export const requestAction = (
       if (debug) {
         console.debug(`validation already in progress for`, formToValidate);
       }
-      return;
+      return false;
     }
     validationInProgressWeakSet.add(formToValidate);
     setTimeout(() => {
@@ -143,7 +143,7 @@ export const requestAction = (
       detail: customEventDetail,
     });
     elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
-    return;
+    return false;
   }
 
   // Validation passed, check for confirmation
@@ -157,7 +157,7 @@ export const requestAction = (
         detail: customEventDetail,
       });
       elementForDispatch.dispatchEvent(actionPreventedCustomEvent);
-      return;
+      return false;
     }
   }
 
@@ -172,6 +172,7 @@ export const requestAction = (
     );
   }
   elementForDispatch.dispatchEvent(actionCustomEvent);
+  return true;
 };
 
 export const closeValidationMessage = (element, reason) => {

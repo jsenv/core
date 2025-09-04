@@ -12,32 +12,38 @@ export const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
       continue;
     }
 
-    // Handle platform-specific combination objects
-    let actualCombination;
-    let crossPlatformCombination;
-    if (typeof key === "object" && key !== null) {
-      actualCombination = isMac ? key.mac : key.other;
-    } else {
-      actualCombination = key;
-      if (containsPlatformSpecificKeys(key)) {
-        crossPlatformCombination = generateCrossPlatformCombination(key);
+    if (typeof key === "function") {
+      if (!key(keyboardEvent)) {
+        continue;
       }
-    }
+    } else {
+      // Handle platform-specific combination objects
+      let actualCombination;
+      let crossPlatformCombination;
+      if (typeof key === "object" && key !== null) {
+        actualCombination = isMac ? key.mac : key.other;
+      } else {
+        actualCombination = key;
+        if (containsPlatformSpecificKeys(key)) {
+          crossPlatformCombination = generateCrossPlatformCombination(key);
+        }
+      }
 
-    // Check both the actual combination and cross-platform combination
-    const matchesActual =
-      actualCombination &&
-      keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
-    const matchesCrossPlatform =
-      crossPlatformCombination &&
-      crossPlatformCombination !== actualCombination &&
-      keyboardEventIsMatchingKeyCombination(
-        keyboardEvent,
-        crossPlatformCombination,
-      );
+      // Check both the actual combination and cross-platform combination
+      const matchesActual =
+        actualCombination &&
+        keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
+      const matchesCrossPlatform =
+        crossPlatformCombination &&
+        crossPlatformCombination !== actualCombination &&
+        keyboardEventIsMatchingKeyCombination(
+          keyboardEvent,
+          crossPlatformCombination,
+        );
 
-    if (!matchesActual && !matchesCrossPlatform) {
-      continue;
+      if (!matchesActual && !matchesCrossPlatform) {
+        continue;
+      }
     }
     if (typeof enabled === "function" && !enabled(keyboardEvent)) {
       continue;
