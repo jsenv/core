@@ -38,7 +38,6 @@
  * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
- * - Now border collapse
  * - Shortcuts to act on selection
  * - Resizing columns
  * - Resizing rows
