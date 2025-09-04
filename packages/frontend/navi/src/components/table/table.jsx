@@ -74,17 +74,14 @@ import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
 import.meta.css = /* css */ `
   .navi_table_container {
-    --border-color: red;
-    --sticky-frontier-border-size: 1px;
-    --sticky-frontier-border-color: yellow;
+    --border-color: #e1e1e1;
     --selection-border-color: #0078d4;
-    --focus-border-color: green;
+    --focus-border-color: #0078d4;
 
     /* needed because cell uses position:relative, sticky must win even if before in DOM order */
     --z-index-sticky-row: 100;
     --z-index-sticky-column: 1000;
     --z-index-sticky-corner: 10000;
-    --z-index-focused: 12000; /* must be above selection and anything else  */
 
     position: relative;
   }
