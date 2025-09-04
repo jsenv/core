@@ -166,12 +166,6 @@ import.meta.css = /* css */ `
     padding-bottom: calc(8px + var(--sticky-border-size));
   }
 
-  .navi_table td:focus,
-  .navi_table th:focus {
-    outline: none; /* Remove default outline */
-    z-index: var(--z-index-focused) !important;
-  }
-
   .navi_table th::after,
   .navi_table td::after {
     content: "";
@@ -179,23 +173,6 @@ import.meta.css = /* css */ `
     /* Default: include bottom and right borders (owned by this cell) */
     inset: 0;
     pointer-events: none;
-  }
-
-  .navi_table td:focus::after,
-  .navi_table th:focus::after {
-    box-shadow:
-      inset 0 2px 0 0 var(--focus-border-color),
-      inset -2px 0 0 0 var(--focus-border-color),
-      inset 0 -2px 0 0 var(--focus-border-color),
-      inset 2px 0 0 0 var(--focus-border-color) !important;
-  }
-
-  .navi_table[data-border-collapse] td::after {
-    top: -1px; /* Include top border */
-  }
-  .navi_table[data-border-collapse] td + td::after,
-  .navi_table[data-border-collapse] th + th::after {
-    left: -1px; /* Include left border */
   }
 
   /* Number column specific styling */
@@ -266,18 +243,18 @@ import.meta.css = /* css */ `
   /* Border-collapse mode: Sticky columns/rows border adjustments */
   /* These rules only apply when border-collapse is enabled */
 
+  .navi_table[data-border-collapse] td::after {
+    top: -1px; /* Include top border */
+  }
+  .navi_table[data-border-collapse] td + td::after,
+  .navi_table[data-border-collapse] th + th::after {
+    left: -1px; /* Include left border */
+  }
+
   /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
   .navi_table[data-border-collapse] th::before,
   .navi_table[data-border-collapse] td::before {
     box-shadow:
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Border-collapse: Header row (thead) gets top border in addition to right and bottom */
-  .navi_table[data-border-collapse] thead th::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
@@ -300,7 +277,7 @@ import.meta.css = /* css */ `
   }
 
   /* Border-collapse: Header first column gets all four borders */
-  .navi_table[data-border-collapse] thead th:first-child::before {
+  .navi_table[data-border-collapse] th:first-child::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
@@ -404,6 +381,22 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  /* Focus styles */
+  .navi_table td:focus,
+  .navi_table th:focus {
+    outline: none; /* Remove default outline */
+    z-index: var(--z-index-focused) !important;
+  }
+
+  .navi_table td:focus::after,
+  .navi_table th:focus::after {
+    box-shadow:
+      inset 0 2px 0 0 var(--focus-border-color),
+      inset -2px 0 0 0 var(--focus-border-color),
+      inset 0 -2px 0 0 var(--focus-border-color),
+      inset 2px 0 0 0 var(--focus-border-color) !important;
   }
 `;
 
