@@ -78,7 +78,7 @@ import.meta.css = /* css */ `
     --border-color: red;
     --sticky-border-size: 5px;
     --sticky-border-color: yellow;
-    --selection-border-color: "#0078d4";
+    --selection-border-color: #0078d4;
     --focus-border-color: green;
 
     /* needed because cell uses position:relative, sticky must win even if before in DOM order */
@@ -360,8 +360,8 @@ import.meta.css = /* css */ `
     outline: none; /* Remove default outline */
   }
 
-  .navi_table td:focus::after,
-  .navi_table th:focus::after {
+  .navi_table th:focus::after,
+  .navi_table td:focus::after {
     box-shadow:
       inset 0 2px 0 0 var(--focus-border-color),
       inset -2px 0 0 0 var(--focus-border-color),
@@ -379,7 +379,6 @@ export const Table = forwardRef((props, ref) => {
     data,
     selection = [],
     selectionColor,
-    selectionOpacity,
     onSelectionChange,
     borderCollapse = false,
   } = props;
@@ -576,7 +575,7 @@ export const Table = forwardRef((props, ref) => {
           </tbody>
         </table>
       </SelectionProvider>
-      <TableSelectionBorders tableRef={innerRef} opacity={selectionOpacity} />
+      <TableSelectionBorders tableRef={innerRef} />
     </div>
   );
 });
