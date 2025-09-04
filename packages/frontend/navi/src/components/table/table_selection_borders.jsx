@@ -4,20 +4,6 @@ import.meta.css = /* css */ `
   /* Selection border styling using ::after pseudo-element */
   /* Draws only selection borders on top of existing table borders */
 
-  /* Common pseudo-element setup */
-  .navi_table [data-selection-border-top]::after,
-  .navi_table [data-selection-border-right]::after,
-  .navi_table [data-selection-border-bottom]::after,
-  .navi_table [data-selection-border-left]::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-  }
-
   /* Single border selections */
   .navi_table [data-selection-border-top]::after {
     box-shadow: inset 0 1px 0 0 var(--selection-border-color);
