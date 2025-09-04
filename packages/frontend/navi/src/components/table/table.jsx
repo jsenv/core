@@ -75,8 +75,8 @@ import { TableSelectionBorders } from "./table_selection_borders.jsx";
 import.meta.css = /* css */ `
   .navi_table_container {
     --border-color: red;
-    --sticky-frontier-border-size: 4px;
-    --sticky-frontier-border-color: orange;
+    --sticky-frontier-border-size: 1px;
+    --sticky-frontier-border-color: yellow;
     --selection-border-color: #0078d4;
     --focus-border-color: green;
 
@@ -162,7 +162,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_cell_content_bold_clone {
-    font-weight: 600; /* force bold to compute max width */
+    font-weight: bold; /* force bold to compute max width */
     visibility: hidden; /* not visible */
     display: block; /* in-flow so it contributes to width */
     height: 0; /* zero height so it doesn't change layout height */
@@ -189,7 +189,7 @@ import.meta.css = /* css */ `
 
   th[data-column-contains-selected] {
     position: relative;
-    font-weight: 600;
+    font-weight: bold;
     color: #444;
   }
 
@@ -353,7 +353,66 @@ import.meta.css = /* css */ `
       inset 1px 0 0 0 var(--selection-border-color);
   }
 
-  /* Sticky frontier borders */
+  /* Base borders for sticky cells (will be overridden by frontier rules) */
+  .navi_table[data-border-collapse] th[data-sticky-x]::before,
+  .navi_table[data-border-collapse] td[data-sticky-x]::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse] th[data-sticky-y]::before,
+  .navi_table[data-border-collapse] td[data-sticky-y]::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header row sticky cells need top border */
+  .navi_table[data-border-collapse] thead th[data-sticky-x]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse] thead th[data-sticky-y]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* First column sticky cells need left border */
+  .navi_table[data-border-collapse] th:first-child[data-sticky-x]::before,
+  .navi_table[data-border-collapse] td:first-child[data-sticky-x]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse] th:first-child[data-sticky-y]::before,
+  .navi_table[data-border-collapse] td:first-child[data-sticky-y]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header first column sticky cells get all four regular borders */
+  .navi_table[data-border-collapse] thead th:first-child[data-sticky-x]::before,
+  .navi_table[data-border-collapse]
+    thead
+    th:first-child[data-sticky-y]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Sticky frontier borders - these override the base sticky borders above */
   /* Border-collapse mode: Sticky X frontier gets right border */
   /* Border-collapse mode: Sticky X frontier gets right border */
   .navi_table[data-border-collapse]
