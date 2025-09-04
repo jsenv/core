@@ -76,8 +76,8 @@ import { TableSelectionBorders } from "./table_selection_borders.jsx";
 import.meta.css = /* css */ `
   .navi_table_container {
     --border-color: red;
-    --sticky-border-size: 5px;
-    --sticky-border-color: yellow;
+    --sticky-frontier-border-size: 2px;
+    --sticky-frontier-border-color: orange;
     --selection-border-color: #0078d4;
     --focus-border-color: green;
 
@@ -354,6 +354,180 @@ import.meta.css = /* css */ `
       inset 1px 0 0 0 var(--selection-border-color);
   }
 
+  /* Sticky frontier borders */
+  /* Border-collapse mode: Sticky X frontier gets right border */
+  .navi_table[data-border-collapse]
+    th[data-sticky-x][data-sticky-x-frontier]::before,
+  .navi_table[data-border-collapse]
+    td[data-sticky-x][data-sticky-x-frontier]::before {
+    box-shadow:
+      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Border-collapse mode: Sticky Y frontier gets bottom border */
+  .navi_table[data-border-collapse]
+    th[data-sticky-y][data-sticky-y-frontier]::before,
+  .navi_table[data-border-collapse]
+    td[data-sticky-y][data-sticky-y-frontier]::before {
+    box-shadow:
+      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
+        var(--sticky-frontier-border-color),
+      inset -1px 0 0 0 var(--border-color);
+  }
+
+  /* Border-collapse mode: Corner sticky frontier gets both right and bottom borders */
+  .navi_table[data-border-collapse]
+    th[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before,
+  .navi_table[data-border-collapse]
+    td[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before {
+    box-shadow:
+      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
+        var(--sticky-frontier-border-color);
+  }
+
+  /* Special cases for header row sticky frontiers - they need top border too */
+  .navi_table[data-border-collapse]
+    thead
+    th[data-sticky-x][data-sticky-x-frontier]::before {
+    box-shadow:
+      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    thead
+    th[data-sticky-y][data-sticky-y-frontier]::before {
+    box-shadow:
+      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    thead
+    th[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before {
+    box-shadow:
+      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 1px 0 0 var(--border-color);
+  }
+
+  /* Special cases for first column sticky frontiers - they need left border too */
+  .navi_table[data-border-collapse]
+    th:first-child[data-sticky-x][data-sticky-x-frontier]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-sticky-x][data-sticky-x-frontier]::before {
+    box-shadow:
+      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    th:first-child[data-sticky-y][data-sticky-y-frontier]::before,
+  .navi_table[data-border-collapse]
+    td:first-child[data-sticky-y][data-sticky-y-frontier]::before {
+    box-shadow:
+      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
+        var(--sticky-frontier-border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    thead
+    th:first-child[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before {
+    box-shadow:
+      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color);
+  }
+
+  /* Borders for cells immediately after sticky frontiers */
+
+  /* Left border for the column after sticky-x-frontier */
+  .navi_table[data-border-collapse] th[data-after-sticky-x-frontier]::before,
+  .navi_table[data-border-collapse] td[data-after-sticky-x-frontier]::before {
+    box-shadow:
+      inset var(--sticky-frontier-border-size) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Top border for the row after sticky-y-frontier */
+  .navi_table[data-border-collapse] th[data-after-sticky-y-frontier]::before,
+  .navi_table[data-border-collapse] td[data-after-sticky-y-frontier]::before {
+    box-shadow:
+      inset 0 var(--sticky-frontier-border-size) 0 0
+        var(--sticky-frontier-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Corner case: cell after both sticky frontiers */
+  .navi_table[data-border-collapse]
+    th[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before,
+  .navi_table[data-border-collapse]
+    td[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before {
+    box-shadow:
+      inset var(--sticky-frontier-border-size) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 var(--sticky-frontier-border-size) 0 0
+        var(--sticky-frontier-border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header row special cases */
+  .navi_table[data-border-collapse]
+    thead
+    th[data-after-sticky-x-frontier]::before {
+    box-shadow:
+      inset var(--sticky-frontier-border-size) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    thead
+    th[data-after-sticky-y-frontier]::before {
+    box-shadow:
+      inset 0 var(--sticky-frontier-border-size) 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  .navi_table[data-border-collapse]
+    thead
+    th[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before {
+    box-shadow:
+      inset var(--sticky-frontier-border-size) 0 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 var(--sticky-frontier-border-size) 0 0
+        var(--sticky-frontier-border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
   /* Focus styles */
   .navi_table td:focus,
   .navi_table th:focus {
@@ -520,9 +694,13 @@ export const Table = forwardRef((props, ref) => {
                   stickyX={col.sticky}
                   stickyY={stickyHeader}
                   isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
+                  isAfterStickyXFrontier={
+                    index + 1 === stickyColumnFrontierIndex + 1
+                  }
                   isStickyYFrontier={
                     stickyHeader && stickyRowFrontierIndex === 0
                   } // Header row is always the frontier (no rows above it)
+                  isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
                   key={col.id}
                   columnName={col.header}
                   columnAccessorKey={col.accessorKey}
@@ -538,6 +716,8 @@ export const Table = forwardRef((props, ref) => {
               const rowOptions = rows[rowIndex] || {};
               const isRowSelected = selectedRowIds.includes(row.id);
               const isStickyYFrontier = stickyRowFrontierIndex === rowIndex + 1;
+              const isAfterStickyYFrontier =
+                rowIndex + 1 === stickyRowFrontierIndex + 1;
 
               return (
                 <tr
@@ -549,7 +729,9 @@ export const Table = forwardRef((props, ref) => {
                     stickyX={rowColumnSticky}
                     stickyY={rowOptions.sticky}
                     isStickyXFrontier={stickyColumnFrontierIndex === 0} // Only if no data columns are sticky
+                    isAfterStickyXFrontier={false} // Row number column can't be after sticky X frontier (it's the first column)
                     isStickyYFrontier={isStickyYFrontier}
+                    isAfterStickyYFrontier={isAfterStickyYFrontier}
                     row={row}
                     rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                     columns={columns}
@@ -561,7 +743,11 @@ export const Table = forwardRef((props, ref) => {
                       isStickyXFrontier={
                         stickyColumnFrontierIndex === colIndex + 1
                       }
+                      isAfterStickyXFrontier={
+                        colIndex + 1 === stickyColumnFrontierIndex + 1
+                      }
                       isStickyYFrontier={isStickyYFrontier}
+                      isAfterStickyYFrontier={isAfterStickyYFrontier}
                       key={`${row.id}-${col.id}`}
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
@@ -604,6 +790,8 @@ const HeaderCell = ({
   stickyY,
   isStickyXFrontier,
   isStickyYFrontier,
+  isAfterStickyXFrontier,
+  isAfterStickyYFrontier,
   columnName,
   columnAccessorKey,
   columnWithSomeSelectedCell,
@@ -634,6 +822,8 @@ const HeaderCell = ({
       data-sticky-y={stickyY ? "" : undefined}
       data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
+      data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
+      data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
       style={{ cursor: "pointer" }}
       tabIndex={-1}
     >
@@ -649,6 +839,8 @@ const RowNumberCell = ({
   stickyY,
   isStickyXFrontier,
   isStickyYFrontier,
+  isAfterStickyXFrontier,
+  isAfterStickyYFrontier,
   row,
   columns,
   rowWithSomeSelectedCell,
@@ -672,6 +864,8 @@ const RowNumberCell = ({
       data-sticky-y={stickyY ? "" : undefined}
       data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
+      data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
+      data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
       className="navi_row_number_cell"
       data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
       data-value={rowValue}
@@ -691,6 +885,8 @@ const DataCell = ({
   stickyY,
   isStickyXFrontier,
   isStickyYFrontier,
+  isAfterStickyXFrontier,
+  isAfterStickyYFrontier,
   columnName,
   row,
   value,
@@ -707,6 +903,8 @@ const DataCell = ({
       data-sticky-y={stickyY ? "" : undefined}
       data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
+      data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
+      data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
       tabIndex={-1}
       data-value={cellId}
       data-selection-name="cell"
