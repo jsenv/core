@@ -533,6 +533,25 @@ export const Table = forwardRef((props, ref) => {
   });
 
   const [selection, setSelection] = useState(initialSelection);
+  update_from_props: {
+    const initialSelectionRef = useRef(initialSelection);
+    if (initialSelectionRef.current !== initialSelection) {
+      const initialSelectionPrev = initialSelectionRef.current;
+      if (initialSelectionPrev.length !== initialSelection.length) {
+        setSelection(initialSelection);
+      } else {
+        const currentSet = new Set(initialSelectionPrev);
+        for (const val of initialSelection) {
+          if (!currentSet.has(val)) {
+            setSelection(initialSelection);
+            break;
+          }
+        }
+      }
+      initialSelectionRef.current = initialSelection;
+    }
+  }
+
   const rowWithSomeSelectedCell = [];
   const columnWithSomeSelectedCell = [];
   const selectedRowIds = [];
