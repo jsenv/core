@@ -19,6 +19,11 @@ export const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
       }
       key = keyReturnValue;
     }
+    if (!key) {
+      console.error(shortcutCandidate);
+      throw new TypeError(`key is required in keyboard shortcut, got ${key}`);
+    }
+
     // Handle platform-specific combination objects
     let actualCombination;
     let crossPlatformCombination;

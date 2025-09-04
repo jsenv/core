@@ -726,7 +726,7 @@ export const Table = forwardRef((props, ref) => {
         shortcuts={[
           // toto
           ...selectionKeyboardShortcuts(selectionInterface),
-          {},
+          // todo
         ]}
       />
     </div>

@@ -105,37 +105,35 @@ export const KeyboardShortcuts = ({
     if (!element) {
       return null;
     }
-
+    const shortcutsCopy = [];
+    for (const shortcutCandidate of shortcuts) {
+      shortcutsCopy.push({
+        ...shortcutCandidate,
+        handler: (keyboardEvent) => {
+          if (shortcutCandidate.handler) {
+            return shortcutCandidate.handler(keyboardEvent);
+          }
+          if (shortcutActionIsBusy) {
+            return false;
+          }
+          const { action } = shortcutCandidate;
+          return requestAction(action, {
+            event: keyboardEvent,
+            target: shortcutElementRef.current,
+            requester: elementRef.current,
+            confirmMessage: shortcutCandidate.confirmMessage,
+          });
+        },
+      });
+    }
     const onKeydown = (event) => {
-      const shortcutsCopy = [];
-      for (const shortcutCandidate of shortcuts) {
-        shortcutsCopy.push({
-          ...shortcutCandidate,
-          handler: (keyboardEvent) => {
-            if (shortcutCandidate.handler) {
-              return shortcutCandidate.handler(keyboardEvent);
-            }
-            if (shortcutActionIsBusy) {
-              return false;
-            }
-            const { action } = shortcutCandidate;
-            return requestAction(action, {
-              event,
-              target: shortcutElementRef.current,
-              requester: elementRef.current,
-              confirmMessage: shortcutCandidate.confirmMessage,
-            });
-          },
-        });
-      }
       applyKeyboardShortcuts(shortcutsCopy, event);
     };
-
     element.addEventListener("keydown", onKeydown);
     return () => {
       element.removeEventListener("keydown", onKeydown);
     };
-  }, []);
+  }, [shortcuts]);
 
   return (
     <div ref={shortcutElementRef} className="navi_shortcut_container">
@@ -144,10 +142,10 @@ export const KeyboardShortcuts = ({
           <KeyboardShortcutAriaElement
             key={shortcut.key}
             keyCombination={shortcut.key}
-            actionName={shortcut.action?.name}
             description={shortcut.description}
             enabled={shortcut.enabled}
-            confirmMessage={shortcut.confirmMessage}
+            data-action={shortcut.action ? shortcut.action.name : undefined}
+            data-confirm-message={shortcut.confirmMessage}
           />
         );
       })}
@@ -157,9 +155,9 @@ export const KeyboardShortcuts = ({
 
 const KeyboardShortcutAriaElement = ({
   keyCombination,
-  actionName,
-  confirmMessage,
   description,
+  enabled,
+  ...props
 }) => {
   if (typeof keyCombination === "function") {
     return null;
@@ -170,8 +168,8 @@ const KeyboardShortcutAriaElement = ({
       className="navi_shortcut_button"
       aria-keyshortcuts={ariaKeyshortcuts}
       tabIndex="-1"
-      data-action={actionName}
-      data-confirm-message={confirmMessage}
+      disabled={!enabled}
+      {...props}
     >
       {description}
     </button>
