@@ -1375,7 +1375,17 @@ export const selectionKeyboardShortcuts = (selection) => {
     },
     {
       // toggle selection only if element has [data-selection-toggle-shortcut] (usually "space")
-      key: (el) => el.getAttribute("data-selection-toggle-shortcut"),
+      key: (keyboardEvent) => {
+        const elementWithToggleShortcut = keyboardEvent.target.closest(
+          "[data-selection-toggle-shortcut]",
+        );
+        if (!elementWithToggleShortcut) {
+          return null;
+        }
+        return elementWithToggleShortcut.getAttribute(
+          "data-selection-toggle-shortcut",
+        );
+      },
       handler: (keyboardEvent) => {
         const element = getSelectableElement(keyboardEvent);
         const elementValue = getElementValue(element);

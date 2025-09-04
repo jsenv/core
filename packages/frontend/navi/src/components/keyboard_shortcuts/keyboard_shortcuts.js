@@ -7,43 +7,44 @@ export const applyKeyboardShortcuts = (shortcuts, keyboardEvent) => {
     return null;
   }
   for (const shortcutCandidate of shortcuts) {
-    const { enabled = true, key } = shortcutCandidate;
+    let { enabled = true, key } = shortcutCandidate;
     if (!enabled) {
       continue;
     }
 
     if (typeof key === "function") {
-      if (!key(keyboardEvent)) {
+      const keyReturnValue = key(keyboardEvent);
+      if (!keyReturnValue) {
         continue;
       }
+      key = keyReturnValue;
+    }
+    // Handle platform-specific combination objects
+    let actualCombination;
+    let crossPlatformCombination;
+    if (typeof key === "object" && key !== null) {
+      actualCombination = isMac ? key.mac : key.other;
     } else {
-      // Handle platform-specific combination objects
-      let actualCombination;
-      let crossPlatformCombination;
-      if (typeof key === "object" && key !== null) {
-        actualCombination = isMac ? key.mac : key.other;
-      } else {
-        actualCombination = key;
-        if (containsPlatformSpecificKeys(key)) {
-          crossPlatformCombination = generateCrossPlatformCombination(key);
-        }
+      actualCombination = key;
+      if (containsPlatformSpecificKeys(key)) {
+        crossPlatformCombination = generateCrossPlatformCombination(key);
       }
+    }
 
-      // Check both the actual combination and cross-platform combination
-      const matchesActual =
-        actualCombination &&
-        keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
-      const matchesCrossPlatform =
-        crossPlatformCombination &&
-        crossPlatformCombination !== actualCombination &&
-        keyboardEventIsMatchingKeyCombination(
-          keyboardEvent,
-          crossPlatformCombination,
-        );
+    // Check both the actual combination and cross-platform combination
+    const matchesActual =
+      actualCombination &&
+      keyboardEventIsMatchingKeyCombination(keyboardEvent, actualCombination);
+    const matchesCrossPlatform =
+      crossPlatformCombination &&
+      crossPlatformCombination !== actualCombination &&
+      keyboardEventIsMatchingKeyCombination(
+        keyboardEvent,
+        crossPlatformCombination,
+      );
 
-      if (!matchesActual && !matchesCrossPlatform) {
-        continue;
-      }
+    if (!matchesActual && !matchesCrossPlatform) {
+      continue;
     }
     if (typeof enabled === "function" && !enabled(keyboardEvent)) {
       continue;
