@@ -39,7 +39,7 @@
  *
  * Next steps:
  * - Double click to edit (see table_data.jsx)
- *  - Space to edit with text selected
+ *  - Enter to edit with text selected
  *  - A-Z key to edit with text replaced by this key
  * - Can add a column
  * - Can add a row
@@ -986,6 +986,7 @@ const DataCell = ({
       tabIndex={-1}
       data-value={cellId}
       data-selection-name="cell"
+      data-selection-keyboard-toggle
       aria-selected={selected}
     >
       {value}
