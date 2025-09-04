@@ -353,80 +353,8 @@ import.meta.css = /* css */ `
       inset 1px 0 0 0 var(--selection-border-color);
   }
 
-  /* Sticky cells that are NOT frontiers should use regular borders */
-  .navi_table[data-border-collapse]
-    th[data-sticky-x]:not([data-sticky-x-frontier])::before,
-  .navi_table[data-border-collapse]
-    td[data-sticky-x]:not([data-sticky-x-frontier])::before {
-    box-shadow:
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    th[data-sticky-y]:not([data-sticky-y-frontier])::before,
-  .navi_table[data-border-collapse]
-    td[data-sticky-y]:not([data-sticky-y-frontier])::before {
-    box-shadow:
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Header row non-frontier sticky cells need top border */
-  .navi_table[data-border-collapse]
-    thead
-    th[data-sticky-x]:not([data-sticky-x-frontier])::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th[data-sticky-y]:not([data-sticky-y-frontier])::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* First column non-frontier sticky cells need left border */
-  .navi_table[data-border-collapse]
-    th:first-child[data-sticky-x]:not([data-sticky-x-frontier])::before,
-  .navi_table[data-border-collapse]
-    td:first-child[data-sticky-x]:not([data-sticky-x-frontier])::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    th:first-child[data-sticky-y]:not([data-sticky-y-frontier])::before,
-  .navi_table[data-border-collapse]
-    td:first-child[data-sticky-y]:not([data-sticky-y-frontier])::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Header first column non-frontier sticky cells get all four regular borders */
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-sticky-x]:not([data-sticky-x-frontier])::before,
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-sticky-y]:not([data-sticky-y-frontier])::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
   /* Sticky frontier borders */
+  /* Border-collapse mode: Sticky X frontier gets right border */
   /* Border-collapse mode: Sticky X frontier gets right border */
   .navi_table[data-border-collapse]
     th[data-sticky-x][data-sticky-x-frontier]::before,
@@ -549,37 +477,6 @@ import.meta.css = /* css */ `
     th[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before,
   .navi_table[data-border-collapse]
     td[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Header row special cases */
-  .navi_table[data-border-collapse]
-    thead
-    th[data-after-sticky-x-frontier]::before {
-    box-shadow:
-      inset var(--sticky-frontier-border-size) 0 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th[data-after-sticky-y-frontier]::before {
-    box-shadow:
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    thead
-    th[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before {
     box-shadow:
       inset 1px 0 0 0 var(--border-color),
       inset 0 1px 0 0 var(--border-color),
