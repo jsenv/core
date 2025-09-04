@@ -54,7 +54,7 @@
 
 import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import {
   useSelectableElement,
   useSelectionProvider,
@@ -78,6 +78,7 @@ import.meta.css = /* css */ `
     --border-color: red;
     --sticky-border-size: 5px;
     --sticky-border-color: yellow;
+    --selection-border-color: "#0078d4";
     --focus-border-color: green;
 
     /* needed because cell uses position:relative, sticky must win even if before in DOM order */
@@ -306,6 +307,104 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
+
+  .navi_table [data-selection-border-top]::after {
+    box-shadow: inset 0 1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table [data-selection-border-right]::after {
+    box-shadow: inset -1px 0 0 0 var(--selection-border-color);
+  }
+
+  .navi_table [data-selection-border-bottom]::after {
+    box-shadow: inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table [data-selection-border-left]::after {
+    box-shadow: inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  /* Two border combinations */
+  .navi_table [data-selection-border-top][data-selection-border-right]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color);
+  }
+
+  .navi_table [data-selection-border-top][data-selection-border-bottom]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table [data-selection-border-top][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  .navi_table
+    [data-selection-border-right][data-selection-border-bottom]::after {
+    box-shadow:
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table [data-selection-border-right][data-selection-border-left]::after {
+    box-shadow:
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  .navi_table
+    [data-selection-border-bottom][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  /* Three border combinations */
+  .navi_table
+    [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color);
+  }
+
+  .navi_table
+    [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  .navi_table
+    [data-selection-border-top][data-selection-border-right][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  .navi_table
+    [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
+    box-shadow:
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
+
+  /* Four border combinations (full selection) */
+  .navi_table
+    [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
+    box-shadow:
+      inset 0 1px 0 0 var(--selection-border-color),
+      inset -1px 0 0 0 var(--selection-border-color),
+      inset 0 -1px 0 0 var(--selection-border-color),
+      inset 1px 0 0 0 var(--selection-border-color);
+  }
 `;
 
 export const Table = forwardRef((props, ref) => {
@@ -397,6 +496,15 @@ export const Table = forwardRef((props, ref) => {
   });
   useFocusGroup(innerRef);
   useStickyGroup(innerRef);
+
+  useLayoutEffect(() => {
+    if (selectionColor) {
+      innerRef.current?.style.setProperty(
+        "--selection-border-color",
+        selectionColor,
+      );
+    }
+  }, [selectionColor]);
 
   // Calculate frontier sticky column and row indexes (boundary between sticky and non-sticky)
   let columnIndex = 0;
@@ -505,11 +613,7 @@ export const Table = forwardRef((props, ref) => {
           </tbody>
         </table>
       </SelectionProvider>
-      <TableSelectionBorders
-        tableRef={innerRef}
-        color={selectionColor}
-        opacity={selectionOpacity}
-      />
+      <TableSelectionBorders tableRef={innerRef} opacity={selectionOpacity} />
     </div>
   );
 });

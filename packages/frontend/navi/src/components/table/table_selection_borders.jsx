@@ -1,109 +1,5 @@
 import { useLayoutEffect } from "preact/hooks";
 
-import.meta.css = /* css */ `
-  /* Selection border styling using ::after pseudo-element */
-  /* Draws only selection borders on top of existing table borders */
-
-  /* Single border selections */
-  .navi_table [data-selection-border-top]::after {
-    box-shadow: inset 0 1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-right]::after {
-    box-shadow: inset -1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-bottom]::after {
-    box-shadow: inset 0 -1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-left]::after {
-    box-shadow: inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  /* Two border combinations */
-  .navi_table [data-selection-border-top][data-selection-border-right]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset -1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-top][data-selection-border-bottom]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-top][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-right][data-selection-border-bottom]::after {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-right][data-selection-border-left]::after {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  /* Three border combinations */
-  .navi_table
-    [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-top][data-selection-border-right][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  /* Four border combinations (full selection) */
-  .navi_table
-    [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-`;
-
 // Table selection border helpers
 const createTableSelectionObserver = (tableElement) => {
   const updateSelectionBorders = () => {
@@ -213,7 +109,7 @@ const createTableSelectionObserver = (tableElement) => {
   };
 };
 
-export const TableSelectionBorders = ({ tableRef, color = "#0078d4" }) => {
+export const TableSelectionBorders = ({ tableRef }) => {
   useLayoutEffect(() => {
     const tableSelectionObserver = createTableSelectionObserver(
       tableRef.current,
@@ -223,12 +119,6 @@ export const TableSelectionBorders = ({ tableRef, color = "#0078d4" }) => {
       tableSelectionObserver.disconnect();
     };
   }, [tableRef]);
-
-  useLayoutEffect(() => {
-    if (color) {
-      tableRef.current?.style.setProperty("--selection-border-color", color);
-    }
-  }, [color, tableRef]);
 
   return null;
 };
