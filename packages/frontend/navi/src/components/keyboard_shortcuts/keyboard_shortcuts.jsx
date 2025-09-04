@@ -1,6 +1,5 @@
 import { requestAction } from "@jsenv/validation";
-import { createContext } from "preact";
-import { useContext, useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
@@ -43,7 +42,6 @@ import.meta.css = /* css */ `
   }
 `;
 
-const KeyboardShortcutsContext = createContext();
 export const KeyboardShortcuts = ({
   elementRef,
   shortcuts,
@@ -144,7 +142,7 @@ export const KeyboardShortcuts = ({
           <KeyboardShortcutAriaElement
             key={shortcut.key}
             keyCombination={shortcut.key}
-            actionName={shortcut.action.name}
+            actionName={shortcut.action?.name}
             description={shortcut.description}
             enabled={shortcut.enabled}
             confirmMessage={shortcut.confirmMessage}
@@ -176,37 +174,4 @@ const KeyboardShortcutAriaElement = ({
       {description}
     </button>
   );
-};
-
-export const useKeyboardShortcutsContext = () => {
-  return useContext(KeyboardShortcutsContext);
-};
-
-export const useKeyboardShortcuts = (elementRef, shortcuts, onShortcut) => {
-  const shortcutsRef = useRef(shortcuts);
-  shortcutsRef.current = shortcuts;
-
-  const onShortcutRef = useRef(onShortcut);
-  onShortcutRef.current = onShortcut;
-
-  useEffect(() => {
-    const element = elementRef.current;
-    const onKeydown = (event) => {
-      const shortcutsCopy = [];
-      for (const shortcutCandidate of shortcutsRef.current) {
-        shortcutsCopy.push({
-          ...shortcutCandidate,
-          action: () => {
-            onShortcutRef.current(shortcutCandidate, event);
-          },
-        });
-      }
-      applyKeyboardShortcuts(shortcutsCopy, event);
-    };
-
-    element.addEventListener("keydown", onKeydown);
-    return () => {
-      element.removeEventListener("keydown", onKeydown);
-    };
-  }, []);
 };
