@@ -220,26 +220,24 @@ import.meta.css = /* css */ `
   /* These rules only apply when border-collapse is enabled */
 
   /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
-  .navi_table[data-border-collapse] td::after {
-    top: -1px;
-  }
-  .navi_table[data-border-collapse] th + th::after,
-  .navi_table[data-border-collapse] td + td::after {
-    left: -1px;
-  }
 
+  /* Base rule: all cells get right and bottom borders */
   .navi_table[data-border-collapse] th::before,
   .navi_table[data-border-collapse] td::before {
     box-shadow:
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
+
+  /* Header cells (all th) get top border in addition to right and bottom */
   .navi_table[data-border-collapse] th::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
+
+  /* First column cells get left border in addition to right and bottom */
   .navi_table[data-border-collapse] th:first-child::before,
   .navi_table[data-border-collapse] td:first-child::before {
     box-shadow:
@@ -247,6 +245,8 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
+
+  /* Header first column gets all four borders */
   .navi_table[data-border-collapse] th:first-child::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
@@ -416,6 +416,15 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] th[data-after-sticky-x-frontier]::before,
   .navi_table[data-border-collapse] td[data-after-sticky-x-frontier]::before {
     box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header cells after sticky-x-frontier also need top border (for border-collapse) */
+  .navi_table[data-border-collapse] th[data-after-sticky-x-frontier]::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
