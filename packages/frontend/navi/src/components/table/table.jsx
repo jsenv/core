@@ -369,14 +369,14 @@ import.meta.css = /* css */ `
   }
 
   /* Header row sticky cells need top border */
-  .navi_table[data-border-collapse] thead th[data-sticky-x]::before {
+  .navi_table[data-border-collapse] th[data-sticky-x]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  .navi_table[data-border-collapse] thead th[data-sticky-y]::before {
+  .navi_table[data-border-collapse] th[data-sticky-y]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
@@ -401,10 +401,8 @@ import.meta.css = /* css */ `
   }
 
   /* Header first column sticky cells get all four regular borders */
-  .navi_table[data-border-collapse] thead th:first-child[data-sticky-x]::before,
-  .navi_table[data-border-collapse]
-    thead
-    th:first-child[data-sticky-y]::before {
+  .navi_table[data-border-collapse] th:first-child[data-sticky-x]::before,
+  .navi_table[data-border-collapse] th:first-child[data-sticky-y]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
