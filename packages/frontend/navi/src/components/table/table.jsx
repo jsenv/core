@@ -53,16 +53,20 @@
  * - Ability to delete a row (button + a shortcut key cmd + delete) with a confirmation message
  */
 
-import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
+import {
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
+import { useKeyboardShortcutsProvider } from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
 import {
   useSelectableElement,
   useSelectionProvider,
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
 import { useStickyGroup } from "./sticky_group.js";
-import { TableSelectionBorders } from "./table_selection_borders.jsx";
 
 /*
  * Box-shadow border mapping template:
@@ -507,7 +511,7 @@ export const Table = forwardRef((props, ref) => {
     columns,
     rows = [],
     data,
-    selection = [],
+    selection: initialSelection = [],
     selectionColor,
     onSelectionChange,
     borderCollapse = false,
@@ -518,7 +522,7 @@ export const Table = forwardRef((props, ref) => {
     return {
       element: innerRef.current,
       clearSelection: () => {
-        selectionSignal.value = [];
+        setSelection([]);
       },
       selectAll: () => {
         // Select all data cells (not row/column selectors)
@@ -528,13 +532,12 @@ export const Table = forwardRef((props, ref) => {
             allCellIds.push(`${col.accessorKey}:${row.id}`);
           });
         });
-        selectionSignal.value = allCellIds;
+        setSelection(allCellIds);
       },
     };
   });
 
-  const selectionSignal = useSignal(selection);
-  selection = selectionSignal.value;
+  const [selection, setSelection] = useState(initialSelection);
   const rowWithSomeSelectedCell = [];
   const columnWithSomeSelectedCell = [];
   const selectedRowIds = [];
@@ -581,13 +584,14 @@ export const Table = forwardRef((props, ref) => {
     layout: "grid",
     value: selection,
     onChange: (value) => {
-      selectionSignal.value = value;
+      setSelection(value);
       onSelectionChange(value);
     },
     selectAllName: "cell",
   });
   useFocusGroup(innerRef);
   useStickyGroup(innerRef);
+  useTableSelectionBorders(innerRef);
 
   useLayoutEffect(() => {
     if (selectionColor) {
@@ -597,6 +601,10 @@ export const Table = forwardRef((props, ref) => {
       );
     }
   }, [selectionColor]);
+
+  const KeyboardShortcutsProvider = useKeyboardShortcutsProvider(innerRef, {
+    shortcuts: [],
+  });
 
   // Calculate frontier sticky column and row indexes (boundary between sticky and non-sticky)
   let columnIndex = 0;
@@ -624,103 +632,198 @@ export const Table = forwardRef((props, ref) => {
 
   return (
     <div className="navi_table_container">
-      <SelectionProvider>
-        <table
-          ref={innerRef}
-          className="navi_table"
-          aria-multiselectable="true"
-          data-multiselection={selection.length > 1 ? "" : undefined}
-          data-border-collapse={borderCollapse ? "" : undefined}
-        >
-          <thead>
-            <tr>
-              <RowNumberHeaderCell
-                stickyX={rowColumnSticky}
-                stickyY={stickyHeader}
-                isStickyXFrontier={
-                  rowColumnSticky && stickyColumnFrontierIndex === 0
-                } // Only frontier if no other columns are sticky
-                isStickyYFrontier={stickyHeader && stickyRowFrontierIndex === 0} // Only frontier if no other rows are sticky
-                onClick={() => {
-                  ref.current.selectAll();
-                }}
-              />
-              {columns.map((col, index) => (
-                <HeaderCell
-                  stickyX={col.sticky}
+      <KeyboardShortcutsProvider>
+        <SelectionProvider>
+          <table
+            ref={innerRef}
+            className="navi_table"
+            aria-multiselectable="true"
+            data-multiselection={selection.length > 1 ? "" : undefined}
+            data-border-collapse={borderCollapse ? "" : undefined}
+          >
+            <thead>
+              <tr>
+                <RowNumberHeaderCell
+                  stickyX={rowColumnSticky}
                   stickyY={stickyHeader}
-                  isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
-                  isAfterStickyXFrontier={
-                    index + 1 === stickyColumnFrontierIndex + 1
-                  }
+                  isStickyXFrontier={
+                    rowColumnSticky && stickyColumnFrontierIndex === 0
+                  } // Only frontier if no other columns are sticky
                   isStickyYFrontier={
                     stickyHeader && stickyRowFrontierIndex === 0
-                  } // Header row is always the frontier (no rows above it)
-                  isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
-                  key={col.id}
-                  columnName={col.header}
-                  columnAccessorKey={col.accessorKey}
-                  columnIndex={index + 1}
-                  columnWithSomeSelectedCell={columnWithSomeSelectedCell}
-                  data={data}
+                  } // Only frontier if no other rows are sticky
+                  onClick={() => {
+                    ref.current.selectAll();
+                  }}
                 />
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, rowIndex) => {
-              const rowOptions = rows[rowIndex] || {};
-              const isRowSelected = selectedRowIds.includes(row.id);
-              const isStickyYFrontier = stickyRowFrontierIndex === rowIndex + 1;
-              const isAfterStickyYFrontier =
-                rowIndex + 1 === stickyRowFrontierIndex + 1;
-
-              return (
-                <tr
-                  key={row.id}
-                  data-row-id={row.id}
-                  aria-selected={isRowSelected}
-                >
-                  <RowNumberCell
-                    stickyX={rowColumnSticky}
-                    stickyY={rowOptions.sticky}
-                    isStickyXFrontier={stickyColumnFrontierIndex === 0} // Only if no data columns are sticky
-                    isAfterStickyXFrontier={false} // Row number column can't be after sticky X frontier (it's the first column)
-                    isStickyYFrontier={isStickyYFrontier}
-                    isAfterStickyYFrontier={isAfterStickyYFrontier}
-                    row={row}
-                    rowWithSomeSelectedCell={rowWithSomeSelectedCell}
-                    columns={columns}
+                {columns.map((col, index) => (
+                  <HeaderCell
+                    stickyX={col.sticky}
+                    stickyY={stickyHeader}
+                    isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
+                    isAfterStickyXFrontier={
+                      index + 1 === stickyColumnFrontierIndex + 1
+                    }
+                    isStickyYFrontier={
+                      stickyHeader && stickyRowFrontierIndex === 0
+                    } // Header row is always the frontier (no rows above it)
+                    isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
+                    key={col.id}
+                    columnName={col.header}
+                    columnAccessorKey={col.accessorKey}
+                    columnIndex={index + 1}
+                    columnWithSomeSelectedCell={columnWithSomeSelectedCell}
+                    data={data}
                   />
-                  {columns.map((col, colIndex) => (
-                    <DataCell
-                      stickyX={col.sticky}
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((row, rowIndex) => {
+                const rowOptions = rows[rowIndex] || {};
+                const isRowSelected = selectedRowIds.includes(row.id);
+                const isStickyYFrontier =
+                  stickyRowFrontierIndex === rowIndex + 1;
+                const isAfterStickyYFrontier =
+                  rowIndex + 1 === stickyRowFrontierIndex + 1;
+
+                return (
+                  <tr
+                    key={row.id}
+                    data-row-id={row.id}
+                    aria-selected={isRowSelected}
+                  >
+                    <RowNumberCell
+                      stickyX={rowColumnSticky}
                       stickyY={rowOptions.sticky}
-                      isStickyXFrontier={
-                        stickyColumnFrontierIndex === colIndex + 1
-                      }
-                      isAfterStickyXFrontier={
-                        colIndex + 1 === stickyColumnFrontierIndex + 1
-                      }
+                      isStickyXFrontier={stickyColumnFrontierIndex === 0} // Only if no data columns are sticky
+                      isAfterStickyXFrontier={false} // Row number column can't be after sticky X frontier (it's the first column)
                       isStickyYFrontier={isStickyYFrontier}
                       isAfterStickyYFrontier={isAfterStickyYFrontier}
-                      key={`${row.id}-${col.id}`}
-                      columnName={col.accessorKey}
-                      columnIndex={colIndex + 1} // +1 because number column is first
                       row={row}
-                      value={row[col.accessorKey]}
+                      rowWithSomeSelectedCell={rowWithSomeSelectedCell}
+                      columns={columns}
                     />
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </SelectionProvider>
-      <TableSelectionBorders tableRef={innerRef} />
+                    {columns.map((col, colIndex) => (
+                      <DataCell
+                        stickyX={col.sticky}
+                        stickyY={rowOptions.sticky}
+                        isStickyXFrontier={
+                          stickyColumnFrontierIndex === colIndex + 1
+                        }
+                        isAfterStickyXFrontier={
+                          colIndex + 1 === stickyColumnFrontierIndex + 1
+                        }
+                        isStickyYFrontier={isStickyYFrontier}
+                        isAfterStickyYFrontier={isAfterStickyYFrontier}
+                        key={`${row.id}-${col.id}`}
+                        columnName={col.accessorKey}
+                        columnIndex={colIndex + 1} // +1 because number column is first
+                        row={row}
+                        value={row[col.accessorKey]}
+                      />
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </SelectionProvider>
+      </KeyboardShortcutsProvider>
     </div>
   );
 });
+
+const useTableSelectionBorders = (tableRef) => {
+  useLayoutEffect(() => {
+    return initTableSelectionObserver(tableRef.current);
+  }, [tableRef]);
+};
+const initTableSelectionObserver = (tableElement) => {
+  const observer = new MutationObserver(() => {
+    updateSelectionBorders(tableElement);
+  });
+  updateSelectionBorders(tableElement);
+  observer.observe(tableElement, {
+    attributes: true,
+    attributeFilter: ["aria-selected"],
+    subtree: true,
+  });
+  return () => {
+    observer.disconnect();
+  };
+};
+const updateSelectionBorders = (tableElement) => {
+  // Find all selected cells
+  const selectedCells = tableElement.querySelectorAll(
+    'td[aria-selected="true"], th[aria-selected="true"]',
+  );
+  console.log(selectedCells);
+
+  // Clear all existing selection border attributes
+  tableElement
+    .querySelectorAll(
+      "[data-selection-border-top], [data-selection-border-right], [data-selection-border-bottom], [data-selection-border-left]",
+    )
+    .forEach((cell) => {
+      cell.removeAttribute("data-selection-border-top");
+      cell.removeAttribute("data-selection-border-right");
+      cell.removeAttribute("data-selection-border-bottom");
+      cell.removeAttribute("data-selection-border-left");
+    });
+
+  if (selectedCells.length === 0) {
+    return;
+  }
+
+  // Convert NodeList to array and get cell positions
+  const cellsArray = Array.from(selectedCells);
+  const cellPositions = cellsArray.map((cell) => {
+    const row = cell.parentElement;
+    return {
+      element: cell,
+      rowIndex: Array.from(row.parentElement.children).indexOf(row),
+      columnIndex: Array.from(row.children).indexOf(cell),
+    };
+  });
+
+  // Calculate selection bounds
+  const rowIndices = cellPositions.map((pos) => pos.rowIndex);
+  const columnIndices = cellPositions.map((pos) => pos.columnIndex);
+  const minRow = Math.min(...rowIndices);
+  const maxRow = Math.max(...rowIndices);
+  const minColumn = Math.min(...columnIndices);
+  const maxColumn = Math.max(...columnIndices);
+
+  // Check if border-collapse mode is enabled
+  // const isBorderCollapse = tableElement.hasAttribute("data-border-collapse");
+
+  // Apply selection borders based on position in selection rectangle
+  cellPositions.forEach(({ element, rowIndex, columnIndex }) => {
+    // Top border: if cell is at top of selection
+    if (rowIndex === minRow) {
+      element.setAttribute("data-selection-border-top", "");
+    }
+
+    // Bottom border: if cell is at bottom of selection
+    if (rowIndex === maxRow) {
+      element.setAttribute("data-selection-border-bottom", "");
+    }
+
+    // Left border: if cell is at left of selection
+    if (columnIndex === minColumn) {
+      element.setAttribute("data-selection-border-left", "");
+    }
+
+    // Right border: if cell is at right of selection
+    if (columnIndex === maxColumn) {
+      element.setAttribute("data-selection-border-right", "");
+    }
+
+    // In border-collapse mode, we may need to adjust internal borders
+    // For now, keeping it simple with just perimeter borders
+  });
+};
 
 const RowNumberHeaderCell = ({
   stickyX,
