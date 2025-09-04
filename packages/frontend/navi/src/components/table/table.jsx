@@ -80,11 +80,11 @@ import.meta.css = /* css */ `
     --sticky-border-color: yellow;
     --focus-border-color: green;
 
-    --z-index-focused: 0; /* must be above selection and anything else  */
     /* needed because cell uses position:relative, sticky must win even if before in DOM order */
     --z-index-sticky-row: 100;
     --z-index-sticky-column: 1000;
     --z-index-sticky-corner: 10000;
+    --z-index-focused: 12000; /* must be above selection and anything else  */
 
     position: relative;
   }
@@ -168,7 +168,7 @@ import.meta.css = /* css */ `
   .navi_table td:focus,
   .navi_table th:focus {
     outline: none; /* Remove default outline */
-    z-index: var(--z-index-focused);
+    z-index: var(--z-index-focused) !important;
   }
 
   .navi_table th::after,
@@ -178,11 +178,6 @@ import.meta.css = /* css */ `
     /* Default: include bottom and right borders (owned by this cell) */
     inset: 0;
     pointer-events: none;
-  }
-
-  .navi_table th:focus,
-  .navi_table td:focus {
-    z-index: 10;
   }
 
   .navi_table td:focus::after,
@@ -266,40 +261,6 @@ import.meta.css = /* css */ `
   }
 
   /* Sticky border styling - works in both normal and border-collapse modes */
-
-  /* Default mode: only frontier sticky elements get thick yellow borders */
-  .navi_table th[data-sticky-x][data-sticky-x-frontier]::before,
-  .navi_table td[data-sticky-x][data-sticky-x-frontier]::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-border-size)) 0 0 0
-        var(--sticky-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table th[data-sticky-y][data-sticky-y-frontier]::before,
-  .navi_table td[data-sticky-y][data-sticky-y-frontier]::before {
-    box-shadow:
-      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
-        var(--sticky-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color);
-  }
-
-  .navi_table
-    th[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before,
-  .navi_table
-    td[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-border-size)) 0 0 0
-        var(--sticky-border-color),
-      inset 0 calc(-1 * var(--sticky-border-size)) 0 0
-        var(--sticky-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color);
-  }
 
   /* Border-collapse mode: Sticky columns/rows border adjustments */
   /* These rules only apply when border-collapse is enabled */
