@@ -391,7 +391,6 @@ import.meta.css = /* css */ `
 
   /* Special cases for header row sticky frontiers - they need top border too */
   .navi_table[data-border-collapse]
-    thead
     th[data-sticky-x][data-sticky-x-frontier]::before {
     box-shadow:
       inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
@@ -401,7 +400,6 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    thead
     th[data-sticky-y][data-sticky-y-frontier]::before {
     box-shadow:
       inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
@@ -411,7 +409,6 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    thead
     th[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before {
     box-shadow:
       inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
@@ -445,7 +442,6 @@ import.meta.css = /* css */ `
   }
 
   .navi_table[data-border-collapse]
-    thead
     th:first-child[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before {
     box-shadow:
       inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
@@ -462,8 +458,7 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] th[data-after-sticky-x-frontier]::before,
   .navi_table[data-border-collapse] td[data-after-sticky-x-frontier]::before {
     box-shadow:
-      inset var(--sticky-frontier-border-size) 0 0 0
-        var(--sticky-frontier-border-color),
+      inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
@@ -472,8 +467,7 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] th[data-after-sticky-y-frontier]::before,
   .navi_table[data-border-collapse] td[data-after-sticky-y-frontier]::before {
     box-shadow:
-      inset 0 var(--sticky-frontier-border-size) 0 0
-        var(--sticky-frontier-border-color),
+      inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
@@ -484,10 +478,8 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse]
     td[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before {
     box-shadow:
-      inset var(--sticky-frontier-border-size) 0 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 var(--sticky-frontier-border-size) 0 0
-        var(--sticky-frontier-border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
@@ -508,8 +500,6 @@ import.meta.css = /* css */ `
     thead
     th[data-after-sticky-y-frontier]::before {
     box-shadow:
-      inset 0 var(--sticky-frontier-border-size) 0 0
-        var(--sticky-frontier-border-color),
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
@@ -519,10 +509,7 @@ import.meta.css = /* css */ `
     thead
     th[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before {
     box-shadow:
-      inset var(--sticky-frontier-border-size) 0 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 var(--sticky-frontier-border-size) 0 0
-        var(--sticky-frontier-border-color),
+      inset 1px 0 0 0 var(--border-color),
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
@@ -541,6 +528,19 @@ import.meta.css = /* css */ `
       inset -2px 0 0 0 var(--focus-border-color),
       inset 0 -2px 0 0 var(--focus-border-color),
       inset 2px 0 0 0 var(--focus-border-color) !important;
+  }
+
+  /* Positioning adjustments for ::after pseudo-elements on cells adjacent to sticky frontiers */
+  /* These ensure selection and focus borders align with the ::before borders */
+
+  .navi_table[data-border-collapse] th[data-after-sticky-x-frontier]::after,
+  .navi_table[data-border-collapse] td[data-after-sticky-x-frontier]::after {
+    left: 0;
+  }
+
+  .navi_table[data-border-collapse] th[data-after-sticky-y-frontier]::after,
+  .navi_table[data-border-collapse] td[data-after-sticky-y-frontier]::after {
+    top: 0;
   }
 `;
 
