@@ -2,9 +2,9 @@
 export { createAction, rerunActions, updateActions } from "./src/actions.js";
 export { useRunOnMount } from "./src/components/action_execution/use_run_on_mount.js";
 export {
-  ShortcutProvider,
   useKeyboardShortcuts,
-} from "./src/components/keyboard_shortcuts/shortcut_context.jsx";
+  useKeyboardShortcutsProvider,
+} from "./src/components/keyboard_shortcuts/keyboard_shortcuts.jsx";
 export { useActionData } from "./src/use_action_data.js";
 export { useActionStatus } from "./src/use_action_status.js";
 

@@ -38,17 +38,19 @@
  * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
- * - Shortcuts to act on selection
+ * - Shortcuts to act on selection (shortcut deviandra un element HTML je pense (qui va render des boutons hidden))
+ *   genre <KeyboardShortcuts />
+ * - Double click to edit (see table_data.jsx)
+ *  - Space to edit with text selected
+ *  - A-Z key to edit with text replaced by this key
+ * - Can add a column
+ * - Can add a row
  * - Resizing columns
  * - Resizing rows
  * - Drag to reorder columns
  * - Drag to reorder rows (won't be possible with database so not for now)
- * - Double click to edit (see table_data.jsx)
- * - Space to edit with text selected
- * - A-Z key to edit with text replaced by this key
  * - A last row with buttons like a delete button with a delete icon
  * - Ability to delete a row (button + a shortcut key cmd + delete) with a confirmation message
- * - Ability to update a cell (double click to edit, enter to validate, esc to cancel)
  */
 
 import { useSignal } from "@preact/signals";

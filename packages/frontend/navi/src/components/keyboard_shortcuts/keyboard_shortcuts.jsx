@@ -43,25 +43,22 @@ import.meta.css = /* css */ `
   }
 `;
 
-const ShortcutContext = createContext();
-export const useShortcutContext = () => {
-  return useContext(ShortcutContext);
-};
-
-export const ShortcutProvider = ({
+const KeyboardShortcutsContext = createContext();
+export const useKeyboardShortcutsProvider = (
   elementRef,
-  shortcuts,
-  onActionPrevented,
-  onActionStart,
-  onActionAbort,
-  onActionError,
-  onActionEnd,
-  allowConcurrentActions,
-  children,
-}) => {
+  {
+    shortcuts,
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+    allowConcurrentActions,
+  },
+) => {
   if (!elementRef) {
     throw new Error(
-      "ShortcutProvider requires an elementRef to attach shortcuts to.",
+      "useKeyboardShortcutsProvider requires an elementRef to attach shortcuts to.",
     );
   }
 
@@ -138,17 +135,25 @@ export const ShortcutProvider = ({
     });
   });
 
-  return (
-    <ShortcutContext.Provider
-      value={{
-        shortcutAction: action,
-        shortcutActionIsBusy,
-      }}
-    >
-      {children}
-      {shortcutHiddenElement}
-    </ShortcutContext.Provider>
-  );
+  const KeyboardShortcutProvider = ({ children }) => {
+    return (
+      <KeyboardShortcutsContext.Provider
+        value={{
+          shortcutAction: action,
+          shortcutActionIsBusy,
+        }}
+      >
+        {children}
+        {shortcutHiddenElement}
+      </KeyboardShortcutsContext.Provider>
+    );
+  };
+
+  return KeyboardShortcutProvider;
+};
+
+export const useKeyboardShortcutsContext = () => {
+  return useContext(KeyboardShortcutsContext);
 };
 
 export const useKeyboardShortcuts = (elementRef, shortcuts, onShortcut) => {

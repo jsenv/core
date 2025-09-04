@@ -5,9 +5,9 @@ import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
-  ShortcutProvider,
-  useShortcutContext,
-} from "../keyboard_shortcuts/shortcut_context.jsx";
+  useKeyboardShortcuts,
+  useKeyboardShortcutsProvider,
+} from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useSelectableElement, useSelection } from "../selection/selection.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
@@ -235,18 +235,19 @@ const LinkWithAction = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
+  const KeyboardShortcutsProvider = useKeyboardShortcutsProvider(innerRef, {
+    shortcuts,
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+  });
+
   return (
-    <ShortcutProvider
-      shortcuts={shortcuts}
-      elementRef={innerRef}
-      onActionPrevented={onActionPrevented}
-      onActionStart={onActionStart}
-      onActionAbort={onActionAbort}
-      onActionError={onActionError}
-      onActionEnd={onActionEnd}
-    >
+    <KeyboardShortcutsProvider>
       <LinkWithShortcuts ref={innerRef} {...rest} />
-    </ShortcutProvider>
+    </KeyboardShortcutsProvider>
   );
 });
 
@@ -254,7 +255,7 @@ const LinkWithShortcuts = forwardRef((props, ref) => {
   const { children, readOnly, loading, ...rest } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const { shortcutAction } = useShortcutContext();
+  const { shortcutAction } = useKeyboardShortcuts();
 
   const { loading: actionLoading } = useActionStatus(shortcutAction);
   const innerLoading = Boolean(loading || actionLoading);
