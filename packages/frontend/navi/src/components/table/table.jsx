@@ -173,7 +173,7 @@ import.meta.css = /* css */ `
   /* Selection */
   .navi_table td[aria-selected="true"],
   .navi_table th[aria-selected="true"] {
-    background-color: rgba(0, 120, 212, 0.08);
+    background-color: #eaf1fd;
   }
   /* Column selection styling */
   .navi_table .navi_row_number_cell[aria-selected="true"],
@@ -410,105 +410,6 @@ import.meta.css = /* css */ `
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Sticky frontier borders - these override the base sticky borders above */
-  /* Border-collapse mode: Sticky X frontier gets right border */
-  /* Border-collapse mode: Sticky X frontier gets right border */
-  .navi_table[data-border-collapse]
-    th[data-sticky-x][data-sticky-x-frontier]::before,
-  .navi_table[data-border-collapse]
-    td[data-sticky-x][data-sticky-x-frontier]::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  /* Border-collapse mode: Sticky Y frontier gets bottom border */
-  .navi_table[data-border-collapse]
-    th[data-sticky-y][data-sticky-y-frontier]::before,
-  .navi_table[data-border-collapse]
-    td[data-sticky-y][data-sticky-y-frontier]::before {
-    box-shadow:
-      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
-        var(--sticky-frontier-border-color),
-      inset -1px 0 0 0 var(--border-color);
-  }
-
-  /* Border-collapse mode: Corner sticky frontier gets both right and bottom borders */
-  .navi_table[data-border-collapse]
-    th[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before,
-  .navi_table[data-border-collapse]
-    td[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
-        var(--sticky-frontier-border-color);
-  }
-
-  /* Special cases for header row sticky frontiers - they need top border too */
-  .navi_table[data-border-collapse]
-    th[data-sticky-x][data-sticky-x-frontier]::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    th[data-sticky-y][data-sticky-y-frontier]::before {
-    box-shadow:
-      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    th[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 1px 0 0 var(--border-color);
-  }
-
-  /* Special cases for first column sticky frontiers - they need left border too */
-  .navi_table[data-border-collapse]
-    th:first-child[data-sticky-x][data-sticky-x-frontier]::before,
-  .navi_table[data-border-collapse]
-    td:first-child[data-sticky-x][data-sticky-x-frontier]::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
-        var(--sticky-frontier-border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    th:first-child[data-sticky-y][data-sticky-y-frontier]::before,
-  .navi_table[data-border-collapse]
-    td:first-child[data-sticky-y][data-sticky-y-frontier]::before {
-    box-shadow:
-      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
-        var(--sticky-frontier-border-color),
-      inset 1px 0 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color);
-  }
-
-  .navi_table[data-border-collapse]
-    th:first-child[data-sticky-x][data-sticky-y][data-sticky-x-frontier][data-sticky-y-frontier]::before {
-    box-shadow:
-      inset calc(-1 * var(--sticky-frontier-border-size)) 0 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 calc(-1 * var(--sticky-frontier-border-size)) 0 0
-        var(--sticky-frontier-border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset 1px 0 0 0 var(--border-color);
   }
 
   /* Borders for cells immediately after sticky frontiers */
