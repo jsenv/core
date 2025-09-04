@@ -776,9 +776,10 @@ const updateSelectionBorders = (tableElement) => {
   const cellsArray = Array.from(selectedCells);
   const cellPositions = cellsArray.map((cell) => {
     const row = cell.parentElement;
+    const allRows = Array.from(tableElement.querySelectorAll("tr"));
     return {
       element: cell,
-      rowIndex: Array.from(row.parentElement.children).indexOf(row),
+      rowIndex: allRows.indexOf(row),
       columnIndex: Array.from(row.children).indexOf(cell),
     };
   });
