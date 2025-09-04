@@ -38,7 +38,6 @@
  * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
- * - Shortcuts to act on selection
  * - Double click to edit (see table_data.jsx)
  *  - Space to edit with text selected
  *  - A-Z key to edit with text replaced by this key

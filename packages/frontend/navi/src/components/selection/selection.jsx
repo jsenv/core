@@ -1298,6 +1298,7 @@ export const selectionKeyboardShortcuts = (
 
   return [
     {
+      description: "Add element above to selection",
       key: "command+shift+up",
       enabled: selection.axis !== "horizontal",
       handler: (keyboardEvent) => {
@@ -1305,6 +1306,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Select element above",
       key: "up",
       enabled: selection.axis !== "horizontal",
       handler: (keyboardEvent) => {
@@ -1314,6 +1316,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Add element below to selection",
       key: "command+shift+down",
       enabled: selection.axis !== "horizontal",
       handler: (keyboardEvent) => {
@@ -1321,6 +1324,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Select element below",
       key: "down",
       enabled: selection.axis !== "horizontal",
       handler: (keyboardEvent) => {
@@ -1330,6 +1334,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Add left element to selection",
       key: "command+shift+left",
       enabled: selection.axis !== "horizontal",
       handler: (keyboardEvent) => {
@@ -1337,6 +1342,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Select left element",
       key: "left",
       enabled: selection.axis !== "vertical",
       handler: (keyboardEvent) => {
@@ -1346,6 +1352,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Add right element to selection",
       key: "command+shift+right",
       enabled: selection.axis !== "vertical",
       handler: (keyboardEvent) => {
@@ -1353,6 +1360,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Select right element",
       key: "right",
       enabled: selection.axis !== "vertical",
       handler: (keyboardEvent) => {
@@ -1362,6 +1370,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Set element as anchor for shift selections",
       key: "shift",
       handler: (keyboardEvent) => {
         const element = getSelectableElement(keyboardEvent);
@@ -1370,6 +1379,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Select all",
       key: "command+a",
       handler: (keyboardEvent) => {
         selection.selectAll(keyboardEvent);
@@ -1377,6 +1387,7 @@ export const selectionKeyboardShortcuts = (
       },
     },
     {
+      description: "Toggle element selected state",
       enabled: (keyboardEvent) => {
         if (!toggleEnabled) {
           return false;
