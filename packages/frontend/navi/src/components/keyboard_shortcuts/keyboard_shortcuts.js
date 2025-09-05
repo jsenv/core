@@ -212,11 +212,7 @@ const generateCrossPlatformCombination = (combination) => {
 
   return crossPlatform;
 };
-
-export const keyboardEventIsMatchingKeyCombination = (
-  event,
-  keyCombination,
-) => {
+const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
   const keys = keyCombination.toLowerCase().split("+");
 
   for (const key of keys) {
