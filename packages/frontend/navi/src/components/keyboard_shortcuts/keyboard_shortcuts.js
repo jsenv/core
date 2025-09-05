@@ -15,7 +15,7 @@ const updateActiveShortcuts = () => {
   // const currentActiveShortcuts = activeShortcutsSignal.peek();
   const activeShortcuts = [];
   for (const [element, { shortcuts }] of shortcutsMap) {
-    if (activeElement === element || element.contains(activeElement)) {
+    if (element === activeElement || element.contains(activeElement)) {
       activeShortcuts.push(...shortcuts);
     }
   }
