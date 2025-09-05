@@ -10,16 +10,43 @@ import { isMac } from "./os.js";
 
 export const activeShortcutsSignal = signal([]);
 const shortcutsMap = new Map();
+
+const areShortcutsEqual = (shortcutA, shortcutB) => {
+  return (
+    shortcutA.key === shortcutB.key &&
+    shortcutA.description === shortcutB.description &&
+    shortcutA.enabled === shortcutB.enabled
+  );
+};
+
+const areShortcutArraysEqual = (arrayA, arrayB) => {
+  if (arrayA.length !== arrayB.length) {
+    return false;
+  }
+
+  for (let i = 0; i < arrayA.length; i++) {
+    if (!areShortcutsEqual(arrayA[i], arrayB[i])) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 const updateActiveShortcuts = () => {
   const activeElement = activeElementSignal.peek();
-  // const currentActiveShortcuts = activeShortcutsSignal.peek();
+  const currentActiveShortcuts = activeShortcutsSignal.peek();
   const activeShortcuts = [];
   for (const [element, { shortcuts }] of shortcutsMap) {
     if (element === activeElement || element.contains(activeElement)) {
       activeShortcuts.push(...shortcuts);
     }
   }
-  activeShortcutsSignal.value = activeShortcuts;
+
+  // Only update if shortcuts have actually changed
+  if (!areShortcutArraysEqual(currentActiveShortcuts, activeShortcuts)) {
+    activeShortcutsSignal.value = activeShortcuts;
+  }
 };
 effect(() => {
   // eslint-disable-next-line no-unused-expressions
