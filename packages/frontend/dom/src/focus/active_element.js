@@ -1,6 +1,6 @@
 import { effect, signal } from "@preact/signals";
 
-const activeElementSignal = signal(document.activeElement);
+export const activeElementSignal = signal(document.activeElement);
 
 document.addEventListener(
   "focus",

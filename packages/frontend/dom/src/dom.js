@@ -1,5 +1,6 @@
 export { elementIsVisible } from "./element_is_visible.js";
 export {
+  activeElementSignal,
   addActiveElementEffect,
   useActiveElement,
 } from "./focus/active_element.js";

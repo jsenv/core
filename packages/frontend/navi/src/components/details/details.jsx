@@ -8,7 +8,7 @@ import { renderActionableComponent } from "../action_execution/render_actionable
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { ActionRenderer } from "../action_renderer.jsx";
-import { KeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
+import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import { useActionEvents } from "../use_action_events.js";
 import { useFocusGroup } from "../use_focus_group.js";
 import { SummaryMarker } from "./summary_marker.jsx";
@@ -104,6 +104,56 @@ const DetailsBasic = forwardRef((props, ref) => {
 
   const summaryRef = useRef(null);
 
+  useKeyboardShortcuts(innerRef, [
+    {
+      key: openKeyShortcut,
+      enabled: arrowKeyShortcuts,
+      when: (e) =>
+        document.activeElement === summaryRef.current &&
+        // avoid handling openKeyShortcut twice when keydown occurs inside nested details
+        !e.defaultPrevented,
+      action: (e) => {
+        const details = innerRef.current;
+        if (!details.open) {
+          e.preventDefault();
+          details.open = true;
+          return;
+        }
+        const summary = summaryRef.current;
+        const firstFocusableElementInDetails = findAfter(
+          summary,
+          elementIsFocusable,
+          { root: details },
+        );
+        if (!firstFocusableElementInDetails) {
+          return;
+        }
+        e.preventDefault();
+        firstFocusableElementInDetails.focus();
+      },
+    },
+    {
+      key: closeKeyShortcut,
+      enabled: arrowKeyShortcuts,
+      when: () => {
+        const details = innerRef.current;
+        return details.open;
+      },
+      action: (e) => {
+        const details = innerRef.current;
+        const summary = summaryRef.current;
+        if (document.activeElement === summary) {
+          e.preventDefault();
+          summary.focus();
+          details.open = false;
+        } else {
+          e.preventDefault();
+          summary.focus();
+        }
+      },
+    },
+  ]);
+
   return (
     <details
       {...rest}
@@ -135,58 +185,6 @@ const DetailsBasic = forwardRef((props, ref) => {
         </div>
       </summary>
       {children}
-      <KeyboardShortcuts
-        elementRef={innerRef}
-        shortcuts={[
-          {
-            key: openKeyShortcut,
-            enabled: arrowKeyShortcuts,
-            when: (e) =>
-              document.activeElement === summaryRef.current &&
-              // avoid handling openKeyShortcut twice when keydown occurs inside nested details
-              !e.defaultPrevented,
-            action: (e) => {
-              const details = innerRef.current;
-              if (!details.open) {
-                e.preventDefault();
-                details.open = true;
-                return;
-              }
-              const summary = summaryRef.current;
-              const firstFocusableElementInDetails = findAfter(
-                summary,
-                elementIsFocusable,
-                { root: details },
-              );
-              if (!firstFocusableElementInDetails) {
-                return;
-              }
-              e.preventDefault();
-              firstFocusableElementInDetails.focus();
-            },
-          },
-          {
-            key: closeKeyShortcut,
-            enabled: arrowKeyShortcuts,
-            when: () => {
-              const details = innerRef.current;
-              return details.open;
-            },
-            action: (e) => {
-              const details = innerRef.current;
-              const summary = summaryRef.current;
-              if (document.activeElement === summary) {
-                e.preventDefault();
-                summary.focus();
-                details.open = false;
-              } else {
-                e.preventDefault();
-                summary.focus();
-              }
-            },
-          },
-        ]}
-      />
     </details>
   );
 });

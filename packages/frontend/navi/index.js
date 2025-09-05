@@ -1,7 +1,7 @@
 // actions
 export { createAction, rerunActions, updateActions } from "./src/actions.js";
 export { useRunOnMount } from "./src/components/action_execution/use_run_on_mount.js";
-export { KeyboardShortcuts } from "./src/components/keyboard_shortcuts/keyboard_shortcuts.jsx";
+export { useKeyboardShortcuts } from "./src/components/keyboard_shortcuts/keyboard_shortcuts.js";
 export { useActionData } from "./src/use_action_data.js";
 export { useActionStatus } from "./src/use_action_status.js";
 
@@ -40,6 +40,7 @@ export { Field } from "./src/components/input/field.jsx";
 export { Input } from "./src/components/input/input.jsx";
 export { RadioList } from "./src/components/input/radio_list.jsx";
 export { Select } from "./src/components/input/select.jsx";
+export { ActiveKeyboardShortcuts } from "./src/components/keyboard_shortcuts/active_keyboard_shortcuts.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
 export {

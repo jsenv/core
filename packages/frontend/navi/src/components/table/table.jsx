@@ -41,14 +41,16 @@
  * - Double click to edit (see table_data.jsx)
  *  - Enter to edit with text selected
  *  - A-Z key to edit with text replaced by this key
- * - Can add a column
- * - Can add a row
- * - Resizing columns
- * - Resizing rows
+ * - Can add a column (+ button at the end of table headers)
+ * - Can add a row (+ button at the end of the row number column )
  * - Drag to reorder columns
  * - Drag to reorder rows (won't be possible with database so not for now)
- * - A last row with buttons like a delete button with a delete icon
- * - Ability to delete a row (button + a shortcut key cmd + delete) with a confirmation message
+ * - Resizing columns
+ * - Resizing rows
+ * - Delete a row (how?)
+ * - Delete a column (how?)
+ * - Rename a column (I guess with enter, double click, A-Z keys)
+ * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
 import { forwardRef } from "preact/compat";
@@ -58,7 +60,7 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { KeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
+import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
   selectionKeyboardShortcuts,
   useSelectableElement,
@@ -606,6 +608,19 @@ export const Table = forwardRef((props, ref) => {
   useStickyGroup(innerRef);
   useTableSelectionBorders(innerRef);
 
+  useKeyboardShortcuts(innerRef, [
+    ...selectionKeyboardShortcuts(selectionInterface, {
+      toggleEnabled: true,
+    }),
+    {
+      key: "enter",
+      handler: () => {
+        // eslint-disable-next-line no-alert
+        window.alert(selection.join(", ") || "(no selection)");
+      },
+    },
+  ]);
+
   useLayoutEffect(() => {
     if (selectionColor) {
       innerRef.current?.style.setProperty(
@@ -734,21 +749,6 @@ export const Table = forwardRef((props, ref) => {
           </tbody>
         </table>
       </SelectionProvider>
-      <KeyboardShortcuts
-        elementRef={innerRef}
-        shortcuts={[
-          ...selectionKeyboardShortcuts(selectionInterface, {
-            toggleEnabled: true,
-          }),
-          {
-            key: "enter",
-            handler: () => {
-              // eslint-disable-next-line no-alert
-              window.alert(selection.join(", ") || "(no selection)");
-            },
-          },
-        ]}
-      />
     </div>
   );
 });

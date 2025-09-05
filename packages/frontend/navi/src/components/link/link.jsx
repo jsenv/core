@@ -3,7 +3,7 @@ import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { KeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.jsx";
+import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useSelectableElement, useSelection } from "../selection/selection.jsx";
 import { useRequestedActionStatus } from "../use_action_events.js";
@@ -239,6 +239,14 @@ const LinkWithAction = forwardRef((props, ref) => {
   const { actionPending } = useRequestedActionStatus(innerRef);
   const innerLoading = Boolean(loading || actionPending);
 
+  useKeyboardShortcuts(innerRef, shortcuts, {
+    onActionPrevented,
+    onActionStart,
+    onActionAbort,
+    onActionError,
+    onActionEnd,
+  });
+
   return (
     <LinkBasic
       ref={innerRef}
@@ -250,15 +258,6 @@ const LinkWithAction = forwardRef((props, ref) => {
       data-focus-visible=""
     >
       {children}
-      <KeyboardShortcuts
-        elementRef={innerRef}
-        shortcuts={shortcuts}
-        onActionPrevented={onActionPrevented}
-        onActionStart={onActionStart}
-        onActionAbort={onActionAbort}
-        onActionError={onActionError}
-        onActionEnd={onActionEnd}
-      />
     </LinkBasic>
   );
 });
