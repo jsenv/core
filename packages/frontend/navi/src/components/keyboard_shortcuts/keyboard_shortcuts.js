@@ -10,11 +10,6 @@ import { isMac } from "./os.js";
 
 export const activeShortcutsSignal = signal([]);
 const shortcutsMap = new Map();
-effect(() => {
-  // eslint-disable-next-line no-unused-expressions
-  activeElementSignal.value;
-  updateActiveShortcuts();
-});
 const updateActiveShortcuts = () => {
   const activeElement = activeElementSignal.peek();
   // const currentActiveShortcuts = activeShortcutsSignal.peek();
@@ -26,6 +21,11 @@ const updateActiveShortcuts = () => {
   }
   activeShortcutsSignal.value = activeShortcuts;
 };
+effect(() => {
+  // eslint-disable-next-line no-unused-expressions
+  activeElementSignal.value;
+  updateActiveShortcuts();
+});
 const addShortcuts = (element, shortcuts) => {
   shortcutsMap.set(element, { shortcuts });
   updateActiveShortcuts();
