@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle } from "preact/compat";
 import { useRef } from "preact/hooks";
-import { Editable, useEditionController } from "../editable/editable.jsx";
+import { Editable, useEditionController } from "../edition/editable.jsx";
 import { useSelectableElement } from "../selection/selection.jsx";
 
 import.meta.css = /* css */ `
