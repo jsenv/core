@@ -51,6 +51,11 @@ const InputTextualBasic = forwardRef((props, ref) => {
     constraints = [],
     loading,
     appearance = "custom",
+
+    // eslint-disable-next-line no-unused-vars
+    cancelOnEscape,
+    // eslint-disable-next-line no-unused-vars
+    cancelOnBlurInvalid,
     ...rest
   } = props;
 
