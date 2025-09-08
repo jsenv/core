@@ -1,3 +1,13 @@
+/**
+ * - We must keep the edited element in the DOM so that
+ * the layout remains the same (especially important for table cells)
+ * And the editable part is in absolute so that it takes the original content dimensions
+ * AND for table cells it can actually take the table cell dimensions
+ *
+ * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
+ *
+ */
+
 import { forwardRef } from "preact/compat";
 import {
   useCallback,
@@ -53,6 +63,7 @@ export const Editable = forwardRef((props, ref) => {
     pattern,
     wrapperProps,
     autoSelect = true,
+    ...rest
   } = props;
   if (import.meta.dev && !action) {
     console.warn(`Editable requires an action prop`);
@@ -77,6 +88,7 @@ export const Editable = forwardRef((props, ref) => {
   const input = (
     <Input
       ref={innerRef}
+      {...rest}
       type={type}
       name={name}
       value={value}
