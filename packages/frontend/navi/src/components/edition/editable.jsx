@@ -24,29 +24,29 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const useEditableController = () => {
-  const [editable, editableSetter] = useState(null);
+export const useEditionController = () => {
+  const [editing, editingSetter] = useState(null);
   const startEditing = useCallback(({ focusVisible } = {}) => {
-    editableSetter({
+    editingSetter({
       focusVisible,
     });
   }, []);
   const stopEditing = useCallback(() => {
-    editableSetter(null);
+    editingSetter(null);
   }, []);
 
-  const prevEditableRef = useRef(editable);
-  const editableJustEnded = prevEditableRef.current && !editable;
-  prevEditableRef.current = editable;
+  const prevEditingRef = useRef(editing);
+  const editionJustEnded = prevEditingRef.current && !editing;
+  prevEditingRef.current = editing;
 
-  return { editable, startEditing, stopEditing, editableJustEnded };
+  return { editing, startEditing, stopEditing, editionJustEnded };
 };
 
 export const Editable = forwardRef((props, ref) => {
   let {
     children,
     action,
-    editable,
+    editing,
     name,
     value,
     valueSignal,
@@ -76,13 +76,13 @@ export const Editable = forwardRef((props, ref) => {
     value = valueSignal.value;
   }
 
-  const editablePreviousRef = useRef(editable);
-  const valueWhenEditStartRef = useRef(editable ? value : undefined);
-  if (editablePreviousRef.current !== editable) {
-    if (editable) {
+  const editingPreviousRef = useRef(editing);
+  const valueWhenEditStartRef = useRef(editing ? value : undefined);
+  if (editingPreviousRef.current !== editing) {
+    if (editing) {
       valueWhenEditStartRef.current = value;
     }
-    editablePreviousRef.current = editable;
+    editingPreviousRef.current = editing;
   }
 
   const input = (
@@ -141,7 +141,7 @@ export const Editable = forwardRef((props, ref) => {
   return (
     <>
       {children || <span>{value}</span>}
-      {editable && (
+      {editing && (
         <div
           {...wrapperProps}
           className={[

@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle } from "preact/compat";
 import { useRef } from "preact/hooks";
-import { Editable, useEditableController } from "../editable/editable.jsx";
+import { Editable, useEditionController } from "../editable/editable.jsx";
 import { useSelectableElement } from "../selection/selection.jsx";
 
 import.meta.css = /* css */ `
@@ -61,7 +61,7 @@ export const TableCell = forwardRef((props, ref) => {
   const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
   const { selected } = useSelectableElement(cellRef);
-  const { editable, startEditing, stopEditing } = useEditableController();
+  const { editing, startEditing, stopEditing } = useEditionController();
   const TagName = isHead ? "th" : "td";
 
   useImperativeHandle(ref, () => ({
@@ -85,7 +85,7 @@ export const TableCell = forwardRef((props, ref) => {
       data-selection-name="cell"
       data-selection-keyboard-toggle
       aria-selected={selected}
-      data-editing={editable ? "" : undefined}
+      data-editing={editing ? "" : undefined}
       onDoubleClick={() => {
         startEditing();
       }}
@@ -93,7 +93,7 @@ export const TableCell = forwardRef((props, ref) => {
         startEditing();
       }}
     >
-      <Editable editable={editable} onEditEnd={stopEditing} value={value}>
+      <Editable editing={editing} onEditEnd={stopEditing} value={value}>
         {value}
       </Editable>
     </TagName>

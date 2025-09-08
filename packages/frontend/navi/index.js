@@ -30,8 +30,8 @@ export { Details } from "./src/components/details/details.jsx";
 export { SummaryMarker } from "./src/components/details/summary_marker.jsx";
 export {
   Editable,
-  useEditableController,
-} from "./src/components/editable/editable.jsx";
+  useEditionController,
+} from "./src/components/edition/editable.jsx";
 export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
 export { Form } from "./src/components/form.jsx";
 export { Button } from "./src/components/input/button.jsx";
