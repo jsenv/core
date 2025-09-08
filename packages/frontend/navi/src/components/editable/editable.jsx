@@ -125,9 +125,10 @@ export const Editable = forwardRef((props, ref) => {
             cancelled: true,
             event: e,
           });
+          return;
         }
       }}
-      action={action}
+      action={action || (() => {})}
       onActionEnd={(e) => {
         onEditEnd({
           success: true,

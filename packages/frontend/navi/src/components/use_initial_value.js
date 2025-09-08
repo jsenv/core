@@ -92,9 +92,7 @@ export const useInitialValue = (
   const mountedRef = useRef(false);
   if (!mountedRef.current) {
     mountedRef.current = true;
-    if (name) {
-      setValue(initialValue);
-    }
+    setValue(initialValue);
   }
 
   // Use the new sync hook

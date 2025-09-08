@@ -164,12 +164,13 @@ export const useActionBoundToOneParam = (
     }
     setValue(initialValue);
   }
+  const value = getValue();
 
   const reset = useCallback(() => {
     setValue(initialValue);
   }, [initialValue, paramsSignal]);
 
-  return [boundAction, getValue(), setValue, reset];
+  return [boundAction, value, setValue, reset];
 };
 
 // export const useActionBoundToOneBooleanParam = (action, name, value) => {
