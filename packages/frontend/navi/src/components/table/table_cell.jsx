@@ -95,11 +95,12 @@ export const TableCell = forwardRef((props, ref) => {
     >
       <Editable
         editable={editable}
-        onEditEnd={stopEditing}
+        onEditEnd={() => {}}
         value={value}
         wrapperProps={{
           className: "navi_table_cell_editing",
         }}
+        loading
       >
         {value}
       </Editable>

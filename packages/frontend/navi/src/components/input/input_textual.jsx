@@ -27,19 +27,11 @@ import {
   useOneFormParam,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { LoaderBackground } from "../loader/loader_background.jsx";
+import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import "./field_css.js";
 import { useOnChange } from "./use_on_change.js";
-
-import.meta.css = /* css */ `
-  .navi_input_wrapper {
-    position: relative;
-    width: fit-content;
-    display: inline-flex;
-  }
-`;
 
 export const InputTextual = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
@@ -92,11 +84,12 @@ const InputTextualBasic = forwardRef((props, ref) => {
   );
 
   return (
-    <span className="navi_input_wrapper">
-      <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
-        {inputTextual}
-      </LoaderBackground>
-    </span>
+    <LoadableInlineElement
+      loading={loading}
+      color="light-dark(#355fcc, #3b82f6)"
+    >
+      {inputTextual}
+    </LoadableInlineElement>
   );
 });
 

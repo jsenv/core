@@ -5,6 +5,13 @@ import { useDebounceTrue } from "../use_debounce_true.js";
 import { RectangleLoading } from "./rectangle_loading.jsx";
 
 import.meta.css = /* css */ `
+  .navi_inline_wrapper {
+    position: relative;
+    width: fit-content;
+    display: inline-flex;
+    height: 100%;
+  }
+
   [name="loading_rectangle_wrapper"] {
     pointer-events: none;
     position: absolute;
@@ -17,6 +24,15 @@ import.meta.css = /* css */ `
     height: 100%;
   }
 `;
+
+export const LoadableInlineElement = ({ children, ...props }) => {
+  return (
+    <span className="navi_inline_wrapper">
+      <LoaderBackground {...props} />
+      {children}
+    </span>
+  );
+};
 
 export const LoaderBackground = ({
   loading,
@@ -121,7 +137,7 @@ const LoaderBackgroundBasic = ({
   children,
 }) => {
   const shouldShowSpinner = useDebounceTrue(loading, 300);
-  const containerRef = useRef(null);
+  const rectangleRef = useRef(null);
   const [outlineOffset, setOutlineOffset] = useState(0);
   const [borderRadius, setBorderRadius] = useState(0);
   const [borderTopWidth, setBorderTopWidth] = useState(0);
@@ -142,8 +158,9 @@ const LoaderBackgroundBasic = ({
   useLayoutEffect(() => {
     let animationFrame;
     const updateStyles = () => {
-      const container = containerRef.current;
-      const containedElement = container.lastElementChild;
+      const rectangle = rectangleRef.current;
+      const container = rectangle.parentElement;
+      const containedElement = rectangle.nextElementSibling;
       const target = targetSelector
         ? container.querySelector(targetSelector)
         : containedElement;
@@ -275,23 +292,23 @@ const LoaderBackgroundBasic = ({
 
   return (
     <>
-      {shouldShowSpinner && (
-        <span
-          name="loading_rectangle_wrapper"
-          style={{
-            top: `${spacingTop}px`,
-            left: `${spacingLeft}px`,
-            bottom: `${spacingBottom}px`,
-            right: `${spacingRight}px`,
-          }}
-        >
-          <RectangleLoading
-            color={currentColor}
-            radius={borderRadius}
-            size={size}
-          />
-        </span>
-      )}
+      <span
+        ref={rectangleRef}
+        name="loading_rectangle_wrapper"
+        style={{
+          display: shouldShowSpinner ? "block" : "none",
+          top: `${spacingTop}px`,
+          left: `${spacingLeft}px`,
+          bottom: `${spacingBottom}px`,
+          right: `${spacingRight}px`,
+        }}
+      >
+        <RectangleLoading
+          color={currentColor}
+          radius={borderRadius}
+          size={size}
+        />
+      </span>
       {children}
     </>
   );

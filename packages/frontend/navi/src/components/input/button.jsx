@@ -6,7 +6,7 @@ import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { LoaderBackground } from "../loader/loader_background.jsx";
+import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import "./field_css.js";
@@ -18,12 +18,6 @@ import "./field_css.js";
  *
  */
 import.meta.css = /* css */ `
-  .navi_button_wrapper {
-    position: relative;
-    display: inline-flex;
-    width: fit-content;
-  }
-
   button[data-custom] {
     transition-duration: 0.15s;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -94,42 +88,40 @@ const ButtonBasic = forwardRef((props, ref) => {
   outlineWidth = resolveCSSSize(outlineWidth);
 
   return (
-    <span className="navi_button_wrapper">
-      <LoaderBackground
-        loading={loading}
-        inset={
-          borderWidth -
-          // -1 is the outline offset thing
-          1
-        }
-        color="light-dark(#355fcc, #3b82f6)"
+    <LoadableInlineElement
+      loading={loading}
+      inset={
+        borderWidth -
+        // -1 is the outline offset thing
+        1
+      }
+      color="light-dark(#355fcc, #3b82f6)"
+    >
+      <button
+        ref={innerRef}
+        {...rest}
+        data-field=""
+        data-field-with-background=""
+        data-field-with-hover=""
+        data-field-with-border={borderWidth ? "" : undefined}
+        data-field-with-border-hover={discrete ? "" : undefined}
+        data-field-with-background-hover={discrete ? "" : undefined}
+        data-custom={appearance === "custom" ? "" : undefined}
+        data-validation-message-arrow-x="center"
+        data-readonly={readOnly ? "" : undefined}
+        aria-busy={loading}
+        style={{
+          ...restStyle,
+          "--button-border-width": `${borderWidth}px`,
+          "--button-outline-width": `${outlineWidth}px`,
+          "--button-border-color": borderColor,
+          "position": "relative",
+        }}
       >
-        <button
-          ref={innerRef}
-          {...rest}
-          data-field=""
-          data-field-with-background=""
-          data-field-with-hover=""
-          data-field-with-border={borderWidth ? "" : undefined}
-          data-field-with-border-hover={discrete ? "" : undefined}
-          data-field-with-background-hover={discrete ? "" : undefined}
-          data-custom={appearance === "custom" ? "" : undefined}
-          data-validation-message-arrow-x="center"
-          data-readonly={readOnly ? "" : undefined}
-          aria-busy={loading}
-          style={{
-            ...restStyle,
-            "--button-border-width": `${borderWidth}px`,
-            "--button-outline-width": `${outlineWidth}px`,
-            "--button-border-color": borderColor,
-            "position": "relative",
-          }}
-        >
-          {children}
-          <span className="shadow"></span>
-        </button>
-      </LoaderBackground>
-    </span>
+        {children}
+        <span className="shadow"></span>
+      </button>
+    </LoadableInlineElement>
   );
 });
 
