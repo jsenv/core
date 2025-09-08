@@ -60,6 +60,7 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+import { Editable, useEditableController } from "../editable/editable.jsx";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
   selectionKeyboardShortcuts,
@@ -497,6 +498,25 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] th[data-after-sticky-y-frontier]::after,
   .navi_table[data-border-collapse] td[data-after-sticky-y-frontier]::after {
     top: 0;
+  }
+
+  .navi_table td[data-editing] .navi_table_cell_content {
+    outline: 2px solid #a8c7fa;
+    outline-offset: 0px;
+  }
+
+  .navi_table td[data-editing] input {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    flex-grow: 1;
+    padding-left: 8px;
+    border-radius: 0; /* match table cell border-radius */
+  }
+
+  .navi_table td[data-editing] input[type="number"]::-webkit-inner-spin-button {
+    width: 14px;
+    height: 30px;
   }
 `;
 
@@ -972,6 +992,7 @@ const DataCell = ({
   const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
   const { selected } = useSelectableElement(cellRef);
+  const { editable, startEditing, stopEditing } = useEditableController();
 
   return (
     <td
@@ -988,8 +1009,18 @@ const DataCell = ({
       data-selection-name="cell"
       data-selection-keyboard-toggle
       aria-selected={selected}
+      data-editing={editable ? "" : undefined}
     >
-      {value}
+      <Editable editable={editable} onEditEnd={() => {}} value={value}>
+        <div
+          className="navi_table_cell_content"
+          onDoubleClick={() => {
+            startEditing();
+          }}
+        >
+          {value}
+        </div>
+      </Editable>
     </td>
   );
 };
