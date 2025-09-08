@@ -38,9 +38,7 @@
  * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
- * - Double click to edit (see table_data.jsx)
- *  - Enter to edit with text selected
- *  - A-Z key to edit with text replaced by this key
+ * - A-Z key to edit with text replaced by this key
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
  * - Drag to reorder columns
@@ -615,15 +613,34 @@ export const Table = forwardRef((props, ref) => {
     }),
     {
       key: "enter",
-      description: "Edit table cell",
+      description: "Edit table cell content",
       handler: () => {
         // Find the currently focused cell
         const activeCell = document.activeElement.closest("td");
-        if (activeCell) {
-          activeCell.dispatchEvent(
-            new CustomEvent("editrequested", { bubbles: false }),
-          );
+        if (!activeCell) {
+          return false;
         }
+        activeCell.dispatchEvent(
+          new CustomEvent("editrequested", { bubbles: false }),
+        );
+        return true;
+      },
+    },
+    {
+      key: "a-z",
+      description: "Start editing table cell content",
+      handler: (e) => {
+        const activeCell = document.activeElement.closest("td");
+        if (!activeCell) {
+          return false;
+        }
+        activeCell.dispatchEvent(
+          new CustomEvent("editrequested", {
+            bubbles: false,
+            detail: { initialKey: e.key },
+          }),
+        );
+        return true;
       },
     },
   ]);
