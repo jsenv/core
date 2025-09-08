@@ -500,6 +500,10 @@ import.meta.css = /* css */ `
     top: 0;
   }
 
+  .navi_table td[data-editing] {
+    padding: 0;
+  }
+
   .navi_table td[data-editing] .navi_table_cell_content {
     outline: 2px solid #a8c7fa;
     outline-offset: 0px;
@@ -1010,16 +1014,12 @@ const DataCell = ({
       data-selection-keyboard-toggle
       aria-selected={selected}
       data-editing={editable ? "" : undefined}
+      onDoubleClick={() => {
+        startEditing();
+      }}
     >
       <Editable editable={editable} onEditEnd={() => {}} value={value}>
-        <div
-          className="navi_table_cell_content"
-          onDoubleClick={() => {
-            startEditing();
-          }}
-        >
-          {value}
-        </div>
+        {value}
       </Editable>
     </td>
   );

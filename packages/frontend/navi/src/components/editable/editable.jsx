@@ -65,67 +65,58 @@ export const Editable = forwardRef((props, ref) => {
     editablePreviousRef.current = editable;
   }
 
+  if (!editable) {
+    return children || <span>{value}</span>;
+  }
+
   return (
-    <>
-      <div
-        style={{
-          display: editable ? "none" : "inline-flex",
-          flexGrow: 1,
-          width: "100%",
-        }}
-      >
-        {children || <span>{value}</span>}
-      </div>
-      {editable && (
-        <Input
-          ref={innerRef}
-          type={type}
-          name={name}
-          value={value}
-          valueSignal={valueSignal}
-          autoFocus
-          autoFocusVisible
-          autoSelect
-          cancelOnEscape
-          cancelOnBlurInvalid
-          constraints={constraints}
-          required={required}
-          readOnly={readOnly}
-          min={min}
-          max={max}
-          step={step}
-          minLength={minLength}
-          maxLength={maxLength}
-          pattern={pattern}
-          onCancel={(e) => {
-            if (valueSignal) {
-              valueSignal.value = valueWhenEditStartRef.current;
-            }
-            onEditEnd({
-              cancelled: true,
-              event: e,
-            });
-          }}
-          onBlur={(e) => {
-            const value =
-              type === "number" ? e.target.valueAsNumber : e.target.value;
-            const valueWhenEditStart = valueWhenEditStartRef.current;
-            if (value === valueWhenEditStart) {
-              onEditEnd({
-                cancelled: true,
-                event: e,
-              });
-            }
-          }}
-          action={action}
-          onActionEnd={(e) => {
-            onEditEnd({
-              success: true,
-              event: e,
-            });
-          }}
-        />
-      )}
-    </>
+    <Input
+      ref={innerRef}
+      type={type}
+      name={name}
+      value={value}
+      valueSignal={valueSignal}
+      autoFocus
+      autoFocusVisible
+      autoSelect
+      cancelOnEscape
+      cancelOnBlurInvalid
+      constraints={constraints}
+      required={required}
+      readOnly={readOnly}
+      min={min}
+      max={max}
+      step={step}
+      minLength={minLength}
+      maxLength={maxLength}
+      pattern={pattern}
+      onCancel={(e) => {
+        if (valueSignal) {
+          valueSignal.value = valueWhenEditStartRef.current;
+        }
+        onEditEnd({
+          cancelled: true,
+          event: e,
+        });
+      }}
+      onBlur={(e) => {
+        const value =
+          type === "number" ? e.target.valueAsNumber : e.target.value;
+        const valueWhenEditStart = valueWhenEditStartRef.current;
+        if (value === valueWhenEditStart) {
+          onEditEnd({
+            cancelled: true,
+            event: e,
+          });
+        }
+      }}
+      action={action}
+      onActionEnd={(e) => {
+        onEditEnd({
+          success: true,
+          event: e,
+        });
+      }}
+    />
   );
 });
