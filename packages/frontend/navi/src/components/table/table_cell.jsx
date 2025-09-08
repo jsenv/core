@@ -37,9 +37,9 @@ import.meta.css = /* css */ `
     height: 30px;
   }
 
-  .navi_table_cell_editing {
+  .navi_table td[data-editing] {
     outline: 2px solid var(--editing-border-color);
-    z-index: 2;
+    z-index: 2; /* To go above neighbours, but should not be too big to stay under the sticky cells */
   }
 `;
 
@@ -93,15 +93,7 @@ export const TableCell = forwardRef((props, ref) => {
         startEditing();
       }}
     >
-      <Editable
-        editable={editable}
-        onEditEnd={() => {}}
-        value={value}
-        wrapperProps={{
-          className: "navi_table_cell_editing",
-        }}
-        loading
-      >
+      <Editable editable={editable} onEditEnd={() => {}} value={value}>
         {value}
       </Editable>
     </TagName>
