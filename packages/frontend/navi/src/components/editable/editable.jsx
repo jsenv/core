@@ -7,6 +7,13 @@ import {
 } from "preact/hooks";
 import { Input } from "../input/input.jsx";
 
+import.meta.css = /* css */ `
+  .navi_editable_wrapper {
+    position: absolute;
+    inset: 0;
+  }
+`;
+
 export const useEditableController = () => {
   const [editable, editableSetter] = useState(null);
   const startEditing = useCallback(({ focusVisible } = {}) => {
@@ -44,7 +51,7 @@ export const Editable = forwardRef((props, ref) => {
     minLength,
     maxLength,
     pattern,
-    renderEditable,
+    wrapperProps,
     autoSelect = true,
   } = props;
   if (import.meta.dev && !action) {
@@ -65,10 +72,6 @@ export const Editable = forwardRef((props, ref) => {
       valueWhenEditStartRef.current = value;
     }
     editablePreviousRef.current = editable;
-  }
-
-  if (!editable) {
-    return children || <span>{value}</span>;
   }
 
   const input = (
@@ -122,8 +125,20 @@ export const Editable = forwardRef((props, ref) => {
     />
   );
 
-  if (!renderEditable) {
-    return input;
-  }
-  return renderEditable(input);
+  return (
+    <>
+      {children || <span>{value}</span>}
+      {editable && (
+        <div
+          {...wrapperProps}
+          className={[
+            "navi_editable_wrapper",
+            ...(wrapperProps?.className || "").split(" "),
+          ].join(" ")}
+        >
+          {input}
+        </div>
+      )}
+    </>
+  );
 });

@@ -1,3 +1,4 @@
+import { forwardRef, useImperativeHandle } from "preact/compat";
 import { useRef } from "preact/hooks";
 import { Editable, useEditableController } from "../editable/editable.jsx";
 import { useSelectableElement } from "../selection/selection.jsx";
@@ -36,37 +37,43 @@ import.meta.css = /* css */ `
     height: 30px;
   }
 
-  .navi_table_cell_dimension {
-    position: absolute;
-    inset: 0;
+  .navi_table_cell_editing {
     outline: 2px solid var(--editing-border-color);
     z-index: 2;
   }
 `;
 
-export const TableCell = ({
-  isHead,
-  stickyX,
-  stickyY,
-  isStickyXFrontier,
-  isStickyYFrontier,
-  isAfterStickyXFrontier,
-  isAfterStickyYFrontier,
-  columnName,
-  row,
-  value,
-  ...props
-}) => {
+export const TableCell = forwardRef((props, ref) => {
+  const {
+    isHead,
+    stickyX,
+    stickyY,
+    isStickyXFrontier,
+    isStickyYFrontier,
+    isAfterStickyXFrontier,
+    isAfterStickyYFrontier,
+    columnName,
+    row,
+    value,
+    ...rest
+  } = props;
+
   const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
   const { selected } = useSelectableElement(cellRef);
   const { editable, startEditing, stopEditing } = useEditableController();
   const TagName = isHead ? "th" : "td";
 
+  useImperativeHandle(ref, () => ({
+    startEditing,
+    stopEditing,
+    element: cellRef.current,
+  }));
+
   return (
     <TagName
       ref={cellRef}
-      {...props}
+      {...rest}
       data-sticky-x={stickyX ? "" : undefined}
       data-sticky-y={stickyY ? "" : undefined}
       data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
@@ -82,17 +89,20 @@ export const TableCell = ({
       onDoubleClick={() => {
         startEditing();
       }}
+      oneditrequested={() => {
+        startEditing();
+      }}
     >
       <Editable
         editable={editable}
         onEditEnd={stopEditing}
         value={value}
-        renderEditable={(input) => (
-          <div className="navi_table_cell_dimension">{input}</div>
-        )}
+        wrapperProps={{
+          className: "navi_table_cell_editing",
+        }}
       >
         {value}
       </Editable>
     </TagName>
   );
-};
+});

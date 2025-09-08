@@ -617,8 +617,13 @@ export const Table = forwardRef((props, ref) => {
       key: "enter",
       description: "Edit table cell",
       handler: () => {
-        // eslint-disable-next-line no-alert
-        window.alert(selection.join(", ") || "(no selection)");
+        // Find the currently focused cell
+        const activeCell = document.activeElement.closest("td");
+        if (activeCell) {
+          activeCell.dispatchEvent(
+            new CustomEvent("editrequested", { bubbles: false }),
+          );
+        }
       },
     },
   ]);
