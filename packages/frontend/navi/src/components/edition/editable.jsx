@@ -26,9 +26,9 @@ import.meta.css = /* css */ `
 
 export const useEditionController = () => {
   const [editing, editingSetter] = useState(null);
-  const startEditing = useCallback(({ focusVisible } = {}) => {
+  const startEditing = useCallback((event) => {
     editingSetter({
-      focusVisible,
+      event,
     });
   }, []);
   const stopEditing = useCallback(() => {
@@ -78,12 +78,23 @@ export const Editable = forwardRef((props, ref) => {
 
   const editingPreviousRef = useRef(editing);
   const valueWhenEditStartRef = useRef(editing ? value : undefined);
+  const initialValueRef = useRef(undefined);
+
   if (editingPreviousRef.current !== editing) {
     if (editing) {
-      valueWhenEditStartRef.current = value;
+      valueWhenEditStartRef.current = value; // Always store the external value
+      initialValueRef.current = editing.event.detail?.initialValue; // Store the initial edit value if provided
+    } else {
+      initialValueRef.current = undefined;
     }
     editingPreviousRef.current = editing;
   }
+
+  // Use initial edit value if provided, otherwise use external value
+  const inputValue =
+    editing && initialValueRef.current !== undefined
+      ? initialValueRef.current
+      : value;
 
   const input = (
     <Input
@@ -91,11 +102,11 @@ export const Editable = forwardRef((props, ref) => {
       {...rest}
       type={type}
       name={name}
-      value={value}
+      value={inputValue}
       valueSignal={valueSignal}
       autoFocus
       autoFocusVisible
-      autoSelect={autoSelect}
+      autoSelect={autoSelect && initialValueRef.current === undefined}
       cancelOnEscape
       cancelOnBlurInvalid
       constraints={constraints}

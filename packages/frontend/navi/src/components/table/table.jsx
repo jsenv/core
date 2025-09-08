@@ -637,7 +637,7 @@ export const Table = forwardRef((props, ref) => {
         activeCell.dispatchEvent(
           new CustomEvent("editrequested", {
             bubbles: false,
-            detail: { initialKey: e.key },
+            detail: { initialValue: e.key },
           }),
         );
         return true;

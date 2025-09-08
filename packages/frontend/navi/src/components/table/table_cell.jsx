@@ -86,11 +86,11 @@ export const TableCell = forwardRef((props, ref) => {
       data-selection-keyboard-toggle
       aria-selected={selected}
       data-editing={editing ? "" : undefined}
-      onDoubleClick={() => {
-        startEditing();
+      onDoubleClick={(e) => {
+        startEditing(e);
       }}
-      oneditrequested={() => {
-        startEditing();
+      oneditrequested={(e) => {
+        startEditing(e);
       }}
     >
       <Editable editing={editing} onEditEnd={stopEditing} value={value}>
