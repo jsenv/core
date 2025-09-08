@@ -60,7 +60,6 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
-import { Editable, useEditableController } from "../editable/editable.jsx";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
   selectionKeyboardShortcuts,
@@ -69,6 +68,7 @@ import {
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
 import { useStickyGroup } from "./sticky_group.js";
+import { TableCell } from "./table_cell.jsx";
 
 /*
  * Box-shadow border mapping template:
@@ -498,29 +498,6 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] th[data-after-sticky-y-frontier]::after,
   .navi_table[data-border-collapse] td[data-after-sticky-y-frontier]::after {
     top: 0;
-  }
-
-  .navi_table td[data-editing] {
-    padding: 0;
-  }
-
-  .navi_table td[data-editing] .navi_table_cell_content {
-    outline: 2px solid #a8c7fa;
-    outline-offset: 0px;
-  }
-
-  .navi_table td[data-editing] input {
-    width: 100%;
-    height: 100%;
-    display: inline-flex;
-    flex-grow: 1;
-    padding-left: 8px;
-    border-radius: 0; /* match table cell border-radius */
-  }
-
-  .navi_table td[data-editing] input[type="number"]::-webkit-inner-spin-button {
-    width: 14px;
-    height: 30px;
   }
 `;
 
@@ -982,45 +959,6 @@ const RowNumberCell = ({
   );
 };
 
-const DataCell = ({
-  stickyX,
-  stickyY,
-  isStickyXFrontier,
-  isStickyYFrontier,
-  isAfterStickyXFrontier,
-  isAfterStickyYFrontier,
-  columnName,
-  row,
-  value,
-}) => {
-  const cellId = `${columnName}:${row.id}`;
-  const cellRef = useRef();
-  const { selected } = useSelectableElement(cellRef);
-  const { editable, startEditing, stopEditing } = useEditableController();
-
-  return (
-    <td
-      ref={cellRef}
-      className="navi_data_cell"
-      data-sticky-x={stickyX ? "" : undefined}
-      data-sticky-y={stickyY ? "" : undefined}
-      data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
-      data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
-      data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
-      data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
-      tabIndex={-1}
-      data-value={cellId}
-      data-selection-name="cell"
-      data-selection-keyboard-toggle
-      aria-selected={selected}
-      data-editing={editable ? "" : undefined}
-      onDoubleClick={() => {
-        startEditing();
-      }}
-    >
-      <Editable editable={editable} onEditEnd={() => {}} value={value}>
-        {value}
-      </Editable>
-    </td>
-  );
+const DataCell = (props) => {
+  return <TableCell {...props} />;
 };

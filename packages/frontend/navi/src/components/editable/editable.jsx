@@ -44,6 +44,7 @@ export const Editable = forwardRef((props, ref) => {
     minLength,
     maxLength,
     pattern,
+    renderEditable,
   } = props;
   if (import.meta.dev && !action) {
     console.warn(`Editable requires an action prop`);
@@ -69,7 +70,7 @@ export const Editable = forwardRef((props, ref) => {
     return children || <span>{value}</span>;
   }
 
-  return (
+  const input = (
     <Input
       ref={innerRef}
       type={type}
@@ -119,4 +120,9 @@ export const Editable = forwardRef((props, ref) => {
       }}
     />
   );
+
+  if (!renderEditable) {
+    return input;
+  }
+  return renderEditable(input);
 });

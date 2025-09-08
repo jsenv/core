@@ -9,6 +9,7 @@ import.meta.css = /* css */ `
     display: inline-flex;
     position: relative;
     width: fit-content;
+    height: 100%;
   }
 
   [name="loading_rectangle_wrapper"] {
