@@ -615,6 +615,7 @@ export const Table = forwardRef((props, ref) => {
     }),
     {
       key: "enter",
+      description: "Edit table cell",
       handler: () => {
         // eslint-disable-next-line no-alert
         window.alert(selection.join(", ") || "(no selection)");

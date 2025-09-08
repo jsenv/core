@@ -3,6 +3,13 @@ import { Editable, useEditableController } from "../editable/editable.jsx";
 import { useSelectableElement } from "../selection/selection.jsx";
 
 import.meta.css = /* css */ `
+  .navi_table {
+    font-size: 16px;
+    font-family: Arial;
+
+    --editing-border-color: #a8c7fa;
+  }
+
   .navi_table td[data-editing] {
     padding: 0;
   }
@@ -32,6 +39,8 @@ import.meta.css = /* css */ `
   .navi_table_cell_dimension {
     position: absolute;
     inset: 0;
+    outline: 2px solid var(--editing-border-color);
+    z-index: 2;
   }
 `;
 
@@ -76,7 +85,7 @@ export const TableCell = ({
     >
       <Editable
         editable={editable}
-        onEditEnd={() => {}}
+        onEditEnd={stopEditing}
         value={value}
         renderEditable={(input) => (
           <div className="navi_table_cell_dimension">{input}</div>

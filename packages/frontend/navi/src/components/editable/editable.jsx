@@ -45,6 +45,7 @@ export const Editable = forwardRef((props, ref) => {
     maxLength,
     pattern,
     renderEditable,
+    autoSelect = true,
   } = props;
   if (import.meta.dev && !action) {
     console.warn(`Editable requires an action prop`);
@@ -79,7 +80,7 @@ export const Editable = forwardRef((props, ref) => {
       valueSignal={valueSignal}
       autoFocus
       autoFocusVisible
-      autoSelect
+      autoSelect={autoSelect}
       cancelOnEscape
       cancelOnBlurInvalid
       constraints={constraints}
