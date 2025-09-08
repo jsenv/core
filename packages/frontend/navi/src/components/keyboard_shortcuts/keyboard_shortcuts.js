@@ -267,7 +267,22 @@ const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
       continue;
     }
 
-    // If it's not a modifier, check if it matches the actual key
+    // Check if it's a range pattern like "a-z" or "0-9"
+    if (key.includes("-") && key.length === 3) {
+      const [startChar, dash, endChar] = key;
+      if (dash === "-") {
+        const eventKeyCode = event.key.toLowerCase().charCodeAt(0);
+        const startCode = startChar.charCodeAt(0);
+        const endCode = endChar.charCodeAt(0);
+
+        if (eventKeyCode >= startCode && eventKeyCode <= endCode) {
+          continue; // Range matched
+        }
+        return false; // Range not matched
+      }
+    }
+
+    // If it's not a modifier or range, check if it matches the actual key
     if (!isSameKey(event.key, key)) {
       return false;
     }
