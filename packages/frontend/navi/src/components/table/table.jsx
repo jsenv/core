@@ -38,7 +38,6 @@
  * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
- * - A-Z key to edit with text replaced by this key
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
  * - Drag to reorder columns

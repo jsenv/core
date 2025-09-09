@@ -27,8 +27,8 @@ import.meta.css = /* css */ `
 export const useEditionController = () => {
   const [editing, editingSetter] = useState(null);
   const startEditing = useCallback((event) => {
-    editingSetter({
-      event,
+    editingSetter((current) => {
+      return current || { event };
     });
   }, []);
   const stopEditing = useCallback(() => {
