@@ -196,12 +196,12 @@ const ButtonInsideForm = forwardRef((props, ref) => {
     const buttonElement = event.target;
     const { form } = buttonElement;
     let wouldSubmitForm = wouldSubmitFormByType;
-    if (!wouldSubmitForm) {
+    if (!wouldSubmitForm && type === undefined) {
       const formSubmitButton = form.querySelector(
         "button[type='submit'], input[type='submit'], input[type='image']",
       );
-      const wouldSubmitFormBecauseSingleButton = !formSubmitButton;
-      wouldSubmitForm = wouldSubmitFormBecauseSingleButton;
+      const wouldSubmitFormBecauseSingleButtonWithoutType = !formSubmitButton;
+      wouldSubmitForm = wouldSubmitFormBecauseSingleButtonWithoutType;
     }
     if (!wouldSubmitForm) {
       if (innerReadOnly) {

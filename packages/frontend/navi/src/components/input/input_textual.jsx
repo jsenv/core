@@ -160,6 +160,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     loading,
     onInput,
     onCancel,
+    onBlur,
     onActionPrevented,
     onActionStart,
     onActionError,
@@ -279,6 +280,9 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          */
         valueAtInteractionRef.current = e.target.value;
         requestAction(boundAction, { event: e });
+      }}
+      onBlur={(e) => {
+        onBlur?.(e);
       }}
     />
   );

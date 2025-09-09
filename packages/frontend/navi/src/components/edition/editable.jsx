@@ -12,6 +12,7 @@ import { forwardRef } from "preact/compat";
 import {
   useCallback,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from "preact/hooks";
@@ -78,23 +79,35 @@ export const Editable = forwardRef((props, ref) => {
 
   const editingPreviousRef = useRef(editing);
   const valueWhenEditStartRef = useRef(editing ? value : undefined);
-  const initialValueRef = useRef(undefined);
 
   if (editingPreviousRef.current !== editing) {
     if (editing) {
       valueWhenEditStartRef.current = value; // Always store the external value
-      initialValueRef.current = editing.event.detail?.initialValue; // Store the initial edit value if provided
-    } else {
-      initialValueRef.current = undefined;
     }
     editingPreviousRef.current = editing;
   }
 
-  // Use initial edit value if provided, otherwise use external value
-  const inputValue =
-    editing && initialValueRef.current !== undefined
-      ? initialValueRef.current
-      : value;
+  // Simulate typing the initial value when editing starts with a custom value
+  useLayoutEffect(() => {
+    if (!editing) {
+      return;
+    }
+    const editingEvent = editing.event;
+    if (!editingEvent) {
+      return;
+    }
+    const editingEventInitialValue = editingEvent.detail?.initialValue;
+    if (editingEventInitialValue === undefined) {
+      return;
+    }
+    const input = innerRef.current;
+    input.value = editingEventInitialValue;
+    input.dispatchEvent(
+      new CustomEvent("input", {
+        bubbles: false,
+      }),
+    );
+  }, [editing]);
 
   const input = (
     <Input
@@ -102,11 +115,11 @@ export const Editable = forwardRef((props, ref) => {
       {...rest}
       type={type}
       name={name}
-      value={inputValue}
+      value={value}
       valueSignal={valueSignal}
       autoFocus
       autoFocusVisible
-      autoSelect={autoSelect && initialValueRef.current === undefined}
+      autoSelect={autoSelect}
       cancelOnEscape
       cancelOnBlurInvalid
       constraints={constraints}
