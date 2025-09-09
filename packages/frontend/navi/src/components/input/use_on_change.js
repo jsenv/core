@@ -39,9 +39,12 @@ export const useOnChange = (inputRef, callback) => {
       valueAtStartRef.current = input.value;
     };
     const oninput = (e) => {
-      if (e.isTrusted) {
-        interactedRef.current = true;
+      if (!e.isTrusted) {
+        // non trusted "input" events will be ignored by the browser when deciding to fire "change" event
+        // we ignore them too
+        return;
       }
+      interactedRef.current = true;
     };
     const onblur = (e) => {
       if (!interactedRef.current && valueAtStartRef.current !== input.value) {
