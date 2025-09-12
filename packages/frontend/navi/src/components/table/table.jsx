@@ -52,12 +52,10 @@
 
 import { forwardRef } from "preact/compat";
 import {
-  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "preact/hooks";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
@@ -500,6 +498,7 @@ import.meta.css = /* css */ `
   }
 `;
 
+const NO_SELECTION = [];
 export const Table = forwardRef((props, ref) => {
   let {
     stickyHeader = true,
@@ -507,7 +506,7 @@ export const Table = forwardRef((props, ref) => {
     columns,
     rows = [],
     data,
-    selection: initialSelection = [],
+    selection,
     selectionColor,
     onSelectionChange,
     borderCollapse = false,
@@ -518,7 +517,7 @@ export const Table = forwardRef((props, ref) => {
     return {
       element: innerRef.current,
       clearSelection: () => {
-        setSelection([]);
+        onSelectionChange(NO_SELECTION);
       },
       selectAll: () => {
         // Select all data cells (not row/column selectors)
@@ -528,32 +527,16 @@ export const Table = forwardRef((props, ref) => {
             allCellIds.push(`${col.accessorKey}:${row.id}`);
           });
         });
-        setSelection(allCellIds);
+        onSelectionChange(allCellIds);
       },
     };
   });
 
-  const [selection, setSelection] = useState(initialSelection);
-  update_from_props: {
-    const initialSelectionRef = useRef(initialSelection);
-    useEffect(() => {
-      const initialSelectionPrev = initialSelectionRef.current;
-      if (initialSelectionPrev.length !== initialSelection.length) {
-        setSelection(initialSelection);
-      } else {
-        const currentSet = new Set(initialSelectionPrev);
-        for (const val of initialSelection) {
-          if (!currentSet.has(val)) {
-            setSelection(initialSelection);
-            break;
-          }
-        }
-      }
-      initialSelectionRef.current = initialSelection;
-    }, [initialSelection]);
-  }
-
-  const selectionData = useMemo(() => {
+  const {
+    rowWithSomeSelectedCell,
+    columnWithSomeSelectedCell,
+    selectedRowIds,
+  } = useMemo(() => {
     const rowWithSomeSelectedCell = [];
     const columnWithSomeSelectedCell = [];
     const selectedRowIds = [];
@@ -588,18 +571,11 @@ export const Table = forwardRef((props, ref) => {
     };
   }, [selection]);
 
-  const {
-    rowWithSomeSelectedCell,
-    columnWithSomeSelectedCell,
-    selectedRowIds,
-  } = selectionData;
-
   const [SelectionProvider, selectionInterface] = useSelectionProvider({
     elementRef: innerRef,
     layout: "grid",
     value: selection,
     onChange: (value) => {
-      setSelection(value);
       onSelectionChange(value);
     },
     selectAllName: "cell",
