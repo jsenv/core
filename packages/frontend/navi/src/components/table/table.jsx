@@ -506,7 +506,7 @@ export const Table = forwardRef((props, ref) => {
     columns,
     rows = [],
     data,
-    selectedValues,
+    selection,
     selectionColor,
     onSelectionChange,
     borderCollapse = false,
@@ -542,7 +542,7 @@ export const Table = forwardRef((props, ref) => {
     const selectedRowIds = [];
     const selectedColumnIds = [];
 
-    for (const item of selectedValues) {
+    for (const item of selection) {
       if (item.startsWith("row:")) {
         const rowId = item.slice(4);
         selectedRowIds.push(rowId);
@@ -569,12 +569,12 @@ export const Table = forwardRef((props, ref) => {
       selectedRowIds,
       selectedColumnIds,
     };
-  }, [selectedValues]);
+  }, [selection]);
 
-  const [SelectionProvider, selectionInterface] = useSelectionProvider({
+  const [SelectionProvider, selectionController] = useSelectionProvider({
     elementRef: innerRef,
     layout: "grid",
-    value: selectedValues,
+    value: selection,
     onChange: (value) => {
       onSelectionChange(value);
     },
@@ -582,10 +582,10 @@ export const Table = forwardRef((props, ref) => {
   });
   useFocusGroup(innerRef);
   useStickyGroup(innerRef);
-  useTableSelectionBorders(innerRef);
+  useTableSelectionBorders(innerRef, selectionController);
 
   useKeyboardShortcuts(innerRef, [
-    ...createSelectionKeyboardShortcuts(selectionInterface, {
+    ...createSelectionKeyboardShortcuts(selectionController, {
       toggleEnabled: true,
     }),
     {
@@ -662,7 +662,7 @@ export const Table = forwardRef((props, ref) => {
           ref={innerRef}
           className="navi_table"
           aria-multiselectable="true"
-          data-multiselection={selectedValues.length > 1 ? "" : undefined}
+          data-multiselection={selection.length > 1 ? "" : undefined}
           data-border-collapse={borderCollapse ? "" : undefined}
         >
           <thead>
@@ -754,30 +754,23 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 
-const useTableSelectionBorders = (tableRef) => {
+const useTableSelectionBorders = (tableRef, selectionController) => {
   useLayoutEffect(() => {
-    return initTableSelectionObserver(tableRef.current);
-  }, [tableRef]);
+    const table = tableRef.current;
+    if (table) {
+      updateSelectionBorders(table, selectionController);
+    }
+  }, [selectionController.value]);
 };
-const initTableSelectionObserver = (tableElement) => {
-  const observer = new MutationObserver(() => {
-    updateSelectionBorders(tableElement);
-  });
-  updateSelectionBorders(tableElement);
-  observer.observe(tableElement, {
-    attributes: true,
-    attributeFilter: ["aria-selected"],
-    subtree: true,
-  });
-  return () => {
-    observer.disconnect();
-  };
-};
-const updateSelectionBorders = (tableElement) => {
+const updateSelectionBorders = (tableElement, selectionController) => {
   // Find all selected cells
-  const selectedCells = tableElement.querySelectorAll(
-    'td[aria-selected="true"], th[aria-selected="true"]',
-  );
+  const cells = tableElement.querySelectorAll("td, th");
+  const selectedCells = [];
+  for (const cell of cells) {
+    if (selectionController.isElementSelected(cell)) {
+      selectedCells.push(cell);
+    }
+  }
 
   // Clear all existing selection border attributes
   tableElement
@@ -796,8 +789,8 @@ const updateSelectionBorders = (tableElement) => {
   }
 
   // Convert NodeList to array and get cell positions
-  const cellsArray = Array.from(selectedCells);
-  const cellPositions = cellsArray.map((cell) => {
+
+  const cellPositions = selectedCells.map((cell) => {
     const row = cell.parentElement;
     const allRows = Array.from(tableElement.querySelectorAll("tr"));
     return {
