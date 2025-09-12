@@ -727,6 +727,7 @@ export const Table = forwardRef((props, ref) => {
                   />
                   {columns.map((col, colIndex) => (
                     <DataCell
+                      key={`${row.id}-${col.id}`}
                       stickyX={col.sticky}
                       stickyY={rowOptions.sticky}
                       isStickyXFrontier={
@@ -737,7 +738,6 @@ export const Table = forwardRef((props, ref) => {
                       }
                       isStickyYFrontier={isStickyYFrontier}
                       isAfterStickyYFrontier={isAfterStickyYFrontier}
-                      key={`${row.id}-${col.id}`}
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
                       row={row}
