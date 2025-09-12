@@ -54,6 +54,7 @@ import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "preact/hooks";
@@ -551,46 +552,46 @@ export const Table = forwardRef((props, ref) => {
     }
   }
 
-  const rowWithSomeSelectedCell = [];
-  const columnWithSomeSelectedCell = [];
-  const selectedRowIds = [];
-  const selectedColumnIds = [];
-  const cellsByRow = new Map();
-  const cellsByColumn = new Map();
-  for (const item of selection) {
-    if (item.startsWith("row:")) {
-      const rowId = item.slice(4);
-      selectedRowIds.push(rowId);
-      continue;
-    }
-    if (item.startsWith("column:")) {
-      const columnId = item.slice(7);
-      selectedColumnIds.push(columnId);
-      continue;
+  const selectionData = useMemo(() => {
+    const rowWithSomeSelectedCell = [];
+    const columnWithSomeSelectedCell = [];
+    const selectedRowIds = [];
+    const selectedColumnIds = [];
+
+    for (const item of selection) {
+      if (item.startsWith("row:")) {
+        const rowId = item.slice(4);
+        selectedRowIds.push(rowId);
+        continue;
+      }
+      if (item.startsWith("column:")) {
+        const columnId = item.slice(7);
+        selectedColumnIds.push(columnId);
+        continue;
+      }
+      const [columnName, rowId] = item.split(":");
+      // Add to some-selected tracking
+      if (!rowWithSomeSelectedCell.includes(rowId)) {
+        rowWithSomeSelectedCell.push(rowId);
+      }
+      if (!columnWithSomeSelectedCell.includes(columnName)) {
+        columnWithSomeSelectedCell.push(columnName);
+      }
     }
 
-    const [columnName, rowId] = item.split(":");
+    return {
+      rowWithSomeSelectedCell,
+      columnWithSomeSelectedCell,
+      selectedRowIds,
+      selectedColumnIds,
+    };
+  }, [selection]);
 
-    // Track cells by row
-    if (!cellsByRow.has(rowId)) {
-      cellsByRow.set(rowId, []);
-    }
-    cellsByRow.get(rowId).push(columnName);
-
-    // Track cells by column
-    if (!cellsByColumn.has(columnName)) {
-      cellsByColumn.set(columnName, []);
-    }
-    cellsByColumn.get(columnName).push(rowId);
-
-    // Add to some-selected tracking
-    if (!rowWithSomeSelectedCell.includes(rowId)) {
-      rowWithSomeSelectedCell.push(rowId);
-    }
-    if (!columnWithSomeSelectedCell.includes(columnName)) {
-      columnWithSomeSelectedCell.push(columnName);
-    }
-  }
+  const {
+    rowWithSomeSelectedCell,
+    columnWithSomeSelectedCell,
+    selectedRowIds,
+  } = selectionData;
 
   const [SelectionProvider, selectionInterface] = useSelectionProvider({
     elementRef: innerRef,
