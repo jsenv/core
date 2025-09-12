@@ -133,7 +133,7 @@
       // eslint-disable-next-line no-unused-vars
       const FixedHeadersDemo = () => {
         const tableRef = useRef(null);
-        const [selection, setSelection] = useState([]);
+        const [selectedValues, setSelectedValues] = useState([]);
 
         return (
           <div className="demo-container">
@@ -161,9 +161,9 @@
                 ref={tableRef}
                 data={data}
                 columns={columns}
-                selection={selection}
+                selectedValues={selectedValues}
                 onSelectionChange={(value) => {
-                  setSelection(value);
+                  setSelectedValues(value);
                 }}
                 // stickyHeader={false}
                 // rowColumnSticky={false}
@@ -183,14 +183,14 @@
               <div>
                 Selection:{" "}
                 <span>
-                  {JSON.stringify(selection.slice(0, 5))}
-                  {selection.length > 5
-                    ? `... (+${selection.length - 5} more)`
+                  {JSON.stringify(selectedValues.slice(0, 5))}
+                  {selectedValues.length > 5
+                    ? `... (+${selectedValues.length - 5} more)`
                     : ""}
                 </span>
               </div>
               <div>
-                Total selection count: <span>{selection.length}</span>
+                Total selection count: <span>{selectedValues.length}</span>
               </div>
             </div>
 
@@ -215,7 +215,7 @@
                   const firstRowCells = columns.map(
                     (col) => `${col.accessorKey}:row-1`,
                   );
-                  setSelection(firstRowCells);
+                  setSelectedValues(firstRowCells);
                 }}
               >
                 Select First Row
@@ -224,7 +224,7 @@
                 onClick={() => {
                   // Select first column
                   const firstColCells = data.map((row) => `col1:${row.id}`);
-                  setSelection(firstColCells);
+                  setSelectedValues(firstColCells);
                 }}
               >
                 Select First Column

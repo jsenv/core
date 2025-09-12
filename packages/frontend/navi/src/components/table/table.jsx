@@ -506,7 +506,7 @@ export const Table = forwardRef((props, ref) => {
     columns,
     rows = [],
     data,
-    selection,
+    selectedValues,
     selectionColor,
     onSelectionChange,
     borderCollapse = false,
@@ -542,7 +542,7 @@ export const Table = forwardRef((props, ref) => {
     const selectedRowIds = [];
     const selectedColumnIds = [];
 
-    for (const item of selection) {
+    for (const item of selectedValues) {
       if (item.startsWith("row:")) {
         const rowId = item.slice(4);
         selectedRowIds.push(rowId);
@@ -569,12 +569,12 @@ export const Table = forwardRef((props, ref) => {
       selectedRowIds,
       selectedColumnIds,
     };
-  }, [selection]);
+  }, [selectedValues]);
 
   const [SelectionProvider, selectionInterface] = useSelectionProvider({
     elementRef: innerRef,
     layout: "grid",
-    value: selection,
+    value: selectedValues,
     onChange: (value) => {
       onSelectionChange(value);
     },
@@ -662,7 +662,7 @@ export const Table = forwardRef((props, ref) => {
           ref={innerRef}
           className="navi_table"
           aria-multiselectable="true"
-          data-multiselection={selection.length > 1 ? "" : undefined}
+          data-multiselection={selectedValues.length > 1 ? "" : undefined}
           data-border-collapse={borderCollapse ? "" : undefined}
         >
           <thead>
