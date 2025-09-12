@@ -46,6 +46,7 @@ export { Route } from "./src/components/route.jsx";
 export {
   useSelectableElement,
   useSelection,
+  useSelectionController,
   useSelectionProvider,
 } from "./src/components/selection/selection.jsx";
 export { Table } from "./src/components/table/table.jsx";
