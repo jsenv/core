@@ -1090,10 +1090,9 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
         if (!elementUnderMouse) {
           return;
         }
-
         // Find the closest selectable element (look for element with data-value or in registry)
         let targetElement = elementUnderMouse;
-        while (targetElement) {
+        while (true) {
           if (selection.registry.has(targetElement)) {
             break;
           }
@@ -1104,15 +1103,14 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
             break;
           }
           targetElement = targetElement.parentElement;
-        }
-        if (!targetElement) {
-          return;
+          if (!targetElement) {
+            return;
+          }
         }
         if (!selection.registry.has(targetElement)) {
           return;
         }
-
-        // Check if we're mixing row and cell selections
+        // Check if we're mixing selection types (like row and cell selections)
         const dragStartSelectionName =
           getElementSelectionName(dragStartElement);
         const targetSelectionName = getElementSelectionName(targetElement);
@@ -1165,7 +1163,6 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
           "drag select: setting selection to range",
           rangeValues,
         );
-        console.log(rangeValues);
         selection.setSelection(rangeValues, e);
       };
 
@@ -1235,7 +1232,7 @@ const handleCrossTypeNavigation = (
   };
 };
 
-export const selectionKeyboardShortcuts = (
+export const createSelectionKeyboardShortcuts = (
   selection,
   { toggleEnabled, toggleKey = "space" } = {},
 ) => {

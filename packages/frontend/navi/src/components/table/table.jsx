@@ -59,7 +59,7 @@ import {
 } from "preact/hooks";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
-  selectionKeyboardShortcuts,
+  createSelectionKeyboardShortcuts,
   useSelectableElement,
   useSelectionProvider,
 } from "../selection/selection.jsx";
@@ -607,7 +607,7 @@ export const Table = forwardRef((props, ref) => {
   useTableSelectionBorders(innerRef);
 
   useKeyboardShortcuts(innerRef, [
-    ...selectionKeyboardShortcuts(selectionInterface, {
+    ...createSelectionKeyboardShortcuts(selectionInterface, {
       toggleEnabled: true,
     }),
     {
