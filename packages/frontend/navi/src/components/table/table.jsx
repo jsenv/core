@@ -52,6 +52,7 @@
 
 import { forwardRef } from "preact/compat";
 import {
+  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useMemo,
@@ -535,7 +536,7 @@ export const Table = forwardRef((props, ref) => {
   const [selection, setSelection] = useState(initialSelection);
   update_from_props: {
     const initialSelectionRef = useRef(initialSelection);
-    if (initialSelectionRef.current !== initialSelection) {
+    useEffect(() => {
       const initialSelectionPrev = initialSelectionRef.current;
       if (initialSelectionPrev.length !== initialSelection.length) {
         setSelection(initialSelection);
@@ -549,7 +550,7 @@ export const Table = forwardRef((props, ref) => {
         }
       }
       initialSelectionRef.current = initialSelection;
-    }
+    }, [initialSelection]);
   }
 
   const selectionData = useMemo(() => {
