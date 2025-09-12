@@ -25,7 +25,15 @@ const debug = (category, ...args) => {
   }
 };
 
-const SelectionContext = createContext(null);
+const SelectionControllerContext = createContext(null);
+const SelectionContext = createContext([]);
+const SelectionControllerProvider = ({ selectionController, children }) => {
+  return (
+    <SelectionControllerContext.Provider value={selectionController}>
+      {children}
+    </SelectionControllerContext.Provider>
+  );
+};
 const SelectionProvider = ({ selection, children }) => {
   return (
     <SelectionContext.Provider value={selection}>
@@ -48,9 +56,12 @@ export const useSelectionProvider = ({
   const currentValueRef = useRef(value);
   currentValueRef.current = value;
 
-  const selection = useMemo(() => {
-    const onChange = (...args) => {
-      onChangeRef.current(...args);
+  const lastInternalValueRef = useRef(null);
+
+  const selectionController = useMemo(() => {
+    const onChange = (newValue, ...args) => {
+      lastInternalValueRef.current = newValue;
+      onChangeRef.current(newValue, ...args);
     };
 
     const getCurrentValue = () => currentValueRef.current;
@@ -75,19 +86,36 @@ export const useSelectionProvider = ({
   }, [layout, multiple, elementRef]);
 
   useEffect(() => {
-    selection.element = elementRef.current;
-  }, []);
+    selectionController.element = elementRef.current;
+  }, [selectionController]);
+
+  // Smart sync: only update selection when value changes externally
+  useEffect(() => {
+    // Check if this is an external change (not from our internal onChange)
+    const isExternalChange = !compareTwoJsValues(
+      value,
+      lastInternalValueRef.current,
+    );
+    if (isExternalChange) {
+      console.log("external value change detected, updating selection", value);
+      selectionController.update(value);
+    } else {
+      console.log("internal value change, skipping update");
+    }
+  }, [value, selectionController]);
 
   const LocalSelectionProvider = useMemo(() => {
     const Stuff = ({ children }) => {
       return (
-        <SelectionProvider selection={selection}>{children}</SelectionProvider>
+        <SelectionControllerProvider selectionController={selectionController}>
+          <SelectionProvider selection={value}>{children}</SelectionProvider>
+        </SelectionControllerProvider>
       );
     };
     return Stuff;
-  }, [selection]);
+  }, [selectionController, value]);
 
-  return [LocalSelectionProvider, selection];
+  return [LocalSelectionProvider, selectionController];
 };
 // Base Selection - shared functionality between grid and linear
 const createBaseSelection = ({
@@ -106,7 +134,6 @@ const createBaseSelection = ({
   },
 }) => {
   const [change, triggerChange] = createCallbackController();
-  change.add(onChange);
 
   const getElementByValue = (valueToFind) => {
     for (const element of registry) {
@@ -163,6 +190,7 @@ const createBaseSelection = ({
       `${type} setSelection: calling onChange with:`,
       finalValue,
     );
+    onChange(finalValue, event);
     triggerChange(finalValue, event);
   };
   let anchorElement = null;
@@ -933,14 +961,19 @@ const getElementPosition = (element) => {
   };
 };
 
+export const useSelectionController = () => {
+  return useContext(SelectionControllerContext);
+};
+
 export const useSelection = () => {
   return useContext(SelectionContext);
 };
 export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
+  const selectionController = useSelectionController();
   const selection = useSelection();
-  if (!selection) {
+  if (!selectionController) {
     throw new Error(
-      "useSelectableElement must be used within a SelectionProvider",
+      "useSelectableElement must be used within a SelectionControllerProvider",
     );
   }
 
@@ -961,7 +994,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
       selectionName,
     );
 
-    selection.registerElement(element, { selectionImpact });
+    selectionController.registerElement(element, { selectionImpact });
     element.setAttribute("data-selectable", "");
     return () => {
       debug(
@@ -971,15 +1004,15 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
         "value:",
         value,
       );
-      selection.unregisterElement(element);
+      selectionController.unregisterElement(element);
       element.removeAttribute("data-selectable");
     };
-  }, [selection, selectionImpact]);
+  }, [selectionController, selectionImpact]);
 
   const [selected, setSelected] = useState(false);
   debug("selection", "useSelectableElement: initial selected state:", selected);
 
-  // Update selected state when selection changes
+  // Update selected state when selection value changes
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
@@ -988,14 +1021,19 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
         "useSelectableElement: no element, setting selected to false",
       );
       setSelected(false);
-      return null;
+      return;
     }
-    const isSelected = selection.isElementSelected(element);
+    // Use selection values directly for better performance
+    const elementValue = getElementValue(element);
+    const isSelected = selection.includes(elementValue);
+    debug(
+      "selection",
+      "useSelectableElement: updating selected state",
+      element,
+      "isSelected:",
+      isSelected,
+    );
     setSelected(isSelected);
-    return selection.channels.change.add(() => {
-      const isSelected = selection.isElementSelected(element);
-      setSelected(isSelected);
-    });
   }, [selection]);
 
   // Add event listeners directly to the element
@@ -1032,7 +1070,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
         isMultiSelect,
         isShiftSelect,
         isSingleSelect,
-        currentSelection: selection.value,
+        currentSelection: selectionController.value,
       });
 
       // Handle immediate selection based on modifier keys
@@ -1043,18 +1081,18 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
           "mousedown: single select, setting selection to:",
           [value],
         );
-        selection.setSelection([value], e);
+        selectionController.setSelection([value], e);
       } else if (isMultiSelect && !isShiftSelect) {
         // Multi select without shift - toggle element
         debug("interaction", "mousedown: multi select, toggling element");
-        selection.toggleElement(element, e);
+        selectionController.toggleElement(element, e);
       } else if (isShiftSelect) {
         e.preventDefault(); // Prevent navigation
         debug(
           "interaction",
           "mousedown: shift select, selecting from anchor to element",
         );
-        selection.selectFromAnchorTo(element, e);
+        selectionController.selectFromAnchorTo(element, e);
       }
 
       // Set up for potential drag selection (now works with all modifier combinations)
@@ -1083,7 +1121,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
 
           isDragging = true;
           // mark it as drag-selecting
-          selection.element.setAttribute("data-drag-selecting", "");
+          selectionController.element.setAttribute("data-drag-selecting", "");
         }
 
         // Find the element under the current mouse position
@@ -1097,7 +1135,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
         // Find the closest selectable element (look for element with data-value or in registry)
         let targetElement = elementUnderMouse;
         while (true) {
-          if (selection.registry.has(targetElement)) {
+          if (selectionController.registry.has(targetElement)) {
             break;
           }
           if (
@@ -1111,7 +1149,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
             return;
           }
         }
-        if (!selection.registry.has(targetElement)) {
+        if (!selectionController.registry.has(targetElement)) {
           return;
         }
         // Check if we're mixing selection types (like row and cell selections)
@@ -1128,7 +1166,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
         }
 
         // Get the range from anchor to current target
-        const rangeValues = selection.getElementRange(
+        const rangeValues = selectionController.getElementRange(
           dragStartElement,
           targetElement,
         );
@@ -1144,7 +1182,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
             "shift drag select: selecting from anchor to target",
             rangeValues,
           );
-          selection.selectFromAnchorTo(targetElement, e);
+          selectionController.selectFromAnchorTo(targetElement, e);
           return;
         }
         if (isMultiSelect) {
@@ -1154,11 +1192,11 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
             "multi-select drag: adding range to selection",
             rangeValues,
           );
-          const currentSelection = [...selection.value];
+          const currentSelection = [...selectionController.value];
           const newSelection = [
             ...new Set([...currentSelection, ...rangeValues]),
           ];
-          selection.setSelection(newSelection, e);
+          selectionController.setSelection(newSelection, e);
           return;
         }
         // For normal drag, replace selection
@@ -1167,7 +1205,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
           "drag select: setting selection to range",
           rangeValues,
         );
-        selection.setSelection(rangeValues, e);
+        selectionController.setSelection(rangeValues, e);
       };
 
       const handleMouseUp = () => {
@@ -1176,7 +1214,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
 
         // Remove drag-selecting state from table
         if (isDragging) {
-          selection.element.removeAttribute("data-drag-selecting");
+          selectionController.element.removeAttribute("data-drag-selecting");
         }
 
         // Reset drag state
@@ -1197,7 +1235,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
       element.removeEventListener("mousedown", handleMouseDown);
       cleanup();
     };
-  }, [selection]);
+  }, [selectionController]);
 
   return {
     selected,
@@ -1237,7 +1275,7 @@ const handleCrossTypeNavigation = (
 };
 
 export const createSelectionKeyboardShortcuts = (
-  selection,
+  selectionController,
   { toggleEnabled, toggleKey = "space" } = {},
 ) => {
   const getSelectableElement = (keydownEvent) => {
@@ -1271,8 +1309,8 @@ export const createSelectionKeyboardShortcuts = (
         "interaction",
         `keydownToSelect: ${key} with Shift - selecting from anchor to target element`,
       );
-      selection.setActiveElement(elementToSelect);
-      selection.selectFromAnchorTo(elementToSelect, keyboardEvent);
+      selectionController.setActiveElement(elementToSelect);
+      selectionController.selectFromAnchorTo(elementToSelect, keyboardEvent);
       return true;
     }
     if (isMultiSelect && !isCrossType) {
@@ -1280,7 +1318,7 @@ export const createSelectionKeyboardShortcuts = (
         "interaction",
         `keydownToSelect: ${key} with multi-select - adding to selection`,
       );
-      selection.addToSelection([targetValue], keyboardEvent);
+      selectionController.addToSelection([targetValue], keyboardEvent);
       return true;
     }
     // Handle cross-type navigation
@@ -1289,7 +1327,7 @@ export const createSelectionKeyboardShortcuts = (
         "interaction",
         `keydownToSelect: ${key} - cross-type navigation, clearing and setting new selection`,
       );
-      selection.setSelection([targetValue], keyboardEvent);
+      selectionController.setSelection([targetValue], keyboardEvent);
       return true;
     }
     if (isCrossType && !shouldClearPreviousSelection) {
@@ -1297,14 +1335,14 @@ export const createSelectionKeyboardShortcuts = (
         "interaction",
         `keydownToSelect: ${key} - cross-type navigation with Cmd, adding to selection`,
       );
-      selection.addToSelection([targetValue], keyboardEvent);
+      selectionController.addToSelection([targetValue], keyboardEvent);
       return true;
     }
     debug(
       "interaction",
       `keydownToSelect: ${key} - setting selection to target element`,
     );
-    selection.setSelection([targetValue], keyboardEvent);
+    selectionController.setSelection([targetValue], keyboardEvent);
     return true;
   };
 
@@ -1312,7 +1350,7 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Add element above to selection",
       key: "command+shift+up",
-      enabled: selection.axis !== "horizontal",
+      enabled: selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1320,17 +1358,17 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select element above",
       key: "up",
-      enabled: selection.axis !== "horizontal",
+      enabled: selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) =>
-          selection.getElementAbove(selectableElement),
+          selectionController.getElementAbove(selectableElement),
         );
       },
     },
     {
       description: "Add element below to selection",
       key: "command+shift+down",
-      enabled: selection.axis !== "horizontal",
+      enabled: selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1338,17 +1376,17 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select element below",
       key: "down",
-      enabled: selection.axis !== "horizontal",
+      enabled: selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) => {
-          return selection.getElementBelow(selectableElement);
+          return selectionController.getElementBelow(selectableElement);
         });
       },
     },
     {
       description: "Add left element to selection",
       key: "command+shift+left",
-      enabled: selection.axis !== "horizontal",
+      enabled: selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1356,17 +1394,17 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select left element",
       key: "left",
-      enabled: selection.axis !== "vertical",
+      enabled: selectionController.axis !== "vertical",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) => {
-          return selection.getElementBefore(selectableElement);
+          return selectionController.getElementBefore(selectableElement);
         });
       },
     },
     {
       description: "Add right element to selection",
       key: "command+shift+right",
-      enabled: selection.axis !== "vertical",
+      enabled: selectionController.axis !== "vertical",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1374,10 +1412,10 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select right element",
       key: "right",
-      enabled: selection.axis !== "vertical",
+      enabled: selectionController.axis !== "vertical",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) => {
-          return selection.getElementAfter(selectableElement);
+          return selectionController.getElementAfter(selectableElement);
         });
       },
     },
@@ -1386,7 +1424,7 @@ export const createSelectionKeyboardShortcuts = (
       key: "shift",
       handler: (keyboardEvent) => {
         const element = getSelectableElement(keyboardEvent);
-        selection.setAnchorElement(element);
+        selectionController.setAnchorElement(element);
         return true;
       },
     },
@@ -1394,7 +1432,7 @@ export const createSelectionKeyboardShortcuts = (
       description: "Select all",
       key: "command+a",
       handler: (keyboardEvent) => {
-        selection.selectAll(keyboardEvent);
+        selectionController.selectAll(keyboardEvent);
         return true;
       },
     },
@@ -1413,12 +1451,16 @@ export const createSelectionKeyboardShortcuts = (
       handler: (keyboardEvent) => {
         const element = getSelectableElement(keyboardEvent);
         const elementValue = getElementValue(element);
-        const isCurrentlySelected = selection.isElementSelected(element);
+        const isCurrentlySelected =
+          selectionController.isElementSelected(element);
         if (isCurrentlySelected) {
-          selection.removeFromSelection([elementValue], keyboardEvent);
+          selectionController.removeFromSelection(
+            [elementValue],
+            keyboardEvent,
+          );
           return true;
         }
-        selection.addToSelection([elementValue], keyboardEvent);
+        selectionController.addToSelection([elementValue], keyboardEvent);
         return true;
       },
     },

@@ -69,13 +69,6 @@ export const useTableSelectionBorders = (
 
     // Initial border update
     updateCellBorders();
-
-    // Listen for selection changes
-    const unsubscribe = selection.channels.change.add(updateCellBorders);
-
-    return () => {
-      unsubscribe();
-    };
   }, [tableRef, selection, color]);
 };
 
@@ -762,7 +755,7 @@ const getSelectedCells = (table, selection) => {
   allCells.forEach((cell) => {
     // Check if this cell's value is in the selection
     const cellValue = getCellValue(cell);
-    if (selection.isValueSelected(cellValue)) {
+    if (selection.includes(cellValue)) {
       selectedCells.push(cell);
     }
   });
