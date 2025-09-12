@@ -108,12 +108,14 @@ export const useSelectionProvider = ({
     const Stuff = ({ children }) => {
       return (
         <SelectionControllerProvider selectionController={selectionController}>
-          <SelectionProvider selection={value}>{children}</SelectionProvider>
+          <SelectionProvider selection={currentValueRef.current}>
+            {children}
+          </SelectionProvider>
         </SelectionControllerProvider>
       );
     };
     return Stuff;
-  }, [selectionController, value]);
+  }, [selectionController]);
 
   return [LocalSelectionProvider, selectionController];
 };
