@@ -764,7 +764,7 @@ const useTableSelectionBorders = (tableRef, selectionController) => {
 };
 const updateSelectionBorders = (tableElement, selectionController) => {
   // Find all selected cells
-  const cells = tableElement.querySelectorAll("td, th");
+  const cells = Array.from(tableElement.querySelectorAll("td, th"));
   const selectedCells = [];
   for (const cell of cells) {
     if (selectionController.isElementSelected(cell)) {
@@ -800,41 +800,36 @@ const updateSelectionBorders = (tableElement, selectionController) => {
     };
   });
 
-  // Calculate selection bounds
-  const rowIndices = cellPositions.map((pos) => pos.rowIndex);
-  const columnIndices = cellPositions.map((pos) => pos.columnIndex);
-  const minRow = Math.min(...rowIndices);
-  const maxRow = Math.max(...rowIndices);
-  const minColumn = Math.min(...columnIndices);
-  const maxColumn = Math.max(...columnIndices);
+  // Create a set for fast lookup of selected cell positions
+  const selectedPositions = new Set(
+    cellPositions.map((pos) => `${pos.rowIndex},${pos.columnIndex}`),
+  );
 
-  // Check if border-collapse mode is enabled
-  // const isBorderCollapse = tableElement.hasAttribute("data-border-collapse");
-
-  // Apply selection borders based on position in selection rectangle
+  // Apply selection borders based on actual neighbors (for proper L-shaped selection support)
   cellPositions.forEach(({ element, rowIndex, columnIndex }) => {
-    // Top border: if cell is at top of selection
-    if (rowIndex === minRow) {
+    // Top border: if cell above is NOT selected or doesn't exist
+    const cellAbove = `${rowIndex - 1},${columnIndex}`;
+    if (!selectedPositions.has(cellAbove)) {
       element.setAttribute("data-selection-border-top", "");
     }
 
-    // Bottom border: if cell is at bottom of selection
-    if (rowIndex === maxRow) {
+    // Bottom border: if cell below is NOT selected or doesn't exist
+    const cellBelow = `${rowIndex + 1},${columnIndex}`;
+    if (!selectedPositions.has(cellBelow)) {
       element.setAttribute("data-selection-border-bottom", "");
     }
 
-    // Left border: if cell is at left of selection
-    if (columnIndex === minColumn) {
+    // Left border: if cell to the left is NOT selected or doesn't exist
+    const cellLeft = `${rowIndex},${columnIndex - 1}`;
+    if (!selectedPositions.has(cellLeft)) {
       element.setAttribute("data-selection-border-left", "");
     }
 
-    // Right border: if cell is at right of selection
-    if (columnIndex === maxColumn) {
+    // Right border: if cell to the right is NOT selected or doesn't exist
+    const cellRight = `${rowIndex},${columnIndex + 1}`;
+    if (!selectedPositions.has(cellRight)) {
       element.setAttribute("data-selection-border-right", "");
     }
-
-    // In border-collapse mode, we may need to adjust internal borders
-    // For now, keeping it simple with just perimeter borders
   });
 };
 
