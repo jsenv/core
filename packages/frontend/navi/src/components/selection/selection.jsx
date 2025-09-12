@@ -33,6 +33,7 @@ const SelectionProvider = ({ selection, children }) => {
     </SelectionContext.Provider>
   );
 };
+
 export const useSelectionProvider = ({
   elementRef,
   layout,
@@ -44,14 +45,19 @@ export const useSelectionProvider = ({
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
+  const currentValueRef = useRef(value);
+  currentValueRef.current = value;
+
   const selection = useMemo(() => {
     const onChange = (...args) => {
       onChangeRef.current(...args);
     };
 
+    const getCurrentValue = () => currentValueRef.current;
+
     if (layout === "grid") {
       return createGridSelection({
-        value,
+        getCurrentValue,
         onChange,
         elementRef,
         multiple,
@@ -59,7 +65,7 @@ export const useSelectionProvider = ({
       });
     }
     return createLinearSelection({
-      value,
+      getCurrentValue,
       onChange,
       axis: layout,
       elementRef,
@@ -68,11 +74,9 @@ export const useSelectionProvider = ({
     });
   }, [layout, multiple, elementRef]);
 
-  // Update the selection's internal values when external value changes
   useEffect(() => {
     selection.element = elementRef.current;
-    selection.update(value);
-  }, [selection, value]);
+  }, []);
 
   const LocalSelectionProvider = useMemo(() => {
     const Stuff = ({ children }) => {
@@ -87,7 +91,7 @@ export const useSelectionProvider = ({
 };
 // Base Selection - shared functionality between grid and linear
 const createBaseSelection = ({
-  value = [],
+  getCurrentValue,
   registry,
   onChange,
   type,
@@ -114,11 +118,12 @@ const createBaseSelection = ({
   };
 
   const update = (newValue, event) => {
-    if (compareTwoJsValues(newValue, value)) {
+    const currentValue = getCurrentValue();
+    if (compareTwoJsValues(newValue, currentValue)) {
       return;
     }
 
-    const oldSelectedSet = new Set(value);
+    const oldSelectedSet = new Set(currentValue);
     const newSelectedSet = new Set(newValue);
     const willBeUnselectedSet = new Set();
     for (const item of oldSelectedSet) {
@@ -158,8 +163,7 @@ const createBaseSelection = ({
       `${type} setSelection: calling onChange with:`,
       finalValue,
     );
-    value = finalValue;
-    triggerChange(value, event);
+    triggerChange(finalValue, event);
   };
   let anchorElement = null;
   let activeElement = null;
@@ -326,7 +330,7 @@ const createBaseSelection = ({
     type,
     multiple,
     get value() {
-      return value;
+      return getCurrentValue();
     },
     registry,
     get anchorElement() {
