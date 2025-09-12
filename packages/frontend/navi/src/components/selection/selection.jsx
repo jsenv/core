@@ -1003,6 +1003,7 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
 
     let isDragging = false;
     let dragStartElement = null;
+    let cleanup = () => {};
 
     const handleMouseDown = (e) => {
       if (e.button !== 0) {
@@ -1104,62 +1105,68 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
           }
           targetElement = targetElement.parentElement;
         }
-
-        if (targetElement && selection.registry.has(targetElement)) {
-          // Check if we're mixing row and cell selections
-          const dragStartSelectionName =
-            getElementSelectionName(dragStartElement);
-          const targetSelectionName = getElementSelectionName(targetElement);
-          // Only allow drag between elements of the same selection type
-          if (dragStartSelectionName !== targetSelectionName) {
-            debug(
-              "interaction",
-              "drag select: skipping mixed selection types",
-              { dragStartSelectionName, targetSelectionName },
-            );
-            return;
-          }
-
-          // Get the range from anchor to current target
-          const rangeValues = selection.getElementRange(
-            dragStartElement,
-            targetElement,
-          );
-
-          // Handle different drag behaviors based on modifier keys
-          const isShiftSelect = e.shiftKey;
-          const isMultiSelect = e.metaKey || e.ctrlKey;
-
-          if (isShiftSelect) {
-            // For shift drag, use selectFromAnchorTo behavior (replace selection with range from anchor)
-            debug(
-              "interaction",
-              "shift drag select: selecting from anchor to target",
-              rangeValues,
-            );
-            selection.selectFromAnchorTo(targetElement, e);
-          } else if (isMultiSelect) {
-            // For multi-select drag, add to existing selection
-            debug(
-              "interaction",
-              "multi-select drag: adding range to selection",
-              rangeValues,
-            );
-            const currentSelection = [...selection.value];
-            const newSelection = [
-              ...new Set([...currentSelection, ...rangeValues]),
-            ];
-            selection.setSelection(newSelection, e);
-          } else {
-            // For normal drag, replace selection
-            debug(
-              "interaction",
-              "drag select: setting selection to range",
-              rangeValues,
-            );
-            selection.setSelection(rangeValues, e);
-          }
+        if (!targetElement) {
+          return;
         }
+        if (!selection.registry.has(targetElement)) {
+          return;
+        }
+
+        // Check if we're mixing row and cell selections
+        const dragStartSelectionName =
+          getElementSelectionName(dragStartElement);
+        const targetSelectionName = getElementSelectionName(targetElement);
+        // Only allow drag between elements of the same selection type
+        if (dragStartSelectionName !== targetSelectionName) {
+          debug("interaction", "drag select: skipping mixed selection types", {
+            dragStartSelectionName,
+            targetSelectionName,
+          });
+          return;
+        }
+
+        // Get the range from anchor to current target
+        const rangeValues = selection.getElementRange(
+          dragStartElement,
+          targetElement,
+        );
+
+        // Handle different drag behaviors based on modifier keys
+        const isShiftSelect = e.shiftKey;
+        const isMultiSelect = e.metaKey || e.ctrlKey;
+
+        if (isShiftSelect) {
+          // For shift drag, use selectFromAnchorTo behavior (replace selection with range from anchor)
+          debug(
+            "interaction",
+            "shift drag select: selecting from anchor to target",
+            rangeValues,
+          );
+          selection.selectFromAnchorTo(targetElement, e);
+          return;
+        }
+        if (isMultiSelect) {
+          // For multi-select drag, add to existing selection
+          debug(
+            "interaction",
+            "multi-select drag: adding range to selection",
+            rangeValues,
+          );
+          const currentSelection = [...selection.value];
+          const newSelection = [
+            ...new Set([...currentSelection, ...rangeValues]),
+          ];
+          selection.setSelection(newSelection, e);
+          return;
+        }
+        // For normal drag, replace selection
+        debug(
+          "interaction",
+          "drag select: setting selection to range",
+          rangeValues,
+        );
+        console.log(rangeValues);
+        selection.setSelection(rangeValues, e);
       };
 
       const handleMouseUp = () => {
@@ -1178,12 +1185,16 @@ export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
 
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
+      cleanup = () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
     };
 
     element.addEventListener("mousedown", handleMouseDown);
-
     return () => {
       element.removeEventListener("mousedown", handleMouseDown);
+      cleanup();
     };
   }, [selection]);
 
