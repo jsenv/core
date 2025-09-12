@@ -18,7 +18,12 @@
 
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useEffect, useImperativeHandle, useRef } from "preact/hooks";
+import {
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -378,7 +383,7 @@ const useOnInputChange = (inputRef, callback) => {
   //   even though the programmatic initial value represents a meaningful change
   const valueAtStartRef = useRef();
   const interactedRef = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const input = inputRef.current;
     valueAtStartRef.current = input.value;
 
@@ -395,9 +400,13 @@ const useOnInputChange = (inputRef, callback) => {
       interactedRef.current = true;
     };
     const onblur = (e) => {
-      if (!interactedRef.current && valueAtStartRef.current !== input.value) {
-        callback(e);
+      if (interactedRef.current) {
+        return;
       }
+      if (valueAtStartRef.current === input.value) {
+        return;
+      }
+      callback(e);
     };
 
     input.addEventListener("focus", onfocus);
