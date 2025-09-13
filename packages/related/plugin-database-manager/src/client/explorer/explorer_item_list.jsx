@@ -133,8 +133,8 @@ const ExplorerItemListWithShortcuts = ({
   children,
 }) => {
   const selectionController = useSelectionController({
-    layout: "linear",
-    axis: "vertical",
+    elementRef,
+    layout: "vertical",
     value: itemSelectionSignal.value,
     onChange: (newValue) => {
       itemSelectionSignal.value = newValue;
