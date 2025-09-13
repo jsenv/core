@@ -40,11 +40,11 @@
  * Next steps:
  * - Drag to reorder columns
  *
- *  Le truc a faire du coup c'est cela:
- *
- *  Lorsqu'on commence a drag on veut alors rendre le contenu de la colonne vide avec ptet un bg grisé par example
  *  Et on veut créer une copie visuelle (<div><table>...</table></div>) avec des dimensions fixes qui correspondent
  *  a la colonne que l'on déplace en absolute
+ *
+ *  Pour faire cela je pense que lorsque le drag démarre on va avoir besoin d'une fonction qui append ce truc dans le body
+ *  alors ptet qu'on peut le faire avec react apres tout let's go
  *
  *  Lorsqu'on "vide" la collone il faut juste s'assurer de cacher le contenu mais pas de la modifier réellement car
  *  on veut pas impacter le layout
@@ -674,6 +674,19 @@ export const Table = forwardRef((props, ref) => {
   }
 
   const [dragState, setDragState] = useState(null);
+  const startDraggingColumn = (columnIndex) => {
+    const table = innerRef.current;
+    const columnHeaderCell =
+      table.querySelector("thead tr").children[columnIndex + 1]; // +1 to skip row number column
+    const columnClientRect = columnHeaderCell.getBoundingClientRect();
+    setDragState({
+      content: `column:${columnIndex}`,
+      columnClientRect,
+    });
+  };
+  const stopDraggingColumn = () => {
+    // setDragState(null);
+  };
 
   return (
     <div className="navi_table_container">
@@ -720,12 +733,10 @@ export const Table = forwardRef((props, ref) => {
                   selectionController={selectionController}
                   dragging={columnIsDragging}
                   onDragStart={() => {
-                    setDragState({
-                      content: `column:${index}`,
-                    });
+                    startDraggingColumn(index);
                   }}
                   onDragEnd={() => {
-                    setDragState(null);
+                    stopDraggingColumn(index);
                   }}
                 >
                   {col.header}
@@ -791,6 +802,7 @@ export const Table = forwardRef((props, ref) => {
           })}
         </tbody>
       </table>
+      {dragState && <DragCopy columns={columns} data={data} />}
     </div>
   );
 });
@@ -1009,4 +1021,51 @@ const RowNumberCell = ({
 
 const DataCell = (props) => {
   return <TableCell {...props} />;
+};
+
+const DragCopy = ({ dragState, columns, data }) => {
+  const columnIndex = parseInt(dragState.content.slice(7), 10);
+  const clientRect = dragState.columnClientRect;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: `${clientRect.left}px`,
+        top: `${clientRect.top}px`,
+        width: `${clientRect.width}px`,
+        height: `${clientRect.height}px`,
+      }}
+    >
+      <ColumnCopy
+        width={clientRect.width}
+        height={clientRect.height}
+        column={columns[columnIndex]}
+        data={data}
+      />
+    </div>
+  );
+};
+
+const ColumnCopy = ({ width, column, data }) => {
+  // we must now: check position to properly position the div
+  // and force table dimensions to the the one of the colum we drag
+  return (
+    <table style={{ width: `${width}px` }}>
+      <thead>
+        <tr>
+          <th>{column.header}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          {data.map((row) => {
+            return (
+              <td key={`${row.id}-${column.id}`}>{row[column.accessorKey]}</td>
+            );
+          })}
+        </tr>
+      </tbody>
+    </table>
+  );
 };
