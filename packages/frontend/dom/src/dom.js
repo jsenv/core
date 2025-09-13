@@ -11,6 +11,7 @@ export { trapFocusInside } from "./focus/focus_trap.js";
 export { canInterceptKeys } from "./keyboard.js";
 export {
   getAncestorScrolls,
+  getScrollableParent,
   getScrollableParentSet,
   trapScrollInside,
 } from "./scroll.js";

@@ -100,6 +100,7 @@ import.meta.css = /* css */ `
     --z-index-sticky-row: 100;
     --z-index-sticky-column: 1000;
     --z-index-sticky-corner: 10000;
+    --z-index-dragging-clone: 20000;
 
     position: relative;
   }
@@ -516,6 +517,7 @@ import.meta.css = /* css */ `
 
   .navi_table_drag_clone_container {
     position: absolute;
+    z-index: var(--z-index-dragging-clone);
     cursor: grabbing;
     user-select: none;
   }
@@ -523,6 +525,7 @@ import.meta.css = /* css */ `
   .navi_table_drag_clone_container th,
   .navi_table_drag_clone_container td {
     opacity: 0;
+    position: relative !important;
   }
   .navi_table_drag_clone_container th[data-grabbed],
   .navi_table_drag_clone_container td[data-grabbed] {
@@ -694,8 +697,8 @@ export const Table = forwardRef((props, ref) => {
     setGrabTarget(`column:${columnIndex}`);
   };
   const releaseColumn = () => {
-    setGrabTarget(null);
-    setDragPosition(null);
+    // setGrabTarget(null);
+    // setDragPosition(null);
   };
 
   return (
