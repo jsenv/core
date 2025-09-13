@@ -56,6 +56,7 @@ export const TableCell = forwardRef((props, ref) => {
     row,
     value,
     selectionController,
+    dragging,
     ...rest
   } = props;
 
@@ -100,6 +101,7 @@ export const TableCell = forwardRef((props, ref) => {
       <Editable editing={editing} onEditEnd={stopEditing} value={value}>
         {value}
       </Editable>
+      {dragging && <div className="navi_table_dragging_placeholder"></div>}
     </TagName>
   );
 });

@@ -508,6 +508,12 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] td[data-after-sticky-y-frontier]::after {
     top: 0;
   }
+
+  .navi_table_dragging_placeholder {
+    position: absolute;
+    inset: 0;
+    background: grey;
+  }
 `;
 
 const NO_SELECTION = [];
@@ -712,6 +718,7 @@ export const Table = forwardRef((props, ref) => {
                   columnWithSomeSelectedCell={columnWithSomeSelectedCell}
                   data={data}
                   selectionController={selectionController}
+                  dragging={columnIsDragging}
                   onDragStart={() => {
                     setDragState({
                       content: `column:${index}`,
@@ -722,7 +729,6 @@ export const Table = forwardRef((props, ref) => {
                   }}
                 >
                   {col.header}
-                  {columnIsDragging ? "drag" : ""}
                 </HeaderCell>
               );
             })}
@@ -754,26 +760,32 @@ export const Table = forwardRef((props, ref) => {
                   columns={columns}
                   selectionController={selectionController}
                 />
-                {columns.map((col, colIndex) => (
-                  <DataCell
-                    key={`${row.id}-${col.id}`}
-                    stickyX={col.sticky}
-                    stickyY={rowOptions.sticky}
-                    isStickyXFrontier={
-                      stickyColumnFrontierIndex === colIndex + 1
-                    }
-                    isAfterStickyXFrontier={
-                      colIndex + 1 === stickyColumnFrontierIndex + 1
-                    }
-                    isStickyYFrontier={isStickyYFrontier}
-                    isAfterStickyYFrontier={isAfterStickyYFrontier}
-                    columnName={col.accessorKey}
-                    columnIndex={colIndex + 1} // +1 because number column is first
-                    row={row}
-                    value={row[col.accessorKey]}
-                    selectionController={selectionController}
-                  />
-                ))}
+                {columns.map((col, colIndex) => {
+                  const columnIsDragging =
+                    dragState?.content === `column:${colIndex}`;
+
+                  return (
+                    <DataCell
+                      key={`${row.id}-${col.id}`}
+                      stickyX={col.sticky}
+                      stickyY={rowOptions.sticky}
+                      isStickyXFrontier={
+                        stickyColumnFrontierIndex === colIndex + 1
+                      }
+                      isAfterStickyXFrontier={
+                        colIndex + 1 === stickyColumnFrontierIndex + 1
+                      }
+                      isStickyYFrontier={isStickyYFrontier}
+                      isAfterStickyYFrontier={isAfterStickyYFrontier}
+                      columnName={col.accessorKey}
+                      columnIndex={colIndex + 1} // +1 because number column is first
+                      row={row}
+                      value={row[col.accessorKey]}
+                      selectionController={selectionController}
+                      dragging={columnIsDragging}
+                    />
+                  );
+                })}
               </tr>
             );
           })}
@@ -894,6 +906,7 @@ const HeaderCell = ({
   selectionController,
   onDragStart,
   onDragEnd,
+  dragging,
   children,
 }) => {
   const cellRef = useRef();
@@ -942,6 +955,7 @@ const HeaderCell = ({
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {children}
       </span>
+      {dragging && <div className="navi_table_dragging_placeholder"></div>}
     </th>
   );
 };
