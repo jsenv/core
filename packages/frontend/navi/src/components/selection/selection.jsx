@@ -341,6 +341,19 @@ const createBaseSelection = ({
       change,
     },
     update,
+    useSelection: () => {
+      const [selection, setSelection] = useState(baseSelection.value);
+      useLayoutEffect(() => {
+        setSelection(baseSelection.value);
+
+        const unsubscribe = change.add((newSelection) => {
+          setSelection(newSelection);
+        });
+
+        return unsubscribe;
+      }, [baseSelection]);
+      return selection;
+    },
 
     registerElement,
     unregisterElement,
@@ -935,10 +948,11 @@ export const useSelectableElement = (
   elementRef,
   { selectionController, selectionImpact },
 ) => {
-  const selection = selectionController.value;
   if (!selectionController) {
     throw new Error("useSelectableElement needs a selectionController");
   }
+
+  const selection = selectionController.useSelection();
 
   useLayoutEffect(() => {
     const element = elementRef.current;
