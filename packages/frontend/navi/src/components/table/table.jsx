@@ -60,7 +60,7 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
-import { startDragGesture } from "@jsenv/dom";
+import { startGrabGesture } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,
@@ -673,9 +673,9 @@ export const Table = forwardRef((props, ref) => {
     }
   }
 
-  const [dragState, setDragState] = useState(null);
-  const [dragPosition, setDragPosition] = useState(null);
-  const startDraggingColumn = (columnIndex) => {
+  const [grabState, setGrabState] = useState(null);
+  const [grabPosition, setGrabPosition] = useState(null);
+  const startGrabbingColumn = (columnIndex) => {
     const table = innerRef.current;
     const columnHeaderCell =
       table.querySelector("thead tr").children[columnIndex + 1]; // +1 to skip row number column
@@ -688,13 +688,13 @@ export const Table = forwardRef((props, ref) => {
       width: columnClientRect.width,
       height: columnClientRect.height,
     };
-    setDragState({
+    setGrabState({
       content: `column:${columnIndex}`,
       columnClientRect: relativeRect,
     });
   };
-  const stopDraggingColumn = () => {
-    // setDragState(null);
+  const stopGrabbingColumn = () => {
+    // setGrabtate(null);
   };
 
   return (
@@ -720,7 +720,7 @@ export const Table = forwardRef((props, ref) => {
               }}
             />
             {columns.map((col, index) => {
-              const columnIsDragging = dragState?.content === `column:${index}`;
+              const columnIsGrabbed = grabState?.content === `column:${index}`;
 
               return (
                 <HeaderCell
@@ -740,16 +740,16 @@ export const Table = forwardRef((props, ref) => {
                   columnWithSomeSelectedCell={columnWithSomeSelectedCell}
                   data={data}
                   selectionController={selectionController}
-                  dragging={columnIsDragging}
-                  onDragStart={({ xMove, yMove }) => {
-                    startDraggingColumn(index);
-                    setDragPosition([xMove, yMove]);
+                  grabbing={columnIsGrabbed}
+                  onGrabStart={({ xMove, yMove }) => {
+                    startGrabbingColumn(index);
+                    setGrabPosition([xMove, yMove]);
                   }}
                   onDrag={({ xMove, yMove }) => {
-                    setDragPosition([xMove, yMove]);
+                    setGrabPosition([xMove, yMove]);
                   }}
-                  onDragEnd={() => {
-                    stopDraggingColumn(index);
+                  onGrabEnd={() => {
+                    stopGrabbingColumn(index);
                   }}
                 >
                   {col.header}
@@ -786,7 +786,7 @@ export const Table = forwardRef((props, ref) => {
                 />
                 {columns.map((col, colIndex) => {
                   const columnIsDragging =
-                    dragState?.content === `column:${colIndex}`;
+                    grabState?.content === `column:${colIndex}`;
 
                   return (
                     <DataCell
@@ -815,10 +815,10 @@ export const Table = forwardRef((props, ref) => {
           })}
         </tbody>
       </table>
-      {dragState && (
-        <DragCopy
-          dragState={dragState}
-          dragPosition={dragPosition}
+      {grabState && (
+        <GrabCopy
+          grabState={grabState}
+          grabPosition={grabPosition}
           columns={columns}
           data={data}
         />
@@ -936,10 +936,10 @@ const HeaderCell = ({
   columnWithSomeSelectedCell,
   data,
   selectionController,
-  onDragStart,
+  onGrabStart,
   onDrag,
-  onDragEnd,
-  dragging,
+  onGrabEnd,
+  grabbing,
   children,
 }) => {
   const cellRef = useRef();
@@ -970,19 +970,19 @@ const HeaderCell = ({
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
       data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
-      style={{ cursor: "grab" }}
+      style={{ cursor: grabbing ? "grabbing" : "grab" }}
       tabIndex={-1}
       onMouseDown={(e) => {
-        startDragGesture(e, {
+        startGrabGesture(e, {
           direction: { x: true },
-          onStart: (gestureInfo) => {
-            onDragStart(gestureInfo);
+          onGrab: (gestureInfo) => {
+            onGrabStart(gestureInfo);
           },
-          onChange: (gestureInfo) => {
+          onDrag: (gestureInfo) => {
             onDrag(gestureInfo);
           },
-          onEnd: (gestureInfo) => {
-            onDragEnd(gestureInfo);
+          onRelease: (gestureInfo) => {
+            onGrabEnd(gestureInfo);
           },
         });
       }}
@@ -991,7 +991,7 @@ const HeaderCell = ({
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {children}
       </span>
-      {dragging && <div className="navi_table_dragging_placeholder"></div>}
+      {grabbing && <div className="navi_table_grabbing_placeholder"></div>}
     </th>
   );
 };
@@ -1047,17 +1047,17 @@ const DataCell = (props) => {
   return <TableCell {...props} />;
 };
 
-const DragCopy = ({ dragPosition, dragState, columns, data }) => {
-  const columnIndex = parseInt(dragState.content.slice(7), 10);
-  const clientRect = dragState.columnClientRect;
-  const [dragX, dragY] = dragPosition;
+const GrabCopy = ({ grabPosition, grabState, columns, data }) => {
+  const columnIndex = parseInt(grabState.content.slice(7), 10);
+  const clientRect = grabState.columnClientRect;
+  const [grabX, grabY] = grabPosition;
 
   return (
     <div
       style={{
         position: "absolute",
-        left: `${clientRect.left + dragX}px`,
-        top: `${clientRect.top + dragY}px`,
+        left: `${clientRect.left + grabX}px`,
+        top: `${clientRect.top + grabY}px`,
       }}
     >
       <ColumnCopy

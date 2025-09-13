@@ -70,4 +70,4 @@ export {
 export { initUITransition } from "./ui_transition/ui_transition.js";
 
 // interaction
-export { startDragGesture } from "./interaction/start_drag_gesture.js";
+export { startGrabGesture } from "./interaction/start_grab_gesture.js";

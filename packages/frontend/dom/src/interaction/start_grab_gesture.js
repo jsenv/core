@@ -1,9 +1,10 @@
-export const startDragGesture = (
+export const startGrabGesture = (
   mousedownEvent,
   {
-    onStart,
-    onChange,
-    onEnd,
+    onGrab,
+    onDragStart,
+    onDrag,
+    onRelease,
     setup = () => {
       return {
         element: mousedownEvent.target,
@@ -72,7 +73,7 @@ export const startDragGesture = (
       document.body.removeChild(backdrop);
     });
   }
-  let started = false;
+  let started = !threshold;
   mouse_events: {
     const updateMousePosition = (e) => {
       if (direction.x) {
@@ -95,7 +96,7 @@ export const startDragGesture = (
         if (!started) {
           return;
         }
-        onChange?.(gestureInfo);
+        onDrag?.(gestureInfo);
         return;
       }
 
@@ -122,11 +123,11 @@ export const startDragGesture = (
           }
         }
         started = true;
-        onStart?.(gestureInfo);
+        onDragStart?.(gestureInfo);
         return;
       }
       if (someChange) {
-        onChange?.(gestureInfo);
+        onDrag?.(gestureInfo);
       }
     };
 
@@ -140,7 +141,7 @@ export const startDragGesture = (
       for (const endCallback of endCallbackSet) {
         endCallback();
       }
-      onEnd?.(gestureInfo);
+      onRelease?.(gestureInfo);
     };
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
@@ -162,8 +163,5 @@ export const startDragGesture = (
     });
   }
 
-  if (!threshold) {
-    started = true;
-    onStart?.(gestureInfo);
-  }
+  onGrab?.(gestureInfo);
 };
