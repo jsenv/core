@@ -324,7 +324,7 @@ export const jsenvPluginDatabaseManager = ({
         },
         "GET /:rolname": async (request) => {
           const { rolname } = request.params;
-          const result = await selectRoleByName(rolname);
+          const result = await selectRoleByName(sql, rolname);
           if (!result) {
             return null;
           }
