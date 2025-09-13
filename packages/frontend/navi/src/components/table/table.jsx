@@ -518,6 +518,7 @@ import.meta.css = /* css */ `
     position: absolute;
     cursor: grabbing;
     user-select: none;
+    overflow: hidden;
   }
 
   .navi_table_drag_clone_container th,
@@ -1064,37 +1065,47 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
   const [dragX, dragY] = dragPosition;
   const x = dragX;
   const y = dragY;
+  const positionerRef = useRef();
+
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    const container = positionerRef.current;
+    container.style.width = `${table.offsetWidth}px`;
+    container.style.height = `${table.offsetHeight}px`;
+  }, []);
 
   return (
     <div
+      ref={positionerRef}
       className="navi_table_drag_clone_container"
       style={{
         left: `${x < 0 ? 0 : x}px`,
         top: `${y < 0 ? 0 : y}px`,
       }}
     >
-      <ColumnDragClone tableRef={tableRef} columnIndex={columnIndex} />
+      <ColumnDragClone
+        tableRef={tableRef}
+        positionerRef={positionerRef}
+        columnIndex={columnIndex}
+      />
+
       {/* to catch any mouse over effect and stuff like that */}
       <div style={{ position: "absolute", inset: 0 }}></div>
     </div>
   );
 };
 
-const ColumnDragClone = ({ tableRef }) => {
+const ColumnDragClone = ({ tableRef, positionerRef }) => {
   useLayoutEffect(() => {
     const table = tableRef.current;
+    const positioner = positionerRef.current;
     if (!table) {
       return null;
     }
-
     const tableClone = table.cloneNode(true);
-    const tableDragCloneContainer = table.parentNode.querySelector(
-      ".navi_table_drag_clone_container",
-    );
-    tableDragCloneContainer.appendChild(tableClone);
-
+    positioner.appendChild(tableClone);
     return () => {
-      tableDragCloneContainer.removeChild(tableClone);
+      positioner.removeChild(tableClone);
     };
   }, []);
 
