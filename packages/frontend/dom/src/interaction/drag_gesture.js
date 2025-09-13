@@ -1,3 +1,5 @@
+import { getScrollableParent } from "../scroll.js";
+
 export const startDragGesture = (
   mousedownEvent,
   {
@@ -130,6 +132,12 @@ export const startDragGesture = (
       } else {
         onDrag?.(gestureInfo, "middle");
       }
+
+      // Auto-scroll the first scrollable parent, if any
+      const scrollableParent = getScrollableParent(gestureInfo.element);
+      if (scrollableParent) {
+        autoScroll(scrollableParent, gestureInfo);
+      }
     };
 
     const handleMouseMove = (e) => {
@@ -165,4 +173,51 @@ export const startDragGesture = (
   }
 
   onGrab?.(gestureInfo);
+};
+
+const autoScroll = (scrollableElement, gestureInfo) => {
+  const rect = scrollableElement.getBoundingClientRect();
+  const scrollZone = 30; // pixels from edge to trigger scrolling
+  const scrollSpeed = 10; // pixels per scroll
+  const { x, y } = gestureInfo;
+
+  horizontal: {
+    // left
+    if (x < rect.left + scrollZone) {
+      // Scroll left
+      scrollableElement.scrollLeft = Math.max(
+        0,
+        scrollableElement.scrollLeft - scrollSpeed,
+      );
+      break horizontal;
+    }
+    // right
+    if (x > rect.right - scrollZone) {
+      const maxScrollLeft =
+        scrollableElement.scrollWidth - scrollableElement.clientWidth;
+      scrollableElement.scrollLeft = Math.min(
+        maxScrollLeft,
+        scrollableElement.scrollLeft + scrollSpeed,
+      );
+    }
+  }
+  vertical: {
+    // up
+    if (y < rect.top + scrollZone) {
+      scrollableElement.scrollTop = Math.max(
+        0,
+        scrollableElement.scrollTop - scrollSpeed,
+      );
+      break vertical;
+    }
+    // down
+    if (y > rect.bottom - scrollZone) {
+      const maxScrollTop =
+        scrollableElement.scrollHeight - scrollableElement.clientHeight;
+      scrollableElement.scrollTop = Math.min(
+        maxScrollTop,
+        scrollableElement.scrollTop + scrollSpeed,
+      );
+    }
+  }
 };

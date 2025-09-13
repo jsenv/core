@@ -694,8 +694,9 @@ export const Table = forwardRef((props, ref) => {
     setGrabTargetRect(relativeRect);
   };
   const stopGrabbingColumn = () => {
-    // setGrabTarget(null);
-    // setGrabTargetRect(null)
+    setGrabTarget(null);
+    setGrabTargetRect(null);
+    setDragPosition(null);
   };
 
   return (
@@ -1076,8 +1077,6 @@ const DraggedCopy = ({
 };
 
 const ColumnCopy = ({ width, column, data }) => {
-  // we must now: check position to properly position the div
-  // and force table dimensions to the the one of the colum we drag
   return (
     <table className="navi_table" style={{ width: `${width}px` }}>
       <thead>
