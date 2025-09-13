@@ -514,6 +514,12 @@ import.meta.css = /* css */ `
     inset: 0;
     background: grey;
   }
+
+  .navi_table_drag_clone_container {
+    position: absolute;
+    cursor: grabbing;
+    user-select: none;
+  }
 `;
 
 const NO_SELECTION = [];
@@ -817,12 +823,11 @@ export const Table = forwardRef((props, ref) => {
         </tbody>
       </table>
       {grabTarget && (
-        <DraggedCopy
+        <DragClone
+          tableRef={innerRef}
           grabTarget={grabTarget}
           grabTargetRect={grabTargetRect}
           dragPosition={dragPosition}
-          columns={columns}
-          data={data}
         />
       )}
     </div>
@@ -1043,58 +1048,51 @@ const DataCell = (props) => {
   return <TableCell {...props} />;
 };
 
-const DraggedCopy = ({
-  grabTarget,
-  grabTargetRect,
-  dragPosition,
-  columns,
-  data,
-}) => {
+const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
   const columnIndex = parseInt(grabTarget.slice(7), 10);
-  const clientRect = grabTargetRect;
   const [dragX, dragY] = dragPosition;
-  const x = clientRect.left + dragX;
-  const y = clientRect.top + dragY;
+  const x = dragX;
+  const y = dragY;
 
   return (
     <div
+      className="navi_table_drag_clone_container"
       style={{
-        position: "absolute",
         left: `${x < 0 ? 0 : x}px`,
         top: `${y < 0 ? 0 : y}px`,
-        cursor: "grabbing",
-        useSelect: "none",
       }}
     >
-      <ColumnCopy
-        width={clientRect.width}
-        height={clientRect.height}
-        column={columns[columnIndex]}
-        data={data}
-      />
+      <ColumnDragClone tableRef={tableRef} columnIndex={columnIndex} />
       {/* to catch any mouse over effect and stuff like that */}
       <div style={{ position: "absolute", inset: 0 }}></div>
     </div>
   );
 };
 
-const ColumnCopy = ({ width, column, data }) => {
-  return (
-    <table className="navi_table" style={{ width: `${width}px` }}>
-      <thead>
-        <tr>
-          <th>{column.header}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row) => {
-          return (
-            <tr key={row.id}>
-              <td>{row[column.accessorKey]}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
+const ColumnDragClone = ({ tableRef, columnIndex }) => {
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table) {
+      return null;
+    }
+
+    const tableClone = table.cloneNode(true);
+
+    const tableCellArray = Array.from(tableClone.querySelectorAll("th, td"));
+    for (const tableCell of tableCellArray) {
+      // TODO: if table cell is not in the column being dragged, force opacity: 0
+    }
+
+    const tableDragCloneContainer = table.querySelector(
+      ".navi_table_drag_clone_container",
+    );
+    tableDragCloneContainer.appendChild(tableClone);
+    tableDragCloneContainer.style.width = `${width}px`;
+
+    return () => {
+      tableDragCloneContainer.removeChild(tableClone);
+    };
+  }, []);
+
+  return null;
 };
