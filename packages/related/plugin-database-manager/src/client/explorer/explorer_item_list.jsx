@@ -79,72 +79,46 @@ export const ExplorerItemList = forwardRef((props, ref) => {
     </>
   );
 
-  const list = (
+  const selection = itemSelectionSignal.value;
+  const selectionLength = selection.length;
+  const selectionController = useSelectionController({
+    elementRef: innerRef,
+    layout: "vertical",
+    value: selection,
+    onChange: (newValue) => {
+      itemSelectionSignal.value = newValue;
+    },
+    multiple: Boolean(deleteManyAction),
+  });
+  useKeyboardShortcuts(innerRef, [
+    ...createSelectionKeyboardShortcuts(selectionController),
+    {
+      enabled: deleteManyAction && selectionLength > 0,
+      key: ["command+delete"],
+      action: deleteManyAction,
+      description: "Delete selected items",
+      confirmMessage:
+        selectionLength === 1
+          ? `Are you sure you want to delete "${selection[0]}"?`
+          : `Are you sure you want to delete the ${selectionLength} selected items?`,
+      onStart: () => {
+        setDeletedItems(selection);
+      },
+      onAbort: () => {
+        setDeletedItems([]);
+      },
+      onError: () => {
+        setDeletedItems([]);
+      },
+      onEnd: () => {
+        setDeletedItems([]);
+      },
+    },
+  ]);
+
+  return (
     <ul ref={innerRef} className="explorer_item_list">
       {listChildren}
     </ul>
   );
-
-  if (deleteManyAction) {
-    const selectionLength = itemSelectionSignal.value.length;
-
-    return (
-      <ExplorerItemListWithShortcuts
-        elementRef={innerRef}
-        itemSelectionSignal={itemSelectionSignal}
-        setDeletedItems={setDeletedItems}
-        shortcuts={[
-          {
-            enabled: selectionLength > 0,
-            key: ["command+delete"],
-            action: deleteManyAction,
-            description: "Delete selected items",
-            confirmMessage:
-              selectionLength === 1
-                ? `Are you sure you want to delete "${itemSelectionSignal.value[0]}"?`
-                : `Are you sure you want to delete the ${selectionLength} selected items?`,
-            onStart: () => {
-              setDeletedItems(itemSelectionSignal.value);
-            },
-            onAbort: () => {
-              setDeletedItems([]);
-            },
-            onError: () => {
-              setDeletedItems([]);
-            },
-            onEnd: () => {
-              setDeletedItems([]);
-            },
-          },
-        ]}
-      >
-        {list}
-      </ExplorerItemListWithShortcuts>
-    );
-  }
-
-  return list;
 });
-
-const ExplorerItemListWithShortcuts = ({
-  elementRef,
-  itemSelectionSignal,
-  shortcuts,
-  children,
-}) => {
-  const selectionController = useSelectionController({
-    elementRef,
-    layout: "vertical",
-    value: itemSelectionSignal.value,
-    onChange: (newValue) => {
-      itemSelectionSignal.value = newValue;
-    },
-    multiple: true,
-  });
-  useKeyboardShortcuts(elementRef, [
-    ...createSelectionKeyboardShortcuts(selectionController),
-    ...shortcuts,
-  ]);
-
-  return children;
-};
