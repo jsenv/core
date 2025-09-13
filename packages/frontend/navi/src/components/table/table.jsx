@@ -802,7 +802,9 @@ export const Table = forwardRef((props, ref) => {
           })}
         </tbody>
       </table>
-      {dragState && <DragCopy columns={columns} data={data} />}
+      {dragState && (
+        <DragCopy dragState={dragState} columns={columns} data={data} />
+      )}
     </div>
   );
 });
@@ -1033,8 +1035,6 @@ const DragCopy = ({ dragState, columns, data }) => {
         position: "absolute",
         left: `${clientRect.left}px`,
         top: `${clientRect.top}px`,
-        width: `${clientRect.width}px`,
-        height: `${clientRect.height}px`,
       }}
     >
       <ColumnCopy
@@ -1058,13 +1058,13 @@ const ColumnCopy = ({ width, column, data }) => {
         </tr>
       </thead>
       <tbody>
-        <tr>
-          {data.map((row) => {
-            return (
-              <td key={`${row.id}-${column.id}`}>{row[column.accessorKey]}</td>
-            );
-          })}
-        </tr>
+        {data.map((row) => {
+          return (
+            <tr key={row.id}>
+              <td>{row[column.accessorKey]}</td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
