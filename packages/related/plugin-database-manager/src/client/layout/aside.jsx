@@ -50,7 +50,7 @@ export const Aside = ({ children }) => {
             elementToResize = gesture.element;
             widthAtStart = getWidth(elementToResize);
           },
-          onMove: (gesture) => {
+          onChange: (gesture) => {
             const xMove = gesture.xMove;
             const newWidth = widthAtStart + xMove;
             const minWidth =

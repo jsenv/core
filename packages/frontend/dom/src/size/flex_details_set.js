@@ -864,7 +864,7 @@ export const initFlexDetailsSet = (
         onStart: (gesture) => {
           start(gesture.element);
         },
-        onMove: (gesture) => {
+        onChange: (gesture) => {
           const yMove = gesture.yMove;
           move(yMove, gesture);
         },

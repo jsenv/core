@@ -1,127 +1,61 @@
-export const startResizeGesture = (event, { onStart, onMove, onEnd }) => {
-  if (event.defaultPrevented) {
-    // an other resize gesture has call preventDefault()
-    // or something wants to prevent mousedown effects
-    return null;
-  }
-  if (event.button !== 0) {
-    return null;
-  }
-  const target = event.target;
-  if (!target.closest) {
-    return null;
-  }
-  const elementWithDataResizeHandle = target.closest("[data-resize-handle]");
-  if (!elementWithDataResizeHandle) {
-    return null;
-  }
-  let elementToResize;
-  const dataResizeHandle =
-    elementWithDataResizeHandle.getAttribute("data-resize-handle");
-  if (!dataResizeHandle || dataResizeHandle === "true") {
-    elementToResize = elementWithDataResizeHandle.closest("[data-resize]");
-  } else {
-    elementToResize = document.querySelector(`#${dataResizeHandle}`);
-  }
-  if (!elementToResize) {
-    console.warn("No element to resize found");
-    return null;
-  }
-  // inspired by https://developer.mozilla.org/en-US/docs/Web/CSS/resize
-  // "horizontal", "vertical", "both"
-  const resizeDirection = getResizeDirection(elementToResize);
-  if (!resizeDirection.x && !resizeDirection.y) {
-    return null;
-  }
-  event.preventDefault();
+import { startDragGesture } from "../interaction/start_drag_gesture.js";
 
-  const endCallbackSet = new Set();
-  const xAtStart = event.clientX;
-  const yAtStart = event.clientY;
-  const gestureInfo = {
-    element: elementToResize,
-    xAtStart,
-    yAtStart,
-    x: xAtStart,
-    y: yAtStart,
-    xMove: 0,
-    yMove: 0,
-    xChanged: false,
-    yChanged: false,
-    isMouseUp: false,
-  };
-  let previousGestureInfo = null;
+export const startResizeGesture = (
+  mousedownEvent,
+  { onStart, onChange, onEnd },
+) => {
+  return startDragGesture(mousedownEvent, {
+    gestureAttribute: "data-resizing",
+    setup: ({ addTeardown }) => {
+      const target = mousedownEvent.target;
+      if (!target.closest) {
+        return null;
+      }
+      const elementWithDataResizeHandle = target.closest(
+        "[data-resize-handle]",
+      );
+      if (!elementWithDataResizeHandle) {
+        return null;
+      }
+      let elementToResize;
+      const dataResizeHandle =
+        elementWithDataResizeHandle.getAttribute("data-resize-handle");
+      if (!dataResizeHandle || dataResizeHandle === "true") {
+        elementToResize = elementWithDataResizeHandle.closest("[data-resize]");
+      } else {
+        elementToResize = document.querySelector(`#${dataResizeHandle}`);
+      }
+      if (!elementToResize) {
+        console.warn("No element to resize found");
+        return null;
+      }
+      // inspired by https://developer.mozilla.org/en-US/docs/Web/CSS/resize
+      // "horizontal", "vertical", "both"
+      const resizeDirection = getResizeDirection(elementToResize);
+      if (!resizeDirection.x && !resizeDirection.y) {
+        return null;
+      }
 
-  elementWithDataResizeHandle.setAttribute("data-active", "");
-  endCallbackSet.add(() => {
-    elementWithDataResizeHandle.removeAttribute("data-active");
+      elementWithDataResizeHandle.setAttribute("data-active", "");
+      addTeardown(() => {
+        elementWithDataResizeHandle.removeAttribute("data-active");
+      });
+
+      return {
+        element: elementToResize,
+        direction: resizeDirection,
+        cursor:
+          resizeDirection.x && resizeDirection.y
+            ? "nwse-resize"
+            : resizeDirection.x
+              ? "ew-resize"
+              : "ns-resize",
+      };
+    },
+    onStart,
+    onChange,
+    onEnd,
   });
-  append_backdrop: {
-    const backdrop = document.createElement("div");
-    backdrop.style.position = "fixed";
-    backdrop.style.zIndex = "1";
-    backdrop.style.inset = "0";
-    backdrop.style.cursor =
-      resizeDirection.x && resizeDirection.y
-        ? "nwse-resize"
-        : resizeDirection.x
-          ? "ew-resize"
-          : "ns-resize";
-    backdrop.style.userSelect = "none";
-    document.body.appendChild(backdrop);
-    endCallbackSet.add(() => {
-      document.body.removeChild(backdrop);
-    });
-  }
-  mouse_events: {
-    const updateMousePosition = (e) => {
-      if (resizeDirection.x) {
-        gestureInfo.x = e.clientX;
-        gestureInfo.xMove = gestureInfo.x - xAtStart;
-        gestureInfo.xChanged = previousGestureInfo
-          ? gestureInfo.xMove !== previousGestureInfo.xMove
-          : true;
-      }
-      if (resizeDirection.y) {
-        gestureInfo.y = e.clientY;
-        gestureInfo.yMove = gestureInfo.y - yAtStart;
-        gestureInfo.yChanged = previousGestureInfo
-          ? gestureInfo.yMove !== previousGestureInfo.yMove
-          : true;
-      }
-      if (gestureInfo.xChanged || gestureInfo.yChanged) {
-        previousGestureInfo = { ...gestureInfo };
-        onMove?.(gestureInfo);
-      }
-    };
-
-    const handleMouseMove = (e) => {
-      updateMousePosition(e);
-    };
-    const handleMouseUp = (e) => {
-      e.preventDefault();
-      gestureInfo.isMouseUp = true;
-      updateMousePosition(e);
-      for (const endCallback of endCallbackSet) {
-        endCallback();
-      }
-      onEnd?.(gestureInfo);
-    };
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    endCallbackSet.add(() => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    });
-  }
-  data_resizing_attribute: {
-    elementToResize.setAttribute("data-resizing", "");
-    endCallbackSet.add(() => {
-      elementToResize.removeAttribute("data-resizing");
-    });
-  }
-  onStart?.(gestureInfo);
-  return null;
 };
 
 const getResizeDirection = (element) => {
