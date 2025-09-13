@@ -60,6 +60,7 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
+import { startDragGesture } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,
@@ -904,6 +905,13 @@ const HeaderCell = ({
       data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
       style={{ cursor: "pointer" }}
       tabIndex={-1}
+      onMouseDown={(e) => {
+        startDragGesture(e, {
+          onStart: () => {},
+          onChange: () => {},
+          onEnd: () => {},
+        });
+      }}
     >
       <span>{columnName}</span>
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">

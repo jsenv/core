@@ -1,6 +1,17 @@
 export const startDragGesture = (
   mousedownEvent,
-  { onStart, onChange, onEnd, setup, gestureAttribute, threshold = 5 },
+  {
+    onStart,
+    onChange,
+    onEnd,
+    setup = () => {
+      return {
+        element: mousedownEvent.target,
+      };
+    },
+    gestureAttribute,
+    threshold = 5,
+  },
 ) => {
   if (mousedownEvent.defaultPrevented) {
     // an other resize gesture has call preventDefault()

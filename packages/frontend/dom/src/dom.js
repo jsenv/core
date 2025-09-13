@@ -68,3 +68,6 @@ export {
   createTransition,
 } from "./transition/transition_playback.js";
 export { initUITransition } from "./ui_transition/ui_transition.js";
+
+// interaction
+export { startDragGesture } from "./interaction/start_drag_gesture.js";
