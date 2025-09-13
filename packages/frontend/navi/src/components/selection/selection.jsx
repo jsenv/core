@@ -85,10 +85,7 @@ export const useSelectionController = ({
       lastInternalValueRef.current,
     );
     if (isExternalChange) {
-      console.log("external value change detected, updating selection", value);
       selectionController.update(value);
-    } else {
-      console.log("internal value change, skipping update");
     }
   }, [value, selectionController]);
 
