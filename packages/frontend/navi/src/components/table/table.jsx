@@ -38,10 +38,20 @@
  * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
+ * - Drag to reorder columns
+ *
+ *  Le truc a faire du coup c'est cela:
+ *
+ *  Lorsqu'on commence a drag on veut alors rendre le contenu de la colonne vide avec ptet un bg grisé par example
+ *  Et on veut créer une copie visuelle (<div><table>...</table></div>) avec des dimensions fixes qui correspondent
+ *  a la colonne que l'on déplace en absolute
+ *
+ *  Lorsqu'on "vide" la collone il faut juste s'assurer de cacher le contenu mais pas de la modifier réellement car
+ *  on veut pas impacter le layout
+ *
+ * - Drag to reorder rows (won't be possible with database so not for now)
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
- * - Drag to reorder columns
- * - Drag to reorder rows (won't be possible with database so not for now)
  * - Resizing columns
  * - Resizing rows
  * - Delete a row (how?)

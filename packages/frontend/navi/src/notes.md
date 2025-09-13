@@ -1,5 +1,3 @@
-- Fix link selection with new approach in the explorer
-
 - Drag to move row and column
 
   (ideally we keep an empty "clone" in the table and we create a visually identic clone to drag)

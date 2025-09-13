@@ -1,6 +1,6 @@
 export const startDragGesture = (
   mousedownEvent,
-  { onStart, onChange, onEnd, setup, gestureAttribute },
+  { onStart, onChange, onEnd, setup, gestureAttribute, threshold = 5 },
 ) => {
   if (mousedownEvent.defaultPrevented) {
     // an other resize gesture has call preventDefault()
@@ -61,7 +61,19 @@ export const startDragGesture = (
     });
   }
   mouse_events: {
+    let thresholdExceededOnce = false;
+
     const updateMousePosition = (e) => {
+      if (threshold && !thresholdExceededOnce) {
+        const deltaX = Math.abs(e.clientX - xAtStart);
+        const deltaY = Math.abs(e.clientY - yAtStart);
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (distance < threshold) {
+          return;
+        }
+        thresholdExceededOnce = true;
+      }
+
       if (direction.x) {
         gestureInfo.x = e.clientX;
         gestureInfo.xMove = gestureInfo.x - xAtStart;
@@ -114,5 +126,7 @@ export const startDragGesture = (
     });
   }
 
-  onStart?.(gestureInfo);
+  if (!threshold) {
+    onStart?.(gestureInfo);
+  }
 };
