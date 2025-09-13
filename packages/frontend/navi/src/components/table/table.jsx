@@ -688,29 +688,14 @@ export const Table = forwardRef((props, ref) => {
   }
 
   const [grabTarget, setGrabTarget] = useState(null);
-  const [grabTargetRect, setGrabTargetRect] = useState(null);
   const [dragPosition, setDragPosition] = useState(null);
 
   const grabColumn = (columnIndex) => {
-    const table = innerRef.current;
-    const columnHeaderCell =
-      table.querySelector("thead tr").children[columnIndex + 1]; // +1 to skip row number column
-    const columnClientRect = columnHeaderCell.getBoundingClientRect();
-    const tableClientRect = table.getBoundingClientRect();
-    // Calculate position relative to table
-    const relativeRect = {
-      left: columnClientRect.left - tableClientRect.left,
-      top: columnClientRect.top - tableClientRect.top,
-      width: columnClientRect.width,
-      height: columnClientRect.height,
-    };
     setGrabTarget(`column:${columnIndex}`);
-    setGrabTargetRect(relativeRect);
   };
   const releaseColumn = () => {
-    // setGrabTarget(null);
-    // setGrabTargetRect(null);
-    // setDragPosition(null);
+    setGrabTarget(null);
+    setDragPosition(null);
   };
 
   return (
@@ -834,7 +819,6 @@ export const Table = forwardRef((props, ref) => {
         <DragClone
           tableRef={innerRef}
           grabTarget={grabTarget}
-          grabTargetRect={grabTargetRect}
           dragPosition={dragPosition}
         />
       )}
@@ -1059,6 +1043,18 @@ const DataCell = (props) => {
   return <TableCell {...props} />;
 };
 
+const getBoundingClientRectRelativeTo = (element, otherElement) => {
+  const elementClientRect = element.getBoundingClientRect();
+  const otherClientRect = otherElement.getBoundingClientRect();
+  const relativeRect = {
+    left: elementClientRect.left - otherClientRect.left,
+    top: elementClientRect.top - otherClientRect.top,
+    width: elementClientRect.width,
+    height: elementClientRect.height,
+  };
+  return relativeRect;
+};
+
 const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
   const columnIndex = parseInt(grabTarget.slice(7), 10);
   const [dragX, dragY] = dragPosition;
@@ -1066,14 +1062,30 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
   const y = dragY;
   const cloneParentElementRef = useRef();
 
+  useLayoutEffect(() => {
+    const cloneParentElement = cloneParentElementRef.current;
+    if (!cloneParentElement) {
+      return;
+    }
+    const table = tableRef.current;
+    const columnElement = table.querySelectorAll("th")[columnIndex + 1];
+    const rectRelativeTo = getBoundingClientRectRelativeTo(
+      columnElement,
+      table,
+    );
+    const minX = -rectRelativeTo.left;
+    const minY = -rectRelativeTo.top;
+    const left = x < minX ? minX : x;
+    const top = y < minY ? minY : y;
+
+    cloneParentElement.style.left = `${left}px`;
+    cloneParentElement.style.top = `${top}px`;
+  }, [x, y]);
+
   return (
     <div
       ref={cloneParentElementRef}
       className="navi_table_drag_clone_container"
-      style={{
-        left: `${x < 0 ? 0 : x}px`,
-        top: `${y < 0 ? 0 : y}px`,
-      }}
     >
       <ColumnDragClone
         tableRef={tableRef}
