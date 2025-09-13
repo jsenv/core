@@ -519,6 +519,15 @@ import.meta.css = /* css */ `
     cursor: grabbing;
     user-select: none;
   }
+
+  .navi_table_drag_clone_container th,
+  .navi_table_drag_clone_container td {
+    opacity: 0;
+  }
+  .navi_table_drag_clone_container th[data-grabbed],
+  .navi_table_drag_clone_container td[data-grabbed] {
+    opacity: 1;
+  }
 `;
 
 const NO_SELECTION = [];
@@ -1071,7 +1080,7 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
   );
 };
 
-const ColumnDragClone = ({ tableRef, columnIndex }) => {
+const ColumnDragClone = ({ tableRef }) => {
   useLayoutEffect(() => {
     const table = tableRef.current;
     if (!table) {
@@ -1079,12 +1088,6 @@ const ColumnDragClone = ({ tableRef, columnIndex }) => {
     }
 
     const tableClone = table.cloneNode(true);
-
-    const tableCellArray = Array.from(tableClone.querySelectorAll("th, td"));
-    for (const tableCell of tableCellArray) {
-      // TODO: if table cell is not in the column being dragged, force opacity: 0
-    }
-
     const tableDragCloneContainer = table.parentNode.querySelector(
       ".navi_table_drag_clone_container",
     );

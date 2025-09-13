@@ -153,7 +153,7 @@ export const startDragGesture = (
 
       // Auto-scroll the first scrollable parent, if any
       if (scrollableParent) {
-        autoScroll(scrollableParent, gestureInfo);
+        autoScroll(scrollableParent, gestureInfo, direction);
       }
     };
 
@@ -192,13 +192,17 @@ export const startDragGesture = (
   onGrab?.(gestureInfo);
 };
 
-const autoScroll = (scrollableElement, gestureInfo) => {
+const autoScroll = (scrollableElement, gestureInfo, direction) => {
   const rect = scrollableElement.getBoundingClientRect();
   const scrollZone = 30; // pixels from edge to trigger scrolling
   const scrollSpeed = 10; // pixels per scroll
   const { x, y } = gestureInfo;
 
   horizontal: {
+    if (!direction.x) {
+      break horizontal;
+    }
+
     // left
     if (x < rect.left + scrollZone) {
       scrollableElement.scrollLeft = Math.max(
@@ -218,6 +222,10 @@ const autoScroll = (scrollableElement, gestureInfo) => {
     }
   }
   vertical: {
+    if (!direction.y) {
+      break vertical;
+    }
+
     // up
     if (y < rect.top + scrollZone) {
       scrollableElement.scrollTop = Math.max(
