@@ -30,6 +30,7 @@ export const useSelectionController = ({
   onChange,
   multiple,
   selectAllName,
+  dragToSelect,
 }) => {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -54,6 +55,7 @@ export const useSelectionController = ({
         elementRef,
         multiple,
         selectAllName,
+        dragToSelect,
       });
     }
     return createLinearSelection({
@@ -63,6 +65,7 @@ export const useSelectionController = ({
       elementRef,
       multiple,
       selectAllName,
+      dragToSelect,
     });
   }, [layout, multiple, elementRef]);
 
@@ -1070,6 +1073,10 @@ export const useSelectableElement = (
           "mousedown: shift select, selecting from anchor to element",
         );
         selectionController.selectFromAnchorTo(element, e);
+      }
+
+      if (!selectionController.dragToSelect) {
+        return;
       }
 
       // Set up for potential drag selection (now works with all modifier combinations)
