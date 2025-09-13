@@ -153,36 +153,11 @@ const LinkPlain = forwardRef((props, ref) => {
 });
 
 const LinkWithSelection = forwardRef((props, ref) => {
-  const {
-    name,
-    value,
-    children,
-    onClick,
-    onKeyDown,
-    selectionController,
-    ...rest
-  } = props;
-
-  const { selected, clickToSelect, keydownToSelect } = useSelectableElement(
-    ref,
-    { selectionController },
-  );
+  const { name, value, children, selectionController, ...rest } = props;
+  const { selected } = useSelectableElement(ref, { selectionController });
 
   return (
-    <LinkPlain
-      ref={ref}
-      {...rest}
-      onClick={(e) => {
-        clickToSelect(e);
-        onClick?.(e);
-      }}
-      onKeyDown={(e) => {
-        keydownToSelect(e);
-        onKeyDown?.(e);
-      }}
-      data-value={value}
-      aria-selected={selected}
-    >
+    <LinkPlain ref={ref} {...rest} data-value={value} aria-selected={selected}>
       <input
         className="navi_link_checkbox"
         type="checkbox"

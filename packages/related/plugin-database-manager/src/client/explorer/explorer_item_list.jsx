@@ -28,57 +28,6 @@ export const ExplorerItemList = forwardRef((props, ref) => {
   const itemSelectionSignal = useSignal([]);
   const [deletedItems, setDeletedItems] = useState([]);
   const deleteManyAction = useDeleteManyItemAction?.(itemSelectionSignal);
-  const listChildren = (
-    <>
-      {itemArray.map((item) => {
-        return (
-          <li className="explorer_item" key={item[idKey]}>
-            <ExplorerItem
-              idKey={idKey}
-              nameKey={nameKey}
-              item={item}
-              deletedItems={deletedItems}
-              renderItem={renderItem}
-              useItemArrayInStore={useItemArrayInStore}
-              useRenameItemAction={useRenameItemAction}
-              useDeleteItemAction={
-                deleteManyAction ? () => null : useDeleteItemAction
-              }
-            />
-          </li>
-        );
-      })}
-      {isCreatingNew && (
-        <li className="explorer_item" key="new_item">
-          <ExplorerNewItem
-            nameKey={nameKey}
-            useItemArrayInStore={useItemArrayInStore}
-            useCreateItemAction={useCreateItemAction}
-            cancelOnBlurInvalid
-            onCancel={(e, reason) => {
-              stopCreatingNew({
-                shouldRestoreFocus: reason === "escape_key",
-              });
-            }}
-            onActionEnd={(e) => {
-              const input = e.target;
-              const eventCausingAction = e.detail.event;
-              const actionRequestedByKeyboard =
-                eventCausingAction &&
-                eventCausingAction.type === "keydown" &&
-                eventCausingAction.key === "Enter";
-              const shouldRestoreFocus =
-                actionRequestedByKeyboard &&
-                // If user focuses something else while action is running, respect it
-                document.activeElement === input;
-              stopCreatingNew({ shouldRestoreFocus });
-            }}
-          />
-        </li>
-      )}
-    </>
-  );
-
   const selection = itemSelectionSignal.value;
   const selectionLength = selection.length;
   const selectionController = useSelectionController({
@@ -118,7 +67,53 @@ export const ExplorerItemList = forwardRef((props, ref) => {
 
   return (
     <ul ref={innerRef} className="explorer_item_list">
-      {listChildren}
+      {itemArray.map((item) => {
+        return (
+          <li className="explorer_item" key={item[idKey]}>
+            <ExplorerItem
+              idKey={idKey}
+              nameKey={nameKey}
+              item={item}
+              deletedItems={deletedItems}
+              renderItem={renderItem}
+              selectionController={selectionController}
+              useItemArrayInStore={useItemArrayInStore}
+              useRenameItemAction={useRenameItemAction}
+              useDeleteItemAction={
+                deleteManyAction ? () => null : useDeleteItemAction
+              }
+            />
+          </li>
+        );
+      })}
+      {isCreatingNew && (
+        <li className="explorer_item" key="new_item">
+          <ExplorerNewItem
+            nameKey={nameKey}
+            useItemArrayInStore={useItemArrayInStore}
+            useCreateItemAction={useCreateItemAction}
+            cancelOnBlurInvalid
+            onCancel={(e, reason) => {
+              stopCreatingNew({
+                shouldRestoreFocus: reason === "escape_key",
+              });
+            }}
+            onActionEnd={(e) => {
+              const input = e.target;
+              const eventCausingAction = e.detail.event;
+              const actionRequestedByKeyboard =
+                eventCausingAction &&
+                eventCausingAction.type === "keydown" &&
+                eventCausingAction.key === "Enter";
+              const shouldRestoreFocus =
+                actionRequestedByKeyboard &&
+                // If user focuses something else while action is running, respect it
+                document.activeElement === input;
+              stopCreatingNew({ shouldRestoreFocus });
+            }}
+          />
+        </li>
+      )}
     </ul>
   );
 });

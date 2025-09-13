@@ -16,6 +16,7 @@ export const ExplorerItem = ({
   nameKey,
   item,
   renderItem,
+  selectionController,
   deletedItems,
   useItemArrayInStore,
   useRenameItemAction,
@@ -29,6 +30,7 @@ export const ExplorerItem = ({
     : null;
 
   const itemRendered = renderItem(item, {
+    selectionController,
     deletedItems,
     className: "explorer_item_content",
     shortcuts: [
