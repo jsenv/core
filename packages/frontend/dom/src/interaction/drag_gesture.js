@@ -1,4 +1,4 @@
-export const startGrabGesture = (
+export const startDragGesture = (
   mousedownEvent,
   {
     onGrab,
@@ -96,15 +96,15 @@ export const startGrabGesture = (
         if (!started) {
           return;
         }
-        onDrag?.(gestureInfo);
+        onDrag?.(gestureInfo, "end");
         return;
       }
 
       let someChange = gestureInfo.xChanged || gestureInfo.yChanged;
-      if (someChange) {
-        previousGestureInfo = { ...gestureInfo };
+      if (!someChange) {
+        return;
       }
-
+      previousGestureInfo = { ...gestureInfo };
       if (!started && threshold) {
         const deltaX = Math.abs(gestureInfo.xMove);
         const deltaY = Math.abs(gestureInfo.yMove);
@@ -124,10 +124,9 @@ export const startGrabGesture = (
         }
         started = true;
         onDragStart?.(gestureInfo);
-        return;
-      }
-      if (someChange) {
-        onDrag?.(gestureInfo);
+        onDrag?.(gestureInfo, "start");
+      } else {
+        onDrag?.(gestureInfo, "middle");
       }
     };
 

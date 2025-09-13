@@ -1,10 +1,10 @@
-import { startGrabGesture } from "../interaction/start_grab_gesture.js";
+import { startDragGesture } from "../interaction/drag_gesture.js";
 
-export const startResizeGesture = (
+export const startDragToResizeGesture = (
   mousedownEvent,
   { onStart, onChange, onEnd },
 ) => {
-  return startGrabGesture(mousedownEvent, {
+  return startDragGesture(mousedownEvent, {
     gestureAttribute: "data-resizing",
     setup: ({ addTeardown }) => {
       const target = mousedownEvent.target;

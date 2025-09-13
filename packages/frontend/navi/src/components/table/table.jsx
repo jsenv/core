@@ -673,8 +673,10 @@ export const Table = forwardRef((props, ref) => {
     }
   }
 
-  const [grabState, setGrabState] = useState(null);
-  const [grabPosition, setGrabPosition] = useState(null);
+  const [grabTarget, setGrabTarget] = useState(null);
+  const [grabTargetRect, setGrabTargetRect] = useState(null);
+  const [dragPosition, setDragPosition] = useState(null);
+
   const startGrabbingColumn = (columnIndex) => {
     const table = innerRef.current;
     const columnHeaderCell =
@@ -688,13 +690,12 @@ export const Table = forwardRef((props, ref) => {
       width: columnClientRect.width,
       height: columnClientRect.height,
     };
-    setGrabState({
-      content: `column:${columnIndex}`,
-      columnClientRect: relativeRect,
-    });
+    setGrabTarget(`column:${columnIndex}`);
+    setGrabTargetRect(relativeRect);
   };
   const stopGrabbingColumn = () => {
-    // setGrabtate(null);
+    // setGrabTarget(null);
+    // setGrabTargetRect(null)
   };
 
   return (
@@ -720,7 +721,7 @@ export const Table = forwardRef((props, ref) => {
               }}
             />
             {columns.map((col, index) => {
-              const columnIsGrabbed = grabState?.content === `column:${index}`;
+              const columnIsGrabbed = grabTarget === `column:${index}`;
 
               return (
                 <HeaderCell
@@ -740,15 +741,15 @@ export const Table = forwardRef((props, ref) => {
                   columnWithSomeSelectedCell={columnWithSomeSelectedCell}
                   data={data}
                   selectionController={selectionController}
-                  grabbing={columnIsGrabbed}
-                  onGrabStart={({ xMove, yMove }) => {
+                  grabbed={columnIsGrabbed}
+                  onGrab={() => {
                     startGrabbingColumn(index);
-                    setGrabPosition([xMove, yMove]);
+                    setDragPosition([0, 0]);
                   }}
                   onDrag={({ xMove, yMove }) => {
-                    setGrabPosition([xMove, yMove]);
+                    setDragPosition([xMove, yMove]);
                   }}
-                  onGrabEnd={() => {
+                  onRelease={() => {
                     stopGrabbingColumn(index);
                   }}
                 >
@@ -785,8 +786,7 @@ export const Table = forwardRef((props, ref) => {
                   selectionController={selectionController}
                 />
                 {columns.map((col, colIndex) => {
-                  const columnIsDragging =
-                    grabState?.content === `column:${colIndex}`;
+                  const columnGrabbed = grabTarget === `column:${colIndex}`;
 
                   return (
                     <DataCell
@@ -806,7 +806,7 @@ export const Table = forwardRef((props, ref) => {
                       row={row}
                       value={row[col.accessorKey]}
                       selectionController={selectionController}
-                      dragging={columnIsDragging}
+                      grabbed={columnGrabbed}
                     />
                   );
                 })}
@@ -815,10 +815,11 @@ export const Table = forwardRef((props, ref) => {
           })}
         </tbody>
       </table>
-      {grabState && (
-        <GrabCopy
-          grabState={grabState}
-          grabPosition={grabPosition}
+      {grabTarget && (
+        <DraggedCopy
+          grabTarget={grabTarget}
+          grabTargetRect={grabTargetRect}
+          dragPosition={dragPosition}
           columns={columns}
           data={data}
         />
@@ -936,10 +937,10 @@ const HeaderCell = ({
   columnWithSomeSelectedCell,
   data,
   selectionController,
-  onGrabStart,
+  grabbed,
+  onGrab,
   onDrag,
-  onGrabEnd,
-  grabbing,
+  onRelease,
   children,
 }) => {
   const cellRef = useRef();
@@ -970,20 +971,14 @@ const HeaderCell = ({
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
       data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
-      style={{ cursor: grabbing ? "grabbing" : "grab" }}
+      style={{ cursor: grabbed ? "grabbing" : "grab" }}
       tabIndex={-1}
       onMouseDown={(e) => {
         startGrabGesture(e, {
           direction: { x: true },
-          onGrab: (gestureInfo) => {
-            onGrabStart(gestureInfo);
-          },
-          onDrag: (gestureInfo) => {
-            onDrag(gestureInfo);
-          },
-          onRelease: (gestureInfo) => {
-            onGrabEnd(gestureInfo);
-          },
+          onGrab,
+          onDrag,
+          onRelease,
         });
       }}
     >
@@ -991,7 +986,7 @@ const HeaderCell = ({
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {children}
       </span>
-      {grabbing && <div className="navi_table_grabbing_placeholder"></div>}
+      {grabbed && <div className="navi_table_grabbing_placeholder"></div>}
     </th>
   );
 };
@@ -1047,17 +1042,25 @@ const DataCell = (props) => {
   return <TableCell {...props} />;
 };
 
-const GrabCopy = ({ grabPosition, grabState, columns, data }) => {
-  const columnIndex = parseInt(grabState.content.slice(7), 10);
-  const clientRect = grabState.columnClientRect;
-  const [grabX, grabY] = grabPosition;
+const DraggedCopy = ({
+  grabTarget,
+  grabTargetRect,
+  dragPosition,
+  columns,
+  data,
+}) => {
+  const columnIndex = parseInt(grabTarget.slice(7), 10);
+  const clientRect = grabTargetRect;
+  const [dragX, dragY] = dragPosition;
 
   return (
     <div
       style={{
         position: "absolute",
-        left: `${clientRect.left + grabX}px`,
-        top: `${clientRect.top + grabY}px`,
+        left: `${clientRect.left + dragX}px`,
+        top: `${clientRect.top + dragY}px`,
+        cursor: "grabbing",
+        useSelect: "none",
       }}
     >
       <ColumnCopy
@@ -1066,6 +1069,8 @@ const GrabCopy = ({ grabPosition, grabState, columns, data }) => {
         column={columns[columnIndex]}
         data={data}
       />
+      {/* to catch any mouse over effect and stuff like that */}
+      <div style={{ position: "absolute", inset: 0 }}></div>
     </div>
   );
 };

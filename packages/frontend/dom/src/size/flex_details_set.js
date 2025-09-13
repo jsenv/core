@@ -6,12 +6,12 @@
 import { forceStyles } from "../style_and_attributes.js";
 import { createHeightTransition } from "../transition/dom_transition.js";
 import { createGroupTransitionController } from "../transition/group_transition.js";
+import { startDragToResizeGesture } from "./drag_to_resize_gesture.js";
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";
 import { getMinHeight } from "./get_min_height.js";
 import { resolveCSSSize } from "./resolve_css_size.js";
-import { startResizeGesture } from "./start_resize_gesture.js";
 
 const HEIGHT_TRANSITION_DURATION = 300;
 const ANIMATE_TOGGLE = true;
@@ -860,15 +860,15 @@ export const initFlexDetailsSet = (
     const onmousedown = (event) => {
       const { start, move, end } = prepareResize();
 
-      startResizeGesture(event, {
-        onStart: (gesture) => {
+      startDragToResizeGesture(event, {
+        onDragStart: (gesture) => {
           start(gesture.element);
         },
-        onChange: (gesture) => {
+        onDrag: (gesture) => {
           const yMove = gesture.yMove;
           move(yMove, gesture);
         },
-        onEnd: () => {
+        onRelease: () => {
           end();
         },
       });
