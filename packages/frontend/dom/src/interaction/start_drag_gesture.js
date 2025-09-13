@@ -11,6 +11,7 @@ export const startDragGesture = (
     },
     gestureAttribute,
     threshold = 5,
+    direction: defaultDirection = { x: true, y: true },
   },
 ) => {
   if (mousedownEvent.defaultPrevented) {
@@ -36,8 +37,8 @@ export const startDragGesture = (
   }
   const {
     element,
-    direction = { x: true, y: true },
-    cursor = "default",
+    direction = defaultDirection,
+    cursor = "grabbing",
   } = setupResult;
   if (!direction.x && !direction.y) {
     return;

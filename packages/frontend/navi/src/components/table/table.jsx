@@ -674,14 +674,23 @@ export const Table = forwardRef((props, ref) => {
   }
 
   const [dragState, setDragState] = useState(null);
+  const [dragPosition, setDragPosition] = useState(null);
   const startDraggingColumn = (columnIndex) => {
     const table = innerRef.current;
     const columnHeaderCell =
       table.querySelector("thead tr").children[columnIndex + 1]; // +1 to skip row number column
     const columnClientRect = columnHeaderCell.getBoundingClientRect();
+    const tableClientRect = table.getBoundingClientRect();
+    // Calculate position relative to table
+    const relativeRect = {
+      left: columnClientRect.left - tableClientRect.left,
+      top: columnClientRect.top - tableClientRect.top,
+      width: columnClientRect.width,
+      height: columnClientRect.height,
+    };
     setDragState({
       content: `column:${columnIndex}`,
-      columnClientRect,
+      columnClientRect: relativeRect,
     });
   };
   const stopDraggingColumn = () => {
@@ -732,8 +741,12 @@ export const Table = forwardRef((props, ref) => {
                   data={data}
                   selectionController={selectionController}
                   dragging={columnIsDragging}
-                  onDragStart={() => {
+                  onDragStart={({ xMove, yMove }) => {
                     startDraggingColumn(index);
+                    setDragPosition([xMove, yMove]);
+                  }}
+                  onDrag={({ xMove, yMove }) => {
+                    setDragPosition([xMove, yMove]);
                   }}
                   onDragEnd={() => {
                     stopDraggingColumn(index);
@@ -803,7 +816,12 @@ export const Table = forwardRef((props, ref) => {
         </tbody>
       </table>
       {dragState && (
-        <DragCopy dragState={dragState} columns={columns} data={data} />
+        <DragCopy
+          dragState={dragState}
+          dragPosition={dragPosition}
+          columns={columns}
+          data={data}
+        />
       )}
     </div>
   );
@@ -919,6 +937,7 @@ const HeaderCell = ({
   data,
   selectionController,
   onDragStart,
+  onDrag,
   onDragEnd,
   dragging,
   children,
@@ -951,16 +970,19 @@ const HeaderCell = ({
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
       data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
-      style={{ cursor: "pointer" }}
+      style={{ cursor: "grab" }}
       tabIndex={-1}
       onMouseDown={(e) => {
         startDragGesture(e, {
-          onStart: () => {
-            onDragStart();
+          direction: { x: true },
+          onStart: (gestureInfo) => {
+            onDragStart(gestureInfo);
           },
-          onChange: () => {},
-          onEnd: () => {
-            onDragEnd();
+          onChange: (gestureInfo) => {
+            onDrag(gestureInfo);
+          },
+          onEnd: (gestureInfo) => {
+            onDragEnd(gestureInfo);
           },
         });
       }}
@@ -1025,16 +1047,17 @@ const DataCell = (props) => {
   return <TableCell {...props} />;
 };
 
-const DragCopy = ({ dragState, columns, data }) => {
+const DragCopy = ({ dragPosition, dragState, columns, data }) => {
   const columnIndex = parseInt(dragState.content.slice(7), 10);
   const clientRect = dragState.columnClientRect;
+  const [dragX, dragY] = dragPosition;
 
   return (
     <div
       style={{
         position: "absolute",
-        left: `${clientRect.left}px`,
-        top: `${clientRect.top}px`,
+        left: `${clientRect.left + dragX}px`,
+        top: `${clientRect.top + dragY}px`,
       }}
     >
       <ColumnCopy
@@ -1051,7 +1074,7 @@ const ColumnCopy = ({ width, column, data }) => {
   // we must now: check position to properly position the div
   // and force table dimensions to the the one of the colum we drag
   return (
-    <table style={{ width: `${width}px` }}>
+    <table className="navi_table" style={{ width: `${width}px` }}>
       <thead>
         <tr>
           <th>{column.header}</th>
