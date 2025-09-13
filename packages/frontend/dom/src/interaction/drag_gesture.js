@@ -13,6 +13,7 @@ export const startDragGesture = (
     gestureAttribute,
     threshold = 5,
     direction: defaultDirection = { x: true, y: true },
+    backdrop = true,
   },
 ) => {
   if (mousedownEvent.defaultPrevented) {
@@ -61,18 +62,19 @@ export const startDragGesture = (
   };
   let previousGestureInfo = null;
 
-  append_backdrop: {
-    const backdrop = document.createElement("div");
-    backdrop.style.position = "fixed";
-    backdrop.style.zIndex = "1";
-    backdrop.style.inset = "0";
-    backdrop.style.cursor = cursor;
-    backdrop.style.userSelect = "none";
-    document.body.appendChild(backdrop);
+  if (backdrop) {
+    const backdropElement = document.createElement("div");
+    backdropElement.style.position = "fixed";
+    backdropElement.style.zIndex = "1";
+    backdropElement.style.inset = "0";
+    backdropElement.style.cursor = cursor;
+    backdropElement.style.userSelect = "none";
+    document.body.appendChild(backdropElement);
     endCallbackSet.add(() => {
-      document.body.removeChild(backdrop);
+      document.body.removeChild(backdropElement);
     });
   }
+
   let started = !threshold;
   mouse_events: {
     const updateMousePosition = (e) => {

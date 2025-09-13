@@ -60,7 +60,7 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
-import { startGrabGesture } from "@jsenv/dom";
+import { startDragGesture } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,
@@ -509,7 +509,7 @@ import.meta.css = /* css */ `
     top: 0;
   }
 
-  .navi_table_dragging_placeholder {
+  .navi_table_drag_placeholder {
     position: absolute;
     inset: 0;
     background: grey;
@@ -974,7 +974,7 @@ const HeaderCell = ({
       style={{ cursor: grabbed ? "grabbing" : "grab" }}
       tabIndex={-1}
       onMouseDown={(e) => {
-        startGrabGesture(e, {
+        startDragGesture(e, {
           direction: { x: true },
           onGrab,
           onDrag,
@@ -986,7 +986,7 @@ const HeaderCell = ({
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {children}
       </span>
-      {grabbed && <div className="navi_table_grabbing_placeholder"></div>}
+      {grabbed && <div className="navi_table_drag_placeholder"></div>}
     </th>
   );
 };
