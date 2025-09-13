@@ -104,8 +104,10 @@ export const startDragGesture = (
           if (deltaX < threshold) {
             return;
           }
-        } else if (deltaY < threshold) {
-          return;
+        } else if (direction.y) {
+          if (deltaY < threshold) {
+            return;
+          }
         }
         started = true;
         onStart?.(gestureInfo);
