@@ -55,12 +55,16 @@ export const TableCell = forwardRef((props, ref) => {
     columnName,
     row,
     value,
+    selectionController,
     ...rest
   } = props;
 
   const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
-  const { selected } = useSelectableElement(cellRef, { value: cellId });
+  const { selected } = useSelectableElement(cellRef, {
+    selectionController,
+    value: cellId,
+  });
   const { editing, startEditing, stopEditing } = useEditionController();
   const TagName = isHead ? "th" : "td";
 

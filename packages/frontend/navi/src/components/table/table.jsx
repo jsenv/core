@@ -61,7 +61,7 @@ import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.j
 import {
   createSelectionKeyboardShortcuts,
   useSelectableElement,
-  useSelectionProvider,
+  useSelectionController,
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
 import { useStickyGroup } from "./sticky_group.js";
@@ -571,7 +571,7 @@ export const Table = forwardRef((props, ref) => {
     };
   }, [selection]);
 
-  const [SelectionProvider, selectionController] = useSelectionProvider({
+  const selectionController = useSelectionController({
     elementRef: innerRef,
     layout: "grid",
     value: selection,
@@ -657,99 +657,98 @@ export const Table = forwardRef((props, ref) => {
 
   return (
     <div className="navi_table_container">
-      <SelectionProvider>
-        <table
-          ref={innerRef}
-          className="navi_table"
-          aria-multiselectable="true"
-          data-multiselection={selection.length > 1 ? "" : undefined}
-          data-border-collapse={borderCollapse ? "" : undefined}
-        >
-          <thead>
-            <tr>
-              <RowNumberHeaderCell
-                stickyX={rowColumnSticky}
+      <table
+        ref={innerRef}
+        className="navi_table"
+        aria-multiselectable="true"
+        data-multiselection={selection.length > 1 ? "" : undefined}
+        data-border-collapse={borderCollapse ? "" : undefined}
+      >
+        <thead>
+          <tr>
+            <RowNumberHeaderCell
+              stickyX={rowColumnSticky}
+              stickyY={stickyHeader}
+              isStickyXFrontier={
+                rowColumnSticky && stickyColumnFrontierIndex === 0
+              } // Only frontier if no other columns are sticky
+              isStickyYFrontier={stickyHeader && stickyRowFrontierIndex === 0} // Only frontier if no other rows are sticky
+              onClick={() => {
+                ref.current.selectAll();
+              }}
+            />
+            {columns.map((col, index) => (
+              <HeaderCell
+                stickyX={col.sticky}
                 stickyY={stickyHeader}
-                isStickyXFrontier={
-                  rowColumnSticky && stickyColumnFrontierIndex === 0
-                } // Only frontier if no other columns are sticky
-                isStickyYFrontier={stickyHeader && stickyRowFrontierIndex === 0} // Only frontier if no other rows are sticky
-                onClick={() => {
-                  ref.current.selectAll();
-                }}
+                isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
+                isAfterStickyXFrontier={
+                  index + 1 === stickyColumnFrontierIndex + 1
+                }
+                isStickyYFrontier={stickyHeader && stickyRowFrontierIndex === 0} // Header row is always the frontier (no rows above it)
+                isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
+                key={col.id}
+                columnName={col.header}
+                columnAccessorKey={col.accessorKey}
+                columnIndex={index + 1}
+                columnWithSomeSelectedCell={columnWithSomeSelectedCell}
+                data={data}
+                selectionController={selectionController}
               />
-              {columns.map((col, index) => (
-                <HeaderCell
-                  stickyX={col.sticky}
-                  stickyY={stickyHeader}
-                  isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
-                  isAfterStickyXFrontier={
-                    index + 1 === stickyColumnFrontierIndex + 1
-                  }
-                  isStickyYFrontier={
-                    stickyHeader && stickyRowFrontierIndex === 0
-                  } // Header row is always the frontier (no rows above it)
-                  isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
-                  key={col.id}
-                  columnName={col.header}
-                  columnAccessorKey={col.accessorKey}
-                  columnIndex={index + 1}
-                  columnWithSomeSelectedCell={columnWithSomeSelectedCell}
-                  data={data}
-                />
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, rowIndex) => {
-              const rowOptions = rows[rowIndex] || {};
-              const isRowSelected = selectedRowIds.includes(row.id);
-              const isStickyYFrontier = stickyRowFrontierIndex === rowIndex + 1;
-              const isAfterStickyYFrontier =
-                rowIndex + 1 === stickyRowFrontierIndex + 1;
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, rowIndex) => {
+            const rowOptions = rows[rowIndex] || {};
+            const isRowSelected = selectedRowIds.includes(row.id);
+            const isStickyYFrontier = stickyRowFrontierIndex === rowIndex + 1;
+            const isAfterStickyYFrontier =
+              rowIndex + 1 === stickyRowFrontierIndex + 1;
 
-              return (
-                <tr
-                  key={row.id}
-                  data-row-id={row.id}
-                  aria-selected={isRowSelected}
-                >
-                  <RowNumberCell
-                    stickyX={rowColumnSticky}
+            return (
+              <tr
+                key={row.id}
+                data-row-id={row.id}
+                aria-selected={isRowSelected}
+              >
+                <RowNumberCell
+                  stickyX={rowColumnSticky}
+                  stickyY={rowOptions.sticky}
+                  isStickyXFrontier={stickyColumnFrontierIndex === 0} // Only if no data columns are sticky
+                  isAfterStickyXFrontier={false} // Row number column can't be after sticky X frontier (it's the first column)
+                  isStickyYFrontier={isStickyYFrontier}
+                  isAfterStickyYFrontier={isAfterStickyYFrontier}
+                  row={row}
+                  rowWithSomeSelectedCell={rowWithSomeSelectedCell}
+                  columns={columns}
+                  selectionController={selectionController}
+                />
+                {columns.map((col, colIndex) => (
+                  <DataCell
+                    key={`${row.id}-${col.id}`}
+                    stickyX={col.sticky}
                     stickyY={rowOptions.sticky}
-                    isStickyXFrontier={stickyColumnFrontierIndex === 0} // Only if no data columns are sticky
-                    isAfterStickyXFrontier={false} // Row number column can't be after sticky X frontier (it's the first column)
+                    isStickyXFrontier={
+                      stickyColumnFrontierIndex === colIndex + 1
+                    }
+                    isAfterStickyXFrontier={
+                      colIndex + 1 === stickyColumnFrontierIndex + 1
+                    }
                     isStickyYFrontier={isStickyYFrontier}
                     isAfterStickyYFrontier={isAfterStickyYFrontier}
+                    columnName={col.accessorKey}
+                    columnIndex={colIndex + 1} // +1 because number column is first
                     row={row}
-                    rowWithSomeSelectedCell={rowWithSomeSelectedCell}
-                    columns={columns}
+                    value={row[col.accessorKey]}
+                    selectionController={selectionController}
                   />
-                  {columns.map((col, colIndex) => (
-                    <DataCell
-                      key={`${row.id}-${col.id}`}
-                      stickyX={col.sticky}
-                      stickyY={rowOptions.sticky}
-                      isStickyXFrontier={
-                        stickyColumnFrontierIndex === colIndex + 1
-                      }
-                      isAfterStickyXFrontier={
-                        colIndex + 1 === stickyColumnFrontierIndex + 1
-                      }
-                      isStickyYFrontier={isStickyYFrontier}
-                      isAfterStickyYFrontier={isAfterStickyYFrontier}
-                      columnName={col.accessorKey}
-                      columnIndex={colIndex + 1} // +1 because number column is first
-                      row={row}
-                      value={row[col.accessorKey]}
-                    />
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </SelectionProvider>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 });
@@ -863,10 +862,12 @@ const HeaderCell = ({
   columnAccessorKey,
   columnWithSomeSelectedCell,
   data,
+  selectionController,
 }) => {
   const cellRef = useRef();
   const columnValue = `column:${columnAccessorKey}`;
   const { selected } = useSelectableElement(cellRef, {
+    selectionController,
     selectionImpact: () => {
       const columnCells = data.map((row) => `${columnAccessorKey}:${row.id}`);
       return columnCells;
@@ -911,11 +912,13 @@ const RowNumberCell = ({
   row,
   columns,
   rowWithSomeSelectedCell,
+  selectionController,
 }) => {
   const cellRef = useRef();
 
   const rowValue = `row:${row.id}`;
   const { selected } = useSelectableElement(cellRef, {
+    selectionController,
     selectionImpact: () => {
       // Return all data cells in this row that should be impacted
       return columns.map((col) => `${col.accessorKey}:${row.id}`);

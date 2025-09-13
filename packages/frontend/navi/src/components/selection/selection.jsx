@@ -1,7 +1,5 @@
 import { findAfter, findBefore } from "@jsenv/dom";
-import { createContext } from "preact";
 import {
-  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -25,24 +23,7 @@ const debug = (category, ...args) => {
   }
 };
 
-const SelectionControllerContext = createContext(null);
-const SelectionContext = createContext([]);
-const SelectionControllerProvider = ({ selectionController, children }) => {
-  return (
-    <SelectionControllerContext.Provider value={selectionController}>
-      {children}
-    </SelectionControllerContext.Provider>
-  );
-};
-const SelectionProvider = ({ selection, children }) => {
-  return (
-    <SelectionContext.Provider value={selection}>
-      {children}
-    </SelectionContext.Provider>
-  );
-};
-
-export const useSelectionProvider = ({
+export const useSelectionController = ({
   elementRef,
   layout,
   value,
@@ -104,20 +85,7 @@ export const useSelectionProvider = ({
     }
   }, [value, selectionController]);
 
-  const LocalSelectionProvider = useMemo(() => {
-    const Stuff = ({ children }) => {
-      return (
-        <SelectionControllerProvider selectionController={selectionController}>
-          <SelectionProvider selection={currentValueRef.current}>
-            {children}
-          </SelectionProvider>
-        </SelectionControllerProvider>
-      );
-    };
-    return Stuff;
-  }, [selectionController]);
-
-  return [LocalSelectionProvider, selectionController];
+  return selectionController;
 };
 // Base Selection - shared functionality between grid and linear
 const createBaseSelection = ({
@@ -963,20 +931,13 @@ const getElementPosition = (element) => {
   };
 };
 
-export const useSelectionController = () => {
-  return useContext(SelectionControllerContext);
-};
-
-export const useSelection = () => {
-  return useContext(SelectionContext);
-};
-export const useSelectableElement = (elementRef, { selectionImpact } = {}) => {
-  const selectionController = useSelectionController();
-  const selection = useSelection();
+export const useSelectableElement = (
+  elementRef,
+  { selectionController, selectionImpact },
+) => {
+  const selection = selectionController.value;
   if (!selectionController) {
-    throw new Error(
-      "useSelectableElement must be used within a SelectionControllerProvider",
-    );
+    throw new Error("useSelectableElement needs a selectionController");
   }
 
   useLayoutEffect(() => {

@@ -5,7 +5,7 @@ import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useSelectableElement, useSelection } from "../selection/selection.jsx";
+import { useSelectableElement } from "../selection/selection.jsx";
 import { useRequestedActionStatus } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 
@@ -72,10 +72,16 @@ export const Link = forwardRef((props, ref) => {
 });
 
 const LinkBasic = forwardRef((props, ref) => {
-  const selection = useSelection();
+  const { selectionController } = props;
 
-  if (selection) {
-    return <LinkWithSelection ref={ref} selection={selection} {...props} />;
+  if (selectionController) {
+    return (
+      <LinkWithSelection
+        ref={ref}
+        selectionController={selectionController}
+        {...props}
+      />
+    );
   }
   return <LinkPlain ref={ref} {...props} />;
 });
@@ -147,10 +153,20 @@ const LinkPlain = forwardRef((props, ref) => {
 });
 
 const LinkWithSelection = forwardRef((props, ref) => {
-  const { name, value, children, onClick, onKeyDown, ...rest } = props;
+  const {
+    name,
+    value,
+    children,
+    onClick,
+    onKeyDown,
+    selectionController,
+    ...rest
+  } = props;
 
-  const { selected, clickToSelect, keydownToSelect } =
-    useSelectableElement(ref);
+  const { selected, clickToSelect, keydownToSelect } = useSelectableElement(
+    ref,
+    { selectionController },
+  );
 
   return (
     <LinkPlain
