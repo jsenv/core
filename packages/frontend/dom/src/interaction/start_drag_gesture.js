@@ -60,9 +60,8 @@ export const startDragGesture = (
       document.body.removeChild(backdrop);
     });
   }
+  let started = false;
   mouse_events: {
-    let started = false;
-
     const updateMousePosition = (e) => {
       if (direction.x) {
         gestureInfo.x = e.clientX;
