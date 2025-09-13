@@ -61,19 +61,9 @@ export const startDragGesture = (
     });
   }
   mouse_events: {
-    let thresholdExceededOnce = false;
+    let started = false;
 
     const updateMousePosition = (e) => {
-      if (threshold && !thresholdExceededOnce) {
-        const deltaX = Math.abs(e.clientX - xAtStart);
-        const deltaY = Math.abs(e.clientY - yAtStart);
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        if (distance < threshold) {
-          return;
-        }
-        thresholdExceededOnce = true;
-      }
-
       if (direction.x) {
         gestureInfo.x = e.clientX;
         gestureInfo.xMove = gestureInfo.x - xAtStart;
@@ -88,8 +78,41 @@ export const startDragGesture = (
           ? gestureInfo.yMove !== previousGestureInfo.yMove
           : true;
       }
-      if (gestureInfo.xChanged || gestureInfo.yChanged) {
+
+      const isMouseUp = e.type === "mouseup";
+      if (isMouseUp) {
+        if (!started) {
+          return;
+        }
+        onChange?.(gestureInfo);
+        return;
+      }
+
+      let someChange = gestureInfo.xChanged || gestureInfo.yChanged;
+      if (someChange) {
         previousGestureInfo = { ...gestureInfo };
+      }
+
+      if (!started && threshold) {
+        const deltaX = Math.abs(gestureInfo.xMove);
+        const deltaY = Math.abs(gestureInfo.yMove);
+        if (direction.x && direction.y) {
+          // Both directions: check both axes
+          if (deltaX < threshold && deltaY < threshold) {
+            return;
+          }
+        } else if (direction.x) {
+          if (deltaX < threshold) {
+            return;
+          }
+        } else if (deltaY < threshold) {
+          return;
+        }
+        started = true;
+        onStart?.(gestureInfo);
+        return;
+      }
+      if (someChange) {
         onChange?.(gestureInfo);
       }
     };
@@ -127,6 +150,7 @@ export const startDragGesture = (
   }
 
   if (!threshold) {
+    started = true;
     onStart?.(gestureInfo);
   }
 };
