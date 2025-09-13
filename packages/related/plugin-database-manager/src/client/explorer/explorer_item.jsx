@@ -3,7 +3,7 @@ import {
   FontSizedSvg,
   Input,
   Overflow,
-  useEditableController,
+  useEditionController,
   useSignalSync,
 } from "@jsenv/navi";
 import {
@@ -23,7 +23,7 @@ export const ExplorerItem = ({
 }) => {
   const itemName = item[nameKey];
 
-  const { editable, startEditing, stopEditing } = useEditableController();
+  const { editing, startEditing, stopEditing } = useEditionController();
   const deleteItemAction = useDeleteItemAction
     ? useDeleteItemAction(item)
     : null;
@@ -34,7 +34,7 @@ export const ExplorerItem = ({
     shortcuts: [
       {
         key: "enter",
-        enabled: !editable,
+        enabled: !editing,
         action: startEditing,
         description: "Edit item name",
       },
@@ -55,7 +55,7 @@ export const ExplorerItem = ({
         item={item}
         useItemArrayInStore={useItemArrayInStore}
         useRenameItemAction={useRenameItemAction}
-        editable={editable}
+        editable={editing}
         stopEditing={stopEditing}
       />
     ) : (
@@ -70,7 +70,7 @@ const RenameInputOrName = ({
   item,
   useItemArrayInStore,
   useRenameItemAction,
-  editable,
+  editing,
   stopEditing,
 }) => {
   const itemName = item[nameKey];
@@ -93,7 +93,7 @@ const RenameInputOrName = ({
 
   return (
     <Editable
-      editable={editable}
+      editing={editing}
       onEditEnd={stopEditing}
       value={itemName}
       valueSignal={nameSignal}
