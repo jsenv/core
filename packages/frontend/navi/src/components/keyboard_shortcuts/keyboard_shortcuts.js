@@ -271,7 +271,22 @@ const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
     if (key.includes("-") && key.length === 3) {
       const [startChar, dash, endChar] = key;
       if (dash === "-") {
-        const eventKeyCode = event.key.toLowerCase().charCodeAt(0);
+        // Only check ranges for single alphanumeric characters
+        const eventKey = event.key.toLowerCase();
+        if (eventKey.length !== 1) {
+          return false; // Not a single character key
+        }
+
+        // Only allow a-z and 0-9 ranges
+        const isValidRange =
+          (startChar >= "a" && endChar <= "z") ||
+          (startChar >= "0" && endChar <= "9");
+
+        if (!isValidRange) {
+          return false; // Invalid range pattern
+        }
+
+        const eventKeyCode = eventKey.charCodeAt(0);
         const startCode = startChar.charCodeAt(0);
         const endCode = endChar.charCodeAt(0);
 
