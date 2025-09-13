@@ -32,6 +32,10 @@ export const useSelectionController = ({
   selectAllName,
   dragToSelect,
 }) => {
+  if (!elementRef) {
+    throw new Error("useSelectionController: elementRef is required");
+  }
+
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
