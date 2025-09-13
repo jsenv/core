@@ -91,6 +91,7 @@ export const TableCell = forwardRef((props, ref) => {
       data-selection-keyboard-toggle
       aria-selected={selected}
       data-editing={editing ? "" : undefined}
+      data-grabbed={grabbed ? "" : undefined}
       onDoubleClick={(e) => {
         startEditing(e);
       }}
@@ -101,7 +102,6 @@ export const TableCell = forwardRef((props, ref) => {
       <Editable editing={editing} onEditEnd={stopEditing} value={value}>
         {value}
       </Editable>
-      {grabbed && <div className="navi_table_drag_placeholder"></div>}
     </TagName>
   );
 });

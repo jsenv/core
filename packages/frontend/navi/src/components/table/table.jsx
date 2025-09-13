@@ -509,10 +509,9 @@ import.meta.css = /* css */ `
     top: 0;
   }
 
-  .navi_table_drag_placeholder {
-    position: absolute;
-    inset: 0;
-    background: grey;
+  .navi_table th[data-grabbed],
+  .navi_table td[data-grabbed] {
+    opacity: 0;
   }
 
   .navi_table_drag_clone_container {
@@ -683,7 +682,7 @@ export const Table = forwardRef((props, ref) => {
   const [grabTargetRect, setGrabTargetRect] = useState(null);
   const [dragPosition, setDragPosition] = useState(null);
 
-  const startGrabbingColumn = (columnIndex) => {
+  const grabColumn = (columnIndex) => {
     const table = innerRef.current;
     const columnHeaderCell =
       table.querySelector("thead tr").children[columnIndex + 1]; // +1 to skip row number column
@@ -699,10 +698,10 @@ export const Table = forwardRef((props, ref) => {
     setGrabTarget(`column:${columnIndex}`);
     setGrabTargetRect(relativeRect);
   };
-  const stopGrabbingColumn = () => {
-    setGrabTarget(null);
-    setGrabTargetRect(null);
-    setDragPosition(null);
+  const releaseColumn = () => {
+    // setGrabTarget(null);
+    // setGrabTargetRect(null);
+    // setDragPosition(null);
   };
 
   return (
@@ -750,14 +749,14 @@ export const Table = forwardRef((props, ref) => {
                   selectionController={selectionController}
                   grabbed={columnIsGrabbed}
                   onGrab={() => {
-                    startGrabbingColumn(index);
+                    grabColumn(index);
                     setDragPosition([0, 0]);
                   }}
                   onDrag={({ xMove, yMove }) => {
                     setDragPosition([xMove, yMove]);
                   }}
                   onRelease={() => {
-                    stopGrabbingColumn(index);
+                    releaseColumn(index);
                   }}
                 >
                   {col.header}
@@ -977,7 +976,10 @@ const HeaderCell = ({
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
       data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
-      style={{ cursor: grabbed ? "grabbing" : "grab" }}
+      data-grabbed={grabbed ? "" : undefined}
+      style={{
+        cursor: grabbed ? "grabbing" : "grab",
+      }}
       tabIndex={-1}
       onMouseDown={(e) => {
         startDragGesture(e, {
@@ -992,7 +994,7 @@ const HeaderCell = ({
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {children}
       </span>
-      {grabbed && <div className="navi_table_drag_placeholder"></div>}
+      {/* {grabbed && <div className="navi_table_drag_placeholder"></div>} */}
     </th>
   );
 };
@@ -1083,11 +1085,10 @@ const ColumnDragClone = ({ tableRef, columnIndex }) => {
       // TODO: if table cell is not in the column being dragged, force opacity: 0
     }
 
-    const tableDragCloneContainer = table.querySelector(
+    const tableDragCloneContainer = table.parentNode.querySelector(
       ".navi_table_drag_clone_container",
     );
     tableDragCloneContainer.appendChild(tableClone);
-    tableDragCloneContainer.style.width = `${width}px`;
 
     return () => {
       tableDragCloneContainer.removeChild(tableClone);
