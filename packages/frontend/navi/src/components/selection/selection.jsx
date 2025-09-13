@@ -725,7 +725,7 @@ const getElementValue = (element) => {
   } else if (element.hasAttribute("data-value")) {
     value = element.getAttribute("data-value");
   } else {
-    value = element;
+    value = undefined;
   }
   debug("valueExtraction", "getElementValue:", element, "->", value);
   return value;
@@ -1039,7 +1039,6 @@ export const useSelectableElement = (
         debug("interaction", "mousedown: event already prevented, skipping");
         return;
       }
-
       const isMultiSelect = e.metaKey || e.ctrlKey;
       const isShiftSelect = e.shiftKey;
       const isSingleSelect = !isMultiSelect && !isShiftSelect;

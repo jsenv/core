@@ -153,7 +153,13 @@ const LinkPlain = forwardRef((props, ref) => {
 });
 
 const LinkWithSelection = forwardRef((props, ref) => {
-  const { name, value, children, selectionController, ...rest } = props;
+  const {
+    name,
+    value = props.href,
+    children,
+    selectionController,
+    ...rest
+  } = props;
   const { selected } = useSelectableElement(ref, { selectionController });
 
   return (
