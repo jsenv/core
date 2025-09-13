@@ -518,7 +518,6 @@ import.meta.css = /* css */ `
     position: absolute;
     cursor: grabbing;
     user-select: none;
-    overflow: hidden;
   }
 
   .navi_table_drag_clone_container th,
@@ -1065,18 +1064,11 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
   const [dragX, dragY] = dragPosition;
   const x = dragX;
   const y = dragY;
-  const positionerRef = useRef();
-
-  useLayoutEffect(() => {
-    const table = tableRef.current;
-    const container = positionerRef.current;
-    container.style.width = `${table.offsetWidth}px`;
-    container.style.height = `${table.offsetHeight}px`;
-  }, []);
+  const cloneParentElementRef = useRef();
 
   return (
     <div
-      ref={positionerRef}
+      ref={cloneParentElementRef}
       className="navi_table_drag_clone_container"
       style={{
         left: `${x < 0 ? 0 : x}px`,
@@ -1085,7 +1077,7 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
     >
       <ColumnDragClone
         tableRef={tableRef}
-        positionerRef={positionerRef}
+        cloneParentElementRef={cloneParentElementRef}
         columnIndex={columnIndex}
       />
 
@@ -1095,17 +1087,18 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
   );
 };
 
-const ColumnDragClone = ({ tableRef, positionerRef }) => {
+const ColumnDragClone = ({ tableRef, cloneParentElementRef }) => {
   useLayoutEffect(() => {
     const table = tableRef.current;
-    const positioner = positionerRef.current;
+    const cloneParentElement = cloneParentElementRef.current;
     if (!table) {
       return null;
     }
     const tableClone = table.cloneNode(true);
-    positioner.appendChild(tableClone);
+
+    cloneParentElement.insertBefore(tableClone, cloneParentElement.firstChild);
     return () => {
-      positioner.removeChild(tableClone);
+      cloneParentElement.removeChild(tableClone);
     };
   }, []);
 
