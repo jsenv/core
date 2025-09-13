@@ -1053,13 +1053,15 @@ const DraggedCopy = ({
   const columnIndex = parseInt(grabTarget.slice(7), 10);
   const clientRect = grabTargetRect;
   const [dragX, dragY] = dragPosition;
+  const x = clientRect.left + dragX;
+  const y = clientRect.top + dragY;
 
   return (
     <div
       style={{
         position: "absolute",
-        left: `${clientRect.left + dragX}px`,
-        top: `${clientRect.top + dragY}px`,
+        left: `${x < 0 ? 0 : x}px`,
+        top: `${y < 0 ? 0 : y}px`,
         cursor: "grabbing",
         useSelect: "none",
       }}

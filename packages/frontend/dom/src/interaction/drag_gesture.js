@@ -78,18 +78,36 @@ export const startDragGesture = (
   }
 
   let started = !threshold;
+
+  // Track initial scroll positions to account for auto-scrolling
+  const scrollableParent = getScrollableParent(element);
+  const initialScrollLeft = scrollableParent ? scrollableParent.scrollLeft : 0;
+  const initialScrollTop = scrollableParent ? scrollableParent.scrollTop : 0;
+
   mouse_events: {
     const updateMousePosition = (e) => {
+      // Account for scroll changes when calculating position
+      const currentScrollLeft = scrollableParent
+        ? scrollableParent.scrollLeft
+        : 0;
+      const currentScrollTop = scrollableParent
+        ? scrollableParent.scrollTop
+        : 0;
+      const scrollDeltaX = currentScrollLeft - initialScrollLeft;
+      const scrollDeltaY = currentScrollTop - initialScrollTop;
+
       if (direction.x) {
         gestureInfo.x = e.clientX;
-        gestureInfo.xMove = gestureInfo.x - xAtStart;
+        // Adjust for scroll offset: if we scrolled right, content moved left, so add scroll delta
+        gestureInfo.xMove = gestureInfo.x - xAtStart + scrollDeltaX;
         gestureInfo.xChanged = previousGestureInfo
           ? gestureInfo.xMove !== previousGestureInfo.xMove
           : true;
       }
       if (direction.y) {
         gestureInfo.y = e.clientY;
-        gestureInfo.yMove = gestureInfo.y - yAtStart;
+        // Adjust for scroll offset: if we scrolled down, content moved up, so add scroll delta
+        gestureInfo.yMove = gestureInfo.y - yAtStart + scrollDeltaY;
         gestureInfo.yChanged = previousGestureInfo
           ? gestureInfo.yMove !== previousGestureInfo.yMove
           : true;
@@ -134,7 +152,6 @@ export const startDragGesture = (
       }
 
       // Auto-scroll the first scrollable parent, if any
-      const scrollableParent = getScrollableParent(gestureInfo.element);
       if (scrollableParent) {
         autoScroll(scrollableParent, gestureInfo);
       }
@@ -184,7 +201,6 @@ const autoScroll = (scrollableElement, gestureInfo) => {
   horizontal: {
     // left
     if (x < rect.left + scrollZone) {
-      // Scroll left
       scrollableElement.scrollLeft = Math.max(
         0,
         scrollableElement.scrollLeft - scrollSpeed,
