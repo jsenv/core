@@ -1,3 +1,9 @@
+- Fix link selection with new approach in the explorer
+
+- Drag to move row and column
+
+  (ideally we keep an empty "clone" in the table and we create a visually identic clone to drag)
+
 - Can use shortcuts on table selection
   - cmd + delete would delete rows/columns
     on cells it does nothing but we'll be able to copy via keyboard to start

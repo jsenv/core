@@ -1,4 +1,8 @@
-import { SelectionProvider, ShortcutProvider } from "@jsenv/navi";
+import {
+  createSelectionKeyboardShortcuts,
+  useKeyboardShortcuts,
+  useSelectionController,
+} from "@jsenv/navi";
 import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
@@ -99,6 +103,18 @@ export const ExplorerItemList = forwardRef((props, ref) => {
               selectionLength === 1
                 ? `Are you sure you want to delete "${itemSelectionSignal.value[0]}"?`
                 : `Are you sure you want to delete the ${selectionLength} selected items?`,
+            onStart: () => {
+              setDeletedItems(itemSelectionSignal.value);
+            },
+            onAbort: () => {
+              setDeletedItems([]);
+            },
+            onError: () => {
+              setDeletedItems([]);
+            },
+            onEnd: () => {
+              setDeletedItems([]);
+            },
           },
         ]}
       >
@@ -113,32 +129,22 @@ export const ExplorerItemList = forwardRef((props, ref) => {
 const ExplorerItemListWithShortcuts = ({
   elementRef,
   itemSelectionSignal,
-  setDeletedItems,
   shortcuts,
   children,
 }) => {
-  return (
-    <SelectionProvider
-      value={itemSelectionSignal.value}
-      onChange={(value) => {
-        itemSelectionSignal.value = value;
-      }}
-      onActionStart={() => {
-        setDeletedItems(itemSelectionSignal.value);
-      }}
-      onActionAbort={() => {
-        setDeletedItems([]);
-      }}
-      onActionError={() => {
-        setDeletedItems([]);
-      }}
-      onActionEnd={() => {
-        setDeletedItems([]);
-      }}
-    >
-      <ShortcutProvider shortcuts={shortcuts} elementRef={elementRef}>
-        {children}
-      </ShortcutProvider>
-    </SelectionProvider>
-  );
+  const selectionController = useSelectionController({
+    layout: "linear",
+    axis: "vertical",
+    value: itemSelectionSignal.value,
+    onChange: (newValue) => {
+      itemSelectionSignal.value = newValue;
+    },
+    multiple: true,
+  });
+  useKeyboardShortcuts(elementRef, [
+    ...createSelectionKeyboardShortcuts(selectionController),
+    ...shortcuts,
+  ]);
+
+  return children;
 };

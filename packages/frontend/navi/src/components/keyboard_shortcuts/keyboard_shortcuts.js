@@ -94,20 +94,22 @@ export const useKeyboardShortcuts = (
       if (!allowConcurrentActions) {
         shortcutActionIsBusyRef.current = true;
       }
+      e.detail.meta.shortcut.onStart?.(e);
       onActionStart?.(e);
     },
     onAbort: (e) => {
       shortcutActionIsBusyRef.current = false;
-
+      e.detail.meta.shortcut.onAbort?.(e);
       onActionAbort?.(e);
     },
     onError: (e) => {
       shortcutActionIsBusyRef.current = false;
-
+      e.detail.meta.shortcut.onError?.(e);
       onActionError?.(e);
     },
     onEnd: (e) => {
       shortcutActionIsBusyRef.current = false;
+      e.detail.meta.shortcut.onEnd?.(e);
       onActionEnd?.(e);
     },
   });
@@ -142,6 +144,9 @@ export const useKeyboardShortcuts = (
             target: element,
             requester: document.activeElement,
             confirmMessage: shortcutCandidate.confirmMessage,
+            meta: {
+              shortcut: shortcutCandidate,
+            },
           });
         },
       });

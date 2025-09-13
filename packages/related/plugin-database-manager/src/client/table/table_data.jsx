@@ -15,27 +15,9 @@
  *
  */
 
-import {
-  Button,
-  clickToSelect,
-  Editable,
-  keydownToSelect,
-  SelectionProvider,
-  ShortcutProvider,
-  Table,
-  useEditableController,
-  useFocusGroup,
-  useRegisterSelectionValue,
-  useSelectionContext,
-} from "@jsenv/navi";
-import { useSignal } from "@preact/signals";
-import { createContext } from "preact";
-import { useContext, useMemo, useRef, useState } from "preact/hooks";
-import { useDatabaseInputProps } from "../components/database_field.jsx";
+import { Button, Table } from "@jsenv/navi";
+import { useMemo, useRef, useState } from "preact/hooks";
 import { TABLE_ROW } from "./table_store.js";
-
-// Context to pass dynamic state to stable components
-const TableStateContext = createContext();
 
 import.meta.css = /* css */ `
   .table_data_actions {
@@ -112,41 +94,11 @@ export const TableData = ({ table, rows }) => {
   const tableName = table.tablename;
   const createRow = TABLE_ROW.POST.bindParams({ tablename: tableName });
 
-  useFocusGroup(tableRef);
-  const [focusWithinRow, setFocusWithinRow] = useState(-1);
-  const [focusWithinColumn, setFocusWithinColumn] = useState(-1);
-
-  const updateFocusPosition = (elementFocusedOrReceivingFocus) => {
-    const [column, row] = getCellPosition(
-      tableRef.current,
-      elementFocusedOrReceivingFocus,
-    );
-    setFocusWithinColumn(column);
-    setFocusWithinRow(row);
-  };
-  const handleTableFocusIn = (event) => {
-    updateFocusPosition(event.target);
-  };
-  const handleTableFocusOut = (event) => {
-    const table = tableRef.current;
-    if (!table) {
-      return;
-    }
-    updateFocusPosition(event.relatedTarget);
-  };
-
   const { schemaColumns } = table.meta;
 
   // Stable column definitions - only recreate when schema changes
   const columns = useMemo(() => {
-    const numberColumn = {
-      id: "number",
-      header: NumberColumnHeader,
-      enableResizing: false,
-      cell: NumberColumnCell,
-    };
-
-    const remainingColumns = schemaColumns.map((column, index) => {
+    return schemaColumns.map((column, index) => {
       const columnName = column.column_name;
       const columnIndex = index + 1; // +1 because number column is first
 
@@ -169,204 +121,30 @@ export const TableData = ({ table, rows }) => {
           />
         ),
         footer: (info) => info.column.id,
-        // Store static data for use in components
-        meta: {
-          columnName,
-          columnIndex,
-          column,
-        },
       };
     });
-
-    return [numberColumn, ...remainingColumns];
   }, [schemaColumns]); // Only depend on schema, not dynamic state
 
   const data = rows;
 
-  // Create a stable context value for the table
-  const tableState = useMemo(
-    () => ({
-      focusWithinRow,
-      focusWithinColumn,
-    }),
-    [focusWithinRow, focusWithinColumn],
-  );
-
-  const cellSelectionSignal = useSignal([]);
-  const selectionLength = cellSelectionSignal.value.length;
-  const [, setDeletedItems] = useState([]);
+  const [selection, setSelection] = useState([]);
 
   return (
-    <SelectionProvider
-      value={cellSelectionSignal.value}
-      onChange={(value) => {
-        cellSelectionSignal.value = value;
-      }}
-      onActionStart={() => {
-        setDeletedItems(cellSelectionSignal.value);
-      }}
-      onActionAbort={() => {
-        setDeletedItems([]);
-      }}
-      onActionError={() => {
-        setDeletedItems([]);
-      }}
-      onActionEnd={() => {
-        setDeletedItems([]);
-      }}
-    >
-      <ShortcutProvider
-        shortcuts={[
-          {
-            // TODO: whenever a row/column is selected the effect is different
-            // we'll delete the row/column instead of the cell
-            // in case of multiple selection (row + cells) then we'll need to decide what to do
-            // no actuall we'll change this as follow:
-            // selecting a row unselect eventual cells
-            // selecting a cell unselect eventual rows
-            enabled: selectionLength > 0,
-            key: ["command+delete"],
-            action: () => {},
-            description: "Reset selected cells",
-            confirmMessage:
-              selectionLength === 1
-                ? `Are you sure you want to reset "${cellSelectionSignal.value[0]}"?`
-                : `Are you sure you want to reset the ${selectionLength} selected cells?`,
-          },
-        ]}
-        elementRef={tableRef}
-      >
-        <TableStateContext.Provider value={tableState}>
-          <div>
-            <Table
-              ref={tableRef}
-              className="database_table"
-              columns={columns}
-              data={data}
-              data-multi-selection={selectionLength > 1 ? "" : undefined}
-              style={{ height: "fit-content" }}
-              onFocusIn={(event) => {
-                handleTableFocusIn(event);
-              }}
-              onFocusOut={(event) => {
-                handleTableFocusOut(event);
-              }}
-            />
-            {data.length === 0 ? <div>No data</div> : null}
-            <div className="table_data_actions">
-              <Button action={createRow}>Add row</Button>
-            </div>
-          </div>
-        </TableStateContext.Provider>
-      </ShortcutProvider>
-    </SelectionProvider>
-  );
-};
-
-const getCellPosition = (table, element) => {
-  if (!table.contains(element)) {
-    return [-1, -1];
-  }
-  const cellElement = element.closest("td");
-  if (!cellElement) {
-    return [-1, -1];
-  }
-  const row = cellElement.parentElement;
-  const columnIndex = Array.from(row.cells).indexOf(cellElement);
-  const rowIndex = Array.from(table.rows).indexOf(row);
-  return [columnIndex, rowIndex];
-};
-
-// Stable component definitions - these don't recreate on every render
-const NumberColumnHeader = () => {
-  return <th style={{ width: "50px" }}></th>;
-};
-
-const NumberColumnCell = ({ row }) => {
-  const { focusWithinRow } = useContext(TableStateContext);
-  return (
-    <DatabaseTableClientCell
-      style={{ textAlign: "center" }}
-      data-focus-within={focusWithinRow === row.index + 1 ? "" : undefined}
-    >
-      {row.original.index}
-    </DatabaseTableClientCell>
-  );
-};
-
-const DatabaseTableHeaderCell = ({ header, columnName, columnIndex }) => {
-  const { focusWithinColumn } = useContext(TableStateContext);
-
-  return (
-    <th
-      style={{
-        width: `${header.getSize()}px`,
-      }}
-      data-focus-within={focusWithinColumn === columnIndex ? "" : undefined}
-    >
-      <span>{columnName}</span>
-    </th>
-  );
-};
-
-const DatabaseTableClientCell = ({ children, ...props }) => {
-  return (
-    <td className="database_table_cell" {...props}>
-      {children}
-    </td>
-  );
-};
-
-const DatabaseTableCell = ({
-  columnName,
-  column,
-  row,
-  value,
-  onClick,
-  onKeyDown,
-  ...props
-}) => {
-  const cellId = `${columnName}:${row.id}`;
-  const selectionContext = useSelectionContext();
-  useRegisterSelectionValue(cellId);
-  const isSelected = selectionContext.isSelected(cellId);
-  const { editable, startEditing, stopEditing } = useEditableController();
-  const databaseInputProps = useDatabaseInputProps({ column });
-
-  return (
-    <td
-      className="database_table_cell"
-      tabIndex="0"
-      data-editing={editable ? "" : undefined}
-      data-with-selection=""
-      data-selected={isSelected ? "" : undefined}
-      onClick={(e) => {
-        clickToSelect(e, { selectionContext, value: cellId });
-        onClick?.(e);
-      }}
-      onKeyDown={(e) => {
-        keydownToSelect(e, { selectionContext, value: cellId });
-        onKeyDown?.(e);
-      }}
-      {...props}
-    >
-      <div className="database_table_cell_content">
-        <Editable
-          editable={editable}
-          onEditEnd={stopEditing}
-          value={value}
-          {...databaseInputProps}
-        >
-          <div
-            className="database_table_cell_value"
-            onDoubleClick={() => {
-              startEditing();
-            }}
-          >
-            {value}
-          </div>
-        </Editable>
+    <div>
+      <Table
+        ref={tableRef}
+        className="database_table"
+        selection={selection}
+        onSelectionChange={setSelection}
+        idKey="id"
+        columns={columns}
+        data={data}
+        style={{ height: "fit-content" }}
+      />
+      {data.length === 0 ? <div>No data</div> : null}
+      <div className="table_data_actions">
+        <Button action={createRow}>Add row</Button>
       </div>
-    </td>
+    </div>
   );
 };

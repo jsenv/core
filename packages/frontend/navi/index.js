@@ -44,6 +44,7 @@ export { ActiveKeyboardShortcuts } from "./src/components/keyboard_shortcuts/act
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
 export {
+  createSelectionKeyboardShortcuts,
   useSelectableElement,
   useSelectionController,
 } from "./src/components/selection/selection.jsx";
