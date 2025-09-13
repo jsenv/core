@@ -101,19 +101,21 @@ export const useDatabaseInputProps = ({ column, valueSignal }) => {
     return {
       type: "checkbox",
       name: columnName,
-      checkedSignal: valueSignal,
+      valueSignal,
     };
   }
   if (column.data_type === "timestamp with time zone") {
     return {
       type: "datetime-local",
       name: columnName,
+      valueSignal,
     };
   }
   if (column.data_type === "integer") {
     return {
       type: "number",
       name: columnName,
+      valueSignal,
       min: 0,
       step: 1,
     };
@@ -122,6 +124,7 @@ export const useDatabaseInputProps = ({ column, valueSignal }) => {
     return {
       type: "text",
       name: columnName,
+      valueSignal,
       required: true,
     };
   }
@@ -129,35 +132,55 @@ export const useDatabaseInputProps = ({ column, valueSignal }) => {
     return {
       type: "text",
       name: columnName,
+      valueSignal,
     };
   }
   if (column.data_type === "oid") {
-    return {};
+    return {
+      type: "text",
+      name: columnName,
+      valueSignal,
+      readOnly: true,
+    };
   }
   if (column.column_name === "rolpassword") {
     return {
       type: "text",
       name: columnName,
+      valueSignal,
     };
   }
   if (column.column_name === "rolconfig") {
     // rolconfig something custom like client_min_messages
     // see https://www.postgresql.org/docs/14/config-setting.html#CONFIG-SETTING-NAMES-VALUES
-    return {};
+    return {
+      type: "hidden",
+      name: columnName,
+      valueSignal,
+    };
   }
   if (column.data_type === "xid") {
     return {
       type: "text",
-      readOnly: true,
+      valueSignal,
       name: columnName,
+      readOnly: true,
     };
   }
   if (column.column_name === "datacl") {
     // datacl is a custom type
     // see https://www.postgresql.org/docs/14/sql-grant.html
-    return {};
+    return {
+      type: "hidden",
+      name: columnName,
+      valueSignal,
+    };
   }
-  return {};
+  return {
+    type: "hidden",
+    name: columnName,
+    valueSignal,
+  };
 };
 
 export const DatabaseInput = ({ column, valueSignal, ...rest }) => {

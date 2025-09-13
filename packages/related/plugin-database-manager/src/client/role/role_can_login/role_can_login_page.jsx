@@ -34,13 +34,13 @@ export const RoleCanLoginPage = ({ role }) => {
         <DatabaseFieldset
           item={role}
           columns={role.meta.columns}
-          usePutAction={(columnName, valueSignal) =>
-            ROLE.PUT.bindParams({
+          usePutAction={(columnName, valueSignal) => {
+            return ROLE.PUT.bindParams({
               rolname: role.tablename,
               columnName,
               columnValue: valueSignal,
-            })
-          }
+            });
+          }}
           ignoredFields={["rolcanlogin"]}
         />
         <RoleDatabaseList role={role} />
