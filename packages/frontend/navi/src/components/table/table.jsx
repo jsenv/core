@@ -67,6 +67,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "preact/hooks";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
@@ -666,6 +667,8 @@ export const Table = forwardRef((props, ref) => {
     }
   }
 
+  const [dragState, setDragState] = useState(null);
+
   return (
     <div className="navi_table_container">
       <table
@@ -688,25 +691,41 @@ export const Table = forwardRef((props, ref) => {
                 ref.current.selectAll();
               }}
             />
-            {columns.map((col, index) => (
-              <HeaderCell
-                stickyX={col.sticky}
-                stickyY={stickyHeader}
-                isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
-                isAfterStickyXFrontier={
-                  index + 1 === stickyColumnFrontierIndex + 1
-                }
-                isStickyYFrontier={stickyHeader && stickyRowFrontierIndex === 0} // Header row is always the frontier (no rows above it)
-                isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
-                key={col.id}
-                columnName={col.header}
-                columnAccessorKey={col.accessorKey}
-                columnIndex={index + 1}
-                columnWithSomeSelectedCell={columnWithSomeSelectedCell}
-                data={data}
-                selectionController={selectionController}
-              />
-            ))}
+            {columns.map((col, index) => {
+              const columnIsDragging = dragState?.content === `column:${index}`;
+
+              return (
+                <HeaderCell
+                  stickyX={col.sticky}
+                  stickyY={stickyHeader}
+                  isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
+                  isAfterStickyXFrontier={
+                    index + 1 === stickyColumnFrontierIndex + 1
+                  }
+                  isStickyYFrontier={
+                    stickyHeader && stickyRowFrontierIndex === 0
+                  } // Header row is always the frontier (no rows above it)
+                  isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
+                  key={col.id}
+                  columnAccessorKey={col.accessorKey}
+                  columnIndex={index + 1}
+                  columnWithSomeSelectedCell={columnWithSomeSelectedCell}
+                  data={data}
+                  selectionController={selectionController}
+                  onDragStart={() => {
+                    setDragState({
+                      content: `column:${index}`,
+                    });
+                  }}
+                  onDragEnd={() => {
+                    setDragState(null);
+                  }}
+                >
+                  {col.header}
+                  {columnIsDragging ? "drag" : ""}
+                </HeaderCell>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -869,11 +888,13 @@ const HeaderCell = ({
   isStickyYFrontier,
   isAfterStickyXFrontier,
   isAfterStickyYFrontier,
-  columnName,
   columnAccessorKey,
   columnWithSomeSelectedCell,
   data,
   selectionController,
+  onDragStart,
+  onDragEnd,
+  children,
 }) => {
   const cellRef = useRef();
   const columnValue = `column:${columnAccessorKey}`;
@@ -907,15 +928,19 @@ const HeaderCell = ({
       tabIndex={-1}
       onMouseDown={(e) => {
         startDragGesture(e, {
-          onStart: () => {},
+          onStart: () => {
+            onDragStart();
+          },
           onChange: () => {},
-          onEnd: () => {},
+          onEnd: () => {
+            onDragEnd();
+          },
         });
       }}
     >
-      <span>{columnName}</span>
+      <span>{children}</span>
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
-        {columnName}
+        {children}
       </span>
     </th>
   );
