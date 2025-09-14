@@ -16,6 +16,10 @@ export const startDragGesture = (
     threshold = 5,
     direction: defaultDirection = { x: true, y: true },
     backdrop = true,
+    minX = -Infinity,
+    maxX = Infinity,
+    minY = -Infinity,
+    maxY = Infinity,
   },
 ) => {
   if (mousedownEvent.defaultPrevented) {
@@ -98,18 +102,28 @@ export const startDragGesture = (
 
       if (direction.x) {
         gestureInfo.x = e.clientX;
-        // Adjust for scroll offset: if we scrolled right, content moved left, so add scroll delta
-        gestureInfo.xMove = gestureInfo.x - xAtStart + scrollDeltaX;
+        let xMove = gestureInfo.x - xAtStart + scrollDeltaX;
+        if (xMove < minX) {
+          xMove = minX;
+        } else if (xMove > maxX) {
+          xMove = maxX;
+        }
+        gestureInfo.xMove = xMove;
         gestureInfo.xChanged = previousGestureInfo
-          ? gestureInfo.xMove !== previousGestureInfo.xMove
+          ? xMove !== previousGestureInfo.xMove
           : true;
       }
       if (direction.y) {
         gestureInfo.y = e.clientY;
-        // Adjust for scroll offset: if we scrolled down, content moved up, so add scroll delta
-        gestureInfo.yMove = gestureInfo.y - yAtStart + scrollDeltaY;
+        let yMove = gestureInfo.y - yAtStart + scrollDeltaY;
+        if (yMove < minY) {
+          yMove = minY;
+        } else if (yMove > maxY) {
+          yMove = maxY;
+        }
+        gestureInfo.yMove = yMove;
         gestureInfo.yChanged = previousGestureInfo
-          ? gestureInfo.yMove !== previousGestureInfo.yMove
+          ? yMove !== previousGestureInfo.yMove
           : true;
       }
 

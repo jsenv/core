@@ -711,14 +711,14 @@ export const Table = forwardRef((props, ref) => {
   }
 
   const [grabTarget, setGrabTarget] = useState(null);
-  const [dragPosition, setDragPosition] = useState(null);
+  const [dragElement, setDragElement] = useState(null);
 
   const grabColumn = (columnIndex) => {
     setGrabTarget(`column:${columnIndex}`);
   };
   const releaseColumn = () => {
     // setGrabTarget(null);
-    // setDragPosition(null);
+    // setDragElement(null);
   };
 
   return (
@@ -771,12 +771,9 @@ export const Table = forwardRef((props, ref) => {
                   data={data}
                   selectionController={selectionController}
                   grabbed={columnIsGrabbed}
-                  onGrab={() => {
+                  onGrab={({ element }) => {
                     grabColumn(index);
-                    setDragPosition([0, 0]);
-                  }}
-                  onDrag={({ xMove, yMove }) => {
-                    setDragPosition([xMove, yMove]);
+                    setDragElement(element);
                   }}
                   onRelease={() => {
                     releaseColumn(index);
@@ -845,13 +842,7 @@ export const Table = forwardRef((props, ref) => {
           })}
         </tbody>
       </table>
-      {grabTarget && (
-        <DragClone
-          tableRef={innerRef}
-          grabTarget={grabTarget}
-          dragPosition={dragPosition}
-        />
-      )}
+      <DragClone dragElement={dragElement} />
     </div>
   );
 });
@@ -1005,11 +996,65 @@ const HeaderCell = ({
       }}
       tabIndex={-1}
       onMouseDown={(e) => {
+        const table = e.target.closest("table");
+        const th = cellRef.current;
+        const rectRelativeTo = getBoundingClientRectRelativeTo(th, table);
+        const minX = -rectRelativeTo.left;
+        // const minY = -rectRelativeTo.top;
+
         startDragGesture(e, {
           direction: { x: true },
           onGrab,
           onDrag,
           onRelease,
+          minX,
+          setup: ({ addTeardown }) => {
+            const tableClone = table.cloneNode(true);
+            const scrollableParent = getScrollableParent(table);
+            const scrollLeft = scrollableParent.scrollLeft || 0;
+            const scrollTop = scrollableParent.scrollTop || 0;
+            update_sticky_elements: {
+              // Find all sticky elements (th and td with data-sticky-x or data-sticky-y)
+              const stickyElements = tableClone.querySelectorAll(
+                "th[data-sticky-x], td[data-sticky-x], th[data-sticky-y], td[data-sticky-y]",
+              );
+              stickyElements.forEach((stickyElement) => {
+                const hasXSticky = stickyElement.hasAttribute("data-sticky-x");
+                const hasYSticky = stickyElement.hasAttribute("data-sticky-y");
+
+                // Use position: relative and calculate offsets to simulate sticky behavior
+                stickyElement.style.position = "relative";
+
+                if (hasXSticky) {
+                  // For horizontal sticky elements, offset left to simulate sticky behavior
+                  // The element should appear to stick at its original position relative to the scroll
+                  stickyElement.style.left = `${scrollLeft}px`;
+                }
+
+                if (hasYSticky) {
+                  // For vertical sticky elements, offset top to simulate sticky behavior
+                  // The element should appear to stick at its original position relative to the scroll
+                  stickyElement.style.top = `${scrollTop}px`;
+                }
+              });
+            }
+            const tableCells = tableClone.querySelectorAll("td, th");
+            tableCells.forEach((cell) => {
+              // TODO: only if part of this column
+              cell.setAttribute("data-grabbed", "");
+            });
+
+            const cloneParent = table
+              .closest(".navi_table_container")
+              .querySelector(".navi_table_drag_clone_positioner");
+            cloneParent.insertBefore(tableClone, cloneParent.firstChild);
+            addTeardown(() => {
+              // cloneParent.removeChild(tableClone);
+            });
+            return {
+              element: tableClone,
+            };
+          },
         });
       }}
     >
@@ -1086,11 +1131,7 @@ const getBoundingClientRectRelativeTo = (element, otherElement) => {
   return relativeRect;
 };
 
-const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
-  const columnIndex = parseInt(grabTarget.slice(7), 10);
-  const [dragX, dragY] = dragPosition;
-  const x = dragX;
-  const y = dragY;
+const DragClone = ({ dragElement }) => {
   const cloneParentElementRef = useRef();
 
   useLayoutEffect(() => {
@@ -1104,90 +1145,22 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
     const tableContainer = cloneParentElement.closest(".navi_table_container");
     cloneContainer.style.width = `${tableContainer.scrollWidth}px`;
     cloneContainer.style.height = `${tableContainer.scrollHeight}px`;
-
-    const table = tableRef.current;
-    const columnElement = table.querySelectorAll("th")[columnIndex + 1];
-    const rectRelativeTo = getBoundingClientRectRelativeTo(
-      columnElement,
-      table,
-    );
-    const minX = -rectRelativeTo.left;
-    const minY = -rectRelativeTo.top;
-    const left = x < minX ? minX : x;
-    const top = y < minY ? minY : y;
-
-    cloneParentElement.style.left = `${left}px`;
-    cloneParentElement.style.top = `${top}px`;
-  }, [x, y]);
+  }, [dragElement]);
 
   return (
-    <div className="navi_table_drag_clone_container">
+    <div
+      className="navi_table_drag_clone_container"
+      style={{
+        display: dragElement ? "block" : "none",
+      }}
+    >
       <div
         ref={cloneParentElementRef}
         className="navi_table_drag_clone_positioner"
       >
-        <ColumnDragClone
-          tableRef={tableRef}
-          cloneParentElementRef={cloneParentElementRef}
-          columnIndex={columnIndex}
-        />
-
         {/* to catch any mouse over effect and stuff like that */}
         {/* <div style={{ position: "absolute", inset: 0 }}></div> */}
       </div>
     </div>
   );
-};
-
-const ColumnDragClone = ({ tableRef, cloneParentElementRef }) => {
-  useLayoutEffect(() => {
-    const table = tableRef.current;
-    const cloneParentElement = cloneParentElementRef.current;
-    if (!table) {
-      return null;
-    }
-
-    const tableClone = table.cloneNode(true);
-
-    const scrollableParent = getScrollableParent(table);
-    const scrollLeft = scrollableParent.scrollLeft || 0;
-    const scrollTop = scrollableParent.scrollTop || 0;
-
-    // Update sticky positioning for cloned elements
-    const updateStickyElements = (clonedTable) => {
-      // Find all sticky elements (th and td with data-sticky-x or data-sticky-y)
-      const stickyElements = clonedTable.querySelectorAll(
-        "th[data-sticky-x], td[data-sticky-x], th[data-sticky-y], td[data-sticky-y]",
-      );
-
-      stickyElements.forEach((stickyElement) => {
-        const hasXSticky = stickyElement.hasAttribute("data-sticky-x");
-        const hasYSticky = stickyElement.hasAttribute("data-sticky-y");
-
-        // Use position: relative and calculate offsets to simulate sticky behavior
-        stickyElement.style.position = "relative";
-
-        if (hasXSticky) {
-          // For horizontal sticky elements, offset left to simulate sticky behavior
-          // The element should appear to stick at its original position relative to the scroll
-          stickyElement.style.left = `${scrollLeft}px`;
-        }
-
-        if (hasYSticky) {
-          // For vertical sticky elements, offset top to simulate sticky behavior
-          // The element should appear to stick at its original position relative to the scroll
-          stickyElement.style.top = `${scrollTop}px`;
-        }
-      });
-    };
-
-    updateStickyElements(tableClone);
-    cloneParentElement.insertBefore(tableClone, cloneParentElement.firstChild);
-
-    return () => {
-      cloneParentElement.removeChild(tableClone);
-    };
-  }, []);
-
-  return null;
 };
