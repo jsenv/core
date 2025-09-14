@@ -1,3 +1,5 @@
+- Investigate why left: -30px does not work
+
 - Drag to move row and column
 
   (ideally we keep an empty "clone" in the table and we create a visually identic clone to drag)

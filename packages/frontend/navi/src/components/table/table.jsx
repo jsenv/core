@@ -108,12 +108,13 @@ import.meta.css = /* css */ `
   .navi_table {
     border-radius: 2px;
     border-spacing: 0; /* Required for manual border collapse */
-    contain: layout style;
   }
 
   .navi_table th,
   .navi_table td {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* Table borders using ::before pseudo-elements */
@@ -169,7 +170,6 @@ import.meta.css = /* css */ `
 
   /* Number column specific styling */
   .navi_row_number_cell {
-    width: 50px;
     text-align: center;
     background: #fafafa;
     font-weight: 500;
@@ -525,10 +525,14 @@ import.meta.css = /* css */ `
     top: 0;
   }
 
+  .navi_table_drag_clone_positioner {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
   .navi_table_drag_clone_container th,
   .navi_table_drag_clone_container td {
     opacity: 0;
-    position: relative !important;
   }
   .navi_table_drag_clone_container th[data-grabbed],
   .navi_table_drag_clone_container td[data-grabbed] {
@@ -726,6 +730,12 @@ export const Table = forwardRef((props, ref) => {
         data-multiselection={selection.length > 1 ? "" : undefined}
         data-border-collapse={borderCollapse ? "" : undefined}
       >
+        <colgroup>
+          <col style={{ minWidth: "100px" }}></col>
+          {columns.map((col) => {
+            return <col key={col.id} />;
+          })}
+        </colgroup>
         <thead>
           <tr>
             <RowNumberHeaderCell
@@ -1115,9 +1125,6 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
       <div
         ref={cloneParentElementRef}
         className="navi_table_drag_clone_positioner"
-        style={{
-          position: "absolute",
-        }}
       >
         <ColumnDragClone
           tableRef={tableRef}
@@ -1157,18 +1164,20 @@ const ColumnDragClone = ({ tableRef, cloneParentElementRef }) => {
         const hasXSticky = stickyElement.hasAttribute("data-sticky-x");
         const hasYSticky = stickyElement.hasAttribute("data-sticky-y");
 
+        // Use position: relative and calculate offsets to simulate sticky behavior
+        stickyElement.style.position = "relative";
+
         if (hasXSticky) {
-          // For horizontal sticky elements, set left position based on scroll
+          // For horizontal sticky elements, offset left to simulate sticky behavior
+          // The element should appear to stick at its original position relative to the scroll
           stickyElement.style.left = `${scrollLeft}px`;
         }
 
         if (hasYSticky) {
-          // For vertical sticky elements, set top position based on scroll
+          // For vertical sticky elements, offset top to simulate sticky behavior
+          // The element should appear to stick at its original position relative to the scroll
           stickyElement.style.top = `${scrollTop}px`;
         }
-
-        // Ensure position is sticky for the clone
-        stickyElement.style.position = "sticky";
       });
     };
 
