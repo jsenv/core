@@ -1047,8 +1047,8 @@ const HeaderCell = ({
                 cellClone.setAttribute("data-grabbed", "");
               }
             });
-            const colClone =
-              tableClone.querySelector("colgroup").children[columnIndex];
+            const colgroupClone = tableClone.querySelector("colgroup");
+            const colClone = colgroupClone.children[columnIndex];
 
             const cloneParent = table
               .closest(".navi_table_container")
