@@ -1,5 +1,7 @@
 import { getScrollableParent } from "../scroll.js";
 
+const DEBUG_AUTO_SCROLL = false;
+
 export const startDragGesture = (
   mousedownEvent,
   {
@@ -228,6 +230,25 @@ const autoScroll = (
   const elementRect = elementVisuallyMoving.getBoundingClientRect();
   const scrollZone = 30; // pixels from edge to trigger scrolling
 
+  if (DEBUG_AUTO_SCROLL) {
+    console.log("autoScroll check:", {
+      scrollableRect: {
+        left: scrollableRect.left,
+        right: scrollableRect.right,
+        top: scrollableRect.top,
+        bottom: scrollableRect.bottom,
+      },
+      elementRect: {
+        left: elementRect.left,
+        right: elementRect.right,
+        top: elementRect.top,
+        bottom: elementRect.bottom,
+      },
+      scrollZone,
+      direction,
+    });
+  }
+
   horizontal: {
     if (!direction.x) {
       break horizontal;
@@ -237,10 +258,18 @@ const autoScroll = (
     if (elementRect.left < scrollableRect.left + scrollZone) {
       // Scroll left by the amount the element is hidden on the left
       const hiddenAmount = scrollableRect.left + scrollZone - elementRect.left;
+      const oldScrollLeft = scrollableElement.scrollLeft;
       scrollableElement.scrollLeft = Math.max(
         0,
         scrollableElement.scrollLeft - hiddenAmount,
       );
+      if (DEBUG_AUTO_SCROLL) {
+        console.log("autoScroll LEFT:", {
+          hiddenAmount,
+          oldScrollLeft,
+          newScrollLeft: scrollableElement.scrollLeft,
+        });
+      }
       break horizontal;
     }
     // Check if element's right edge is beyond scrollable area's right boundary
@@ -250,10 +279,19 @@ const autoScroll = (
         elementRect.right - (scrollableRect.right - scrollZone);
       const maxScrollLeft =
         scrollableElement.scrollWidth - scrollableElement.clientWidth;
+      const oldScrollLeft = scrollableElement.scrollLeft;
       scrollableElement.scrollLeft = Math.min(
         maxScrollLeft,
         scrollableElement.scrollLeft + hiddenAmount,
       );
+      if (DEBUG_AUTO_SCROLL) {
+        console.log("autoScroll RIGHT:", {
+          hiddenAmount,
+          oldScrollLeft,
+          newScrollLeft: scrollableElement.scrollLeft,
+          maxScrollLeft,
+        });
+      }
     }
   }
   vertical: {
@@ -265,10 +303,18 @@ const autoScroll = (
     if (elementRect.top < scrollableRect.top + scrollZone) {
       // Scroll up by the amount the element is hidden at the top
       const hiddenAmount = scrollableRect.top + scrollZone - elementRect.top;
+      const oldScrollTop = scrollableElement.scrollTop;
       scrollableElement.scrollTop = Math.max(
         0,
         scrollableElement.scrollTop - hiddenAmount,
       );
+      if (DEBUG_AUTO_SCROLL) {
+        console.log("autoScroll UP:", {
+          hiddenAmount,
+          oldScrollTop,
+          newScrollTop: scrollableElement.scrollTop,
+        });
+      }
       break vertical;
     }
     // Check if element's bottom edge is beyond scrollable area's bottom boundary
@@ -278,10 +324,19 @@ const autoScroll = (
         elementRect.bottom - (scrollableRect.bottom - scrollZone);
       const maxScrollTop =
         scrollableElement.scrollHeight - scrollableElement.clientHeight;
+      const oldScrollTop = scrollableElement.scrollTop;
       scrollableElement.scrollTop = Math.min(
         maxScrollTop,
         scrollableElement.scrollTop + hiddenAmount,
       );
+      if (DEBUG_AUTO_SCROLL) {
+        console.log("autoScroll DOWN:", {
+          hiddenAmount,
+          oldScrollTop,
+          newScrollTop: scrollableElement.scrollTop,
+          maxScrollTop,
+        });
+      }
     }
   }
 };
