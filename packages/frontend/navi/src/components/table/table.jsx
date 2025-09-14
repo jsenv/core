@@ -541,7 +541,7 @@ export const Table = forwardRef((props, ref) => {
     columns,
     rows = [],
     data,
-    selection,
+    selection = [],
     selectionColor,
     onSelectionChange,
     borderCollapse = false,

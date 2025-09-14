@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Table Column Drag Demo - Reorder Columns</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        margin: 0px;
+        padding: 0;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Container with fixed size to show drag behavior */
+      .table-container {
+        height: 500px;
+        width: 800px;
+        overflow: auto;
+        margin: 20px 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      /* Status display */
+      .status {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f0f8ff;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+
+      .actions {
+        margin-top: 15px;
+      }
+
+      .action-button {
+        background: #007acc;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 10px;
+      }
+
+      .action-button:hover {
+        background: #005a9e;
+      }
+
+      .info {
+        background: #e8f4fd;
+        border: 1px solid #bee5eb;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+
+      .info h3 {
+        margin-top: 0;
+        color: #0c5460;
+      }
+
+      .info ul {
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h1>Table Column Drag Demo</h1>
+
+      <div class="info">
+        <h3>Column Drag & Drop Features</h3>
+        <ul>
+          <li>
+            <strong>Drag to Reorder:</strong> Grab any column header and drag it
+            to reorder columns
+          </li>
+          <li>
+            <strong>Visual Feedback:</strong> Drag clone provides visual
+            indication of the column being moved
+          </li>
+          <li>
+            <strong>Real Data:</strong> Table contains realistic user data with
+            ID, name, email, and dates
+          </li>
+          <li>
+            <strong>No Sticky Headers:</strong> Focus on drag behavior without
+            sticky positioning complexity
+          </li>
+        </ul>
+      </div>
+
+      <div class="table-container">
+        <div id="root"></div>
+      </div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useRef } from "preact/hooks";
+      // eslint-disable-next-line no-unused-vars
+      import { Table } from "@jsenv/navi";
+
+      // Generate realistic user data
+      const firstNames = [
+        "John",
+        "Jane",
+        "Michael",
+        "Sarah",
+        "David",
+        "Emily",
+        "Chris",
+        "Lisa",
+        "Mark",
+        "Anna",
+        "Tom",
+        "Kate",
+        "Alex",
+        "Maria",
+        "Paul",
+        "Susan",
+        "Jake",
+        "Emma",
+        "Luke",
+        "Nina",
+      ];
+      const lastNames = [
+        "Smith",
+        "Johnson",
+        "Williams",
+        "Brown",
+        "Jones",
+        "Garcia",
+        "Miller",
+        "Davis",
+        "Rodriguez",
+        "Martinez",
+        "Hernandez",
+        "Lopez",
+        "Gonzalez",
+        "Wilson",
+        "Anderson",
+        "Thomas",
+        "Taylor",
+        "Moore",
+        "Jackson",
+        "Martin",
+      ];
+      const domains = [
+        "example.com",
+        "test.org",
+        "demo.net",
+        "sample.io",
+        "users.co",
+      ];
+
+      function generateRandomUser(id) {
+        const firstName =
+          firstNames[Math.floor(Math.random() * firstNames.length)];
+        const lastName =
+          lastNames[Math.floor(Math.random() * lastNames.length)];
+        const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domains[Math.floor(Math.random() * domains.length)]}`;
+        const creationDate = new Date(
+          2020 + Math.random() * 4,
+          Math.floor(Math.random() * 12),
+          Math.floor(Math.random() * 28) + 1,
+        );
+
+        return {
+          id,
+          name: `${firstName} ${lastName}`,
+          email,
+          creation_date: creationDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          }),
+        };
+      }
+
+      // Initial dataset
+      const initialData = [];
+      for (let i = 1; i <= 50; i++) {
+        initialData.push(generateRandomUser(i));
+      }
+
+      const initialColumns = [
+        { key: "id", title: "ID", width: 80 },
+        { key: "name", title: "Full Name", width: 180 },
+        { key: "email", title: "Email Address", width: 220 },
+        { key: "creation_date", title: "Created", width: 120 },
+      ];
+
+      // eslint-disable-next-line no-unused-vars
+      const TableDemo = () => {
+        const tableRef = useRef(null);
+        const [data, setData] = useState(initialData);
+        const [columns, setColumns] = useState(initialColumns);
+        const [lastAction, setLastAction] = useState(
+          "Ready for column dragging",
+        );
+
+        const resetColumns = () => {
+          setColumns(initialColumns);
+          setLastAction("Column order reset to default");
+        };
+
+        const addRandomUser = () => {
+          const newId = Math.max(...data.map((u) => u.id)) + 1;
+          const newUser = generateRandomUser(newId);
+          setData([...data, newUser]);
+          setLastAction(`Added new user: ${newUser.name}`);
+        };
+
+        const clearTable = () => {
+          setData([]);
+          setLastAction("Table cleared");
+        };
+
+        const handleColumnDrag = (fromIndex, toIndex) => {
+          const newColumns = [...columns];
+          const [movedColumn] = newColumns.splice(fromIndex, 1);
+          newColumns.splice(toIndex, 0, movedColumn);
+          setColumns(newColumns);
+          setLastAction(
+            `Moved column from position ${fromIndex + 1} to position ${toIndex + 1}`,
+          );
+        };
+
+        const handleSelectionChange = (selection) => {
+          const count = Object.keys(selection).length;
+          if (count > 0) {
+            setLastAction(`Selected ${count} row${count !== 1 ? "s" : ""}`);
+          }
+        };
+
+        return (
+          <div className="demo-container">
+            <h1>Table Column Drag Demo</h1>
+
+            <div className="info">
+              <h3>Column Drag & Drop Features</h3>
+              <ul>
+                <li>
+                  <strong>Drag to Reorder:</strong> Grab any column header and
+                  drag it to reorder columns
+                </li>
+                <li>
+                  <strong>Visual Feedback:</strong> Drag clone provides visual
+                  indication of the column being moved
+                </li>
+                <li>
+                  <strong>Real Data:</strong> Table contains realistic user data
+                  with ID, name, email, and dates
+                </li>
+                <li>
+                  <strong>No Sticky Headers:</strong> Focus on drag behavior
+                  without sticky positioning complexity
+                </li>
+              </ul>
+            </div>
+
+            <div className="table-container">
+              <Table
+                ref={tableRef}
+                data={data}
+                columns={columns}
+                stickyColumn={false}
+                stickyHeader={false}
+                onColumnDrag={handleColumnDrag}
+                onSelectionChange={handleSelectionChange}
+              />
+            </div>
+
+            <div className="status">
+              <div>
+                <strong>Column Order:</strong>{" "}
+                <span>{columns.map((col) => col.key).join(", ")}</span>
+              </div>
+              <div>
+                <strong>Last Action:</strong> <span>{lastAction}</span>
+              </div>
+            </div>
+
+            <div className="actions">
+              <button className="action-button" onClick={resetColumns}>
+                Reset Column Order
+              </button>
+              <button className="action-button" onClick={addRandomUser}>
+                Add Random User
+              </button>
+              <button className="action-button" onClick={clearTable}>
+                Clear Table
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // Render the app
+      render(<TableDemo />, document.getElementById("root"));
+
+      console.log("Column drag demo loaded. Try:");
+      console.log("- Drag column headers to reorder columns");
+      console.log("- Click cells to select/deselect");
+      console.log("- Use the buttons to manipulate data");
+    </script>
+  </body>
+</html>
