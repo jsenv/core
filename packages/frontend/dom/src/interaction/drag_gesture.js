@@ -226,7 +226,7 @@ const autoScroll = (
 ) => {
   const scrollableRect = scrollableElement.getBoundingClientRect();
   const elementRect = elementVisuallyMoving.getBoundingClientRect();
-  const scrollZone = 0; // pixels from edge to trigger scrolling
+  const scrollZone = 30; // pixels from edge to trigger scrolling
 
   horizontal: {
     if (!direction.x) {

@@ -996,10 +996,13 @@ const HeaderCell = ({
       }}
       tabIndex={-1}
       onMouseDown={(e) => {
-        const table = e.target.closest("table");
         const th = cellRef.current;
-        const rectRelativeTo = getBoundingClientRectRelativeTo(th, table);
+        const table = e.target.closest("table");
         const columnIndex = Array.from(th.parentNode.children).indexOf(th);
+        const colgroup = table.querySelector("colgroup");
+        const secondCol = colgroup.children[1];
+        const col = colgroup.children[columnIndex];
+        const rectRelativeTo = getBoundingClientRectRelativeTo(col, secondCol);
         const minX = -rectRelativeTo.left;
         // const minY = -rectRelativeTo.top;
 
