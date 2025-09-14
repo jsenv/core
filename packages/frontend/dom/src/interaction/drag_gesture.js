@@ -236,7 +236,7 @@ export const startDragGesture = (
 
 const autoScroll = (
   scrollableElement,
-  { elementVisuallyMoving, direction, stickyLeftElement = null, gestureInfo },
+  { elementVisuallyMoving, direction, stickyLeftElement = null },
 ) => {
   const scrollableRect = scrollableElement.getBoundingClientRect();
   const elementRect = elementVisuallyMoving.getBoundingClientRect();
