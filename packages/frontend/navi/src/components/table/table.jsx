@@ -1000,10 +1000,7 @@ const HeaderCell = ({
         const table = e.target.closest("table");
         const columnIndex = Array.from(th.parentNode.children).indexOf(th);
         const colgroup = table.querySelector("colgroup");
-        const secondCol = colgroup.children[1];
-        const col = colgroup.children[columnIndex];
-        const rectRelativeTo = getBoundingClientRectRelativeTo(col, secondCol);
-        const minX = -rectRelativeTo.left;
+        const firstCol = colgroup.children[1];
         // const minY = -rectRelativeTo.top;
 
         startDragGesture(e, {
@@ -1011,7 +1008,6 @@ const HeaderCell = ({
           onGrab,
           onDrag,
           onRelease,
-          minX,
           setup: ({ addTeardown }) => {
             const tableClone = table.cloneNode(true);
             const scrollableParent = getScrollableParent(table);
@@ -1062,6 +1058,7 @@ const HeaderCell = ({
             return {
               element: tableClone,
               elementToMove: cloneParent,
+              stickyLeftElement: firstCol,
               elementVisuallyMoving:
                 tableClone.querySelector("colgroup").children[columnIndex],
             };
@@ -1128,18 +1125,6 @@ const RowNumberCell = ({
 
 const DataCell = (props) => {
   return <TableCell {...props} />;
-};
-
-const getBoundingClientRectRelativeTo = (element, otherElement) => {
-  const elementClientRect = element.getBoundingClientRect();
-  const otherClientRect = otherElement.getBoundingClientRect();
-  const relativeRect = {
-    left: elementClientRect.left - otherClientRect.left,
-    top: elementClientRect.top - otherClientRect.top,
-    width: elementClientRect.width,
-    height: elementClientRect.height,
-  };
-  return relativeRect;
 };
 
 const DragClone = ({ dragElement }) => {

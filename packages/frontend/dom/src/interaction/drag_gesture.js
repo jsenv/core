@@ -1,6 +1,6 @@
 import { getScrollableParent } from "../scroll.js";
 
-const DEBUG_AUTO_SCROLL = false;
+const DEBUG_AUTO_SCROLL = true;
 
 export const startDragGesture = (
   mousedownEvent,
@@ -51,6 +51,7 @@ export const startDragGesture = (
     elementVisuallyMoving = element,
     direction = defaultDirection,
     cursor = "grabbing",
+    stickyLeftElement = null,
   } = setupResult;
   if (!direction.x && !direction.y) {
     return;
@@ -108,8 +109,16 @@ export const startDragGesture = (
       if (direction.x) {
         gestureInfo.x = e.clientX;
         let xMove = gestureInfo.x - xAtStart + scrollDeltaX;
-        if (xMove < minX) {
-          xMove = minX;
+        // Apply sticky left constraint - element can't move left past sticky elements
+        let effectiveMinX = minX;
+        if (stickyLeftElement) {
+          const stickyRect = stickyLeftElement.getBoundingClientRect();
+          const tableRect = element.getBoundingClientRect();
+          const stickyRightRelativeToTable = stickyRect.right - tableRect.left;
+          effectiveMinX = Math.max(minX, stickyRightRelativeToTable);
+        }
+        if (xMove < effectiveMinX) {
+          xMove = effectiveMinX;
         } else if (xMove > maxX) {
           xMove = maxX;
         }
@@ -175,6 +184,7 @@ export const startDragGesture = (
         autoScroll(scrollableParent, {
           elementVisuallyMoving,
           direction,
+          stickyLeftElement,
         });
       }
 
@@ -224,11 +234,18 @@ export const startDragGesture = (
 
 const autoScroll = (
   scrollableElement,
-  { elementVisuallyMoving, direction },
+  { elementVisuallyMoving, direction, stickyLeftElement = null },
 ) => {
   const scrollableRect = scrollableElement.getBoundingClientRect();
   const elementRect = elementVisuallyMoving.getBoundingClientRect();
   const scrollZone = 30; // pixels from edge to trigger scrolling
+
+  // Calculate effective visible area accounting for sticky elements
+  let effectiveLeft = scrollableRect.left;
+  if (stickyLeftElement) {
+    const stickyRect = stickyLeftElement.getBoundingClientRect();
+    effectiveLeft = stickyRect.right;
+  }
 
   if (DEBUG_AUTO_SCROLL) {
     console.log("autoScroll check:", {
@@ -246,6 +263,8 @@ const autoScroll = (
       },
       scrollZone,
       direction,
+      stickyLeftElement: stickyLeftElement ? "present" : "none",
+      effectiveLeft,
     });
   }
 
@@ -254,10 +273,10 @@ const autoScroll = (
       break horizontal;
     }
 
-    // Check if element's left edge is beyond scrollable area's left boundary
-    if (elementRect.left < scrollableRect.left + scrollZone) {
-      // Scroll left by the amount the element is hidden on the left
-      const hiddenAmount = scrollableRect.left + scrollZone - elementRect.left;
+    // Check if element's left edge is beyond effective left boundary (accounting for sticky elements)
+    if (elementRect.left < effectiveLeft + scrollZone) {
+      // Scroll left by the amount the element is hidden beyond the effective left boundary
+      const hiddenAmount = effectiveLeft + scrollZone - elementRect.left;
       const oldScrollLeft = scrollableElement.scrollLeft;
       scrollableElement.scrollLeft = Math.max(
         0,
@@ -268,6 +287,8 @@ const autoScroll = (
           hiddenAmount,
           oldScrollLeft,
           newScrollLeft: scrollableElement.scrollLeft,
+          effectiveLeft,
+          originalLeft: scrollableRect.left,
         });
       }
       break horizontal;
