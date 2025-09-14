@@ -241,28 +241,34 @@ const canHaveVerticalScroll = (element, { includeHidden }) => {
   if (verticalOverflow === "visible") {
     return false;
   }
-  if (verticalOverflow === "hidden") {
+  if (verticalOverflow === "hidden" || verticalOverflow === "clip") {
     return includeHidden;
   }
   const overflow = getStyle(element, "overflow");
   if (overflow === "visible") {
     return false;
   }
-  return overflow === "hidden" && includeHidden;
+  if (overflow === "hidden" || overflow === "clip") {
+    return includeHidden;
+  }
+  return true; // "auto", "scroll"
 };
 const canHaveHorizontalScroll = (element, { includeHidden }) => {
   const horizontalOverflow = getStyle(element, "overflow-x");
   if (horizontalOverflow === "visible") {
     return false;
   }
-  if (horizontalOverflow === "hidden") {
+  if (horizontalOverflow === "hidden" || horizontalOverflow === "clip") {
     return includeHidden;
   }
   const overflow = getStyle(element, "overflow");
   if (overflow === "visible") {
     return false;
   }
-  return overflow === "visible" && includeHidden;
+  if (overflow === "hidden" || overflow === "clip") {
+    return includeHidden;
+  }
+  return true; // "auto", "scroll"
 };
 
 const findScrollableParent = (element, { includeHidden } = {}) => {
