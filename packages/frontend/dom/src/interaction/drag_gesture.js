@@ -67,7 +67,7 @@ export const startDragGesture = (
   if (backdrop) {
     const backdropElement = document.createElement("div");
     backdropElement.style.position = "fixed";
-    backdropElement.style.zIndex = "1";
+    backdropElement.style.zIndex = "1000000";
     backdropElement.style.inset = "0";
     backdropElement.style.cursor = cursor;
     backdropElement.style.userSelect = "none";
