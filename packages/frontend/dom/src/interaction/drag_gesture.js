@@ -46,6 +46,7 @@ export const startDragGesture = (
   const {
     element,
     elementToMove = element,
+    elementVisuallyMoving = element,
     direction = defaultDirection,
     cursor = "grabbing",
   } = setupResult;
@@ -57,6 +58,7 @@ export const startDragGesture = (
   const yAtStart = mousedownEvent.clientY;
   const gestureInfo = {
     element,
+    elementVisuallyMoving,
     xAtStart,
     yAtStart,
     x: xAtStart,
@@ -168,7 +170,10 @@ export const startDragGesture = (
 
       // Auto-scroll the first scrollable parent, if any
       if (scrollableParent) {
-        autoScroll(scrollableParent, gestureInfo, direction);
+        autoScroll(scrollableParent, {
+          elementVisuallyMoving,
+          direction,
+        });
       }
 
       if (!started) {
@@ -215,32 +220,39 @@ export const startDragGesture = (
   onGrab?.(gestureInfo);
 };
 
-const autoScroll = (scrollableElement, gestureInfo, direction) => {
+const autoScroll = (
+  scrollableElement,
+  { elementVisuallyMoving, direction },
+) => {
   const scrollableRect = scrollableElement.getBoundingClientRect();
-  const elementRect = gestureInfo.element.getBoundingClientRect();
+  const elementRect = elementVisuallyMoving.getBoundingClientRect();
   const scrollZone = 0; // pixels from edge to trigger scrolling
-  const scrollStep = 5; // small fixed scroll amount per frame
 
   horizontal: {
     if (!direction.x) {
       break horizontal;
     }
 
-    // Check if element's left edge is approaching scrollable area's left boundary
+    // Check if element's left edge is beyond scrollable area's left boundary
     if (elementRect.left < scrollableRect.left + scrollZone) {
+      // Scroll left by the amount the element is hidden on the left
+      const hiddenAmount = scrollableRect.left + scrollZone - elementRect.left;
       scrollableElement.scrollLeft = Math.max(
         0,
-        scrollableElement.scrollLeft - scrollStep,
+        scrollableElement.scrollLeft - hiddenAmount,
       );
       break horizontal;
     }
-    // Check if element's right edge is approaching scrollable area's right boundary
+    // Check if element's right edge is beyond scrollable area's right boundary
     if (elementRect.right > scrollableRect.right - scrollZone) {
+      // Scroll right by the amount the element is hidden on the right
+      const hiddenAmount =
+        elementRect.right - (scrollableRect.right - scrollZone);
       const maxScrollLeft =
         scrollableElement.scrollWidth - scrollableElement.clientWidth;
       scrollableElement.scrollLeft = Math.min(
         maxScrollLeft,
-        scrollableElement.scrollLeft + scrollStep,
+        scrollableElement.scrollLeft + hiddenAmount,
       );
     }
   }
@@ -249,21 +261,26 @@ const autoScroll = (scrollableElement, gestureInfo, direction) => {
       break vertical;
     }
 
-    // Check if element's top edge is approaching scrollable area's top boundary
+    // Check if element's top edge is beyond scrollable area's top boundary
     if (elementRect.top < scrollableRect.top + scrollZone) {
+      // Scroll up by the amount the element is hidden at the top
+      const hiddenAmount = scrollableRect.top + scrollZone - elementRect.top;
       scrollableElement.scrollTop = Math.max(
         0,
-        scrollableElement.scrollTop - scrollStep,
+        scrollableElement.scrollTop - hiddenAmount,
       );
       break vertical;
     }
-    // Check if element's bottom edge is approaching scrollable area's bottom boundary
+    // Check if element's bottom edge is beyond scrollable area's bottom boundary
     if (elementRect.bottom > scrollableRect.bottom - scrollZone) {
+      // Scroll down by the amount the element is hidden at the bottom
+      const hiddenAmount =
+        elementRect.bottom - (scrollableRect.bottom - scrollZone);
       const maxScrollTop =
         scrollableElement.scrollHeight - scrollableElement.clientHeight;
       scrollableElement.scrollTop = Math.min(
         maxScrollTop,
-        scrollableElement.scrollTop + scrollStep,
+        scrollableElement.scrollTop + hiddenAmount,
       );
     }
   }

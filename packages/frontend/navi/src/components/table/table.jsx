@@ -1057,8 +1057,10 @@ const HeaderCell = ({
               // cloneParent.removeChild(tableClone);
             });
             return {
-              elementToMove: cloneParent,
               element: tableClone,
+              elementToMove: cloneParent,
+              elementVisuallyMoving:
+                tableClone.querySelector("colgroup").children[columnIndex],
             };
           },
         });
