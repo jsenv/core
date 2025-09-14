@@ -220,7 +220,8 @@ export const startDragGesture = (
           if (desiredElementLeft >= leftMin) {
             break horizontal;
           }
-          const scrollLeftRequired = desiredElementLeft - leftMin;
+          const scrollLeftRequired =
+            scrollLeft + (desiredElementLeft - leftMin);
           scrollableParent.scrollLeft = scrollLeftRequired;
           gestureInfo.autoScrolledX = scrollLeftRequired;
         }
