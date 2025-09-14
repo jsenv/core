@@ -717,8 +717,8 @@ export const Table = forwardRef((props, ref) => {
     setGrabTarget(`column:${columnIndex}`);
   };
   const releaseColumn = () => {
-    // setGrabTarget(null);
-    // setDragElement(null);
+    setGrabTarget(null);
+    setDragElement(null);
   };
 
   return (
@@ -1057,7 +1057,7 @@ const HeaderCell = ({
               .querySelector(".navi_table_drag_clone_positioner");
             cloneParent.insertBefore(tableClone, cloneParent.firstChild);
             addTeardown(() => {
-              // cloneParent.removeChild(tableClone);
+              cloneParent.removeChild(tableClone);
             });
             return {
               element: tableClone,
