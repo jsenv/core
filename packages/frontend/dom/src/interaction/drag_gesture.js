@@ -101,9 +101,9 @@ export const startDragGesture = (
   const initialLeft = elementVisuallyMovingRect.left;
 
   if (stickyLeftElement) {
-    const stickyRect = stickyLeftElement.getBoundingClientRect();
-    const stickyRightRelativeToElement = stickyRect.right - initialLeft;
-    minX = Math.max(minX, stickyRightRelativeToElement);
+    // const stickyRect = stickyLeftElement.getBoundingClientRect();
+    // const stickyRightRelativeToElement = stickyRect.right - initialLeft;
+    // minX = Math.max(minX, stickyRightRelativeToElement);
   }
 
   mouse_events: {
@@ -194,7 +194,7 @@ export const startDragGesture = (
           initialLeft + gestureInfo.xMove + scrollXDiff;
         const desiredElementRight = desiredElementLeft + elementWidth;
         let scrollableLeft = scrollableRect.left;
-        let scrollableRight = scrollableLeft + availableWidth;
+        let leftMax = scrollableLeft + availableWidth;
         if (stickyLeftElement) {
           // const stickyRect = stickyLeftElement.getBoundingClientRect();
           // scrollableLeft = stickyRect.right;
@@ -204,10 +204,10 @@ export const startDragGesture = (
             break horizontal;
           }
           if (isGoingRight) {
-            if (desiredElementRight <= scrollableRight) {
+            if (desiredElementRight <= leftMax) {
               break horizontal;
             }
-            const scrollLeftRequired = desiredElementRight - scrollableRight;
+            const scrollLeftRequired = desiredElementRight - leftMax;
             scrollableParent.scrollLeft = scrollLeftRequired;
             gestureInfo.autoScrolledX = scrollLeftRequired;
             break horizontal;
@@ -216,11 +216,11 @@ export const startDragGesture = (
           if (!isGoingLeft) {
             break horizontal;
           }
-          console.log({ desiredElementLeft, scrollableLeft });
-          if (desiredElementLeft >= scrollableLeft) {
+          const leftMin = scrollableLeft + scrollLeft;
+          if (desiredElementLeft >= leftMin) {
             break horizontal;
           }
-          const scrollLeftRequired = desiredElementLeft - scrollableLeft;
+          const scrollLeftRequired = desiredElementLeft - leftMin;
           scrollableParent.scrollLeft = scrollLeftRequired;
           gestureInfo.autoScrolledX = scrollLeftRequired;
         }
