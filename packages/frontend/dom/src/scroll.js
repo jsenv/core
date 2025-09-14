@@ -108,7 +108,7 @@ export const getScrollableParentSet = (element) => {
   return scrollableParentSet;
 };
 
-export const getScrollableParent = (arg) => {
+export const getScrollableParent = (arg, { includeHidden } = {}) => {
   if (typeof arg !== "object" || arg.nodeType !== 1) {
     throw new TypeError("getScrollableParent first argument must be DOM node");
   }
@@ -122,7 +122,8 @@ export const getScrollableParent = (arg) => {
     return getScrollingElement(element.ownerDocument);
   }
   return (
-    findScrollableParent(element) || getScrollingElement(element.ownerDocument)
+    findScrollableParent(element, { includeHidden }) ||
+    getScrollingElement(element.ownerDocument)
   );
 };
 
@@ -223,40 +224,48 @@ const testScrollCompliance = (document) => {
   return scrollComplianceResult;
 };
 
-const isScrollable = (element) => {
-  // note: keep in mind that an element with overflow: 'hidden' is scrollable
-  // it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft
-  if (!verticalOverflowIsVisible(element)) {
+// note: keep in mind that an element with overflow: 'hidden' is scrollable
+// it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft
+// the only overflow that prevents scroll is "visible"
+const isScrollable = (element, { includeHidden }) => {
+  if (canHaveVerticalScroll(element, { includeHidden })) {
     return true;
   }
-
-  if (!horizontalOverflowIsVisible(element)) {
+  if (canHaveHorizontalScroll(element, { includeHidden })) {
     return true;
   }
-
   return false;
 };
-
-const verticalOverflowIsVisible = (element) => {
-  const verticalOverflow = getStyle(element, "overflow-x");
+const canHaveVerticalScroll = (element, { includeHidden }) => {
+  const verticalOverflow = getStyle(element, "overflow-y");
   if (verticalOverflow === "visible") {
-    return true;
+    return false;
   }
-
+  if (verticalOverflow === "hidden") {
+    return includeHidden;
+  }
   const overflow = getStyle(element, "overflow");
-  return overflow === "visible";
+  if (overflow === "visible") {
+    return false;
+  }
+  return overflow === "hidden" && includeHidden;
 };
-
-const horizontalOverflowIsVisible = (element) => {
-  const horizontalOverflow = getStyle(element, "overflow-y");
+const canHaveHorizontalScroll = (element, { includeHidden }) => {
+  const horizontalOverflow = getStyle(element, "overflow-x");
   if (horizontalOverflow === "visible") {
-    return true;
+    return false;
+  }
+  if (horizontalOverflow === "hidden") {
+    return includeHidden;
   }
   const overflow = getStyle(element, "overflow");
-  return overflow === "visible";
+  if (overflow === "visible") {
+    return false;
+  }
+  return overflow === "visible" && includeHidden;
 };
 
-const findScrollableParent = (element) => {
+const findScrollableParent = (element, { includeHidden } = {}) => {
   if (element === document.documentElement) {
     return null;
   }
@@ -271,7 +280,7 @@ const findScrollableParent = (element) => {
       parent = parent.parentNode;
       continue;
     }
-    if (isScrollable(parent)) {
+    if (isScrollable(parent, { includeHidden })) {
       return parent;
     }
     parent = parent.parentNode;
