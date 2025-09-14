@@ -45,6 +45,7 @@ export const startDragGesture = (
   }
   const {
     element,
+    elementToMove = element,
     direction = defaultDirection,
     cursor = "grabbing",
   } = setupResult;
@@ -158,16 +159,24 @@ export const startDragGesture = (
             return;
           }
         }
-        started = true;
-        onDragStart?.(gestureInfo);
-        onDrag?.(gestureInfo, "start");
-      } else {
-        onDrag?.(gestureInfo, "middle");
+      }
+
+      if (elementToMove) {
+        elementToMove.style.left = `${gestureInfo.xMove}px`;
+        elementToMove.style.top = `${gestureInfo.yMove}px`;
       }
 
       // Auto-scroll the first scrollable parent, if any
       if (scrollableParent) {
         autoScroll(scrollableParent, gestureInfo, direction);
+      }
+
+      if (!started) {
+        started = true;
+        onDragStart?.(gestureInfo);
+        onDrag?.(gestureInfo, "start");
+      } else {
+        onDrag?.(gestureInfo, "middle");
       }
     };
 

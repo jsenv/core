@@ -1057,6 +1057,7 @@ const HeaderCell = ({
               // cloneParent.removeChild(tableClone);
             });
             return {
+              elementToMove: cloneParent,
               element: tableClone,
             };
           },
