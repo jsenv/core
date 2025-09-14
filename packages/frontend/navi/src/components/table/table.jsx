@@ -520,6 +520,9 @@ import.meta.css = /* css */ `
     z-index: var(--z-index-dragging-clone);
     cursor: grabbing;
     user-select: none;
+    overflow: hidden;
+    left: 0;
+    top: 0;
   }
 
   .navi_table_drag_clone_container th,
@@ -1085,6 +1088,13 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
     if (!cloneParentElement) {
       return;
     }
+    const cloneContainer = cloneParentElement.closest(
+      ".navi_table_drag_clone_container",
+    );
+    const tableContainer = cloneParentElement.closest(".navi_table_container");
+    cloneContainer.style.width = `${tableContainer.scrollWidth}px`;
+    cloneContainer.style.height = `${tableContainer.scrollHeight}px`;
+
     const table = tableRef.current;
     const columnElement = table.querySelectorAll("th")[columnIndex + 1];
     const rectRelativeTo = getBoundingClientRectRelativeTo(
@@ -1101,18 +1111,23 @@ const DragClone = ({ tableRef, grabTarget, dragPosition }) => {
   }, [x, y]);
 
   return (
-    <div
-      ref={cloneParentElementRef}
-      className="navi_table_drag_clone_container"
-    >
-      <ColumnDragClone
-        tableRef={tableRef}
-        cloneParentElementRef={cloneParentElementRef}
-        columnIndex={columnIndex}
-      />
+    <div className="navi_table_drag_clone_container">
+      <div
+        ref={cloneParentElementRef}
+        className="navi_table_drag_clone_positioner"
+        style={{
+          position: "absolute",
+        }}
+      >
+        <ColumnDragClone
+          tableRef={tableRef}
+          cloneParentElementRef={cloneParentElementRef}
+          columnIndex={columnIndex}
+        />
 
-      {/* to catch any mouse over effect and stuff like that */}
-      <div style={{ position: "absolute", inset: 0 }}></div>
+        {/* to catch any mouse over effect and stuff like that */}
+        {/* <div style={{ position: "absolute", inset: 0 }}></div> */}
+      </div>
     </div>
   );
 };
