@@ -186,6 +186,7 @@ export const startDragGesture = (
           elementVisuallyMoving,
           direction,
           stickyLeftElement,
+          gestureInfo,
         });
       }
 
@@ -235,7 +236,7 @@ export const startDragGesture = (
 
 const autoScroll = (
   scrollableElement,
-  { elementVisuallyMoving, direction, stickyLeftElement = null },
+  { elementVisuallyMoving, direction, stickyLeftElement = null, gestureInfo },
 ) => {
   const scrollableRect = scrollableElement.getBoundingClientRect();
   const elementRect = elementVisuallyMoving.getBoundingClientRect();
@@ -245,11 +246,9 @@ const autoScroll = (
   let effectiveLeft = scrollableRect.left;
   if (stickyLeftElement) {
     const stickyRect = stickyLeftElement.getBoundingClientRect();
-    // For sticky elements, calculate where the sticky boundary appears within the scrollable area
-    // If the sticky element is positioned to the left of the container, it will appear at the left edge
-    // but still occupy its full width within the container
-    const stickyWidth = stickyRect.width;
-    effectiveLeft = scrollableRect.left + stickyWidth;
+    // Account for scroll position: sticky right edge adjusted for scroll
+    // stickyRect.right is in viewport coordinates, adjust for current scroll position
+    effectiveLeft = stickyRect.right + scrollableElement.scrollLeft;
   }
 
   if (DEBUG_AUTO_SCROLL) {
