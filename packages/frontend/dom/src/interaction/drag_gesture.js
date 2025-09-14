@@ -245,7 +245,11 @@ const autoScroll = (
   let effectiveLeft = scrollableRect.left;
   if (stickyLeftElement) {
     const stickyRect = stickyLeftElement.getBoundingClientRect();
-    effectiveLeft = stickyRect.right;
+    // For sticky elements, calculate where the sticky boundary appears within the scrollable area
+    // If the sticky element is positioned to the left of the container, it will appear at the left edge
+    // but still occupy its full width within the container
+    const stickyWidth = stickyRect.width;
+    effectiveLeft = scrollableRect.left + stickyWidth;
   }
 
   if (DEBUG_AUTO_SCROLL) {
