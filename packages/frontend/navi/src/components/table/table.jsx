@@ -531,6 +531,19 @@ import.meta.css = /* css */ `
   .navi_table_drag_clone_container td[data-grabbed] {
     opacity: 1;
   }
+
+  .navi_table_drag_clone_container th[data-sticky-y],
+  .navi_table_drag_clone_container td[data-sticky-y] {
+    position: relative;
+  }
+  .navi_table_drag_clone_container th[data-sticky-x],
+  .navi_table_drag_clone_container td[data-sticky-x] {
+    position: relative;
+  }
+  .navi_table_drag_clone_container th[data-sticky-x][data-sticky-y],
+  .navi_table_drag_clone_container td[data-sticky-x][data-sticky-y] {
+    position: relative;
+  }
 `;
 
 const NO_SELECTION = [];
