@@ -787,6 +787,7 @@ export const Table = forwardRef((props, ref) => {
                   rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                   columns={columns}
                   selectionController={selectionController}
+                  value={rowIndex + 1}
                 />
                 {columns.map((col, colIndex) => {
                   const columnGrabbed = grabTarget === `column:${colIndex}`;
@@ -1005,6 +1006,7 @@ const RowNumberCell = ({
   columns,
   rowWithSomeSelectedCell,
   selectionController,
+  value,
 }) => {
   const cellRef = useRef();
 
@@ -1037,7 +1039,7 @@ const RowNumberCell = ({
       style={{ cursor: "pointer", textAlign: "center" }}
       tabIndex={-1}
     >
-      {row.index}
+      {value}
     </td>
   );
 };
