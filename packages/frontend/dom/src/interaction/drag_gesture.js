@@ -189,7 +189,6 @@ export const startDragGesture = (
         const elementHeight = elementRect.height;
 
         const scrollXDiff = scrollLeft - initialScrollLeft;
-
         // Calculate where element bounds would be at the desired position
         const desiredElementLeft =
           initialLeft + gestureInfo.xMove + scrollXDiff;
@@ -197,8 +196,8 @@ export const startDragGesture = (
         let scrollableLeft = scrollableRect.left;
         let scrollableRight = scrollableLeft + availableWidth;
         if (stickyLeftElement) {
-          const stickyRect = stickyLeftElement.getBoundingClientRect();
-          scrollableLeft = stickyRect.right;
+          // const stickyRect = stickyLeftElement.getBoundingClientRect();
+          // scrollableLeft = stickyRect.right;
         }
         horizontal: {
           if (!direction.x) {
@@ -221,14 +220,9 @@ export const startDragGesture = (
           if (desiredElementLeft >= scrollableLeft) {
             break horizontal;
           }
-          const scrollAmount = scrollableLeft - desiredElementLeft;
-          const oldScrollLeft = scrollableParent.scrollLeft;
-          scrollableParent.scrollLeft = Math.max(
-            0,
-            scrollableParent.scrollLeft - scrollAmount,
-          );
-          const actualScrolled = oldScrollLeft - scrollableParent.scrollLeft;
-          gestureInfo.autoScrolledX -= actualScrolled;
+          const scrollLeftRequired = desiredElementLeft - scrollableLeft;
+          scrollableParent.scrollLeft = scrollLeftRequired;
+          gestureInfo.autoScrolledX = scrollLeftRequired;
         }
 
         // let scrollableTop = scrollableRect.top;
