@@ -108,6 +108,15 @@ export const startDragGesture = (
 
   mouse_events: {
     const updateMousePosition = (e) => {
+      const isGoingLeft = e.clientX < gestureInfo.x;
+      const isGoingRight = e.clientX > gestureInfo.x;
+      const isGoingTop = e.clientY < gestureInfo.y;
+      const isGoingBottom = e.clientY > gestureInfo.y;
+      gestureInfo.isGoingLeft = isGoingLeft;
+      gestureInfo.isGoingRight = isGoingRight;
+      gestureInfo.isGoingTop = isGoingTop;
+      gestureInfo.isGoingBottom = isGoingBottom;
+
       if (direction.x) {
         gestureInfo.x = e.clientX;
         let xMove = gestureInfo.x - xAtStart;
@@ -148,6 +157,7 @@ export const startDragGesture = (
       if (!someChange) {
         return;
       }
+
       previousGestureInfo = { ...gestureInfo };
       if (!started && threshold) {
         const deltaX = Math.abs(gestureInfo.xMove);
@@ -171,62 +181,63 @@ export const startDragGesture = (
       // Auto-scroll the first scrollable parent, if any
       if (scrollableParent) {
         const scrollableRect = scrollableParent.getBoundingClientRect();
-
-        // Calculate where the element should be based on pure mouse movement
-        const desiredLeft = gestureInfo.xAtStart + gestureInfo.xMove;
-        const desiredTop = gestureInfo.yAtStart + gestureInfo.yMove;
-
+        const availableWidth = scrollableParent.clientWidth;
+        const scrollbarWidth = scrollableParent.offsetWidth - availableWidth;
         // Get the element's current size to calculate its bounds
         const elementRect = elementVisuallyMoving.getBoundingClientRect();
         const elementWidth = elementRect.width;
         const elementHeight = elementRect.height;
+        const scrollLeft = scrollableParent.scrollLeft;
+        const scrollXDiff = scrollLeft - initialScrollLeft;
 
         // Calculate where element bounds would be at the desired position
-        const desiredElementLeft = desiredLeft;
-        const desiredElementRight = desiredLeft + elementWidth;
-        const desiredElementTop = desiredTop;
-        const desiredElementBottom = desiredTop + elementHeight;
-
-        // Calculate effective visible area accounting for sticky elements
-        let effectiveLeft = scrollableRect.left;
+        const desiredElementLeft =
+          initialLeft + gestureInfo.xMove + scrollXDiff;
+        const desiredElementRight = desiredElementLeft + elementWidth;
+        let scrollableLeft = scrollableRect.left;
+        let scrollableRight = scrollableLeft + availableWidth;
         if (stickyLeftElement) {
           const stickyRect = stickyLeftElement.getBoundingClientRect();
-          effectiveLeft = stickyRect.right;
+          scrollableLeft = stickyRect.right;
         }
-
         horizontal: {
           if (!direction.x) {
             break horizontal;
           }
-
-          let scrollAmount = 0;
-          // Check if desired element position would be beyond effective left boundary
-          if (desiredElementLeft < effectiveLeft) {
-            // Need to scroll left to make room
-            scrollAmount = effectiveLeft - desiredElementLeft;
-            const oldScrollLeft = scrollableParent.scrollLeft;
-            scrollableParent.scrollLeft = Math.max(
-              0,
-              scrollableParent.scrollLeft - scrollAmount,
-            );
-            const actualScrolled = oldScrollLeft - scrollableParent.scrollLeft;
-            gestureInfo.autoScrolledX -= actualScrolled;
+          console.log(gestureInfo.xMove);
+          if (isGoingRight) {
+            if (desiredElementRight <= scrollableRight) {
+              break horizontal;
+            }
+            const scrollLeftRequired =
+              desiredElementRight - scrollableRight + scrollbarWidth;
+            scrollableParent.scrollLeft = scrollLeftRequired;
+            gestureInfo.autoScrolledX = scrollLeftRequired;
+            break horizontal;
           }
-          // Check if desired element position would be beyond scrollable area's right boundary
-          else if (desiredElementRight > scrollableRect.right) {
-            // Need to scroll right to make room
-            scrollAmount = desiredElementRight - scrollableRect.right;
-            const maxScrollLeft =
-              scrollableParent.scrollWidth - scrollableParent.clientWidth;
-            const oldScrollLeft = scrollableParent.scrollLeft;
-            scrollableParent.scrollLeft = Math.min(
-              maxScrollLeft,
-              scrollableParent.scrollLeft + scrollAmount,
-            );
-            const actualScrolled = scrollableParent.scrollLeft - oldScrollLeft;
-            gestureInfo.autoScrolledX += actualScrolled;
+          // need to scroll left?
+          if (!isGoingLeft) {
+            break horizontal;
           }
+          console.log({ desiredElementLeft, scrollableLeft });
+          if (desiredElementLeft >= scrollableLeft) {
+            break horizontal;
+          }
+          const scrollAmount = scrollableLeft - desiredElementLeft;
+          const oldScrollLeft = scrollableParent.scrollLeft;
+          scrollableParent.scrollLeft = Math.max(
+            0,
+            scrollableParent.scrollLeft - scrollAmount,
+          );
+          const actualScrolled = oldScrollLeft - scrollableParent.scrollLeft;
+          gestureInfo.autoScrolledX -= actualScrolled;
         }
+
+        // let scrollableTop = scrollableRect.top;
+        // let scrollableBottom = scrollableRect.bottom;
+        const desiredElementTop = elementRect.top + gestureInfo.yMove;
+        const desiredElementBottom = desiredElementTop + elementHeight;
+
         vertical: {
           if (!direction.y) {
             break vertical;
@@ -266,12 +277,6 @@ export const startDragGesture = (
         // Position element accounting for auto-scroll
         const finalLeft = gestureInfo.xMove + gestureInfo.autoScrolledX;
         const finalTop = gestureInfo.yMove + gestureInfo.autoScrolledY;
-        console.log(
-          "move to",
-          finalLeft,
-          "autoScrolledX:",
-          gestureInfo.autoScrolledX,
-        );
         elementToMove.style.left = `${finalLeft}px`;
         elementToMove.style.top = `${finalTop}px`;
       }
