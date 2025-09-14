@@ -178,16 +178,16 @@ export const startDragGesture = (
         }
       }
 
-      // Auto-scroll the first scrollable parent, if any
-      if (scrollableParent) {
+      let scrollLeft = scrollableParent.scrollLeft;
+      let scrollTop = scrollableParent.scrollTop;
+      auto_scroll: {
         const scrollableRect = scrollableParent.getBoundingClientRect();
         const availableWidth = scrollableParent.clientWidth;
-        const scrollbarWidth = scrollableParent.offsetWidth - availableWidth;
-        // Get the element's current size to calculate its bounds
+        // const scrollbarWidth = scrollableParent.offsetWidth - availableWidth;
         const elementRect = elementVisuallyMoving.getBoundingClientRect();
         const elementWidth = elementRect.width;
         const elementHeight = elementRect.height;
-        const scrollLeft = scrollableParent.scrollLeft;
+
         const scrollXDiff = scrollLeft - initialScrollLeft;
 
         // Calculate where element bounds would be at the desired position
@@ -204,13 +204,11 @@ export const startDragGesture = (
           if (!direction.x) {
             break horizontal;
           }
-          console.log(gestureInfo.xMove);
           if (isGoingRight) {
             if (desiredElementRight <= scrollableRight) {
               break horizontal;
             }
-            const scrollLeftRequired =
-              desiredElementRight - scrollableRight + scrollbarWidth;
+            const scrollLeftRequired = desiredElementRight - scrollableRight;
             scrollableParent.scrollLeft = scrollLeftRequired;
             gestureInfo.autoScrolledX = scrollLeftRequired;
             break horizontal;
@@ -275,8 +273,8 @@ export const startDragGesture = (
 
       if (elementToMove) {
         // Position element accounting for auto-scroll
-        const finalLeft = gestureInfo.xMove + gestureInfo.autoScrolledX;
-        const finalTop = gestureInfo.yMove + gestureInfo.autoScrolledY;
+        const finalLeft = gestureInfo.xMove + scrollLeft;
+        const finalTop = gestureInfo.yMove + scrollTop;
         elementToMove.style.left = `${finalLeft}px`;
         elementToMove.style.top = `${finalTop}px`;
       }
