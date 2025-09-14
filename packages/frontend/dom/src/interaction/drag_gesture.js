@@ -216,31 +216,31 @@ export const startDragGesture = (
 };
 
 const autoScroll = (scrollableElement, gestureInfo, direction) => {
-  const rect = scrollableElement.getBoundingClientRect();
-  const scrollZone = 30; // pixels from edge to trigger scrolling
-  const scrollSpeed = 10; // pixels per scroll
-  const { x, y } = gestureInfo;
+  const scrollableRect = scrollableElement.getBoundingClientRect();
+  const elementRect = gestureInfo.element.getBoundingClientRect();
+  const scrollZone = 0; // pixels from edge to trigger scrolling
+  const scrollStep = 5; // small fixed scroll amount per frame
 
   horizontal: {
     if (!direction.x) {
       break horizontal;
     }
 
-    // left
-    if (x < rect.left + scrollZone) {
+    // Check if element's left edge is approaching scrollable area's left boundary
+    if (elementRect.left < scrollableRect.left + scrollZone) {
       scrollableElement.scrollLeft = Math.max(
         0,
-        scrollableElement.scrollLeft - scrollSpeed,
+        scrollableElement.scrollLeft - scrollStep,
       );
       break horizontal;
     }
-    // right
-    if (x > rect.right - scrollZone) {
+    // Check if element's right edge is approaching scrollable area's right boundary
+    if (elementRect.right > scrollableRect.right - scrollZone) {
       const maxScrollLeft =
         scrollableElement.scrollWidth - scrollableElement.clientWidth;
       scrollableElement.scrollLeft = Math.min(
         maxScrollLeft,
-        scrollableElement.scrollLeft + scrollSpeed,
+        scrollableElement.scrollLeft + scrollStep,
       );
     }
   }
@@ -249,21 +249,21 @@ const autoScroll = (scrollableElement, gestureInfo, direction) => {
       break vertical;
     }
 
-    // up
-    if (y < rect.top + scrollZone) {
+    // Check if element's top edge is approaching scrollable area's top boundary
+    if (elementRect.top < scrollableRect.top + scrollZone) {
       scrollableElement.scrollTop = Math.max(
         0,
-        scrollableElement.scrollTop - scrollSpeed,
+        scrollableElement.scrollTop - scrollStep,
       );
       break vertical;
     }
-    // down
-    if (y > rect.bottom - scrollZone) {
+    // Check if element's bottom edge is approaching scrollable area's bottom boundary
+    if (elementRect.bottom > scrollableRect.bottom - scrollZone) {
       const maxScrollTop =
         scrollableElement.scrollHeight - scrollableElement.clientHeight;
       scrollableElement.scrollTop = Math.min(
         maxScrollTop,
-        scrollableElement.scrollTop + scrollSpeed,
+        scrollableElement.scrollTop + scrollStep,
       );
     }
   }
