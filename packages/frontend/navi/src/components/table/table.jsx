@@ -756,7 +756,7 @@ export const Table = forwardRef((props, ref) => {
                     releaseColumn(index);
                   }}
                 >
-                  {col.header}
+                  {col.value}
                 </HeaderCell>
               );
             })}
