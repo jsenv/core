@@ -60,7 +60,7 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
-import { startDragGesture } from "@jsenv/dom";
+import { getScrollableParent, startDragGesture } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,
@@ -1139,9 +1139,42 @@ const ColumnDragClone = ({ tableRef, cloneParentElementRef }) => {
     if (!table) {
       return null;
     }
+
     const tableClone = table.cloneNode(true);
 
+    const scrollableParent = getScrollableParent(table);
+    const scrollLeft = scrollableParent.scrollLeft || 0;
+    const scrollTop = scrollableParent.scrollTop || 0;
+
+    // Update sticky positioning for cloned elements
+    const updateStickyElements = (clonedTable) => {
+      // Find all sticky elements (th and td with data-sticky-x or data-sticky-y)
+      const stickyElements = clonedTable.querySelectorAll(
+        "th[data-sticky-x], td[data-sticky-x], th[data-sticky-y], td[data-sticky-y]",
+      );
+
+      stickyElements.forEach((stickyElement) => {
+        const hasXSticky = stickyElement.hasAttribute("data-sticky-x");
+        const hasYSticky = stickyElement.hasAttribute("data-sticky-y");
+
+        if (hasXSticky) {
+          // For horizontal sticky elements, set left position based on scroll
+          stickyElement.style.left = `${scrollLeft}px`;
+        }
+
+        if (hasYSticky) {
+          // For vertical sticky elements, set top position based on scroll
+          stickyElement.style.top = `${scrollTop}px`;
+        }
+
+        // Ensure position is sticky for the clone
+        stickyElement.style.position = "sticky";
+      });
+    };
+
+    updateStickyElements(tableClone);
     cloneParentElement.insertBefore(tableClone, cloneParentElement.firstChild);
+
     return () => {
       cloneParentElement.removeChild(tableClone);
     };
