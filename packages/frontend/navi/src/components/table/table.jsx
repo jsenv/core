@@ -999,6 +999,7 @@ const HeaderCell = ({
         const table = e.target.closest("table");
         const th = cellRef.current;
         const rectRelativeTo = getBoundingClientRectRelativeTo(th, table);
+        const columnIndex = Array.from(th.parentNode.children).indexOf(th);
         const minX = -rectRelativeTo.left;
         // const minY = -rectRelativeTo.top;
 
@@ -1040,8 +1041,12 @@ const HeaderCell = ({
             }
             const tableCells = tableClone.querySelectorAll("td, th");
             tableCells.forEach((cell) => {
-              // TODO: only if part of this column
-              cell.setAttribute("data-grabbed", "");
+              const cellColumnIndex = Array.from(
+                cell.parentNode.children,
+              ).indexOf(cell);
+              if (cellColumnIndex === columnIndex) {
+                cell.setAttribute("data-grabbed", "");
+              }
             });
 
             const cloneParent = table
