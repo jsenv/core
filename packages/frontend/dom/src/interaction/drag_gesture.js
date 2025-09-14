@@ -93,6 +93,15 @@ export const startDragGesture = (
   const scrollableParent = getScrollableParent(element);
   const initialScrollLeft = scrollableParent ? scrollableParent.scrollLeft : 0;
   const initialScrollTop = scrollableParent ? scrollableParent.scrollTop : 0;
+  const elementVisuallyMovingRect =
+    elementVisuallyMoving.getBoundingClientRect();
+  const initialLeft = elementVisuallyMovingRect.left;
+
+  if (stickyLeftElement) {
+    const stickyRect = stickyLeftElement.getBoundingClientRect();
+    const stickyRightRelativeToElement = stickyRect.right - initialLeft;
+    minX = Math.max(minX, stickyRightRelativeToElement);
+  }
 
   mouse_events: {
     const updateMousePosition = (e) => {
@@ -109,16 +118,8 @@ export const startDragGesture = (
       if (direction.x) {
         gestureInfo.x = e.clientX;
         let xMove = gestureInfo.x - xAtStart + scrollDeltaX;
-        // Apply sticky left constraint - element can't move left past sticky elements
-        let effectiveMinX = minX;
-        if (stickyLeftElement) {
-          const stickyRect = stickyLeftElement.getBoundingClientRect();
-          const tableRect = element.getBoundingClientRect();
-          const stickyRightRelativeToTable = stickyRect.right - tableRect.left;
-          effectiveMinX = Math.max(minX, stickyRightRelativeToTable);
-        }
-        if (xMove < effectiveMinX) {
-          xMove = effectiveMinX;
+        if (xMove < minX) {
+          xMove = minX;
         } else if (xMove > maxX) {
           xMove = maxX;
         }

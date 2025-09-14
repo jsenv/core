@@ -717,8 +717,8 @@ export const Table = forwardRef((props, ref) => {
     setGrabTarget(`column:${columnIndex}`);
   };
   const releaseColumn = () => {
-    setGrabTarget(null);
-    setDragElement(null);
+    // setGrabTarget(null);
+    // setDragElement(null);
   };
 
   return (
@@ -1000,7 +1000,7 @@ const HeaderCell = ({
         const table = e.target.closest("table");
         const columnIndex = Array.from(th.parentNode.children).indexOf(th);
         const colgroup = table.querySelector("colgroup");
-        const firstCol = colgroup.children[1];
+        const firstCol = colgroup.children[0];
         // const minY = -rectRelativeTo.top;
 
         startDragGesture(e, {
@@ -1038,29 +1038,34 @@ const HeaderCell = ({
                 }
               });
             }
-            const tableCells = tableClone.querySelectorAll("td, th");
-            tableCells.forEach((cell) => {
+            const tableCloneCells = tableClone.querySelectorAll("td, th");
+            tableCloneCells.forEach((cellClone) => {
               const cellColumnIndex = Array.from(
-                cell.parentNode.children,
-              ).indexOf(cell);
+                cellClone.parentNode.children,
+              ).indexOf(cellClone);
               if (cellColumnIndex === columnIndex) {
-                cell.setAttribute("data-grabbed", "");
+                cellClone.setAttribute("data-grabbed", "");
               }
             });
+            const colClone =
+              tableClone.querySelector("colgroup").children[columnIndex];
 
             const cloneParent = table
               .closest(".navi_table_container")
               .querySelector(".navi_table_drag_clone_positioner");
             cloneParent.insertBefore(tableClone, cloneParent.firstChild);
+            cloneParent.closest(
+              ".navi_table_drag_clone_container",
+            ).style.display = "block";
             addTeardown(() => {
-              cloneParent.removeChild(tableClone);
+              // cloneParent.removeChild(tableClone);
             });
+
             return {
               element: tableClone,
               elementToMove: cloneParent,
               stickyLeftElement: firstCol,
-              elementVisuallyMoving:
-                tableClone.querySelector("colgroup").children[columnIndex],
+              elementVisuallyMoving: colClone,
             };
           },
         });
