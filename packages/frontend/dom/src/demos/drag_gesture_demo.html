@@ -108,6 +108,45 @@
         z-index: 1000;
       }
 
+      /* Solid obstacles that cannot be traversed */
+      .solid-obstacle {
+        position: absolute;
+        background: #e91e63;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        border: 2px solid #c2185b;
+        z-index: 100;
+      }
+
+      /* Content area for Case 3 with obstacles */
+      .obstacle-content {
+        width: 600px; /* Wider than container = horizontal scrollbar */
+        height: 400px; /* Taller than container = both scrollbars */
+        background:
+          linear-gradient(
+            90deg,
+            transparent 99px,
+            #ddd 100px,
+            #ddd 101px,
+            transparent 102px
+          ),
+          linear-gradient(
+            0deg,
+            transparent 99px,
+            #ddd 100px,
+            #ddd 101px,
+            transparent 102px
+          );
+        position: relative;
+      }
+
       .info {
         max-width: 800px;
         margin: 0 auto;
@@ -179,6 +218,10 @@
         <li>
           <strong>Case 2:</strong> Both scrollbars visible (content wider and
           taller)
+        </li>
+        <li>
+          <strong>Case 3:</strong> Solid obstacles - dragged element cannot
+          overlap with fixed objects
         </li>
         <li>
           <strong>Visual debug markers</strong> show boundaries and scroll areas
@@ -491,6 +534,183 @@
       </div>
     </div>
 
+    <!-- Case 3: Solid Obstacles -->
+    <div class="demo-section">
+      <h2 class="demo-title">
+        Case 3: Solid Obstacles (content with non-traversable objects)
+      </h2>
+      <div
+        style="
+          display: flex;
+          gap: 20px;
+          align-items: flex-start;
+          justify-content: center;
+        "
+      >
+        <div class="container" id="obstacleContainer">
+          <div class="obstacle-content">
+            <!-- Solid obstacles that cannot be traversed -->
+            <div
+              class="solid-obstacle"
+              style="top: 50px; left: 150px; width: 80px; height: 60px"
+            >
+              WALL A
+            </div>
+
+            <div
+              class="solid-obstacle"
+              style="top: 150px; left: 300px; width: 100px; height: 40px"
+            >
+              WALL B
+            </div>
+
+            <div
+              class="solid-obstacle"
+              style="top: 250px; left: 50px; width: 60px; height: 80px"
+            >
+              WALL C
+            </div>
+
+            <!-- Draggable rectangle that must respect obstacles -->
+            <div
+              class="draggable-rectangle"
+              id="obstacleRectangle"
+              style="top: 30px; left: 50px"
+            >
+              DRAG ME
+            </div>
+          </div>
+        </div>
+
+        <!-- Programmatic Controls for Case 3 -->
+        <div
+          style="
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            min-width: 280px;
+            position: relative;
+            z-index: 10;
+          "
+        >
+          <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #333">
+            Programmatic Controls
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <button
+              id="grabBtn3"
+              style="
+                padding: 8px 12px;
+                background: #4caf50;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+              "
+            >
+              Grab
+            </button>
+            <button
+              id="dragLeftBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #9c27b0;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Left
+            </button>
+            <button
+              id="dragRightBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #2196f3;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Right
+            </button>
+            <button
+              id="dragUpBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #607d8b;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Up
+            </button>
+            <button
+              id="dragDownBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #ff9800;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Down
+            </button>
+            <button
+              id="releaseBtn3"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Release
+            </button>
+          </div>
+          <div
+            id="status3"
+            style="
+              margin-top: 10px;
+              padding: 8px;
+              background: #f9f9f9;
+              border-radius: 3px;
+              font-family: monospace;
+              font-size: 10px;
+              color: #666;
+            "
+          >
+            Ready
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script type="module">
       // Import the drag gesture functionality
       // Note: You'll need to adjust the import path based on your setup
@@ -514,6 +734,7 @@
         "horizontalRectangle",
       );
       const bothRectangle = document.getElementById("bothRectangle");
+      const obstacleRectangle = document.getElementById("obstacleRectangle");
       const debugCheckbox = document.getElementById("debugMarkersCheckbox");
 
       // Handle debug markers toggle
@@ -554,6 +775,20 @@
         dragInstance: null,
       };
 
+      // Programmatic controls for Case 3 (Solid obstacles)
+      const case3Controls = {
+        grabBtn: document.getElementById("grabBtn3"),
+        dragLeftBtn: document.getElementById("dragLeftBtn3"),
+        dragRightBtn: document.getElementById("dragRightBtn3"),
+        dragUpBtn: document.getElementById("dragUpBtn3"),
+        dragDownBtn: document.getElementById("dragDownBtn3"),
+        releaseBtn: document.getElementById("releaseBtn3"),
+        statusDiv: document.getElementById("status3"),
+        rectangle: obstacleRectangle,
+        dragGesture: null,
+        dragInstance: null,
+      };
+
       function updateStatus(controls, message) {
         controls.statusDiv.textContent = message;
         console.log("Programmatic Control:", message);
@@ -584,7 +819,11 @@
         controls.grabBtn.style.cursor = grabbed ? "not-allowed" : "pointer";
       }
 
-      function setupProgrammaticControls(controls, caseLabel) {
+      function setupProgrammaticControls(
+        controls,
+        caseLabel,
+        customConstraint = null,
+      ) {
         // Grab button
         controls.grabBtn.addEventListener("click", () => {
           if (controls.dragInstance) return;
@@ -598,7 +837,7 @@
           const xAtStart = rectangleRect.left - positionedParentRect.left;
           const yAtStart = rectangleRect.top - positionedParentRect.top;
 
-          controls.dragGesture = createDragGesture({
+          const dragOptions = {
             backdrop: false,
             onGrab: (gestureInfo) => {
               updateStatus(controls, `Grabbed ${caseLabel} programmatically`);
@@ -619,7 +858,13 @@
               controls.dragInstance = null;
               updateButtonStates(controls, false);
             },
-          });
+          };
+
+          if (customConstraint) {
+            dragOptions.constraint = customConstraint;
+          }
+
+          controls.dragGesture = createDragGesture(dragOptions);
 
           controls.dragInstance = controls.dragGesture.grab({
             element: rectangle,
@@ -702,10 +947,83 @@
       setupProgrammaticControls(case1Controls, "horizontal case");
       setupProgrammaticControls(case2Controls, "both scrollbars case");
 
+      // For Case 3, create obstacle constraint
+      const obstacleConstraint = (() => {
+        const rect = obstacleRectangle.getBoundingClientRect();
+        const scrollableParent = getScrollableParent(obstacleRectangle);
+        return createObstacleConstraint(
+          scrollableParent,
+          rect.width,
+          rect.height,
+        );
+      })();
+
+      setupProgrammaticControls(
+        case3Controls,
+        "solid obstacles case",
+        obstacleConstraint,
+      );
+
+      // Function to get obstacle bounds for collision detection
+      function getObstacleBounds() {
+        const obstacles = document.querySelectorAll(".solid-obstacle");
+        return Array.from(obstacles).map((obstacle) => {
+          return {
+            left: obstacle.offsetLeft,
+            top: obstacle.offsetTop,
+            right: obstacle.offsetLeft + obstacle.offsetWidth,
+            bottom: obstacle.offsetTop + obstacle.offsetHeight,
+            width: obstacle.offsetWidth,
+            height: obstacle.offsetHeight,
+          };
+        });
+      }
+
+      // Function to create constraint that respects solid obstacles
+      function createObstacleConstraint(
+        scrollableParent,
+        elementWidth,
+        elementHeight,
+      ) {
+        const obstacles = getObstacleBounds();
+        const scrollWidth = scrollableParent.scrollWidth;
+        const scrollHeight = scrollableParent.scrollHeight;
+
+        return {
+          left: 0,
+          top: 0,
+          right: scrollWidth - elementWidth,
+          bottom: scrollHeight - elementHeight,
+          // Custom constraint function that checks obstacle collisions
+          checkPosition: (left, top) => {
+            const elementRect = {
+              left,
+              top,
+              right: left + elementWidth,
+              bottom: top + elementHeight,
+            };
+
+            // Check collision with each obstacle
+            for (const obstacle of obstacles) {
+              if (
+                elementRect.left < obstacle.right &&
+                elementRect.right > obstacle.left &&
+                elementRect.top < obstacle.bottom &&
+                elementRect.bottom > obstacle.top
+              ) {
+                // Collision detected - element cannot move to this position
+                return false;
+              }
+            }
+            return true;
+          },
+        };
+      }
+
       // Function to set up drag gesture for any rectangle
-      function setupDragGesture(rectangle, caseLabel) {
+      function setupDragGesture(rectangle, caseLabel, customConstraint = null) {
         rectangle.addEventListener("mousedown", (event) => {
-          startDragGesture(event, {
+          const options = {
             backdrop: false,
             setup: () => ({
               element: rectangle,
@@ -724,13 +1042,22 @@
             onRelease: (gestureInfo) => {
               console.log(`${caseLabel} - Drag released`, gestureInfo);
             },
-          });
+          };
+
+          if (customConstraint) {
+            options.constraint = customConstraint;
+          }
+
+          startDragGesture(event, options);
         });
       }
 
       // Set up drag gestures for all rectangles
       setupDragGesture(horizontalRectangle, "Horizontal Only");
       setupDragGesture(bothRectangle, "Both Directions");
+
+      // Set up drag gesture with obstacle avoidance for Case 3
+      setupDragGesture(obstacleRectangle, "With Obstacles", obstacleConstraint);
     </script>
 
     <script>

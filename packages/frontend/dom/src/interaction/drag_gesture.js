@@ -319,6 +319,18 @@ export const createDragGesture = ({
           : true;
       }
 
+      // Apply custom collision detection if provided
+      if (finalConstraint.checkPosition) {
+        const proposedLeft = initialLeft + gestureInfo.xMove;
+        const proposedTop = initialTop + gestureInfo.yMove;
+
+        if (!finalConstraint.checkPosition(proposedLeft, proposedTop)) {
+          // Position would cause collision - revert to previous valid position
+          gestureInfo.xMove = previousGestureInfo?.xMove || 0;
+          gestureInfo.yMove = previousGestureInfo?.yMove || 0;
+        }
+      }
+
       if (isRelease) {
         if (!started) {
           return;
