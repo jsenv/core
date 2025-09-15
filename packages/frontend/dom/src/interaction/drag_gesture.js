@@ -55,8 +55,7 @@ const getPositionedParent = (element) => {
   return document.body;
 };
 
-const getDefaultConstraint = (element) => {
-  const positionedParent = getPositionedParent(element);
+const getDefaultConstraint = (element, positionedParent) => {
   const parentRect = positionedParent.getBoundingClientRect();
   const elementRect = element.getBoundingClientRect();
 
@@ -130,7 +129,12 @@ export const startDragGesture = (
   const xAtStart = mousedownEvent.clientX;
   const yAtStart = mousedownEvent.clientY;
 
-  // Track initial scroll positions to account for auto-scrolling
+  const positionedParent = getPositionedParent(element);
+  const elementVisuallyMovingRect =
+    elementVisuallyMoving.getBoundingClientRect();
+  const initialLeft = elementVisuallyMovingRect.left;
+  const initialTop = elementVisuallyMovingRect.top;
+
   const scrollableParent = getScrollableParent(element);
   const initialScrollLeft = scrollableParent ? scrollableParent.scrollLeft : 0;
   const initialScrollTop = scrollableParent ? scrollableParent.scrollTop : 0;
@@ -168,13 +172,10 @@ export const startDragGesture = (
   }
 
   let started = !threshold;
-  const elementVisuallyMovingRect =
-    elementVisuallyMoving.getBoundingClientRect();
-  const initialLeft = elementVisuallyMovingRect.left;
-  const initialTop = elementVisuallyMovingRect.top;
 
   // Set up constraint bounds
-  const finalConstraint = constraint || getDefaultConstraint(element);
+  const finalConstraint =
+    constraint || getDefaultConstraint(element, positionedParent);
   const constraintLeft = finalConstraint.left ?? -Infinity;
   const constraintTop = finalConstraint.top ?? -Infinity;
   const constraintRight = finalConstraint.right ?? Infinity;
