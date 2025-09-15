@@ -790,9 +790,9 @@ const applyConstraints = (
         // Would overlap - need to constrain movement
 
         // Check current element position relative to obstacle
-        const currentLeft = initialLeft + (gestureInfo.xMove || 0);
+        const currentLeft = initialLeft + gestureInfo.xMove;
         const currentRight = currentLeft + elementWidth;
-        const currentTop = initialTop + (gestureInfo.yMove || 0);
+        const currentTop = initialTop + gestureInfo.yMove;
         const currentBottom = currentTop + elementHeight;
 
         const currentlyLeftOfObstacle = currentRight <= constraint.left;
