@@ -760,18 +760,21 @@ const applyConstraints = (
 ) => {
   const { initialLeft, initialTop } = gestureInfo;
 
-  // Start with bounds constraints (scrollable area limits)
-  let minXMove = -initialLeft;
-  let maxXMove = Infinity;
-  let minYMove = -initialTop;
-  let maxYMove = Infinity;
-
   for (const constraint of constraints) {
     if (constraint.type === "bounds") {
-      minXMove = Math.max(minXMove, constraint.left - initialLeft);
-      maxXMove = Math.min(maxXMove, constraint.right - initialLeft);
-      minYMove = Math.max(minYMove, constraint.top - initialTop);
-      maxYMove = Math.min(maxYMove, constraint.bottom - initialTop);
+      // Apply bounds constraints directly
+      if (xMove < constraint.left - initialLeft) {
+        xMove = constraint.left - initialLeft;
+      }
+      if (xMove > constraint.right - initialLeft) {
+        xMove = constraint.right - initialLeft;
+      }
+      if (yMove < constraint.top - initialTop) {
+        yMove = constraint.top - initialTop;
+      }
+      if (yMove > constraint.bottom - initialTop) {
+        yMove = constraint.bottom - initialTop;
+      }
     } else if (constraint.type === "obstacle") {
       // Current element position
       const currentLeft = initialLeft;
@@ -797,14 +800,14 @@ const applyConstraints = (
       if (wouldHaveXOverlap) {
         if (isAbove && gestureInfo.isGoingDown) {
           // Element above, trying to go down - stop at obstacle top
-          const maxAllowedYMove = constraint.top - elementHeight - initialTop;
-          maxYMove = Math.min(maxYMove, maxAllowedYMove);
-          yMove = Math.max(minYMove, Math.min(maxYMove, yMove)); // Update immediately
+          if (yMove > constraint.top - elementHeight - initialTop) {
+            yMove = constraint.top - elementHeight - initialTop;
+          }
         } else if (isBelow && gestureInfo.isGoingUp) {
           // Element below, trying to go up - stop at obstacle bottom
-          const minAllowedYMove = constraint.bottom - initialTop;
-          minYMove = Math.max(minYMove, minAllowedYMove);
-          yMove = Math.max(minYMove, Math.min(maxYMove, yMove)); // Update immediately
+          if (yMove < constraint.bottom - initialTop) {
+            yMove = constraint.bottom - initialTop;
+          }
         }
       }
 
@@ -818,12 +821,14 @@ const applyConstraints = (
       if (finalWouldHaveYOverlap) {
         if (isOnTheLeft && gestureInfo.isGoingRight) {
           // Element on left, trying to go right - stop at obstacle left
-          const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
-          xMove = Math.min(xMove, maxAllowedXMove);
+          if (xMove > constraint.left - elementWidth - initialLeft) {
+            xMove = constraint.left - elementWidth - initialLeft;
+          }
         } else if (isOnTheRight && gestureInfo.isGoingLeft) {
           // Element on right, trying to go left - stop at obstacle right
-          const minAllowedXMove = constraint.right - initialLeft;
-          xMove = Math.max(xMove, minAllowedXMove);
+          if (xMove < constraint.right - initialLeft) {
+            xMove = constraint.right - initialLeft;
+          }
         }
       }
     }
