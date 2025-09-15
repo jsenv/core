@@ -93,196 +93,6 @@ export const disableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = false;
 };
 
-const createDebugMarker = (
-  name,
-  x,
-  y,
-  color = "red",
-  orientation = "vertical",
-) => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
-
-  const marker = document.createElement("div");
-  marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
-  marker.style.left = `${x}px`;
-  marker.style.top = `${y}px`;
-  marker.title = name;
-
-  // Add label
-  const label = document.createElement("div");
-  label.className = `navi_debug_marker_label navi_debug_marker_label--${color}`;
-  label.textContent = name;
-  marker.appendChild(label);
-
-  document.body.appendChild(marker);
-  return marker;
-};
-
-// Visual feedback line connecting mouse cursor to dragged element when constraints prevent following
-// This provides intuitive feedback during drag operations when the element cannot reach the mouse
-// position due to obstacles, boundaries, or other constraints. The line becomes visible when there's
-// a significant distance between the mouse and the element, helping users understand why the
-// element isn't moving as expected.
-const createConstraintFeedbackLine = () => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
-  const line = document.createElement("div");
-  line.className = "navi_constraint_feedback_line";
-  line.title =
-    "Constraint feedback - shows distance between mouse and constrained element";
-  document.body.appendChild(line);
-  return line;
-};
-
-const updateConstraintFeedbackLine = (
-  line,
-  mouseX,
-  mouseY,
-  elementX,
-  elementY,
-) => {
-  if (!line) return;
-
-  // Calculate distance between mouse and element center
-  const deltaX = mouseX - elementX;
-  const deltaY = mouseY - elementY;
-  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-  // Show line only when distance is significant (> 20px threshold)
-  const threshold = 20;
-  if (distance <= threshold) {
-    line.removeAttribute("data-visible");
-    return;
-  }
-
-  // Calculate angle and position
-  const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-  line.setAttribute("data-visible", "");
-  // Position line at element center
-  line.style.left = `${elementX}px`;
-  line.style.top = `${elementY}px`;
-  line.style.width = `${distance}px`;
-  line.style.transform = `rotate(${angle}deg)`;
-  // Fade in based on distance (more visible as distance increases)
-  const maxOpacity = 0.8;
-  const opacityFactor = Math.min((distance - threshold) / 100, 1);
-  line.style.opacity = `${maxOpacity * opacityFactor}`;
-};
-
-const getPositionedParent = (element) => {
-  let parent = element.parentElement;
-  while (parent && parent !== document.body) {
-    const position = window.getComputedStyle(parent).position;
-    if (
-      position === "relative" ||
-      position === "absolute" ||
-      position === "fixed"
-    ) {
-      return parent;
-    }
-    parent = parent.parentElement;
-  }
-  return document.body;
-};
-
-const createScrollableAreaConstraint = (scrollableParent) => {
-  return ({ elementWidth, elementHeight }) => {
-    return {
-      type: "bounds",
-      left: 0,
-      top: 0,
-      right: scrollableParent.scrollWidth - elementWidth,
-      bottom: scrollableParent.scrollHeight - elementHeight,
-    };
-  };
-};
-
-// Function to create constraint that respects solid obstacles
-const createObstacleConstraint = (obstacle) => {
-  return () => {
-    const obstacleRect = obstacle.getBoundingClientRect();
-    return {
-      type: "obstacle",
-      left: obstacleRect.left,
-      top: obstacleRect.top,
-      right: obstacleRect.right,
-      bottom: obstacleRect.bottom,
-    };
-  };
-};
-
-// Apply bounds constraint on X axis
-const applyConstraintsOnX = (xMove, initialLeft, elementWidth, constraints) => {
-  let minXMove = -initialLeft; // Allow to go to left edge (0)
-  let maxXMove = Infinity;
-
-  for (const constraint of constraints) {
-    if (constraint.type === "bounds") {
-      minXMove = Math.max(minXMove, constraint.left - initialLeft);
-      maxXMove = Math.min(maxXMove, constraint.right - initialLeft);
-    } else if (constraint.type === "obstacle") {
-      // For obstacles, find the nearest valid position
-      const proposedLeft = initialLeft + xMove;
-      const proposedRight = proposedLeft + elementWidth;
-
-      // Check if element would overlap with this obstacle
-      if (proposedLeft < constraint.right && proposedRight > constraint.left) {
-        // Collision detected - find nearest valid position
-        const moveToLeftOfObstacle =
-          constraint.left - elementWidth - initialLeft;
-        const moveToRightOfObstacle = constraint.right - initialLeft;
-
-        // Choose the option closest to desired position
-        if (
-          Math.abs(xMove - moveToLeftOfObstacle) <
-          Math.abs(xMove - moveToRightOfObstacle)
-        ) {
-          maxXMove = Math.min(maxXMove, moveToLeftOfObstacle);
-        } else {
-          minXMove = Math.max(minXMove, moveToRightOfObstacle);
-        }
-      }
-    }
-  }
-
-  return Math.max(minXMove, Math.min(maxXMove, xMove));
-};
-
-// Apply bounds constraint on Y axis
-const applyConstraintsOnY = (yMove, initialTop, elementHeight, constraints) => {
-  let minYMove = -initialTop; // Allow to go to top edge (0)
-  let maxYMove = Infinity;
-
-  for (const constraint of constraints) {
-    if (constraint.type === "bounds") {
-      minYMove = Math.max(minYMove, constraint.top - initialTop);
-      maxYMove = Math.min(maxYMove, constraint.bottom - initialTop);
-    } else if (constraint.type === "obstacle") {
-      // For obstacles, find the nearest valid position
-      const proposedTop = initialTop + yMove;
-      const proposedBottom = proposedTop + elementHeight;
-
-      // Check if element would overlap with this obstacle
-      if (proposedTop < constraint.bottom && proposedBottom > constraint.top) {
-        // Collision detected - find nearest valid position
-        const moveToTopOfObstacle = constraint.top - elementHeight - initialTop;
-        const moveToBottomOfObstacle = constraint.bottom - initialTop;
-
-        // Choose the option closest to desired position
-        if (
-          Math.abs(yMove - moveToTopOfObstacle) <
-          Math.abs(yMove - moveToBottomOfObstacle)
-        ) {
-          maxYMove = Math.min(maxYMove, moveToTopOfObstacle);
-        } else {
-          minYMove = Math.max(minYMove, moveToBottomOfObstacle);
-        }
-      }
-    }
-  }
-
-  return Math.max(minYMove, Math.min(maxYMove, yMove));
-};
-
 export const createDragGesture = ({
   onGrab,
   onDragStart,
@@ -427,6 +237,31 @@ export const createDragGesture = ({
       currentYRelative,
       { isRelease = false, mouseX = null, mouseY = null } = {},
     ) => {
+      // Update constraint feedback line to show visual connection between mouse and element
+      // when constraints prevent the element from following the mouse cursor
+      if (
+        !isRelease &&
+        constraintFeedbackLine &&
+        mouseX !== null &&
+        mouseY !== null
+      ) {
+        // Calculate element center position in viewport coordinates
+        const currentElementRect =
+          elementVisuallyImpacted.getBoundingClientRect();
+        const elementCenterX =
+          currentElementRect.left + currentElementRect.width / 2;
+        const elementCenterY =
+          currentElementRect.top + currentElementRect.height / 2;
+
+        updateConstraintFeedbackLine(
+          constraintFeedbackLine,
+          mouseX,
+          mouseY,
+          elementCenterX,
+          elementCenterY,
+        );
+      }
+
       const isGoingLeft = currentXRelative < gestureInfo.x;
       const isGoingRight = currentXRelative > gestureInfo.x;
       const isGoingUp = currentYRelative < gestureInfo.y;
@@ -490,8 +325,6 @@ export const createDragGesture = ({
           ? yMove !== previousGestureInfo.yMove
           : true;
       }
-
-      // Collision detection is now handled by the constraint functions
 
       if (isRelease) {
         if (!started) {
@@ -689,7 +522,7 @@ export const createDragGesture = ({
         }
       }
 
-      lifecycle.drag(gestureInfo, {
+      lifecycle?.drag?.(gestureInfo, {
         scrollableParent,
         positionedParent,
         direction,
@@ -698,31 +531,6 @@ export const createDragGesture = ({
         visibleAreaTop,
         visibleAreaBottom,
       });
-
-      // Update constraint feedback line to show visual connection between mouse and element
-      // when constraints prevent the element from following the mouse cursor
-      if (
-        !isRelease &&
-        constraintFeedbackLine &&
-        mouseX !== null &&
-        mouseY !== null
-      ) {
-        // Calculate element center position in viewport coordinates
-        const currentElementRect =
-          elementVisuallyImpacted.getBoundingClientRect();
-        const elementCenterX =
-          currentElementRect.left + currentElementRect.width / 2;
-        const elementCenterY =
-          currentElementRect.top + currentElementRect.height / 2;
-
-        updateConstraintFeedbackLine(
-          constraintFeedbackLine,
-          mouseX,
-          mouseY,
-          elementCenterX,
-          elementCenterY,
-        );
-      }
 
       if (!started) {
         started = true;
@@ -817,7 +625,7 @@ export const createDragGesture = ({
     };
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
-    dragGesture.addTeardown(() => {
+    addTeardown(() => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     });
@@ -829,4 +637,194 @@ export const createDragGesture = ({
     grabViaMousedown,
     addTeardown,
   };
+};
+
+const createDebugMarker = (
+  name,
+  x,
+  y,
+  color = "red",
+  orientation = "vertical",
+) => {
+  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
+
+  const marker = document.createElement("div");
+  marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.title = name;
+
+  // Add label
+  const label = document.createElement("div");
+  label.className = `navi_debug_marker_label navi_debug_marker_label--${color}`;
+  label.textContent = name;
+  marker.appendChild(label);
+
+  document.body.appendChild(marker);
+  return marker;
+};
+
+// Visual feedback line connecting mouse cursor to dragged element when constraints prevent following
+// This provides intuitive feedback during drag operations when the element cannot reach the mouse
+// position due to obstacles, boundaries, or other constraints. The line becomes visible when there's
+// a significant distance between the mouse and the element, helping users understand why the
+// element isn't moving as expected.
+const createConstraintFeedbackLine = () => {
+  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
+  const line = document.createElement("div");
+  line.className = "navi_constraint_feedback_line";
+  line.title =
+    "Constraint feedback - shows distance between mouse and constrained element";
+  document.body.appendChild(line);
+  return line;
+};
+
+const updateConstraintFeedbackLine = (
+  line,
+  mouseX,
+  mouseY,
+  elementX,
+  elementY,
+) => {
+  if (!line) return;
+
+  // Calculate distance between mouse and element center
+  const deltaX = mouseX - elementX;
+  const deltaY = mouseY - elementY;
+  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+  // Show line only when distance is significant (> 20px threshold)
+  const threshold = 20;
+  if (distance <= threshold) {
+    line.removeAttribute("data-visible");
+    return;
+  }
+
+  // Calculate angle and position
+  const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+  line.setAttribute("data-visible", "");
+  // Position line at element center
+  line.style.left = `${elementX}px`;
+  line.style.top = `${elementY}px`;
+  line.style.width = `${distance}px`;
+  line.style.transform = `rotate(${angle}deg)`;
+  // Fade in based on distance (more visible as distance increases)
+  const maxOpacity = 0.8;
+  const opacityFactor = Math.min((distance - threshold) / 100, 1);
+  line.style.opacity = `${maxOpacity * opacityFactor}`;
+};
+
+const getPositionedParent = (element) => {
+  let parent = element.parentElement;
+  while (parent && parent !== document.body) {
+    const position = window.getComputedStyle(parent).position;
+    if (
+      position === "relative" ||
+      position === "absolute" ||
+      position === "fixed"
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return document.body;
+};
+
+const createScrollableAreaConstraint = (scrollableParent) => {
+  return ({ elementWidth, elementHeight }) => {
+    return {
+      type: "bounds",
+      left: 0,
+      top: 0,
+      right: scrollableParent.scrollWidth - elementWidth,
+      bottom: scrollableParent.scrollHeight - elementHeight,
+    };
+  };
+};
+
+// Function to create constraint that respects solid obstacles
+const createObstacleConstraint = (obstacle) => {
+  return () => {
+    const obstacleRect = obstacle.getBoundingClientRect();
+    return {
+      type: "obstacle",
+      left: obstacleRect.left,
+      top: obstacleRect.top,
+      right: obstacleRect.right,
+      bottom: obstacleRect.bottom,
+    };
+  };
+};
+
+// Apply bounds constraint on X axis
+const applyConstraintsOnX = (xMove, initialLeft, elementWidth, constraints) => {
+  let minXMove = -initialLeft; // Allow to go to left edge (0)
+  let maxXMove = Infinity;
+
+  for (const constraint of constraints) {
+    if (constraint.type === "bounds") {
+      minXMove = Math.max(minXMove, constraint.left - initialLeft);
+      maxXMove = Math.min(maxXMove, constraint.right - initialLeft);
+    } else if (constraint.type === "obstacle") {
+      // For obstacles, find the nearest valid position
+      const proposedLeft = initialLeft + xMove;
+      const proposedRight = proposedLeft + elementWidth;
+
+      // Check if element would overlap with this obstacle
+      if (proposedLeft < constraint.right && proposedRight > constraint.left) {
+        // Collision detected - find nearest valid position
+        const moveToLeftOfObstacle =
+          constraint.left - elementWidth - initialLeft;
+        const moveToRightOfObstacle = constraint.right - initialLeft;
+
+        // Choose the option closest to desired position
+        if (
+          Math.abs(xMove - moveToLeftOfObstacle) <
+          Math.abs(xMove - moveToRightOfObstacle)
+        ) {
+          maxXMove = Math.min(maxXMove, moveToLeftOfObstacle);
+        } else {
+          minXMove = Math.max(minXMove, moveToRightOfObstacle);
+        }
+      }
+    }
+  }
+
+  return Math.max(minXMove, Math.min(maxXMove, xMove));
+};
+
+// Apply bounds constraint on Y axis
+const applyConstraintsOnY = (yMove, initialTop, elementHeight, constraints) => {
+  let minYMove = -initialTop; // Allow to go to top edge (0)
+  let maxYMove = Infinity;
+
+  for (const constraint of constraints) {
+    if (constraint.type === "bounds") {
+      minYMove = Math.max(minYMove, constraint.top - initialTop);
+      maxYMove = Math.min(maxYMove, constraint.bottom - initialTop);
+    } else if (constraint.type === "obstacle") {
+      // For obstacles, find the nearest valid position
+      const proposedTop = initialTop + yMove;
+      const proposedBottom = proposedTop + elementHeight;
+
+      // Check if element would overlap with this obstacle
+      if (proposedTop < constraint.bottom && proposedBottom > constraint.top) {
+        // Collision detected - find nearest valid position
+        const moveToTopOfObstacle = constraint.top - elementHeight - initialTop;
+        const moveToBottomOfObstacle = constraint.bottom - initialTop;
+
+        // Choose the option closest to desired position
+        if (
+          Math.abs(yMove - moveToTopOfObstacle) <
+          Math.abs(yMove - moveToBottomOfObstacle)
+        ) {
+          maxYMove = Math.min(maxYMove, moveToTopOfObstacle);
+        } else {
+          minYMove = Math.max(minYMove, moveToBottomOfObstacle);
+        }
+      }
+    }
+  }
+
+  return Math.max(minYMove, Math.min(maxYMove, yMove));
 };

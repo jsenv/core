@@ -1,8 +1,9 @@
 import { createDragGesture } from "./drag_gesture.js";
 
-export const createDragToMoveGesture = () => {
+export const createDragToMoveGesture = (options) => {
   const dragToMoveGesture = createDragGesture({
-    lifecyle: {
+    ...options,
+    lifecycle: {
       drag: (
         gestureInfo,
         {
