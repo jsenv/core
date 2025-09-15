@@ -1003,71 +1003,67 @@ const HeaderCell = ({
         const firstCol = colgroup.children[0];
         // const minY = -rectRelativeTo.top;
 
-        startDragGesture(e, {
+        const dragToMoveGesture = createDragToMoveGesture({
           direction: { x: true },
           onGrab,
           onDrag,
           onRelease,
-          setup: ({ addTeardown }) => {
-            const tableClone = table.cloneNode(true);
-            const scrollableParent = getScrollableParent(table);
-            const scrollLeft = scrollableParent.scrollLeft || 0;
-            const scrollTop = scrollableParent.scrollTop || 0;
-            update_sticky_elements: {
-              // Find all sticky elements (th and td with data-sticky-x or data-sticky-y)
-              const stickyElements = tableClone.querySelectorAll(
-                "th[data-sticky-x], td[data-sticky-x], th[data-sticky-y], td[data-sticky-y]",
-              );
-              stickyElements.forEach((stickyElement) => {
-                const hasXSticky = stickyElement.hasAttribute("data-sticky-x");
-                const hasYSticky = stickyElement.hasAttribute("data-sticky-y");
+        });
+        const tableClone = table.cloneNode(true);
+        const scrollableParent = getScrollableParent(table);
+        const scrollLeft = scrollableParent.scrollLeft || 0;
+        const scrollTop = scrollableParent.scrollTop || 0;
+        update_sticky_elements: {
+          // Find all sticky elements (th and td with data-sticky-x or data-sticky-y)
+          const stickyElements = tableClone.querySelectorAll(
+            "th[data-sticky-x], td[data-sticky-x], th[data-sticky-y], td[data-sticky-y]",
+          );
+          stickyElements.forEach((stickyElement) => {
+            const hasXSticky = stickyElement.hasAttribute("data-sticky-x");
+            const hasYSticky = stickyElement.hasAttribute("data-sticky-y");
 
-                // Use position: relative and calculate offsets to simulate sticky behavior
-                stickyElement.style.position = "relative";
+            // Use position: relative and calculate offsets to simulate sticky behavior
+            stickyElement.style.position = "relative";
 
-                if (hasXSticky) {
-                  // For horizontal sticky elements, offset left to simulate sticky behavior
-                  // The element should appear to stick at its original position relative to the scroll
-                  stickyElement.style.left = `${scrollLeft}px`;
-                }
-
-                if (hasYSticky) {
-                  // For vertical sticky elements, offset top to simulate sticky behavior
-                  // The element should appear to stick at its original position relative to the scroll
-                  stickyElement.style.top = `${scrollTop}px`;
-                }
-              });
+            if (hasXSticky) {
+              // For horizontal sticky elements, offset left to simulate sticky behavior
+              // The element should appear to stick at its original position relative to the scroll
+              stickyElement.style.left = `${scrollLeft}px`;
             }
-            const tableCloneCells = tableClone.querySelectorAll("td, th");
-            tableCloneCells.forEach((cellClone) => {
-              const cellColumnIndex = Array.from(
-                cellClone.parentNode.children,
-              ).indexOf(cellClone);
-              if (cellColumnIndex === columnIndex) {
-                cellClone.setAttribute("data-grabbed", "");
-              }
-            });
-            const colgroupClone = tableClone.querySelector("colgroup");
-            const colClone = colgroupClone.children[columnIndex];
 
-            const cloneParent = table
-              .closest(".navi_table_container")
-              .querySelector(".navi_table_drag_clone_positioner");
-            cloneParent.insertBefore(tableClone, cloneParent.firstChild);
-            cloneParent.closest(
-              ".navi_table_drag_clone_container",
-            ).style.display = "block";
-            addTeardown(() => {
-              // cloneParent.removeChild(tableClone);
-            });
+            if (hasYSticky) {
+              // For vertical sticky elements, offset top to simulate sticky behavior
+              // The element should appear to stick at its original position relative to the scroll
+              stickyElement.style.top = `${scrollTop}px`;
+            }
+          });
+        }
+        const tableCloneCells = tableClone.querySelectorAll("td, th");
+        tableCloneCells.forEach((cellClone) => {
+          const cellColumnIndex = Array.from(
+            cellClone.parentNode.children,
+          ).indexOf(cellClone);
+          if (cellColumnIndex === columnIndex) {
+            cellClone.setAttribute("data-grabbed", "");
+          }
+        });
+        const colgroupClone = tableClone.querySelector("colgroup");
+        const colClone = colgroupClone.children[columnIndex];
 
-            return {
-              element: tableClone,
-              elementToMove: cloneParent,
-              stickyLeftElement: firstCol,
-              elementVisuallyMoving: colClone,
-            };
-          },
+        const cloneParent = table
+          .closest(".navi_table_container")
+          .querySelector(".navi_table_drag_clone_positioner");
+        cloneParent.insertBefore(tableClone, cloneParent.firstChild);
+        cloneParent.closest(".navi_table_drag_clone_container").style.display =
+          "block";
+        dragToMoveGesture.addTeardown(() => {
+          // cloneParent.removeChild(tableClone);
+        });
+        dragToMoveGesture.grabViaMousedown(e, {
+          element: tableClone,
+          elementToMove: cloneParent,
+          stickyLeftElement: firstCol,
+          elementVisuallyMoving: colClone,
         });
       }}
     >

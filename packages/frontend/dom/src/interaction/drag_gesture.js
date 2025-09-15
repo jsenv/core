@@ -205,6 +205,11 @@ export const createDragGesture = ({
   backdrop = true,
   constraint = null,
 }) => {
+  const teardownCallbackSet = new Set();
+  const addTeardown = (callback) => {
+    teardownCallbackSet.add(callback);
+  };
+
   const grab = ({
     element,
     elementToMove = element,
@@ -213,7 +218,6 @@ export const createDragGesture = ({
     cursor = "grabbing",
     xAtStart,
     yAtStart,
-    addTeardown = () => {},
   }) => {
     if (!direction.x && !direction.y) {
       return null;
@@ -681,11 +685,6 @@ export const createDragGesture = ({
       gestureInfo.isMouseUp = true;
       drag(currentXRelative, currentYRelative, { isRelease: true });
 
-      // Hide constraint feedback line
-      if (constraintFeedbackLine) {
-        constraintFeedbackLine.style.opacity = "0";
-      }
-
       // Clean up any remaining debug markers when drag ends
       if (DRAG_DEBUG_VISUAL_MARKERS && gestureInfo.currentDebugMarkers) {
         gestureInfo.currentDebugMarkers.forEach((marker) => {
@@ -696,6 +695,9 @@ export const createDragGesture = ({
         gestureInfo.currentDebugMarkers = null;
       }
 
+      for (const teardownCallback of teardownCallbackSet) {
+        teardownCallback();
+      }
       onRelease?.(gestureInfo);
     };
 
@@ -708,14 +710,7 @@ export const createDragGesture = ({
     };
   };
 
-  const grabViaMousedown = (
-    mousedownEvent,
-    setup = () => {
-      return {
-        element: mousedownEvent.target,
-      };
-    },
-  ) => {
+  const grabViaMousedown = (mousedownEvent, options) => {
     if (mousedownEvent.defaultPrevented) {
       return null;
     }
@@ -731,17 +726,8 @@ export const createDragGesture = ({
     const xAtStart = mousedownEvent.clientX;
     const yAtStart = mousedownEvent.clientY;
 
-    const endCallbackSet = new Set();
-    const setupResult = setup({
-      addTeardown: (callback) => {
-        endCallbackSet.add(callback);
-      },
-    });
-    if (!setupResult) {
-      return null;
-    }
-
-    const positionedParent = getPositionedParent(setupResult.element);
+    const element = options.element;
+    const positionedParent = getPositionedParent(element);
     const positionedParentRect = positionedParent.getBoundingClientRect();
 
     // Convert mouse start position to relative coordinates
@@ -749,15 +735,11 @@ export const createDragGesture = ({
     const yAtStartRelative = yAtStart - positionedParentRect.top;
 
     const dragGesture = grab({
-      ...setupResult,
+      ...options,
       xAtStart: xAtStartRelative,
       yAtStart: yAtStartRelative,
-      addTeardown: (callback) => {
-        endCallbackSet.add(callback);
-      },
     });
 
-    // Set up mouse event handlers
     const handleMouseMove = (e) => {
       const currentPositionedParentRect =
         positionedParent.getBoundingClientRect();
@@ -776,33 +758,19 @@ export const createDragGesture = ({
       const currentXRelative = e.clientX - currentPositionedParentRect.left;
       const currentYRelative = e.clientY - currentPositionedParentRect.top;
       dragGesture.release(currentXRelative, currentYRelative);
-
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-
-      for (const endCallback of endCallbackSet) {
-        endCallback();
-      }
     };
-
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
-    endCallbackSet.add(() => {
+    dragGesture.addTeardown(() => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     });
-
     return dragGesture;
   };
 
   return {
     grab,
     grabViaMousedown,
+    addTeardown,
   };
-};
-
-// Legacy compatibility
-export const startDragGesture = (mousedownEvent, options) => {
-  const dragGesture = createDragGesture(options);
-  return dragGesture.grabViaMousedown(mousedownEvent, options.setup);
 };
