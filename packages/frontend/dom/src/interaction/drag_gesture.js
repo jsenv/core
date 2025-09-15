@@ -803,15 +803,15 @@ const applyConstraintsOnX = (
           proposedLeft < constraint.right &&
           proposedRight > constraint.left
         ) {
-          // Collision detected - constrain to edges of obstacle
-          if (xMove > 0) {
-            // Moving right - stop at left edge of obstacle
+          // Collision detected - constrain to edges of obstacle based on movement direction
+          if (gestureInfo.isGoingRight) {
+            // Moving right - stop so element's right edge touches obstacle's left edge
             maxXMove = Math.min(
               maxXMove,
-              constraint.left - elementWidth - initialLeft,
+              constraint.left - initialLeft - elementWidth,
             );
-          } else {
-            // Moving left - stop at right edge of obstacle
+          } else if (gestureInfo.isGoingLeft) {
+            // Moving left - stop so element's left edge touches obstacle's right edge
             minXMove = Math.max(minXMove, constraint.right - initialLeft);
           }
         }
@@ -853,15 +853,15 @@ const applyConstraintsOnY = (
           proposedTop < constraint.bottom &&
           proposedBottom > constraint.top
         ) {
-          // Collision detected - constrain to edges of obstacle
-          if (yMove > 0) {
-            // Moving down - stop at top edge of obstacle
+          // Collision detected - constrain to edges of obstacle based on movement direction
+          if (gestureInfo.isGoingDown) {
+            // Moving down - stop so element's bottom edge touches obstacle's top edge
             maxYMove = Math.min(
               maxYMove,
-              constraint.top - elementHeight - initialTop,
+              constraint.top - initialTop - elementHeight,
             );
-          } else {
-            // Moving up - stop at bottom edge of obstacle
+          } else if (gestureInfo.isGoingUp) {
+            // Moving up - stop so element's top edge touches obstacle's bottom edge
             minYMove = Math.max(minYMove, constraint.bottom - initialTop);
           }
         }
