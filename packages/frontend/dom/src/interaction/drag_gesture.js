@@ -219,28 +219,26 @@ const applyConstraintsOnX = (xMove, initialLeft, elementWidth, constraints) => {
     if (constraint.type === "bounds") {
       minXMove = Math.max(minXMove, constraint.left - initialLeft);
       maxXMove = Math.min(maxXMove, constraint.right - initialLeft);
-    } else if (constraint.type === "zones") {
+    } else if (constraint.type === "obstacle") {
       // For obstacles, find the nearest valid position
       const proposedLeft = initialLeft + xMove;
       const proposedRight = proposedLeft + elementWidth;
 
-      for (const obstacle of constraint.obstacles) {
-        // Check if element would overlap with this obstacle
-        if (proposedLeft < obstacle.right && proposedRight > obstacle.left) {
-          // Collision detected - find nearest valid position
-          const moveToLeftOfObstacle =
-            obstacle.left - elementWidth - initialLeft;
-          const moveToRightOfObstacle = obstacle.right - initialLeft;
+      // Check if element would overlap with this obstacle
+      if (proposedLeft < constraint.right && proposedRight > constraint.left) {
+        // Collision detected - find nearest valid position
+        const moveToLeftOfObstacle =
+          constraint.left - elementWidth - initialLeft;
+        const moveToRightOfObstacle = constraint.right - initialLeft;
 
-          // Choose the option closest to desired position
-          if (
-            Math.abs(xMove - moveToLeftOfObstacle) <
-            Math.abs(xMove - moveToRightOfObstacle)
-          ) {
-            maxXMove = Math.min(maxXMove, moveToLeftOfObstacle);
-          } else {
-            minXMove = Math.max(minXMove, moveToRightOfObstacle);
-          }
+        // Choose the option closest to desired position
+        if (
+          Math.abs(xMove - moveToLeftOfObstacle) <
+          Math.abs(xMove - moveToRightOfObstacle)
+        ) {
+          maxXMove = Math.min(maxXMove, moveToLeftOfObstacle);
+        } else {
+          minXMove = Math.max(minXMove, moveToRightOfObstacle);
         }
       }
     }
@@ -258,27 +256,25 @@ const applyConstraintsOnY = (yMove, initialTop, elementHeight, constraints) => {
     if (constraint.type === "bounds") {
       minYMove = Math.max(minYMove, constraint.top - initialTop);
       maxYMove = Math.min(maxYMove, constraint.bottom - initialTop);
-    } else if (constraint.type === "zones") {
+    } else if (constraint.type === "obstacle") {
       // For obstacles, find the nearest valid position
       const proposedTop = initialTop + yMove;
       const proposedBottom = proposedTop + elementHeight;
 
-      for (const obstacle of constraint.obstacles) {
-        // Check if element would overlap with this obstacle
-        if (proposedTop < obstacle.bottom && proposedBottom > obstacle.top) {
-          // Collision detected - find nearest valid position
-          const moveToTopOfObstacle = obstacle.top - elementHeight - initialTop;
-          const moveToBottomOfObstacle = obstacle.bottom - initialTop;
+      // Check if element would overlap with this obstacle
+      if (proposedTop < constraint.bottom && proposedBottom > constraint.top) {
+        // Collision detected - find nearest valid position
+        const moveToTopOfObstacle = constraint.top - elementHeight - initialTop;
+        const moveToBottomOfObstacle = constraint.bottom - initialTop;
 
-          // Choose the option closest to desired position
-          if (
-            Math.abs(yMove - moveToTopOfObstacle) <
-            Math.abs(yMove - moveToBottomOfObstacle)
-          ) {
-            maxYMove = Math.min(maxYMove, moveToTopOfObstacle);
-          } else {
-            minYMove = Math.max(minYMove, moveToBottomOfObstacle);
-          }
+        // Choose the option closest to desired position
+        if (
+          Math.abs(yMove - moveToTopOfObstacle) <
+          Math.abs(yMove - moveToBottomOfObstacle)
+        ) {
+          maxYMove = Math.min(maxYMove, moveToTopOfObstacle);
+        } else {
+          minYMove = Math.max(minYMove, moveToBottomOfObstacle);
         }
       }
     }
@@ -587,20 +583,20 @@ export const createDragGesture = ({
         let constraintBottom = Infinity;
 
         // Extract bounds from bounds constraints and collect obstacle data
-        const obstacleZones = [];
+        const obstacles = [];
         for (const constraint of constraints) {
           if (constraint.type === "bounds") {
             constraintLeft = Math.max(constraintLeft, constraint.left);
             constraintTop = Math.max(constraintTop, constraint.top);
             constraintRight = Math.min(constraintRight, constraint.right);
             constraintBottom = Math.min(constraintBottom, constraint.bottom);
-          } else if (constraint.type === "zones") {
-            obstacleZones.push(...constraint.obstacles);
+          } else if (constraint.type === "obstacle") {
+            obstacles.push(constraint);
           }
         }
 
-        // Create markers for obstacle zones
-        obstacleZones.forEach((obstacle, index) => {
+        // Create markers for obstacles
+        obstacles.forEach((obstacle, index) => {
           const obstacleLeftViewport =
             currentPositionedParentRect.left + obstacle.left;
           const obstacleTopViewport =
