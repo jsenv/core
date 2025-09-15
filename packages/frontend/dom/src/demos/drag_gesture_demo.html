@@ -31,19 +31,18 @@
       .container {
         width: 400px;
         height: 200px;
-        border: 2px solid #333;
-        border-top: none;
         background: white;
         overflow: auto;
         position: relative;
         margin: 0 auto;
-        border-radius: 0 0 8px 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
       }
 
-      /* Horizontal only scroll */
+      /* Horizontal scrollbar only - content wider but same height */
       .horizontal-content {
-        width: 800px; /* Make content wider than container for horizontal scroll */
-        height: 200px; /* Same height as container - no vertical scroll */
+        width: 800px; /* Wider than container = horizontal scrollbar */
+        height: 180px; /* Same height as container = no vertical scrollbar */
         background: linear-gradient(
           90deg,
           transparent 99px,
@@ -55,10 +54,10 @@
         position: relative;
       }
 
-      /* Both horizontal and vertical scroll */
+      /* Both scrollbars - content wider and taller */
       .both-content {
-        width: 800px; /* Make content wider than container for horizontal scroll */
-        height: 400px; /* Make content taller than container for vertical scroll */
+        width: 800px; /* Wider than container = horizontal scrollbar */
+        height: 400px; /* Taller than container = vertical scrollbar */
         background:
           linear-gradient(
             90deg,
@@ -157,23 +156,30 @@
   </head>
   <body>
     <div class="info">
-      <h1>Drag Gesture Demo - Multiple Cases</h1>
+      <h1>Drag Gesture Demo - Scrollbar Cases</h1>
       <p>
-        This demo showcases different drag gesture scenarios with auto-scroll:
+        This demo tests drag gesture auto-scroll with different scrollbar
+        configurations:
       </p>
       <ul>
         <li>
-          <strong>Drag the purple rectangles</strong> within their containers
+          <strong>Drag rectangles in any direction</strong> - they're not
+          restricted to scroll direction
         </li>
         <li>
-          <strong>Auto-scroll triggers</strong> when you drag near the edges
+          <strong>Auto-scroll triggers</strong> when you drag near container
+          edges
         </li>
         <li>
-          <strong>Visual debug markers</strong> show boundaries (toggle below)
+          <strong>Case 1:</strong> Only horizontal scrollbar visible (content
+          wider, same height)
         </li>
         <li>
-          <strong>Compare behavior</strong> between horizontal-only and
-          bi-directional scrolling
+          <strong>Case 2:</strong> Both scrollbars visible (content wider and
+          taller)
+        </li>
+        <li>
+          <strong>Visual debug markers</strong> show boundaries and scroll areas
         </li>
       </ul>
     </div>
@@ -185,24 +191,28 @@
       </label>
     </div>
 
-    <!-- Case 1: Horizontal Scroll Only -->
+    <!-- Case 1: Only Horizontal Scrollbar -->
     <div class="demo-section">
-      <h2 class="demo-title">Case 1: Horizontal Scroll Only</h2>
+      <h2 class="demo-title">
+        Case 1: Only Horizontal Scrollbar (content wider, same height)
+      </h2>
       <div class="container" id="horizontalContainer">
         <div class="horizontal-content">
           <div class="draggable-rectangle" id="horizontalRectangle">
-            DRAG ME →
+            DRAG ME
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Case 2: Both Horizontal and Vertical Scroll -->
+    <!-- Case 2: Both Scrollbars -->
     <div class="demo-section">
-      <h2 class="demo-title">Case 2: Both Horizontal & Vertical Scroll</h2>
+      <h2 class="demo-title">
+        Case 2: Both Scrollbars (content wider and taller)
+      </h2>
       <div class="container" id="bothContainer">
         <div class="both-content">
-          <div class="draggable-rectangle" id="bothRectangle">DRAG ME ↗</div>
+          <div class="draggable-rectangle" id="bothRectangle">DRAG ME</div>
         </div>
       </div>
     </div>
