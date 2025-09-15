@@ -56,11 +56,8 @@ const getPositionedParent = (element) => {
 };
 
 const getDefaultConstraint = (scrollableParent) => {
-  // const parentRect = scrollableParent.getBoundingClientRect();
   const scrollWidth = scrollableParent.scrollWidth;
   const scrollHeight = scrollableParent.scrollHeight;
-  // const scrollbarWidth = parentRect.width - positionedParent.clientWidth;
-  // const scrollbarHeight = parentRect.height - positionedParent.clientHeight;
   return {
     left: 0,
     top: 0,
@@ -69,240 +66,221 @@ const getDefaultConstraint = (scrollableParent) => {
   };
 };
 
-export const startDragGesture = (
-  mousedownEvent,
-  {
-    onGrab,
-    onDragStart,
-    onDrag,
-    onRelease,
-    setup = () => {
-      return {
-        element: mousedownEvent.target,
-      };
-    },
-    gestureAttribute,
-    threshold = 5,
-    direction: defaultDirection = { x: true, y: true },
-    backdrop = true,
-    constraint = null,
-  },
-) => {
-  if (mousedownEvent.defaultPrevented) {
-    // an other resize gesture has call preventDefault()
-    // or something wants to prevent mousedown effects
-    return;
-  }
-  if (mousedownEvent.button !== 0) {
-    return;
-  }
-  const target = mousedownEvent.target;
-  if (!target.closest) {
-    return;
-  }
-  const endCallbackSet = new Set();
-  const setupResult = setup({
-    addTeardown: (callback) => {
-      endCallbackSet.add(callback);
-    },
-  });
-  if (!setupResult) {
-    return;
-  }
-  const {
+export const createDragGesture = ({
+  onGrab,
+  onDragStart,
+  onDrag,
+  onRelease,
+  gestureAttribute,
+  threshold = 5,
+  direction: defaultDirection = { x: true, y: true },
+  backdrop = true,
+  constraint = null,
+}) => {
+  const grab = ({
     element,
     elementToMove = element,
     elementVisuallyMoving = element,
     direction = defaultDirection,
     cursor = "grabbing",
-  } = setupResult;
-  if (!direction.x && !direction.y) {
-    return;
-  }
-  mousedownEvent.preventDefault();
-  const xAtStart = mousedownEvent.clientX;
-  const yAtStart = mousedownEvent.clientY;
+    xAtStart,
+    yAtStart,
+    addTeardown = () => {},
+  }) => {
+    if (!direction.x && !direction.y) {
+      return null;
+    }
 
-  const positionedParent = getPositionedParent(element);
-  const positionedParentRect = positionedParent.getBoundingClientRect();
-  const elementVisuallyMovingRect =
-    elementVisuallyMoving.getBoundingClientRect();
-
-  // Convert to coordinates relative to positioned parent
-  const initialLeft =
-    elementVisuallyMovingRect.left - positionedParentRect.left;
-  const initialTop = elementVisuallyMovingRect.top - positionedParentRect.top;
-
-  // Capture element dimensions at start to avoid changing values during drag
-  const elementWidth = elementVisuallyMovingRect.width;
-  const elementHeight = elementVisuallyMovingRect.height;
-
-  // Convert mouse start position to relative coordinates
-  const xAtStartRelative = xAtStart - positionedParentRect.left;
-  const yAtStartRelative = yAtStart - positionedParentRect.top;
-
-  const scrollableParent = getScrollableParent(element);
-  const initialScrollLeft = scrollableParent ? scrollableParent.scrollLeft : 0;
-  const initialScrollTop = scrollableParent ? scrollableParent.scrollTop : 0;
-
-  const gestureInfo = {
-    element,
-    elementVisuallyMoving,
-    xAtStart: xAtStartRelative,
-    yAtStart: yAtStartRelative,
-    x: xAtStartRelative,
-    y: yAtStartRelative,
-    xMove: 0,
-    yMove: 0,
-    xChanged: false,
-    yChanged: false,
-    isMouseUp: false,
-    initialScrollLeft,
-    initialScrollTop,
-    autoScrolledX: 0,
-    autoScrolledY: 0,
-  };
-  let previousGestureInfo = null;
-
-  if (backdrop) {
-    const backdropElement = document.createElement("div");
-    backdropElement.style.position = "fixed";
-    backdropElement.style.zIndex = "1000000";
-    backdropElement.style.inset = "0";
-    backdropElement.style.cursor = cursor;
-    backdropElement.style.userSelect = "none";
-    document.body.appendChild(backdropElement);
-    endCallbackSet.add(() => {
-      document.body.removeChild(backdropElement);
-    });
-  }
-
-  let started = !threshold;
-
-  // Set up constraint bounds
-  const finalConstraint = constraint || getDefaultConstraint(scrollableParent);
-  const constraintLeft = finalConstraint.left ?? -Infinity;
-  const constraintTop = finalConstraint.top ?? -Infinity;
-  const constraintRight = finalConstraint.right ?? Infinity;
-  const constraintBottom = finalConstraint.bottom ?? Infinity;
-
-  // Create visual markers for constraints
-  const constraintMarkers = [];
-  if (DRAG_DEBUG_VISUAL_MARKERS) {
+    const positionedParent = getPositionedParent(element);
     const positionedParentRect = positionedParent.getBoundingClientRect();
+    const elementVisuallyMovingRect =
+      elementVisuallyMoving.getBoundingClientRect();
 
-    // Only create markers for finite constraints
-    if (constraintLeft !== -Infinity) {
-      const constraintLeftViewport = positionedParentRect.left + constraintLeft;
-      constraintMarkers.push(
-        createDebugMarker("constraintLeft", constraintLeftViewport, 0, "red"),
-      );
-    }
-    if (constraintRight !== Infinity) {
-      const constraintRightViewport =
-        positionedParentRect.left + constraintRight;
-      constraintMarkers.push(
-        createDebugMarker("constraintRight", constraintRightViewport, 0, "red"),
-      );
-    }
-    if (constraintTop !== -Infinity) {
-      // Create horizontal line for top constraint
-      const constraintTopViewport = positionedParentRect.top + constraintTop;
-      const topMarker = document.createElement("div");
-      topMarker.style.position = "fixed";
-      topMarker.style.left = "0";
-      topMarker.style.top = `${constraintTopViewport}px`;
-      topMarker.style.width = "100vw";
-      topMarker.style.height = "2px";
-      topMarker.style.backgroundColor = "red";
-      topMarker.style.zIndex = "9999";
-      topMarker.style.pointerEvents = "none";
-      topMarker.style.opacity = "0.7";
-      topMarker.title = "constraintTop";
+    // Convert to coordinates relative to positioned parent
+    const initialLeft =
+      elementVisuallyMovingRect.left - positionedParentRect.left;
+    const initialTop = elementVisuallyMovingRect.top - positionedParentRect.top;
 
-      const topLabel = document.createElement("div");
-      topLabel.textContent = "constraintTop";
-      topLabel.style.position = "absolute";
-      topLabel.style.left = "10px";
-      topLabel.style.top = "5px";
-      topLabel.style.fontSize = "12px";
-      topLabel.style.color = "red";
-      topLabel.style.fontWeight = "bold";
-      topLabel.style.textShadow = "1px 1px 1px rgba(255,255,255,0.8)";
-      topMarker.appendChild(topLabel);
+    // Capture element dimensions at start to avoid changing values during drag
+    const elementWidth = elementVisuallyMovingRect.width;
+    const elementHeight = elementVisuallyMovingRect.height;
 
-      document.body.appendChild(topMarker);
-      constraintMarkers.push(topMarker);
-    }
-    if (constraintBottom !== Infinity) {
-      // Create horizontal line for bottom constraint
-      const constraintBottomViewport =
-        positionedParentRect.top + constraintBottom;
-      const bottomMarker = document.createElement("div");
-      bottomMarker.style.position = "fixed";
-      bottomMarker.style.left = "0";
-      bottomMarker.style.top = `${constraintBottomViewport}px`;
-      bottomMarker.style.width = "100vw";
-      bottomMarker.style.height = "2px";
-      bottomMarker.style.backgroundColor = "red";
-      bottomMarker.style.zIndex = "9999";
-      bottomMarker.style.pointerEvents = "none";
-      bottomMarker.style.opacity = "0.7";
-      bottomMarker.title = "constraintBottom";
+    const scrollableParent = getScrollableParent(element);
+    const initialScrollLeft = scrollableParent
+      ? scrollableParent.scrollLeft
+      : 0;
+    const initialScrollTop = scrollableParent ? scrollableParent.scrollTop : 0;
 
-      const bottomLabel = document.createElement("div");
-      bottomLabel.textContent = "constraintBottom";
-      bottomLabel.style.position = "absolute";
-      bottomLabel.style.left = "10px";
-      bottomLabel.style.top = "-20px";
-      bottomLabel.style.fontSize = "12px";
-      bottomLabel.style.color = "red";
-      bottomLabel.style.fontWeight = "bold";
-      bottomLabel.style.textShadow = "1px 1px 1px rgba(255,255,255,0.8)";
-      bottomMarker.appendChild(bottomLabel);
+    const gestureInfo = {
+      element,
+      elementVisuallyMoving,
+      xAtStart,
+      yAtStart,
+      x: xAtStart,
+      y: yAtStart,
+      xMove: 0,
+      yMove: 0,
+      xChanged: false,
+      yChanged: false,
+      isMouseUp: false,
+      initialScrollLeft,
+      initialScrollTop,
+      autoScrolledX: 0,
+      autoScrolledY: 0,
+    };
+    let previousGestureInfo = null;
+    let started = !threshold;
 
-      document.body.appendChild(bottomMarker);
-      constraintMarkers.push(bottomMarker);
-    }
-
-    // Clean up constraint markers when gesture ends
-    endCallbackSet.add(() => {
-      constraintMarkers.forEach((marker) => {
-        if (marker && marker.parentNode) {
-          marker.parentNode.removeChild(marker);
-        }
+    // Set up backdrop
+    if (backdrop) {
+      const backdropElement = document.createElement("div");
+      backdropElement.style.position = "fixed";
+      backdropElement.style.zIndex = "1000000";
+      backdropElement.style.inset = "0";
+      backdropElement.style.cursor = cursor;
+      backdropElement.style.userSelect = "none";
+      document.body.appendChild(backdropElement);
+      addTeardown(() => {
+        document.body.removeChild(backdropElement);
       });
+    }
+
+    // Set up constraint bounds
+    const finalConstraint =
+      constraint || getDefaultConstraint(scrollableParent);
+    const constraintLeft = finalConstraint.left ?? -Infinity;
+    const constraintTop = finalConstraint.top ?? -Infinity;
+    const constraintRight = finalConstraint.right ?? Infinity;
+    const constraintBottom = finalConstraint.bottom ?? Infinity;
+
+    // Create visual markers for constraints
+    const constraintMarkers = [];
+    if (DRAG_DEBUG_VISUAL_MARKERS) {
+      const positionedParentRect = positionedParent.getBoundingClientRect();
+
+      // Only create markers for finite constraints
+      if (constraintLeft !== -Infinity) {
+        const constraintLeftViewport =
+          positionedParentRect.left + constraintLeft;
+        constraintMarkers.push(
+          createDebugMarker("constraintLeft", constraintLeftViewport, 0, "red"),
+        );
+      }
+      if (constraintRight !== Infinity) {
+        const constraintRightViewport =
+          positionedParentRect.left + constraintRight;
+        constraintMarkers.push(
+          createDebugMarker(
+            "constraintRight",
+            constraintRightViewport,
+            0,
+            "red",
+          ),
+        );
+      }
+      if (constraintTop !== -Infinity) {
+        // Create horizontal line for top constraint
+        const constraintTopViewport = positionedParentRect.top + constraintTop;
+        const topMarker = document.createElement("div");
+        topMarker.style.position = "fixed";
+        topMarker.style.left = "0";
+        topMarker.style.top = `${constraintTopViewport}px`;
+        topMarker.style.width = "100vw";
+        topMarker.style.height = "2px";
+        topMarker.style.backgroundColor = "red";
+        topMarker.style.zIndex = "9999";
+        topMarker.style.pointerEvents = "none";
+        topMarker.style.opacity = "0.7";
+        topMarker.title = "constraintTop";
+
+        const topLabel = document.createElement("div");
+        topLabel.textContent = "constraintTop";
+        topLabel.style.position = "absolute";
+        topLabel.style.left = "10px";
+        topLabel.style.top = "5px";
+        topLabel.style.fontSize = "12px";
+        topLabel.style.color = "red";
+        topLabel.style.fontWeight = "bold";
+        topLabel.style.textShadow = "1px 1px 1px rgba(255,255,255,0.8)";
+        topMarker.appendChild(topLabel);
+
+        document.body.appendChild(topMarker);
+        constraintMarkers.push(topMarker);
+      }
+      if (constraintBottom !== Infinity) {
+        // Create horizontal line for bottom constraint
+        const constraintBottomViewport =
+          positionedParentRect.top + constraintBottom;
+        const bottomMarker = document.createElement("div");
+        bottomMarker.style.position = "fixed";
+        bottomMarker.style.left = "0";
+        bottomMarker.style.top = `${constraintBottomViewport}px`;
+        bottomMarker.style.width = "100vw";
+        bottomMarker.style.height = "2px";
+        bottomMarker.style.backgroundColor = "red";
+        bottomMarker.style.zIndex = "9999";
+        bottomMarker.style.pointerEvents = "none";
+        bottomMarker.style.opacity = "0.7";
+        bottomMarker.title = "constraintBottom";
+
+        const bottomLabel = document.createElement("div");
+        bottomLabel.textContent = "constraintBottom";
+        bottomLabel.style.position = "absolute";
+        bottomLabel.style.left = "10px";
+        bottomLabel.style.top = "-20px";
+        bottomLabel.style.fontSize = "12px";
+        bottomLabel.style.color = "red";
+        bottomLabel.style.fontWeight = "bold";
+        bottomLabel.style.textShadow = "1px 1px 1px rgba(255,255,255,0.8)";
+        bottomMarker.appendChild(bottomLabel);
+
+        document.body.appendChild(bottomMarker);
+        constraintMarkers.push(bottomMarker);
+      }
+
+      // Clean up constraint markers when gesture ends
+      addTeardown(() => {
+        constraintMarkers.forEach((marker) => {
+          if (marker && marker.parentNode) {
+            marker.parentNode.removeChild(marker);
+          }
+        });
+      });
+    }
+
+    // Set up dragging attribute
+    element.setAttribute("data-dragging", "");
+    addTeardown(() => {
+      element.removeAttribute("data-dragging");
     });
-  }
 
-  mouse_events: {
-    const updateMousePosition = (e) => {
-      // Convert current mouse position to relative coordinates using CURRENT positioned parent position
-      // Note: We'll recalculate this after scrolling if needed
-      let currentPositionedParentRect =
-        positionedParent.getBoundingClientRect();
-      let currentXRelative = e.clientX - currentPositionedParentRect.left;
-      let currentYRelative = e.clientY - currentPositionedParentRect.top;
+    if (gestureAttribute) {
+      element.setAttribute(gestureAttribute, "");
+      addTeardown(() => {
+        element.removeAttribute(gestureAttribute);
+      });
+    }
 
+    const drag = (
+      currentXRelative,
+      currentYRelative,
+      { isRelease = false } = {},
+    ) => {
       const isGoingLeft = currentXRelative < gestureInfo.x;
       const isGoingRight = currentXRelative > gestureInfo.x;
       const isGoingTop = currentYRelative < gestureInfo.y;
       const isGoingBottom = currentYRelative > gestureInfo.y;
+
       gestureInfo.isGoingLeft = isGoingLeft;
       gestureInfo.isGoingRight = isGoingRight;
       gestureInfo.isGoingTop = isGoingTop;
       gestureInfo.isGoingBottom = isGoingBottom;
 
-      // Store mouse position before any scrolling changes coordinates
-      const mouseXBeforeScroll = currentXRelative;
-      const mouseYBeforeScroll = currentYRelative;
-
       if (direction.x) {
-        gestureInfo.x = mouseXBeforeScroll;
+        gestureInfo.x = currentXRelative;
         let xMove = gestureInfo.x - gestureInfo.xAtStart;
 
         // Apply constraints accounting for initial position
-        // finalX = initialLeft + xMove, so xMove = finalX - initialLeft
         const minXMove = constraintLeft - initialLeft;
         const maxXMove = constraintRight - initialLeft;
 
@@ -316,12 +294,12 @@ export const startDragGesture = (
           ? xMove !== previousGestureInfo.xMove
           : true;
       }
+
       if (direction.y) {
-        gestureInfo.y = mouseYBeforeScroll;
+        gestureInfo.y = currentYRelative;
         let yMove = gestureInfo.y - gestureInfo.yAtStart;
 
         // Apply constraints accounting for initial position
-        // finalY = initialTop + yMove, so yMove = finalY - initialTop
         const minYMove = constraintTop - initialTop;
         const maxYMove = constraintBottom - initialTop;
 
@@ -336,8 +314,7 @@ export const startDragGesture = (
           : true;
       }
 
-      const isMouseUp = e.type === "mouseup";
-      if (isMouseUp) {
+      if (isRelease) {
         if (!started) {
           return;
         }
@@ -370,11 +347,10 @@ export const startDragGesture = (
         }
       }
 
+      // Auto-scroll logic
       auto_scroll: {
         const scrollableRect = scrollableParent.getBoundingClientRect();
-        // Use clientWidth for the actual scrollable area (excludes scrollbar)
         const availableWidth = scrollableParent.clientWidth;
-        // Use the element dimensions captured at start of drag (not current position)
 
         // Calculate where element bounds would be in viewport coordinates
         const currentPositionedParentRect =
@@ -437,61 +413,50 @@ export const startDragGesture = (
           gestureInfo.currentDebugMarkers = newDebugMarkers;
         }
 
-        horizontal: {
-          if (!direction.x) {
-            break horizontal;
-          }
+        // Horizontal auto-scroll
+        if (direction.x) {
           const currentScrollLeft = scrollableParent.scrollLeft;
           if (isGoingRight) {
-            if (desiredElementRight <= visibleAreaRight) {
-              break horizontal;
+            if (desiredElementRight > visibleAreaRight) {
+              // Calculate exactly how much we need to scroll to make the element right edge visible
+              const scrollAmountNeeded = desiredElementRight - visibleAreaRight;
+              const newScrollLeft = currentScrollLeft + scrollAmountNeeded;
+
+              console.log("Right scroll needed:", {
+                desiredElementRight,
+                visibleAreaRight,
+                scrollAmountNeeded,
+                currentScrollLeft,
+                newScrollLeft,
+                elementWidth,
+              });
+
+              scrollableParent.scrollLeft = newScrollLeft;
+              gestureInfo.autoScrolledX = newScrollLeft;
             }
-            // Calculate exactly how much we need to scroll to make the element right edge visible
-            const scrollAmountNeeded = desiredElementRight - visibleAreaRight;
-            const newScrollLeft = currentScrollLeft + scrollAmountNeeded;
-
-            console.log("Right scroll needed:", {
-              desiredElementRight,
-              visibleAreaRight,
-              scrollAmountNeeded,
-              currentScrollLeft,
-              newScrollLeft,
-              elementWidth,
-            });
-
-            scrollableParent.scrollLeft = newScrollLeft;
-            gestureInfo.autoScrolledX = newScrollLeft;
-            break horizontal;
+          } else if (isGoingLeft) {
+            const visibleAreaLeftWithScrollOffset =
+              visibleAreaLeft + currentScrollLeft;
+            if (desiredElementLeft < visibleAreaLeftWithScrollOffset) {
+              const scrollLeftRequired =
+                currentScrollLeft +
+                (desiredElementLeft - visibleAreaLeftWithScrollOffset);
+              scrollableParent.scrollLeft = scrollLeftRequired;
+              gestureInfo.autoScrolledX = scrollLeftRequired;
+            }
           }
-          // need to scroll left?
-          if (!isGoingLeft) {
-            break horizontal;
-          }
-          const visibleAreaLeftWithScrollOffset =
-            visibleAreaLeft + currentScrollLeft;
-          if (desiredElementLeft >= visibleAreaLeftWithScrollOffset) {
-            break horizontal;
-          }
-          const scrollLeftRequired =
-            currentScrollLeft +
-            (desiredElementLeft - visibleAreaLeftWithScrollOffset);
-          scrollableParent.scrollLeft = scrollLeftRequired;
-          gestureInfo.autoScrolledX = scrollLeftRequired;
         }
 
-        const visibleAreaTop = scrollableRect.top;
-        const visibleAreaBottom = scrollableRect.bottom;
+        // Vertical auto-scroll
+        if (direction.y) {
+          const visibleAreaTop = scrollableRect.top;
+          const visibleAreaBottom = scrollableRect.bottom;
 
-        vertical: {
-          if (!direction.y) {
-            break vertical;
-          }
-
-          let scrollAmountForKeepInView = 0;
           // Check if desired element position would be beyond visible area's top boundary
           if (desiredElementTop < visibleAreaTop) {
             // Need to scroll up to keep element in view
-            scrollAmountForKeepInView = visibleAreaTop - desiredElementTop;
+            const scrollAmountForKeepInView =
+              visibleAreaTop - desiredElementTop;
             const oldScrollTop = scrollableParent.scrollTop;
             scrollableParent.scrollTop = Math.max(
               0,
@@ -503,7 +468,7 @@ export const startDragGesture = (
           // Check if desired element position would be beyond visible area's bottom boundary
           else if (desiredElementBottom > visibleAreaBottom) {
             // Need to scroll down to keep element in view
-            scrollAmountForKeepInView =
+            const scrollAmountForKeepInView =
               desiredElementBottom - visibleAreaBottom;
             const maxScrollTop =
               scrollableParent.scrollHeight - scrollableParent.clientHeight;
@@ -518,9 +483,8 @@ export const startDragGesture = (
         }
       }
 
+      // Position element
       if (elementToMove) {
-        // Position element using relative coordinates to positioned parent
-        // No need to account for scroll - element is positioned relative to positioned parent
         const finalLeft = initialLeft + gestureInfo.xMove;
         const finalTop = initialTop + gestureInfo.yMove;
 
@@ -544,13 +508,9 @@ export const startDragGesture = (
       }
     };
 
-    const handleMouseMove = (e) => {
-      updateMousePosition(e);
-    };
-    const handleMouseUp = (e) => {
-      e.preventDefault();
+    const release = (currentXRelative, currentYRelative) => {
       gestureInfo.isMouseUp = true;
-      updateMousePosition(e);
+      drag(currentXRelative, currentYRelative, { isRelease: true });
 
       // Clean up any remaining debug markers when drag ends
       if (DRAG_DEBUG_VISUAL_MARKERS && gestureInfo.currentDebugMarkers) {
@@ -562,30 +522,110 @@ export const startDragGesture = (
         gestureInfo.currentDebugMarkers = null;
       }
 
+      onRelease?.(gestureInfo);
+    };
+
+    onGrab?.(gestureInfo);
+
+    return {
+      drag,
+      release,
+      gestureInfo,
+    };
+  };
+
+  const grabViaMousedown = (
+    mousedownEvent,
+    setup = () => {
+      return {
+        element: mousedownEvent.target,
+      };
+    },
+  ) => {
+    if (mousedownEvent.defaultPrevented) {
+      return null;
+    }
+    if (mousedownEvent.button !== 0) {
+      return null;
+    }
+    const target = mousedownEvent.target;
+    if (!target.closest) {
+      return null;
+    }
+
+    mousedownEvent.preventDefault();
+    const xAtStart = mousedownEvent.clientX;
+    const yAtStart = mousedownEvent.clientY;
+
+    const endCallbackSet = new Set();
+    const setupResult = setup({
+      addTeardown: (callback) => {
+        endCallbackSet.add(callback);
+      },
+    });
+    if (!setupResult) {
+      return null;
+    }
+
+    const positionedParent = getPositionedParent(setupResult.element);
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+
+    // Convert mouse start position to relative coordinates
+    const xAtStartRelative = xAtStart - positionedParentRect.left;
+    const yAtStartRelative = yAtStart - positionedParentRect.top;
+
+    const dragGesture = grab({
+      ...setupResult,
+      xAtStart: xAtStartRelative,
+      yAtStart: yAtStartRelative,
+      addTeardown: (callback) => {
+        endCallbackSet.add(callback);
+      },
+    });
+
+    // Set up mouse event handlers
+    const handleMouseMove = (e) => {
+      const currentPositionedParentRect =
+        positionedParent.getBoundingClientRect();
+      const currentXRelative = e.clientX - currentPositionedParentRect.left;
+      const currentYRelative = e.clientY - currentPositionedParentRect.top;
+      dragGesture.drag(currentXRelative, currentYRelative);
+    };
+
+    const handleMouseUp = (e) => {
+      e.preventDefault();
+      const currentPositionedParentRect =
+        positionedParent.getBoundingClientRect();
+      const currentXRelative = e.clientX - currentPositionedParentRect.left;
+      const currentYRelative = e.clientY - currentPositionedParentRect.top;
+      dragGesture.release(currentXRelative, currentYRelative);
+
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+
       for (const endCallback of endCallbackSet) {
         endCallback();
       }
-      onRelease?.(gestureInfo);
     };
+
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
     endCallbackSet.add(() => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     });
-  }
-  data_dragging_attribute: {
-    element.setAttribute("data-dragging", "");
-    endCallbackSet.add(() => {
-      element.removeAttribute("data-dragging");
-    });
-  }
-  if (gestureAttribute) {
-    element.setAttribute(gestureAttribute, "");
-    endCallbackSet.add(() => {
-      element.removeAttribute(gestureAttribute);
-    });
-  }
 
-  onGrab?.(gestureInfo);
+    return dragGesture;
+  };
+
+  return {
+    grab,
+    grabViaMousedown,
+  };
+};
+
+// Legacy compatibility
+export const startDragGesture = (mousedownEvent, options) => {
+  const dragGesture = createDragGesture(options);
+  return dragGesture.grabViaMousedown(mousedownEvent, options.setup);
 };

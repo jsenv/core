@@ -191,6 +191,136 @@
       </label>
     </div>
 
+    <div
+      class="programmatic-controls"
+      style="
+        margin: 20px auto;
+        text-align: center;
+        max-width: 800px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      "
+    >
+      <h3 style="margin-top: 0; color: #333">Programmatic Drag Controls</h3>
+      <p style="margin-bottom: 15px; color: #666">
+        Test drag gestures without mouse events to isolate potential feedback
+        loops:
+      </p>
+
+      <div
+        style="
+          display: flex;
+          gap: 15px;
+          justify-content: center;
+          align-items: center;
+          flex-wrap: wrap;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+          "
+        >
+          <label for="rectangleSelect" style="font-size: 14px; color: #333"
+            >Target:</label
+          >
+          <select
+            id="rectangleSelect"
+            style="
+              padding: 8px 12px;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+            "
+          >
+            <option value="horizontal">Horizontal Rectangle</option>
+            <option value="both">Both Scrollbars Rectangle</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 10px">
+          <button
+            id="grabBtn"
+            style="
+              padding: 10px 15px;
+              background: #4caf50;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+            "
+          >
+            Grab
+          </button>
+          <button
+            id="dragRightBtn"
+            disabled
+            style="
+              padding: 10px 15px;
+              background: #2196f3;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+            "
+          >
+            Drag Right
+          </button>
+          <button
+            id="dragDownBtn"
+            disabled
+            style="
+              padding: 10px 15px;
+              background: #ff9800;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+            "
+          >
+            Drag Down
+          </button>
+          <button
+            id="releaseBtn"
+            disabled
+            style="
+              padding: 10px 15px;
+              background: #f44336;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 14px;
+            "
+          >
+            Release
+          </button>
+        </div>
+      </div>
+
+      <div
+        id="programmaticStatus"
+        style="
+          margin-top: 15px;
+          padding: 10px;
+          background: #f9f9f9;
+          border-radius: 4px;
+          font-family: monospace;
+          font-size: 12px;
+          color: #666;
+        "
+      >
+        No programmatic drag active
+      </div>
+    </div>
+
     <!-- Case 1: Only Horizontal Scrollbar -->
     <div class="demo-section">
       <h2 class="demo-title">
@@ -221,6 +351,7 @@
       // Import the drag gesture functionality
       // Note: You'll need to adjust the import path based on your setup
       import {
+        createDragGesture,
         startDragGesture,
         DRAG_DEBUG_VISUAL_MARKERS,
         enableDebugMarkers,
@@ -229,6 +360,7 @@
       import { getScrollableParent } from "../scroll.js";
 
       // Make functions available globally for the demo
+      window.createDragGesture = createDragGesture;
       window.startDragGesture = startDragGesture;
       window.getScrollableParent = getScrollableParent;
       window.enableDebugMarkers = enableDebugMarkers;
@@ -249,6 +381,149 @@
           disableDebugMarkers();
         }
       });
+
+      // Programmatic controls
+      const rectangleSelect = document.getElementById("rectangleSelect");
+      const grabBtn = document.getElementById("grabBtn");
+      const dragRightBtn = document.getElementById("dragRightBtn");
+      const dragDownBtn = document.getElementById("dragDownBtn");
+      const releaseBtn = document.getElementById("releaseBtn");
+      const statusDiv = document.getElementById("programmaticStatus");
+
+      let currentDragGesture = null;
+      let currentDragInstance = null;
+
+      function updateStatus(message) {
+        statusDiv.textContent = message;
+        console.log("Programmatic Control:", message);
+      }
+
+      function getSelectedRectangle() {
+        return rectangleSelect.value === "horizontal"
+          ? horizontalRectangle
+          : bothRectangle;
+      }
+
+      function updateButtonStates(grabbed = false) {
+        grabBtn.disabled = grabbed;
+        dragRightBtn.disabled = !grabbed;
+        dragDownBtn.disabled = !grabbed;
+        releaseBtn.disabled = !grabbed;
+      }
+
+      // Grab button
+      grabBtn.addEventListener("click", () => {
+        const rectangle = getSelectedRectangle();
+        const positionedParent = rectangle.offsetParent || document.body;
+        const positionedParentRect = positionedParent.getBoundingClientRect();
+        const rectangleRect = rectangle.getBoundingClientRect();
+
+        // Calculate start position in relative coordinates
+        const xAtStart = rectangleRect.left - positionedParentRect.left + 50; // Simulate starting 50px from left edge
+        const yAtStart = rectangleRect.top - positionedParentRect.top + 30; // Simulate starting 30px from top edge
+
+        currentDragGesture = createDragGesture({
+          onGrab: (gestureInfo) => {
+            updateStatus(
+              `Grabbed ${rectangleSelect.value} rectangle programmatically`,
+            );
+            console.log("Programmatic grab:", gestureInfo);
+          },
+          onDragStart: (gestureInfo) => {
+            updateStatus(
+              `Started programmatic drag on ${rectangleSelect.value} rectangle`,
+            );
+            console.log("Programmatic drag start:", gestureInfo);
+          },
+          onDrag: (gestureInfo, phase) => {
+            updateStatus(
+              `Programmatic dragging ${rectangleSelect.value} rectangle (${phase})`,
+            );
+            console.log("Programmatic drag:", gestureInfo, phase);
+          },
+          onRelease: (gestureInfo) => {
+            updateStatus(
+              `Released ${rectangleSelect.value} rectangle programmatically`,
+            );
+            console.log("Programmatic release:", gestureInfo);
+            currentDragGesture = null;
+            currentDragInstance = null;
+            updateButtonStates(false);
+          },
+        });
+
+        currentDragInstance = currentDragGesture.start({
+          element: rectangle,
+          elementToMove: rectangle,
+          elementVisuallyMoving: rectangle,
+          xAtStart,
+          yAtStart,
+          addTeardown: () => {
+            // Store cleanup callbacks if needed
+          },
+        });
+
+        updateButtonStates(true);
+      });
+
+      // Drag Right button
+      dragRightBtn.addEventListener("click", () => {
+        if (!currentDragInstance) return;
+
+        const rectangle = getSelectedRectangle();
+        const positionedParent = rectangle.offsetParent || document.body;
+        const positionedParentRect = positionedParent.getBoundingClientRect();
+        const rectangleRect = rectangle.getBoundingClientRect();
+
+        // Calculate current position and move right by 50px
+        const currentX = rectangleRect.left - positionedParentRect.left;
+        const currentY = rectangleRect.top - positionedParentRect.top;
+        const newX = currentX + 50;
+
+        updateStatus(
+          `Dragging ${rectangleSelect.value} rectangle right by 50px`,
+        );
+        currentDragInstance.drag(newX, currentY);
+      });
+
+      // Drag Down button
+      dragDownBtn.addEventListener("click", () => {
+        if (!currentDragInstance) return;
+
+        const rectangle = getSelectedRectangle();
+        const positionedParent = rectangle.offsetParent || document.body;
+        const positionedParentRect = positionedParent.getBoundingClientRect();
+        const rectangleRect = rectangle.getBoundingClientRect();
+
+        // Calculate current position and move down by 50px
+        const currentX = rectangleRect.left - positionedParentRect.left;
+        const currentY = rectangleRect.top - positionedParentRect.top;
+        const newY = currentY + 50;
+
+        updateStatus(
+          `Dragging ${rectangleSelect.value} rectangle down by 50px`,
+        );
+        currentDragInstance.drag(currentX, newY);
+      });
+
+      // Release button
+      releaseBtn.addEventListener("click", () => {
+        if (!currentDragInstance) return;
+
+        const rectangle = getSelectedRectangle();
+        const positionedParent = rectangle.offsetParent || document.body;
+        const positionedParentRect = positionedParent.getBoundingClientRect();
+        const rectangleRect = rectangle.getBoundingClientRect();
+
+        // Calculate current position for final release
+        const currentX = rectangleRect.left - positionedParentRect.left;
+        const currentY = rectangleRect.top - positionedParentRect.top;
+
+        updateStatus(`Releasing ${rectangleSelect.value} rectangle`);
+        currentDragInstance.release(currentX, currentY);
+      });
+
+      updateButtonStates(false);
 
       // Function to set up drag gesture for any rectangle
       function setupDragGesture(rectangle, caseLabel) {
