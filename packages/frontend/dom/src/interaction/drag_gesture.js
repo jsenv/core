@@ -357,10 +357,6 @@ export const createDragGesture = ({
       let actualScrollLeft = scrollableParent?.scrollLeft ?? 0;
       let actualScrollTop = scrollableParent?.scrollTop ?? 0;
 
-      // Track effective positioning separate from gesture coordinates
-      let effectiveXMove = gestureInfo.xMove;
-      let effectiveYMove = gestureInfo.yMove;
-
       auto_scroll: {
         const scrollableRect = scrollableParent.getBoundingClientRect();
         const availableWidth = scrollableParent.clientWidth;
@@ -447,22 +443,7 @@ export const createDragGesture = ({
               });
 
               scrollableParent.scrollLeft = intendedScrollLeft;
-              actualScrollLeft = scrollableParent.scrollLeft; // Use the actual value after browser clamping
-
-              // If scroll was clamped, adjust the effective positioning (not the gesture info)
-              if (actualScrollLeft !== intendedScrollLeft) {
-                const scrollDifference = intendedScrollLeft - actualScrollLeft;
-                // Reduce the effective move by the amount we couldn't scroll
-                effectiveXMove -= scrollDifference;
-                console.log("Scroll clamped, adjusting effective position:", {
-                  intendedScroll: intendedScrollLeft,
-                  actualScroll: actualScrollLeft,
-                  scrollDifference,
-                  originalXMove: gestureInfo.xMove,
-                  effectiveXMove,
-                });
-              }
-
+              actualScrollLeft = scrollableParent.scrollLeft;
               gestureInfo.autoScrolledX = actualScrollLeft;
             }
           } else if (isGoingLeft) {
@@ -484,21 +465,7 @@ export const createDragGesture = ({
               });
 
               scrollableParent.scrollLeft = intendedScrollLeft;
-              actualScrollLeft = scrollableParent.scrollLeft; // Use the actual value after browser clamping
-
-              // If scroll was clamped, adjust the effective positioning (not the gesture info)
-              if (actualScrollLeft !== intendedScrollLeft) {
-                const scrollDifference = intendedScrollLeft - actualScrollLeft;
-                // Adjust the effective move by the amount we couldn't scroll
-                effectiveXMove -= scrollDifference;
-                console.log("Left scroll clamped:", {
-                  intended: intendedScrollLeft,
-                  actual: actualScrollLeft,
-                  scrollDifference,
-                  effectiveXMove,
-                });
-              }
-
+              actualScrollLeft = scrollableParent.scrollLeft;
               gestureInfo.autoScrolledX = actualScrollLeft;
             }
           }
@@ -544,15 +511,14 @@ export const createDragGesture = ({
         }
       }
 
-      // Position element using effective positioning (accounts for scroll limitations)
+      // Position element
       if (elementToMove) {
-        const finalLeft = initialLeft + effectiveXMove;
-        const finalTop = initialTop + effectiveYMove;
+        const finalLeft = initialLeft + gestureInfo.xMove;
+        const finalTop = initialTop + gestureInfo.yMove;
 
         console.log("Positioning element:", {
           initialLeft,
-          gestureXMove: gestureInfo.xMove, // Pure gesture - unchanged
-          effectiveXMove, // Adjusted for scroll limitations
+          xMove: gestureInfo.xMove,
           finalLeft,
           scrollLeft: actualScrollLeft,
         });
