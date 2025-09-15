@@ -503,12 +503,10 @@ export const startDragGesture = (
       }
 
       if (elementToMove) {
-        // Position element using relative coordinates (already accounting for positioned parent)
-        // Use current scroll positions (which may have changed due to auto-scroll)
-        const currentScrollLeft = scrollableParent.scrollLeft;
-        const currentScrollTop = scrollableParent.scrollTop;
-        const finalLeft = initialLeft + gestureInfo.xMove + currentScrollLeft;
-        const finalTop = initialTop + gestureInfo.yMove + currentScrollTop;
+        // Position element using relative coordinates to positioned parent
+        // No need to account for scroll - element is positioned relative to positioned parent
+        const finalLeft = initialLeft + gestureInfo.xMove;
+        const finalTop = initialTop + gestureInfo.yMove;
 
         elementToMove.style.left = `${finalLeft}px`;
         elementToMove.style.top = `${finalTop}px`;
