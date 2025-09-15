@@ -418,51 +418,63 @@ export const createDragGesture = ({
         }
 
         // Horizontal auto-scroll
+        let intendedScrollLeft = scrollableParent?.scrollLeft ?? 0;
+
         if (direction.x) {
           const currentScrollLeft = scrollableParent.scrollLeft;
           if (isGoingRight) {
             if (desiredElementRight > visibleAreaRight) {
               // Calculate exactly how much we need to scroll to make the element right edge visible
               const scrollAmountNeeded = desiredElementRight - visibleAreaRight;
-              const newScrollLeft = currentScrollLeft + scrollAmountNeeded;
+              intendedScrollLeft = currentScrollLeft + scrollAmountNeeded;
 
               console.log("Right scroll needed:", {
                 desiredElementRight,
                 visibleAreaRight,
                 scrollAmountNeeded,
                 currentScrollLeft,
-                newScrollLeft,
+                intendedScrollLeft,
                 elementWidth,
               });
 
-              scrollableParent.scrollLeft = newScrollLeft;
+              scrollableParent.scrollLeft = intendedScrollLeft;
               actualScrollLeft = scrollableParent.scrollLeft; // Use the actual value after browser clamping
-              gestureInfo.autoScrolledX = actualScrollLeft;
 
-              // If scroll was clamped, we need to adjust the element position
-              if (actualScrollLeft !== newScrollLeft) {
-                const scrollDifference = newScrollLeft - actualScrollLeft;
+              // If scroll was clamped, adjust the gesture coordinates
+              if (actualScrollLeft !== intendedScrollLeft) {
+                const scrollDifference = intendedScrollLeft - actualScrollLeft;
                 // Reduce the xMove by the amount we couldn't scroll
                 gestureInfo.xMove -= scrollDifference;
                 gestureInfo.x = gestureInfo.xAtStart + gestureInfo.xMove;
-                console.log("Scroll clamped, adjusting element position:", {
-                  intendedScroll: newScrollLeft,
+                console.log("Scroll clamped, adjusting gesture:", {
+                  intendedScroll: intendedScrollLeft,
                   actualScroll: actualScrollLeft,
                   scrollDifference,
                   newXMove: gestureInfo.xMove,
                   newX: gestureInfo.x,
                 });
               }
+
+              gestureInfo.autoScrolledX = actualScrollLeft;
             }
           } else if (isGoingLeft) {
             const visibleAreaLeftWithScrollOffset =
               visibleAreaLeft + currentScrollLeft;
             if (desiredElementLeft < visibleAreaLeftWithScrollOffset) {
-              const scrollLeftRequired =
+              intendedScrollLeft =
                 currentScrollLeft +
                 (desiredElementLeft - visibleAreaLeftWithScrollOffset);
-              scrollableParent.scrollLeft = scrollLeftRequired;
+              scrollableParent.scrollLeft = intendedScrollLeft;
               actualScrollLeft = scrollableParent.scrollLeft; // Use the actual value after browser clamping
+
+              // If scroll was clamped, adjust the gesture coordinates
+              if (actualScrollLeft !== intendedScrollLeft) {
+                const scrollDifference = intendedScrollLeft - actualScrollLeft;
+                // Reduce the xMove by the amount we couldn't scroll
+                gestureInfo.xMove -= scrollDifference;
+                gestureInfo.x = gestureInfo.xAtStart + gestureInfo.xMove;
+              }
+
               gestureInfo.autoScrolledX = actualScrollLeft;
             }
           }
@@ -517,8 +529,7 @@ export const createDragGesture = ({
           initialLeft,
           xMove: gestureInfo.xMove,
           finalLeft,
-          scrollLeft: actualScrollLeft, // Use the accurate scroll value we set
-          actualScrollFromDOM: scrollableParent.scrollLeft, // Show the DOM value for comparison
+          scrollLeft: actualScrollLeft,
         });
 
         elementToMove.style.left = `${finalLeft}px`;
