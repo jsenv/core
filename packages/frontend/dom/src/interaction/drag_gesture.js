@@ -301,10 +301,16 @@ export const startDragGesture = (
       if (direction.x) {
         gestureInfo.x = currentXRelative;
         let xMove = gestureInfo.x - gestureInfo.xAtStart;
-        if (xMove < constraintLeft) {
-          xMove = constraintLeft;
-        } else if (xMove > constraintRight) {
-          xMove = constraintRight;
+
+        // Apply constraints accounting for initial position
+        // finalX = initialLeft + xMove, so xMove = finalX - initialLeft
+        const minXMove = constraintLeft - initialLeft;
+        const maxXMove = constraintRight - initialLeft;
+
+        if (xMove < minXMove) {
+          xMove = minXMove;
+        } else if (xMove > maxXMove) {
+          xMove = maxXMove;
         }
         gestureInfo.xMove = xMove;
         gestureInfo.xChanged = previousGestureInfo
@@ -314,10 +320,16 @@ export const startDragGesture = (
       if (direction.y) {
         gestureInfo.y = currentYRelative;
         let yMove = gestureInfo.y - gestureInfo.yAtStart;
-        if (yMove < constraintTop) {
-          yMove = constraintTop;
-        } else if (yMove > constraintBottom) {
-          yMove = constraintBottom;
+
+        // Apply constraints accounting for initial position
+        // finalY = initialTop + yMove, so yMove = finalY - initialTop
+        const minYMove = constraintTop - initialTop;
+        const maxYMove = constraintBottom - initialTop;
+
+        if (yMove < minYMove) {
+          yMove = minYMove;
+        } else if (yMove > maxYMove) {
+          yMove = maxYMove;
         }
         gestureInfo.yMove = yMove;
         gestureInfo.yChanged = previousGestureInfo
