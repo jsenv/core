@@ -352,145 +352,144 @@ export const createDragGesture = ({
         }
       }
 
-      // Auto-scroll logic
-      // Track the scroll position we actually set (not what we read back from DOM)
-      let actualScrollLeft = scrollableParent?.scrollLeft ?? 0;
-      let actualScrollTop = scrollableParent?.scrollTop ?? 0;
+      // Helper function to handle auto-scroll and element positioning for an axis
+      const moveAndScrollIntoView = ({
+        isGoingPositive, // right/down
+        isGoingNegative, // left/up
+        desiredElementStart, // left/top edge of element
+        desiredElementEnd, // right/bottom edge of element
+        visibleAreaStart, // visible left/top boundary
+        visibleAreaEnd, // visible right/bottom boundary
+        currentScroll, // current scrollLeft or scrollTop value
+        initialPosition, // initialLeft or initialTop
+        moveAmount, // gestureInfo.xMove or gestureInfo.yMove
+        scrollProperty, // 'scrollLeft' or 'scrollTop'
+        styleProperty, // 'left' or 'top'
+        autoScrollProperty, // 'autoScrolledX' or 'autoScrolledY'
+      }) => {
+        let scroll = currentScroll;
 
-      auto_scroll: {
-        const scrollableRect = scrollableParent.getBoundingClientRect();
-
-        // Calculate where element bounds would be in viewport coordinates
-        const currentPositionedParentRect =
-          positionedParent.getBoundingClientRect();
-
-        // Horizontal auto-scroll
-        if (direction.x) {
-          const availableWidth = scrollableParent.clientWidth;
-          // Visible area is from the container's left edge to the right edge of scrollable content
-          let visibleAreaLeft = scrollableRect.left;
-          let visibleAreaRight = visibleAreaLeft + availableWidth;
-
-          const desiredElementLeftRelative = initialLeft + gestureInfo.xMove;
-          // Convert to viewport coordinates for auto-scroll calculations
-          const desiredElementLeft =
-            desiredElementLeftRelative + currentPositionedParentRect.left;
-          const desiredElementRight = desiredElementLeft + elementWidth;
-
-          // Create debug markers for horizontal boundaries
-          if (DRAG_DEBUG_VISUAL_MARKERS) {
-            // Schedule removal of previous markers if they exist
-            if (gestureInfo.currentDebugMarkers) {
-              const previousMarkers = gestureInfo.currentDebugMarkers;
-              setTimeout(() => {
-                previousMarkers.forEach((marker) => {
-                  if (marker && marker.parentNode) {
-                    marker.parentNode.removeChild(marker);
-                  }
-                });
-              }, 100);
-            }
-
-            // Create new markers (these become the current ones)
-            const newDebugMarkers = [];
-            newDebugMarkers.push(
-              createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
-            );
-            newDebugMarkers.push(
-              createDebugMarker(
-                "visibleAreaRight",
-                visibleAreaRight,
-                0,
-                "green",
-              ),
-            );
-            newDebugMarkers.push(
-              createDebugMarker(
-                "desiredElementLeft",
-                desiredElementLeft,
-                0,
-                "orange",
-              ),
-            );
-            newDebugMarkers.push(
-              createDebugMarker(
-                "desiredElementRight",
-                desiredElementRight,
-                0,
-                "purple",
-              ),
-            );
-
-            // Store as current markers for next mousemove
-            gestureInfo.currentDebugMarkers = newDebugMarkers;
+        // Handle auto-scroll
+        if (isGoingPositive) {
+          if (desiredElementEnd > visibleAreaEnd) {
+            const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
+            scroll = currentScroll + scrollAmountNeeded;
           }
-
-          const currentScrollLeft = scrollableParent.scrollLeft;
-          if (isGoingRight) {
-            if (desiredElementRight > visibleAreaRight) {
-              const scrollAmountNeeded = desiredElementRight - visibleAreaRight;
-              scrollableParent.scrollLeft =
-                currentScrollLeft + scrollAmountNeeded;
-              actualScrollLeft = scrollableParent.scrollLeft;
-              gestureInfo.autoScrolledX = actualScrollLeft;
-            }
-          } else if (isGoingLeft) {
-            if (desiredElementLeft < visibleAreaLeft) {
-              const scrollAmountNeeded = visibleAreaLeft - desiredElementLeft;
-              scrollableParent.scrollLeft = Math.max(
-                0,
-                currentScrollLeft - scrollAmountNeeded,
-              );
-              actualScrollLeft = scrollableParent.scrollLeft;
-              gestureInfo.autoScrolledX = actualScrollLeft;
-            }
+        } else if (isGoingNegative) {
+          if (desiredElementStart < visibleAreaStart) {
+            const scrollAmountNeeded = visibleAreaStart - desiredElementStart;
+            scroll = Math.max(0, currentScroll - scrollAmountNeeded);
           }
         }
 
-        // Vertical auto-scroll
-        if (direction.y) {
-          const availableHeight = scrollableParent.clientHeight;
-          let visibleAreaTop = scrollableRect.top;
-          let visibleAreaBottom = visibleAreaTop + availableHeight;
+        // Apply scroll
+        scrollableParent[scrollProperty] = scroll;
+        gestureInfo[autoScrollProperty] = scroll;
 
-          const currentScrollTop = scrollableParent.scrollTop;
-
-          const desiredElementTopRelative = initialTop + gestureInfo.yMove;
-
-          const desiredElementTop =
-            desiredElementTopRelative + currentPositionedParentRect.top;
-          const desiredElementBottom = desiredElementTop + elementHeight;
-
-          if (isGoingUp) {
-            if (desiredElementTop < visibleAreaTop) {
-              const scrollAmountNeeded = visibleAreaTop - desiredElementTop;
-              scrollableParent.scrollTop = Math.max(
-                0,
-                currentScrollTop - scrollAmountNeeded,
-              );
-              actualScrollTop = scrollableParent.scrollTop;
-              gestureInfo.autoScrolledY = actualScrollTop;
-            }
-          } else if (isGoingDown) {
-            if (desiredElementBottom > visibleAreaBottom) {
-              const scrollAmountNeeded =
-                desiredElementBottom - visibleAreaBottom;
-              scrollableParent.scrollTop =
-                currentScrollTop + scrollAmountNeeded;
-              actualScrollTop = scrollableParent.scrollTop;
-              gestureInfo.autoScrolledY = actualScrollTop;
-            }
-          }
+        // Calculate and apply element position
+        const elementPosition = initialPosition + moveAmount;
+        if (elementToMove) {
+          elementToMove.style[styleProperty] = `${elementPosition}px`;
         }
+
+        return { scroll, elementPosition };
+      };
+
+      const scrollableRect = scrollableParent.getBoundingClientRect();
+
+      // Calculate where element bounds would be in viewport coordinates
+      const currentPositionedParentRect =
+        positionedParent.getBoundingClientRect();
+
+      // Horizontal auto-scroll
+      if (direction.x) {
+        const availableWidth = scrollableParent.clientWidth;
+        const visibleAreaLeft = scrollableRect.left;
+        const visibleAreaRight = visibleAreaLeft + availableWidth;
+        const desiredElementLeftRelative = initialLeft + gestureInfo.xMove;
+        const desiredElementLeft =
+          desiredElementLeftRelative + currentPositionedParentRect.left;
+        const desiredElementRight = desiredElementLeft + elementWidth;
+        if (DRAG_DEBUG_VISUAL_MARKERS) {
+          // Schedule removal of previous markers if they exist
+          if (gestureInfo.currentDebugMarkers) {
+            const previousMarkers = gestureInfo.currentDebugMarkers;
+            setTimeout(() => {
+              previousMarkers.forEach((marker) => {
+                if (marker && marker.parentNode) {
+                  marker.parentNode.removeChild(marker);
+                }
+              });
+            }, 100);
+          }
+
+          // Create new markers (these become the current ones)
+          const newDebugMarkers = [];
+          newDebugMarkers.push(
+            createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
+          );
+          newDebugMarkers.push(
+            createDebugMarker("visibleAreaRight", visibleAreaRight, 0, "green"),
+          );
+          newDebugMarkers.push(
+            createDebugMarker(
+              "desiredElementLeft",
+              desiredElementLeft,
+              0,
+              "orange",
+            ),
+          );
+          newDebugMarkers.push(
+            createDebugMarker(
+              "desiredElementRight",
+              desiredElementRight,
+              0,
+              "purple",
+            ),
+          );
+
+          // Store as current markers for next mousemove
+          gestureInfo.currentDebugMarkers = newDebugMarkers;
+        }
+        moveAndScrollIntoView({
+          isGoingPositive: isGoingRight,
+          isGoingNegative: isGoingLeft,
+          desiredElementStart: desiredElementLeft,
+          desiredElementEnd: desiredElementRight,
+          visibleAreaStart: visibleAreaLeft,
+          visibleAreaEnd: visibleAreaRight,
+          currentScroll: scrollableParent.scrollLeft,
+          initialPosition: initialLeft,
+          moveAmount: gestureInfo.xMove,
+          scrollProperty: "scrollLeft",
+          styleProperty: "left",
+          autoScrollProperty: "autoScrolledX",
+        });
       }
 
-      // Position element
-      if (elementToMove) {
-        const finalLeft = initialLeft + gestureInfo.xMove;
-        const finalTop = initialTop + gestureInfo.yMove;
-
-        elementToMove.style.left = `${finalLeft}px`;
-        elementToMove.style.top = `${finalTop}px`;
+      // Vertical auto-scroll
+      if (direction.y) {
+        const availableHeight = scrollableParent.clientHeight;
+        const visibleAreaTop = scrollableRect.top;
+        const visibleAreaBottom = visibleAreaTop + availableHeight;
+        const desiredElementTopRelative = initialTop + gestureInfo.yMove;
+        const desiredElementTop =
+          desiredElementTopRelative + currentPositionedParentRect.top;
+        const desiredElementBottom = desiredElementTop + elementHeight;
+        moveAndScrollIntoView({
+          isGoingPositive: isGoingDown,
+          isGoingNegative: isGoingUp,
+          desiredElementStart: desiredElementTop,
+          desiredElementEnd: desiredElementBottom,
+          visibleAreaStart: visibleAreaTop,
+          visibleAreaEnd: visibleAreaBottom,
+          currentScroll: scrollableParent.scrollTop,
+          initialPosition: initialTop,
+          moveAmount: gestureInfo.yMove,
+          scrollProperty: "scrollTop",
+          styleProperty: "top",
+          autoScrollProperty: "autoScrolledY",
+        });
       }
 
       if (!started) {
