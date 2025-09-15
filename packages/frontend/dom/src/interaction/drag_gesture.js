@@ -196,41 +196,22 @@ const createScrollableAreaConstraint = (scrollableParent) => {
   };
 };
 
-// Function to get obstacle bounds for collision detection
-const getObstacleBounds = (scrollableParent) => {
-  const obstacles = scrollableParent.querySelectorAll("[data-drag-obstacle]");
-  const bounds = [];
-  for (const obstacle of obstacles) {
-    bounds.push({
-      left: obstacle.offsetLeft,
-      top: obstacle.offsetTop,
-      right: obstacle.offsetLeft + obstacle.offsetWidth,
-      bottom: obstacle.offsetTop + obstacle.offsetHeight,
-      width: obstacle.offsetWidth,
-      height: obstacle.offsetHeight,
-    });
-  }
-  return bounds;
-};
-
 // Function to create constraint that respects solid obstacles
-const createObstacleConstraint = (scrollableParent) => {
+const createObstacleConstraint = (obstacle) => {
   return () => {
-    const obstacles = getObstacleBounds(scrollableParent);
+    const obstacleRect = obstacle.getBoundingClientRect();
     return {
-      type: "zones",
-      obstacles: obstacles.map((obstacle) => ({
-        left: obstacle.left,
-        top: obstacle.top,
-        right: obstacle.right,
-        bottom: obstacle.bottom,
-      })),
+      type: "obstacle",
+      left: obstacleRect.left,
+      top: obstacleRect.top,
+      right: obstacleRect.right,
+      bottom: obstacleRect.bottom,
     };
   };
 };
 
 // Apply bounds constraint on X axis
-const applyConstraintOnX = (xMove, initialLeft, elementWidth, constraints) => {
+const applyConstraintsOnX = (xMove, initialLeft, elementWidth, constraints) => {
   let minXMove = -initialLeft; // Allow to go to left edge (0)
   let maxXMove = Infinity;
 
@@ -269,7 +250,7 @@ const applyConstraintOnX = (xMove, initialLeft, elementWidth, constraints) => {
 };
 
 // Apply bounds constraint on Y axis
-const applyConstraintOnY = (yMove, initialTop, elementHeight, constraints) => {
+const applyConstraintsOnY = (yMove, initialTop, elementHeight, constraints) => {
   let minYMove = -initialTop; // Allow to go to top edge (0)
   let maxYMove = Infinity;
 
@@ -315,7 +296,6 @@ export const createDragGesture = ({
   threshold = 5,
   direction: defaultDirection = { x: true, y: true },
   backdrop = true,
-  constraint = null,
   lifecycle,
 }) => {
   const teardownCallbackSet = new Set();
@@ -410,14 +390,13 @@ export const createDragGesture = ({
     const constraintFunctions = [];
 
     // Always add bounds constraint (scrollable area)
-    const boundsConstraint =
-      constraint || createScrollableAreaConstraint(scrollableParent);
+    const boundsConstraint = createScrollableAreaConstraint(scrollableParent);
     constraintFunctions.push(boundsConstraint);
 
     // Check for obstacles and add obstacle constraint if found
     const obstacles = scrollableParent.querySelectorAll("[drag-obstacle]");
-    if (obstacles.length > 0) {
-      constraintFunctions.push(createObstacleConstraint(scrollableParent));
+    for (const obstacle of obstacles) {
+      constraintFunctions.push(createObstacleConstraint(obstacle));
     }
 
     // Clean up debug markers when gesture ends
@@ -480,7 +459,7 @@ export const createDragGesture = ({
           }),
         );
 
-        xMove = applyConstraintOnX(
+        xMove = applyConstraintsOnX(
           xMove,
           initialLeft,
           currentElementWidth,
@@ -504,7 +483,7 @@ export const createDragGesture = ({
           }),
         );
 
-        yMove = applyConstraintOnY(
+        yMove = applyConstraintsOnY(
           yMove,
           initialTop,
           currentElementHeight,
