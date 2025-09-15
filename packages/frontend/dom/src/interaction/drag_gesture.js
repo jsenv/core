@@ -200,7 +200,7 @@ export const createDragGesture = ({
     constraintFunctions.push(boundsConstraint);
 
     // Check for obstacles and add obstacle constraint if found
-    const obstacles = scrollableParent.querySelectorAll("[drag-obstacle]");
+    const obstacles = scrollableParent.querySelectorAll("[data-drag-obstacle]");
     for (const obstacle of obstacles) {
       constraintFunctions.push(createObstacleConstraint(obstacle));
     }
@@ -214,7 +214,7 @@ export const createDragGesture = ({
       });
       currentConstraintMarkers.forEach((marker) => {
         if (marker && marker.parentNode) {
-          marker.parentNode.removeChild(marker);
+          // marker.parentNode.removeChild(marker);
         }
       });
     });
@@ -379,13 +379,6 @@ export const createDragGesture = ({
             });
           }, 100);
         }
-
-        // Remove previous constraint markers
-        currentConstraintMarkers.forEach((marker) => {
-          if (marker && marker.parentNode) {
-            marker.parentNode.removeChild(marker);
-          }
-        });
         currentConstraintMarkers = [];
         currentDebugMarkers = [];
 
