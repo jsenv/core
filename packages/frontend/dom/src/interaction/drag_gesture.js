@@ -286,13 +286,18 @@ export const createDragGesture = ({
         );
       }
 
+      gestureInfo.x = currentXRelative;
+      gestureInfo.y = currentYRelative;
+      gestureInfo.xDiff = gestureInfo.x - currentXRelative;
+      gestureInfo.yDiff = gestureInfo.y - currentYRelative;
+      const xMove = direction.x ? gestureInfo.x - gestureInfo.xAtStart : 0;
+      const yMove = direction.y ? gestureInfo.y - gestureInfo.yAtStart : 0;
+
       const isGoingLeft = currentXRelative < gestureInfo.x;
       const isGoingRight = currentXRelative > gestureInfo.x;
       const isGoingUp = currentYRelative < gestureInfo.y;
       const isGoingDown = currentYRelative > gestureInfo.y;
 
-      gestureInfo.xDiff = gestureInfo.x - currentXRelative;
-      gestureInfo.yDiff = gestureInfo.y - currentYRelative;
       gestureInfo.isGoingLeft = isGoingLeft;
       gestureInfo.isGoingRight = isGoingRight;
       gestureInfo.isGoingUp = isGoingUp;
@@ -304,10 +309,6 @@ export const createDragGesture = ({
       const currentElementWidth = currentElementRect.width;
       const currentElementHeight = currentElementRect.height;
 
-      gestureInfo.x = currentXRelative;
-      gestureInfo.y = currentYRelative;
-      const xMove = direction.x ? gestureInfo.x - gestureInfo.xAtStart : 0;
-      const yMove = direction.y ? gestureInfo.y - gestureInfo.yAtStart : 0;
       const constraints = constraintFunctions.map((fn) =>
         fn({
           elementWidth: currentElementWidth,
