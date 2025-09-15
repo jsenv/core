@@ -96,19 +96,28 @@
         text-align: center;
       }
 
-      .debug-toggle button {
-        padding: 10px 20px;
+      .debug-toggle label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
         font-size: 14px;
-        background: #667eea;
-        color: white;
-        border: none;
-        border-radius: 4px;
+        color: #333;
         cursor: pointer;
-        transition: background 0.2s ease;
+        background: white;
+        padding: 10px 15px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
       }
 
-      .debug-toggle button:hover {
-        background: #5a67d8;
+      .debug-toggle label:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .debug-toggle input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
       }
     </style>
   </head>
@@ -138,7 +147,10 @@
     </div>
 
     <div class="debug-toggle">
-      <button onclick="toggleDebugMarkers()">Toggle Debug Markers</button>
+      <label>
+        <input type="checkbox" id="debugMarkersCheckbox" checked />
+        Show Debug Markers
+      </label>
     </div>
 
     <div class="container" id="scrollContainer">
@@ -150,14 +162,32 @@
     <script type="module">
       // Import the drag gesture functionality
       // Note: You'll need to adjust the import path based on your setup
-      import { startDragGesture } from "../interaction/drag_gesture.js";
+      import {
+        startDragGesture,
+        DRAG_DEBUG_VISUAL_MARKERS,
+        enableDebugMarkers,
+        disableDebugMarkers,
+      } from "../interaction/drag_gesture.js";
       import { getScrollableParent } from "../scroll.js";
 
       // Make functions available globally for the demo
       window.startDragGesture = startDragGesture;
       window.getScrollableParent = getScrollableParent;
+      window.enableDebugMarkers = enableDebugMarkers;
+      window.disableDebugMarkers = disableDebugMarkers;
 
       const rectangle = document.getElementById("rectangle");
+      const debugCheckbox = document.getElementById("debugMarkersCheckbox");
+
+      // Handle debug markers toggle
+      debugCheckbox.checked = DRAG_DEBUG_VISUAL_MARKERS;
+      debugCheckbox.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          enableDebugMarkers();
+        } else {
+          disableDebugMarkers();
+        }
+      });
 
       // Set up drag gesture on mousedown
       rectangle.addEventListener("mousedown", (event) => {

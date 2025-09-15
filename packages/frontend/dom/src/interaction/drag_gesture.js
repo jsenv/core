@@ -1,6 +1,12 @@
 import { getScrollableParent } from "../scroll.js";
 
-const DRAG_DEBUG_VISUAL_MARKERS = true;
+export let DRAG_DEBUG_VISUAL_MARKERS = true;
+export const enableDebugMarkers = () => {
+  DRAG_DEBUG_VISUAL_MARKERS = true;
+};
+export const disableDebugMarkers = () => {
+  DRAG_DEBUG_VISUAL_MARKERS = false;
+};
 
 const createDebugMarker = (name, x, y, color = "red") => {
   if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
@@ -132,6 +138,7 @@ export const startDragGesture = (
   const elementVisuallyMovingRect =
     elementVisuallyMoving.getBoundingClientRect();
   const initialLeft = elementVisuallyMovingRect.left;
+  const initialTop = elementVisuallyMovingRect.top;
 
   if (stickyLeftElement) {
     // const stickyRect = stickyLeftElement.getBoundingClientRect();
@@ -346,8 +353,8 @@ export const startDragGesture = (
 
       if (elementToMove) {
         // Position element accounting for auto-scroll
-        const finalLeft = gestureInfo.xMove + scrollLeft;
-        const finalTop = gestureInfo.yMove + scrollTop;
+        const finalLeft = initialLeft + gestureInfo.xMove + scrollLeft;
+        const finalTop = initialTop + gestureInfo.yMove + scrollTop;
         elementToMove.style.left = `${finalLeft}px`;
         elementToMove.style.top = `${finalTop}px`;
       }
