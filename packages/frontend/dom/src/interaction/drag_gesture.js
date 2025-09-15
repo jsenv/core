@@ -273,13 +273,13 @@ export const createDragGesture = ({
     ) => {
       const isGoingLeft = currentXRelative < gestureInfo.x;
       const isGoingRight = currentXRelative > gestureInfo.x;
-      const isGoingTop = currentYRelative < gestureInfo.y;
-      const isGoingBottom = currentYRelative > gestureInfo.y;
+      const isGoingUp = currentYRelative < gestureInfo.y;
+      const isGoingDown = currentYRelative > gestureInfo.y;
 
       gestureInfo.isGoingLeft = isGoingLeft;
       gestureInfo.isGoingRight = isGoingRight;
-      gestureInfo.isGoingTop = isGoingTop;
-      gestureInfo.isGoingBottom = isGoingBottom;
+      gestureInfo.isGoingUp = isGoingUp;
+      gestureInfo.isGoingDown = isGoingDown;
 
       if (direction.x) {
         gestureInfo.x = currentXRelative;
@@ -423,48 +423,23 @@ export const createDragGesture = ({
         }
 
         // Horizontal auto-scroll
-        let intendedScrollLeft = scrollableParent?.scrollLeft ?? 0;
-
         if (direction.x) {
           const currentScrollLeft = scrollableParent.scrollLeft;
           if (isGoingRight) {
             if (desiredElementRight > visibleAreaRight) {
-              // Calculate exactly how much we need to scroll to make the element right edge visible
               const scrollAmountNeeded = desiredElementRight - visibleAreaRight;
-              intendedScrollLeft = currentScrollLeft + scrollAmountNeeded;
-
-              console.log("Right scroll needed:", {
-                desiredElementRight,
-                visibleAreaRight,
-                scrollAmountNeeded,
-                currentScrollLeft,
-                intendedScrollLeft,
-                elementWidth,
-              });
-
-              scrollableParent.scrollLeft = intendedScrollLeft;
+              scrollableParent.scrollLeft =
+                currentScrollLeft + scrollAmountNeeded;
               actualScrollLeft = scrollableParent.scrollLeft;
               gestureInfo.autoScrolledX = actualScrollLeft;
             }
           } else if (isGoingLeft) {
             if (desiredElementLeft < visibleAreaLeft) {
-              // Calculate exactly how much we need to scroll to make the element left edge visible
               const scrollAmountNeeded = visibleAreaLeft - desiredElementLeft;
-              intendedScrollLeft = Math.max(
+              scrollableParent.scrollLeft = Math.max(
                 0,
                 currentScrollLeft - scrollAmountNeeded,
               );
-
-              console.log("Left scroll needed:", {
-                desiredElementLeft,
-                visibleAreaLeft,
-                scrollAmountNeeded,
-                currentScrollLeft,
-                intendedScrollLeft,
-                elementWidth,
-              });
-
-              scrollableParent.scrollLeft = intendedScrollLeft;
               actualScrollLeft = scrollableParent.scrollLeft;
               gestureInfo.autoScrolledX = actualScrollLeft;
             }
@@ -473,40 +448,29 @@ export const createDragGesture = ({
 
         // Vertical auto-scroll
         if (direction.y) {
+          const currentScrollTop = scrollableParent.scrollTop;
           const visibleAreaTop = scrollableRect.top;
           const visibleAreaBottom = scrollableRect.bottom;
 
-          // Check if desired element position would be beyond visible area's top boundary
-          if (desiredElementTop < visibleAreaTop) {
-            // Need to scroll up to keep element in view
-            const scrollAmountForKeepInView =
-              visibleAreaTop - desiredElementTop;
-            const oldScrollTop = scrollableParent.scrollTop;
-            const newScrollTop = Math.max(
-              0,
-              scrollableParent.scrollTop - scrollAmountForKeepInView,
-            );
-            scrollableParent.scrollTop = newScrollTop;
-            actualScrollTop = scrollableParent.scrollTop; // Use the actual value after browser clamping
-            const actualScrolled = oldScrollTop - actualScrollTop;
-            gestureInfo.autoScrolledY -= actualScrolled;
-          }
-          // Check if desired element position would be beyond visible area's bottom boundary
-          else if (desiredElementBottom > visibleAreaBottom) {
-            // Need to scroll down to keep element in view
-            const scrollAmountForKeepInView =
-              desiredElementBottom - visibleAreaBottom;
-            const maxScrollTop =
-              scrollableParent.scrollHeight - scrollableParent.clientHeight;
-            const oldScrollTop = scrollableParent.scrollTop;
-            const newScrollTop = Math.min(
-              maxScrollTop,
-              scrollableParent.scrollTop + scrollAmountForKeepInView,
-            );
-            scrollableParent.scrollTop = newScrollTop;
-            actualScrollTop = scrollableParent.scrollTop; // Use the actual value after browser clamping
-            const actualScrolled = actualScrollTop - oldScrollTop;
-            gestureInfo.autoScrolledY += actualScrolled;
+          if (isGoingUp) {
+            if (desiredElementTop < visibleAreaTop) {
+              const scrollAmountNeeded = visibleAreaTop - desiredElementTop;
+              scrollableParent.scrollTop = Math.max(
+                0,
+                currentScrollTop - scrollAmountNeeded,
+              );
+              actualScrollTop = scrollableParent.scrollTop;
+              gestureInfo.autoScrolledY = actualScrollTop;
+            }
+          } else if (isGoingDown) {
+            if (desiredElementBottom > visibleAreaBottom) {
+              const scrollAmountNeeded =
+                desiredElementBottom - visibleAreaBottom;
+              scrollableParent.scrollTop =
+                currentScrollTop + scrollAmountNeeded;
+              actualScrollTop = scrollableParent.scrollTop;
+              gestureInfo.autoScrolledY = actualScrollTop;
+            }
           }
         }
       }
@@ -515,13 +479,6 @@ export const createDragGesture = ({
       if (elementToMove) {
         const finalLeft = initialLeft + gestureInfo.xMove;
         const finalTop = initialTop + gestureInfo.yMove;
-
-        console.log("Positioning element:", {
-          initialLeft,
-          xMove: gestureInfo.xMove,
-          finalLeft,
-          scrollLeft: actualScrollLeft,
-        });
 
         elementToMove.style.left = `${finalLeft}px`;
         elementToMove.style.top = `${finalTop}px`;
