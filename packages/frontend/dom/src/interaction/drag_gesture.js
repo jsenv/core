@@ -787,33 +787,29 @@ const applyConstraintsOnX = (
       minXMove = Math.max(minXMove, constraint.left - initialLeft);
       maxXMove = Math.min(maxXMove, constraint.right - initialLeft);
     } else if (constraint.type === "obstacle") {
-      // For obstacles, only constrain X if there would be Y overlap
-      const proposedLeft = initialLeft + xMove;
-      const proposedRight = proposedLeft + elementWidth;
+      // For obstacles, prevent crossing based on current element position and movement direction
+      const currentLeft = initialLeft + xMove;
+      const currentRight = currentLeft + elementWidth;
       const currentTop = initialTop + yMove;
       const currentBottom = currentTop + elementHeight;
 
-      // Check if there's Y overlap (current or proposed Y position overlaps with obstacle)
+      // Check if there's Y overlap (element overlaps with obstacle vertically)
       const hasYOverlap =
         currentTop < constraint.bottom && currentBottom > constraint.top;
 
       if (hasYOverlap) {
-        // Check if X movement would cause collision
-        if (
-          proposedLeft < constraint.right &&
-          proposedRight > constraint.left
-        ) {
-          // Collision detected - constrain to edges of obstacle based on movement direction
-          if (gestureInfo.isGoingRight) {
-            // Moving right - stop so element's right edge touches obstacle's left edge
-            maxXMove = Math.min(
-              maxXMove,
-              constraint.left - initialLeft - elementWidth,
-            );
-          } else if (gestureInfo.isGoingLeft) {
-            // Moving left - stop so element's left edge touches obstacle's right edge
-            minXMove = Math.max(minXMove, constraint.right - initialLeft);
-          }
+        // Check current position relative to obstacle
+        const elementIsLeftOfObstacle = currentRight <= constraint.left;
+        const elementIsRightOfObstacle = currentLeft >= constraint.right;
+
+        if (gestureInfo.isGoingRight && elementIsLeftOfObstacle) {
+          // Moving right from left side - don't cross the obstacle's left boundary
+          const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
+          maxXMove = Math.min(maxXMove, maxAllowedXMove);
+        } else if (gestureInfo.isGoingLeft && elementIsRightOfObstacle) {
+          // Moving left from right side - don't cross the obstacle's right boundary
+          const minAllowedXMove = constraint.right - initialLeft;
+          minXMove = Math.max(minXMove, minAllowedXMove);
         }
       }
     }
@@ -837,33 +833,29 @@ const applyConstraintsOnY = (
       minYMove = Math.max(minYMove, constraint.top - initialTop);
       maxYMove = Math.min(maxYMove, constraint.bottom - initialTop);
     } else if (constraint.type === "obstacle") {
-      // For obstacles, only constrain Y if there would be X overlap
-      const proposedTop = initialTop + yMove;
-      const proposedBottom = proposedTop + elementHeight;
+      // For obstacles, prevent crossing based on current element position and movement direction
       const currentLeft = initialLeft + xMove;
       const currentRight = currentLeft + elementWidth;
+      const currentTop = initialTop + yMove;
+      const currentBottom = currentTop + elementHeight;
 
-      // Check if there's X overlap (current or proposed X position overlaps with obstacle)
+      // Check if there's X overlap (element overlaps with obstacle horizontally)
       const hasXOverlap =
         currentLeft < constraint.right && currentRight > constraint.left;
 
       if (hasXOverlap) {
-        // Check if Y movement would cause collision
-        if (
-          proposedTop < constraint.bottom &&
-          proposedBottom > constraint.top
-        ) {
-          // Collision detected - constrain to edges of obstacle based on movement direction
-          if (gestureInfo.isGoingDown) {
-            // Moving down - stop so element's bottom edge touches obstacle's top edge
-            maxYMove = Math.min(
-              maxYMove,
-              constraint.top - initialTop - elementHeight,
-            );
-          } else if (gestureInfo.isGoingUp) {
-            // Moving up - stop so element's top edge touches obstacle's bottom edge
-            minYMove = Math.max(minYMove, constraint.bottom - initialTop);
-          }
+        // Check current position relative to obstacle
+        const elementIsAboveObstacle = currentBottom <= constraint.top;
+        const elementIsBelowObstacle = currentTop >= constraint.bottom;
+
+        if (gestureInfo.isGoingDown && elementIsAboveObstacle) {
+          // Moving down from above - don't cross the obstacle's top boundary
+          const maxAllowedYMove = constraint.top - elementHeight - initialTop;
+          maxYMove = Math.min(maxYMove, maxAllowedYMove);
+        } else if (gestureInfo.isGoingUp && elementIsBelowObstacle) {
+          // Moving up from below - don't cross the obstacle's bottom boundary
+          const minAllowedYMove = constraint.bottom - initialTop;
+          minYMove = Math.max(minYMove, minAllowedYMove);
         }
       }
     }
