@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drag Gesture Demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+      }
+
+      .container {
+        width: 800px;
+        height: 400px;
+        border: 2px solid #333;
+        background: white;
+        overflow: auto;
+        position: relative;
+        margin: 20px auto;
+      }
+
+      .scrollable-content {
+        width: 1600px; /* Make content wider than container for horizontal scroll */
+        height: 800px; /* Make content taller than container for vertical scroll */
+        background:
+          linear-gradient(
+            90deg,
+            transparent 99px,
+            #ddd 100px,
+            #ddd 101px,
+            transparent 102px
+          ),
+          linear-gradient(
+            transparent 99px,
+            #ddd 100px,
+            #ddd 101px,
+            transparent 102px
+          );
+        background-size: 100px 100px;
+        position: relative;
+      }
+
+      .draggable-rectangle {
+        width: 80px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 2px solid #333;
+        border-radius: 8px;
+        position: absolute;
+        top: 100px;
+        left: 100px;
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition: box-shadow 0.2s ease;
+      }
+
+      .draggable-rectangle:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .draggable-rectangle[data-dragging] {
+        cursor: grabbing;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+      }
+
+      .info {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .info h1 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .info ul {
+        line-height: 1.6;
+      }
+
+      .debug-toggle {
+        margin: 20px auto;
+        text-align: center;
+      }
+
+      .debug-toggle button {
+        padding: 10px 20px;
+        font-size: 14px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+
+      .debug-toggle button:hover {
+        background: #5a67d8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="info">
+      <h1>Drag Gesture Demo</h1>
+      <p>
+        This demo showcases the drag gesture functionality with auto-scroll:
+      </p>
+      <ul>
+        <li>
+          <strong>Drag the purple rectangle</strong> within the scrollable
+          container
+        </li>
+        <li>
+          <strong>Auto-scroll triggers</strong> when you drag near the edges
+        </li>
+        <li>
+          <strong>Visual debug markers</strong> show boundaries (toggle with
+          button below)
+        </li>
+        <li>
+          <strong>Smooth scrolling</strong> maintains 1:1 mouse movement
+          correlation
+        </li>
+      </ul>
+    </div>
+
+    <div class="debug-toggle">
+      <button onclick="toggleDebugMarkers()">Toggle Debug Markers</button>
+    </div>
+
+    <div class="container" id="scrollContainer">
+      <div class="scrollable-content">
+        <div class="draggable-rectangle" id="rectangle">DRAG ME</div>
+      </div>
+    </div>
+
+    <script type="module">
+      // Import the drag gesture functionality
+      // Note: You'll need to adjust the import path based on your setup
+      import { startDragGesture } from "../interaction/drag_gesture.js";
+      import { getScrollableParent } from "../scroll.js";
+
+      // Make functions available globally for the demo
+      window.startDragGesture = startDragGesture;
+      window.getScrollableParent = getScrollableParent;
+
+      const rectangle = document.getElementById("rectangle");
+
+      // Set up drag gesture on mousedown
+      rectangle.addEventListener("mousedown", (event) => {
+        const initialRect = rectangle.getBoundingClientRect();
+        const containerRect = document
+          .getElementById("scrollContainer")
+          .getBoundingClientRect();
+
+        startDragGesture(event, {
+          setup: () => ({
+            element: rectangle,
+            elementToMove: rectangle,
+            elementVisuallyMoving: rectangle,
+          }),
+          onGrab: (gestureInfo) => {
+            console.log("Grab started", gestureInfo);
+          },
+          onDragStart: (gestureInfo) => {
+            console.log("Drag started", gestureInfo);
+            rectangle.style.position = "absolute";
+          },
+          onDrag: (gestureInfo, phase) => {
+            console.log("Dragging", phase, gestureInfo);
+          },
+          onRelease: (gestureInfo) => {
+            console.log("Drag released", gestureInfo);
+          },
+          direction: { x: true, y: true },
+          threshold: 5,
+          backdrop: true,
+          // Constrain movement within the scrollable content
+          minConstrainedX: -initialRect.left + containerRect.left,
+          maxConstrainedX:
+            1600 -
+            rectangle.offsetWidth -
+            initialRect.left +
+            containerRect.left,
+          minConstrainedY: -initialRect.top + containerRect.top,
+          maxConstrainedY:
+            800 - rectangle.offsetHeight - initialRect.top + containerRect.top,
+        });
+      });
+    </script>
+
+    <script>
+      // Add some visual feedback
+      document.addEventListener("DOMContentLoaded", () => {
+        const container = document.getElementById("scrollContainer");
+        const rectangle = document.getElementById("rectangle");
+
+        // Add scroll position indicator
+        const scrollInfo = document.createElement("div");
+        scrollInfo.style.position = "fixed";
+        scrollInfo.style.top = "10px";
+        scrollInfo.style.right = "10px";
+        scrollInfo.style.background = "rgba(0,0,0,0.8)";
+        scrollInfo.style.color = "white";
+        scrollInfo.style.padding = "8px 12px";
+        scrollInfo.style.borderRadius = "4px";
+        scrollInfo.style.fontSize = "12px";
+        scrollInfo.style.fontFamily = "monospace";
+        scrollInfo.style.zIndex = "10000";
+        document.body.appendChild(scrollInfo);
+
+        function updateScrollInfo() {
+          scrollInfo.textContent = `Scroll: ${Math.round(container.scrollLeft)}, ${Math.round(container.scrollTop)}`;
+        }
+
+        container.addEventListener("scroll", updateScrollInfo);
+        updateScrollInfo();
+
+        // Add position indicator for rectangle
+        const posInfo = document.createElement("div");
+        posInfo.style.position = "fixed";
+        posInfo.style.bottom = "10px";
+        posInfo.style.right = "10px";
+        posInfo.style.background = "rgba(0,0,0,0.8)";
+        posInfo.style.color = "white";
+        posInfo.style.padding = "8px 12px";
+        posInfo.style.borderRadius = "4px";
+        posInfo.style.fontSize = "12px";
+        posInfo.style.fontFamily = "monospace";
+        posInfo.style.zIndex = "10000";
+        document.body.appendChild(posInfo);
+
+        function updatePosInfo() {
+          const rect = rectangle.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const relativeX =
+            rect.left - containerRect.left + container.scrollLeft;
+          const relativeY = rect.top - containerRect.top + container.scrollTop;
+          posInfo.textContent = `Pos: ${Math.round(relativeX)}, ${Math.round(relativeY)}`;
+        }
+
+        // Update position info periodically while dragging
+        let posUpdateInterval;
+        rectangle.addEventListener("mousedown", () => {
+          posUpdateInterval = setInterval(updatePosInfo, 16); // ~60fps
+        });
+
+        document.addEventListener("mouseup", () => {
+          if (posUpdateInterval) {
+            clearInterval(posUpdateInterval);
+            updatePosInfo(); // Final update
+          }
+        });
+
+        updatePosInfo();
+      });
+    </script>
+  </body>
+</html>
