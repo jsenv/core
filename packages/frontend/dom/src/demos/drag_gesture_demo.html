@@ -718,20 +718,11 @@
       // Import the drag gesture functionality
       // Note: You'll need to adjust the import path based on your setup
       import {
-        createDragGesture,
-        startDragGesture,
         DRAG_DEBUG_VISUAL_MARKERS,
         enableDebugMarkers,
         disableDebugMarkers,
       } from "../interaction/drag_gesture.js";
-      import { getScrollableParent } from "../scroll.js";
-
-      // Make functions available globally for the demo
-      window.createDragGesture = createDragGesture;
-      window.startDragGesture = startDragGesture;
-      window.getScrollableParent = getScrollableParent;
-      window.enableDebugMarkers = enableDebugMarkers;
-      window.disableDebugMarkers = disableDebugMarkers;
+      import { createDragToMoveGesture } from "../interaction/drag_to_move_gesture.js";
 
       const horizontalRectangle = document.getElementById(
         "horizontalRectangle",
@@ -859,7 +850,7 @@
             },
           };
 
-          controls.dragGesture = createDragGesture(dragOptions);
+          controls.dragGesture = createDragToMoveGesture(dragOptions);
 
           controls.dragInstance = controls.dragGesture.grab({
             element: rectangle,
@@ -946,13 +937,8 @@
       // Function to set up drag gesture for any rectangle
       function setupDragGesture(rectangle, caseLabel) {
         rectangle.addEventListener("mousedown", (event) => {
-          const options = {
+          createDragToMoveGesture({
             backdrop: false,
-            setup: () => ({
-              element: rectangle,
-              elementToMove: rectangle,
-              elementVisuallyMoving: rectangle,
-            }),
             onGrab: (gestureInfo) => {
               console.log(`${caseLabel} - Grab started`, gestureInfo);
             },
@@ -965,9 +951,9 @@
             onRelease: (gestureInfo) => {
               console.log(`${caseLabel} - Drag released`, gestureInfo);
             },
-          };
-
-          startDragGesture(event, options);
+          }).grabViaMousedown(event, {
+            element: rectangle,
+          });
         });
       }
 
