@@ -774,148 +774,33 @@ const applyConstraints = (
       // For obstacles, prevent element from entering obstacle space
 
       // Current element position (where it is now)
-      const currentLeft = initialLeft + gestureInfo.xMove;
-      const currentRight = currentLeft + elementWidth;
-      const currentTop = initialTop + gestureInfo.yMove;
-      const currentBottom = currentTop + elementHeight;
+      const currentRight = initialLeft + gestureInfo.xMove + elementWidth;
 
       // Proposed element position (where it would move to)
-      const proposedLeft = initialLeft + xMove;
-      const proposedRight = proposedLeft + elementWidth;
       const proposedTop = initialTop + yMove;
       const proposedBottom = proposedTop + elementHeight;
 
-      // Focus on X movement (isGoingRight) only for now
-      // Enhanced debug logging for simultaneous X/Y movements
-      console.log("=== CONSTRAINT DEBUG ===");
-      console.log("Movement direction:", {
-        isGoingRight: gestureInfo.isGoingRight,
-        isGoingLeft: gestureInfo.isGoingLeft,
-        isGoingUp: gestureInfo.isGoingUp,
-        isGoingDown: gestureInfo.isGoingDown,
-      });
-      console.log("Current element bounds:", {
-        left: currentLeft,
-        right: currentRight,
-        top: currentTop,
-        bottom: currentBottom,
-      });
-      console.log("Obstacle bounds:", {
-        left: constraint.left,
-        right: constraint.right,
-        top: constraint.top,
-        bottom: constraint.bottom,
-      });
-      console.log("Proposed element bounds:", {
-        left: proposedLeft,
-        right: proposedRight,
-        top: proposedTop,
-        bottom: proposedBottom,
-      });
-
-      // X-axis constraint logic
+      // Handle only RIGHT movement for now with simplified constraint logic
       if (gestureInfo.isGoingRight) {
+        // Check if element is currently left of obstacle
+        const elementIsLeftOfObstacle = currentRight <= constraint.left;
+        // Check if there would be Y overlap in the proposed position
         const wouldHaveYOverlap =
           proposedTop < constraint.bottom && proposedBottom > constraint.top;
-        const wouldHaveXOverlap =
-          proposedLeft < constraint.right && proposedRight > constraint.left;
 
-        console.log("RIGHT MOVEMENT CHECK:", {
-          wouldHaveYOverlap,
-          wouldHaveXOverlap,
-          shouldConstrain: wouldHaveYOverlap && wouldHaveXOverlap,
+        console.log("RIGHT:", {
+          elementLeft: elementIsLeftOfObstacle,
+          yOverlap: wouldHaveYOverlap,
+          constrain: elementIsLeftOfObstacle && wouldHaveYOverlap,
         });
 
-        // If moving right would cause overlap, constrain to obstacle's left edge
-        if (wouldHaveYOverlap && wouldHaveXOverlap) {
+        // Only constrain if element is approaching from the left AND would have Y overlap
+        if (elementIsLeftOfObstacle && wouldHaveYOverlap) {
           const stopXMove = constraint.left - elementWidth - initialLeft;
-          console.log(
-            "CONSTRAINING X RIGHT: stopXMove =",
-            stopXMove,
-            "vs current xMove =",
-            xMove,
-          );
+          console.log("STOP at:", stopXMove, "current:", xMove);
           maxXMove = Math.min(maxXMove, stopXMove);
         }
       }
-
-      if (gestureInfo.isGoingLeft) {
-        const wouldHaveYOverlap =
-          proposedTop < constraint.bottom && proposedBottom > constraint.top;
-        const wouldHaveXOverlap =
-          proposedLeft < constraint.right && proposedRight > constraint.left;
-
-        console.log("LEFT MOVEMENT CHECK:", {
-          wouldHaveYOverlap,
-          wouldHaveXOverlap,
-          shouldConstrain: wouldHaveYOverlap && wouldHaveXOverlap,
-        });
-
-        // If moving left would cause overlap, constrain to obstacle's right edge
-        if (wouldHaveYOverlap && wouldHaveXOverlap) {
-          const stopXMove = constraint.right - initialLeft;
-          console.log(
-            "CONSTRAINING X LEFT: stopXMove =",
-            stopXMove,
-            "vs current xMove =",
-            xMove,
-          );
-          minXMove = Math.max(minXMove, stopXMove);
-        }
-      }
-
-      // Y-axis constraint logic
-      if (gestureInfo.isGoingDown) {
-        const wouldHaveXOverlap =
-          proposedLeft < constraint.right && proposedRight > constraint.left;
-        const wouldHaveYOverlap =
-          proposedTop < constraint.bottom && proposedBottom > constraint.top;
-
-        console.log("DOWN MOVEMENT CHECK:", {
-          wouldHaveXOverlap,
-          wouldHaveYOverlap,
-          shouldConstrain: wouldHaveXOverlap && wouldHaveYOverlap,
-        });
-
-        // If moving down would cause overlap, constrain to obstacle's top edge
-        if (wouldHaveXOverlap && wouldHaveYOverlap) {
-          const stopYMove = constraint.top - elementHeight - initialTop;
-          console.log(
-            "CONSTRAINING Y DOWN: stopYMove =",
-            stopYMove,
-            "vs current yMove =",
-            yMove,
-          );
-          maxYMove = Math.min(maxYMove, stopYMove);
-        }
-      }
-
-      if (gestureInfo.isGoingUp) {
-        const wouldHaveXOverlap =
-          proposedLeft < constraint.right && proposedRight > constraint.left;
-        const wouldHaveYOverlap =
-          proposedTop < constraint.bottom && proposedBottom > constraint.top;
-
-        console.log("UP MOVEMENT CHECK:", {
-          wouldHaveXOverlap,
-          wouldHaveYOverlap,
-          shouldConstrain: wouldHaveXOverlap && wouldHaveYOverlap,
-        });
-
-        // If moving up would cause overlap, constrain to obstacle's bottom edge
-        if (wouldHaveXOverlap && wouldHaveYOverlap) {
-          const stopYMove = constraint.bottom - initialTop;
-          console.log(
-            "CONSTRAINING Y UP: stopYMove =",
-            stopYMove,
-            "vs current yMove =",
-            yMove,
-          );
-          minYMove = Math.max(minYMove, stopYMove);
-        }
-      }
-
-      // TODO: Handle other directions later
     }
   }
 
