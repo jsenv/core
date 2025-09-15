@@ -788,17 +788,17 @@ const applyConstraints = (
         yMove = maxAllowedYMove;
       }
     } else if (constraint.type === "obstacle") {
-      // Current element position
-      const currentLeft = initialLeft;
-      const currentRight = currentLeft + elementWidth;
-      const currentTop = initialTop;
-      const currentBottom = currentTop + elementHeight;
+      // Current element position (including previous moves from gestureInfo)
+      const currentActualLeft = initialLeft + (gestureInfo.xMove || 0);
+      const currentActualRight = currentActualLeft + elementWidth;
+      const currentActualTop = initialTop + (gestureInfo.yMove || 0);
+      const currentActualBottom = currentActualTop + elementHeight;
 
       // Determine current position relative to obstacle
-      const isOnTheLeft = currentRight <= constraint.left;
-      const isOnTheRight = currentLeft >= constraint.right;
-      const isAbove = currentBottom <= constraint.top;
-      const isBelow = currentTop >= constraint.bottom;
+      const isOnTheLeft = currentActualRight <= constraint.left;
+      const isOnTheRight = currentActualLeft >= constraint.right;
+      const isAbove = currentActualBottom <= constraint.top;
+      const isBelow = currentActualTop >= constraint.bottom;
 
       // Apply constraints based on element position - only one direction per obstacle
       if (isAbove || isBelow) {
