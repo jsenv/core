@@ -1,6 +1,6 @@
 import { getScrollableParent } from "../scroll.js";
 
-const DRAG_DEBUG_VISUAL_MARKERS = false; // Set to true to enable visual debug markers
+const DRAG_DEBUG_VISUAL_MARKERS = true;
 
 const createDebugMarker = (name, x, y, color = "red") => {
   if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
@@ -234,15 +234,28 @@ export const startDragGesture = (
         }
 
         // Create debug markers for horizontal boundaries
-        const debugMarkers = [];
         if (DRAG_DEBUG_VISUAL_MARKERS) {
-          debugMarkers.push(
+          // Schedule removal of previous markers if they exist
+          if (gestureInfo.currentDebugMarkers) {
+            const previousMarkers = gestureInfo.currentDebugMarkers;
+            setTimeout(() => {
+              previousMarkers.forEach((marker) => {
+                if (marker && marker.parentNode) {
+                  marker.parentNode.removeChild(marker);
+                }
+              });
+            }, 100);
+          }
+
+          // Create new markers (these become the current ones)
+          const newDebugMarkers = [];
+          newDebugMarkers.push(
             createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
           );
-          debugMarkers.push(
+          newDebugMarkers.push(
             createDebugMarker("visibleAreaRight", visibleAreaRight, 0, "green"),
           );
-          debugMarkers.push(
+          newDebugMarkers.push(
             createDebugMarker(
               "desiredElementLeft",
               desiredElementLeft,
@@ -250,7 +263,7 @@ export const startDragGesture = (
               "orange",
             ),
           );
-          debugMarkers.push(
+          newDebugMarkers.push(
             createDebugMarker(
               "desiredElementRight",
               desiredElementRight,
@@ -259,14 +272,8 @@ export const startDragGesture = (
             ),
           );
 
-          // Clean up previous markers after a short delay
-          setTimeout(() => {
-            debugMarkers.forEach((marker) => {
-              if (marker && marker.parentNode) {
-                marker.parentNode.removeChild(marker);
-              }
-            });
-          }, 100);
+          // Store as current markers for next mousemove
+          gestureInfo.currentDebugMarkers = newDebugMarkers;
         }
 
         horizontal: {
@@ -361,6 +368,17 @@ export const startDragGesture = (
       e.preventDefault();
       gestureInfo.isMouseUp = true;
       updateMousePosition(e);
+
+      // Clean up any remaining debug markers when drag ends
+      if (DRAG_DEBUG_VISUAL_MARKERS && gestureInfo.currentDebugMarkers) {
+        gestureInfo.currentDebugMarkers.forEach((marker) => {
+          if (marker && marker.parentNode) {
+            marker.parentNode.removeChild(marker);
+          }
+        });
+        gestureInfo.currentDebugMarkers = null;
+      }
+
       for (const endCallback of endCallbackSet) {
         endCallback();
       }
