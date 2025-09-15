@@ -90,7 +90,6 @@ import.meta.css = /* css */ `
     opacity: 0.5;
     z-index: 9999;
     pointer-events: none;
-    border: 2px solid darkorange;
   }
 
   .navi_obstacle_marker_label {
@@ -301,49 +300,45 @@ export const createDragGesture = ({
       const currentElementWidth = currentElementRect.width;
       const currentElementHeight = currentElementRect.height;
 
+      gestureInfo.x = currentXRelative;
+      gestureInfo.y = currentYRelative;
+
+      let xMove = gestureInfo.x - gestureInfo.xAtStart;
+      let yMove = gestureInfo.y - gestureInfo.yAtStart;
+      const constraints = constraintFunctions.map((fn) =>
+        fn({
+          elementWidth: currentElementWidth,
+          elementHeight: currentElementHeight,
+        }),
+      );
+
       if (direction.x) {
-        gestureInfo.x = currentXRelative;
-        let xMove = gestureInfo.x - gestureInfo.xAtStart;
-
-        // Apply constraints using new architecture
-        const constraints = constraintFunctions.map((fn) =>
-          fn({
-            elementWidth: currentElementWidth,
-            elementHeight: currentElementHeight,
-          }),
-        );
-
-        xMove = applyConstraintsOnX(
+        xMove = applyConstraintsOnX(gestureInfo, {
           xMove,
-          initialLeft,
-          currentElementWidth,
+          yMove,
           constraints,
-        );
+          elementWidth: currentElementWidth,
+          elementHeight: currentElementHeight,
+        });
         gestureInfo.xMove = xMove;
+      }
+      if (direction.y) {
+        yMove = applyConstraintsOnY(gestureInfo, {
+          xMove,
+          yMove,
+          constraints,
+          elementWidth: currentElementWidth,
+          elementHeight: currentElementHeight,
+        });
+        gestureInfo.yMove = yMove;
+      }
+
+      if (direction.x) {
         gestureInfo.xChanged = previousGestureInfo
           ? xMove !== previousGestureInfo.xMove
           : true;
       }
-
       if (direction.y) {
-        gestureInfo.y = currentYRelative;
-        let yMove = gestureInfo.y - gestureInfo.yAtStart;
-
-        // Apply constraints using new architecture
-        const constraints = constraintFunctions.map((fn) =>
-          fn({
-            elementWidth: currentElementWidth,
-            elementHeight: currentElementHeight,
-          }),
-        );
-
-        yMove = applyConstraintsOnY(
-          yMove,
-          initialTop,
-          currentElementHeight,
-          constraints,
-        );
-        gestureInfo.yMove = yMove;
         gestureInfo.yChanged = previousGestureInfo
           ? yMove !== previousGestureInfo.yMove
           : true;
@@ -778,7 +773,12 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
 };
 
 // Apply bounds constraint on X axis
-const applyConstraintsOnX = (xMove, initialLeft, elementWidth, constraints) => {
+const applyConstraintsOnX = (
+  gestureInfo,
+  { xMove, yMove, elementWidth, elementHeight, constraints },
+) => {
+  const { initialLeft, initialTop } = gestureInfo;
+
   let minXMove = -initialLeft; // Allow to go to left edge (0)
   let maxXMove = Infinity;
 
@@ -787,25 +787,33 @@ const applyConstraintsOnX = (xMove, initialLeft, elementWidth, constraints) => {
       minXMove = Math.max(minXMove, constraint.left - initialLeft);
       maxXMove = Math.min(maxXMove, constraint.right - initialLeft);
     } else if (constraint.type === "obstacle") {
-      // For obstacles, find the nearest valid position
+      // For obstacles, only constrain X if there would be Y overlap
       const proposedLeft = initialLeft + xMove;
       const proposedRight = proposedLeft + elementWidth;
+      const currentTop = initialTop + yMove;
+      const currentBottom = currentTop + elementHeight;
 
-      // Check if element would overlap with this obstacle
-      if (proposedLeft < constraint.right && proposedRight > constraint.left) {
-        // Collision detected - find nearest valid position
-        const moveToLeftOfObstacle =
-          constraint.left - elementWidth - initialLeft;
-        const moveToRightOfObstacle = constraint.right - initialLeft;
+      // Check if there's Y overlap (current or proposed Y position overlaps with obstacle)
+      const hasYOverlap =
+        currentTop < constraint.bottom && currentBottom > constraint.top;
 
-        // Choose the option closest to desired position
+      if (hasYOverlap) {
+        // Check if X movement would cause collision
         if (
-          Math.abs(xMove - moveToLeftOfObstacle) <
-          Math.abs(xMove - moveToRightOfObstacle)
+          proposedLeft < constraint.right &&
+          proposedRight > constraint.left
         ) {
-          maxXMove = Math.min(maxXMove, moveToLeftOfObstacle);
-        } else {
-          minXMove = Math.max(minXMove, moveToRightOfObstacle);
+          // Collision detected - constrain to edges of obstacle
+          if (xMove > 0) {
+            // Moving right - stop at left edge of obstacle
+            maxXMove = Math.min(
+              maxXMove,
+              constraint.left - elementWidth - initialLeft,
+            );
+          } else {
+            // Moving left - stop at right edge of obstacle
+            minXMove = Math.max(minXMove, constraint.right - initialLeft);
+          }
         }
       }
     }
@@ -815,7 +823,12 @@ const applyConstraintsOnX = (xMove, initialLeft, elementWidth, constraints) => {
 };
 
 // Apply bounds constraint on Y axis
-const applyConstraintsOnY = (yMove, initialTop, elementHeight, constraints) => {
+const applyConstraintsOnY = (
+  gestureInfo,
+  { xMove, yMove, elementWidth, elementHeight, constraints },
+) => {
+  const { initialLeft, initialTop } = gestureInfo;
+
   let minYMove = -initialTop; // Allow to go to top edge (0)
   let maxYMove = Infinity;
 
@@ -824,24 +837,33 @@ const applyConstraintsOnY = (yMove, initialTop, elementHeight, constraints) => {
       minYMove = Math.max(minYMove, constraint.top - initialTop);
       maxYMove = Math.min(maxYMove, constraint.bottom - initialTop);
     } else if (constraint.type === "obstacle") {
-      // For obstacles, find the nearest valid position
+      // For obstacles, only constrain Y if there would be X overlap
       const proposedTop = initialTop + yMove;
       const proposedBottom = proposedTop + elementHeight;
+      const currentLeft = initialLeft + xMove;
+      const currentRight = currentLeft + elementWidth;
 
-      // Check if element would overlap with this obstacle
-      if (proposedTop < constraint.bottom && proposedBottom > constraint.top) {
-        // Collision detected - find nearest valid position
-        const moveToTopOfObstacle = constraint.top - elementHeight - initialTop;
-        const moveToBottomOfObstacle = constraint.bottom - initialTop;
+      // Check if there's X overlap (current or proposed X position overlaps with obstacle)
+      const hasXOverlap =
+        currentLeft < constraint.right && currentRight > constraint.left;
 
-        // Choose the option closest to desired position
+      if (hasXOverlap) {
+        // Check if Y movement would cause collision
         if (
-          Math.abs(yMove - moveToTopOfObstacle) <
-          Math.abs(yMove - moveToBottomOfObstacle)
+          proposedTop < constraint.bottom &&
+          proposedBottom > constraint.top
         ) {
-          maxYMove = Math.min(maxYMove, moveToTopOfObstacle);
-        } else {
-          minYMove = Math.max(minYMove, moveToBottomOfObstacle);
+          // Collision detected - constrain to edges of obstacle
+          if (yMove > 0) {
+            // Moving down - stop at top edge of obstacle
+            maxYMove = Math.min(
+              maxYMove,
+              constraint.top - elementHeight - initialTop,
+            );
+          } else {
+            // Moving up - stop at bottom edge of obstacle
+            minYMove = Math.max(minYMove, constraint.bottom - initialTop);
+          }
         }
       }
     }
