@@ -302,47 +302,29 @@ export const createDragGesture = ({
 
       gestureInfo.x = currentXRelative;
       gestureInfo.y = currentYRelative;
-
-      let xMove = direction.x ? gestureInfo.x - gestureInfo.xAtStart : 0;
-      let yMove = direction.y ? gestureInfo.y - gestureInfo.yAtStart : 0;
+      const xMove = direction.x ? gestureInfo.x - gestureInfo.xAtStart : 0;
+      const yMove = direction.y ? gestureInfo.y - gestureInfo.yAtStart : 0;
       const constraints = constraintFunctions.map((fn) =>
         fn({
           elementWidth: currentElementWidth,
           elementHeight: currentElementHeight,
         }),
       );
-
-      if (direction.x) {
-        xMove = applyConstraintsOnX(gestureInfo, {
-          xMove,
-          yMove,
-          constraints,
-          elementWidth: currentElementWidth,
-          elementHeight: currentElementHeight,
-        });
-        gestureInfo.xMove = xMove;
-      }
-      if (direction.y) {
-        yMove = applyConstraintsOnY(gestureInfo, {
-          xMove,
-          yMove,
-          constraints,
-          elementWidth: currentElementWidth,
-          elementHeight: currentElementHeight,
-        });
-        gestureInfo.yMove = yMove;
-      }
-
-      if (direction.x) {
-        gestureInfo.xChanged = previousGestureInfo
-          ? xMove !== previousGestureInfo.xMove
-          : true;
-      }
-      if (direction.y) {
-        gestureInfo.yChanged = previousGestureInfo
-          ? yMove !== previousGestureInfo.yMove
-          : true;
-      }
+      const constrainedMoves = applyConstraints(gestureInfo, {
+        xMove,
+        yMove,
+        constraints,
+        elementWidth: currentElementWidth,
+        elementHeight: currentElementHeight,
+      });
+      gestureInfo.xMove = constrainedMoves.xMove;
+      gestureInfo.yMove = constrainedMoves.yMove;
+      gestureInfo.xChanged = previousGestureInfo
+        ? gestureInfo.xMove !== previousGestureInfo.xMove
+        : true;
+      gestureInfo.yChanged = previousGestureInfo
+        ? gestureInfo.yMove !== previousGestureInfo.yMove
+        : true;
 
       if (isRelease) {
         if (!started) {
@@ -772,8 +754,8 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
   };
 };
 
-// Apply bounds constraint on X axis
-const applyConstraintsOnX = (
+// Apply constraints on both X and Y axes
+const applyConstraints = (
   gestureInfo,
   { xMove, yMove, elementWidth, elementHeight, constraints },
 ) => {
@@ -781,85 +763,72 @@ const applyConstraintsOnX = (
 
   let minXMove = -initialLeft; // Allow to go to left edge (0)
   let maxXMove = Infinity;
-
-  for (const constraint of constraints) {
-    if (constraint.type === "bounds") {
-      minXMove = Math.max(minXMove, constraint.left - initialLeft);
-      maxXMove = Math.min(maxXMove, constraint.right - initialLeft);
-    } else if (constraint.type === "obstacle") {
-      // For obstacles, prevent crossing based on current element position and movement direction
-      const currentLeft = initialLeft + xMove;
-      const currentRight = currentLeft + elementWidth;
-      const currentTop = initialTop + yMove;
-      const currentBottom = currentTop + elementHeight;
-
-      // Check if there's Y overlap (element overlaps with obstacle vertically)
-      const hasYOverlap =
-        currentTop < constraint.bottom && currentBottom > constraint.top;
-
-      if (hasYOverlap) {
-        // Check current position relative to obstacle
-        const elementIsLeftOfObstacle = currentRight <= constraint.left;
-        const elementIsRightOfObstacle = currentLeft >= constraint.right;
-
-        if (gestureInfo.isGoingRight && elementIsLeftOfObstacle) {
-          // Moving right from left side - don't cross the obstacle's left boundary
-          const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
-          maxXMove = Math.min(maxXMove, maxAllowedXMove);
-        } else if (gestureInfo.isGoingLeft && elementIsRightOfObstacle) {
-          // Moving left from right side - don't cross the obstacle's right boundary
-          const minAllowedXMove = constraint.right - initialLeft;
-          minXMove = Math.max(minXMove, minAllowedXMove);
-        }
-      }
-    }
-  }
-
-  return Math.max(minXMove, Math.min(maxXMove, xMove));
-};
-
-// Apply bounds constraint on Y axis
-const applyConstraintsOnY = (
-  gestureInfo,
-  { xMove, yMove, elementWidth, elementHeight, constraints },
-) => {
-  const { initialLeft, initialTop } = gestureInfo;
-
   let minYMove = -initialTop; // Allow to go to top edge (0)
   let maxYMove = Infinity;
 
   for (const constraint of constraints) {
     if (constraint.type === "bounds") {
+      // Apply bounds constraints
+      minXMove = Math.max(minXMove, constraint.left - initialLeft);
+      maxXMove = Math.min(maxXMove, constraint.right - initialLeft);
       minYMove = Math.max(minYMove, constraint.top - initialTop);
       maxYMove = Math.min(maxYMove, constraint.bottom - initialTop);
     } else if (constraint.type === "obstacle") {
-      // For obstacles, prevent crossing based on current element position and movement direction
-      const currentLeft = initialLeft + xMove;
-      const currentRight = currentLeft + elementWidth;
-      const currentTop = initialTop + yMove;
-      const currentBottom = currentTop + elementHeight;
+      // For obstacles, prevent element from overlapping with obstacle
+      const proposedLeft = initialLeft + xMove;
+      const proposedRight = proposedLeft + elementWidth;
+      const proposedTop = initialTop + yMove;
+      const proposedBottom = proposedTop + elementHeight;
 
-      // Check if there's X overlap (element overlaps with obstacle horizontally)
-      const hasXOverlap =
-        currentLeft < constraint.right && currentRight > constraint.left;
+      // Check if proposed position would overlap with obstacle
+      const wouldOverlapX =
+        proposedLeft < constraint.right && proposedRight > constraint.left;
+      const wouldOverlapY =
+        proposedTop < constraint.bottom && proposedBottom > constraint.top;
 
-      if (hasXOverlap) {
-        // Check current position relative to obstacle
-        const elementIsAboveObstacle = currentBottom <= constraint.top;
-        const elementIsBelowObstacle = currentTop >= constraint.bottom;
+      if (wouldOverlapX && wouldOverlapY) {
+        // Would overlap - need to constrain movement
 
-        if (gestureInfo.isGoingDown && elementIsAboveObstacle) {
-          // Moving down from above - don't cross the obstacle's top boundary
-          const maxAllowedYMove = constraint.top - elementHeight - initialTop;
-          maxYMove = Math.min(maxYMove, maxAllowedYMove);
-        } else if (gestureInfo.isGoingUp && elementIsBelowObstacle) {
-          // Moving up from below - don't cross the obstacle's bottom boundary
-          const minAllowedYMove = constraint.bottom - initialTop;
-          minYMove = Math.max(minYMove, minAllowedYMove);
+        // Check current element position relative to obstacle
+        const currentLeft = initialLeft + (gestureInfo.xMove || 0);
+        const currentRight = currentLeft + elementWidth;
+        const currentTop = initialTop + (gestureInfo.yMove || 0);
+        const currentBottom = currentTop + elementHeight;
+
+        const currentlyLeftOfObstacle = currentRight <= constraint.left;
+        const currentlyRightOfObstacle = currentLeft >= constraint.right;
+        const currentlyAboveObstacle = currentBottom <= constraint.top;
+        const currentlyBelowObstacle = currentTop >= constraint.bottom;
+
+        // Constrain X movement if moving towards obstacle
+        if (gestureInfo.isGoingRight && currentlyLeftOfObstacle) {
+          // Moving right from left - stop at left edge of obstacle
+          maxXMove = Math.min(
+            maxXMove,
+            constraint.left - elementWidth - initialLeft,
+          );
+        } else if (gestureInfo.isGoingLeft && currentlyRightOfObstacle) {
+          // Moving left from right - stop at right edge of obstacle
+          minXMove = Math.max(minXMove, constraint.right - initialLeft);
+        }
+
+        // Constrain Y movement if moving towards obstacle
+        if (gestureInfo.isGoingDown && currentlyAboveObstacle) {
+          // Moving down from above - stop at top edge of obstacle
+          maxYMove = Math.min(
+            maxYMove,
+            constraint.top - elementHeight - initialTop,
+          );
+        } else if (gestureInfo.isGoingUp && currentlyBelowObstacle) {
+          // Moving up from below - stop at bottom edge of obstacle
+          minYMove = Math.max(minYMove, constraint.bottom - initialTop);
         }
       }
     }
   }
 
-  return Math.max(minYMove, Math.min(maxYMove, yMove));
+  return {
+    xMove: Math.max(minXMove, Math.min(maxXMove, xMove)),
+    yMove: Math.max(minYMove, Math.min(maxYMove, yMove)),
+  };
 };
