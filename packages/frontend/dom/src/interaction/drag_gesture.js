@@ -55,14 +55,18 @@ const getPositionedParent = (element) => {
   return document.body;
 };
 
-const getDefaultConstraint = (scrollableParent) => {
+const getDefaultConstraint = (
+  scrollableParent,
+  elementWidth,
+  elementHeight,
+) => {
   const scrollWidth = scrollableParent.scrollWidth;
   const scrollHeight = scrollableParent.scrollHeight;
   return {
     left: 0,
     top: 0,
-    right: scrollWidth,
-    bottom: scrollHeight,
+    right: scrollWidth - elementWidth, // Element can't go beyond scroll area minus its own width
+    bottom: scrollHeight - elementHeight, // Element can't go beyond scroll area minus its own height
   };
 };
 
@@ -147,7 +151,8 @@ export const createDragGesture = ({
 
     // Set up constraint bounds
     const finalConstraint =
-      constraint || getDefaultConstraint(scrollableParent);
+      constraint ||
+      getDefaultConstraint(scrollableParent, elementWidth, elementHeight);
     const constraintLeft = finalConstraint.left ?? -Infinity;
     const constraintTop = finalConstraint.top ?? -Infinity;
     const constraintRight = finalConstraint.right ?? Infinity;
