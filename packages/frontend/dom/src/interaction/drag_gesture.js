@@ -303,8 +303,8 @@ export const createDragGesture = ({
       gestureInfo.x = currentXRelative;
       gestureInfo.y = currentYRelative;
 
-      let xMove = gestureInfo.x - gestureInfo.xAtStart;
-      let yMove = gestureInfo.y - gestureInfo.yAtStart;
+      let xMove = direction.x ? gestureInfo.x - gestureInfo.xAtStart : 0;
+      let yMove = direction.y ? gestureInfo.y - gestureInfo.yAtStart : 0;
       const constraints = constraintFunctions.map((fn) =>
         fn({
           elementWidth: currentElementWidth,
