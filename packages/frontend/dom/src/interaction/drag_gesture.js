@@ -187,6 +187,7 @@ const getPositionedParent = (element) => {
 const createScrollableAreaConstraint = (scrollableParent) => {
   return ({ elementWidth, elementHeight }) => {
     return {
+      type: "bounds",
       left: 0,
       top: 0,
       right: scrollableParent.scrollWidth - elementWidth,
@@ -214,54 +215,95 @@ const getObstacleBounds = (scrollableParent) => {
 
 // Function to create constraint that respects solid obstacles
 const createObstacleConstraint = (scrollableParent) => {
-  const obstacles = getObstacleBounds(scrollableParent);
+  return () => {
+    const obstacles = getObstacleBounds(scrollableParent);
+    return {
+      type: "zones",
+      obstacles: obstacles.map((obstacle) => ({
+        left: obstacle.left,
+        top: obstacle.top,
+        right: obstacle.right,
+        bottom: obstacle.bottom,
+      })),
+    };
+  };
+};
 
-  return ({ elementWidth, elementHeight, currentLeft, currentTop }) => {
-    let left = 0;
-    let top = 0;
-    let right = scrollableParent.scrollWidth - elementWidth;
-    let bottom = scrollableParent.scrollHeight - elementHeight;
+// Apply bounds constraint on X axis
+const applyConstraintOnX = (xMove, initialLeft, elementWidth, constraints) => {
+  let minXMove = -initialLeft; // Allow to go to left edge (0)
+  let maxXMove = Infinity;
 
-    // Find constraints based on obstacles
-    for (const obstacle of obstacles) {
-      const elementBottom = currentTop + elementHeight;
-      const elementTop = currentTop;
-      const elementRight = currentLeft + elementWidth;
-      const elementLeft = currentLeft;
+  for (const constraint of constraints) {
+    if (constraint.type === "bounds") {
+      minXMove = Math.max(minXMove, constraint.left - initialLeft);
+      maxXMove = Math.min(maxXMove, constraint.right - initialLeft);
+    } else if (constraint.type === "zones") {
+      // For obstacles, find the nearest valid position
+      const proposedLeft = initialLeft + xMove;
+      const proposedRight = proposedLeft + elementWidth;
 
-      // Check vertical overlap for horizontal constraints
-      if (elementTop < obstacle.bottom && elementBottom > obstacle.top) {
-        // Constrain from the left (rightmost obstacle edge)
-        if (
-          obstacle.right > left &&
-          obstacle.right <= currentLeft + elementWidth
-        ) {
-          left = obstacle.right;
-        }
-        // Constrain from the right (leftmost obstacle edge)
-        if (obstacle.left < right && obstacle.left >= currentLeft) {
-          right = obstacle.left - elementWidth;
-        }
-      }
+      for (const obstacle of constraint.obstacles) {
+        // Check if element would overlap with this obstacle
+        if (proposedLeft < obstacle.right && proposedRight > obstacle.left) {
+          // Collision detected - find nearest valid position
+          const moveToLeftOfObstacle =
+            obstacle.left - elementWidth - initialLeft;
+          const moveToRightOfObstacle = obstacle.right - initialLeft;
 
-      // Check horizontal overlap for vertical constraints
-      if (elementLeft < obstacle.right && elementRight > obstacle.left) {
-        // Constrain from the top (bottommost obstacle edge)
-        if (
-          obstacle.bottom > top &&
-          obstacle.bottom <= currentTop + elementHeight
-        ) {
-          top = obstacle.bottom;
-        }
-        // Constrain from the bottom (topmost obstacle edge)
-        if (obstacle.top < bottom && obstacle.top >= currentTop) {
-          bottom = obstacle.top - elementHeight;
+          // Choose the option closest to desired position
+          if (
+            Math.abs(xMove - moveToLeftOfObstacle) <
+            Math.abs(xMove - moveToRightOfObstacle)
+          ) {
+            maxXMove = Math.min(maxXMove, moveToLeftOfObstacle);
+          } else {
+            minXMove = Math.max(minXMove, moveToRightOfObstacle);
+          }
         }
       }
     }
+  }
 
-    return { left, top, right, bottom };
-  };
+  return Math.max(minXMove, Math.min(maxXMove, xMove));
+};
+
+// Apply bounds constraint on Y axis
+const applyConstraintOnY = (yMove, initialTop, elementHeight, constraints) => {
+  let minYMove = -initialTop; // Allow to go to top edge (0)
+  let maxYMove = Infinity;
+
+  for (const constraint of constraints) {
+    if (constraint.type === "bounds") {
+      minYMove = Math.max(minYMove, constraint.top - initialTop);
+      maxYMove = Math.min(maxYMove, constraint.bottom - initialTop);
+    } else if (constraint.type === "zones") {
+      // For obstacles, find the nearest valid position
+      const proposedTop = initialTop + yMove;
+      const proposedBottom = proposedTop + elementHeight;
+
+      for (const obstacle of constraint.obstacles) {
+        // Check if element would overlap with this obstacle
+        if (proposedTop < obstacle.bottom && proposedBottom > obstacle.top) {
+          // Collision detected - find nearest valid position
+          const moveToTopOfObstacle = obstacle.top - elementHeight - initialTop;
+          const moveToBottomOfObstacle = obstacle.bottom - initialTop;
+
+          // Choose the option closest to desired position
+          if (
+            Math.abs(yMove - moveToTopOfObstacle) <
+            Math.abs(yMove - moveToBottomOfObstacle)
+          ) {
+            maxYMove = Math.min(maxYMove, moveToTopOfObstacle);
+          } else {
+            minYMove = Math.max(minYMove, moveToBottomOfObstacle);
+          }
+        }
+      }
+    }
+  }
+
+  return Math.max(minYMove, Math.min(maxYMove, yMove));
 };
 
 export const createDragGesture = ({
@@ -364,14 +406,18 @@ export const createDragGesture = ({
       });
     }
 
-    // Set up constraint bounds
-    let finalConstraint =
-      constraint || createScrollableAreaConstraint(scrollableParent);
+    // Set up constraints - collect all constraint functions
+    const constraintFunctions = [];
 
-    // Check for obstacles and enhance constraint if found
+    // Always add bounds constraint (scrollable area)
+    const boundsConstraint =
+      constraint || createScrollableAreaConstraint(scrollableParent);
+    constraintFunctions.push(boundsConstraint);
+
+    // Check for obstacles and add obstacle constraint if found
     const obstacles = scrollableParent.querySelectorAll("[drag-obstacle]");
     if (obstacles.length > 0) {
-      finalConstraint = createObstacleConstraint(scrollableParent);
+      constraintFunctions.push(createObstacleConstraint(scrollableParent));
     }
 
     // Clean up debug markers when gesture ends
@@ -426,26 +472,20 @@ export const createDragGesture = ({
         gestureInfo.x = currentXRelative;
         let xMove = gestureInfo.x - gestureInfo.xAtStart;
 
-        // Calculate dynamic constraint bounds
-        const currentLeft = initialLeft + xMove;
-        const currentTop =
-          initialTop + (direction.y ? gestureInfo.y - gestureInfo.yAtStart : 0);
+        // Apply constraints using new architecture
+        const constraints = constraintFunctions.map((fn) =>
+          fn({
+            elementWidth: currentElementWidth,
+            elementHeight: currentElementHeight,
+          }),
+        );
 
-        const constraintBounds = finalConstraint({
-          elementWidth: currentElementWidth,
-          elementHeight: currentElementHeight,
-          currentLeft,
-          currentTop,
-        });
-
-        const minXMove = constraintBounds.left - initialLeft;
-        const maxXMove = constraintBounds.right - initialLeft;
-
-        if (xMove < minXMove) {
-          xMove = minXMove;
-        } else if (xMove > maxXMove) {
-          xMove = maxXMove;
-        }
+        xMove = applyConstraintOnX(
+          xMove,
+          initialLeft,
+          currentElementWidth,
+          constraints,
+        );
         gestureInfo.xMove = xMove;
         gestureInfo.xChanged = previousGestureInfo
           ? xMove !== previousGestureInfo.xMove
@@ -456,25 +496,20 @@ export const createDragGesture = ({
         gestureInfo.y = currentYRelative;
         let yMove = gestureInfo.y - gestureInfo.yAtStart;
 
-        // Calculate dynamic constraint bounds
-        const currentLeft = initialLeft + (direction.x ? gestureInfo.xMove : 0);
-        const currentTop = initialTop + yMove;
+        // Apply constraints using new architecture
+        const constraints = constraintFunctions.map((fn) =>
+          fn({
+            elementWidth: currentElementWidth,
+            elementHeight: currentElementHeight,
+          }),
+        );
 
-        const constraintBounds = finalConstraint({
-          elementWidth: currentElementWidth,
-          elementHeight: currentElementHeight,
-          currentLeft,
-          currentTop,
-        });
-
-        const minYMove = constraintBounds.top - initialTop;
-        const maxYMove = constraintBounds.bottom - initialTop;
-
-        if (yMove < minYMove) {
-          yMove = minYMove;
-        } else if (yMove > maxYMove) {
-          yMove = maxYMove;
-        }
+        yMove = applyConstraintOnY(
+          yMove,
+          initialTop,
+          currentElementHeight,
+          constraints,
+        );
         gestureInfo.yMove = yMove;
         gestureInfo.yChanged = previousGestureInfo
           ? yMove !== previousGestureInfo.yMove
@@ -557,21 +592,74 @@ export const createDragGesture = ({
         // Create dynamic constraint markers based on current element size
         const currentPositionedParentRect =
           positionedParent.getBoundingClientRect();
-        const currentLeft = initialLeft + gestureInfo.xMove;
-        const currentTop = initialTop + gestureInfo.yMove;
 
-        // Compute current constraint bounds using the new function-based approach
-        const constraintBounds = finalConstraint({
-          elementWidth: currentElementWidth,
-          elementHeight: currentElementHeight,
-          currentLeft,
-          currentTop,
+        // Compute current constraint bounds for debug markers
+        const constraints = constraintFunctions.map((fn) =>
+          fn({
+            elementWidth: currentElementWidth,
+            elementHeight: currentElementHeight,
+          }),
+        );
+
+        // For debug markers, we'll show bounds constraints and obstacle zones
+        let constraintLeft = 0;
+        let constraintTop = 0;
+        let constraintRight = Infinity;
+        let constraintBottom = Infinity;
+
+        // Extract bounds from bounds constraints and collect obstacle data
+        const obstacleZones = [];
+        for (const constraint of constraints) {
+          if (constraint.type === "bounds") {
+            constraintLeft = Math.max(constraintLeft, constraint.left);
+            constraintTop = Math.max(constraintTop, constraint.top);
+            constraintRight = Math.min(constraintRight, constraint.right);
+            constraintBottom = Math.min(constraintBottom, constraint.bottom);
+          } else if (constraint.type === "zones") {
+            obstacleZones.push(...constraint.obstacles);
+          }
+        }
+
+        // Create markers for obstacle zones
+        obstacleZones.forEach((obstacle, index) => {
+          const obstacleLeftViewport =
+            currentPositionedParentRect.left + obstacle.left;
+          const obstacleTopViewport =
+            currentPositionedParentRect.top + obstacle.top;
+          const obstacleRightViewport =
+            currentPositionedParentRect.left + obstacle.right;
+          const obstacleBottomViewport =
+            currentPositionedParentRect.top + obstacle.bottom;
+
+          currentConstraintMarkers.push(
+            createDebugMarker(
+              `obstacle${index}Left`,
+              obstacleLeftViewport,
+              0,
+              "orange",
+            ),
+            createDebugMarker(
+              `obstacle${index}Right`,
+              obstacleRightViewport,
+              0,
+              "orange",
+            ),
+            createDebugMarker(
+              `obstacle${index}Top`,
+              0,
+              obstacleTopViewport,
+              "orange",
+              "horizontal",
+            ),
+            createDebugMarker(
+              `obstacle${index}Bottom`,
+              0,
+              obstacleBottomViewport,
+              "orange",
+              "horizontal",
+            ),
+          );
         });
-
-        const constraintLeft = constraintBounds.left;
-        const constraintTop = constraintBounds.top;
-        const constraintRight = constraintBounds.right;
-        const constraintBottom = constraintBounds.bottom;
 
         // Create constraint markers
         if (constraintLeft > 0) {
