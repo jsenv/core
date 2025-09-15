@@ -184,6 +184,95 @@ export const startDragGesture = (
   const constraintRight = finalConstraint.right ?? Infinity;
   const constraintBottom = finalConstraint.bottom ?? Infinity;
 
+  // Create visual markers for constraints
+  const constraintMarkers = [];
+  if (DRAG_DEBUG_VISUAL_MARKERS) {
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+
+    // Only create markers for finite constraints
+    if (constraintLeft !== -Infinity) {
+      const constraintLeftViewport = positionedParentRect.left + constraintLeft;
+      constraintMarkers.push(
+        createDebugMarker("constraintLeft", constraintLeftViewport, 0, "red"),
+      );
+    }
+    if (constraintRight !== Infinity) {
+      const constraintRightViewport =
+        positionedParentRect.left + constraintRight;
+      constraintMarkers.push(
+        createDebugMarker("constraintRight", constraintRightViewport, 0, "red"),
+      );
+    }
+    if (constraintTop !== -Infinity) {
+      // Create horizontal line for top constraint
+      const constraintTopViewport = positionedParentRect.top + constraintTop;
+      const topMarker = document.createElement("div");
+      topMarker.style.position = "fixed";
+      topMarker.style.left = "0";
+      topMarker.style.top = `${constraintTopViewport}px`;
+      topMarker.style.width = "100vw";
+      topMarker.style.height = "2px";
+      topMarker.style.backgroundColor = "red";
+      topMarker.style.zIndex = "9999";
+      topMarker.style.pointerEvents = "none";
+      topMarker.style.opacity = "0.7";
+      topMarker.title = "constraintTop";
+
+      const topLabel = document.createElement("div");
+      topLabel.textContent = "constraintTop";
+      topLabel.style.position = "absolute";
+      topLabel.style.left = "10px";
+      topLabel.style.top = "5px";
+      topLabel.style.fontSize = "12px";
+      topLabel.style.color = "red";
+      topLabel.style.fontWeight = "bold";
+      topLabel.style.textShadow = "1px 1px 1px rgba(255,255,255,0.8)";
+      topMarker.appendChild(topLabel);
+
+      document.body.appendChild(topMarker);
+      constraintMarkers.push(topMarker);
+    }
+    if (constraintBottom !== Infinity) {
+      // Create horizontal line for bottom constraint
+      const constraintBottomViewport =
+        positionedParentRect.top + constraintBottom;
+      const bottomMarker = document.createElement("div");
+      bottomMarker.style.position = "fixed";
+      bottomMarker.style.left = "0";
+      bottomMarker.style.top = `${constraintBottomViewport}px`;
+      bottomMarker.style.width = "100vw";
+      bottomMarker.style.height = "2px";
+      bottomMarker.style.backgroundColor = "red";
+      bottomMarker.style.zIndex = "9999";
+      bottomMarker.style.pointerEvents = "none";
+      bottomMarker.style.opacity = "0.7";
+      bottomMarker.title = "constraintBottom";
+
+      const bottomLabel = document.createElement("div");
+      bottomLabel.textContent = "constraintBottom";
+      bottomLabel.style.position = "absolute";
+      bottomLabel.style.left = "10px";
+      bottomLabel.style.top = "-20px";
+      bottomLabel.style.fontSize = "12px";
+      bottomLabel.style.color = "red";
+      bottomLabel.style.fontWeight = "bold";
+      bottomLabel.style.textShadow = "1px 1px 1px rgba(255,255,255,0.8)";
+      bottomMarker.appendChild(bottomLabel);
+
+      document.body.appendChild(bottomMarker);
+      constraintMarkers.push(bottomMarker);
+    }
+
+    // Clean up constraint markers when gesture ends
+    endCallbackSet.add(() => {
+      constraintMarkers.forEach((marker) => {
+        if (marker && marker.parentNode) {
+          marker.parentNode.removeChild(marker);
+        }
+      });
+    });
+  }
+
   if (stickyLeftElement) {
     // const stickyRect = stickyLeftElement.getBoundingClientRect();
     // const stickyRightRelativeToElement = stickyRect.right - initialLeft;
