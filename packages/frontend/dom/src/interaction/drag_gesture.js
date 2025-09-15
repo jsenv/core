@@ -291,6 +291,8 @@ export const createDragGesture = ({
       const isGoingUp = currentYRelative < gestureInfo.y;
       const isGoingDown = currentYRelative > gestureInfo.y;
 
+      gestureInfo.xDiff = gestureInfo.x - currentXRelative;
+      gestureInfo.yDiff = gestureInfo.y - currentYRelative;
       gestureInfo.isGoingLeft = isGoingLeft;
       gestureInfo.isGoingRight = isGoingRight;
       gestureInfo.isGoingUp = isGoingUp;
@@ -778,26 +780,36 @@ const applyConstraints = (
       const proposedBottom = proposedTop + elementHeight;
 
       // Handle only RIGHT movement - prevent crossing obstacle boundary
-      if (gestureInfo.isGoingRight) {
+      if (gestureInfo.isGoingRight || gestureInfo.xDiff === 0) {
         // Check if there would be Y overlap in the proposed position
         const wouldHaveYOverlap =
           proposedTop < constraint.bottom && proposedBottom > constraint.top;
 
         if (wouldHaveYOverlap) {
-          // Never allow element's right edge to go past obstacle's left edge
-          const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
+          // Keep element completely BEFORE obstacle - right edge must not touch obstacle's left edge
+          const gap = 0; // 1px gap to prevent touching
+          const maxAllowedXMove =
+            constraint.left - elementWidth - initialLeft - gap;
+
+          // Only apply constraint if we're actually trying to go beyond the boundary
           console.log("RIGHT constraint:", {
             maxAllowed: maxAllowedXMove,
             requested: xMove,
+            gap,
           });
-          maxXMove = Math.min(maxXMove, maxAllowedXMove);
+          if (maxAllowedXMove < maxXMove) {
+            maxXMove = maxAllowedXMove;
+          }
         }
       }
     }
   }
 
+  xMove = Math.max(minXMove, Math.min(maxXMove, xMove));
+  yMove = Math.max(minYMove, Math.min(maxYMove, yMove));
+
   return {
-    xMove: Math.max(minXMove, Math.min(maxXMove, xMove)),
-    yMove: Math.max(minYMove, Math.min(maxYMove, yMove)),
+    xMove,
+    yMove,
   };
 };

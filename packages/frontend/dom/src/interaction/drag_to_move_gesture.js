@@ -37,6 +37,7 @@ export const createDragToMoveGesture = (options) => {
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
+          // axis,
           isGoingPositive, // right/down
           isGoingNegative, // left/up
           desiredElementStart, // left/top edge of element
@@ -82,6 +83,7 @@ export const createDragToMoveGesture = (options) => {
             desiredElementLeftRelative + currentPositionedParentRect.left;
           const desiredElementRight = desiredElementLeft + elementWidth;
           moveAndKeepIntoView({
+            axis: "x",
             isGoingPositive: isGoingRight,
             isGoingNegative: isGoingLeft,
             desiredElementStart: desiredElementLeft,
@@ -104,6 +106,7 @@ export const createDragToMoveGesture = (options) => {
             desiredElementTopRelative + currentPositionedParentRect.top;
           const desiredElementBottom = desiredElementTop + elementHeight;
           moveAndKeepIntoView({
+            axis: "y",
             isGoingPositive: isGoingDown,
             isGoingNegative: isGoingUp,
             desiredElementStart: desiredElementTop,
