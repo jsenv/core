@@ -353,7 +353,7 @@ export const createDragGesture = ({
       }
 
       // Helper function to handle auto-scroll and element positioning for an axis
-      const moveAndScrollIntoView = ({
+      const moveAndKeepIntoView = ({
         isGoingPositive, // right/down
         isGoingNegative, // left/up
         desiredElementStart, // left/top edge of element
@@ -369,30 +369,30 @@ export const createDragGesture = ({
       }) => {
         let scroll = currentScroll;
 
-        // Handle auto-scroll
-        if (isGoingPositive) {
-          if (desiredElementEnd > visibleAreaEnd) {
-            const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
-            scroll = currentScroll + scrollAmountNeeded;
+        keep_into_view: {
+          if (isGoingPositive) {
+            if (desiredElementEnd > visibleAreaEnd) {
+              const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
+              scroll = currentScroll + scrollAmountNeeded;
+            }
+          } else if (isGoingNegative) {
+            if (desiredElementStart < visibleAreaStart) {
+              const scrollAmountNeeded = visibleAreaStart - desiredElementStart;
+              scroll = Math.max(0, currentScroll - scrollAmountNeeded);
+            }
           }
-        } else if (isGoingNegative) {
-          if (desiredElementStart < visibleAreaStart) {
-            const scrollAmountNeeded = visibleAreaStart - desiredElementStart;
-            scroll = Math.max(0, currentScroll - scrollAmountNeeded);
+
+          // Apply scroll
+          scrollableParent[scrollProperty] = scroll;
+          gestureInfo[autoScrollProperty] = scroll;
+        }
+        move: {
+          // Calculate and apply element position
+          const elementPosition = initialPosition + moveAmount;
+          if (elementToMove) {
+            elementToMove.style[styleProperty] = `${elementPosition}px`;
           }
         }
-
-        // Apply scroll
-        scrollableParent[scrollProperty] = scroll;
-        gestureInfo[autoScrollProperty] = scroll;
-
-        // Calculate and apply element position
-        const elementPosition = initialPosition + moveAmount;
-        if (elementToMove) {
-          elementToMove.style[styleProperty] = `${elementPosition}px`;
-        }
-
-        return { scroll, elementPosition };
       };
 
       const scrollableRect = scrollableParent.getBoundingClientRect();
@@ -451,7 +451,7 @@ export const createDragGesture = ({
           // Store as current markers for next mousemove
           gestureInfo.currentDebugMarkers = newDebugMarkers;
         }
-        moveAndScrollIntoView({
+        moveAndKeepIntoView({
           isGoingPositive: isGoingRight,
           isGoingNegative: isGoingLeft,
           desiredElementStart: desiredElementLeft,
@@ -476,7 +476,7 @@ export const createDragGesture = ({
         const desiredElementTop =
           desiredElementTopRelative + currentPositionedParentRect.top;
         const desiredElementBottom = desiredElementTop + elementHeight;
-        moveAndScrollIntoView({
+        moveAndKeepIntoView({
           isGoingPositive: isGoingDown,
           isGoingNegative: isGoingUp,
           desiredElementStart: desiredElementTop,
