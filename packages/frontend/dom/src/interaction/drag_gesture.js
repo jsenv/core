@@ -784,29 +784,28 @@ const applyConstraints = (
         proposedTop < constraint.bottom && proposedBottom > constraint.top;
 
       if (wouldHaveYOverlap) {
-        // Current element position
-        const currentLeft = initialLeft + xMove;
+        // Current element position (without the proposed move)
+        const currentLeft = initialLeft;
         const currentRight = currentLeft + elementWidth;
 
-        // Determine which side of the obstacle the element is closest to
-        const distanceToLeftSide = Math.abs(currentRight - constraint.left);
-        const distanceToRightSide = Math.abs(currentLeft - constraint.right);
+        // Determine which side of the obstacle the element is currently on
+        const isOnTheLeft = currentRight <= constraint.left;
+        const isOnTheRight = currentLeft >= constraint.right;
 
-        // Apply the constraint for the closest side
-        if (distanceToLeftSide <= distanceToRightSide) {
-          // Element is closer to the left side of obstacle - keep it on the left
+        if (isOnTheLeft) {
+          // Element is on the left side - prevent it from crossing to the right
           const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
-          console.log("RIGHT constraint (closest to left side):", {
+          console.log("RIGHT constraint (element on left):", {
             maxAllowed: maxAllowedXMove,
             requested: xMove,
           });
           if (maxAllowedXMove < maxXMove) {
             maxXMove = maxAllowedXMove;
           }
-        } else {
-          // Element is closer to the right side of obstacle - keep it on the right
+        } else if (isOnTheRight) {
+          // Element is on the right side - prevent it from crossing to the left
           const minAllowedXMove = constraint.right - initialLeft;
-          console.log("LEFT constraint (closest to right side):", {
+          console.log("LEFT constraint (element on right):", {
             minAllowed: minAllowedXMove,
             requested: xMove,
           });
@@ -814,6 +813,7 @@ const applyConstraints = (
             minXMove = minAllowedXMove;
           }
         }
+        // If element is neither on left nor right (overlapping), no X constraint applied
       }
     }
   }
