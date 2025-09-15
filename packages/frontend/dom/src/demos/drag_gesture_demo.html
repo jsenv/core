@@ -552,6 +552,7 @@
             <!-- Solid obstacles that cannot be traversed -->
             <div
               class="solid-obstacle"
+              data-drag-obstacle
               style="top: 50px; left: 150px; width: 80px; height: 60px"
             >
               WALL A
@@ -559,6 +560,7 @@
 
             <div
               class="solid-obstacle"
+              data-drag-obstacle
               style="top: 150px; left: 300px; width: 100px; height: 40px"
             >
               WALL B
@@ -566,6 +568,7 @@
 
             <div
               class="solid-obstacle"
+              data-drag-obstacle
               style="top: 250px; left: 50px; width: 60px; height: 80px"
             >
               WALL C
@@ -819,11 +822,7 @@
         controls.grabBtn.style.cursor = grabbed ? "not-allowed" : "pointer";
       }
 
-      function setupProgrammaticControls(
-        controls,
-        caseLabel,
-        customConstraint = null,
-      ) {
+      function setupProgrammaticControls(controls, caseLabel) {
         // Grab button
         controls.grabBtn.addEventListener("click", () => {
           if (controls.dragInstance) return;
@@ -859,10 +858,6 @@
               updateButtonStates(controls, false);
             },
           };
-
-          if (customConstraint) {
-            dragOptions.constraint = customConstraint;
-          }
 
           controls.dragGesture = createDragGesture(dragOptions);
 
@@ -946,82 +941,10 @@
       // Set up both sets of controls
       setupProgrammaticControls(case1Controls, "horizontal case");
       setupProgrammaticControls(case2Controls, "both scrollbars case");
-
-      // For Case 3, create obstacle constraint
-      const obstacleConstraint = (() => {
-        const rect = obstacleRectangle.getBoundingClientRect();
-        const scrollableParent = getScrollableParent(obstacleRectangle);
-        return createObstacleConstraint(
-          scrollableParent,
-          rect.width,
-          rect.height,
-        );
-      })();
-
-      setupProgrammaticControls(
-        case3Controls,
-        "solid obstacles case",
-        obstacleConstraint,
-      );
-
-      // Function to get obstacle bounds for collision detection
-      function getObstacleBounds() {
-        const obstacles = document.querySelectorAll(".solid-obstacle");
-        return Array.from(obstacles).map((obstacle) => {
-          return {
-            left: obstacle.offsetLeft,
-            top: obstacle.offsetTop,
-            right: obstacle.offsetLeft + obstacle.offsetWidth,
-            bottom: obstacle.offsetTop + obstacle.offsetHeight,
-            width: obstacle.offsetWidth,
-            height: obstacle.offsetHeight,
-          };
-        });
-      }
-
-      // Function to create constraint that respects solid obstacles
-      function createObstacleConstraint(
-        scrollableParent,
-        elementWidth,
-        elementHeight,
-      ) {
-        const obstacles = getObstacleBounds();
-        const scrollWidth = scrollableParent.scrollWidth;
-        const scrollHeight = scrollableParent.scrollHeight;
-
-        return {
-          left: 0,
-          top: 0,
-          right: scrollWidth - elementWidth,
-          bottom: scrollHeight - elementHeight,
-          // Custom constraint function that checks obstacle collisions
-          checkPosition: (left, top) => {
-            const elementRect = {
-              left,
-              top,
-              right: left + elementWidth,
-              bottom: top + elementHeight,
-            };
-
-            // Check collision with each obstacle
-            for (const obstacle of obstacles) {
-              if (
-                elementRect.left < obstacle.right &&
-                elementRect.right > obstacle.left &&
-                elementRect.top < obstacle.bottom &&
-                elementRect.bottom > obstacle.top
-              ) {
-                // Collision detected - element cannot move to this position
-                return false;
-              }
-            }
-            return true;
-          },
-        };
-      }
+      setupProgrammaticControls(case3Controls, "solid obstacles case");
 
       // Function to set up drag gesture for any rectangle
-      function setupDragGesture(rectangle, caseLabel, customConstraint = null) {
+      function setupDragGesture(rectangle, caseLabel) {
         rectangle.addEventListener("mousedown", (event) => {
           const options = {
             backdrop: false,
@@ -1044,10 +967,6 @@
             },
           };
 
-          if (customConstraint) {
-            options.constraint = customConstraint;
-          }
-
           startDragGesture(event, options);
         });
       }
@@ -1055,9 +974,7 @@
       // Set up drag gestures for all rectangles
       setupDragGesture(horizontalRectangle, "Horizontal Only");
       setupDragGesture(bothRectangle, "Both Directions");
-
-      // Set up drag gesture with obstacle avoidance for Case 3
-      setupDragGesture(obstacleRectangle, "With Obstacles", obstacleConstraint);
+      setupDragGesture(obstacleRectangle, "With Obstacles"); // Obstacles handled automatically via [drag-obstacle] attribute
     </script>
 
     <script>

@@ -70,6 +70,64 @@ const getDefaultConstraint = (
   };
 };
 
+// Function to get obstacle bounds for collision detection
+const getObstacleBounds = (scrollableParent) => {
+  const obstacles = scrollableParent.querySelectorAll("[data-drag-obstacle]");
+  const bounds = [];
+  for (const obstacle of obstacles) {
+    bounds.push({
+      left: obstacle.offsetLeft,
+      top: obstacle.offsetTop,
+      right: obstacle.offsetLeft + obstacle.offsetWidth,
+      bottom: obstacle.offsetTop + obstacle.offsetHeight,
+      width: obstacle.offsetWidth,
+      height: obstacle.offsetHeight,
+    });
+  }
+  return bounds;
+};
+
+// Function to create constraint that respects solid obstacles
+const createObstacleConstraint = (
+  scrollableParent,
+  elementWidth,
+  elementHeight,
+) => {
+  const obstacles = getObstacleBounds(scrollableParent);
+  const scrollWidth = scrollableParent.scrollWidth;
+  const scrollHeight = scrollableParent.scrollHeight;
+
+  return {
+    left: 0,
+    top: 0,
+    right: scrollWidth - elementWidth,
+    bottom: scrollHeight - elementHeight,
+    // Custom constraint function that checks obstacle collisions
+    checkPosition: (left, top) => {
+      const elementRect = {
+        left,
+        top,
+        right: left + elementWidth,
+        bottom: top + elementHeight,
+      };
+
+      // Check collision with each obstacle
+      for (const obstacle of obstacles) {
+        if (
+          elementRect.left < obstacle.right &&
+          elementRect.right > obstacle.left &&
+          elementRect.top < obstacle.bottom &&
+          elementRect.bottom > obstacle.top
+        ) {
+          // Collision detected - element cannot move to this position
+          return false;
+        }
+      }
+      return true;
+    },
+  };
+};
+
 export const createDragGesture = ({
   onGrab,
   onDragStart,
@@ -150,9 +208,19 @@ export const createDragGesture = ({
     }
 
     // Set up constraint bounds
-    const finalConstraint =
+    let finalConstraint =
       constraint ||
       getDefaultConstraint(scrollableParent, elementWidth, elementHeight);
+
+    // Check for obstacles and enhance constraint if found
+    const obstacles = scrollableParent.querySelectorAll("[drag-obstacle]");
+    if (obstacles.length > 0) {
+      finalConstraint = createObstacleConstraint(
+        scrollableParent,
+        elementWidth,
+        elementHeight,
+      );
+    }
     const constraintLeft = finalConstraint.left ?? -Infinity;
     const constraintTop = finalConstraint.top ?? -Infinity;
     const constraintRight = finalConstraint.right ?? Infinity;
