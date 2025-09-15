@@ -461,20 +461,37 @@ export const createDragGesture = ({
               gestureInfo.autoScrolledX = actualScrollLeft;
             }
           } else if (isGoingLeft) {
-            const visibleAreaLeftWithScrollOffset =
-              visibleAreaLeft + currentScrollLeft;
-            if (desiredElementLeft < visibleAreaLeftWithScrollOffset) {
-              intendedScrollLeft =
-                currentScrollLeft +
-                (desiredElementLeft - visibleAreaLeftWithScrollOffset);
+            if (desiredElementLeft < visibleAreaLeft) {
+              // Calculate exactly how much we need to scroll to make the element left edge visible
+              const scrollAmountNeeded = visibleAreaLeft - desiredElementLeft;
+              intendedScrollLeft = Math.max(
+                0,
+                currentScrollLeft - scrollAmountNeeded,
+              );
+
+              console.log("Left scroll needed:", {
+                desiredElementLeft,
+                visibleAreaLeft,
+                scrollAmountNeeded,
+                currentScrollLeft,
+                intendedScrollLeft,
+                elementWidth,
+              });
+
               scrollableParent.scrollLeft = intendedScrollLeft;
               actualScrollLeft = scrollableParent.scrollLeft; // Use the actual value after browser clamping
 
               // If scroll was clamped, adjust the effective positioning (not the gesture info)
               if (actualScrollLeft !== intendedScrollLeft) {
                 const scrollDifference = intendedScrollLeft - actualScrollLeft;
-                // Reduce the effective move by the amount we couldn't scroll
+                // Adjust the effective move by the amount we couldn't scroll
                 effectiveXMove -= scrollDifference;
+                console.log("Left scroll clamped:", {
+                  intended: intendedScrollLeft,
+                  actual: actualScrollLeft,
+                  scrollDifference,
+                  effectiveXMove,
+                });
               }
 
               gestureInfo.autoScrolledX = actualScrollLeft;

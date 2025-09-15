@@ -245,6 +245,22 @@
               Grab
             </button>
             <button
+              id="dragLeftBtn1"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #9c27b0;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Left
+            </button>
+            <button
               id="dragRightBtn1"
               disabled
               style="
@@ -259,6 +275,22 @@
               "
             >
               Drag Right
+            </button>
+            <button
+              id="dragUpBtn1"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #607d8b;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Up
             </button>
             <button
               id="dragDownBtn1"
@@ -361,6 +393,22 @@
               Grab
             </button>
             <button
+              id="dragLeftBtn2"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #9c27b0;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Left
+            </button>
+            <button
               id="dragRightBtn2"
               disabled
               style="
@@ -375,6 +423,22 @@
               "
             >
               Drag Right
+            </button>
+            <button
+              id="dragUpBtn2"
+              disabled
+              style="
+                padding: 8px 12px;
+                background: #607d8b;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.5;
+              "
+            >
+              Drag Up
             </button>
             <button
               id="dragDownBtn2"
@@ -465,7 +529,9 @@
       // Programmatic controls for Case 1 (Horizontal)
       const case1Controls = {
         grabBtn: document.getElementById("grabBtn1"),
+        dragLeftBtn: document.getElementById("dragLeftBtn1"),
         dragRightBtn: document.getElementById("dragRightBtn1"),
+        dragUpBtn: document.getElementById("dragUpBtn1"),
         dragDownBtn: document.getElementById("dragDownBtn1"),
         releaseBtn: document.getElementById("releaseBtn1"),
         statusDiv: document.getElementById("status1"),
@@ -477,7 +543,9 @@
       // Programmatic controls for Case 2 (Both scrollbars)
       const case2Controls = {
         grabBtn: document.getElementById("grabBtn2"),
+        dragLeftBtn: document.getElementById("dragLeftBtn2"),
         dragRightBtn: document.getElementById("dragRightBtn2"),
+        dragUpBtn: document.getElementById("dragUpBtn2"),
         dragDownBtn: document.getElementById("dragDownBtn2"),
         releaseBtn: document.getElementById("releaseBtn2"),
         statusDiv: document.getElementById("status2"),
@@ -493,13 +561,17 @@
 
       function updateButtonStates(controls, grabbed = false) {
         controls.grabBtn.disabled = grabbed;
+        controls.dragLeftBtn.disabled = !grabbed;
         controls.dragRightBtn.disabled = !grabbed;
+        controls.dragUpBtn.disabled = !grabbed;
         controls.dragDownBtn.disabled = !grabbed;
         controls.releaseBtn.disabled = !grabbed;
 
         // Update visual disabled state
         const buttons = [
+          controls.dragLeftBtn,
           controls.dragRightBtn,
+          controls.dragUpBtn,
           controls.dragDownBtn,
           controls.releaseBtn,
         ];
@@ -563,6 +635,18 @@
           updateButtonStates(controls, true);
         });
 
+        // Drag Left button
+        controls.dragLeftBtn.addEventListener("click", () => {
+          if (!controls.dragInstance) return;
+
+          // Get current gesture position and move left by 50px
+          const currentGestureInfo = controls.dragInstance.gestureInfo;
+          const newX = currentGestureInfo.x - 50;
+
+          updateStatus(controls, `Dragging ${caseLabel} left by 50px`);
+          controls.dragInstance.drag(newX, currentGestureInfo.y);
+        });
+
         // Drag Right button
         controls.dragRightBtn.addEventListener("click", () => {
           if (!controls.dragInstance) return;
@@ -573,6 +657,18 @@
 
           updateStatus(controls, `Dragging ${caseLabel} right by 50px`);
           controls.dragInstance.drag(newX, currentGestureInfo.y);
+        });
+
+        // Drag Up button
+        controls.dragUpBtn.addEventListener("click", () => {
+          if (!controls.dragInstance) return;
+
+          // Get current gesture position and move up by 50px
+          const currentGestureInfo = controls.dragInstance.gestureInfo;
+          const newY = currentGestureInfo.y - 50;
+
+          updateStatus(controls, `Dragging ${caseLabel} up by 50px`);
+          controls.dragInstance.drag(currentGestureInfo.x, newY);
         });
 
         // Drag Down button
