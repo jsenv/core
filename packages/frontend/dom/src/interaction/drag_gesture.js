@@ -56,16 +56,16 @@ const getPositionedParent = (element) => {
 };
 
 const getDefaultConstraint = (scrollableParent) => {
-  const parentRect = scrollableParent.getBoundingClientRect();
+  // const parentRect = scrollableParent.getBoundingClientRect();
   const scrollWidth = scrollableParent.scrollWidth;
   const scrollHeight = scrollableParent.scrollHeight;
   // const scrollbarWidth = parentRect.width - positionedParent.clientWidth;
   // const scrollbarHeight = parentRect.height - positionedParent.clientHeight;
   return {
-    left: parentRect.left,
-    top: parentRect.top,
-    right: parentRect.left + scrollWidth,
-    bottom: parentRect.top + scrollHeight,
+    left: 0,
+    top: 0,
+    right: scrollWidth,
+    bottom: scrollHeight,
   };
 };
 
@@ -125,10 +125,18 @@ export const startDragGesture = (
   const yAtStart = mousedownEvent.clientY;
 
   const positionedParent = getPositionedParent(element);
+  const positionedParentRect = positionedParent.getBoundingClientRect();
   const elementVisuallyMovingRect =
     elementVisuallyMoving.getBoundingClientRect();
-  const initialLeft = elementVisuallyMovingRect.left;
-  const initialTop = elementVisuallyMovingRect.top;
+
+  // Convert to coordinates relative to positioned parent
+  const initialLeft =
+    elementVisuallyMovingRect.left - positionedParentRect.left;
+  const initialTop = elementVisuallyMovingRect.top - positionedParentRect.top;
+
+  // Convert mouse start position to relative coordinates
+  const xAtStartRelative = xAtStart - positionedParentRect.left;
+  const yAtStartRelative = yAtStart - positionedParentRect.top;
 
   const scrollableParent = getScrollableParent(element);
   const initialScrollLeft = scrollableParent ? scrollableParent.scrollLeft : 0;
@@ -137,10 +145,10 @@ export const startDragGesture = (
   const gestureInfo = {
     element,
     elementVisuallyMoving,
-    xAtStart,
-    yAtStart,
-    x: xAtStart,
-    y: yAtStart,
+    xAtStart: xAtStartRelative,
+    yAtStart: yAtStartRelative,
+    x: xAtStartRelative,
+    y: yAtStartRelative,
     xMove: 0,
     yMove: 0,
     xChanged: false,
@@ -184,18 +192,26 @@ export const startDragGesture = (
 
   mouse_events: {
     const updateMousePosition = (e) => {
-      const isGoingLeft = e.clientX < gestureInfo.x;
-      const isGoingRight = e.clientX > gestureInfo.x;
-      const isGoingTop = e.clientY < gestureInfo.y;
-      const isGoingBottom = e.clientY > gestureInfo.y;
+      // Get current positioned parent rect in case it moved due to scrolling
+      const currentPositionedParentRect =
+        positionedParent.getBoundingClientRect();
+
+      // Convert current mouse position to relative coordinates
+      const currentXRelative = e.clientX - currentPositionedParentRect.left;
+      const currentYRelative = e.clientY - currentPositionedParentRect.top;
+
+      const isGoingLeft = currentXRelative < gestureInfo.x;
+      const isGoingRight = currentXRelative > gestureInfo.x;
+      const isGoingTop = currentYRelative < gestureInfo.y;
+      const isGoingBottom = currentYRelative > gestureInfo.y;
       gestureInfo.isGoingLeft = isGoingLeft;
       gestureInfo.isGoingRight = isGoingRight;
       gestureInfo.isGoingTop = isGoingTop;
       gestureInfo.isGoingBottom = isGoingBottom;
 
       if (direction.x) {
-        gestureInfo.x = e.clientX;
-        let xMove = gestureInfo.x - xAtStart;
+        gestureInfo.x = currentXRelative;
+        let xMove = gestureInfo.x - gestureInfo.xAtStart;
         if (xMove < constraintLeft) {
           xMove = constraintLeft;
         } else if (xMove > constraintRight) {
@@ -207,8 +223,8 @@ export const startDragGesture = (
           : true;
       }
       if (direction.y) {
-        gestureInfo.y = e.clientY;
-        let yMove = gestureInfo.y - yAtStart;
+        gestureInfo.y = currentYRelative;
+        let yMove = gestureInfo.y - gestureInfo.yAtStart;
         if (yMove < constraintTop) {
           yMove = constraintTop;
         } else if (yMove > constraintBottom) {
@@ -264,11 +280,20 @@ export const startDragGesture = (
         const elementWidth = elementRect.width;
         const elementHeight = elementRect.height;
 
-        const scrollXDiff = scrollLeft - initialScrollLeft;
-        // Calculate where element bounds would be at the desired position
+        // Calculate where element bounds would be in viewport coordinates
+        const currentPositionedParentRect =
+          positionedParent.getBoundingClientRect();
+        const desiredElementLeftRelative = initialLeft + gestureInfo.xMove;
+        const desiredElementTopRelative = initialTop + gestureInfo.yMove;
+
+        // Convert to viewport coordinates for auto-scroll calculations
         const desiredElementLeft =
-          initialLeft + gestureInfo.xMove + scrollXDiff;
+          desiredElementLeftRelative + currentPositionedParentRect.left;
         const desiredElementRight = desiredElementLeft + elementWidth;
+        const desiredElementTop =
+          desiredElementTopRelative + currentPositionedParentRect.top;
+        const desiredElementBottom = desiredElementTop + elementHeight;
+
         let visibleAreaLeft = scrollableRect.left;
         let visibleAreaRight = visibleAreaLeft + availableWidth;
         if (stickyLeftElement) {
@@ -348,8 +373,6 @@ export const startDragGesture = (
 
         const visibleAreaTop = scrollableRect.top;
         const visibleAreaBottom = scrollableRect.bottom;
-        const desiredElementTop = elementRect.top + gestureInfo.yMove;
-        const desiredElementBottom = desiredElementTop + elementHeight;
 
         vertical: {
           if (!direction.y) {
@@ -388,17 +411,12 @@ export const startDragGesture = (
       }
 
       if (elementToMove) {
-        // Calculate final viewport position accounting for auto-scroll
-        const finalViewportLeft = initialLeft + gestureInfo.xMove + scrollLeft;
-        const finalViewportTop = initialTop + gestureInfo.yMove + scrollTop;
+        // Position element using relative coordinates (already accounting for positioned parent)
+        const finalLeft = initialLeft + gestureInfo.xMove + scrollLeft;
+        const finalTop = initialTop + gestureInfo.yMove + scrollTop;
 
-        // Convert to coordinates relative to positioned parent
-        const positionedParentRect = positionedParent.getBoundingClientRect();
-        const relativeLeft = finalViewportLeft - positionedParentRect.left;
-        const relativeTop = finalViewportTop - positionedParentRect.top;
-
-        elementToMove.style.left = `${relativeLeft}px`;
-        elementToMove.style.top = `${relativeTop}px`;
+        elementToMove.style.left = `${finalLeft}px`;
+        elementToMove.style.top = `${finalTop}px`;
       }
 
       if (!started) {
