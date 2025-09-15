@@ -83,6 +83,27 @@ import.meta.css = /* css */ `
   .navi_debug_marker_label--purple {
     color: purple;
   }
+
+  .navi_obstacle_marker {
+    position: fixed;
+    background-color: orange;
+    opacity: 0.5;
+    z-index: 9999;
+    pointer-events: none;
+    border: 2px solid darkorange;
+  }
+
+  .navi_obstacle_marker_label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
 `;
 
 export let DRAG_DEBUG_VISUAL_MARKERS = true;
@@ -202,7 +223,9 @@ export const createDragGesture = ({
     // Check for obstacles and add obstacle constraint if found
     const obstacles = scrollableParent.querySelectorAll("[data-drag-obstacle]");
     for (const obstacle of obstacles) {
-      constraintFunctions.push(createObstacleConstraint(obstacle));
+      constraintFunctions.push(
+        createObstacleConstraint(obstacle, positionedParent),
+      );
     }
 
     // Clean up debug markers when gesture ends
@@ -427,39 +450,20 @@ export const createDragGesture = ({
             currentPositionedParentRect.left + obstacle.left;
           const obstacleTopViewport =
             currentPositionedParentRect.top + obstacle.top;
-          const obstacleRightViewport =
-            currentPositionedParentRect.left + obstacle.right;
-          const obstacleBottomViewport =
-            currentPositionedParentRect.top + obstacle.bottom;
+          const obstacleWidth = obstacle.right - obstacle.left;
+          const obstacleHeight = obstacle.bottom - obstacle.top;
 
-          currentConstraintMarkers.push(
-            createDebugMarker(
-              `obstacle${index}Left`,
-              obstacleLeftViewport,
-              0,
-              "orange",
-            ),
-            createDebugMarker(
-              `obstacle${index}Right`,
-              obstacleRightViewport,
-              0,
-              "orange",
-            ),
-            createDebugMarker(
-              `obstacle${index}Top`,
-              0,
-              obstacleTopViewport,
-              "orange",
-              "horizontal",
-            ),
-            createDebugMarker(
-              `obstacle${index}Bottom`,
-              0,
-              obstacleBottomViewport,
-              "orange",
-              "horizontal",
-            ),
+          const obstacleMarker = createObstacleMarker(
+            `Obstacle ${index + 1}`,
+            obstacleLeftViewport,
+            obstacleTopViewport,
+            obstacleWidth,
+            obstacleHeight,
           );
+
+          if (obstacleMarker) {
+            currentConstraintMarkers.push(obstacleMarker);
+          }
         });
 
         // Create constraint markers
@@ -657,6 +661,27 @@ const createDebugMarker = (
   return marker;
 };
 
+const createObstacleMarker = (name, left, top, width, height) => {
+  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
+
+  const marker = document.createElement("div");
+  marker.className = "navi_obstacle_marker";
+  marker.style.left = `${left}px`;
+  marker.style.top = `${top}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
+  marker.title = name;
+
+  // Add label
+  const label = document.createElement("div");
+  label.className = "navi_obstacle_marker_label";
+  label.textContent = name;
+  marker.appendChild(label);
+
+  document.body.appendChild(marker);
+  return marker;
+};
+
 // Visual feedback line connecting mouse cursor to dragged element when constraints prevent following
 // This provides intuitive feedback during drag operations when the element cannot reach the mouse
 // position due to obstacles, boundaries, or other constraints. The line becomes visible when there's
@@ -736,15 +761,18 @@ const createScrollableAreaConstraint = (scrollableParent) => {
 };
 
 // Function to create constraint that respects solid obstacles
-const createObstacleConstraint = (obstacle) => {
+const createObstacleConstraint = (obstacle, positionedParent) => {
   return () => {
     const obstacleRect = obstacle.getBoundingClientRect();
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+
+    // Convert obstacle coordinates to be relative to positioned parent
     return {
       type: "obstacle",
-      left: obstacleRect.left,
-      top: obstacleRect.top,
-      right: obstacleRect.right,
-      bottom: obstacleRect.bottom,
+      left: obstacleRect.left - positionedParentRect.left,
+      top: obstacleRect.top - positionedParentRect.top,
+      right: obstacleRect.right - positionedParentRect.left,
+      bottom: obstacleRect.bottom - positionedParentRect.top,
     };
   };
 };
