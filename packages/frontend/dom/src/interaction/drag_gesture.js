@@ -381,13 +381,10 @@ export const createDragGesture = ({
               scroll = Math.max(0, currentScroll - scrollAmountNeeded);
             }
           }
-
-          // Apply scroll
           scrollableParent[scrollProperty] = scroll;
           gestureInfo[autoScrollProperty] = scroll;
         }
         move: {
-          // Calculate and apply element position
           const elementPosition = initialPosition + moveAmount;
           if (elementToMove) {
             elementToMove.style[styleProperty] = `${elementPosition}px`;
