@@ -815,17 +815,19 @@ const applyConstraints = (
 
       // X-axis constraint logic
       if (gestureInfo.isGoingRight) {
-        const elementIsLeftOfObstacle = currentRight <= constraint.left;
         const wouldHaveYOverlap =
           proposedTop < constraint.bottom && proposedBottom > constraint.top;
+        const wouldHaveXOverlap =
+          proposedLeft < constraint.right && proposedRight > constraint.left;
 
         console.log("RIGHT MOVEMENT CHECK:", {
-          elementIsLeftOfObstacle,
           wouldHaveYOverlap,
-          shouldConstrain: elementIsLeftOfObstacle && wouldHaveYOverlap,
+          wouldHaveXOverlap,
+          shouldConstrain: wouldHaveYOverlap && wouldHaveXOverlap,
         });
 
-        if (elementIsLeftOfObstacle && wouldHaveYOverlap) {
+        // If moving right would cause overlap, constrain to obstacle's left edge
+        if (wouldHaveYOverlap && wouldHaveXOverlap) {
           const stopXMove = constraint.left - elementWidth - initialLeft;
           console.log(
             "CONSTRAINING X RIGHT: stopXMove =",
@@ -838,17 +840,19 @@ const applyConstraints = (
       }
 
       if (gestureInfo.isGoingLeft) {
-        const elementIsRightOfObstacle = currentLeft >= constraint.right;
         const wouldHaveYOverlap =
           proposedTop < constraint.bottom && proposedBottom > constraint.top;
+        const wouldHaveXOverlap =
+          proposedLeft < constraint.right && proposedRight > constraint.left;
 
         console.log("LEFT MOVEMENT CHECK:", {
-          elementIsRightOfObstacle,
           wouldHaveYOverlap,
-          shouldConstrain: elementIsRightOfObstacle && wouldHaveYOverlap,
+          wouldHaveXOverlap,
+          shouldConstrain: wouldHaveYOverlap && wouldHaveXOverlap,
         });
 
-        if (elementIsRightOfObstacle && wouldHaveYOverlap) {
+        // If moving left would cause overlap, constrain to obstacle's right edge
+        if (wouldHaveYOverlap && wouldHaveXOverlap) {
           const stopXMove = constraint.right - initialLeft;
           console.log(
             "CONSTRAINING X LEFT: stopXMove =",
@@ -862,17 +866,19 @@ const applyConstraints = (
 
       // Y-axis constraint logic
       if (gestureInfo.isGoingDown) {
-        const elementIsAboveObstacle = currentBottom <= constraint.top;
         const wouldHaveXOverlap =
           proposedLeft < constraint.right && proposedRight > constraint.left;
+        const wouldHaveYOverlap =
+          proposedTop < constraint.bottom && proposedBottom > constraint.top;
 
         console.log("DOWN MOVEMENT CHECK:", {
-          elementIsAboveObstacle,
           wouldHaveXOverlap,
-          shouldConstrain: elementIsAboveObstacle && wouldHaveXOverlap,
+          wouldHaveYOverlap,
+          shouldConstrain: wouldHaveXOverlap && wouldHaveYOverlap,
         });
 
-        if (elementIsAboveObstacle && wouldHaveXOverlap) {
+        // If moving down would cause overlap, constrain to obstacle's top edge
+        if (wouldHaveXOverlap && wouldHaveYOverlap) {
           const stopYMove = constraint.top - elementHeight - initialTop;
           console.log(
             "CONSTRAINING Y DOWN: stopYMove =",
@@ -885,17 +891,19 @@ const applyConstraints = (
       }
 
       if (gestureInfo.isGoingUp) {
-        const elementIsBelowObstacle = currentTop >= constraint.bottom;
         const wouldHaveXOverlap =
           proposedLeft < constraint.right && proposedRight > constraint.left;
+        const wouldHaveYOverlap =
+          proposedTop < constraint.bottom && proposedBottom > constraint.top;
 
         console.log("UP MOVEMENT CHECK:", {
-          elementIsBelowObstacle,
           wouldHaveXOverlap,
-          shouldConstrain: elementIsBelowObstacle && wouldHaveXOverlap,
+          wouldHaveYOverlap,
+          shouldConstrain: wouldHaveXOverlap && wouldHaveYOverlap,
         });
 
-        if (elementIsBelowObstacle && wouldHaveXOverlap) {
+        // If moving up would cause overlap, constrain to obstacle's bottom edge
+        if (wouldHaveXOverlap && wouldHaveYOverlap) {
           const stopYMove = constraint.bottom - initialTop;
           console.log(
             "CONSTRAINING Y UP: stopYMove =",
