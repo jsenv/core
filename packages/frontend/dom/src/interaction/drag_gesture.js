@@ -1,5 +1,38 @@
 import { getScrollableParent } from "../scroll.js";
 
+const DRAG_DEBUG_VISUAL_MARKERS = false; // Set to true to enable visual debug markers
+
+const createDebugMarker = (name, x, y, color = "red") => {
+  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
+
+  const marker = document.createElement("div");
+  marker.style.position = "fixed";
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.style.width = "2px";
+  marker.style.height = "100vh";
+  marker.style.backgroundColor = color;
+  marker.style.zIndex = "9999";
+  marker.style.pointerEvents = "none";
+  marker.style.opacity = "0.7";
+  marker.title = name;
+
+  // Add label
+  const label = document.createElement("div");
+  label.textContent = name;
+  label.style.position = "absolute";
+  label.style.top = "10px";
+  label.style.left = "5px";
+  label.style.fontSize = "12px";
+  label.style.color = color;
+  label.style.fontWeight = "bold";
+  label.style.textShadow = "1px 1px 1px rgba(255,255,255,0.8)";
+  marker.appendChild(label);
+
+  document.body.appendChild(marker);
+  return marker;
+};
+
 export const startDragGesture = (
   mousedownEvent,
   {
@@ -16,10 +49,10 @@ export const startDragGesture = (
     threshold = 5,
     direction: defaultDirection = { x: true, y: true },
     backdrop = true,
-    minX = -Infinity,
-    maxX = Infinity,
-    minY = -Infinity,
-    maxY = Infinity,
+    minConstrainedX = -Infinity,
+    maxConstrainedX = Infinity,
+    minConstrainedY = -Infinity,
+    maxConstrainedY = Infinity,
   },
 ) => {
   if (mousedownEvent.defaultPrevented) {
@@ -120,10 +153,10 @@ export const startDragGesture = (
       if (direction.x) {
         gestureInfo.x = e.clientX;
         let xMove = gestureInfo.x - xAtStart;
-        if (xMove < minX) {
-          xMove = minX;
-        } else if (xMove > maxX) {
-          xMove = maxX;
+        if (xMove < minConstrainedX) {
+          xMove = minConstrainedX;
+        } else if (xMove > maxConstrainedX) {
+          xMove = maxConstrainedX;
         }
         gestureInfo.xMove = xMove;
         gestureInfo.xChanged = previousGestureInfo
@@ -133,10 +166,10 @@ export const startDragGesture = (
       if (direction.y) {
         gestureInfo.y = e.clientY;
         let yMove = gestureInfo.y - yAtStart;
-        if (yMove < minY) {
-          yMove = minY;
-        } else if (yMove > maxY) {
-          yMove = maxY;
+        if (yMove < minConstrainedY) {
+          yMove = minConstrainedY;
+        } else if (yMove > maxConstrainedY) {
+          yMove = maxConstrainedY;
         }
         gestureInfo.yMove = yMove;
         gestureInfo.yChanged = previousGestureInfo
@@ -193,21 +226,69 @@ export const startDragGesture = (
         const desiredElementLeft =
           initialLeft + gestureInfo.xMove + scrollXDiff;
         const desiredElementRight = desiredElementLeft + elementWidth;
-        let scrollableLeft = scrollableRect.left;
-        let leftMax = scrollableLeft + availableWidth;
+        let scrollableAreaLeft = scrollableRect.left;
+        let rightBoundaryForKeepInView = scrollableAreaLeft + availableWidth;
         if (stickyLeftElement) {
           // const stickyRect = stickyLeftElement.getBoundingClientRect();
-          // scrollableLeft = stickyRect.right;
+          // scrollableAreaLeft = stickyRect.right;
         }
+
+        // Create debug markers for horizontal boundaries
+        const debugMarkers = [];
+        if (DRAG_DEBUG_VISUAL_MARKERS) {
+          debugMarkers.push(
+            createDebugMarker(
+              "scrollableAreaLeft",
+              scrollableAreaLeft,
+              0,
+              "blue",
+            ),
+          );
+          debugMarkers.push(
+            createDebugMarker(
+              "rightBoundaryForKeepInView",
+              rightBoundaryForKeepInView,
+              0,
+              "green",
+            ),
+          );
+          debugMarkers.push(
+            createDebugMarker(
+              "desiredElementLeft",
+              desiredElementLeft,
+              0,
+              "orange",
+            ),
+          );
+          debugMarkers.push(
+            createDebugMarker(
+              "desiredElementRight",
+              desiredElementRight,
+              0,
+              "purple",
+            ),
+          );
+
+          // Clean up previous markers after a short delay
+          setTimeout(() => {
+            debugMarkers.forEach((marker) => {
+              if (marker && marker.parentNode) {
+                marker.parentNode.removeChild(marker);
+              }
+            });
+          }, 100);
+        }
+
         horizontal: {
           if (!direction.x) {
             break horizontal;
           }
           if (isGoingRight) {
-            if (desiredElementRight <= leftMax) {
+            if (desiredElementRight <= rightBoundaryForKeepInView) {
               break horizontal;
             }
-            const scrollLeftRequired = desiredElementRight - leftMax;
+            const scrollLeftRequired =
+              desiredElementRight - rightBoundaryForKeepInView;
             scrollableParent.scrollLeft = scrollLeftRequired;
             gestureInfo.autoScrolledX = scrollLeftRequired;
             break horizontal;
@@ -216,18 +297,18 @@ export const startDragGesture = (
           if (!isGoingLeft) {
             break horizontal;
           }
-          const leftMin = scrollableLeft + scrollLeft;
-          if (desiredElementLeft >= leftMin) {
+          const leftBoundaryForKeepInView = scrollableAreaLeft + scrollLeft;
+          if (desiredElementLeft >= leftBoundaryForKeepInView) {
             break horizontal;
           }
           const scrollLeftRequired =
-            scrollLeft + (desiredElementLeft - leftMin);
+            scrollLeft + (desiredElementLeft - leftBoundaryForKeepInView);
           scrollableParent.scrollLeft = scrollLeftRequired;
           gestureInfo.autoScrolledX = scrollLeftRequired;
         }
 
-        // let scrollableTop = scrollableRect.top;
-        // let scrollableBottom = scrollableRect.bottom;
+        const scrollableAreaTop = scrollableRect.top;
+        const scrollableAreaBottom = scrollableRect.bottom;
         const desiredElementTop = elementRect.top + gestureInfo.yMove;
         const desiredElementBottom = desiredElementTop + elementHeight;
 
@@ -236,29 +317,30 @@ export const startDragGesture = (
             break vertical;
           }
 
-          let scrollAmount = 0;
+          let scrollAmountForKeepInView = 0;
           // Check if desired element position would be beyond scrollable area's top boundary
-          if (desiredElementTop < scrollableRect.top) {
-            // Need to scroll up to make room
-            scrollAmount = scrollableRect.top - desiredElementTop;
+          if (desiredElementTop < scrollableAreaTop) {
+            // Need to scroll up to keep element in view
+            scrollAmountForKeepInView = scrollableAreaTop - desiredElementTop;
             const oldScrollTop = scrollableParent.scrollTop;
             scrollableParent.scrollTop = Math.max(
               0,
-              scrollableParent.scrollTop - scrollAmount,
+              scrollableParent.scrollTop - scrollAmountForKeepInView,
             );
             const actualScrolled = oldScrollTop - scrollableParent.scrollTop;
             gestureInfo.autoScrolledY -= actualScrolled;
           }
           // Check if desired element position would be beyond scrollable area's bottom boundary
-          else if (desiredElementBottom > scrollableRect.bottom) {
-            // Need to scroll down to make room
-            scrollAmount = desiredElementBottom - scrollableRect.bottom;
+          else if (desiredElementBottom > scrollableAreaBottom) {
+            // Need to scroll down to keep element in view
+            scrollAmountForKeepInView =
+              desiredElementBottom - scrollableAreaBottom;
             const maxScrollTop =
               scrollableParent.scrollHeight - scrollableParent.clientHeight;
             const oldScrollTop = scrollableParent.scrollTop;
             scrollableParent.scrollTop = Math.min(
               maxScrollTop,
-              scrollableParent.scrollTop + scrollAmount,
+              scrollableParent.scrollTop + scrollAmountForKeepInView,
             );
             const actualScrolled = scrollableParent.scrollTop - oldScrollTop;
             gestureInfo.autoScrolledY += actualScrolled;
