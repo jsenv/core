@@ -1,5 +1,21 @@
 import { getScrollableParent } from "../scroll.js";
 
+import.meta.css = /* css */ `
+  .navi_constraint_feedback_line {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    border-top: 2px dotted #ff6b35;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+    transform-origin: left center;
+  }
+
+  .navi_constraint_feedback_line [data-visible] {
+    opacity: 1;
+  }
+`;
+
 export let DRAG_DEBUG_VISUAL_MARKERS = true;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = true;
@@ -37,6 +53,56 @@ const createDebugMarker = (name, x, y, color = "red") => {
 
   document.body.appendChild(marker);
   return marker;
+};
+
+// Visual feedback line connecting mouse cursor to dragged element when constraints prevent following
+// This provides intuitive feedback during drag operations when the element cannot reach the mouse
+// position due to obstacles, boundaries, or other constraints. The line becomes visible when there's
+// a significant distance between the mouse and the element, helping users understand why the
+// element isn't moving as expected.
+const createConstraintFeedbackLine = () => {
+  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
+  const line = document.createElement("div");
+  line.className = "navi_constraint_feedback_line";
+  line.title =
+    "Constraint feedback - shows distance between mouse and constrained element";
+  document.body.appendChild(line);
+  return line;
+};
+
+const updateConstraintFeedbackLine = (
+  line,
+  mouseX,
+  mouseY,
+  elementX,
+  elementY,
+) => {
+  if (!line) return;
+
+  // Calculate distance between mouse and element center
+  const deltaX = mouseX - elementX;
+  const deltaY = mouseY - elementY;
+  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+  // Show line only when distance is significant (> 20px threshold)
+  const threshold = 20;
+  if (distance <= threshold) {
+    line.removeAttribute("data-visible");
+    return;
+  }
+
+  // Calculate angle and position
+  const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+  line.setAttribute("data-visible", "");
+  // Position line at element center
+  line.style.left = `${elementX}px`;
+  line.style.top = `${elementY}px`;
+  line.style.width = `${distance}px`;
+  line.style.transform = `rotate(${angle}deg)`;
+  // Fade in based on distance (more visible as distance increases)
+  const maxOpacity = 0.8;
+  const opacityFactor = Math.min((distance - threshold) / 100, 1);
+  line.style.opacity = `${maxOpacity * opacityFactor}`;
 };
 
 const getPositionedParent = (element) => {
@@ -207,6 +273,14 @@ export const createDragGesture = ({
       });
     }
 
+    // Set up constraint feedback line
+    const constraintFeedbackLine = createConstraintFeedbackLine();
+    if (constraintFeedbackLine) {
+      addTeardown(() => {
+        document.body.removeChild(constraintFeedbackLine);
+      });
+    }
+
     // Set up constraint bounds
     let finalConstraint =
       constraint ||
@@ -337,7 +411,7 @@ export const createDragGesture = ({
     const drag = (
       currentXRelative,
       currentYRelative,
-      { isRelease = false } = {},
+      { isRelease = false, mouseX = null, mouseY = null } = {},
     ) => {
       const isGoingLeft = currentXRelative < gestureInfo.x;
       const isGoingRight = currentXRelative > gestureInfo.x;
@@ -569,6 +643,31 @@ export const createDragGesture = ({
         });
       }
 
+      // Update constraint feedback line to show visual connection between mouse and element
+      // when constraints prevent the element from following the mouse cursor
+      if (
+        !isRelease &&
+        constraintFeedbackLine &&
+        mouseX !== null &&
+        mouseY !== null
+      ) {
+        // Calculate element center position in viewport coordinates
+        const currentElementRect =
+          elementVisuallyMoving.getBoundingClientRect();
+        const elementCenterX =
+          currentElementRect.left + currentElementRect.width / 2;
+        const elementCenterY =
+          currentElementRect.top + currentElementRect.height / 2;
+
+        updateConstraintFeedbackLine(
+          constraintFeedbackLine,
+          mouseX,
+          mouseY,
+          elementCenterX,
+          elementCenterY,
+        );
+      }
+
       if (!started) {
         started = true;
         onDragStart?.(gestureInfo);
@@ -581,6 +680,11 @@ export const createDragGesture = ({
     const release = (currentXRelative, currentYRelative) => {
       gestureInfo.isMouseUp = true;
       drag(currentXRelative, currentYRelative, { isRelease: true });
+
+      // Hide constraint feedback line
+      if (constraintFeedbackLine) {
+        constraintFeedbackLine.style.opacity = "0";
+      }
 
       // Clean up any remaining debug markers when drag ends
       if (DRAG_DEBUG_VISUAL_MARKERS && gestureInfo.currentDebugMarkers) {
@@ -659,7 +763,10 @@ export const createDragGesture = ({
         positionedParent.getBoundingClientRect();
       const currentXRelative = e.clientX - currentPositionedParentRect.left;
       const currentYRelative = e.clientY - currentPositionedParentRect.top;
-      dragGesture.drag(currentXRelative, currentYRelative);
+      dragGesture.drag(currentXRelative, currentYRelative, {
+        mouseX: e.clientX,
+        mouseY: e.clientY,
+      });
     };
 
     const handleMouseUp = (e) => {
