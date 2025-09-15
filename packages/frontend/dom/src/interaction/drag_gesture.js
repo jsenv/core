@@ -226,31 +226,21 @@ export const startDragGesture = (
         const desiredElementLeft =
           initialLeft + gestureInfo.xMove + scrollXDiff;
         const desiredElementRight = desiredElementLeft + elementWidth;
-        let scrollableAreaLeft = scrollableRect.left;
-        let rightBoundaryForKeepInView = scrollableAreaLeft + availableWidth;
+        let visibleAreaLeft = scrollableRect.left;
+        let visibleAreaRight = visibleAreaLeft + availableWidth;
         if (stickyLeftElement) {
           // const stickyRect = stickyLeftElement.getBoundingClientRect();
-          // scrollableAreaLeft = stickyRect.right;
+          // visibleAreaLeft = stickyRect.right;
         }
 
         // Create debug markers for horizontal boundaries
         const debugMarkers = [];
         if (DRAG_DEBUG_VISUAL_MARKERS) {
           debugMarkers.push(
-            createDebugMarker(
-              "scrollableAreaLeft",
-              scrollableAreaLeft,
-              0,
-              "blue",
-            ),
+            createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
           );
           debugMarkers.push(
-            createDebugMarker(
-              "rightBoundaryForKeepInView",
-              rightBoundaryForKeepInView,
-              0,
-              "green",
-            ),
+            createDebugMarker("visibleAreaRight", visibleAreaRight, 0, "green"),
           );
           debugMarkers.push(
             createDebugMarker(
@@ -284,11 +274,10 @@ export const startDragGesture = (
             break horizontal;
           }
           if (isGoingRight) {
-            if (desiredElementRight <= rightBoundaryForKeepInView) {
+            if (desiredElementRight <= visibleAreaRight) {
               break horizontal;
             }
-            const scrollLeftRequired =
-              desiredElementRight - rightBoundaryForKeepInView;
+            const scrollLeftRequired = desiredElementRight - visibleAreaRight;
             scrollableParent.scrollLeft = scrollLeftRequired;
             gestureInfo.autoScrolledX = scrollLeftRequired;
             break horizontal;
@@ -297,18 +286,18 @@ export const startDragGesture = (
           if (!isGoingLeft) {
             break horizontal;
           }
-          const leftBoundaryForKeepInView = scrollableAreaLeft + scrollLeft;
-          if (desiredElementLeft >= leftBoundaryForKeepInView) {
+          const visibleAreaLeftWithScrollOffset = visibleAreaLeft + scrollLeft;
+          if (desiredElementLeft >= visibleAreaLeftWithScrollOffset) {
             break horizontal;
           }
           const scrollLeftRequired =
-            scrollLeft + (desiredElementLeft - leftBoundaryForKeepInView);
+            scrollLeft + (desiredElementLeft - visibleAreaLeftWithScrollOffset);
           scrollableParent.scrollLeft = scrollLeftRequired;
           gestureInfo.autoScrolledX = scrollLeftRequired;
         }
 
-        const scrollableAreaTop = scrollableRect.top;
-        const scrollableAreaBottom = scrollableRect.bottom;
+        const visibleAreaTop = scrollableRect.top;
+        const visibleAreaBottom = scrollableRect.bottom;
         const desiredElementTop = elementRect.top + gestureInfo.yMove;
         const desiredElementBottom = desiredElementTop + elementHeight;
 
@@ -318,10 +307,10 @@ export const startDragGesture = (
           }
 
           let scrollAmountForKeepInView = 0;
-          // Check if desired element position would be beyond scrollable area's top boundary
-          if (desiredElementTop < scrollableAreaTop) {
+          // Check if desired element position would be beyond visible area's top boundary
+          if (desiredElementTop < visibleAreaTop) {
             // Need to scroll up to keep element in view
-            scrollAmountForKeepInView = scrollableAreaTop - desiredElementTop;
+            scrollAmountForKeepInView = visibleAreaTop - desiredElementTop;
             const oldScrollTop = scrollableParent.scrollTop;
             scrollableParent.scrollTop = Math.max(
               0,
@@ -330,11 +319,11 @@ export const startDragGesture = (
             const actualScrolled = oldScrollTop - scrollableParent.scrollTop;
             gestureInfo.autoScrolledY -= actualScrolled;
           }
-          // Check if desired element position would be beyond scrollable area's bottom boundary
-          else if (desiredElementBottom > scrollableAreaBottom) {
+          // Check if desired element position would be beyond visible area's bottom boundary
+          else if (desiredElementBottom > visibleAreaBottom) {
             // Need to scroll down to keep element in view
             scrollAmountForKeepInView =
-              desiredElementBottom - scrollableAreaBottom;
+              desiredElementBottom - visibleAreaBottom;
             const maxScrollTop =
               scrollableParent.scrollHeight - scrollableParent.clientHeight;
             const oldScrollTop = scrollableParent.scrollTop;
