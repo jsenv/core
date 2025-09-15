@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Drag Gesture Demo</title>
+    <title>Drag Gesture Demo - Multiple Cases</title>
     <style>
       body {
         margin: 0;
@@ -12,17 +12,51 @@
         background: #f0f0f0;
       }
 
+      .demo-section {
+        margin: 40px auto;
+        max-width: 800px;
+      }
+
+      .demo-title {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        border-bottom: 2px solid #333;
+        margin: 0;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+      }
+
       .container {
         width: 400px;
         height: 200px;
         border: 2px solid #333;
+        border-top: none;
         background: white;
         overflow: auto;
         position: relative;
-        margin: 20px auto;
+        margin: 0 auto;
+        border-radius: 0 0 8px 8px;
       }
 
-      .scrollable-content {
+      /* Horizontal only scroll */
+      .horizontal-content {
+        width: 800px; /* Make content wider than container for horizontal scroll */
+        height: 200px; /* Same height as container - no vertical scroll */
+        background: linear-gradient(
+          90deg,
+          transparent 99px,
+          #ddd 100px,
+          #ddd 101px,
+          transparent 102px
+        );
+        background-size: 100px 100px;
+        position: relative;
+      }
+
+      /* Both horizontal and vertical scroll */
+      .both-content {
         width: 800px; /* Make content wider than container for horizontal scroll */
         height: 400px; /* Make content taller than container for vertical scroll */
         background:
@@ -123,25 +157,23 @@
   </head>
   <body>
     <div class="info">
-      <h1>Drag Gesture Demo</h1>
+      <h1>Drag Gesture Demo - Multiple Cases</h1>
       <p>
-        This demo showcases the drag gesture functionality with auto-scroll:
+        This demo showcases different drag gesture scenarios with auto-scroll:
       </p>
       <ul>
         <li>
-          <strong>Drag the purple rectangle</strong> within the scrollable
-          container
+          <strong>Drag the purple rectangles</strong> within their containers
         </li>
         <li>
           <strong>Auto-scroll triggers</strong> when you drag near the edges
         </li>
         <li>
-          <strong>Visual debug markers</strong> show boundaries (toggle with
-          button below)
+          <strong>Visual debug markers</strong> show boundaries (toggle below)
         </li>
         <li>
-          <strong>Smooth scrolling</strong> maintains 1:1 mouse movement
-          correlation
+          <strong>Compare behavior</strong> between horizontal-only and
+          bi-directional scrolling
         </li>
       </ul>
     </div>
@@ -153,9 +185,25 @@
       </label>
     </div>
 
-    <div class="container" id="scrollContainer">
-      <div class="scrollable-content">
-        <div class="draggable-rectangle" id="rectangle">DRAG ME</div>
+    <!-- Case 1: Horizontal Scroll Only -->
+    <div class="demo-section">
+      <h2 class="demo-title">Case 1: Horizontal Scroll Only</h2>
+      <div class="container" id="horizontalContainer">
+        <div class="horizontal-content">
+          <div class="draggable-rectangle" id="horizontalRectangle">
+            DRAG ME →
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case 2: Both Horizontal and Vertical Scroll -->
+    <div class="demo-section">
+      <h2 class="demo-title">Case 2: Both Horizontal & Vertical Scroll</h2>
+      <div class="container" id="bothContainer">
+        <div class="both-content">
+          <div class="draggable-rectangle" id="bothRectangle">DRAG ME ↗</div>
+        </div>
       </div>
     </div>
 
@@ -176,7 +224,10 @@
       window.enableDebugMarkers = enableDebugMarkers;
       window.disableDebugMarkers = disableDebugMarkers;
 
-      const rectangle = document.getElementById("rectangle");
+      const horizontalRectangle = document.getElementById(
+        "horizontalRectangle",
+      );
+      const bothRectangle = document.getElementById("bothRectangle");
       const debugCheckbox = document.getElementById("debugMarkersCheckbox");
 
       // Handle debug markers toggle
@@ -189,94 +240,128 @@
         }
       });
 
-      // Set up drag gesture on mousedown
-      rectangle.addEventListener("mousedown", (event) => {
-        startDragGesture(event, {
-          setup: () => ({
-            element: rectangle,
-            elementToMove: rectangle,
-            elementVisuallyMoving: rectangle,
-          }),
-          onGrab: (gestureInfo) => {
-            console.log("Grab started", gestureInfo);
-          },
-          onDragStart: () => {
-            // console.log("Drag started", gestureInfo);
-          },
-          onDrag: () => {
-            //  console.log("Dragging", phase, gestureInfo);
-          },
-          onRelease: (gestureInfo) => {
-            console.log("Drag released", gestureInfo);
-          },
+      // Function to set up drag gesture for any rectangle
+      function setupDragGesture(rectangle, caseLabel) {
+        rectangle.addEventListener("mousedown", (event) => {
+          startDragGesture(event, {
+            setup: () => ({
+              element: rectangle,
+              elementToMove: rectangle,
+              elementVisuallyMoving: rectangle,
+            }),
+            onGrab: (gestureInfo) => {
+              console.log(`${caseLabel} - Grab started`, gestureInfo);
+            },
+            onDragStart: (gestureInfo) => {
+              console.log(`${caseLabel} - Drag started`, gestureInfo);
+            },
+            onDrag: () => {
+              // console.log(`${caseLabel} - Dragging`, gestureInfo, phase);
+            },
+            onRelease: (gestureInfo) => {
+              console.log(`${caseLabel} - Drag released`, gestureInfo);
+            },
+          });
         });
-      });
+      }
+
+      // Set up drag gestures for all rectangles
+      setupDragGesture(horizontalRectangle, "Horizontal Only");
+      setupDragGesture(bothRectangle, "Both Directions");
     </script>
 
     <script>
-      // Add some visual feedback
+      // Add visual feedback for multiple containers
       document.addEventListener("DOMContentLoaded", () => {
-        const container = document.getElementById("scrollContainer");
-        const rectangle = document.getElementById("rectangle");
+        const horizontalContainer = document.getElementById(
+          "horizontalContainer",
+        );
+        const bothContainer = document.getElementById("bothContainer");
+        const horizontalRectangle = document.getElementById(
+          "horizontalRectangle",
+        );
+        const bothRectangle = document.getElementById("bothRectangle");
 
-        // Add scroll position indicator
-        const scrollInfo = document.createElement("div");
-        scrollInfo.style.position = "fixed";
-        scrollInfo.style.top = "10px";
-        scrollInfo.style.right = "10px";
-        scrollInfo.style.background = "rgba(0,0,0,0.8)";
-        scrollInfo.style.color = "white";
-        scrollInfo.style.padding = "8px 12px";
-        scrollInfo.style.borderRadius = "4px";
-        scrollInfo.style.fontSize = "12px";
-        scrollInfo.style.fontFamily = "monospace";
-        scrollInfo.style.zIndex = "10000";
-        document.body.appendChild(scrollInfo);
+        // Create info display for horizontal case
+        const horizontalInfo = createInfoDisplay(
+          "Horizontal Case",
+          "10px",
+          "10px",
+        );
+        const bothInfo = createInfoDisplay("Both Directions", "10px", "200px");
 
-        function updateScrollInfo() {
-          scrollInfo.textContent = `Scroll: ${Math.round(container.scrollLeft)}, ${Math.round(container.scrollTop)}`;
+        function createInfoDisplay(label, top, right) {
+          const info = document.createElement("div");
+          info.style.position = "fixed";
+          info.style.top = top;
+          info.style.right = right;
+          info.style.background = "rgba(0,0,0,0.8)";
+          info.style.color = "white";
+          info.style.padding = "8px 12px";
+          info.style.borderRadius = "4px";
+          info.style.fontSize = "11px";
+          info.style.fontFamily = "monospace";
+          info.style.zIndex = "10000";
+          info.style.lineHeight = "1.4";
+          info.style.minWidth = "160px";
+          document.body.appendChild(info);
+          return info;
         }
 
-        container.addEventListener("scroll", updateScrollInfo);
-        updateScrollInfo();
-
-        // Add position indicator for rectangle
-        const posInfo = document.createElement("div");
-        posInfo.style.position = "fixed";
-        posInfo.style.bottom = "10px";
-        posInfo.style.right = "10px";
-        posInfo.style.background = "rgba(0,0,0,0.8)";
-        posInfo.style.color = "white";
-        posInfo.style.padding = "8px 12px";
-        posInfo.style.borderRadius = "4px";
-        posInfo.style.fontSize = "12px";
-        posInfo.style.fontFamily = "monospace";
-        posInfo.style.zIndex = "10000";
-        document.body.appendChild(posInfo);
-
-        function updatePosInfo() {
+        function updateInfo(container, rectangle, infoDisplay, label) {
           const rect = rectangle.getBoundingClientRect();
           const containerRect = container.getBoundingClientRect();
           const relativeX =
             rect.left - containerRect.left + container.scrollLeft;
           const relativeY = rect.top - containerRect.top + container.scrollTop;
-          posInfo.textContent = `Pos: ${Math.round(relativeX)}, ${Math.round(relativeY)}`;
+
+          infoDisplay.innerHTML = `
+            <div style="font-weight: bold; margin-bottom: 4px;">${label}</div>
+            <div>Scroll: ${Math.round(container.scrollLeft)}, ${Math.round(container.scrollTop)}</div>
+            <div>Pos: ${Math.round(relativeX)}, ${Math.round(relativeY)}</div>
+          `;
         }
 
-        // Update position info periodically while dragging
-        let posUpdateInterval;
-        rectangle.addEventListener("mousedown", () => {
-          posUpdateInterval = setInterval(updatePosInfo, 16); // ~60fps
-        });
-
-        document.addEventListener("mouseup", () => {
-          if (posUpdateInterval) {
-            clearInterval(posUpdateInterval);
-            updatePosInfo(); // Final update
+        // Set up scroll listeners and initial updates
+        function setupContainerMonitoring(
+          container,
+          rectangle,
+          infoDisplay,
+          label,
+        ) {
+          function update() {
+            updateInfo(container, rectangle, infoDisplay, label);
           }
-        });
 
-        updatePosInfo();
+          container.addEventListener("scroll", update);
+          update();
+
+          // Update position info periodically while dragging
+          let updateInterval;
+          rectangle.addEventListener("mousedown", () => {
+            updateInterval = setInterval(update, 16); // ~60fps
+          });
+
+          document.addEventListener("mouseup", () => {
+            if (updateInterval) {
+              clearInterval(updateInterval);
+              update(); // Final update
+            }
+          });
+        }
+
+        setupContainerMonitoring(
+          horizontalContainer,
+          horizontalRectangle,
+          horizontalInfo,
+          "Horizontal Only",
+        );
+        setupContainerMonitoring(
+          bothContainer,
+          bothRectangle,
+          bothInfo,
+          "Both Directions",
+        );
       });
     </script>
   </body>
