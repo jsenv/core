@@ -779,37 +779,34 @@ const applyConstraints = (
       const proposedTop = initialTop + yMove;
       const proposedBottom = proposedTop + elementHeight;
 
-      // Handle only RIGHT movement - prevent crossing obstacle boundary
-      if (gestureInfo.isGoingRight || gestureInfo.xDiff === 0) {
-        // Check if there would be Y overlap in the proposed position
-        const wouldHaveYOverlap =
-          proposedTop < constraint.bottom && proposedBottom > constraint.top;
+      // Check if there would be Y overlap in the proposed position
+      const wouldHaveYOverlap =
+        proposedTop < constraint.bottom && proposedBottom > constraint.top;
 
-        if (wouldHaveYOverlap) {
-          // Keep element completely BEFORE obstacle - right edge must not touch obstacle's left edge
+      if (wouldHaveYOverlap) {
+        // Current element position
+        const currentLeft = initialLeft + xMove;
+        const currentRight = currentLeft + elementWidth;
+
+        // Determine which side of the obstacle the element is closest to
+        const distanceToLeftSide = Math.abs(currentRight - constraint.left);
+        const distanceToRightSide = Math.abs(currentLeft - constraint.right);
+
+        // Apply the constraint for the closest side
+        if (distanceToLeftSide <= distanceToRightSide) {
+          // Element is closer to the left side of obstacle - keep it on the left
           const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
-          // Only apply constraint if we're actually trying to go beyond the boundary
-          console.log("RIGHT constraint:", {
+          console.log("RIGHT constraint (closest to left side):", {
             maxAllowed: maxAllowedXMove,
             requested: xMove,
           });
           if (maxAllowedXMove < maxXMove) {
             maxXMove = maxAllowedXMove;
           }
-        }
-      }
-
-      // Handle only LEFT movement - prevent crossing obstacle boundary
-      if (gestureInfo.isGoingLeft || gestureInfo.xDiff === 0) {
-        // Check if there would be Y overlap in the proposed position
-        const wouldHaveYOverlap =
-          proposedTop < constraint.bottom && proposedBottom > constraint.top;
-
-        if (wouldHaveYOverlap) {
-          // Keep element completely AFTER obstacle - left edge must not touch obstacle's right edge
+        } else {
+          // Element is closer to the right side of obstacle - keep it on the right
           const minAllowedXMove = constraint.right - initialLeft;
-          // Only apply constraint if we're actually trying to go beyond the boundary
-          console.log("LEFT constraint:", {
+          console.log("LEFT constraint (closest to right side):", {
             minAllowed: minAllowedXMove,
             requested: xMove,
           });
