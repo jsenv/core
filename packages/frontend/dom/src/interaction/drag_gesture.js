@@ -359,71 +359,72 @@ export const createDragGesture = ({
 
       auto_scroll: {
         const scrollableRect = scrollableParent.getBoundingClientRect();
-        const availableWidth = scrollableParent.clientWidth;
 
         // Calculate where element bounds would be in viewport coordinates
         const currentPositionedParentRect =
           positionedParent.getBoundingClientRect();
-        const desiredElementLeftRelative = initialLeft + gestureInfo.xMove;
-        const desiredElementTopRelative = initialTop + gestureInfo.yMove;
-
-        // Convert to viewport coordinates for auto-scroll calculations
-        const desiredElementLeft =
-          desiredElementLeftRelative + currentPositionedParentRect.left;
-        const desiredElementRight = desiredElementLeft + elementWidth;
-        const desiredElementTop =
-          desiredElementTopRelative + currentPositionedParentRect.top;
-        const desiredElementBottom = desiredElementTop + elementHeight;
-
-        // Visible area is from the container's left edge to the right edge of scrollable content
-        let visibleAreaLeft = scrollableRect.left;
-        let visibleAreaRight = scrollableRect.left + availableWidth;
-
-        // Create debug markers for horizontal boundaries
-        if (DRAG_DEBUG_VISUAL_MARKERS) {
-          // Schedule removal of previous markers if they exist
-          if (gestureInfo.currentDebugMarkers) {
-            const previousMarkers = gestureInfo.currentDebugMarkers;
-            setTimeout(() => {
-              previousMarkers.forEach((marker) => {
-                if (marker && marker.parentNode) {
-                  marker.parentNode.removeChild(marker);
-                }
-              });
-            }, 100);
-          }
-
-          // Create new markers (these become the current ones)
-          const newDebugMarkers = [];
-          newDebugMarkers.push(
-            createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
-          );
-          newDebugMarkers.push(
-            createDebugMarker("visibleAreaRight", visibleAreaRight, 0, "green"),
-          );
-          newDebugMarkers.push(
-            createDebugMarker(
-              "desiredElementLeft",
-              desiredElementLeft,
-              0,
-              "orange",
-            ),
-          );
-          newDebugMarkers.push(
-            createDebugMarker(
-              "desiredElementRight",
-              desiredElementRight,
-              0,
-              "purple",
-            ),
-          );
-
-          // Store as current markers for next mousemove
-          gestureInfo.currentDebugMarkers = newDebugMarkers;
-        }
 
         // Horizontal auto-scroll
         if (direction.x) {
+          const availableWidth = scrollableParent.clientWidth;
+          // Visible area is from the container's left edge to the right edge of scrollable content
+          let visibleAreaLeft = scrollableRect.left;
+          let visibleAreaRight = visibleAreaLeft + availableWidth;
+
+          const desiredElementLeftRelative = initialLeft + gestureInfo.xMove;
+          // Convert to viewport coordinates for auto-scroll calculations
+          const desiredElementLeft =
+            desiredElementLeftRelative + currentPositionedParentRect.left;
+          const desiredElementRight = desiredElementLeft + elementWidth;
+
+          // Create debug markers for horizontal boundaries
+          if (DRAG_DEBUG_VISUAL_MARKERS) {
+            // Schedule removal of previous markers if they exist
+            if (gestureInfo.currentDebugMarkers) {
+              const previousMarkers = gestureInfo.currentDebugMarkers;
+              setTimeout(() => {
+                previousMarkers.forEach((marker) => {
+                  if (marker && marker.parentNode) {
+                    marker.parentNode.removeChild(marker);
+                  }
+                });
+              }, 100);
+            }
+
+            // Create new markers (these become the current ones)
+            const newDebugMarkers = [];
+            newDebugMarkers.push(
+              createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
+            );
+            newDebugMarkers.push(
+              createDebugMarker(
+                "visibleAreaRight",
+                visibleAreaRight,
+                0,
+                "green",
+              ),
+            );
+            newDebugMarkers.push(
+              createDebugMarker(
+                "desiredElementLeft",
+                desiredElementLeft,
+                0,
+                "orange",
+              ),
+            );
+            newDebugMarkers.push(
+              createDebugMarker(
+                "desiredElementRight",
+                desiredElementRight,
+                0,
+                "purple",
+              ),
+            );
+
+            // Store as current markers for next mousemove
+            gestureInfo.currentDebugMarkers = newDebugMarkers;
+          }
+
           const currentScrollLeft = scrollableParent.scrollLeft;
           if (isGoingRight) {
             if (desiredElementRight > visibleAreaRight) {
@@ -448,9 +449,17 @@ export const createDragGesture = ({
 
         // Vertical auto-scroll
         if (direction.y) {
+          const availableHeight = scrollableParent.clientHeight;
+          let visibleAreaTop = scrollableRect.top;
+          let visibleAreaBottom = visibleAreaTop + availableHeight;
+
           const currentScrollTop = scrollableParent.scrollTop;
-          const visibleAreaTop = scrollableRect.top;
-          const visibleAreaBottom = scrollableRect.bottom;
+
+          const desiredElementTopRelative = initialTop + gestureInfo.yMove;
+
+          const desiredElementTop =
+            desiredElementTopRelative + currentPositionedParentRect.top;
+          const desiredElementBottom = desiredElementTop + elementHeight;
 
           if (isGoingUp) {
             if (desiredElementTop < visibleAreaTop) {
