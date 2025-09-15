@@ -800,48 +800,50 @@ const applyConstraints = (
       const isAbove = currentBottom <= constraint.top;
       const isBelow = currentTop >= constraint.bottom;
 
-      // Check for potential Y overlap with proposed position
-      const proposedTop = initialTop + yMove;
-      const proposedBottom = proposedTop + elementHeight;
-      const wouldHaveYOverlap =
-        proposedTop < constraint.bottom && proposedBottom > constraint.top;
+      // Apply constraints based on element position - only one direction per obstacle
+      if (isAbove || isBelow) {
+        // Element is above or below - only check Y constraints
+        const proposedLeft = initialLeft + xMove;
+        const proposedRight = proposedLeft + elementWidth;
+        const wouldHaveXOverlap =
+          proposedLeft < constraint.right && proposedRight > constraint.left;
 
-      // Apply X constraints if Y overlap would occur
-      if (wouldHaveYOverlap) {
-        if (isOnTheLeft && gestureInfo.isGoingRight) {
-          // Element on left, trying to go right - stop at obstacle left
-          const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
-          if (xMove > maxAllowedXMove) {
-            xMove = maxAllowedXMove;
-          }
-        } else if (isOnTheRight && gestureInfo.isGoingLeft) {
-          // Element on right, trying to go left - stop at obstacle right
-          const minAllowedXMove = constraint.right - initialLeft;
-          if (xMove < minAllowedXMove) {
-            xMove = minAllowedXMove;
+        if (wouldHaveXOverlap) {
+          if (isAbove) {
+            // Element above - prevent it from going down into obstacle
+            const maxAllowedYMove = constraint.top - elementHeight - initialTop;
+            if (yMove > maxAllowedYMove) {
+              yMove = maxAllowedYMove;
+            }
+          } else if (isBelow) {
+            // Element below - prevent it from going up into obstacle
+            const minAllowedYMove = constraint.bottom - initialTop;
+            if (yMove < minAllowedYMove) {
+              yMove = minAllowedYMove;
+            }
           }
         }
-      }
+      } else if (isOnTheLeft || isOnTheRight) {
+        // Element is on left or right - only check X constraints
+        const proposedTop = initialTop + yMove;
+        const proposedBottom = proposedTop + elementHeight;
+        const wouldHaveYOverlap =
+          proposedTop < constraint.bottom && proposedBottom > constraint.top;
 
-      // Apply Y constraints if X overlap would occur (using updated xMove)
-      const finalProposedLeft = initialLeft + xMove;
-      const finalProposedRight = finalProposedLeft + elementWidth;
-      const finalWouldHaveXOverlap =
-        finalProposedLeft < constraint.right &&
-        finalProposedRight > constraint.left;
-
-      if (finalWouldHaveXOverlap) {
-        if (isAbove && gestureInfo.isGoingDown) {
-          // Element above, trying to go down - stop at obstacle top
-          const maxAllowedYMove = constraint.top - elementHeight - initialTop;
-          if (yMove > maxAllowedYMove) {
-            yMove = maxAllowedYMove;
-          }
-        } else if (isBelow && gestureInfo.isGoingUp) {
-          // Element below, trying to go up - stop at obstacle bottom
-          const minAllowedYMove = constraint.bottom - initialTop;
-          if (yMove < minAllowedYMove) {
-            yMove = minAllowedYMove;
+        if (wouldHaveYOverlap) {
+          if (isOnTheLeft) {
+            // Element on left - prevent it from going right into obstacle
+            const maxAllowedXMove =
+              constraint.left - elementWidth - initialLeft;
+            if (xMove > maxAllowedXMove) {
+              xMove = maxAllowedXMove;
+            }
+          } else if (isOnTheRight) {
+            // Element on right - prevent it from going left into obstacle
+            const minAllowedXMove = constraint.right - initialLeft;
+            if (xMove < minAllowedXMove) {
+              xMove = minAllowedXMove;
+            }
           }
         }
       }
