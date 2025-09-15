@@ -787,18 +787,34 @@ const applyConstraints = (
 
         if (wouldHaveYOverlap) {
           // Keep element completely BEFORE obstacle - right edge must not touch obstacle's left edge
-          const gap = 0; // 1px gap to prevent touching
-          const maxAllowedXMove =
-            constraint.left - elementWidth - initialLeft - gap;
-
+          const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
           // Only apply constraint if we're actually trying to go beyond the boundary
           console.log("RIGHT constraint:", {
             maxAllowed: maxAllowedXMove,
             requested: xMove,
-            gap,
           });
           if (maxAllowedXMove < maxXMove) {
             maxXMove = maxAllowedXMove;
+          }
+        }
+      }
+
+      // Handle only LEFT movement - prevent crossing obstacle boundary
+      if (gestureInfo.isGoingLeft || gestureInfo.xDiff === 0) {
+        // Check if there would be Y overlap in the proposed position
+        const wouldHaveYOverlap =
+          proposedTop < constraint.bottom && proposedBottom > constraint.top;
+
+        if (wouldHaveYOverlap) {
+          // Keep element completely AFTER obstacle - left edge must not touch obstacle's right edge
+          const minAllowedXMove = constraint.right - initialLeft;
+          // Only apply constraint if we're actually trying to go beyond the boundary
+          console.log("LEFT constraint:", {
+            minAllowed: minAllowedXMove,
+            requested: xMove,
+          });
+          if (minAllowedXMove > minXMove) {
+            minXMove = minAllowedXMove;
           }
         }
       }
