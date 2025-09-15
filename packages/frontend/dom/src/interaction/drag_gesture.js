@@ -436,8 +436,23 @@ export const createDragGesture = ({
               });
 
               scrollableParent.scrollLeft = newScrollLeft;
-              actualScrollLeft = newScrollLeft; // Use the value we just set, not DOM read
-              gestureInfo.autoScrolledX = newScrollLeft;
+              actualScrollLeft = scrollableParent.scrollLeft; // Use the actual value after browser clamping
+              gestureInfo.autoScrolledX = actualScrollLeft;
+
+              // If scroll was clamped, we need to adjust the element position
+              if (actualScrollLeft !== newScrollLeft) {
+                const scrollDifference = newScrollLeft - actualScrollLeft;
+                // Reduce the xMove by the amount we couldn't scroll
+                gestureInfo.xMove -= scrollDifference;
+                gestureInfo.x = gestureInfo.xAtStart + gestureInfo.xMove;
+                console.log("Scroll clamped, adjusting element position:", {
+                  intendedScroll: newScrollLeft,
+                  actualScroll: actualScrollLeft,
+                  scrollDifference,
+                  newXMove: gestureInfo.xMove,
+                  newX: gestureInfo.x,
+                });
+              }
             }
           } else if (isGoingLeft) {
             const visibleAreaLeftWithScrollOffset =
@@ -447,8 +462,8 @@ export const createDragGesture = ({
                 currentScrollLeft +
                 (desiredElementLeft - visibleAreaLeftWithScrollOffset);
               scrollableParent.scrollLeft = scrollLeftRequired;
-              actualScrollLeft = scrollLeftRequired; // Use the value we just set, not DOM read
-              gestureInfo.autoScrolledX = scrollLeftRequired;
+              actualScrollLeft = scrollableParent.scrollLeft; // Use the actual value after browser clamping
+              gestureInfo.autoScrolledX = actualScrollLeft;
             }
           }
         }
@@ -469,8 +484,8 @@ export const createDragGesture = ({
               scrollableParent.scrollTop - scrollAmountForKeepInView,
             );
             scrollableParent.scrollTop = newScrollTop;
-            actualScrollTop = newScrollTop; // Use the value we just set, not DOM read
-            const actualScrolled = oldScrollTop - newScrollTop;
+            actualScrollTop = scrollableParent.scrollTop; // Use the actual value after browser clamping
+            const actualScrolled = oldScrollTop - actualScrollTop;
             gestureInfo.autoScrolledY -= actualScrolled;
           }
           // Check if desired element position would be beyond visible area's bottom boundary
@@ -486,8 +501,8 @@ export const createDragGesture = ({
               scrollableParent.scrollTop + scrollAmountForKeepInView,
             );
             scrollableParent.scrollTop = newScrollTop;
-            actualScrollTop = newScrollTop; // Use the value we just set, not DOM read
-            const actualScrolled = newScrollTop - oldScrollTop;
+            actualScrollTop = scrollableParent.scrollTop; // Use the actual value after browser clamping
+            const actualScrolled = actualScrollTop - oldScrollTop;
             gestureInfo.autoScrolledY += actualScrolled;
           }
         }
