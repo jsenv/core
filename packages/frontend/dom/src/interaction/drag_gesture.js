@@ -55,22 +55,17 @@ const getPositionedParent = (element) => {
   return document.body;
 };
 
-const getDefaultConstraint = (element, positionedParent) => {
-  const parentRect = positionedParent.getBoundingClientRect();
-  const elementRect = element.getBoundingClientRect();
-
-  // Calculate relative position constraints within the positioned parent
+const getDefaultConstraint = (scrollableParent) => {
+  const parentRect = scrollableParent.getBoundingClientRect();
+  const scrollWidth = scrollableParent.scrollWidth;
+  const scrollHeight = scrollableParent.scrollHeight;
+  // const scrollbarWidth = parentRect.width - positionedParent.clientWidth;
+  // const scrollbarHeight = parentRect.height - positionedParent.clientHeight;
   return {
-    left: -elementRect.left + parentRect.left,
-    top: -elementRect.top + parentRect.top,
-    right:
-      parentRect.width -
-      (elementRect.left - parentRect.left) -
-      elementRect.width,
-    bottom:
-      parentRect.height -
-      (elementRect.top - parentRect.top) -
-      elementRect.height,
+    left: parentRect.left,
+    top: parentRect.top,
+    right: parentRect.left + scrollWidth,
+    bottom: parentRect.top + scrollHeight,
   };
 };
 
@@ -174,8 +169,8 @@ export const startDragGesture = (
   let started = !threshold;
 
   // Set up constraint bounds
-  const finalConstraint =
-    constraint || getDefaultConstraint(element, positionedParent);
+  const finalConstraint = constraint || getDefaultConstraint(scrollableParent);
+  console.log(finalConstraint);
   const constraintLeft = finalConstraint.left ?? -Infinity;
   const constraintTop = finalConstraint.top ?? -Infinity;
   const constraintRight = finalConstraint.right ?? Infinity;
