@@ -773,32 +773,24 @@ const applyConstraints = (
     } else if (constraint.type === "obstacle") {
       // For obstacles, prevent element from entering obstacle space
 
-      // Current element position (where it is now)
-      const currentRight = initialLeft + gestureInfo.xMove + elementWidth;
-
       // Proposed element position (where it would move to)
       const proposedTop = initialTop + yMove;
       const proposedBottom = proposedTop + elementHeight;
 
-      // Handle only RIGHT movement for now with simplified constraint logic
+      // Handle only RIGHT movement - prevent crossing obstacle boundary
       if (gestureInfo.isGoingRight) {
-        // Check if element is currently left of obstacle
-        const elementIsLeftOfObstacle = currentRight <= constraint.left;
         // Check if there would be Y overlap in the proposed position
         const wouldHaveYOverlap =
           proposedTop < constraint.bottom && proposedBottom > constraint.top;
 
-        console.log("RIGHT:", {
-          elementLeft: elementIsLeftOfObstacle,
-          yOverlap: wouldHaveYOverlap,
-          constrain: elementIsLeftOfObstacle && wouldHaveYOverlap,
-        });
-
-        // Only constrain if element is approaching from the left AND would have Y overlap
-        if (elementIsLeftOfObstacle && wouldHaveYOverlap) {
-          const stopXMove = constraint.left - elementWidth - initialLeft;
-          console.log("STOP at:", stopXMove, "current:", xMove);
-          maxXMove = Math.min(maxXMove, stopXMove);
+        if (wouldHaveYOverlap) {
+          // Never allow element's right edge to go past obstacle's left edge
+          const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
+          console.log("RIGHT constraint:", {
+            maxAllowed: maxAllowedXMove,
+            requested: xMove,
+          });
+          maxXMove = Math.min(maxXMove, maxAllowedXMove);
         }
       }
     }
