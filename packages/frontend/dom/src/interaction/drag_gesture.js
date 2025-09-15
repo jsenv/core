@@ -236,7 +236,7 @@ export const createDragGesture = ({
       });
       currentConstraintMarkers.forEach((marker) => {
         if (marker && marker.parentNode) {
-          // marker.parentNode.removeChild(marker);
+          marker.parentNode.removeChild(marker);
         }
       });
     });
