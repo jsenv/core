@@ -393,11 +393,17 @@ export const startDragGesture = (
       }
 
       if (elementToMove) {
-        // Position element accounting for auto-scroll
-        const finalLeft = initialLeft + gestureInfo.xMove + scrollLeft;
-        const finalTop = initialTop + gestureInfo.yMove + scrollTop;
-        elementToMove.style.left = `${finalLeft}px`;
-        elementToMove.style.top = `${finalTop}px`;
+        // Calculate final viewport position accounting for auto-scroll
+        const finalViewportLeft = initialLeft + gestureInfo.xMove + scrollLeft;
+        const finalViewportTop = initialTop + gestureInfo.yMove + scrollTop;
+
+        // Convert to coordinates relative to positioned parent
+        const positionedParentRect = positionedParent.getBoundingClientRect();
+        const relativeLeft = finalViewportLeft - positionedParentRect.left;
+        const relativeTop = finalViewportTop - positionedParentRect.top;
+
+        elementToMove.style.left = `${relativeLeft}px`;
+        elementToMove.style.top = `${relativeTop}px`;
       }
 
       if (!started) {
