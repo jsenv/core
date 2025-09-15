@@ -13,8 +13,8 @@
       }
 
       .container {
-        width: 800px;
-        height: 400px;
+        width: 400px;
+        height: 200px;
         border: 2px solid #333;
         background: white;
         overflow: auto;
@@ -23,8 +23,8 @@
       }
 
       .scrollable-content {
-        width: 1600px; /* Make content wider than container for horizontal scroll */
-        height: 800px; /* Make content taller than container for vertical scroll */
+        width: 800px; /* Make content wider than container for horizontal scroll */
+        height: 400px; /* Make content taller than container for vertical scroll */
         background:
           linear-gradient(
             90deg,
@@ -50,8 +50,8 @@
         border: 2px solid #333;
         border-radius: 8px;
         position: absolute;
-        top: 100px;
-        left: 100px;
+        top: 50px;
+        left: 50px;
         cursor: grab;
         display: flex;
         align-items: center;
@@ -200,12 +200,11 @@
           onGrab: (gestureInfo) => {
             console.log("Grab started", gestureInfo);
           },
-          onDragStart: (gestureInfo) => {
-            console.log("Drag started", gestureInfo);
-            rectangle.style.position = "absolute";
+          onDragStart: () => {
+            // console.log("Drag started", gestureInfo);
           },
-          onDrag: (gestureInfo, phase) => {
-            console.log("Dragging", phase, gestureInfo);
+          onDrag: () => {
+            //  console.log("Dragging", phase, gestureInfo);
           },
           onRelease: (gestureInfo) => {
             console.log("Drag released", gestureInfo);

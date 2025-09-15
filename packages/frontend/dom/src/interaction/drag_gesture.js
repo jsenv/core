@@ -115,7 +115,6 @@ export const startDragGesture = (
     elementVisuallyMoving = element,
     direction = defaultDirection,
     cursor = "grabbing",
-    stickyLeftElement = null,
   } = setupResult;
   if (!direction.x && !direction.y) {
     return;
@@ -178,7 +177,6 @@ export const startDragGesture = (
 
   // Set up constraint bounds
   const finalConstraint = constraint || getDefaultConstraint(scrollableParent);
-  console.log(finalConstraint);
   const constraintLeft = finalConstraint.left ?? -Infinity;
   const constraintTop = finalConstraint.top ?? -Infinity;
   const constraintRight = finalConstraint.right ?? Infinity;
@@ -273,12 +271,6 @@ export const startDragGesture = (
     });
   }
 
-  if (stickyLeftElement) {
-    // const stickyRect = stickyLeftElement.getBoundingClientRect();
-    // const stickyRightRelativeToElement = stickyRect.right - initialLeft;
-    // constraintLeft = Math.max(constraintLeft, stickyRightRelativeToElement);
-  }
-
   mouse_events: {
     const updateMousePosition = (e) => {
       // Get current positioned parent rect in case it moved due to scrolling
@@ -371,8 +363,6 @@ export const startDragGesture = (
         }
       }
 
-      let scrollLeft = scrollableParent.scrollLeft;
-      let scrollTop = scrollableParent.scrollTop;
       auto_scroll: {
         const scrollableRect = scrollableParent.getBoundingClientRect();
         const availableWidth = scrollableParent.clientWidth;
@@ -397,10 +387,6 @@ export const startDragGesture = (
 
         let visibleAreaLeft = scrollableRect.left;
         let visibleAreaRight = visibleAreaLeft + availableWidth;
-        if (stickyLeftElement) {
-          // const stickyRect = stickyLeftElement.getBoundingClientRect();
-          // visibleAreaLeft = stickyRect.right;
-        }
 
         // Create debug markers for horizontal boundaries
         if (DRAG_DEBUG_VISUAL_MARKERS) {
@@ -449,25 +435,30 @@ export const startDragGesture = (
           if (!direction.x) {
             break horizontal;
           }
+          const currentScrollLeft = scrollableParent.scrollLeft;
           if (isGoingRight) {
             if (desiredElementRight <= visibleAreaRight) {
               break horizontal;
             }
-            const scrollLeftRequired = desiredElementRight - visibleAreaRight;
-            scrollableParent.scrollLeft = scrollLeftRequired;
-            gestureInfo.autoScrolledX = scrollLeftRequired;
+            // Calculate how much we need to scroll to make the element right edge visible
+            const scrollAmountNeeded = desiredElementRight - visibleAreaRight;
+            const newScrollLeft = currentScrollLeft + scrollAmountNeeded;
+            scrollableParent.scrollLeft = newScrollLeft;
+            gestureInfo.autoScrolledX = newScrollLeft;
             break horizontal;
           }
           // need to scroll left?
           if (!isGoingLeft) {
             break horizontal;
           }
-          const visibleAreaLeftWithScrollOffset = visibleAreaLeft + scrollLeft;
+          const visibleAreaLeftWithScrollOffset =
+            visibleAreaLeft + currentScrollLeft;
           if (desiredElementLeft >= visibleAreaLeftWithScrollOffset) {
             break horizontal;
           }
           const scrollLeftRequired =
-            scrollLeft + (desiredElementLeft - visibleAreaLeftWithScrollOffset);
+            currentScrollLeft +
+            (desiredElementLeft - visibleAreaLeftWithScrollOffset);
           scrollableParent.scrollLeft = scrollLeftRequired;
           gestureInfo.autoScrolledX = scrollLeftRequired;
         }
@@ -513,8 +504,11 @@ export const startDragGesture = (
 
       if (elementToMove) {
         // Position element using relative coordinates (already accounting for positioned parent)
-        const finalLeft = initialLeft + gestureInfo.xMove + scrollLeft;
-        const finalTop = initialTop + gestureInfo.yMove + scrollTop;
+        // Use current scroll positions (which may have changed due to auto-scroll)
+        const currentScrollLeft = scrollableParent.scrollLeft;
+        const currentScrollTop = scrollableParent.scrollTop;
+        const finalLeft = initialLeft + gestureInfo.xMove + currentScrollLeft;
+        const finalTop = initialTop + gestureInfo.yMove + currentScrollTop;
 
         elementToMove.style.left = `${finalLeft}px`;
         elementToMove.style.top = `${finalTop}px`;
