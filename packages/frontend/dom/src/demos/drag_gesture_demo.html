@@ -525,6 +525,7 @@
           const yAtStart = rectangleRect.top - positionedParentRect.top;
 
           controls.dragGesture = createDragGesture({
+            backdrop: false,
             onGrab: (gestureInfo) => {
               updateStatus(controls, `Grabbed ${caseLabel} programmatically`);
               console.log("Programmatic grab:", gestureInfo);
