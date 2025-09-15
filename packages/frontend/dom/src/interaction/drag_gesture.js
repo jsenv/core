@@ -14,6 +14,75 @@ import.meta.css = /* css */ `
   .navi_constraint_feedback_line [data-visible] {
     opacity: 1;
   }
+
+  .navi_debug_marker {
+    position: fixed;
+    width: 2px;
+    height: 100vh;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .navi_debug_marker--vertical {
+    width: 2px;
+    height: 100vh;
+  }
+
+  .navi_debug_marker--horizontal {
+    width: 100vw;
+    height: 2px;
+  }
+
+  .navi_debug_marker--red {
+    background-color: red;
+  }
+
+  .navi_debug_marker--blue {
+    background-color: blue;
+  }
+
+  .navi_debug_marker--green {
+    background-color: green;
+  }
+
+  .navi_debug_marker--orange {
+    background-color: orange;
+  }
+
+  .navi_debug_marker--purple {
+    background-color: purple;
+  }
+
+  .navi_debug_marker_label {
+    position: absolute;
+    top: 10px;
+    left: 5px;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.8);
+    pointer-events: none;
+  }
+
+  .navi_debug_marker_label--red {
+    color: red;
+  }
+
+  .navi_debug_marker_label--blue {
+    color: blue;
+  }
+
+  .navi_debug_marker_label--green {
+    color: green;
+  }
+
+  .navi_debug_marker_label--orange {
+    color: orange;
+  }
+
+  .navi_debug_marker_label--purple {
+    color: purple;
+  }
 `;
 
 export let DRAG_DEBUG_VISUAL_MARKERS = true;
@@ -24,31 +93,25 @@ export const disableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = false;
 };
 
-const createDebugMarker = (name, x, y, color = "red") => {
+const createDebugMarker = (
+  name,
+  x,
+  y,
+  color = "red",
+  orientation = "vertical",
+) => {
   if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
 
   const marker = document.createElement("div");
-  marker.style.position = "fixed";
+  marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
   marker.style.left = `${x}px`;
   marker.style.top = `${y}px`;
-  marker.style.width = "2px";
-  marker.style.height = "100vh";
-  marker.style.backgroundColor = color;
-  marker.style.zIndex = "9999";
-  marker.style.pointerEvents = "none";
-  marker.style.opacity = "0.7";
   marker.title = name;
 
   // Add label
   const label = document.createElement("div");
+  label.className = `navi_debug_marker_label navi_debug_marker_label--${color}`;
   label.textContent = name;
-  label.style.position = "absolute";
-  label.style.top = "10px";
-  label.style.left = "5px";
-  label.style.fontSize = "12px";
-  label.style.color = color;
-  label.style.fontWeight = "bold";
-  label.style.textShadow = "1px 1px 1px rgba(255,255,255,0.8)";
   marker.appendChild(label);
 
   document.body.appendChild(marker);
@@ -123,9 +186,8 @@ const getPositionedParent = (element) => {
 
 const getDefaultConstraint = (scrollableParent) => {
   return {
-    left: 0,
-    top: 0,
-    // Dynamic constraints that compute bounds based on current element size
+    getLeft: () => 0,
+    getTop: () => 0,
     getRight: (elementWidth) => scrollableParent.scrollWidth - elementWidth,
     getBottom: (elementHeight) => scrollableParent.scrollHeight - elementHeight,
   };
@@ -153,33 +215,90 @@ const createObstacleConstraint = (scrollableParent) => {
   const obstacles = getObstacleBounds(scrollableParent);
 
   return {
-    left: 0,
-    top: 0,
-    // Dynamic constraints that compute bounds based on current element size
-    getRight: (elementWidth) => scrollableParent.scrollWidth - elementWidth,
-    getBottom: (elementHeight) => scrollableParent.scrollHeight - elementHeight,
-    // Custom constraint function that checks obstacle collisions
-    checkPosition: (left, top, elementWidth, elementHeight) => {
-      const elementRect = {
-        left,
-        top,
-        right: left + elementWidth,
-        bottom: top + elementHeight,
-      };
+    getLeft: (elementWidth, elementHeight, currentLeft, currentTop) => {
+      let maxLeft = 0;
 
-      // Check collision with each obstacle
+      // Find the rightmost obstacle edge that would constrain leftward movement
       for (const obstacle of obstacles) {
-        if (
-          elementRect.left < obstacle.right &&
-          elementRect.right > obstacle.left &&
-          elementRect.top < obstacle.bottom &&
-          elementRect.bottom > obstacle.top
-        ) {
-          // Collision detected - element cannot move to this position
-          return false;
+        const elementBottom = currentTop + elementHeight;
+        const elementTop = currentTop;
+
+        // Check if element vertically overlaps with this obstacle
+        if (elementTop < obstacle.bottom && elementBottom > obstacle.top) {
+          // Element overlaps vertically, so obstacle constrains horizontal movement
+          if (
+            obstacle.right > maxLeft &&
+            obstacle.right <= currentLeft + elementWidth
+          ) {
+            maxLeft = obstacle.right;
+          }
         }
       }
-      return true;
+
+      return maxLeft;
+    },
+
+    getTop: (elementWidth, elementHeight, currentLeft, currentTop) => {
+      let maxTop = 0;
+
+      // Find the bottommost obstacle edge that would constrain upward movement
+      for (const obstacle of obstacles) {
+        const elementRight = currentLeft + elementWidth;
+        const elementLeft = currentLeft;
+
+        // Check if element horizontally overlaps with this obstacle
+        if (elementLeft < obstacle.right && elementRight > obstacle.left) {
+          // Element overlaps horizontally, so obstacle constrains vertical movement
+          if (
+            obstacle.bottom > maxTop &&
+            obstacle.bottom <= currentTop + elementHeight
+          ) {
+            maxTop = obstacle.bottom;
+          }
+        }
+      }
+
+      return maxTop;
+    },
+
+    getRight: (elementWidth, elementHeight, currentLeft, currentTop) => {
+      let minRight = scrollableParent.scrollWidth - elementWidth;
+
+      // Find the leftmost obstacle edge that would constrain rightward movement
+      for (const obstacle of obstacles) {
+        const elementBottom = currentTop + elementHeight;
+        const elementTop = currentTop;
+
+        // Check if element vertically overlaps with this obstacle
+        if (elementTop < obstacle.bottom && elementBottom > obstacle.top) {
+          // Element overlaps vertically, so obstacle constrains horizontal movement
+          if (obstacle.left < minRight && obstacle.left >= currentLeft) {
+            minRight = obstacle.left - elementWidth;
+          }
+        }
+      }
+
+      return minRight;
+    },
+
+    getBottom: (elementWidth, elementHeight, currentLeft, currentTop) => {
+      let minBottom = scrollableParent.scrollHeight - elementHeight;
+
+      // Find the topmost obstacle edge that would constrain downward movement
+      for (const obstacle of obstacles) {
+        const elementRight = currentLeft + elementWidth;
+        const elementLeft = currentLeft;
+
+        // Check if element horizontally overlaps with this obstacle
+        if (elementLeft < obstacle.right && elementRight > obstacle.left) {
+          // Element overlaps horizontally, so obstacle constrains vertical movement
+          if (obstacle.top < minBottom && obstacle.top >= currentTop) {
+            minBottom = obstacle.top - elementHeight;
+          }
+        }
+      }
+
+      return minBottom;
     },
   };
 };
@@ -258,6 +377,10 @@ export const createDragGesture = ({
     let previousGestureInfo = null;
     let started = !threshold;
 
+    // Debug markers storage (separate from gestureInfo)
+    let currentDebugMarkers = [];
+    let currentConstraintMarkers = [];
+
     // Set up backdrop
     if (backdrop) {
       const backdropElement = document.createElement("div");
@@ -289,9 +412,13 @@ export const createDragGesture = ({
       finalConstraint = createObstacleConstraint(scrollableParent);
     }
 
-    // Dynamic constraint markers will be created during drag operations
-    let currentConstraintMarkers = [];
+    // Clean up debug markers when gesture ends
     addTeardown(() => {
+      currentDebugMarkers.forEach((marker) => {
+        if (marker && marker.parentNode) {
+          marker.parentNode.removeChild(marker);
+        }
+      });
       currentConstraintMarkers.forEach((marker) => {
         if (marker && marker.parentNode) {
           marker.parentNode.removeChild(marker);
@@ -337,11 +464,27 @@ export const createDragGesture = ({
         gestureInfo.x = currentXRelative;
         let xMove = gestureInfo.x - gestureInfo.xAtStart;
 
-        // Apply dynamic constraints accounting for initial position and current element size
-        const constraintLeft = finalConstraint.left ?? -Infinity;
+        // Calculate dynamic constraint bounds
+        const currentLeft = initialLeft + xMove;
+        const currentTop =
+          initialTop + (direction.y ? gestureInfo.y - gestureInfo.yAtStart : 0);
+
+        const constraintLeft = finalConstraint.getLeft
+          ? finalConstraint.getLeft(
+              currentElementWidth,
+              currentElementHeight,
+              currentLeft,
+              currentTop,
+            )
+          : 0;
         const constraintRight = finalConstraint.getRight
-          ? finalConstraint.getRight(currentElementWidth)
-          : (finalConstraint.right ?? Infinity);
+          ? finalConstraint.getRight(
+              currentElementWidth,
+              currentElementHeight,
+              currentLeft,
+              currentTop,
+            )
+          : Infinity;
 
         const minXMove = constraintLeft - initialLeft;
         const maxXMove = constraintRight - initialLeft;
@@ -361,11 +504,26 @@ export const createDragGesture = ({
         gestureInfo.y = currentYRelative;
         let yMove = gestureInfo.y - gestureInfo.yAtStart;
 
-        // Apply dynamic constraints accounting for initial position and current element size
-        const constraintTop = finalConstraint.top ?? -Infinity;
+        // Calculate dynamic constraint bounds
+        const currentLeft = initialLeft + (direction.x ? gestureInfo.xMove : 0);
+        const currentTop = initialTop + yMove;
+
+        const constraintTop = finalConstraint.getTop
+          ? finalConstraint.getTop(
+              currentElementWidth,
+              currentElementHeight,
+              currentLeft,
+              currentTop,
+            )
+          : 0;
         const constraintBottom = finalConstraint.getBottom
-          ? finalConstraint.getBottom(currentElementHeight)
-          : (finalConstraint.bottom ?? Infinity);
+          ? finalConstraint.getBottom(
+              currentElementWidth,
+              currentElementHeight,
+              currentLeft,
+              currentTop,
+            )
+          : Infinity;
 
         const minYMove = constraintTop - initialTop;
         const maxYMove = constraintBottom - initialTop;
@@ -381,24 +539,7 @@ export const createDragGesture = ({
           : true;
       }
 
-      // Apply custom collision detection if provided
-      if (finalConstraint.checkPosition) {
-        const proposedLeft = initialLeft + gestureInfo.xMove;
-        const proposedTop = initialTop + gestureInfo.yMove;
-
-        if (
-          !finalConstraint.checkPosition(
-            proposedLeft,
-            proposedTop,
-            currentElementWidth,
-            currentElementHeight,
-          )
-        ) {
-          // Position would cause collision - revert to previous valid position
-          gestureInfo.xMove = previousGestureInfo?.xMove || 0;
-          gestureInfo.yMove = previousGestureInfo?.yMove || 0;
-        }
-      }
+      // Collision detection is now handled by the constraint functions
 
       if (isRelease) {
         if (!started) {
@@ -443,8 +584,8 @@ export const createDragGesture = ({
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
         // Schedule removal of previous markers if they exist
-        if (gestureInfo.currentDebugMarkers) {
-          const previousMarkers = gestureInfo.currentDebugMarkers;
+        if (currentDebugMarkers.length > 0) {
+          const previousMarkers = [...currentDebugMarkers];
           setTimeout(() => {
             previousMarkers.forEach((marker) => {
               if (marker && marker.parentNode) {
@@ -461,32 +602,58 @@ export const createDragGesture = ({
           }
         });
         currentConstraintMarkers = [];
+        currentDebugMarkers = [];
 
         // Create new debug markers
-        const newDebugMarkers = [];
-        newDebugMarkers.push(
+        currentDebugMarkers.push(
           createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
         );
-        newDebugMarkers.push(
+        currentDebugMarkers.push(
           createDebugMarker("visibleAreaRight", visibleAreaRight, 0, "green"),
         );
 
         // Create dynamic constraint markers based on current element size
         const currentPositionedParentRect =
           positionedParent.getBoundingClientRect();
+        const currentLeft = initialLeft + gestureInfo.xMove;
+        const currentTop = initialTop + gestureInfo.yMove;
 
-        // Compute current constraint bounds
-        const constraintLeft = finalConstraint.left ?? -Infinity;
-        const constraintTop = finalConstraint.top ?? -Infinity;
+        // Compute current constraint bounds using the new function-based approach
+        const constraintLeft = finalConstraint.getLeft
+          ? finalConstraint.getLeft(
+              currentElementWidth,
+              currentElementHeight,
+              currentLeft,
+              currentTop,
+            )
+          : 0;
+        const constraintTop = finalConstraint.getTop
+          ? finalConstraint.getTop(
+              currentElementWidth,
+              currentElementHeight,
+              currentLeft,
+              currentTop,
+            )
+          : 0;
         const constraintRight = finalConstraint.getRight
-          ? finalConstraint.getRight(currentElementWidth)
-          : (finalConstraint.right ?? Infinity);
+          ? finalConstraint.getRight(
+              currentElementWidth,
+              currentElementHeight,
+              currentLeft,
+              currentTop,
+            )
+          : Infinity;
         const constraintBottom = finalConstraint.getBottom
-          ? finalConstraint.getBottom(currentElementHeight)
-          : (finalConstraint.bottom ?? Infinity);
+          ? finalConstraint.getBottom(
+              currentElementWidth,
+              currentElementHeight,
+              currentLeft,
+              currentTop,
+            )
+          : Infinity;
 
         // Create constraint markers
-        if (constraintLeft !== -Infinity) {
+        if (constraintLeft > 0) {
           const constraintLeftViewport =
             currentPositionedParentRect.left + constraintLeft;
           currentConstraintMarkers.push(
@@ -510,69 +677,32 @@ export const createDragGesture = ({
             ),
           );
         }
-        if (constraintTop !== -Infinity) {
-          // Create horizontal line for top constraint
+        if (constraintTop > 0) {
           const constraintTopViewport =
             currentPositionedParentRect.top + constraintTop;
-          const topMarker = document.createElement("div");
-          topMarker.style.position = "fixed";
-          topMarker.style.left = "0";
-          topMarker.style.top = `${constraintTopViewport}px`;
-          topMarker.style.width = "100vw";
-          topMarker.style.height = "2px";
-          topMarker.style.backgroundColor = "red";
-          topMarker.style.zIndex = "9999";
-          topMarker.style.pointerEvents = "none";
-          topMarker.style.opacity = "0.7";
-          topMarker.title = "constraintTop";
-
-          const topLabel = document.createElement("div");
-          topLabel.textContent = "constraintTop";
-          topLabel.style.position = "absolute";
-          topLabel.style.left = "10px";
-          topLabel.style.top = "5px";
-          topLabel.style.fontSize = "12px";
-          topLabel.style.color = "red";
-          topLabel.style.fontWeight = "bold";
-          topLabel.style.textShadow = "1px 1px 1px rgba(255,255,255,0.8)";
-          topMarker.appendChild(topLabel);
-
-          document.body.appendChild(topMarker);
-          currentConstraintMarkers.push(topMarker);
+          currentConstraintMarkers.push(
+            createDebugMarker(
+              "constraintTop",
+              constraintTopViewport,
+              0,
+              "red",
+              "horizontal",
+            ),
+          );
         }
         if (constraintBottom !== Infinity) {
-          // Create horizontal line for bottom constraint
           const constraintBottomViewport =
             currentPositionedParentRect.top + constraintBottom;
-          const bottomMarker = document.createElement("div");
-          bottomMarker.style.position = "fixed";
-          bottomMarker.style.left = "0";
-          bottomMarker.style.top = `${constraintBottomViewport}px`;
-          bottomMarker.style.width = "100vw";
-          bottomMarker.style.height = "2px";
-          bottomMarker.style.backgroundColor = "red";
-          bottomMarker.style.zIndex = "9999";
-          bottomMarker.style.pointerEvents = "none";
-          bottomMarker.style.opacity = "0.7";
-          bottomMarker.title = "constraintBottom";
-
-          const bottomLabel = document.createElement("div");
-          bottomLabel.textContent = "constraintBottom";
-          bottomLabel.style.position = "absolute";
-          bottomLabel.style.left = "10px";
-          bottomLabel.style.top = "-20px";
-          bottomLabel.style.fontSize = "12px";
-          bottomLabel.style.color = "red";
-          bottomLabel.style.fontWeight = "bold";
-          bottomLabel.style.textShadow = "1px 1px 1px rgba(255,255,whites,0.8)";
-          bottomMarker.appendChild(bottomLabel);
-
-          document.body.appendChild(bottomMarker);
-          currentConstraintMarkers.push(bottomMarker);
+          currentConstraintMarkers.push(
+            createDebugMarker(
+              "constraintBottom",
+              constraintBottomViewport,
+              0,
+              "red",
+              "horizontal",
+            ),
+          );
         }
-
-        // Store current debug markers
-        gestureInfo.currentDebugMarkers = newDebugMarkers;
       }
 
       lifecycle.drag(gestureInfo, {
@@ -623,13 +753,19 @@ export const createDragGesture = ({
       gestureInfo.isMouseUp = true;
       drag(currentXRelative, currentYRelative, { isRelease: true });
       // Clean up any remaining debug markers when drag ends
-      if (DRAG_DEBUG_VISUAL_MARKERS && gestureInfo.currentDebugMarkers) {
-        gestureInfo.currentDebugMarkers.forEach((marker) => {
+      if (DRAG_DEBUG_VISUAL_MARKERS) {
+        currentDebugMarkers.forEach((marker) => {
           if (marker && marker.parentNode) {
             marker.parentNode.removeChild(marker);
           }
         });
-        gestureInfo.currentDebugMarkers = null;
+        currentConstraintMarkers.forEach((marker) => {
+          if (marker && marker.parentNode) {
+            marker.parentNode.removeChild(marker);
+          }
+        });
+        currentDebugMarkers = [];
+        currentConstraintMarkers = [];
       }
       for (const teardownCallback of teardownCallbackSet) {
         teardownCallback();
