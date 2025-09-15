@@ -348,6 +348,10 @@ export const createDragGesture = ({
       }
 
       // Auto-scroll logic
+      // Track the scroll position we actually set (not what we read back from DOM)
+      let actualScrollLeft = scrollableParent?.scrollLeft ?? 0;
+      let actualScrollTop = scrollableParent?.scrollTop ?? 0;
+
       auto_scroll: {
         const scrollableRect = scrollableParent.getBoundingClientRect();
         const availableWidth = scrollableParent.clientWidth;
@@ -432,6 +436,7 @@ export const createDragGesture = ({
               });
 
               scrollableParent.scrollLeft = newScrollLeft;
+              actualScrollLeft = newScrollLeft; // Use the value we just set, not DOM read
               gestureInfo.autoScrolledX = newScrollLeft;
             }
           } else if (isGoingLeft) {
@@ -442,6 +447,7 @@ export const createDragGesture = ({
                 currentScrollLeft +
                 (desiredElementLeft - visibleAreaLeftWithScrollOffset);
               scrollableParent.scrollLeft = scrollLeftRequired;
+              actualScrollLeft = scrollLeftRequired; // Use the value we just set, not DOM read
               gestureInfo.autoScrolledX = scrollLeftRequired;
             }
           }
@@ -458,11 +464,13 @@ export const createDragGesture = ({
             const scrollAmountForKeepInView =
               visibleAreaTop - desiredElementTop;
             const oldScrollTop = scrollableParent.scrollTop;
-            scrollableParent.scrollTop = Math.max(
+            const newScrollTop = Math.max(
               0,
               scrollableParent.scrollTop - scrollAmountForKeepInView,
             );
-            const actualScrolled = oldScrollTop - scrollableParent.scrollTop;
+            scrollableParent.scrollTop = newScrollTop;
+            actualScrollTop = newScrollTop; // Use the value we just set, not DOM read
+            const actualScrolled = oldScrollTop - newScrollTop;
             gestureInfo.autoScrolledY -= actualScrolled;
           }
           // Check if desired element position would be beyond visible area's bottom boundary
@@ -473,11 +481,13 @@ export const createDragGesture = ({
             const maxScrollTop =
               scrollableParent.scrollHeight - scrollableParent.clientHeight;
             const oldScrollTop = scrollableParent.scrollTop;
-            scrollableParent.scrollTop = Math.min(
+            const newScrollTop = Math.min(
               maxScrollTop,
               scrollableParent.scrollTop + scrollAmountForKeepInView,
             );
-            const actualScrolled = scrollableParent.scrollTop - oldScrollTop;
+            scrollableParent.scrollTop = newScrollTop;
+            actualScrollTop = newScrollTop; // Use the value we just set, not DOM read
+            const actualScrolled = newScrollTop - oldScrollTop;
             gestureInfo.autoScrolledY += actualScrolled;
           }
         }
@@ -492,7 +502,8 @@ export const createDragGesture = ({
           initialLeft,
           xMove: gestureInfo.xMove,
           finalLeft,
-          scrollLeft: scrollableParent.scrollLeft,
+          scrollLeft: actualScrollLeft, // Use the accurate scroll value we set
+          actualScrollFromDOM: scrollableParent.scrollLeft, // Show the DOM value for comparison
         });
 
         elementToMove.style.left = `${finalLeft}px`;
