@@ -191,11 +191,6 @@
 
       // Set up drag gesture on mousedown
       rectangle.addEventListener("mousedown", (event) => {
-        const initialRect = rectangle.getBoundingClientRect();
-        const containerRect = document
-          .getElementById("scrollContainer")
-          .getBoundingClientRect();
-
         startDragGesture(event, {
           setup: () => ({
             element: rectangle,
@@ -215,19 +210,6 @@
           onRelease: (gestureInfo) => {
             console.log("Drag released", gestureInfo);
           },
-          direction: { x: true, y: true },
-          threshold: 5,
-          backdrop: true,
-          // Constrain movement within the scrollable content
-          minConstrainedX: -initialRect.left + containerRect.left,
-          maxConstrainedX:
-            1600 -
-            rectangle.offsetWidth -
-            initialRect.left +
-            containerRect.left,
-          minConstrainedY: -initialRect.top + containerRect.top,
-          maxConstrainedY:
-            800 - rectangle.offsetHeight - initialRect.top + containerRect.top,
         });
       });
     </script>

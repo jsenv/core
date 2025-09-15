@@ -39,6 +39,42 @@ const createDebugMarker = (name, x, y, color = "red") => {
   return marker;
 };
 
+const getPositionedParent = (element) => {
+  let parent = element.parentElement;
+  while (parent && parent !== document.body) {
+    const position = window.getComputedStyle(parent).position;
+    if (
+      position === "relative" ||
+      position === "absolute" ||
+      position === "fixed"
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return document.body;
+};
+
+const getDefaultConstraint = (element) => {
+  const positionedParent = getPositionedParent(element);
+  const parentRect = positionedParent.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+
+  // Calculate relative position constraints within the positioned parent
+  return {
+    left: -elementRect.left + parentRect.left,
+    top: -elementRect.top + parentRect.top,
+    right:
+      parentRect.width -
+      (elementRect.left - parentRect.left) -
+      elementRect.width,
+    bottom:
+      parentRect.height -
+      (elementRect.top - parentRect.top) -
+      elementRect.height,
+  };
+};
+
 export const startDragGesture = (
   mousedownEvent,
   {
@@ -55,10 +91,7 @@ export const startDragGesture = (
     threshold = 5,
     direction: defaultDirection = { x: true, y: true },
     backdrop = true,
-    minConstrainedX = -Infinity,
-    maxConstrainedX = Infinity,
-    minConstrainedY = -Infinity,
-    maxConstrainedY = Infinity,
+    constraint = null,
   },
 ) => {
   if (mousedownEvent.defaultPrevented) {
@@ -140,10 +173,17 @@ export const startDragGesture = (
   const initialLeft = elementVisuallyMovingRect.left;
   const initialTop = elementVisuallyMovingRect.top;
 
+  // Set up constraint bounds
+  const finalConstraint = constraint || getDefaultConstraint(element);
+  const constraintLeft = finalConstraint.left ?? -Infinity;
+  const constraintTop = finalConstraint.top ?? -Infinity;
+  const constraintRight = finalConstraint.right ?? Infinity;
+  const constraintBottom = finalConstraint.bottom ?? Infinity;
+
   if (stickyLeftElement) {
     // const stickyRect = stickyLeftElement.getBoundingClientRect();
     // const stickyRightRelativeToElement = stickyRect.right - initialLeft;
-    // minX = Math.max(minX, stickyRightRelativeToElement);
+    // constraintLeft = Math.max(constraintLeft, stickyRightRelativeToElement);
   }
 
   mouse_events: {
@@ -160,10 +200,10 @@ export const startDragGesture = (
       if (direction.x) {
         gestureInfo.x = e.clientX;
         let xMove = gestureInfo.x - xAtStart;
-        if (xMove < minConstrainedX) {
-          xMove = minConstrainedX;
-        } else if (xMove > maxConstrainedX) {
-          xMove = maxConstrainedX;
+        if (xMove < constraintLeft) {
+          xMove = constraintLeft;
+        } else if (xMove > constraintRight) {
+          xMove = constraintRight;
         }
         gestureInfo.xMove = xMove;
         gestureInfo.xChanged = previousGestureInfo
@@ -173,10 +213,10 @@ export const startDragGesture = (
       if (direction.y) {
         gestureInfo.y = e.clientY;
         let yMove = gestureInfo.y - yAtStart;
-        if (yMove < minConstrainedY) {
-          yMove = minConstrainedY;
-        } else if (yMove > maxConstrainedY) {
-          yMove = maxConstrainedY;
+        if (yMove < constraintTop) {
+          yMove = constraintTop;
+        } else if (yMove > constraintBottom) {
+          yMove = constraintBottom;
         }
         gestureInfo.yMove = yMove;
         gestureInfo.yChanged = previousGestureInfo
