@@ -277,13 +277,12 @@ export const startDragGesture = (
 
   mouse_events: {
     const updateMousePosition = (e) => {
-      // Get current positioned parent rect in case it moved due to scrolling
-      const currentPositionedParentRect =
+      // Convert current mouse position to relative coordinates using CURRENT positioned parent position
+      // Note: We'll recalculate this after scrolling if needed
+      let currentPositionedParentRect =
         positionedParent.getBoundingClientRect();
-
-      // Convert current mouse position to relative coordinates
-      const currentXRelative = e.clientX - currentPositionedParentRect.left;
-      const currentYRelative = e.clientY - currentPositionedParentRect.top;
+      let currentXRelative = e.clientX - currentPositionedParentRect.left;
+      let currentYRelative = e.clientY - currentPositionedParentRect.top;
 
       const isGoingLeft = currentXRelative < gestureInfo.x;
       const isGoingRight = currentXRelative > gestureInfo.x;
@@ -294,8 +293,12 @@ export const startDragGesture = (
       gestureInfo.isGoingTop = isGoingTop;
       gestureInfo.isGoingBottom = isGoingBottom;
 
+      // Store mouse position before any scrolling changes coordinates
+      const mouseXBeforeScroll = currentXRelative;
+      const mouseYBeforeScroll = currentYRelative;
+
       if (direction.x) {
-        gestureInfo.x = currentXRelative;
+        gestureInfo.x = mouseXBeforeScroll;
         let xMove = gestureInfo.x - gestureInfo.xAtStart;
 
         // Apply constraints accounting for initial position
@@ -314,7 +317,7 @@ export const startDragGesture = (
           : true;
       }
       if (direction.y) {
-        gestureInfo.y = currentYRelative;
+        gestureInfo.y = mouseYBeforeScroll;
         let yMove = gestureInfo.y - gestureInfo.yAtStart;
 
         // Apply constraints accounting for initial position
@@ -446,6 +449,16 @@ export const startDragGesture = (
             // Calculate exactly how much we need to scroll to make the element right edge visible
             const scrollAmountNeeded = desiredElementRight - visibleAreaRight;
             const newScrollLeft = currentScrollLeft + scrollAmountNeeded;
+
+            console.log("Right scroll needed:", {
+              desiredElementRight,
+              visibleAreaRight,
+              scrollAmountNeeded,
+              currentScrollLeft,
+              newScrollLeft,
+              elementWidth,
+            });
+
             scrollableParent.scrollLeft = newScrollLeft;
             gestureInfo.autoScrolledX = newScrollLeft;
             break horizontal;
@@ -510,6 +523,13 @@ export const startDragGesture = (
         // No need to account for scroll - element is positioned relative to positioned parent
         const finalLeft = initialLeft + gestureInfo.xMove;
         const finalTop = initialTop + gestureInfo.yMove;
+
+        console.log("Positioning element:", {
+          initialLeft,
+          xMove: gestureInfo.xMove,
+          finalLeft,
+          scrollLeft: scrollableParent.scrollLeft,
+        });
 
         elementToMove.style.left = `${finalLeft}px`;
         elementToMove.style.top = `${finalTop}px`;
