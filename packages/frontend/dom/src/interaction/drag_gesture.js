@@ -133,6 +133,10 @@ export const startDragGesture = (
     elementVisuallyMovingRect.left - positionedParentRect.left;
   const initialTop = elementVisuallyMovingRect.top - positionedParentRect.top;
 
+  // Capture element dimensions at start to avoid changing values during drag
+  const elementWidth = elementVisuallyMovingRect.width;
+  const elementHeight = elementVisuallyMovingRect.height;
+
   // Convert mouse start position to relative coordinates
   const xAtStartRelative = xAtStart - positionedParentRect.left;
   const yAtStartRelative = yAtStart - positionedParentRect.top;
@@ -367,9 +371,7 @@ export const startDragGesture = (
         const scrollableRect = scrollableParent.getBoundingClientRect();
         // Use clientWidth for the actual scrollable area (excludes scrollbar)
         const availableWidth = scrollableParent.clientWidth;
-        const elementRect = elementVisuallyMoving.getBoundingClientRect();
-        const elementWidth = elementRect.width;
-        const elementHeight = elementRect.height;
+        // Use the element dimensions captured at start of drag (not current position)
 
         // Calculate where element bounds would be in viewport coordinates
         const currentPositionedParentRect =
