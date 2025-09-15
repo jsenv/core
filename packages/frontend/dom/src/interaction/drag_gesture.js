@@ -365,8 +365,8 @@ export const startDragGesture = (
 
       auto_scroll: {
         const scrollableRect = scrollableParent.getBoundingClientRect();
+        // Use clientWidth for the actual scrollable area (excludes scrollbar)
         const availableWidth = scrollableParent.clientWidth;
-        // const scrollbarWidth = scrollableParent.offsetWidth - availableWidth;
         const elementRect = elementVisuallyMoving.getBoundingClientRect();
         const elementWidth = elementRect.width;
         const elementHeight = elementRect.height;
@@ -385,8 +385,9 @@ export const startDragGesture = (
           desiredElementTopRelative + currentPositionedParentRect.top;
         const desiredElementBottom = desiredElementTop + elementHeight;
 
+        // Visible area is from the container's left edge to the right edge of scrollable content
         let visibleAreaLeft = scrollableRect.left;
-        let visibleAreaRight = visibleAreaLeft + availableWidth;
+        let visibleAreaRight = scrollableRect.left + availableWidth;
 
         // Create debug markers for horizontal boundaries
         if (DRAG_DEBUG_VISUAL_MARKERS) {
@@ -440,7 +441,7 @@ export const startDragGesture = (
             if (desiredElementRight <= visibleAreaRight) {
               break horizontal;
             }
-            // Calculate how much we need to scroll to make the element right edge visible
+            // Calculate exactly how much we need to scroll to make the element right edge visible
             const scrollAmountNeeded = desiredElementRight - visibleAreaRight;
             const newScrollLeft = currentScrollLeft + scrollAmountNeeded;
             scrollableParent.scrollLeft = newScrollLeft;
