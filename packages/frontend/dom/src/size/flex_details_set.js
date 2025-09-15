@@ -3,10 +3,10 @@
  *
  */
 
+import { startDragToResizeGesture } from "../interaction/drag_to_resize_gesture.js";
 import { forceStyles } from "../style_and_attributes.js";
 import { createHeightTransition } from "../transition/dom_transition.js";
 import { createGroupTransitionController } from "../transition/group_transition.js";
-import { startDragToResizeGesture } from "./drag_to_resize_gesture.js";
 import { getHeight } from "./get_height.js";
 import { getInnerHeight } from "./get_inner_height.js";
 import { getMarginSizes } from "./get_margin_sizes.js";

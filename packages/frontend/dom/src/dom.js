@@ -19,7 +19,6 @@ export {
 export { addAttributeEffect } from "./add_attribute_effect.js";
 
 // size
-export { startDragToResizeGesture } from "./size/drag_to_resize_gesture.js";
 export { initFlexDetailsSet } from "./size/flex_details_set.js";
 export { getAvailableHeight } from "./size/get_available_height.js";
 export { getAvailableWidth } from "./size/get_available_width.js";
@@ -71,4 +70,5 @@ export {
 export { initUITransition } from "./ui_transition/ui_transition.js";
 
 // interaction
-export { startDragGesture } from "./interaction/drag_gesture.js";
+export { createDragGesture } from "./interaction/drag_gesture.js";
+export { startDragToResizeGesture } from "./interaction/drag_to_resize_gesture.js";
