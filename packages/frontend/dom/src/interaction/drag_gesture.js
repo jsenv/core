@@ -371,10 +371,20 @@ export const createDragGesture = ({
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
         // Schedule removal of previous markers if they exist
-        if (currentDebugMarkers.length > 0) {
-          const previousMarkers = [...currentDebugMarkers];
+        const previousDebugMarkers = [...currentDebugMarkers];
+        const previousConstraintMarkers = [...currentConstraintMarkers];
+
+        if (
+          previousDebugMarkers.length > 0 ||
+          previousConstraintMarkers.length > 0
+        ) {
           setTimeout(() => {
-            previousMarkers.forEach((marker) => {
+            previousDebugMarkers.forEach((marker) => {
+              if (marker && marker.parentNode) {
+                marker.parentNode.removeChild(marker);
+              }
+            });
+            previousConstraintMarkers.forEach((marker) => {
               if (marker && marker.parentNode) {
                 marker.parentNode.removeChild(marker);
               }
