@@ -286,17 +286,24 @@ export const createDragGesture = ({
         );
       }
 
+      const previousX = gestureInfo.x;
+      const previousY = gestureInfo.y;
+
       gestureInfo.x = currentXRelative;
       gestureInfo.y = currentYRelative;
-      gestureInfo.xDiff = gestureInfo.x - currentXRelative;
-      gestureInfo.yDiff = gestureInfo.y - currentYRelative;
+      gestureInfo.xDiff = previousX - currentXRelative;
+      gestureInfo.yDiff = previousY - currentYRelative;
       const xMove = direction.x ? gestureInfo.x - gestureInfo.xAtStart : 0;
       const yMove = direction.y ? gestureInfo.y - gestureInfo.yAtStart : 0;
 
-      const isGoingLeft = currentXRelative < gestureInfo.x;
-      const isGoingRight = currentXRelative > gestureInfo.x;
-      const isGoingUp = currentYRelative < gestureInfo.y;
-      const isGoingDown = currentYRelative > gestureInfo.y;
+      // Calculate direction based on where the element is trying to move (relative to previous position)
+      const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
+      const previousYMove = previousGestureInfo ? previousGestureInfo.yMove : 0;
+
+      const isGoingLeft = xMove < previousXMove;
+      const isGoingRight = xMove > previousXMove;
+      const isGoingUp = yMove < previousYMove;
+      const isGoingDown = yMove > previousYMove;
 
       gestureInfo.isGoingLeft = isGoingLeft;
       gestureInfo.isGoingRight = isGoingRight;
