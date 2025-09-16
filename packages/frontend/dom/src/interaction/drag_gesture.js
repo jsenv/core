@@ -185,6 +185,12 @@ export const createDragGesture = ({
       initialScrollLeft,
       initialScrollTop,
     };
+    definePropertyAsReadOnly(gestureInfo, "xAtStart");
+    definePropertyAsReadOnly(gestureInfo, "yAtStart");
+    definePropertyAsReadOnly(gestureInfo, "initialLeft");
+    definePropertyAsReadOnly(gestureInfo, "initialTop");
+    definePropertyAsReadOnly(gestureInfo, "initialScrollLeft");
+    definePropertyAsReadOnly(gestureInfo, "initialScrollTop");
     let previousGestureInfo = null;
     let started = !threshold;
 
@@ -271,19 +277,15 @@ export const createDragGesture = ({
         const currentScrollLeft = scrollableParent.scrollLeft;
         const currentScrollTop = scrollableParent.scrollTop;
 
-        const scrollDeltaX = currentScrollLeft - gestureInfo.initialScrollLeft;
-        const scrollDeltaY = currentScrollTop - gestureInfo.initialScrollTop;
+        const scrollDeltaX = currentScrollLeft - initialScrollLeft;
+        const scrollDeltaY = currentScrollTop - initialScrollTop;
 
-        // Adjust the current gesture position to compensate for scroll
-        // When we scroll right (+scrollDeltaX), we need to move the element right too
+        // Update the initial position references to account for scroll
+        // The element's actual position relative to positioned parent changes when scrolling
         const adjustedX = gestureInfo.x + scrollDeltaX;
         const adjustedY = gestureInfo.y + scrollDeltaY;
 
-        // Update initial scroll values for next scroll event
-        gestureInfo.initialScrollLeft = currentScrollLeft;
-        gestureInfo.initialScrollTop = currentScrollTop;
-
-        // Call drag with the adjusted position to maintain element position relative to content
+        // Call drag with the current position to recalculate constraints with updated initial position
         drag(adjustedX, adjustedY);
 
         isHandlingScroll = false;
@@ -807,6 +809,7 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
     const positionedParentRect = positionedParent.getBoundingClientRect();
 
     // Convert obstacle coordinates to be relative to positioned parent
+    // getBoundingClientRect() already accounts for scroll position
     return {
       type: "obstacle",
       left: obstacleRect.left - positionedParentRect.left,
@@ -913,4 +916,11 @@ const applyConstraints = (
     xMove,
     yMove,
   };
+};
+
+const definePropertyAsReadOnly = (object, propertyName) => {
+  Object.defineProperty(object, propertyName, {
+    writable: false,
+    value: object[propertyName],
+  });
 };
