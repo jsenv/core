@@ -192,15 +192,24 @@ export const createDragGesture = ({
 
     const positionedParent = getPositionedParent(element);
     const positionedParentRect = positionedParent.getBoundingClientRect();
+    const elementToImpactRect = elementToImpact.getBoundingClientRect();
     const elementVisuallyImpactedRect =
       elementVisuallyImpacted.getBoundingClientRect();
 
-    // Convert to coordinates relative to positioned parent
+    // Use elementVisuallyImpacted as primary coordinate system for all calculations
+    // This keeps constraint logic, logging, and calculations in meaningful visual coordinates
     const initialLeft =
       elementVisuallyImpactedRect.left - positionedParentRect.left;
     const initialTop =
       elementVisuallyImpactedRect.top - positionedParentRect.top;
 
+    // Calculate offset to translate visual movement to elementToImpact movement
+    // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
+    // All constraint calculations use visual coordinates (xMove, yMove)
+    const visualOffsetX =
+      elementVisuallyImpactedRect.left - elementToImpactRect.left;
+    const visualOffsetY =
+      elementVisuallyImpactedRect.top - elementToImpactRect.top;
     const scrollableParent = getScrollableParent(element);
     const initialScrollLeft = scrollableParent.scrollLeft;
     const initialScrollTop = scrollableParent.scrollTop;
@@ -228,6 +237,8 @@ export const createDragGesture = ({
       initialTop,
       initialScrollLeft,
       initialScrollTop,
+      visualOffsetX,
+      visualOffsetY,
     };
     definePropertyAsReadOnly(gestureInfo, "xAtStart");
     definePropertyAsReadOnly(gestureInfo, "yAtStart");
@@ -235,6 +246,8 @@ export const createDragGesture = ({
     definePropertyAsReadOnly(gestureInfo, "initialTop");
     definePropertyAsReadOnly(gestureInfo, "initialScrollLeft");
     definePropertyAsReadOnly(gestureInfo, "initialScrollTop");
+    definePropertyAsReadOnly(gestureInfo, "visualOffsetX");
+    definePropertyAsReadOnly(gestureInfo, "visualOffsetY");
     let previousGestureInfo = null;
     let started = !threshold;
 
@@ -1079,12 +1092,12 @@ const applyConstraints = (
 
   for (const constraint of constraints) {
     if (constraint.type === "bounds") {
-      // Apply bounds constraints directly
+      // Apply bounds constraints directly using visual coordinates
+      // initialLeft/initialTop now represent elementVisuallyImpacted position
       const minAllowedXMove = constraint.left - initialLeft;
       const maxAllowedXMove = constraint.right - initialLeft;
       const minAllowedYMove = constraint.top - initialTop;
       const maxAllowedYMove = constraint.bottom - initialTop;
-
       if (xMove < minAllowedXMove) {
         logConstraintEnforcement(
           "x",
@@ -1131,16 +1144,16 @@ const applyConstraints = (
       const actualCurrentXMove = gestureInfo.xMove || 0;
       const actualCurrentYMove = gestureInfo.yMove || 0;
 
+      // Calculate current visual position (initialLeft/initialTop are now visual coordinates)
+      const currentVisualLeft = initialLeft + actualCurrentXMove;
+      const currentVisualTop = initialTop + actualCurrentYMove;
+
       // Round coordinates to prevent floating point precision issues in boundary detection
-      const currentActualLeft = roundForConstraints(
-        initialLeft + actualCurrentXMove,
-      );
+      const currentActualLeft = roundForConstraints(currentVisualLeft);
       const currentActualRight = roundForConstraints(
         currentActualLeft + elementWidth,
       );
-      const currentActualTop = roundForConstraints(
-        initialTop + actualCurrentYMove,
-      );
+      const currentActualTop = roundForConstraints(currentVisualTop);
       const currentActualBottom = roundForConstraints(
         currentActualTop + elementHeight,
       );

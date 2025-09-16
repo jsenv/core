@@ -11,6 +11,8 @@ export const createDragToMoveGesture = (options) => {
         const {
           initialLeft,
           initialTop,
+          visualOffsetX,
+          visualOffsetY,
           isGoingDown,
           isGoingUp,
           isGoingLeft,
@@ -22,6 +24,10 @@ export const createDragToMoveGesture = (options) => {
           visibleAreaTop,
           visibleAreaBottom,
         } = gestureInfo;
+
+        // Calculate initial position for elementToImpact (initialLeft/initialTop are now visual coordinates)
+        const initialLeftToImpact = initialLeft - visualOffsetX;
+        const initialTopToImpact = initialTop - visualOffsetY;
         const elementVisuallyImpactedRect =
           elementVisuallyImpacted.getBoundingClientRect();
         const elementWidth = elementVisuallyImpactedRect.width;
@@ -85,7 +91,7 @@ export const createDragToMoveGesture = (options) => {
             visibleAreaStart: visibleAreaLeft,
             visibleAreaEnd: visibleAreaRight,
             currentScroll: scrollableParent.scrollLeft,
-            initialPosition: initialLeft,
+            initialPosition: initialLeftToImpact,
             moveAmount: gestureInfo.xMove,
             scrollProperty: "scrollLeft",
             styleProperty: "left",
@@ -107,7 +113,7 @@ export const createDragToMoveGesture = (options) => {
             visibleAreaStart: visibleAreaTop,
             visibleAreaEnd: visibleAreaBottom,
             currentScroll: scrollableParent.scrollTop,
-            initialPosition: initialTop,
+            initialPosition: initialTopToImpact,
             moveAmount: gestureInfo.yMove,
             scrollProperty: "scrollTop",
             styleProperty: "top",
