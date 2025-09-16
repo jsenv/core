@@ -1014,9 +1014,6 @@ const HeaderCell = ({
   onGrab,
   onDrag,
   onRelease,
-  mouseHoverPreviousColumnResizeHandle,
-  onMouseEnterPreviousColumnResizeHandle,
-  onMouseLeavePreviousColumnResizeHandle,
   children,
 }) => {
   const cellRef = useRef();
@@ -1028,8 +1025,6 @@ const HeaderCell = ({
       return columnCells;
     },
   });
-
-  const [mouseHoverResizeHandle, setMouseHoverResizeHandle] = useState(null);
 
   const columnContainsSelectedCell =
     columnWithSomeSelectedCell.includes(columnAccessorKey);
@@ -1180,12 +1175,13 @@ const HeaderCell = ({
       {columnIndex > 1 && (
         <div
           className="navi_table_column_resize_handle_left"
-          data-hover={mouseHoverPreviousColumnResizeHandle ? "" : undefined}
-          onMouseEnter={() => {
-            onMouseEnterPreviousColumnResizeHandle?.();
+          onMouseEnter={(e) => {
+            e.target.setAttribute("data-hover", "");
+            // TODO: set [data-hover] on right handle of previous column
           }}
-          onMouseLeave={() => {
-            onMouseLeavePreviousColumnResizeHandle?.();
+          onMouseLeave={(e) => {
+            e.target.removeAttribute("data-hover");
+            // TODO: remove [data-hover] on right handle of previous column
           }}
         ></div>
       )}
@@ -1196,12 +1192,14 @@ const HeaderCell = ({
       {grabbed && <div className="navi_table_drag_placeholder"></div>}
       <div
         className="navi_table_column_resize_handle_right"
-        data-hover={mouseHoverResizeHandle ? "" : undefined}
-        onMouseEnter={() => {
-          setMouseHoverResizeHandle(true);
+        onMouseEnter={(e) => {
+          e.target.setAttribute("data-hover", "");
+          // TODO: set [data-hover] on left handle of next column
         }}
-        onMouseLeave={() => {
-          setMouseHoverResizeHandle(false);
+        onMouseLeave={(e) => {
+          e.target.removeAttribute("data-hover");
+
+          // TODO: remove [data-hover] on left handle of next column
         }}
       ></div>
     </th>
