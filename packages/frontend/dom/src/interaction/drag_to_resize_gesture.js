@@ -1,4 +1,4 @@
-import { createDragGesture } from "../interaction/drag_gesture.js";
+import { createDragGesture } from "./drag_gesture.js";
 
 export const startDragToResizeGesture = (
   mousedownEvent,

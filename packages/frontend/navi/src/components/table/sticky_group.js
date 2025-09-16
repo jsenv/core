@@ -57,22 +57,31 @@ const initStickyGroup = (container) => {
       const columnIndex = Array.from(headerRow.children).indexOf(
         stickyHeaderCell,
       );
+      const leftPosition = index === 0 ? 0 : cumulativeWidth;
+
+      // Set CSS variable on all cells in this column
+      const columnCells = container.querySelectorAll(
+        `th:nth-child(${columnIndex + 1})[data-sticky-x], td:nth-child(${columnIndex + 1})[data-sticky-x]`,
+      );
+      columnCells.forEach((cell) => {
+        cell.style.setProperty(LEFT_CSS_VAR, `${leftPosition}px`);
+      });
+
+      // Also set CSS variable on corresponding <col> element if it exists
+      const colgroup = container.querySelector("colgroup");
+      if (colgroup) {
+        const correspondingCol = colgroup.querySelector(
+          `col:nth-child(${columnIndex + 1})`,
+        );
+        if (correspondingCol) {
+          correspondingCol.style.setProperty(LEFT_CSS_VAR, `${leftPosition}px`);
+        }
+      }
+
+      // Update cumulative width for next column
       if (index === 0) {
-        // First sticky column stays at left: 0, set CSS variable
-        stickyHeaderCell.style.setProperty(LEFT_CSS_VAR, "0px");
         cumulativeWidth = stickyHeaderCell.getBoundingClientRect().width;
       } else {
-        // Subsequent columns use cumulative positioning
-        const leftPosition = cumulativeWidth;
-
-        // Set CSS variable on all cells in this column
-        const columnCells = container.querySelectorAll(
-          `th:nth-child(${columnIndex + 1})[data-sticky-x], td:nth-child(${columnIndex + 1})[data-sticky-x]`,
-        );
-        columnCells.forEach((cell) => {
-          cell.style.setProperty(LEFT_CSS_VAR, `${leftPosition}px`);
-        });
-        // Add this column's width to cumulative width for next column
         cumulativeWidth += stickyHeaderCell.getBoundingClientRect().width;
       }
     });
@@ -83,7 +92,9 @@ const initStickyGroup = (container) => {
     const stickyCells = container.querySelectorAll(
       "th[data-sticky-y], td[data-sticky-y]",
     );
-    if (stickyCells.length === 0) return;
+    if (stickyCells.length === 0) {
+      return;
+    }
 
     // Group cells by their parent row
     const rowsWithStickyCells = new Map();
@@ -108,19 +119,20 @@ const initStickyGroup = (container) => {
 
     stickyRows.forEach((row, index) => {
       const rowCells = rowsWithStickyCells.get(row);
+      const topPosition = index === 0 ? 0 : cumulativeHeight;
 
+      // Set CSS variable on all sticky cells in this row
+      rowCells.forEach((cell) => {
+        cell.style.setProperty(TOP_CSS_VAR, `${topPosition}px`);
+      });
+
+      // Also set CSS variable on the <tr> element itself
+      row.style.setProperty(TOP_CSS_VAR, `${topPosition}px`);
+
+      // Update cumulative height for next row
       if (index === 0) {
-        // First sticky row stays at top: 0
-        rowCells.forEach((cell) => {
-          cell.style.setProperty(TOP_CSS_VAR, "0px");
-        });
         cumulativeHeight = row.getBoundingClientRect().height;
       } else {
-        // Subsequent rows use cumulative positioning
-        const topPosition = cumulativeHeight;
-        rowCells.forEach((cell) => {
-          cell.style.setProperty(TOP_CSS_VAR, `${topPosition}px`);
-        });
         cumulativeHeight += row.getBoundingClientRect().height;
       }
     });
