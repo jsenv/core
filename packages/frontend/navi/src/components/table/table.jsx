@@ -38,18 +38,9 @@
  * - Border-collapse mode available as optional feature for future use
  *
  * Next steps:
- * - Drag to reorder columns
- *
- *  Et on veut créer une copie visuelle (<div><table>...</table></div>) avec des dimensions fixes qui correspondent
- *  a la colonne que l'on déplace en absolute
- *
- *  Pour faire cela je pense que lorsque le drag démarre on va avoir besoin d'une fonction qui append ce truc dans le body
- *  alors ptet qu'on peut le faire avec react apres tout let's go
- *
- *  Lorsqu'on "vide" la collone il faut juste s'assurer de cacher le contenu mais pas de la modifier réellement car
- *  on veut pas impacter le layout
- *
- * - Drag to reorder rows (won't be possible with database so not for now)
+ * - Drag to resize columns
+ * - Drag to reorder columns a finir (affichage des trucs au survol d'autre colonnes et finalisation avec un example
+ * qui permet de les re-order en stockant ca dans un state)
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
  * - Resizing columns
@@ -1097,9 +1088,44 @@ const HeaderCell = ({
         cloneParent.insertBefore(tableClone, cloneParent.firstChild);
         cloneParent.closest(".navi_table_drag_clone_container").style.display =
           "block";
+
+        const cellThatWouldBeFocused = e.target.closest("td, th");
+        let focusedElementInClone = null;
+        // Build a path from table to activeElement
+        const pathToElement = [];
+        let current = cellThatWouldBeFocused;
+        while (current && current !== table) {
+          const parent = current.parentNode;
+          if (parent) {
+            const siblings = Array.from(parent.children);
+            pathToElement.unshift(siblings.indexOf(current));
+          }
+          current = parent;
+        }
+        // Follow the same path in the clone to find the corresponding element
+        focusedElementInClone = tableClone;
+        for (const index of pathToElement) {
+          if (focusedElementInClone.children[index]) {
+            focusedElementInClone = focusedElementInClone.children[index];
+          } else {
+            focusedElementInClone = null;
+            break;
+          }
+        }
+        // Move focus to the clone element
+        if (focusedElementInClone && focusedElementInClone.focus) {
+          focusedElementInClone.focus();
+        }
+
         dragToMoveGesture.addTeardown(() => {
           cloneParent.style.left = 0;
           tableClone.remove();
+          // Restore focus to the original element
+          if (cellThatWouldBeFocused) {
+            // Note: will likely fail if the column element is re-rendered by preact
+            // that day we'll fix it
+            cellThatWouldBeFocused.focus();
+          }
         });
         firstCol.setAttribute("data-drag-obstacle", "");
         firstCol.setAttribute("data-sticky-obstacle", "");
