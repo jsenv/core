@@ -160,10 +160,10 @@ export const createDragGesture = ({
   threshold = 5,
   direction: defaultDirection = { x: true, y: true },
   backdrop = true,
-  // Visual feedback line connecting mouse cursor to dragged element when constraints prevent following
+  // Visual feedback line connecting mouse cursor to grab point when constraints prevent following
   // This provides intuitive feedback during drag operations when the element cannot reach the mouse
   // position due to obstacles, boundaries, or other constraints. The line becomes visible when there's
-  // a significant distance between the mouse and the element, helping users understand why the
+  // a significant distance between the mouse and the grab point, helping users understand why the
   // element isn't moving as expected.
   constrainedFeedbackLine = true,
   // Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
@@ -300,17 +300,18 @@ export const createDragGesture = ({
         return;
       }
 
-      // Calculate element center position in viewport coordinates
-      const currentElementRect =
-        elementVisuallyImpacted.getBoundingClientRect();
-      const elementCenterX =
-        currentElementRect.left + currentElementRect.width / 2;
-      const elementCenterY =
-        currentElementRect.top + currentElementRect.height / 2;
+      // Calculate grab point position in viewport coordinates
+      // The grab point is where the mouse initially clicked on the element
+      const positionedParentRect = positionedParent.getBoundingClientRect();
 
-      // Calculate distance between mouse and element center
-      const deltaX = effectiveMouseX - elementCenterX;
-      const deltaY = effectiveMouseY - elementCenterY;
+      // Convert grab start position to current viewport coordinates
+      // xAtStart/yAtStart are relative to positioned parent, so convert to viewport
+      const grabPointX = positionedParentRect.left + xAtStart;
+      const grabPointY = positionedParentRect.top + yAtStart;
+
+      // Calculate distance between mouse and grab point
+      const deltaX = effectiveMouseX - grabPointX;
+      const deltaY = effectiveMouseY - grabPointY;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
       // Show line only when distance is significant (> 20px threshold)
@@ -323,9 +324,9 @@ export const createDragGesture = ({
       // Calculate angle and position
       const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
       constraintFeedbackLine.setAttribute("data-visible", "");
-      // Position line at element center (which automatically accounts for scroll via getBoundingClientRect)
-      constraintFeedbackLine.style.left = `${elementCenterX}px`;
-      constraintFeedbackLine.style.top = `${elementCenterY}px`;
+      // Position line at grab point (where mouse initially clicked on element)
+      constraintFeedbackLine.style.left = `${grabPointX}px`;
+      constraintFeedbackLine.style.top = `${grabPointY}px`;
       constraintFeedbackLine.style.width = `${distance}px`;
       constraintFeedbackLine.style.transform = `rotate(${angle}deg)`;
       // Fade in based on distance (more visible as distance increases)
@@ -877,7 +878,7 @@ const createConstraintFeedbackLine = () => {
   const line = document.createElement("div");
   line.className = "navi_constraint_feedback_line";
   line.title =
-    "Constraint feedback - shows distance between mouse and constrained element";
+    "Constraint feedback - shows distance between mouse and grab point";
   document.body.appendChild(line);
   return line;
 };
