@@ -71,4 +71,5 @@ export { initUITransition } from "./ui_transition/ui_transition.js";
 
 // interaction
 export { createDragGesture } from "./interaction/drag_gesture.js";
+export { createDragToMoveGesture } from "./interaction/drag_to_move_gesture.js";
 export { startDragToResizeGesture } from "./interaction/drag_to_resize_gesture.js";

@@ -60,7 +60,7 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
-import { getScrollableParent, startDragGesture } from "@jsenv/dom";
+import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,
