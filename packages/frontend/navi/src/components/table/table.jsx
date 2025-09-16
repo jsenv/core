@@ -1009,10 +1009,14 @@ const HeaderCell = ({
   data,
   selectionController,
   grabbed,
+  columnIndex,
   stickyColumnFrontierIndex,
   onGrab,
   onDrag,
   onRelease,
+  mouseHoverPreviousColumnResizeHandle,
+  onMouseEnterPreviousColumnResizeHandle,
+  onMouseLeavePreviousColumnResizeHandle,
   children,
 }) => {
   const cellRef = useRef();
@@ -1024,6 +1028,8 @@ const HeaderCell = ({
       return columnCells;
     },
   });
+
+  const [mouseHoverResizeHandle, setMouseHoverResizeHandle] = useState(null);
 
   const columnContainsSelectedCell =
     columnWithSomeSelectedCell.includes(columnAccessorKey);
@@ -1171,13 +1177,33 @@ const HeaderCell = ({
         });
       }}
     >
-      <div className="navi_table_column_resize_handle_left"></div>
+      {columnIndex > 1 && (
+        <div
+          className="navi_table_column_resize_handle_left"
+          data-hover={mouseHoverPreviousColumnResizeHandle ? "" : undefined}
+          onMouseEnter={() => {
+            onMouseEnterPreviousColumnResizeHandle?.();
+          }}
+          onMouseLeave={() => {
+            onMouseLeavePreviousColumnResizeHandle?.();
+          }}
+        ></div>
+      )}
       <span>{children}</span>
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {children}
       </span>
       {grabbed && <div className="navi_table_drag_placeholder"></div>}
-      <div className="navi_table_column_resize_handle_right"></div>
+      <div
+        className="navi_table_column_resize_handle_right"
+        data-hover={mouseHoverResizeHandle ? "" : undefined}
+        onMouseEnter={() => {
+          setMouseHoverResizeHandle(true);
+        }}
+        onMouseLeave={() => {
+          setMouseHoverResizeHandle(false);
+        }}
+      ></div>
     </th>
   );
 };
