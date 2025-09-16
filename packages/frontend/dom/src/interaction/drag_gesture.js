@@ -1023,6 +1023,11 @@ const applyConstraints = (
         }
       }
 
+      // TODO: Investigate why overlap detection is needed for scroll but not mouse
+      // Mouse interactions work correctly without this, so scroll should too.
+      // There's likely a deeper issue with constraint application during scroll events.
+
+      /*
       // Handle overlap case - when element is already overlapping with obstacle
       if (!isOnTheLeft && !isOnTheRight && !isAbove && !isBelow) {
         // Element is overlapping with obstacle - push it out in the direction of least resistance
@@ -1070,6 +1075,7 @@ const applyConstraints = (
           }
         }
       }
+      */
     }
   }
 
