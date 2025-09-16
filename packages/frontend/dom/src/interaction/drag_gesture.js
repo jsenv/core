@@ -429,16 +429,40 @@ export const createDragGesture = ({
 
       // Add visual markers for visible area bounds
       currentDebugMarkers.push(
-        createDebugMarker("visibleAreaTop", 0, visibleAreaTop, "red"),
+        createDebugMarker({
+          name: "visibleAreaTop",
+          x: 0,
+          y: visibleAreaTop,
+          color: "red",
+          orientation: "horizontal",
+        }),
       );
       currentDebugMarkers.push(
-        createDebugMarker("visibleAreaBottom", 0, visibleAreaBottom, "orange"),
+        createDebugMarker({
+          name: "visibleAreaBottom",
+          x: 0,
+          y: visibleAreaBottom,
+          color: "orange",
+          orientation: "horizontal",
+        }),
       );
       currentDebugMarkers.push(
-        createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
+        createDebugMarker({
+          name: "visibleAreaLeft",
+          x: visibleAreaLeft,
+          y: 0,
+          color: "blue",
+          orientation: "vertical",
+        }),
       );
       currentDebugMarkers.push(
-        createDebugMarker("visibleAreaRight", visibleAreaRight, 0, "green"),
+        createDebugMarker({
+          name: "visibleAreaRight",
+          x: visibleAreaRight,
+          y: 0,
+          color: "green",
+          orientation: "vertical",
+        }),
       );
 
       // Create dynamic constraint markers based on current element size
@@ -490,39 +514,51 @@ export const createDragGesture = ({
       if (leftBound > 0) {
         const leftBoundViewport = currentPositionedParentRect.left + leftBound;
         currentConstraintMarkers.push(
-          createDebugMarker("leftBound", leftBoundViewport, 0, "red"),
+          createDebugMarker({
+            name: "leftBound",
+            x: leftBoundViewport,
+            y: 0,
+            color: "red",
+            orientation: "vertical",
+          }),
         );
       }
       if (rightBound !== Infinity) {
         const rightBoundViewport =
           currentPositionedParentRect.left + rightBound;
         currentConstraintMarkers.push(
-          createDebugMarker("rightBound", rightBoundViewport, 0, "red"),
+          createDebugMarker({
+            name: "rightBound",
+            x: rightBoundViewport,
+            y: 0,
+            color: "red",
+            orientation: "vertical",
+          }),
         );
       }
       if (topBound > 0) {
         const topBoundViewport = currentPositionedParentRect.top + topBound;
         currentConstraintMarkers.push(
-          createDebugMarker(
-            "topBound",
-            topBoundViewport,
-            0,
-            "red",
-            "horizontal",
-          ),
+          createDebugMarker({
+            name: "topBound",
+            x: 0,
+            y: topBoundViewport,
+            color: "red",
+            orientation: "horizontal",
+          }),
         );
       }
       if (bottomBound !== Infinity) {
         const bottomBoundViewport =
           currentPositionedParentRect.top + bottomBound;
         currentConstraintMarkers.push(
-          createDebugMarker(
-            "bottomBound",
-            bottomBoundViewport,
-            0,
-            "red",
-            "horizontal",
-          ),
+          createDebugMarker({
+            name: "bottomBound",
+            x: 0,
+            y: bottomBoundViewport,
+            color: "red",
+            orientation: "horizontal",
+          }),
         );
       }
     };
@@ -826,13 +862,13 @@ export const createDragGesture = ({
   };
 };
 
-const createDebugMarker = (
+const createDebugMarker = ({
   name,
   x,
   y,
   color = "red",
   orientation = "vertical",
-) => {
+}) => {
   if (!DRAG_DEBUG_VISUAL_MARKERS) {
     return null;
   }
