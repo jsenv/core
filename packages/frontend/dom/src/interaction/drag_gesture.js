@@ -470,11 +470,7 @@ export const createDragGesture = ({
           yMove,
         });
       } else {
-        // For mouse movement and programmatic calls, calculate fresh mouse movement
-        xMouseMove = direction.x ? x - gestureInfo.xAtStart : 0;
-        yMouseMove = direction.y ? y - gestureInfo.yAtStart : 0;
-
-        // Calculate scroll offset
+        // For mouse movement and programmatic calls, calculate scroll offset first
         const currentScrollLeft = scrollableParent.scrollLeft;
         const currentScrollTop = scrollableParent.scrollTop;
         const scrollDeltaX = direction.x
@@ -484,15 +480,22 @@ export const createDragGesture = ({
           ? currentScrollTop - initialScrollTop
           : 0;
 
-        // Total movement = mouse movement + scroll offset
+        // For mouse movement, currentXRelative already includes scroll effects
+        // So mouse movement = current position - start position - scroll offset
+        xMouseMove = direction.x ? x - gestureInfo.xAtStart - scrollDeltaX : 0;
+        yMouseMove = direction.y ? y - gestureInfo.yAtStart - scrollDeltaY : 0;
+
+        // Total movement = mouse movement + scroll offset (should equal x - xAtStart)
         xMove = xMouseMove + scrollDeltaX;
         yMove = yMouseMove + scrollDeltaY;
 
-        console.log(`[${interactionType.toUpperCase()}] Fresh calculation:`, {
-          xMouseMove,
-          yMouseMove,
+        console.log(`[${interactionType.toUpperCase()}] Fixed calculation:`, {
+          xFromStart: direction.x ? x - gestureInfo.xAtStart : 0,
+          yFromStart: direction.y ? y - gestureInfo.yAtStart : 0,
           scrollDeltaX,
           scrollDeltaY,
+          xMouseMove,
+          yMouseMove,
           xMove,
           yMove,
         });
