@@ -1061,8 +1061,8 @@ const HeaderCell = ({
         dragToMoveGesture.addTeardown(() => {
           // cloneParent.removeChild(tableClone);
         });
-        // firstCol.setAttribute("data-drag-obstacle", "");
-        // firstCol.setAttribute("data-sticky-obstacle", "");
+        firstCol.setAttribute("data-drag-obstacle", "");
+        firstCol.setAttribute("data-sticky-obstacle", "");
 
         dragToMoveGesture.grabViaMousedown(e, {
           element: table,

@@ -25,7 +25,6 @@ const initStickyGroup = (container) => {
   }
 
   const isGrid = container.tagName === "TABLE";
-
   const updatePositions = () => {
     if (isGrid) {
       updateGridPositions();
@@ -33,7 +32,6 @@ const initStickyGroup = (container) => {
       updateLinearPositions();
     }
   };
-
   const updateGridPositions = () => {
     // Handle table grid - update both horizontal and vertical sticky elements
     updateTableColumns();
@@ -86,7 +84,6 @@ const initStickyGroup = (container) => {
       }
     });
   };
-
   const updateTableRows = () => {
     // Handle sticky rows by finding cells with data-sticky-y and grouping by row
     const stickyCells = container.querySelectorAll(
