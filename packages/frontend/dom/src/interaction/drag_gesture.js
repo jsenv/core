@@ -122,6 +122,12 @@ export const createDragGesture = ({
   threshold = 5,
   direction: defaultDirection = { x: true, y: true },
   backdrop = true,
+  // Visual feedback line connecting mouse cursor to dragged element when constraints prevent following
+  // This provides intuitive feedback during drag operations when the element cannot reach the mouse
+  // position due to obstacles, boundaries, or other constraints. The line becomes visible when there's
+  // a significant distance between the mouse and the element, helping users understand why the
+  // element isn't moving as expected.
+  constrainedFeedbackLine = true,
   lifecycle,
 }) => {
   const teardownCallbackSet = new Set();
@@ -205,8 +211,9 @@ export const createDragGesture = ({
     }
 
     // Set up constraint feedback line
-    const constraintFeedbackLine = createConstraintFeedbackLine();
-    if (constraintFeedbackLine) {
+    let constraintFeedbackLine;
+    if (constrainedFeedbackLine) {
+      constraintFeedbackLine = createConstraintFeedbackLine();
       addTeardown(() => {
         document.body.removeChild(constraintFeedbackLine);
       });
@@ -506,11 +513,13 @@ export const createDragGesture = ({
       });
 
       if (!dragData) {
-        updateConstraintFeedbackLine(constraintFeedbackLine, {
-          elementVisuallyImpacted,
-          mouseX,
-          mouseY,
-        });
+        if (constraintFeedbackLine) {
+          updateConstraintFeedbackLine(constraintFeedbackLine, {
+            elementVisuallyImpacted,
+            mouseX,
+            mouseY,
+          });
+        }
         return;
       }
       // Only update previousGestureInfo if it's not a release
@@ -535,11 +544,13 @@ export const createDragGesture = ({
           direction,
         });
       }
-      updateConstraintFeedbackLine(constraintFeedbackLine, {
-        elementVisuallyImpacted,
-        mouseX,
-        mouseY,
-      });
+      if (constraintFeedbackLine) {
+        updateConstraintFeedbackLine(constraintFeedbackLine, {
+          elementVisuallyImpacted,
+          mouseX,
+          mouseY,
+        });
+      }
       if (isRelease) {
         onDrag?.(gestureInfo, "end");
       } else if (!started) {
@@ -680,13 +691,7 @@ const createObstacleMarker = (name, left, top, width, height) => {
   return marker;
 };
 
-// Visual feedback line connecting mouse cursor to dragged element when constraints prevent following
-// This provides intuitive feedback during drag operations when the element cannot reach the mouse
-// position due to obstacles, boundaries, or other constraints. The line becomes visible when there's
-// a significant distance between the mouse and the element, helping users understand why the
-// element isn't moving as expected.
 const createConstraintFeedbackLine = () => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
   const line = document.createElement("div");
   line.className = "navi_constraint_feedback_line";
   line.title =
