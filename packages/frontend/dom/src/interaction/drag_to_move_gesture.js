@@ -48,21 +48,21 @@ export const createDragToMoveGesture = (options) => {
         }) => {
           let scroll = currentScroll;
 
-          // keep_into_view: {
-          //   if (isGoingPositive) {
-          //     if (desiredElementEnd > visibleAreaEnd) {
-          //       const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
-          //       scroll = currentScroll + scrollAmountNeeded;
-          //     }
-          //   } else if (isGoingNegative) {
-          //     if (desiredElementStart < visibleAreaStart) {
-          //       const scrollAmountNeeded =
-          //         visibleAreaStart - desiredElementStart;
-          //       scroll = Math.max(0, currentScroll - scrollAmountNeeded);
-          //     }
-          //   }
-          //   scrollableParent[scrollProperty] = scroll;
-          // }
+          keep_into_view: {
+            if (isGoingPositive) {
+              if (desiredElementEnd > visibleAreaEnd) {
+                const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
+                scroll = currentScroll + scrollAmountNeeded;
+              }
+            } else if (isGoingNegative) {
+              if (desiredElementStart < visibleAreaStart) {
+                const scrollAmountNeeded =
+                  visibleAreaStart - desiredElementStart;
+                scroll = Math.max(0, currentScroll - scrollAmountNeeded);
+              }
+            }
+            scrollableParent[scrollProperty] = scroll;
+          }
           move: {
             const elementPosition = initialPosition + moveAmount;
             if (elementToImpact) {
