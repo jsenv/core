@@ -145,7 +145,6 @@ const getScrollingElement = (document) => {
     ? null
     : possiblyScrollingElement;
 };
-
 const getNextBodyElement = (frameset) => {
   // We use this function to be correct per spec in case `document.body` is
   // a `frameset` but there exists a later `body`. Since `document.body` is
@@ -160,9 +159,7 @@ const getNextBodyElement = (frameset) => {
   }
   return null;
 };
-
 const isBodyElement = (element) => element.ownerDocument.body === element;
-
 const bodyIsScrollable = (body) => {
   // a body element is scrollable if body and html are scrollable and rendered
   if (!isScrollable(body)) {
@@ -208,7 +205,6 @@ const isCompliant = (document) => {
   }
   return false;
 };
-
 const testScrollCompliance = (document) => {
   const iframe = document.createElement("iframe");
   iframe.style.height = "1px";
@@ -239,6 +235,10 @@ const isScrollable = (element, { includeHidden }) => {
 const canHaveVerticalScroll = (element, { includeHidden }) => {
   const verticalOverflow = getStyle(element, "overflow-y");
   if (verticalOverflow === "visible") {
+    // browser returns "visible" on documentElement even if it is scrollable
+    if (isDocumentElement(element)) {
+      return true;
+    }
     return false;
   }
   if (verticalOverflow === "hidden" || verticalOverflow === "clip") {
@@ -246,6 +246,10 @@ const canHaveVerticalScroll = (element, { includeHidden }) => {
   }
   const overflow = getStyle(element, "overflow");
   if (overflow === "visible") {
+    // browser returns "visible" on documentElement even if it is scrollable
+    if (isDocumentElement(element)) {
+      return true;
+    }
     return false;
   }
   if (overflow === "hidden" || overflow === "clip") {
@@ -256,6 +260,10 @@ const canHaveVerticalScroll = (element, { includeHidden }) => {
 const canHaveHorizontalScroll = (element, { includeHidden }) => {
   const horizontalOverflow = getStyle(element, "overflow-x");
   if (horizontalOverflow === "visible") {
+    // browser returns "visible" on documentElement even if it is scrollable
+    if (isDocumentElement(element)) {
+      return true;
+    }
     return false;
   }
   if (horizontalOverflow === "hidden" || horizontalOverflow === "clip") {
@@ -263,6 +271,10 @@ const canHaveHorizontalScroll = (element, { includeHidden }) => {
   }
   const overflow = getStyle(element, "overflow");
   if (overflow === "visible") {
+    if (isDocumentElement(element)) {
+      // browser returns "visible" on documentElement even if it is scrollable
+      return true;
+    }
     return false;
   }
   if (overflow === "hidden" || overflow === "clip") {
@@ -272,14 +284,20 @@ const canHaveHorizontalScroll = (element, { includeHidden }) => {
 };
 
 const findScrollableParent = (element, { includeHidden } = {}) => {
+  if (element === document) {
+    return null;
+  }
   if (element === document.documentElement) {
+    if (isScrollable(element, { includeHidden })) {
+      return element;
+    }
     return null;
   }
 
   const position = getStyle(element, "position");
   let parent = element.parentNode;
   while (parent) {
-    if (isDocumentElement(parent)) {
+    if (parent === document) {
       return null;
     }
     if (position === "absolute" && getStyle(parent, "position") === "static") {
