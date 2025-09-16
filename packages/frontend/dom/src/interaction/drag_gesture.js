@@ -1073,6 +1073,10 @@ const applyConstraints = (
 ) => {
   const { initialLeft, initialTop } = gestureInfo;
 
+  // Capture original movement values for debug logging
+  const originalXMove = xMove;
+  const originalYMove = yMove;
+
   for (const constraint of constraints) {
     if (constraint.type === "bounds") {
       // Apply bounds constraints directly
@@ -1281,6 +1285,18 @@ const applyConstraints = (
         }
       }
     }
+  }
+
+  // Log when no constraints were applied (movement unchanged)
+  if (
+    DRAG_DEBUG_VISUAL_MARKERS &&
+    originalXMove === xMove &&
+    originalYMove === yMove &&
+    (originalXMove !== 0 || originalYMove !== 0)
+  ) {
+    console.debug(
+      `Drag by ${interactionType}: no constraint enforcement needed (xMove=${xMove.toFixed(2)}, yMove=${yMove.toFixed(2)})`,
+    );
   }
 
   return {
