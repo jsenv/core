@@ -45,7 +45,6 @@ export const createDragToMoveGesture = (options) => {
           moveAmount, // gestureInfo.xMove or gestureInfo.yMove
           scrollProperty, // 'scrollLeft' or 'scrollTop'
           styleProperty, // 'left' or 'top'
-          autoScrollProperty, // 'autoScrolledX' or 'autoScrolledY'
         }) => {
           let scroll = currentScroll;
 
@@ -63,7 +62,6 @@ export const createDragToMoveGesture = (options) => {
               }
             }
             scrollableParent[scrollProperty] = scroll;
-            gestureInfo[autoScrollProperty] = scroll;
           }
           move: {
             const elementPosition = initialPosition + moveAmount;
@@ -91,7 +89,6 @@ export const createDragToMoveGesture = (options) => {
             moveAmount: gestureInfo.xMove,
             scrollProperty: "scrollLeft",
             styleProperty: "left",
-            autoScrollProperty: "autoScrolledX",
           });
         }
 
@@ -114,7 +111,6 @@ export const createDragToMoveGesture = (options) => {
             moveAmount: gestureInfo.yMove,
             scrollProperty: "scrollTop",
             styleProperty: "top",
-            autoScrollProperty: "autoScrolledY",
           });
         }
       },

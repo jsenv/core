@@ -186,8 +186,6 @@ export const createDragGesture = ({
       initialTop,
       initialScrollLeft,
       initialScrollTop,
-      autoScrolledX: 0,
-      autoScrolledY: 0,
     };
     let previousGestureInfo = null;
     let started = !threshold;
@@ -260,6 +258,37 @@ export const createDragGesture = ({
       element.setAttribute(gestureAttribute, "");
       addTeardown(() => {
         element.removeAttribute(gestureAttribute);
+      });
+    }
+
+    // Set up scroll event handling to adjust drag position when scrolling occurs
+    update_on_scroll: {
+      const handleScroll = () => {
+        if (!started) return;
+
+        const currentScrollLeft = scrollableParent
+          ? scrollableParent.scrollLeft
+          : 0;
+        const currentScrollTop = scrollableParent
+          ? scrollableParent.scrollTop
+          : 0;
+
+        const scrollDeltaX = currentScrollLeft - gestureInfo.initialScrollLeft;
+        const scrollDeltaY = currentScrollTop - gestureInfo.initialScrollTop;
+
+        // Compensate for scroll by adjusting the relative position
+        // as if the mouse had moved in the opposite direction of the scroll
+        const compensatedXRelative = gestureInfo.x - scrollDeltaX;
+        const compensatedYRelative = gestureInfo.y - scrollDeltaY;
+
+        // Trigger a drag update with the compensated position
+        drag(compensatedXRelative, compensatedYRelative);
+      };
+      scrollableParent.addEventListener("scroll", handleScroll, {
+        passive: true,
+      });
+      addTeardown(() => {
+        scrollableParent.removeEventListener("scroll", handleScroll);
       });
     }
 
