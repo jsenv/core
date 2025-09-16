@@ -276,11 +276,9 @@ export const createDragGesture = ({
         }
         isHandlingScroll = true;
 
-        // When scrolling occurs during drag, we need to maintain the current mouse position
-        // The key insight: gestureInfo.x and gestureInfo.y represent the current mouse position
-        // relative to positioned parent. We should just call drag with these current coordinates
-        // to recalculate position with the new scroll state
-        drag(gestureInfo.x, gestureInfo.y);
+        // When scrolling occurs during drag, recalculate with scroll interaction type
+        // This preserves mouse movement but recalculates total movement with new scroll offset
+        drag(gestureInfo.x, gestureInfo.y, { interactionType: "scroll" });
 
         isHandlingScroll = false;
       };
@@ -429,7 +427,7 @@ export const createDragGesture = ({
     const determineDragData = (
       currentXRelative,
       currentYRelative,
-      { isRelease = false },
+      { isRelease = false, interactionType },
     ) => {
       const previousX = gestureInfo.x;
       const previousY = gestureInfo.y;
@@ -439,23 +437,66 @@ export const createDragGesture = ({
       const xDiff = previousX - currentXRelative;
       const yDiff = previousY - currentYRelative;
 
-      // Calculate mouse movement separately from total movement
-      // Note: xAtStart/yAtStart are already relative to positioned parent at grab time
-      const xMouseMove = direction.x ? x - gestureInfo.xAtStart : 0;
-      const yMouseMove = direction.y ? y - gestureInfo.yAtStart : 0;
-      // Calculate scroll offset
-      const currentScrollLeft = scrollableParent.scrollLeft;
-      const currentScrollTop = scrollableParent.scrollTop;
-      const scrollDeltaX = direction.x
-        ? currentScrollLeft - initialScrollLeft
-        : 0;
-      const scrollDeltaY = direction.y
-        ? currentScrollTop - initialScrollTop
-        : 0;
+      // Calculate movement based on interaction type
+      let xMouseMove;
+      let yMouseMove;
+      let xMove;
+      let yMove;
 
-      // Total movement = mouse movement + scroll offset
-      const xMove = xMouseMove + scrollDeltaX;
-      const yMove = yMouseMove + scrollDeltaY;
+      if (interactionType === "scroll") {
+        // For scroll events, keep existing mouse movement but recalculate total movement with new scroll
+        xMouseMove = gestureInfo.xMouseMove; // Keep existing mouse movement
+        yMouseMove = gestureInfo.yMouseMove; // Keep existing mouse movement
+
+        // Recalculate total movement with current scroll offset
+        const currentScrollLeft = scrollableParent.scrollLeft;
+        const currentScrollTop = scrollableParent.scrollTop;
+        const scrollDeltaX = direction.x
+          ? currentScrollLeft - initialScrollLeft
+          : 0;
+        const scrollDeltaY = direction.y
+          ? currentScrollTop - initialScrollTop
+          : 0;
+
+        xMove = xMouseMove + scrollDeltaX;
+        yMove = yMouseMove + scrollDeltaY;
+
+        console.log(`[SCROLL] Recalculating with scroll delta:`, {
+          xMouseMove,
+          yMouseMove,
+          scrollDeltaX,
+          scrollDeltaY,
+          xMove,
+          yMove,
+        });
+      } else {
+        // For mouse movement and programmatic calls, calculate fresh mouse movement
+        xMouseMove = direction.x ? x - gestureInfo.xAtStart : 0;
+        yMouseMove = direction.y ? y - gestureInfo.yAtStart : 0;
+
+        // Calculate scroll offset
+        const currentScrollLeft = scrollableParent.scrollLeft;
+        const currentScrollTop = scrollableParent.scrollTop;
+        const scrollDeltaX = direction.x
+          ? currentScrollLeft - initialScrollLeft
+          : 0;
+        const scrollDeltaY = direction.y
+          ? currentScrollTop - initialScrollTop
+          : 0;
+
+        // Total movement = mouse movement + scroll offset
+        xMove = xMouseMove + scrollDeltaX;
+        yMove = yMouseMove + scrollDeltaY;
+
+        console.log(`[${interactionType.toUpperCase()}] Fresh calculation:`, {
+          xMouseMove,
+          yMouseMove,
+          scrollDeltaX,
+          scrollDeltaY,
+          xMove,
+          yMove,
+        });
+      }
 
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
@@ -555,10 +596,31 @@ export const createDragGesture = ({
     const drag = (
       currentXRelative,
       currentYRelative,
-      { isRelease = false, mouseX = null, mouseY = null } = {},
+      {
+        isRelease = false,
+        mouseX = null,
+        mouseY = null,
+        interactionType = "programmatic", // "mousemove", "scroll", "programmatic"
+      } = {},
     ) => {
+      // Debug logging
+      console.log(`[DRAG] ${interactionType}:`, {
+        currentXRelative,
+        currentYRelative,
+        isRelease,
+        mouseX,
+        mouseY,
+        gestureInfoX: gestureInfo.x,
+        gestureInfoY: gestureInfo.y,
+        xMouseMove: gestureInfo.xMouseMove,
+        yMouseMove: gestureInfo.yMouseMove,
+        xMove: gestureInfo.xMove,
+        yMove: gestureInfo.yMove,
+      });
+
       const dragData = determineDragData(currentXRelative, currentYRelative, {
         isRelease,
+        interactionType,
       });
 
       if (!dragData) {
@@ -611,9 +673,16 @@ export const createDragGesture = ({
       }
     };
 
-    const release = (currentXRelative, currentYRelative) => {
+    const release = (
+      currentXRelative,
+      currentYRelative,
+      { interactionType = "programmatic" } = {},
+    ) => {
       gestureInfo.isMouseUp = true;
-      drag(currentXRelative, currentYRelative, { isRelease: true });
+      drag(currentXRelative, currentYRelative, {
+        isRelease: true,
+        interactionType,
+      });
       for (const teardownCallback of teardownCallbackSet) {
         teardownCallback();
       }
@@ -657,6 +726,7 @@ export const createDragGesture = ({
       ...options,
       xAtStart: xAtStartRelative,
       yAtStart: yAtStartRelative,
+      interactionType: "mousedown",
     });
 
     const handleMouseMove = (e) => {
@@ -667,6 +737,7 @@ export const createDragGesture = ({
       dragGesture.drag(currentXRelative, currentYRelative, {
         mouseX: e.clientX,
         mouseY: e.clientY,
+        interactionType: "mousemove",
       });
     };
 
@@ -676,7 +747,9 @@ export const createDragGesture = ({
         positionedParent.getBoundingClientRect();
       const currentXRelative = e.clientX - currentPositionedParentRect.left;
       const currentYRelative = e.clientY - currentPositionedParentRect.top;
-      dragGesture.release(currentXRelative, currentYRelative);
+      dragGesture.release(currentXRelative, currentYRelative, {
+        interactionType: "mouseup",
+      });
     };
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
