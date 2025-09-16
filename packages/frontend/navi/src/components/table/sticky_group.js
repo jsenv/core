@@ -46,23 +46,21 @@ const initStickyGroup = (container) => {
     if (!headerRow) {
       return;
     }
-    const stickyColumns = Array.from(headerRow.children).filter((cell) =>
-      cell.hasAttribute("data-sticky-x"),
-    );
+    const stickyHeaderCells = headerRow.querySelectorAll("th[data-sticky-x]");
     // Only proceed if we have more than one sticky column
-    if (stickyColumns.length <= 1) {
+    if (stickyHeaderCells.length <= 1) {
       return;
     }
 
     let cumulativeWidth = 0;
-
-    stickyColumns.forEach((headerCell, index) => {
-      const columnIndex = Array.from(headerRow.children).indexOf(headerCell);
-
+    stickyHeaderCells.forEach((stickyHeaderCell, index) => {
+      const columnIndex = Array.from(headerRow.children).indexOf(
+        stickyHeaderCell,
+      );
       if (index === 0) {
         // First sticky column stays at left: 0, set CSS variable
-        headerCell.style.setProperty(LEFT_CSS_VAR, "0px");
-        cumulativeWidth = headerCell.getBoundingClientRect().width;
+        stickyHeaderCell.style.setProperty(LEFT_CSS_VAR, "0px");
+        cumulativeWidth = stickyHeaderCell.getBoundingClientRect().width;
       } else {
         // Subsequent columns use cumulative positioning
         const leftPosition = cumulativeWidth;
@@ -74,9 +72,8 @@ const initStickyGroup = (container) => {
         columnCells.forEach((cell) => {
           cell.style.setProperty(LEFT_CSS_VAR, `${leftPosition}px`);
         });
-
         // Add this column's width to cumulative width for next column
-        cumulativeWidth += headerCell.getBoundingClientRect().width;
+        cumulativeWidth += stickyHeaderCell.getBoundingClientRect().width;
       }
     });
   };

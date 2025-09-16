@@ -935,7 +935,6 @@ const createScrollableAreaConstraint = (scrollableParent) => {
 const createObstacleConstraint = (obstacle, positionedParent) => {
   return () => {
     const obstacleRect = obstacle.getBoundingClientRect();
-
     // Check if element should be treated as sticky obstacle
     const stickyData = obstacle.getAttribute("data-sticky-obstacle");
 
@@ -944,10 +943,11 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
       const computedStyle = getComputedStyle(obstacle);
       const width = obstacleRect.width;
       const height = obstacleRect.height;
-      // If sticky values are not specified, use current computed position
       const left = parseFloat(computedStyle.left) || 0;
       const top = parseFloat(computedStyle.top) || 0;
 
+      // Note: For sticky obstacles, left/top are already relative to positioned parent
+      // since they come from getComputedStyle or are explicitly configured relative values
       return {
         type: "obstacle",
         left,
