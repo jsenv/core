@@ -263,12 +263,7 @@ export const createDragGesture = ({
     ) => {
       // Update constraint feedback line to show visual connection between mouse and element
       // when constraints prevent the element from following the mouse cursor
-      if (
-        !isRelease &&
-        constraintFeedbackLine &&
-        mouseX !== null &&
-        mouseY !== null
-      ) {
+      if (constraintFeedbackLine && mouseX !== null && mouseY !== null) {
         // Calculate element center position in viewport coordinates
         const currentElementRect =
           elementVisuallyImpacted.getBoundingClientRect();
@@ -800,9 +795,10 @@ const applyConstraints = (
       const isAbove = currentActualBottom <= constraint.top;
       const isBelow = currentActualTop >= constraint.bottom;
 
-      // Apply constraints based on element position - only one direction per obstacle
+      // Apply constraints based on element position - handle all cases including diagonal
+
+      // Always check Y constraints if element is above or below
       if (isAbove || isBelow) {
-        // Element is above or below - only check Y constraints
         const proposedLeft = initialLeft + xMove;
         const proposedRight = proposedLeft + elementWidth;
         const wouldHaveXOverlap =
@@ -823,9 +819,11 @@ const applyConstraints = (
             }
           }
         }
-      } else if (isOnTheLeft || isOnTheRight) {
-        // Element is on left or right - only check X constraints
-        const proposedTop = initialTop + yMove;
+      }
+
+      // Always check X constraints if element is on left or right (even after Y adjustment)
+      if (isOnTheLeft || isOnTheRight) {
+        const proposedTop = initialTop + yMove; // Use potentially adjusted yMove
         const proposedBottom = proposedTop + elementHeight;
         const wouldHaveYOverlap =
           proposedTop < constraint.bottom && proposedBottom > constraint.top;
