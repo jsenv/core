@@ -223,6 +223,63 @@ export const createDragGesture = ({
       });
     }
 
+    // Track last known mouse position for constraint feedback line during scroll
+    let lastMouseX = null;
+    let lastMouseY = null;
+    // Internal function to update constraint feedback line
+    const updateConstraintFeedbackLine = ({ mouseX, mouseY }) => {
+      if (!constraintFeedbackLine) {
+        return;
+      }
+
+      // Update last known mouse position if provided
+      if (mouseX !== null && mouseY !== null) {
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
+      }
+
+      // Use last known position if current position not available (e.g., during scroll)
+      const effectiveMouseX = mouseX !== null ? mouseX : lastMouseX;
+      const effectiveMouseY = mouseY !== null ? mouseY : lastMouseY;
+
+      if (effectiveMouseX === null || effectiveMouseY === null) {
+        return;
+      }
+
+      // Calculate element center position in viewport coordinates
+      const currentElementRect =
+        elementVisuallyImpacted.getBoundingClientRect();
+      const elementCenterX =
+        currentElementRect.left + currentElementRect.width / 2;
+      const elementCenterY =
+        currentElementRect.top + currentElementRect.height / 2;
+
+      // Calculate distance between mouse and element center
+      const deltaX = effectiveMouseX - elementCenterX;
+      const deltaY = effectiveMouseY - elementCenterY;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      // Show line only when distance is significant (> 20px threshold)
+      const threshold = 20;
+      if (distance <= threshold) {
+        constraintFeedbackLine.removeAttribute("data-visible");
+        return;
+      }
+
+      // Calculate angle and position
+      const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+      constraintFeedbackLine.setAttribute("data-visible", "");
+      // Position line at element center (which automatically accounts for scroll via getBoundingClientRect)
+      constraintFeedbackLine.style.left = `${elementCenterX}px`;
+      constraintFeedbackLine.style.top = `${elementCenterY}px`;
+      constraintFeedbackLine.style.width = `${distance}px`;
+      constraintFeedbackLine.style.transform = `rotate(${angle}deg)`;
+      // Fade in based on distance (more visible as distance increases)
+      const maxOpacity = 0.8;
+      const opacityFactor = Math.min((distance - threshold) / 100, 1);
+      constraintFeedbackLine.style.opacity = `${maxOpacity * opacityFactor}`;
+    };
+
     // Set up constraints - collect all constraint functions
     const constraintFunctions = [];
 
@@ -627,13 +684,7 @@ export const createDragGesture = ({
       });
 
       if (!dragData) {
-        if (constraintFeedbackLine) {
-          updateConstraintFeedbackLine(constraintFeedbackLine, {
-            elementVisuallyImpacted,
-            mouseX,
-            mouseY,
-          });
-        }
+        updateConstraintFeedbackLine({ mouseX, mouseY });
         return;
       }
       // Only update previousGestureInfo if it's not a release
@@ -658,13 +709,7 @@ export const createDragGesture = ({
           direction,
         });
       }
-      if (constraintFeedbackLine) {
-        updateConstraintFeedbackLine(constraintFeedbackLine, {
-          elementVisuallyImpacted,
-          mouseX,
-          mouseY,
-        });
-      }
+      updateConstraintFeedbackLine({ mouseX, mouseY });
       if (isRelease) {
         onDrag?.(gestureInfo, "end");
       } else if (!started) {
@@ -823,43 +868,6 @@ const createConstraintFeedbackLine = () => {
     "Constraint feedback - shows distance between mouse and constrained element";
   document.body.appendChild(line);
   return line;
-};
-
-// Update constraint feedback line after element is positioned
-// This ensures the line reflects the actual element position after constraints
-const updateConstraintFeedbackLine = (
-  constraintFeedbackLine,
-  { elementVisuallyImpacted, mouseX, mouseY },
-) => {
-  // Calculate element center position in viewport coordinates
-  const currentElementRect = elementVisuallyImpacted.getBoundingClientRect();
-  const elementCenterX = currentElementRect.left + currentElementRect.width / 2;
-  const elementCenterY = currentElementRect.top + currentElementRect.height / 2;
-
-  // Calculate distance between mouse and element center
-  const deltaX = mouseX - elementCenterX;
-  const deltaY = mouseY - elementCenterY;
-  const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-  // Show line only when distance is significant (> 20px threshold)
-  const threshold = 20;
-  if (distance <= threshold) {
-    constraintFeedbackLine.removeAttribute("data-visible");
-    return;
-  }
-
-  // Calculate angle and position
-  const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-  constraintFeedbackLine.setAttribute("data-visible", "");
-  // Position line at element center
-  constraintFeedbackLine.style.left = `${elementCenterX}px`;
-  constraintFeedbackLine.style.top = `${elementCenterY}px`;
-  constraintFeedbackLine.style.width = `${distance}px`;
-  constraintFeedbackLine.style.transform = `rotate(${angle}deg)`;
-  // Fade in based on distance (more visible as distance increases)
-  const maxOpacity = 0.8;
-  const opacityFactor = Math.min((distance - threshold) / 100, 1);
-  constraintFeedbackLine.style.opacity = `${maxOpacity * opacityFactor}`;
 };
 
 const getPositionedParent = (element) => {
