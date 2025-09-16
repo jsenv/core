@@ -57,7 +57,7 @@ import.meta.css = /* css */ `
     position: fixed;
     width: 2px;
     height: 100vh;
-    z-index: 9999;
+    z-index: 999999;
     pointer-events: none;
     opacity: 0.7;
   }
