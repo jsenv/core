@@ -1,3 +1,36 @@
+/**
+ * Drag Gesture System
+ *
+ * Provides constraint-based dragging functionality for DOM elements with support for:
+ *
+ * **Core Features:**
+ * - Mouse and scroll-based dragging interactions
+ * - Bounds constraints (keep elements within container boundaries)
+ * - Obstacle constraints (prevent elements from overlapping with other elements)
+ * - Visual feedback with constraint lines and debug markers
+ *
+ * **Interaction Types:**
+ * - Mouse dragging: Traditional click-and-drag with mouse events
+ * - Scroll dragging: Drag using scroll wheel while holding mouse button
+ * - Programmatic: Direct position updates via API
+ *
+ * **Constraint System:**
+ * - Bounds constraints: Define rectangular areas elements must stay within
+ * - Obstacle constraints: Define rectangular areas elements cannot overlap
+ * - Floating point precision handling: Ensures reliable constraint detection
+ * - Overlap resolution: Automatic collision detection and resolution
+ *
+ * **Technical Details:**
+ * - Uses floating point rounding to prevent precision issues in boundary detection
+ * - Scroll events are more susceptible to floating point errors than mouse events
+ * - Supports both relative and absolute positioning contexts
+ * - Integrates with scrollable containers for viewport-aware constraints
+ *
+ * **Usage:**
+ * Call `drag(element, options)` to make an element draggable with constraints.
+ * Configure constraints, interaction callbacks, and visual feedback options.
+ */
+
 import { getScrollableParent } from "../scroll.js";
 
 import.meta.css = /* css */ `
@@ -902,8 +935,29 @@ const createScrollableAreaConstraint = (scrollableParent) => {
 const createObstacleConstraint = (obstacle, positionedParent) => {
   return () => {
     const obstacleRect = obstacle.getBoundingClientRect();
-    const positionedParentRect = positionedParent.getBoundingClientRect();
 
+    // Check if element should be treated as sticky obstacle
+    const stickyData = obstacle.getAttribute("data-sticky-obstacle");
+
+    if (stickyData) {
+      // Get element's computed style for dimensions and current position
+      const computedStyle = getComputedStyle(obstacle);
+      const width = obstacleRect.width;
+      const height = obstacleRect.height;
+      // If sticky values are not specified, use current computed position
+      const left = parseFloat(computedStyle.left) || 0;
+      const top = parseFloat(computedStyle.top) || 0;
+
+      return {
+        type: "obstacle",
+        left,
+        top,
+        right: left + width,
+        bottom: top + height,
+      };
+    }
+
+    const positionedParentRect = positionedParent.getBoundingClientRect();
     // Convert obstacle coordinates to be relative to positioned parent
     // getBoundingClientRect() already accounts for scroll position
     return {
