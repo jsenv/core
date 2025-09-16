@@ -160,10 +160,8 @@ export const createDragGesture = ({
       elementVisuallyImpactedRect.top - positionedParentRect.top;
 
     const scrollableParent = getScrollableParent(element);
-    const initialScrollLeft = scrollableParent
-      ? scrollableParent.scrollLeft
-      : 0;
-    const initialScrollTop = scrollableParent ? scrollableParent.scrollTop : 0;
+    const initialScrollLeft = scrollableParent.scrollLeft;
+    const initialScrollTop = scrollableParent.scrollTop;
 
     const gestureInfo = {
       element,
