@@ -1081,19 +1081,6 @@ const applyConstraints = (
       const minAllowedYMove = constraint.top - initialTop;
       const maxAllowedYMove = constraint.bottom - initialTop;
 
-      if (DRAG_DEBUG_VISUAL_MARKERS) {
-        console.debug(
-          `Bounds constraint: left=${constraint.left}, top=${constraint.top}, right=${constraint.right}, bottom=${constraint.bottom}`,
-        );
-        console.debug(
-          `Initial position: left=${initialLeft}, top=${initialTop}`,
-        );
-        console.debug(
-          `Calculated bounds: minX=${minAllowedXMove}, maxX=${maxAllowedXMove}, minY=${minAllowedYMove}, maxY=${maxAllowedYMove}`,
-        );
-        console.debug(`Current movement: xMove=${xMove}, yMove=${yMove}`);
-      }
-
       if (xMove < minAllowedXMove) {
         logConstraintEnforcement(
           "x",
