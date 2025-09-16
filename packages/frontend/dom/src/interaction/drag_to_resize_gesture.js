@@ -2,7 +2,7 @@ import { createDragGesture } from "./drag_gesture.js";
 
 export const startDragToResizeGesture = (
   mousedownEvent,
-  { onStart, onChange, onEnd },
+  { onDragStart, onDrag, onRelease, ...options },
 ) => {
   const target = mousedownEvent.target;
   if (!target.closest) {
@@ -33,9 +33,9 @@ export const startDragToResizeGesture = (
 
   const dragToResizeGesture = createDragGesture({
     gestureAttribute: "data-resizing",
-    onDragStart: onStart,
-    onDrag: onChange,
-    onRelease: onEnd,
+    onDragStart,
+    onDrag,
+    onRelease,
   });
 
   elementWithDataResizeHandle.setAttribute("data-active", "");
@@ -52,6 +52,7 @@ export const startDragToResizeGesture = (
         : resizeDirection.x
           ? "ew-resize"
           : "ns-resize",
+    ...options,
   });
   return dragToResizeGesture;
 };
