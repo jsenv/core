@@ -556,8 +556,8 @@ import.meta.css = /* css */ `
 const NO_SELECTION = [];
 export const Table = forwardRef((props, ref) => {
   let {
-    stickyHeader = true,
-    rowColumnSticky = true,
+    stickyHeader,
+    rowColumnSticky,
     columns,
     rows = [],
     data,
@@ -687,26 +687,52 @@ export const Table = forwardRef((props, ref) => {
   }, [selectionColor]);
 
   // Calculate frontier sticky column and row indexes (boundary between sticky and non-sticky)
-  let columnIndex = 0;
-  let stickyColumnFrontierIndex = 0;
-  while (columnIndex < columns.length) {
-    const column = columns[columnIndex];
-    columnIndex++;
-    if (column.sticky) {
-      stickyColumnFrontierIndex = columnIndex;
+
+  let stickyColumnFrontierIndex = -1;
+  sticky_column_frontier: {
+    let lastStickyColumnIndex = -1;
+    let columnIndex = 0;
+    while (columnIndex < columns.length) {
+      const column = columns[columnIndex];
+      columnIndex++;
+      if (column.sticky) {
+        lastStickyColumnIndex = columnIndex;
+      } else {
+        break;
+      }
+    }
+    if (lastStickyColumnIndex === -1) {
+      if (rowColumnSticky === undefined) {
+        rowColumnSticky = true;
+      }
+      stickyColumnFrontierIndex = rowColumnSticky ? 0 : -1;
     } else {
-      break;
+      rowColumnSticky = true; // force to true
+      stickyColumnFrontierIndex = lastStickyColumnIndex;
     }
   }
-  let stickyRowFrontierIndex = 0;
-  let rowIndex = 0;
-  while (rowIndex < rows.length) {
-    const { sticky } = rows[rowIndex];
-    rowIndex++;
-    if (sticky) {
-      stickyRowFrontierIndex = rowIndex;
+
+  let stickyRowFrontierIndex = -1;
+  sticky_row_frontier: {
+    let lastStickyRowIndex = -1;
+    let rowIndex = 0;
+    while (rowIndex < rows.length) {
+      const { sticky } = rows[rowIndex];
+      rowIndex++;
+      if (sticky) {
+        lastStickyRowIndex = rowIndex;
+      } else {
+        break;
+      }
+    }
+    if (lastStickyRowIndex === -1) {
+      if (stickyHeader === undefined) {
+        stickyHeader = true;
+      }
+      stickyRowFrontierIndex = stickyHeader ? 0 : -1;
     } else {
-      break;
+      stickyHeader = true; // force to true
+      stickyRowFrontierIndex = lastStickyRowIndex;
     }
   }
 
@@ -1008,7 +1034,7 @@ const HeaderCell = ({
 
         // Find the last sticky column element to use as left boundary for auto-scroll
         let lastStickyColumnElement = null;
-        if (stickyColumnFrontierIndex > 0) {
+        if (stickyColumnFrontierIndex > -1) {
           // Find the last sticky column header cell
           const headerRow = table.querySelector("thead tr");
           lastStickyColumnElement =
