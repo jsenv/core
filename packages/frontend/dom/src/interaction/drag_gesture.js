@@ -940,12 +940,43 @@ const getPositionedParent = (element) => {
 
 const createScrollableAreaConstraint = (scrollableParent) => {
   return ({ elementWidth, elementHeight }) => {
+    // Handle floating point precision issues between getBoundingClientRect() and scroll dimensions
+    // - elementWidth/elementHeight: floats from getBoundingClientRect() (e.g., 2196.477294921875)
+    // - scrollWidth/scrollHeight: integers from browser's internal calculations (e.g., 2196)
+    //
+    // When element dimensions exceed or equal scroll dimensions due to precision differences,
+    // we cap the constraint bounds to prevent negative positioning that would push elements
+    // outside their intended scrollable area.
+
+    const scrollWidth = scrollableParent.scrollWidth;
+    const scrollHeight = scrollableParent.scrollHeight;
+
+    // Calculate horizontal bounds: element can be positioned from left=0 to right=constraint
+    let right;
+    if (elementWidth >= scrollWidth) {
+      // Element fills or exceeds container width - constraint to left edge only
+      right = 0;
+    } else {
+      // Normal case: element can move within available space
+      right = scrollWidth - elementWidth;
+    }
+
+    // Calculate vertical bounds: element can be positioned from top=0 to bottom=constraint
+    let bottom;
+    if (elementHeight >= scrollHeight) {
+      // Element fills or exceeds container height - constraint to top edge only
+      bottom = 0;
+    } else {
+      // Normal case: element can move within available space
+      bottom = scrollHeight - elementHeight;
+    }
+
     return {
       type: "bounds",
       left: 0,
       top: 0,
-      right: scrollableParent.scrollWidth - elementWidth,
-      bottom: scrollableParent.scrollHeight - elementHeight,
+      right,
+      bottom,
       element: scrollableParent,
       name: "scrollable area bounds",
     };
@@ -1046,6 +1077,23 @@ const applyConstraints = (
     if (constraint.type === "bounds") {
       // Apply bounds constraints directly
       const minAllowedXMove = constraint.left - initialLeft;
+      const maxAllowedXMove = constraint.right - initialLeft;
+      const minAllowedYMove = constraint.top - initialTop;
+      const maxAllowedYMove = constraint.bottom - initialTop;
+
+      if (DRAG_DEBUG_VISUAL_MARKERS) {
+        console.debug(
+          `Bounds constraint: left=${constraint.left}, top=${constraint.top}, right=${constraint.right}, bottom=${constraint.bottom}`,
+        );
+        console.debug(
+          `Initial position: left=${initialLeft}, top=${initialTop}`,
+        );
+        console.debug(
+          `Calculated bounds: minX=${minAllowedXMove}, maxX=${maxAllowedXMove}, minY=${minAllowedYMove}, maxY=${maxAllowedYMove}`,
+        );
+        console.debug(`Current movement: xMove=${xMove}, yMove=${yMove}`);
+      }
+
       if (xMove < minAllowedXMove) {
         logConstraintEnforcement(
           "x",
@@ -1056,7 +1104,6 @@ const applyConstraints = (
         );
         xMove = minAllowedXMove;
       }
-      const maxAllowedXMove = constraint.right - initialLeft;
       if (xMove > maxAllowedXMove) {
         logConstraintEnforcement(
           "x",
@@ -1067,7 +1114,6 @@ const applyConstraints = (
         );
         xMove = maxAllowedXMove;
       }
-      const minAllowedYMove = constraint.top - initialTop;
       if (yMove < minAllowedYMove) {
         logConstraintEnforcement(
           "y",
@@ -1078,7 +1124,6 @@ const applyConstraints = (
         );
         yMove = minAllowedYMove;
       }
-      const maxAllowedYMove = constraint.bottom - initialTop;
       if (yMove > maxAllowedYMove) {
         logConstraintEnforcement(
           "y",
