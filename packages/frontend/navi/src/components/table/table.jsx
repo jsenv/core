@@ -1008,6 +1008,7 @@ const HeaderCell = ({
           onGrab,
           onDrag,
           onRelease,
+          keepMarkersOnRelease: true,
         });
         const tableClone = table.cloneNode(true);
         const scrollableParent = getScrollableParent(table);

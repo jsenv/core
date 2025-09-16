@@ -26,9 +26,14 @@
  * - Supports both relative and absolute positioning contexts
  * - Integrates with scrollable containers for viewport-aware constraints
  *
+ * **Debug Features:**
+ * - Visual markers show bounds, obstacles, and constraint feedback lines
+ * - Optional marker persistence after drag ends for debugging constraint systems
+ * - Enable/disable debug markers globally via DRAG_DEBUG_VISUAL_MARKERS
+ *
  * **Usage:**
- * Call `drag(element, options)` to make an element draggable with constraints.
- * Configure constraints, interaction callbacks, and visual feedback options.
+ * Call `createDragGesture(options)` to create a drag gesture system.
+ * Configure constraints, interaction callbacks, visual feedback, and debug options.
  */
 
 import { getScrollableParent } from "../scroll.js";
@@ -161,6 +166,10 @@ export const createDragGesture = ({
   // a significant distance between the mouse and the element, helping users understand why the
   // element isn't moving as expected.
   constrainedFeedbackLine = true,
+  // Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
+  // Useful for debugging constraint systems and understanding why elements behave certain ways
+  // When enabled, markers persist until next drag gesture starts or page is refreshed
+  keepMarkersOnRelease = false,
   lifecycle,
 }) => {
   const teardownCallbackSet = new Set();
@@ -233,6 +242,16 @@ export const createDragGesture = ({
     let currentDebugMarkers = [];
     let currentConstraintMarkers = [];
 
+    // Clean up any existing persistent markers from previous drag gestures
+    if (keepMarkersOnRelease) {
+      // Remove any existing markers from previous gestures
+      document
+        .querySelectorAll(
+          ".navi_debug_marker, .navi_obstacle_marker, .navi_constraint_feedback_line",
+        )
+        .forEach((marker) => marker.remove());
+    }
+
     // Set up backdrop
     if (backdrop) {
       const backdropElement = document.createElement("div");
@@ -252,7 +271,9 @@ export const createDragGesture = ({
     if (constrainedFeedbackLine) {
       constraintFeedbackLine = createConstraintFeedbackLine();
       addTeardown(() => {
-        constraintFeedbackLine.remove();
+        if (!keepMarkersOnRelease) {
+          constraintFeedbackLine.remove();
+        }
       });
     }
 
@@ -330,14 +351,16 @@ export const createDragGesture = ({
 
     // Clean up debug markers when gesture ends
     addTeardown(() => {
-      currentDebugMarkers.forEach((marker) => {
-        marker.remove();
-      });
-      currentConstraintMarkers.forEach((marker) => {
-        marker.remove();
-      });
-      currentDebugMarkers = [];
-      currentConstraintMarkers = [];
+      if (!keepMarkersOnRelease) {
+        currentDebugMarkers.forEach((marker) => {
+          marker.remove();
+        });
+        currentConstraintMarkers.forEach((marker) => {
+          marker.remove();
+        });
+        currentDebugMarkers = [];
+        currentConstraintMarkers = [];
+      }
     });
 
     // Set up dragging attribute
