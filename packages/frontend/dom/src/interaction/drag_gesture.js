@@ -1022,6 +1022,54 @@ const applyConstraints = (
           }
         }
       }
+
+      // Handle overlap case - when element is already overlapping with obstacle
+      if (!isOnTheLeft && !isOnTheRight && !isAbove && !isBelow) {
+        // Element is overlapping with obstacle - push it out in the direction of least resistance
+        console.log(
+          `[OBSTACLE] Element is overlapping with obstacle, resolving collision`,
+        );
+
+        // Calculate distances to push element out in each direction
+        const distanceToLeft = currentActualRight - constraint.left; // Distance to push left
+        const distanceToRight = constraint.right - currentActualLeft; // Distance to push right
+        const distanceToTop = currentActualBottom - constraint.top; // Distance to push up
+        const distanceToBottom = constraint.bottom - currentActualTop; // Distance to push down
+
+        // Find the minimum distance (direction of least resistance)
+        const minDistance = Math.min(
+          distanceToLeft,
+          distanceToRight,
+          distanceToTop,
+          distanceToBottom,
+        );
+
+        if (minDistance === distanceToLeft) {
+          // Push left: element should not go past constraint.left - elementWidth
+          const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
+          if (xMove > maxAllowedXMove) {
+            xMove = maxAllowedXMove;
+          }
+        } else if (minDistance === distanceToRight) {
+          // Push right: element should not go before constraint.right
+          const minAllowedXMove = constraint.right - initialLeft;
+          if (xMove < minAllowedXMove) {
+            xMove = minAllowedXMove;
+          }
+        } else if (minDistance === distanceToTop) {
+          // Push up: element should not go past constraint.top - elementHeight
+          const maxAllowedYMove = constraint.top - elementHeight - initialTop;
+          if (yMove > maxAllowedYMove) {
+            yMove = maxAllowedYMove;
+          }
+        } else if (minDistance === distanceToBottom) {
+          // Push down: element should not go before constraint.bottom
+          const minAllowedYMove = constraint.bottom - initialTop;
+          if (yMove < minAllowedYMove) {
+            yMove = minAllowedYMove;
+          }
+        }
+      }
     }
   }
 
