@@ -243,7 +243,7 @@ export const createDragGesture = ({
       backdropElement.style.userSelect = "none";
       document.body.appendChild(backdropElement);
       addTeardown(() => {
-        document.body.removeChild(backdropElement);
+        backdropElement.remove();
       });
     }
 
@@ -252,7 +252,7 @@ export const createDragGesture = ({
     if (constrainedFeedbackLine) {
       constraintFeedbackLine = createConstraintFeedbackLine();
       addTeardown(() => {
-        document.body.removeChild(constraintFeedbackLine);
+        constraintFeedbackLine.remove();
       });
     }
 
@@ -331,14 +331,10 @@ export const createDragGesture = ({
     // Clean up debug markers when gesture ends
     addTeardown(() => {
       currentDebugMarkers.forEach((marker) => {
-        if (marker && marker.parentNode) {
-          marker.parentNode.removeChild(marker);
-        }
+        marker.remove();
       });
       currentConstraintMarkers.forEach((marker) => {
-        if (marker && marker.parentNode) {
-          marker.parentNode.removeChild(marker);
-        }
+        marker.remove();
       });
       currentDebugMarkers = [];
       currentConstraintMarkers = [];
