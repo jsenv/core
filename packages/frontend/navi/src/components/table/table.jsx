@@ -1059,11 +1059,13 @@ const HeaderCell = ({
         dragToMoveGesture.addTeardown(() => {
           // cloneParent.removeChild(tableClone);
         });
+        // firstCol.setAttribute("data-drag-obstacle", "");
+        // firstCol.setAttribute("data-sticky-obstacle", "");
+
         dragToMoveGesture.grabViaMousedown(e, {
           element: tableClone,
-          elementToMove: cloneParent,
-          stickyLeftElement: firstCol,
-          elementVisuallyMoving: colClone,
+          elementToImpact: cloneParent,
+          elementVisuallyImpacted: colClone,
         });
       }}
     >

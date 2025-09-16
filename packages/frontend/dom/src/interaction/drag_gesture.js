@@ -816,7 +816,9 @@ const createDebugMarker = (
   color = "red",
   orientation = "vertical",
 ) => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
+  if (!DRAG_DEBUG_VISUAL_MARKERS) {
+    return null;
+  }
 
   const marker = document.createElement("div");
   marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
