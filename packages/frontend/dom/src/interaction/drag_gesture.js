@@ -170,6 +170,11 @@ export const createDragGesture = ({
   // Useful for debugging constraint systems and understanding why elements behave certain ways
   // When enabled, markers persist until next drag gesture starts or page is refreshed
   keepMarkersOnRelease = false,
+  // Reduce visible scrollable area to trigger auto-scroll before reaching actual boundaries
+  // Useful for scenarios like sticky columns where auto-scroll should start when approaching sticky areas
+  // Expected format: { left?: HTMLElement, right?: HTMLElement, top?: HTMLElement, bottom?: HTMLElement }
+  // Elements are used to compute their position/size and reduce the corresponding edge of visible area
+  visibleAreaReducers = {},
   lifecycle,
 }) => {
   const teardownCallbackSet = new Set();
@@ -659,11 +664,36 @@ export const createDragGesture = ({
 
       const scrollableRect = scrollableParent.getBoundingClientRect();
       const availableWidth = scrollableParent.clientWidth;
-      const visibleAreaLeft = scrollableRect.left;
-      const visibleAreaRight = visibleAreaLeft + availableWidth;
       const availableHeight = scrollableParent.clientHeight;
-      const visibleAreaTop = scrollableRect.top;
-      const visibleAreaBottom = visibleAreaTop + availableHeight;
+
+      // Calculate base visible area
+      let visibleAreaLeft = scrollableRect.left;
+      let visibleAreaRight = visibleAreaLeft + availableWidth;
+      let visibleAreaTop = scrollableRect.top;
+      let visibleAreaBottom = visibleAreaTop + availableHeight;
+
+      // Apply visible area reducers to artificially shrink the scrollable zone
+      // This triggers auto-scroll before reaching actual boundaries
+      if (visibleAreaReducers.left) {
+        const leftElement = visibleAreaReducers.left;
+        const leftElementRect = leftElement.getBoundingClientRect();
+        visibleAreaLeft = Math.max(visibleAreaLeft, leftElementRect.right);
+      }
+      if (visibleAreaReducers.right) {
+        const rightElement = visibleAreaReducers.right;
+        const rightElementRect = rightElement.getBoundingClientRect();
+        visibleAreaRight = Math.min(visibleAreaRight, rightElementRect.left);
+      }
+      if (visibleAreaReducers.top) {
+        const topElement = visibleAreaReducers.top;
+        const topElementRect = topElement.getBoundingClientRect();
+        visibleAreaTop = Math.max(visibleAreaTop, topElementRect.bottom);
+      }
+      if (visibleAreaReducers.bottom) {
+        const bottomElement = visibleAreaReducers.bottom;
+        const bottomElementRect = bottomElement.getBoundingClientRect();
+        visibleAreaBottom = Math.min(visibleAreaBottom, bottomElementRect.top);
+      }
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
         drawVisualMarkers({

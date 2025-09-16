@@ -771,6 +771,7 @@ export const Table = forwardRef((props, ref) => {
                   data={data}
                   selectionController={selectionController}
                   grabbed={columnIsGrabbed}
+                  stickyColumnFrontierIndex={stickyColumnFrontierIndex}
                   onGrab={(_, tableClone) => {
                     grabColumn(index);
                     setDragElement(tableClone);
@@ -957,6 +958,7 @@ const HeaderCell = ({
   data,
   selectionController,
   grabbed,
+  stickyColumnFrontierIndex,
   onGrab,
   onDrag,
   onRelease,
@@ -1004,12 +1006,24 @@ const HeaderCell = ({
         // const minY = -rectRelativeTo.top;
         const tableClone = table.cloneNode(true);
 
+        // Find the last sticky column element to use as left boundary for auto-scroll
+        let lastStickyColumnElement = null;
+        if (stickyColumnFrontierIndex > 0) {
+          // Find the last sticky column header cell
+          const headerRow = table.querySelector("thead tr");
+          lastStickyColumnElement =
+            headerRow.children[stickyColumnFrontierIndex];
+        }
+
         const dragToMoveGesture = createDragToMoveGesture({
           direction: { x: true },
           onGrab: (gestureInfo) => onGrab(gestureInfo, tableClone),
           onDrag,
           onRelease,
           keepMarkersOnRelease: true,
+          visibleAreaReducers: {
+            left: lastStickyColumnElement,
+          },
         });
 
         const scrollableParent = getScrollableParent(table);
