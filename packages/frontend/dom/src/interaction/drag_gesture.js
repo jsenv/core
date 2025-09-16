@@ -422,19 +422,19 @@ export const createDragGesture = ({
         positionedParent.getBoundingClientRect();
 
       // For debug markers, we'll show bounds constraints and obstacle zones
-      let constraintLeft = 0;
-      let constraintTop = 0;
-      let constraintRight = Infinity;
-      let constraintBottom = Infinity;
+      let leftBound = 0;
+      let topBound = 0;
+      let rightBound = Infinity;
+      let bottomBound = Infinity;
 
       // Extract bounds from bounds constraints and collect obstacle data
       const obstacles = [];
       for (const constraint of constraints) {
         if (constraint.type === "bounds") {
-          constraintLeft = Math.max(constraintLeft, constraint.left);
-          constraintTop = Math.max(constraintTop, constraint.top);
-          constraintRight = Math.min(constraintRight, constraint.right);
-          constraintBottom = Math.min(constraintBottom, constraint.bottom);
+          leftBound = Math.max(leftBound, constraint.left);
+          topBound = Math.max(topBound, constraint.top);
+          rightBound = Math.min(rightBound, constraint.right);
+          bottomBound = Math.min(bottomBound, constraint.bottom);
         } else if (constraint.type === "obstacle") {
           obstacles.push(constraint);
         }
@@ -462,46 +462,39 @@ export const createDragGesture = ({
         }
       });
 
-      // Create constraint markers
-      if (constraintLeft > 0) {
-        const constraintLeftViewport =
-          currentPositionedParentRect.left + constraintLeft;
+      // Create bound markers
+      if (leftBound > 0) {
+        const leftBoundViewport = currentPositionedParentRect.left + leftBound;
         currentConstraintMarkers.push(
-          createDebugMarker("constraintLeft", constraintLeftViewport, 0, "red"),
+          createDebugMarker("leftBound", leftBoundViewport, 0, "red"),
         );
       }
-      if (constraintRight !== Infinity) {
-        const constraintRightViewport =
-          currentPositionedParentRect.left + constraintRight;
+      if (rightBound !== Infinity) {
+        const rightBoundViewport =
+          currentPositionedParentRect.left + rightBound;
         currentConstraintMarkers.push(
-          createDebugMarker(
-            "constraintRight",
-            constraintRightViewport,
-            0,
-            "red",
-          ),
+          createDebugMarker("rightBound", rightBoundViewport, 0, "red"),
         );
       }
-      if (constraintTop > 0) {
-        const constraintTopViewport =
-          currentPositionedParentRect.top + constraintTop;
+      if (topBound > 0) {
+        const topBoundViewport = currentPositionedParentRect.top + topBound;
         currentConstraintMarkers.push(
           createDebugMarker(
-            "constraintTop",
-            constraintTopViewport,
+            "topBound",
+            topBoundViewport,
             0,
             "red",
             "horizontal",
           ),
         );
       }
-      if (constraintBottom !== Infinity) {
-        const constraintBottomViewport =
-          currentPositionedParentRect.top + constraintBottom;
+      if (bottomBound !== Infinity) {
+        const bottomBoundViewport =
+          currentPositionedParentRect.top + bottomBound;
         currentConstraintMarkers.push(
           createDebugMarker(
-            "constraintBottom",
-            constraintBottomViewport,
+            "bottomBound",
+            bottomBoundViewport,
             0,
             "red",
             "horizontal",
@@ -1001,16 +994,16 @@ const applyConstraints = (
       );
 
       // Round constraint boundaries as well for consistent comparison
-      const constraintLeft = roundForConstraints(constraint.left);
-      const constraintRight = roundForConstraints(constraint.right);
-      const constraintTop = roundForConstraints(constraint.top);
-      const constraintBottom = roundForConstraints(constraint.bottom);
+      const leftBound = roundForConstraints(constraint.left);
+      const rightBound = roundForConstraints(constraint.right);
+      const topBound = roundForConstraints(constraint.top);
+      const bottomBound = roundForConstraints(constraint.bottom);
 
       // Determine current position relative to obstacle
-      const isOnTheLeft = currentActualRight <= constraintLeft;
-      const isOnTheRight = currentActualLeft >= constraintRight;
-      const isAbove = currentActualBottom <= constraintTop;
-      const isBelow = currentActualTop >= constraintBottom;
+      const isOnTheLeft = currentActualRight <= leftBound;
+      const isOnTheRight = currentActualLeft >= rightBound;
+      const isAbove = currentActualBottom <= topBound;
+      const isBelow = currentActualTop >= bottomBound;
 
       // Apply constraints based on element position - handle all cases including diagonal
 
@@ -1019,18 +1012,18 @@ const applyConstraints = (
         const proposedLeft = initialLeft + xMove;
         const proposedRight = proposedLeft + elementWidth;
         const wouldHaveXOverlap =
-          proposedLeft < constraintRight && proposedRight > constraintLeft;
+          proposedLeft < rightBound && proposedRight > leftBound;
 
         if (wouldHaveXOverlap) {
           if (isAbove) {
             // Element above - prevent it from going down into obstacle
-            const maxAllowedYMove = constraintTop - elementHeight - initialTop;
+            const maxAllowedYMove = topBound - elementHeight - initialTop;
             if (yMove > maxAllowedYMove) {
               yMove = maxAllowedYMove;
             }
           } else if (isBelow) {
             // Element below - prevent it from going up into obstacle
-            const minAllowedYMove = constraintBottom - initialTop;
+            const minAllowedYMove = bottomBound - initialTop;
             if (yMove < minAllowedYMove) {
               yMove = minAllowedYMove;
             }
@@ -1043,18 +1036,18 @@ const applyConstraints = (
         const proposedTop = initialTop + yMove; // Use potentially adjusted yMove
         const proposedBottom = proposedTop + elementHeight;
         const wouldHaveYOverlap =
-          proposedTop < constraintBottom && proposedBottom > constraintTop;
+          proposedTop < bottomBound && proposedBottom > topBound;
 
         if (wouldHaveYOverlap) {
           if (isOnTheLeft) {
             // Element on left - prevent it from going right into obstacle
-            const maxAllowedXMove = constraintLeft - elementWidth - initialLeft;
+            const maxAllowedXMove = leftBound - elementWidth - initialLeft;
             if (xMove > maxAllowedXMove) {
               xMove = maxAllowedXMove;
             }
           } else if (isOnTheRight) {
             // Element on right - prevent it from going left into obstacle
-            const minAllowedXMove = constraintRight - initialLeft;
+            const minAllowedXMove = rightBound - initialLeft;
             if (xMove < minAllowedXMove) {
               xMove = minAllowedXMove;
             }
@@ -1072,10 +1065,10 @@ const applyConstraints = (
         // Element is overlapping with obstacle - push it out in the direction of least resistance
 
         // Calculate distances to push element out in each direction
-        const distanceToLeft = currentActualRight - constraintLeft; // Distance to push left
-        const distanceToRight = constraintRight - currentActualLeft; // Distance to push right
-        const distanceToTop = currentActualBottom - constraintTop; // Distance to push up
-        const distanceToBottom = constraintBottom - currentActualTop; // Distance to push down
+        const distanceToLeft = currentActualRight - leftBound; // Distance to push left
+        const distanceToRight = rightBound - currentActualLeft; // Distance to push right
+        const distanceToTop = currentActualBottom - topBound; // Distance to push up
+        const distanceToBottom = bottomBound - currentActualTop; // Distance to push down
 
         // Find the minimum distance (direction of least resistance)
         const minDistance = Math.min(
@@ -1086,26 +1079,26 @@ const applyConstraints = (
         );
 
         if (minDistance === distanceToLeft) {
-          // Push left: element should not go past constraintLeft - elementWidth
-          const maxAllowedXMove = constraintLeft - elementWidth - initialLeft;
+          // Push left: element should not go past leftBound - elementWidth
+          const maxAllowedXMove = leftBound - elementWidth - initialLeft;
           if (xMove > maxAllowedXMove) {
             xMove = maxAllowedXMove;
           }
         } else if (minDistance === distanceToRight) {
-          // Push right: element should not go before constraintRight
-          const minAllowedXMove = constraintRight - initialLeft;
+          // Push right: element should not go before rightBound
+          const minAllowedXMove = rightBound - initialLeft;
           if (xMove < minAllowedXMove) {
             xMove = minAllowedXMove;
           }
         } else if (minDistance === distanceToTop) {
-          // Push up: element should not go past constraintTop - elementHeight
-          const maxAllowedYMove = constraintTop - elementHeight - initialTop;
+          // Push up: element should not go past topBound - elementHeight
+          const maxAllowedYMove = topBound - elementHeight - initialTop;
           if (yMove > maxAllowedYMove) {
             yMove = maxAllowedYMove;
           }
         } else if (minDistance === distanceToBottom) {
-          // Push down: element should not go before constraintBottom
-          const minAllowedYMove = constraintBottom - initialTop;
+          // Push down: element should not go before bottomBound
+          const minAllowedYMove = bottomBound - initialTop;
           if (yMove < minAllowedYMove) {
             yMove = minAllowedYMove;
           }
