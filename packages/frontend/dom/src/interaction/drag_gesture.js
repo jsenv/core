@@ -668,6 +668,7 @@ export const createDragGesture = ({
         constraints,
         elementWidth: currentElementWidth,
         elementHeight: currentElementHeight,
+        interactionType,
       });
       const finalXMove = constrainedMoves.xMove;
       const finalYMove = constrainedMoves.yMove;
@@ -945,6 +946,8 @@ const createScrollableAreaConstraint = (scrollableParent) => {
       top: 0,
       right: scrollableParent.scrollWidth - elementWidth,
       bottom: scrollableParent.scrollHeight - elementHeight,
+      element: scrollableParent,
+      name: "scrollable area bounds",
     };
   };
 };
@@ -972,6 +975,8 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
         top,
         right: left + width,
         bottom: top + height,
+        element: obstacle,
+        name: `sticky obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
       };
     }
 
@@ -984,6 +989,8 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
       top: obstacleRect.top - positionedParentRect.top,
       right: obstacleRect.right - positionedParentRect.left,
       bottom: obstacleRect.bottom - positionedParentRect.top,
+      element: obstacle,
+      name: `obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
     };
   };
 };
@@ -1009,10 +1016,29 @@ const roundForConstraints = (value) => {
   return Math.round(value * 100) / 100;
 };
 
+// Helper function for debug logging constraint enforcement
+const logConstraintEnforcement = (
+  axis,
+  originalValue,
+  constrainedValue,
+  constraint,
+  interactionType = "unknown",
+) => {
+  if (!DRAG_DEBUG_VISUAL_MARKERS || originalValue === constrainedValue) {
+    return; // No constraint applied or debug disabled
+  }
+
+  const direction = constrainedValue > originalValue ? "increased" : "capped";
+  console.debug(
+    `Drag by ${interactionType}: ${axis} movement ${direction} from ${originalValue.toFixed(2)} to ${constrainedValue.toFixed(2)} by ${constraint.name}`,
+    constraint.element,
+  );
+};
+
 // Apply constraints on both X and Y axes
 const applyConstraints = (
   gestureInfo,
-  { xMove, yMove, elementWidth, elementHeight, constraints },
+  { xMove, yMove, elementWidth, elementHeight, constraints, interactionType },
 ) => {
   const { initialLeft, initialTop } = gestureInfo;
 
@@ -1021,18 +1047,46 @@ const applyConstraints = (
       // Apply bounds constraints directly
       const minAllowedXMove = constraint.left - initialLeft;
       if (xMove < minAllowedXMove) {
+        logConstraintEnforcement(
+          "x",
+          xMove,
+          minAllowedXMove,
+          constraint,
+          interactionType,
+        );
         xMove = minAllowedXMove;
       }
       const maxAllowedXMove = constraint.right - initialLeft;
       if (xMove > maxAllowedXMove) {
+        logConstraintEnforcement(
+          "x",
+          xMove,
+          maxAllowedXMove,
+          constraint,
+          interactionType,
+        );
         xMove = maxAllowedXMove;
       }
       const minAllowedYMove = constraint.top - initialTop;
       if (yMove < minAllowedYMove) {
+        logConstraintEnforcement(
+          "y",
+          yMove,
+          minAllowedYMove,
+          constraint,
+          interactionType,
+        );
         yMove = minAllowedYMove;
       }
       const maxAllowedYMove = constraint.bottom - initialTop;
       if (yMove > maxAllowedYMove) {
+        logConstraintEnforcement(
+          "y",
+          yMove,
+          maxAllowedYMove,
+          constraint,
+          interactionType,
+        );
         yMove = maxAllowedYMove;
       }
     } else if (constraint.type === "obstacle") {
@@ -1081,12 +1135,26 @@ const applyConstraints = (
             // Element above - prevent it from going down into obstacle
             const maxAllowedYMove = topBound - elementHeight - initialTop;
             if (yMove > maxAllowedYMove) {
+              logConstraintEnforcement(
+                "y",
+                yMove,
+                maxAllowedYMove,
+                constraint,
+                interactionType,
+              );
               yMove = maxAllowedYMove;
             }
           } else if (isBelow) {
             // Element below - prevent it from going up into obstacle
             const minAllowedYMove = bottomBound - initialTop;
             if (yMove < minAllowedYMove) {
+              logConstraintEnforcement(
+                "y",
+                yMove,
+                minAllowedYMove,
+                constraint,
+                interactionType,
+              );
               yMove = minAllowedYMove;
             }
           }
@@ -1105,12 +1173,26 @@ const applyConstraints = (
             // Element on left - prevent it from going right into obstacle
             const maxAllowedXMove = leftBound - elementWidth - initialLeft;
             if (xMove > maxAllowedXMove) {
+              logConstraintEnforcement(
+                "x",
+                xMove,
+                maxAllowedXMove,
+                constraint,
+                interactionType,
+              );
               xMove = maxAllowedXMove;
             }
           } else if (isOnTheRight) {
             // Element on right - prevent it from going left into obstacle
             const minAllowedXMove = rightBound - initialLeft;
             if (xMove < minAllowedXMove) {
+              logConstraintEnforcement(
+                "x",
+                xMove,
+                minAllowedXMove,
+                constraint,
+                interactionType,
+              );
               xMove = minAllowedXMove;
             }
           }
