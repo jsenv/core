@@ -37,6 +37,8 @@
  * - Sticky borders replace regular borders with thicker colored variants
  * - Border-collapse mode available as optional feature for future use
  *
+ * Note how border disappear for sticky elements when using border-collapse (https://bugzilla.mozilla.org/show_bug.cgi?id=1727594)
+ *
  * Next steps:
  * - Drag to resize columns
  * - Drag to reorder columns a finir (affichage des trucs au survol d'autre colonnes et finalisation avec un example
@@ -542,6 +544,36 @@ import.meta.css = /* css */ `
   .navi_table_drag_clone_container td[data-sticky-x][data-sticky-y] {
     position: relative;
   }
+
+  .navi_table_column_resize_handle_right {
+    cursor: ew-resize;
+    position: absolute;
+    z-index: 1;
+    right: 0px;
+    width: 10px;
+    top: 5px;
+    bottom: 5px;
+    background: red;
+    opacity: 0;
+  }
+  .navi_table_column_resize_handle_right[data-hover] {
+    opacity: 1;
+  }
+
+  .navi_table_column_resize_handle_left {
+    cursor: ew-resize;
+    position: absolute;
+    z-index: 1;
+    left: 0px;
+    width: 10px;
+    top: 5px;
+    bottom: 5px;
+    background: red;
+    opacity: 0;
+  }
+  .navi_table_column_resize_handle_left[data-hover] {
+    opacity: 1;
+  }
 `;
 
 const NO_SELECTION = [];
@@ -768,6 +800,7 @@ export const Table = forwardRef((props, ref) => {
             />
             {columns.map((col, index) => {
               const columnIsGrabbed = grabTarget === `column:${index}`;
+              const isLastColumn = index === columns.length - 1;
 
               return (
                 <HeaderCell
@@ -789,6 +822,7 @@ export const Table = forwardRef((props, ref) => {
                   selectionController={selectionController}
                   grabbed={columnIsGrabbed}
                   stickyColumnFrontierIndex={stickyColumnFrontierIndex}
+                  isLastColumn={isLastColumn}
                   onGrab={(_, tableClone) => {
                     grabColumn(index);
                     setDragElement(tableClone);
@@ -1137,11 +1171,13 @@ const HeaderCell = ({
         });
       }}
     >
+      <div className="navi_table_column_resize_handle_left"></div>
       <span>{children}</span>
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {children}
       </span>
-      {/* {grabbed && <div className="navi_table_drag_placeholder"></div>} */}
+      {grabbed && <div className="navi_table_drag_placeholder"></div>}
+      <div className="navi_table_column_resize_handle_right"></div>
     </th>
   );
 };
