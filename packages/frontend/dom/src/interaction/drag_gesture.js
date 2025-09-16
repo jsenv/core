@@ -257,11 +257,11 @@ export const createDragGesture = ({
     }
 
     const drawVisualMarkers = ({
+      constraints,
       visibleAreaLeft,
       visibleAreaRight,
       visibleAreaTop,
       visibleAreaBottom,
-      constraints,
     }) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
@@ -435,6 +435,7 @@ export const createDragGesture = ({
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
         drawVisualMarkers({
+          constraints,
           visibleAreaLeft,
           visibleAreaRight,
           visibleAreaTop,
@@ -462,6 +463,10 @@ export const createDragGesture = ({
         isGoingRight,
         isGoingUp,
         isGoingDown,
+        visibleAreaLeft,
+        visibleAreaRight,
+        visibleAreaTop,
+        visibleAreaBottom,
       };
 
       if (isRelease) {
