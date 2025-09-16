@@ -771,9 +771,9 @@ export const Table = forwardRef((props, ref) => {
                   data={data}
                   selectionController={selectionController}
                   grabbed={columnIsGrabbed}
-                  onGrab={({ element }) => {
+                  onGrab={(_, tableClone) => {
                     grabColumn(index);
-                    setDragElement(element);
+                    setDragElement(tableClone);
                   }}
                   onRelease={() => {
                     releaseColumn(index);
@@ -1002,15 +1002,16 @@ const HeaderCell = ({
         const colgroup = table.querySelector("colgroup");
         const firstCol = colgroup.children[0];
         // const minY = -rectRelativeTo.top;
+        const tableClone = table.cloneNode(true);
 
         const dragToMoveGesture = createDragToMoveGesture({
           direction: { x: true },
-          onGrab,
+          onGrab: (gestureInfo) => onGrab(gestureInfo, tableClone),
           onDrag,
           onRelease,
           keepMarkersOnRelease: true,
         });
-        const tableClone = table.cloneNode(true);
+
         const scrollableParent = getScrollableParent(table);
         const scrollLeft = scrollableParent.scrollLeft || 0;
         const scrollTop = scrollableParent.scrollTop || 0;
@@ -1064,7 +1065,7 @@ const HeaderCell = ({
         // firstCol.setAttribute("data-sticky-obstacle", "");
 
         dragToMoveGesture.grabViaMousedown(e, {
-          element: tableClone,
+          element: table,
           elementToImpact: cloneParent,
           elementVisuallyImpacted: colClone,
         });
