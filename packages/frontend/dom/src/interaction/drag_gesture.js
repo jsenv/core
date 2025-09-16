@@ -173,6 +173,8 @@ export const createDragGesture = ({
       y: yAtStart,
       xMove: 0,
       yMove: 0,
+      xMouseMove: 0, // Movement caused by mouse drag
+      yMouseMove: 0, // Movement caused by mouse drag
       xChanged: false,
       yChanged: false,
       isGoingUp: undefined,
@@ -274,18 +276,13 @@ export const createDragGesture = ({
         }
         isHandlingScroll = true;
 
-        const currentScrollLeft = scrollableParent.scrollLeft;
-        const currentScrollTop = scrollableParent.scrollTop;
+        // When scrolling occurs during drag, recalculate the element position
+        // using the current mouse position (which remains unchanged by scroll)
+        // The determineDragData function will automatically account for scroll offset
+        const adjustedX = xAtStart + gestureInfo.xMouseMove;
+        const adjustedY = yAtStart + gestureInfo.yMouseMove;
 
-        const scrollDeltaX = currentScrollLeft - initialScrollLeft;
-        const scrollDeltaY = currentScrollTop - initialScrollTop;
-
-        // Update the initial position references to account for scroll
-        // The element's actual position relative to positioned parent changes when scrolling
-        const adjustedX = gestureInfo.x + scrollDeltaX;
-        const adjustedY = gestureInfo.y + scrollDeltaY;
-
-        // Call drag with the current position to recalculate constraints with updated initial position
+        // Call drag with the mouse position - scroll offset will be calculated in determineDragData
         drag(adjustedX, adjustedY);
 
         isHandlingScroll = false;
@@ -444,8 +441,23 @@ export const createDragGesture = ({
       const y = currentYRelative;
       const xDiff = previousX - currentXRelative;
       const yDiff = previousY - currentYRelative;
-      const xMove = direction.x ? x - gestureInfo.xAtStart : 0;
-      const yMove = direction.y ? y - gestureInfo.yAtStart : 0;
+
+      // Calculate mouse movement separately from total movement
+      const xMouseMove = direction.x ? x - gestureInfo.xAtStart : 0;
+      const yMouseMove = direction.y ? y - gestureInfo.yAtStart : 0;
+      // Calculate scroll offset
+      const currentScrollLeft = scrollableParent.scrollLeft;
+      const currentScrollTop = scrollableParent.scrollTop;
+      const scrollDeltaX = direction.x
+        ? currentScrollLeft - initialScrollLeft
+        : 0;
+      const scrollDeltaY = direction.y
+        ? currentScrollTop - initialScrollTop
+        : 0;
+
+      // Total movement = mouse movement + scroll offset
+      const xMove = xMouseMove + scrollDeltaX;
+      const yMove = yMouseMove + scrollDeltaY;
 
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
@@ -503,6 +515,8 @@ export const createDragGesture = ({
         yDiff,
         xMove: finalXMove,
         yMove: finalYMove,
+        xMouseMove,
+        yMouseMove,
         isGoingLeft,
         isGoingRight,
         isGoingUp,
