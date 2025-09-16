@@ -5,13 +5,13 @@ import.meta.css = /* css */ `
     position: fixed;
     pointer-events: none;
     z-index: 9998;
-    border-top: 2px dotted #ff6b35;
     opacity: 0;
-    transition: opacity 0.1s ease;
+    transition: opacity 0.15s ease;
     transform-origin: left center;
+    border-top: 2px dotted rgba(59, 130, 246, 0.7);
   }
 
-  .navi_constraint_feedback_line [data-visible] {
+  .navi_constraint_feedback_line[data-visible] {
     opacity: 1;
   }
 
