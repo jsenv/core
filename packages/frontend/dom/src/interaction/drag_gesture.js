@@ -276,14 +276,11 @@ export const createDragGesture = ({
         }
         isHandlingScroll = true;
 
-        // When scrolling occurs during drag, recalculate the element position
-        // using the current mouse position (which remains unchanged by scroll)
-        // The determineDragData function will automatically account for scroll offset
-        const adjustedX = xAtStart + gestureInfo.xMouseMove;
-        const adjustedY = yAtStart + gestureInfo.yMouseMove;
-
-        // Call drag with the mouse position - scroll offset will be calculated in determineDragData
-        drag(adjustedX, adjustedY);
+        // When scrolling occurs during drag, we need to maintain the current mouse position
+        // The key insight: gestureInfo.x and gestureInfo.y represent the current mouse position
+        // relative to positioned parent. We should just call drag with these current coordinates
+        // to recalculate position with the new scroll state
+        drag(gestureInfo.x, gestureInfo.y);
 
         isHandlingScroll = false;
       };
@@ -443,6 +440,7 @@ export const createDragGesture = ({
       const yDiff = previousY - currentYRelative;
 
       // Calculate mouse movement separately from total movement
+      // Note: xAtStart/yAtStart are already relative to positioned parent at grab time
       const xMouseMove = direction.x ? x - gestureInfo.xAtStart : 0;
       const yMouseMove = direction.y ? y - gestureInfo.yAtStart : 0;
       // Calculate scroll offset
