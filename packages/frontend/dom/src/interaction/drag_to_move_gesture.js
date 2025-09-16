@@ -6,15 +6,7 @@ export const createDragToMoveGesture = (options) => {
     lifecycle: {
       drag: (
         gestureInfo,
-        {
-          direction,
-          positionedParent,
-          scrollableParent,
-          visibleAreaLeft,
-          visibleAreaRight,
-          visibleAreaTop,
-          visibleAreaBottom,
-        },
+        { direction, positionedParent, scrollableParent },
       ) => {
         const {
           initialLeft,
@@ -25,6 +17,10 @@ export const createDragToMoveGesture = (options) => {
           isGoingRight,
           elementToImpact,
           elementVisuallyImpacted,
+          visibleAreaLeft,
+          visibleAreaRight,
+          visibleAreaTop,
+          visibleAreaBottom,
         } = gestureInfo;
         const elementVisuallyImpactedRect =
           elementVisuallyImpacted.getBoundingClientRect();

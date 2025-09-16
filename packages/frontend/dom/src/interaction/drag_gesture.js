@@ -256,40 +256,152 @@ export const createDragGesture = ({
       });
     }
 
-    const drag = (
-      currentXRelative,
-      currentYRelative,
-      { isRelease = false, mouseX = null, mouseY = null } = {},
-    ) => {
-      // Update constraint feedback line to show visual connection between mouse and element
-      // when constraints prevent the element from following the mouse cursor
-      if (constraintFeedbackLine && mouseX !== null && mouseY !== null) {
-        // Calculate element center position in viewport coordinates
-        const currentElementRect =
-          elementVisuallyImpacted.getBoundingClientRect();
-        const elementCenterX =
-          currentElementRect.left + currentElementRect.width / 2;
-        const elementCenterY =
-          currentElementRect.top + currentElementRect.height / 2;
+    const drawVisualMarkers = ({
+      visibleAreaLeft,
+      visibleAreaRight,
+      visibleAreaTop,
+      visibleAreaBottom,
+      constraints,
+    }) => {
+      // Schedule removal of previous markers if they exist
+      const previousDebugMarkers = [...currentDebugMarkers];
+      const previousConstraintMarkers = [...currentConstraintMarkers];
 
-        updateConstraintFeedbackLine(
-          constraintFeedbackLine,
-          mouseX,
-          mouseY,
-          elementCenterX,
-          elementCenterY,
-        );
+      if (
+        previousDebugMarkers.length > 0 ||
+        previousConstraintMarkers.length > 0
+      ) {
+        setTimeout(() => {
+          previousDebugMarkers.forEach((marker) => marker.remove());
+          previousConstraintMarkers.forEach((marker) => marker.remove());
+        }, 100);
       }
 
+      // Clear current marker arrays
+      currentDebugMarkers.length = 0;
+      currentConstraintMarkers.length = 0;
+
+      // Add visual markers for visible area bounds
+      currentDebugMarkers.push(
+        createDebugMarker("visibleAreaTop", 0, visibleAreaTop, "red"),
+      );
+      currentDebugMarkers.push(
+        createDebugMarker("visibleAreaBottom", 0, visibleAreaBottom, "orange"),
+      );
+      currentDebugMarkers.push(
+        createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
+      );
+      currentDebugMarkers.push(
+        createDebugMarker("visibleAreaRight", visibleAreaRight, 0, "green"),
+      );
+
+      // Create dynamic constraint markers based on current element size
+      const currentPositionedParentRect =
+        positionedParent.getBoundingClientRect();
+
+      // For debug markers, we'll show bounds constraints and obstacle zones
+      let constraintLeft = 0;
+      let constraintTop = 0;
+      let constraintRight = Infinity;
+      let constraintBottom = Infinity;
+
+      // Extract bounds from bounds constraints and collect obstacle data
+      const obstacles = [];
+      for (const constraint of constraints) {
+        if (constraint.type === "bounds") {
+          constraintLeft = Math.max(constraintLeft, constraint.left);
+          constraintTop = Math.max(constraintTop, constraint.top);
+          constraintRight = Math.min(constraintRight, constraint.right);
+          constraintBottom = Math.min(constraintBottom, constraint.bottom);
+        } else if (constraint.type === "obstacle") {
+          obstacles.push(constraint);
+        }
+      }
+
+      // Create markers for obstacles
+      obstacles.forEach((obstacle, index) => {
+        const obstacleLeftViewport =
+          currentPositionedParentRect.left + obstacle.left;
+        const obstacleTopViewport =
+          currentPositionedParentRect.top + obstacle.top;
+        const obstacleWidth = obstacle.right - obstacle.left;
+        const obstacleHeight = obstacle.bottom - obstacle.top;
+
+        const obstacleMarker = createObstacleMarker(
+          `Obstacle ${index + 1}`,
+          obstacleLeftViewport,
+          obstacleTopViewport,
+          obstacleWidth,
+          obstacleHeight,
+        );
+
+        if (obstacleMarker) {
+          currentConstraintMarkers.push(obstacleMarker);
+        }
+      });
+
+      // Create constraint markers
+      if (constraintLeft > 0) {
+        const constraintLeftViewport =
+          currentPositionedParentRect.left + constraintLeft;
+        currentConstraintMarkers.push(
+          createDebugMarker("constraintLeft", constraintLeftViewport, 0, "red"),
+        );
+      }
+      if (constraintRight !== Infinity) {
+        const constraintRightViewport =
+          currentPositionedParentRect.left + constraintRight;
+        currentConstraintMarkers.push(
+          createDebugMarker(
+            "constraintRight",
+            constraintRightViewport,
+            0,
+            "red",
+          ),
+        );
+      }
+      if (constraintTop > 0) {
+        const constraintTopViewport =
+          currentPositionedParentRect.top + constraintTop;
+        currentConstraintMarkers.push(
+          createDebugMarker(
+            "constraintTop",
+            constraintTopViewport,
+            0,
+            "red",
+            "horizontal",
+          ),
+        );
+      }
+      if (constraintBottom !== Infinity) {
+        const constraintBottomViewport =
+          currentPositionedParentRect.top + constraintBottom;
+        currentConstraintMarkers.push(
+          createDebugMarker(
+            "constraintBottom",
+            constraintBottomViewport,
+            0,
+            "red",
+            "horizontal",
+          ),
+        );
+      }
+    };
+
+    const determineDragData = (
+      currentXRelative,
+      currentYRelative,
+      { isRelease = false },
+    ) => {
       const previousX = gestureInfo.x;
       const previousY = gestureInfo.y;
 
-      gestureInfo.x = currentXRelative;
-      gestureInfo.y = currentYRelative;
-      gestureInfo.xDiff = previousX - currentXRelative;
-      gestureInfo.yDiff = previousY - currentYRelative;
-      const xMove = direction.x ? gestureInfo.x - gestureInfo.xAtStart : 0;
-      const yMove = direction.y ? gestureInfo.y - gestureInfo.yAtStart : 0;
+      const x = currentXRelative;
+      const y = currentYRelative;
+      const xDiff = previousX - currentXRelative;
+      const yDiff = previousY - currentYRelative;
+      const xMove = direction.x ? x - gestureInfo.xAtStart : 0;
+      const yMove = direction.y ? y - gestureInfo.yAtStart : 0;
 
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
@@ -299,11 +411,6 @@ export const createDragGesture = ({
       const isGoingRight = xMove > previousXMove;
       const isGoingUp = yMove < previousYMove;
       const isGoingDown = yMove > previousYMove;
-
-      gestureInfo.isGoingLeft = isGoingLeft;
-      gestureInfo.isGoingRight = isGoingRight;
-      gestureInfo.isGoingUp = isGoingUp;
-      gestureInfo.isGoingDown = isGoingDown;
 
       // Get current element dimensions for dynamic constraint calculation
       const currentElementRect =
@@ -317,54 +424,6 @@ export const createDragGesture = ({
           elementHeight: currentElementHeight,
         }),
       );
-      const constrainedMoves = applyConstraints(gestureInfo, {
-        xMove,
-        yMove,
-        constraints,
-        elementWidth: currentElementWidth,
-        elementHeight: currentElementHeight,
-      });
-      gestureInfo.xMove = constrainedMoves.xMove;
-      gestureInfo.yMove = constrainedMoves.yMove;
-      gestureInfo.xChanged = previousGestureInfo
-        ? gestureInfo.xMove !== previousGestureInfo.xMove
-        : true;
-      gestureInfo.yChanged = previousGestureInfo
-        ? gestureInfo.yMove !== previousGestureInfo.yMove
-        : true;
-
-      if (isRelease) {
-        if (!started) {
-          return;
-        }
-        onDrag?.(gestureInfo, "end");
-        return;
-      }
-
-      let someChange = gestureInfo.xChanged || gestureInfo.yChanged;
-      if (!someChange) {
-        return;
-      }
-
-      previousGestureInfo = { ...gestureInfo };
-      if (!started && threshold) {
-        const deltaX = Math.abs(gestureInfo.xMove);
-        const deltaY = Math.abs(gestureInfo.yMove);
-        if (direction.x && direction.y) {
-          // Both directions: check both axes
-          if (deltaX < threshold && deltaY < threshold) {
-            return;
-          }
-        } else if (direction.x) {
-          if (deltaX < threshold) {
-            return;
-          }
-        } else if (direction.y) {
-          if (deltaY < threshold) {
-            return;
-          }
-        }
-      }
 
       const scrollableRect = scrollableParent.getBoundingClientRect();
       const availableWidth = scrollableParent.clientWidth;
@@ -375,155 +434,110 @@ export const createDragGesture = ({
       const visibleAreaBottom = visibleAreaTop + availableHeight;
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
-        // Schedule removal of previous markers if they exist
-        const previousDebugMarkers = [...currentDebugMarkers];
-        const previousConstraintMarkers = [...currentConstraintMarkers];
-
-        if (
-          previousDebugMarkers.length > 0 ||
-          previousConstraintMarkers.length > 0
-        ) {
-          setTimeout(() => {
-            previousDebugMarkers.forEach((marker) => {
-              if (marker && marker.parentNode) {
-                marker.parentNode.removeChild(marker);
-              }
-            });
-            previousConstraintMarkers.forEach((marker) => {
-              if (marker && marker.parentNode) {
-                marker.parentNode.removeChild(marker);
-              }
-            });
-          }, 100);
-        }
-        currentConstraintMarkers = [];
-        currentDebugMarkers = [];
-
-        // Create new debug markers
-        currentDebugMarkers.push(
-          createDebugMarker("visibleAreaLeft", visibleAreaLeft, 0, "blue"),
-        );
-        currentDebugMarkers.push(
-          createDebugMarker("visibleAreaRight", visibleAreaRight, 0, "green"),
-        );
-
-        // Create dynamic constraint markers based on current element size
-        const currentPositionedParentRect =
-          positionedParent.getBoundingClientRect();
-
-        // Compute current constraint bounds for debug markers
-        const constraints = constraintFunctions.map((fn) =>
-          fn({
-            elementWidth: currentElementWidth,
-            elementHeight: currentElementHeight,
-          }),
-        );
-
-        // For debug markers, we'll show bounds constraints and obstacle zones
-        let constraintLeft = 0;
-        let constraintTop = 0;
-        let constraintRight = Infinity;
-        let constraintBottom = Infinity;
-
-        // Extract bounds from bounds constraints and collect obstacle data
-        const obstacles = [];
-        for (const constraint of constraints) {
-          if (constraint.type === "bounds") {
-            constraintLeft = Math.max(constraintLeft, constraint.left);
-            constraintTop = Math.max(constraintTop, constraint.top);
-            constraintRight = Math.min(constraintRight, constraint.right);
-            constraintBottom = Math.min(constraintBottom, constraint.bottom);
-          } else if (constraint.type === "obstacle") {
-            obstacles.push(constraint);
-          }
-        }
-
-        // Create markers for obstacles
-        obstacles.forEach((obstacle, index) => {
-          const obstacleLeftViewport =
-            currentPositionedParentRect.left + obstacle.left;
-          const obstacleTopViewport =
-            currentPositionedParentRect.top + obstacle.top;
-          const obstacleWidth = obstacle.right - obstacle.left;
-          const obstacleHeight = obstacle.bottom - obstacle.top;
-
-          const obstacleMarker = createObstacleMarker(
-            `Obstacle ${index + 1}`,
-            obstacleLeftViewport,
-            obstacleTopViewport,
-            obstacleWidth,
-            obstacleHeight,
-          );
-
-          if (obstacleMarker) {
-            currentConstraintMarkers.push(obstacleMarker);
-          }
+        drawVisualMarkers({
+          visibleAreaLeft,
+          visibleAreaRight,
+          visibleAreaTop,
+          visibleAreaBottom,
         });
-
-        // Create constraint markers
-        if (constraintLeft > 0) {
-          const constraintLeftViewport =
-            currentPositionedParentRect.left + constraintLeft;
-          currentConstraintMarkers.push(
-            createDebugMarker(
-              "constraintLeft",
-              constraintLeftViewport,
-              0,
-              "red",
-            ),
-          );
-        }
-        if (constraintRight !== Infinity) {
-          const constraintRightViewport =
-            currentPositionedParentRect.left + constraintRight;
-          currentConstraintMarkers.push(
-            createDebugMarker(
-              "constraintRight",
-              constraintRightViewport,
-              0,
-              "red",
-            ),
-          );
-        }
-        if (constraintTop > 0) {
-          const constraintTopViewport =
-            currentPositionedParentRect.top + constraintTop;
-          currentConstraintMarkers.push(
-            createDebugMarker(
-              "constraintTop",
-              constraintTopViewport,
-              0,
-              "red",
-              "horizontal",
-            ),
-          );
-        }
-        if (constraintBottom !== Infinity) {
-          const constraintBottomViewport =
-            currentPositionedParentRect.top + constraintBottom;
-          currentConstraintMarkers.push(
-            createDebugMarker(
-              "constraintBottom",
-              constraintBottomViewport,
-              0,
-              "red",
-              "horizontal",
-            ),
-          );
-        }
       }
 
-      lifecycle?.drag?.(gestureInfo, {
-        scrollableParent,
-        positionedParent,
-        direction,
-        visibleAreaLeft,
-        visibleAreaRight,
-        visibleAreaTop,
-        visibleAreaBottom,
+      const constrainedMoves = applyConstraints(gestureInfo, {
+        xMove,
+        yMove,
+        constraints,
+        elementWidth: currentElementWidth,
+        elementHeight: currentElementHeight,
+      });
+      const finalXMove = constrainedMoves.xMove;
+      const finalYMove = constrainedMoves.yMove;
+      const dragData = {
+        x,
+        y,
+        xDiff,
+        yDiff,
+        xMove: finalXMove,
+        yMove: finalYMove,
+        isGoingLeft,
+        isGoingRight,
+        isGoingUp,
+        isGoingDown,
+      };
+
+      if (isRelease) {
+        if (!started) {
+          return null;
+        }
+        return dragData;
+      }
+      if (!started && threshold) {
+        const deltaX = Math.abs(finalXMove);
+        const deltaY = Math.abs(finalYMove);
+        if (direction.x && direction.y) {
+          // Both directions: check both axes
+          if (deltaX < threshold && deltaY < threshold) {
+            return null;
+          }
+        } else if (direction.x) {
+          if (deltaX < threshold) {
+            return null;
+          }
+        } else if (direction.y) {
+          if (deltaY < threshold) {
+            return null;
+          }
+        }
+      }
+      return dragData;
+    };
+
+    const drag = (
+      currentXRelative,
+      currentYRelative,
+      { isRelease = false, mouseX = null, mouseY = null } = {},
+    ) => {
+      const dragData = determineDragData(currentXRelative, currentYRelative, {
+        isRelease,
       });
 
-      if (!started) {
+      if (!dragData) {
+        updateConstraintFeedbackLine(constraintFeedbackLine, {
+          elementVisuallyImpacted,
+          mouseX,
+          mouseY,
+        });
+        return;
+      }
+      // Only update previousGestureInfo if it's not a release
+      if (!isRelease) {
+        previousGestureInfo = { ...gestureInfo };
+      }
+
+      Object.assign(gestureInfo, dragData);
+      // Calculate xChanged/yChanged based on previous gesture info
+      const xChanged = previousGestureInfo
+        ? dragData.xMove !== previousGestureInfo.xMove
+        : true;
+      const yChanged = previousGestureInfo
+        ? dragData.yMove !== previousGestureInfo.yMove
+        : true;
+      Object.assign(gestureInfo, { xChanged, yChanged });
+      const someChange = xChanged || yChanged;
+      if (someChange) {
+        lifecycle?.drag?.(gestureInfo, {
+          scrollableParent,
+          positionedParent,
+          direction,
+        });
+      }
+      updateConstraintFeedbackLine(constraintFeedbackLine, {
+        elementVisuallyImpacted,
+        mouseX,
+        mouseY,
+      });
+      if (isRelease) {
+        onDrag?.(gestureInfo, "end");
+      } else if (!started) {
         started = true;
         onDragStart?.(gestureInfo);
         onDrag?.(gestureInfo, "start");
@@ -676,39 +690,41 @@ const createConstraintFeedbackLine = () => {
   return line;
 };
 
+// Update constraint feedback line after element is positioned
+// This ensures the line reflects the actual element position after constraints
 const updateConstraintFeedbackLine = (
-  line,
-  mouseX,
-  mouseY,
-  elementX,
-  elementY,
+  constraintFeedbackLine,
+  { elementVisuallyImpacted, mouseX, mouseY },
 ) => {
-  if (!line) return;
+  // Calculate element center position in viewport coordinates
+  const currentElementRect = elementVisuallyImpacted.getBoundingClientRect();
+  const elementCenterX = currentElementRect.left + currentElementRect.width / 2;
+  const elementCenterY = currentElementRect.top + currentElementRect.height / 2;
 
   // Calculate distance between mouse and element center
-  const deltaX = mouseX - elementX;
-  const deltaY = mouseY - elementY;
+  const deltaX = mouseX - elementCenterX;
+  const deltaY = mouseY - elementCenterY;
   const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
   // Show line only when distance is significant (> 20px threshold)
   const threshold = 20;
   if (distance <= threshold) {
-    line.removeAttribute("data-visible");
+    constraintFeedbackLine.removeAttribute("data-visible");
     return;
   }
 
   // Calculate angle and position
   const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-  line.setAttribute("data-visible", "");
+  constraintFeedbackLine.setAttribute("data-visible", "");
   // Position line at element center
-  line.style.left = `${elementX}px`;
-  line.style.top = `${elementY}px`;
-  line.style.width = `${distance}px`;
-  line.style.transform = `rotate(${angle}deg)`;
+  constraintFeedbackLine.style.left = `${elementCenterX}px`;
+  constraintFeedbackLine.style.top = `${elementCenterY}px`;
+  constraintFeedbackLine.style.width = `${distance}px`;
+  constraintFeedbackLine.style.transform = `rotate(${angle}deg)`;
   // Fade in based on distance (more visible as distance increases)
   const maxOpacity = 0.8;
   const opacityFactor = Math.min((distance - threshold) / 100, 1);
-  line.style.opacity = `${maxOpacity * opacityFactor}`;
+  constraintFeedbackLine.style.opacity = `${maxOpacity * opacityFactor}`;
 };
 
 const getPositionedParent = (element) => {
