@@ -943,10 +943,14 @@ const applyConstraints = (
         yMove = maxAllowedYMove;
       }
     } else if (constraint.type === "obstacle") {
-      // Current element position (including previous moves from gestureInfo)
-      const currentActualLeft = initialLeft + (gestureInfo.xMove || 0);
+      // Current element position using the passed current movement values
+      // This ensures we use the actual current position, not potentially stale gestureInfo values
+      const actualCurrentXMove = gestureInfo.xMove || 0;
+      const actualCurrentYMove = gestureInfo.yMove || 0;
+
+      const currentActualLeft = initialLeft + actualCurrentXMove;
       const currentActualRight = currentActualLeft + elementWidth;
-      const currentActualTop = initialTop + (gestureInfo.yMove || 0);
+      const currentActualTop = initialTop + actualCurrentYMove;
       const currentActualBottom = currentActualTop + elementHeight;
 
       // Determine current position relative to obstacle
@@ -954,6 +958,19 @@ const applyConstraints = (
       const isOnTheRight = currentActualLeft >= constraint.right;
       const isAbove = currentActualBottom <= constraint.top;
       const isBelow = currentActualTop >= constraint.bottom;
+
+      // Debug logging for obstacle constraints
+      console.log(`[OBSTACLE] Checking constraint:`, {
+        constraintLeft: constraint.left,
+        constraintRight: constraint.right,
+        currentActualLeft,
+        currentActualRight,
+        actualCurrentXMove,
+        proposedXMove: xMove,
+        isOnTheLeft,
+        isOnTheRight,
+        elementWidth,
+      });
 
       // Apply constraints based on element position - handle all cases including diagonal
 

@@ -555,6 +555,15 @@
       >
         <div class="container" id="obstacleContainer">
           <div class="obstacle-content">
+            <!-- Draggable rectangle that must respect obstacles -->
+            <div
+              class="draggable-rectangle"
+              id="obstacleRectangle"
+              style="top: 30px; left: 50px"
+            >
+              DRAG ME
+            </div>
+
             <!-- Solid obstacles that cannot be traversed -->
             <div
               class="solid-obstacle"
@@ -564,7 +573,7 @@
               WALL A
             </div>
 
-            <div
+            <!-- <div
               class="solid-obstacle"
               data-drag-obstacle
               style="top: 150px; left: 300px; width: 100px; height: 40px"
@@ -592,16 +601,7 @@
               "
             >
               WALL D
-            </div>
-
-            <!-- Draggable rectangle that must respect obstacles -->
-            <div
-              class="draggable-rectangle"
-              id="obstacleRectangle"
-              style="top: 30px; left: 50px"
-            >
-              DRAG ME
-            </div>
+            </div> -->
           </div>
         </div>
 
