@@ -1112,7 +1112,7 @@ const HeaderCell = ({
             break;
           }
         }
-        // Move focus to the clone element
+        // Move focus to the clone element (the goal is to see the focus ring in the dragged clone)
         if (focusedElementInClone && focusedElementInClone.focus) {
           focusedElementInClone.focus();
         }
