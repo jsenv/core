@@ -916,6 +916,27 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
   };
 };
 
+/**
+ * Rounds coordinates to prevent floating point precision issues in constraint calculations.
+ *
+ * This is critical for obstacle detection because:
+ * 1. Boundary detection relies on precise comparisons (e.g., elementRight <= obstacleLeft)
+ * 2. Floating point arithmetic can produce values like 149.99999999 instead of 150
+ * 3. This causes incorrect boundary classifications (element appears "on left" when it should be "overlapping")
+ *
+ * Scroll events are more susceptible to this issue because:
+ * - Mouse events use integer pixel coordinates from the DOM (e.g., clientX: 150)
+ * - Scroll events use element.scrollLeft which can have sub-pixel values from CSS transforms, zoom, etc.
+ * - Scroll compensation calculations (scrollDelta * ratios) amplify floating point errors
+ * - Multiple scroll events accumulate these errors over time
+ *
+ * Using 2-decimal precision maintains smooth sub-pixel positioning while ensuring
+ * reliable boundary detection for constraint systems.
+ */
+const roundForConstraints = (value) => {
+  return Math.round(value * 100) / 100;
+};
+
 // Apply constraints on both X and Y axes
 const applyConstraints = (
   gestureInfo,
@@ -948,29 +969,31 @@ const applyConstraints = (
       const actualCurrentXMove = gestureInfo.xMove || 0;
       const actualCurrentYMove = gestureInfo.yMove || 0;
 
-      const currentActualLeft = initialLeft + actualCurrentXMove;
-      const currentActualRight = currentActualLeft + elementWidth;
-      const currentActualTop = initialTop + actualCurrentYMove;
-      const currentActualBottom = currentActualTop + elementHeight;
+      // Round coordinates to prevent floating point precision issues in boundary detection
+      const currentActualLeft = roundForConstraints(
+        initialLeft + actualCurrentXMove,
+      );
+      const currentActualRight = roundForConstraints(
+        currentActualLeft + elementWidth,
+      );
+      const currentActualTop = roundForConstraints(
+        initialTop + actualCurrentYMove,
+      );
+      const currentActualBottom = roundForConstraints(
+        currentActualTop + elementHeight,
+      );
+
+      // Round constraint boundaries as well for consistent comparison
+      const constraintLeft = roundForConstraints(constraint.left);
+      const constraintRight = roundForConstraints(constraint.right);
+      const constraintTop = roundForConstraints(constraint.top);
+      const constraintBottom = roundForConstraints(constraint.bottom);
 
       // Determine current position relative to obstacle
-      const isOnTheLeft = currentActualRight <= constraint.left;
-      const isOnTheRight = currentActualLeft >= constraint.right;
-      const isAbove = currentActualBottom <= constraint.top;
-      const isBelow = currentActualTop >= constraint.bottom;
-
-      // Debug logging for obstacle constraints
-      console.log(`[OBSTACLE] Checking constraint:`, {
-        constraintLeft: constraint.left,
-        constraintRight: constraint.right,
-        currentActualLeft,
-        currentActualRight,
-        actualCurrentXMove,
-        proposedXMove: xMove,
-        isOnTheLeft,
-        isOnTheRight,
-        elementWidth,
-      });
+      const isOnTheLeft = currentActualRight <= constraintLeft;
+      const isOnTheRight = currentActualLeft >= constraintRight;
+      const isAbove = currentActualBottom <= constraintTop;
+      const isBelow = currentActualTop >= constraintBottom;
 
       // Apply constraints based on element position - handle all cases including diagonal
 
@@ -979,18 +1002,18 @@ const applyConstraints = (
         const proposedLeft = initialLeft + xMove;
         const proposedRight = proposedLeft + elementWidth;
         const wouldHaveXOverlap =
-          proposedLeft < constraint.right && proposedRight > constraint.left;
+          proposedLeft < constraintRight && proposedRight > constraintLeft;
 
         if (wouldHaveXOverlap) {
           if (isAbove) {
             // Element above - prevent it from going down into obstacle
-            const maxAllowedYMove = constraint.top - elementHeight - initialTop;
+            const maxAllowedYMove = constraintTop - elementHeight - initialTop;
             if (yMove > maxAllowedYMove) {
               yMove = maxAllowedYMove;
             }
           } else if (isBelow) {
             // Element below - prevent it from going up into obstacle
-            const minAllowedYMove = constraint.bottom - initialTop;
+            const minAllowedYMove = constraintBottom - initialTop;
             if (yMove < minAllowedYMove) {
               yMove = minAllowedYMove;
             }
@@ -1003,19 +1026,18 @@ const applyConstraints = (
         const proposedTop = initialTop + yMove; // Use potentially adjusted yMove
         const proposedBottom = proposedTop + elementHeight;
         const wouldHaveYOverlap =
-          proposedTop < constraint.bottom && proposedBottom > constraint.top;
+          proposedTop < constraintBottom && proposedBottom > constraintTop;
 
         if (wouldHaveYOverlap) {
           if (isOnTheLeft) {
             // Element on left - prevent it from going right into obstacle
-            const maxAllowedXMove =
-              constraint.left - elementWidth - initialLeft;
+            const maxAllowedXMove = constraintLeft - elementWidth - initialLeft;
             if (xMove > maxAllowedXMove) {
               xMove = maxAllowedXMove;
             }
           } else if (isOnTheRight) {
             // Element on right - prevent it from going left into obstacle
-            const minAllowedXMove = constraint.right - initialLeft;
+            const minAllowedXMove = constraintRight - initialLeft;
             if (xMove < minAllowedXMove) {
               xMove = minAllowedXMove;
             }
@@ -1023,23 +1045,20 @@ const applyConstraints = (
         }
       }
 
-      // TODO: Investigate why overlap detection is needed for scroll but not mouse
-      // Mouse interactions work correctly without this, so scroll should too.
-      // There's likely a deeper issue with constraint application during scroll events.
-
-      /*
       // Handle overlap case - when element is already overlapping with obstacle
+      // This should not normally happen due to floating point rounding fixes above,
+      // but may occur if:
+      // - Element starts in overlapped state during initialization
+      // - Programmatic positioning places element over obstacle
+      // - Other interactions (resize, external transforms) create overlap
       if (!isOnTheLeft && !isOnTheRight && !isAbove && !isBelow) {
         // Element is overlapping with obstacle - push it out in the direction of least resistance
-        console.log(
-          `[OBSTACLE] Element is overlapping with obstacle, resolving collision`,
-        );
 
         // Calculate distances to push element out in each direction
-        const distanceToLeft = currentActualRight - constraint.left; // Distance to push left
-        const distanceToRight = constraint.right - currentActualLeft; // Distance to push right
-        const distanceToTop = currentActualBottom - constraint.top; // Distance to push up
-        const distanceToBottom = constraint.bottom - currentActualTop; // Distance to push down
+        const distanceToLeft = currentActualRight - constraintLeft; // Distance to push left
+        const distanceToRight = constraintRight - currentActualLeft; // Distance to push right
+        const distanceToTop = currentActualBottom - constraintTop; // Distance to push up
+        const distanceToBottom = constraintBottom - currentActualTop; // Distance to push down
 
         // Find the minimum distance (direction of least resistance)
         const minDistance = Math.min(
@@ -1050,32 +1069,31 @@ const applyConstraints = (
         );
 
         if (minDistance === distanceToLeft) {
-          // Push left: element should not go past constraint.left - elementWidth
-          const maxAllowedXMove = constraint.left - elementWidth - initialLeft;
+          // Push left: element should not go past constraintLeft - elementWidth
+          const maxAllowedXMove = constraintLeft - elementWidth - initialLeft;
           if (xMove > maxAllowedXMove) {
             xMove = maxAllowedXMove;
           }
         } else if (minDistance === distanceToRight) {
-          // Push right: element should not go before constraint.right
-          const minAllowedXMove = constraint.right - initialLeft;
+          // Push right: element should not go before constraintRight
+          const minAllowedXMove = constraintRight - initialLeft;
           if (xMove < minAllowedXMove) {
             xMove = minAllowedXMove;
           }
         } else if (minDistance === distanceToTop) {
-          // Push up: element should not go past constraint.top - elementHeight
-          const maxAllowedYMove = constraint.top - elementHeight - initialTop;
+          // Push up: element should not go past constraintTop - elementHeight
+          const maxAllowedYMove = constraintTop - elementHeight - initialTop;
           if (yMove > maxAllowedYMove) {
             yMove = maxAllowedYMove;
           }
         } else if (minDistance === distanceToBottom) {
-          // Push down: element should not go before constraint.bottom
-          const minAllowedYMove = constraint.bottom - initialTop;
+          // Push down: element should not go before constraintBottom
+          const minAllowedYMove = constraintBottom - initialTop;
           if (yMove < minAllowedYMove) {
             yMove = minAllowedYMove;
           }
         }
       }
-      */
     }
   }
 
