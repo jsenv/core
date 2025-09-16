@@ -160,11 +160,11 @@ export const createDragGesture = ({
   threshold = 5,
   direction: defaultDirection = { x: true, y: true },
   backdrop = true,
-  // Visual feedback line connecting mouse cursor to grab point when constraints prevent following
+  // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
   // This provides intuitive feedback during drag operations when the element cannot reach the mouse
-  // position due to obstacles, boundaries, or other constraints. The line becomes visible when there's
-  // a significant distance between the mouse and the grab point, helping users understand why the
-  // element isn't moving as expected.
+  // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
+  // initially grabbed the element, but moves with the element to show the current anchor position.
+  // It becomes visible when there's a significant distance between mouse and grab point.
   constrainedFeedbackLine = true,
   // Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
   // Useful for debugging constraint systems and understanding why elements behave certain ways
@@ -300,18 +300,20 @@ export const createDragGesture = ({
         return;
       }
 
-      // Calculate grab point position in viewport coordinates
-      // The grab point is where the mouse initially clicked on the element
+      // Calculate current grab point position in viewport coordinates
+      // The grab point is where the mouse initially clicked on the element, but moves with the element
       const positionedParentRect = positionedParent.getBoundingClientRect();
 
-      // Convert grab start position to current viewport coordinates
-      // xAtStart/yAtStart are relative to positioned parent, so convert to viewport
-      const grabPointX = positionedParentRect.left + xAtStart;
-      const grabPointY = positionedParentRect.top + yAtStart;
+      // Current grab point = initial grab position + element movement
+      // xAtStart/yAtStart are relative to positioned parent, add current movement
+      const currentGrabPointX =
+        positionedParentRect.left + xAtStart + (gestureInfo.xMove || 0);
+      const currentGrabPointY =
+        positionedParentRect.top + yAtStart + (gestureInfo.yMove || 0);
 
-      // Calculate distance between mouse and grab point
-      const deltaX = effectiveMouseX - grabPointX;
-      const deltaY = effectiveMouseY - grabPointY;
+      // Calculate distance between mouse and current grab point
+      const deltaX = effectiveMouseX - currentGrabPointX;
+      const deltaY = effectiveMouseY - currentGrabPointY;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
       // Show line only when distance is significant (> 20px threshold)
@@ -324,9 +326,9 @@ export const createDragGesture = ({
       // Calculate angle and position
       const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
       constraintFeedbackLine.setAttribute("data-visible", "");
-      // Position line at grab point (where mouse initially clicked on element)
-      constraintFeedbackLine.style.left = `${grabPointX}px`;
-      constraintFeedbackLine.style.top = `${grabPointY}px`;
+      // Position line at current grab point (follows element movement)
+      constraintFeedbackLine.style.left = `${currentGrabPointX}px`;
+      constraintFeedbackLine.style.top = `${currentGrabPointY}px`;
       constraintFeedbackLine.style.width = `${distance}px`;
       constraintFeedbackLine.style.transform = `rotate(${angle}deg)`;
       // Fade in based on distance (more visible as distance increases)
@@ -914,7 +916,7 @@ const createConstraintFeedbackLine = () => {
   const line = document.createElement("div");
   line.className = "navi_constraint_feedback_line";
   line.title =
-    "Constraint feedback - shows distance between mouse and grab point";
+    "Constraint feedback - shows distance between mouse and moving grab point";
   document.body.appendChild(line);
   return line;
 };
