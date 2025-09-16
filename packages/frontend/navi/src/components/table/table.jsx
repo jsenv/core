@@ -527,7 +527,7 @@ import.meta.css = /* css */ `
 
   .navi_table_drag_clone_positioner {
     position: absolute;
-    background: rgba(0, 0, 0, 0.5);
+    /* background: rgba(0, 0, 0, 0.5); */
   }
 
   .navi_table_drag_clone_container th,
@@ -743,8 +743,8 @@ export const Table = forwardRef((props, ref) => {
     setGrabTarget(`column:${columnIndex}`);
   };
   const releaseColumn = () => {
-    // setGrabTarget(null);
-    // setDragElement(null);
+    setGrabTarget(null);
+    setDragElement(null);
   };
 
   return (
@@ -1046,7 +1046,6 @@ const HeaderCell = ({
           onGrab: (gestureInfo) => onGrab(gestureInfo, tableClone),
           onDrag,
           onRelease,
-          keepMarkersOnRelease: true,
           visibleAreaReducers: {
             left: lastStickyColumnElement,
           },
@@ -1099,7 +1098,8 @@ const HeaderCell = ({
         cloneParent.closest(".navi_table_drag_clone_container").style.display =
           "block";
         dragToMoveGesture.addTeardown(() => {
-          // cloneParent.removeChild(tableClone);
+          cloneParent.style.left = 0;
+          tableClone.remove();
         });
         firstCol.setAttribute("data-drag-obstacle", "");
         firstCol.setAttribute("data-sticky-obstacle", "");
