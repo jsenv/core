@@ -263,32 +263,40 @@ export const createDragGesture = ({
 
     // Set up scroll event handling to adjust drag position when scrolling occurs
     update_on_scroll: {
+      let isHandlingScroll = false;
       const handleScroll = () => {
-        if (!started) return;
+        if (isHandlingScroll) {
+          return;
+        }
+        isHandlingScroll = true;
 
-        const currentScrollLeft = scrollableParent
-          ? scrollableParent.scrollLeft
-          : 0;
-        const currentScrollTop = scrollableParent
-          ? scrollableParent.scrollTop
-          : 0;
+        const currentScrollLeft = scrollableParent.scrollLeft;
+        const currentScrollTop = scrollableParent.scrollTop;
 
         const scrollDeltaX = currentScrollLeft - gestureInfo.initialScrollLeft;
         const scrollDeltaY = currentScrollTop - gestureInfo.initialScrollTop;
 
-        // Compensate for scroll by adjusting the relative position
-        // as if the mouse had moved in the opposite direction of the scroll
-        const compensatedXRelative = gestureInfo.x - scrollDeltaX;
-        const compensatedYRelative = gestureInfo.y - scrollDeltaY;
+        // Adjust the current gesture position to compensate for scroll
+        // When we scroll right (+scrollDeltaX), we need to move the element right too
+        const adjustedX = gestureInfo.x + scrollDeltaX;
+        const adjustedY = gestureInfo.y + scrollDeltaY;
 
-        // Trigger a drag update with the compensated position
-        drag(compensatedXRelative, compensatedYRelative);
+        // Update initial scroll values for next scroll event
+        gestureInfo.initialScrollLeft = currentScrollLeft;
+        gestureInfo.initialScrollTop = currentScrollTop;
+
+        // Call drag with the adjusted position to maintain element position relative to content
+        drag(adjustedX, adjustedY);
+
+        isHandlingScroll = false;
       };
       scrollableParent.addEventListener("scroll", handleScroll, {
         passive: true,
       });
       addTeardown(() => {
-        scrollableParent.removeEventListener("scroll", handleScroll);
+        scrollableParent.removeEventListener("scroll", handleScroll, {
+          passive: true,
+        });
       });
     }
 
