@@ -871,6 +871,7 @@ export const initFlexDetailsSet = (
         onRelease: () => {
           end();
         },
+        constrainedFeedbackLine: false,
       });
     };
     container.addEventListener("mousedown", onmousedown);
