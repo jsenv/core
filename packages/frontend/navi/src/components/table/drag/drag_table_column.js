@@ -2,7 +2,7 @@ import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
 export const initDragTableColumnByMousedown = (
   mousedownEvent,
-  { stickyColumnFrontierIndex, onGrab, onDrag, onRelease },
+  { onGrab, onDrag, onRelease },
 ) => {
   const teardownCallbackSet = new Set();
   const addTeardown = (callback) => {
@@ -138,21 +138,11 @@ export const initDragTableColumnByMousedown = (
   }
 
   init_drag_gesture: {
-    // Find the last sticky column element to use as left boundary for auto-scroll
-    // amd mark it a a drag obstable
-    let lastStickyColumnElement = null;
-    if (stickyColumnFrontierIndex > -1) {
-      const colgroup = table.querySelector("colgroup");
-      lastStickyColumnElement = colgroup.children[stickyColumnFrontierIndex];
-    }
     const dragToMoveGesture = createDragToMoveGesture({
       direction: { x: true },
       onGrab,
       onDrag,
       onRelease,
-      visibleAreaReducers: {
-        left: lastStickyColumnElement,
-      },
     });
 
     const colgroupClone = tableClone.querySelector("colgroup");

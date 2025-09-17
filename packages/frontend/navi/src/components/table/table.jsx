@@ -776,7 +776,6 @@ export const Table = forwardRef((props, ref) => {
                   data={data}
                   selectionController={selectionController}
                   grabbed={columnIsGrabbed}
-                  stickyColumnFrontierIndex={stickyColumnFrontierIndex}
                   isLastColumn={isLastColumn}
                   movable
                   resizable
@@ -973,7 +972,6 @@ const HeaderCell = ({
   selectionController,
   grabbed,
   columnIndex,
-  stickyColumnFrontierIndex,
   resizable,
   movable,
   onGrab,
@@ -1021,7 +1019,6 @@ const HeaderCell = ({
           return;
         }
         initDragTableColumnByMousedown(e, {
-          stickyColumnFrontierIndex,
           onGrab,
           onDrag,
           onRelease,

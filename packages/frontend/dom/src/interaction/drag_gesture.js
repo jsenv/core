@@ -205,11 +205,6 @@ export const createDragGesture = ({
   // Useful for debugging constraint systems and understanding why elements behave certain ways
   // When enabled, markers persist until next drag gesture starts or page is refreshed
   keepMarkersOnRelease = false,
-  // Reduce visible scrollable area to trigger auto-scroll before reaching actual boundaries
-  // Useful for scenarios like sticky columns where auto-scroll should start when approaching sticky areas
-  // Expected format: { left?: HTMLElement, right?: HTMLElement, top?: HTMLElement, bottom?: HTMLElement }
-  // Elements are used to compute their position/size and reduce the corresponding edge of visible area
-  visibleAreaReducers = {},
   lifecycle,
 }) => {
   const teardownCallbackSet = new Set();
@@ -710,27 +705,31 @@ export const createDragGesture = ({
       let visibleAreaTop = scrollableRect.top;
       let visibleAreaBottom = visibleAreaTop + availableHeight;
 
-      // Apply visible area reducers to artificially shrink the scrollable zone
-      // This triggers auto-scroll before reaching actual boundaries
-      if (visibleAreaReducers.left) {
-        const leftElement = visibleAreaReducers.left;
-        const leftRect = getElementBounds(leftElement, scrollableParent);
-        visibleAreaLeft = Math.max(visibleAreaLeft, leftRect.right);
-      }
-      if (visibleAreaReducers.right) {
-        const rightElement = visibleAreaReducers.right;
-        const rightRect = getElementBounds(rightElement, scrollableParent);
-        visibleAreaRight = Math.min(visibleAreaRight, rightRect.left);
-      }
-      if (visibleAreaReducers.top) {
-        const topElement = visibleAreaReducers.top;
-        const topRect = getElementBounds(topElement, scrollableParent);
-        visibleAreaTop = Math.max(visibleAreaTop, topRect.bottom);
-      }
-      if (visibleAreaReducers.bottom) {
-        const bottomElement = visibleAreaReducers.bottom;
-        const bottomRect = getElementBounds(bottomElement, scrollableParent);
-        visibleAreaBottom = Math.min(visibleAreaBottom, bottomRect.top);
+      // Auto-detect sticky obstacles within scrollable parent and reduce visible area accordingly
+      // This automatically handles sticky columns/rows by detecting their position and adjusting scroll boundaries
+      const stickyObstacles = scrollableParent.querySelectorAll(
+        "[data-sticky-obstacle]",
+      );
+      for (const stickyObstacle of stickyObstacles) {
+        const stickyRect = getElementBounds(stickyObstacle, scrollableParent);
+
+        // Determine which edge this sticky obstacle affects based on its position
+        // Left edge: if sticky element is positioned at or near the left edge
+        if (Math.abs(stickyRect.left - visibleAreaLeft) < 10) {
+          visibleAreaLeft = Math.max(visibleAreaLeft, stickyRect.right);
+        }
+        // Right edge: if sticky element is positioned at or near the right edge
+        if (Math.abs(stickyRect.right - visibleAreaRight) < 10) {
+          visibleAreaRight = Math.min(visibleAreaRight, stickyRect.left);
+        }
+        // Top edge: if sticky element is positioned at or near the top edge
+        if (Math.abs(stickyRect.top - visibleAreaTop) < 10) {
+          visibleAreaTop = Math.max(visibleAreaTop, stickyRect.bottom);
+        }
+        // Bottom edge: if sticky element is positioned at or near the bottom edge
+        if (Math.abs(stickyRect.bottom - visibleAreaBottom) < 10) {
+          visibleAreaBottom = Math.min(visibleAreaBottom, stickyRect.top);
+        }
       }
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
