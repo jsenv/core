@@ -137,20 +137,28 @@ export const initDragTableColumnByMousedown = (
 
   init_drag_gesture: {
     const colgroup = table.querySelector("colgroup");
-    // const firstCol = colgroup.children[0];
-    // firstCol.setAttribute("data-drag-obstacle", "");
-    // firstCol.setAttribute("data-sticky-obstacle", "");
+    const firstCol = colgroup.children[0];
+    firstCol.setAttribute("data-drag-obstacle", "");
+    firstCol.setAttribute("data-sticky-obstacle", "");
 
     // Find the last sticky column element to use as left boundary for auto-scroll
     // amd mark it a a drag obstable
     let lastStickyColumnElement = null;
     if (stickyColumnFrontierIndex === -1) {
-      colgroup.children[0].setAttribute("data-drag-obstacle", "");
+      const firsCol = colgroup.children[0];
+      firsCol.setAttribute("data-drag-obstacle", "");
+      addTeardown(() => {
+        firsCol.removeAttribute("data-drag-obstacle");
+      });
     } else {
       // Find the last sticky column header cell
       lastStickyColumnElement = colgroup.children[stickyColumnFrontierIndex];
       lastStickyColumnElement.setAttribute("data-drag-obstacle", "");
       lastStickyColumnElement.setAttribute("data-sticky-obstacle", "");
+      addTeardown(() => {
+        lastStickyColumnElement.removeAttribute("data-drag-obstacle");
+        lastStickyColumnElement.removeAttribute("data-sticky-obstacle");
+      });
     }
     const dragToMoveGesture = createDragToMoveGesture({
       direction: { x: true },
