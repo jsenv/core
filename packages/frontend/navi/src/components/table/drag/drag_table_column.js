@@ -137,9 +137,6 @@ export const initDragTableColumnByMousedown = (
 
   init_drag_gesture: {
     const colgroup = table.querySelector("colgroup");
-    const firstCol = colgroup.children[0];
-    firstCol.setAttribute("data-drag-obstacle", "");
-    firstCol.setAttribute("data-sticky-obstacle", "");
 
     // Find the last sticky column element to use as left boundary for auto-scroll
     // amd mark it a a drag obstable

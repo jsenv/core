@@ -195,8 +195,6 @@ const initResizeTableColumnByMousedown = (
     tableColumnResizer.removeAttribute("data-resizing");
   });
 
-  // - l'auto scroll ne marche pas, bizarre il considérer que document est le scrollable parent...
-  // a gauche il faut le limiter par la taille minit que peut prendre la colonne
   // (column.minWidth default to 50)
   // a droite pas de limite (enfin disons columnmaxWidth default to 1000)
   tableColumnResizer.setAttribute("data-resizing", "");
