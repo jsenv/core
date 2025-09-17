@@ -400,6 +400,9 @@ export const createDragGesture = ({
     // Check for obstacles and add obstacle constraint if found
     const obstacles = scrollableParent.querySelectorAll("[data-drag-obstacle]");
     for (const obstacle of obstacles) {
+      if (obstacle.closest("[data-drag-obstacle-ignore]")) {
+        continue;
+      }
       constraintFunctions.push(
         createObstacleConstraint(obstacle, positionedParent),
       );

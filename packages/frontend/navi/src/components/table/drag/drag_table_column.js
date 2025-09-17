@@ -25,6 +25,7 @@ export const initDragTableColumnByMousedown = (
     .closest(".navi_table_container")
     .querySelector(".navi_table_drag_clone_positioner");
   const tableClone = table.cloneNode(true);
+  // ensure [data-drag-obstacle] inside the table clone are ignored
   tableClone.setAttribute("data-drag-obstacle-ignore", "");
 
   update_sticky_elements: {
