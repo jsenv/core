@@ -25,6 +25,7 @@ export const initDragTableColumnByMousedown = (
     .closest(".navi_table_container")
     .querySelector(".navi_table_drag_clone_positioner");
   const tableClone = table.cloneNode(true);
+  tableClone.setAttribute("data-drag-obstacle-ignore", "");
 
   update_sticky_elements: {
     // In the table clone we set sticky elements to position: relative
@@ -136,26 +137,12 @@ export const initDragTableColumnByMousedown = (
   }
 
   init_drag_gesture: {
-    const colgroup = table.querySelector("colgroup");
-
     // Find the last sticky column element to use as left boundary for auto-scroll
     // amd mark it a a drag obstable
     let lastStickyColumnElement = null;
-    if (stickyColumnFrontierIndex === -1) {
-      const firsCol = colgroup.children[0];
-      firsCol.setAttribute("data-drag-obstacle", "");
-      addTeardown(() => {
-        firsCol.removeAttribute("data-drag-obstacle");
-      });
-    } else {
-      // Find the last sticky column header cell
+    if (stickyColumnFrontierIndex > -1) {
+      const colgroup = table.querySelector("colgroup");
       lastStickyColumnElement = colgroup.children[stickyColumnFrontierIndex];
-      lastStickyColumnElement.setAttribute("data-drag-obstacle", "");
-      lastStickyColumnElement.setAttribute("data-sticky-obstacle", "");
-      addTeardown(() => {
-        lastStickyColumnElement.removeAttribute("data-drag-obstacle");
-        lastStickyColumnElement.removeAttribute("data-sticky-obstacle");
-      });
     }
     const dragToMoveGesture = createDragToMoveGesture({
       direction: { x: true },

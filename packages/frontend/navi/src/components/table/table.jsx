@@ -722,9 +722,22 @@ export const Table = forwardRef((props, ref) => {
         data-border-collapse={borderCollapse ? "" : undefined}
       >
         <colgroup>
-          <col style={{ minWidth: "100px" }}></col>
-          {columns.map((col) => {
-            return <col key={col.id} />;
+          <col
+            data-drag-obstacle=""
+            data-sticky-obstacle={stickyHeader ? "" : undefined}
+            style={{ minWidth: "100px" }}
+          ></col>
+          {columns.map((col, index) => {
+            const isLastStickyColumn = index < stickyColumnFrontierIndex;
+            const isDragObstable = isLastStickyColumn;
+
+            return (
+              <col
+                key={col.id}
+                data-drag-obstacle={isDragObstable ? "" : undefined}
+                data-sticky-obstacle={isLastStickyColumn ? "" : undefined}
+              />
+            );
           })}
         </colgroup>
         <thead>
