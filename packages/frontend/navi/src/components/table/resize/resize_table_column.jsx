@@ -169,6 +169,14 @@ export const TableColumnResizer = () => {
   );
 };
 
+// TODO:
+// - a gauche column.minWidth si définie avec in min a 50 quoiqu'il (par rapport a la taille actuelle)
+// donc si elle fait 200px on mettre un leftBound a cell.left - 150px
+// - a droite column.maxWidth avec un max a 1000 quoi qu'il
+// on a pas cette option pour le moment
+// puisqu'on utilise que des obstacles
+// aussi ici on va autorise a dépasser la traille du scrollable parent
+// donc il faut une option pour forcer une right bound qui lorsque'elle est définié override le right bound du scrollable parent
 const initResizeTableColumnByMousedown = (
   mousedownEvent,
   { onGrab, onDrag, onRelease, isLeft },
@@ -195,8 +203,6 @@ const initResizeTableColumnByMousedown = (
     tableColumnResizer.removeAttribute("data-resizing");
   });
 
-  // (column.minWidth default to 50)
-  // a droite pas de limite (enfin disons columnmaxWidth default to 1000)
   tableColumnResizer.setAttribute("data-resizing", "");
   dragToMoveGesture.grabViaMousedown(mousedownEvent, {
     element: tableColumnResizer,
