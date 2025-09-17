@@ -69,6 +69,7 @@ import {
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
 import { initDragTableColumnByMousedown } from "./drag_table_column.js";
+import "./resize_table_column.js";
 import { useStickyGroup } from "./sticky_group.js";
 import { TableCell } from "./table_cell.jsx";
 
@@ -501,78 +502,6 @@ import.meta.css = /* css */ `
   .navi_table[data-border-collapse] th[data-after-sticky-y-frontier]::after,
   .navi_table[data-border-collapse] td[data-after-sticky-y-frontier]::after {
     top: 0;
-  }
-
-  .navi_table th[data-grabbed],
-  .navi_table td[data-grabbed] {
-    opacity: 0;
-  }
-
-  .navi_table_drag_clone_container {
-    position: absolute;
-    z-index: var(--z-index-dragging-clone);
-    cursor: grabbing;
-    user-select: none;
-    overflow: hidden;
-    left: 0;
-    top: 0;
-  }
-
-  .navi_table_drag_clone_positioner {
-    position: absolute;
-    /* background: rgba(0, 0, 0, 0.5); */
-  }
-
-  .navi_table_drag_clone_container th,
-  .navi_table_drag_clone_container td {
-    opacity: 0;
-  }
-  .navi_table_drag_clone_container th[data-grabbed],
-  .navi_table_drag_clone_container td[data-grabbed] {
-    opacity: 1;
-  }
-
-  .navi_table_drag_clone_container th[data-sticky-y],
-  .navi_table_drag_clone_container td[data-sticky-y] {
-    position: relative;
-  }
-  .navi_table_drag_clone_container th[data-sticky-x],
-  .navi_table_drag_clone_container td[data-sticky-x] {
-    position: relative;
-  }
-  .navi_table_drag_clone_container th[data-sticky-x][data-sticky-y],
-  .navi_table_drag_clone_container td[data-sticky-x][data-sticky-y] {
-    position: relative;
-  }
-
-  .navi_table_column_resize_handle_right {
-    cursor: ew-resize;
-    position: absolute;
-    z-index: 1;
-    right: 0px;
-    width: 10px;
-    top: 5px;
-    bottom: 5px;
-    background: red;
-    opacity: 0;
-  }
-  .navi_table_column_resize_handle_right[data-hover] {
-    opacity: 1;
-  }
-
-  .navi_table_column_resize_handle_left {
-    cursor: ew-resize;
-    position: absolute;
-    z-index: 1;
-    left: 0px;
-    width: 10px;
-    top: 5px;
-    bottom: 5px;
-    background: red;
-    opacity: 0;
-  }
-  .navi_table_column_resize_handle_left[data-hover] {
-    opacity: 1;
   }
 `;
 
