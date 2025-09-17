@@ -1177,11 +1177,11 @@ const HeaderCell = ({
           className="navi_table_column_resize_handle_left"
           onMouseEnter={(e) => {
             e.target.setAttribute("data-hover", "");
-            // TODO: set [data-hover] on right handle of previous column
+            setDataHoverOnPreviousColumnRightHandle(e, true);
           }}
           onMouseLeave={(e) => {
             e.target.removeAttribute("data-hover");
-            // TODO: remove [data-hover] on right handle of previous column
+            setDataHoverOnPreviousColumnRightHandle(e, false);
           }}
         ></div>
       )}
@@ -1194,17 +1194,49 @@ const HeaderCell = ({
         className="navi_table_column_resize_handle_right"
         onMouseEnter={(e) => {
           e.target.setAttribute("data-hover", "");
-          // TODO: set [data-hover] on left handle of next column
+          setDataHoverOnNextColumnLeftHandle(e, true);
         }}
         onMouseLeave={(e) => {
           e.target.removeAttribute("data-hover");
-
-          // TODO: remove [data-hover] on left handle of next column
+          setDataHoverOnNextColumnLeftHandle(e, false);
         }}
       ></div>
     </th>
   );
 };
+const setDataHoverOnPreviousColumnRightHandle = (e, isHover) => {
+  const currentCell = e.target.closest("th");
+  const previousCell = currentCell.previousElementSibling;
+  if (previousCell) {
+    const previousRightHandle = previousCell.querySelector(
+      ".navi_table_column_resize_handle_right",
+    );
+    if (previousRightHandle) {
+      if (isHover) {
+        previousRightHandle.setAttribute("data-hover", "");
+      } else {
+        previousRightHandle.removeAttribute("data-hover");
+      }
+    }
+  }
+};
+const setDataHoverOnNextColumnLeftHandle = (e, isHover) => {
+  const currentCell = e.target.closest("th");
+  const nextCell = currentCell.nextElementSibling;
+  if (nextCell) {
+    const nextLeftHandle = nextCell.querySelector(
+      ".navi_table_column_resize_handle_left",
+    );
+    if (nextLeftHandle) {
+      if (isHover) {
+        nextLeftHandle.setAttribute("data-hover", "");
+      } else {
+        nextLeftHandle.removeAttribute("data-hover");
+      }
+    }
+  }
+};
+
 const RowNumberCell = ({
   stickyX,
   stickyY,
