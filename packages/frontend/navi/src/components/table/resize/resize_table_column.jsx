@@ -5,7 +5,6 @@ import.meta.css = /* css */ `
   .navi_table_column_resize_handle_right {
     cursor: ew-resize;
     position: absolute;
-    z-index: 100000000;
     width: 7px;
     height: 22px;
     top: 50%;
