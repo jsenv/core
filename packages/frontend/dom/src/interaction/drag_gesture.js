@@ -161,25 +161,24 @@ const getElementBounds = (element, scrollableParent) => {
   const isVirtuallySticky = element.hasAttribute("data-sticky-obstacle");
 
   if (isVirtuallySticky) {
-    // For sticky obstacles, simulate their sticky position using scroll offsets
+    // For sticky obstacles, calculate where they would appear in viewport when sticky
     const computedStyle = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     const scrollableRect = scrollableParent.getBoundingClientRect();
 
     // Get sticky positioning values
-    const left = parseFloat(computedStyle.left) || 0;
-    const top = parseFloat(computedStyle.top) || 0;
+    const stickyLeft = parseFloat(computedStyle.left) || 0;
+    const stickyTop = parseFloat(computedStyle.top) || 0;
     const width = rect.width;
     const height = rect.height;
 
-    const { scrollLeft, scrollTop } = scrollableParent;
-
-    // Calculate sticky position: scrollable viewport + scroll offset + sticky offset
+    // Calculate where the sticky element would appear in viewport coordinates
+    // This is the scrollable container's viewport position + the sticky offset
     return {
-      left: scrollableRect.left + scrollLeft + left,
-      top: scrollableRect.top + scrollTop + top,
-      right: scrollableRect.left + scrollLeft + left + width,
-      bottom: scrollableRect.top + scrollTop + top + height,
+      left: scrollableRect.left + stickyLeft,
+      top: scrollableRect.top + stickyTop,
+      right: scrollableRect.left + stickyLeft + width,
+      bottom: scrollableRect.top + stickyTop + height,
     };
   }
 
