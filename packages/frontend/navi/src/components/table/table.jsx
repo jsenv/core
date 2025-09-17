@@ -72,6 +72,7 @@ import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
 import {
   TableColumnLeftResizeHandle,
+  TableColumnResizer,
   TableColumnRightResizeHandle,
 } from "./resize/resize_table_column.jsx";
 import { useStickyGroup } from "./sticky_group.js";
@@ -830,6 +831,7 @@ export const Table = forwardRef((props, ref) => {
         </tbody>
       </table>
       <TableDragCloneContainer dragElement={dragElement} />
+      <TableColumnResizer />
     </div>
   );
 });

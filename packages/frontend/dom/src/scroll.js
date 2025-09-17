@@ -300,7 +300,11 @@ const findScrollableParent = (element, { includeHidden } = {}) => {
     if (parent === document) {
       return null;
     }
-    if (position === "absolute" && getStyle(parent, "position") === "static") {
+    if (
+      position === "absolute" &&
+      parent !== document.documentElement &&
+      getStyle(parent, "position") === "static"
+    ) {
       parent = parent.parentNode;
       continue;
     }

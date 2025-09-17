@@ -1,3 +1,5 @@
+import { createDragToMoveGesture } from "@jsenv/dom";
+
 import.meta.css = /* css */ `
   .navi_table_column_resize_handle_right {
     cursor: ew-resize;
@@ -28,12 +30,25 @@ import.meta.css = /* css */ `
   .navi_table_column_resize_handle_left[data-hover] {
     opacity: 1;
   }
+
+  .navi_table_column_resizer {
+    position: absolute;
+    z-index: 1000000;
+    top: 0;
+    bottom: 0;
+    background: grey;
+    width: 10px;
+  }
 `;
 
-export const TableColumnLeftResizeHandle = () => {
+export const TableColumnLeftResizeHandle = ({ onGrab, onDrag, onRelease }) => {
   return (
     <div
       className="navi_table_column_resize_handle_left"
+      onMouseDown={(e) => {
+        e.stopPropagation(); // prevent drag column
+        initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
+      }}
       onMouseEnter={(e) => {
         e.target.setAttribute("data-hover", "");
         setDataHoverOnPreviousColumnRightHandle(e, true);
@@ -45,13 +60,13 @@ export const TableColumnLeftResizeHandle = () => {
     ></div>
   );
 };
-export const TableColumnRightResizeHandle = () => {
+export const TableColumnRightResizeHandle = ({ onGrab, onDrag, onRelease }) => {
   return (
     <div
       className="navi_table_column_resize_handle_right"
       onMouseDown={(e) => {
         e.stopPropagation(); // prevent drag column
-        initResizeTableColumnByMousedown(e);
+        initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
       }}
       onMouseEnter={(e) => {
         e.target.setAttribute("data-hover", "");
@@ -64,6 +79,10 @@ export const TableColumnRightResizeHandle = () => {
     ></div>
   );
 };
+export const TableColumnResizer = () => {
+  return <div className="navi_table_column_resizer"></div>;
+};
+
 const setDataHoverOnPreviousColumnRightHandle = (e, isHover) => {
   const currentCell = e.target.closest("th");
   const previousCell = currentCell.previousElementSibling;
@@ -97,4 +116,22 @@ const setDataHoverOnNextColumnLeftHandle = (e, isHover) => {
   }
 };
 
-const initResizeTableColumnByMousedown = () => {};
+const initResizeTableColumnByMousedown = (
+  mousedownEvent,
+  { onGrab, onDrag, onRelease },
+) => {
+  const tableColumnResizer = mousedownEvent.target
+    .closest(".navi_table_container")
+    .querySelector(".navi_table_column_resizer");
+
+  const dragToMoveGesture = createDragToMoveGesture({
+    direction: { x: true },
+    onGrab,
+    onDrag,
+    onRelease,
+  });
+
+  dragToMoveGesture.grabViaMousedown(mousedownEvent, {
+    element: tableColumnResizer,
+  });
+};
