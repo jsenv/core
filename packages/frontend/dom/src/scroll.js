@@ -116,8 +116,13 @@ export const getScrollableParent = (arg, { includeHidden } = {}) => {
   if (element === document) {
     return null;
   }
+  if (element === document.documentElement) {
+    if (isScrollable(element, { includeHidden })) {
+      return element;
+    }
+    return null;
+  }
   const position = getStyle(element, "position");
-
   if (position === "fixed") {
     return getScrollingElement(element.ownerDocument);
   }
@@ -284,29 +289,26 @@ const canHaveHorizontalScroll = (element, { includeHidden }) => {
 };
 
 const findScrollableParent = (element, { includeHidden } = {}) => {
-  if (element === document) {
-    return null;
-  }
-  if (element === document.documentElement) {
-    if (isScrollable(element, { includeHidden })) {
-      return element;
-    }
-    return null;
-  }
-
   const position = getStyle(element, "position");
   let parent = element.parentNode;
+  // Si l'élément est en position absolute, d'abord trouver le premier parent positionné
+  if (position === "absolute") {
+    while (parent && parent !== document) {
+      if (parent === document.documentElement) {
+        break; // documentElement est considéré comme positionné
+      }
+      const parentPosition = getStyle(parent, "position");
+      if (parentPosition !== "static") {
+        break; // Trouvé le premier parent positionné
+      }
+      parent = parent.parentNode;
+    }
+  }
+
+  // Maintenant chercher le premier parent scrollable à partir du parent positionné
   while (parent) {
     if (parent === document) {
       return null;
-    }
-    if (
-      position === "absolute" &&
-      parent !== document.documentElement &&
-      getStyle(parent, "position") === "static"
-    ) {
-      parent = parent.parentNode;
-      continue;
     }
     if (isScrollable(parent, { includeHidden })) {
       return parent;
