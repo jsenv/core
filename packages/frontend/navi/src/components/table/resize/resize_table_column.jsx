@@ -5,7 +5,7 @@ import.meta.css = /* css */ `
   .navi_table_column_resize_handle_right {
     cursor: ew-resize;
     position: absolute;
-    z-index: 1;
+    z-index: 100000000;
     width: 7px;
     height: 22px;
     top: 50%;
@@ -82,10 +82,12 @@ export const TableColumnLeftResizeHandle = ({ onGrab, onDrag, onRelease }) => {
         e.stopPropagation(); // prevent drag column
         initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
       }}
-      onMouseEnter={(e) => {
+      onMouseMove={(e) => {
+        console.log("mouse move left");
         onMouseEnterLeftResizeHandle(e);
       }}
       onMouseLeave={(e) => {
+        console.log("mouse leave left");
         onMouseLeaveLeftResizeHandle(e);
       }}
     ></div>
@@ -99,12 +101,12 @@ export const TableColumnRightResizeHandle = ({ onGrab, onDrag, onRelease }) => {
         e.stopPropagation(); // prevent drag column
         initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
       }}
-      onMouseEnter={(e) => {
-        console.log("mouse enter right");
+      onMouseMove={(e) => {
+        console.log("mouse move right");
         onMouseEnterRightResizeHandle(e);
       }}
       onMouseLeave={(e) => {
-        console.log("mouse leave right");
+        console.log("mouse leave right", e.relatedTarget);
         onMouseLeaveRightResizeHandle(e);
       }}
     ></div>
