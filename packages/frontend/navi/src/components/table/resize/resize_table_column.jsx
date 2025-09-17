@@ -1,33 +1,27 @@
 import { createDragToMoveGesture } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
+  .navi_table_column_resize_handle_left,
   .navi_table_column_resize_handle_right {
     cursor: ew-resize;
     position: absolute;
     z-index: 1;
-    right: 0px;
-    width: 10px;
-    top: 5px;
-    bottom: 5px;
-    background: red;
-    opacity: 0;
+    width: 4px;
+    height: 22px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #444746;
+    border-radius: 15px;
+    /* opacity: 0; */
   }
-  .navi_table_column_resize_handle_right[data-hover] {
-    opacity: 1;
-  }
-
   .navi_table_column_resize_handle_left {
-    cursor: ew-resize;
-    position: absolute;
-    z-index: 1;
-    left: 0px;
-    width: 10px;
-    top: 5px;
-    bottom: 5px;
-    background: red;
-    opacity: 0;
+    left: 3px;
   }
-  .navi_table_column_resize_handle_left[data-hover] {
+  .navi_table_column_resize_handle_right {
+    right: 3px;
+  }
+  .navi_table_column_resize_handle_left[data-hover],
+  .navi_table_column_resize_handle_right[data-hover] {
     opacity: 1;
   }
 
@@ -85,9 +79,11 @@ export const TableColumnResizer = ({ resizeInfo }) => {
   return (
     <div
       className="navi_table_column_resizer"
-      style={{
-        display: resizeInfo ? "block" : "none",
-      }}
+      style={
+        {
+          // display: resizeInfo ? "block" : "none",
+        }
+      }
     >
       <div
         style={{
@@ -103,6 +99,38 @@ export const TableColumnResizer = ({ resizeInfo }) => {
       </div>
     </div>
   );
+};
+
+const initResizeTableColumnByMousedown = (
+  mousedownEvent,
+  { onGrab, onDrag, onRelease },
+) => {
+  const tableContainer = mousedownEvent.target.closest(".navi_table_container");
+  const tableColumnResizer = tableContainer.querySelector(
+    ".navi_table_column_resizer",
+  );
+
+  const tableCell = mousedownEvent.target.closest("th");
+  const tableCellRect = tableCell.getBoundingClientRect();
+  const tableContainerRect = tableContainer.getBoundingClientRect();
+  const tableCellLeftRelative = tableCellRect.left - tableContainerRect.left;
+  const tableCellHeight = tableCellRect.height;
+  const tableCellWidth = tableCellRect.width;
+
+  const dragToMoveGesture = createDragToMoveGesture({
+    direction: { x: true },
+    onGrab: () => {
+      tableColumnResizer.style.left = `${tableCellLeftRelative + tableCellWidth}px`;
+
+      onGrab({ rowHeight: tableCellHeight });
+    },
+    onDrag,
+    onRelease,
+  });
+
+  dragToMoveGesture.grabViaMousedown(mousedownEvent, {
+    element: tableColumnResizer,
+  });
 };
 
 const setDataHoverOnPreviousColumnRightHandle = (e, isHover) => {
@@ -136,29 +164,4 @@ const setDataHoverOnNextColumnLeftHandle = (e, isHover) => {
       }
     }
   }
-};
-
-const initResizeTableColumnByMousedown = (
-  mousedownEvent,
-  { onGrab, onDrag, onRelease },
-) => {
-  const tableColumnResizer = mousedownEvent.target
-    .closest(".navi_table_container")
-    .querySelector(".navi_table_column_resizer");
-
-  const tableCell = mousedownEvent.target.closest("th");
-  const rowHeight = tableCell.getBoundingClientRect().height;
-
-  const dragToMoveGesture = createDragToMoveGesture({
-    direction: { x: true },
-    onGrab: () => {
-      onGrab({ rowHeight });
-    },
-    onDrag,
-    onRelease,
-  });
-
-  dragToMoveGesture.grabViaMousedown(mousedownEvent, {
-    element: tableColumnResizer,
-  });
 };
