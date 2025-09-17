@@ -68,9 +68,9 @@ import {
   useSelectionController,
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
+import { initDragTableColumnByMousedown } from "./drag_table_column.js";
 import { useStickyGroup } from "./sticky_group.js";
 import { TableCell } from "./table_cell.jsx";
-import { initDragTableColumnByMousedown } from "./table_column_drag.js";
 
 /*
  * Box-shadow border mapping template:
