@@ -53,7 +53,6 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
-import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import {
   useImperativeHandle,
@@ -71,6 +70,7 @@ import {
 import { useFocusGroup } from "../use_focus_group.js";
 import { useStickyGroup } from "./sticky_group.js";
 import { TableCell } from "./table_cell.jsx";
+import { initDragTableColumnByMousedown } from "./table_column_drag.js";
 
 /*
  * Box-shadow border mapping template:
@@ -1054,130 +1054,14 @@ const HeaderCell = ({
       }}
       tabIndex={-1}
       onMouseDown={(e) => {
-        if (!movable) {
+        if (!movable || stickyX) {
           return;
         }
-
-        const th = cellRef.current;
-        const table = e.target.closest("table");
-        const columnIndex = Array.from(th.parentNode.children).indexOf(th);
-        const colgroup = table.querySelector("colgroup");
-        const firstCol = colgroup.children[0];
-        // const minY = -rectRelativeTo.top;
-        const tableClone = table.cloneNode(true);
-
-        // Find the last sticky column element to use as left boundary for auto-scroll
-        let lastStickyColumnElement = null;
-        if (stickyColumnFrontierIndex > -1) {
-          // Find the last sticky column header cell
-          const headerRow = table.querySelector("thead tr");
-          lastStickyColumnElement =
-            headerRow.children[stickyColumnFrontierIndex];
-        }
-
-        const dragToMoveGesture = createDragToMoveGesture({
-          direction: { x: true },
-          onGrab: (gestureInfo) => onGrab(gestureInfo, tableClone),
+        initDragTableColumnByMousedown(e, {
+          stickyColumnFrontierIndex,
+          onGrab,
           onDrag,
           onRelease,
-          visibleAreaReducers: {
-            left: lastStickyColumnElement,
-          },
-        });
-
-        const scrollableParent = getScrollableParent(table);
-        const scrollLeft = scrollableParent.scrollLeft || 0;
-        const scrollTop = scrollableParent.scrollTop || 0;
-        update_sticky_elements: {
-          // Find all sticky elements (th and td with data-sticky-x or data-sticky-y)
-          const stickyElements = tableClone.querySelectorAll(
-            "th[data-sticky-x], td[data-sticky-x], th[data-sticky-y], td[data-sticky-y]",
-          );
-          stickyElements.forEach((stickyElement) => {
-            const hasXSticky = stickyElement.hasAttribute("data-sticky-x");
-            const hasYSticky = stickyElement.hasAttribute("data-sticky-y");
-
-            // Use position: relative and calculate offsets to simulate sticky behavior
-            stickyElement.style.position = "relative";
-
-            if (hasXSticky) {
-              // For horizontal sticky elements, offset left to simulate sticky behavior
-              // The element should appear to stick at its original position relative to the scroll
-              stickyElement.style.left = `${scrollLeft}px`;
-            }
-
-            if (hasYSticky) {
-              // For vertical sticky elements, offset top to simulate sticky behavior
-              // The element should appear to stick at its original position relative to the scroll
-              stickyElement.style.top = `${scrollTop}px`;
-            }
-          });
-        }
-        const tableCloneCells = tableClone.querySelectorAll("td, th");
-        tableCloneCells.forEach((cellClone) => {
-          const cellColumnIndex = Array.from(
-            cellClone.parentNode.children,
-          ).indexOf(cellClone);
-          if (cellColumnIndex === columnIndex) {
-            cellClone.setAttribute("data-grabbed", "");
-          }
-        });
-        const colgroupClone = tableClone.querySelector("colgroup");
-        const colClone = colgroupClone.children[columnIndex];
-
-        const cloneParent = table
-          .closest(".navi_table_container")
-          .querySelector(".navi_table_drag_clone_positioner");
-        cloneParent.insertBefore(tableClone, cloneParent.firstChild);
-        cloneParent.closest(".navi_table_drag_clone_container").style.display =
-          "block";
-
-        const cellThatWouldBeFocused = e.target.closest("td, th");
-        let focusedElementInClone = null;
-        // Build a path from table to activeElement
-        const pathToElement = [];
-        let current = cellThatWouldBeFocused;
-        while (current && current !== table) {
-          const parent = current.parentNode;
-          if (parent) {
-            const siblings = Array.from(parent.children);
-            pathToElement.unshift(siblings.indexOf(current));
-          }
-          current = parent;
-        }
-        // Follow the same path in the clone to find the corresponding element
-        focusedElementInClone = tableClone;
-        for (const index of pathToElement) {
-          if (focusedElementInClone.children[index]) {
-            focusedElementInClone = focusedElementInClone.children[index];
-          } else {
-            focusedElementInClone = null;
-            break;
-          }
-        }
-        // Move focus to the clone element (the goal is to see the focus ring in the dragged clone)
-        if (focusedElementInClone && focusedElementInClone.focus) {
-          e.preventDefault(); // otherwise focus will go back to the non cloned cell
-          focusedElementInClone.focus();
-        }
-
-        dragToMoveGesture.addTeardown(() => {
-          cloneParent.style.left = 0;
-          tableClone.remove();
-          // Restore focus to the original element
-          if (cellThatWouldBeFocused) {
-            // Note: will likely fail if the column element is re-rendered by preact
-            // that day we'll fix it
-            cellThatWouldBeFocused.focus();
-          }
-        });
-        firstCol.setAttribute("data-drag-obstacle", "");
-        firstCol.setAttribute("data-sticky-obstacle", "");
-
-        dragToMoveGesture.grabViaMousedown(e, {
-          element: table,
-          elementToImpact: cloneParent,
-          elementVisuallyImpacted: colClone,
         });
       }}
     >

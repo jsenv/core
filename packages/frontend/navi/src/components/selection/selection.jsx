@@ -1034,11 +1034,11 @@ export const useSelectableElement = (
         return;
       }
 
-      if (e.defaultPrevented) {
-        // If the event was prevented by another handler, do not interfere
-        debug("interaction", "mousedown: event already prevented, skipping");
-        return;
-      }
+      // if (e.defaultPrevented) {
+      //   // If the event was prevented by another handler, do not interfere
+      //   debug("interaction", "mousedown: event already prevented, skipping");
+      //   return;
+      // }
       const isMultiSelect = e.metaKey || e.ctrlKey;
       const isShiftSelect = e.shiftKey;
       const isSingleSelect = !isMultiSelect && !isShiftSelect;
