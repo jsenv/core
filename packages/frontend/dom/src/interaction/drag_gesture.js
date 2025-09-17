@@ -143,7 +143,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export let DRAG_DEBUG_VISUAL_MARKERS = true;
+export let DRAG_DEBUG_VISUAL_MARKERS = false;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = true;
 };
@@ -309,7 +309,7 @@ export const createDragGesture = ({
     if (backdrop) {
       const backdropElement = document.createElement("div");
       backdropElement.style.position = "fixed";
-      backdropElement.style.zIndex = "1000000";
+      backdropElement.style.zIndex = "1";
       backdropElement.style.inset = "0";
       backdropElement.style.cursor = cursor;
       backdropElement.style.userSelect = "none";

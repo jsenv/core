@@ -68,7 +68,8 @@ import {
   useSelectionController,
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
-import { initDragTableColumnByMousedown } from "./drag_table_column.js";
+import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
+import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
 import "./resize_table_column.js";
 import { useStickyGroup } from "./sticky_group.js";
 import { TableCell } from "./table_cell.jsx";
@@ -825,7 +826,7 @@ export const Table = forwardRef((props, ref) => {
           })}
         </tbody>
       </table>
-      <DragClone dragElement={dragElement} />
+      <TableDragCloneContainer dragElement={dragElement} />
     </div>
   );
 });
@@ -1112,38 +1113,4 @@ const RowNumberCell = ({
 
 const DataCell = (props) => {
   return <TableCell {...props} />;
-};
-
-const DragClone = ({ dragElement }) => {
-  const cloneParentElementRef = useRef();
-
-  useLayoutEffect(() => {
-    const cloneParentElement = cloneParentElementRef.current;
-    if (!cloneParentElement) {
-      return;
-    }
-    const cloneContainer = cloneParentElement.closest(
-      ".navi_table_drag_clone_container",
-    );
-    const tableContainer = cloneParentElement.closest(".navi_table_container");
-    cloneContainer.style.width = `${tableContainer.scrollWidth}px`;
-    cloneContainer.style.height = `${tableContainer.scrollHeight}px`;
-  }, [dragElement]);
-
-  return (
-    <div
-      className="navi_table_drag_clone_container"
-      style={{
-        display: dragElement ? "block" : "none",
-      }}
-    >
-      <div
-        ref={cloneParentElementRef}
-        className="navi_table_drag_clone_positioner"
-      >
-        {/* to catch any mouse over effect and stuff like that */}
-        {/* <div style={{ position: "absolute", inset: 0 }}></div> */}
-      </div>
-    </div>
-  );
 };

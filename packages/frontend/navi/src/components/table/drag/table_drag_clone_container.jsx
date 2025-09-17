@@ -1,0 +1,79 @@
+import { useLayoutEffect, useRef } from "preact/compat";
+
+import.meta.css = /* css */ `
+  .navi_table th[data-grabbed],
+  .navi_table td[data-grabbed] {
+    opacity: 0;
+  }
+
+  .navi_table_drag_clone_container {
+    position: absolute;
+    z-index: var(--z-index-dragging-clone);
+    cursor: grabbing;
+    user-select: none;
+    overflow: hidden;
+    left: 0;
+    top: 0;
+  }
+
+  .navi_table_drag_clone_positioner {
+    position: absolute;
+    /* background: rgba(0, 0, 0, 0.5); */
+  }
+
+  .navi_table_drag_clone_container th,
+  .navi_table_drag_clone_container td {
+    opacity: 0;
+  }
+  .navi_table_drag_clone_container th[data-grabbed],
+  .navi_table_drag_clone_container td[data-grabbed] {
+    opacity: 1;
+  }
+
+  .navi_table_drag_clone_container th[data-sticky-y],
+  .navi_table_drag_clone_container td[data-sticky-y] {
+    position: relative;
+  }
+  .navi_table_drag_clone_container th[data-sticky-x],
+  .navi_table_drag_clone_container td[data-sticky-x] {
+    position: relative;
+  }
+  .navi_table_drag_clone_container th[data-sticky-x][data-sticky-y],
+  .navi_table_drag_clone_container td[data-sticky-x][data-sticky-y] {
+    position: relative;
+  }
+`;
+
+export const TableDragCloneContainer = ({ dragElement }) => {
+  const cloneParentElementRef = useRef();
+
+  useLayoutEffect(() => {
+    const cloneParentElement = cloneParentElementRef.current;
+    if (!cloneParentElement) {
+      return;
+    }
+    const cloneContainer = cloneParentElement.closest(
+      ".navi_table_drag_clone_container",
+    );
+    const tableContainer = cloneParentElement.closest(".navi_table_container");
+    cloneContainer.style.width = `${tableContainer.scrollWidth}px`;
+    cloneContainer.style.height = `${tableContainer.scrollHeight}px`;
+  }, [dragElement]);
+
+  return (
+    <div
+      className="navi_table_drag_clone_container"
+      style={{
+        display: dragElement ? "block" : "none",
+      }}
+    >
+      <div
+        ref={cloneParentElementRef}
+        className="navi_table_drag_clone_positioner"
+      >
+        {/* to catch any mouse over effect and stuff like that */}
+        {/* <div style={{ position: "absolute", inset: 0 }}></div> */}
+      </div>
+    </div>
+  );
+};

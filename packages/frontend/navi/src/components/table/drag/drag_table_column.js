@@ -1,49 +1,5 @@
 import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
-import.meta.css = /* css */ `
-  .navi_table th[data-grabbed],
-  .navi_table td[data-grabbed] {
-    opacity: 0;
-  }
-
-  .navi_table_drag_clone_container {
-    position: absolute;
-    z-index: var(--z-index-dragging-clone);
-    cursor: grabbing;
-    user-select: none;
-    overflow: hidden;
-    left: 0;
-    top: 0;
-  }
-
-  .navi_table_drag_clone_positioner {
-    position: absolute;
-    /* background: rgba(0, 0, 0, 0.5); */
-  }
-
-  .navi_table_drag_clone_container th,
-  .navi_table_drag_clone_container td {
-    opacity: 0;
-  }
-  .navi_table_drag_clone_container th[data-grabbed],
-  .navi_table_drag_clone_container td[data-grabbed] {
-    opacity: 1;
-  }
-
-  .navi_table_drag_clone_container th[data-sticky-y],
-  .navi_table_drag_clone_container td[data-sticky-y] {
-    position: relative;
-  }
-  .navi_table_drag_clone_container th[data-sticky-x],
-  .navi_table_drag_clone_container td[data-sticky-x] {
-    position: relative;
-  }
-  .navi_table_drag_clone_container th[data-sticky-x][data-sticky-y],
-  .navi_table_drag_clone_container td[data-sticky-x][data-sticky-y] {
-    position: relative;
-  }
-`;
-
 export const initDragTableColumnByMousedown = (
   mousedownEvent,
   { stickyColumnFrontierIndex, onGrab, onDrag, onRelease },
