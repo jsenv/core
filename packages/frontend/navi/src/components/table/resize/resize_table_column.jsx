@@ -6,19 +6,19 @@ import.meta.css = /* css */ `
     cursor: ew-resize;
     position: absolute;
     z-index: 1;
-    width: 4px;
+    width: 7px;
     height: 22px;
     top: 50%;
     transform: translateY(-50%);
     background: orange;
     border-radius: 15px;
-    opacity: 0.8;
+    opacity: 0.5;
   }
   .navi_table_column_resize_handle_left {
-    left: 3px;
+    left: 0px;
   }
   .navi_table_column_resize_handle_right {
-    right: 3px;
+    right: 0px;
   }
 
   .navi_table_column_resizer {
@@ -28,13 +28,21 @@ import.meta.css = /* css */ `
     top: 0;
     bottom: 0;
     width: 10px;
+    left: var(--table-cell-right, 0);
   }
 
   .navi_table_column_resizer .navi_table_column_resize_handle_left,
   .navi_table_column_resizer .navi_table_column_resize_handle_right {
     pointer-events: auto;
     background: #444746;
-    opacity: 1;
+    opacity: 0.5;
+    width: 4px;
+  }
+  .navi_table_column_resizer .navi_table_column_resize_handle_left {
+    left: 3px;
+  }
+  .navi_table_column_resizer .navi_table_column_resize_handle_right {
+    right: 3px;
   }
 
   .navi_table_column_resize_handle_container {
@@ -90,7 +98,10 @@ const updateTableColumnResizerPosition = (e) => {
   const tableCellWidth = tableCellRect.width;
 
   const tableCellRelativeRight = tableCellLeftRelative + tableCellWidth;
-  tableColumnResizer.style.left = `${tableCellRelativeRight}px`;
+  tableColumnResizer.style.setProperty(
+    "--table-cell-right",
+    `${tableCellRelativeRight}px`,
+  );
   tableColumnResizer.style.setProperty(
     "--table-cell-height",
     `${tableCellHeight}px`,
