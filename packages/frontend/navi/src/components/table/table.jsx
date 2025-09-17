@@ -694,7 +694,7 @@ export const Table = forwardRef((props, ref) => {
   }
 
   const [grabTarget, setGrabTarget] = useState(null);
-  const [resizeTarget, setResizeTarget] = useState(null);
+  const [resizeInfo, setResizeInfo] = useState(null);
 
   const grabColumn = (columnIndex) => {
     setGrabTarget(`column:${columnIndex}`);
@@ -702,11 +702,14 @@ export const Table = forwardRef((props, ref) => {
   const releaseColumn = () => {
     setGrabTarget(null);
   };
-  const grabColumnResizeHandle = (columnIndex) => {
-    setResizeTarget(`column:${columnIndex}`);
+  const grabColumnResizeHandle = (columnIndex, resizeInfo) => {
+    setResizeInfo({
+      ...resizeInfo,
+      target: `column:${columnIndex}`,
+    });
   };
   const releaseColumnResizeHandle = () => {
-    setResizeTarget(null);
+    setResizeInfo(null);
   };
 
   return (
@@ -770,8 +773,8 @@ export const Table = forwardRef((props, ref) => {
                   onRelease={() => {
                     releaseColumn(index);
                   }}
-                  onGrabResizeHandle={() => {
-                    grabColumnResizeHandle(index);
+                  onGrabResizeHandle={(resizeInfo) => {
+                    grabColumnResizeHandle(index, resizeInfo);
                   }}
                   onReleaseResizeHandle={() => {
                     releaseColumnResizeHandle(index);
@@ -841,7 +844,7 @@ export const Table = forwardRef((props, ref) => {
         </tbody>
       </table>
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
-      <TableColumnResizer resizeTarget={resizeTarget} />
+      <TableColumnResizer resizeInfo={resizeInfo} />
     </div>
   );
 });

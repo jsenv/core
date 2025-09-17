@@ -79,11 +79,28 @@ export const TableColumnRightResizeHandle = ({ onGrab, onDrag, onRelease }) => {
     ></div>
   );
 };
-export const TableColumnResizer = ({ resizeTarget }) => {
+export const TableColumnResizer = ({ resizeInfo }) => {
+  const { rowHeight } = resizeInfo || {};
+
   return (
-    <div className="navi_table_column_resizer">
-      <div className="navi_table_column_resize_handle_left" data-hover></div>
-      <div className="navi_table_column_resize_handle_right" data-hover></div>
+    <div
+      className="navi_table_column_resizer"
+      style={{
+        display: resizeInfo ? "block" : "none",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: "0px",
+          left: "-10px",
+          right: "-10px",
+          height: `${rowHeight}px`,
+        }}
+      >
+        <div className="navi_table_column_resize_handle_left" data-hover></div>
+        <div className="navi_table_column_resize_handle_right" data-hover></div>
+      </div>
     </div>
   );
 };
@@ -134,7 +151,9 @@ const initResizeTableColumnByMousedown = (
 
   const dragToMoveGesture = createDragToMoveGesture({
     direction: { x: true },
-    onGrab,
+    onGrab: () => {
+      onGrab({ rowHeight });
+    },
     onDrag,
     onRelease,
   });
