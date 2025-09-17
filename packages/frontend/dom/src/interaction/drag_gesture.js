@@ -143,12 +143,48 @@ import.meta.css = /* css */ `
   }
 `;
 
-export let DRAG_DEBUG_VISUAL_MARKERS = false;
+export let DRAG_DEBUG_VISUAL_MARKERS = true;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = true;
 };
 export const disableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = false;
+};
+
+/**
+ * Get element bounds, handling both normal positioning and data-sticky-obstacle
+ * @param {HTMLElement} element - The element to get bounds for
+ * @param {HTMLElement} scrollableParent - The scrollable parent for coordinate conversion
+ * @returns {Object} Bounds object with left, top, right, bottom properties
+ */
+const getElementBounds = (element, scrollableParent) => {
+  const isVirtuallySticky = element.hasAttribute("data-sticky-obstacle");
+
+  if (isVirtuallySticky) {
+    // For sticky obstacles, simulate their sticky position using scroll offsets
+    const computedStyle = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    const scrollableRect = scrollableParent.getBoundingClientRect();
+
+    // Get sticky positioning values
+    const left = parseFloat(computedStyle.left) || 0;
+    const top = parseFloat(computedStyle.top) || 0;
+    const width = rect.width;
+    const height = rect.height;
+
+    const { scrollLeft, scrollTop } = scrollableParent;
+
+    // Calculate sticky position: scrollable viewport + scroll offset + sticky offset
+    return {
+      left: scrollableRect.left + scrollLeft + left,
+      top: scrollableRect.top + scrollTop + top,
+      right: scrollableRect.left + scrollLeft + left + width,
+      bottom: scrollableRect.top + scrollTop + top + height,
+    };
+  }
+
+  // For normal elements, use getBoundingClientRect directly
+  return element.getBoundingClientRect();
 };
 
 export const createDragGesture = ({
@@ -676,23 +712,23 @@ export const createDragGesture = ({
       // This triggers auto-scroll before reaching actual boundaries
       if (visibleAreaReducers.left) {
         const leftElement = visibleAreaReducers.left;
-        const leftElementRect = leftElement.getBoundingClientRect();
-        visibleAreaLeft = Math.max(visibleAreaLeft, leftElementRect.right);
+        const leftRect = getElementBounds(leftElement, scrollableParent);
+        visibleAreaLeft = Math.max(visibleAreaLeft, leftRect.right);
       }
       if (visibleAreaReducers.right) {
         const rightElement = visibleAreaReducers.right;
-        const rightElementRect = rightElement.getBoundingClientRect();
-        visibleAreaRight = Math.min(visibleAreaRight, rightElementRect.left);
+        const rightRect = getElementBounds(rightElement, scrollableParent);
+        visibleAreaRight = Math.min(visibleAreaRight, rightRect.left);
       }
       if (visibleAreaReducers.top) {
         const topElement = visibleAreaReducers.top;
-        const topElementRect = topElement.getBoundingClientRect();
-        visibleAreaTop = Math.max(visibleAreaTop, topElementRect.bottom);
+        const topRect = getElementBounds(topElement, scrollableParent);
+        visibleAreaTop = Math.max(visibleAreaTop, topRect.bottom);
       }
       if (visibleAreaReducers.bottom) {
         const bottomElement = visibleAreaReducers.bottom;
-        const bottomElementRect = bottomElement.getBoundingClientRect();
-        visibleAreaBottom = Math.min(visibleAreaBottom, bottomElementRect.top);
+        const bottomRect = getElementBounds(bottomElement, scrollableParent);
+        visibleAreaBottom = Math.min(visibleAreaBottom, bottomRect.top);
       }
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
