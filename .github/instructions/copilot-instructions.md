@@ -198,3 +198,10 @@ const userProxy = createActionProxy(getUserAction, {
 - **Feature Detection**: Progressive enhancement for new browser features
 
 This guide should help AI coding agents understand the architecture, patterns, and conventions used throughout the @jsenv/core codebase, enabling them to contribute effectively while maintaining consistency with the existing codebase.
+
+## Others
+
+- Put helpers functions at the bottom of the file by default
+- Put constants simple variables (everything except functions) above the function using them. For the exported function is means top of the file after imports. For helper function it means above them.
+- Don't write tests on your initiative.
+- Don't write documentation on your initiative.
