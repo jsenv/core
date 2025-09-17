@@ -10,9 +10,9 @@ import.meta.css = /* css */ `
     height: 22px;
     top: 50%;
     transform: translateY(-50%);
-    background: #444746;
+    background: orange;
     border-radius: 15px;
-    /* opacity: 0; */
+    opacity: 0.8;
   }
   .navi_table_column_resize_handle_left {
     left: 3px;
@@ -20,18 +20,43 @@ import.meta.css = /* css */ `
   .navi_table_column_resize_handle_right {
     right: 3px;
   }
-  .navi_table_column_resize_handle_left[data-hover],
-  .navi_table_column_resize_handle_right[data-hover] {
-    opacity: 1;
-  }
 
   .navi_table_column_resizer {
+    pointer-events: none;
     position: absolute;
     z-index: 1000000;
     top: 0;
     bottom: 0;
-    background: grey;
     width: 10px;
+  }
+
+  .navi_table_column_resizer .navi_table_column_resize_handle_left,
+  .navi_table_column_resizer .navi_table_column_resize_handle_right {
+    pointer-events: auto;
+    background: #444746;
+    opacity: 1;
+  }
+
+  .navi_table_column_resize_handle_container {
+    position: absolute;
+    top: 0;
+    left: -10px;
+    right: 0;
+    height: var(--table-cell-height);
+  }
+
+  .navi_table_column_resizer_line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    left: -3px;
+    background: #c0c0c0;
+    opacity: 0;
+  }
+
+  .navi_table_column_resizer[data-resizing] .navi_table_column_resizer_line {
+    opacity: 1;
   }
 `;
 
@@ -44,16 +69,39 @@ export const TableColumnLeftResizeHandle = ({ onGrab, onDrag, onRelease }) => {
         initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
       }}
       onMouseEnter={(e) => {
-        e.target.setAttribute("data-hover", "");
-        setDataHoverOnPreviousColumnRightHandle(e, true);
+        onMouseEnterLeftResizeHandle(e);
       }}
       onMouseLeave={(e) => {
-        e.target.removeAttribute("data-hover");
-        setDataHoverOnPreviousColumnRightHandle(e, false);
+        onMouseLeaveLeftResizeHandle(e);
       }}
     ></div>
   );
 };
+const updateTableColumnResizerPosition = (e) => {
+  const tableCell = e.target.closest("th");
+  const tableCellRect = tableCell.getBoundingClientRect();
+  const tableContainer = e.target.closest(".navi_table_container");
+  const tableColumnResizer = tableContainer.querySelector(
+    ".navi_table_column_resizer",
+  );
+  const tableContainerRect = tableContainer.getBoundingClientRect();
+  const tableCellLeftRelative = tableCellRect.left - tableContainerRect.left;
+  const tableCellHeight = tableCellRect.height;
+  const tableCellWidth = tableCellRect.width;
+
+  const tableCellRelativeRight = tableCellLeftRelative + tableCellWidth;
+  tableColumnResizer.style.left = `${tableCellRelativeRight}px`;
+  tableColumnResizer.style.setProperty(
+    "--table-cell-height",
+    `${tableCellHeight}px`,
+  );
+};
+
+const onMouseEnterLeftResizeHandle = (e) => {
+  updateTableColumnResizerPosition(e);
+};
+const onMouseLeaveLeftResizeHandle = () => {};
+
 export const TableColumnRightResizeHandle = ({ onGrab, onDrag, onRelease }) => {
   return (
     <div
@@ -63,40 +111,20 @@ export const TableColumnRightResizeHandle = ({ onGrab, onDrag, onRelease }) => {
         initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
       }}
       onMouseEnter={(e) => {
-        e.target.setAttribute("data-hover", "");
-        setDataHoverOnNextColumnLeftHandle(e, true);
+        updateTableColumnResizerPosition(e);
       }}
-      onMouseLeave={(e) => {
-        e.target.removeAttribute("data-hover");
-        setDataHoverOnNextColumnLeftHandle(e, false);
-      }}
+      onMouseLeave={() => {}}
     ></div>
   );
 };
-export const TableColumnResizer = ({ resizeInfo }) => {
-  const { rowHeight } = resizeInfo || {};
-
+export const TableColumnResizer = () => {
   return (
-    <div
-      className="navi_table_column_resizer"
-      style={
-        {
-          // display: resizeInfo ? "block" : "none",
-        }
-      }
-    >
-      <div
-        style={{
-          position: "absolute",
-          top: "0px",
-          left: "-10px",
-          right: "-10px",
-          height: `${rowHeight}px`,
-        }}
-      >
+    <div className="navi_table_column_resizer" data-resizing>
+      <div className="navi_table_column_resize_handle_container">
         <div className="navi_table_column_resize_handle_left" data-hover></div>
         <div className="navi_table_column_resize_handle_right" data-hover></div>
       </div>
+      <div className="navi_table_column_resizer_line"></div>
     </div>
   );
 };
@@ -105,63 +133,17 @@ const initResizeTableColumnByMousedown = (
   mousedownEvent,
   { onGrab, onDrag, onRelease },
 ) => {
-  const tableContainer = mousedownEvent.target.closest(".navi_table_container");
-  const tableColumnResizer = tableContainer.querySelector(
-    ".navi_table_column_resizer",
-  );
-
-  const tableCell = mousedownEvent.target.closest("th");
-  const tableCellRect = tableCell.getBoundingClientRect();
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  const tableCellLeftRelative = tableCellRect.left - tableContainerRect.left;
-  const tableCellHeight = tableCellRect.height;
-  const tableCellWidth = tableCellRect.width;
-
   const dragToMoveGesture = createDragToMoveGesture({
     direction: { x: true },
     onGrab: () => {
-      tableColumnResizer.style.left = `${tableCellLeftRelative + tableCellWidth}px`;
-
-      onGrab({ rowHeight: tableCellHeight });
+      //  tableColumnResizer.style.left = `${tableCellLeftRelative + tableCellWidth}px`;
+      onGrab({ rowHeight: 0 });
     },
     onDrag,
     onRelease,
   });
 
   dragToMoveGesture.grabViaMousedown(mousedownEvent, {
-    element: tableColumnResizer,
+    element: null,
   });
-};
-
-const setDataHoverOnPreviousColumnRightHandle = (e, isHover) => {
-  const currentCell = e.target.closest("th");
-  const previousCell = currentCell.previousElementSibling;
-  if (previousCell) {
-    const previousRightHandle = previousCell.querySelector(
-      ".navi_table_column_resize_handle_right",
-    );
-    if (previousRightHandle) {
-      if (isHover) {
-        previousRightHandle.setAttribute("data-hover", "");
-      } else {
-        previousRightHandle.removeAttribute("data-hover");
-      }
-    }
-  }
-};
-const setDataHoverOnNextColumnLeftHandle = (e, isHover) => {
-  const currentCell = e.target.closest("th");
-  const nextCell = currentCell.nextElementSibling;
-  if (nextCell) {
-    const nextLeftHandle = nextCell.querySelector(
-      ".navi_table_column_resize_handle_left",
-    );
-    if (nextLeftHandle) {
-      if (isHover) {
-        nextLeftHandle.setAttribute("data-hover", "");
-      } else {
-        nextLeftHandle.removeAttribute("data-hover");
-      }
-    }
-  }
 };
