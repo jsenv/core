@@ -28,8 +28,8 @@ export const initDragTableColumnByMousedown = (
 
   update_sticky_elements: {
     // In the table clone we set sticky elements to position: relative
-    // because position sticky does not play well with moves
-    // TODO: retest if this is needed at all
+    // because position would not work as the clone is not in a scrollable container
+    // but an absolutely positioned element
     const scrollableParent = getScrollableParent(table);
     const scrollLeft = scrollableParent.scrollLeft || 0;
     const scrollTop = scrollableParent.scrollTop || 0;

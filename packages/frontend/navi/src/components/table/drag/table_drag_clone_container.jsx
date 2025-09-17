@@ -14,10 +14,12 @@ import.meta.css = /* css */ `
     overflow: hidden;
     left: 0;
     top: 0;
+    pointer-events: none;
   }
 
   .navi_table_drag_clone_positioner {
     position: absolute;
+    pointer-events: auto; /* Allow wheel events */
     /* background: rgba(0, 0, 0, 0.5); */
   }
 
@@ -70,6 +72,23 @@ export const TableDragCloneContainer = ({ dragElement }) => {
       <div
         ref={cloneParentElementRef}
         className="navi_table_drag_clone_positioner"
+        onWheel={(e) => {
+          if (e.deltaY) {
+            // the dragged column is not really sticky so we prevent vertical scroll while dragging
+            // otherwise it would look weird if user scrolls using the wheel
+            e.preventDefault();
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            // the dragged column is not really sticky so we prevent vertical scroll while dragging
+            // otherwise it would look weird if user scrolls using arrow keys
+            e.preventDefault();
+          }
+          if (e.key === " ") {
+            e.preventDefault();
+          }
+        }}
       >
         {/* to catch any mouse over effect and stuff like that */}
         {/* <div style={{ position: "absolute", inset: 0 }}></div> */}
