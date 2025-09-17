@@ -29,6 +29,7 @@ import.meta.css = /* css */ `
     bottom: 0;
     width: 10px;
     left: var(--table-cell-right, 0);
+    opacity: 0;
   }
 
   .navi_table_column_resizer .navi_table_column_resize_handle_left,
@@ -63,6 +64,11 @@ import.meta.css = /* css */ `
     opacity: 0;
   }
 
+  .navi_table_column_resizer[data-hover],
+  .navi_table_column_resizer[data-resizing] {
+    opacity: 1;
+  }
+
   .navi_table_column_resizer[data-resizing] .navi_table_column_resizer_line {
     opacity: 1;
   }
@@ -85,10 +91,51 @@ export const TableColumnLeftResizeHandle = ({ onGrab, onDrag, onRelease }) => {
     ></div>
   );
 };
-const updateTableColumnResizerPosition = (e) => {
-  const tableCell = e.target.closest("th");
-  const tableCellRect = tableCell.getBoundingClientRect();
+export const TableColumnRightResizeHandle = ({ onGrab, onDrag, onRelease }) => {
+  return (
+    <div
+      className="navi_table_column_resize_handle_right"
+      onMouseDown={(e) => {
+        e.stopPropagation(); // prevent drag column
+        initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
+      }}
+      onMouseEnter={(e) => {
+        console.log("mouse enter right");
+        onMouseEnterRightResizeHandle(e);
+      }}
+      onMouseLeave={(e) => {
+        console.log("mouse leave right");
+        onMouseLeaveRightResizeHandle(e);
+      }}
+    ></div>
+  );
+};
+const onMouseEnterLeftResizeHandle = (e) => {
+  const previousCell = e.target.closest("th").previousElementSibling;
+  updateTableColumnResizerPosition(previousCell);
+};
+const onMouseEnterRightResizeHandle = (e) => {
+  const cell = e.target.closest("th");
+  updateTableColumnResizerPosition(cell);
+};
+const onMouseLeaveLeftResizeHandle = (e) => {
   const tableContainer = e.target.closest(".navi_table_container");
+  const tableColumnResizer = tableContainer.querySelector(
+    ".navi_table_column_resizer",
+  );
+  tableColumnResizer.removeAttribute("data-hover");
+};
+const onMouseLeaveRightResizeHandle = (e) => {
+  const tableContainer = e.target.closest(".navi_table_container");
+  const tableColumnResizer = tableContainer.querySelector(
+    ".navi_table_column_resizer",
+  );
+  tableColumnResizer.removeAttribute("data-hover");
+};
+
+const updateTableColumnResizerPosition = (tableCell) => {
+  const tableCellRect = tableCell.getBoundingClientRect();
+  const tableContainer = tableCell.closest(".navi_table_container");
   const tableColumnResizer = tableContainer.querySelector(
     ".navi_table_column_resizer",
   );
@@ -106,31 +153,12 @@ const updateTableColumnResizerPosition = (e) => {
     "--table-cell-height",
     `${tableCellHeight}px`,
   );
+  tableColumnResizer.setAttribute("data-hover", "");
 };
 
-const onMouseEnterLeftResizeHandle = (e) => {
-  updateTableColumnResizerPosition(e);
-};
-const onMouseLeaveLeftResizeHandle = () => {};
-
-export const TableColumnRightResizeHandle = ({ onGrab, onDrag, onRelease }) => {
-  return (
-    <div
-      className="navi_table_column_resize_handle_right"
-      onMouseDown={(e) => {
-        e.stopPropagation(); // prevent drag column
-        initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
-      }}
-      onMouseEnter={(e) => {
-        updateTableColumnResizerPosition(e);
-      }}
-      onMouseLeave={() => {}}
-    ></div>
-  );
-};
 export const TableColumnResizer = () => {
   return (
-    <div className="navi_table_column_resizer" data-resizing>
+    <div className="navi_table_column_resizer">
       <div className="navi_table_column_resize_handle_container">
         <div className="navi_table_column_resize_handle_left" data-hover></div>
         <div className="navi_table_column_resize_handle_right" data-hover></div>
