@@ -70,7 +70,10 @@ import {
 import { useFocusGroup } from "../use_focus_group.js";
 import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
-import "./resize_table_column.js";
+import {
+  TableColumnLeftResizeHandle,
+  TableColumnRightResizeHandle,
+} from "./resize/resize_table_column.jsx";
 import { useStickyGroup } from "./sticky_group.js";
 import { TableCell } from "./table_cell.jsx";
 
@@ -995,71 +998,14 @@ const HeaderCell = ({
         });
       }}
     >
-      {resizable && columnIndex > 1 && (
-        <div
-          className="navi_table_column_resize_handle_left"
-          onMouseEnter={(e) => {
-            e.target.setAttribute("data-hover", "");
-            setDataHoverOnPreviousColumnRightHandle(e, true);
-          }}
-          onMouseLeave={(e) => {
-            e.target.removeAttribute("data-hover");
-            setDataHoverOnPreviousColumnRightHandle(e, false);
-          }}
-        ></div>
-      )}
+      {resizable && columnIndex > 1 && <TableColumnLeftResizeHandle />}
       <span>{children}</span>
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {children}
       </span>
-      {grabbed && <div className="navi_table_drag_placeholder"></div>}
-      {resizable && (
-        <div
-          className="navi_table_column_resize_handle_right"
-          onMouseEnter={(e) => {
-            e.target.setAttribute("data-hover", "");
-            setDataHoverOnNextColumnLeftHandle(e, true);
-          }}
-          onMouseLeave={(e) => {
-            e.target.removeAttribute("data-hover");
-            setDataHoverOnNextColumnLeftHandle(e, false);
-          }}
-        ></div>
-      )}
+      {resizable && <TableColumnRightResizeHandle />}
     </th>
   );
-};
-const setDataHoverOnPreviousColumnRightHandle = (e, isHover) => {
-  const currentCell = e.target.closest("th");
-  const previousCell = currentCell.previousElementSibling;
-  if (previousCell) {
-    const previousRightHandle = previousCell.querySelector(
-      ".navi_table_column_resize_handle_right",
-    );
-    if (previousRightHandle) {
-      if (isHover) {
-        previousRightHandle.setAttribute("data-hover", "");
-      } else {
-        previousRightHandle.removeAttribute("data-hover");
-      }
-    }
-  }
-};
-const setDataHoverOnNextColumnLeftHandle = (e, isHover) => {
-  const currentCell = e.target.closest("th");
-  const nextCell = currentCell.nextElementSibling;
-  if (nextCell) {
-    const nextLeftHandle = nextCell.querySelector(
-      ".navi_table_column_resize_handle_left",
-    );
-    if (nextLeftHandle) {
-      if (isHover) {
-        nextLeftHandle.setAttribute("data-hover", "");
-      } else {
-        nextLeftHandle.removeAttribute("data-hover");
-      }
-    }
-  }
 };
 
 const RowNumberCell = ({
