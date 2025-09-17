@@ -694,14 +694,19 @@ export const Table = forwardRef((props, ref) => {
   }
 
   const [grabTarget, setGrabTarget] = useState(null);
-  const [dragElement, setDragElement] = useState(null);
+  const [resizeTarget, setResizeTarget] = useState(null);
 
   const grabColumn = (columnIndex) => {
     setGrabTarget(`column:${columnIndex}`);
   };
   const releaseColumn = () => {
     setGrabTarget(null);
-    setDragElement(null);
+  };
+  const grabColumnResizeHandle = (columnIndex) => {
+    setResizeTarget(`column:${columnIndex}`);
+  };
+  const releaseColumnResizeHandle = () => {
+    setResizeTarget(null);
   };
 
   return (
@@ -759,12 +764,17 @@ export const Table = forwardRef((props, ref) => {
                   isLastColumn={isLastColumn}
                   movable
                   resizable
-                  onGrab={(_, tableClone) => {
+                  onGrab={() => {
                     grabColumn(index);
-                    setDragElement(tableClone);
                   }}
                   onRelease={() => {
                     releaseColumn(index);
+                  }}
+                  onGrabResizeHandle={() => {
+                    grabColumnResizeHandle(index);
+                  }}
+                  onReleaseResizeHandle={() => {
+                    releaseColumnResizeHandle(index);
                   }}
                 >
                   {col.value}
@@ -830,8 +840,8 @@ export const Table = forwardRef((props, ref) => {
           })}
         </tbody>
       </table>
-      <TableDragCloneContainer dragElement={dragElement} />
-      <TableColumnResizer />
+      <TableDragCloneContainer dragging={Boolean(grabTarget)} />
+      <TableColumnResizer resizeTarget={resizeTarget} />
     </div>
   );
 });
@@ -953,6 +963,8 @@ const HeaderCell = ({
   onGrab,
   onDrag,
   onRelease,
+  onGrabResizeHandle,
+  onReleaseResizeHandle,
   children,
 }) => {
   const cellRef = useRef();
@@ -1000,12 +1012,22 @@ const HeaderCell = ({
         });
       }}
     >
-      {resizable && columnIndex > 1 && <TableColumnLeftResizeHandle />}
+      {resizable && columnIndex > 1 && (
+        <TableColumnLeftResizeHandle
+          onGrab={onGrabResizeHandle}
+          onRelease={onReleaseResizeHandle}
+        />
+      )}
       <span>{children}</span>
       <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
         {children}
       </span>
-      {resizable && <TableColumnRightResizeHandle />}
+      {resizable && (
+        <TableColumnRightResizeHandle
+          onGrab={onGrabResizeHandle}
+          onRelease={onReleaseResizeHandle}
+        />
+      )}
     </th>
   );
 };

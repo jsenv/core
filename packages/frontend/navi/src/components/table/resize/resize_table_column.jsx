@@ -79,8 +79,13 @@ export const TableColumnRightResizeHandle = ({ onGrab, onDrag, onRelease }) => {
     ></div>
   );
 };
-export const TableColumnResizer = () => {
-  return <div className="navi_table_column_resizer"></div>;
+export const TableColumnResizer = ({ resizeTarget }) => {
+  return (
+    <div className="navi_table_column_resizer">
+      <div className="navi_table_column_resize_handle_left" data-hover></div>
+      <div className="navi_table_column_resize_handle_right" data-hover></div>
+    </div>
+  );
 };
 
 const setDataHoverOnPreviousColumnRightHandle = (e, isHover) => {
@@ -123,6 +128,9 @@ const initResizeTableColumnByMousedown = (
   const tableColumnResizer = mousedownEvent.target
     .closest(".navi_table_container")
     .querySelector(".navi_table_column_resizer");
+
+  const tableCell = mousedownEvent.target.closest("th");
+  const rowHeight = tableCell.getBoundingClientRect().height;
 
   const dragToMoveGesture = createDragToMoveGesture({
     direction: { x: true },

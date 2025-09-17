@@ -162,7 +162,7 @@ export const initDragTableColumnByMousedown = (
     }
     const dragToMoveGesture = createDragToMoveGesture({
       direction: { x: true },
-      onGrab: (gestureInfo) => onGrab(gestureInfo, tableClone),
+      onGrab,
       onDrag,
       onRelease,
       visibleAreaReducers: {

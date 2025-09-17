@@ -46,7 +46,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableDragCloneContainer = ({ dragElement }) => {
+export const TableDragCloneContainer = ({ dragging }) => {
   const cloneParentElementRef = useRef();
 
   useLayoutEffect(() => {
@@ -60,13 +60,13 @@ export const TableDragCloneContainer = ({ dragElement }) => {
     const tableContainer = cloneParentElement.closest(".navi_table_container");
     cloneContainer.style.width = `${tableContainer.scrollWidth}px`;
     cloneContainer.style.height = `${tableContainer.scrollHeight}px`;
-  }, [dragElement]);
+  }, [dragging]);
 
   return (
     <div
       className="navi_table_drag_clone_container"
       style={{
-        display: dragElement ? "block" : "none",
+        display: dragging ? "block" : "none",
       }}
     >
       <div
