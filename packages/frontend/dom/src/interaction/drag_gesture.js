@@ -840,9 +840,6 @@ export const createDragGesture = ({
   };
 
   const grabViaMousedown = (mousedownEvent, options) => {
-    if (mousedownEvent.defaultPrevented) {
-      return null;
-    }
     if (mousedownEvent.button !== 0) {
       return null;
     }
@@ -851,7 +848,6 @@ export const createDragGesture = ({
       return null;
     }
 
-    mousedownEvent.preventDefault();
     const xAtStart = mousedownEvent.clientX;
     const yAtStart = mousedownEvent.clientY;
 

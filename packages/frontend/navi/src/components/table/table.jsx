@@ -823,6 +823,8 @@ export const Table = forwardRef((props, ref) => {
                   grabbed={columnIsGrabbed}
                   stickyColumnFrontierIndex={stickyColumnFrontierIndex}
                   isLastColumn={isLastColumn}
+                  movable
+                  resizable
                   onGrab={(_, tableClone) => {
                     grabColumn(index);
                     setDragElement(tableClone);
@@ -1011,6 +1013,8 @@ const HeaderCell = ({
   grabbed,
   columnIndex,
   stickyColumnFrontierIndex,
+  resizable,
+  movable,
   onGrab,
   onDrag,
   onRelease,
@@ -1050,6 +1054,10 @@ const HeaderCell = ({
       }}
       tabIndex={-1}
       onMouseDown={(e) => {
+        if (!movable) {
+          return;
+        }
+
         const th = cellRef.current;
         const table = e.target.closest("table");
         const columnIndex = Array.from(th.parentNode.children).indexOf(th);
@@ -1149,6 +1157,7 @@ const HeaderCell = ({
         }
         // Move focus to the clone element (the goal is to see the focus ring in the dragged clone)
         if (focusedElementInClone && focusedElementInClone.focus) {
+          e.preventDefault(); // otherwise focus will go back to the non cloned cell
           focusedElementInClone.focus();
         }
 
@@ -1172,7 +1181,7 @@ const HeaderCell = ({
         });
       }}
     >
-      {columnIndex > 1 && (
+      {resizable && columnIndex > 1 && (
         <div
           className="navi_table_column_resize_handle_left"
           onMouseEnter={(e) => {
@@ -1190,17 +1199,19 @@ const HeaderCell = ({
         {children}
       </span>
       {grabbed && <div className="navi_table_drag_placeholder"></div>}
-      <div
-        className="navi_table_column_resize_handle_right"
-        onMouseEnter={(e) => {
-          e.target.setAttribute("data-hover", "");
-          setDataHoverOnNextColumnLeftHandle(e, true);
-        }}
-        onMouseLeave={(e) => {
-          e.target.removeAttribute("data-hover");
-          setDataHoverOnNextColumnLeftHandle(e, false);
-        }}
-      ></div>
+      {resizable && (
+        <div
+          className="navi_table_column_resize_handle_right"
+          onMouseEnter={(e) => {
+            e.target.setAttribute("data-hover", "");
+            setDataHoverOnNextColumnLeftHandle(e, true);
+          }}
+          onMouseLeave={(e) => {
+            e.target.removeAttribute("data-hover");
+            setDataHoverOnNextColumnLeftHandle(e, false);
+          }}
+        ></div>
+      )}
     </th>
   );
 };
