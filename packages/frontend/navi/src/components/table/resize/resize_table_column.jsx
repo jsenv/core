@@ -78,7 +78,12 @@ export const TableColumnLeftResizeHandle = ({ onGrab, onDrag, onRelease }) => {
       className="navi_table_column_resize_handle_left"
       onMouseDown={(e) => {
         e.stopPropagation(); // prevent drag column
-        initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
+        initResizeTableColumnByMousedown(e, {
+          onGrab,
+          onDrag,
+          onRelease,
+          isLeft: true,
+        });
       }}
       onMouseEnter={(e) => {
         onMouseEnterLeftResizeHandle(e);
@@ -166,19 +171,36 @@ export const TableColumnResizer = () => {
 
 const initResizeTableColumnByMousedown = (
   mousedownEvent,
-  { onGrab, onDrag, onRelease },
+  { onGrab, onDrag, onRelease, isLeft },
 ) => {
+  let tableCell = mousedownEvent.target.closest("th");
+  if (isLeft) {
+    tableCell = tableCell.previousElementSibling;
+  }
+  const tableContainer = tableCell.closest(".navi_table_container");
+  const tableColumnResizer = tableContainer.querySelector(
+    ".navi_table_column_resizer",
+  );
   const dragToMoveGesture = createDragToMoveGesture({
     direction: { x: true },
     onGrab: () => {
-      //  tableColumnResizer.style.left = `${tableCellLeftRelative + tableCellWidth}px`;
+      updateTableColumnResizerPosition(tableCell);
       onGrab({ rowHeight: 0 });
     },
     onDrag,
     onRelease,
   });
+  dragToMoveGesture.addTeardown(() => {
+    tableColumnResizer.style.left = "";
+    tableColumnResizer.removeAttribute("data-resizing");
+  });
 
+  // - l'auto scroll ne marche pas, bizarre il considérer que document est le scrollable parent...
+  // a gauche il faut le limiter par la taille minit que peut prendre la colonne
+  // (column.minWidth default to 50)
+  // a droite pas de limite (enfin disons columnmaxWidth default to 1000)
+  tableColumnResizer.setAttribute("data-resizing", "");
   dragToMoveGesture.grabViaMousedown(mousedownEvent, {
-    element: null,
+    element: tableColumnResizer,
   });
 };
