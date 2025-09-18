@@ -1,0 +1,25 @@
+{
+  "name": "@jsenv/eslint-plugin",
+  "version": "1.0.0",
+  "description": "Custom ESLint rules for jsenv projects",
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "jsenv"
+  ],
+  "license": "MIT",
+  "author": "jsenv",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "lib/"
+  ],
+  "peerDependencies": {
+    "eslint": ">=8.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
