@@ -1,6 +1,57 @@
+// Helper function to build variable renaming map within a function
+function buildVariableRenamingMap(functionDef) {
+  const renamingMap = new Map(); // renamedVar -> originalVar
+
+  function traverse(node) {
+    if (!node || typeof node !== "object") return;
+
+    // Look for variable declarations like: const newVar = oldVar;
+    if (
+      node.type === "VariableDeclarator" &&
+      node.id &&
+      node.id.type === "Identifier" &&
+      node.init &&
+      node.init.type === "Identifier"
+    ) {
+      // Map: newVar -> oldVar (so we can resolve back to original)
+      renamingMap.set(node.id.name, node.init.name);
+    }
+
+    // Traverse child nodes
+    for (const key in node) {
+      if (key === "parent") continue;
+      const child = node[key];
+      if (Array.isArray(child)) {
+        for (const item of child) {
+          traverse(item);
+        }
+      } else {
+        traverse(child);
+      }
+    }
+  }
+
+  traverse(functionDef);
+  return renamingMap;
+}
+
+// Helper function to resolve variable name back to original through renaming chain
+function resolveToOriginalVariable(varName, renamingMap) {
+  let currentName = varName;
+  const visited = new Set();
+
+  while (renamingMap.has(currentName) && !visited.has(currentName)) {
+    visited.add(currentName);
+    currentName = renamingMap.get(currentName);
+  }
+
+  return currentName;
+}
+
 // Helper function to analyze parameter propagation through function calls
 function analyzeParameterPropagation(functionDef, functionDefinitions) {
   const propagations = [];
+  const renamingMap = buildVariableRenamingMap(functionDef);
 
   function traverse(node) {
     if (!node || typeof node !== "object") return;
@@ -15,9 +66,10 @@ function analyzeParameterPropagation(functionDef, functionDefinitions) {
       const calledFunction = functionDefinitions.get(calledFunctionName);
 
       if (calledFunction) {
-        // Check arguments for objects with spread elements
+        // Check arguments for objects with spread elements OR direct variable passing
         for (let argIndex = 0; argIndex < node.arguments.length; argIndex++) {
           const arg = node.arguments[argIndex];
+
           if (arg.type === "ObjectExpression") {
             const spreadElements = [];
             const directProperties = [];
@@ -28,7 +80,12 @@ function analyzeParameterPropagation(functionDef, functionDefinitions) {
                 prop.argument &&
                 prop.argument.type === "Identifier"
               ) {
-                spreadElements.push(prop.argument.name);
+                // Resolve variable name back to original through renaming chain
+                const originalName = resolveToOriginalVariable(
+                  prop.argument.name,
+                  renamingMap,
+                );
+                spreadElements.push(originalName);
               } else if (
                 prop.type === "Property" &&
                 prop.key &&
@@ -45,6 +102,25 @@ function analyzeParameterPropagation(functionDef, functionDefinitions) {
                 argumentIndex: argIndex,
                 spreadElements,
                 directProperties,
+              });
+            }
+          } else if (arg.type === "Identifier") {
+            // Direct variable passing like: targetFunction(titi)
+            // Resolve back to original variable (e.g., titi -> rest)
+            const originalName = resolveToOriginalVariable(
+              arg.name,
+              renamingMap,
+            );
+
+            // Only add if this resolves to a different name (meaning it was renamed)
+            if (originalName !== arg.name) {
+              propagations.push({
+                targetFunction: calledFunctionName,
+                targetFunctionDef: calledFunction,
+                argumentIndex: argIndex,
+                spreadElements: [originalName], // The original rest param name
+                directProperties: [],
+                isDirectVariablePassing: true,
               });
             }
           }
@@ -71,27 +147,60 @@ function analyzeParameterPropagation(functionDef, functionDefinitions) {
 }
 
 // Helper function to check if rest parameter is propagated to other functions
-function isRestParameterPropagated(functionDef, restParamName) {
+function isRestParameterPropagated(
+  functionDef,
+  restParamName,
+  functionDefinitions,
+) {
   let found = false;
+  const renamingMap = buildVariableRenamingMap(functionDef);
 
   function traverse(node) {
     if (found) return;
     if (!node || typeof node !== "object") return;
 
-    // Look for function calls where rest param is used in spread elements
-    if (node.type === "CallExpression") {
+    // Look for function calls where rest param is used in spread elements or direct passing
+    if (
+      node.type === "CallExpression" &&
+      node.callee &&
+      node.callee.type === "Identifier"
+    ) {
+      // Only consider functions we can analyze (in functionDefinitions)
+      const calledFunctionName = node.callee.name;
+      const calledFunction = functionDefinitions.get(calledFunctionName);
+
+      if (!calledFunction) {
+        return; // Skip functions we can't analyze
+      }
+
       for (const arg of node.arguments) {
         if (arg.type === "ObjectExpression") {
           for (const prop of arg.properties) {
             if (
               prop.type === "SpreadElement" &&
               prop.argument &&
-              prop.argument.type === "Identifier" &&
-              prop.argument.name === restParamName
+              prop.argument.type === "Identifier"
             ) {
-              found = true;
-              return;
+              // Check both direct name and resolved name through renaming
+              const originalName = resolveToOriginalVariable(
+                prop.argument.name,
+                renamingMap,
+              );
+              if (
+                prop.argument.name === restParamName ||
+                originalName === restParamName
+              ) {
+                found = true;
+                return;
+              }
             }
+          }
+        } else if (arg.type === "Identifier") {
+          // Direct variable passing - check if it resolves back to our rest param
+          const originalName = resolveToOriginalVariable(arg.name, renamingMap);
+          if (originalName === restParamName) {
+            found = true;
+            return;
           }
         }
       }
@@ -374,7 +483,11 @@ export default {
 
             // Check if rest parameter is propagated to other functions
             const isRestPropagated = restParamName
-              ? isRestParameterPropagated(functionDef, restParamName)
+              ? isRestParameterPropagated(
+                  functionDef,
+                  restParamName,
+                  functionDefinitions,
+                )
               : false;
 
             // If rest is not propagated anywhere, we can't track parameter usage
