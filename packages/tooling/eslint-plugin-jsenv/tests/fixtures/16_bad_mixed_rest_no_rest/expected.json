@@ -1,10 +1,12 @@
-[
-  {
-    "messageId": "extraParam",
-    "data": {
-      "param": "extra",
-      "func": "mixed"
-    },
-    "type": "Property"
-  }
-]
+{
+  "errors": [
+    {
+      "messageId": "extraParam",
+      "data": {
+        "param": "extra",
+        "func": "mixed"
+      },
+      "type": "Property"
+    }
+  ]
+}

@@ -1,18 +1,20 @@
-[
-  {
-    "messageId": "extraParam",
-    "data": {
-      "param": "extra",
-      "func": "process"
+{
+  "errors": [
+    {
+      "messageId": "extraParam",
+      "data": {
+        "param": "extra",
+        "func": "process"
+      },
+      "type": "Property"
     },
-    "type": "Property"
-  },
-  {
-    "messageId": "extraParam",
-    "data": {
-      "param": "unused",
-      "func": "process"
-    },
-    "type": "Property"
-  }
-]
+    {
+      "messageId": "extraParam",
+      "data": {
+        "param": "unused",
+        "func": "process"
+      },
+      "type": "Property"
+    }
+  ]
+}

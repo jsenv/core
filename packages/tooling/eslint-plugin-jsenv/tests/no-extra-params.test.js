@@ -34,7 +34,7 @@ for (const testDir of testDirs) {
     invalidCases.push({
       name,
       code,
-      errors: expectedData, // The expected.json should be the errors array
+      errors: expectedData.errors, // Extract the errors array from the expected.json
     });
   } else {
     // Valid case - no expected.json file

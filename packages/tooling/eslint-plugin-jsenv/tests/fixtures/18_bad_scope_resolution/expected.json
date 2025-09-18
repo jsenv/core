@@ -1,0 +1,16 @@
+{
+  "errors": [
+    {
+      "messageId": "extraParam",
+      "data": {
+        "param": "extraParam",
+        "func": "simpleFunction"
+      },
+      "type": "Property",
+      "line": 6,
+      "column": 32,
+      "endLine": 6,
+      "endColumn": 58
+    }
+  ]
+}

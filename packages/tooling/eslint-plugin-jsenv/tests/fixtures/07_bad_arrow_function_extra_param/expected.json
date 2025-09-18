@@ -1,7 +1,12 @@
-[
-  {
-    "messageId": "extraParam",
-    "data": { "param": "y", "func": "bar" },
-    "type": "Property"
-  }
-]
+{
+  "errors": [
+    {
+      "messageId": "extraParam",
+      "data": {
+        "param": "y",
+        "func": "bar"
+      },
+      "type": "Property"
+    }
+  ]
+}
