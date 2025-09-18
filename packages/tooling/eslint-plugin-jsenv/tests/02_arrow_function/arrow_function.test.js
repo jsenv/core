@@ -1,7 +1,7 @@
 import { RuleTester } from "eslint";
-import rule from "../../lib/rules/no-extra-params.js";
 import { readFileSync } from "fs";
 import { join } from "path";
+import rule from "../../lib/rules/no-extra-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
