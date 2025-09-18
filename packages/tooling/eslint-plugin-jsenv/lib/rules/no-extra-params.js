@@ -70,23 +70,31 @@ function analyzeParameterPropagation(functionDef, functionDefinitions) {
   return propagations;
 }
 
-// Helper function to check if rest parameter is used directly in function body
-function isRestParameterUsedDirectly(functionDef, restParamName) {
+// Helper function to check if rest parameter is propagated to other functions
+function isRestParameterPropagated(functionDef, restParamName) {
   let found = false;
 
-  function traverse(node, parent) {
+  function traverse(node) {
     if (found) return;
     if (!node || typeof node !== "object") return;
 
-    // Check for identifier usage (not in parameter declaration or spread element)
-    if (
-      node.type === "Identifier" &&
-      node.name === restParamName &&
-      node !== functionDef.params &&
-      parent?.type !== "SpreadElement"
-    ) {
-      found = true;
-      return;
+    // Look for function calls where rest param is used in spread elements
+    if (node.type === "CallExpression") {
+      for (const arg of node.arguments) {
+        if (arg.type === "ObjectExpression") {
+          for (const prop of arg.properties) {
+            if (
+              prop.type === "SpreadElement" &&
+              prop.argument &&
+              prop.argument.type === "Identifier" &&
+              prop.argument.name === restParamName
+            ) {
+              found = true;
+              return;
+            }
+          }
+        }
+      }
     }
 
     // Traverse child nodes, but skip the params to avoid false positives
@@ -96,15 +104,15 @@ function isRestParameterUsedDirectly(functionDef, restParamName) {
       const child = node[key];
       if (Array.isArray(child)) {
         for (const item of child) {
-          traverse(item, node);
+          traverse(item);
         }
       } else {
-        traverse(child, node);
+        traverse(child);
       }
     }
   }
 
-  traverse(functionDef, null);
+  traverse(functionDef);
   return found;
 }
 
@@ -342,13 +350,14 @@ export default {
             );
             const restParamName = restParam ? restParam.argument.name : null;
 
-            // Check if rest parameter is used directly
-            const isRestUsedDirectly = restParamName
-              ? isRestParameterUsedDirectly(functionDef, restParamName)
+            // Check if rest parameter is propagated to other functions
+            const isRestPropagated = restParamName
+              ? isRestParameterPropagated(functionDef, restParamName)
               : false;
 
-            // If rest is used directly (like console.log(rest)), all properties are valid
-            if (isRestUsedDirectly) {
+            // If rest is not propagated anywhere, we can't track parameter usage
+            if (!isRestPropagated) {
+              // Let no-unused-vars handle unused rest params
               continue;
             }
 
