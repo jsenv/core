@@ -17,28 +17,28 @@ const ruleTester = new RuleTester({
 
 const fixturesDir = join(import.meta.dirname, "fixtures");
 
-const validCode = readFileSync(join(fixturesDir, "input_valid.js"), "utf8");
-const invalidCode = readFileSync(join(fixturesDir, "input_invalid.js"), "utf8");
+const validCode = readFileSync(join(fixturesDir, "jsx_valid.jsx"), "utf8");
+const invalidCode = readFileSync(join(fixturesDir, "jsx_invalid.jsx"), "utf8");
 
-ruleTester.run("no-extra-params - order independence", rule, {
+ruleTester.run("no-extra-params - JSX order independence", rule, {
   valid: [
     {
-      name: "function call before definition - valid usage",
+      name: "JSX usage before component definition - valid",
       code: validCode,
     },
   ],
   invalid: [
     {
-      name: "function call before definition - with extra param",
+      name: "JSX usage before component definition - with extra prop",
       code: invalidCode,
       errors: [
         {
           messageId: "extraParam",
-          data: { param: "extra", func: "doSomething" },
+          data: { param: "extra", func: "MyComponent" },
         },
       ],
     },
   ],
 });
 
-console.log("✅ Order independence tests passed!");
+console.log("✅ JSX order independence tests passed!");

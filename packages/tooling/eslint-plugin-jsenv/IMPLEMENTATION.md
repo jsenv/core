@@ -47,47 +47,25 @@ This ESLint plugin implements a comprehensive `no-extra-params` rule that detect
 - Full JSX component prop validation
 - Treats JSX props identically to function parameters
 - Supports JSX component chaining with rest props
-- Order-independent analysis for JSX components
-
-### 8. Order-Independent Analysis ⭐
-
-- **Two-pass analysis system** that works regardless of function definition order
-- Supports usage before definition (common in JavaScript/JSX)
-- Handles hoisted functions and forward references
-- Critical for real-world JavaScript/React codebases
 
 ## 🧪 Test Coverage
 
-The plugin includes comprehensive test coverage with **13 test suites**:
+The plugin includes comprehensive test coverage with **11 test suites**:
 
 1. **01_function_basic** - Basic function parameter detection
 2. **02_arrow_function** - Arrow function support
 3. **03_multiple_params** - Multiple parameter validation
-4. **04_rest_params** - Rest parameter detection and renaming
+4. **04_rest_params** - Rest parameter detection and renaming (2 test files)
 5. **05_scope_resolution** - Variable shadowing and scope handling
 6. **06_function_chaining** - Parameter propagation analysis
-7. **07_jsx** - JSX component prop validation
-8. **08_order_independence** - Order-independent analysis validation
+7. **07_jsx** - JSX component prop validation (2 test files)
+8. **08_order_independence** - Usage before definition scenarios (3 test files)
 
 ## 🚀 Technical Implementation
 
-### Two-Pass Analysis System
+### Analysis System
 
-The rule uses a sophisticated two-pass analysis:
-
-1. **Collection Phase**: Gathers all function definitions and calls/JSX elements
-2. **Analysis Phase**: Analyzes collected items with complete knowledge of all functions
-
-This enables order-independent analysis, supporting real-world patterns like:
-
-```javascript
-// Usage before definition (works!)
-MyComponent({ title: "Hello", extra: "unused" });
-
-function MyComponent({ title }) {
-  return <div>{title}</div>;
-}
-```
+The rule uses a two-pass analysis to handle all JavaScript patterns including usage before definition.
 
 ### Function Chaining Detection
 
@@ -115,13 +93,26 @@ packages/tooling/eslint-plugin-jsenv/
 │       └── no-extra-params.js     # Main rule implementation
 ├── tests/                         # Comprehensive test suite
 │   ├── 01_function_basic/
+│   │   └── fixtures/
+│   │       ├── input_valid.js
+│   │       └── input_invalid.js
 │   ├── 02_arrow_function/
 │   ├── 03_multiple_params/
 │   ├── 04_rest_params/
 │   ├── 05_scope_resolution/
 │   ├── 06_function_chaining/
 │   ├── 07_jsx/
-│   ├── 08_order_independence/
+│   ├── 08_order_independence/      # Order-independent analysis tests
+│   │   ├── fixtures/
+│   │   │   ├── input_valid.js     # Basic order independence
+│   │   │   ├── input_invalid.js
+│   │   │   ├── jsx_valid.jsx      # JSX order independence
+│   │   │   ├── jsx_invalid.jsx
+│   │   │   ├── chaining_valid.js  # Chaining order independence
+│   │   │   └── chaining_invalid.js
+│   │   ├── order_independence.test.js
+│   │   ├── jsx_order.test.js
+│   │   └── chaining_order.test.js
 │   └── run-all.js                 # Test runner
 ├── package.json
 └── index.js                       # Plugin entry point
@@ -139,6 +130,33 @@ Perfect for:
 - Function parameter optimization
 - Code cleanup and maintenance
 - Preventing unused parameter accumulation
-- Supporting modern JavaScript patterns with hoisting
 
-The order-independent analysis makes this rule practical for real codebases where functions are often used before they're defined.
+## 📋 Test Conventions
+
+All tests follow consistent naming and structure conventions:
+
+### File Naming
+
+- Test directories use underscore (`_`) separators: `01_function_basic`
+- Fixture files use underscore separators: `input_valid.js`, `jsx_invalid.jsx`
+- Test files end with `.test.js`: `order_independence.test.js`
+
+### Test Structure
+
+- Each test uses `readFileSync` to load fixture files
+- Valid cases use `input_valid.js` or `{feature}_valid.js`
+- Invalid cases use `input_invalid.js` or `{feature}_invalid.js`
+- JSX tests use `.jsx` extension for fixture files
+- All tests include descriptive names and expected error messages
+
+### Fixtures Organization
+
+```
+{test_suite}/
+├── fixtures/
+│   ├── input_valid.js        # Main valid test case
+│   ├── input_invalid.js      # Main invalid test case
+│   ├── {feature}_valid.js    # Feature-specific valid cases
+│   └── {feature}_invalid.js  # Feature-specific invalid cases
+└── {test_name}.test.js       # Test runner
+```

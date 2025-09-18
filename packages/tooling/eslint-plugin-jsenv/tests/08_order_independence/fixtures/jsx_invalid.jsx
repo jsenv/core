@@ -1,6 +1,6 @@
-// Test JSX component usage before component definition
+// Test JSX component usage before component definition - invalid case
 
-// JSX usage before component definition
+// JSX usage before component definition with extra prop
 function App() {
   return <MyComponent title="Hello" extra="shouldWarn" />;
 }
