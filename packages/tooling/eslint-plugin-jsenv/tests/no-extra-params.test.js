@@ -1,5 +1,5 @@
 import { RuleTester } from "eslint";
-import { readFileSync, readdirSync } from "fs";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import rule from "../lib/rules/no-extra-params.js";
@@ -14,35 +14,36 @@ const ruleTester = new RuleTester({
   },
 });
 
-// Load valid test cases
-const validDir = join(fixturesDir, "valid");
-const validCases = readdirSync(validDir)
-  .sort() // Ensure order based on numbering
-  .map((testDir) => {
-    const testPath = join(validDir, testDir);
-    const code = readFileSync(join(testPath, "input.js"), "utf8");
-    return {
-      name: testDir.replace(/^\d+_/, "").replace(/_/g, " "),
-      code,
-    };
-  });
+// Load all test cases from flat structure
+const testDirs = readdirSync(fixturesDir).sort(); // Ensure order based on numbering
 
-// Load invalid test cases
-const invalidDir = join(fixturesDir, "invalid");
-const invalidCases = readdirSync(invalidDir)
-  .sort() // Ensure order based on numbering
-  .map((testDir) => {
-    const testPath = join(invalidDir, testDir);
-    const code = readFileSync(join(testPath, "input.js"), "utf8");
-    const errors = JSON.parse(
-      readFileSync(join(testPath, "errors.json"), "utf8"),
-    );
-    return {
-      name: testDir.replace(/^\d+_/, "").replace(/_/g, " "),
+const validCases = [];
+const invalidCases = [];
+
+for (const testDir of testDirs) {
+  const testPath = join(fixturesDir, testDir);
+  const code = readFileSync(join(testPath, "input.js"), "utf8");
+  const expectedPath = join(testPath, "expected.json");
+
+  // Clean up test name by removing number prefix and converting underscores to spaces
+  const name = testDir.replace(/^\d+_(good|bad)_/, "").replace(/_/g, " ");
+
+  if (existsSync(expectedPath)) {
+    // Invalid case - has expected.json file
+    const expectedData = JSON.parse(readFileSync(expectedPath, "utf8"));
+    invalidCases.push({
+      name,
       code,
-      errors,
-    };
-  });
+      ...expectedData, // Spread the expected.json content directly
+    });
+  } else {
+    // Valid case - no expected.json file
+    validCases.push({
+      name,
+      code,
+    });
+  }
+}
 
 ruleTester.run("no-extra-params", rule, {
   valid: validCases,

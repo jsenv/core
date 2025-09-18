@@ -1,7 +1,0 @@
-[
-  {
-    "messageId": "extraParam",
-    "data": { "param": "y", "func": "bar" },
-    "type": "Property"
-  }
-]
