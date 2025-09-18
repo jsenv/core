@@ -779,6 +779,8 @@ export const Table = forwardRef((props, ref) => {
                   isLastColumn={isLastColumn}
                   movable
                   resizable
+                  columnMinWidth={col.minWidth}
+                  columnMaxWidth={col.maxWidth}
                   onGrab={() => {
                     grabColumn(index);
                   }}
@@ -968,6 +970,8 @@ const HeaderCell = ({
   isAfterStickyYFrontier,
   columnAccessorKey,
   columnWithSomeSelectedCell,
+  columnMinWidth,
+  columnMaxWidth,
   data,
   selectionController,
   grabbed,
@@ -1029,6 +1033,8 @@ const HeaderCell = ({
         <TableColumnLeftResizeHandle
           onGrab={onGrabResizeHandle}
           onRelease={onReleaseResizeHandle}
+          columnMinWidth={columnMinWidth}
+          columnMaxWidth={columnMaxWidth}
         />
       )}
       <span>{children}</span>
@@ -1039,6 +1045,8 @@ const HeaderCell = ({
         <TableColumnRightResizeHandle
           onGrab={onGrabResizeHandle}
           onRelease={onReleaseResizeHandle}
+          columnMinWidth={columnMinWidth}
+          columnMaxWidth={columnMaxWidth}
         />
       )}
     </th>

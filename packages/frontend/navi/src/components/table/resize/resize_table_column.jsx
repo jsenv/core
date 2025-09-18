@@ -72,13 +72,21 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableColumnLeftResizeHandle = ({ onGrab, onDrag, onRelease }) => {
+export const TableColumnLeftResizeHandle = ({
+  columnMinWidth,
+  columnMaxWidth,
+  onGrab,
+  onDrag,
+  onRelease,
+}) => {
   return (
     <div
       className="navi_table_column_resize_handle_left"
       onMouseDown={(e) => {
         e.stopPropagation(); // prevent drag column
         initResizeTableColumnByMousedown(e, {
+          columnMinWidth,
+          columnMaxWidth,
           onGrab,
           onDrag,
           onRelease,
@@ -94,13 +102,25 @@ export const TableColumnLeftResizeHandle = ({ onGrab, onDrag, onRelease }) => {
     ></div>
   );
 };
-export const TableColumnRightResizeHandle = ({ onGrab, onDrag, onRelease }) => {
+export const TableColumnRightResizeHandle = ({
+  columnMinWidth,
+  columnMaxWidth,
+  onGrab,
+  onDrag,
+  onRelease,
+}) => {
   return (
     <div
       className="navi_table_column_resize_handle_right"
       onMouseDown={(e) => {
         e.stopPropagation(); // prevent drag column
-        initResizeTableColumnByMousedown(e, { onGrab, onDrag, onRelease });
+        initResizeTableColumnByMousedown(e, {
+          columnMinWidth,
+          columnMaxWidth,
+          onGrab,
+          onDrag,
+          onRelease,
+        });
       }}
       onMouseEnter={(e) => {
         onMouseEnterRightResizeHandle(e);
@@ -179,7 +199,7 @@ export const TableColumnResizer = () => {
 // donc il faut une option pour forcer une right bound qui lorsque'elle est définié override le right bound du scrollable parent
 const initResizeTableColumnByMousedown = (
   mousedownEvent,
-  { onGrab, onDrag, onRelease, isLeft },
+  { columnMinWidth, columnMaxWidth, onGrab, onDrag, onRelease, isLeft },
 ) => {
   let tableCell = mousedownEvent.target.closest("th");
   if (isLeft) {
@@ -197,11 +217,16 @@ const initResizeTableColumnByMousedown = (
   const currentCellWidth = tableCellRect.width;
 
   // Left bound: minimum width of 50px (can shrink column by current width - 50)
-  const minWidth = 50;
-  const customLeftBound = currentCellLeft + currentCellWidth - minWidth;
-
+  const minWidth =
+    typeof columnMinWidth === "number" && columnMinWidth > 50
+      ? columnMinWidth
+      : 50;
   // Right bound: maximum width of 1000px (can expand beyond scrollable parent if needed)
-  const maxWidth = 1000;
+  const maxWidth =
+    typeof columnMaxWidth === "number" && columnMaxWidth < 1000
+      ? columnMaxWidth
+      : 1000;
+  const customLeftBound = currentCellLeft + currentCellWidth - minWidth;
   const maxExpandAmount = maxWidth - currentCellWidth;
   const customRightBound = currentCellLeft + currentCellWidth + maxExpandAmount;
 
