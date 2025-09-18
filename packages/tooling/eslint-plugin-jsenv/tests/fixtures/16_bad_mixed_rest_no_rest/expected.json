@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "messageId": "extraParam",
+      "data": { "param": "extra", "func": "mixed" },
+      "type": "Property"
+    }
+  ]
+}

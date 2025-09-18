@@ -57,10 +57,24 @@ export default {
           const arg = node.arguments[i];
 
           // Only check ObjectPattern parameters
-          if (param.type !== "ObjectPattern") continue;
+          if (param.type !== "ObjectPattern") {
+            continue;
+          }
 
           // Only check ObjectExpression arguments
-          if (!arg || arg.type !== "ObjectExpression") continue;
+          if (!arg || arg.type !== "ObjectExpression") {
+            continue;
+          }
+
+          // Check if this ObjectPattern has a rest element (...rest)
+          const hasRestElement = param.properties.some(
+            (p) => p.type === "RestElement",
+          );
+
+          // If there's a rest element, all properties are considered valid
+          if (hasRestElement) {
+            continue;
+          }
 
           const allowedProps = new Set(
             param.properties
