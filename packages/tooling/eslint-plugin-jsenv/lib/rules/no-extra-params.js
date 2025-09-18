@@ -62,7 +62,13 @@ export default {
           // Only check ObjectExpression arguments
           if (!arg || arg.type !== "ObjectExpression") continue;
 
-          const allowedProps = new Set(param.properties.map((p) => p.key.name));
+          const allowedProps = new Set(
+            param.properties
+              .map((p) =>
+                p.key && p.key.type === "Identifier" ? p.key.name : null,
+              )
+              .filter((name) => name !== null),
+          );
 
           for (const prop of arg.properties) {
             if (prop.key && prop.key.type === "Identifier") {
