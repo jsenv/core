@@ -2,7 +2,7 @@ import { RuleTester } from "eslint";
 import rule from "../lib/rules/no-extra-params.js";
 
 const ruleTester = new RuleTester({
-  parserOptions: {
+  languageOptions: {
     ecmaVersion: 2022,
     sourceType: "module",
   },

@@ -7,40 +7,51 @@ export default {
       category: "Possible Errors",
       recommended: false,
     },
-    schema: [], // pas d'options pour le moment
+    schema: [],
     messages: {
       extraParam: "'{{param}}' is passed but not used in '{{func}}'.",
     },
   },
 
   create(context) {
+    const functionDefinitions = new Map();
+
     return {
+      // Collect function definitions
+      FunctionDeclaration(node) {
+        if (node.id && node.id.name) {
+          functionDefinitions.set(node.id.name, node);
+        }
+      },
+
+      // Handle variable declarations with function expressions
+      VariableDeclarator(node) {
+        if (
+          node.id &&
+          node.id.type === "Identifier" &&
+          node.init &&
+          (node.init.type === "FunctionExpression" ||
+            node.init.type === "ArrowFunctionExpression")
+        ) {
+          functionDefinitions.set(node.id.name, node.init);
+        }
+      },
+
+      // Check call expressions
       CallExpression(node) {
         const callee = node.callee;
 
-        // On ne traite que les fonctions identifiées dans le même scope
         if (callee.type !== "Identifier") return;
 
         const funcName = callee.name;
-        const scope = context.getScope();
-        const funcDef = scope.set.get(funcName);
+        const functionDef = functionDefinitions.get(funcName);
 
-        if (!funcDef || !funcDef.defs.length) return;
-        const defNode = funcDef.defs[0].node;
+        if (!functionDef) return;
 
-        // Vérifie si c'est une FunctionDeclaration ou FunctionExpression
-        if (
-          defNode.type !== "FunctionDeclaration" &&
-          defNode.type !== "FunctionExpression" &&
-          defNode.type !== "ArrowFunctionExpression"
-        ) {
-          return;
-        }
-
-        const params = defNode.params;
+        const params = functionDef.params;
         if (params.length === 0) return;
 
-        // Cas spécifique: destructuring { a, b }
+        // Check for object destructuring in first parameter
         const firstParam = params[0];
         if (firstParam.type !== "ObjectPattern") return;
 
