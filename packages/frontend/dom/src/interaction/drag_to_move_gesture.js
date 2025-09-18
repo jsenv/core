@@ -83,7 +83,7 @@ export const createDragToMoveGesture = (options) => {
             desiredElementLeftRelative + currentPositionedParentRect.left;
           const desiredElementRight = desiredElementLeft + elementWidth;
           moveAndKeepIntoView({
-            axis: "x",
+            // axis: "x",
             isGoingPositive: isGoingRight,
             isGoingNegative: isGoingLeft,
             desiredElementStart: desiredElementLeft,
@@ -105,7 +105,7 @@ export const createDragToMoveGesture = (options) => {
             desiredElementTopRelative + currentPositionedParentRect.top;
           const desiredElementBottom = desiredElementTop + elementHeight;
           moveAndKeepIntoView({
-            axis: "y",
+            // axis: "y",
             isGoingPositive: isGoingDown,
             isGoingNegative: isGoingUp,
             desiredElementStart: desiredElementTop,

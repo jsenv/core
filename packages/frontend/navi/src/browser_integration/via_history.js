@@ -185,7 +185,6 @@ export const setupBrowserIntegrationViaHistory = ({
     const state = history.state;
     handleRoutingTask(url, {
       state,
-      routingReason: "reload method call",
     });
   };
 

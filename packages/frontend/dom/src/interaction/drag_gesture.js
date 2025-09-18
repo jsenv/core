@@ -226,6 +226,7 @@ export const createDragGesture = ({
     cursor = "grabbing",
     xAtStart,
     yAtStart,
+    interactionType,
   }) => {
     if (!direction.x && !direction.y) {
       return null;
@@ -280,6 +281,7 @@ export const createDragGesture = ({
       initialScrollTop,
       visualOffsetX,
       visualOffsetY,
+      interactionType,
     };
     definePropertyAsReadOnly(gestureInfo, "xAtStart");
     definePropertyAsReadOnly(gestureInfo, "yAtStart");

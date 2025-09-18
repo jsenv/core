@@ -74,8 +74,6 @@ export const initJsSupervisorMiddleware = async (
     const url = request.url();
     if (url === fileServerUrl && urlToExtension(url) === ".html") {
       interceptHtmlToExecute({
-        url,
-        request,
         route,
       });
       return;
@@ -83,14 +81,13 @@ export const initJsSupervisorMiddleware = async (
     if (inlineScriptContents.has(url)) {
       interceptInlineScript({
         url,
-        request,
         route,
       });
       return;
     }
     const fsServerUrl = new URL("/@fs/", webServer.origin);
     if (url.startsWith(fsServerUrl)) {
-      interceptFileSystemUrl({ url, request, route });
+      interceptFileSystemUrl({ url, route });
       return;
     }
     route.fallback();

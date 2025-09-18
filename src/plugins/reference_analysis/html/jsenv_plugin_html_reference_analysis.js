@@ -252,7 +252,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
           const createInlineReference = (
             node,
             inlineContent,
-            { type, expectedType, contentType },
+            { type, subtype, expectedType, contentType },
           ) => {
             const hotAccept =
               getHtmlNodeAttribute(node, "hot-accept") !== undefined;
@@ -268,6 +268,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
               getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
             const inlineReference = urlInfo.dependencies.foundInline({
               type,
+              subtype,
               expectedType,
               isOriginalPosition: isOriginal,
               specifierLine: line,

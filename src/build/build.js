@@ -337,7 +337,7 @@ export const build = async ({
   });
 
   const logLevel = logs.level;
-  const logger = createLogger({ logLevel });
+  let logger = createLogger({ logLevel });
   const animatedLogEnabled =
     logs.animated &&
     // canEraseProcessStdout
@@ -819,9 +819,9 @@ export const build = async ({
     const buildTask = createTaskLog("build");
     buildAbortController = new AbortController();
     try {
+      logger = createLogger({ logLevel: "warn" });
       const result = await runBuild({
         signal: buildAbortController.signal,
-        logLevel: "warn",
       });
       buildTask.done();
       resolveFirstBuild(result);

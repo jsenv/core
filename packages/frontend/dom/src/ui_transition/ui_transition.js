@@ -904,7 +904,6 @@ export const initUITransition = (container) => {
               previousChild,
               firstChild,
               attributeToRemove: ["data-content-key"],
-              transitionType: type,
             });
 
           // If size transitions are disabled and the new content is smaller,
@@ -1020,7 +1019,6 @@ export const initUITransition = (container) => {
               previousChild,
               firstChild,
               attributeToRemove: ["data-content-key", "data-content-phase"],
-              transitionType: phaseTransitionType,
             });
 
           const fromPhase = !hadChild
