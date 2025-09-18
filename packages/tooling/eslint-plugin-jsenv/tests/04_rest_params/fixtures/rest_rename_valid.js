@@ -1,5 +1,6 @@
 // Valid: Rest param renamed and passed to function that uses the property
 const validRestRename = ({ a, ...rest }) => {
+  console.log(a);
   const titi = rest;
   targetFunction(titi);
 };
@@ -12,6 +13,7 @@ validRestRename({ a: 1, c: true }); // Should be valid - 'c' is used by targetFu
 
 // Valid: Multiple levels of renaming
 const validMultipleRename = ({ key, ...settings }) => {
+  console.log(key);
   const config = settings;
   const options = config;
   processConfig(options);
@@ -22,3 +24,13 @@ const processConfig = ({ debug, verbose }) => {
 };
 
 validMultipleRename({ key: "value", debug: true, verbose: false });
+
+// Valid: Rest param renamed but not propagated to trackable function
+const validNoTarget = ({ b, ...config }) => {
+  console.log(b);
+  const settings = config;
+  global.settings = settings; // Use settings without passing to a trackable function
+};
+
+// Should be valid - not propagated to trackable function, so no-extra-params doesn't check
+validNoTarget({ b: 2, unused: "value" });
