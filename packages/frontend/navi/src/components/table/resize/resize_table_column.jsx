@@ -189,8 +189,26 @@ const initResizeTableColumnByMousedown = (
   const tableColumnResizer = tableContainer.querySelector(
     ".navi_table_column_resizer",
   );
+
+  // Calculate custom bounds for column resizing
+  const tableCellRect = tableCell.getBoundingClientRect();
+  const tableContainerRect = tableContainer.getBoundingClientRect();
+  const currentCellLeft = tableCellRect.left - tableContainerRect.left;
+  const currentCellWidth = tableCellRect.width;
+
+  // Left bound: minimum width of 50px (can shrink column by current width - 50)
+  const minWidth = 50;
+  const customLeftBound = currentCellLeft + currentCellWidth - minWidth;
+
+  // Right bound: maximum width of 1000px (can expand beyond scrollable parent if needed)
+  const maxWidth = 1000;
+  const maxExpandAmount = maxWidth - currentCellWidth;
+  const customRightBound = currentCellLeft + currentCellWidth + maxExpandAmount;
+
   const dragToMoveGesture = createDragToMoveGesture({
     direction: { x: true },
+    customLeftBound,
+    customRightBound,
     onGrab: () => {
       updateTableColumnResizerPosition(tableCell);
       onGrab({ rowHeight: 0 });

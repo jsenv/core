@@ -205,6 +205,12 @@ export const createDragGesture = ({
   // Useful for debugging constraint systems and understanding why elements behave certain ways
   // When enabled, markers persist until next drag gesture starts or page is refreshed
   keepMarkersOnRelease = false,
+  // Custom bounds that override the default scrollable area bounds
+  // Useful for scenarios like column resizing where you want custom min/max constraints
+  customLeftBound,
+  customRightBound,
+  customTopBound,
+  customBottomBound,
   lifecycle,
 }) => {
   const teardownCallbackSet = new Set();
@@ -389,7 +395,12 @@ export const createDragGesture = ({
     const constraintFunctions = [];
 
     // Always add bounds constraint (scrollable area)
-    const boundsConstraint = createScrollableAreaConstraint(scrollableParent);
+    const boundsConstraint = createScrollableAreaConstraint(scrollableParent, {
+      customLeftBound,
+      customRightBound,
+      customTopBound,
+      customBottomBound,
+    });
     constraintFunctions.push(boundsConstraint);
 
     // Check for obstacles and add obstacle constraint if found
@@ -1014,7 +1025,10 @@ const getPositionedParent = (element) => {
   return document.body;
 };
 
-const createScrollableAreaConstraint = (scrollableParent) => {
+const createScrollableAreaConstraint = (
+  scrollableParent,
+  { customLeftBound, customRightBound, customTopBound, customBottomBound } = {},
+) => {
   return ({ elementWidth, elementHeight }) => {
     // Handle floating point precision issues between getBoundingClientRect() and scroll dimensions
     // - elementWidth/elementHeight: floats from getBoundingClientRect() (e.g., 2196.477294921875)
@@ -1028,6 +1042,7 @@ const createScrollableAreaConstraint = (scrollableParent) => {
     const scrollHeight = scrollableParent.scrollHeight;
 
     // Calculate horizontal bounds: element can be positioned from left=0 to right=constraint
+    let left = 0;
     let right;
     if (elementWidth >= scrollWidth) {
       // Element fills or exceeds container width - constraint to left edge only
@@ -1038,6 +1053,7 @@ const createScrollableAreaConstraint = (scrollableParent) => {
     }
 
     // Calculate vertical bounds: element can be positioned from top=0 to bottom=constraint
+    let top = 0;
     let bottom;
     if (elementHeight >= scrollHeight) {
       // Element fills or exceeds container height - constraint to top edge only
@@ -1047,14 +1063,34 @@ const createScrollableAreaConstraint = (scrollableParent) => {
       bottom = scrollHeight - elementHeight;
     }
 
+    // Override with custom bounds if provided
+    if (customLeftBound !== undefined) {
+      left = customLeftBound;
+    }
+    if (customRightBound !== undefined) {
+      right = customRightBound;
+    }
+    if (customTopBound !== undefined) {
+      top = customTopBound;
+    }
+    if (customBottomBound !== undefined) {
+      bottom = customBottomBound;
+    }
+
     return {
       type: "bounds",
-      left: 0,
-      top: 0,
+      left,
+      top,
       right,
       bottom,
       element: scrollableParent,
-      name: "scrollable area bounds",
+      name:
+        customLeftBound !== undefined ||
+        customRightBound !== undefined ||
+        customTopBound !== undefined ||
+        customBottomBound !== undefined
+          ? "custom bounds constraint"
+          : "scrollable area bounds",
     };
   };
 };
