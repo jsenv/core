@@ -117,7 +117,20 @@ function isRestParameterPropagated(functionDef, restParamName) {
 }
 
 // Helper function to check if a parameter is used through function chaining
-function checkParameterChaining(paramName, functionDef, functionDefinitions) {
+function checkParameterChaining(
+  paramName,
+  functionDef,
+  functionDefinitions,
+  visited = new Set(),
+) {
+  // Avoid infinite recursion
+  const functionKey =
+    functionDef.id?.name || functionDef.parent?.id?.name || "anonymous";
+  if (visited.has(functionKey)) {
+    return false;
+  }
+  visited.add(functionKey);
+
   const propagations = analyzeParameterPropagation(
     functionDef,
     functionDefinitions,
@@ -160,9 +173,18 @@ function checkParameterChaining(paramName, functionDef, functionDefinitions) {
                     ) {
                       return true; // Parameter is used in target function
                     }
-                    // If target has rest element, consider parameter as potentially used
+                    // If target has rest element, recursively check its chain
                     if (targetProp.type === "RestElement") {
-                      return true;
+                      // Recursively check if this parameter is used further down the chain
+                      const isUsedInChain = checkParameterChaining(
+                        paramName,
+                        targetFunctionDef,
+                        functionDefinitions,
+                        visited,
+                      );
+                      if (isUsedInChain) {
+                        return true;
+                      }
                     }
                   }
                 }
