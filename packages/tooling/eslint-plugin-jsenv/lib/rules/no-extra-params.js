@@ -552,6 +552,119 @@ export default {
           }
         }
       },
+
+      // Check JSX elements (equivalent to function calls)
+      JSXElement(node) {
+        const openingElement = node.openingElement;
+        if (!openingElement || !openingElement.name) return;
+
+        // Only handle JSXIdentifier (component names like <Toto />)
+        if (openingElement.name.type !== "JSXIdentifier") return;
+
+        const componentName = openingElement.name.name;
+        const functionDef = functionDefinitions.get(componentName);
+
+        if (!functionDef) return;
+
+        const params = functionDef.params;
+        if (params.length === 0 || openingElement.attributes.length === 0) return;
+
+        // Assume first parameter is props object
+        const param = params[0];
+        if (param.type !== "ObjectPattern") return;
+
+        // Check if this ObjectPattern has a rest element (...rest)
+        const hasRestElement = param.properties.some(
+          (p) => p.type === "RestElement",
+        );
+
+        // If there's a rest element, we need to check chaining to see if rest properties are actually used
+        if (hasRestElement) {
+          // Get explicitly declared parameters (not in rest)
+          const explicitProps = new Set(
+            param.properties
+              .filter(
+                (p) =>
+                  p.type === "Property" &&
+                  p.key &&
+                  p.key.type === "Identifier",
+              )
+              .map((p) => p.key.name),
+          );
+
+          // Get the rest parameter name
+          const restParam = param.properties.find(
+            (p) => p.type === "RestElement",
+          );
+          const restParamName = restParam ? restParam.argument.name : null;
+
+          // Check if rest parameter is propagated to other functions
+          const isRestPropagated = restParamName
+            ? isRestParameterPropagated(functionDef, restParamName, functionDefinitions)
+            : false;
+
+          // If rest is not propagated anywhere, we can't track parameter usage
+          if (!isRestPropagated) {
+            // Let no-unused-vars handle unused rest params
+            return;
+          }
+
+          // Check JSX attributes that would go into rest
+          for (const attr of openingElement.attributes) {
+            if (attr.type === "JSXAttribute" && attr.name && attr.name.type === "JSXIdentifier") {
+              const attrName = attr.name.name;
+              if (!explicitProps.has(attrName)) {
+                // This attribute goes into rest - check if it's used in chaining
+                const isUsedInChain = checkParameterChaining(
+                  attrName,
+                  functionDef,
+                  functionDefinitions,
+                );
+
+                if (!isUsedInChain) {
+                  context.report({
+                    node: attr,
+                    messageId: "extraParam",
+                    data: { param: attrName, func: componentName },
+                  });
+                }
+              }
+            }
+          }
+          return;
+        }
+
+        // Handle regular props (no rest element)
+        const allowedProps = new Set(
+          param.properties
+            .map((p) =>
+              p.key && p.key.type === "Identifier" ? p.key.name : null,
+            )
+            .filter((name) => name !== null),
+        );
+
+        for (const attr of openingElement.attributes) {
+          if (attr.type === "JSXAttribute" && attr.name && attr.name.type === "JSXIdentifier") {
+            const attrName = attr.name.name;
+            if (!allowedProps.has(attrName)) {
+              // Check if this parameter is used through function chaining
+              const isUsedInChain = checkParameterChaining(
+                attrName,
+                functionDef,
+                functionDefinitions,
+              );
+
+              if (!isUsedInChain) {
+                context.report({
+                  node: attr,
+                  messageId: "extraParam",
+                  data: { param: attrName, func: componentName },
+                });
+              }
+            }
+          }
+        }
+      },
     };
   },
 };
