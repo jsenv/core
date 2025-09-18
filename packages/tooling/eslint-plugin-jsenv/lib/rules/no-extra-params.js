@@ -1,3 +1,60 @@
+// Helper function to find variable declarations in a function that match a name
+function findVariableDeclarationsInFunction(functionNode, varName) {
+  let found = false;
+
+  function traverse(node) {
+    if (found) return;
+
+    if (!node || typeof node !== "object") return;
+
+    // Check for variable declarators
+    if (
+      node.type === "VariableDeclarator" &&
+      node.id &&
+      node.id.type === "Identifier" &&
+      node.id.name === varName
+    ) {
+      found = true;
+      return;
+    }
+
+    // Check for destructuring assignments
+    if (
+      node.type === "VariableDeclarator" &&
+      node.id &&
+      node.id.type === "ObjectPattern"
+    ) {
+      for (const prop of node.id.properties) {
+        if (
+          prop.type === "Property" &&
+          prop.key &&
+          prop.key.type === "Identifier" &&
+          prop.key.name === varName
+        ) {
+          found = true;
+          return;
+        }
+      }
+    }
+
+    // Traverse child nodes
+    for (const key in node) {
+      if (key === "parent") continue; // Avoid infinite loops
+      const child = node[key];
+      if (Array.isArray(child)) {
+        for (const item of child) {
+          traverse(item);
+        }
+      } else {
+        traverse(child);
+      }
+    }
+  }
+
+  traverse(functionNode);
+  return found;
+}
+
 export default {
   meta: {
     type: "problem",
@@ -47,6 +104,29 @@ export default {
         const functionDef = functionDefinitions.get(funcName);
 
         if (!functionDef) return;
+
+        // Check if this call is inside the function that we're tracking
+        // and if that function has variable declarations that shadow the function name
+        let parent = node.parent;
+        let isInsideTrackedFunction = false;
+        while (parent) {
+          if (parent === functionDef) {
+            isInsideTrackedFunction = true;
+            break;
+          }
+          parent = parent.parent;
+        }
+
+        if (isInsideTrackedFunction) {
+          // Look for variable declarations inside this function that declare the same name
+          const hasShadowingVariable = findVariableDeclarationsInFunction(
+            functionDef,
+            funcName,
+          );
+          if (hasShadowingVariable) {
+            return; // The function name is shadowed, so this call doesn't refer to our tracked function
+          }
+        }
 
         const params = functionDef.params;
         if (params.length === 0 || node.arguments.length === 0) return;

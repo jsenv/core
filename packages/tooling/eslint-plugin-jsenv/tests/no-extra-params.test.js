@@ -34,7 +34,7 @@ for (const testDir of testDirs) {
     invalidCases.push({
       name,
       code,
-      ...expectedData, // Spread the expected.json content directly
+      errors: expectedData, // The expected.json should be the errors array
     });
   } else {
     // Valid case - no expected.json file

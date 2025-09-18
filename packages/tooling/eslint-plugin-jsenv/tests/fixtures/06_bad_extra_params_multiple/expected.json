@@ -1,14 +1,12 @@
-{
-  "errors": [
-    {
-      "messageId": "extraParam",
-      "data": { "param": "b", "func": "foo" },
-      "type": "Property"
-    },
-    {
-      "messageId": "extraParam",
-      "data": { "param": "c", "func": "foo" },
-      "type": "Property"
-    }
-  ]
-}
+[
+  {
+    "messageId": "extraParam",
+    "data": { "param": "b", "func": "foo" },
+    "type": "Property"
+  },
+  {
+    "messageId": "extraParam",
+    "data": { "param": "c", "func": "foo" },
+    "type": "Property"
+  }
+]

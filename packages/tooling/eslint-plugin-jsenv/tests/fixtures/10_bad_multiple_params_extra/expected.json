@@ -1,9 +1,10 @@
-{
-  "errors": [
-    {
-      "messageId": "extraParam",
-      "data": { "param": "d", "func": "toto" },
-      "type": "Property"
-    }
-  ]
-}
+[
+  {
+    "messageId": "extraParam",
+    "data": {
+      "param": "d",
+      "func": "toto"
+    },
+    "type": "Property"
+  }
+]
