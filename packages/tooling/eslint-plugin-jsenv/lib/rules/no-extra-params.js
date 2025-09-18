@@ -49,28 +49,31 @@ export default {
         if (!functionDef) return;
 
         const params = functionDef.params;
-        if (params.length === 0) return;
+        if (params.length === 0 || node.arguments.length === 0) return;
 
-        // Check for object destructuring in first parameter
-        const firstParam = params[0];
-        if (firstParam.type !== "ObjectPattern") return;
+        // Check each parameter that has object destructuring
+        for (let i = 0; i < params.length; i++) {
+          const param = params[i];
+          const arg = node.arguments[i];
 
-        const allowedProps = new Set(
-          firstParam.properties.map((p) => p.key.name),
-        );
+          // Only check ObjectPattern parameters
+          if (param.type !== "ObjectPattern") continue;
 
-        const arg = node.arguments[0];
-        if (!arg || arg.type !== "ObjectExpression") return;
+          // Only check ObjectExpression arguments
+          if (!arg || arg.type !== "ObjectExpression") continue;
 
-        for (const prop of arg.properties) {
-          if (prop.key && prop.key.type === "Identifier") {
-            const keyName = prop.key.name;
-            if (!allowedProps.has(keyName)) {
-              context.report({
-                node: prop,
-                messageId: "extraParam",
-                data: { param: keyName, func: funcName },
-              });
+          const allowedProps = new Set(param.properties.map((p) => p.key.name));
+
+          for (const prop of arg.properties) {
+            if (prop.key && prop.key.type === "Identifier") {
+              const keyName = prop.key.name;
+              if (!allowedProps.has(keyName)) {
+                context.report({
+                  node: prop,
+                  messageId: "extraParam",
+                  data: { param: keyName, func: funcName },
+                });
+              }
             }
           }
         }
