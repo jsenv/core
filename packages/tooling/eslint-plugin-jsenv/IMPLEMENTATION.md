@@ -48,9 +48,17 @@ This ESLint plugin implements a comprehensive `no-extra-params` rule that detect
 - Treats JSX props identically to function parameters
 - Supports JSX component chaining with rest props
 
+### 8. Wrapper Function Support
+
+- **React Wrappers**: `forwardRef()`, `memo()`, `React.forwardRef()`, `React.memo()`
+- **JavaScript Standard**: `Function.prototype.bind()`
+- Resolves wrapped functions to analyze the original function signature
+- Supports both function references and inline function expressions
+- Enables proper validation of Higher-Order Components (HOCs)
+
 ## 🧪 Test Coverage
 
-The plugin includes comprehensive test coverage with **11 test suites**:
+The plugin includes comprehensive test coverage with **13 test suites**:
 
 1. **01_function_basic** - Basic function parameter detection
 2. **02_arrow_function** - Arrow function support
@@ -60,6 +68,10 @@ The plugin includes comprehensive test coverage with **11 test suites**:
 6. **06_function_chaining** - Parameter propagation analysis
 7. **07_jsx** - JSX component prop validation (2 test files)
 8. **08_order_independence** - Usage before definition scenarios (3 test files)
+9. **09_wrapper_functions** - Wrapper function support (2 test files)
+   - React wrappers (forwardRef, memo)
+   - Standard JavaScript wrappers (bind)
+   - Inline function expressions
 
 ## 🚀 Technical Implementation
 
@@ -84,6 +96,26 @@ Full JSX support treating component props as function parameters:
 <MyComponent title="Hello" extra="unused" /> // extra flagged if unused
 ```
 
+### Wrapper Function Resolution
+
+Automatically resolves wrapper functions to analyze the underlying component:
+
+```javascript
+// React wrappers
+const WrappedComponent = forwardRef(MyComponent);
+const MemoizedComponent = memo(MyComponent);
+const ReactForwardRef = React.forwardRef(MyComponent);
+
+// JavaScript standard wrappers
+const boundFunction = myFunction.bind(null);
+
+// Inline expressions
+const InlineWrapper = forwardRef(({ title }) => <div>{title}</div>);
+
+// All validate against the original function signature
+WrappedComponent({ title: "Hello", extra: "flagged" }); // extra flagged
+```
+
 ## 📁 Project Structure
 
 ```
@@ -102,17 +134,31 @@ packages/tooling/eslint-plugin-jsenv/
 │   ├── 05_scope_resolution/
 │   ├── 06_function_chaining/
 │   ├── 07_jsx/
-│   ├── 08_order_independence/      # Order-independent analysis tests
+│   ├── 08_order_independence/      # Usage before definition tests
 │   │   ├── fixtures/
-│   │   │   ├── input_valid.js     # Basic order independence
+│   │   │   ├── input_valid.js     # Basic usage patterns
 │   │   │   ├── input_invalid.js
-│   │   │   ├── jsx_valid.jsx      # JSX order independence
+│   │   │   ├── jsx_valid.jsx      # JSX usage patterns
 │   │   │   ├── jsx_invalid.jsx
-│   │   │   ├── chaining_valid.js  # Chaining order independence
+│   │   │   ├── chaining_valid.js  # Chaining usage patterns
 │   │   │   └── chaining_invalid.js
 │   │   ├── order_independence.test.js
 │   │   ├── jsx_order.test.js
 │   │   └── chaining_order.test.js
+│   ├── 09_wrapper_functions/       # Wrapper function support tests
+│   │   ├── fixtures/
+│   │   │   ├── forwardref_valid.js    # forwardRef wrapper tests
+│   │   │   ├── forwardref_invalid.js
+│   │   │   ├── memo_valid.js          # memo wrapper tests
+│   │   │   ├── memo_invalid.js
+│   │   │   ├── react_wrappers_valid.js   # React.* wrappers
+│   │   │   ├── react_wrappers_invalid.js
+│   │   │   ├── bind_valid.js          # Function.bind tests
+│   │   │   ├── bind_invalid.js
+│   │   │   ├── inline_valid.js        # Inline expressions
+│   │   │   └── inline_invalid.js
+│   │   ├── wrapper_functions.test.js
+│   │   └── inline_wrapper.test.js
 │   └── run-all.js                 # Test runner
 ├── package.json
 └── index.js                       # Plugin entry point
@@ -127,9 +173,11 @@ The plugin is integrated into `eslint-config-relax` and automatically available 
 Perfect for:
 
 - React component prop validation
+- Higher-Order Component (HOC) prop validation
 - Function parameter optimization
 - Code cleanup and maintenance
 - Preventing unused parameter accumulation
+- Wrapper function analysis (forwardRef, memo, bind)
 
 ## 📋 Test Conventions
 
