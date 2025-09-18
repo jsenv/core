@@ -27,6 +27,15 @@ const nonPropagatedValidCode = readFileSync(
   "utf8",
 );
 
+const propertyRenameValidCode = readFileSync(
+  join(fixturesDir, "property_rename_valid.js"),
+  "utf8",
+);
+const propertyRenameInvalidCode = readFileSync(
+  join(fixturesDir, "property_rename_invalid.js"),
+  "utf8",
+);
+
 ruleTester.run("no-extra-params - rest parameters", rule, {
   valid: [
     {
@@ -40,6 +49,10 @@ ruleTester.run("no-extra-params - rest parameters", rule, {
     {
       name: "rest params not propagated (no-unused-vars handles unused rest)",
       code: nonPropagatedValidCode,
+    },
+    {
+      name: "property renaming in destructuring - valid cases",
+      code: propertyRenameValidCode,
     },
   ],
   invalid: [
@@ -86,6 +99,32 @@ ruleTester.run("no-extra-params - rest parameters", rule, {
         {
           messageId: "extraParam",
           data: { param: "timeout", func: "processRequest" },
+          type: "Property",
+        },
+      ],
+    },
+    {
+      name: "property renaming in destructuring - invalid cases",
+      code: propertyRenameInvalidCode,
+      errors: [
+        {
+          messageId: "extraParam",
+          data: { param: "b", func: "invalidRename1" },
+          type: "Property",
+        },
+        {
+          messageId: "extraParam",
+          data: { param: "c", func: "invalidRename2" },
+          type: "Property",
+        },
+        {
+          messageId: "extraParam",
+          data: { param: "x", func: "invalidMultipleRename" },
+          type: "Property",
+        },
+        {
+          messageId: "extraParam",
+          data: { param: "y", func: "invalidMultipleRename" },
           type: "Property",
         },
       ],
