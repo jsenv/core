@@ -105,15 +105,32 @@ function analyzeParameterPropagation(functionDef, functionDefinitions) {
               });
             }
           } else if (arg.type === "Identifier") {
-            // Direct variable passing like: targetFunction(titi)
+            // Direct variable passing like: targetFunction(rest) or targetFunction(titi)
             // Resolve back to original variable (e.g., titi -> rest)
             const originalName = resolveToOriginalVariable(
               arg.name,
               renamingMap,
             );
 
-            // Only add if this resolves to a different name (meaning it was renamed)
-            if (originalName !== arg.name) {
+            // Check if this identifier is a rest parameter (either direct or renamed)
+            const restParams = [];
+            const functionParams = functionDef.params || [];
+
+            for (const param of functionParams) {
+              if (param.type === "ObjectPattern") {
+                for (const prop of param.properties) {
+                  if (prop.type === "RestElement" && prop.argument?.name) {
+                    restParams.push(prop.argument.name);
+                  }
+                }
+              }
+            }
+
+            // Add if this variable is a rest parameter or resolves to one
+            if (
+              restParams.includes(arg.name) ||
+              restParams.includes(originalName)
+            ) {
               propagations.push({
                 targetFunction: calledFunctionName,
                 targetFunctionDef: calledFunction,
@@ -365,6 +382,265 @@ function findVariableDeclarationsInFunction(functionNode, varName) {
   return found;
 }
 
+// Function to analyze a call expression
+function analyzeCallExpression(node, functionDefinitions, context) {
+  const callee = node.callee;
+
+  if (callee.type !== "Identifier") return;
+
+  const funcName = callee.name;
+  const functionDef = functionDefinitions.get(funcName);
+
+  if (!functionDef) return;
+
+  // Check if this call is inside the function that we're tracking
+  // and if that function has variable declarations that shadow the function name
+  let parent = node.parent;
+  let isInsideTrackedFunction = false;
+  while (parent) {
+    if (parent === functionDef) {
+      isInsideTrackedFunction = true;
+      break;
+    }
+    parent = parent.parent;
+  }
+
+  if (isInsideTrackedFunction) {
+    // Look for variable declarations inside this function that declare the same name
+    const hasShadowingVariable = findVariableDeclarationsInFunction(
+      functionDef,
+      funcName,
+    );
+    if (hasShadowingVariable) {
+      return; // The function name is shadowed, so this call doesn't refer to our tracked function
+    }
+  }
+
+  const params = functionDef.params;
+  if (params.length === 0 || node.arguments.length === 0) return;
+
+  // Check each parameter that has object destructuring
+  for (let i = 0; i < params.length; i++) {
+    const param = params[i];
+    const arg = node.arguments[i];
+
+    // Only check ObjectPattern parameters
+    if (param.type !== "ObjectPattern") {
+      continue;
+    }
+
+    // Only check ObjectExpression arguments
+    if (!arg || arg.type !== "ObjectExpression") {
+      continue;
+    }
+
+    // Check if this ObjectPattern has a rest element (...rest)
+    const hasRestElement = param.properties.some(
+      (p) => p.type === "RestElement",
+    );
+
+    // If there's a rest element, we need to check chaining to see if rest properties are actually used
+    if (hasRestElement) {
+      // Get explicitly declared parameters (not in rest)
+      const explicitProps = new Set(
+        param.properties
+          .filter(
+            (p) =>
+              p.type === "Property" && p.key && p.key.type === "Identifier",
+          )
+          .map((p) => p.key.name),
+      );
+
+      // Get the rest parameter name for direct usage check
+      const restParam = param.properties.find((p) => p.type === "RestElement");
+      const restParamName = restParam ? restParam.argument.name : null;
+
+      // Check if rest parameter is propagated to other functions
+      const isRestPropagated = restParamName
+        ? isRestParameterPropagated(
+            functionDef,
+            restParamName,
+            functionDefinitions,
+          )
+        : false;
+
+      // If rest is not propagated anywhere, we can't track parameter usage
+      if (!isRestPropagated) {
+        // Let no-unused-vars handle unused rest params
+        continue;
+      }
+
+      // Check properties that would go into rest
+      for (const prop of arg.properties) {
+        if (prop.key && prop.key.type === "Identifier") {
+          const keyName = prop.key.name;
+          if (!explicitProps.has(keyName)) {
+            // This property goes into rest - check if it's used in chaining
+            const isUsedInChain = checkParameterChaining(
+              keyName,
+              functionDef,
+              functionDefinitions,
+            );
+
+            if (!isUsedInChain) {
+              context.report({
+                node: prop,
+                messageId: "extraParam",
+                data: { param: keyName, func: funcName },
+              });
+            }
+          }
+        }
+      }
+      continue;
+    }
+
+    const allowedProps = new Set(
+      param.properties
+        .map((p) => (p.key && p.key.type === "Identifier" ? p.key.name : null))
+        .filter((name) => name !== null),
+    );
+
+    for (const prop of arg.properties) {
+      if (prop.key && prop.key.type === "Identifier") {
+        const keyName = prop.key.name;
+        if (!allowedProps.has(keyName)) {
+          // Check if this parameter is used through function chaining
+          const isUsedInChain = checkParameterChaining(
+            keyName,
+            functionDef,
+            functionDefinitions,
+          );
+
+          if (!isUsedInChain) {
+            context.report({
+              node: prop,
+              messageId: "extraParam",
+              data: { param: keyName, func: funcName },
+            });
+          }
+        }
+      }
+    }
+  }
+}
+
+// Function to analyze a JSX element
+function analyzeJSXElement(node, functionDefinitions, context) {
+  const openingElement = node.openingElement;
+  if (!openingElement || !openingElement.name) return;
+
+  // Only handle JSXIdentifier (component names like <Toto />)
+  if (openingElement.name.type !== "JSXIdentifier") return;
+
+  const componentName = openingElement.name.name;
+  const functionDef = functionDefinitions.get(componentName);
+
+  if (!functionDef) return;
+
+  const params = functionDef.params;
+  if (params.length === 0 || openingElement.attributes.length === 0) return;
+
+  // Assume first parameter is props object
+  const param = params[0];
+  if (param.type !== "ObjectPattern") return;
+
+  // Check if this ObjectPattern has a rest element (...rest)
+  const hasRestElement = param.properties.some((p) => p.type === "RestElement");
+
+  // If there's a rest element, we need to check chaining to see if rest properties are actually used
+  if (hasRestElement) {
+    // Get explicitly declared parameters (not in rest)
+    const explicitProps = new Set(
+      param.properties
+        .filter(
+          (p) => p.type === "Property" && p.key && p.key.type === "Identifier",
+        )
+        .map((p) => p.key.name),
+    );
+
+    // Get the rest parameter name
+    const restParam = param.properties.find((p) => p.type === "RestElement");
+    const restParamName = restParam ? restParam.argument.name : null;
+
+    // Check if rest parameter is propagated to other functions
+    const isRestPropagated = restParamName
+      ? isRestParameterPropagated(
+          functionDef,
+          restParamName,
+          functionDefinitions,
+        )
+      : false;
+
+    // If rest is not propagated anywhere, we can't track parameter usage
+    if (!isRestPropagated) {
+      // Let no-unused-vars handle unused rest params
+      return;
+    }
+
+    // Check JSX attributes that would go into rest
+    for (const attr of openingElement.attributes) {
+      if (
+        attr.type === "JSXAttribute" &&
+        attr.name &&
+        attr.name.type === "JSXIdentifier"
+      ) {
+        const attrName = attr.name.name;
+        if (!explicitProps.has(attrName)) {
+          // This attribute goes into rest - check if it's used in chaining
+          const isUsedInChain = checkParameterChaining(
+            attrName,
+            functionDef,
+            functionDefinitions,
+          );
+
+          if (!isUsedInChain) {
+            context.report({
+              node: attr,
+              messageId: "extraParam",
+              data: { param: attrName, func: componentName },
+            });
+          }
+        }
+      }
+    }
+    return;
+  }
+
+  // Handle regular props (no rest element)
+  const allowedProps = new Set(
+    param.properties
+      .map((p) => (p.key && p.key.type === "Identifier" ? p.key.name : null))
+      .filter((name) => name !== null),
+  );
+
+  for (const attr of openingElement.attributes) {
+    if (
+      attr.type === "JSXAttribute" &&
+      attr.name &&
+      attr.name.type === "JSXIdentifier"
+    ) {
+      const attrName = attr.name.name;
+      if (!allowedProps.has(attrName)) {
+        // Check if this parameter is used through function chaining
+        const isUsedInChain = checkParameterChaining(
+          attrName,
+          functionDef,
+          functionDefinitions,
+        );
+
+        if (!isUsedInChain) {
+          context.report({
+            node: attr,
+            messageId: "extraParam",
+            data: { param: attrName, func: componentName },
+          });
+        }
+      }
+    }
+  }
+}
+
 export default {
   meta: {
     type: "problem",
@@ -382,17 +658,19 @@ export default {
 
   create(context) {
     const functionDefinitions = new Map();
+    const callsToAnalyze = [];
+    const jsxElementsToAnalyze = [];
 
     return {
       // Collect function definitions
-      FunctionDeclaration(node) {
+      "FunctionDeclaration"(node) {
         if (node.id && node.id.name) {
           functionDefinitions.set(node.id.name, node);
         }
       },
 
       // Handle variable declarations with function expressions
-      VariableDeclarator(node) {
+      "VariableDeclarator"(node) {
         if (
           node.id &&
           node.id.type === "Identifier" &&
@@ -404,276 +682,36 @@ export default {
         }
       },
 
-      // Check call expressions
-      CallExpression(node) {
+      // Collect call expressions to analyze later
+      "CallExpression"(node) {
         const callee = node.callee;
 
         if (callee.type !== "Identifier") return;
 
-        const funcName = callee.name;
-        const functionDef = functionDefinitions.get(funcName);
-
-        if (!functionDef) return;
-
-        // Check if this call is inside the function that we're tracking
-        // and if that function has variable declarations that shadow the function name
-        let parent = node.parent;
-        let isInsideTrackedFunction = false;
-        while (parent) {
-          if (parent === functionDef) {
-            isInsideTrackedFunction = true;
-            break;
-          }
-          parent = parent.parent;
-        }
-
-        if (isInsideTrackedFunction) {
-          // Look for variable declarations inside this function that declare the same name
-          const hasShadowingVariable = findVariableDeclarationsInFunction(
-            functionDef,
-            funcName,
-          );
-          if (hasShadowingVariable) {
-            return; // The function name is shadowed, so this call doesn't refer to our tracked function
-          }
-        }
-
-        const params = functionDef.params;
-        if (params.length === 0 || node.arguments.length === 0) return;
-
-        // Check each parameter that has object destructuring
-        for (let i = 0; i < params.length; i++) {
-          const param = params[i];
-          const arg = node.arguments[i];
-
-          // Only check ObjectPattern parameters
-          if (param.type !== "ObjectPattern") {
-            continue;
-          }
-
-          // Only check ObjectExpression arguments
-          if (!arg || arg.type !== "ObjectExpression") {
-            continue;
-          }
-
-          // Check if this ObjectPattern has a rest element (...rest)
-          const hasRestElement = param.properties.some(
-            (p) => p.type === "RestElement",
-          );
-
-          // If there's a rest element, we need to check chaining to see if rest properties are actually used
-          if (hasRestElement) {
-            // Get explicitly declared parameters (not in rest)
-            const explicitProps = new Set(
-              param.properties
-                .filter(
-                  (p) =>
-                    p.type === "Property" &&
-                    p.key &&
-                    p.key.type === "Identifier",
-                )
-                .map((p) => p.key.name),
-            );
-
-            // Get the rest parameter name for direct usage check
-            const restParam = param.properties.find(
-              (p) => p.type === "RestElement",
-            );
-            const restParamName = restParam ? restParam.argument.name : null;
-
-            // Check if rest parameter is propagated to other functions
-            const isRestPropagated = restParamName
-              ? isRestParameterPropagated(
-                  functionDef,
-                  restParamName,
-                  functionDefinitions,
-                )
-              : false;
-
-            // If rest is not propagated anywhere, we can't track parameter usage
-            if (!isRestPropagated) {
-              // Let no-unused-vars handle unused rest params
-              continue;
-            }
-
-            // Check properties that would go into rest
-            for (const prop of arg.properties) {
-              if (prop.key && prop.key.type === "Identifier") {
-                const keyName = prop.key.name;
-                if (!explicitProps.has(keyName)) {
-                  // This property goes into rest - check if it's used in chaining
-                  const isUsedInChain = checkParameterChaining(
-                    keyName,
-                    functionDef,
-                    functionDefinitions,
-                  );
-
-                  if (!isUsedInChain) {
-                    context.report({
-                      node: prop,
-                      messageId: "extraParam",
-                      data: { param: keyName, func: funcName },
-                    });
-                  }
-                }
-              }
-            }
-            continue;
-          }
-
-          const allowedProps = new Set(
-            param.properties
-              .map((p) =>
-                p.key && p.key.type === "Identifier" ? p.key.name : null,
-              )
-              .filter((name) => name !== null),
-          );
-
-          for (const prop of arg.properties) {
-            if (prop.key && prop.key.type === "Identifier") {
-              const keyName = prop.key.name;
-              if (!allowedProps.has(keyName)) {
-                // Check if this parameter is used through function chaining
-                const isUsedInChain = checkParameterChaining(
-                  keyName,
-                  functionDef,
-                  functionDefinitions,
-                );
-
-                if (!isUsedInChain) {
-                  context.report({
-                    node: prop,
-                    messageId: "extraParam",
-                    data: { param: keyName, func: funcName },
-                  });
-                }
-              }
-            }
-          }
-        }
+        callsToAnalyze.push(node);
       },
 
-      // Check JSX elements (equivalent to function calls)
-      JSXElement(node) {
+      // Collect JSX elements to analyze later
+      "JSXElement"(node) {
         const openingElement = node.openingElement;
         if (!openingElement || !openingElement.name) return;
 
         // Only handle JSXIdentifier (component names like <Toto />)
         if (openingElement.name.type !== "JSXIdentifier") return;
 
-        const componentName = openingElement.name.name;
-        const functionDef = functionDefinitions.get(componentName);
+        jsxElementsToAnalyze.push(node);
+      },
 
-        if (!functionDef) return;
-
-        const params = functionDef.params;
-        if (params.length === 0 || openingElement.attributes.length === 0)
-          return;
-
-        // Assume first parameter is props object
-        const param = params[0];
-        if (param.type !== "ObjectPattern") return;
-
-        // Check if this ObjectPattern has a rest element (...rest)
-        const hasRestElement = param.properties.some(
-          (p) => p.type === "RestElement",
-        );
-
-        // If there's a rest element, we need to check chaining to see if rest properties are actually used
-        if (hasRestElement) {
-          // Get explicitly declared parameters (not in rest)
-          const explicitProps = new Set(
-            param.properties
-              .filter(
-                (p) =>
-                  p.type === "Property" && p.key && p.key.type === "Identifier",
-              )
-              .map((p) => p.key.name),
-          );
-
-          // Get the rest parameter name
-          const restParam = param.properties.find(
-            (p) => p.type === "RestElement",
-          );
-          const restParamName = restParam ? restParam.argument.name : null;
-
-          // Check if rest parameter is propagated to other functions
-          const isRestPropagated = restParamName
-            ? isRestParameterPropagated(
-                functionDef,
-                restParamName,
-                functionDefinitions,
-              )
-            : false;
-
-          // If rest is not propagated anywhere, we can't track parameter usage
-          if (!isRestPropagated) {
-            // Let no-unused-vars handle unused rest params
-            return;
-          }
-
-          // Check JSX attributes that would go into rest
-          for (const attr of openingElement.attributes) {
-            if (
-              attr.type === "JSXAttribute" &&
-              attr.name &&
-              attr.name.type === "JSXIdentifier"
-            ) {
-              const attrName = attr.name.name;
-              if (!explicitProps.has(attrName)) {
-                // This attribute goes into rest - check if it's used in chaining
-                const isUsedInChain = checkParameterChaining(
-                  attrName,
-                  functionDef,
-                  functionDefinitions,
-                );
-
-                if (!isUsedInChain) {
-                  context.report({
-                    node: attr,
-                    messageId: "extraParam",
-                    data: { param: attrName, func: componentName },
-                  });
-                }
-              }
-            }
-          }
-          return;
+      // Analyze all collected calls and JSX after collecting all function definitions
+      "Program:exit"() {
+        // Process all collected function calls
+        for (const callNode of callsToAnalyze) {
+          analyzeCallExpression(callNode, functionDefinitions, context);
         }
 
-        // Handle regular props (no rest element)
-        const allowedProps = new Set(
-          param.properties
-            .map((p) =>
-              p.key && p.key.type === "Identifier" ? p.key.name : null,
-            )
-            .filter((name) => name !== null),
-        );
-
-        for (const attr of openingElement.attributes) {
-          if (
-            attr.type === "JSXAttribute" &&
-            attr.name &&
-            attr.name.type === "JSXIdentifier"
-          ) {
-            const attrName = attr.name.name;
-            if (!allowedProps.has(attrName)) {
-              // Check if this parameter is used through function chaining
-              const isUsedInChain = checkParameterChaining(
-                attrName,
-                functionDef,
-                functionDefinitions,
-              );
-
-              if (!isUsedInChain) {
-                context.report({
-                  node: attr,
-                  messageId: "extraParam",
-                  data: { param: attrName, func: componentName },
-                });
-              }
-            }
-          }
+        // Process all collected JSX elements
+        for (const jsxNode of jsxElementsToAnalyze) {
+          analyzeJSXElement(jsxNode, functionDefinitions, context);
         }
       },
     };
