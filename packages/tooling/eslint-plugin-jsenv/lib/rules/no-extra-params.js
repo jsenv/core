@@ -567,7 +567,8 @@ export default {
         if (!functionDef) return;
 
         const params = functionDef.params;
-        if (params.length === 0 || openingElement.attributes.length === 0) return;
+        if (params.length === 0 || openingElement.attributes.length === 0)
+          return;
 
         // Assume first parameter is props object
         const param = params[0];
@@ -585,9 +586,7 @@ export default {
             param.properties
               .filter(
                 (p) =>
-                  p.type === "Property" &&
-                  p.key &&
-                  p.key.type === "Identifier",
+                  p.type === "Property" && p.key && p.key.type === "Identifier",
               )
               .map((p) => p.key.name),
           );
@@ -600,7 +599,11 @@ export default {
 
           // Check if rest parameter is propagated to other functions
           const isRestPropagated = restParamName
-            ? isRestParameterPropagated(functionDef, restParamName, functionDefinitions)
+            ? isRestParameterPropagated(
+                functionDef,
+                restParamName,
+                functionDefinitions,
+              )
             : false;
 
           // If rest is not propagated anywhere, we can't track parameter usage
@@ -611,7 +614,11 @@ export default {
 
           // Check JSX attributes that would go into rest
           for (const attr of openingElement.attributes) {
-            if (attr.type === "JSXAttribute" && attr.name && attr.name.type === "JSXIdentifier") {
+            if (
+              attr.type === "JSXAttribute" &&
+              attr.name &&
+              attr.name.type === "JSXIdentifier"
+            ) {
               const attrName = attr.name.name;
               if (!explicitProps.has(attrName)) {
                 // This attribute goes into rest - check if it's used in chaining
@@ -644,7 +651,11 @@ export default {
         );
 
         for (const attr of openingElement.attributes) {
-          if (attr.type === "JSXAttribute" && attr.name && attr.name.type === "JSXIdentifier") {
+          if (
+            attr.type === "JSXAttribute" &&
+            attr.name &&
+            attr.name.type === "JSXIdentifier"
+          ) {
             const attrName = attr.name.name;
             if (!allowedProps.has(attrName)) {
               // Check if this parameter is used through function chaining
