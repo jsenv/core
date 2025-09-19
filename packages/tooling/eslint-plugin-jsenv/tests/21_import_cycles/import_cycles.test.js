@@ -24,7 +24,8 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
           data: { key: "value" }
         });
       `,
-      filename: "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/21_import_cycles/simple.js",
+      filename:
+        "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/21_import_cycles/simple.js",
     },
   ],
   invalid: [
@@ -47,10 +48,11 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
           
         });
       `,
-      filename: "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/21_import_cycles/file_a.js",
+      filename:
+        "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/21_import_cycles/file_a.js",
       errors: [
         {
-          message: 'invalidParam does not exist in helperFunction()',
+          message: "invalidParam does not exist in helperFunction()",
           type: "Property",
         },
       ],

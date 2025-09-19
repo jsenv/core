@@ -200,8 +200,12 @@ function transformContent(content) {
 export function resolveImports(context, functionDefinitions) {
   // Initialize cycle detection set
   const visitedFiles = new Set();
-  
-  return resolveImportsWithCycleDetection(context, functionDefinitions, visitedFiles);
+
+  return resolveImportsWithCycleDetection(
+    context,
+    functionDefinitions,
+    visitedFiles,
+  );
 }
 
 /**
@@ -210,7 +214,11 @@ export function resolveImports(context, functionDefinitions) {
  * @param {Map} functionDefinitions - Map to store function definitions
  * @param {Set} visitedFiles - Set of files currently being processed (for cycle detection)
  */
-function resolveImportsWithCycleDetection(context, functionDefinitions, visitedFiles) {
+function resolveImportsWithCycleDetection(
+  context,
+  functionDefinitions,
+  visitedFiles,
+) {
   const sourceCode = context.getSourceCode();
   const filename = context.getFilename();
   const settings = context.settings;
@@ -219,7 +227,7 @@ function resolveImportsWithCycleDetection(context, functionDefinitions, visitedF
   if (!filename || filename === "<input>") {
     return;
   }
-  
+
   // Add current file to visited set for cycle detection
   if (visitedFiles.has(filename)) {
     // Cycle detected, stop processing to avoid infinite loop
@@ -248,7 +256,7 @@ function resolveImportsWithCycleDetection(context, functionDefinitions, visitedF
           // Cycle detected, skip this import to avoid infinite loop
           continue;
         }
-        
+
         try {
           const importedAst = parseFileWithESLint(resolvedPath, context);
           if (importedAst) {
@@ -290,7 +298,7 @@ function resolveImportsWithCycleDetection(context, functionDefinitions, visitedF
       }
     }
   }
-  
+
   // Remove current file from visited set when done processing
   visitedFiles.delete(filename);
 }
@@ -410,7 +418,12 @@ function extractFunctionDefinitions(ast) {
  * @param {Set} visitedFiles - Set of files currently being processed (for cycle detection)
  * @returns {Map} - Map of re-exported function names to definitions
  */
-function resolveReExportsWithCycleDetection(ast, currentFilePath, context, visitedFiles) {
+function resolveReExportsWithCycleDetection(
+  ast,
+  currentFilePath,
+  context,
+  visitedFiles,
+) {
   const reExportedFunctions = new Map();
 
   function traverse(node) {
@@ -435,7 +448,7 @@ function resolveReExportsWithCycleDetection(ast, currentFilePath, context, visit
           // Cycle detected, skip this re-export to avoid infinite loop
           return;
         }
-        
+
         try {
           const reExportedAst = parseFileWithESLint(resolvedFromPath, context);
           if (reExportedAst) {
