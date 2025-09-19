@@ -65,81 +65,78 @@ export function analyzeParameterPropagation(functionDef, functionDefinitions) {
       const calledFunctionName = node.callee.name;
       const calledFunction = functionDefinitions.get(calledFunctionName);
 
-      if (calledFunction) {
-        // Check arguments for objects with spread elements OR direct variable passing
-        for (let argIndex = 0; argIndex < node.arguments.length; argIndex++) {
-          const arg = node.arguments[argIndex];
+      // Process propagations for both internal and external functions
+      // For external functions, calledFunction will be null/undefined
+      // Check arguments for objects with spread elements OR direct variable passing
+      for (let argIndex = 0; argIndex < node.arguments.length; argIndex++) {
+        const arg = node.arguments[argIndex];
 
-          if (arg.type === "ObjectExpression") {
-            const spreadElements = [];
-            const directProperties = [];
+        if (arg.type === "ObjectExpression") {
+          const spreadElements = [];
+          const directProperties = [];
 
-            for (const prop of arg.properties) {
-              if (
-                prop.type === "SpreadElement" &&
-                prop.argument &&
-                prop.argument.type === "Identifier"
-              ) {
-                // Resolve variable name back to original through renaming chain
-                const originalName = resolveToOriginalVariable(
-                  prop.argument.name,
-                  renamingMap,
-                );
-                spreadElements.push(originalName);
-              } else if (
-                prop.type === "Property" &&
-                prop.key &&
-                prop.key.type === "Identifier"
-              ) {
-                directProperties.push(prop.key.name);
-              }
+          for (const prop of arg.properties) {
+            if (
+              prop.type === "SpreadElement" &&
+              prop.argument &&
+              prop.argument.type === "Identifier"
+            ) {
+              // Resolve variable name back to original through renaming chain
+              const originalName = resolveToOriginalVariable(
+                prop.argument.name,
+                renamingMap,
+              );
+              spreadElements.push(originalName);
+            } else if (
+              prop.type === "Property" &&
+              prop.key &&
+              prop.key.type === "Identifier"
+            ) {
+              directProperties.push(prop.key.name);
             }
+          }
 
-            if (spreadElements.length > 0) {
-              propagations.push({
-                targetFunction: calledFunctionName,
-                targetFunctionDef: calledFunction,
-                argumentIndex: argIndex,
-                spreadElements,
-                directProperties,
-              });
-            }
-          } else if (arg.type === "Identifier") {
-            // Direct variable passing like: targetFunction(rest) or targetFunction(titi)
-            // Resolve back to original variable (e.g., titi -> rest)
-            const originalName = resolveToOriginalVariable(
-              arg.name,
-              renamingMap,
-            );
+          if (spreadElements.length > 0) {
+            propagations.push({
+              targetFunction: calledFunctionName,
+              targetFunctionDef: calledFunction,
+              argumentIndex: argIndex,
+              spreadElements,
+              directProperties,
+            });
+          }
+        } else if (arg.type === "Identifier") {
+          // Direct variable passing like: targetFunction(rest) or targetFunction(titi)
+          // Resolve back to original variable (e.g., titi -> rest)
+          const originalName = resolveToOriginalVariable(arg.name, renamingMap);
 
-            // Check if this identifier is a rest parameter (either direct or renamed)
-            const restParams = [];
-            const functionParams = functionDef.params || [];
+          // Check if this identifier is a rest parameter (either direct or renamed)
+          const restParams = [];
+          const functionParams = functionDef.params || [];
 
-            for (const param of functionParams) {
-              if (param.type === "ObjectPattern") {
-                for (const prop of param.properties) {
-                  if (prop.type === "RestElement" && prop.argument?.name) {
-                    restParams.push(prop.argument.name);
-                  }
+          for (const param of functionParams) {
+            if (param.type === "ObjectPattern") {
+              for (const prop of param.properties) {
+                if (prop.type === "RestElement" && prop.argument?.name) {
+                  restParams.push(prop.argument.name);
                 }
               }
             }
+          }
 
-            // Add if this variable is a rest parameter or resolves to one
-            if (
-              restParams.includes(arg.name) ||
-              restParams.includes(originalName)
-            ) {
-              propagations.push({
-                targetFunction: calledFunctionName,
-                targetFunctionDef: calledFunction,
-                argumentIndex: argIndex,
-                spreadElements: [originalName], // The original rest param name
-                directProperties: [],
-                isDirectVariablePassing: true,
-              });
-            }
+          // Add if this variable is a rest parameter or resolves to one
+          if (
+            restParams.includes(arg.name) ||
+            restParams.includes(originalName)
+          ) {
+            propagations.push({
+              targetFunction: calledFunctionName,
+              targetFunctionDef: calledFunction,
+              argumentIndex: argIndex,
+              spreadElements: [originalName], // The original rest param name
+              directProperties: [],
+              isDirectVariablePassing: true,
+            });
           }
         }
       }
