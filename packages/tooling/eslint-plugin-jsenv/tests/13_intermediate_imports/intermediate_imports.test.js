@@ -16,37 +16,34 @@ const ruleTester = new RuleTester({
 const fixturesDir = join(__dirname, "fixtures");
 const mainFilePath = join(fixturesDir, "main.js");
 
-// Basic import resolution test - direct import from single file
+// Test intermediate import resolution - re-exports and chaining
 ruleTester.run(
-  "no-unknown-params basic import resolution",
+  "no-unknown-params intermediate import resolution",
   noUnknownParamsRule,
   {
     valid: [
       {
-        // Test with local function definition (should work)
+        // Test with intermediate file re-exports (should work)
         code: `
-        function processData({ id, name, ...rest }) {
-          console.log(id, name, rest);
-        }
+        import { processData, validateUser } from './intermediate.js';
         processData({ id: 1, name: "John" });
+        validateUser({ username: "john", email: "john@test.com" });
       `,
         filename: mainFilePath,
       },
     ],
     invalid: [
       {
-        // Test with local function definition WITHOUT rest parameter (should catch error)
+        // Test with intermediate file chain: main -> intermediate -> helper
         code: `
-        function processData({ id, name }) {
-          console.log(id, name);
-        }
+        import { processData, validateUser } from './intermediate.js';
         processData({ id: 1, name: "John", age: 30 });
+        validateUser({ username: "john", email: "john@test.com", isActive: true });
       `,
         output: `
-        function processData({ id, name }) {
-          console.log(id, name);
-        }
+        import { processData, validateUser } from './intermediate.js';
         processData({ id: 1, name: "John" });
+        validateUser({ username: "john", email: "john@test.com" });
       `,
         filename: mainFilePath,
         errors: [
@@ -54,23 +51,13 @@ ruleTester.run(
             messageId: "superfluous_param",
             data: { param: "age", func: "processData", expected: "id, name" },
           },
-        ],
-      },
-      // Test with imports (this should work once import resolution is functional)
-      {
-        code: `
-        import { processData } from './helper.js';
-        processData({ id: 1, name: "John", age: 30 });
-      `,
-        output: `
-        import { processData } from './helper.js';
-        processData({ id: 1, name: "John" });
-      `,
-        filename: mainFilePath,
-        errors: [
           {
             messageId: "superfluous_param",
-            data: { param: "age", func: "processData", expected: "id, name" },
+            data: {
+              param: "isActive",
+              func: "validateUser",
+              expected: "username, email",
+            },
           },
         ],
       },
@@ -78,4 +65,4 @@ ruleTester.run(
   },
 );
 
-console.log("✅ Basic import resolution tests passed!");
+console.log("✅ Intermediate import resolution tests passed!");
