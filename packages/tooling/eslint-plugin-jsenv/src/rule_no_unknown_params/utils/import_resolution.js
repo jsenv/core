@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { createRequire } from "module";
 import { dirname, resolve } from "path";
 
 /**
@@ -15,13 +16,22 @@ export function resolveImports(context, functionDefinitions) {
     return;
   }
 
+  // Get ESLint settings for import resolution
+  const settings = context.settings || {};
+  const importResolver =
+    settings["import-x/resolver"] || settings["import/resolver"];
+
   const ast = sourceCode.ast;
 
   // Find all import declarations
   for (const node of ast.body) {
     if (node.type === "ImportDeclaration") {
       const importPath = node.source.value;
-      const resolvedPath = resolveModulePath(importPath, filename);
+      const resolvedPath = resolveModulePath(
+        importPath,
+        filename,
+        importResolver,
+      );
 
       if (resolvedPath) {
         try {
@@ -58,10 +68,27 @@ export function resolveImports(context, functionDefinitions) {
  * Resolves a module path relative to the importing file
  * @param {string} importPath - The import path (e.g., './helper.js')
  * @param {string} currentFile - The current file path
+ * @param {Object} importResolver - ESLint import resolver settings
  * @returns {string|null} - Resolved absolute path or null
  */
-function resolveModulePath(importPath, currentFile) {
-  // Only handle relative imports for now
+function resolveModulePath(importPath, currentFile, importResolver) {
+  // Try using ESLint import resolver if available
+  if (importResolver) {
+    try {
+      const resolvedFile = resolveWithImportResolver(
+        importPath,
+        currentFile,
+        importResolver,
+      );
+      if (resolvedFile) {
+        return resolvedFile;
+      }
+    } catch {
+      // Fall back to default resolution if resolver fails
+    }
+  }
+
+  // Fallback: Only handle relative imports
   if (!importPath.startsWith("./") && !importPath.startsWith("../")) {
     return null;
   }
@@ -90,6 +117,38 @@ function parseImportedFile(filePath) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Resolves a module using ESLint import resolver configuration
+ * @param {string} importPath - The import specifier
+ * @param {string} currentFile - The importing file path
+ * @param {Object} importResolver - Import resolver settings from ESLint config
+ * @returns {string|null} - Resolved file path or null
+ */
+function resolveWithImportResolver(importPath, currentFile, importResolver) {
+  // Handle @jsenv/eslint-import-resolver
+  if (importResolver["@jsenv/eslint-import-resolver"]) {
+    try {
+      // Try to require the resolver synchronously
+      // This will work if the resolver is available as a dependency
+      const require = createRequire(import.meta.url);
+      const resolver = require("@jsenv/eslint-import-resolver");
+      const options = importResolver["@jsenv/eslint-import-resolver"];
+
+      const result = resolver.resolve(importPath, currentFile, options);
+
+      if (result.found && result.path) {
+        return result.path;
+      }
+    } catch {
+      // Resolver not available or failed, fall back silently
+    }
+  }
+
+  // Could add support for other resolvers here (node, webpack, etc.)
+
+  return null;
 }
 
 /**
