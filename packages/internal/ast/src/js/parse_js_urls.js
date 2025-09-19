@@ -178,7 +178,7 @@ export const parseJsUrls = ({
       if (isNewWorkerCall(node)) {
         analyzeNewWorkerCall(node, {
           isJsModule,
-          isNodeJs,
+          // isNodeJs,
           onUrl,
         });
         return;
