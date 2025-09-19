@@ -1033,17 +1033,19 @@ export default {
     },
     schema: [],
     messages: {
-      unknownParam: "'{{param}}' is not recognized in '{{func}}'.",
+      unknownParam: "'{{param}}' is not part of params declared by '{{func}}()'.",
       unknownParamChain:
-        "'{{param}}' is not recognized in call chain '{{chain}}'.",
+        "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → '{{secondFunc}}()'.",
       unknownParamLongChain:
-        "'{{param}}' is not recognized in call chain '{{firstFunc}}' → ... → '{{lastFunc}}'.",
+        "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → ... → '{{lastFunc}}()'.",
       unknownParamWithSuggestions:
-        "'{{param}}' is not recognized in '{{func}}'. Did you mean: {{suggestions}}?",
+        "'{{param}}' is not part of params declared by '{{func}}()'. Did you mean: {{suggestions}}?",
       unknownParamChainWithSuggestions:
-        "'{{param}}' is not recognized in call chain '{{chain}}'. Available parameters: {{available}}.",
+        "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → '{{secondFunc}}()'. Available parameters: {{available}}.",
+      unknownParamChainLongWithSuggestions:
+        "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → ... → '{{lastFunc}}()'. Available parameters: {{available}}.",
       extraneousParam:
-        "'{{param}}' is extraneous. '{{func}}' only accepts: {{expected}}.",
+        "'{{param}}' is extraneous. '{{func}}()' only accepts: {{expected}}.",
     },
   },
 
