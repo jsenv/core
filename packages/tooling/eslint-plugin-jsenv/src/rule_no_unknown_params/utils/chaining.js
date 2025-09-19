@@ -1,5 +1,38 @@
 import { analyzeParameterPropagation } from "./parameter_analysis.js";
 
+// Helper function to check if a parameter is used at all in the function body
+function acceptsAnyObjectProperty(paramName, functionDef) {
+  let found = false;
+
+  function traverse(node) {
+    if (found) return;
+    if (!node || typeof node !== "object") return;
+
+    // Check if parameter is referenced anywhere in the function body
+    if (node.type === "Identifier" && node.name === paramName) {
+      found = true;
+      return;
+    }
+
+    // Traverse child nodes, but skip the function parameters to avoid false positives
+    for (const key in node) {
+      if (key === "parent" || (node === functionDef && key === "params"))
+        continue;
+      const child = node[key];
+      if (Array.isArray(child)) {
+        for (const item of child) {
+          traverse(item);
+        }
+      } else {
+        traverse(child);
+      }
+    }
+  }
+
+  traverse(functionDef);
+  return found;
+}
+
 // Helper function to check if a parameter is used through function chaining
 export function checkParameterChaining(
   paramName,
@@ -86,6 +119,17 @@ export function checkParameterChaining(
                         return result;
                       }
                     }
+                  }
+                } else if (targetParam.type === "Identifier") {
+                  // Simple object parameter (e.g., stringifyAttributes(object))
+                  // Check if this parameter is used in a way that accepts any object property
+                  if (
+                    acceptsAnyObjectProperty(
+                      targetParam.name,
+                      targetFunctionDef,
+                    )
+                  ) {
+                    return { found: true, chain: currentChain };
                   }
                 } else if (targetParam.type === "AssignmentPattern") {
                   // Handle parameters with defaults
