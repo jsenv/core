@@ -1,6 +1,4 @@
 import { RuleTester } from "eslint";
-import { readFileSync } from "fs";
-import { join } from "path";
 import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
@@ -10,22 +8,45 @@ const ruleTester = new RuleTester({
   },
 });
 
-const fixturesDir = join(import.meta.dirname, "fixtures");
-
-const validCode = readFileSync(join(fixturesDir, "input_valid.js"), "utf8");
-const invalidCode = readFileSync(join(fixturesDir, "input_invalid.js"), "utf8");
-
 ruleTester.run("no-unknown-params - function chaining", rule, {
   valid: [
     {
       name: "parameter used through chaining with spread operator",
-      code: validCode,
+      code: `const toto = ({ a, ...rest }) => {
+  console.log(a);
+  tata({ ...rest, b: true });
+};
+
+const tata = ({ b }) => {
+  console.log(b);
+};
+
+toto({ a: true, b: false });`,
     },
   ],
   invalid: [
     {
       name: "parameter not used in chaining",
-      code: invalidCode,
+      code: `const toto = ({ a, ...rest }) => {
+  console.log(a);
+  tata({ ...rest, b: true });
+};
+
+const tata = ({ b }) => {
+  console.log(b);
+};
+
+toto({ a: true, c: true });`,
+      output: `const toto = ({ a, ...rest }) => {
+  console.log(a);
+  tata({ ...rest, b: true });
+};
+
+const tata = ({ b }) => {
+  console.log(b);
+};
+
+toto({ a: true });`,
       errors: [
         {
           messageId: "unknownParam",

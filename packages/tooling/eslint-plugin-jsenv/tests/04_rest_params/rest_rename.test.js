@@ -8,45 +8,48 @@ const ruleTester = new RuleTester({
   },
 });
 
-const validRestRenamed = `
-const validRestRename = ({ a, ...rest }) => {
-  console.log(a);
-  const titi = rest;
-  targetFunction(titi);
-};
-
-const targetFunction = ({ c }) => {
-  console.log(c);
-};
-
-validRestRename({ a: 1, c: true });
-`;
-
-const invalidRestRenamed = `
-const invalidRestRename = ({ a, ...rest }) => {
-  console.log(a);
-  const titi = rest;
-  targetFunction(titi);
-};
-
-const targetFunction = ({ c }) => {
-  console.log(c);
-};
-
-invalidRestRename({ a: 1, d: true });
-`;
-
 ruleTester.run("no-unknown-params - rest renaming", rule, {
   valid: [
     {
       name: "rest param renamed and passed to function that uses the property",
-      code: validRestRenamed,
+      code: `const validRestRename = ({ a, ...rest }) => {
+  console.log(a);
+  const titi = rest;
+  targetFunction(titi);
+};
+
+const targetFunction = ({ c }) => {
+  console.log(c);
+};
+
+validRestRename({ a: 1, c: true });`,
     },
   ],
   invalid: [
     {
       name: "rest param renamed but property not used by target function",
-      code: invalidRestRenamed,
+      code: `const invalidRestRename = ({ a, ...rest }) => {
+  console.log(a);
+  const titi = rest;
+  targetFunction(titi);
+};
+
+const targetFunction = ({ c }) => {
+  console.log(c);
+};
+
+invalidRestRename({ a: 1, d: true });`,
+      output: `const invalidRestRename = ({ a, ...rest }) => {
+  console.log(a);
+  const titi = rest;
+  targetFunction(titi);
+};
+
+const targetFunction = ({ c }) => {
+  console.log(c);
+};
+
+invalidRestRename({ a: 1 });`,
       errors: [
         {
           messageId: "unknownParam",

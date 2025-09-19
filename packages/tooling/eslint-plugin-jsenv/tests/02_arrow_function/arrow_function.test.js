@@ -1,6 +1,4 @@
 import { RuleTester } from "eslint";
-import { readFileSync } from "fs";
-import { join } from "path";
 import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
@@ -10,22 +8,21 @@ const ruleTester = new RuleTester({
   },
 });
 
-const fixturesDir = join(import.meta.dirname, "fixtures");
-
-const validCode = readFileSync(join(fixturesDir, "input_valid.js"), "utf8");
-const invalidCode = readFileSync(join(fixturesDir, "input_invalid.js"), "utf8");
-
 ruleTester.run("no-unknown-params - arrow function", rule, {
   valid: [
     {
       name: "arrow function uses all parameters",
-      code: validCode,
+      code: `const bar = ({ x }) => x * 2;
+bar({ x: 5 });`,
     },
   ],
   invalid: [
     {
       name: "arrow function with extra parameter",
-      code: invalidCode,
+      code: `const bar = ({ x }) => x * 2;
+bar({ x: 5, y: 10 });`,
+      output: `const bar = ({ x }) => x * 2;
+bar({ x: 5 });`,
       errors: [
         {
           messageId: "unknownParam",

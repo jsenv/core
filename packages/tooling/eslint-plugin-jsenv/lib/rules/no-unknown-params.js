@@ -570,7 +570,7 @@ function generateErrorMessage(
       };
     }
 
-    if (chain.length <= 3) {
+    if (chain.length === 1 || chain.length === 2) {
       return {
         messageId: "extraneousParamChain",
         data: {
@@ -616,7 +616,7 @@ function generateErrorMessage(
     };
   }
 
-  if (chain.length <= 3) {
+  if (chain.length === 1 || chain.length === 2) {
     // Short chain
     if (suggestions.length > 0 || availableParamsArray.length > 0) {
       return {
@@ -1252,24 +1252,23 @@ export default {
     hasSuggestions: true,
     schema: [],
     messages: {
-      unknownParam:
-        "'{{param}}' is not part of params declared by '{{func}}()'.",
+      unknownParam: "{{param}} does not exist in {{func}}()",
       unknownParamChain:
-        "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → '{{secondFunc}}()'.",
+        "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}()",
       unknownParamLongChain:
-        "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → ... → '{{lastFunc}}()'.",
+        "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}()",
       unknownParamWithSuggestions:
-        "'{{param}}' is not part of params declared by '{{func}}()'. Did you mean: {{suggestions}}?",
+        "{{param}} does not exist in {{func}}(). Did you mean: {{suggestions}}?",
       unknownParamChainWithSuggestions:
-        "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → '{{secondFunc}}()'. Available parameters: {{available}}.",
+        "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}(). Available parameters: {{available}}.",
       unknownParamChainLongWithSuggestions:
-        "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → ... → '{{lastFunc}}()'. Available parameters: {{available}}.",
+        "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}(). Available parameters: {{available}}.",
       extraneousParam:
-        "'{{param}}' is extraneous. '{{func}}()' only accepts: {{expected}}.",
+        "{{param}} is extraneous. {{func}}() only accepts: {{expected}}.",
       extraneousParamChain:
-        "'{{param}}' is extraneous. Call chain '{{firstFunc}}()' → '{{secondFunc}}()' only accepts: {{expected}}.",
+        "{{param}} is extraneous. {{firstFunc}}() -> {{secondFunc}}() only accepts: {{expected}}.",
       extraneousParamLongChain:
-        "'{{param}}' is extraneous. Call chain '{{firstFunc}}()' → ... → '{{lastFunc}}()' only accepts: {{expected}}.",
+        "{{param}} is extraneous. {{firstFunc}}() -> ... -> {{lastFunc}}() only accepts: {{expected}}.",
     },
   },
 

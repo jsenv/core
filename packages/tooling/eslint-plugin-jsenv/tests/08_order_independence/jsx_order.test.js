@@ -1,6 +1,4 @@
 import { RuleTester } from "eslint";
-import { readFileSync } from "fs";
-import { join } from "path";
 import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
@@ -15,22 +13,36 @@ const ruleTester = new RuleTester({
   },
 });
 
-const fixturesDir = join(import.meta.dirname, "fixtures");
-
-const validCode = readFileSync(join(fixturesDir, "jsx_valid.jsx"), "utf8");
-const invalidCode = readFileSync(join(fixturesDir, "jsx_invalid.jsx"), "utf8");
-
 ruleTester.run("no-unknown-params - JSX order independence", rule, {
   valid: [
     {
       name: "JSX usage before component definition - valid",
-      code: validCode,
+      code: `function ValidApp() {
+  return <ValidComponent title="Hello" />;
+}
+
+function ValidComponent({ title }) {
+  return <div>{title}</div>;
+}`,
     },
   ],
   invalid: [
     {
       name: "JSX usage before component definition - with extra prop",
-      code: invalidCode,
+      code: `function App() {
+  return <MyComponent title="Hello" extra="shouldWarn" />;
+}
+
+function MyComponent({ title }) {
+  return <div>{title}</div>;
+}`,
+      output: `function App() {
+  return <MyComponent title="Hello"  />;
+}
+
+function MyComponent({ title }) {
+  return <div>{title}</div>;
+}`,
       errors: [
         {
           messageId: "unknownParam",

@@ -1,6 +1,4 @@
 import { RuleTester } from "eslint";
-import { readFileSync } from "fs";
-import { join } from "path";
 import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
@@ -10,25 +8,42 @@ const ruleTester = new RuleTester({
   },
 });
 
-const fixturesDir = join(import.meta.dirname, "fixtures");
-
-const validCode = readFileSync(join(fixturesDir, "chaining_valid.js"), "utf8");
-const invalidCode = readFileSync(
-  join(fixturesDir, "chaining_invalid.js"),
-  "utf8",
-);
-
 ruleTester.run("no-unknown-params - chaining order independence", rule, {
   valid: [
     {
       name: "function chaining before definition - valid usage",
-      code: validCode,
+      code: `processValidData({ name: "test", age: 25 });
+
+function processValidData({ name, ...rest }) {
+  return handleValidRest({ ...rest });
+}
+
+function handleValidRest({ age }) {
+  return age;
+}`,
     },
   ],
   invalid: [
     {
       name: "function chaining before definition - with unused param",
-      code: invalidCode,
+      code: `processData({ name: "test", age: 25, unused: "value" });
+
+function processData({ name, ...rest }) {
+  return handleRest({ ...rest });
+}
+
+function handleRest({ age }) {
+  return age;
+}`,
+      output: `processData({ name: "test", age: 25 });
+
+function processData({ name, ...rest }) {
+  return handleRest({ ...rest });
+}
+
+function handleRest({ age }) {
+  return age;
+}`,
       errors: [
         {
           messageId: "unknownParam",

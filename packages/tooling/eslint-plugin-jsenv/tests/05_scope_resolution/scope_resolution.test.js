@@ -1,6 +1,4 @@
 import { RuleTester } from "eslint";
-import { readFileSync } from "fs";
-import { join } from "path";
 import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
@@ -10,22 +8,32 @@ const ruleTester = new RuleTester({
   },
 });
 
-const fixturesDir = join(import.meta.dirname, "fixtures");
-
-const validCode = readFileSync(join(fixturesDir, "input_valid.js"), "utf8");
-const invalidCode = readFileSync(join(fixturesDir, "input_invalid.js"), "utf8");
-
 ruleTester.run("no-unknown-params - scope resolution", rule, {
   valid: [
     {
       name: "function name reused in different scope (dynamic import)",
-      code: validCode,
+      code: `export const createSecureServer = async ({ certificate, privateKey }) => {
+  const { createSecureServer } = await import("https");
+  return createSecureServer({
+    cert: certificate,
+    key: privateKey,
+  });
+};`,
     },
   ],
   invalid: [
     {
       name: "simple case with extra parameter",
-      code: invalidCode,
+      code: `const simpleFunction = ({ used }) => {
+  return used;
+};
+
+simpleFunction({ used: "test", extraParam: "should error" });`,
+      output: `const simpleFunction = ({ used }) => {
+  return used;
+};
+
+simpleFunction({ used: "test" });`,
       errors: [
         {
           messageId: "unknownParam",
