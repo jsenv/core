@@ -84,9 +84,12 @@ export function analyzeCallExpression(
   if (callee.type !== "Identifier") return;
 
   const funcName = callee.name;
-  const functionDef = functionDefinitions.get(funcName);
+  const functionDefWrapper = functionDefinitions.get(funcName);
 
-  if (!functionDef) return;
+  if (!functionDefWrapper) return;
+
+  // Handle both wrapped format and direct node format for backward compatibility
+  const functionDef = functionDefWrapper.node || functionDefWrapper;
 
   // Check if this call is inside the function that we're tracking
   // and if that function has variable declarations that shadow the function name
@@ -111,6 +114,7 @@ export function analyzeCallExpression(
     }
   }
 
+  if (!functionDef.params) return;
   const params = functionDef.params;
   if (params.length === 0 || node.arguments.length === 0) return;
 
@@ -195,6 +199,7 @@ export function analyzeCallExpression(
                 givenParams,
                 context.getFilename(),
                 maxChainDepth,
+                functionDefWrapper.sourceFile,
               );
 
               const fixes = [];
@@ -270,6 +275,8 @@ export function analyzeCallExpression(
               givenParams,
               context.getFilename(),
               maxChainDepth,
+              functionDefWrapper.sourceFile,
+              maxChainDepth,
             );
 
             const fixes = [];
@@ -324,9 +331,13 @@ export function analyzeJSXElement(
   if (openingElement.name.type !== "JSXIdentifier") return;
 
   const componentName = openingElement.name.name;
-  const functionDef = functionDefinitions.get(componentName);
+  const functionDefWrapper = functionDefinitions.get(componentName);
 
-  if (!functionDef) return;
+  if (!functionDefWrapper) return;
+
+  // Handle both wrapped format and direct node format for backward compatibility
+  const functionDef = functionDefWrapper.node || functionDefWrapper;
+  if (!functionDef || !functionDef.params) return;
 
   const params = functionDef.params;
   if (params.length === 0 || openingElement.attributes.length === 0) return;
@@ -413,6 +424,7 @@ export function analyzeJSXElement(
               givenAttrs,
               context.getFilename(),
               maxChainDepth,
+              functionDefWrapper.sourceFile,
             );
 
             const fixes = [];
@@ -504,6 +516,7 @@ export function analyzeJSXElement(
             givenAttrs,
             context.getFilename(),
             maxChainDepth,
+            functionDefWrapper.sourceFile,
           );
 
           const fixes = [];

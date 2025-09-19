@@ -79,7 +79,10 @@ export function resolveWrapperReferences(functionDefinitions) {
   const wrapperReferences = new Map();
 
   // Find all wrapper references
-  for (const [name, funcDef] of functionDefinitions.entries()) {
+  for (const [name, funcDefWrapper] of functionDefinitions.entries()) {
+    // Handle both old format (direct nodes) and new format (wrapper objects)
+    const funcDef = funcDefWrapper?.node || funcDefWrapper;
+
     if (funcDef && funcDef.type === "WrapperReference") {
       wrapperReferences.set(name, funcDef.name);
     }
@@ -87,9 +90,26 @@ export function resolveWrapperReferences(functionDefinitions) {
 
   // Resolve wrapper references to actual function definitions
   for (const [wrapperName, referencedName] of wrapperReferences.entries()) {
-    const actualFunction = functionDefinitions.get(referencedName);
+    const actualFunctionWrapper = functionDefinitions.get(referencedName);
+    const actualFunction = actualFunctionWrapper?.node || actualFunctionWrapper;
+
     if (actualFunction && actualFunction.type !== "WrapperReference") {
-      functionDefinitions.set(wrapperName, actualFunction);
+      // Store the resolved function in the same wrapper format
+      const wrapperEntry = functionDefinitions.get(wrapperName);
+      if (
+        wrapperEntry &&
+        typeof wrapperEntry === "object" &&
+        wrapperEntry.node
+      ) {
+        // Update the node in the existing wrapper
+        functionDefinitions.set(wrapperName, {
+          ...wrapperEntry,
+          node: actualFunction,
+        });
+      } else {
+        // For backward compatibility with old format
+        functionDefinitions.set(wrapperName, actualFunction);
+      }
     }
   }
 }

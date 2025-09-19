@@ -89,8 +89,11 @@ export const noUnknownParamsRule = {
     return {
       // Collect function definitions
       "FunctionDeclaration"(node) {
-        if (node.id && node.id.name) {
-          functionDefinitions.set(node.id.name, node);
+        if (node.id && node.id.type === "Identifier") {
+          functionDefinitions.set(node.id.name, {
+            node,
+            sourceFile: context.getFilename(),
+          });
         }
       },
 
@@ -103,7 +106,10 @@ export const noUnknownParamsRule = {
           (node.init.type === "FunctionExpression" ||
             node.init.type === "ArrowFunctionExpression")
         ) {
-          functionDefinitions.set(node.id.name, node.init);
+          functionDefinitions.set(node.id.name, {
+            node: node.init,
+            sourceFile: context.getFilename(),
+          });
         } else if (
           node.id &&
           node.id.type === "Identifier" &&
@@ -113,8 +119,50 @@ export const noUnknownParamsRule = {
           // Handle wrapper functions like forwardRef(Component), memo(Component)
           const wrappedFunction = resolveWrapperFunction(node.init);
           if (wrappedFunction) {
-            functionDefinitions.set(node.id.name, wrappedFunction);
+            // console.log("Debug: Found wrapped function", node.id.name, "->", wrappedFunction);
+            functionDefinitions.set(node.id.name, {
+              node: wrappedFunction,
+              sourceFile: context.getFilename(),
+            });
           }
+        }
+      },
+
+      // Handle exported function declarations
+      "ExportNamedDeclaration"(node) {
+        if (
+          node.declaration?.type === "FunctionDeclaration" &&
+          node.declaration.id?.name
+        ) {
+          functionDefinitions.set(node.declaration.id.name, {
+            node: node.declaration,
+            sourceFile: context.getFilename(),
+          });
+        } else if (node.declaration?.type === "VariableDeclaration") {
+          for (const declarator of node.declaration.declarations) {
+            if (
+              declarator.id?.name &&
+              (declarator.init?.type === "FunctionExpression" ||
+                declarator.init?.type === "ArrowFunctionExpression")
+            ) {
+              functionDefinitions.set(declarator.id.name, {
+                node: declarator.init,
+                sourceFile: context.getFilename(),
+              });
+            }
+          }
+        }
+      },
+
+      "ExportDefaultDeclaration"(node) {
+        if (
+          node.declaration?.type === "FunctionDeclaration" &&
+          node.declaration.id?.name
+        ) {
+          functionDefinitions.set(node.declaration.id.name, {
+            node: node.declaration,
+            sourceFile: context.getFilename(),
+          });
         }
       },
 

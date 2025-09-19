@@ -96,7 +96,10 @@ export function checkParameterChaining(
                 return { found: true, chain: currentChain };
               }
 
-              const targetParams = targetFunctionDef.params;
+              // Handle both wrapped format and direct node format for backward compatibility
+              const targetFunctionNode =
+                targetFunctionDef.node || targetFunctionDef;
+              const targetParams = targetFunctionNode.params;
               if (argumentIndex < targetParams.length) {
                 const targetParam = targetParams[argumentIndex];
                 if (targetParam.type === "ObjectPattern") {
@@ -115,7 +118,7 @@ export function checkParameterChaining(
                       // Recursively check if this parameter is used further down the chain
                       const result = checkParameterChaining(
                         paramName,
-                        targetFunctionDef,
+                        targetFunctionNode,
                         functionDefinitions,
                         visited,
                         currentChain,
@@ -132,7 +135,7 @@ export function checkParameterChaining(
                   if (
                     acceptsAnyObjectProperty(
                       targetParam.name,
-                      targetFunctionDef,
+                      targetFunctionNode,
                     )
                   ) {
                     return { found: true, chain: currentChain };
@@ -221,8 +224,10 @@ export function collectChainParameters(
 
   for (const propagation of propagations) {
     const { targetFunctionDef } = propagation;
+    // Handle both wrapped format and direct node format for backward compatibility
+    const targetFunctionNode = targetFunctionDef?.node || targetFunctionDef;
     const targetParams = collectChainParameters(
-      targetFunctionDef,
+      targetFunctionNode,
       functionDefinitions,
       visited,
       maxChainDepth,

@@ -53,7 +53,7 @@ ruleTester.run(
               param: "age",
               func: "processData",
               expected: "id, name",
-              filePath: "./intermediate.js",
+              filePath: "./helper.js",
             },
           },
           {

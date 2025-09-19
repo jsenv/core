@@ -45,6 +45,7 @@ export function generateErrorMessage(
   givenParams = [],
   currentFilePath = null,
   maxChainDepth = 40,
+  functionSourceFile = null,
 ) {
   // Collect all available parameters in the function and its chain
   const availableParams = collectChainParameters(
@@ -98,7 +99,7 @@ export function generateErrorMessage(
   const lastFunc = chain.length > 0 ? chain[chain.length - 1] : functionName;
 
   // Check if function is from an imported file (different from current file)
-  const sourceFile = functionDef?.__sourceFile;
+  const sourceFile = functionSourceFile;
   const shouldShowFilePath =
     sourceFile && currentFilePath && sourceFile !== currentFilePath;
   const relativeFilePath = shouldShowFilePath

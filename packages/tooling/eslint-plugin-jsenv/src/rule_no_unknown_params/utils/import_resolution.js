@@ -267,7 +267,10 @@ function resolveImportsWithCycleDetection(
           const importedAst = parseFileWithESLint(resolvedPath, context);
           if (importedAst) {
             // Extract function definitions from imported file
-            const importedFunctions = extractFunctionDefinitions(importedAst);
+            const importedFunctions = extractFunctionDefinitions(
+              importedAst,
+              resolvedPath,
+            );
 
             // Handle re-exports only if not in a cycle to prevent infinite recursion
             if (!visitedFiles.has(resolvedPath)) {
@@ -364,9 +367,10 @@ function resolveModulePath(importPath, currentFile, importResolver) {
 /**
  * Extracts function definitions from an AST
  * @param {Object} ast - The AST to analyze
+ * @param {string} sourceFile - The file path where these functions are defined
  * @returns {Map} - Map of function name to function definition
  */
-function extractFunctionDefinitions(ast) {
+function extractFunctionDefinitions(ast, sourceFile = null) {
   const functions = new Map();
 
   function traverse(node) {
@@ -374,7 +378,10 @@ function extractFunctionDefinitions(ast) {
 
     // Handle function declarations
     if (node.type === "FunctionDeclaration" && node.id?.name) {
-      functions.set(node.id.name, node);
+      functions.set(node.id.name, {
+        node,
+        sourceFile: sourceFile || null,
+      });
     }
 
     // Handle exported function expressions
@@ -383,7 +390,10 @@ function extractFunctionDefinitions(ast) {
         node.declaration?.type === "FunctionDeclaration" &&
         node.declaration.id?.name
       ) {
-        functions.set(node.declaration.id.name, node.declaration);
+        functions.set(node.declaration.id.name, {
+          node: node.declaration,
+          sourceFile: sourceFile || null,
+        });
       } else if (node.declaration?.type === "VariableDeclaration") {
         for (const declarator of node.declaration.declarations) {
           if (
@@ -391,7 +401,10 @@ function extractFunctionDefinitions(ast) {
             (declarator.init?.type === "FunctionExpression" ||
               declarator.init?.type === "ArrowFunctionExpression")
           ) {
-            functions.set(declarator.id.name, declarator.init);
+            functions.set(declarator.id.name, {
+              node: declarator.init,
+              sourceFile: sourceFile || null,
+            });
           }
         }
       }
@@ -405,7 +418,10 @@ function extractFunctionDefinitions(ast) {
           (declarator.init?.type === "FunctionExpression" ||
             declarator.init?.type === "ArrowFunctionExpression")
         ) {
-          functions.set(declarator.id.name, declarator.init);
+          functions.set(declarator.id.name, {
+            node: declarator.init,
+            sourceFile: sourceFile || null,
+          });
         }
       }
     }
@@ -479,8 +495,10 @@ function resolveReExportsWithCycleDetection(
         try {
           const reExportedAst = parseFileWithESLint(resolvedFromPath, context);
           if (reExportedAst) {
-            const reExportedFileFunctions =
-              extractFunctionDefinitions(reExportedAst);
+            const reExportedFileFunctions = extractFunctionDefinitions(
+              reExportedAst,
+              resolvedFromPath,
+            );
 
             for (const specifier of node.specifiers) {
               if (specifier.type === "ExportSpecifier") {
