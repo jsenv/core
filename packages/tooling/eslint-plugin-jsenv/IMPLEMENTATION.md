@@ -58,7 +58,7 @@ This ESLint plugin implements a comprehensive `no-extra-params` rule that detect
 
 ## 🧪 Test Coverage
 
-The plugin includes comprehensive test coverage with **13 test suites**:
+The plugin includes comprehensive test coverage with **14 test suites**:
 
 1. **01_function_basic** - Basic function parameter detection
 2. **02_arrow_function** - Arrow function support
@@ -72,6 +72,10 @@ The plugin includes comprehensive test coverage with **13 test suites**:
    - React wrappers (forwardRef, memo)
    - Standard JavaScript wrappers (bind)
    - Inline function expressions
+10. **10_unknown_functions** - Unknown function handling
+    - External/global functions (window._, document._, etc.)
+    - Imported functions without definitions
+    - Dynamic function assignments
 
 ## 🚀 Technical Implementation
 
@@ -124,42 +128,17 @@ packages/tooling/eslint-plugin-jsenv/
 │   └── rules/
 │       └── no-extra-params.js     # Main rule implementation
 ├── tests/                         # Comprehensive test suite
-│   ├── 01_function_basic/
-│   │   └── fixtures/
-│   │       ├── input_valid.js
-│   │       └── input_invalid.js
-│   ├── 02_arrow_function/
-│   ├── 03_multiple_params/
-│   ├── 04_rest_params/
-│   ├── 05_scope_resolution/
-│   ├── 06_function_chaining/
-│   ├── 07_jsx/
-│   ├── 08_order_independence/      # Usage before definition tests
-│   │   ├── fixtures/
-│   │   │   ├── input_valid.js     # Basic usage patterns
-│   │   │   ├── input_invalid.js
-│   │   │   ├── jsx_valid.jsx      # JSX usage patterns
-│   │   │   ├── jsx_invalid.jsx
-│   │   │   ├── chaining_valid.js  # Chaining usage patterns
-│   │   │   └── chaining_invalid.js
-│   │   ├── order_independence.test.js
-│   │   ├── jsx_order.test.js
-│   │   └── chaining_order.test.js
-│   ├── 09_wrapper_functions/       # Wrapper function support tests
-│   │   ├── fixtures/
-│   │   │   ├── forwardref_valid.js    # forwardRef wrapper tests
-│   │   │   ├── forwardref_invalid.js
-│   │   │   ├── memo_valid.js          # memo wrapper tests
-│   │   │   ├── memo_invalid.js
-│   │   │   ├── react_wrappers_valid.js   # React.* wrappers
-│   │   │   ├── react_wrappers_invalid.js
-│   │   │   ├── bind_valid.js          # Function.bind tests
-│   │   │   ├── bind_invalid.js
-│   │   │   ├── inline_valid.js        # Inline expressions
-│   │   │   └── inline_invalid.js
-│   │   ├── wrapper_functions.test.js
-│   │   └── inline_wrapper.test.js
-│   └── run-all.js                 # Test runner
+│   ├── 01_function_basic/         # Basic function parameter detection
+│   ├── 02_arrow_function/         # Arrow function support
+│   ├── 03_multiple_params/        # Multiple parameter validation
+│   ├── 04_rest_params/           # Rest parameter detection and renaming
+│   ├── 05_scope_resolution/      # Variable shadowing and scope handling
+│   ├── 06_function_chaining/     # Parameter propagation analysis
+│   ├── 07_jsx/                   # JSX component prop validation
+│   ├── 08_order_independence/    # Usage before definition scenarios
+│   ├── 09_wrapper_functions/     # Wrapper function support (forwardRef, memo, bind)
+│   ├── 10_unknown_functions/     # Unknown function handling
+│   └── run-all.js               # Test runner
 ├── package.json
 └── index.js                       # Plugin entry point
 ```
