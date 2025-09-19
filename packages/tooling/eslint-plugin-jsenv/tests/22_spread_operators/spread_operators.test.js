@@ -20,7 +20,7 @@ const mainFilePath = join(fixturesDir, "main.js");
 ruleTester.run("no-unknown-params spread operators", noUnknownParamsRule, {
   valid: [
     {
-      // Valid usage - spread operator should pass parameters through
+      // Valid usage with imports - spread operator should pass parameters through
       code: `
         import { createAction } from './actions.js';
         
@@ -41,9 +41,31 @@ ruleTester.run("no-unknown-params spread operators", noUnknownParamsRule, {
       `,
       filename: mainFilePath,
     },
+    {
+      // Valid usage with inline functions - simple object parameter with default
+      code: `
+        // Simple object parameter function with default (like createAction)
+        function createAction(callback, rootOptions = {}) {
+          return { callback, ...rootOptions };
+        }
+        
+        // Wrapper that spreads to createAction
+        function createWrapper({ callback, ...options }) {
+          return createAction(callback, { ...options });
+        }
+        
+        // This should be valid - any option can be passed through
+        createWrapper({
+          callback: () => {},
+          compute: (id) => id,
+          anyProperty: "should work",
+        });
+      `,
+      filename: mainFilePath,
+    },
   ],
   invalid: [
-    // No invalid cases for this test since createAction accepts any parameters via ...otherOptions
+    // No invalid cases for this test since createAction accepts any parameters via ...otherOptions or rootOptions = {}
   ],
 });
 
