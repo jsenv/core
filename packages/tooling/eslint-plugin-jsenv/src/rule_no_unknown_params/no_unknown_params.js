@@ -36,6 +36,12 @@ export const noUnknownParamsRule = {
             default: 40,
             description: "Maximum depth for following function call chains",
           },
+          detailedMessage: {
+            type: "boolean",
+            default: false,
+            description:
+              "Include detailed debugging information in error messages",
+          },
         },
         additionalProperties: false,
       },
@@ -44,6 +50,10 @@ export const noUnknownParamsRule = {
       not_found_param: "{{param}} does not exist in {{func}}()",
       not_found_param_with_file:
         "{{param}} does not exist in {{func}}() (defined in {{filePath}})",
+      not_found_param_detailed:
+        "{{param}} does not exist in {{func}}() - Analysis: {{analysis}}",
+      not_found_param_with_file_detailed:
+        "{{param}} does not exist in {{func}}() (defined in {{filePath}}) - Analysis: {{analysis}}",
       not_found_param_chain:
         "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}()",
       not_found_param_chain_with_file:
@@ -84,6 +94,7 @@ export const noUnknownParamsRule = {
     const options = context.options[0] || {};
     const maxImportDepth = options.maxImportDepth || 12;
     const maxChainDepth = options.maxChainDepth || 40;
+    const detailedMessage = options.detailedMessage === true; // Default to false
 
     const functionDefinitions = new Map();
     const callsToAnalyze = [];
@@ -205,6 +216,7 @@ export const noUnknownParamsRule = {
               functionDefinitions,
               context,
               maxChainDepth,
+              detailedMessage,
             );
           }
 
@@ -215,6 +227,7 @@ export const noUnknownParamsRule = {
               functionDefinitions,
               context,
               maxChainDepth,
+              detailedMessage,
             );
           }
         } finally {

@@ -180,6 +180,7 @@ export function analyzeCallExpression(
   functionDefinitions,
   context,
   maxChainDepth = 40,
+  detailedMessage = false,
 ) {
   const callee = node.callee;
 
@@ -318,6 +319,7 @@ export function analyzeCallExpression(
                 context.getFilename(),
                 maxChainDepth,
                 functionDefWrapper.sourceFile,
+                detailedMessage,
               );
 
               const fixes = [];
@@ -394,7 +396,7 @@ export function analyzeCallExpression(
               context.getFilename(),
               maxChainDepth,
               functionDefWrapper.sourceFile,
-              maxChainDepth,
+              detailedMessage,
             );
 
             const fixes = [];
@@ -441,6 +443,7 @@ export function analyzeJSXElement(
   functionDefinitions,
   context,
   maxChainDepth = 40,
+  detailedMessage = false,
 ) {
   const openingElement = node.openingElement;
   if (!openingElement || !openingElement.name) return;
@@ -543,6 +546,7 @@ export function analyzeJSXElement(
               context.getFilename(),
               maxChainDepth,
               functionDefWrapper.sourceFile,
+              detailedMessage,
             );
 
             const fixes = [];
@@ -635,6 +639,7 @@ export function analyzeJSXElement(
             context.getFilename(),
             maxChainDepth,
             functionDefWrapper.sourceFile,
+            detailedMessage,
           );
 
           const fixes = [];

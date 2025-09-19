@@ -9,6 +9,7 @@ const ruleTester = new RuleTester({
 });
 
 // Test rest parameter tracking with dynamic imports vs static imports
+// Also has a failing test with detailedMessage enabled to demonstrate the debugging feature
 ruleTester.run(
   "rest parameter tracking - dynamic imports",
   noUnknownParamsRule,
@@ -65,7 +66,7 @@ ruleTester.run(
     ],
     invalid: [
       {
-        name: "local function should still validate parameters",
+        name: "local function should show regular error message (detailed disabled by default)",
         code: `
         // Local function that only accepts specific params
         const build = ({ logLevel }) => ({ logLevel });
@@ -77,7 +78,7 @@ ruleTester.run(
 
         test({
           expectedFileCount: 2,
-          versioning: false, // Should error - local build doesn't accept versioning
+          minification: false, // Should error - local build doesn't accept minification
         });
       `,
         output: `
@@ -90,13 +91,13 @@ ruleTester.run(
         };
 
         test({
-          expectedFileCount: 2, // Should error - local build doesn't accept versioning
+          expectedFileCount: 2, // Should error - local build doesn't accept minification
         });
       `,
         errors: [
           {
             messageId: "not_found_param",
-            data: { param: "versioning", func: "test" },
+            data: { param: "minification", func: "test" },
             type: "Property",
           },
         ],

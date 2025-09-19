@@ -46,6 +46,7 @@ export function generateErrorMessage(
   currentFilePath = null,
   maxChainDepth = 40,
   functionSourceFile = null,
+  detailedMessage = false,
 ) {
   // Collect all available parameters in the function and its chain
   const availableParams = collectChainParameters(
@@ -193,12 +194,47 @@ export function generateErrorMessage(
       };
     }
 
-    const messageId = shouldShowFilePath
-      ? "not_found_param_with_file"
-      : "not_found_param";
+    let messageId;
+    if (detailedMessage) {
+      messageId = shouldShowFilePath
+        ? "not_found_param_with_file_detailed"
+        : "not_found_param_detailed";
+    } else {
+      messageId = shouldShowFilePath
+        ? "not_found_param_with_file"
+        : "not_found_param";
+    }
+
     const data = { param: paramName, func: functionName };
     if (shouldShowFilePath) {
       data.filePath = relativeFilePath;
+    }
+
+    // Add detailed analysis information
+    if (detailedMessage) {
+      const hasRestParam = functionDef?.params?.some(
+        (p) =>
+          p.type === "ObjectPattern" &&
+          p.properties?.some((prop) => prop.type === "RestElement"),
+      );
+
+      const explicitParams = new Set();
+      if (functionDef?.params) {
+        for (const param of functionDef.params) {
+          if (param.type === "ObjectPattern") {
+            for (const prop of param.properties) {
+              if (prop.type === "Property" && prop.key?.name) {
+                explicitParams.add(prop.key.name);
+              }
+            }
+          }
+        }
+      }
+
+      const isExplicit = explicitParams.has(paramName);
+      const chainStr = chain.length > 0 ? chain.join(" -> ") : "none";
+
+      data.analysis = `Param '${paramName}' ${isExplicit ? "is explicit" : hasRestParam ? "goes to rest" : "not found"}. Function has ${explicitParams.size} explicit params: [${Array.from(explicitParams).join(", ")}]. Available in chain: [${availableParamsArray.join(", ")}]. Chain: ${chainStr}`;
     }
     return {
       messageId,
