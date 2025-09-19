@@ -8,11 +8,14 @@ const ruleTester = new RuleTester({
   },
 });
 
-ruleTester.run("no-unknown-params rest destructuring fix", noUnknownParamsRule, {
-  valid: [
-    {
-      name: "regular params should work",
-      code: `
+ruleTester.run(
+  "no-unknown-params rest destructuring fix",
+  noUnknownParamsRule,
+  {
+    valid: [
+      {
+        name: "regular params should work",
+        code: `
         import { build } from "@jsenv/core";
 
         const test = async (params) => {
@@ -23,10 +26,10 @@ ruleTester.run("no-unknown-params rest destructuring fix", noUnknownParamsRule, 
           versioning: false,
         });
       `,
-    },
-    {
-      name: "rest destructuring should work like regular params",
-      code: `
+      },
+      {
+        name: "rest destructuring should work like regular params",
+        code: `
         import { build } from "@jsenv/core";
 
         const test = async ({ ...params }) => {
@@ -37,7 +40,8 @@ ruleTester.run("no-unknown-params rest destructuring fix", noUnknownParamsRule, 
           versioning: false,
         });
       `,
-    },
-  ],
-  invalid: [],
-});
+      },
+    ],
+    invalid: [],
+  },
+);
