@@ -10,8 +10,6 @@ npm install @jsenv/eslint-plugin
 
 ## Usage
 
-The plugin is automatically included in `@jsenv/eslint-config-relax`. For manual setup:
-
 ```javascript
 // eslint.config.js
 import jsenvPlugin from "@jsenv/eslint-plugin";
@@ -28,6 +26,8 @@ export default [
 ];
 ```
 
+> The plugin is automatically included in `@jsenv/eslint-config-relax`. So if you use `@jsenv/eslint-config-relax` you already have it enabled.
+
 ## Rules
 
 ### `no-unknown-params`
@@ -41,13 +41,15 @@ Detects unknown parameters in function calls and JSX component props that are no
 function greet({ name }) {
   return `Hello ${name}`;
 }
-greet({ name: "John" }); // ✅ OK
+greet({
+  name: "John",
+});
 
 // JSX props match component parameters
 function Button({ title, onClick }) {
   return <button onClick={onClick}>{title}</button>;
 }
-<Button title="Click me" onClick={handleClick} />; // ✅ OK
+<Button title="Click me" onClick={handleClick} />;
 
 // Rest parameters with chaining
 function processData({ id, ...rest }) {
@@ -56,34 +58,46 @@ function processData({ id, ...rest }) {
 function sendToAPI({ data, options }) {
   // processes data and options
 }
-processData({ id: 1, data: "test", options: {} }); // ✅ OK
+processData({
+  id: 1,
+  data: "test",
+  options: {},
+});
 
 // Property renaming in destructuring
 function processUser({ name: userName, id: userId }) {
   console.log(userName, userId);
 }
-processUser({ name: "John", id: 123 }); // ✅ OK
+processUser({
+  name: "John",
+  id: 123,
+});
 
 // Wrapper functions
 const MemoButton = memo(Button);
-<MemoButton title="Click me" onClick={handleClick} />; // ✅ OK
+<MemoButton title="Click me" onClick={handleClick} />;
 ```
 
 #### ❌ Invalid
 
-````javascript
 ```javascript
 // Superfluous unused parameters
 function greet({ name }) {
   return `Hello ${name}`;
 }
-greet({ name: "John", age: 25 }); // ❌ 'age' is not used
+greet({
+  name: "John",
+  age: 25, // ❌ 'age' is not used
+});
 
 // Superfluous JSX props
 function Button({ onClick }) {
   return <button onClick={onClick}>Click me</button>;
 }
-<Button onClick={handleClick} disabled={true} />; // ❌ 'disabled' is not used
+<Button
+  onClick={handleClick}
+  disabled={true} // ❌ 'disabled' is not used
+/>;
 
 // Superfluous parameters in rest chains
 function processUser({ id, ...rest }) {
@@ -92,10 +106,12 @@ function processUser({ id, ...rest }) {
 function processData({ name, email }) {
   return { name, email };
 }
-processData({ id: 1, data: "test", unused: "superfluous" }); // ❌ 'unused' not used in chain
-
-// Property renaming with superfluous parameters
-````
+processData({
+  id: 1,
+  data: "test",
+  unused: "superfluous", // ❌ 'unused' not used in chain
+});
+```
 
 ## Features
 
