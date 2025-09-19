@@ -248,6 +248,16 @@ export function analyzeCallExpression(
 
     // If there's a rest element, we need to check chaining to see if rest properties are actually used
     if (hasRestElement) {
+      // Special case: if the rest parameter is the ONLY parameter `{ ...params }`,
+      // then this function accepts any parameters, similar to `(params) => ...`
+      const isOnlyRestParam =
+        param.properties.length === 1 &&
+        param.properties[0].type === "RestElement";
+      if (isOnlyRestParam) {
+        // Function signature like `({ ...params })` should accept any parameters
+        continue;
+      }
+
       // Get explicitly declared parameters (not in rest)
       const explicitProps = new Set(
         param.properties
