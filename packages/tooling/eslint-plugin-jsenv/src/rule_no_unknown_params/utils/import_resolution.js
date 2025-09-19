@@ -1,17 +1,33 @@
 import { readFileSync } from "fs";
 import { createRequire } from "module";
 import { dirname, resolve } from "path";
+import { fileParseCache } from "./file_parse_cache.js";
 
 /**
- * Parses an imported JavaScript file using ESLint's parser following eslint-plugin-import-x patterns
+ * Parses an imported JavaScript file using ESLint's parser with caching
+ * Based on eslint-plugin-import-x's export-map caching mechanism
  * @param {string} filePath - Path to the file to parse
  * @param {Object} context - ESLint context for parser options
  * @returns {Object|null} - AST or null if parsing fails
  */
 function parseFileWithESLint(filePath, context) {
   try {
+    // Check cache first
+    const cachedAst = fileParseCache.get(filePath, context);
+    if (cachedAst) {
+      return cachedAst;
+    }
+
+    // Cache miss - read and parse file
     const content = readFileSync(filePath, "utf-8");
-    return parseContent(filePath, content, context);
+    const ast = parseContent(filePath, content, context);
+
+    // Cache the result if parsing succeeded
+    if (ast) {
+      fileParseCache.set(filePath, context, ast);
+    }
+
+    return ast;
   } catch {
     // If parsing fails, return null and let the rule continue without import resolution
     return null;

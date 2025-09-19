@@ -1,6 +1,22 @@
 import { collectChainParameters } from "./chaining.js";
 import { calculateSimilarity, findSimilarParams } from "./suggestions.js";
 
+/**
+ * Formats a parameter list, shortening it if it's too long
+ * @param {Array<string>} params - Array of parameter names
+ * @param {number} maxShown - Maximum number of parameters to show before truncating (default: 5)
+ * @returns {string} - Formatted parameter list
+ */
+function formatParameterList(params, maxShown = 5) {
+  if (params.length <= maxShown) {
+    return params.join(", ");
+  }
+
+  const shown = params.slice(0, maxShown);
+  const remaining = params.length - maxShown;
+  return `${shown.join(", ")} and ${remaining} more`;
+}
+
 // Helper function to generate appropriate error message based on call chain
 export function generateErrorMessage(
   paramName,
@@ -73,7 +89,7 @@ export function generateErrorMessage(
         data: {
           param: paramName,
           func: functionName,
-          expected: Array.from(directParams).join(", "),
+          expected: formatParameterList(Array.from(directParams)),
         },
         autofixes,
       };
@@ -86,7 +102,7 @@ export function generateErrorMessage(
           param: paramName,
           firstFunc,
           secondFunc,
-          expected: Array.from(directParams).join(", "),
+          expected: formatParameterList(Array.from(directParams)),
         },
         autofixes,
       };
@@ -98,7 +114,7 @@ export function generateErrorMessage(
         param: paramName,
         firstFunc,
         lastFunc,
-        expected: Array.from(directParams).join(", "),
+        expected: formatParameterList(Array.from(directParams)),
       },
       autofixes,
     };
