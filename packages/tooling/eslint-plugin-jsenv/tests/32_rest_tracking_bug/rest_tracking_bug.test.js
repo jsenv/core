@@ -8,14 +8,14 @@ const ruleTester = new RuleTester({
   },
 });
 
-// Test rest parameter tracking with imported functions (user's reported case)
+// Test rest parameter tracking with dynamic imports vs static imports
 ruleTester.run(
-  "rest parameter tracking - imported functions",
+  "rest parameter tracking - dynamic imports",
   noUnknownParamsRule,
   {
     valid: [
       {
-        name: "mixed destructuring with imported function should work",
+        name: "static import should work",
         code: `
         import { build } from "@jsenv/core";
 
@@ -30,20 +30,77 @@ ruleTester.run(
       `,
       },
       {
-        name: "only rest parameter with imported function should work",
+        name: "dynamic import should also work",
         code: `
-        import { build } from "@jsenv/core";
-
-        const test = async ({ ...params }) => {
+        const test = async ({ expectedFileCount, ...params }) => {
+          const { build } = await import("@jsenv/core");
+          console.log(expectedFileCount);
           await build({ ...params });
         };
 
         test({
-          versioning: false
+          versioning: false, 
+        });
+      `,
+      },
+      {
+        name: "local function with dynamic import wrapper",
+        code: `
+        // Local function that dynamically imports and forwards parameters
+        const buildWrapper = async (options) => {
+          const { build } = await import("@jsenv/core");
+          return build(options);
+        };
+
+        const test = async ({ expectedFileCount, ...params }) => {
+          console.log(expectedFileCount);
+          await buildWrapper({ ...params });
+        };
+
+        test({
+          versioning: false, 
         });
       `,
       },
     ],
-    invalid: [],
+    invalid: [
+      {
+        name: "local function should still validate parameters",
+        code: `
+        // Local function that only accepts specific params
+        const build = ({ logLevel }) => ({ logLevel });
+
+        const test = async ({ expectedFileCount, ...params }) => {
+          console.log(expectedFileCount);
+          await build({ ...params }); // params spread to local function
+        };
+
+        test({
+          expectedFileCount: 2,
+          versioning: false, // Should error - local build doesn't accept versioning
+        });
+      `,
+        output: `
+        // Local function that only accepts specific params
+        const build = ({ logLevel }) => ({ logLevel });
+
+        const test = async ({ expectedFileCount, ...params }) => {
+          console.log(expectedFileCount);
+          await build({ ...params }); // params spread to local function
+        };
+
+        test({
+          expectedFileCount: 2, // Should error - local build doesn't accept versioning
+        });
+      `,
+        errors: [
+          {
+            messageId: "not_found_param",
+            data: { param: "versioning", func: "test" },
+            type: "Property",
+          },
+        ],
+      },
+    ],
   },
 );
