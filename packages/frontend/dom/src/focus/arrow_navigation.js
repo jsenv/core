@@ -84,8 +84,6 @@ const getTargetInLinearFocusGroup = (
       return previousElement;
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
-      direction,
-      loop,
       name,
     });
     if (ancestorTarget) {
@@ -115,8 +113,6 @@ const getTargetInLinearFocusGroup = (
       return nextElement;
     }
     const ancestorTarget = delegateArrowNavigation(event, element, {
-      direction,
-      loop,
       name,
     });
     if (ancestorTarget) {

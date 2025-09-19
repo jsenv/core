@@ -174,7 +174,6 @@ export const jsenvPluginDirectoryListing = ({
               const items = getDirectoryContentItems({
                 serverRootDirectoryUrl: rootDirectoryUrl,
                 mainFilePath,
-                requestedUrl,
                 firstExistingDirectoryUrl,
               });
               return items;
@@ -242,7 +241,6 @@ const generateDirectoryListingInjection = (
   const directoryContentItems = getDirectoryContentItems({
     serverRootDirectoryUrl,
     mainFilePath,
-    requestedUrl: urlNotFound,
     firstExistingDirectoryUrl,
   });
   package_workspaces: {

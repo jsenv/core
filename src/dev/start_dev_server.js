@@ -316,7 +316,6 @@ export const startDevServer = async ({
         runtimeCompat,
         clientRuntimeCompat,
         supervisor,
-        minification: false,
         sourcemaps,
         sourcemapsSourcesContent,
         outDirectoryUrl: outDirectoryUrl

@@ -22,7 +22,6 @@ export const jsenvPluginNodeEsmResolution = (
       );
     }
     return createNodeEsmResolver({
-      build: kitchenContext.build,
       runtimeCompat: kitchenContext.runtimeCompat,
       rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
       packageConditions,
@@ -39,7 +38,6 @@ export const jsenvPluginNodeEsmResolution = (
     appliesDuring: "*",
     init: (kitchenContext) => {
       nodeEsmResolverDefault = createNodeEsmResolver({
-        build: kitchenContext.build,
         runtimeCompat: kitchenContext.runtimeCompat,
         rootDirectoryUrl: kitchenContext.rootDirectoryUrl,
         preservesSymlink: true,

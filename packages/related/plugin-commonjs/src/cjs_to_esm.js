@@ -41,7 +41,6 @@ export const commonJsToJsModule = ({
           sourceUrl: sourceFileUrl,
           sourceContent: String(readFileSync(new URL(sourceFileUrl))),
           compiledUrl: compiledFileUrl,
-          compiledContent: content,
           sourcemap,
         });
         return {

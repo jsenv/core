@@ -1496,7 +1496,6 @@ let createRootNode;
 
     const rootNode = createNode({
       context,
-      id: nodeId,
       group: "root",
       value,
       parent: null,
