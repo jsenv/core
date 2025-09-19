@@ -89,7 +89,6 @@ export const jsenvPluginAsJsClassic = () => {
       }
 
       const { content, sourcemap } = await convertJsModuleToJsClassic({
-        rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
         input: jsModuleBundledUrlInfo.content,
         inputSourcemap: jsModuleBundledUrlInfo.sourcemap,
         inputUrl: urlInfo.url,
