@@ -83,7 +83,7 @@ mixed(
 );`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "extra", func: "mixed" },
           type: "Property",
         },
@@ -170,32 +170,32 @@ processRequest({
 });`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "debug", func: "initializeApp" },
           type: "Property",
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "timeout", func: "initializeApp" },
           type: "Property",
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "email", func: "createUser" },
           type: "Property",
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "age", func: "createUser" },
           type: "Property",
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "headers", func: "processRequest" },
           type: "Property",
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "timeout", func: "processRequest" },
           type: "Property",
         },
@@ -233,22 +233,22 @@ const invalidMultipleRename = ({ prop1: x, prop2: y }) => {
 invalidMultipleRename({ y: 2 });`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "b", func: "invalidRename1" },
           type: "Property",
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "c", func: "invalidRename2" },
           type: "Property",
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "x", func: "invalidMultipleRename" },
           type: "Property",
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "y", func: "invalidMultipleRename" },
           type: "Property",
         },

@@ -31,7 +31,7 @@ foo({ a: 1, b: 2 });`,
 foo({ a: 1 });`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "b", func: "foo" },
           type: "Property",
         },

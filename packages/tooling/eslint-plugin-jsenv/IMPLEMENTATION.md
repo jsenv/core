@@ -8,7 +8,7 @@ This ESLint plugin implements a comprehensive `no-unknown-params` rule that dete
 
 ### 1. Basic Function Parameter Detection
 
-- Detects extra parameters in function calls with object destructuring
+- Detects superfluous parameters in function calls with object destructuring
 - Supports both function declarations and arrow functions
 - Proper error reporting with function and parameter names
 
@@ -107,7 +107,7 @@ Advanced parameter propagation tracking through:
 Full JSX support treating component props as function parameters:
 
 ```jsx
-<MyComponent title="Hello" extra="unused" /> // extra flagged if unused
+<MyComponent title="Hello" superfluous="unused" /> // superfluous flagged if unused
 ```
 
 **JSX Test Pattern**: All React component tests use proper JSX syntax (`<Component prop="value" />`) instead of function calls to match real-world usage patterns.
@@ -129,7 +129,7 @@ const boundFunction = myFunction.bind(null);
 const InlineWrapper = forwardRef(({ title }) => <div>{title}</div>);
 
 // All validate against the original function signature
-WrappedComponent({ title: "Hello", extra: "flagged" }); // extra flagged
+WrappedComponent({ title: "Hello", superfluous: "flagged" }); // superfluous flagged
 ```
 
 ## 📁 Project Structure

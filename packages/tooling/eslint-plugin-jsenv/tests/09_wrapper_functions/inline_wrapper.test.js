@@ -60,11 +60,11 @@ ForwardRefInline({ title: "Hello" });
 MemoInline({ name: "John" });`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "extra1", func: "ForwardRefInline" },
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "extra2", func: "MemoInline" },
         },
       ],

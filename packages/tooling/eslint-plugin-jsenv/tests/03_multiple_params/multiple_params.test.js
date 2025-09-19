@@ -33,7 +33,7 @@ toto("hello", { b: 1, c: 2 });
 `,
       errors: [
         {
-          messageId: "superfluousParam",
+          messageId: "superfluous_param",
           data: { param: "d", func: "toto", expected: "b, c" },
           type: "Property",
         },

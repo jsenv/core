@@ -43,7 +43,7 @@ external.method({ x: true, y: false });
 knownFunction({ name: "test" });`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "extra", func: "knownFunction" },
         },
       ],

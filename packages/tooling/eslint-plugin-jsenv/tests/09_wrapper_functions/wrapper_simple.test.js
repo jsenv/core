@@ -89,7 +89,7 @@ const WrappedComponent = forwardRef(MyComponent);
 export const App = () => <WrappedComponent title="Hello"  />;`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "extra", func: "WrappedComponent" },
         },
       ],
@@ -112,7 +112,7 @@ const MemoizedComponent = memo(MyComponent);
 export const App = () => <MemoizedComponent name="John"  />;`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "unused", func: "MemoizedComponent" },
         },
       ],
@@ -147,11 +147,11 @@ export const App = () => (
 );`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "extra1", func: "ReactForwardRefComponent" },
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "extra2", func: "ReactMemoComponent" },
         },
       ],
@@ -174,7 +174,7 @@ const boundFunction = myFunction.bind(null);
 boundFunction({ name: "Alice" });`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "extra", func: "boundFunction" },
         },
       ],

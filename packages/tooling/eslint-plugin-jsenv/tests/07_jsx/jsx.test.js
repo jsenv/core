@@ -59,7 +59,7 @@ export const App = () => {
 };`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "b", func: "Toto" },
           type: "JSXAttribute",
         },
@@ -83,12 +83,12 @@ export const App = () => {
 };`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "disabled", func: "Button" },
           type: "JSXAttribute",
         },
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "size", func: "Button" },
           type: "JSXAttribute",
         },

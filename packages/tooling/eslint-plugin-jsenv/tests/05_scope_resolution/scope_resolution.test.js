@@ -36,7 +36,7 @@ simpleFunction({ used: "test", extraParam: "should error" });`,
 simpleFunction({ used: "test" });`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "extraParam", func: "simpleFunction" },
           type: "Property",
         },

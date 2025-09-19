@@ -518,6 +518,12 @@ function generateErrorMessage(
   const suggestions = findSimilarParams(paramName, availableParams);
   const bestSuggestion = suggestions.length > 0 ? suggestions[0] : null;
 
+  // Calculate similarity for high-confidence typo detection
+  const bestSimilarity = bestSuggestion
+    ? calculateSimilarity(paramName, bestSuggestion)
+    : 0;
+  const isHighConfidenceTypo = bestSimilarity > 0.8;
+
   // Check if this is a case where user provided exactly expected + one extra
   const directParams = new Set();
   if (functionDef.params) {
@@ -536,10 +542,10 @@ function generateErrorMessage(
     }
   }
 
-  // Check if this is an "extraneous" parameter
-  // Consider it extraneous if we have 2+ expected params and ALL are provided + extra
+  // Check if this is a "superfluous" parameter
+  // Consider it superfluous if we have 2+ expected params and ALL are provided + extra
   // This provides better error messages for cases with clear parameter expectations
-  const isExtraneous =
+  const isSuperfluous =
     directParams.size >= 2 &&
     Array.from(directParams).every((expected) =>
       givenParams.includes(expected),
@@ -550,17 +556,17 @@ function generateErrorMessage(
   const secondFunc = chain.length > 1 ? chain[1] : null;
   const lastFunc = chain.length > 0 ? chain[chain.length - 1] : functionName;
 
-  // Generate autofix functions
+  // Generate autofix functions - for high-confidence typos, only offer rename
   const autofixes = {
-    remove: true, // Always offer removal
+    remove: !isHighConfidenceTypo, // Skip remove for likely typos
     rename: bestSuggestion, // Only suggest rename if we have a good similarity match
   };
 
-  if (isExtraneous) {
+  if (isSuperfluous) {
     // Superfluous parameter cases
     if (chain.length === 0) {
       return {
-        messageId: "superfluousParam",
+        messageId: "superfluous_param",
         data: {
           param: paramName,
           func: functionName,
@@ -572,7 +578,7 @@ function generateErrorMessage(
 
     if (chain.length === 1 || chain.length === 2) {
       return {
-        messageId: "superfluousParamChain",
+        messageId: "superfluous_param_chain",
         data: {
           param: paramName,
           firstFunc,
@@ -584,7 +590,7 @@ function generateErrorMessage(
     }
 
     return {
-      messageId: "superfluousParamLongChain",
+      messageId: "superfluous_param_long_chain",
       data: {
         param: paramName,
         firstFunc,
@@ -599,7 +605,7 @@ function generateErrorMessage(
     // Simple case - no chain
     if (suggestions.length > 0) {
       return {
-        messageId: "notFoundParamWithSuggestions",
+        messageId: "not_found_param_with_suggestions",
         data: {
           param: paramName,
           func: functionName,
@@ -610,7 +616,7 @@ function generateErrorMessage(
     }
 
     return {
-      messageId: "notFoundParam",
+      messageId: "not_found_param",
       data: { param: paramName, func: functionName },
       autofixes,
     };
@@ -620,7 +626,7 @@ function generateErrorMessage(
     // Short chain
     if (suggestions.length > 0 || availableParamsArray.length > 0) {
       return {
-        messageId: "notFoundParamChainWithSuggestions",
+        messageId: "not_found_param_chain_with_suggestions",
         data: {
           param: paramName,
           firstFunc,
@@ -632,7 +638,7 @@ function generateErrorMessage(
     }
 
     return {
-      messageId: "notFoundParamChain",
+      messageId: "not_found_param_chain",
       data: { param: paramName, firstFunc, secondFunc },
       autofixes,
     };
@@ -641,7 +647,7 @@ function generateErrorMessage(
   // Long chain (4+ functions) - show abbreviated form
   if (suggestions.length > 0 || availableParamsArray.length > 0) {
     return {
-      messageId: "notFoundParamChainLongWithSuggestions",
+      messageId: "not_found_param_chain_long_with_suggestions",
       data: {
         param: paramName,
         firstFunc,
@@ -653,7 +659,7 @@ function generateErrorMessage(
   }
 
   return {
-    messageId: "notFoundParamLongChain",
+    messageId: "not_found_param_long_chain",
     data: { param: paramName, firstFunc, lastFunc },
     autofixes,
   };
@@ -1252,22 +1258,22 @@ export default {
     hasSuggestions: true,
     schema: [],
     messages: {
-      notFoundParam: "{{param}} does not exist in {{func}}()",
-      notFoundParamChain:
+      not_found_param: "{{param}} does not exist in {{func}}()",
+      not_found_param_chain:
         "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}()",
-      notFoundParamLongChain:
+      not_found_param_long_chain:
         "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}()",
-      notFoundParamWithSuggestions:
+      not_found_param_with_suggestions:
         "{{param}} does not exist in {{func}}(). Did you mean: {{suggestions}}?",
-      notFoundParamChainWithSuggestions:
+      not_found_param_chain_with_suggestions:
         "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}(). Available parameters: {{available}}.",
-      notFoundParamChainLongWithSuggestions:
+      not_found_param_chain_long_with_suggestions:
         "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}(). Available parameters: {{available}}.",
-      superfluousParam:
+      superfluous_param:
         "{{param}} is superfluous. {{func}}() only accepts: {{expected}}.",
-      superfluousParamChain:
+      superfluous_param_chain:
         "{{param}} is superfluous. {{firstFunc}}() -> {{secondFunc}}() only accepts: {{expected}}.",
-      superfluousParamLongChain:
+      superfluous_param_long_chain:
         "{{param}} is superfluous. {{firstFunc}}() -> ... -> {{lastFunc}}() only accepts: {{expected}}.",
     },
   },

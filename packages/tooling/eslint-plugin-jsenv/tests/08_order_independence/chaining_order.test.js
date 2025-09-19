@@ -46,7 +46,7 @@ function handleRest({ age }) {
 }`,
       errors: [
         {
-          messageId: "notFoundParam",
+          messageId: "not_found_param",
           data: { param: "unused", func: "processData" },
         },
       ],

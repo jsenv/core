@@ -71,34 +71,31 @@ const MemoButton = memo(Button);
 
 #### ❌ Invalid
 
+````javascript
 ```javascript
-// Extra unused parameters
+// Superfluous unused parameters
 function greet({ name }) {
   return `Hello ${name}`;
 }
 greet({ name: "John", age: 25 }); // ❌ 'age' is not used
 
-// Extra JSX props
-function Button({ title }) {
-  return <button>{title}</button>;
+// Superfluous JSX props
+function Button({ onClick }) {
+  return <button onClick={onClick}>Click me</button>;
 }
-<Button title="Click me" disabled />; // ❌ 'disabled' is not used
+<Button onClick={handleClick} disabled={true} />; // ❌ 'disabled' is not used
 
-// Extra parameters in rest chains
-function processData({ id, ...rest }) {
-  return sendToAPI({ ...rest });
+// Superfluous parameters in rest chains
+function processUser({ id, ...rest }) {
+  return processData(rest);
 }
-function sendToAPI({ data }) {
-  // only uses data
+function processData({ name, email }) {
+  return { name, email };
 }
-processData({ id: 1, data: "test", unused: "extra" }); // ❌ 'unused' not used in chain
+processData({ id: 1, data: "test", unused: "superfluous" }); // ❌ 'unused' not used in chain
 
-// Property renaming with extra parameters
-function processUser({ name: userName }) {
-  console.log(userName);
-}
-processUser({ name: "John", age: 30 }); // ❌ 'age' is not used
-```
+// Property renaming with superfluous parameters
+````
 
 ## Features
 
@@ -187,7 +184,7 @@ const ForwardedUserCard = forwardRef(UserCard);
   avatar="/avatar.jpg"
 />
 
-// ❌ Invalid - extra prop
+// ❌ Invalid - superfluous prop
 <ForwardedUserCard
   name="John Doe"
   email="john@example.com"
@@ -200,7 +197,7 @@ const ForwardedUserCard = forwardRef(UserCard);
 
 ```javascript
 // These are ignored - no analysis performed
-window.gtag({ event: "page_view", extra: "data" }); // ✅ Ignored
+window.gtag({ event: "page_view", data: "value" }); // ✅ Ignored
 console.log({ message: "hello", level: "debug" }); // ✅ Ignored
 external.api({ method: "POST", unused: "param" }); // ✅ Ignored
 
@@ -208,7 +205,7 @@ external.api({ method: "POST", unused: "param" }); // ✅ Ignored
 function myFunction({ name }) {
   return name;
 }
-myFunction({ name: "test", extra: "param" }); // ❌ 'extra' flagged
+myFunction({ name: "test", superfluous: "param" }); // ❌ 'superfluous' flagged
 ```
 
 ## Configuration
