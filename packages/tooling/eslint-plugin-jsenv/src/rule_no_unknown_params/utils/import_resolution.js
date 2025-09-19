@@ -2,8 +2,50 @@ import { readFileSync, statSync } from "fs";
 import { createRequire } from "module";
 import { dirname, resolve } from "path";
 
-// Simple file parsing cache similar to eslint-plugin-import-x
+// LRU Cache with size limit and timeout-based cleanup for file parsing
+const MAX_CACHE_SIZE = 1000;
+const CACHE_TIMEOUT_MS = 500000; // 500 seconds
 const fileParseCache = new Map();
+const cacheTimeouts = new Map(); // Track timeouts for each cache key
+
+/**
+ * Implements LRU eviction when cache exceeds MAX_CACHE_SIZE
+ */
+function evictLRU() {
+  if (fileParseCache.size >= MAX_CACHE_SIZE) {
+    // Get the first (oldest) key and delete it
+    const firstKey = fileParseCache.keys().next().value;
+    if (firstKey) {
+      fileParseCache.delete(firstKey);
+      // Also clear its timeout
+      const timeout = cacheTimeouts.get(firstKey);
+      if (timeout) {
+        clearTimeout(timeout);
+        cacheTimeouts.delete(firstKey);
+      }
+    }
+  }
+}
+
+/**
+ * Sets up or refreshes the timeout for a cache entry
+ */
+function setupCacheTimeout(cacheKey) {
+  // Clear existing timeout if any
+  const existingTimeout = cacheTimeouts.get(cacheKey);
+  if (existingTimeout) {
+    clearTimeout(existingTimeout);
+  }
+
+  // Set new timeout
+  const timeout = setTimeout(() => {
+    fileParseCache.delete(cacheKey);
+    cacheTimeouts.delete(cacheKey);
+  }, CACHE_TIMEOUT_MS);
+
+  // Use WeakRef to avoid memory leaks if timeout object is held
+  cacheTimeouts.set(cacheKey, timeout);
+}
 
 /**
  * Create cache key from file path and context (similar to eslint-plugin-import-x makeContextCacheKey)
@@ -53,11 +95,21 @@ function parseFileWithESLint(filePath, context) {
       try {
         const stats = statSync(filePath);
         if (cached.mtime === stats.mtime.valueOf()) {
+          // Cache hit - refresh timeout and move to end (LRU)
+          const value = fileParseCache.get(cacheKey);
+          fileParseCache.delete(cacheKey);
+          fileParseCache.set(cacheKey, value);
+          setupCacheTimeout(cacheKey);
           return cached.ast;
         }
       } catch {
         // File might not exist anymore, remove from cache
         fileParseCache.delete(cacheKey);
+        const timeout = cacheTimeouts.get(cacheKey);
+        if (timeout) {
+          clearTimeout(timeout);
+          cacheTimeouts.delete(cacheKey);
+        }
         return null;
       }
     }
@@ -70,10 +122,17 @@ function parseFileWithESLint(filePath, context) {
     if (ast) {
       try {
         const stats = statSync(filePath);
+
+        // Evict LRU entries if cache is full
+        evictLRU();
+
         fileParseCache.set(cacheKey, {
           ast,
           mtime: stats.mtime.valueOf(),
         });
+
+        // Set up timeout for this cache entry
+        setupCacheTimeout(cacheKey);
       } catch {
         // If we can't stat the file, don't cache it
       }
@@ -539,9 +598,14 @@ function resolveReExportsWithCycleDetection(
 }
 
 /**
- * Clear the file parse cache
+ * Clear the file parse cache and all timeouts
  */
 export function clearFileParseCache() {
+  // Clear all timeouts first
+  for (const timeout of cacheTimeouts.values()) {
+    clearTimeout(timeout);
+  }
+  cacheTimeouts.clear();
   fileParseCache.clear();
 }
 
@@ -562,8 +626,9 @@ export function cleanupFileParseCache(maxAge = 5 * 60 * 1000) {
   const keysToDelete = [];
 
   for (const [cacheKey, cached] of fileParseCache.entries()) {
-    // Extract file path from cache key (before the first \0)
-    const filePath = cacheKey.split("\0")[0];
+    // Extract file path from cache key (after the last \0)
+    const parts = cacheKey.split("\0");
+    const filePath = parts[parts.length - 1];
 
     try {
       const stats = statSync(filePath);
@@ -582,5 +647,33 @@ export function cleanupFileParseCache(maxAge = 5 * 60 * 1000) {
 
   for (const key of keysToDelete) {
     fileParseCache.delete(key);
+    const timeout = cacheTimeouts.get(key);
+    if (timeout) {
+      clearTimeout(timeout);
+      cacheTimeouts.delete(key);
+    }
+  }
+}
+
+/**
+ * Schedule cache cleanup to run periodically in Program:exit
+ * This ensures cache doesn't grow indefinitely but preserves useful entries
+ */
+export function scheduleMemoryCleanup() {
+  // Clean up stale entries
+  cleanupFileParseCache();
+
+  // If cache is still too large, force LRU eviction
+  while (fileParseCache.size > MAX_CACHE_SIZE * 0.8) {
+    // Keep 20% buffer
+    const firstKey = fileParseCache.keys().next().value;
+    if (!firstKey) break;
+
+    fileParseCache.delete(firstKey);
+    const timeout = cacheTimeouts.get(firstKey);
+    if (timeout) {
+      clearTimeout(timeout);
+      cacheTimeouts.delete(firstKey);
+    }
   }
 }

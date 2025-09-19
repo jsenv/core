@@ -1,5 +1,8 @@
 import { analyzeCallExpression, analyzeJSXElement } from "./utils/analysis.js";
-import { resolveImports } from "./utils/import_resolution.js";
+import {
+  resolveImports,
+  scheduleMemoryCleanup,
+} from "./utils/import_resolution.js";
 import {
   resolveWrapperFunction,
   resolveWrapperReferences,
@@ -188,30 +191,40 @@ export const noUnknownParamsRule = {
 
       // Analyze all collected calls and JSX after collecting all function definitions
       "Program:exit"() {
-        // First, resolve import statements to get imported function definitions
-        resolveImports(context, functionDefinitions, maxImportDepth);
+        try {
+          // First, resolve import statements to get imported function definitions
+          resolveImports(context, functionDefinitions, maxImportDepth);
 
-        // Then, resolve wrapper function references
-        resolveWrapperReferences(functionDefinitions);
+          // Then, resolve wrapper function references
+          resolveWrapperReferences(functionDefinitions);
 
-        // Process all collected function calls
-        for (const callNode of callsToAnalyze) {
-          analyzeCallExpression(
-            callNode,
-            functionDefinitions,
-            context,
-            maxChainDepth,
-          );
-        }
+          // Process all collected function calls
+          for (const callNode of callsToAnalyze) {
+            analyzeCallExpression(
+              callNode,
+              functionDefinitions,
+              context,
+              maxChainDepth,
+            );
+          }
 
-        // Process all collected JSX elements
-        for (const jsxNode of jsxElementsToAnalyze) {
-          analyzeJSXElement(
-            jsxNode,
-            functionDefinitions,
-            context,
-            maxChainDepth,
-          );
+          // Process all collected JSX elements
+          for (const jsxNode of jsxElementsToAnalyze) {
+            analyzeJSXElement(
+              jsxNode,
+              functionDefinitions,
+              context,
+              maxChainDepth,
+            );
+          }
+        } finally {
+          // Clean up per-file analysis state to prevent memory leaks
+          functionDefinitions.clear();
+          callsToAnalyze.length = 0;
+          jsxElementsToAnalyze.length = 0;
+
+          // Schedule cache cleanup (but keep fileParseCache for reuse across files)
+          scheduleMemoryCleanup();
         }
       },
     };
