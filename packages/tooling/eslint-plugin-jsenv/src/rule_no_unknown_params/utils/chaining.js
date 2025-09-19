@@ -90,6 +90,12 @@ export function checkParameterChaining(
 
             if (!explicitParams.includes(paramName)) {
               // Parameter is in rest, check if target function accepts it
+
+              // If target function is external (no source code available), assume all params are valid
+              if (!targetFunctionDef) {
+                return { found: true, chain: currentChain };
+              }
+
               const targetParams = targetFunctionDef.params;
               if (argumentIndex < targetParams.length) {
                 const targetParam = targetParams[argumentIndex];
