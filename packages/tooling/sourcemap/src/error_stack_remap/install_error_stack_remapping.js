@@ -58,12 +58,10 @@ export const installErrorStackRemapping = ({
 
     const stackRemappingPromise = remapStack({
       stack,
-      error,
       resolveFile,
       fetchFile: memoizeFetch(fetchFile),
       SourceMapConsumer,
       readErrorStack,
-      indent,
       onFailure,
     });
     errorRemappingCache.set(error, stackRemappingPromise);

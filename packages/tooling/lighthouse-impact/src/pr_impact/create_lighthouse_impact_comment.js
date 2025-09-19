@@ -51,8 +51,6 @@ export const createLighthouseImpactComment = ({
 ${renderBody({
   beforeMergeLighthouseReport,
   afterMergeLighthouseReport,
-  pullRequestBase,
-  pullRequestHead,
 })}
 `,
         ]
@@ -77,16 +75,12 @@ ${renderBody({
 const renderBody = ({
   beforeMergeLighthouseReport,
   afterMergeLighthouseReport,
-  pullRequestBase,
-  pullRequestHead,
 }) => {
   return Object.keys(afterMergeLighthouseReport.categories).map(
     (categoryName) => {
       return renderCategory(categoryName, {
         beforeMergeLighthouseReport,
         afterMergeLighthouseReport,
-        pullRequestBase,
-        pullRequestHead,
       });
     },
   ).join(`

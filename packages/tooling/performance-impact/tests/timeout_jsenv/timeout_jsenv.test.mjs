@@ -9,7 +9,6 @@ const measureFilePerformance = async (params) => {
     runtime: nodeWorkerThread(),
     ...params,
     // measurePerformance: true,
-    compileServerCanWriteOnFilesystem: false,
     collectPerformance: true,
   });
   const { measures } = executionResult.performance;

@@ -21,7 +21,6 @@ export const jsenvFormatPerformanceImpactCell = ({
     metricValueBeforeMerge,
   });
   const diffAsPercentageFormatted = formatImpactAsPercentage({
-    metricUnit,
     metricValueBeforeMerge,
     metricValueAfterMerge,
   });

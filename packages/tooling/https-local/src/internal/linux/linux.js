@@ -13,7 +13,6 @@ export const executeTrustQuery = async ({
 }) => {
   const linuxTrustInfo = await executeTrustQueryOnLinux({
     logger,
-    certificateCommonName,
     certificateFileUrl,
     certificateIsNew,
     certificate,
