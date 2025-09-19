@@ -248,12 +248,13 @@ function checkParameterChaining(
   functionDef,
   functionDefinitions,
   visited = new Set(),
+  chain = [],
 ) {
   // Avoid infinite recursion
   const functionKey =
     functionDef.id?.name || functionDef.parent?.id?.name || "anonymous";
   if (visited.has(functionKey)) {
-    return false;
+    return { found: false, chain: [] };
   }
   visited.add(functionKey);
 
@@ -263,7 +264,12 @@ function checkParameterChaining(
   );
 
   for (const propagation of propagations) {
-    const { targetFunctionDef, spreadElements, argumentIndex } = propagation;
+    const { targetFunction, targetFunctionDef, spreadElements, argumentIndex } =
+      propagation;
+    const currentChain =
+      chain.length === 0
+        ? [functionKey, targetFunction]
+        : [...chain, targetFunction];
 
     // Check if this parameter could be propagated via spread elements
     const functionParams = functionDef.params;
@@ -297,19 +303,21 @@ function checkParameterChaining(
                       targetProp.key.type === "Identifier" &&
                       targetProp.key.name === paramName
                     ) {
-                      return true; // Parameter is used in target function
+                      // Parameter is used in target function - return success with full chain
+                      return { found: true, chain: currentChain };
                     }
                     // If target has rest element, recursively check its chain
                     if (targetProp.type === "RestElement") {
                       // Recursively check if this parameter is used further down the chain
-                      const isUsedInChain = checkParameterChaining(
+                      const result = checkParameterChaining(
                         paramName,
                         targetFunctionDef,
                         functionDefinitions,
                         visited,
+                        currentChain,
                       );
-                      if (isUsedInChain) {
-                        return true;
+                      if (result.found) {
+                        return result;
                       }
                     }
                   }
@@ -322,7 +330,35 @@ function checkParameterChaining(
     }
   }
 
-  return false;
+  return { found: false, chain: [] };
+}
+
+// Helper function to generate appropriate error message based on call chain
+function generateErrorMessage(paramName, functionName, chain) {
+  if (chain.length === 0) {
+    // Simple case - no chain information or direct call
+    return {
+      messageId: "unknownParam",
+      data: { param: paramName, func: functionName },
+    };
+  }
+
+  if (chain.length <= 3) {
+    // Short chain - show full path
+    const chainStr = chain.join(" → ");
+    return {
+      messageId: "unknownParamChain",
+      data: { param: paramName, chain: chainStr },
+    };
+  }
+
+  // Long chain - show abbreviated form
+  const firstFunc = chain[0];
+  const lastFunc = chain[chain.length - 1];
+  return {
+    messageId: "unknownParamLongChain",
+    data: { param: paramName, firstFunc, lastFunc },
+  };
 }
 
 // Helper function to find variable declarations in a function that match a name
@@ -476,17 +512,22 @@ function analyzeCallExpression(node, functionDefinitions, context) {
           const keyName = prop.key.name;
           if (!explicitProps.has(keyName)) {
             // This property goes into rest - check if it's used in chaining
-            const isUsedInChain = checkParameterChaining(
+            const chainResult = checkParameterChaining(
               keyName,
               functionDef,
               functionDefinitions,
             );
 
-            if (!isUsedInChain) {
+            if (!chainResult.found) {
+              const { messageId, data } = generateErrorMessage(
+                keyName,
+                funcName,
+                chainResult.chain,
+              );
               context.report({
                 node: prop,
-                messageId: "unknownParam",
-                data: { param: keyName, func: funcName },
+                messageId,
+                data,
               });
             }
           }
@@ -506,17 +547,22 @@ function analyzeCallExpression(node, functionDefinitions, context) {
         const keyName = prop.key.name;
         if (!allowedProps.has(keyName)) {
           // Check if this parameter is used through function chaining
-          const isUsedInChain = checkParameterChaining(
+          const chainResult = checkParameterChaining(
             keyName,
             functionDef,
             functionDefinitions,
           );
 
-          if (!isUsedInChain) {
+          if (!chainResult.found) {
+            const { messageId, data } = generateErrorMessage(
+              keyName,
+              funcName,
+              chainResult.chain,
+            );
             context.report({
               node: prop,
-              messageId: "unknownParam",
-              data: { param: keyName, func: funcName },
+              messageId,
+              data,
             });
           }
         }
@@ -684,17 +730,22 @@ function analyzeJSXElement(node, functionDefinitions, context) {
         const attrName = attr.name.name;
         if (!explicitProps.has(attrName)) {
           // This attribute goes into rest - check if it's used in chaining
-          const isUsedInChain = checkParameterChaining(
+          const chainResult = checkParameterChaining(
             attrName,
             functionDef,
             functionDefinitions,
           );
 
-          if (!isUsedInChain) {
+          if (!chainResult.found) {
+            const { messageId, data } = generateErrorMessage(
+              attrName,
+              componentName,
+              chainResult.chain,
+            );
             context.report({
               node: attr,
-              messageId: "unknownParam",
-              data: { param: attrName, func: componentName },
+              messageId,
+              data,
             });
           }
         }
@@ -719,17 +770,22 @@ function analyzeJSXElement(node, functionDefinitions, context) {
       const attrName = attr.name.name;
       if (!allowedProps.has(attrName)) {
         // Check if this parameter is used through function chaining
-        const isUsedInChain = checkParameterChaining(
+        const chainResult = checkParameterChaining(
           attrName,
           functionDef,
           functionDefinitions,
         );
 
-        if (!isUsedInChain) {
+        if (!chainResult.found) {
+          const { messageId, data } = generateErrorMessage(
+            attrName,
+            componentName,
+            chainResult.chain,
+          );
           context.report({
             node: attr,
-            messageId: "unknownParam",
-            data: { param: attrName, func: componentName },
+            messageId,
+            data,
           });
         }
       }
@@ -749,6 +805,10 @@ export default {
     schema: [],
     messages: {
       unknownParam: "'{{param}}' is not recognized in '{{func}}'.",
+      unknownParamChain:
+        "'{{param}}' is not recognized in call chain '{{chain}}'.",
+      unknownParamLongChain:
+        "'{{param}}' is not recognized in call chain '{{firstFunc}}' → ... → '{{lastFunc}}'.",
     },
   },
 
