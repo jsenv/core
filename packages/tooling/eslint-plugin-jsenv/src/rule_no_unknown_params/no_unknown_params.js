@@ -1,4 +1,5 @@
 import { analyzeCallExpression, analyzeJSXElement } from "./utils/analysis.js";
+import { resolveImports } from "./utils/import_resolution.js";
 import {
   resolveWrapperFunction,
   resolveWrapperReferences,
@@ -96,7 +97,10 @@ export const noUnknownParamsRule = {
 
       // Analyze all collected calls and JSX after collecting all function definitions
       "Program:exit"() {
-        // First, resolve wrapper function references
+        // First, resolve import statements to get imported function definitions
+        resolveImports(context, functionDefinitions);
+
+        // Then, resolve wrapper function references
         resolveWrapperReferences(functionDefinitions);
 
         // Process all collected function calls

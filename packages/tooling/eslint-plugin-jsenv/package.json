@@ -19,6 +19,9 @@
   "scripts": {
     "test": "node ./tests/run-all.js"
   },
+  "devDependencies": {
+    "eslint": "9.35.0"
+  },
   "engines": {
     "node": ">=18.0.0"
   }
