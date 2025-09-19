@@ -8,11 +8,14 @@ const ruleTester = new RuleTester({
   },
 });
 
-ruleTester.run("no-unknown-params - simple object parameters", noUnknownParamsRule, {
-  valid: [
-    {
-      name: "Object.keys() usage accepts any property via rest parameter",
-      code: `const stringifyAttributes = (object) => {
+ruleTester.run(
+  "no-unknown-params - simple object parameters",
+  noUnknownParamsRule,
+  {
+    valid: [
+      {
+        name: "Object.keys() usage accepts any property via rest parameter",
+        code: `const stringifyAttributes = (object) => {
   let string = "";
   Object.keys(object).forEach((key) => {
     const value = object[key];
@@ -30,10 +33,10 @@ const createHtmlNode = ({ tagName, children = "", ...rest }) => {
 
 // This should be valid because stringifyAttributes uses the object parameter
 createHtmlNode({ tagName: "div", src: "image.jpg", alt: "Image", className: "test" });`,
-    },
-    {
-      name: "Simple console.log usage accepts any property",
-      code: `const logObject = (obj) => {
+      },
+      {
+        name: "Simple console.log usage accepts any property",
+        code: `const logObject = (obj) => {
   console.log(obj);
 };
 
@@ -43,10 +46,10 @@ const processData = ({ id, ...metadata }) => {
 
 // Should be valid because logObject uses the obj parameter
 processData({ id: 1, name: "test", category: "data", extra: "info" });`,
-    },
-    {
-      name: "Parameter used in expression accepts any property",
-      code: `const processConfig = (config) => {
+      },
+      {
+        name: "Parameter used in expression accepts any property",
+        code: `const processConfig = (config) => {
   return "Config: " + config;
 };
 
@@ -56,10 +59,10 @@ const setup = ({ env, ...options }) => {
 
 // Should be valid because processConfig uses the config parameter
 setup({ env: "prod", debug: true, cache: false, timeout: 5000 });`,
-    },
-    {
-      name: "Parameter used in conditional accepts any property",
-      code: `const validateOptions = (opts) => {
+      },
+      {
+        name: "Parameter used in conditional accepts any property",
+        code: `const validateOptions = (opts) => {
   if (opts) {
     return true;
   }
@@ -72,10 +75,10 @@ const initialize = ({ mode, ...settings }) => {
 
 // Should be valid because validateOptions references the opts parameter
 initialize({ mode: "test", verbose: true, strict: false });`,
-    },
-    {
-      name: "Parameter used with property access accepts any property",
-      code: `const getTitle = (data) => {
+      },
+      {
+        name: "Parameter used with property access accepts any property",
+        code: `const getTitle = (data) => {
   return data.title || "Default";
 };
 
@@ -85,12 +88,12 @@ const render = ({ type, ...props }) => {
 
 // Should be valid because getTitle accesses properties on the data parameter
 render({ type: "page", title: "Home", description: "Welcome", meta: {} });`,
-    },
-  ],
-  invalid: [
-    {
-      name: "Unused parameter should still report errors for unknown properties",
-      code: `const ignoreParam = (unused) => {
+      },
+    ],
+    invalid: [
+      {
+        name: "Unused parameter should still report errors for unknown properties",
+        code: `const ignoreParam = (unused) => {
   return "fixed result";
 };
 
@@ -104,7 +107,7 @@ const directCall = ({ id }) => {
 
 // This should error because directCall doesn't accept 'name' property
 directCall({ id: 1, name: "invalid" });`,
-      output: `const ignoreParam = (unused) => {
+        output: `const ignoreParam = (unused) => {
   return "fixed result";
 };
 
@@ -118,15 +121,16 @@ const directCall = ({ id }) => {
 
 // This should error because directCall doesn't accept 'name' property
 directCall({ id: 1 });`,
-      errors: [
-        {
-          messageId: "not_found_param",
-          data: { param: "name", func: "directCall" },
-          type: "Property",
-        },
-      ],
-    },
-  ],
-});
+        errors: [
+          {
+            messageId: "not_found_param",
+            data: { param: "name", func: "directCall" },
+            type: "Property",
+          },
+        ],
+      },
+    ],
+  },
+);
 
 console.log("✅ Simple object parameters tests completed!");
