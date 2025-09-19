@@ -251,29 +251,25 @@ function resolveImportsWithCycleDetection(
       );
 
       if (resolvedPath) {
-        // Check for cycle before processing
-        if (visitedFiles.has(resolvedPath)) {
-          // Cycle detected, skip this import to avoid infinite loop
-          continue;
-        }
-
         try {
           const importedAst = parseFileWithESLint(resolvedPath, context);
           if (importedAst) {
             // Extract function definitions from imported file
             const importedFunctions = extractFunctionDefinitions(importedAst);
 
-            // Handle re-exports by resolving them recursively with cycle detection
-            const reExportedFunctions = resolveReExportsWithCycleDetection(
-              importedAst,
-              resolvedPath,
-              context,
-              visitedFiles,
-            );
+            // Handle re-exports only if not in a cycle to prevent infinite recursion
+            if (!visitedFiles.has(resolvedPath)) {
+              const reExportedFunctions = resolveReExportsWithCycleDetection(
+                importedAst,
+                resolvedPath,
+                context,
+                visitedFiles,
+              );
 
-            // Merge re-exported functions with directly defined functions
-            for (const [name, func] of reExportedFunctions) {
-              importedFunctions.set(name, func);
+              // Merge re-exported functions with directly defined functions
+              for (const [name, func] of reExportedFunctions) {
+                importedFunctions.set(name, func);
+              }
             }
 
             // Map imported names to local names

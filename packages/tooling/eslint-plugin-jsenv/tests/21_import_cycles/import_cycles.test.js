@@ -30,29 +30,35 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
   ],
   invalid: [
     {
-      // Test that our rule doesn't crash on cycles - it should handle gracefully
-      // The exact error messages may vary based on cycle handling, but no infinite loops
+      // Test that we can analyze function parameters even with import cycles
+      // Now that we parse files without recursively following imports, this should work
       code: `
         import { helperFunction } from "./file_b.js";
         
-        // Just test that calling an imported function with extra params works
+        // Test calling imported function with correct params + invalid param
         helperFunction({
-          invalidParam: "this should be caught without crashing"
+          userId: 1,
+          processData: "test", 
+          options: { key: "value" },
+          invalidParam: "should be caught as superfluous"
         });
       `,
       output: `
         import { helperFunction } from "./file_b.js";
         
-        // Just test that calling an imported function with extra params works
+        // Test calling imported function with correct params + invalid param
         helperFunction({
-          
+          userId: 1,
+          processData: "test", 
+          options: { key: "value" }
         });
       `,
       filename:
         "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/21_import_cycles/file_a.js",
       errors: [
         {
-          message: "invalidParam does not exist in helperFunction()",
+          message:
+            "invalidParam is superfluous. helperFunction() only accepts: userId, processData, options.",
           type: "Property",
         },
       ],
