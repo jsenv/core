@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
-import { dirname, resolve } from "path";
 import { createRequire } from "module";
+import { dirname, resolve } from "path";
 
 /**
  * Parses an imported JavaScript file using ESLint's parser following eslint-plugin-import-x patterns
