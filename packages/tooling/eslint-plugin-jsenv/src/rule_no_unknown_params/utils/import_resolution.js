@@ -1,7 +1,38 @@
-import { readFileSync } from "fs";
+import { readFileSync, statSync } from "fs";
 import { createRequire } from "module";
 import { dirname, resolve } from "path";
-import { fileParseCache } from "./file_parse_cache.js";
+
+// Simple file parsing cache similar to eslint-plugin-import-x
+const fileParseCache = new Map();
+
+/**
+ * Create cache key from file path and context (similar to eslint-plugin-import-x makeContextCacheKey)
+ * @param {string} filePath - File path
+ * @param {Object} context - ESLint context
+ * @returns {string} - Cache key
+ */
+function createCacheKey(filePath, context) {
+  // If context already has a cacheKey (like eslint-plugin-import-x childContext), use it
+  if (context.cacheKey) {
+    return `${context.cacheKey}\0${filePath}`;
+  }
+
+  // Build cache key similar to eslint-plugin-import-x makeContextCacheKey
+  const { settings, parserOptions, languageOptions, cwd } = context;
+  const parserOpts = languageOptions?.parserOptions || parserOptions || {};
+
+  let hash = cwd || "";
+  hash = `${hash}\0${JSON.stringify(settings || {})}`;
+  hash = `${hash}\0${JSON.stringify(parserOpts)}`;
+
+  if (languageOptions) {
+    hash = `${hash}\0${String(languageOptions.ecmaVersion)}`;
+    hash = `${hash}\0${String(languageOptions.sourceType)}`;
+    hash = `${hash}\0${JSON.stringify(languageOptions.parser || "espree")}`;
+  }
+
+  return `${hash}\0${filePath}`;
+}
 
 /**
  * Parses an imported JavaScript file using ESLint's parser with caching
@@ -12,19 +43,40 @@ import { fileParseCache } from "./file_parse_cache.js";
  */
 function parseFileWithESLint(filePath, context) {
   try {
-    // Check cache first
-    const cachedAst = fileParseCache.get(filePath, context);
-    if (cachedAst) {
-      return cachedAst;
+    const cacheKey = createCacheKey(filePath, context);
+
+    // Check if we have a cached version
+    if (fileParseCache.has(cacheKey)) {
+      const cached = fileParseCache.get(cacheKey);
+
+      // Check mtime to see if file has been modified
+      try {
+        const stats = statSync(filePath);
+        if (cached.mtime === stats.mtime.valueOf()) {
+          return cached.ast;
+        }
+      } catch {
+        // File might not exist anymore, remove from cache
+        fileParseCache.delete(cacheKey);
+        return null;
+      }
     }
 
-    // Cache miss - read and parse file
+    // Cache miss or file modified - read and parse file
     const content = readFileSync(filePath, "utf-8");
     const ast = parseContent(filePath, content, context);
 
     // Cache the result if parsing succeeded
     if (ast) {
-      fileParseCache.set(filePath, context, ast);
+      try {
+        const stats = statSync(filePath);
+        fileParseCache.set(cacheKey, {
+          ast,
+          mtime: stats.mtime.valueOf(),
+        });
+      } catch {
+        // If we can't stat the file, don't cache it
+      }
     }
 
     return ast;
@@ -389,4 +441,51 @@ function resolveReExports(ast, currentFilePath, context) {
 
   traverse(ast);
   return reExportedFunctions;
+}
+
+/**
+ * Clear the file parse cache
+ */
+export function clearFileParseCache() {
+  fileParseCache.clear();
+}
+
+/**
+ * Get cache size for debugging/monitoring
+ * @returns {number} - Number of cached entries
+ */
+export function getFileParseCacheSize() {
+  return fileParseCache.size;
+}
+
+/**
+ * Clean up stale cache entries (files that no longer exist or are very old)
+ * @param {number} maxAge - Maximum age in milliseconds (default: 5 minutes)
+ */
+export function cleanupFileParseCache(maxAge = 5 * 60 * 1000) {
+  const now = Date.now();
+  const keysToDelete = [];
+
+  for (const [cacheKey, cached] of fileParseCache.entries()) {
+    // Extract file path from cache key (before the first \0)
+    const filePath = cacheKey.split("\0")[0];
+
+    try {
+      const stats = statSync(filePath);
+      // Remove if file is older than maxAge or mtime doesn't match
+      if (
+        now - stats.mtime.valueOf() > maxAge ||
+        cached.mtime !== stats.mtime.valueOf()
+      ) {
+        keysToDelete.push(cacheKey);
+      }
+    } catch {
+      // File doesn't exist anymore, remove from cache
+      keysToDelete.push(cacheKey);
+    }
+  }
+
+  for (const key of keysToDelete) {
+    fileParseCache.delete(key);
+  }
 }

@@ -1,6 +1,6 @@
 import { noUnknownParamsRule } from "@jsenv/eslint-plugin";
 import { RuleTester } from "eslint";
-import { fileParseCache } from "../../src/rule_no_unknown_params/utils/file_parse_cache.js";
+import { clearFileParseCache } from "../../src/rule_no_unknown_params/utils/import_resolution.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -10,7 +10,7 @@ const ruleTester = new RuleTester({
 });
 
 // Clear cache before tests - this demonstrates the caching API is available
-fileParseCache.clear();
+clearFileParseCache();
 
 // Test caching behavior with import resolution
 ruleTester.run("no-unknown-params caching mechanism", noUnknownParamsRule, {
