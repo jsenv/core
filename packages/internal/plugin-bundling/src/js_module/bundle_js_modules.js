@@ -29,7 +29,7 @@ export const bundleJsModules = async (
   },
 ) => {
   const {
-    signal,
+    // signal,
     logger,
     rootDirectoryUrl,
     packageDirectory,
@@ -167,8 +167,8 @@ export const bundleJsModules = async (
         rollupPlugins: [
           ...rollupPlugins,
           rollupPluginJsenv({
-            signal,
-            logger,
+            // signal,
+            // logger,
             rootDirectoryUrl,
             buildDirectoryUrl,
             graph,
@@ -176,7 +176,7 @@ export const bundleJsModules = async (
             PATH_AND_URL_CONVERTER,
             kitchen,
 
-            runtimeCompat,
+            // runtimeCompat,
             sourcemaps,
             include,
             preserveDynamicImports,
