@@ -58,7 +58,7 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
       errors: [
         {
           message:
-            "invalidParam is superfluous. helperFunction() only accepts: userId, processData, options.",
+            "invalidParam is superfluous. helperFunction() (defined in ./file_b.js) only accepts: userId, processData, options.",
           type: "Property",
         },
       ],

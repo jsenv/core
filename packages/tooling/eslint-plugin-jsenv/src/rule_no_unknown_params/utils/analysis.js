@@ -178,6 +178,7 @@ export function analyzeCallExpression(node, functionDefinitions, context) {
                 functionDef,
                 functionDefinitions,
                 givenParams,
+                context.getFilename(),
               );
 
               const fixes = [];
@@ -248,6 +249,7 @@ export function analyzeCallExpression(node, functionDefinitions, context) {
               functionDef,
               functionDefinitions,
               givenParams,
+              context.getFilename(),
             );
 
             const fixes = [];
@@ -375,6 +377,7 @@ export function analyzeJSXElement(node, functionDefinitions, context) {
               functionDef,
               functionDefinitions,
               givenAttrs,
+              context.getFilename(),
             );
 
             const fixes = [];
@@ -455,6 +458,7 @@ export function analyzeJSXElement(node, functionDefinitions, context) {
             functionDef,
             functionDefinitions,
             givenAttrs,
+            context.getFilename(),
           );
 
           const fixes = [];

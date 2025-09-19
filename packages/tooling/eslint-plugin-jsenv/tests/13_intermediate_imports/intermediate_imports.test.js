@@ -48,15 +48,21 @@ ruleTester.run(
         filename: mainFilePath,
         errors: [
           {
-            messageId: "superfluous_param",
-            data: { param: "age", func: "processData", expected: "id, name" },
+            messageId: "superfluous_param_with_file",
+            data: {
+              param: "age",
+              func: "processData",
+              expected: "id, name",
+              filePath: "./intermediate.js",
+            },
           },
           {
-            messageId: "superfluous_param",
+            messageId: "superfluous_param_with_file",
             data: {
               param: "isActive",
               func: "validateUser",
               expected: "username, email",
+              filePath: "./intermediate.js",
             },
           },
         ],

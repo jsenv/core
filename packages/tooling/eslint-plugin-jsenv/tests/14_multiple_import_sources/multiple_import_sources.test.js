@@ -61,21 +61,22 @@ ruleTester.run(
         errors: [
           {
             message:
-              "age is superfluous. createUser() only accepts: name, email, role.",
+              "age is superfluous. createUser() (defined in ./user-ops.js) only accepts: name, email, role.",
             type: "Property",
           },
           {
             message:
-              "force is superfluous. updateUser() only accepts: id, updates.",
-            type: "Property",
-          },
-          {
-            message: "strict does not exist in validateEmail()",
+              "force is superfluous. updateUser() (defined in ./user-ops.js) only accepts: id, updates.",
             type: "Property",
           },
           {
             message:
-              "throwOnError is superfluous. validateData() only accepts: data, schema.",
+              "strict does not exist in validateEmail() (defined in ./validators.js)",
+            type: "Property",
+          },
+          {
+            message:
+              "throwOnError is superfluous. validateData() (defined in ./validators.js) only accepts: data, schema.",
             type: "Property",
           },
         ],

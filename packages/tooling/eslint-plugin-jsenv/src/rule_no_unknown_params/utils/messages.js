@@ -1,5 +1,23 @@
+import { dirname, relative } from "path";
 import { collectChainParameters } from "./chaining.js";
 import { calculateSimilarity, findSimilarParams } from "./suggestions.js";
+
+/**
+ * Get relative file path for display in error messages
+ * @param {string} sourceFile - Absolute path to the source file
+ * @param {string} currentFile - Absolute path to the current file being linted
+ * @returns {string} - Relative path for display
+ */
+function getRelativeFilePath(sourceFile, currentFile) {
+  try {
+    const relativePath = relative(dirname(currentFile), sourceFile);
+    // Ensure it starts with ./ for clarity
+    return relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
+  } catch {
+    // Fallback to just the filename if relative path fails
+    return sourceFile.split("/").pop() || sourceFile;
+  }
+}
 
 /**
  * Formats a parameter list, shortening it if it's too long
@@ -25,6 +43,7 @@ export function generateErrorMessage(
   functionDef,
   functionDefinitions,
   givenParams = [],
+  currentFilePath = null,
 ) {
   // Collect all available parameters in the function and its chain
   const availableParams = collectChainParameters(
@@ -75,6 +94,14 @@ export function generateErrorMessage(
   const secondFunc = chain.length > 1 ? chain[1] : null;
   const lastFunc = chain.length > 0 ? chain[chain.length - 1] : functionName;
 
+  // Check if function is from an imported file (different from current file)
+  const sourceFile = functionDef?.__sourceFile;
+  const shouldShowFilePath =
+    sourceFile && currentFilePath && sourceFile !== currentFilePath;
+  const relativeFilePath = shouldShowFilePath
+    ? getRelativeFilePath(sourceFile, currentFilePath)
+    : null;
+
   // Generate autofix functions - for high-confidence typos, only offer rename
   const autofixes = {
     remove: !isHighConfidenceTypo, // Skip remove for likely typos
@@ -84,38 +111,59 @@ export function generateErrorMessage(
   if (isSuperfluous) {
     // Superfluous parameter cases
     if (chain.length === 0) {
+      const messageId = shouldShowFilePath
+        ? "superfluous_param_with_file"
+        : "superfluous_param";
+      const data = {
+        param: paramName,
+        func: functionName,
+        expected: formatParameterList(Array.from(directParams)),
+      };
+      if (shouldShowFilePath) {
+        data.filePath = relativeFilePath;
+      }
       return {
-        messageId: "superfluous_param",
-        data: {
-          param: paramName,
-          func: functionName,
-          expected: formatParameterList(Array.from(directParams)),
-        },
+        messageId,
+        data,
         autofixes,
       };
     }
 
     if (chain.length === 1 || chain.length === 2) {
+      const messageId = shouldShowFilePath
+        ? "superfluous_param_chain_with_file"
+        : "superfluous_param_chain";
+      const data = {
+        param: paramName,
+        firstFunc,
+        secondFunc,
+        expected: formatParameterList(Array.from(directParams)),
+      };
+      if (shouldShowFilePath) {
+        data.filePath = relativeFilePath;
+      }
       return {
-        messageId: "superfluous_param_chain",
-        data: {
-          param: paramName,
-          firstFunc,
-          secondFunc,
-          expected: formatParameterList(Array.from(directParams)),
-        },
+        messageId,
+        data,
         autofixes,
       };
     }
 
+    const messageId = shouldShowFilePath
+      ? "superfluous_param_long_chain_with_file"
+      : "superfluous_param_long_chain";
+    const data = {
+      param: paramName,
+      firstFunc,
+      lastFunc,
+      expected: formatParameterList(Array.from(directParams)),
+    };
+    if (shouldShowFilePath) {
+      data.filePath = relativeFilePath;
+    }
     return {
-      messageId: "superfluous_param_long_chain",
-      data: {
-        param: paramName,
-        firstFunc,
-        lastFunc,
-        expected: formatParameterList(Array.from(directParams)),
-      },
+      messageId,
+      data,
       autofixes,
     };
   }
@@ -123,20 +171,34 @@ export function generateErrorMessage(
   if (chain.length === 0) {
     // Simple case - no chain
     if (suggestions.length > 0) {
+      const messageId = shouldShowFilePath
+        ? "not_found_param_with_suggestions_and_file"
+        : "not_found_param_with_suggestions";
+      const data = {
+        param: paramName,
+        func: functionName,
+        suggestions: suggestions.join(", "),
+      };
+      if (shouldShowFilePath) {
+        data.filePath = relativeFilePath;
+      }
       return {
-        messageId: "not_found_param_with_suggestions",
-        data: {
-          param: paramName,
-          func: functionName,
-          suggestions: suggestions.join(", "),
-        },
+        messageId,
+        data,
         autofixes,
       };
     }
 
+    const messageId = shouldShowFilePath
+      ? "not_found_param_with_file"
+      : "not_found_param";
+    const data = { param: paramName, func: functionName };
+    if (shouldShowFilePath) {
+      data.filePath = relativeFilePath;
+    }
     return {
-      messageId: "not_found_param",
-      data: { param: paramName, func: functionName },
+      messageId,
+      data,
       autofixes,
     };
   }
@@ -144,42 +206,70 @@ export function generateErrorMessage(
   if (chain.length === 1 || chain.length === 2) {
     // Short chain
     if (suggestions.length > 0 || availableParamsArray.length > 0) {
+      const messageId = shouldShowFilePath
+        ? "not_found_param_chain_with_suggestions_and_file"
+        : "not_found_param_chain_with_suggestions";
+      const data = {
+        param: paramName,
+        firstFunc,
+        secondFunc,
+        available: availableParamsArray.join(", "),
+      };
+      if (shouldShowFilePath) {
+        data.filePath = relativeFilePath;
+      }
       return {
-        messageId: "not_found_param_chain_with_suggestions",
-        data: {
-          param: paramName,
-          firstFunc,
-          secondFunc,
-          available: availableParamsArray.join(", "),
-        },
+        messageId,
+        data,
         autofixes,
       };
     }
 
+    const messageId = shouldShowFilePath
+      ? "not_found_param_chain_with_file"
+      : "not_found_param_chain";
+    const data = { param: paramName, firstFunc, secondFunc };
+    if (shouldShowFilePath) {
+      data.filePath = relativeFilePath;
+    }
     return {
-      messageId: "not_found_param_chain",
-      data: { param: paramName, firstFunc, secondFunc },
+      messageId,
+      data,
       autofixes,
     };
   }
 
   // Long chain (4+ functions) - show abbreviated form
   if (suggestions.length > 0 || availableParamsArray.length > 0) {
+    const messageId = shouldShowFilePath
+      ? "not_found_param_chain_long_with_suggestions_and_file"
+      : "not_found_param_chain_long_with_suggestions";
+    const data = {
+      param: paramName,
+      firstFunc,
+      lastFunc,
+      available: availableParamsArray.join(", "),
+    };
+    if (shouldShowFilePath) {
+      data.filePath = relativeFilePath;
+    }
     return {
-      messageId: "not_found_param_chain_long_with_suggestions",
-      data: {
-        param: paramName,
-        firstFunc,
-        lastFunc,
-        available: availableParamsArray.join(", "),
-      },
+      messageId,
+      data,
       autofixes,
     };
   }
 
+  const messageId = shouldShowFilePath
+    ? "not_found_param_long_chain_with_file"
+    : "not_found_param_long_chain";
+  const data = { param: paramName, firstFunc, lastFunc };
+  if (shouldShowFilePath) {
+    data.filePath = relativeFilePath;
+  }
   return {
-    messageId: "not_found_param_long_chain",
-    data: { param: paramName, firstFunc, lastFunc },
+    messageId,
+    data,
     autofixes,
   };
 }

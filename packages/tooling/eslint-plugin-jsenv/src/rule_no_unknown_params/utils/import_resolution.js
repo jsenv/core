@@ -268,7 +268,12 @@ function resolveImportsWithCycleDetection(
 
               // Merge re-exported functions with directly defined functions
               for (const [name, func] of reExportedFunctions) {
-                importedFunctions.set(name, func);
+                // Add source file metadata to re-exported function
+                const functionWithSource = {
+                  ...func,
+                  __sourceFile: resolvedPath,
+                };
+                importedFunctions.set(name, functionWithSource);
               }
             }
 
@@ -279,10 +284,13 @@ function resolveImportsWithCycleDetection(
                 const localName = specifier.local.name;
 
                 if (importedFunctions.has(importedName)) {
-                  functionDefinitions.set(
-                    localName,
-                    importedFunctions.get(importedName),
-                  );
+                  const functionNode = importedFunctions.get(importedName);
+                  // Add source file metadata to function definition
+                  const functionWithSource = {
+                    ...functionNode,
+                    __sourceFile: resolvedPath,
+                  };
+                  functionDefinitions.set(localName, functionWithSource);
                 }
               }
             }
