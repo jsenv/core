@@ -521,15 +521,20 @@ function generateErrorMessage(
     };
   }
 
-  if (chain.length <= 3) {
-    // Short chain
-    const chainStr = chain.join(" → ");
-    if (availableParamsArray.length > 0) {
+  // Chain case - show first function and where the issue is detected
+  const firstFunc = chain[0];
+  const secondFunc = chain.length > 1 ? chain[1] : null;
+  const lastFunc = chain[chain.length - 1];
+
+  if (chain.length === 2) {
+    // Two functions in chain - show both
+    if (suggestions.length > 0 || availableParamsArray.length > 0) {
       return {
         messageId: "unknownParamChainWithSuggestions",
         data: {
           param: paramName,
-          chain: chainStr,
+          firstFunc,
+          secondFunc,
           available: availableParamsArray.join(", "),
         },
       };
@@ -537,13 +542,43 @@ function generateErrorMessage(
 
     return {
       messageId: "unknownParamChain",
-      data: { param: paramName, chain: chainStr },
+      data: { param: paramName, firstFunc, secondFunc },
     };
   }
 
-  // Long chain - show abbreviated form
-  const firstFunc = chain[0];
-  const lastFunc = chain[chain.length - 1];
+  if (chain.length === 3) {
+    // Three functions - still show first two for context
+    if (suggestions.length > 0 || availableParamsArray.length > 0) {
+      return {
+        messageId: "unknownParamChainWithSuggestions",
+        data: {
+          param: paramName,
+          firstFunc,
+          secondFunc,
+          available: availableParamsArray.join(", "),
+        },
+      };
+    }
+
+    return {
+      messageId: "unknownParamChain",
+      data: { param: paramName, firstFunc, secondFunc },
+    };
+  }
+
+  // Long chain (4+ functions) - show abbreviated form
+  if (suggestions.length > 0 || availableParamsArray.length > 0) {
+    return {
+      messageId: "unknownParamChainLongWithSuggestions",
+      data: {
+        param: paramName,
+        firstFunc,
+        lastFunc,
+        available: availableParamsArray.join(", "),
+      },
+    };
+  }
+
   return {
     messageId: "unknownParamLongChain",
     data: { param: paramName, firstFunc, lastFunc },
@@ -1033,7 +1068,8 @@ export default {
     },
     schema: [],
     messages: {
-      unknownParam: "'{{param}}' is not part of params declared by '{{func}}()'.",
+      unknownParam:
+        "'{{param}}' is not part of params declared by '{{func}}()'.",
       unknownParamChain:
         "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → '{{secondFunc}}()'.",
       unknownParamLongChain:
