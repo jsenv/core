@@ -66,8 +66,8 @@ function parseContent(filePath, content, context) {
 
     return null;
   } catch {
-    // If parsing fails, fall back to simple regex parsing
-    return parseExportedFunctions(content);
+    // If ESLint parsing fails completely, return null to skip this file
+    return null;
   }
 }
 
@@ -82,8 +82,27 @@ function getParser(context) {
     return context.languageOptions.parser;
   }
 
-  // Fall back to simple parsing if no parser available
-  return null;
+  // Try to get ESLint's default parser (espree) from the source code
+  const sourceCode = context.getSourceCode();
+  if (
+    sourceCode &&
+    sourceCode.parserServices &&
+    sourceCode.parserServices.parseForESLint
+  ) {
+    return {
+      parseForESLint: sourceCode.parserServices.parseForESLint,
+    };
+  }
+
+  // Try to get the default parser that ESLint uses (espree)
+  try {
+    const require = createRequire(import.meta.url);
+    const espree = require("espree");
+    return espree;
+  } catch {
+    // Fall back to simple parsing if no parser available
+    return null;
+  }
 }
 
 /**
@@ -103,81 +122,6 @@ function transformContent(content) {
   );
 
   return processed;
-}
-
-/**
- * Simple regex-based parser for exported functions
- * @param {string} content - File content
- * @returns {Object} - Simple AST-like structure
- */
-function parseExportedFunctions(content) {
-  const functions = [];
-  const reExports = [];
-
-  // Match export function declarations with destructured parameters
-  const exportFunctionRegex =
-    /export\s+function\s+(\w+)\s*\(\s*\{([^}]+)\}\s*\)/g;
-  let match;
-
-  while ((match = exportFunctionRegex.exec(content)) !== null) {
-    const functionName = match[1];
-    const params = match[2].trim();
-
-    // Parse the parameter names
-    const paramNames = params
-      .split(",")
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0);
-
-    // Create simple AST-like structure
-    const properties = paramNames.map((name) => ({
-      type: "Property",
-      key: { type: "Identifier", name },
-      value: { type: "Identifier", name },
-      shorthand: true,
-    }));
-
-    functions.push({
-      type: "FunctionDeclaration",
-      id: { name: functionName, type: "Identifier" },
-      params: [
-        {
-          type: "ObjectPattern",
-          properties,
-        },
-      ],
-    });
-  }
-
-  // Match re-exports: export { name } from "./file.js"
-  const reExportRegex = /export\s+\{\s*(\w+)\s*\}\s+from\s+["']([^"']+)["']/g;
-  while ((match = reExportRegex.exec(content)) !== null) {
-    const exportName = match[1];
-    const fromPath = match[2];
-
-    reExports.push({
-      type: "ExportNamedDeclaration",
-      specifiers: [
-        {
-          type: "ExportSpecifier",
-          exported: { type: "Identifier", name: exportName },
-          local: { type: "Identifier", name: exportName },
-        },
-      ],
-      source: { type: "Literal", value: fromPath },
-    });
-  }
-
-  return {
-    type: "Program",
-    body: [
-      ...functions.map((func) => ({
-        type: "ExportNamedDeclaration",
-        declaration: func,
-      })),
-      ...reExports,
-    ],
-  };
 }
 
 /**

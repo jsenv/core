@@ -19,11 +19,10 @@
   "scripts": {
     "test": "node ./tests/run-all.js"
   },
-  "dependencies": {
-    "@jsenv/eslint-import-resolver": "workspace:*"
-  },
   "devDependencies": {
-    "eslint": "9.35.0"
+    "@jsenv/eslint-import-resolver": "workspace:*",
+    "eslint": "9.35.0",
+    "espree": "10.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
