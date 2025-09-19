@@ -73,7 +73,12 @@ export function findVariableDeclarationsInFunction(functionNode, varName) {
 }
 
 // Function to analyze a call expression
-export function analyzeCallExpression(node, functionDefinitions, context) {
+export function analyzeCallExpression(
+  node,
+  functionDefinitions,
+  context,
+  maxChainDepth = 40,
+) {
   const callee = node.callee;
 
   if (callee.type !== "Identifier") return;
@@ -175,6 +180,9 @@ export function analyzeCallExpression(node, functionDefinitions, context) {
               keyName,
               functionDef,
               functionDefinitions,
+              new Set(),
+              [],
+              maxChainDepth,
             );
 
             if (!chainResult.found) {
@@ -186,6 +194,7 @@ export function analyzeCallExpression(node, functionDefinitions, context) {
                 functionDefinitions,
                 givenParams,
                 context.getFilename(),
+                maxChainDepth,
               );
 
               const fixes = [];
@@ -246,6 +255,9 @@ export function analyzeCallExpression(node, functionDefinitions, context) {
             keyName,
             functionDef,
             functionDefinitions,
+            new Set(),
+            [],
+            maxChainDepth,
           );
 
           if (!chainResult.found) {
@@ -257,6 +269,7 @@ export function analyzeCallExpression(node, functionDefinitions, context) {
               functionDefinitions,
               givenParams,
               context.getFilename(),
+              maxChainDepth,
             );
 
             const fixes = [];
@@ -298,7 +311,12 @@ export function analyzeCallExpression(node, functionDefinitions, context) {
 }
 
 // Function to analyze a JSX element
-export function analyzeJSXElement(node, functionDefinitions, context) {
+export function analyzeJSXElement(
+  node,
+  functionDefinitions,
+  context,
+  maxChainDepth = 40,
+) {
   const openingElement = node.openingElement;
   if (!openingElement || !openingElement.name) return;
 
@@ -380,6 +398,9 @@ export function analyzeJSXElement(node, functionDefinitions, context) {
             attrName,
             functionDef,
             functionDefinitions,
+            new Set(),
+            [],
+            maxChainDepth,
           );
 
           if (!chainResult.found) {
@@ -391,6 +412,7 @@ export function analyzeJSXElement(node, functionDefinitions, context) {
               functionDefinitions,
               givenAttrs,
               context.getFilename(),
+              maxChainDepth,
             );
 
             const fixes = [];
@@ -467,6 +489,9 @@ export function analyzeJSXElement(node, functionDefinitions, context) {
           attrName,
           functionDef,
           functionDefinitions,
+          new Set(),
+          [],
+          maxChainDepth,
         );
 
         if (!chainResult.found) {
@@ -478,6 +503,7 @@ export function analyzeJSXElement(node, functionDefinitions, context) {
             functionDefinitions,
             givenAttrs,
             context.getFilename(),
+            maxChainDepth,
           );
 
           const fixes = [];

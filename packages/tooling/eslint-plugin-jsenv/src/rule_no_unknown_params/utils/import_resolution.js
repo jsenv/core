@@ -196,8 +196,9 @@ function transformContent(content) {
  * Resolves import statements to function definitions using ESLint's context
  * @param {Object} context - ESLint context
  * @param {Map} functionDefinitions - Local function definitions map
+ * @param {number} maxDepth - Maximum depth for import resolution (default: 12)
  */
-export function resolveImports(context, functionDefinitions) {
+export function resolveImports(context, functionDefinitions, maxDepth = 12) {
   // Initialize cycle detection set
   const visitedFiles = new Set();
 
@@ -205,6 +206,8 @@ export function resolveImports(context, functionDefinitions) {
     context,
     functionDefinitions,
     visitedFiles,
+    0, // current depth
+    maxDepth,
   );
 }
 
@@ -213,11 +216,15 @@ export function resolveImports(context, functionDefinitions) {
  * @param {Object} context - ESLint context
  * @param {Map} functionDefinitions - Map to store function definitions
  * @param {Set} visitedFiles - Set of files currently being processed (for cycle detection)
+ * @param {number} currentDepth - Current recursion depth
+ * @param {number} maxDepth - Maximum allowed recursion depth
  */
 function resolveImportsWithCycleDetection(
   context,
   functionDefinitions,
   visitedFiles,
+  currentDepth,
+  maxDepth,
 ) {
   const sourceCode = context.getSourceCode();
   const filename = context.getFilename();
@@ -225,6 +232,11 @@ function resolveImportsWithCycleDetection(
 
   // Skip if no filename (like in tests without filename)
   if (!filename || filename === "<input>") {
+    return;
+  }
+
+  // Check depth limit to prevent memory issues
+  if (currentDepth >= maxDepth) {
     return;
   }
 
@@ -264,6 +276,8 @@ function resolveImportsWithCycleDetection(
                 resolvedPath,
                 context,
                 visitedFiles,
+                currentDepth + 1,
+                maxDepth,
               );
 
               // Merge re-exported functions with directly defined functions
@@ -420,6 +434,8 @@ function extractFunctionDefinitions(ast) {
  * @param {string} currentFilePath - Path to the current file
  * @param {Object} context - ESLint context
  * @param {Set} visitedFiles - Set of files currently being processed (for cycle detection)
+ * @param {number} currentDepth - Current recursion depth
+ * @param {number} maxDepth - Maximum allowed recursion depth
  * @returns {Map} - Map of re-exported function names to definitions
  */
 function resolveReExportsWithCycleDetection(
@@ -427,7 +443,14 @@ function resolveReExportsWithCycleDetection(
   currentFilePath,
   context,
   visitedFiles,
+  currentDepth,
+  maxDepth,
 ) {
+  // Check depth limit to prevent memory issues
+  if (currentDepth >= maxDepth) {
+    return new Map();
+  }
+
   const reExportedFunctions = new Map();
 
   function traverse(node) {

@@ -16,7 +16,27 @@ export const noUnknownParamsRule = {
     },
     fixable: "code",
     hasSuggestions: true,
-    schema: [],
+    schema: [
+      {
+        type: "object",
+        properties: {
+          maxImportDepth: {
+            type: "integer",
+            minimum: 1,
+            default: 12,
+            description:
+              "Maximum depth for resolving imports to prevent infinite loops",
+          },
+          maxChainDepth: {
+            type: "integer",
+            minimum: 1,
+            default: 40,
+            description: "Maximum depth for following function call chains",
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
     messages: {
       not_found_param: "{{param}} does not exist in {{func}}()",
       not_found_param_with_file:
@@ -57,6 +77,11 @@ export const noUnknownParamsRule = {
   },
 
   create(context) {
+    // Get configuration options with defaults
+    const options = context.options[0] || {};
+    const maxImportDepth = options.maxImportDepth || 12;
+    const maxChainDepth = options.maxChainDepth || 40;
+
     const functionDefinitions = new Map();
     const callsToAnalyze = [];
     const jsxElementsToAnalyze = [];
@@ -116,19 +141,29 @@ export const noUnknownParamsRule = {
       // Analyze all collected calls and JSX after collecting all function definitions
       "Program:exit"() {
         // First, resolve import statements to get imported function definitions
-        resolveImports(context, functionDefinitions);
+        resolveImports(context, functionDefinitions, maxImportDepth);
 
         // Then, resolve wrapper function references
         resolveWrapperReferences(functionDefinitions);
 
         // Process all collected function calls
         for (const callNode of callsToAnalyze) {
-          analyzeCallExpression(callNode, functionDefinitions, context);
+          analyzeCallExpression(
+            callNode,
+            functionDefinitions,
+            context,
+            maxChainDepth,
+          );
         }
 
         // Process all collected JSX elements
         for (const jsxNode of jsxElementsToAnalyze) {
-          analyzeJSXElement(jsxNode, functionDefinitions, context);
+          analyzeJSXElement(
+            jsxNode,
+            functionDefinitions,
+            context,
+            maxChainDepth,
+          );
         }
       },
     };

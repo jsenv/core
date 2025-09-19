@@ -7,7 +7,13 @@ export function checkParameterChaining(
   functionDefinitions,
   visited = new Set(),
   chain = [],
+  maxChainDepth = 40,
 ) {
+  // Check chain depth limit to prevent memory issues
+  if (chain.length >= maxChainDepth) {
+    return { found: false, chain: [] };
+  }
+
   // Avoid infinite recursion
   const functionKey =
     functionDef.id?.name || functionDef.parent?.id?.name || "anonymous";
@@ -74,6 +80,7 @@ export function checkParameterChaining(
                         functionDefinitions,
                         visited,
                         currentChain,
+                        maxChainDepth,
                       );
                       if (result.found) {
                         return result;
@@ -123,7 +130,13 @@ export function collectChainParameters(
   functionDef,
   functionDefinitions,
   visited = new Set(),
+  maxChainDepth = 40,
 ) {
+  // Check depth limit to prevent memory issues
+  if (visited.size >= maxChainDepth) {
+    return new Set();
+  }
+
   const functionKey =
     functionDef.id?.name || functionDef.parent?.id?.name || "anonymous";
   if (visited.has(functionKey)) {
@@ -162,6 +175,7 @@ export function collectChainParameters(
       targetFunctionDef,
       functionDefinitions,
       visited,
+      maxChainDepth,
     );
     for (const param of targetParams) {
       allParams.add(param);

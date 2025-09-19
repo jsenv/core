@@ -44,11 +44,14 @@ export function generateErrorMessage(
   functionDefinitions,
   givenParams = [],
   currentFilePath = null,
+  maxChainDepth = 40,
 ) {
   // Collect all available parameters in the function and its chain
   const availableParams = collectChainParameters(
     functionDef,
     functionDefinitions,
+    new Set(),
+    maxChainDepth,
   );
   const availableParamsArray = Array.from(availableParams);
 
