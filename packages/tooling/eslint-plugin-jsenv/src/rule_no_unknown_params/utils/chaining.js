@@ -24,6 +24,7 @@ export function checkParameterChaining(
   for (const propagation of propagations) {
     const { targetFunction, targetFunctionDef, spreadElements, argumentIndex } =
       propagation;
+
     const currentChain =
       chain.length === 0
         ? [functionKey, targetFunction]
@@ -76,6 +77,32 @@ export function checkParameterChaining(
                       );
                       if (result.found) {
                         return result;
+                      }
+                    }
+                  }
+                } else if (targetParam.type === "AssignmentPattern") {
+                  // Handle parameters with defaults
+                  if (targetParam.left?.type === "Identifier") {
+                    // Simple object parameter with default (e.g., rootOptions = {})
+                    return { found: true, chain: currentChain };
+                  } else if (targetParam.left?.type === "ObjectPattern") {
+                    // Destructured object parameter with default (e.g., { name, ...rest } = {})
+                    // Check if it has a rest element
+                    if (
+                      targetParam.left.properties?.some(
+                        (prop) => prop.type === "RestElement",
+                      )
+                    ) {
+                      return { found: true, chain: currentChain };
+                    }
+                    // Continue to check the regular object pattern logic
+                    for (const targetProp of targetParam.left.properties) {
+                      if (
+                        targetProp.type === "Property" &&
+                        targetProp.key?.type === "Identifier" &&
+                        targetProp.key.name === paramName
+                      ) {
+                        return { found: true, chain: currentChain };
                       }
                     }
                   }
