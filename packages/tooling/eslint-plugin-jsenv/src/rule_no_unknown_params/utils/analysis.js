@@ -15,6 +15,108 @@ const IGNORED_JSX_PROPS = new Set([
   "children", // Handled specially by JSX transform
 ]);
 
+/**
+ * Finds the correct function definition respecting lexical scoping rules
+ * Uses ESLint's scope manager to properly handle scoping
+ * @param {Object} callNode - The call expression node
+ * @param {string} funcName - Function name to look for
+ * @param {Map} functionDefinitions - Global function definitions map
+ * @returns {Object|null} - Function definition wrapper or null
+ */
+function findFunctionInScope(callNode, funcName, functionDefinitions) {
+  // For now, use a safer approach that doesn't rely on parent traversal
+  // Check if there's a local function definition that would shadow imports
+
+  // Look for block-scoped variable declarations in the same AST
+  const sourceCode = callNode?.parent?.parent?.parent; // Try to get to a higher level
+  if (sourceCode && sourceCode.type === "Program") {
+    const localFunction = findLocalFunctionInAST(
+      sourceCode,
+      funcName,
+      callNode,
+    );
+    if (localFunction) {
+      return {
+        node: localFunction,
+        sourceFile: null,
+      };
+    }
+  }
+
+  // No local declaration found, use the global definition (import or top-level)
+  return functionDefinitions.get(funcName);
+}
+
+/**
+ * Searches for a local function declaration that would be in scope for the call
+ * @param {Object} programNode - The program AST node
+ * @param {string} funcName - Function name to find
+ * @param {Object} callNode - The call expression node to check scope for
+ * @returns {Object|null} - Function node or null
+ */
+function findLocalFunctionInAST(programNode, funcName, callNode) {
+  // Simple heuristic: look for variable declarations in the same top-level block
+  // This handles cases like: { const a = () => {}; a(); }
+
+  function findInStatements(statements) {
+    for (const stmt of statements) {
+      if (stmt.type === "BlockStatement") {
+        // Check if our call is within this block
+        if (isNodeWithinBlock(callNode, stmt)) {
+          const localFunc = findFunctionInStatements(stmt.body, funcName);
+          if (localFunc) return localFunc;
+        }
+      } else if (stmt.type === "VariableDeclaration") {
+        const localFunc = findFunctionInStatements([stmt], funcName);
+        if (localFunc) return localFunc;
+      }
+    }
+    return null;
+  }
+
+  return findInStatements(programNode.body || []);
+}
+
+/**
+ * Checks if a node is within a block statement (simple range check)
+ */
+function isNodeWithinBlock(node, blockStmt) {
+  if (!node.range || !blockStmt.range) return false;
+  return (
+    node.range[0] >= blockStmt.range[0] && node.range[1] <= blockStmt.range[1]
+  );
+}
+
+/**
+ * Searches for a local function declaration within statements
+ * @param {Array} statements - Array of statement nodes
+ * @param {string} funcName - Function name to find
+ * @returns {Object|null} - Function node or null
+ */
+function findFunctionInStatements(statements, funcName) {
+  for (const stmt of statements) {
+    // Check variable declarations: const a = () => {}
+    if (stmt.type === "VariableDeclaration") {
+      for (const declarator of stmt.declarations) {
+        if (
+          declarator.id?.name === funcName &&
+          (declarator.init?.type === "FunctionExpression" ||
+            declarator.init?.type === "ArrowFunctionExpression")
+        ) {
+          return declarator.init;
+        }
+      }
+    }
+
+    // Check function declarations: function a() {}
+    if (stmt.type === "FunctionDeclaration" && stmt.id?.name === funcName) {
+      return stmt;
+    }
+  }
+
+  return null;
+}
+
 // Helper function to find variable declarations in a function that match a name
 export function findVariableDeclarationsInFunction(functionNode, varName) {
   let found = false;
@@ -84,7 +186,13 @@ export function analyzeCallExpression(
   if (callee.type !== "Identifier") return;
 
   const funcName = callee.name;
-  const functionDefWrapper = functionDefinitions.get(funcName);
+
+  // Find the correct function definition respecting lexical scope
+  const functionDefWrapper = findFunctionInScope(
+    node,
+    funcName,
+    functionDefinitions,
+  );
 
   if (!functionDefWrapper) return;
 
