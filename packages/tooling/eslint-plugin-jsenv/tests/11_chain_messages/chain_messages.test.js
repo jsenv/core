@@ -41,6 +41,12 @@ ruleTester.run("no-unknown-params - enhanced messages", rule, {
     {
       name: "simple unknown parameter",
       code: simpleInvalidCode,
+      output: `// Test case: Simple direct function call with completely unknown parameter
+function greet({ name }) {
+  return \`Hello \${name}\`;
+}
+greet({  }); // 'xyz' is completely unknown and different from expected params
+`,
       errors: [
         {
           messageId: "unknownParam", // Falls back to basic message
@@ -52,6 +58,12 @@ ruleTester.run("no-unknown-params - enhanced messages", rule, {
     {
       name: "parameter with potential typo",
       code: typoInvalidCode,
+      output: `// Test case: Function call with typo in parameter name
+function authenticate({ username, password }) {
+  return login(username, password);
+}
+authenticate({ username: "john" }); // 'passwd' should suggest 'password'
+`,
       errors: [
         {
           messageId: "unknownParamWithSuggestions", // Enhanced message with suggestions
@@ -61,12 +73,38 @@ ruleTester.run("no-unknown-params - enhanced messages", rule, {
             suggestions: "password",
           },
           type: "Property",
+          suggestions: [
+            {
+              desc: "Remove 'passwd'",
+              output: `// Test case: Function call with typo in parameter name
+function authenticate({ username, password }) {
+  return login(username, password);
+}
+authenticate({ username: "john" }); // 'passwd' should suggest 'password'
+`,
+            },
+            {
+              desc: "Rename 'passwd' to 'password'",
+              output: `// Test case: Function call with typo in parameter name
+function authenticate({ username, password }) {
+  return login(username, password);
+}
+authenticate({ username: "john", password: "secret" }); // 'passwd' should suggest 'password'
+`,
+            },
+          ],
         },
       ],
     },
     {
       name: "extraneous parameter",
       code: extraneousInvalidCode,
+      output: `// Test case: Extraneous parameter (user provided all expected params + one extra)
+function validate({ email, phone }) {
+  console.log(email, phone);
+}
+validate({ email: "test@example.com", phone: "123" }); // 'extra' should trigger extraneous message
+`,
       errors: [
         {
           messageId: "extraneousParam", // Enhanced message for extraneous params
@@ -78,6 +116,15 @@ ruleTester.run("no-unknown-params - enhanced messages", rule, {
     {
       name: "unknown param in chain context",
       code: chainInvalidCode,
+      output: `// Test case: Chain with available parameters shown
+function step1({ id, ...rest }) {
+  return step2({ ...rest });
+}
+function step2({ name, email, config }) {
+  console.log(name, email, config);
+}
+step1({ id: 1, name: "John", email: "john@test.com" }); // Should show available params
+`,
       errors: [
         {
           messageId: "unknownParam", // May get chain message with available params

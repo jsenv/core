@@ -443,6 +443,61 @@ function levenshteinDistance(str1, str2) {
   return matrix[str2.length][str1.length];
 }
 
+// Helper function to create autofix for removing a property
+function createRemoveFix(fixer, propNode) {
+  const parent = propNode.parent;
+
+  // Find the property index
+  let propIndex = -1;
+  for (let i = 0; i < parent.properties.length; i++) {
+    if (parent.properties[i] === propNode) {
+      propIndex = i;
+      break;
+    }
+  }
+
+  if (propIndex === -1) return null;
+
+  const isLast = propIndex === parent.properties.length - 1;
+
+  if (parent.properties.length === 1) {
+    // Only property - just remove it
+    return fixer.remove(propNode);
+  }
+
+  if (isLast) {
+    // Last property - remove including preceding comma
+    const prevProperty = parent.properties[propIndex - 1];
+    const range = [prevProperty.range[1], propNode.range[1]];
+    return fixer.removeRange(range);
+  }
+
+  // Not last property - remove including following comma
+  const nextProperty = parent.properties[propIndex + 1];
+  const range = [propNode.range[0], nextProperty.range[0]];
+  return fixer.removeRange(range);
+}
+
+// Helper function to create autofix for renaming a property
+function createRenameFix(fixer, propNode, newName) {
+  if (propNode.key && propNode.key.type === "Identifier") {
+    return fixer.replaceText(propNode.key, newName);
+  }
+  return null;
+}
+
+// Helper function to create autofix for JSX attributes
+function createJSXRemoveFix(fixer, attrNode) {
+  return fixer.remove(attrNode);
+}
+
+function createJSXRenameFix(fixer, attrNode, newName) {
+  if (attrNode.name && attrNode.name.type === "JSXIdentifier") {
+    return fixer.replaceText(attrNode.name, newName);
+  }
+  return null;
+}
+
 // Helper function to generate appropriate error message based on call chain
 function generateErrorMessage(
   paramName,
@@ -461,6 +516,7 @@ function generateErrorMessage(
 
   // Find suggestions for potential typos
   const suggestions = findSimilarParams(paramName, availableParams);
+  const bestSuggestion = suggestions.length > 0 ? suggestions[0] : null;
 
   // Check if this is a case where user provided exactly expected + one extra
   const directParams = new Set();
@@ -490,9 +546,57 @@ function generateErrorMessage(
     ) &&
     givenParams.some((p) => !directParams.has(p));
 
+  const firstFunc = chain.length > 0 ? chain[0] : functionName;
+  const secondFunc = chain.length > 1 ? chain[1] : null;
+  const lastFunc = chain.length > 0 ? chain[chain.length - 1] : functionName;
+
+  // Generate autofix functions
+  const autofixes = {
+    remove: true, // Always offer removal
+    rename: bestSuggestion, // Only suggest rename if we have a good similarity match
+  };
+
+  if (isExtraneous) {
+    // Extraneous parameter cases
+    if (chain.length === 0) {
+      return {
+        messageId: "extraneousParam",
+        data: {
+          param: paramName,
+          func: functionName,
+          expected: Array.from(directParams).join(", "),
+        },
+        autofixes,
+      };
+    }
+
+    if (chain.length <= 3) {
+      return {
+        messageId: "extraneousParamChain",
+        data: {
+          param: paramName,
+          firstFunc,
+          secondFunc,
+          expected: Array.from(directParams).join(", "),
+        },
+        autofixes,
+      };
+    }
+
+    return {
+      messageId: "extraneousParamLongChain",
+      data: {
+        param: paramName,
+        firstFunc,
+        lastFunc,
+        expected: Array.from(directParams).join(", "),
+      },
+      autofixes,
+    };
+  }
+
   if (chain.length === 0) {
     // Simple case - no chain
-    // Prioritize suggestions over extraneous if we have good suggestions
     if (suggestions.length > 0) {
       return {
         messageId: "unknownParamWithSuggestions",
@@ -501,33 +605,19 @@ function generateErrorMessage(
           func: functionName,
           suggestions: suggestions.join(", "),
         },
-      };
-    }
-
-    if (isExtraneous && directParams.size > 0) {
-      return {
-        messageId: "extraneousParam",
-        data: {
-          param: paramName,
-          func: functionName,
-          expected: Array.from(directParams).join(", "),
-        },
+        autofixes,
       };
     }
 
     return {
       messageId: "unknownParam",
       data: { param: paramName, func: functionName },
+      autofixes,
     };
   }
 
-  // Chain case - show first function and where the issue is detected
-  const firstFunc = chain[0];
-  const secondFunc = chain.length > 1 ? chain[1] : null;
-  const lastFunc = chain[chain.length - 1];
-
-  if (chain.length === 2) {
-    // Two functions in chain - show both
+  if (chain.length <= 3) {
+    // Short chain
     if (suggestions.length > 0 || availableParamsArray.length > 0) {
       return {
         messageId: "unknownParamChainWithSuggestions",
@@ -537,32 +627,14 @@ function generateErrorMessage(
           secondFunc,
           available: availableParamsArray.join(", "),
         },
+        autofixes,
       };
     }
 
     return {
       messageId: "unknownParamChain",
       data: { param: paramName, firstFunc, secondFunc },
-    };
-  }
-
-  if (chain.length === 3) {
-    // Three functions - still show first two for context
-    if (suggestions.length > 0 || availableParamsArray.length > 0) {
-      return {
-        messageId: "unknownParamChainWithSuggestions",
-        data: {
-          param: paramName,
-          firstFunc,
-          secondFunc,
-          available: availableParamsArray.join(", "),
-        },
-      };
-    }
-
-    return {
-      messageId: "unknownParamChain",
-      data: { param: paramName, firstFunc, secondFunc },
+      autofixes,
     };
   }
 
@@ -576,12 +648,14 @@ function generateErrorMessage(
         lastFunc,
         available: availableParamsArray.join(", "),
       },
+      autofixes,
     };
   }
 
   return {
     messageId: "unknownParamLongChain",
     data: { param: paramName, firstFunc, lastFunc },
+    autofixes,
   };
 } // Helper function to find variable declarations in a function that match a name
 function findVariableDeclarationsInFunction(functionNode, varName) {
@@ -746,7 +820,7 @@ function analyzeCallExpression(node, functionDefinitions, context) {
             );
 
             if (!chainResult.found) {
-              const { messageId, data } = generateErrorMessage(
+              const { messageId, data, autofixes } = generateErrorMessage(
                 keyName,
                 funcName,
                 chainResult.chain,
@@ -754,10 +828,37 @@ function analyzeCallExpression(node, functionDefinitions, context) {
                 functionDefinitions,
                 givenParams,
               );
+
+              const fixes = [];
+              if (autofixes.remove) {
+                fixes.push((fixer) => createRemoveFix(fixer, prop));
+              }
+              if (autofixes.rename) {
+                fixes.push((fixer) =>
+                  createRenameFix(fixer, prop, autofixes.rename),
+                );
+              }
+
+              // Only provide suggestions if we have a good rename candidate
+              const shouldSuggest = fixes.length > 1 && autofixes.rename;
+
               context.report({
                 node: prop,
                 messageId,
                 data,
+                fix: fixes.length > 0 ? fixes[0] : undefined,
+                suggest: shouldSuggest
+                  ? [
+                      {
+                        desc: `Remove '${keyName}'`,
+                        fix: fixes[0],
+                      },
+                      {
+                        desc: `Rename '${keyName}' to '${autofixes.rename}'`,
+                        fix: fixes[1],
+                      },
+                    ]
+                  : undefined,
               });
             }
           }
@@ -789,7 +890,7 @@ function analyzeCallExpression(node, functionDefinitions, context) {
           );
 
           if (!chainResult.found) {
-            const { messageId, data } = generateErrorMessage(
+            const { messageId, data, autofixes } = generateErrorMessage(
               keyName,
               funcName,
               chainResult.chain,
@@ -797,10 +898,37 @@ function analyzeCallExpression(node, functionDefinitions, context) {
               functionDefinitions,
               givenParams,
             );
+
+            const fixes = [];
+            if (autofixes.remove) {
+              fixes.push((fixer) => createRemoveFix(fixer, prop));
+            }
+            if (autofixes.rename) {
+              fixes.push((fixer) =>
+                createRenameFix(fixer, prop, autofixes.rename),
+              );
+            }
+
+            // Only provide suggestions if we have a good rename candidate
+            const shouldSuggest = fixes.length > 1 && autofixes.rename;
+
             context.report({
               node: prop,
               messageId,
               data,
+              fix: fixes.length > 0 ? fixes[0] : undefined,
+              suggest: shouldSuggest
+                ? [
+                    {
+                      desc: `Remove '${keyName}'`,
+                      fix: fixes[0],
+                    },
+                    {
+                      desc: `Rename '${keyName}' to '${autofixes.rename}'`,
+                      fix: fixes[1],
+                    },
+                  ]
+                : undefined,
             });
           }
         }
@@ -985,7 +1113,7 @@ function analyzeJSXElement(node, functionDefinitions, context) {
           );
 
           if (!chainResult.found) {
-            const { messageId, data } = generateErrorMessage(
+            const { messageId, data, autofixes } = generateErrorMessage(
               attrName,
               componentName,
               chainResult.chain,
@@ -993,10 +1121,37 @@ function analyzeJSXElement(node, functionDefinitions, context) {
               functionDefinitions,
               givenAttrs,
             );
+
+            const fixes = [];
+            if (autofixes.remove) {
+              fixes.push((fixer) => createJSXRemoveFix(fixer, attr));
+            }
+            if (autofixes.rename) {
+              fixes.push((fixer) =>
+                createJSXRenameFix(fixer, attr, autofixes.rename),
+              );
+            }
+
+            // Only provide suggestions if we have a good rename candidate
+            const shouldSuggest = fixes.length > 1 && autofixes.rename;
+
             context.report({
               node: attr,
               messageId,
               data,
+              fix: fixes.length > 0 ? fixes[0] : undefined,
+              suggest: shouldSuggest
+                ? [
+                    {
+                      desc: `Remove '${attrName}'`,
+                      fix: fixes[0],
+                    },
+                    {
+                      desc: `Rename '${attrName}' to '${autofixes.rename}'`,
+                      fix: fixes[1],
+                    },
+                  ]
+                : undefined,
             });
           }
         }
@@ -1038,7 +1193,7 @@ function analyzeJSXElement(node, functionDefinitions, context) {
         );
 
         if (!chainResult.found) {
-          const { messageId, data } = generateErrorMessage(
+          const { messageId, data, autofixes } = generateErrorMessage(
             attrName,
             componentName,
             chainResult.chain,
@@ -1046,10 +1201,37 @@ function analyzeJSXElement(node, functionDefinitions, context) {
             functionDefinitions,
             givenAttrs,
           );
+
+          const fixes = [];
+          if (autofixes.remove) {
+            fixes.push((fixer) => createJSXRemoveFix(fixer, attr));
+          }
+          if (autofixes.rename) {
+            fixes.push((fixer) =>
+              createJSXRenameFix(fixer, attr, autofixes.rename),
+            );
+          }
+
+          // Only provide suggestions if we have a good rename candidate
+          const shouldSuggest = fixes.length > 1 && autofixes.rename;
+
           context.report({
             node: attr,
             messageId,
             data,
+            fix: fixes.length > 0 ? fixes[0] : undefined,
+            suggest: shouldSuggest
+              ? [
+                  {
+                    desc: `Remove '${attrName}'`,
+                    fix: fixes[0],
+                  },
+                  {
+                    desc: `Rename '${attrName}' to '${autofixes.rename}'`,
+                    fix: fixes[1],
+                  },
+                ]
+              : undefined,
           });
         }
       }
@@ -1066,6 +1248,8 @@ export default {
       category: "Possible Errors",
       recommended: false,
     },
+    fixable: "code",
+    hasSuggestions: true,
     schema: [],
     messages: {
       unknownParam:
@@ -1082,6 +1266,10 @@ export default {
         "'{{param}}' is not part of params declared in call chain '{{firstFunc}}()' → ... → '{{lastFunc}}()'. Available parameters: {{available}}.",
       extraneousParam:
         "'{{param}}' is extraneous. '{{func}}()' only accepts: {{expected}}.",
+      extraneousParamChain:
+        "'{{param}}' is extraneous. Call chain '{{firstFunc}}()' → '{{secondFunc}}()' only accepts: {{expected}}.",
+      extraneousParamLongChain:
+        "'{{param}}' is extraneous. Call chain '{{firstFunc}}()' → ... → '{{lastFunc}}()' only accepts: {{expected}}.",
     },
   },
 

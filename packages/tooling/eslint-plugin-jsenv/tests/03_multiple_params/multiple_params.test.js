@@ -26,6 +26,11 @@ ruleTester.run("no-unknown-params - multiple parameters", rule, {
     {
       name: "multiple parameters with extra property in object",
       code: invalidCode,
+      output: `const toto = (a, { b, c }) => {
+  console.log(a, b, c);
+};
+toto("hello", { b: 1, c: 2 });
+`,
       errors: [
         {
           messageId: "extraneousParam",

@@ -26,6 +26,11 @@ ruleTester.run("no-unknown-params - function basic", rule, {
     {
       name: "function with extra parameter",
       code: invalidCode,
+      output: `function foo({ a }) {
+  console.log(a);
+}
+foo({ a: 1 });
+`,
       errors: [
         {
           messageId: "unknownParam",
