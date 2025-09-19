@@ -19,9 +19,6 @@
   "scripts": {
     "test": "node ./tests/run-all.js"
   },
-  "peerDependencies": {
-    "eslint": ">=8.0.0"
-  },
   "engines": {
     "node": ">=18.0.0"
   }
