@@ -37,6 +37,26 @@ export const ValidWithRest = () => {
   return <ComponentWithRest a={1} b={2} />;
 };`,
     },
+    {
+      name: "JSX component with React built-in props (key, ref) should be ignored",
+      code: `const Button = ({ label }) => {
+  return <button>{label}</button>;
+};
+
+export const App = () => {
+  return <Button key="btn1" ref={null} label="Click" />;
+};`,
+    },
+    {
+      name: "JSX component with children prop should be ignored",
+      code: `const Container = ({ className }) => {
+  return <div className={className} />;
+};
+
+export const App = () => {
+  return <Container className="wrapper" children={<span>content</span>} />;
+};`,
+    },
   ],
   invalid: [
     {
@@ -90,6 +110,30 @@ export const App = () => {
         {
           messageId: "not_found_param",
           data: { param: "size", func: "Button" },
+          type: "JSXAttribute",
+        },
+      ],
+    },
+    {
+      name: "JSX component with mixed valid, invalid, and ignored props",
+      code: `const Button = ({ label, className }) => {
+  return <button className={className}>{label}</button>;
+};
+
+export const App = () => {
+  return <Button key="btn1" ref={null} label="Click" unknownProp="test" />;
+};`,
+      output: `const Button = ({ label, className }) => {
+  return <button className={className}>{label}</button>;
+};
+
+export const App = () => {
+  return <Button key="btn1" ref={null} label="Click"  />;
+};`,
+      errors: [
+        {
+          messageId: "not_found_param",
+          data: { param: "unknownProp", func: "Button" },
           type: "JSXAttribute",
         },
       ],

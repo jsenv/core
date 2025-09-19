@@ -8,6 +8,13 @@ import { checkParameterChaining } from "./chaining.js";
 import { generateErrorMessage } from "./messages.js";
 import { isRestParameterPropagated } from "./parameter_analysis.js";
 
+// React/JSX props that are handled by React itself and should be ignored
+const IGNORED_JSX_PROPS = new Set([
+  "key",      // Used by React for list reconciliation
+  "ref",      // Used by React for ref forwarding
+  "children", // Handled specially by JSX transform
+]);
+
 // Helper function to find variable declarations in a function that match a name
 export function findVariableDeclarationsInFunction(functionNode, varName) {
   let found = false;
@@ -361,6 +368,12 @@ export function analyzeJSXElement(node, functionDefinitions, context) {
         attr.name.type === "JSXIdentifier"
       ) {
         const attrName = attr.name.name;
+        
+        // Skip React/JSX built-in props
+        if (IGNORED_JSX_PROPS.has(attrName)) {
+          continue;
+        }
+        
         if (!explicitProps.has(attrName)) {
           // This attribute goes into rest - check if it's used in chaining
           const chainResult = checkParameterChaining(
@@ -442,6 +455,12 @@ export function analyzeJSXElement(node, functionDefinitions, context) {
       attr.name.type === "JSXIdentifier"
     ) {
       const attrName = attr.name.name;
+      
+      // Skip React/JSX built-in props
+      if (IGNORED_JSX_PROPS.has(attrName)) {
+        continue;
+      }
+      
       if (!allowedProps.has(attrName)) {
         // Check if this parameter is used through function chaining
         const chainResult = checkParameterChaining(
