@@ -1,4 +1,4 @@
-import { noUnknownParamsRule } from "./src/rules/no_unknown_params.js";
+import { noUnknownParamsRule } from "./src/rule_no_unknown_params/no_unknown_params.js";
 
 export { noUnknownParamsRule };
 

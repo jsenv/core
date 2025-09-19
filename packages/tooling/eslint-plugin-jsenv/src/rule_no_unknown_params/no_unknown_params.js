@@ -1,8 +1,8 @@
-import { analyzeCallExpression, analyzeJSXElement } from "../utils/analysis.js";
+import { analyzeCallExpression, analyzeJSXElement } from "./utils/analysis.js";
 import {
   resolveWrapperFunction,
   resolveWrapperReferences,
-} from "../utils/wrapper_resolution.js";
+} from "./utils/wrapper_resolution.js";
 
 export const noUnknownParamsRule = {
   meta: {
