@@ -154,7 +154,7 @@ function parseExportedFunctions(content) {
   while ((match = reExportRegex.exec(content)) !== null) {
     const exportName = match[1];
     const fromPath = match[2];
-    
+
     reExports.push({
       type: "ExportNamedDeclaration",
       specifiers: [
@@ -162,7 +162,7 @@ function parseExportedFunctions(content) {
           type: "ExportSpecifier",
           exported: { type: "Identifier", name: exportName },
           local: { type: "Identifier", name: exportName },
-        }
+        },
       ],
       source: { type: "Literal", value: fromPath },
     });
@@ -223,7 +223,7 @@ export function resolveImports(context, functionDefinitions) {
               resolvedPath,
               context,
             );
-            
+
             // Merge re-exported functions with directly defined functions
             for (const [name, func] of reExportedFunctions) {
               importedFunctions.set(name, func);
@@ -390,7 +390,8 @@ function resolveReExports(ast, currentFilePath, context) {
         try {
           const reExportedAst = parseFileWithESLint(resolvedFromPath, context);
           if (reExportedAst) {
-            const reExportedFileFunctions = extractFunctionDefinitions(reExportedAst);
+            const reExportedFileFunctions =
+              extractFunctionDefinitions(reExportedAst);
 
             for (const specifier of node.specifiers) {
               if (specifier.type === "ExportSpecifier") {

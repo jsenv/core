@@ -103,8 +103,12 @@ ruleTester.run(
             data: { param: "age", func: "processData", expected: "id, name" },
           },
           {
-            messageId: "superfluous_param", 
-            data: { param: "isActive", func: "validateUser", expected: "username, email" },
+            messageId: "superfluous_param",
+            data: {
+              param: "isActive",
+              func: "validateUser",
+              expected: "username, email",
+            },
           },
         ],
       },
