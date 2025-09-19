@@ -375,6 +375,33 @@ function resolveImportsWithCycleDetection(
           // Silently skip files that can't be resolved/parsed
           // This matches real-world ESLint behavior where not all files are analyzable
         }
+      } else {
+        // If we can't resolve the import (e.g., external packages like @jsenv/core),
+        // create placeholder entries for imported functions so they are treated as external
+        for (const specifier of node.specifiers) {
+          if (
+            specifier.type === "ImportSpecifier" ||
+            specifier.type === "ImportDefaultSpecifier"
+          ) {
+            const localName = specifier.local.name;
+            // Mark as external function with no source code
+            functionDefinitions.set(localName, {
+              node: null, // No AST node available
+              sourceFile: importPath, // Original import path for reference
+              isExternal: true, // Mark as external
+            });
+          } else if (specifier.type === "ImportNamespaceSpecifier") {
+            const localName = specifier.local.name;
+            // Create a namespace placeholder for external packages
+            functionDefinitions.set(localName, {
+              node: null,
+              sourceFile: importPath,
+              isNamespace: true,
+              isExternal: true,
+              functions: new Map(), // Empty functions map for external namespace
+            });
+          }
+        }
       }
     }
   }

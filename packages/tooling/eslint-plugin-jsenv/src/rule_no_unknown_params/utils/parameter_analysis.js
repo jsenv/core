@@ -179,10 +179,11 @@ export function isRestParameterPropagated(
       node.callee &&
       node.callee.type === "Identifier"
     ) {
-      // Only consider functions we can analyze (in functionDefinitions)
+      // Consider both internal and external functions
       const calledFunctionName = node.callee.name;
       const calledFunction = functionDefinitions.get(calledFunctionName);
 
+      // Skip only if function is completely unknown (not in functionDefinitions at all)
       if (!calledFunction) {
         return; // Skip functions we can't analyze
       }

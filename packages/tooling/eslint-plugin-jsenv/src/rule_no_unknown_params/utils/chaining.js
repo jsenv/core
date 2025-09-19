@@ -92,7 +92,7 @@ export function checkParameterChaining(
               // Parameter is in rest, check if target function accepts it
 
               // If target function is external (no source code available), assume all params are valid
-              if (!targetFunctionDef) {
+              if (!targetFunctionDef || targetFunctionDef.isExternal) {
                 return { found: true, chain: currentChain };
               }
 
