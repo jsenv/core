@@ -30,7 +30,6 @@ export const useSelectionController = ({
   onChange,
   multiple,
   selectAllName,
-  dragToSelect,
 }) => {
   if (!elementRef) {
     throw new Error("useSelectionController: elementRef is required");
@@ -56,10 +55,8 @@ export const useSelectionController = ({
       return createGridSelection({
         getCurrentValue,
         onChange,
-        elementRef,
         multiple,
         selectAllName,
-        dragToSelect,
       });
     }
     return createLinearSelection({
@@ -69,7 +66,6 @@ export const useSelectionController = ({
       elementRef,
       multiple,
       selectAllName,
-      dragToSelect,
     });
   }, [layout, multiple, elementRef]);
 

@@ -755,7 +755,7 @@ export const Table = forwardRef((props, ref) => {
             />
             {columns.map((col, index) => {
               const columnIsGrabbed = grabTarget === `column:${index}`;
-              const isLastColumn = index === columns.length - 1;
+              // const isLastColumn = index === columns.length - 1;
 
               return (
                 <HeaderCell
@@ -776,7 +776,7 @@ export const Table = forwardRef((props, ref) => {
                   data={data}
                   selectionController={selectionController}
                   grabbed={columnIsGrabbed}
-                  isLastColumn={isLastColumn}
+                  // isLastColumn={isLastColumn}
                   movable
                   resizable
                   columnMinWidth={col.minWidth}

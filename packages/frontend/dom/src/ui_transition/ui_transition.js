@@ -930,7 +930,6 @@ export const initUITransition = (container) => {
               type,
               animationProgress,
               isPhaseTransition: false,
-              previousChild,
               fromContentKeyState: previousContentKeyState,
               toContentKeyState: currentContentKeyState,
               onComplete: () => {
@@ -1046,7 +1045,6 @@ export const initUITransition = (container) => {
               type: phaseTransitionType,
               animationProgress: phaseAnimationProgress,
               isPhaseTransition: true,
-              previousChild,
               fromContentKeyState: previousContentKeyState,
               toContentKeyState: currentContentKeyState,
               onComplete: () => {

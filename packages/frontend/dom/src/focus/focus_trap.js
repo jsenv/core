@@ -55,7 +55,10 @@ export const trapFocusInside = (element) => {
     };
   };
 
-  const deactivate = activate({ element, lock });
+  const deactivate = activate({
+    // element
+    lock,
+  });
 
   const untrap = () => {
     deactivate();

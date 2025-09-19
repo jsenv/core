@@ -26,7 +26,14 @@ const applyActions = (params) => {
 
 const applyRouting = (
   url,
-  { globalAbortSignal, abortSignal, state, replace, isVisited, reason },
+  {
+    globalAbortSignal,
+    abortSignal,
+    // state
+    replace,
+    isVisited,
+    reason,
+  },
 ) => {
   const {
     loadSet,
@@ -34,7 +41,11 @@ const applyRouting = (
     abortSignalMap,
     routeLoadRequestedMap,
     activeRouteSet,
-  } = updateRoutes(url, { state, replace, isVisited });
+  } = updateRoutes(url, {
+    replace,
+    // state,
+    isVisited,
+  });
   if (loadSet.size === 0 && reloadSet.size === 0) {
     return {
       allResult: undefined,

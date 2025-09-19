@@ -55,7 +55,7 @@ export const Button = forwardRef((props, ref) => {
     Basic: ButtonBasic,
     WithAction: ButtonWithAction,
     InsideForm: ButtonInsideForm,
-    InsideFormWithAction: ButtonWithActionInsideForm,
+    WithActionInsideForm: ButtonWithActionInsideForm,
   });
 });
 
