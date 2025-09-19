@@ -25,7 +25,7 @@ bar({ x: 5, y: 10 });`,
 bar({ x: 5 });`,
       errors: [
         {
-          messageId: "unknownParam",
+          messageId: "notFoundParam",
           data: { param: "y", func: "bar" },
           type: "Property",
         },

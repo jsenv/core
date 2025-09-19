@@ -557,10 +557,10 @@ function generateErrorMessage(
   };
 
   if (isExtraneous) {
-    // Extraneous parameter cases
+    // Superfluous parameter cases
     if (chain.length === 0) {
       return {
-        messageId: "extraneousParam",
+        messageId: "superfluousParam",
         data: {
           param: paramName,
           func: functionName,
@@ -572,7 +572,7 @@ function generateErrorMessage(
 
     if (chain.length === 1 || chain.length === 2) {
       return {
-        messageId: "extraneousParamChain",
+        messageId: "superfluousParamChain",
         data: {
           param: paramName,
           firstFunc,
@@ -584,7 +584,7 @@ function generateErrorMessage(
     }
 
     return {
-      messageId: "extraneousParamLongChain",
+      messageId: "superfluousParamLongChain",
       data: {
         param: paramName,
         firstFunc,
@@ -599,7 +599,7 @@ function generateErrorMessage(
     // Simple case - no chain
     if (suggestions.length > 0) {
       return {
-        messageId: "unknownParamWithSuggestions",
+        messageId: "notFoundParamWithSuggestions",
         data: {
           param: paramName,
           func: functionName,
@@ -610,7 +610,7 @@ function generateErrorMessage(
     }
 
     return {
-      messageId: "unknownParam",
+      messageId: "notFoundParam",
       data: { param: paramName, func: functionName },
       autofixes,
     };
@@ -620,7 +620,7 @@ function generateErrorMessage(
     // Short chain
     if (suggestions.length > 0 || availableParamsArray.length > 0) {
       return {
-        messageId: "unknownParamChainWithSuggestions",
+        messageId: "notFoundParamChainWithSuggestions",
         data: {
           param: paramName,
           firstFunc,
@@ -632,7 +632,7 @@ function generateErrorMessage(
     }
 
     return {
-      messageId: "unknownParamChain",
+      messageId: "notFoundParamChain",
       data: { param: paramName, firstFunc, secondFunc },
       autofixes,
     };
@@ -641,7 +641,7 @@ function generateErrorMessage(
   // Long chain (4+ functions) - show abbreviated form
   if (suggestions.length > 0 || availableParamsArray.length > 0) {
     return {
-      messageId: "unknownParamChainLongWithSuggestions",
+      messageId: "notFoundParamChainLongWithSuggestions",
       data: {
         param: paramName,
         firstFunc,
@@ -653,7 +653,7 @@ function generateErrorMessage(
   }
 
   return {
-    messageId: "unknownParamLongChain",
+    messageId: "notFoundParamLongChain",
     data: { param: paramName, firstFunc, lastFunc },
     autofixes,
   };
@@ -1252,23 +1252,23 @@ export default {
     hasSuggestions: true,
     schema: [],
     messages: {
-      unknownParam: "{{param}} does not exist in {{func}}()",
-      unknownParamChain:
+      notFoundParam: "{{param}} does not exist in {{func}}()",
+      notFoundParamChain:
         "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}()",
-      unknownParamLongChain:
+      notFoundParamLongChain:
         "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}()",
-      unknownParamWithSuggestions:
+      notFoundParamWithSuggestions:
         "{{param}} does not exist in {{func}}(). Did you mean: {{suggestions}}?",
-      unknownParamChainWithSuggestions:
+      notFoundParamChainWithSuggestions:
         "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}(). Available parameters: {{available}}.",
-      unknownParamChainLongWithSuggestions:
+      notFoundParamChainLongWithSuggestions:
         "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}(). Available parameters: {{available}}.",
-      extraneousParam:
-        "{{param}} is extraneous. {{func}}() only accepts: {{expected}}.",
-      extraneousParamChain:
-        "{{param}} is extraneous. {{firstFunc}}() -> {{secondFunc}}() only accepts: {{expected}}.",
-      extraneousParamLongChain:
-        "{{param}} is extraneous. {{firstFunc}}() -> ... -> {{lastFunc}}() only accepts: {{expected}}.",
+      superfluousParam:
+        "{{param}} is superfluous. {{func}}() only accepts: {{expected}}.",
+      superfluousParamChain:
+        "{{param}} is superfluous. {{firstFunc}}() -> {{secondFunc}}() only accepts: {{expected}}.",
+      superfluousParamLongChain:
+        "{{param}} is superfluous. {{firstFunc}}() -> ... -> {{lastFunc}}() only accepts: {{expected}}.",
     },
   },
 

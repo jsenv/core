@@ -45,7 +45,7 @@ function MyComponent({ title }) {
 }`,
       errors: [
         {
-          messageId: "unknownParam",
+          messageId: "notFoundParam",
           data: { param: "extra", func: "MyComponent" },
         },
       ],

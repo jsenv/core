@@ -46,7 +46,7 @@ function handleRest({ age }) {
 }`,
       errors: [
         {
-          messageId: "unknownParam",
+          messageId: "notFoundParam",
           data: { param: "unused", func: "processData" },
         },
       ],

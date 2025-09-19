@@ -39,7 +39,7 @@ function doSomething({ name }) {
 }`,
       errors: [
         {
-          messageId: "unknownParam",
+          messageId: "notFoundParam",
           data: { param: "extra", func: "doSomething" },
         },
       ],

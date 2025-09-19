@@ -59,7 +59,7 @@ export const App = () => {
 };`,
       errors: [
         {
-          messageId: "unknownParam",
+          messageId: "notFoundParam",
           data: { param: "b", func: "Toto" },
           type: "JSXAttribute",
         },
@@ -83,12 +83,12 @@ export const App = () => {
 };`,
       errors: [
         {
-          messageId: "unknownParam",
+          messageId: "notFoundParam",
           data: { param: "disabled", func: "Button" },
           type: "JSXAttribute",
         },
         {
-          messageId: "unknownParam",
+          messageId: "notFoundParam",
           data: { param: "size", func: "Button" },
           type: "JSXAttribute",
         },
