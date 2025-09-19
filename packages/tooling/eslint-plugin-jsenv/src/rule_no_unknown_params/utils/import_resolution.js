@@ -1,25 +1,107 @@
+import { readFileSync } from "fs";
 import { dirname, resolve } from "path";
 
-import { readFileSync } from "fs";
-
 /**
- * Parses an imported JavaScript file using ESLint's parser
+ * Parses an imported JavaScript file using ESLint's parser following eslint-plugin-import-x patterns
  * @param {string} filePath - Path to the file to parse
- * @param {string} content - File content
  * @param {Object} context - ESLint context for parser options
  * @returns {Object|null} - AST or null if parsing fails
  */
-function parseFileWithESLint(filePath) {
+function parseFileWithESLint(filePath, context) {
   try {
     const content = readFileSync(filePath, "utf-8");
-
-    // Simple regex-based parsing for exported functions
-    // This is a basic approach for the specific case we're handling
-    return parseExportedFunctions(content);
+    return parseContent(filePath, content, context);
   } catch {
     // If parsing fails, return null and let the rule continue without import resolution
     return null;
   }
+}
+
+/**
+ * Parses content using ESLint parser following eslint-plugin-import-x patterns
+ * @param {string} filePath - Path to the file
+ * @param {string} content - File content
+ * @param {Object} context - ESLint context
+ * @returns {Object|null} - AST or null if parsing fails
+ */
+function parseContent(filePath, content, context) {
+  try {
+    // Get parser from context (flat config vs legacy)
+    const parser = getParser(context);
+    if (!parser) {
+      return null;
+    }
+
+    // Clone parser options to avoid frozen object issues
+    let parserOptions = {
+      ...(context.languageOptions?.parserOptions ||
+        context.parserOptions ||
+        {}),
+    };
+
+    // Add essential parsing options
+    parserOptions.comment = true;
+    parserOptions.attachComment = true; // backward compatibility
+    parserOptions.tokens = true;
+    parserOptions.loc = true;
+    parserOptions.range = true;
+    parserOptions.filePath = filePath;
+
+    // Handle flat config ecmaVersion and sourceType
+    parserOptions.ecmaVersion ??= context.languageOptions?.ecmaVersion || 2022;
+    parserOptions.sourceType ??=
+      context.languageOptions?.sourceType || "module";
+
+    // Transform content like ESLint does
+    const processedContent = transformContent(content);
+
+    // Use parseForESLint if available, otherwise fall back to parse
+    if (parser.parseForESLint && typeof parser.parseForESLint === "function") {
+      const result = parser.parseForESLint(processedContent, parserOptions);
+      return result.ast;
+    } else if (parser.parse && typeof parser.parse === "function") {
+      return parser.parse(processedContent, parserOptions);
+    }
+
+    return null;
+  } catch {
+    // If parsing fails, fall back to simple regex parsing
+    return parseExportedFunctions(content);
+  }
+}
+
+/**
+ * Gets parser from context (handles both flat and legacy config)
+ * @param {Object} context - ESLint context
+ * @returns {Object|null} - Parser or null
+ */
+function getParser(context) {
+  // Try flat config parser first
+  if (context.languageOptions?.parser) {
+    return context.languageOptions.parser;
+  }
+
+  // Fall back to simple parsing if no parser available
+  return null;
+}
+
+/**
+ * Transforms content like ESLint does (BOM strip and hashbang transform)
+ * @param {string} content - File content
+ * @returns {string} - Processed content
+ */
+function transformContent(content) {
+  // Strip Unicode BOM
+  let processed =
+    content.codePointAt(0) === 0xfeff ? content.slice(1) : content;
+
+  // Transform hashbang to comment
+  processed = processed.replace(
+    /^#!([^\r\n]+)/u,
+    (_, captured) => `//${captured}`,
+  );
+
+  return processed;
 }
 
 /**
@@ -106,7 +188,7 @@ export function resolveImports(context, functionDefinitions) {
 
       if (resolvedPath) {
         try {
-          const importedAst = parseFileWithESLint(resolvedPath);
+          const importedAst = parseFileWithESLint(resolvedPath, context);
           if (importedAst) {
             // Extract function definitions from imported file
             const importedFunctions = extractFunctionDefinitions(importedAst);
