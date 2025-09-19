@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { dirname, resolve } from "path";
+import { createRequire } from "module";
 
 /**
  * Parses an imported JavaScript file using ESLint's parser following eslint-plugin-import-x patterns
@@ -228,9 +229,17 @@ function resolveModulePath(importPath, currentFile, importResolver) {
   // Try using ESLint import resolver if available
   if (importResolver && importResolver["@jsenv/eslint-import-resolver"]) {
     try {
-      // Handle @jsenv/eslint-import-resolver dynamically
-      // Note: This is sync context so we can't use dynamic import
-      // Just fall through to basic resolution
+      // Use createRequire to load @jsenv/eslint-import-resolver
+      const require = createRequire(import.meta.url);
+      const resolver = require("@jsenv/eslint-import-resolver");
+      const options = importResolver["@jsenv/eslint-import-resolver"];
+
+      // Use the resolver's resolve interface
+      const result = resolver.resolve(importPath, currentFile, options);
+
+      if (result && result.found && result.path) {
+        return result.path;
+      }
     } catch {
       // Fall back to default resolution if resolver fails
     }
