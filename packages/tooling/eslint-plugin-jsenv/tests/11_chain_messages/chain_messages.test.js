@@ -1,4 +1,6 @@
 import { RuleTester } from "eslint";
+import { readFileSync } from "fs";
+import { join } from "path";
 import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
@@ -8,84 +10,81 @@ const ruleTester = new RuleTester({
   },
 });
 
-console.log("Testing chain messages...");
+const fixturesDir = join(import.meta.dirname, "fixtures");
 
-// Test 1: Simple chain with 2 functions
-const simpleChain = `
-function processData({ id, ...rest }) {
-  return sendData({ ...rest });
-}
-function sendData({ name, email }) {
-  console.log(name, email);
-}
-processData({ id: 1, name: "John", email: "test@example.com", age: 25 });
-`;
+const validCode = readFileSync(join(fixturesDir, "valid.js"), "utf8");
+const simpleInvalidCode = readFileSync(
+  join(fixturesDir, "simple_invalid.js"),
+  "utf8",
+);
+const typoInvalidCode = readFileSync(
+  join(fixturesDir, "typo_invalid.js"),
+  "utf8",
+);
+const extraneousInvalidCode = readFileSync(
+  join(fixturesDir, "extraneous_invalid.js"),
+  "utf8",
+);
+const chainInvalidCode = readFileSync(
+  join(fixturesDir, "chain_invalid.js"),
+  "utf8",
+);
 
-// Test 2: Longer chain with multiple propagations
-const longChain = `
-function step1({ id, ...rest }) {
-  return step2({ ...rest });
-}
-function step2({ data, ...rest }) {
-  return step3({ ...rest });
-}
-function step3({ config, ...rest }) {
-  return step4({ ...rest });
-}
-function step4({ settings, ...rest }) {
-  return step5({ ...rest });
-}
-function step5({ name }) {
-  console.log(name);
-}
-step1({ id: 1, data: "test", config: {}, settings: {}, name: "John", unknown: "param" });
-`;
-
-// Run tests
-try {
-  ruleTester.run("no-unknown-params - chain messages", rule, {
-    valid: [
-      // This should be valid - all params are used somewhere in chain
-      {
-        name: "all parameters used in chain",
-        code: `
-function step1({ id, ...rest }) {
-  return step2({ ...rest });
-}
-function step2({ name }) {
-  console.log(name);
-}
-step1({ id: 1, name: "John" });
-        `,
-      },
-    ],
-    invalid: [
-      {
-        name: "parameter not used in short chain",
-        code: simpleChain,
-        errors: [
-          {
-            messageId: "unknownParam", // Could be unknownParamChain if chain detected
-            data: { param: "age", func: "processData" },
-            type: "Property",
+ruleTester.run("no-unknown-params - enhanced messages", rule, {
+  valid: [
+    {
+      name: "all parameters recognized in chain",
+      code: validCode,
+    },
+  ],
+  invalid: [
+    {
+      name: "simple unknown parameter",
+      code: simpleInvalidCode,
+      errors: [
+        {
+          messageId: "unknownParam", // Falls back to basic message
+          data: { param: "xyz", func: "greet" },
+          type: "Property",
+        },
+      ],
+    },
+    {
+      name: "parameter with potential typo",
+      code: typoInvalidCode,
+      errors: [
+        {
+          messageId: "unknownParamWithSuggestions", // Enhanced message with suggestions
+          data: {
+            param: "passwd",
+            func: "authenticate",
+            suggestions: "password",
           },
-        ],
-      },
-      {
-        name: "parameter not used in long chain",
-        code: longChain,
-        errors: [
-          {
-            messageId: "unknownParam", // Could be unknownParamLongChain if chain detected
-            data: { param: "unknown", func: "step1" },
-            type: "Property",
-          },
-        ],
-      },
-    ],
-  });
-
-  console.log("✅ Chain message tests completed successfully");
-} catch (error) {
-  console.error("❌ Test failed:", error.message);
-}
+          type: "Property",
+        },
+      ],
+    },
+    {
+      name: "extraneous parameter",
+      code: extraneousInvalidCode,
+      errors: [
+        {
+          messageId: "extraneousParam", // Enhanced message for extraneous params
+          data: { param: "extra", func: "validate", expected: "email, phone" },
+          type: "Property",
+        },
+      ],
+    },
+    {
+      name: "unknown param in chain context",
+      code: chainInvalidCode,
+      errors: [
+        {
+          messageId: "unknownParam", // May get chain message with available params
+          data: { param: "unknown", func: "step1" },
+          type: "Property",
+        },
+      ],
+    },
+  ],
+});

@@ -333,10 +333,188 @@ function checkParameterChaining(
   return { found: false, chain: [] };
 }
 
+// Helper function to collect all parameters accepted in a function and its call chain
+function collectChainParameters(
+  functionDef,
+  functionDefinitions,
+  visited = new Set(),
+) {
+  const functionKey =
+    functionDef.id?.name || functionDef.parent?.id?.name || "anonymous";
+  if (visited.has(functionKey)) {
+    return new Set();
+  }
+  visited.add(functionKey);
+
+  const allParams = new Set();
+
+  // Collect parameters from this function
+  if (functionDef.params) {
+    for (const param of functionDef.params) {
+      if (param.type === "ObjectPattern") {
+        for (const prop of param.properties) {
+          if (
+            prop.type === "Property" &&
+            prop.key &&
+            prop.key.type === "Identifier"
+          ) {
+            allParams.add(prop.key.name);
+          }
+        }
+      }
+    }
+  }
+
+  // Collect parameters from propagated functions
+  const propagations = analyzeParameterPropagation(
+    functionDef,
+    functionDefinitions,
+  );
+
+  for (const propagation of propagations) {
+    const { targetFunctionDef } = propagation;
+    const targetParams = collectChainParameters(
+      targetFunctionDef,
+      functionDefinitions,
+      visited,
+    );
+    for (const param of targetParams) {
+      allParams.add(param);
+    }
+  }
+
+  return allParams;
+}
+
+// Helper function to find similar parameter names (for typo suggestions)
+function findSimilarParams(unknownParam, availableParams) {
+  const suggestions = [];
+  const unknownLower = unknownParam.toLowerCase();
+
+  for (const param of availableParams) {
+    const paramLower = param.toLowerCase();
+
+    // Exact case-insensitive match
+    if (unknownLower === paramLower && unknownParam !== param) {
+      suggestions.unshift(param); // Put at front
+      continue;
+    }
+
+    // Starting with same letters
+    if (param.startsWith(unknownParam.charAt(0)) && param !== unknownParam) {
+      const similarity = calculateSimilarity(unknownParam, param);
+      if (similarity > 0.6) {
+        suggestions.push(param);
+      }
+    }
+  }
+
+  return suggestions.slice(0, 3); // Max 3 suggestions
+}
+
+// Simple similarity calculation (Levenshtein-like)
+function calculateSimilarity(str1, str2) {
+  const maxLen = Math.max(str1.length, str2.length);
+  const distance = levenshteinDistance(str1, str2);
+  return 1 - distance / maxLen;
+}
+
+function levenshteinDistance(str1, str2) {
+  const matrix = [];
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1,
+        );
+      }
+    }
+  }
+  return matrix[str2.length][str1.length];
+}
+
 // Helper function to generate appropriate error message based on call chain
-function generateErrorMessage(paramName, functionName, chain) {
+function generateErrorMessage(
+  paramName,
+  functionName,
+  chain,
+  functionDef,
+  functionDefinitions,
+  givenParams = [],
+) {
+  // Collect all available parameters in the function and its chain
+  const availableParams = collectChainParameters(
+    functionDef,
+    functionDefinitions,
+  );
+  const availableParamsArray = Array.from(availableParams);
+
+  // Find suggestions for potential typos
+  const suggestions = findSimilarParams(paramName, availableParams);
+
+  // Check if this is a case where user provided exactly expected + one extra
+  const directParams = new Set();
+  if (functionDef.params) {
+    for (const param of functionDef.params) {
+      if (param.type === "ObjectPattern") {
+        for (const prop of param.properties) {
+          if (
+            prop.type === "Property" &&
+            prop.key &&
+            prop.key.type === "Identifier"
+          ) {
+            directParams.add(prop.key.name);
+          }
+        }
+      }
+    }
+  }
+
+  // Check if this is an "extraneous" parameter
+  // Consider it extraneous if we have 2+ expected params and ALL are provided + extra
+  // This provides better error messages for cases with clear parameter expectations
+  const isExtraneous =
+    directParams.size >= 2 &&
+    Array.from(directParams).every((expected) =>
+      givenParams.includes(expected),
+    ) &&
+    givenParams.some((p) => !directParams.has(p));
+
   if (chain.length === 0) {
-    // Simple case - no chain information or direct call
+    // Simple case - no chain
+    // Prioritize suggestions over extraneous if we have good suggestions
+    if (suggestions.length > 0) {
+      return {
+        messageId: "unknownParamWithSuggestions",
+        data: {
+          param: paramName,
+          func: functionName,
+          suggestions: suggestions.join(", "),
+        },
+      };
+    }
+
+    if (isExtraneous && directParams.size > 0) {
+      return {
+        messageId: "extraneousParam",
+        data: {
+          param: paramName,
+          func: functionName,
+          expected: Array.from(directParams).join(", "),
+        },
+      };
+    }
+
     return {
       messageId: "unknownParam",
       data: { param: paramName, func: functionName },
@@ -344,8 +522,19 @@ function generateErrorMessage(paramName, functionName, chain) {
   }
 
   if (chain.length <= 3) {
-    // Short chain - show full path
+    // Short chain
     const chainStr = chain.join(" → ");
+    if (availableParamsArray.length > 0) {
+      return {
+        messageId: "unknownParamChainWithSuggestions",
+        data: {
+          param: paramName,
+          chain: chainStr,
+          available: availableParamsArray.join(", "),
+        },
+      };
+    }
+
     return {
       messageId: "unknownParamChain",
       data: { param: paramName, chain: chainStr },
@@ -359,9 +548,7 @@ function generateErrorMessage(paramName, functionName, chain) {
     messageId: "unknownParamLongChain",
     data: { param: paramName, firstFunc, lastFunc },
   };
-}
-
-// Helper function to find variable declarations in a function that match a name
+} // Helper function to find variable declarations in a function that match a name
 function findVariableDeclarationsInFunction(functionNode, varName) {
   let found = false;
 
@@ -506,6 +693,11 @@ function analyzeCallExpression(node, functionDefinitions, context) {
         continue;
       }
 
+      // Collect all given parameters
+      const givenParams = arg.properties
+        .filter((p) => p.key && p.key.type === "Identifier")
+        .map((p) => p.key.name);
+
       // Check properties that would go into rest
       for (const prop of arg.properties) {
         if (prop.key && prop.key.type === "Identifier") {
@@ -523,6 +715,9 @@ function analyzeCallExpression(node, functionDefinitions, context) {
                 keyName,
                 funcName,
                 chainResult.chain,
+                functionDef,
+                functionDefinitions,
+                givenParams,
               );
               context.report({
                 node: prop,
@@ -542,6 +737,11 @@ function analyzeCallExpression(node, functionDefinitions, context) {
         .filter((name) => name !== null),
     );
 
+    // Collect all given parameters
+    const givenParams = arg.properties
+      .filter((p) => p.key && p.key.type === "Identifier")
+      .map((p) => p.key.name);
+
     for (const prop of arg.properties) {
       if (prop.key && prop.key.type === "Identifier") {
         const keyName = prop.key.name;
@@ -558,6 +758,9 @@ function analyzeCallExpression(node, functionDefinitions, context) {
               keyName,
               funcName,
               chainResult.chain,
+              functionDef,
+              functionDefinitions,
+              givenParams,
             );
             context.report({
               node: prop,
@@ -720,6 +923,16 @@ function analyzeJSXElement(node, functionDefinitions, context) {
       return;
     }
 
+    // Collect all given JSX attributes
+    const givenAttrs = openingElement.attributes
+      .filter(
+        (attr) =>
+          attr.type === "JSXAttribute" &&
+          attr.name &&
+          attr.name.type === "JSXIdentifier",
+      )
+      .map((attr) => attr.name.name);
+
     // Check JSX attributes that would go into rest
     for (const attr of openingElement.attributes) {
       if (
@@ -741,6 +954,9 @@ function analyzeJSXElement(node, functionDefinitions, context) {
               attrName,
               componentName,
               chainResult.chain,
+              functionDef,
+              functionDefinitions,
+              givenAttrs,
             );
             context.report({
               node: attr,
@@ -760,6 +976,16 @@ function analyzeJSXElement(node, functionDefinitions, context) {
       .map((p) => (p.key && p.key.type === "Identifier" ? p.key.name : null))
       .filter((name) => name !== null),
   );
+
+  // Collect all given JSX attributes
+  const givenAttrs = openingElement.attributes
+    .filter(
+      (attr) =>
+        attr.type === "JSXAttribute" &&
+        attr.name &&
+        attr.name.type === "JSXIdentifier",
+    )
+    .map((attr) => attr.name.name);
 
   for (const attr of openingElement.attributes) {
     if (
@@ -781,6 +1007,9 @@ function analyzeJSXElement(node, functionDefinitions, context) {
             attrName,
             componentName,
             chainResult.chain,
+            functionDef,
+            functionDefinitions,
+            givenAttrs,
           );
           context.report({
             node: attr,
@@ -809,6 +1038,12 @@ export default {
         "'{{param}}' is not recognized in call chain '{{chain}}'.",
       unknownParamLongChain:
         "'{{param}}' is not recognized in call chain '{{firstFunc}}' → ... → '{{lastFunc}}'.",
+      unknownParamWithSuggestions:
+        "'{{param}}' is not recognized in '{{func}}'. Did you mean: {{suggestions}}?",
+      unknownParamChainWithSuggestions:
+        "'{{param}}' is not recognized in call chain '{{chain}}'. Available parameters: {{available}}.",
+      extraneousParam:
+        "'{{param}}' is extraneous. '{{func}}' only accepts: {{expected}}.",
     },
   },
 

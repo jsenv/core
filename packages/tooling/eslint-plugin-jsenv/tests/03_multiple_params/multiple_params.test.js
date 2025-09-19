@@ -28,8 +28,8 @@ ruleTester.run("no-unknown-params - multiple parameters", rule, {
       code: invalidCode,
       errors: [
         {
-          messageId: "unknownParam",
-          data: { param: "d", func: "toto" },
+          messageId: "extraneousParam",
+          data: { param: "d", func: "toto", expected: "b, c" },
           type: "Property",
         },
       ],
