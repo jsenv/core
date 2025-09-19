@@ -17,7 +17,7 @@ ruleTester.run(
       {
         name: "static import should work",
         code: `
-        import { build } from "@jsenv/core";
+        import { build } from "./fixtures/build.js";
 
         const test = async ({ expectedFileCount, ...params }) => {
           console.log(expectedFileCount);
@@ -33,7 +33,7 @@ ruleTester.run(
         name: "dynamic import should also work",
         code: `
         const test = async ({ expectedFileCount, ...params }) => {
-          const { build } = await import("@jsenv/core");
+          const { build } = await import("./fixtures/build.js");
           console.log(expectedFileCount);
           await build({ ...params });
         };
@@ -48,7 +48,7 @@ ruleTester.run(
         code: `
         // Local function that dynamically imports and forwards parameters
         const buildWrapper = async (options) => {
-          const { build } = await import("@jsenv/core");
+          const { build } = await import("./fixtures/build.js");
           return build(options);
         };
 
