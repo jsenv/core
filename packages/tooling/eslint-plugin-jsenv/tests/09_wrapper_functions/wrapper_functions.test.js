@@ -1,7 +1,7 @@
 import { RuleTester } from "eslint";
 import { readFileSync } from "fs";
 import { join } from "path";
-import rule from "../../lib/rules/no-extra-params.js";
+import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -39,7 +39,7 @@ const reactWrappersInvalid = readFileSync(
 const bindValid = readFileSync(join(fixturesDir, "bind_valid.js"), "utf8");
 const bindInvalid = readFileSync(join(fixturesDir, "bind_invalid.js"), "utf8");
 
-ruleTester.run("no-extra-params - wrapper functions", rule, {
+ruleTester.run("no-unknown-params - wrapper functions", rule, {
   valid: [
     {
       name: "forwardRef wrapper with valid props",
@@ -64,7 +64,7 @@ ruleTester.run("no-extra-params - wrapper functions", rule, {
       code: forwardRefInvalid,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "extra", func: "WrappedComponent" },
         },
       ],
@@ -74,7 +74,7 @@ ruleTester.run("no-extra-params - wrapper functions", rule, {
       code: memoInvalid,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "unused", func: "MemoizedComponent" },
         },
       ],
@@ -84,11 +84,11 @@ ruleTester.run("no-extra-params - wrapper functions", rule, {
       code: reactWrappersInvalid,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "extra1", func: "ReactForwardRefComponent" },
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "extra2", func: "ReactMemoComponent" },
         },
       ],
@@ -98,7 +98,7 @@ ruleTester.run("no-extra-params - wrapper functions", rule, {
       code: bindInvalid,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "extra", func: "boundFunction" },
         },
       ],

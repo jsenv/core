@@ -22,7 +22,7 @@ export default [
       "@jsenv": jsenvPlugin,
     },
     rules: {
-      "@jsenv/no-extra-params": "error",
+      "@jsenv/no-unknown-params": "error",
     },
   },
 ];
@@ -30,9 +30,9 @@ export default [
 
 ## Rules
 
-### `no-extra-params`
+### `no-unknown-params`
 
-Detects unused parameters in function calls and JSX component props.
+Detects unknown parameters in function calls and JSX component props that are not recognized anywhere in the function definition or call chain.
 
 #### ✅ Valid
 

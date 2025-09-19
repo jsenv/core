@@ -1,7 +1,7 @@
 import { RuleTester } from "eslint";
 import { readFileSync } from "fs";
 import { join } from "path";
-import rule from "../../lib/rules/no-extra-params.js";
+import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -15,7 +15,7 @@ const fixturesDir = join(import.meta.dirname, "fixtures");
 const validCode = readFileSync(join(fixturesDir, "input_valid.js"), "utf8");
 const invalidCode = readFileSync(join(fixturesDir, "input_invalid.js"), "utf8");
 
-ruleTester.run("no-extra-params - function basic", rule, {
+ruleTester.run("no-unknown-params - function basic", rule, {
   valid: [
     {
       name: "function uses all parameters",
@@ -28,7 +28,7 @@ ruleTester.run("no-extra-params - function basic", rule, {
       code: invalidCode,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "b", func: "foo" },
           type: "Property",
         },

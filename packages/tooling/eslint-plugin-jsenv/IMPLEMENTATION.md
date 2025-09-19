@@ -1,8 +1,8 @@
-# ESLint Plugin JSEnv - no-extra-params Rule
+# ESLint Plugin JSEnv - no-unknown-params Rule
 
 ## 🎉 Implementation Complete
 
-This ESLint plugin implements a comprehensive `no-extra-params` rule that detects unused parameters in function calls and JSX component props.
+This ESLint plugin implements a comprehensive `no-unknown-params` rule that detects unused parameters in function calls and JSX component props.
 
 ## ✨ Features Implemented
 
@@ -126,7 +126,7 @@ WrappedComponent({ title: "Hello", extra: "flagged" }); // extra flagged
 packages/tooling/eslint-plugin-jsenv/
 ├── lib/
 │   └── rules/
-│       └── no-extra-params.js     # Main rule implementation
+│       └── no-unknown-params.js     # Main rule implementation
 ├── tests/                         # Comprehensive test suite
 │   ├── 01_function_basic/         # Basic function parameter detection
 │   ├── 02_arrow_function/         # Arrow function support

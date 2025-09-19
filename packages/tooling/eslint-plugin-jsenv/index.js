@@ -1,4 +1,4 @@
-import noExtraParams from "./lib/rules/no-extra-params.js";
+import noUnknownParams from "./lib/rules/no-unknown-params.js";
 
 export default {
   meta: {
@@ -6,13 +6,13 @@ export default {
     version: "1.0.0",
   },
   rules: {
-    "no-extra-params": noExtraParams,
+    "no-unknown-params": noUnknownParams,
   },
   configs: {
     recommended: {
       plugins: ["@jsenv"],
       rules: {
-        "@jsenv/no-extra-params": "warn",
+        "@jsenv/no-unknown-params": "warn",
       },
     },
   },

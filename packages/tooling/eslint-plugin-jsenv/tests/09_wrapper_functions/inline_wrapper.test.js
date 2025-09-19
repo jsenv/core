@@ -1,7 +1,7 @@
 import { RuleTester } from "eslint";
 import { readFileSync } from "fs";
 import { join } from "path";
-import rule from "../../lib/rules/no-extra-params.js";
+import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -23,7 +23,7 @@ const inlineInvalid = readFileSync(
   "utf8",
 );
 
-ruleTester.run("no-extra-params - inline wrapper functions", rule, {
+ruleTester.run("no-unknown-params - inline wrapper functions", rule, {
   valid: [
     {
       name: "inline function expressions in wrappers with valid props",
@@ -36,11 +36,11 @@ ruleTester.run("no-extra-params - inline wrapper functions", rule, {
       code: inlineInvalid,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "extra1", func: "ForwardRefInline" },
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "extra2", func: "MemoInline" },
         },
       ],

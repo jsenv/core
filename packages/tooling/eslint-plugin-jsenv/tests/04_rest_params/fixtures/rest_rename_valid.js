@@ -32,5 +32,5 @@ const validNoTarget = ({ b, ...config }) => {
   global.settings = settings; // Use settings without passing to a trackable function
 };
 
-// Should be valid - not propagated to trackable function, so no-extra-params doesn't check
+// Should be valid - not propagated to trackable function, so no-unknown-params doesn't check
 validNoTarget({ b: 2, unused: "value" });

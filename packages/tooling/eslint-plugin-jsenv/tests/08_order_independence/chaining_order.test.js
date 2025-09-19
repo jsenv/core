@@ -1,7 +1,7 @@
 import { RuleTester } from "eslint";
 import { readFileSync } from "fs";
 import { join } from "path";
-import rule from "../../lib/rules/no-extra-params.js";
+import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -18,7 +18,7 @@ const invalidCode = readFileSync(
   "utf8",
 );
 
-ruleTester.run("no-extra-params - chaining order independence", rule, {
+ruleTester.run("no-unknown-params - chaining order independence", rule, {
   valid: [
     {
       name: "function chaining before definition - valid usage",
@@ -31,7 +31,7 @@ ruleTester.run("no-extra-params - chaining order independence", rule, {
       code: invalidCode,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "unused", func: "processData" },
         },
       ],

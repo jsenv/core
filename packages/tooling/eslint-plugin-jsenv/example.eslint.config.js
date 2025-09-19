@@ -6,7 +6,7 @@ export default [
       "@jsenv": await import("@jsenv/eslint-plugin"),
     },
     rules: {
-      "@jsenv/no-extra-params": "warn",
+      "@jsenv/no-unknown-params": "warn",
     },
   },
 ];

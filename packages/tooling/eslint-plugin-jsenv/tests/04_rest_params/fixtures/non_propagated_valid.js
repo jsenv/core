@@ -1,7 +1,7 @@
 // Valid: Rest params not propagated - no-unused-vars should handle these
 function localProcessor({ key, ...settings }) {
   console.log(key);
-  // settings is not used, but no-extra-params shouldn't report this
+  // settings is not used, but no-unknown-params shouldn't report this
   // because it's not propagated to another function
 }
 

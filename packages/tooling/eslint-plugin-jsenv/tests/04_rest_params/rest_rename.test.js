@@ -1,5 +1,5 @@
 import { RuleTester } from "eslint";
-import rule from "../../lib/rules/no-extra-params.js";
+import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -36,7 +36,7 @@ const targetFunction = ({ c }) => {
 invalidRestRename({ a: 1, d: true });
 `;
 
-ruleTester.run("no-extra-params - rest renaming", rule, {
+ruleTester.run("no-unknown-params - rest renaming", rule, {
   valid: [
     {
       name: "rest param renamed and passed to function that uses the property",
@@ -49,7 +49,7 @@ ruleTester.run("no-extra-params - rest renaming", rule, {
       code: invalidRestRenamed,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "d", func: "invalidRestRename" },
           type: "Property",
         },

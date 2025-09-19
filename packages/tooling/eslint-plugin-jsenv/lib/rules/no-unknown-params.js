@@ -485,7 +485,7 @@ function analyzeCallExpression(node, functionDefinitions, context) {
             if (!isUsedInChain) {
               context.report({
                 node: prop,
-                messageId: "extraParam",
+                messageId: "unknownParam",
                 data: { param: keyName, func: funcName },
               });
             }
@@ -515,7 +515,7 @@ function analyzeCallExpression(node, functionDefinitions, context) {
           if (!isUsedInChain) {
             context.report({
               node: prop,
-              messageId: "extraParam",
+              messageId: "unknownParam",
               data: { param: keyName, func: funcName },
             });
           }
@@ -693,7 +693,7 @@ function analyzeJSXElement(node, functionDefinitions, context) {
           if (!isUsedInChain) {
             context.report({
               node: attr,
-              messageId: "extraParam",
+              messageId: "unknownParam",
               data: { param: attrName, func: componentName },
             });
           }
@@ -728,7 +728,7 @@ function analyzeJSXElement(node, functionDefinitions, context) {
         if (!isUsedInChain) {
           context.report({
             node: attr,
-            messageId: "extraParam",
+            messageId: "unknownParam",
             data: { param: attrName, func: componentName },
           });
         }
@@ -742,13 +742,13 @@ export default {
     type: "problem",
     docs: {
       description:
-        "Disallow passing extra params not used in function definition",
+        "Disallow passing unknown params not recognized in function definition or call chain",
       category: "Possible Errors",
       recommended: false,
     },
     schema: [],
     messages: {
-      extraParam: "'{{param}}' is passed but not used in '{{func}}'.",
+      unknownParam: "'{{param}}' is not recognized in '{{func}}'.",
     },
   },
 

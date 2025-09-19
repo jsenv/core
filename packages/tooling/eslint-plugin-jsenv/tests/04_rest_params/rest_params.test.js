@@ -1,7 +1,7 @@
 import { RuleTester } from "eslint";
 import { readFileSync } from "fs";
 import { join } from "path";
-import rule from "../../lib/rules/no-extra-params.js";
+import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -36,7 +36,7 @@ const propertyRenameInvalidCode = readFileSync(
   "utf8",
 );
 
-ruleTester.run("no-extra-params - rest parameters", rule, {
+ruleTester.run("no-unknown-params - rest parameters", rule, {
   valid: [
     {
       name: "basic rest parameters accept extra properties",
@@ -61,7 +61,7 @@ ruleTester.run("no-extra-params - rest parameters", rule, {
       code: invalidCode,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "extra", func: "mixed" },
           type: "Property",
         },
@@ -72,32 +72,32 @@ ruleTester.run("no-extra-params - rest parameters", rule, {
       code: propagationInvalidCode,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "debug", func: "initializeApp" },
           type: "Property",
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "timeout", func: "initializeApp" },
           type: "Property",
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "email", func: "createUser" },
           type: "Property",
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "age", func: "createUser" },
           type: "Property",
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "headers", func: "processRequest" },
           type: "Property",
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "timeout", func: "processRequest" },
           type: "Property",
         },
@@ -108,22 +108,22 @@ ruleTester.run("no-extra-params - rest parameters", rule, {
       code: propertyRenameInvalidCode,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "b", func: "invalidRename1" },
           type: "Property",
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "c", func: "invalidRename2" },
           type: "Property",
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "x", func: "invalidMultipleRename" },
           type: "Property",
         },
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "y", func: "invalidMultipleRename" },
           type: "Property",
         },

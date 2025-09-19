@@ -1,7 +1,7 @@
 import { RuleTester } from "eslint";
 import { readFileSync } from "fs";
 import { join } from "path";
-import rule from "../../lib/rules/no-extra-params.js";
+import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -20,7 +20,7 @@ const fixturesDir = join(import.meta.dirname, "fixtures");
 const validCode = readFileSync(join(fixturesDir, "jsx_valid.jsx"), "utf8");
 const invalidCode = readFileSync(join(fixturesDir, "jsx_invalid.jsx"), "utf8");
 
-ruleTester.run("no-extra-params - JSX order independence", rule, {
+ruleTester.run("no-unknown-params - JSX order independence", rule, {
   valid: [
     {
       name: "JSX usage before component definition - valid",
@@ -33,7 +33,7 @@ ruleTester.run("no-extra-params - JSX order independence", rule, {
       code: invalidCode,
       errors: [
         {
-          messageId: "extraParam",
+          messageId: "unknownParam",
           data: { param: "extra", func: "MyComponent" },
         },
       ],
