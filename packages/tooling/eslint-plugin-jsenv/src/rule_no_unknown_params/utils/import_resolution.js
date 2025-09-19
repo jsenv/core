@@ -112,6 +112,7 @@ function transformContent(content) {
  */
 function parseExportedFunctions(content) {
   const functions = [];
+  const reExports = [];
 
   // Match export function declarations with destructured parameters
   const exportFunctionRegex =
@@ -148,12 +149,34 @@ function parseExportedFunctions(content) {
     });
   }
 
+  // Match re-exports: export { name } from "./file.js"
+  const reExportRegex = /export\s+\{\s*(\w+)\s*\}\s+from\s+["']([^"']+)["']/g;
+  while ((match = reExportRegex.exec(content)) !== null) {
+    const exportName = match[1];
+    const fromPath = match[2];
+    
+    reExports.push({
+      type: "ExportNamedDeclaration",
+      specifiers: [
+        {
+          type: "ExportSpecifier",
+          exported: { type: "Identifier", name: exportName },
+          local: { type: "Identifier", name: exportName },
+        }
+      ],
+      source: { type: "Literal", value: fromPath },
+    });
+  }
+
   return {
     type: "Program",
-    body: functions.map((func) => ({
-      type: "ExportNamedDeclaration",
-      declaration: func,
-    })),
+    body: [
+      ...functions.map((func) => ({
+        type: "ExportNamedDeclaration",
+        declaration: func,
+      })),
+      ...reExports,
+    ],
   };
 }
 
@@ -193,6 +216,18 @@ export function resolveImports(context, functionDefinitions) {
           if (importedAst) {
             // Extract function definitions from imported file
             const importedFunctions = extractFunctionDefinitions(importedAst);
+
+            // Handle re-exports by resolving them recursively
+            const reExportedFunctions = resolveReExports(
+              importedAst,
+              resolvedPath,
+              context,
+            );
+            
+            // Merge re-exported functions with directly defined functions
+            for (const [name, func] of reExportedFunctions) {
+              importedFunctions.set(name, func);
+            }
 
             // Map imported names to local names
             for (const specifier of node.specifiers) {
@@ -323,4 +358,74 @@ function extractFunctionDefinitions(ast) {
 
   traverse(ast);
   return functions;
+}
+
+/**
+ * Resolves re-exports recursively to find function definitions
+ * @param {Object} ast - AST of the file containing re-exports
+ * @param {string} currentFilePath - Path to the current file
+ * @param {Object} context - ESLint context
+ * @returns {Map} - Map of re-exported function names to definitions
+ */
+function resolveReExports(ast, currentFilePath, context) {
+  const reExportedFunctions = new Map();
+
+  function traverse(node) {
+    if (!node || typeof node !== "object") return;
+
+    // Handle re-export declarations: export { name } from "./file.js"
+    if (
+      node.type === "ExportNamedDeclaration" &&
+      node.source &&
+      node.specifiers
+    ) {
+      const fromPath = node.source.value;
+      const resolvedFromPath = resolveModulePath(
+        fromPath,
+        currentFilePath,
+        null, // No resolver needed for relative paths
+      );
+
+      if (resolvedFromPath) {
+        try {
+          const reExportedAst = parseFileWithESLint(resolvedFromPath, context);
+          if (reExportedAst) {
+            const reExportedFileFunctions = extractFunctionDefinitions(reExportedAst);
+
+            for (const specifier of node.specifiers) {
+              if (specifier.type === "ExportSpecifier") {
+                const exportedName = specifier.exported.name;
+                const localName = specifier.local.name;
+
+                if (reExportedFileFunctions.has(localName)) {
+                  reExportedFunctions.set(
+                    exportedName,
+                    reExportedFileFunctions.get(localName),
+                  );
+                }
+              }
+            }
+          }
+        } catch {
+          // Silently skip files that can't be resolved
+        }
+      }
+    }
+
+    // Traverse child nodes
+    for (const key in node) {
+      if (key === "parent") continue;
+      const child = node[key];
+      if (Array.isArray(child)) {
+        for (const item of child) {
+          traverse(item);
+        }
+      } else {
+        traverse(child);
+      }
+    }
+  }
+
+  traverse(ast);
+  return reExportedFunctions;
 }
