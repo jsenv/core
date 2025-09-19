@@ -57,7 +57,6 @@ export const ExplorerItem = ({
         item={item}
         useItemArrayInStore={useItemArrayInStore}
         useRenameItemAction={useRenameItemAction}
-        editable={editing}
         stopEditing={stopEditing}
       />
     ) : (

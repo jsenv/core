@@ -3,7 +3,7 @@ import { PlusSvg } from "./icons.jsx";
 
 export const SvgIconGroup = ({ children }) => {
   return (
-    <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
+    <SVGMaskOverlay viewBox="0 0 24 24">
       <svg>
         <svg x="2" y="4" width="12" height="12" overflow="visible">
           {children}
@@ -21,7 +21,7 @@ export const SvgIconGroup = ({ children }) => {
 
 export const SvgWithPlus = ({ children }) => {
   return (
-    <SVGMaskOverlay viewBox="0 0 24 24" width="100%" height="100%">
+    <SVGMaskOverlay viewBox="0 0 24 24">
       {children}
       <svg x="12" y="12" width="16" height="16" overflow="visible">
         <circle cx="8" cy="8" r="5" fill="transparent" />

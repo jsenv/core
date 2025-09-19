@@ -71,7 +71,6 @@ export const ExplorerItemList = forwardRef((props, ref) => {
         return (
           <li className="explorer_item" key={item[idKey]}>
             <ExplorerItem
-              idKey={idKey}
               nameKey={nameKey}
               item={item}
               deletedItems={deletedItems}

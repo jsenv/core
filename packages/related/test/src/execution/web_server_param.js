@@ -92,7 +92,6 @@ export const ensureWebServerIsStarted = async (
   }
   if (webServer.command) {
     await startServerUsingCommand(webServer, {
-      ignoreProcessExecArgv,
       signal,
       allocatedMs,
       teardownCallbackSet,
