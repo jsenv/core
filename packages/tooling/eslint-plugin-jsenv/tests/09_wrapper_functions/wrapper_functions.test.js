@@ -1,6 +1,4 @@
 import { RuleTester } from "eslint";
-import { readFileSync } from "fs";
-import { join } from "path";
 import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
@@ -15,70 +13,84 @@ const ruleTester = new RuleTester({
   },
 });
 
-const fixturesDir = join(import.meta.dirname, "fixtures");
-
-// Load fixture files
-const forwardRefValid = readFileSync(
-  join(fixturesDir, "forwardref_valid.js"),
-  "utf8",
-);
-const forwardRefInvalid = readFileSync(
-  join(fixturesDir, "forwardref_invalid.js"),
-  "utf8",
-);
-const memoValid = readFileSync(join(fixturesDir, "memo_valid.js"), "utf8");
-const memoInvalid = readFileSync(join(fixturesDir, "memo_invalid.js"), "utf8");
-const reactWrappersValid = readFileSync(
-  join(fixturesDir, "react_wrappers_valid.js"),
-  "utf8",
-);
-const reactWrappersInvalid = readFileSync(
-  join(fixturesDir, "react_wrappers_invalid.js"),
-  "utf8",
-);
-const bindValid = readFileSync(join(fixturesDir, "bind_valid.js"), "utf8");
-const bindInvalid = readFileSync(join(fixturesDir, "bind_invalid.js"), "utf8");
-
 ruleTester.run("no-unknown-params - wrapper functions", rule, {
   valid: [
     {
       name: "forwardRef wrapper with valid props",
-      code: forwardRefValid,
+      code: `function MyComponent({ title, description }) {
+  return (
+    <div>
+      {title}: {description}
+    </div>
+  );
+}
+
+const WrappedComponent = forwardRef(MyComponent);
+
+export const App = () => <WrappedComponent title="Hello" description="World" />;`,
     },
     {
       name: "memo wrapper with valid props",
-      code: memoValid,
+      code: `function MyComponent({ name, age }) {
+  return (
+    <div>
+      {name} is {age} years old
+    </div>
+  );
+}
+
+const MemoizedComponent = memo(MyComponent);
+
+export const App = () => <MemoizedComponent name="John" age={25} />;`,
     },
     {
       name: "React.forwardRef and React.memo with valid props",
-      code: reactWrappersValid,
+      code: `function BaseComponent({ title, subtitle }) {
+  return (
+    <h1>
+      {title} - {subtitle}
+    </h1>
+  );
+}
+
+const ReactForwardRefComponent = React.forwardRef(BaseComponent);
+const ReactMemoComponent = React.memo(BaseComponent);
+
+export const App = () => (
+  <>
+    <ReactForwardRefComponent title="Hello" subtitle="World" />
+    <ReactMemoComponent title="React" subtitle="Memo" />
+  </>
+);`,
     },
     {
       name: "Function.bind wrapper with valid props",
-      code: bindValid,
+      code: `function myFunction({ name, age }) {
+  console.log(\`\${name} is \${age} years old\`);
+}
+
+const boundFunction = myFunction.bind(null);
+
+boundFunction({ name: "Alice", age: 30 });`,
     },
   ],
   invalid: [
     {
       name: "forwardRef wrapper with extra prop",
-      code: `// Test forwardRef wrapper - invalid case
-function MyComponent({ title }) {
+      code: `function MyComponent({ title }) {
   return <div>{title}</div>;
 }
 
 const WrappedComponent = forwardRef(MyComponent);
 
-// Invalid usage - extra prop should be detected
-WrappedComponent({ title: "Hello", extra: "unused" });`,
-      output: `// Test forwardRef wrapper - invalid case
-function MyComponent({ title }) {
+export const App = () => <WrappedComponent title="Hello" extra="unused" />;`,
+      output: `function MyComponent({ title }) {
   return <div>{title}</div>;
 }
 
 const WrappedComponent = forwardRef(MyComponent);
 
-// Invalid usage - extra prop should be detected
-WrappedComponent({ title: "Hello" });`,
+export const App = () => <WrappedComponent title="Hello"  />;`,
       errors: [
         {
           messageId: "unknownParam",
@@ -88,17 +100,20 @@ WrappedComponent({ title: "Hello" });`,
     },
     {
       name: "memo wrapper with extra prop",
-      code: memoInvalid,
-      output: `// Test memo wrapper - invalid case
-function MyComponent({ name }) {
+      code: `function MyComponent({ name }) {
   return <div>Hello {name}</div>;
 }
 
 const MemoizedComponent = memo(MyComponent);
 
-// Invalid usage - extra prop should be detected
-MemoizedComponent({ name: "John" });
-`,
+export const App = () => <MemoizedComponent name="John" unused="extra" />;`,
+      output: `function MyComponent({ name }) {
+  return <div>Hello {name}</div>;
+}
+
+const MemoizedComponent = memo(MyComponent);
+
+export const App = () => <MemoizedComponent name="John"  />;`,
       errors: [
         {
           messageId: "unknownParam",
@@ -108,19 +123,32 @@ MemoizedComponent({ name: "John" });
     },
     {
       name: "React wrappers with extra props",
-      code: reactWrappersInvalid,
-      output: `// Test React.forwardRef and React.memo - invalid case
-function BaseComponent({ title }) {
+      code: `function BaseComponent({ title }) {
   return <h1>{title}</h1>;
 }
 
 const ReactForwardRefComponent = React.forwardRef(BaseComponent);
 const ReactMemoComponent = React.memo(BaseComponent);
 
-// Invalid usage - extra props should be detected
-ReactForwardRefComponent({ title: "Hello" });
-ReactMemoComponent({ title: "React" });
-`,
+export const App = () => (
+  <>
+    <ReactForwardRefComponent title="Hello" extra1="unused" />
+    <ReactMemoComponent title="React" extra2="unused" />
+  </>
+);`,
+      output: `function BaseComponent({ title }) {
+  return <h1>{title}</h1>;
+}
+
+const ReactForwardRefComponent = React.forwardRef(BaseComponent);
+const ReactMemoComponent = React.memo(BaseComponent);
+
+export const App = () => (
+  <>
+    <ReactForwardRefComponent title="Hello"  />
+    <ReactMemoComponent title="React"  />
+  </>
+);`,
       errors: [
         {
           messageId: "unknownParam",
@@ -134,17 +162,20 @@ ReactMemoComponent({ title: "React" });
     },
     {
       name: "Function.bind wrapper with extra prop",
-      code: bindInvalid,
-      output: `// Test Function.prototype.bind wrapper - invalid case
-function myFunction({ name }) {
+      code: `function myFunction({ name }) {
   console.log(\`Hello \${name}\`);
 }
 
 const boundFunction = myFunction.bind(null);
 
-// Invalid usage - extra prop should be detected
-boundFunction({ name: "Alice" });
-`,
+boundFunction({ name: "Alice", extra: "unused" });`,
+      output: `function myFunction({ name }) {
+  console.log(\`Hello \${name}\`);
+}
+
+const boundFunction = myFunction.bind(null);
+
+boundFunction({ name: "Alice" });`,
       errors: [
         {
           messageId: "unknownParam",

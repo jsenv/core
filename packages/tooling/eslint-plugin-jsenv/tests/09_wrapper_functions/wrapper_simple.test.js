@@ -23,7 +23,7 @@ ruleTester.run("no-unknown-params - wrapper functions", rule, {
 
 const ValidWrappedComponent = forwardRef(ValidComponent);
 
-ValidWrappedComponent({ title: "Hello" });`,
+export const App = () => <ValidWrappedComponent title="Hello" />;`,
     },
     {
       name: "memo wrapper with valid props",
@@ -37,7 +37,7 @@ ValidWrappedComponent({ title: "Hello" });`,
 
 const MemoizedComponent = memo(MyComponent);
 
-MemoizedComponent({ name: "John", age: 25 });`,
+export const App = () => <MemoizedComponent name="John" age={25} />;`,
     },
     {
       name: "React.forwardRef and React.memo with valid props",
@@ -52,8 +52,12 @@ MemoizedComponent({ name: "John", age: 25 });`,
 const ReactForwardRefComponent = React.forwardRef(BaseComponent);
 const ReactMemoComponent = React.memo(BaseComponent);
 
-ReactForwardRefComponent({ title: "Hello", subtitle: "World" });
-ReactMemoComponent({ title: "React", subtitle: "Memo" });`,
+export const App = () => (
+  <>
+    <ReactForwardRefComponent title="Hello" subtitle="World" />
+    <ReactMemoComponent title="React" subtitle="Memo" />
+  </>
+);`,
     },
     {
       name: "Function.bind wrapper with valid props",
@@ -75,14 +79,14 @@ boundFunction({ name: "Alice", age: 30 });`,
 
 const WrappedComponent = forwardRef(MyComponent);
 
-WrappedComponent({ title: "Hello", extra: "unused" });`,
+export const App = () => <WrappedComponent title="Hello" extra="unused" />;`,
       output: `function MyComponent({ title }) {
   return <div>{title}</div>;
 }
 
 const WrappedComponent = forwardRef(MyComponent);
 
-WrappedComponent({ title: "Hello" });`,
+export const App = () => <WrappedComponent title="Hello"  />;`,
       errors: [
         {
           messageId: "unknownParam",
@@ -98,14 +102,14 @@ WrappedComponent({ title: "Hello" });`,
 
 const MemoizedComponent = memo(MyComponent);
 
-MemoizedComponent({ name: "John", unused: "extra" });`,
+export const App = () => <MemoizedComponent name="John" unused="extra" />;`,
       output: `function MyComponent({ name }) {
   return <div>Hello {name}</div>;
 }
 
 const MemoizedComponent = memo(MyComponent);
 
-MemoizedComponent({ name: "John" });`,
+export const App = () => <MemoizedComponent name="John"  />;`,
       errors: [
         {
           messageId: "unknownParam",
@@ -122,8 +126,12 @@ MemoizedComponent({ name: "John" });`,
 const ReactForwardRefComponent = React.forwardRef(BaseComponent);
 const ReactMemoComponent = React.memo(BaseComponent);
 
-ReactForwardRefComponent({ title: "Hello", extra1: "unused" });
-ReactMemoComponent({ title: "React", extra2: "unused" });`,
+export const App = () => (
+  <>
+    <ReactForwardRefComponent title="Hello" extra1="unused" />
+    <ReactMemoComponent title="React" extra2="unused" />
+  </>
+);`,
       output: `function BaseComponent({ title }) {
   return <h1>{title}</h1>;
 }
@@ -131,8 +139,12 @@ ReactMemoComponent({ title: "React", extra2: "unused" });`,
 const ReactForwardRefComponent = React.forwardRef(BaseComponent);
 const ReactMemoComponent = React.memo(BaseComponent);
 
-ReactForwardRefComponent({ title: "Hello" });
-ReactMemoComponent({ title: "React" });`,
+export const App = () => (
+  <>
+    <ReactForwardRefComponent title="Hello"  />
+    <ReactMemoComponent title="React"  />
+  </>
+);`,
       errors: [
         {
           messageId: "unknownParam",
