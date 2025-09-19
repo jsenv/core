@@ -42,13 +42,19 @@ This ESLint plugin implements a comprehensive `no-unknown-params` rule that dete
 - Resolves original parameter names through assignment chains
 - Proper handling of destructuring assignments
 
-### 7. JSX Component Support
+### 7. Property Renaming Support
+
+- Supports destructuring parameter renaming (`{ prop: newName }`)
+- Correctly maps original property names to destructured variable names
+- Validates against original property names in function calls
+
+### 8. JSX Component Support
 
 - Full JSX component prop validation
 - Treats JSX props identically to function parameters
 - Supports JSX component chaining with rest props
 
-### 8. Wrapper Function Support
+### 9. Wrapper Function Support
 
 - **React Wrappers**: `forwardRef()`, `memo()`, `React.forwardRef()`, `React.memo()`
 - **JavaScript Standard**: `Function.prototype.bind()`
@@ -58,7 +64,7 @@ This ESLint plugin implements a comprehensive `no-unknown-params` rule that dete
 
 ## 🧪 Test Coverage
 
-The plugin includes comprehensive test coverage with **14 test suites**:
+The plugin includes comprehensive test coverage with **16 test suites**:
 
 1. **01_function_basic** - Basic function parameter detection
 2. **02_arrow_function** - Arrow function support
@@ -66,22 +72,26 @@ The plugin includes comprehensive test coverage with **14 test suites**:
 4. **04_rest_params** - Rest parameter detection and renaming (2 test files)
 5. **05_scope_resolution** - Variable shadowing and scope handling
 6. **06_function_chaining** - Parameter propagation analysis
-7. **07_jsx** - JSX component prop validation (2 test files)
+7. **07_jsx** - JSX component prop validation with focused single-purpose tests
 8. **08_order_independence** - Usage before definition scenarios (3 test files)
-9. **09_wrapper_functions** - Wrapper function support (2 test files)
-   - React wrappers (forwardRef, memo)
-   - Standard JavaScript wrappers (bind)
-   - Inline function expressions
+9. **09_wrapper_functions** - Wrapper function support (3 test files)
 10. **10_unknown_functions** - Unknown function handling
-    - External/global functions (window._, document._, etc.)
-    - Imported functions without definitions
-    - Dynamic function assignments
+11. **11_chain_messages** - Error message accuracy in function chains
 
 ## 🚀 Technical Implementation
 
 ### Analysis System
 
 The rule uses a two-pass analysis to handle all JavaScript patterns including usage before definition.
+
+### Auto-Fix Capabilities
+
+The rule provides automatic fixing by removing unused parameters from:
+
+- Function calls with object destructuring
+- JSX component props
+- Rest parameter propagation chains
+- Wrapper function calls
 
 ### Function Chaining Detection
 
@@ -99,6 +109,8 @@ Full JSX support treating component props as function parameters:
 ```jsx
 <MyComponent title="Hello" extra="unused" /> // extra flagged if unused
 ```
+
+**JSX Test Pattern**: All React component tests use proper JSX syntax (`<Component prop="value" />`) instead of function calls to match real-world usage patterns.
 
 ### Wrapper Function Resolution
 
@@ -165,25 +177,23 @@ All tests follow consistent naming and structure conventions:
 ### File Naming
 
 - Test directories use underscore (`_`) separators: `01_function_basic`
-- Fixture files use underscore separators: `input_valid.js`, `jsx_invalid.jsx`
 - Test files end with `.test.js`: `order_independence.test.js`
+- Multiple test files per category when needed: `rest_params.test.js`, `rest_rename.test.js`
 
 ### Test Structure
 
-- Each test uses `readFileSync` to load fixture files
-- Valid cases use `input_valid.js` or `{feature}_valid.js`
-- Invalid cases use `input_invalid.js` or `{feature}_invalid.js`
-- JSX tests use `.jsx` extension for fixture files
-- All tests include descriptive names and expected error messages
+- **Inline Code**: All tests use inline code instead of fixture files for better readability
+- **Focused Testing**: Each test case validates one specific behavior
+- **JSX Syntax**: React component tests use proper JSX syntax (`<Component />`) not function calls
+- **Auto-fix Output**: Invalid tests include `output` property showing expected auto-fix results
+- **Clean Source Code**: No explanatory comments in source code, descriptions in test metadata
 
-### Fixtures Organization
+### Test Organization
 
 ```
 {test_suite}/
-├── fixtures/
-│   ├── input_valid.js        # Main valid test case
-│   ├── input_invalid.js      # Main invalid test case
-│   ├── {feature}_valid.js    # Feature-specific valid cases
-│   └── {feature}_invalid.js  # Feature-specific invalid cases
-└── {test_name}.test.js       # Test runner
+├── {feature1}.test.js       # Main test file with inline code
+├── {feature2}.test.js       # Additional focused test file
+└── fixtures/               # Legacy fixtures (being phased out)
+    └── (deprecated files)
 ```

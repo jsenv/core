@@ -58,6 +58,12 @@ function sendToAPI({ data, options }) {
 }
 processData({ id: 1, data: "test", options: {} }); // ✅ OK
 
+// Property renaming in destructuring
+function processUser({ name: userName, id: userId }) {
+  console.log(userName, userId);
+}
+processUser({ name: "John", id: 123 }); // ✅ OK
+
 // Wrapper functions
 const MemoButton = memo(Button);
 <MemoButton title="Click me" onClick={handleClick} />; // ✅ OK
@@ -86,6 +92,12 @@ function sendToAPI({ data }) {
   // only uses data
 }
 processData({ id: 1, data: "test", unused: "extra" }); // ❌ 'unused' not used in chain
+
+// Property renaming with extra parameters
+function processUser({ name: userName }) {
+  console.log(userName);
+}
+processUser({ name: "John", age: 30 }); // ❌ 'age' is not used
 ```
 
 ## Features
@@ -102,7 +114,9 @@ processData({ id: 1, data: "test", unused: "extra" }); // ❌ 'unused' not used 
 - **Rest Parameter Support** - Tracks `...rest` parameter usage through function chains
 - **Function Chaining** - Detects parameter propagation via spread operators
 - **Variable Renaming** - Handles rest parameter renaming (`const renamed = rest`)
+- **Property Renaming** - Supports destructuring with renaming (`{ prop: newName }`)
 - **Scope Resolution** - Proper variable shadowing and dynamic import handling
+- **Order Independence** - Works regardless of function declaration/usage order
 
 ### 🛠️ Wrapper Functions
 
@@ -208,19 +222,28 @@ This plugin is designed for jsenv projects and is automatically included in:
 - `@jsenv/eslint-config-relax`
 - All jsenv project templates
 
+## Auto-Fix Support
+
+The rule includes automatic fixing capabilities that remove unused parameters:
+
+```javascript
+// Before auto-fix
+greet({ name: "John", age: 25, city: "NYC" });
+
+// After auto-fix (removes unused parameters)
+greet({ name: "John" });
+```
+
+**Auto-fix works with:**
+
+- Function calls with object parameters
+- JSX component props
+- Rest parameter chains
+- Wrapper functions (forwardRef, memo, bind)
+
 ## Contributing
 
-The plugin uses a comprehensive test suite with 14 test categories covering all supported patterns. See [IMPLEMENTATION.md](./IMPLEMENTATION.md) for technical details.
-
-## License
-
-MIT
-
-Current implementation only handles:
-
-- Functions with object destructuring as the first parameter
-- Direct function calls (not method calls or imported functions)
-- Simple object property names (not computed properties or renaming)
+The plugin uses a comprehensive test suite with **16 test suites** covering all supported patterns. See [IMPLEMENTATION.md](./IMPLEMENTATION.md) for technical details.
 
 ## License
 
