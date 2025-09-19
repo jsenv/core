@@ -1,4 +1,4 @@
-export const noUnknownParams = {
+export const noUnknownParamsRule = {
   meta: {
     type: "problem",
     docs: {

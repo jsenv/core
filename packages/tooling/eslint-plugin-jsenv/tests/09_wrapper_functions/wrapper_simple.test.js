@@ -1,5 +1,5 @@
+import { noUnknownParamsRule } from "@jsenv/eslint-plugin";
 import { RuleTester } from "eslint";
-import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -13,7 +13,7 @@ const ruleTester = new RuleTester({
   },
 });
 
-ruleTester.run("no-unknown-params - wrapper functions", rule, {
+ruleTester.run("no-unknown-params - wrapper functions", noUnknownParamsRule, {
   valid: [
     {
       name: "forwardRef wrapper with valid props",

@@ -1,5 +1,5 @@
+import { noUnknownParamsRule } from "@jsenv/eslint-plugin";
 import { RuleTester } from "eslint";
-import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -8,7 +8,7 @@ const ruleTester = new RuleTester({
   },
 });
 
-ruleTester.run("no-unknown-params - rest renaming", rule, {
+ruleTester.run("no-unknown-params - rest renaming", noUnknownParamsRule, {
   valid: [
     {
       name: "rest param renamed and passed to function that uses the property",

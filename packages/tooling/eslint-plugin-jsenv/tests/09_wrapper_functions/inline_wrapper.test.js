@@ -1,5 +1,5 @@
+import { noUnknownParamsRule } from "@jsenv/eslint-plugin";
 import { RuleTester } from "eslint";
-import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -13,11 +13,14 @@ const ruleTester = new RuleTester({
   },
 });
 
-ruleTester.run("no-unknown-params - inline wrapper functions", rule, {
-  valid: [
-    {
-      name: "inline function expressions in wrappers with valid props",
-      code: `// Test wrapper with inline function expression - valid case
+ruleTester.run(
+  "no-unknown-params - inline wrapper functions",
+  noUnknownParamsRule,
+  {
+    valid: [
+      {
+        name: "inline function expressions in wrappers with valid props",
+        code: `// Test wrapper with inline function expression - valid case
 const ValidForwardRef = forwardRef(({ title }) => {
   return <div>{title}</div>;
 });
@@ -29,12 +32,12 @@ const ValidMemo = memo(({ name }) => {
 // Valid usage
 ValidForwardRef({ title: "Hello" });
 ValidMemo({ name: "John" });`,
-    },
-  ],
-  invalid: [
-    {
-      name: "inline function expressions in wrappers with extra props",
-      code: `// Test wrapper with inline function expression - invalid case
+      },
+    ],
+    invalid: [
+      {
+        name: "inline function expressions in wrappers with extra props",
+        code: `// Test wrapper with inline function expression - invalid case
 const ForwardRefInline = forwardRef(({ title }) => {
   return <div>{title}</div>;
 });
@@ -46,7 +49,7 @@ const MemoInline = memo(({ name }) => {
 // Invalid usage - extra props should be detected
 ForwardRefInline({ title: "Hello", extra1: "unused" });
 MemoInline({ name: "John", extra2: "unused" });`,
-      output: `// Test wrapper with inline function expression - invalid case
+        output: `// Test wrapper with inline function expression - invalid case
 const ForwardRefInline = forwardRef(({ title }) => {
   return <div>{title}</div>;
 });
@@ -58,18 +61,19 @@ const MemoInline = memo(({ name }) => {
 // Invalid usage - extra props should be detected
 ForwardRefInline({ title: "Hello" });
 MemoInline({ name: "John" });`,
-      errors: [
-        {
-          messageId: "not_found_param",
-          data: { param: "extra1", func: "ForwardRefInline" },
-        },
-        {
-          messageId: "not_found_param",
-          data: { param: "extra2", func: "MemoInline" },
-        },
-      ],
-    },
-  ],
-});
+        errors: [
+          {
+            messageId: "not_found_param",
+            data: { param: "extra1", func: "ForwardRefInline" },
+          },
+          {
+            messageId: "not_found_param",
+            data: { param: "extra2", func: "MemoInline" },
+          },
+        ],
+      },
+    ],
+  },
+);
 
 console.log("✅ Inline wrapper functions tests passed!");

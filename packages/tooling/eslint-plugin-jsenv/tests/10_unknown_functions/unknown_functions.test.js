@@ -1,5 +1,5 @@
+import { noUnknownParamsRule } from "@jsenv/eslint-plugin";
 import { RuleTester } from "eslint";
-import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -8,7 +8,7 @@ const ruleTester = new RuleTester({
   },
 });
 
-ruleTester.run("no-unknown-params - unknown functions", rule, {
+ruleTester.run("no-unknown-params - unknown functions", noUnknownParamsRule, {
   valid: [
     {
       name: "unknown functions should be ignored - no errors expected",

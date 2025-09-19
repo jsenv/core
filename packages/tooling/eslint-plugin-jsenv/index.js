@@ -1,4 +1,6 @@
-import { noUnknownParams } from "./src/rules/no_unknown_params.js";
+import { noUnknownParamsRule } from "./src/rules/no_unknown_params.js";
+
+export { noUnknownParamsRule };
 
 export default {
   meta: {
@@ -6,7 +8,7 @@ export default {
     version: "1.0.0",
   },
   rules: {
-    "no-unknown-params": noUnknownParams,
+    "no-unknown-params": noUnknownParamsRule,
   },
   configs: {
     recommended: {

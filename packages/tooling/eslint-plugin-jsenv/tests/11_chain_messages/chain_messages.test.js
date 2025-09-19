@@ -1,7 +1,7 @@
+import { noUnknownParamsRule } from "@jsenv/eslint-plugin";
 import { RuleTester } from "eslint";
 import { readFileSync } from "fs";
 import { join } from "path";
-import rule from "../../lib/rules/no-unknown-params.js";
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -30,7 +30,7 @@ const chainInvalidCode = readFileSync(
   "utf8",
 );
 
-ruleTester.run("no-unknown-params - enhanced messages", rule, {
+ruleTester.run("no-unknown-params - enhanced messages", noUnknownParamsRule, {
   valid: [
     {
       name: "all parameters recognized in chain",
