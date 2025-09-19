@@ -1,4 +1,4 @@
-import noUnknownParams from "./lib/rules/no-unknown-params.js";
+import { noUnknownParams } from "./lib/rules/no_unknown_params.js";
 
 export default {
   meta: {
