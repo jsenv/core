@@ -3,151 +3,289 @@ import { createRequire } from "module";
 import { dirname, resolve } from "path";
 import { debug } from "../debug.js";
 
-// Cache organized by context.cacheKey with per-context file limits
-const MAX_FILES_PER_CONTEXT = 1000;
+// Top level functions used by the rest of the file to interact with cache
+let parseFileWithCache;
+let clearFileParseCache;
+let getFileParseCacheSize;
+let cleanupFileParseCache;
+let scheduleMemoryCleanup;
 
-// Map of contextKey -> Map of filePath -> cached data
-const contextCaches = new Map();
-const contextCleanupTimeouts = new Map();
+cache: {
+  /*
+   * Cache Implementation Strategy:
+   *
+   * ESLint runs in two main scenarios that affect our caching strategy:
+   *
+   * 1. Background/Long-running processes: ESLint can run in the background (IDEs, watchers)
+   *    and potentially grow "forever" as new files are linted. Memory can become very large,
+   *    but we still want caching to speed up expensive parsing operations and maximize reuse
+   *    as users update their files.
+   *
+   * 2. Bulk processing: ESLint can process large amounts of files with different configurations
+   *    (context.cacheKey changes based on ESLint config). We want to maximize cache reuse
+   *    per cacheKey because ESLint will likely process files in subgroups with the same config.
+   *
+   * Our approach:
+   * - Organize cache by context keys (ESLint configurations) to maximize reuse within configs
+   * - Limit files per context (1000) to prevent unbounded memory growth
+   * - Use LRU eviction within each context to keep most recently accessed files
+   * - Delayed cleanup (300ms) when switching contexts to allow context reuse while preventing
+   *   memory leaks from abandoned contexts
+   * - File modification time checking to ensure cache validity
+   */
 
-/**
- * Implements LRU eviction when a context cache exceeds MAX_FILES_PER_CONTEXT
- * @param {Map} contextCache - The cache for a specific context
- */
-function evictLRUFromContext(contextCache) {
-  while (contextCache.size >= MAX_FILES_PER_CONTEXT) {
-    // Get the first (oldest) key and delete it
-    const firstKey = contextCache.keys().next().value;
-    if (firstKey) {
-      contextCache.delete(firstKey);
+  const MAX_FILES_PER_CONTEXT = 1000;
+  const CLEANUP_DELAY_MS = 300;
+
+  // Map of contextKey -> Map of filePath -> cached data
+  const contextCaches = new Map();
+  const contextCleanupTimeouts = new Map();
+
+  /**
+   * Create cache key from file path and context (similar to eslint-plugin-import-x makeContextCacheKey)
+   * @param {string} filePath - File path
+   * @param {Object} context - ESLint context
+   * @returns {Object} - Object with contextKey and filePath
+   */
+  function createCacheKey(filePath, context) {
+    let contextKey;
+
+    // If context already has a cacheKey (like eslint-plugin-import-x childContext), use it
+    if (context.cacheKey) {
+      contextKey = context.cacheKey;
     } else {
-      break;
-    }
-  }
-}
+      // Build cache key similar to eslint-plugin-import-x makeContextCacheKey
+      const { settings, parserOptions, languageOptions, cwd } = context;
+      const parserOpts = languageOptions?.parserOptions || parserOptions || {};
 
-/**
- * Schedules cleanup of previous contexts when switching to a new one
- * @param {string} newContextKey - The new context key
- */
-function scheduleContextCleanup(contextKey) {
-  if (contextCleanupTimeouts.has(contextKey)) {
-    clearTimeout(contextCleanupTimeouts.get(contextKey));
-  }
+      let hash = cwd || "";
+      hash = `${hash}\0${JSON.stringify(settings || {})}`;
+      hash = `${hash}\0${JSON.stringify(parserOpts)}`;
 
-  const timeout = setTimeout(() => {
-    const contextCache = contextCaches.get(contextKey);
-    if (contextCache) {
-      contextCache.clear();
-      contextCaches.delete(contextKey);
-    }
-    contextCleanupTimeouts.delete(contextKey);
-  }, 300);
+      if (languageOptions) {
+        hash = `${hash}\0${String(languageOptions.ecmaVersion)}`;
+        hash = `${hash}\0${String(languageOptions.sourceType)}`;
+        hash = `${hash}\0${JSON.stringify(languageOptions.parser || "espree")}`;
+      }
 
-  contextCleanupTimeouts.set(contextKey, timeout);
-}
-
-/**
- * Create cache key from file path and context (similar to eslint-plugin-import-x makeContextCacheKey)
- * @param {string} filePath - File path
- * @param {Object} context - ESLint context
- * @returns {Object} - Object with contextKey and filePath
- */
-function createCacheKey(filePath, context) {
-  let contextKey;
-
-  // If context already has a cacheKey (like eslint-plugin-import-x childContext), use it
-  if (context.cacheKey) {
-    contextKey = context.cacheKey;
-  } else {
-    // Build cache key similar to eslint-plugin-import-x makeContextCacheKey
-    const { settings, parserOptions, languageOptions, cwd } = context;
-    const parserOpts = languageOptions?.parserOptions || parserOptions || {};
-
-    let hash = cwd || "";
-    hash = `${hash}\0${JSON.stringify(settings || {})}`;
-    hash = `${hash}\0${JSON.stringify(parserOpts)}`;
-
-    if (languageOptions) {
-      hash = `${hash}\0${String(languageOptions.ecmaVersion)}`;
-      hash = `${hash}\0${String(languageOptions.sourceType)}`;
-      hash = `${hash}\0${JSON.stringify(languageOptions.parser || "espree")}`;
+      contextKey = hash;
     }
 
-    contextKey = hash;
+    return { contextKey, filePath };
   }
 
-  return { contextKey, filePath };
-}
-
-/**
- * Parses an imported JavaScript file using ESLint's parser with caching
- * Based on eslint-plugin-import-x's export-map caching mechanism
- * @param {string} filePath - Path to the file to parse
- * @param {Object} context - ESLint context for parser options
- * @returns {Object|null} - AST or null if parsing fails
- */
-function parseFileWithESLint(filePath, context) {
-  try {
-    const { contextKey, filePath: fileKey } = createCacheKey(filePath, context);
-
+  /**
+   * Gets or creates a context cache
+   * @param {string} contextKey - The context identifier
+   * @returns {Map} - File cache for this context
+   */
+  function getContextCache(contextKey) {
     if (!contextCaches.has(contextKey)) {
       contextCaches.set(contextKey, new Map());
     }
-    const contextCache = contextCaches.get(contextKey);
-
-    // Check if we have a cached version
-    if (contextCache.has(fileKey)) {
-      const cached = contextCache.get(fileKey);
-
-      // Check mtime to see if file has been modified
-      try {
-        const stats = statSync(filePath);
-        if (cached.mtime === stats.mtime.valueOf()) {
-          // Cache hit - move to end (LRU)
-          const value = contextCache.get(fileKey);
-          contextCache.delete(fileKey);
-          contextCache.set(fileKey, value);
-          return cached.ast;
-        }
-      } catch {
-        // File might not exist anymore, remove from cache
-        contextCache.delete(fileKey);
-        return null;
-      }
-    }
-
-    // Cache miss or file modified - read and parse file
-    const content = readFileSync(filePath, "utf-8");
-    const ast = parseContent(filePath, content, context);
-
-    // Cache the result if parsing succeeded
-    if (ast) {
-      try {
-        const stats = statSync(filePath);
-
-        // Evict LRU entries if cache is full
-        if (contextCache.size >= MAX_FILES_PER_CONTEXT) {
-          evictLRUFromContext(contextCache);
-        }
-
-        contextCache.set(fileKey, {
-          ast,
-          mtime: stats.mtime.valueOf(),
-        });
-
-        // Schedule cleanup for this context
-        scheduleContextCleanup(contextKey);
-      } catch {
-        // If we can't stat the file, don't cache it
-      }
-    }
-
-    return ast;
-  } catch {
-    // If parsing fails, return null and let the rule continue without import resolution
-    return null;
+    return contextCaches.get(contextKey);
   }
+
+  /**
+   * Implements LRU eviction when a context cache exceeds MAX_FILES_PER_CONTEXT
+   * @param {Map} contextCache - The cache for a specific context
+   */
+  function evictLRUFromContext(contextCache) {
+    while (contextCache.size >= MAX_FILES_PER_CONTEXT) {
+      // Get the first (oldest) key and delete it
+      const firstKey = contextCache.keys().next().value;
+      if (firstKey) {
+        contextCache.delete(firstKey);
+      } else {
+        break;
+      }
+    }
+  }
+
+  /**
+   * Schedules cleanup of a context after a delay to allow context reuse
+   * @param {string} contextKey - The context key to schedule cleanup for
+   */
+  function scheduleContextCleanup(contextKey) {
+    if (contextCleanupTimeouts.has(contextKey)) {
+      clearTimeout(contextCleanupTimeouts.get(contextKey));
+    }
+
+    const timeout = setTimeout(() => {
+      const contextCache = contextCaches.get(contextKey);
+      if (contextCache) {
+        contextCache.clear();
+        contextCaches.delete(contextKey);
+      }
+      contextCleanupTimeouts.delete(contextKey);
+    }, CLEANUP_DELAY_MS);
+
+    contextCleanupTimeouts.set(contextKey, timeout);
+  }
+
+  /**
+   * Clear all caches and timeouts
+   */
+  function clearCache() {
+    // Clear all cleanup timeouts first
+    for (const timeout of contextCleanupTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    contextCleanupTimeouts.clear();
+
+    // Clear all context caches
+    for (const contextCache of contextCaches.values()) {
+      contextCache.clear();
+    }
+    contextCaches.clear();
+  }
+
+  /**
+   * Get total cache size across all contexts
+   * @returns {number} - Total number of cached entries
+   */
+  function getTotalSize() {
+    let totalSize = 0;
+    for (const contextCache of contextCaches.values()) {
+      totalSize += contextCache.size;
+    }
+    return totalSize;
+  }
+
+  /**
+   * Clean up stale cache entries (files that no longer exist or are very old)
+   * @param {number} maxAge - Maximum age in milliseconds (default: 5 minutes)
+   */
+  function cleanupStaleEntries(maxAge = 5 * 60 * 1000) {
+    const now = Date.now();
+
+    for (const [contextKey, contextCache] of contextCaches.entries()) {
+      const keysToDelete = [];
+
+      for (const [filePath, cached] of contextCache.entries()) {
+        try {
+          const stats = statSync(filePath);
+          // Remove if file is older than maxAge or mtime doesn't match
+          if (
+            now - stats.mtime.valueOf() > maxAge ||
+            cached.mtime !== stats.mtime.valueOf()
+          ) {
+            keysToDelete.push(filePath);
+          }
+        } catch {
+          // File doesn't exist anymore, remove from cache
+          keysToDelete.push(filePath);
+        }
+      }
+
+      for (const key of keysToDelete) {
+        contextCache.delete(key);
+      }
+
+      // If context cache is empty, remove it and cancel cleanup timeout
+      if (contextCache.size === 0) {
+        contextCaches.delete(contextKey);
+        const timeout = contextCleanupTimeouts.get(contextKey);
+        if (timeout) {
+          clearTimeout(timeout);
+          contextCleanupTimeouts.delete(contextKey);
+        }
+      }
+    }
+  }
+
+  /**
+   * Force LRU eviction across all contexts if they exceed size limits
+   */
+  function forceEviction() {
+    for (const contextCache of contextCaches.values()) {
+      while (contextCache.size > MAX_FILES_PER_CONTEXT * 0.8) {
+        // Keep 20% buffer
+        const firstKey = contextCache.keys().next().value;
+        if (!firstKey) break;
+        contextCache.delete(firstKey);
+      }
+    }
+  }
+  // Initialize cache interface functions
+  parseFileWithCache = function parseFileWithESLint(filePath, context) {
+    try {
+      const { contextKey, filePath: fileKey } = createCacheKey(
+        filePath,
+        context,
+      );
+      const contextCache = getContextCache(contextKey);
+
+      // Check if we have a cached version
+      if (contextCache.has(fileKey)) {
+        const cached = contextCache.get(fileKey);
+
+        // Check mtime to see if file has been modified
+        try {
+          const stats = statSync(filePath);
+          if (cached.mtime === stats.mtime.valueOf()) {
+            // Cache hit - move to end (LRU)
+            const value = contextCache.get(fileKey);
+            contextCache.delete(fileKey);
+            contextCache.set(fileKey, value);
+            return cached.ast;
+          }
+        } catch {
+          // File might not exist anymore, remove from cache
+          contextCache.delete(fileKey);
+          return null;
+        }
+      }
+
+      // Cache miss or file modified - read and parse file
+      const content = readFileSync(filePath, "utf-8");
+      const ast = parseContent(filePath, content, context);
+
+      // Cache the result if parsing succeeded
+      if (ast) {
+        try {
+          const stats = statSync(filePath);
+
+          // Evict LRU entries if cache is full
+          if (contextCache.size >= MAX_FILES_PER_CONTEXT) {
+            evictLRUFromContext(contextCache);
+          }
+
+          contextCache.set(fileKey, {
+            ast,
+            mtime: stats.mtime.valueOf(),
+          });
+
+          // Schedule cleanup for this context
+          scheduleContextCleanup(contextKey);
+        } catch {
+          // If we can't stat the file, don't cache it
+        }
+      }
+
+      return ast;
+    } catch {
+      // If parsing fails, return null and let the rule continue without import resolution
+      return null;
+    }
+  };
+
+  clearFileParseCache = function () {
+    clearCache();
+  };
+
+  getFileParseCacheSize = function () {
+    return getTotalSize();
+  };
+
+  cleanupFileParseCache = function (maxAge) {
+    cleanupStaleEntries(maxAge);
+  };
+
+  scheduleMemoryCleanup = function () {
+    cleanupStaleEntries();
+    forceEviction();
+  };
 }
 
 /**
@@ -331,7 +469,7 @@ function resolveImportsWithCycleDetection(
 
       if (resolvedPath) {
         try {
-          const importedAst = parseFileWithESLint(resolvedPath, context);
+          const importedAst = parseFileWithCache(resolvedPath, context);
           if (importedAst) {
             // Extract function definitions from imported file
             const importedFunctions = extractFunctionDefinitions(
@@ -590,7 +728,7 @@ function resolveReExportsWithCycleDetection(
         }
 
         try {
-          const reExportedAst = parseFileWithESLint(resolvedFromPath, context);
+          const reExportedAst = parseFileWithCache(resolvedFromPath, context);
           if (reExportedAst) {
             const reExportedFileFunctions = extractFunctionDefinitions(
               reExportedAst,
@@ -635,92 +773,10 @@ function resolveReExportsWithCycleDetection(
   return reExportedFunctions;
 }
 
-/**
- * Clear the file parse cache and all timeouts
- */
-export function clearFileParseCache() {
-  // Clear all cleanup timeouts first
-  for (const timeout of contextCleanupTimeouts.values()) {
-    clearTimeout(timeout);
-  }
-  contextCleanupTimeouts.clear();
-
-  // Clear all context caches
-  for (const contextCache of contextCaches.values()) {
-    contextCache.clear();
-  }
-  contextCaches.clear();
-}
-
-/**
- * Get cache size for debugging/monitoring
- * @returns {number} - Total number of cached entries across all contexts
- */
-export function getFileParseCacheSize() {
-  let totalSize = 0;
-  for (const contextCache of contextCaches.values()) {
-    totalSize += contextCache.size;
-  }
-  return totalSize;
-}
-
-/**
- * Clean up stale cache entries (files that no longer exist or are very old)
- * @param {number} maxAge - Maximum age in milliseconds (default: 5 minutes)
- */
-export function cleanupFileParseCache(maxAge = 5 * 60 * 1000) {
-  const now = Date.now();
-
-  for (const [contextKey, contextCache] of contextCaches.entries()) {
-    const keysToDelete = [];
-
-    for (const [filePath, cached] of contextCache.entries()) {
-      try {
-        const stats = statSync(filePath);
-        // Remove if file is older than maxAge or mtime doesn't match
-        if (
-          now - stats.mtime.valueOf() > maxAge ||
-          cached.mtime !== stats.mtime.valueOf()
-        ) {
-          keysToDelete.push(filePath);
-        }
-      } catch {
-        // File doesn't exist anymore, remove from cache
-        keysToDelete.push(filePath);
-      }
-    }
-
-    for (const key of keysToDelete) {
-      contextCache.delete(key);
-    }
-
-    // If context cache is empty, remove it and cancel cleanup timeout
-    if (contextCache.size === 0) {
-      contextCaches.delete(contextKey);
-      const timeout = contextCleanupTimeouts.get(contextKey);
-      if (timeout) {
-        clearTimeout(timeout);
-        contextCleanupTimeouts.delete(contextKey);
-      }
-    }
-  }
-}
-
-/**
- * Schedule cache cleanup to run periodically in Program:exit
- * This ensures cache doesn't grow indefinitely but preserves useful entries
- */
-export function scheduleMemoryCleanup() {
-  // Clean up stale entries
-  cleanupFileParseCache();
-
-  // If individual context caches are still too large, force LRU eviction
-  for (const contextCache of contextCaches.values()) {
-    while (contextCache.size > MAX_FILES_PER_CONTEXT * 0.8) {
-      // Keep 20% buffer
-      const firstKey = contextCache.keys().next().value;
-      if (!firstKey) break;
-      contextCache.delete(firstKey);
-    }
-  }
-}
+// Export the cache interface functions
+export {
+  cleanupFileParseCache,
+  clearFileParseCache,
+  getFileParseCacheSize,
+  scheduleMemoryCleanup,
+};
