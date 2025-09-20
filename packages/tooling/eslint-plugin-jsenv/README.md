@@ -14,6 +14,8 @@ ESLint plugin for jsenv projects with advanced parameter validation rules.
     - [🎯 Core Functionality](#-core-functionality)
     - [🔗 Advanced Analysis](#-advanced-analysis)
   - [Auto-Fix Support](#auto-fix-support)
+    - [Typo Detection and Correction](#typo-detection-and-correction)
+    - [Parameter Removal](#parameter-removal)
   - [Examples](#examples)
     - [Function Chaining](#function-chaining)
     - [React Component Validation](#react-component-validation)
@@ -144,7 +146,7 @@ greet({ name: "John" }); // ✅ Fixed to 'name'
 // Before auto-fix - unused parameters
 greet({ name: "John", age: 25, city: "NYC" });
 
-// After auto-fix - removes unused parameters  
+// After auto-fix - removes unused parameters
 greet({ name: "John" });
 ```
 
