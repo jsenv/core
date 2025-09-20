@@ -737,6 +737,9 @@ export const Table = forwardRef((props, ref) => {
                 key={col.id}
                 data-drag-obstacle={isDragObstable ? "" : undefined}
                 data-sticky-obstacle={isLastStickyColumn ? "" : undefined}
+                style={{
+                  minWidth: col.width ? `${col.width}px` : undefined,
+                }}
               />
             );
           })}

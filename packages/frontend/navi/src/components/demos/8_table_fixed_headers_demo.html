@@ -134,6 +134,7 @@
       const FixedHeadersDemo = () => {
         const tableRef = useRef(null);
         const [selection, setSelection] = useState([]);
+        const [columnWidths, setColumnWidths] = useState({});
 
         return (
           <div className="demo-container">
@@ -160,10 +161,20 @@
               <Table
                 ref={tableRef}
                 data={data}
-                columns={columns}
+                columns={columns.map((column) => ({
+                  ...column,
+                  width: columnWidths[column.id] || column.width,
+                }))}
                 selection={selection}
                 onSelectionChange={(value) => {
                   setSelection(value);
+                }}
+                onColumnResize={({ column, width }) => {
+                  console.log(`Column ${column} resized to ${width}px`);
+                  setColumnWidths((prev) => ({
+                    ...prev,
+                    [column.id]: width,
+                  }));
                 }}
                 // stickyHeader={false}
                 // rowColumnSticky={false}
@@ -191,6 +202,14 @@
               </div>
               <div>
                 Total selection count: <span>{selection.length}</span>
+              </div>
+              <div>
+                Column widths:{" "}
+                <span>
+                  {Object.keys(columnWidths).length > 0
+                    ? JSON.stringify(columnWidths)
+                    : "Default (120px each)"}
+                </span>
               </div>
             </div>
 
@@ -228,6 +247,13 @@
                 }}
               >
                 Select First Column
+              </button>
+              <button
+                onClick={() => {
+                  setColumnWidths({});
+                }}
+              >
+                Reset Column Widths
               </button>
             </div>
 
