@@ -791,15 +791,14 @@ export const Table = forwardRef((props, ref) => {
                   onRelease={() => {
                     releaseColumn(index);
                   }}
-                  onGrabResizeHandle={(resizeInfo) => {
-                    grabColumnResizeHandle(index, resizeInfo);
+                  onGrabResizeHandle={(resizeInfo, columnIndex) => {
+                    grabColumnResizeHandle(columnIndex, resizeInfo);
                   }}
-                  onReleaseResizeHandle={({ width }) => {
-                    releaseColumnResizeHandle(index);
+                  onReleaseResizeHandle={({ width }, columnIndex) => {
+                    releaseColumnResizeHandle(columnIndex);
                     onColumnResize?.({
                       width,
-                      column: col,
-                      columnIndex: index,
+                      column: columns[columnIndex - 1],
                     });
                   }}
                 >
@@ -1040,8 +1039,8 @@ const HeaderCell = ({
     >
       {resizable && columnIndex > 1 && (
         <TableColumnLeftResizeHandle
-          onGrab={onGrabResizeHandle}
-          onRelease={onReleaseResizeHandle}
+          onGrab={(info) => onGrabResizeHandle(info, columnIndex - 1)}
+          onRelease={(info) => onReleaseResizeHandle(info, columnIndex - 1)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
@@ -1052,8 +1051,8 @@ const HeaderCell = ({
       </span>
       {resizable && (
         <TableColumnRightResizeHandle
-          onGrab={onGrabResizeHandle}
-          onRelease={onReleaseResizeHandle}
+          onGrab={(info) => onGrabResizeHandle(info, columnIndex)}
+          onRelease={(info) => onReleaseResizeHandle(info, columnIndex)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
