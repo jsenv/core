@@ -11,7 +11,6 @@ import { jsenvTrackingConfig } from "./jsenv_tracking_config.js";
 import { transform as rawTransform } from "./raw_transformation.js";
 
 export const generateFileSizeReport = async ({
-  cancellationToken,
   log,
   logLevel,
   rootDirectoryUrl,
@@ -31,7 +30,6 @@ export const generateFileSizeReport = async ({
   }
 
   const groupTrackingResults = await applyTrackingConfig(trackingConfig, {
-    cancellationToken,
     rootDirectoryUrl,
     manifestConfig,
   });
