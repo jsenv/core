@@ -41,7 +41,7 @@ ruleTester.run("no-unknown-params inline function", noUnknownParamsRule, {
       `,
       errors: [
         {
-          message: "invalidParam not found in extremeFunction()",
+          message: `"invalidParam" not found in extremeFunction()`,
           type: "Property",
         },
       ],

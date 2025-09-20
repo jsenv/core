@@ -39,7 +39,7 @@ ruleTester.run(
         filename: "/test.js",
         errors: [
           {
-            message: "invalidParam not found in sevenParamFunction()",
+            message: `"invalidParam" not found in sevenParamFunction()`,
             type: "Property",
           },
         ],

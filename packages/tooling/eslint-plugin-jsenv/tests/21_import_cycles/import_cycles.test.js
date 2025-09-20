@@ -57,8 +57,7 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
         "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/21_import_cycles/file_a.js",
       errors: [
         {
-          message:
-            "invalidParam not found in helperFunction() (defined in ./file_b.js)",
+          message: `"invalidParam" not found in helperFunction() (defined in ./file_b.js)`,
           type: "Property",
         },
       ],

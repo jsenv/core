@@ -36,8 +36,7 @@ ruleTester.run("no-unknown-params caching mechanism", noUnknownParamsRule, {
         "/Users/dmail/Documents/dev/jsenv/core/packages/tooling/eslint-plugin-jsenv/tests/20_caching_and_performance/test.js",
       errors: [
         {
-          message:
-            "invalidParam not found in extremeFunction() (defined in ./extreme_function.js)",
+          message: `"invalidParam" not found in extremeFunction() (defined in ./extreme_function.js)`,
           type: "Property",
         },
       ],

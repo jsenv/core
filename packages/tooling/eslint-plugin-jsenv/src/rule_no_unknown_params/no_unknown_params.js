@@ -42,29 +42,18 @@ export const noUnknownParamsRule = {
       },
     ],
     messages: {
-      not_found_param: "{{param}} not found in {{func}}()",
-      not_found_param_with_file:
-        "{{param}} not found in {{func}}() (defined in {{filePath}})",
-      not_found_param_chain:
-        "{{param}} not found in {{firstFunc}}() -> {{secondFunc}}()",
-      not_found_param_chain_with_file:
-        "{{param}} not found in {{firstFunc}}() -> {{secondFunc}}() (defined in {{filePath}})",
-      not_found_param_long_chain:
-        "{{param}} not found in {{firstFunc}}() -> ... -> {{lastFunc}}()",
-      not_found_param_long_chain_with_file:
-        "{{param}} not found in {{firstFunc}}() -> ... -> {{lastFunc}}() (defined in {{filePath}})",
-      not_found_param_with_suggestions:
-        "{{param}} not found in {{func}}(). Did you mean: {{suggestions}}?",
-      not_found_param_with_suggestions_and_file:
-        "{{param}} not found in {{func}}() (defined in {{filePath}}). Did you mean: {{suggestions}}?",
-      not_found_param_chain_with_suggestions:
-        "{{param}} not found in {{firstFunc}}() -> {{secondFunc}}(). Available parameters: {{available}}.",
-      not_found_param_chain_with_suggestions_and_file:
-        "{{param}} not found in {{firstFunc}}() -> {{secondFunc}}() (defined in {{filePath}}). Available parameters: {{available}}.",
-      not_found_param_chain_long_with_suggestions:
-        "{{param}} not found in {{firstFunc}}() -> ... -> {{lastFunc}}(). Available parameters: {{available}}.",
-      not_found_param_chain_long_with_suggestions_and_file:
-        "{{param}} not found in {{firstFunc}}() -> ... -> {{lastFunc}}() (defined in {{filePath}}). Available parameters: {{available}}.",
+      not_found_param: `"{{param}}" not found in {{func}}()`,
+      not_found_param_with_file: `"{{param}}" not found in {{func}}() (defined in {{filePath}})`,
+      not_found_param_chain: `"{{param}}" not found in {{firstFunc}}() -> {{secondFunc}}()`,
+      not_found_param_chain_with_file: `"{{param}}" not found in {{firstFunc}}() -> {{secondFunc}}() (defined in {{filePath}})`,
+      not_found_param_long_chain: `"{{param}}" not found in {{firstFunc}}() -> ... -> {{lastFunc}}()`,
+      not_found_param_long_chain_with_file: `"{{param}}" not found in {{firstFunc}}() -> ... -> {{lastFunc}}() (defined in {{filePath}})`,
+      not_found_param_with_suggestions: `"{{param}}" not found in {{func}}(). Did you mean: {{suggestions}}?`,
+      not_found_param_with_suggestions_and_file: `"{{param}}" not found in {{func}}() (defined in {{filePath}}). Did you mean: {{suggestions}}?`,
+      not_found_param_chain_with_suggestions: `"{{param}}" not found in {{firstFunc}}() -> {{secondFunc}}(). Available parameters: {{available}}.`,
+      not_found_param_chain_with_suggestions_and_file: `"{{param}}" not found in {{firstFunc}}() -> {{secondFunc}}() (defined in {{filePath}}). Available parameters: {{available}}.`,
+      not_found_param_chain_long_with_suggestions: `"{{param}}" not found in {{firstFunc}}() -> ... -> {{lastFunc}}(). Available parameters: {{available}}.`,
+      not_found_param_chain_long_with_suggestions_and_file: `"{{param}}" not found in {{firstFunc}}() -> ... -> {{lastFunc}}() (defined in {{filePath}}). Available parameters: {{available}}.`,
     },
   },
 
