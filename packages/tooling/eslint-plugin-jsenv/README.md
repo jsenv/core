@@ -2,31 +2,24 @@
 
 ESLint plugin for jsenv projects with advanced parameter validation rules.
 
-## Installation
+## Table of Contents
 
-```bash
-npm install @jsenv/eslint-plugin
-```
-
-## Usage
-
-```javascript
-// eslint.config.js
-import jsenvPlugin from "@jsenv/eslint-plugin";
-
-export default [
-  {
-    plugins: {
-      "@jsenv": jsenvPlugin,
-    },
-    rules: {
-      "@jsenv/no-unknown-params": "error",
-    },
-  },
-];
-```
-
-> The plugin is automatically included in `@jsenv/eslint-config-relax`. So if you use `@jsenv/eslint-config-relax` you already have it enabled.
+- [@jsenv/eslint-plugin](#jsenveslint-plugin)
+  - [Table of Contents](#table-of-contents)
+  - [Rules](#rules)
+    - [`no-unknown-params`](#no-unknown-params)
+      - [✅ Valid](#-valid)
+      - [❌ Invalid](#-invalid)
+  - [Features](#features)
+    - [🎯 Core Functionality](#-core-functionality)
+    - [🔗 Advanced Analysis](#-advanced-analysis)
+  - [Examples](#examples)
+    - [Function Chaining](#function-chaining)
+    - [React Component Validation](#react-component-validation)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Auto-Fix Support](#auto-fix-support)
+  - [Contributing](#contributing)
 
 ## Rules
 
@@ -117,32 +110,16 @@ processData({
 
 ### 🎯 Core Functionality
 
-- **Function Parameter Detection** - Analyzes object destructuring parameters
-- **JSX Component Props** - Validates React component prop usage
+- **Function Parameter Detection** - Analyzes object destructuring parameters in function calls
+- **JSX Component Props** - Validates React component prop usage with well-known props patterns
+- **React HOCs Support** - Works with `forwardRef()`, `memo()`, and other Higher Order Components
 - **Multiple Parameters** - Handles functions with multiple destructured parameters
-- **Arrow Functions** - Full support for arrow function expressions
 
 ### 🔗 Advanced Analysis
 
-- **Rest Parameter Support** - Tracks `...rest` parameter usage through function chains
-- **Function Chaining** - Detects parameter propagation via spread operators
-- **Variable Renaming** - Handles rest parameter renaming (`const renamed = rest`)
-- **Property Renaming** - Supports destructuring with renaming (`{ prop: newName }`)
-- **Scope Resolution** - Proper variable shadowing and dynamic import handling
-- **Order Independence** - Works regardless of function declaration/usage order
+Performs sophisticated analysis including rest parameter chains, function chaining via spread operators, property renaming, and scope resolution with order-independent detection.
 
-### 🛠️ Wrapper Functions
-
-- **React HOCs** - `forwardRef()`, `memo()`, `React.forwardRef()`, `React.memo()`
-- **JavaScript Standard** - `Function.prototype.bind()`
-- **Inline Expressions** - Supports both function references and inline expressions
-- **Automatic Resolution** - Resolves to underlying function signatures
-
-### 🚀 Smart Handling
-
-- **Usage Before Definition** - Works regardless of function declaration order
-- **Unknown Functions** - Ignores external/imported functions without definitions
-- **JSX Integration** - Treats JSX props identically to function parameters
+The rule automatically ignores external/imported functions without definitions (see [IMPLEMENTATION.md](./IMPLEMENTATION.md) for technical details).
 
 ## Examples
 
@@ -209,35 +186,37 @@ const ForwardedUserCard = forwardRef(UserCard);
 />
 ```
 
-### Unknown Functions
+## Installation
 
-```javascript
-// These are ignored - no analysis performed
-window.gtag({ event: "page_view", data: "value" }); // ✅ Ignored
-console.log({ message: "hello", level: "debug" }); // ✅ Ignored
-external.api({ method: "POST", unused: "param" }); // ✅ Ignored
-
-// Only known functions are analyzed
-function myFunction({ name }) {
-  return name;
-}
-myFunction({ name: "test", superfluous: "param" }); // ❌ 'superfluous' flagged
+```bash
+npm install @jsenv/eslint-plugin
 ```
 
-## Configuration
+## Usage
+
+```javascript
+// eslint.config.js
+import jsenvPlugin from "@jsenv/eslint-plugin";
+
+export default [
+  {
+    plugins: {
+      "@jsenv": jsenvPlugin,
+    },
+    rules: {
+      "@jsenv/no-unknown-params": "error",
+    },
+  },
+];
+```
+
+> The plugin is automatically included in [@jsenv/eslint-config-relax](../eslint-config-relax). So if you use `@jsenv/eslint-config-relax` you already have it enabled.
 
 The rule has no configuration options - it uses sensible defaults for all scenarios.
 
-## Integration
-
-This plugin is designed for jsenv projects and is automatically included in:
-
-- `@jsenv/eslint-config-relax`
-- All jsenv project templates
-
 ## Auto-Fix Support
 
-The rule includes automatic fixing capabilities that remove unused parameters:
+The rule includes automatic fixing capabilities that remove unused parameters and can suggest the best parameter name when likely typos are detected:
 
 ```javascript
 // Before auto-fix
@@ -247,17 +226,6 @@ greet({ name: "John", age: 25, city: "NYC" });
 greet({ name: "John" });
 ```
 
-**Auto-fix works with:**
-
-- Function calls with object parameters
-- JSX component props
-- Rest parameter chains
-- Wrapper functions (forwardRef, memo, bind)
-
 ## Contributing
 
-The plugin uses a comprehensive test suite with **16 test suites** covering all supported patterns. See [IMPLEMENTATION.md](./IMPLEMENTATION.md) for technical details.
-
-## License
-
-MIT
+The plugin uses a comprehensive test suite with **39 tests** covering all supported patterns. See [IMPLEMENTATION.md](./IMPLEMENTATION.md) for technical details.
