@@ -225,7 +225,7 @@ export const rulesRelax = {
   "no-unused-expressions": ["error"],
   "no-unused-labels": ["off"], // https://gist.github.com/getify/706e5e10822a298375da40f9cc1fa295
   "no-unused-private-class-members": ["error"],
-  "no-unused-vars": ["error"],
+  "no-unused-vars": ["error", { ignoreRestSiblings: true }],
   "no-use-before-define": [
     "error",
     /*

@@ -522,7 +522,7 @@ export const Table = forwardRef((props, ref) => {
     selectionColor,
     onSelectionChange,
     onColumnResize,
-    borderCollapse = false,
+    borderCollapse = true,
   } = props;
 
   const innerRef = useRef();

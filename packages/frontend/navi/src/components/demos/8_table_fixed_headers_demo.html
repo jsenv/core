@@ -128,13 +128,12 @@
 
       // Create large dataset (50 rows x 10 columns = 500 cells)
       const data = generateLargeDataset(50, 10);
-      const columns = generateColumns(10);
 
       // eslint-disable-next-line no-unused-vars
       const FixedHeadersDemo = () => {
         const tableRef = useRef(null);
         const [selection, setSelection] = useState([]);
-        const [columnWidths, setColumnWidths] = useState({});
+        const [columns, setColumns] = useState(() => generateColumns(10));
 
         return (
           <div className="demo-container">
@@ -161,20 +160,18 @@
               <Table
                 ref={tableRef}
                 data={data}
-                columns={columns.map((column) => ({
-                  ...column,
-                  width: columnWidths[column.id] || column.width,
-                }))}
+                columns={columns}
                 selection={selection}
                 onSelectionChange={(value) => {
                   setSelection(value);
                 }}
                 onColumnResize={({ column, width }) => {
-                  console.log(`Column ${column} resized to ${width}px`);
-                  setColumnWidths((prev) => ({
-                    ...prev,
-                    [column.id]: width,
-                  }));
+                  console.log(`Column ${column.id} resized to ${width}px`);
+                  setColumns((prevColumns) =>
+                    prevColumns.map((col) =>
+                      col.id === column.id ? { ...col, width } : col,
+                    ),
+                  );
                 }}
                 // stickyHeader={false}
                 // rowColumnSticky={false}
@@ -206,8 +203,14 @@
               <div>
                 Column widths:{" "}
                 <span>
-                  {Object.keys(columnWidths).length > 0
-                    ? JSON.stringify(columnWidths)
+                  {columns.some((col) => col.width)
+                    ? JSON.stringify(
+                        Object.fromEntries(
+                          columns
+                            .filter((col) => col.width)
+                            .map((col) => [col.id, col.width]),
+                        ),
+                      )
                     : "Default (120px each)"}
                 </span>
               </div>
@@ -250,7 +253,12 @@
               </button>
               <button
                 onClick={() => {
-                  setColumnWidths({});
+                  setColumns((prevColumns) =>
+                    prevColumns.map((col) => {
+                      const { width, ...colWithoutWidth } = col;
+                      return colWithoutWidth;
+                    }),
+                  );
                 }}
               >
                 Reset Column Widths
@@ -284,7 +292,7 @@
 
       console.log("Fixed Headers Demo loaded with large dataset:");
       console.log(
-        `- ${data.length} rows × ${columns.length} columns = ${data.length * columns.length} total cells`,
+        `- ${data.length} rows × 10 columns = ${data.length * 10} total cells`,
       );
       console.log("- Scroll the table to test fixed header behavior");
       console.log(
