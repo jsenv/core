@@ -52,17 +52,16 @@ ruleTester.run("no-unknown-params with import aliases", noUnknownParamsRule, {
       errors: [
         {
           message:
-            "metadata is superfluous. createAPI() (defined in ./api-utils.js) only accepts: type, data.",
+            "metadata not found in createAPI() (defined in ./api-utils.js)",
+          type: "Property",
+        },
+        {
+          message: "force not found in updateAPI() (defined in ./api-utils.js)",
           type: "Property",
         },
         {
           message:
-            "force is superfluous. updateAPI() (defined in ./api-utils.js) only accepts: id, changes.",
-          type: "Property",
-        },
-        {
-          message:
-            "cascade does not exist in deleteAPI() (defined in ./api-utils.js)",
+            "cascade not found in deleteAPI() (defined in ./api-utils.js)",
           type: "Property",
         },
       ],

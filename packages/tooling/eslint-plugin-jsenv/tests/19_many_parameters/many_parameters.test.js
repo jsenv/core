@@ -84,8 +84,7 @@ ruleTester.run("no-unknown-params with many parameters", noUnknownParamsRule, {
       filename: "/test.js",
       errors: [
         {
-          message:
-            "unknownParam is superfluous. processComplexData() only accepts: id, name, email, age, address and 5 more.",
+          message: "unknownParam not found in processComplexData()",
           type: "Property",
         },
       ],

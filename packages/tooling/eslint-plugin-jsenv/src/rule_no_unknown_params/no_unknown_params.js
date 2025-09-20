@@ -42,41 +42,29 @@ export const noUnknownParamsRule = {
       },
     ],
     messages: {
-      not_found_param: "{{param}} does not exist in {{func}}()",
+      not_found_param: "{{param}} not found in {{func}}()",
       not_found_param_with_file:
-        "{{param}} does not exist in {{func}}() (defined in {{filePath}})",
+        "{{param}} not found in {{func}}() (defined in {{filePath}})",
       not_found_param_chain:
-        "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}()",
+        "{{param}} not found in {{firstFunc}}() -> {{secondFunc}}()",
       not_found_param_chain_with_file:
-        "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}() (defined in {{filePath}})",
+        "{{param}} not found in {{firstFunc}}() -> {{secondFunc}}() (defined in {{filePath}})",
       not_found_param_long_chain:
-        "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}()",
+        "{{param}} not found in {{firstFunc}}() -> ... -> {{lastFunc}}()",
       not_found_param_long_chain_with_file:
-        "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}() (defined in {{filePath}})",
+        "{{param}} not found in {{firstFunc}}() -> ... -> {{lastFunc}}() (defined in {{filePath}})",
       not_found_param_with_suggestions:
-        "{{param}} does not exist in {{func}}(). Did you mean: {{suggestions}}?",
+        "{{param}} not found in {{func}}(). Did you mean: {{suggestions}}?",
       not_found_param_with_suggestions_and_file:
-        "{{param}} does not exist in {{func}}() (defined in {{filePath}}). Did you mean: {{suggestions}}?",
+        "{{param}} not found in {{func}}() (defined in {{filePath}}). Did you mean: {{suggestions}}?",
       not_found_param_chain_with_suggestions:
-        "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}(). Available parameters: {{available}}.",
+        "{{param}} not found in {{firstFunc}}() -> {{secondFunc}}(). Available parameters: {{available}}.",
       not_found_param_chain_with_suggestions_and_file:
-        "{{param}} does not exist in {{firstFunc}}() -> {{secondFunc}}() (defined in {{filePath}}). Available parameters: {{available}}.",
+        "{{param}} not found in {{firstFunc}}() -> {{secondFunc}}() (defined in {{filePath}}). Available parameters: {{available}}.",
       not_found_param_chain_long_with_suggestions:
-        "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}(). Available parameters: {{available}}.",
+        "{{param}} not found in {{firstFunc}}() -> ... -> {{lastFunc}}(). Available parameters: {{available}}.",
       not_found_param_chain_long_with_suggestions_and_file:
-        "{{param}} does not exist in {{firstFunc}}() -> ... -> {{lastFunc}}() (defined in {{filePath}}). Available parameters: {{available}}.",
-      superfluous_param:
-        "{{param}} is superfluous. {{func}}() only accepts: {{expected}}.",
-      superfluous_param_with_file:
-        "{{param}} is superfluous. {{func}}() (defined in {{filePath}}) only accepts: {{expected}}.",
-      superfluous_param_chain:
-        "{{param}} is superfluous. {{firstFunc}}() -> {{secondFunc}}() only accepts: {{expected}}.",
-      superfluous_param_chain_with_file:
-        "{{param}} is superfluous. {{firstFunc}}() -> {{secondFunc}}() (defined in {{filePath}}) only accepts: {{expected}}.",
-      superfluous_param_long_chain:
-        "{{param}} is superfluous. {{firstFunc}}() -> ... -> {{lastFunc}}() only accepts: {{expected}}.",
-      superfluous_param_long_chain_with_file:
-        "{{param}} is superfluous. {{firstFunc}}() -> ... -> {{lastFunc}}() (defined in {{filePath}}) only accepts: {{expected}}.",
+        "{{param}} not found in {{firstFunc}}() -> ... -> {{lastFunc}}() (defined in {{filePath}}). Available parameters: {{available}}.",
     },
   },
 

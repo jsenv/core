@@ -19,22 +19,6 @@ function getRelativeFilePath(sourceFile, currentFile) {
   }
 }
 
-/**
- * Formats a parameter list, shortening it if it's too long
- * @param {Array<string>} params - Array of parameter names
- * @param {number} maxShown - Maximum number of parameters to show before truncating (default: 5)
- * @returns {string} - Formatted parameter list
- */
-function formatParameterList(params, maxShown = 5) {
-  if (params.length <= maxShown) {
-    return params.join(", ");
-  }
-
-  const shown = params.slice(0, maxShown);
-  const remaining = params.length - maxShown;
-  return `${shown.join(", ")} and ${remaining} more`;
-}
-
 // Helper function to generate appropriate error message based on call chain
 export function generateErrorMessage(
   paramName,
@@ -111,71 +95,11 @@ export function generateErrorMessage(
     ? getRelativeFilePath(sourceFile, currentFilePath)
     : null;
 
-  // Generate autofix functions - for high-confidence typos, only offer rename
+  // Generate autofix functions - for superfluous params only offer remove, for typos only offer rename
   const autofixes = {
-    remove: !isHighConfidenceTypo, // Skip remove for likely typos
-    rename: bestSuggestion, // Only suggest rename if we have a good similarity match
+    remove: isSuperfluous ? true : !isHighConfidenceTypo, // Always remove for superfluous, skip remove for likely typos
+    rename: isSuperfluous ? null : bestSuggestion, // Skip rename for superfluous, only suggest rename if we have a good similarity match
   };
-
-  if (isSuperfluous) {
-    // Superfluous parameter cases
-    if (chain.length === 0) {
-      const messageId = shouldShowFilePath
-        ? "superfluous_param_with_file"
-        : "superfluous_param";
-      const data = {
-        param: paramName,
-        func: responsibleFunc,
-        expected: formatParameterList(Array.from(directParams)),
-      };
-      if (shouldShowFilePath) {
-        data.filePath = relativeFilePath;
-      }
-      return {
-        messageId,
-        data,
-        autofixes,
-      };
-    }
-
-    if (chain.length === 1 || chain.length === 2) {
-      const messageId = shouldShowFilePath
-        ? "superfluous_param_chain_with_file"
-        : "superfluous_param_chain";
-      const data = {
-        param: paramName,
-        firstFunc,
-        secondFunc,
-        expected: formatParameterList(Array.from(directParams)),
-      };
-      if (shouldShowFilePath) {
-        data.filePath = relativeFilePath;
-      }
-      return {
-        messageId,
-        data,
-        autofixes,
-      };
-    }
-
-    const messageId = shouldShowFilePath
-      ? "superfluous_param_long_chain_with_file"
-      : "superfluous_param_long_chain";
-    const data = {
-      param: paramName,
-      firstFunc,
-      lastFunc,
-      expected: formatParameterList(Array.from(directParams)),
-    };
-    if (shouldShowFilePath) {
-      data.filePath = relativeFilePath;
-    }
-    return {
-      messageId,
-      data,
-      autofixes,
-    };
-  }
 
   if (chain.length === 0) {
     // Simple case - no chain

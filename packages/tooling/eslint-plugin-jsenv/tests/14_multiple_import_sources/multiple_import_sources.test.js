@@ -60,23 +60,22 @@ ruleTester.run(
         filename: mainFilePath,
         errors: [
           {
-            message:
-              "age is superfluous. createUser() (defined in ./user-ops.js) only accepts: name, email, role.",
+            message: "age not found in createUser() (defined in ./user-ops.js)",
             type: "Property",
           },
           {
             message:
-              "force is superfluous. updateUser() (defined in ./user-ops.js) only accepts: id, updates.",
+              "force not found in updateUser() (defined in ./user-ops.js)",
             type: "Property",
           },
           {
             message:
-              "strict does not exist in validateEmail() (defined in ./validators.js)",
+              "strict not found in validateEmail() (defined in ./validators.js)",
             type: "Property",
           },
           {
             message:
-              "throwOnError is superfluous. validateData() (defined in ./validators.js) only accepts: data, schema.",
+              "throwOnError not found in validateData() (defined in ./validators.js)",
             type: "Property",
           },
         ],

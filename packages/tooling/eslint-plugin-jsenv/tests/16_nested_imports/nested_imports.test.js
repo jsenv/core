@@ -99,8 +99,7 @@ ruleTester.run("no-unknown-params with nested imports", noUnknownParamsRule, {
       filename: mainFilePath,
       errors: [
         {
-          message:
-            "unknownDeepParam is superfluous. handleItemWithDeepNesting() only accepts: item, config, enhancement, metadata.",
+          message: "unknownDeepParam not found in handleItemWithDeepNesting()",
           type: "Property",
         },
       ],

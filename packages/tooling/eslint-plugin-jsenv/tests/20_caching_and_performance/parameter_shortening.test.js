@@ -39,8 +39,7 @@ ruleTester.run(
         filename: "/test.js",
         errors: [
           {
-            message:
-              "invalidParam is superfluous. sevenParamFunction() only accepts: a, b, c, d, e and 2 more.",
+            message: "invalidParam not found in sevenParamFunction()",
             type: "Property",
           },
         ],

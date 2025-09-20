@@ -51,8 +51,8 @@ ruleTester.run(
         filename: mainFilePath,
         errors: [
           {
-            messageId: "superfluous_param",
-            data: { param: "age", func: "processData", expected: "id, name" },
+            messageId: "not_found_param",
+            data: { param: "age", func: "processData" },
           },
         ],
       },
@@ -69,11 +69,10 @@ ruleTester.run(
         filename: mainFilePath,
         errors: [
           {
-            messageId: "superfluous_param_with_file",
+            messageId: "not_found_param_with_file",
             data: {
               param: "age",
               func: "processData",
-              expected: "id, name",
               filePath: "./helper.js",
             },
           },

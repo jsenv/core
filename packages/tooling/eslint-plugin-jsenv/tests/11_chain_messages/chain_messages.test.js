@@ -107,8 +107,8 @@ validate({ email: "test@example.com", phone: "123" }); // 'extra' should trigger
 `,
       errors: [
         {
-          messageId: "superfluous_param", // Enhanced message for extraneous params
-          data: { param: "extra", func: "validate", expected: "email, phone" },
+          messageId: "not_found_param", // Enhanced message for extraneous params
+          data: { param: "extra", func: "validate" },
           type: "Property",
         },
       ],

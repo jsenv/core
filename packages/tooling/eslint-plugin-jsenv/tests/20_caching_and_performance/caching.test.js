@@ -37,7 +37,7 @@ ruleTester.run("no-unknown-params caching mechanism", noUnknownParamsRule, {
       errors: [
         {
           message:
-            "invalidParam does not exist in extremeFunction() (defined in ./extreme_function.js)",
+            "invalidParam not found in extremeFunction() (defined in ./extreme_function.js)",
           type: "Property",
         },
       ],
