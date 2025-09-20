@@ -3,78 +3,81 @@ import { createRequire } from "module";
 import { dirname, resolve } from "path";
 import { debug } from "../debug.js";
 
-// LRU Cache with size limit and timeout-based cleanup for file parsing
-const MAX_CACHE_SIZE = 1000;
-const CACHE_TIMEOUT_MS = 500000; // 500 seconds
-const fileParseCache = new Map();
-const cacheTimeouts = new Map(); // Track timeouts for each cache key
+// Cache organized by context.cacheKey with per-context file limits
+const MAX_FILES_PER_CONTEXT = 1000;
+
+// Map of contextKey -> Map of filePath -> cached data
+const contextCaches = new Map();
+const contextCleanupTimeouts = new Map();
 
 /**
- * Implements LRU eviction when cache exceeds MAX_CACHE_SIZE
+ * Implements LRU eviction when a context cache exceeds MAX_FILES_PER_CONTEXT
+ * @param {Map} contextCache - The cache for a specific context
  */
-function evictLRU() {
-  if (fileParseCache.size >= MAX_CACHE_SIZE) {
+function evictLRUFromContext(contextCache) {
+  while (contextCache.size >= MAX_FILES_PER_CONTEXT) {
     // Get the first (oldest) key and delete it
-    const firstKey = fileParseCache.keys().next().value;
+    const firstKey = contextCache.keys().next().value;
     if (firstKey) {
-      fileParseCache.delete(firstKey);
-      // Also clear its timeout
-      const timeout = cacheTimeouts.get(firstKey);
-      if (timeout) {
-        clearTimeout(timeout);
-        cacheTimeouts.delete(firstKey);
-      }
+      contextCache.delete(firstKey);
+    } else {
+      break;
     }
   }
 }
 
 /**
- * Sets up or refreshes the timeout for a cache entry
+ * Schedules cleanup of previous contexts when switching to a new one
+ * @param {string} newContextKey - The new context key
  */
-function setupCacheTimeout(cacheKey) {
-  // Clear existing timeout if any
-  const existingTimeout = cacheTimeouts.get(cacheKey);
-  if (existingTimeout) {
-    clearTimeout(existingTimeout);
+function scheduleContextCleanup(contextKey) {
+  if (contextCleanupTimeouts.has(contextKey)) {
+    clearTimeout(contextCleanupTimeouts.get(contextKey));
   }
 
-  // Set new timeout
   const timeout = setTimeout(() => {
-    fileParseCache.delete(cacheKey);
-    cacheTimeouts.delete(cacheKey);
-  }, CACHE_TIMEOUT_MS);
+    const contextCache = contextCaches.get(contextKey);
+    if (contextCache) {
+      contextCache.clear();
+      contextCaches.delete(contextKey);
+    }
+    contextCleanupTimeouts.delete(contextKey);
+  }, 300);
 
-  // Use WeakRef to avoid memory leaks if timeout object is held
-  cacheTimeouts.set(cacheKey, timeout);
+  contextCleanupTimeouts.set(contextKey, timeout);
 }
 
 /**
  * Create cache key from file path and context (similar to eslint-plugin-import-x makeContextCacheKey)
  * @param {string} filePath - File path
  * @param {Object} context - ESLint context
- * @returns {string} - Cache key
+ * @returns {Object} - Object with contextKey and filePath
  */
 function createCacheKey(filePath, context) {
+  let contextKey;
+
   // If context already has a cacheKey (like eslint-plugin-import-x childContext), use it
   if (context.cacheKey) {
-    return `${context.cacheKey}\0${filePath}`;
+    contextKey = context.cacheKey;
+  } else {
+    // Build cache key similar to eslint-plugin-import-x makeContextCacheKey
+    const { settings, parserOptions, languageOptions, cwd } = context;
+    const parserOpts = languageOptions?.parserOptions || parserOptions || {};
+
+    let hash = cwd || "";
+    hash = `${hash}\0${JSON.stringify(settings || {})}`;
+    hash = `${hash}\0${JSON.stringify(parserOpts)}`;
+
+    if (languageOptions) {
+      hash = `${hash}\0${String(languageOptions.ecmaVersion)}`;
+      hash = `${hash}\0${String(languageOptions.sourceType)}`;
+      hash = `${hash}\0${JSON.stringify(languageOptions.parser || "espree")}`;
+    }
+
+    contextKey = hash;
   }
 
-  // Build cache key similar to eslint-plugin-import-x makeContextCacheKey
-  const { settings, parserOptions, languageOptions, cwd } = context;
-  const parserOpts = languageOptions?.parserOptions || parserOptions || {};
-
-  let hash = cwd || "";
-  hash = `${hash}\0${JSON.stringify(settings || {})}`;
-  hash = `${hash}\0${JSON.stringify(parserOpts)}`;
-
-  if (languageOptions) {
-    hash = `${hash}\0${String(languageOptions.ecmaVersion)}`;
-    hash = `${hash}\0${String(languageOptions.sourceType)}`;
-    hash = `${hash}\0${JSON.stringify(languageOptions.parser || "espree")}`;
-  }
-
-  return `${hash}\0${filePath}`;
+  return { contextKey, filePath };
 }
 
 /**
@@ -86,31 +89,30 @@ function createCacheKey(filePath, context) {
  */
 function parseFileWithESLint(filePath, context) {
   try {
-    const cacheKey = createCacheKey(filePath, context);
+    const { contextKey, filePath: fileKey } = createCacheKey(filePath, context);
+
+    if (!contextCaches.has(contextKey)) {
+      contextCaches.set(contextKey, new Map());
+    }
+    const contextCache = contextCaches.get(contextKey);
 
     // Check if we have a cached version
-    if (fileParseCache.has(cacheKey)) {
-      const cached = fileParseCache.get(cacheKey);
+    if (contextCache.has(fileKey)) {
+      const cached = contextCache.get(fileKey);
 
       // Check mtime to see if file has been modified
       try {
         const stats = statSync(filePath);
         if (cached.mtime === stats.mtime.valueOf()) {
-          // Cache hit - refresh timeout and move to end (LRU)
-          const value = fileParseCache.get(cacheKey);
-          fileParseCache.delete(cacheKey);
-          fileParseCache.set(cacheKey, value);
-          setupCacheTimeout(cacheKey);
+          // Cache hit - move to end (LRU)
+          const value = contextCache.get(fileKey);
+          contextCache.delete(fileKey);
+          contextCache.set(fileKey, value);
           return cached.ast;
         }
       } catch {
         // File might not exist anymore, remove from cache
-        fileParseCache.delete(cacheKey);
-        const timeout = cacheTimeouts.get(cacheKey);
-        if (timeout) {
-          clearTimeout(timeout);
-          cacheTimeouts.delete(cacheKey);
-        }
+        contextCache.delete(fileKey);
         return null;
       }
     }
@@ -125,15 +127,17 @@ function parseFileWithESLint(filePath, context) {
         const stats = statSync(filePath);
 
         // Evict LRU entries if cache is full
-        evictLRU();
+        if (contextCache.size >= MAX_FILES_PER_CONTEXT) {
+          evictLRUFromContext(contextCache);
+        }
 
-        fileParseCache.set(cacheKey, {
+        contextCache.set(fileKey, {
           ast,
           mtime: stats.mtime.valueOf(),
         });
 
-        // Set up timeout for this cache entry
-        setupCacheTimeout(cacheKey);
+        // Schedule cleanup for this context
+        scheduleContextCleanup(contextKey);
       } catch {
         // If we can't stat the file, don't cache it
       }
@@ -635,20 +639,29 @@ function resolveReExportsWithCycleDetection(
  * Clear the file parse cache and all timeouts
  */
 export function clearFileParseCache() {
-  // Clear all timeouts first
-  for (const timeout of cacheTimeouts.values()) {
+  // Clear all cleanup timeouts first
+  for (const timeout of contextCleanupTimeouts.values()) {
     clearTimeout(timeout);
   }
-  cacheTimeouts.clear();
-  fileParseCache.clear();
+  contextCleanupTimeouts.clear();
+
+  // Clear all context caches
+  for (const contextCache of contextCaches.values()) {
+    contextCache.clear();
+  }
+  contextCaches.clear();
 }
 
 /**
  * Get cache size for debugging/monitoring
- * @returns {number} - Number of cached entries
+ * @returns {number} - Total number of cached entries across all contexts
  */
 export function getFileParseCacheSize() {
-  return fileParseCache.size;
+  let totalSize = 0;
+  for (const contextCache of contextCaches.values()) {
+    totalSize += contextCache.size;
+  }
+  return totalSize;
 }
 
 /**
@@ -657,34 +670,38 @@ export function getFileParseCacheSize() {
  */
 export function cleanupFileParseCache(maxAge = 5 * 60 * 1000) {
   const now = Date.now();
-  const keysToDelete = [];
 
-  for (const [cacheKey, cached] of fileParseCache.entries()) {
-    // Extract file path from cache key (after the last \0)
-    const parts = cacheKey.split("\0");
-    const filePath = parts[parts.length - 1];
+  for (const [contextKey, contextCache] of contextCaches.entries()) {
+    const keysToDelete = [];
 
-    try {
-      const stats = statSync(filePath);
-      // Remove if file is older than maxAge or mtime doesn't match
-      if (
-        now - stats.mtime.valueOf() > maxAge ||
-        cached.mtime !== stats.mtime.valueOf()
-      ) {
-        keysToDelete.push(cacheKey);
+    for (const [filePath, cached] of contextCache.entries()) {
+      try {
+        const stats = statSync(filePath);
+        // Remove if file is older than maxAge or mtime doesn't match
+        if (
+          now - stats.mtime.valueOf() > maxAge ||
+          cached.mtime !== stats.mtime.valueOf()
+        ) {
+          keysToDelete.push(filePath);
+        }
+      } catch {
+        // File doesn't exist anymore, remove from cache
+        keysToDelete.push(filePath);
       }
-    } catch {
-      // File doesn't exist anymore, remove from cache
-      keysToDelete.push(cacheKey);
     }
-  }
 
-  for (const key of keysToDelete) {
-    fileParseCache.delete(key);
-    const timeout = cacheTimeouts.get(key);
-    if (timeout) {
-      clearTimeout(timeout);
-      cacheTimeouts.delete(key);
+    for (const key of keysToDelete) {
+      contextCache.delete(key);
+    }
+
+    // If context cache is empty, remove it and cancel cleanup timeout
+    if (contextCache.size === 0) {
+      contextCaches.delete(contextKey);
+      const timeout = contextCleanupTimeouts.get(contextKey);
+      if (timeout) {
+        clearTimeout(timeout);
+        contextCleanupTimeouts.delete(contextKey);
+      }
     }
   }
 }
@@ -697,17 +714,13 @@ export function scheduleMemoryCleanup() {
   // Clean up stale entries
   cleanupFileParseCache();
 
-  // If cache is still too large, force LRU eviction
-  while (fileParseCache.size > MAX_CACHE_SIZE * 0.8) {
-    // Keep 20% buffer
-    const firstKey = fileParseCache.keys().next().value;
-    if (!firstKey) break;
-
-    fileParseCache.delete(firstKey);
-    const timeout = cacheTimeouts.get(firstKey);
-    if (timeout) {
-      clearTimeout(timeout);
-      cacheTimeouts.delete(firstKey);
+  // If individual context caches are still too large, force LRU eviction
+  for (const contextCache of contextCaches.values()) {
+    while (contextCache.size > MAX_FILES_PER_CONTEXT * 0.8) {
+      // Keep 20% buffer
+      const firstKey = contextCache.keys().next().value;
+      if (!firstKey) break;
+      contextCache.delete(firstKey);
     }
   }
 }
