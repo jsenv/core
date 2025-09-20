@@ -127,8 +127,13 @@ step1({ id: 1, name: "John", email: "john@test.com" }); // Should show available
 `,
       errors: [
         {
-          messageId: "not_found_param", // May get chain message with available params
-          data: { param: "unknown", func: "step1" },
+          messageId: "not_found_param_chain_with_suggestions", // Chain message with available params
+          data: {
+            param: "unknown",
+            firstFunc: "step1",
+            secondFunc: "step2",
+            available: "id, name, email, config",
+          },
           type: "Property",
         },
       ],

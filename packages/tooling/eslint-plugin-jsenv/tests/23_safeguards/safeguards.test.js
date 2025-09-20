@@ -76,13 +76,23 @@ ruleTester.run("no-unknown-params safeguards", noUnknownParamsRule, {
       options: [{ maxChainDepth: 2 }], // Very low limit - should stop early
       errors: [
         {
-          messageId: "not_found_param",
-          data: { param: "p6", func: "f1" },
+          messageId: "not_found_param_chain_with_suggestions",
+          data: {
+            param: "p6",
+            firstFunc: "f1",
+            secondFunc: "f2",
+            available: "p1, p2",
+          },
           type: "Property",
         },
         {
-          messageId: "not_found_param",
-          data: { param: "unknownParam", func: "f1" },
+          messageId: "not_found_param_chain_with_suggestions",
+          data: {
+            param: "unknownParam",
+            firstFunc: "f1",
+            secondFunc: "f2",
+            available: "p1, p2",
+          },
           type: "Property",
         },
       ],

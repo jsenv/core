@@ -52,8 +52,13 @@ const targetFunction = ({ c }) => {
 invalidRestRename({ a: 1 });`,
       errors: [
         {
-          messageId: "not_found_param",
-          data: { param: "d", func: "invalidRestRename" },
+          messageId: "not_found_param_chain_with_suggestions",
+          data: {
+            param: "d",
+            firstFunc: "invalidRestRename",
+            secondFunc: "targetFunction",
+            available: "a, c",
+          },
           type: "Property",
         },
       ],

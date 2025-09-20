@@ -95,8 +95,13 @@ const handleData = ({ type, ...userData }) => {
 handleData({ type: "user", name: "John", age: 30 });`,
       errors: [
         {
-          messageId: "not_found_param",
-          data: { param: "email", func: "handleData" },
+          messageId: "not_found_param_chain_with_suggestions",
+          data: {
+            param: "email",
+            firstFunc: "handleData",
+            secondFunc: "processUser",
+            available: "type, name, age",
+          },
           type: "Property",
         },
       ],

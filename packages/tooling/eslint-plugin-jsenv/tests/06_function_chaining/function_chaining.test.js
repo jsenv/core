@@ -49,8 +49,13 @@ const tata = ({ b }) => {
 toto({ a: true });`,
       errors: [
         {
-          messageId: "not_found_param",
-          data: { param: "c", func: "toto" },
+          messageId: "not_found_param_chain_with_suggestions",
+          data: {
+            param: "c",
+            firstFunc: "toto",
+            secondFunc: "tata",
+            available: "a, b",
+          },
           type: "Property",
         },
       ],
