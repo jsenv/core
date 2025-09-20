@@ -38,6 +38,14 @@
 
 import { getScrollableParent } from "../scroll.js";
 
+export let DRAG_DEBUG_VISUAL_MARKERS = false;
+export const enableDebugMarkers = () => {
+  DRAG_DEBUG_VISUAL_MARKERS = true;
+};
+export const disableDebugMarkers = () => {
+  DRAG_DEBUG_VISUAL_MARKERS = false;
+};
+
 import.meta.css = /* css */ `
   .navi_constraint_feedback_line {
     position: fixed;
@@ -142,14 +150,6 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 `;
-
-export let DRAG_DEBUG_VISUAL_MARKERS = true;
-export const enableDebugMarkers = () => {
-  DRAG_DEBUG_VISUAL_MARKERS = true;
-};
-export const disableDebugMarkers = () => {
-  DRAG_DEBUG_VISUAL_MARKERS = false;
-};
 
 /**
  * Get element bounds, handling both normal positioning and data-sticky-obstacle

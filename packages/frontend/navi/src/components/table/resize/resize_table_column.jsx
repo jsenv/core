@@ -5,13 +5,13 @@ import.meta.css = /* css */ `
   .navi_table_column_resize_handle_right {
     cursor: ew-resize;
     position: absolute;
-    width: 7px;
-    height: 22px;
+    width: 8px;
+    height: 100%;
     top: 50%;
     transform: translateY(-50%);
-    background: orange;
     border-radius: 15px;
-    opacity: 0.5;
+    /* background: orange; */
+    /* opacity: 0.5; */
   }
   .navi_table_column_resize_handle_left {
     left: 0px;
@@ -34,14 +34,16 @@ import.meta.css = /* css */ `
   .navi_table_column_resizer .navi_table_column_resize_handle_left,
   .navi_table_column_resizer .navi_table_column_resize_handle_right {
     background: #444746;
-    opacity: 0.5;
-    width: 4px;
+    /* opacity: 0.5; */
+    width: 5px;
+    height: 26px;
+    max-height: 80%;
   }
   .navi_table_column_resizer .navi_table_column_resize_handle_left {
-    left: 3px;
+    left: 2px;
   }
   .navi_table_column_resizer .navi_table_column_resize_handle_right {
-    right: 3px;
+    right: 2px;
   }
 
   .navi_table_column_resize_handle_container {
@@ -83,6 +85,7 @@ export const TableColumnLeftResizeHandle = ({
     <div
       className="navi_table_column_resize_handle_left"
       onMouseDown={(e) => {
+        e.preventDefault();
         e.stopPropagation(); // prevent drag column
         initResizeTableColumnByMousedown(e, {
           columnMinWidth,
@@ -113,6 +116,7 @@ export const TableColumnRightResizeHandle = ({
     <div
       className="navi_table_column_resize_handle_right"
       onMouseDown={(e) => {
+        e.preventDefault();
         e.stopPropagation(); // prevent drag column
         initResizeTableColumnByMousedown(e, {
           columnMinWidth,
