@@ -521,6 +521,7 @@ export const Table = forwardRef((props, ref) => {
     selection = [],
     selectionColor,
     onSelectionChange,
+    onColumnResize,
     borderCollapse = false,
   } = props;
 
@@ -790,8 +791,13 @@ export const Table = forwardRef((props, ref) => {
                   onGrabResizeHandle={(resizeInfo) => {
                     grabColumnResizeHandle(index, resizeInfo);
                   }}
-                  onReleaseResizeHandle={() => {
+                  onReleaseResizeHandle={({ width }) => {
                     releaseColumnResizeHandle(index);
+                    onColumnResize?.({
+                      width,
+                      column: col,
+                      columnIndex: index,
+                    });
                   }}
                 >
                   {col.value}

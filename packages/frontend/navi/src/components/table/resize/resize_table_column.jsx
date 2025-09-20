@@ -243,7 +243,13 @@ const initResizeTableColumnByMousedown = (
       onGrab({ rowHeight: 0 });
     },
     onDrag,
-    onRelease,
+    onRelease: (gesture) => {
+      const newWidth = currentCellWidth + gesture.xMove;
+      onRelease({
+        width: newWidth,
+        currentWidth: currentCellWidth,
+      });
+    },
   });
   dragToMoveGesture.addTeardown(() => {
     tableColumnResizer.style.left = "";
