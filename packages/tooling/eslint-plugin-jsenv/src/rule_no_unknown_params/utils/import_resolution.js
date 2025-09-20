@@ -9,7 +9,6 @@ let clearFileParseCache;
 let getFileParseCacheSize;
 let cleanupFileParseCache;
 let scheduleMemoryCleanup;
-
 cache: {
   /*
    * Cache Implementation Strategy:
@@ -103,24 +102,37 @@ cache: {
   }
 
   /**
-   * Schedules cleanup of a context after a delay to allow context reuse
-   * @param {string} contextKey - The context key to schedule cleanup for
+   * When a context key is encountered, stop its timeout and schedule cleanup for all other contexts
+   * @param {string} activeContextKey - The context key that was just accessed
    */
-  function scheduleContextCleanup(contextKey) {
-    if (contextCleanupTimeouts.has(contextKey)) {
-      clearTimeout(contextCleanupTimeouts.get(contextKey));
+  function scheduleContextCleanup(activeContextKey) {
+    // Stop timeout for the active context key
+    if (contextCleanupTimeouts.has(activeContextKey)) {
+      clearTimeout(contextCleanupTimeouts.get(activeContextKey));
+      contextCleanupTimeouts.delete(activeContextKey);
     }
 
-    const timeout = setTimeout(() => {
-      const contextCache = contextCaches.get(contextKey);
-      if (contextCache) {
-        contextCache.clear();
-        contextCaches.delete(contextKey);
-      }
-      contextCleanupTimeouts.delete(contextKey);
-    }, CLEANUP_DELAY_MS);
+    // Schedule cleanup for ALL OTHER context keys
+    for (const [
+      contextKey,
+      existingTimeout,
+    ] of contextCleanupTimeouts.entries()) {
+      if (contextKey !== activeContextKey) {
+        // Clear existing timeout and set new one
+        clearTimeout(existingTimeout);
 
-    contextCleanupTimeouts.set(contextKey, timeout);
+        const timeout = setTimeout(() => {
+          const contextCache = contextCaches.get(contextKey);
+          if (contextCache) {
+            contextCache.clear();
+            contextCaches.delete(contextKey);
+          }
+          contextCleanupTimeouts.delete(contextKey);
+        }, CLEANUP_DELAY_MS);
+
+        contextCleanupTimeouts.set(contextKey, timeout);
+      }
+    }
   }
 
   /**
@@ -216,6 +228,9 @@ cache: {
       );
       const contextCache = getContextCache(contextKey);
 
+      // As soon as we encounter this context key, stop its timeout and schedule cleanup for all others
+      scheduleContextCleanup(contextKey);
+
       // Check if we have a cached version
       if (contextCache.has(fileKey)) {
         const cached = contextCache.get(fileKey);
@@ -255,9 +270,6 @@ cache: {
             ast,
             mtime: stats.mtime.valueOf(),
           });
-
-          // Schedule cleanup for this context
-          scheduleContextCleanup(contextKey);
         } catch {
           // If we can't stat the file, don't cache it
         }
