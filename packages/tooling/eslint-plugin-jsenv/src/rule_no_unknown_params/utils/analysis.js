@@ -180,7 +180,6 @@ export function analyzeCallExpression(
   functionDefinitions,
   context,
   maxChainDepth = 40,
-  detailedMessage = false,
 ) {
   const callee = node.callee;
 
@@ -319,7 +318,6 @@ export function analyzeCallExpression(
                 context.getFilename(),
                 maxChainDepth,
                 functionDefWrapper.sourceFile,
-                detailedMessage,
               );
 
               const fixes = [];
@@ -396,7 +394,6 @@ export function analyzeCallExpression(
               context.getFilename(),
               maxChainDepth,
               functionDefWrapper.sourceFile,
-              detailedMessage,
             );
 
             const fixes = [];
