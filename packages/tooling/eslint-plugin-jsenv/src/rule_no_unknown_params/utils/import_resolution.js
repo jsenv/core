@@ -1,6 +1,7 @@
 import { readFileSync, statSync } from "fs";
 import { createRequire } from "module";
 import { dirname, resolve } from "path";
+import { debug } from "../debug.js";
 
 // LRU Cache with size limit and timeout-based cleanup for file parsing
 const MAX_CACHE_SIZE = 1000;
@@ -315,11 +316,14 @@ function resolveImportsWithCycleDetection(
   for (const node of ast.body) {
     if (node.type === "ImportDeclaration") {
       const importPath = node.source.value;
+      debug(`Found import: ${importPath}`);
+
       const resolvedPath = resolveModulePath(
         importPath,
         filename,
         importResolver,
       );
+      debug(`Resolved path for ${importPath}: ${resolvedPath || "null"}`);
 
       if (resolvedPath) {
         try {
@@ -378,12 +382,14 @@ function resolveImportsWithCycleDetection(
       } else {
         // If we can't resolve the import (e.g., external packages like @jsenv/core),
         // create placeholder entries for imported functions so they are treated as external
+        debug(`Creating external placeholders for ${importPath}`);
         for (const specifier of node.specifiers) {
           if (
             specifier.type === "ImportSpecifier" ||
             specifier.type === "ImportDefaultSpecifier"
           ) {
             const localName = specifier.local.name;
+            debug(`Adding external function: ${localName} from ${importPath}`);
             // Mark as external function with no source code
             functionDefinitions.set(localName, {
               node: null, // No AST node available
@@ -392,6 +398,7 @@ function resolveImportsWithCycleDetection(
             });
           } else if (specifier.type === "ImportNamespaceSpecifier") {
             const localName = specifier.local.name;
+            debug(`Adding external namespace: ${localName} from ${importPath}`);
             // Create a namespace placeholder for external packages
             functionDefinitions.set(localName, {
               node: null,

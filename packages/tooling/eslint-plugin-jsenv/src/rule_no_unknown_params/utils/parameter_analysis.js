@@ -1,3 +1,5 @@
+import { debug } from "../debug.js";
+
 // Helper function to build variable renaming map within a function
 export function buildVariableRenamingMap(functionDef) {
   const renamingMap = new Map(); // renamedVar -> originalVar
@@ -65,6 +67,10 @@ export function analyzeParameterPropagation(functionDef, functionDefinitions) {
       const calledFunctionName = node.callee.name;
       const calledFunction = functionDefinitions.get(calledFunctionName);
 
+      debug(
+        `Found call to ${calledFunctionName}, function exists: ${Boolean(calledFunction)}, isExternal: ${calledFunction?.isExternal || false}`,
+      );
+
       // Process propagations for both internal and external functions
       // For external functions, calledFunction will be null/undefined
       // Check arguments for objects with spread elements OR direct variable passing
@@ -97,6 +103,9 @@ export function analyzeParameterPropagation(functionDef, functionDefinitions) {
           }
 
           if (spreadElements.length > 0) {
+            debug(
+              `Found spread propagation: ${calledFunctionName} <- [${spreadElements.join(", ")}]`,
+            );
             propagations.push({
               targetFunction: calledFunctionName,
               targetFunctionDef: calledFunction,

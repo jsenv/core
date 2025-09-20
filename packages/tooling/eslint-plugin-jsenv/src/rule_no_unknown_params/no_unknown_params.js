@@ -1,4 +1,4 @@
-import createDebug from "debug";
+import { debug } from "./debug.js";
 import { analyzeCallExpression, analyzeJSXElement } from "./utils/analysis.js";
 import {
   resolveImports,
@@ -8,8 +8,6 @@ import {
   resolveWrapperFunction,
   resolveWrapperReferences,
 } from "./utils/wrapper_resolution.js";
-
-const debug = createDebug("eslint-plugin:no-unknown-params");
 
 export const noUnknownParamsRule = {
   meta: {
@@ -197,14 +195,36 @@ export const noUnknownParamsRule = {
       // Analyze all collected calls and JSX after collecting all function definitions
       "Program:exit"() {
         try {
+          debug("=== Starting Program:exit analysis ===");
+          debug(
+            "Collected function definitions before import resolution:",
+            Array.from(functionDefinitions.keys()),
+          );
+          debug("Collected calls to analyze:", callsToAnalyze.length);
+
           // First, resolve import statements to get imported function definitions
           resolveImports(context, functionDefinitions, maxImportDepth);
+
+          debug(
+            "Function definitions after import resolution:",
+            Array.from(functionDefinitions.keys()),
+          );
+          for (const [name, def] of functionDefinitions) {
+            debug(
+              `  - ${name}: isExternal=${Boolean(def.isExternal)}, sourceFile=${def.sourceFile}`,
+            );
+          }
 
           // Then, resolve wrapper function references
           resolveWrapperReferences(functionDefinitions);
 
           // Process all collected function calls
+          debug("=== Processing function calls ===");
           for (const callNode of callsToAnalyze) {
+            const funcName = callNode.callee?.name;
+            debug(
+              `Analyzing call to: ${funcName} at line ${callNode.loc?.start?.line}`,
+            );
             analyzeCallExpression(
               callNode,
               functionDefinitions,

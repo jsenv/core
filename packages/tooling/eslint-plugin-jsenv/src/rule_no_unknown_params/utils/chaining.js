@@ -1,3 +1,4 @@
+import { debug } from "../debug.js";
 import { analyzeParameterPropagation } from "./parameter_analysis.js";
 
 // Helper function to check if a parameter is used at all in the function body
@@ -42,8 +43,15 @@ export function checkParameterChaining(
   chain = [],
   maxChainDepth = 40,
 ) {
+  const functionName =
+    functionDef.id?.name || functionDef.parent?.id?.name || "anonymous";
+  debug(
+    `checkParameterChaining: looking for param '${paramName}' in function '${functionName}'`,
+  );
+
   // Check chain depth limit to prevent memory issues
   if (chain.length >= maxChainDepth) {
+    debug(`checkParameterChaining: max chain depth reached for '${paramName}'`);
     return { found: false, chain: [] };
   }
 
@@ -60,6 +68,10 @@ export function checkParameterChaining(
     functionDefinitions,
   );
 
+  debug(
+    `checkParameterChaining: found ${propagations.length} propagations for '${functionName}'`,
+  );
+
   for (const propagation of propagations) {
     const { targetFunction, targetFunctionDef, spreadElements, argumentIndex } =
       propagation;
@@ -68,6 +80,10 @@ export function checkParameterChaining(
       chain.length === 0
         ? [functionKey, targetFunction]
         : [...chain, targetFunction];
+
+    debug(
+      `checkParameterChaining: checking propagation to '${targetFunction}', spreadElements: [${spreadElements.join(", ")}]`,
+    );
 
     // Check if this parameter could be propagated via spread elements
     const functionParams = functionDef.params;
@@ -89,10 +105,17 @@ export function checkParameterChaining(
               .map((p) => p.key.name);
 
             if (!explicitParams.includes(paramName)) {
+              debug(
+                `Parameter '${paramName}' is in rest element, checking target function '${targetFunction}'`,
+              );
+
               // Parameter is in rest, check if target function accepts it
 
               // If target function is external (no source code available), assume all params are valid
               if (!targetFunctionDef || targetFunctionDef.isExternal) {
+                debug(
+                  `[DEBUG] Target function '${targetFunction}' is external, accepting parameter '${paramName}'`,
+                );
                 return { found: true, chain: currentChain };
               }
 
@@ -100,6 +123,21 @@ export function checkParameterChaining(
               const targetFunctionNode =
                 targetFunctionDef.node || targetFunctionDef;
               const targetParams = targetFunctionNode.params;
+              debug(
+                `[DEBUG] Target function '${targetFunction}' has ${targetParams.length} parameters`,
+              );
+
+              // Check if target function uses rest parameters (...args) - these accept any parameters
+              if (
+                targetParams.length > 0 &&
+                targetParams[targetParams.length - 1].type === "RestElement"
+              ) {
+                debug(
+                  `Target function '${targetFunction}' uses rest parameters (...args), accepting parameter '${paramName}'`,
+                );
+                return { found: true, chain: currentChain };
+              }
+
               if (argumentIndex < targetParams.length) {
                 const targetParam = targetParams[argumentIndex];
                 if (targetParam.type === "ObjectPattern") {
