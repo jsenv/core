@@ -122,9 +122,19 @@ export function checkParameterChaining(
               // Handle both wrapped format and direct node format for backward compatibility
               const targetFunctionNode =
                 targetFunctionDef.node || targetFunctionDef;
+
+              // Protective behavior: if we can't properly access the target function's parameters,
+              // assume it's valid to avoid false positives
+              if (!targetFunctionNode || !targetFunctionNode.params) {
+                debug(
+                  `Target function '${targetFunction}' has no analyzable parameters, assuming parameter '${paramName}' is valid`,
+                );
+                return { found: true, chain: currentChain };
+              }
+
               const targetParams = targetFunctionNode.params;
               debug(
-                `[DEBUG] Target function '${targetFunction}' has ${targetParams.length} parameters`,
+                `Target function '${targetFunction}' has ${targetParams.length} parameters`,
               );
 
               // Check if target function uses rest parameters (...args) - these accept any parameters

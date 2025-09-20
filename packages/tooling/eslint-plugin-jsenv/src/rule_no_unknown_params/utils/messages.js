@@ -98,6 +98,11 @@ export function generateErrorMessage(
   const secondFunc = chain.length > 1 ? chain[1] : null;
   const lastFunc = chain.length > 0 ? chain[chain.length - 1] : functionName;
 
+  // The responsible function is the one that ultimately rejects the parameter:
+  // - If there's a chain, it's the last function in the chain
+  // - If there's no chain, it's the original function
+  const responsibleFunc = lastFunc;
+
   // Check if function is from an imported file (different from current file)
   const sourceFile = functionSourceFile;
   const shouldShowFilePath =
@@ -120,7 +125,7 @@ export function generateErrorMessage(
         : "superfluous_param";
       const data = {
         param: paramName,
-        func: functionName,
+        func: responsibleFunc,
         expected: formatParameterList(Array.from(directParams)),
       };
       if (shouldShowFilePath) {
@@ -180,7 +185,7 @@ export function generateErrorMessage(
         : "not_found_param_with_suggestions";
       const data = {
         param: paramName,
-        func: functionName,
+        func: responsibleFunc,
         suggestions: suggestions.join(", "),
       };
       if (shouldShowFilePath) {
@@ -199,7 +204,7 @@ export function generateErrorMessage(
       ? "not_found_param_with_file"
       : "not_found_param";
 
-    const data = { param: paramName, func: functionName };
+    const data = { param: paramName, func: responsibleFunc };
     if (shouldShowFilePath) {
       data.filePath = relativeFilePath;
     }
