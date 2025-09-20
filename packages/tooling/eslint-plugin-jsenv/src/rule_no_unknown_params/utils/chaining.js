@@ -72,6 +72,9 @@ export function checkParameterChaining(
     `checkParameterChaining: found ${propagations.length} propagations for '${functionName}'`,
   );
 
+  // Keep track of the longest chain even if parameter is not found
+  let bestChain = chain;
+
   for (const propagation of propagations) {
     const { targetFunction, targetFunctionDef, spreadElements, argumentIndex } =
       propagation;
@@ -80,6 +83,11 @@ export function checkParameterChaining(
       chain.length === 0
         ? [functionKey, targetFunction]
         : [...chain, targetFunction];
+
+    // Update bestChain with the longest chain we've built so far
+    if (currentChain.length > bestChain.length) {
+      bestChain = currentChain;
+    }
 
     debug(
       `checkParameterChaining: checking propagation to '${targetFunction}', spreadElements: [${spreadElements.join(", ")}]`,
@@ -223,7 +231,9 @@ export function checkParameterChaining(
     }
   }
 
-  return { found: false, chain: [] };
+  // When parameter is not found, preserve the longest chain we built during analysis
+  // This allows error reporting to attribute the rejection to the correct function
+  return { found: false, chain: bestChain };
 }
 
 // Helper function to collect all parameters accepted in a function and its call chain

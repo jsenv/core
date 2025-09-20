@@ -108,10 +108,12 @@ const wrapper = ({ id, ...params }) => {
 wrapper({ id: 1 });`,
         errors: [
           {
-            messageId: "not_found_param",
+            messageId: "not_found_param_chain_with_suggestions",
             data: {
               param: "unknownParam",
-              func: "wrapper", // TODO: Should ideally report 'handler' as it's the function that rejects the parameter
+              firstFunc: "wrapper",
+              secondFunc: "handler", // ✅ Fixed: Now correctly reports 'handler' as the function that rejects the parameter
+              available: "id, name",
             },
           },
         ],
