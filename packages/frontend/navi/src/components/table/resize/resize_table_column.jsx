@@ -220,7 +220,7 @@ const initResizeTableColumnByMousedown = (
   const currentCellLeft = tableCellRect.left - tableContainerRect.left;
   const currentCellWidth = tableCellRect.width;
 
-  // Left bound: minimum width of 50px (can shrink column by current width - 50)
+  // Left bound: minimum width of 50px (can shrink column down to this width)
   const minWidth =
     typeof columnMinWidth === "number" && columnMinWidth > 50
       ? columnMinWidth
@@ -230,7 +230,7 @@ const initResizeTableColumnByMousedown = (
     typeof columnMaxWidth === "number" && columnMaxWidth < 1000
       ? columnMaxWidth
       : 1000;
-  const customLeftBound = currentCellLeft + currentCellWidth - minWidth;
+  const customLeftBound = currentCellLeft + minWidth;
   const maxExpandAmount = maxWidth - currentCellWidth;
   const customRightBound = currentCellLeft + currentCellWidth + maxExpandAmount;
 

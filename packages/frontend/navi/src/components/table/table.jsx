@@ -739,6 +739,7 @@ export const Table = forwardRef((props, ref) => {
                 data-sticky-obstacle={isLastStickyColumn ? "" : undefined}
                 style={{
                   minWidth: col.width ? `${col.width}px` : undefined,
+                  maxWidth: col.width ? `${col.width}px` : undefined,
                 }}
               />
             );
