@@ -116,12 +116,16 @@
       const generateColumns = (count = 10) => {
         const columns = [];
         for (let i = 1; i <= count; i++) {
-          columns.push({
+          const column = {
             // sticky: i === 1,
             id: `col${i}`,
             accessorKey: `col${i}`,
             value: `Column ${i}`,
-          });
+          };
+          if (i === 1) {
+            column.width = 30;
+          }
+          columns.push(column);
         }
         return columns;
       };

@@ -802,6 +802,9 @@ export const Table = forwardRef((props, ref) => {
                       column: columns[columnIndex - 1],
                     });
                   }}
+                  style={{
+                    maxWidth: col.width ? `${col.width}px` : undefined,
+                  }}
                 >
                   {col.value}
                 </HeaderCell>
@@ -858,6 +861,9 @@ export const Table = forwardRef((props, ref) => {
                       value={row[col.accessorKey]}
                       selectionController={selectionController}
                       grabbed={columnGrabbed}
+                      style={{
+                        maxWidth: col.width ? `${col.width}px` : undefined,
+                      }}
                     />
                   );
                 })}
@@ -992,6 +998,7 @@ const HeaderCell = ({
   onRelease,
   onGrabResizeHandle,
   onReleaseResizeHandle,
+  style,
   children,
 }) => {
   const cellRef = useRef();
@@ -1025,6 +1032,7 @@ const HeaderCell = ({
       data-grabbed={grabbed ? "" : undefined}
       style={{
         cursor: grabbed ? "grabbing" : "grab",
+        ...style,
       }}
       tabIndex={-1}
       onMouseDown={(e) => {

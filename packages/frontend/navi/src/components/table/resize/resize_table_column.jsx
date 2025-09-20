@@ -1,6 +1,10 @@
 import { createDragToMoveGesture } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
+  .navi_table {
+    table-layout: fixed;
+  }
+
   .navi_table_column_resize_handle_left,
   .navi_table_column_resize_handle_right {
     cursor: ew-resize;
