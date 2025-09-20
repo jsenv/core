@@ -2,7 +2,13 @@ import { createDragToMoveGesture } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
   .navi_table {
-    table-layout: fixed;
+    /* table-layout: fixed; */
+  }
+
+  .navi_table th,
+  .navi_table td {
+    /* ensure table cell padding does not count when we say column = 50px we want a column of 50px, not 50px + paddings */
+    box-sizing: content-box;
   }
 
   .navi_table_column_resize_handle_left,
