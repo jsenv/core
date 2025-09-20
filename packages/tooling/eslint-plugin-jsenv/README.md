@@ -13,12 +13,12 @@ ESLint plugin for jsenv projects with advanced parameter validation rules.
   - [Features](#features)
     - [🎯 Core Functionality](#-core-functionality)
     - [🔗 Advanced Analysis](#-advanced-analysis)
+  - [Auto-Fix Support](#auto-fix-support)
   - [Examples](#examples)
     - [Function Chaining](#function-chaining)
     - [React Component Validation](#react-component-validation)
   - [Installation](#installation)
   - [Usage](#usage)
-  - [Auto-Fix Support](#auto-fix-support)
   - [Contributing](#contributing)
 
 ## Rules
@@ -121,6 +121,33 @@ Performs sophisticated analysis including rest parameter chains, function chaini
 
 The rule automatically ignores external/imported functions without definitions (see [IMPLEMENTATION.md](./IMPLEMENTATION.md) for technical details).
 
+## Auto-Fix Support
+
+The rule includes automatic fixing capabilities with intelligent suggestions:
+
+### Typo Detection and Correction
+
+```javascript
+// Before auto-fix - likely typo detected
+function greet({ name }) {
+  return `Hello ${name}`;
+}
+greet({ nam: "John" }); // ❌ 'nam' not found in "name"
+
+// After auto-fix - suggests best match
+greet({ name: "John" }); // ✅ Fixed to 'name'
+```
+
+### Parameter Removal
+
+```javascript
+// Before auto-fix - unused parameters
+greet({ name: "John", age: 25, city: "NYC" });
+
+// After auto-fix - removes unused parameters  
+greet({ name: "John" });
+```
+
 ## Examples
 
 ### Function Chaining
@@ -213,18 +240,6 @@ export default [
 > The plugin is automatically included in [@jsenv/eslint-config-relax](../eslint-config-relax). So if you use `@jsenv/eslint-config-relax` you already have it enabled.
 
 The rule has no configuration options - it uses sensible defaults for all scenarios.
-
-## Auto-Fix Support
-
-The rule includes automatic fixing capabilities that remove unused parameters and can suggest the best parameter name when likely typos are detected:
-
-```javascript
-// Before auto-fix
-greet({ name: "John", age: 25, city: "NYC" });
-
-// After auto-fix (removes unused parameters)
-greet({ name: "John" });
-```
 
 ## Contributing
 
