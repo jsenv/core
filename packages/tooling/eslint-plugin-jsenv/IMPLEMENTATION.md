@@ -1,8 +1,10 @@
 # ESLint Plugin JSEnv - no-unknown-params Rule
 
+> **⚠️ Documentation Notice**: This implementation document provides a good overview of the project at a specific point in time but will likely become outdated as development continues. While it may not always be kept perfectly up-to-date, it should remain accurate enough to help you understand and dig into the project as it exists today.
+
 ## 🎉 Implementation Complete
 
-This ESLint plugin implements a comprehensive `no-unknown-params` rule that detects unused parameters in function calls and JSX component props.
+This ESLint plugin implements a comprehensive `no-unknown-params` rule that detects unused parameters in function calls and JSX component props with intelligent auto-fixing capabilities including typo detection and parameter suggestions.
 
 ## ✨ Features Implemented
 
@@ -64,29 +66,69 @@ This ESLint plugin implements a comprehensive `no-unknown-params` rule that dete
 
 ## 🧪 Test Coverage
 
-The plugin includes comprehensive test coverage with **16 test suites**:
+The plugin includes comprehensive test coverage with **39 tests** across **34 test suites**:
 
 1. **01_function_basic** - Basic function parameter detection
-2. **02_arrow_function** - Arrow function support
+2. **02_arrow_function** - Arrow function support  
 3. **03_multiple_params** - Multiple parameter validation
 4. **04_rest_params** - Rest parameter detection and renaming (2 test files)
 5. **05_scope_resolution** - Variable shadowing and scope handling
 6. **06_function_chaining** - Parameter propagation analysis
-7. **07_jsx** - JSX component prop validation with focused single-purpose tests
+7. **07_jsx** - JSX component prop validation
 8. **08_order_independence** - Usage before definition scenarios (3 test files)
 9. **09_wrapper_functions** - Wrapper function support (3 test files)
 10. **10_unknown_functions** - Unknown function handling
 11. **11_chain_messages** - Error message accuracy in function chains
+12. **12_import_resolution** - Cross-file import analysis
+13. **13_intermediate_imports** - Multi-level import chains
+14. **14_multiple_import_sources** - Multiple file import scenarios
+15. **15_import_aliases** - Import alias handling
+16. **16_nested_imports** - Nested import structures
+17. **17_import_with_errors** - Error handling in imports
+18. **18_complex_destructuring** - Advanced destructuring patterns
+19. **19_many_parameters** - Large parameter set handling
+20. **20_caching_and_performance** - Cache performance optimization (3 test files)
+21. **21_import_cycles** - Circular import detection
+22. **22_spread_operators** - Spread operator analysis
+23. **23_safeguards** - Edge case protection
+24. **24_external_functions** - External function handling
+25. **25_simple_object_params** - Simple object parameter patterns
+26. **26_param_spreading** - Parameter spreading scenarios
+27. **27_scope_resolution** - Advanced scope resolution
+28. **28_dynamic_imports** - Dynamic import support
+29. **31_rest_destructuring_fix** - Rest destructuring fixes
+30. **32_rest_tracking_bug** - Rest parameter bug fixes
+31. **33_external_imports** - External import handling
+32. **34_rest_parameters** - Rest parameter edge cases
 
 ## 🚀 Technical Implementation
 
 ### Analysis System
 
-The rule uses a two-pass analysis to handle all JavaScript patterns including usage before definition.
+The rule uses a sophisticated multi-pass analysis system to handle all JavaScript patterns including usage before definition, cross-file imports, and complex function chaining.
+
+### Import Resolution & Caching
+
+**Context-Based Cache System**: The plugin implements an intelligent caching system organized by ESLint context keys to handle different scenarios:
+
+- **Background/Long-running processes**: ESLint running in IDEs/watchers with potentially unlimited file growth
+- **Bulk processing**: Large file sets with different ESLint configurations requiring context-specific cache optimization
+
+**Cache Strategy**:
+- Organizes cache by context keys (ESLint configurations) for maximum reuse within configs
+- Limits 1000 files per context to prevent unbounded memory growth  
+- Uses LRU eviction within each context to keep most recently accessed files
+- Implements delayed cleanup (300ms) when switching contexts to allow context reuse while preventing memory leaks
+- Aggressive cleanup: when a context is accessed, all other contexts get fresh deletion timers
+
+**File Modification Tracking**: Uses `mtime` checking to ensure cache validity and automatic invalidation of stale entries.
 
 ### Auto-Fix Capabilities
 
-The rule provides automatic fixing by removing unused parameters from:
+The rule provides intelligent automatic fixing with two main capabilities:
+
+**1. Typo Detection & Correction**: Suggests the best parameter name when likely typos are detected
+**2. Parameter Removal**: Removes unused parameters from:
 
 - Function calls with object destructuring
 - JSX component props
@@ -136,23 +178,49 @@ WrappedComponent({ title: "Hello", superfluous: "flagged" }); // superfluous fla
 
 ```
 packages/tooling/eslint-plugin-jsenv/
-├── lib/
-│   └── rules/
-│       └── no-unknown-params.js     # Main rule implementation
-├── tests/                         # Comprehensive test suite
-│   ├── 01_function_basic/         # Basic function parameter detection
-│   ├── 02_arrow_function/         # Arrow function support
-│   ├── 03_multiple_params/        # Multiple parameter validation
-│   ├── 04_rest_params/           # Rest parameter detection and renaming
-│   ├── 05_scope_resolution/      # Variable shadowing and scope handling
-│   ├── 06_function_chaining/     # Parameter propagation analysis
-│   ├── 07_jsx/                   # JSX component prop validation
-│   ├── 08_order_independence/    # Usage before definition scenarios
-│   ├── 09_wrapper_functions/     # Wrapper function support (forwardRef, memo, bind)
-│   ├── 10_unknown_functions/     # Unknown function handling
-│   └── run-all.js               # Test runner
+├── src/
+│   └── rule_no_unknown_params/
+│       ├── no_unknown_params.js           # Main rule implementation with 12 message templates  
+│       └── utils/
+│           ├── import_resolution.js       # Cross-file import analysis with context-based caching
+│           ├── debug.js                   # Debug utilities
+│           └── wrapper_functions.js       # Wrapper function resolution (forwardRef, memo, etc.)
+├── tests/                               # Comprehensive test suite (39 tests across 34 suites)
+│   ├── 01_function_basic/               # Basic function parameter detection
+│   ├── 02_arrow_function/               # Arrow function support
+│   ├── 03_multiple_params/              # Multiple parameter validation
+│   ├── 04_rest_params/                  # Rest parameter detection and renaming
+│   ├── 05_scope_resolution/             # Variable shadowing and scope handling
+│   ├── 06_function_chaining/            # Parameter propagation analysis
+│   ├── 07_jsx/                          # JSX component prop validation
+│   ├── 08_order_independence/           # Usage before definition scenarios
+│   ├── 09_wrapper_functions/            # Wrapper function support (forwardRef, memo, bind)
+│   ├── 10_unknown_functions/            # Unknown function handling
+│   ├── 11_chain_messages/               # Error message accuracy in function chains
+│   ├── 12_import_resolution/            # Cross-file import analysis
+│   ├── 13_intermediate_imports/         # Multi-level import chains
+│   ├── 14_multiple_import_sources/      # Multiple file import scenarios
+│   ├── 15_import_aliases/               # Import alias handling
+│   ├── 16_nested_imports/               # Nested import structures
+│   ├── 17_import_with_errors/           # Error handling in imports
+│   ├── 18_complex_destructuring/        # Advanced destructuring patterns
+│   ├── 19_many_parameters/              # Large parameter set handling
+│   ├── 20_caching_and_performance/      # Cache performance optimization
+│   ├── 21_import_cycles/                # Circular import detection
+│   ├── 22_spread_operators/             # Spread operator analysis
+│   ├── 23_safeguards/                   # Edge case protection
+│   ├── 24_external_functions/           # External function handling
+│   ├── 25_simple_object_params/         # Simple object parameter patterns
+│   ├── 26_param_spreading/              # Parameter spreading scenarios
+│   ├── 27_scope_resolution/             # Advanced scope resolution
+│   ├── 28_dynamic_imports/              # Dynamic import support
+│   ├── 31_rest_destructuring_fix/       # Rest destructuring fixes
+│   ├── 32_rest_tracking_bug/            # Rest parameter bug fixes
+│   ├── 33_external_imports/             # External import handling
+│   ├── 34_rest_parameters/              # Rest parameter edge cases
+│   └── run-all.js                       # Test runner
 ├── package.json
-└── index.js                       # Plugin entry point
+└── index.js                             # Plugin entry point
 ```
 
 ## ✅ Integration
@@ -163,12 +231,13 @@ The plugin is integrated into `eslint-config-relax` and automatically available 
 
 Perfect for:
 
-- React component prop validation
-- Higher-Order Component (HOC) prop validation
-- Function parameter optimization
-- Code cleanup and maintenance
-- Preventing unused parameter accumulation
-- Wrapper function analysis (forwardRef, memo, bind)
+- **React component prop validation** - Comprehensive JSX prop analysis
+- **Higher-Order Component (HOC) analysis** - forwardRef, memo, and custom HOCs
+- **Cross-file import validation** - Multi-file function parameter tracking  
+- **Function parameter optimization** - Automated cleanup with intelligent suggestions
+- **Code maintenance** - Preventing parameter bloat and catching typos
+- **Large codebase management** - Efficient caching for performance at scale
+- **Wrapper function analysis** - Automatic resolution of wrapped functions
 
 ## 📋 Test Conventions
 
