@@ -78,7 +78,7 @@ import {
   useTableSelectionController,
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
-import "./sticky/table_sticky.js";
+import { TableStickyColumnFrontier } from "./sticky/table_sticky.jsx";
 import { TableCell } from "./table_cell.jsx";
 
 /*
@@ -593,6 +593,7 @@ export const Table = forwardRef((props, ref) => {
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer resizeInfo={resizeInfo} />
       <TableRowResizer />
+      <TableStickyColumnFrontier />
     </div>
   );
 });

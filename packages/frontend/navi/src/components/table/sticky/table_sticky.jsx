@@ -156,3 +156,7 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 `;
+
+export const TableStickyColumnFrontier = () => {
+  return <div className="navi_table_sticky_column_frontier"></div>;
+};
