@@ -28,7 +28,7 @@ import.meta.css = /* css */ `
     left: 0;
     right: 0;
     height: 10px;
-    top: var(--table-row-bottom, 0);
+    top: var(--table-cell-bottom, 0);
     opacity: 0;
   }
 
@@ -52,7 +52,7 @@ import.meta.css = /* css */ `
     left: 0;
     top: -10px;
     bottom: 0;
-    width: var(--table-row-width);
+    width: var(--table-cell-width);
   }
 
   .navi_table_row_resizer_line {
@@ -87,9 +87,9 @@ export const TableRowResizer = () => {
   );
 };
 
-const updateTableRowResizerPosition = (tableRow) => {
-  const tableRowRect = tableRow.getBoundingClientRect();
-  const tableContainer = tableRow.closest(".navi_table_container");
+const updateTableRowResizerPosition = (rowCell) => {
+  const tableRowCellRect = rowCell.getBoundingClientRect();
+  const tableContainer = rowCell.closest(".navi_table_container");
   const tableRowResizer = tableContainer.querySelector(
     ".navi_table_row_resizer",
   );
@@ -99,16 +99,16 @@ const updateTableRowResizerPosition = (tableRow) => {
     return;
   }
   const tableContainerRect = tableContainer.getBoundingClientRect();
-  const tableRowTopRelative = tableRowRect.top - tableContainerRect.top;
-  const tableRowWidth = tableRowRect.width;
-  const tableRowHeight = tableRowRect.height;
+  const tableRowTopRelative = tableRowCellRect.top - tableContainerRect.top;
+  const tableRowWidth = tableRowCellRect.width;
+  const tableRowHeight = tableRowCellRect.height;
 
   const tableRowRelativeBottom = tableRowTopRelative + tableRowHeight;
   tableRowResizer.style.setProperty(
-    "--table-row-bottom",
+    "--table-cell-bottom",
     `${tableRowRelativeBottom}px`,
   );
-  tableRowResizer.style.setProperty("--table-row-width", `${tableRowWidth}px`);
+  tableRowResizer.style.setProperty("--table-cell-width", `${tableRowWidth}px`);
   tableRowResizer.setAttribute("data-hover", "");
 };
 
@@ -178,13 +178,13 @@ export const TableRowBottomResizeHandle = ({
 const onMouseEnterTopResizeHandle = (e) => {
   const previousRow = e.target.closest("tr").previousElementSibling;
   if (previousRow) {
-    updateTableRowResizerPosition(previousRow);
+    updateTableRowResizerPosition(previousRow.querySelector("td"));
   }
 };
 
 const onMouseEnterBottomResizeHandle = (e) => {
-  const row = e.target.closest("tr");
-  updateTableRowResizerPosition(row);
+  const rowCell = e.target.closest("td");
+  updateTableRowResizerPosition(rowCell);
 };
 
 const onMouseLeaveTopResizeHandle = (e) => {
