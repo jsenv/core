@@ -709,7 +709,6 @@ export const createDragGesture = ({
       });
       for (const stickyObstacle of stickyObstacles) {
         const stickyRect = getElementBounds(stickyObstacle, scrollableParent);
-        console.log({ stickyObstacle });
 
         // Determine which edge this sticky obstacle affects based on its position
         // Left edge: if sticky element is positioned at or near the left edge
