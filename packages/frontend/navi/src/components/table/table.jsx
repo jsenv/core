@@ -336,18 +336,6 @@ import.meta.css = /* css */ `
       inset 1px 0 0 0 var(--selection-border-color);
   }
 
-  /* Corner case: cell after both sticky frontiers */
-  .navi_table[data-border-collapse]
-    th[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before,
-  .navi_table[data-border-collapse]
-    td[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before {
-    box-shadow:
-      inset 1px 0 0 0 var(--border-color),
-      inset 0 1px 0 0 var(--border-color),
-      inset -1px 0 0 0 var(--border-color),
-      inset 0 -1px 0 0 var(--border-color);
-  }
-
   /* Focus styles */
   .navi_table td:focus,
   .navi_table th:focus {
@@ -500,7 +488,6 @@ export const Table = forwardRef((props, ref) => {
   }, [selectionColor]);
 
   // Calculate frontier sticky column and row indexes (boundary between sticky and non-sticky)
-
   let stickyColumnFrontierIndex = -1;
   sticky_column_frontier: {
     let lastStickyColumnIndex = -1;
@@ -524,7 +511,6 @@ export const Table = forwardRef((props, ref) => {
       stickyColumnFrontierIndex = lastStickyColumnIndex;
     }
   }
-
   let stickyRowFrontierIndex = -1;
   sticky_row_frontier: {
     let lastStickyRowIndex = -1;
@@ -549,15 +535,17 @@ export const Table = forwardRef((props, ref) => {
     }
   }
 
+  // ability to drag columns
   const [grabTarget, setGrabTarget] = useState(null);
-  const [resizeInfo, setResizeInfo] = useState(null);
-
   const grabColumn = (columnIndex) => {
     setGrabTarget(`column:${columnIndex}`);
   };
   const releaseColumn = () => {
     setGrabTarget(null);
   };
+
+  // ability to resize columns/rows
+  const [resizeInfo, setResizeInfo] = useState(null);
   const grabColumnResizeHandle = (columnIndex, resizeInfo) => {
     setResizeInfo({
       ...resizeInfo,
@@ -567,7 +555,6 @@ export const Table = forwardRef((props, ref) => {
   const releaseColumnResizeHandle = () => {
     setResizeInfo(null);
   };
-
   const grabRowResizeHandle = (rowIndex, resizeInfo) => {
     setResizeInfo({
       ...resizeInfo,

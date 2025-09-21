@@ -143,4 +143,16 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
+
+  /* Corner case: cell after both sticky frontiers */
+  .navi_table[data-border-collapse]
+    th[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before,
+  .navi_table[data-border-collapse]
+    td[data-after-sticky-x-frontier][data-after-sticky-y-frontier]::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
 `;
