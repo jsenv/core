@@ -58,12 +58,8 @@
             #ff9999 0px,
             #ff9999 100px,
             transparent 100px,
-            transparent 300px,
-            #99ff99 300px,
-            #99ff99 500px,
             transparent 500px,
-            transparent 700px,
-            #ff9999 700px,
+            #ff9999 500px,
             #ff9999 800px
           );
         background-size:
@@ -87,12 +83,8 @@
             #ff9999 0px,
             #ff9999 100px,
             transparent 100px,
-            transparent 200px,
-            #99ff99 200px,
-            #99ff99 400px,
             transparent 400px,
-            transparent 500px,
-            #ff9999 500px,
+            #ff9999 400px,
             #ff9999 600px
           );
         background-size:
@@ -212,9 +204,6 @@
       .red-zone {
         background: #ff9999;
       }
-      .green-zone {
-        background: #99ff99;
-      }
 
       .position-display {
         position: fixed;
@@ -250,22 +239,16 @@
       </p>
       <ul>
         <li>
-          <strong>Horizontal Constraints:</strong> Element starts at 50% of
-          scrollable width and is constrained to the green zone (100px-500px
-          from content left)
+          <strong>Horizontal Constraints:</strong> Element's left edge must stay 
+          between 100px-500px. Red zones show forbidden positions for the element.
         </li>
         <li>
-          <strong>Vertical Constraints:</strong> Element starts at 50% of
-          scrollable height and is constrained to the green zone (100px-400px
-          from content top)
+          <strong>Vertical Constraints:</strong> Element's top edge must stay 
+          between 100px-400px. Red zones show forbidden positions for the element.
         </li>
         <li>
-          <strong>Red zones:</strong> Represent areas where the element cannot
-          be dragged
-        </li>
-        <li>
-          <strong>Green zones:</strong> Represent allowed dragging areas within
-          custom bounds
+          <strong>Red zones:</strong> Show areas where the element's top-left corner 
+          cannot be positioned (0-100px and 500px+ horizontally, 0-100px and 400px+ vertically)
         </li>
         <li>
           <strong>Auto-scroll:</strong> Still works when dragging near container
@@ -286,10 +269,6 @@
       <div class="legend-item">
         <div class="legend-color red-zone"></div>
         <span>Forbidden Zone</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color green-zone"></div>
-        <span>Allowed Zone</span>
       </div>
     </div>
 
@@ -484,13 +463,13 @@
       // Add hover effects to show bounds information
       horizontalRectangle.addEventListener("mouseenter", () => {
         if (!horizontalRectangle.hasAttribute("data-dragging")) {
-          updateBoundsInfo("Horizontal bounds: L=100px, R=500px (green zone)");
+          updateBoundsInfo("Horizontal bounds: L=100px, R=500px (red = forbidden)");
         }
       });
 
       verticalRectangle.addEventListener("mouseenter", () => {
         if (!verticalRectangle.hasAttribute("data-dragging")) {
-          updateBoundsInfo("Vertical bounds: T=100px, B=400px (green zone)");
+          updateBoundsInfo("Vertical bounds: T=100px, B=400px (red = forbidden)");
         }
       });
 
