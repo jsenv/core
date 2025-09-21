@@ -54,18 +54,11 @@
  */
 
 import { forwardRef } from "preact/compat";
-import {
-  useImperativeHandle,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
   createSelectionKeyboardShortcuts,
   useSelectableElement,
-  useSelectionController,
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
 import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
@@ -80,6 +73,10 @@ import {
   TableRowResizer,
   TableRowTopResizeHandle,
 } from "./resize/resize_table_row.jsx";
+import {
+  useTableSelection,
+  useTableSelectionController,
+} from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
 import "./sticky/table_sticky.js";
 import { TableCell } from "./table_cell.jsx";
@@ -185,23 +182,6 @@ import.meta.css = /* css */ `
     pointer-events: none; /* inert */
   }
 
-  /* Selection */
-  .navi_table th[aria-selected="true"],
-  .navi_table td[aria-selected="true"] {
-    background-color: var(--selection-background-color);
-  }
-  td[data-row-contains-selected] {
-    position: relative;
-    font-weight: 500;
-    color: #444;
-  }
-
-  th[data-column-contains-selected] {
-    position: relative;
-    font-weight: bold;
-    color: #444;
-  }
-
   /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
 
   /* Base rule: all cells get right and bottom borders */
@@ -236,104 +216,6 @@ import.meta.css = /* css */ `
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table [data-selection-border-top]::after {
-    box-shadow: inset 0 1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-right]::after {
-    box-shadow: inset -1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-bottom]::after {
-    box-shadow: inset 0 -1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-left]::after {
-    box-shadow: inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  /* Two border combinations */
-  .navi_table [data-selection-border-top][data-selection-border-right]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset -1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-top][data-selection-border-bottom]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-top][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-right][data-selection-border-bottom]::after {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table [data-selection-border-right][data-selection-border-left]::after {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  /* Three border combinations */
-  .navi_table
-    [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-top][data-selection-border-right][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  .navi_table
-    [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
-  }
-
-  /* Four border combinations (full selection) */
-  .navi_table
-    [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
-    box-shadow:
-      inset 0 1px 0 0 var(--selection-border-color),
-      inset -1px 0 0 0 var(--selection-border-color),
-      inset 0 -1px 0 0 var(--selection-border-color),
-      inset 1px 0 0 0 var(--selection-border-color);
   }
 
   /* Focus styles */
@@ -388,58 +270,20 @@ export const Table = forwardRef((props, ref) => {
     };
   });
 
+  const selectionController = useTableSelectionController({
+    tableRef: innerRef,
+    selection,
+    onSelectionChange,
+    selectionColor,
+  });
   const {
     rowWithSomeSelectedCell,
     columnWithSomeSelectedCell,
     selectedRowIds,
-  } = useMemo(() => {
-    const rowWithSomeSelectedCell = [];
-    const columnWithSomeSelectedCell = [];
-    const selectedRowIds = [];
-    const selectedColumnIds = [];
+  } = useTableSelection(selection);
 
-    for (const item of selection) {
-      if (item.startsWith("row:")) {
-        const rowId = item.slice(4);
-        selectedRowIds.push(rowId);
-        continue;
-      }
-      if (item.startsWith("column:")) {
-        const columnId = item.slice(7);
-        selectedColumnIds.push(columnId);
-        continue;
-      }
-      const [columnName, rowId] = item.split(":");
-      // Add to some-selected tracking
-      if (!rowWithSomeSelectedCell.includes(rowId)) {
-        rowWithSomeSelectedCell.push(rowId);
-      }
-      if (!columnWithSomeSelectedCell.includes(columnName)) {
-        columnWithSomeSelectedCell.push(columnName);
-      }
-    }
-
-    return {
-      rowWithSomeSelectedCell,
-      columnWithSomeSelectedCell,
-      selectedRowIds,
-      selectedColumnIds,
-    };
-  }, [selection]);
-
-  const selectionController = useSelectionController({
-    elementRef: innerRef,
-    layout: "grid",
-    value: selection,
-    onChange: (value) => {
-      onSelectionChange(value);
-    },
-    selectAllName: "cell",
-  });
   useFocusGroup(innerRef);
   useStickyGroup(innerRef);
-  useTableSelectionBorders(innerRef, selectionController);
-
   useKeyboardShortcuts(innerRef, [
     ...createSelectionKeyboardShortcuts(selectionController, {
       toggleEnabled: true,
@@ -477,15 +321,6 @@ export const Table = forwardRef((props, ref) => {
       },
     },
   ]);
-
-  useLayoutEffect(() => {
-    if (selectionColor) {
-      innerRef.current?.style.setProperty(
-        "--selection-border-color",
-        selectionColor,
-      );
-    }
-  }, [selectionColor]);
 
   // Calculate frontier sticky column and row indexes (boundary between sticky and non-sticky)
   let stickyColumnFrontierIndex = -1;
@@ -761,85 +596,6 @@ export const Table = forwardRef((props, ref) => {
     </div>
   );
 });
-
-const useTableSelectionBorders = (tableRef, selectionController) => {
-  useLayoutEffect(() => {
-    const table = tableRef.current;
-    if (table) {
-      updateSelectionBorders(table, selectionController);
-    }
-  }, [selectionController.value]);
-};
-const updateSelectionBorders = (tableElement, selectionController) => {
-  // Find all selected cells
-  const cells = Array.from(tableElement.querySelectorAll("td, th"));
-  const selectedCells = [];
-  for (const cell of cells) {
-    if (selectionController.isElementSelected(cell)) {
-      selectedCells.push(cell);
-    }
-  }
-
-  // Clear all existing selection border attributes
-  tableElement
-    .querySelectorAll(
-      "[data-selection-border-top], [data-selection-border-right], [data-selection-border-bottom], [data-selection-border-left]",
-    )
-    .forEach((cell) => {
-      cell.removeAttribute("data-selection-border-top");
-      cell.removeAttribute("data-selection-border-right");
-      cell.removeAttribute("data-selection-border-bottom");
-      cell.removeAttribute("data-selection-border-left");
-    });
-
-  if (selectedCells.length === 0) {
-    return;
-  }
-
-  // Convert NodeList to array and get cell positions
-
-  const cellPositions = selectedCells.map((cell) => {
-    const row = cell.parentElement;
-    const allRows = Array.from(tableElement.querySelectorAll("tr"));
-    return {
-      element: cell,
-      rowIndex: allRows.indexOf(row),
-      columnIndex: Array.from(row.children).indexOf(cell),
-    };
-  });
-
-  // Create a set for fast lookup of selected cell positions
-  const selectedPositions = new Set(
-    cellPositions.map((pos) => `${pos.rowIndex},${pos.columnIndex}`),
-  );
-
-  // Apply selection borders based on actual neighbors (for proper L-shaped selection support)
-  cellPositions.forEach(({ element, rowIndex, columnIndex }) => {
-    // Top border: if cell above is NOT selected or doesn't exist
-    const cellAbove = `${rowIndex - 1},${columnIndex}`;
-    if (!selectedPositions.has(cellAbove)) {
-      element.setAttribute("data-selection-border-top", "");
-    }
-
-    // Bottom border: if cell below is NOT selected or doesn't exist
-    const cellBelow = `${rowIndex + 1},${columnIndex}`;
-    if (!selectedPositions.has(cellBelow)) {
-      element.setAttribute("data-selection-border-bottom", "");
-    }
-
-    // Left border: if cell to the left is NOT selected or doesn't exist
-    const cellLeft = `${rowIndex},${columnIndex - 1}`;
-    if (!selectedPositions.has(cellLeft)) {
-      element.setAttribute("data-selection-border-left", "");
-    }
-
-    // Right border: if cell to the right is NOT selected or doesn't exist
-    const cellRight = `${rowIndex},${columnIndex + 1}`;
-    if (!selectedPositions.has(cellRight)) {
-      element.setAttribute("data-selection-border-right", "");
-    }
-  });
-};
 
 const RowNumberHeaderCell = ({
   stickyX,
