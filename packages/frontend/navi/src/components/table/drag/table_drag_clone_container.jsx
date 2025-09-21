@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from "preact/compat";
+import { Z_INDEX_DRAGGING_CLONE } from "../z_indexes.js";
 
 import.meta.css = /* css */ `
   .navi_table th[data-grabbed],
@@ -8,7 +9,7 @@ import.meta.css = /* css */ `
 
   .navi_table_drag_clone_container {
     position: absolute;
-    z-index: var(--z-index-dragging-clone);
+    z-index: ${Z_INDEX_DRAGGING_CLONE};
     cursor: grabbing;
     user-select: none;
     overflow: hidden;

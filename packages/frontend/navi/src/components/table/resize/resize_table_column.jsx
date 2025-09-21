@@ -1,10 +1,7 @@
 import { createDragToMoveGesture } from "@jsenv/dom";
+import { Z_INDEX_RESIZER_BACKDROP } from "../z_indexes.js";
 
 import.meta.css = /* css */ `
-  .navi_table {
-    /* table-layout: fixed; */
-  }
-
   .navi_table th,
   .navi_table td {
     /* ensure table cell padding does not count when we say column = 50px we want a column of 50px, not 50px + paddings */
@@ -101,6 +98,11 @@ const updateTableColumnResizerPosition = (tableCell) => {
   const tableColumnResizer = tableContainer.querySelector(
     ".navi_table_column_resizer",
   );
+  if (tableColumnResizer.hasAttribute("data-resizing")) {
+    // ensure mouseenter/mouseleave while resizing cannot interfere
+    // while resizing (would move the resizer on other columns)
+    return;
+  }
   const tableContainerRect = tableContainer.getBoundingClientRect();
   const tableCellLeftRelative = tableCellRect.left - tableContainerRect.left;
   const tableCellHeight = tableCellRect.height;
@@ -236,6 +238,7 @@ const initResizeTableColumnByMousedown = (
 
   const dragToMoveGesture = createDragToMoveGesture({
     direction: { x: true },
+    backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
     customLeftBound,
     customRightBound,
     onGrab: () => {

@@ -77,6 +77,11 @@ import {
 } from "./resize/resize_table_column.jsx";
 import { useStickyGroup } from "./sticky_group.js";
 import { TableCell } from "./table_cell.jsx";
+import {
+  Z_INDEX_STICKY_COLUMN,
+  Z_INDEX_STICKY_CORNER,
+  Z_INDEX_STICKY_ROW,
+} from "./z_indexes.js";
 
 /*
  * Box-shadow border mapping template:
@@ -94,12 +99,6 @@ import.meta.css = /* css */ `
     --selection-border-color: #0078d4;
     --focus-border-color: #0078d4;
     --selection-background-color: #eaf1fd;
-
-    /* needed because cell uses position:relative, sticky must win even if before in DOM order */
-    --z-index-sticky-row: 100;
-    --z-index-sticky-column: 1000;
-    --z-index-sticky-corner: 10000;
-    --z-index-dragging-clone: 20000;
 
     position: relative;
   }
@@ -207,20 +206,20 @@ import.meta.css = /* css */ `
   .navi_table td[data-sticky-y] {
     position: sticky;
     top: var(--sticky-group-top, 0);
-    z-index: var(--z-index-sticky-row);
+    z-index: ${Z_INDEX_STICKY_ROW};
   }
   .navi_table th[data-sticky-x],
   .navi_table td[data-sticky-x] {
     position: sticky;
     left: var(--sticky-group-left, 0);
-    z-index: var(--z-index-sticky-column);
+    z-index: ${Z_INDEX_STICKY_COLUMN};
   }
   .navi_table th[data-sticky-x][data-sticky-y],
   .navi_table td[data-sticky-x][data-sticky-y] {
     position: sticky;
     top: var(--sticky-group-top, 0);
     left: var(--sticky-group-left, 0);
-    z-index: var(--z-index-sticky-corner);
+    z-index: ${Z_INDEX_STICKY_CORNER};
   }
 
   /* Sticky border styling - works in both normal and border-collapse modes */

@@ -195,6 +195,7 @@ export const createDragGesture = ({
   threshold = 5,
   direction: defaultDirection = { x: true, y: true },
   backdrop = true,
+  backdropZIndex = 1,
   // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
   // This provides intuitive feedback during drag operations when the element cannot reach the mouse
   // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
@@ -312,7 +313,7 @@ export const createDragGesture = ({
     if (backdrop) {
       const backdropElement = document.createElement("div");
       backdropElement.style.position = "fixed";
-      backdropElement.style.zIndex = "1";
+      backdropElement.style.zIndex = backdropZIndex;
       backdropElement.style.inset = "0";
       backdropElement.style.cursor = cursor;
       backdropElement.style.userSelect = "none";
