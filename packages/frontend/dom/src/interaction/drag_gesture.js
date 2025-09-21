@@ -39,7 +39,7 @@
 import { getScrollableParent } from "../scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 
-export let DRAG_DEBUG_VISUAL_MARKERS = false;
+export let DRAG_DEBUG_VISUAL_MARKERS = true;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = true;
 };
@@ -378,7 +378,7 @@ export const createDragGesture = ({
     constraintFunctions.push(boundsConstraint);
 
     // Check for obstacles and add obstacle constraint if found
-    const obstacles = queryObstacles(scrollableParent, name);
+    const obstacles = queryObstacles(scrollableParent, { name });
     for (const obstacle of obstacles) {
       constraintFunctions.push(
         createObstacleConstraint(obstacle, positionedParent),
@@ -694,13 +694,22 @@ export const createDragGesture = ({
       let visibleAreaTop = scrollableRect.top + borderSizes.top;
       let visibleAreaBottom = visibleAreaTop + availableHeight;
 
+      // Debug warning for invalid visible area
+      if (import.meta.dev && visibleAreaTop > visibleAreaBottom) {
+        console.warn(
+          `Invalid visible area detected: visibleAreaTop (${visibleAreaTop}) > visibleAreaBottom (${visibleAreaBottom})`,
+        );
+      }
+
       // Auto-detect sticky obstacles within scrollable parent and reduce visible area accordingly
       // This automatically handles sticky columns/rows by detecting their position and adjusting scroll boundaries
-      const stickyObstacles = scrollableParent.querySelectorAll(
-        "[data-sticky-obstacle]",
-      );
+      const stickyObstacles = queryObstacles(scrollableParent, {
+        name,
+        sticky: true,
+      });
       for (const stickyObstacle of stickyObstacles) {
         const stickyRect = getElementBounds(stickyObstacle, scrollableParent);
+        console.log({ stickyObstacle });
 
         // Determine which edge this sticky obstacle affects based on its position
         // Left edge: if sticky element is positioned at or near the left edge
@@ -719,6 +728,13 @@ export const createDragGesture = ({
         if (Math.abs(stickyRect.bottom - visibleAreaBottom) < 10) {
           visibleAreaBottom = Math.min(visibleAreaBottom, stickyRect.top);
         }
+      }
+
+      // Debug warning for invalid visible area after sticky obstacle processing
+      if (import.meta.dev && visibleAreaTop > visibleAreaBottom) {
+        console.warn(
+          `Invalid visible area after sticky obstacle processing: visibleAreaTop (${visibleAreaTop}) > visibleAreaBottom (${visibleAreaBottom})`,
+        );
       }
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
@@ -743,6 +759,7 @@ export const createDragGesture = ({
       });
       const finalXMove = constrainedMoves.xMove;
       const finalYMove = constrainedMoves.yMove;
+
       const dragData = {
         x,
         y,
@@ -814,6 +831,7 @@ export const createDragGesture = ({
       }
 
       Object.assign(gestureInfo, dragData);
+
       // Calculate xChanged/yChanged based on previous gesture info
       const xChanged = previousGestureInfo
         ? dragData.xMove !== previousGestureInfo.xMove
@@ -932,44 +950,13 @@ export const createDragGesture = ({
   };
 };
 
-/**
- * Get element bounds, handling both normal positioning and data-sticky-obstacle
- * @param {HTMLElement} element - The element to get bounds for
- * @param {HTMLElement} scrollableParent - The scrollable parent for coordinate conversion
- * @returns {Object} Bounds object with left, top, right, bottom properties
- */
-const getElementBounds = (element, scrollableParent) => {
-  const isVirtuallySticky = element.hasAttribute("data-sticky-obstacle");
-
-  if (isVirtuallySticky) {
-    // For sticky obstacles, calculate where they would appear in viewport when sticky
-    const computedStyle = getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
-    const scrollableRect = scrollableParent.getBoundingClientRect();
-
-    // Get sticky positioning values
-    const stickyLeft = parseFloat(computedStyle.left) || 0;
-    const stickyTop = parseFloat(computedStyle.top) || 0;
-    const width = rect.width;
-    const height = rect.height;
-
-    // Calculate where the sticky element would appear in viewport coordinates
-    // This is the scrollable container's viewport position + the sticky offset
-    return {
-      left: scrollableRect.left + stickyLeft,
-      top: scrollableRect.top + stickyTop,
-      right: scrollableRect.left + stickyLeft + width,
-      bottom: scrollableRect.top + stickyTop + height,
-    };
-  }
-
-  // For normal elements, use getBoundingClientRect directly
-  return element.getBoundingClientRect();
-};
-const queryObstacles = (element, name) => {
+const queryObstacles = (element, { name, sticky }) => {
   const obstacles = element.querySelectorAll("[data-drag-obstacle]");
   const matchingObstacles = [];
   for (const obstacle of obstacles) {
+    if (sticky && !obstacle.hasAttribute("data-sticky-obstacle")) {
+      continue;
+    }
     if (obstacle.closest("[data-drag-obstacle-ignore]")) {
       continue;
     }
@@ -1003,6 +990,42 @@ const getPositionedParent = (element) => {
     parent = parent.parentElement;
   }
   return document.body;
+};
+/**
+ * Get element bounds, handling both normal positioning and data-sticky-obstacle
+ * @param {HTMLElement} element - The element to get bounds for
+ * @param {HTMLElement} scrollableParent - The scrollable parent for coordinate conversion
+ * @returns {Object} Bounds object with left, top, right, bottom properties
+ */
+const getElementBounds = (element, scrollableParent) => {
+  const isVirtuallySticky = element.hasAttribute("data-sticky-obstacle");
+
+  if (isVirtuallySticky) {
+    // For sticky obstacles, calculate where they would appear in viewport when sticky
+    const computedStyle = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    const scrollableRect = scrollableParent.getBoundingClientRect();
+
+    // Get sticky positioning values
+    const stickyLeft = parseFloat(computedStyle.left) || 0;
+    const stickyTop = parseFloat(computedStyle.top) || 0;
+    const width = rect.width;
+    const height = rect.height;
+
+    console.log({ stickyTop });
+
+    // Calculate where the sticky element would appear in viewport coordinates
+    // This is the scrollable container's viewport position + the sticky offset
+    return {
+      left: scrollableRect.left + stickyLeft,
+      top: scrollableRect.top + stickyTop,
+      right: scrollableRect.left + stickyLeft + width,
+      bottom: scrollableRect.top + stickyTop + height,
+    };
+  }
+
+  // For normal elements, use getBoundingClientRect directly
+  return element.getBoundingClientRect();
 };
 const createScrollableAreaConstraint = (
   scrollableParent,
