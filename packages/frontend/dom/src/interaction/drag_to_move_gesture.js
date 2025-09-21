@@ -52,22 +52,28 @@ export const createDragToMoveGesture = (options) => {
           scrollProperty, // 'scrollLeft' or 'scrollTop'
           styleProperty, // 'left' or 'top'
         }) => {
-          let scroll = currentScroll;
-
           keep_into_view: {
             if (isGoingPositive) {
               if (desiredElementEnd > visibleAreaEnd) {
                 const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
-                scroll = currentScroll + scrollAmountNeeded;
+                const scroll = currentScroll + scrollAmountNeeded;
+                scrollableParent[scrollProperty] = scroll;
               }
             } else if (isGoingNegative) {
               if (desiredElementStart < visibleAreaStart) {
                 const scrollAmountNeeded =
                   visibleAreaStart - desiredElementStart;
-                scroll = Math.max(0, currentScroll - scrollAmountNeeded);
+                const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
+                console.log({
+                  currentScroll,
+                  scrollAmountNeeded,
+                  scroll,
+                  visibleAreaStart,
+                  desiredElementStart,
+                });
+                scrollableParent[scrollProperty] = scroll;
               }
             }
-            scrollableParent[scrollProperty] = scroll;
           }
           move: {
             const elementPosition = initialPosition + moveAmount;
@@ -76,6 +82,7 @@ export const createDragToMoveGesture = (options) => {
             }
           }
         };
+
         // Horizontal auto-scroll
         if (direction.x) {
           const desiredElementLeftRelative = initialLeft + gestureInfo.xMove;
