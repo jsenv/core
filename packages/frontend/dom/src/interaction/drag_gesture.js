@@ -37,6 +37,7 @@
  */
 
 import { getScrollableParent } from "../scroll.js";
+import { getBorderSizes } from "../size/get_border_sizes.js";
 
 export let DRAG_DEBUG_VISUAL_MARKERS = false;
 export const enableDebugMarkers = () => {
@@ -721,10 +722,11 @@ export const createDragGesture = ({
       const availableWidth = scrollableParent.clientWidth;
       const availableHeight = scrollableParent.clientHeight;
 
-      // Calculate base visible area
-      let visibleAreaLeft = scrollableRect.left;
+      const borderSizes = getBorderSizes(scrollableParent);
+      // Calculate base visible area accounting for borders
+      let visibleAreaLeft = scrollableRect.left + borderSizes.left;
       let visibleAreaRight = visibleAreaLeft + availableWidth;
-      let visibleAreaTop = scrollableRect.top;
+      let visibleAreaTop = scrollableRect.top + borderSizes.top;
       let visibleAreaBottom = visibleAreaTop + availableHeight;
 
       // Auto-detect sticky obstacles within scrollable parent and reduce visible area accordingly
