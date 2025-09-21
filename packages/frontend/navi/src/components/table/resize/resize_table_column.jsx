@@ -8,7 +8,7 @@ import.meta.css = /* css */ `
   .navi_table th,
   .navi_table td {
     /* ensure table cell padding does not count when we say column = 50px we want a column of 50px, not 50px + paddings */
-    box-sizing: content-box;
+    box-sizing: border-box;
   }
 
   .navi_table_column_resize_handle_left,
@@ -24,10 +24,10 @@ import.meta.css = /* css */ `
     /* opacity: 0.5; */
   }
   .navi_table_column_resize_handle_left {
-    left: 0px;
+    left: 0;
   }
   .navi_table_column_resize_handle_right {
-    right: 0px;
+    right: 0;
   }
 
   .navi_table_column_resizer {
@@ -83,6 +83,40 @@ import.meta.css = /* css */ `
     opacity: 1;
   }
 `;
+
+export const TableColumnResizer = () => {
+  return (
+    <div className="navi_table_column_resizer">
+      <div className="navi_table_column_resize_handle_container">
+        <div className="navi_table_column_resize_handle_left"></div>
+        <div className="navi_table_column_resize_handle_right"></div>
+      </div>
+      <div className="navi_table_column_resizer_line"></div>
+    </div>
+  );
+};
+const updateTableColumnResizerPosition = (tableCell) => {
+  const tableCellRect = tableCell.getBoundingClientRect();
+  const tableContainer = tableCell.closest(".navi_table_container");
+  const tableColumnResizer = tableContainer.querySelector(
+    ".navi_table_column_resizer",
+  );
+  const tableContainerRect = tableContainer.getBoundingClientRect();
+  const tableCellLeftRelative = tableCellRect.left - tableContainerRect.left;
+  const tableCellHeight = tableCellRect.height;
+  const tableCellWidth = tableCellRect.width;
+
+  const tableCellRelativeRight = tableCellLeftRelative + tableCellWidth;
+  tableColumnResizer.style.setProperty(
+    "--table-cell-right",
+    `${tableCellRelativeRight}px`,
+  );
+  tableColumnResizer.style.setProperty(
+    "--table-cell-height",
+    `${tableCellHeight}px`,
+  );
+  tableColumnResizer.setAttribute("data-hover", "");
+};
 
 export const TableColumnLeftResizeHandle = ({
   columnMinWidth,
@@ -167,50 +201,6 @@ const onMouseLeaveRightResizeHandle = (e) => {
   );
   tableColumnResizer.removeAttribute("data-hover");
 };
-
-const updateTableColumnResizerPosition = (tableCell) => {
-  const tableCellRect = tableCell.getBoundingClientRect();
-  const tableContainer = tableCell.closest(".navi_table_container");
-  const tableColumnResizer = tableContainer.querySelector(
-    ".navi_table_column_resizer",
-  );
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  const tableCellLeftRelative = tableCellRect.left - tableContainerRect.left;
-  const tableCellHeight = tableCellRect.height;
-  const tableCellWidth = tableCellRect.width;
-
-  const tableCellRelativeRight = tableCellLeftRelative + tableCellWidth;
-  tableColumnResizer.style.setProperty(
-    "--table-cell-right",
-    `${tableCellRelativeRight}px`,
-  );
-  tableColumnResizer.style.setProperty(
-    "--table-cell-height",
-    `${tableCellHeight}px`,
-  );
-  tableColumnResizer.setAttribute("data-hover", "");
-};
-
-export const TableColumnResizer = () => {
-  return (
-    <div className="navi_table_column_resizer">
-      <div className="navi_table_column_resize_handle_container">
-        <div className="navi_table_column_resize_handle_left" data-hover></div>
-        <div className="navi_table_column_resize_handle_right" data-hover></div>
-      </div>
-      <div className="navi_table_column_resizer_line"></div>
-    </div>
-  );
-};
-
-// TODO:
-// - a gauche column.minWidth si définie avec in min a 50 quoiqu'il (par rapport a la taille actuelle)
-// donc si elle fait 200px on mettre un leftBound a cell.left - 150px
-// - a droite column.maxWidth avec un max a 1000 quoi qu'il
-// on a pas cette option pour le moment
-// puisqu'on utilise que des obstacles
-// aussi ici on va autorise a dépasser la traille du scrollable parent
-// donc il faut une option pour forcer une right bound qui lorsque'elle est définié override le right bound du scrollable parent
 const initResizeTableColumnByMousedown = (
   mousedownEvent,
   { columnMinWidth, columnMaxWidth, onGrab, onDrag, onRelease, isLeft },
