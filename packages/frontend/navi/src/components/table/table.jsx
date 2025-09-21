@@ -74,7 +74,7 @@ import {
   useTableSelectionController,
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
-import { TableStickyColumnFrontier } from "./sticky/table_sticky.jsx";
+import { TableStickyColumnFrontierHandle } from "./sticky/table_sticky.jsx";
 import { TableCell } from "./table_cell.jsx";
 
 /*
@@ -414,8 +414,8 @@ export const Table = forwardRef((props, ref) => {
             style={{ minWidth: "100px" }}
           ></col>
           {columns.map((col, index) => {
-            const isLastStickyColumn = index < stickyColumnFrontierIndex;
-            const isDragObstable = isLastStickyColumn;
+            const isStickyColumn = index < stickyColumnFrontierIndex;
+            const isDragObstable = isStickyColumn;
 
             return (
               <col
@@ -456,7 +456,7 @@ export const Table = forwardRef((props, ref) => {
                 <HeaderCell
                   stickyX={col.sticky}
                   stickyY={stickyHeader}
-                  isStickyXFrontier={stickyColumnFrontierIndex === index + 1}
+                  isStickyXFrontier={index + 1 === stickyColumnFrontierIndex}
                   isAfterStickyXFrontier={
                     index + 1 === stickyColumnFrontierIndex + 1
                   }
@@ -591,7 +591,6 @@ export const Table = forwardRef((props, ref) => {
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer />
       <TableRowResizer />
-      <TableStickyColumnFrontier />
     </div>
   );
 });
@@ -612,7 +611,9 @@ const RowNumberHeaderCell = ({
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       style={{ textAlign: "center" }}
       {...rest}
-    ></th>
+    >
+      {isStickyXFrontier && <TableStickyColumnFrontierHandle />}
+    </th>
   );
 };
 const HeaderCell = ({
@@ -705,6 +706,8 @@ const HeaderCell = ({
           columnMaxWidth={columnMaxWidth}
         />
       )}
+
+      {isStickyXFrontier && <TableStickyColumnFrontierHandle />}
     </th>
   );
 };
@@ -776,6 +779,7 @@ const RowNumberCell = ({
           rowMaxHeight={rowMaxHeight}
         />
       )}
+      {isStickyXFrontier && <TableStickyColumnFrontierHandle />}
     </td>
   );
 };
