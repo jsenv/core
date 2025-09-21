@@ -158,41 +158,6 @@ import.meta.css = /* css */ `
   }
 `;
 
-/**
- * Get element bounds, handling both normal positioning and data-sticky-obstacle
- * @param {HTMLElement} element - The element to get bounds for
- * @param {HTMLElement} scrollableParent - The scrollable parent for coordinate conversion
- * @returns {Object} Bounds object with left, top, right, bottom properties
- */
-const getElementBounds = (element, scrollableParent) => {
-  const isVirtuallySticky = element.hasAttribute("data-sticky-obstacle");
-
-  if (isVirtuallySticky) {
-    // For sticky obstacles, calculate where they would appear in viewport when sticky
-    const computedStyle = getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
-    const scrollableRect = scrollableParent.getBoundingClientRect();
-
-    // Get sticky positioning values
-    const stickyLeft = parseFloat(computedStyle.left) || 0;
-    const stickyTop = parseFloat(computedStyle.top) || 0;
-    const width = rect.width;
-    const height = rect.height;
-
-    // Calculate where the sticky element would appear in viewport coordinates
-    // This is the scrollable container's viewport position + the sticky offset
-    return {
-      left: scrollableRect.left + stickyLeft,
-      top: scrollableRect.top + stickyTop,
-      right: scrollableRect.left + stickyLeft + width,
-      bottom: scrollableRect.top + stickyTop + height,
-    };
-  }
-
-  // For normal elements, use getBoundingClientRect directly
-  return element.getBoundingClientRect();
-};
-
 export const createDragGesture = ({
   name,
   onGrab,
@@ -967,6 +932,40 @@ export const createDragGesture = ({
   };
 };
 
+/**
+ * Get element bounds, handling both normal positioning and data-sticky-obstacle
+ * @param {HTMLElement} element - The element to get bounds for
+ * @param {HTMLElement} scrollableParent - The scrollable parent for coordinate conversion
+ * @returns {Object} Bounds object with left, top, right, bottom properties
+ */
+const getElementBounds = (element, scrollableParent) => {
+  const isVirtuallySticky = element.hasAttribute("data-sticky-obstacle");
+
+  if (isVirtuallySticky) {
+    // For sticky obstacles, calculate where they would appear in viewport when sticky
+    const computedStyle = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    const scrollableRect = scrollableParent.getBoundingClientRect();
+
+    // Get sticky positioning values
+    const stickyLeft = parseFloat(computedStyle.left) || 0;
+    const stickyTop = parseFloat(computedStyle.top) || 0;
+    const width = rect.width;
+    const height = rect.height;
+
+    // Calculate where the sticky element would appear in viewport coordinates
+    // This is the scrollable container's viewport position + the sticky offset
+    return {
+      left: scrollableRect.left + stickyLeft,
+      top: scrollableRect.top + stickyTop,
+      right: scrollableRect.left + stickyLeft + width,
+      bottom: scrollableRect.top + stickyTop + height,
+    };
+  }
+
+  // For normal elements, use getBoundingClientRect directly
+  return element.getBoundingClientRect();
+};
 const queryObstacles = (element, name) => {
   const obstacles = element.querySelectorAll("[data-drag-obstacle]");
   const matchingObstacles = [];
@@ -990,64 +989,6 @@ const queryObstacles = (element, name) => {
   }
   return matchingObstacles;
 };
-
-const createDebugMarker = ({
-  name,
-  x,
-  y,
-  color = "red",
-  orientation = "vertical",
-}) => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) {
-    return null;
-  }
-
-  const marker = document.createElement("div");
-  marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
-  marker.style.left = `${x}px`;
-  marker.style.top = `${y}px`;
-  marker.title = name;
-
-  // Add label
-  const label = document.createElement("div");
-  label.className = `navi_debug_marker_label navi_debug_marker_label--${color}`;
-  label.textContent = name;
-  marker.appendChild(label);
-
-  document.body.appendChild(marker);
-  return marker;
-};
-
-const createObstacleMarker = (name, left, top, width, height) => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
-
-  const marker = document.createElement("div");
-  marker.className = "navi_obstacle_marker";
-  marker.style.left = `${left}px`;
-  marker.style.top = `${top}px`;
-  marker.style.width = `${width}px`;
-  marker.style.height = `${height}px`;
-  marker.title = name;
-
-  // Add label
-  const label = document.createElement("div");
-  label.className = "navi_obstacle_marker_label";
-  label.textContent = name;
-  marker.appendChild(label);
-
-  document.body.appendChild(marker);
-  return marker;
-};
-
-const createConstraintFeedbackLine = () => {
-  const line = document.createElement("div");
-  line.className = "navi_constraint_feedback_line";
-  line.title =
-    "Constraint feedback - shows distance between mouse and moving grab point";
-  document.body.appendChild(line);
-  return line;
-};
-
 const getPositionedParent = (element) => {
   let parent = element.parentElement;
   while (parent && parent !== document.body) {
@@ -1063,7 +1004,6 @@ const getPositionedParent = (element) => {
   }
   return document.body;
 };
-
 const createScrollableAreaConstraint = (
   scrollableParent,
   { customLeftBound, customRightBound, customTopBound, customBottomBound } = {},
@@ -1133,7 +1073,6 @@ const createScrollableAreaConstraint = (
     };
   };
 };
-
 // Function to create constraint that respects solid obstacles
 const createObstacleConstraint = (obstacle, positionedParent) => {
   return () => {
@@ -1461,4 +1400,59 @@ const definePropertyAsReadOnly = (object, propertyName) => {
     writable: false,
     value: object[propertyName],
   });
+};
+
+const createConstraintFeedbackLine = () => {
+  const line = document.createElement("div");
+  line.className = "navi_constraint_feedback_line";
+  line.title =
+    "Constraint feedback - shows distance between mouse and moving grab point";
+  document.body.appendChild(line);
+  return line;
+};
+const createDebugMarker = ({
+  name,
+  x,
+  y,
+  color = "red",
+  orientation = "vertical",
+}) => {
+  if (!DRAG_DEBUG_VISUAL_MARKERS) {
+    return null;
+  }
+
+  const marker = document.createElement("div");
+  marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.title = name;
+
+  // Add label
+  const label = document.createElement("div");
+  label.className = `navi_debug_marker_label navi_debug_marker_label--${color}`;
+  label.textContent = name;
+  marker.appendChild(label);
+
+  document.body.appendChild(marker);
+  return marker;
+};
+const createObstacleMarker = (name, left, top, width, height) => {
+  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
+
+  const marker = document.createElement("div");
+  marker.className = "navi_obstacle_marker";
+  marker.style.left = `${left}px`;
+  marker.style.top = `${top}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
+  marker.title = name;
+
+  // Add label
+  const label = document.createElement("div");
+  label.className = "navi_obstacle_marker_label";
+  label.textContent = name;
+  marker.appendChild(label);
+
+  document.body.appendChild(marker);
+  return marker;
 };
