@@ -38,7 +38,7 @@
 
 import { getScrollableParent } from "../scroll.js";
 
-export let DRAG_DEBUG_VISUAL_MARKERS = true;
+export let DRAG_DEBUG_VISUAL_MARKERS = false;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = true;
 };

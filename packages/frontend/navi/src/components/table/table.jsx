@@ -1164,7 +1164,7 @@ const RowNumberCell = ({
       data-selection-name="row"
       data-selection-keyboard-toggle
       aria-selected={selected}
-      style={{ textAlign: "center", position: "relative" }}
+      style={{ textAlign: "center" }}
       tabIndex={-1}
     >
       {resizable && rowIndex > 0 && (
