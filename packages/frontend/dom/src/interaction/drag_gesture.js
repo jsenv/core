@@ -683,6 +683,15 @@ export const createDragGesture = ({
         }),
       );
 
+      // Development safeguards: detect impossible/illogical constraints
+      if (import.meta.dev) {
+        validateConstraints(constraints, {
+          elementWidth: currentElementWidth,
+          elementHeight: currentElementHeight,
+          dragName: name,
+        });
+      }
+
       const scrollableRect = scrollableParent.getBoundingClientRect();
       const availableWidth = scrollableParent.clientWidth;
       const availableHeight = scrollableParent.clientHeight;
@@ -1134,6 +1143,107 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
       name: `obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
     };
   };
+};
+
+/**
+ * Validates constraints for logical consistency and reports issues during development.
+ * Helps catch configuration errors like inappropriate obstacle assignments.
+ */
+const validateConstraints = (
+  constraints,
+  { elementWidth, elementHeight, dragName },
+) => {
+  const boundsConstraints = constraints.filter((c) => c.type === "bounds");
+  const obstacleConstraints = constraints.filter((c) => c.type === "obstacle");
+
+  // Check for impossible bounds constraints
+  boundsConstraints.forEach((bounds) => {
+    if (bounds.left > bounds.right) {
+      console.warn(
+        `Impossible bounds constraint: left (${bounds.left}) > right (${bounds.right})`,
+        { constraint: bounds, dragName, element: bounds.element },
+      );
+    }
+    if (bounds.top > bounds.bottom) {
+      console.warn(
+        `Impossible bounds constraint: top (${bounds.top}) > bottom (${bounds.bottom})`,
+        { constraint: bounds, dragName, element: bounds.element },
+      );
+    }
+
+    const availableWidth = bounds.right - bounds.left;
+    const availableHeight = bounds.bottom - bounds.top;
+
+    if (availableWidth < elementWidth && availableWidth >= 0) {
+      console.warn(
+        `Bounds constraint too narrow: available width (${availableWidth.toFixed(2)}) < element width (${elementWidth.toFixed(2)})`,
+        { constraint: bounds, dragName, element: bounds.element },
+      );
+    }
+    if (availableHeight < elementHeight && availableHeight >= 0) {
+      console.warn(
+        `Bounds constraint too short: available height (${availableHeight.toFixed(2)}) < element height (${elementHeight.toFixed(2)})`,
+        { constraint: bounds, dragName, element: bounds.element },
+      );
+    }
+  });
+
+  // Check for problematic obstacle overlaps and inappropriate obstacle assignments
+  obstacleConstraints.forEach((obstacle, index) => {
+    // Check for impossible obstacle geometry
+    if (obstacle.left > obstacle.right || obstacle.top > obstacle.bottom) {
+      console.warn(
+        `Impossible obstacle geometry: left=${obstacle.left}, right=${obstacle.right}, top=${obstacle.top}, bottom=${obstacle.bottom}`,
+        { constraint: obstacle, dragName, element: obstacle.element },
+      );
+    }
+
+    // Check for obstacles that completely block movement in all directions
+    boundsConstraints.forEach((bounds) => {
+      const obstacleWidth = obstacle.right - obstacle.left;
+      const obstacleHeight = obstacle.bottom - obstacle.top;
+      const boundsWidth = bounds.right - bounds.left;
+      const boundsHeight = bounds.bottom - bounds.top;
+
+      if (obstacleWidth >= boundsWidth && obstacleHeight >= boundsHeight) {
+        console.warn(
+          `Obstacle completely blocks bounds area: obstacle (${obstacleWidth.toFixed(2)}×${obstacleHeight.toFixed(2)}) >= bounds (${boundsWidth.toFixed(2)}×${boundsHeight.toFixed(2)})`,
+          {
+            obstacle,
+            bounds,
+            dragName,
+            obstacleElement: obstacle.element,
+            boundsElement: bounds.element,
+          },
+        );
+      }
+    });
+
+    // Check for overlapping obstacles that might create conflicting constraints
+    obstacleConstraints.forEach((otherObstacle, otherIndex) => {
+      if (index >= otherIndex) return; // Avoid duplicate checks
+
+      const hasOverlap = !(
+        obstacle.right <= otherObstacle.left ||
+        obstacle.left >= otherObstacle.right ||
+        obstacle.bottom <= otherObstacle.top ||
+        obstacle.top >= otherObstacle.bottom
+      );
+
+      if (hasOverlap) {
+        console.warn(
+          `Overlapping obstacles detected: may create conflicting constraints`,
+          {
+            obstacle1: obstacle,
+            obstacle2: otherObstacle,
+            dragName,
+            element1: obstacle.element,
+            element2: otherObstacle.element,
+          },
+        );
+      }
+    });
+  });
 };
 
 /**
