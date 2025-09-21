@@ -278,8 +278,10 @@ export const Table = forwardRef((props, ref) => {
     selectedRowIds,
   } = useTableSelection(selection);
 
+  const tableContainerRef = useRef();
+
   useFocusGroup(innerRef);
-  useStickyGroup(innerRef);
+  useStickyGroup(tableContainerRef, { elementSelector: "table" });
   useKeyboardShortcuts(innerRef, [
     ...createSelectionKeyboardShortcuts(selectionController, {
       toggleEnabled: true,
@@ -397,7 +399,7 @@ export const Table = forwardRef((props, ref) => {
   };
 
   return (
-    <div className="navi_table_container">
+    <div ref={tableContainerRef} className="navi_table_container">
       <table
         ref={innerRef}
         className="navi_table"

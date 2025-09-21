@@ -1,6 +1,7 @@
 import {
   Z_INDEX_STICKY_COLUMN,
   Z_INDEX_STICKY_CORNER,
+  Z_INDEX_STICKY_FRONTIER,
   Z_INDEX_STICKY_ROW,
 } from "../z_indexes.js";
 
@@ -156,6 +157,13 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
+  .navi_table_sticky_container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: ${Z_INDEX_STICKY_FRONTIER};
+  }
+
   .navi_table_sticky_column_frontier {
     position: sticky;
     top: 0;
@@ -167,5 +175,9 @@ import.meta.css = /* css */ `
 `;
 
 export const TableStickyColumnFrontier = () => {
-  return <div className="navi_table_sticky_column_frontier"></div>;
+  return (
+    <div className="navi_table_sticky_container">
+      <div className="navi_table_sticky_column_frontier"></div>
+    </div>
+  );
 };

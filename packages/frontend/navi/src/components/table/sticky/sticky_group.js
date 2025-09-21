@@ -1,14 +1,14 @@
 import { useLayoutEffect } from "preact/hooks";
 
 // React hook version for easy integration
-export const useStickyGroup = (elementRef) => {
+export const useStickyGroup = (elementRef, { elementSelector } = {}) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
       return undefined;
     }
-    return initStickyGroup(element);
-  }, []);
+    return initStickyGroup(element, { elementSelector });
+  }, [elementSelector]);
 };
 
 const LEFT_CSS_VAR = "--sticky-group-left";
@@ -25,6 +25,7 @@ const TOP_CSS_VAR = "--sticky-group-top";
 const initStickyGroup = (
   container,
   {
+    elementSelector,
     targetReceivingCumulativeStickyColumnPosition = ".navi_table_sticky_column_frontier",
     targetReceivingCumulativeStickyRowPosition = ".navi_table_sticky_row_frontier",
   } = {},
@@ -33,7 +34,10 @@ const initStickyGroup = (
     throw new Error("initStickyGroup: container is required");
   }
 
-  const isGrid = container.tagName === "TABLE";
+  const element = elementSelector
+    ? container.querySelector(elementSelector)
+    : container;
+  const isGrid = element.tagName === "TABLE";
   const updatePositions = () => {
     if (isGrid) {
       updateGridPositions();
@@ -49,7 +53,7 @@ const initStickyGroup = (
 
   const updateTableColumns = () => {
     // Find all sticky columns by checking the first row
-    const headerRow = container.querySelector("thead tr");
+    const headerRow = element.querySelector("thead tr");
     if (!headerRow) {
       return;
     }
@@ -62,7 +66,7 @@ const initStickyGroup = (
       const leftPosition = index === 0 ? 0 : cumulativeWidth;
 
       // Set CSS variable on all cells in this column
-      const columnCells = container.querySelectorAll(
+      const columnCells = element.querySelectorAll(
         `th:nth-child(${columnIndex + 1})[data-sticky-x], td:nth-child(${columnIndex + 1})[data-sticky-x]`,
       );
       columnCells.forEach((cell) => {
@@ -70,7 +74,7 @@ const initStickyGroup = (
       });
 
       // Also set CSS variable on corresponding <col> element if it exists
-      const colgroup = container.querySelector("colgroup");
+      const colgroup = element.querySelector("colgroup");
       if (colgroup) {
         const correspondingCol = colgroup.querySelector(
           `col:nth-child(${columnIndex + 1})`,
@@ -99,7 +103,7 @@ const initStickyGroup = (
   };
   const updateTableRows = () => {
     // Handle sticky rows by finding cells with data-sticky-y and grouping by row
-    const stickyCells = container.querySelectorAll(
+    const stickyCells = element.querySelectorAll(
       "th[data-sticky-y], td[data-sticky-y]",
     );
     if (stickyCells.length === 0) {
@@ -118,8 +122,8 @@ const initStickyGroup = (
 
     // Convert to array and sort by row position in DOM
     const stickyRows = Array.from(rowsWithStickyCells.keys()).sort((a, b) => {
-      const aIndex = Array.from(container.querySelectorAll("tr")).indexOf(a);
-      const bIndex = Array.from(container.querySelectorAll("tr")).indexOf(b);
+      const aIndex = Array.from(element.querySelectorAll("tr")).indexOf(a);
+      const bIndex = Array.from(element.querySelectorAll("tr")).indexOf(b);
       return aIndex - bIndex;
     });
 
@@ -155,7 +159,7 @@ const initStickyGroup = (
 
   const updateLinearPositions = () => {
     // Handle linear container - detect direction from first sticky element
-    const stickyElements = container.querySelectorAll(
+    const stickyElements = element.querySelectorAll(
       "[data-sticky-x], [data-sticky-y]",
     );
     if (stickyElements.length <= 1) return;
@@ -215,8 +219,8 @@ const initStickyGroup = (
   });
 
   // Start observing
-  resizeObserver.observe(container);
-  mutationObserver.observe(container, {
+  resizeObserver.observe(element);
+  mutationObserver.observe(element, {
     attributes: true,
     childList: true,
     subtree: true,
