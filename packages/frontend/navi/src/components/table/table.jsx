@@ -376,7 +376,7 @@ export const Table = forwardRef((props, ref) => {
   };
 
   // ability to resize columns/rows
-  const [resizeInfo, setResizeInfo] = useState(null);
+  const [, setResizeInfo] = useState(null);
   const grabColumnResizeHandle = (columnIndex, resizeInfo) => {
     setResizeInfo({
       ...resizeInfo,
@@ -587,11 +587,9 @@ export const Table = forwardRef((props, ref) => {
         </tbody>
       </table>
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
-      <TableColumnResizer resizeInfo={resizeInfo} />
+      <TableColumnResizer />
       <TableRowResizer />
-      <TableStickyColumnFrontier
-        stickyColumnFrontierIndex={stickyColumnFrontierIndex}
-      />
+      <TableStickyColumnFrontier />
     </div>
   );
 });
