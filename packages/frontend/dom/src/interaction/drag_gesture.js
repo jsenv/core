@@ -47,6 +47,12 @@ export const disableDebugMarkers = () => {
 };
 
 import.meta.css = /* css */ `
+  .navi_drag_gesture_backdrop {
+    position: fixed;
+    inset: 0;
+    user-select: none;
+  }
+
   .navi_constraint_feedback_line {
     position: fixed;
     pointer-events: none;
@@ -313,11 +319,9 @@ export const createDragGesture = ({
     // Set up backdrop
     if (backdrop) {
       const backdropElement = document.createElement("div");
-      backdropElement.style.position = "fixed";
+      backdropElement.className = "navi_drag_gesture_backdrop";
       backdropElement.style.zIndex = backdropZIndex;
-      backdropElement.style.inset = "0";
       backdropElement.style.cursor = cursor;
-      backdropElement.style.userSelect = "none";
       document.body.appendChild(backdropElement);
       addTeardown(() => {
         backdropElement.remove();

@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Drag Gesture Demo - Custom Bounds Constraints</title>
     <style>
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
         padding: 20px;
@@ -58,8 +62,8 @@
             #ff9999 0px,
             #ff9999 100px,
             transparent 100px,
-            transparent 500px,
-            #ff9999 500px,
+            transparent 580px,
+            #ff9999 580px,
             #ff9999 800px
           );
         background-size:
@@ -83,8 +87,8 @@
             #ff9999 0px,
             #ff9999 100px,
             transparent 100px,
-            transparent 400px,
-            #ff9999 400px,
+            transparent 460px,
+            #ff9999 460px,
             #ff9999 600px
           );
         background-size:
@@ -110,6 +114,7 @@
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         transition: box-shadow 0.2s ease;
+        user-select: none;
       }
 
       .draggable-rectangle:hover {
@@ -239,16 +244,19 @@
       </p>
       <ul>
         <li>
-          <strong>Horizontal Constraints:</strong> Element's left edge must stay 
-          between 100px-500px. Red zones show forbidden positions for the element.
+          <strong>Horizontal Constraints:</strong> Element's left edge must stay
+          between 100px-500px. Red zones show forbidden positions for the
+          element.
         </li>
         <li>
-          <strong>Vertical Constraints:</strong> Element's top edge must stay 
-          between 100px-400px. Red zones show forbidden positions for the element.
+          <strong>Vertical Constraints:</strong> Element's top edge must stay
+          between 100px-400px. Red zones show forbidden positions for the
+          element.
         </li>
         <li>
-          <strong>Red zones:</strong> Show areas where the element's top-left corner 
-          cannot be positioned (0-100px and 500px+ horizontally, 0-100px and 400px+ vertically)
+          <strong>Red zones:</strong> Show areas where the element cannot be
+          positioned accounting for its full size (0-100px and 580px+
+          horizontally, 0-100px and 460px+ vertically)
         </li>
         <li>
           <strong>Auto-scroll:</strong> Still works when dragging near container
@@ -463,13 +471,17 @@
       // Add hover effects to show bounds information
       horizontalRectangle.addEventListener("mouseenter", () => {
         if (!horizontalRectangle.hasAttribute("data-dragging")) {
-          updateBoundsInfo("Horizontal bounds: L=100px, R=500px (red = forbidden)");
+          updateBoundsInfo(
+            "Horizontal bounds: L=100px, R=500px (red = forbidden)",
+          );
         }
       });
 
       verticalRectangle.addEventListener("mouseenter", () => {
         if (!verticalRectangle.hasAttribute("data-dragging")) {
-          updateBoundsInfo("Vertical bounds: T=100px, B=400px (red = forbidden)");
+          updateBoundsInfo(
+            "Vertical bounds: T=100px, B=400px (red = forbidden)",
+          );
         }
       });
 
