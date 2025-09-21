@@ -138,6 +138,7 @@
         const tableRef = useRef(null);
         const [selection, setSelection] = useState([]);
         const [columns, setColumns] = useState(() => generateColumns(10));
+        const [rows, setRows] = useState([]);
 
         return (
           <div className="demo-container">
@@ -165,6 +166,7 @@
                 ref={tableRef}
                 data={data}
                 columns={columns}
+                rows={rows}
                 selection={selection}
                 onSelectionChange={(value) => {
                   setSelection(value);
@@ -176,6 +178,18 @@
                       col.id === column.id ? { ...col, width } : col,
                     ),
                   );
+                }}
+                onRowResize={({ height, rowIndex }) => {
+                  console.log(`Row ${rowIndex} resized to ${height}px`);
+                  setRows((prevRows) => {
+                    const newRows = [...prevRows];
+                    // Ensure we have enough rows in the array
+                    while (newRows.length <= rowIndex) {
+                      newRows.push({});
+                    }
+                    newRows[rowIndex] = { ...newRows[rowIndex], height };
+                    return newRows;
+                  });
                 }}
                 // stickyHeader={false}
                 // rowColumnSticky={false}
@@ -216,6 +230,20 @@
                         ),
                       )
                     : "Default (120px each)"}
+                </span>
+              </div>
+              <div>
+                Row heights:{" "}
+                <span>
+                  {rows.some((row) => row.height)
+                    ? JSON.stringify(
+                        Object.fromEntries(
+                          rows
+                            .map((row, index) => [index, row.height])
+                            .filter(([, height]) => height),
+                        ),
+                      )
+                    : "Default (auto)"}
                 </span>
               </div>
             </div>
@@ -266,6 +294,13 @@
                 }}
               >
                 Reset Column Widths
+              </button>
+              <button
+                onClick={() => {
+                  setRows([]);
+                }}
+              >
+                Reset Row Heights
               </button>
             </div>
 

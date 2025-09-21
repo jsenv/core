@@ -75,6 +75,11 @@ import {
   TableColumnResizer,
   TableColumnRightResizeHandle,
 } from "./resize/resize_table_column.jsx";
+import {
+  TableRowBottomResizeHandle,
+  TableRowResizer,
+  TableRowTopResizeHandle,
+} from "./resize/resize_table_row.jsx";
 import { useStickyGroup } from "./sticky_group.js";
 import { TableCell } from "./table_cell.jsx";
 import {
@@ -521,6 +526,7 @@ export const Table = forwardRef((props, ref) => {
     selectionColor,
     onSelectionChange,
     onColumnResize,
+    onRowResize,
     borderCollapse = true,
   } = props;
 
@@ -712,6 +718,16 @@ export const Table = forwardRef((props, ref) => {
     setResizeInfo(null);
   };
 
+  const grabRowResizeHandle = (rowIndex, resizeInfo) => {
+    setResizeInfo({
+      ...resizeInfo,
+      target: `row:${rowIndex}`,
+    });
+  };
+  const releaseRowResizeHandle = () => {
+    setResizeInfo(null);
+  };
+
   return (
     <div className="navi_table_container">
       <table
@@ -824,6 +840,11 @@ export const Table = forwardRef((props, ref) => {
                 key={row.id}
                 data-row-id={row.id}
                 aria-selected={isRowSelected}
+                style={{
+                  height: rowOptions.height
+                    ? `${rowOptions.height}px`
+                    : undefined,
+                }}
               >
                 <RowNumberCell
                   stickyX={rowColumnSticky}
@@ -837,6 +858,21 @@ export const Table = forwardRef((props, ref) => {
                   columns={columns}
                   selectionController={selectionController}
                   value={rowIndex + 1}
+                  resizable
+                  rowIndex={rowIndex}
+                  rowMinHeight={rowOptions.minHeight}
+                  rowMaxHeight={rowOptions.maxHeight}
+                  onGrabResizeHandle={(resizeInfo, rowIdx) => {
+                    grabRowResizeHandle(rowIdx, resizeInfo);
+                  }}
+                  onReleaseResizeHandle={({ height }, rowIdx) => {
+                    releaseRowResizeHandle(rowIdx);
+                    onRowResize?.({
+                      height,
+                      row: data[rowIdx],
+                      rowIndex: rowIdx,
+                    });
+                  }}
                 />
                 {columns.map((col, colIndex) => {
                   const columnGrabbed = grabTarget === `column:${colIndex}`;
@@ -873,6 +909,7 @@ export const Table = forwardRef((props, ref) => {
       </table>
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer resizeInfo={resizeInfo} />
+      <TableRowResizer />
     </div>
   );
 });
@@ -1081,6 +1118,12 @@ const RowNumberCell = ({
   rowWithSomeSelectedCell,
   selectionController,
   value,
+  resizable,
+  rowIndex,
+  rowMinHeight,
+  rowMaxHeight,
+  onGrabResizeHandle,
+  onReleaseResizeHandle,
 }) => {
   const cellRef = useRef();
 
@@ -1110,10 +1153,26 @@ const RowNumberCell = ({
       data-selection-name="row"
       data-selection-keyboard-toggle
       aria-selected={selected}
-      style={{ cursor: "pointer", textAlign: "center" }}
+      style={{ cursor: "pointer", textAlign: "center", position: "relative" }}
       tabIndex={-1}
     >
+      {resizable && rowIndex > 0 && (
+        <TableRowTopResizeHandle
+          onGrab={(info) => onGrabResizeHandle(info, rowIndex - 1)}
+          onRelease={(info) => onReleaseResizeHandle(info, rowIndex - 1)}
+          rowMinHeight={rowMinHeight}
+          rowMaxHeight={rowMaxHeight}
+        />
+      )}
       {value}
+      {resizable && (
+        <TableRowBottomResizeHandle
+          onGrab={(info) => onGrabResizeHandle(info, rowIndex)}
+          onRelease={(info) => onReleaseResizeHandle(info, rowIndex)}
+          rowMinHeight={rowMinHeight}
+          rowMaxHeight={rowMaxHeight}
+        />
+      )}
     </td>
   );
 };
