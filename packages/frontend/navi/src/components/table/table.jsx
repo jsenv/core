@@ -40,13 +40,9 @@
  * Note how border disappear for sticky elements when using border-collapse (https://bugzilla.mozilla.org/show_bug.cgi?id=1727594)
  *
  * Next steps:
- * - Drag to resize columns
- * - Drag to reorder columns a finir (affichage des trucs au survol d'autre colonnes et finalisation avec un example
- * qui permet de les re-order en stockant ca dans un state)
+ * - Finir vrai exemple de re-order de column (mise a jour du state + effet au survol)
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
- * - Resizing columns
- * - Resizing rows
  * - Delete a row (how?)
  * - Delete a column (how?)
  * - Rename a column (I guess with enter, double click, A-Z keys)
@@ -593,7 +589,9 @@ export const Table = forwardRef((props, ref) => {
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer resizeInfo={resizeInfo} />
       <TableRowResizer />
-      <TableStickyColumnFrontier />
+      <TableStickyColumnFrontier
+        stickyColumnFrontierIndex={stickyColumnFrontierIndex}
+      />
     </div>
   );
 });

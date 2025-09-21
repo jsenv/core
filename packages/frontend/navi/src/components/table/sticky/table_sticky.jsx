@@ -155,6 +155,15 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
+
+  .navi_table_sticky_column_frontier {
+    position: sticky;
+    top: 0;
+    bottom: 0;
+    left: var(--sticky-group-left, 0);
+    width: 5px;
+    background: #444746;
+  }
 `;
 
 export const TableStickyColumnFrontier = () => {

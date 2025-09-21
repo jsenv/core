@@ -3,8 +3,11 @@ import { useLayoutEffect } from "preact/hooks";
 // React hook version for easy integration
 export const useStickyGroup = (elementRef) => {
   useLayoutEffect(() => {
-    if (!elementRef.current) return undefined;
-    return initStickyGroup(elementRef.current);
+    const element = elementRef.current;
+    if (!element) {
+      return undefined;
+    }
+    return initStickyGroup(element);
   }, []);
 };
 
@@ -19,7 +22,13 @@ const TOP_CSS_VAR = "--sticky-group-top";
  * @param {HTMLElement} container The container element
  * @returns {Function} Cleanup function
  */
-const initStickyGroup = (container) => {
+const initStickyGroup = (
+  container,
+  {
+    targetReceivingCumulativeStickyColumnPosition = ".navi_table_sticky_column_frontier",
+    targetReceivingCumulativeStickyRowPosition = ".navi_table_sticky_row_frontier",
+  } = {},
+) => {
   if (!container) {
     throw new Error("initStickyGroup: container is required");
   }
@@ -45,11 +54,6 @@ const initStickyGroup = (container) => {
       return;
     }
     const stickyHeaderCells = headerRow.querySelectorAll("th[data-sticky-x]");
-    // Only proceed if we have more than one sticky column
-    if (stickyHeaderCells.length <= 1) {
-      return;
-    }
-
     let cumulativeWidth = 0;
     stickyHeaderCells.forEach((stickyHeaderCell, index) => {
       const columnIndex = Array.from(headerRow.children).indexOf(
@@ -83,6 +87,15 @@ const initStickyGroup = (container) => {
         cumulativeWidth += stickyHeaderCell.getBoundingClientRect().width;
       }
     });
+
+    if (targetReceivingCumulativeStickyColumnPosition) {
+      const element = container.querySelector(
+        targetReceivingCumulativeStickyColumnPosition,
+      );
+      if (element) {
+        element.style.setProperty(LEFT_CSS_VAR, `${cumulativeWidth}px`);
+      }
+    }
   };
   const updateTableRows = () => {
     // Handle sticky rows by finding cells with data-sticky-y and grouping by row
@@ -110,10 +123,7 @@ const initStickyGroup = (container) => {
       return aIndex - bIndex;
     });
 
-    if (stickyRows.length <= 1) return;
-
     let cumulativeHeight = 0;
-
     stickyRows.forEach((row, index) => {
       const rowCells = rowsWithStickyCells.get(row);
       const topPosition = index === 0 ? 0 : cumulativeHeight;
@@ -133,6 +143,14 @@ const initStickyGroup = (container) => {
         cumulativeHeight += row.getBoundingClientRect().height;
       }
     });
+    if (targetReceivingCumulativeStickyRowPosition) {
+      const element = container.querySelector(
+        targetReceivingCumulativeStickyRowPosition,
+      );
+      if (element) {
+        element.style.setProperty(TOP_CSS_VAR, `${cumulativeHeight}px`);
+      }
+    }
   };
 
   const updateLinearPositions = () => {
