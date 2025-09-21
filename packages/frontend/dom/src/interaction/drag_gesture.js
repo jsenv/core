@@ -473,6 +473,8 @@ export const createDragGesture = ({
       visibleAreaRight,
       visibleAreaTop,
       visibleAreaBottom,
+      elementWidth,
+      elementHeight,
     }) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
@@ -589,8 +591,10 @@ export const createDragGesture = ({
         );
       }
       if (rightBound !== Infinity) {
+        // For visual clarity, show rightBound at the right edge of the element
+        // when element is positioned at rightBound (not the left edge position)
         const rightBoundViewport =
-          currentPositionedParentRect.left + rightBound;
+          currentPositionedParentRect.left + rightBound + elementWidth;
         currentConstraintMarkers.push(
           createDebugMarker({
             name: "rightBound",
@@ -614,8 +618,10 @@ export const createDragGesture = ({
         );
       }
       if (bottomBound !== Infinity) {
+        // For visual clarity, show bottomBound at the bottom edge of the element
+        // when element is positioned at bottomBound (not the top edge position)
         const bottomBoundViewport =
-          currentPositionedParentRect.top + bottomBound;
+          currentPositionedParentRect.top + bottomBound + elementHeight;
         currentConstraintMarkers.push(
           createDebugMarker({
             name: "bottomBound",
@@ -751,6 +757,8 @@ export const createDragGesture = ({
           visibleAreaRight,
           visibleAreaTop,
           visibleAreaBottom,
+          elementWidth: currentElementWidth,
+          elementHeight: currentElementHeight,
         });
       }
 
