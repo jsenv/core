@@ -143,7 +143,6 @@ export const TableRowTopResizeHandle = ({
     ></div>
   );
 };
-
 export const TableRowBottomResizeHandle = ({
   rowMinHeight,
   rowMaxHeight,
@@ -174,19 +173,16 @@ export const TableRowBottomResizeHandle = ({
     ></div>
   );
 };
-
 const onMouseEnterTopResizeHandle = (e) => {
   const previousRow = e.target.closest("tr").previousElementSibling;
   if (previousRow) {
     updateTableRowResizerPosition(previousRow.querySelector("td"));
   }
 };
-
 const onMouseEnterBottomResizeHandle = (e) => {
   const rowCell = e.target.closest("td");
   updateTableRowResizerPosition(rowCell);
 };
-
 const onMouseLeaveTopResizeHandle = (e) => {
   const tableContainer = e.target.closest(".navi_table_container");
   const tableRowResizer = tableContainer.querySelector(
@@ -194,7 +190,6 @@ const onMouseLeaveTopResizeHandle = (e) => {
   );
   tableRowResizer.removeAttribute("data-hover");
 };
-
 const onMouseLeaveBottomResizeHandle = (e) => {
   const tableContainer = e.target.closest(".navi_table_container");
   const tableRowResizer = tableContainer.querySelector(
@@ -215,28 +210,31 @@ const initResizeTableRowByMousedown = (
     return; // No row to resize
   }
 
-  const tableContainer = tableRow.closest(".navi_table_container");
+  const tableCell = tableRow.querySelector("td");
+  const tableContainer = tableCell.closest(".navi_table_container");
   const tableRowResizer = tableContainer.querySelector(
     ".navi_table_row_resizer",
   );
 
   // Calculate custom bounds for row resizing
-  const tableRowRect = tableRow.getBoundingClientRect();
+  const tableRowCellRect = tableCell.getBoundingClientRect();
   const tableContainerRect = tableContainer.getBoundingClientRect();
-  const currentRowTop = tableRowRect.top - tableContainerRect.top;
-  const currentRowHeight = tableRowRect.height;
+  const currentRowCellTop = tableRowCellRect.top - tableContainerRect.top;
+  const currentRowCellHeight = tableRowCellRect.height;
 
   // Top bound: minimum height of 30px (can shrink row down to this height)
   const minHeight =
     typeof rowMinHeight === "number" && rowMinHeight > 30 ? rowMinHeight : 30;
   // Bottom bound: maximum height of 500px (can expand beyond scrollable parent if needed)
   const maxHeight =
-    typeof rowMaxHeight === "number" && rowMaxHeight < 500 ? rowMaxHeight : 500;
-  const customTopBound = currentRowTop + minHeight;
-  const maxExpandAmount = maxHeight - currentRowHeight;
-  const customBottomBound = currentRowTop + currentRowHeight + maxExpandAmount;
+    typeof rowMaxHeight === "number" && rowMaxHeight < 300 ? rowMaxHeight : 300;
+  const customTopBound = currentRowCellTop + minHeight;
+  const maxExpandAmount = maxHeight - currentRowCellHeight;
+  const customBottomBound =
+    currentRowCellTop + currentRowCellHeight + maxExpandAmount;
 
   const dragToMoveGesture = createDragToMoveGesture({
+    name: "resize-row",
     direction: { y: true },
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
     customTopBound,
@@ -247,10 +245,10 @@ const initResizeTableRowByMousedown = (
     },
     onDrag,
     onRelease: (gesture) => {
-      const newHeight = currentRowHeight + gesture.yMove;
+      const newHeight = currentRowCellHeight + gesture.yMove;
       onRelease({
         height: newHeight,
-        currentHeight: currentRowHeight,
+        currentHeight: currentRowCellHeight,
       });
     },
   });

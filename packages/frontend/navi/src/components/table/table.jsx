@@ -739,7 +739,7 @@ export const Table = forwardRef((props, ref) => {
       >
         <colgroup>
           <col
-            data-drag-obstacle=""
+            data-drag-obstacle="resize-column,move-column"
             data-sticky-obstacle={stickyHeader ? "" : undefined}
             style={{ minWidth: "100px" }}
           ></col>
@@ -750,8 +750,10 @@ export const Table = forwardRef((props, ref) => {
             return (
               <col
                 key={col.id}
-                data-drag-obstacle={isDragObstable ? "" : undefined}
-                data-sticky-obstacle={isLastStickyColumn ? "" : undefined}
+                data-drag-obstacle={
+                  isDragObstable ? "resize-column,move-column" : undefined
+                }
+                data-sticky-obstacle={isDragObstable ? "" : undefined}
                 style={{
                   minWidth: col.width ? `${col.width}px` : undefined,
                   maxWidth: col.width ? `${col.width}px` : undefined,
@@ -761,7 +763,10 @@ export const Table = forwardRef((props, ref) => {
           })}
         </colgroup>
         <thead>
-          <tr>
+          <tr
+            data-drag-obstacle="resize-row,move-row"
+            data-sticky-obstacle={stickyHeader ? "" : undefined}
+          >
             <RowNumberHeaderCell
               stickyX={rowColumnSticky}
               stickyY={stickyHeader}
@@ -834,12 +839,18 @@ export const Table = forwardRef((props, ref) => {
             const isStickyYFrontier = stickyRowFrontierIndex === rowIndex + 1;
             const isAfterStickyYFrontier =
               rowIndex + 1 === stickyRowFrontierIndex + 1;
+            const isLastStickyRow = rowIndex < stickyRowFrontierIndex;
+            const isDragObstacle = isLastStickyRow;
 
             return (
               <tr
                 key={row.id}
                 data-row-id={row.id}
                 aria-selected={isRowSelected}
+                data-drag-obstacle={
+                  isDragObstacle ? "resize-row,move-row" : undefined
+                }
+                data-sticky-obstacle={isDragObstacle ? "" : undefined}
                 style={{
                   height: rowOptions.height
                     ? `${rowOptions.height}px`

@@ -38,7 +38,7 @@
 
 import { getScrollableParent } from "../scroll.js";
 
-export let DRAG_DEBUG_VISUAL_MARKERS = false;
+export let DRAG_DEBUG_VISUAL_MARKERS = true;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = true;
 };
@@ -187,6 +187,7 @@ const getElementBounds = (element, scrollableParent) => {
 };
 
 export const createDragGesture = ({
+  name,
   onGrab,
   onDragStart,
   onDrag,
@@ -407,11 +408,8 @@ export const createDragGesture = ({
     constraintFunctions.push(boundsConstraint);
 
     // Check for obstacles and add obstacle constraint if found
-    const obstacles = scrollableParent.querySelectorAll("[data-drag-obstacle]");
+    const obstacles = queryObstacles(scrollableParent, name);
     for (const obstacle of obstacles) {
-      if (obstacle.closest("[data-drag-obstacle-ignore]")) {
-        continue;
-      }
       constraintFunctions.push(
         createObstacleConstraint(obstacle, positionedParent),
       );
@@ -953,6 +951,30 @@ export const createDragGesture = ({
     grabViaMousedown,
     addTeardown,
   };
+};
+
+const queryObstacles = (element, name) => {
+  const obstacles = element.querySelectorAll("[data-drag-obstacle]");
+  const matchingObstacles = [];
+  for (const obstacle of obstacles) {
+    if (obstacle.closest("[data-drag-obstacle-ignore]")) {
+      continue;
+    }
+    if (name) {
+      const obstacleAttributeValue =
+        obstacle.getAttribute("data-drag-obstacle");
+      const obstacleNames = obstacleAttributeValue.split(",");
+      const found = obstacleNames.some(
+        (obstacleName) =>
+          obstacleName.trim().toLowerCase() === name.toLowerCase(),
+      );
+      if (!found) {
+        continue;
+      }
+    }
+    matchingObstacles.push(obstacle);
+  }
+  return matchingObstacles;
 };
 
 const createDebugMarker = ({

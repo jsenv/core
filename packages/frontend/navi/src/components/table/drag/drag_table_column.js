@@ -139,6 +139,7 @@ export const initDragTableColumnByMousedown = (
 
   init_drag_gesture: {
     const dragToMoveGesture = createDragToMoveGesture({
+      name: "move-column",
       direction: { x: true },
       onGrab,
       onDrag,

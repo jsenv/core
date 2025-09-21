@@ -237,6 +237,7 @@ const initResizeTableColumnByMousedown = (
   const customRightBound = currentCellLeft + currentCellWidth + maxExpandAmount;
 
   const dragToMoveGesture = createDragToMoveGesture({
+    name: "resize-column",
     direction: { x: true },
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
     customLeftBound,
