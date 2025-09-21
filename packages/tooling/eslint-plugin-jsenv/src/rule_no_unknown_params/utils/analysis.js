@@ -458,7 +458,84 @@ export function analyzeJSXElement(
   if (!functionDef || !functionDef.params) return;
 
   const params = functionDef.params;
-  if (params.length === 0 || openingElement.attributes.length === 0) return;
+
+  // If no attributes are passed, nothing to check
+  if (openingElement.attributes.length === 0) return;
+
+  // If component has no parameters but receives props, all props are invalid
+  if (params.length === 0) {
+    // Collect all given JSX attributes for error reporting
+    const givenAttrs = openingElement.attributes
+      .filter(
+        (attr) =>
+          attr.type === "JSXAttribute" &&
+          attr.name &&
+          attr.name.type === "JSXIdentifier",
+      )
+      .map((attr) => attr.name.name);
+
+    // Report each non-React prop as invalid
+    for (const attr of openingElement.attributes) {
+      if (
+        attr.type === "JSXAttribute" &&
+        attr.name &&
+        attr.name.type === "JSXIdentifier"
+      ) {
+        const attrName = attr.name.name;
+
+        // Skip React/JSX built-in props
+        if (IGNORED_JSX_PROPS.has(attrName)) {
+          continue;
+        }
+
+        const { messageId, data, autofixes } = generateErrorMessage(
+          attrName,
+          componentName,
+          [], // No chain for components with no params
+          functionDef,
+          functionDefinitions,
+          givenAttrs,
+          context.getFilename(),
+          maxChainDepth,
+          functionDefWrapper.sourceFile,
+          detailedMessage,
+        );
+
+        const fixes = [];
+        if (autofixes.remove) {
+          fixes.push((fixer) => createJSXRemoveFix(fixer, attr));
+        }
+        if (autofixes.rename) {
+          fixes.push((fixer) =>
+            createJSXRenameFix(fixer, attr, autofixes.rename),
+          );
+        }
+
+        // Only provide suggestions if we have a good rename candidate
+        const shouldSuggest = fixes.length > 1 && autofixes.rename;
+
+        context.report({
+          node: attr,
+          messageId,
+          data,
+          fix: fixes.length > 0 ? fixes[0] : undefined,
+          suggest: shouldSuggest
+            ? [
+                {
+                  desc: `Remove '${attrName}'`,
+                  fix: fixes[0],
+                },
+                {
+                  desc: `Rename '${attrName}' to '${autofixes.rename}'`,
+                  fix: fixes[1],
+                },
+              ]
+            : undefined,
+        });
+      }
+    }
+    return;
+  }
 
   // Assume first parameter is props object
   const param = params[0];

@@ -138,5 +138,34 @@ export const App = () => {
         },
       ],
     },
+    {
+      name: "JSX component with no props receiving unknown props",
+      code: `const ComponentWithoutProps = () => {
+  return null;
+};
+
+export const App = () => {
+  return <ComponentWithoutProps extra="value" another="value2" />;
+};`,
+      output: `const ComponentWithoutProps = () => {
+  return null;
+};
+
+export const App = () => {
+  return <ComponentWithoutProps   />;
+};`,
+      errors: [
+        {
+          messageId: "not_found_param",
+          data: { param: "extra", func: "ComponentWithoutProps" },
+          type: "JSXAttribute",
+        },
+        {
+          messageId: "not_found_param",
+          data: { param: "another", func: "ComponentWithoutProps" },
+          type: "JSXAttribute",
+        },
+      ],
+    },
   ],
 });

@@ -16,3 +16,10 @@ export const MultipleExtraProps = () => {
 const Button = ({ label }) => {
   return <button>{label}</button>;
 };
+
+const ComponentWithoutProps = () => {
+  return null;
+};
+export const Compi = () => {
+  return <ComponentWithoutProps extra="value" another="value2" />;
+};
