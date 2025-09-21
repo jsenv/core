@@ -1012,8 +1012,6 @@ const getElementBounds = (element, scrollableParent) => {
     const width = rect.width;
     const height = rect.height;
 
-    console.log({ stickyTop });
-
     // Calculate where the sticky element would appear in viewport coordinates
     // This is the scrollable container's viewport position + the sticky offset
     return {
