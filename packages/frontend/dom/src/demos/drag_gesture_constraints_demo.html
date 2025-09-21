@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drag Gesture Demo - Custom Bounds Constraints</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+      }
+
+      .demo-section {
+        margin: 40px auto;
+        max-width: 900px;
+      }
+
+      .demo-title {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        border-bottom: 2px solid #333;
+        margin: 0;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .container {
+        width: 400px;
+        height: 300px;
+        background: white;
+        overflow: auto;
+        overscroll-behavior: contain;
+        position: relative;
+        margin: 0 auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        border: 3px solid #ddd;
+      }
+
+      /* Horizontal constraints content */
+      .horizontal-content {
+        width: 800px; /* Wider than container = horizontal scrollbar */
+        height: 280px; /* Same height as container = no vertical scrollbar */
+        background:
+          linear-gradient(
+            90deg,
+            transparent 99px,
+            #eee 100px,
+            #eee 101px,
+            transparent 102px
+          ),
+          linear-gradient(
+            90deg,
+            #ff9999 0px,
+            #ff9999 100px,
+            transparent 100px,
+            transparent 300px,
+            #99ff99 300px,
+            #99ff99 500px,
+            transparent 500px,
+            transparent 700px,
+            #ff9999 700px,
+            #ff9999 800px
+          );
+        background-size:
+          100px 100px,
+          800px 100%;
+        position: relative;
+      }
+
+      /* Vertical constraints content */
+      .vertical-content {
+        width: 380px; /* Same width as container = no horizontal scrollbar */
+        height: 600px; /* Taller than container = vertical scrollbar */
+        background:
+          linear-gradient(
+            transparent 99px,
+            #eee 100px,
+            #eee 101px,
+            transparent 102px
+          ),
+          linear-gradient(
+            #ff9999 0px,
+            #ff9999 100px,
+            transparent 100px,
+            transparent 200px,
+            #99ff99 200px,
+            #99ff99 400px,
+            transparent 400px,
+            transparent 500px,
+            #ff9999 500px,
+            #ff9999 600px
+          );
+        background-size:
+          100px 100px,
+          100% 600px;
+        position: relative;
+      }
+
+      .draggable-rectangle {
+        width: 80px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 3px solid #333;
+        border-radius: 8px;
+        position: absolute;
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transition: box-shadow 0.2s ease;
+      }
+
+      .draggable-rectangle:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .draggable-rectangle[data-dragging] {
+        cursor: grabbing;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+      }
+
+      .info {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .info h1 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .info ul {
+        line-height: 1.6;
+      }
+
+      .debug-toggle {
+        margin: 20px auto;
+        text-align: center;
+      }
+
+      .debug-toggle label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #333;
+        cursor: pointer;
+        background: white;
+        padding: 10px 15px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+      }
+
+      .debug-toggle label:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .debug-toggle input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      /* Visual indicators for bounds */
+      .bounds-legend {
+        background: white;
+        padding: 15px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin: 20px auto;
+        max-width: 400px;
+        text-align: center;
+      }
+
+      .bounds-legend h4 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #333;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 10px;
+        font-size: 12px;
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 15px;
+        border-radius: 2px;
+        border: 1px solid #333;
+      }
+
+      .red-zone {
+        background: #ff9999;
+      }
+      .green-zone {
+        background: #99ff99;
+      }
+
+      .position-display {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 11px;
+        z-index: 10000;
+        line-height: 1.4;
+        min-width: 200px;
+      }
+
+      .position-display div {
+        margin: 2px 0;
+      }
+
+      .position-display .label {
+        font-weight: bold;
+        color: #ffeb3b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="info">
+      <h1>Drag Gesture Demo - Custom Bounds Constraints</h1>
+      <p>
+        This demo demonstrates custom boundary constraints that prevent dragging
+        beyond specific limits:
+      </p>
+      <ul>
+        <li>
+          <strong>Horizontal Constraints:</strong> Element starts at 50% of
+          scrollable width and is constrained to the green zone (100px-500px
+          from content left)
+        </li>
+        <li>
+          <strong>Vertical Constraints:</strong> Element starts at 50% of
+          scrollable height and is constrained to the green zone (100px-400px
+          from content top)
+        </li>
+        <li>
+          <strong>Red zones:</strong> Represent areas where the element cannot
+          be dragged
+        </li>
+        <li>
+          <strong>Green zones:</strong> Represent allowed dragging areas within
+          custom bounds
+        </li>
+        <li>
+          <strong>Auto-scroll:</strong> Still works when dragging near container
+          edges, but respects bounds
+        </li>
+      </ul>
+    </div>
+
+    <div class="debug-toggle">
+      <label>
+        <input type="checkbox" id="debugMarkersCheckbox" checked />
+        Show Debug Markers
+      </label>
+    </div>
+
+    <div class="bounds-legend">
+      <h4>Visual Legend</h4>
+      <div class="legend-item">
+        <div class="legend-color red-zone"></div>
+        <span>Forbidden Zone</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color green-zone"></div>
+        <span>Allowed Zone</span>
+      </div>
+    </div>
+
+    <!-- Case 1: Horizontal Custom Bounds -->
+    <div class="demo-section">
+      <h2 class="demo-title">
+        Case 1: Horizontal Custom Bounds (customLeftBound: 100px,
+        customRightBound: 500px)
+      </h2>
+      <div class="container" id="horizontalContainer">
+        <div class="horizontal-content">
+          <div
+            class="draggable-rectangle"
+            id="horizontalRectangle"
+            style="left: 300px; top: 110px"
+          >
+            DRAG H
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Case 2: Vertical Custom Bounds -->
+    <div class="demo-section">
+      <h2 class="demo-title">
+        Case 2: Vertical Custom Bounds (customTopBound: 100px,
+        customBottomBound: 400px)
+      </h2>
+      <div class="container" id="verticalContainer">
+        <div class="vertical-content">
+          <div
+            class="draggable-rectangle"
+            id="verticalRectangle"
+            style="left: 150px; top: 250px"
+          >
+            DRAG V
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Position Display -->
+    <div class="position-display" id="positionDisplay">
+      <div class="label">Drag Position Info</div>
+      <div id="horizontalInfo">Horizontal: Not dragging</div>
+      <div id="verticalInfo">Vertical: Not dragging</div>
+      <div id="boundsInfo">Bounds: Hover to see limits</div>
+    </div>
+
+    <script type="module">
+      import {
+        DRAG_DEBUG_VISUAL_MARKERS,
+        enableDebugMarkers,
+        disableDebugMarkers,
+      } from "../interaction/drag_gesture.js";
+      import { createDragToMoveGesture } from "../interaction/drag_to_move_gesture.js";
+
+      const horizontalRectangle = document.getElementById(
+        "horizontalRectangle",
+      );
+      const verticalRectangle = document.getElementById("verticalRectangle");
+      const horizontalContainer = document.getElementById(
+        "horizontalContainer",
+      );
+      const verticalContainer = document.getElementById("verticalContainer");
+      const debugCheckbox = document.getElementById("debugMarkersCheckbox");
+      const horizontalInfo = document.getElementById("horizontalInfo");
+      const verticalInfo = document.getElementById("verticalInfo");
+      const boundsInfo = document.getElementById("boundsInfo");
+
+      // Handle debug markers toggle
+      debugCheckbox.checked = DRAG_DEBUG_VISUAL_MARKERS;
+      debugCheckbox.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          enableDebugMarkers();
+        } else {
+          disableDebugMarkers();
+        }
+      });
+
+      // Set up drag gesture for horizontal constraints
+      horizontalRectangle.addEventListener("mousedown", (event) => {
+        // Custom bounds in container-relative coordinates
+        const customLeftBound = 100; // Cannot drag left of 100px from content start
+        const customRightBound = 500; // Cannot drag right of 500px from content start
+
+        createDragToMoveGesture({
+          backdrop: false,
+          customLeftBound,
+          customRightBound,
+          onGrab: (gestureInfo) => {
+            console.log("Horizontal - Grab started", gestureInfo);
+            horizontalRectangle.setAttribute("data-dragging", "");
+            updateHorizontalInfo(gestureInfo, "Grabbed");
+          },
+          onDragStart: (gestureInfo) => {
+            console.log("Horizontal - Drag started", gestureInfo);
+            updateHorizontalInfo(gestureInfo, "Drag Start");
+          },
+          onDrag: (gestureInfo, phase) => {
+            updateHorizontalInfo(gestureInfo, `Dragging (${phase})`);
+            updateBoundsInfo("Horizontal bounds: L=100px, R=500px");
+          },
+          onRelease: (gestureInfo) => {
+            console.log("Horizontal - Drag released", gestureInfo);
+            horizontalRectangle.removeAttribute("data-dragging");
+            updateHorizontalInfo(gestureInfo, "Released");
+            updateBoundsInfo("Hover to see limits");
+          },
+        }).grabViaMousedown(event, {
+          element: horizontalRectangle,
+        });
+      });
+
+      // Set up drag gesture for vertical constraints
+      verticalRectangle.addEventListener("mousedown", (event) => {
+        // Custom bounds in container-relative coordinates
+        const customTopBound = 100; // Cannot drag above 100px from content start
+        const customBottomBound = 400; // Cannot drag below 400px from content start
+
+        createDragToMoveGesture({
+          backdrop: false,
+          customTopBound,
+          customBottomBound,
+          onGrab: (gestureInfo) => {
+            console.log("Vertical - Grab started", gestureInfo);
+            verticalRectangle.setAttribute("data-dragging", "");
+            updateVerticalInfo(gestureInfo, "Grabbed");
+          },
+          onDragStart: (gestureInfo) => {
+            console.log("Vertical - Drag started", gestureInfo);
+            updateVerticalInfo(gestureInfo, "Drag Start");
+          },
+          onDrag: (gestureInfo, phase) => {
+            updateVerticalInfo(gestureInfo, `Dragging (${phase})`);
+            updateBoundsInfo("Vertical bounds: T=100px, B=400px");
+          },
+          onRelease: (gestureInfo) => {
+            console.log("Vertical - Drag released", gestureInfo);
+            verticalRectangle.removeAttribute("data-dragging");
+            updateVerticalInfo(gestureInfo, "Released");
+            updateBoundsInfo("Hover to see limits");
+          },
+        }).grabViaMousedown(event, {
+          element: verticalRectangle,
+        });
+      });
+
+      function updateHorizontalInfo(gestureInfo, status) {
+        const container = horizontalContainer;
+        const rect = horizontalRectangle.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const relativeX = rect.left - containerRect.left + container.scrollLeft;
+
+        horizontalInfo.innerHTML = `Horizontal: ${status} | X: ${Math.round(relativeX)}px | Scroll: ${Math.round(container.scrollLeft)}px`;
+      }
+
+      function updateVerticalInfo(gestureInfo, status) {
+        const container = verticalContainer;
+        const rect = verticalRectangle.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const relativeY = rect.top - containerRect.top + container.scrollTop;
+
+        verticalInfo.innerHTML = `Vertical: ${status} | Y: ${Math.round(relativeY)}px | Scroll: ${Math.round(container.scrollTop)}px`;
+      }
+
+      function updateBoundsInfo(text) {
+        boundsInfo.textContent = text;
+      }
+
+      // Initial position updates
+      function updatePositions() {
+        const hRect = horizontalRectangle.getBoundingClientRect();
+        const hContainerRect = horizontalContainer.getBoundingClientRect();
+        const hRelativeX =
+          hRect.left - hContainerRect.left + horizontalContainer.scrollLeft;
+
+        const vRect = verticalRectangle.getBoundingClientRect();
+        const vContainerRect = verticalContainer.getBoundingClientRect();
+        const vRelativeY =
+          vRect.top - vContainerRect.top + verticalContainer.scrollTop;
+
+        horizontalInfo.innerHTML = `Horizontal: Ready | X: ${Math.round(hRelativeX)}px | Scroll: ${Math.round(horizontalContainer.scrollLeft)}px`;
+        verticalInfo.innerHTML = `Vertical: Ready | Y: ${Math.round(vRelativeY)}px | Scroll: ${Math.round(verticalContainer.scrollTop)}px`;
+      }
+
+      // Update positions on scroll
+      horizontalContainer.addEventListener("scroll", updatePositions);
+      verticalContainer.addEventListener("scroll", updatePositions);
+      updatePositions();
+
+      // Add hover effects to show bounds information
+      horizontalRectangle.addEventListener("mouseenter", () => {
+        if (!horizontalRectangle.hasAttribute("data-dragging")) {
+          updateBoundsInfo("Horizontal bounds: L=100px, R=500px (green zone)");
+        }
+      });
+
+      verticalRectangle.addEventListener("mouseenter", () => {
+        if (!verticalRectangle.hasAttribute("data-dragging")) {
+          updateBoundsInfo("Vertical bounds: T=100px, B=400px (green zone)");
+        }
+      });
+
+      horizontalRectangle.addEventListener("mouseleave", () => {
+        if (!horizontalRectangle.hasAttribute("data-dragging")) {
+          updateBoundsInfo("Hover to see limits");
+        }
+      });
+
+      verticalRectangle.addEventListener("mouseleave", () => {
+        if (!verticalRectangle.hasAttribute("data-dragging")) {
+          updateBoundsInfo("Hover to see limits");
+        }
+      });
+    </script>
+  </body>
+</html>
