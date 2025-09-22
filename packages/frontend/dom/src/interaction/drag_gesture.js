@@ -81,7 +81,7 @@ import.meta.css = /* css */ `
     height: 100vh;
     z-index: 999999;
     pointer-events: none;
-    opacity: 0.7;
+    opacity: 0.5;
   }
 
   .navi_debug_marker--vertical {
@@ -147,7 +147,7 @@ import.meta.css = /* css */ `
   .navi_obstacle_marker {
     position: fixed;
     background-color: orange;
-    opacity: 0.5;
+    opacity: 0.6;
     z-index: 9999;
     pointer-events: none;
   }
@@ -167,7 +167,7 @@ import.meta.css = /* css */ `
   .navi_sticky_frontier_marker {
     position: fixed;
     background-color: purple;
-    opacity: 0.3;
+    opacity: 0.1;
     z-index: 9999;
     pointer-events: none;
     border: 2px dashed purple;
@@ -409,10 +409,7 @@ export const createDragGesture = ({
     const obstacles = queryObstacles(scrollableParent, { name });
     for (const obstacle of obstacles) {
       constraintFunctions.push(
-        createObstacleConstraint(obstacle, {
-          positionedParent,
-          scrollableParent,
-        }),
+        createObstacleConstraint(obstacle, { positionedParent }),
       );
     }
 
@@ -581,7 +578,7 @@ export const createDragGesture = ({
       // Create markers for sticky frontiers
       const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
       stickyFrontiers.forEach((frontier, index) => {
-        const frontierBounds = getElementBounds(frontier, scrollableParent);
+        const frontierBounds = getElementBounds(frontier, positionedParent);
 
         // Convert frontier bounds to viewport coordinates for marker positioning
         // frontierBounds are already in viewport coordinates from getBoundingClientRect()
@@ -740,7 +737,7 @@ export const createDragGesture = ({
           elementWidth: currentElementWidth,
           elementHeight: currentElementHeight,
           dragName: name,
-          scrollableParent,
+          positionedParent,
         });
       }
 
@@ -766,7 +763,7 @@ export const createDragGesture = ({
       // Sticky frontiers always reduce visible area - z-index handles visual layering when elements go behind frontiers
       const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
       for (const stickyFrontier of stickyFrontiers) {
-        const frontierRect = getElementBounds(stickyFrontier, scrollableParent);
+        const frontierRect = getElementBounds(stickyFrontier, positionedParent);
 
         // Determine which edge this sticky frontier affects based on its position
         // Left edge: if sticky frontier is positioned at or near the left edge
@@ -1083,7 +1080,7 @@ const getPositionedParent = (element) => {
  * @param {HTMLElement} element - The element to get bounds for
  * @returns {Object} Bounds object with left, top, right, bottom properties
  */
-const getElementBounds = (element, scrollableParent) => {
+const getElementBounds = (element, positionedParent) => {
   const rect = element.getBoundingClientRect();
   const isHorizontallySticky = element.hasAttribute("data-sticky-x");
   const isVerticallySticky = element.hasAttribute("data-sticky-y");
@@ -1100,26 +1097,29 @@ const getElementBounds = (element, scrollableParent) => {
     };
   }
 
-  // handle vritually sticky obstacles (<col> or <tr>)
+  // handle virtually sticky obstacles (<col> or <tr>)
   // are not really sticky but should be handled as such
   // For sticky elements, calculate current position based on scroll and sticky behavior
   // The sticky element "sticks" at its CSS left position relative to the scrollable parent
-  let left = rect.left;
-  const scrollableRect = scrollableParent.getBoundingClientRect();
-  const borderSizes = getBorderSizes(scrollableParent);
+  let left;
+  const scrollableRect = positionedParent.getBoundingClientRect();
+  const borderSizes = getBorderSizes(positionedParent);
   if (isHorizontallySticky) {
     const stickyLeft = parseFloat(computedStyle.left) || 0;
     const stickyPositionInViewport =
       scrollableRect.left + borderSizes.left + stickyLeft;
     left = stickyPositionInViewport;
+  } else {
+    left = rect.left;
   }
-  let top = rect.top;
+  let top;
   if (isVerticallySticky) {
     const stickyTop = parseFloat(computedStyle.top) || 0;
-    const borderSizes = getBorderSizes(scrollableParent);
     const stickyPositionInViewport =
       scrollableRect.top + borderSizes.top + stickyTop;
     top = stickyPositionInViewport;
+  } else {
+    top = rect.top;
   }
   return {
     sticky: true,
@@ -1199,26 +1199,9 @@ const createScrollableAreaConstraint = (
   };
 };
 // Function to create constraint that respects solid obstacles
-const createObstacleConstraint = (
-  obstacle,
-  { positionedParent, scrollableParent },
-) => {
+const createObstacleConstraint = (obstacle, { positionedParent }) => {
   return () => {
-    const obstacleBounds = getElementBounds(obstacle, scrollableParent);
-    if (obstacleBounds.sticky) {
-      // Note: For sticky obstacles, left/top are already relative to positioned parent
-      // since they come from getComputedStyle or are explicitly configured relative values
-      return {
-        type: "obstacle",
-        left: obstacleBounds.left,
-        top: obstacleBounds.top,
-        right: obstacleBounds.right,
-        bottom: obstacleBounds.bottom,
-        element: obstacle,
-        name: `sticky obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
-      };
-    }
-
+    const obstacleBounds = getElementBounds(obstacle, positionedParent);
     const positionedParentRect = positionedParent.getBoundingClientRect();
     // Convert obstacle coordinates to be relative to positioned parent
     // getBoundingClientRect() already accounts for scroll position
@@ -1229,7 +1212,7 @@ const createObstacleConstraint = (
       right: obstacleBounds.right - positionedParentRect.left,
       bottom: obstacleBounds.bottom - positionedParentRect.top,
       element: obstacle,
-      name: `obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
+      name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
     };
   };
 };
@@ -1240,7 +1223,7 @@ const createObstacleConstraint = (
  */
 const validateConstraints = (
   constraints,
-  { elementWidth, elementHeight, dragName, scrollableParent },
+  { elementWidth, elementHeight, dragName, positionedParent },
 ) => {
   const boundsConstraints = constraints.filter((c) => c.type === "bounds");
   const obstacleConstraints = constraints.filter((c) => c.type === "obstacle");
@@ -1347,7 +1330,7 @@ const validateConstraints = (
           frontiers: stickyFrontiers.map((f, i) => ({
             index: i,
             element: f,
-            bounds: getElementBounds(f, scrollableParent),
+            bounds: getElementBounds(f, positionedParent),
           })),
         },
       );
