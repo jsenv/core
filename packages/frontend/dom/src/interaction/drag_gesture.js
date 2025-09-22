@@ -1404,17 +1404,20 @@ const validateConstraints = (
   // Check for problematic obstacle overlaps and inappropriate obstacle assignments
   obstacleConstraints.forEach((obstacle, index) => {
     // Check for impossible obstacle geometry
-    if (obstacle.left > obstacle.right || obstacle.top > obstacle.bottom) {
+    if (
+      obstacle.bounds.left > obstacle.bounds.right ||
+      obstacle.bounds.top > obstacle.bounds.bottom
+    ) {
       console.warn(
-        `Impossible obstacle geometry: left=${obstacle.left}, right=${obstacle.right}, top=${obstacle.top}, bottom=${obstacle.bottom}`,
+        `Impossible obstacle geometry: left=${obstacle.bounds.left}, right=${obstacle.bounds.right}, top=${obstacle.bounds.top}, bottom=${obstacle.bounds.bottom}`,
         { constraint: obstacle, dragName, element: obstacle.element },
       );
     }
 
     // Check for obstacles that completely block movement in all directions
     boundsConstraints.forEach((bounds) => {
-      const obstacleWidth = obstacle.right - obstacle.left;
-      const obstacleHeight = obstacle.bottom - obstacle.top;
+      const obstacleWidth = obstacle.bounds.right - obstacle.bounds.left;
+      const obstacleHeight = obstacle.bounds.bottom - obstacle.bounds.top;
       const boundsWidth = bounds.right - bounds.left;
       const boundsHeight = bounds.bottom - bounds.top;
 
@@ -1437,10 +1440,10 @@ const validateConstraints = (
       if (index >= otherIndex) return; // Avoid duplicate checks
 
       const hasOverlap = !(
-        obstacle.right <= otherObstacle.left ||
-        obstacle.left >= otherObstacle.right ||
-        obstacle.bottom <= otherObstacle.top ||
-        obstacle.top >= otherObstacle.bottom
+        obstacle.bounds.right <= otherObstacle.bounds.left ||
+        obstacle.bounds.left >= otherObstacle.bounds.right ||
+        obstacle.bounds.bottom <= otherObstacle.bounds.top ||
+        obstacle.bounds.top >= otherObstacle.bounds.bottom
       );
 
       if (hasOverlap) {
@@ -1595,10 +1598,10 @@ const applyConstraints = (
       );
 
       // Round constraint boundaries as well for consistent comparison
-      const leftBound = roundForConstraints(constraint.left);
-      const rightBound = roundForConstraints(constraint.right);
-      const topBound = roundForConstraints(constraint.top);
-      const bottomBound = roundForConstraints(constraint.bottom);
+      const leftBound = roundForConstraints(constraint.bounds.left);
+      const rightBound = roundForConstraints(constraint.bounds.right);
+      const topBound = roundForConstraints(constraint.bounds.top);
+      const bottomBound = roundForConstraints(constraint.bounds.bottom);
 
       // Determine current position relative to obstacle
       const isOnTheLeft = currentActualRight <= leftBound;
