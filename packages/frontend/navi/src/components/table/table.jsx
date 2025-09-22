@@ -75,8 +75,9 @@ import {
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
 import {
-  TableStickyColumnFrontierHandle,
-  TableStickyColumnFrontierHandleGhost,
+  TableColumnStickyFrontier,
+  TableColumnStickyFrontierGhost,
+  TableColumnStickyFrontierPreview,
 } from "./sticky/table_sticky.jsx";
 import { TableCell } from "./table_cell.jsx";
 
@@ -594,7 +595,8 @@ export const Table = forwardRef((props, ref) => {
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer />
       <TableRowResizer />
-      <TableStickyColumnFrontierHandleGhost />
+      <TableColumnStickyFrontierGhost />
+      <TableColumnStickyFrontierPreview />
     </div>
   );
 });
@@ -616,7 +618,7 @@ const RowNumberHeaderCell = ({
       style={{ textAlign: "center" }}
       {...rest}
     >
-      {isStickyXFrontier && <TableStickyColumnFrontierHandle />}
+      {isStickyXFrontier && <TableColumnStickyFrontier />}
     </th>
   );
 };
@@ -711,7 +713,7 @@ const HeaderCell = ({
         />
       )}
 
-      {isStickyXFrontier && <TableStickyColumnFrontierHandle />}
+      {isStickyXFrontier && <TableColumnStickyFrontier />}
     </th>
   );
 };
@@ -783,7 +785,7 @@ const RowNumberCell = ({
           rowMaxHeight={rowMaxHeight}
         />
       )}
-      {isStickyXFrontier && <TableStickyColumnFrontierHandle />}
+      {isStickyXFrontier && <TableColumnStickyFrontier />}
     </td>
   );
 };

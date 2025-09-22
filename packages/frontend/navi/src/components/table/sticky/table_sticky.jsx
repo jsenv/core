@@ -1,7 +1,9 @@
+import { createDragToMoveGesture } from "@jsenv/dom";
 import {
   Z_INDEX_STICKY_COLUMN,
   Z_INDEX_STICKY_CORNER,
   Z_INDEX_STICKY_FRONTIER,
+  Z_INDEX_STICKY_FRONTIER_BACKDROP,
   Z_INDEX_STICKY_ROW,
 } from "../z_indexes.js";
 
@@ -157,7 +159,7 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  .navi_table_sticky_column_frontier {
+  .navi_table_column_sticky_frontier {
     position: absolute;
     right: 0;
     top: 0;
@@ -166,17 +168,22 @@ import.meta.css = /* css */ `
     background: #444746;
     cursor: grab;
   }
-
-  .navi_table_sticky_column_frontier_ghost {
+  .navi_table_column_sticky_frontier_ghost,
+  .navi_table_column_sticky_frontier_preview {
     position: absolute;
     right: 0;
     top: 0;
     bottom: 0;
     width: 5px;
-    background: rgba(68, 71, 70, 0.5);
     pointer-events: none;
     opacity: 0;
     z-index: ${Z_INDEX_STICKY_FRONTIER};
+  }
+  .navi_table_column_sticky_frontier_ghost {
+    background: rgba(68, 71, 70, 0.5);
+  }
+  .navi_table_column_sticky_frontier_preview {
+    background: red;
   }
 `;
 
@@ -187,24 +194,70 @@ import.meta.css = /* css */ `
  * so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
  * as a table cell uses a position relative)
  */
-export const TableStickyColumnFrontierHandle = () => {
+export const TableColumnStickyFrontier = () => {
   return (
     <div
-      className="navi_table_sticky_column_frontier"
-      onMouseDown={() => {
-        // TODO: we'll move the frontier
-        // we need to
-        // inject an element into the table to be able to move it because our
-        // line is actually inside every <td>,<th>
-        // It must be at the right left position. I guess in absolute.
-        // This element will have a 0.5 opacity
-        // When we cross half the width of a column we inject a second vertical line where the new frontier would be
-        // to tell user "hey if you grab here, the frontier will be there"
-        // At this stage user can see 3 frontiers. Where it is, the one he grab, the futurue one if he releases.
+      className="navi_table_column_sticky_frontier"
+      onMouseDown={(e) => {
+        initMoveColumnStickyFrontierByMousedown(e);
       }}
     ></div>
   );
 };
-export const TableStickyColumnFrontierHandleGhost = () => {
-  return <div className="navi_table_sticky_column_frontier_ghost"></div>;
+export const TableColumnStickyFrontierGhost = () => {
+  return <div className="navi_table_column_sticky_frontier_ghost"></div>;
+};
+
+export const TableColumnStickyFrontierPreview = () => {
+  return <div className="navi_table_column_sticky_frontier_preview"></div>;
+};
+
+// TODO: we'll move the frontier
+// we need to
+// inject an element into the table to be able to move it because our
+// line is actually inside every <td>,<th>
+// It must be at the right left position. I guess in absolute.
+// This element will have a 0.5 opacity
+// When we cross half the width of a column we inject a second vertical line where the new frontier would be
+// to tell user "hey if you grab here, the frontier will be there"
+// At this stage user can see 3 frontiers. Where it is, the one he grab, the futurue one if he releases.
+const initMoveColumnStickyFrontierByMousedown = (
+  mousedownEvent,
+  { onGrab, onDrag, onRelease },
+) => {
+  const tableCell = mousedownEvent.target.closest("th,td");
+  const tableContainer = tableCell.closest(".navi_table_container");
+  const tableColumnStickyFrontier = tableContainer.querySelector(
+    ".navi_table_row_resizer",
+  );
+
+  // Calculate custom bounds for row resizing
+  const tableRowCellRect = tableCell.getBoundingClientRect();
+  const tableContainerRect = tableContainer.getBoundingClientRect();
+  const currentRowCellTop = tableRowCellRect.top - tableContainerRect.top;
+  const currentRowCellHeight = tableRowCellRect.height;
+
+  const dragToMoveGesture = createDragToMoveGesture({
+    name: "move-column-sticky-frontier",
+    direction: { x: true },
+    backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
+    onGrab: () => {
+      onGrab({ columnWidth: 0 });
+    },
+    onDrag,
+    onRelease: (gesture) => {
+      const newHeight = currentRowCellHeight + gesture.yMove;
+      onRelease({
+        height: newHeight,
+        currentHeight: currentRowCellHeight,
+      });
+    },
+  });
+  dragToMoveGesture.addTeardown(() => {
+    tableRowResizer.style.top = "";
+  });
+
+  dragToMoveGesture.grabViaMousedown(mousedownEvent, {
+    element: tableRowResizer,
+  });
 };
