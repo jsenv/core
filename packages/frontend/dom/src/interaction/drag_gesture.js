@@ -765,6 +765,12 @@ export const createDragGesture = ({
       for (const stickyFrontier of stickyFrontiers) {
         const frontierRect = getElementBounds(stickyFrontier, positionedParent);
 
+        // Store original values for validation
+        const originalVisibleAreaLeft = visibleAreaLeft;
+        const originalVisibleAreaRight = visibleAreaRight;
+        const originalVisibleAreaTop = visibleAreaTop;
+        const originalVisibleAreaBottom = visibleAreaBottom;
+
         // Determine which edge this sticky frontier affects based on its position
         // Left edge: if sticky frontier is positioned at or near the left edge
         if (Math.abs(frontierRect.left - visibleAreaLeft) < 10) {
@@ -782,13 +788,30 @@ export const createDragGesture = ({
         if (Math.abs(frontierRect.bottom - visibleAreaBottom) < 10) {
           visibleAreaBottom = Math.min(visibleAreaBottom, frontierRect.top);
         }
-      }
 
-      // Debug warning for invalid visible area after sticky obstacle processing
-      if (import.meta.dev && visibleAreaTop > visibleAreaBottom) {
-        console.warn(
-          `Invalid visible area after sticky obstacle processing: visibleAreaTop (${visibleAreaTop}) > visibleAreaBottom (${visibleAreaBottom})`,
-        );
+        // Debug warnings for invalid visible areas caused by this specific frontier
+        if (import.meta.dev) {
+          if (visibleAreaLeft > visibleAreaRight) {
+            console.warn(
+              `Sticky frontier created invalid horizontal visible area: visibleAreaLeft (${visibleAreaLeft}) > visibleAreaRight (${visibleAreaRight}). Original: left=${originalVisibleAreaLeft}, right=${originalVisibleAreaRight}`,
+              {
+                frontierElement: stickyFrontier,
+                frontierRect,
+                dragName: name,
+              },
+            );
+          }
+          if (visibleAreaTop > visibleAreaBottom) {
+            console.warn(
+              `Sticky frontier created invalid vertical visible area: visibleAreaTop (${visibleAreaTop}) > visibleAreaBottom (${visibleAreaBottom}). Original: top=${originalVisibleAreaTop}, bottom=${originalVisibleAreaBottom}`,
+              {
+                frontierElement: stickyFrontier,
+                frontierRect,
+                dragName: name,
+              },
+            );
+          }
+        }
       }
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
