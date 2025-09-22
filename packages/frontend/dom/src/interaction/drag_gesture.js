@@ -772,6 +772,11 @@ export const createDragGesture = ({
       // Auto-detect sticky frontiers within scrollable parent and reduce visible area accordingly
       // Sticky frontiers always reduce visible area - z-index handles visual layering when elements go behind frontiers
       const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
+      // Get current element position (including current movement)
+      const currentElementLeft = initialLeft + (gestureInfo.xMove || 0);
+      const currentElementRight = currentElementLeft + currentElementWidth;
+      const currentElementTop = initialTop + (gestureInfo.yMove || 0);
+      const currentElementBottom = currentElementTop + currentElementHeight;
       for (const stickyFrontier of stickyFrontiers) {
         const frontierRect = getElementBounds(stickyFrontier, positionedParent);
 
@@ -783,31 +788,21 @@ export const createDragGesture = ({
 
         // Determine which side of the frontier the element is on to decide how it constrains visible area
         // Only apply constraints for movement directions that are allowed
-
-        // Get current element position (including current movement)
-        const currentElementLeft = initialLeft + (gestureInfo.xMove || 0);
-        const currentElementRight = currentElementLeft + currentElementWidth;
-        const currentElementTop = initialTop + (gestureInfo.yMove || 0);
-        const currentElementBottom = currentElementTop + currentElementHeight;
-
         // Convert frontier to positioned parent coordinates for comparison
         const positionedParentRect = positionedParent.getBoundingClientRect();
         const frontierLeft = frontierRect.left - positionedParentRect.left;
-        const frontierRight = frontierRect.right - positionedParentRect.left;
         const frontierTop = frontierRect.top - positionedParentRect.top;
-        const frontierBottom = frontierRect.bottom - positionedParentRect.top;
 
         // Apply horizontal constraints only if horizontal movement is allowed
         if (direction.x) {
-          // Determine if frontier is to the left or right of element
-          if (frontierRight <= currentElementLeft) {
-            // Frontier is to the left of element - constrains visible area from the left
+          if (frontierLeft <= currentElementLeft) {
+            // frontier on the left of the element
             const frontierRightViewport = frontierRect.right;
             if (frontierRightViewport > visibleAreaLeft) {
               visibleAreaLeft = frontierRightViewport;
             }
           } else if (frontierLeft >= currentElementRight) {
-            // Frontier is to the right of element - constrains visible area from the right
+            // frontier on the right of the element
             const frontierLeftViewport = frontierRect.left;
             if (frontierLeftViewport < visibleAreaRight) {
               visibleAreaRight = frontierLeftViewport;
@@ -817,8 +812,7 @@ export const createDragGesture = ({
 
         // Apply vertical constraints only if vertical movement is allowed
         if (direction.y) {
-          // Determine if frontier is above or below element
-          if (frontierBottom <= currentElementTop) {
+          if (frontierTop <= currentElementTop) {
             // Frontier is above element - constrains visible area from the top
             const frontierBottomViewport = frontierRect.bottom;
             if (frontierBottomViewport > visibleAreaTop) {
