@@ -794,66 +794,24 @@ export const createDragGesture = ({
       // Sticky frontiers always reduce visible area - z-index handles visual layering when elements go behind frontiers
       const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
       for (const stickyFrontier of stickyFrontiers) {
-        const frontierRectViewport = getElementBounds(
-          stickyFrontier,
-          scrollableParent,
-        );
+        const frontierRect = getElementBounds(stickyFrontier, scrollableParent);
 
-        // Convert frontier bounds from viewport coordinates to positioned parent relative coordinates
-        // This ensures consistency with the rest of the constraint system
-        const positionedParentRect = positionedParent.getBoundingClientRect();
-        const frontierRect = {
-          left: frontierRectViewport.left - positionedParentRect.left,
-          top: frontierRectViewport.top - positionedParentRect.top,
-          right: frontierRectViewport.right - positionedParentRect.left,
-          bottom: frontierRectViewport.bottom - positionedParentRect.top,
-        };
-
-        // Convert visible area from viewport coordinates to positioned parent relative coordinates for comparison
-        const visibleAreaLeftRelative =
-          visibleAreaLeft - positionedParentRect.left;
-        const visibleAreaRightRelative =
-          visibleAreaRight - positionedParentRect.left;
-        const visibleAreaTopRelative =
-          visibleAreaTop - positionedParentRect.top;
-        const visibleAreaBottomRelative =
-          visibleAreaBottom - positionedParentRect.top;
-
-        // Determine which edge this sticky frontier affects based on its position (now in consistent coordinates)
+        // Determine which edge this sticky frontier affects based on its position
         // Left edge: if sticky frontier is positioned at or near the left edge
-        if (Math.abs(frontierRect.left - visibleAreaLeftRelative) < 10) {
-          const newVisibleAreaLeftRelative = Math.max(
-            visibleAreaLeftRelative,
-            frontierRect.right,
-          );
-          visibleAreaLeft =
-            positionedParentRect.left + newVisibleAreaLeftRelative;
+        if (Math.abs(frontierRect.left - visibleAreaLeft) < 10) {
+          visibleAreaLeft = Math.max(visibleAreaLeft, frontierRect.right);
         }
         // Right edge: if sticky frontier is positioned at or near the right edge
-        if (Math.abs(frontierRect.right - visibleAreaRightRelative) < 10) {
-          const newVisibleAreaRightRelative = Math.min(
-            visibleAreaRightRelative,
-            frontierRect.left,
-          );
-          visibleAreaRight =
-            positionedParentRect.left + newVisibleAreaRightRelative;
+        if (Math.abs(frontierRect.right - visibleAreaRight) < 10) {
+          visibleAreaRight = Math.min(visibleAreaRight, frontierRect.left);
         }
         // Top edge: if sticky frontier is positioned at or near the top edge
-        if (Math.abs(frontierRect.top - visibleAreaTopRelative) < 10) {
-          const newVisibleAreaTopRelative = Math.max(
-            visibleAreaTopRelative,
-            frontierRect.bottom,
-          );
-          visibleAreaTop = positionedParentRect.top + newVisibleAreaTopRelative;
+        if (Math.abs(frontierRect.top - visibleAreaTop) < 10) {
+          visibleAreaTop = Math.max(visibleAreaTop, frontierRect.bottom);
         }
         // Bottom edge: if sticky frontier is positioned at or near the bottom edge
-        if (Math.abs(frontierRect.bottom - visibleAreaBottomRelative) < 10) {
-          const newVisibleAreaBottomRelative = Math.min(
-            visibleAreaBottomRelative,
-            frontierRect.top,
-          );
-          visibleAreaBottom =
-            positionedParentRect.top + newVisibleAreaBottomRelative;
+        if (Math.abs(frontierRect.bottom - visibleAreaBottom) < 10) {
+          visibleAreaBottom = Math.min(visibleAreaBottom, frontierRect.top);
         }
       }
 
