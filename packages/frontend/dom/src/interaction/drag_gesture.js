@@ -772,22 +772,22 @@ export const createDragGesture = ({
         const originalVisibleAreaTop = visibleAreaTop;
         const originalVisibleAreaBottom = visibleAreaBottom;
 
-        // Determine which edge this sticky frontier affects based on its position
-        // Left edge: if sticky frontier is positioned at or near the left edge
-        if (Math.abs(frontierRect.left - visibleAreaLeft) < 10) {
-          visibleAreaLeft = Math.max(visibleAreaLeft, frontierRect.right);
+        // Check each side of the sticky frontier and use it if it's more restrictive
+        // Left side: if frontier's right edge reduces the visible area from the left
+        if (frontierRect.right > visibleAreaLeft) {
+          visibleAreaLeft = frontierRect.right;
         }
-        // Right edge: if sticky frontier is positioned at or near the right edge
-        if (Math.abs(frontierRect.right - visibleAreaRight) < 10) {
-          visibleAreaRight = Math.min(visibleAreaRight, frontierRect.left);
+        // Right side: if frontier's left edge reduces the visible area from the right
+        if (frontierRect.left < visibleAreaRight) {
+          visibleAreaRight = frontierRect.left;
         }
-        // Top edge: if sticky frontier is positioned at or near the top edge
-        if (Math.abs(frontierRect.top - visibleAreaTop) < 10) {
-          visibleAreaTop = Math.max(visibleAreaTop, frontierRect.bottom);
+        // Top side: if frontier's bottom edge reduces the visible area from the top
+        if (frontierRect.bottom > visibleAreaTop) {
+          visibleAreaTop = frontierRect.bottom;
         }
-        // Bottom edge: if sticky frontier is positioned at or near the bottom edge
-        if (Math.abs(frontierRect.bottom - visibleAreaBottom) < 10) {
-          visibleAreaBottom = Math.min(visibleAreaBottom, frontierRect.top);
+        // Bottom side: if frontier's top edge reduces the visible area from the bottom
+        if (frontierRect.top < visibleAreaBottom) {
+          visibleAreaBottom = frontierRect.top;
         }
 
         // Debug warnings for invalid visible areas caused by this specific frontier
