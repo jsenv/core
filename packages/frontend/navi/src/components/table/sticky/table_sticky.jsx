@@ -269,8 +269,29 @@ const initMoveColumnStickyFrontierByMousedown = (
       const ghostRect = tableColumnStickyFrontierGhost.getBoundingClientRect();
       const ghostCenterX = ghostRect.left + ghostRect.width / 2;
 
+      const onGhostHoverColumn = (targetColumnIndex) => {
+        if (targetColumnIndex === columnIndex) {
+          tableColumnStickyFrontierPreview.removeAttribute("data-visible");
+          return;
+        }
+        let previewPosition;
+        if (targetColumnIndex === -1) {
+          previewPosition = 0;
+        } else {
+          const colElement = colElements[targetColumnIndex];
+          const columnRect = colElement.getBoundingClientRect();
+          const tableContainerRect = tableContainer.getBoundingClientRect();
+          previewPosition = columnRect.right - tableContainerRect.left;
+        }
+
+        tableColumnStickyFrontierPreview.style.setProperty(
+          "--table-column-preview-right",
+          `${previewPosition}px`,
+        );
+        tableColumnStickyFrontierPreview.setAttribute("data-visible", "");
+      };
+
       // Find which column the ghost is currently over
-      let targetColumnIndex = -1;
       ghost_over_target: {
         let i = 0;
         for (; i < colElements.length; i++) {
@@ -285,36 +306,15 @@ const initMoveColumnStickyFrontierByMousedown = (
           // on the column, left or right side?
           const columnCenterX = columnRect.left + columnRect.width / 2;
           if (ghostCenterX < columnCenterX) {
-            targetColumnIndex = i - 1;
-            // targetSide = "left";
-          } else {
-            targetColumnIndex = i;
-            // targetSide = "right";
+            onGhostHoverColumn(i - 1);
+            break ghost_over_target;
           }
+          onGhostHoverColumn(i);
+          break ghost_over_target;
         }
       }
 
       // Show or hide the preview based on the position
-      if (targetColumnIndex === columnIndex) {
-        tableColumnStickyFrontierPreview.removeAttribute("data-visible");
-      } else {
-        let previewPosition;
-        if (targetColumnIndex === -1) {
-          previewPosition = 0;
-        } else {
-          const tableContainerRect = tableContainer.getBoundingClientRect();
-          const columnElement = colElements[targetColumnIndex];
-          previewPosition =
-            columnElement.getBoundingClientRect().right -
-            tableContainerRect.left;
-        }
-        tableColumnStickyFrontierPreview.style.setProperty(
-          "--table-column-preview-right",
-          `${previewPosition}px`,
-        );
-        tableColumnStickyFrontierPreview.setAttribute("data-visible", "");
-      }
-
       onDrag?.(gesture);
     },
     onRelease,
