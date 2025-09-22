@@ -194,6 +194,11 @@ import.meta.css = /* css */ `
   }
   .navi_table_column_sticky_frontier_preview {
     background: red;
+    left: calc(
+      var(--table-column-preview-right, 0px) - var(
+          --column-sticky-frontier-width
+        )
+    );
   }
 `;
 
@@ -226,12 +231,6 @@ export const TableColumnStickyFrontierPreview = () => {
   return <div className="navi_table_column_sticky_frontier_preview"></div>;
 };
 
-// TODO: we'll move the frontier
-// we need to
-// inject an element into the table to be able to move it because our
-// line is actually inside every <td>,<th>
-// It must be at the right left position. I guess in absolute.
-// This element will have a 0.5 opacity
 // When we cross half the width of a column we inject a second vertical line where the new frontier would be
 // to tell user "hey if you grab here, the frontier will be there"
 // At this stage user can see 3 frontiers. Where it is, the one he grab, the futurue one if he releases.
@@ -240,25 +239,44 @@ const initMoveColumnStickyFrontierByMousedown = (
   { onGrab, onDrag, onRelease },
 ) => {
   const tableCell = mousedownEvent.target.closest("th,td");
-  const tableContainer = tableCell.closest(".navi_table_container");
+  const table = tableCell.closest("table");
+  const tableContainer = table.closest(".navi_table_container");
   const tableCellRect = tableCell.getBoundingClientRect();
   const tableContainerRect = tableContainer.getBoundingClientRect();
   const columnLeftRelative = tableCellRect.left - tableContainerRect.left;
   const columnRightRelative = columnLeftRelative + tableCellRect.width;
 
-  const dragToMoveGesture = createDragToMoveGesture({
-    name: "move-column-sticky-frontier",
-    direction: { x: true },
-    keepMarkersOnRelease: true,
-    backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
-    onGrab,
-    onDrag,
-    onRelease,
-  });
-
   const tableColumnStickyFrontierGhost = tableContainer.querySelector(
     ".navi_table_column_sticky_frontier_ghost",
   );
+  const tableColumnStickyFrontierPreview = tableContainer.querySelector(
+    ".navi_table_column_sticky_frontier_preview",
+  );
+
+  const colgroup = table.querySelector("colgroup");
+  const columnIndex = Array.from(tableCell.closest("tr").children).indexOf(
+    tableCell,
+  );
+  const currentCol = colgroup.children[columnIndex];
+  const dragToMoveGesture = createDragToMoveGesture({
+    name: "move-column-sticky-frontier",
+    direction: { x: true },
+    // keepMarkersOnRelease: true,
+    backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
+    onGrab,
+    onDrag: (gesture) => {
+      const left = tableColumnStickyFrontierGhost.getBoundingClientRect().left;
+      // if he is left on side of a <col> -> we show the preview on that <col> (except if it's already on that column, here we would hide the preview)
+      // same if on the right side of a column
+      // we can use colgroup
+      onDrag?.(gesture);
+    },
+    onRelease,
+  });
+  dragToMoveGesture.addTeardown(() => {
+    tableColumnStickyFrontierPreview.removeAttribute("data-visible");
+  });
+
   tableColumnStickyFrontierGhost.style.setProperty(
     "--table-column-right",
     `${columnRightRelative}px`,
