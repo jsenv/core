@@ -254,10 +254,11 @@ const initMoveColumnStickyFrontierByMousedown = (
   );
 
   const colgroup = table.querySelector("colgroup");
+  const colElements = Array.from(colgroup.children);
   const columnIndex = Array.from(tableCell.closest("tr").children).indexOf(
     tableCell,
   );
-  const currentCol = colgroup.children[columnIndex];
+
   const dragToMoveGesture = createDragToMoveGesture({
     name: "move-column-sticky-frontier",
     direction: { x: true },
@@ -265,16 +266,64 @@ const initMoveColumnStickyFrontierByMousedown = (
     backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
     onGrab,
     onDrag: (gesture) => {
-      const left = tableColumnStickyFrontierGhost.getBoundingClientRect().left;
-      // if he is left on side of a <col> -> we show the preview on that <col> (except if it's already on that column, here we would hide the preview)
-      // same if on the right side of a column
-      // we can use colgroup
+      const ghostRect = tableColumnStickyFrontierGhost.getBoundingClientRect();
+      const ghostCenterX = ghostRect.left + ghostRect.width / 2;
+
+      // Find which column the ghost is currently over
+      let targetColumnIndex = -1;
+      ghost_over_target: {
+        let i = 0;
+        for (; i < colElements.length; i++) {
+          const colElement = colElements[i];
+          const columnRect = colElement.getBoundingClientRect();
+          if (ghostCenterX < columnRect.left) {
+            continue;
+          }
+          if (ghostCenterX > columnRect.right) {
+            continue;
+          }
+          // on the column, left or right side?
+          const columnCenterX = columnRect.left + columnRect.width / 2;
+          if (ghostCenterX < columnCenterX) {
+            targetColumnIndex = i - 1;
+            // targetSide = "left";
+          } else {
+            targetColumnIndex = i;
+            // targetSide = "right";
+          }
+        }
+      }
+
+      // Show or hide the preview based on the position
+      if (targetColumnIndex === columnIndex) {
+        tableColumnStickyFrontierPreview.removeAttribute("data-visible");
+      } else {
+        let previewPosition;
+        if (targetColumnIndex === -1) {
+          previewPosition = 0;
+        } else {
+          const tableContainerRect = tableContainer.getBoundingClientRect();
+          const columnElement = colElements[targetColumnIndex];
+          previewPosition =
+            columnElement.getBoundingClientRect().right -
+            tableContainerRect.left;
+        }
+        tableColumnStickyFrontierPreview.style.setProperty(
+          "--table-column-preview-right",
+          `${previewPosition}px`,
+        );
+        tableColumnStickyFrontierPreview.setAttribute("data-visible", "");
+      }
+
       onDrag?.(gesture);
     },
     onRelease,
   });
   dragToMoveGesture.addTeardown(() => {
     tableColumnStickyFrontierPreview.removeAttribute("data-visible");
+    tableColumnStickyFrontierPreview.style.removeProperty(
+      "--table-column-preview-right",
+    );
   });
 
   tableColumnStickyFrontierGhost.style.setProperty(

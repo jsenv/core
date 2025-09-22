@@ -64,13 +64,6 @@ export const createDragToMoveGesture = (options) => {
                 const scrollAmountNeeded =
                   visibleAreaStart - desiredElementStart;
                 const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
-                console.log({
-                  currentScroll,
-                  scrollAmountNeeded,
-                  scroll,
-                  visibleAreaStart,
-                  desiredElementStart,
-                });
                 scrollableParent[scrollProperty] = scroll;
               }
             }
