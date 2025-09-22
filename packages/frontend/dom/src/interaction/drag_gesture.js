@@ -578,7 +578,7 @@ export const createDragGesture = ({
       // Create markers for sticky frontiers
       const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
       stickyFrontiers.forEach((frontier, index) => {
-        const frontierBounds = getElementBounds(frontier, scrollableParent);
+        const frontierBounds = getElementBounds(frontier, positionedParent);
 
         const frontierMarker = createStickyFrontierMarker(
           `Sticky Frontier ${index + 1}`,
@@ -735,6 +735,7 @@ export const createDragGesture = ({
           elementWidth: currentElementWidth,
           elementHeight: currentElementHeight,
           dragName: name,
+          positionedParent,
         });
       }
 
@@ -763,7 +764,7 @@ export const createDragGesture = ({
         sticky: true,
       });
       for (const stickyObstacle of stickyObstacles) {
-        const stickyRect = getElementBounds(stickyObstacle, scrollableParent);
+        const stickyRect = getElementBounds(stickyObstacle, positionedParent);
 
         // Determine which edge this sticky obstacle affects based on its position
         // Left edge: if sticky element is positioned at or near the left edge
@@ -788,7 +789,7 @@ export const createDragGesture = ({
       // Sticky frontiers trigger scroll when encountered but allow movement beyond when scroll is exhausted
       const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
       for (const stickyFrontier of stickyFrontiers) {
-        const frontierRect = getElementBounds(stickyFrontier, scrollableParent);
+        const frontierRect = getElementBounds(stickyFrontier, positionedParent);
 
         // Check if scrolling is still possible in each direction
         const canScrollLeft = scrollableParent.scrollLeft > 0;
@@ -1128,7 +1129,7 @@ const getPositionedParent = (element) => {
  * @param {HTMLElement} scrollableParent - The scrollable parent for coordinate conversion
  * @returns {Object} Bounds object with left, top, right, bottom properties
  */
-const getElementBounds = (element, scrollableParent) => {
+const getElementBounds = (element, positionedParent) => {
   const rect = element.getBoundingClientRect();
   const isHorizontallySticky = element.hasAttribute("data-sticky-x");
   const isVerticallySticky = element.hasAttribute("data-sticky-y");
@@ -1148,15 +1149,15 @@ const getElementBounds = (element, scrollableParent) => {
   // handle vritually sticky obstacles (<col> or <tr>)
   // are not really sticky but should be handled as such
   let left = rect.left;
-  const scrollableRect = scrollableParent.getBoundingClientRect();
+  const parentRect = positionedParent.getBoundingClientRect();
   if (isHorizontallySticky) {
     const stickyLeft = parseFloat(computedStyle.left) || 0;
-    left = scrollableRect.left + stickyLeft;
+    left = parentRect.left + stickyLeft;
   }
   let top = rect.top;
   if (isVerticallySticky) {
     const stickyTop = parseFloat(computedStyle.top) || 0;
-    top = scrollableRect.top + stickyTop;
+    top = parentRect.top + stickyTop;
   }
   return {
     sticky: true,
@@ -1238,7 +1239,7 @@ const createScrollableAreaConstraint = (
 // Function to create constraint that respects solid obstacles
 const createObstacleConstraint = (obstacle, positionedParent) => {
   return () => {
-    const obstacleBounds = getElementBounds(obstacle);
+    const obstacleBounds = getElementBounds(obstacle, positionedParent);
     if (obstacleBounds.sticky) {
       // Note: For sticky obstacles, left/top are already relative to positioned parent
       // since they come from getComputedStyle or are explicitly configured relative values
@@ -1274,7 +1275,7 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
  */
 const validateConstraints = (
   constraints,
-  { elementWidth, elementHeight, dragName },
+  { elementWidth, elementHeight, dragName, positionedParent },
 ) => {
   const boundsConstraints = constraints.filter((c) => c.type === "bounds");
   const obstacleConstraints = constraints.filter((c) => c.type === "obstacle");
@@ -1381,7 +1382,7 @@ const validateConstraints = (
           frontiers: stickyFrontiers.map((f, i) => ({
             index: i,
             element: f,
-            bounds: getElementBounds(f),
+            bounds: getElementBounds(f, positionedParent),
           })),
         },
       );
