@@ -407,17 +407,17 @@ export const Table = forwardRef((props, ref) => {
                 ref.current.selectAll();
               }}
             />
-            {columns.map((col, index) => {
-              const columnIsGrabbed = grabTarget === `column:${index}`;
+            {columns.map((col, colIndex) => {
+              const columnIsGrabbed = grabTarget === `column:${colIndex}`;
               // const isLastColumn = index === columns.length - 1;
 
               return (
                 <HeaderCell
                   stickyX={col.sticky}
                   stickyY={firsRowIsSticky}
-                  isStickyXFrontier={index + 1 === columnStickyFrontierIndex}
+                  isStickyXFrontier={colIndex + 1 === columnStickyFrontierIndex}
                   isAfterStickyXFrontier={
-                    index + 1 === columnStickyFrontierIndex + 1
+                    colIndex + 1 === columnStickyFrontierIndex + 1
                   }
                   isStickyYFrontier={rowStickyFrontierIndex === 0} // Header row is always the frontier (no rows above it)
                   isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
@@ -425,7 +425,7 @@ export const Table = forwardRef((props, ref) => {
                   onColumnStickyFrontierChange={onColumnStickyFrontierChange}
                   key={col.id}
                   columnAccessorKey={col.accessorKey}
-                  columnIndex={index + 1}
+                  columnIndex={colIndex + 1}
                   columnWithSomeSelectedCell={columnWithSomeSelectedCell}
                   data={data}
                   selectionController={selectionController}
@@ -435,10 +435,10 @@ export const Table = forwardRef((props, ref) => {
                   columnMinWidth={col.minWidth}
                   columnMaxWidth={col.maxWidth}
                   onGrab={() => {
-                    grabColumn(index);
+                    grabColumn(colIndex);
                   }}
                   onRelease={() => {
-                    releaseColumn(index);
+                    releaseColumn(colIndex);
                   }}
                   onGrabResizeHandle={(resizeInfo, columnIndex) => {
                     grabColumnResizeHandle(columnIndex, resizeInfo);
