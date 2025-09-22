@@ -159,22 +159,25 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--border-color);
   }
 
+  .navi_table_container {
+    --column-sticky-frontier-width: 5px;
+  }
+
   .navi_table_column_sticky_frontier {
     position: absolute;
     right: 0;
     top: 0;
     bottom: 0;
-    width: 5px;
+    width: var(--column-sticky-frontier-width);
     background: #444746;
     cursor: grab;
   }
   .navi_table_column_sticky_frontier_ghost,
   .navi_table_column_sticky_frontier_preview {
     position: absolute;
-    right: 0;
     top: 0;
     bottom: 0;
-    width: 5px;
+    width: var(--column-sticky-frontier-width);
     pointer-events: none;
     opacity: 0;
     z-index: ${Z_INDEX_STICKY_FRONTIER};
@@ -185,7 +188,9 @@ import.meta.css = /* css */ `
   }
   .navi_table_column_sticky_frontier_ghost {
     background: rgba(68, 71, 70, 0.5);
-    left: var(--table-column-right, 0);
+    left: calc(
+      var(--table-column-right, 0px) - var(--column-sticky-frontier-width)
+    );
   }
   .navi_table_column_sticky_frontier_preview {
     background: red;

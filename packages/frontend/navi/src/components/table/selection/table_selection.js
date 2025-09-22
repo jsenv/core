@@ -2,7 +2,11 @@ import { useLayoutEffect, useMemo } from "preact/hooks";
 import { useSelectionController } from "../../selection/selection.jsx";
 
 import.meta.css = /* css */ `
-  /* Selection */
+  .navi_table_container {
+    --selection-border-color: #0078d4;
+    --selection-background-color: #eaf1fd;
+  }
+
   .navi_table th[aria-selected="true"],
   .navi_table td[aria-selected="true"] {
     background-color: var(--selection-background-color);

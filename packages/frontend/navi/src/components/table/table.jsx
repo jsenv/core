@@ -94,9 +94,7 @@ import { TableCell } from "./table_cell.jsx";
 import.meta.css = /* css */ `
   .navi_table_container {
     --border-color: #e1e1e1;
-    --selection-border-color: #0078d4;
     --focus-border-color: #0078d4;
-    --selection-background-color: #eaf1fd;
 
     position: relative;
   }
