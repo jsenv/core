@@ -179,6 +179,10 @@ import.meta.css = /* css */ `
     opacity: 0;
     z-index: ${Z_INDEX_STICKY_FRONTIER};
   }
+  .navi_table_column_sticky_frontier_ghost[data-visible],
+  .navi_table_column_sticky_frontier_preview[data-visible] {
+    opacity: 1;
+  }
   .navi_table_column_sticky_frontier_ghost {
     background: rgba(68, 71, 70, 0.5);
     left: var(--table-column-right, 0);

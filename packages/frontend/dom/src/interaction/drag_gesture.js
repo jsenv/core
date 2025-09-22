@@ -1054,7 +1054,7 @@ const createScrollableAreaConstraint = (
     let right;
     if (elementWidth >= scrollWidth) {
       // Element fills or exceeds container width - constraint to left edge only
-      right = 0;
+      right = scrollWidth;
     } else {
       // Normal case: element can move within available space
       right = scrollWidth - elementWidth;
@@ -1065,7 +1065,7 @@ const createScrollableAreaConstraint = (
     let bottom;
     if (elementHeight >= scrollHeight) {
       // Element fills or exceeds container height - constraint to top edge only
-      bottom = 0;
+      bottom = scrollHeight;
     } else {
       // Normal case: element can move within available space
       bottom = scrollHeight - elementHeight;
