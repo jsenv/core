@@ -144,6 +144,7 @@ export const initDragTableColumnByMousedown = (
       onGrab,
       onDrag,
       onRelease,
+      keepMarkersOnRelease: true,
     });
 
     const colgroupClone = tableClone.querySelector("colgroup");

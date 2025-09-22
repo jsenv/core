@@ -762,34 +762,6 @@ export const createDragGesture = ({
         );
       }
 
-      // Auto-detect sticky obstacles within scrollable parent and reduce visible area accordingly
-      // This automatically handles sticky columns/rows by detecting their position and adjusting scroll boundaries
-      const stickyObstacles = queryObstacles(scrollableParent, {
-        name,
-        sticky: true,
-      });
-      for (const stickyObstacle of stickyObstacles) {
-        const stickyRect = getElementBounds(stickyObstacle, scrollableParent);
-
-        // Determine which edge this sticky obstacle affects based on its position
-        // Left edge: if sticky element is positioned at or near the left edge
-        if (Math.abs(stickyRect.left - visibleAreaLeft) < 10) {
-          visibleAreaLeft = Math.max(visibleAreaLeft, stickyRect.right);
-        }
-        // Right edge: if sticky element is positioned at or near the right edge
-        if (Math.abs(stickyRect.right - visibleAreaRight) < 10) {
-          visibleAreaRight = Math.min(visibleAreaRight, stickyRect.left);
-        }
-        // Top edge: if sticky element is positioned at or near the top edge
-        if (Math.abs(stickyRect.top - visibleAreaTop) < 10) {
-          visibleAreaTop = Math.max(visibleAreaTop, stickyRect.bottom);
-        }
-        // Bottom edge: if sticky element is positioned at or near the bottom edge
-        if (Math.abs(stickyRect.bottom - visibleAreaBottom) < 10) {
-          visibleAreaBottom = Math.min(visibleAreaBottom, stickyRect.top);
-        }
-      }
-
       // Auto-detect sticky frontiers within scrollable parent and reduce visible area accordingly
       // Sticky frontiers always reduce visible area - z-index handles visual layering when elements go behind frontiers
       const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
