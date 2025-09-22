@@ -772,22 +772,56 @@ export const createDragGesture = ({
         const originalVisibleAreaTop = visibleAreaTop;
         const originalVisibleAreaBottom = visibleAreaBottom;
 
-        // Check each side of the sticky frontier and use it if it's more restrictive
-        // Left side: if frontier's right edge reduces the visible area from the left
-        if (frontierRect.right > visibleAreaLeft) {
-          visibleAreaLeft = frontierRect.right;
+        // Determine which side of the frontier the element is on to decide how it constrains visible area
+        // Only apply constraints for movement directions that are allowed
+
+        // Get current element position (including current movement)
+        const currentElementLeft = initialLeft + (gestureInfo.xMove || 0);
+        const currentElementRight = currentElementLeft + currentElementWidth;
+        const currentElementTop = initialTop + (gestureInfo.yMove || 0);
+        const currentElementBottom = currentElementTop + currentElementHeight;
+
+        // Convert frontier to positioned parent coordinates for comparison
+        const positionedParentRect = positionedParent.getBoundingClientRect();
+        const frontierLeft = frontierRect.left - positionedParentRect.left;
+        const frontierRight = frontierRect.right - positionedParentRect.left;
+        const frontierTop = frontierRect.top - positionedParentRect.top;
+        const frontierBottom = frontierRect.bottom - positionedParentRect.top;
+
+        // Apply horizontal constraints only if horizontal movement is allowed
+        if (direction.x) {
+          // Determine if frontier is to the left or right of element
+          if (frontierRight <= currentElementLeft) {
+            // Frontier is to the left of element - constrains visible area from the left
+            const frontierRightViewport = frontierRect.right;
+            if (frontierRightViewport > visibleAreaLeft) {
+              visibleAreaLeft = frontierRightViewport;
+            }
+          } else if (frontierLeft >= currentElementRight) {
+            // Frontier is to the right of element - constrains visible area from the right
+            const frontierLeftViewport = frontierRect.left;
+            if (frontierLeftViewport < visibleAreaRight) {
+              visibleAreaRight = frontierLeftViewport;
+            }
+          }
         }
-        // Right side: if frontier's left edge reduces the visible area from the right
-        if (frontierRect.left < visibleAreaRight) {
-          visibleAreaRight = frontierRect.left;
-        }
-        // Top side: if frontier's bottom edge reduces the visible area from the top
-        if (frontierRect.bottom > visibleAreaTop) {
-          visibleAreaTop = frontierRect.bottom;
-        }
-        // Bottom side: if frontier's top edge reduces the visible area from the bottom
-        if (frontierRect.top < visibleAreaBottom) {
-          visibleAreaBottom = frontierRect.top;
+
+        // Apply vertical constraints only if vertical movement is allowed
+        if (direction.y) {
+          // Determine if frontier is above or below element
+          if (frontierBottom <= currentElementTop) {
+            // Frontier is above element - constrains visible area from the top
+            const frontierBottomViewport = frontierRect.bottom;
+            if (frontierBottomViewport > visibleAreaTop) {
+              visibleAreaTop = frontierBottomViewport;
+            }
+          } else if (frontierTop >= currentElementBottom) {
+            // Frontier is below element - constrains visible area from the bottom
+            const frontierTopViewport = frontierRect.top;
+            if (frontierTopViewport < visibleAreaBottom) {
+              visibleAreaBottom = frontierTopViewport;
+            }
+          }
         }
 
         // Debug warnings for invalid visible areas caused by this specific frontier
