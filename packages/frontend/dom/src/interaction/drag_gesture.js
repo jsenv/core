@@ -748,20 +748,23 @@ export const createDragGesture = ({
         scrollableParent,
         { name, positionedParent },
       );
-      const stickyFrontierObjects = [
-        ...(direction.x
-          ? createHorizontalStickyFrontiersFromQuerySelector(scrollableParent, {
-              name,
-              scrollableParent,
-            })
-          : []),
-        ...(direction.y
-          ? createVerticalStickyFrontiersFromQuerySelector(scrollableParent, {
-              name,
-              scrollableParent,
-            })
-          : []),
-      ];
+      const stickyFrontierObjects = [];
+      if (direction.x) {
+        const horizontalFrontiers =
+          createHorizontalStickyFrontiersFromQuerySelector(scrollableParent, {
+            name,
+            scrollableParent,
+          });
+        stickyFrontierObjects.push(...horizontalFrontiers);
+      }
+      if (direction.y) {
+        const verticalFrontiers =
+          createVerticalStickyFrontiersFromQuerySelector(scrollableParent, {
+            name,
+            scrollableParent,
+          });
+        stickyFrontierObjects.push(...verticalFrontiers);
+      }
 
       // Development safeguards: detect impossible/illogical constraints
       if (import.meta.dev) {
@@ -1133,99 +1136,51 @@ const createStickyFrontierOnAxis = (
   element,
   { name, scrollableParent, primarySide, oppositeSide },
 ) => {
-  const primaryFrontiers = element.querySelectorAll(
-    `[data-drag-sticky-frontier-${primarySide}]`,
-  );
-  const oppositeFrontiers = element.querySelectorAll(
-    `[data-drag-sticky-frontier-${oppositeSide}]`,
+  const primaryAttrName = `data-drag-sticky-frontier-${primarySide}`;
+  const oppositeAttrName = `data-drag-sticky-frontier-${oppositeSide}`;
+  const frontiers = element.querySelectorAll(
+    `[${primaryAttrName}], [${oppositeAttrName}]`,
   );
   const matchingStickyFrontiers = [];
-
-  // Process primary side frontiers
-  for (const frontier of primaryFrontiers) {
+  for (const frontier of frontiers) {
     if (frontier.closest("[data-drag-ignore]")) {
       continue;
     }
-
+    const hasPrimary = frontier.hasAttribute(primaryAttrName);
+    const hasOpposite = frontier.hasAttribute(oppositeAttrName);
     // Check if element has both sides (invalid)
-    if (frontier.hasAttribute(`data-drag-sticky-frontier-${oppositeSide}`)) {
+    if (hasPrimary && hasOpposite) {
       const elementSelector = getElementSelector(frontier);
       console.warn(
-        `Sticky frontier element (${elementSelector}) has both ${primarySide} and ${oppositeSide} attributes. ` +
-          `A sticky frontier should only have one side attribute. Using ${primarySide} side.`,
+        `Sticky frontier element (${elementSelector}) has both ${primarySide} and ${oppositeSide} attributes. 
+  A sticky frontier should only have one side attribute.`,
       );
+      continue;
     }
-
-    const attributeValue = frontier.getAttribute(
-      `data-drag-sticky-frontier-${primarySide}`,
-    );
-    let isMatching = false;
-
+    const attrName = hasPrimary ? primaryAttrName : oppositeAttrName;
+    const attributeValue = frontier.getAttribute(attrName);
     if (attributeValue && name) {
       const frontierNames = attributeValue.split(",");
-      isMatching = frontierNames.some(
+      const isMatching = frontierNames.some(
         (frontierName) =>
           frontierName.trim().toLowerCase() === name.toLowerCase(),
       );
-    } else if (!name) {
-      isMatching = true;
+      if (!isMatching) {
+        continue;
+      }
     }
-
-    if (isMatching) {
-      const frontierBounds = getElementBounds(frontier, scrollableParent);
-      const stickyFrontierObject = {
-        type: "sticky-frontier",
-        element: frontier,
-        sides: primarySide,
-        bounds: frontierBounds,
-        name: `Sticky Frontier (${getElementSelector(frontier)}) - side: ${primarySide}`,
-      };
-      matchingStickyFrontiers.push(stickyFrontierObject);
-    }
+    const frontierBounds = getElementBounds(frontier, scrollableParent);
+    const stickyFrontierObject = {
+      type: "sticky-frontier",
+      element: frontier,
+      sides: primarySide,
+      bounds: frontierBounds,
+      name: `Sticky Frontier (${getElementSelector(frontier)}) - side: ${primarySide}`,
+    };
+    matchingStickyFrontiers.push(stickyFrontierObject);
   }
-
-  // Process opposite side frontiers (skip if already processed as primary)
-  for (const frontier of oppositeFrontiers) {
-    if (frontier.closest("[data-drag-ignore]")) {
-      continue;
-    }
-
-    // Skip if already processed as primary frontier
-    if (frontier.hasAttribute(`data-drag-sticky-frontier-${primarySide}`)) {
-      continue;
-    }
-
-    const attributeValue = frontier.getAttribute(
-      `data-drag-sticky-frontier-${oppositeSide}`,
-    );
-    let isMatching = false;
-
-    if (attributeValue && name) {
-      const frontierNames = attributeValue.split(",");
-      isMatching = frontierNames.some(
-        (frontierName) =>
-          frontierName.trim().toLowerCase() === name.toLowerCase(),
-      );
-    } else if (!name) {
-      isMatching = true;
-    }
-
-    if (isMatching) {
-      const frontierBounds = getElementBounds(frontier, scrollableParent);
-      const stickyFrontierObject = {
-        type: "sticky-frontier",
-        element: frontier,
-        sides: oppositeSide,
-        bounds: frontierBounds,
-        name: `Sticky Frontier (${getElementSelector(frontier)}) - side: ${oppositeSide}`,
-      };
-      matchingStickyFrontiers.push(stickyFrontierObject);
-    }
-  }
-
   return matchingStickyFrontiers;
 };
-
 const createHorizontalStickyFrontiersFromQuerySelector = (
   element,
   { name, scrollableParent },
@@ -1237,7 +1192,6 @@ const createHorizontalStickyFrontiersFromQuerySelector = (
     oppositeSide: "right",
   });
 };
-
 const createVerticalStickyFrontiersFromQuerySelector = (
   element,
   { name, scrollableParent },
