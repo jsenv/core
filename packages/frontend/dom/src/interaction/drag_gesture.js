@@ -492,43 +492,47 @@ export const createDragGesture = ({
       currentDebugMarkers.length = 0;
       currentConstraintMarkers.length = 0;
 
-      // Add visual markers for visible area bounds
-      currentDebugMarkers.push(
-        createDebugMarker({
-          name: "visibleAreaTop",
-          x: 0,
-          y: visibleAreaTop,
-          color: "red",
-          orientation: "horizontal",
-        }),
-      );
-      currentDebugMarkers.push(
-        createDebugMarker({
-          name: "visibleAreaBottom",
-          x: 0,
-          y: visibleAreaBottom,
-          color: "orange",
-          orientation: "horizontal",
-        }),
-      );
-      currentDebugMarkers.push(
-        createDebugMarker({
-          name: "visibleAreaLeft",
-          x: visibleAreaLeft,
-          y: 0,
-          color: "blue",
-          orientation: "vertical",
-        }),
-      );
-      currentDebugMarkers.push(
-        createDebugMarker({
-          name: "visibleAreaRight",
-          x: visibleAreaRight,
-          y: 0,
-          color: "green",
-          orientation: "vertical",
-        }),
-      );
+      // Add visual markers for visible area bounds - only for allowed movement directions
+      if (direction.y) {
+        currentDebugMarkers.push(
+          createDebugMarker({
+            name: "visibleAreaTop",
+            x: 0,
+            y: visibleAreaTop,
+            color: "red",
+            orientation: "horizontal",
+          }),
+        );
+        currentDebugMarkers.push(
+          createDebugMarker({
+            name: "visibleAreaBottom",
+            x: 0,
+            y: visibleAreaBottom,
+            color: "orange",
+            orientation: "horizontal",
+          }),
+        );
+      }
+      if (direction.x) {
+        currentDebugMarkers.push(
+          createDebugMarker({
+            name: "visibleAreaLeft",
+            x: visibleAreaLeft,
+            y: 0,
+            color: "blue",
+            orientation: "vertical",
+          }),
+        );
+        currentDebugMarkers.push(
+          createDebugMarker({
+            name: "visibleAreaRight",
+            x: visibleAreaRight,
+            y: 0,
+            color: "green",
+            orientation: "vertical",
+          }),
+        );
+      }
 
       // Create dynamic constraint markers based on current element size
       const currentPositionedParentRect =
@@ -595,60 +599,65 @@ export const createDragGesture = ({
         }
       });
 
-      // Create bound markers
-      if (leftBound > 0) {
-        const leftBoundViewport = currentPositionedParentRect.left + leftBound;
-        currentConstraintMarkers.push(
-          createDebugMarker({
-            name: "leftBound",
-            x: leftBoundViewport,
-            y: 0,
-            color: "red",
-            orientation: "vertical",
-          }),
-        );
+      // Create bound markers - only for allowed movement directions
+      if (direction.x) {
+        if (leftBound > 0) {
+          const leftBoundViewport =
+            currentPositionedParentRect.left + leftBound;
+          currentConstraintMarkers.push(
+            createDebugMarker({
+              name: "leftBound",
+              x: leftBoundViewport,
+              y: 0,
+              color: "red",
+              orientation: "vertical",
+            }),
+          );
+        }
+        if (rightBound !== Infinity) {
+          // For visual clarity, show rightBound at the right edge of the element
+          // when element is positioned at rightBound (not the left edge position)
+          const rightBoundViewport =
+            currentPositionedParentRect.left + rightBound + elementWidth;
+          currentConstraintMarkers.push(
+            createDebugMarker({
+              name: "rightBound",
+              x: rightBoundViewport,
+              y: 0,
+              color: "red",
+              orientation: "vertical",
+            }),
+          );
+        }
       }
-      if (rightBound !== Infinity) {
-        // For visual clarity, show rightBound at the right edge of the element
-        // when element is positioned at rightBound (not the left edge position)
-        const rightBoundViewport =
-          currentPositionedParentRect.left + rightBound + elementWidth;
-        currentConstraintMarkers.push(
-          createDebugMarker({
-            name: "rightBound",
-            x: rightBoundViewport,
-            y: 0,
-            color: "red",
-            orientation: "vertical",
-          }),
-        );
-      }
-      if (topBound > 0) {
-        const topBoundViewport = currentPositionedParentRect.top + topBound;
-        currentConstraintMarkers.push(
-          createDebugMarker({
-            name: "topBound",
-            x: 0,
-            y: topBoundViewport,
-            color: "red",
-            orientation: "horizontal",
-          }),
-        );
-      }
-      if (bottomBound !== Infinity) {
-        // For visual clarity, show bottomBound at the bottom edge of the element
-        // when element is positioned at bottomBound (not the top edge position)
-        const bottomBoundViewport =
-          currentPositionedParentRect.top + bottomBound + elementHeight;
-        currentConstraintMarkers.push(
-          createDebugMarker({
-            name: "bottomBound",
-            x: 0,
-            y: bottomBoundViewport,
-            color: "red",
-            orientation: "horizontal",
-          }),
-        );
+      if (direction.y) {
+        if (topBound > 0) {
+          const topBoundViewport = currentPositionedParentRect.top + topBound;
+          currentConstraintMarkers.push(
+            createDebugMarker({
+              name: "topBound",
+              x: 0,
+              y: topBoundViewport,
+              color: "red",
+              orientation: "horizontal",
+            }),
+          );
+        }
+        if (bottomBound !== Infinity) {
+          // For visual clarity, show bottomBound at the bottom edge of the element
+          // when element is positioned at bottomBound (not the top edge position)
+          const bottomBoundViewport =
+            currentPositionedParentRect.top + bottomBound + elementHeight;
+          currentConstraintMarkers.push(
+            createDebugMarker({
+              name: "bottomBound",
+              x: 0,
+              y: bottomBoundViewport,
+              color: "red",
+              orientation: "horizontal",
+            }),
+          );
+        }
       }
     };
 
