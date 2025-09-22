@@ -1,6 +1,7 @@
 import {
   Z_INDEX_STICKY_COLUMN,
   Z_INDEX_STICKY_CORNER,
+  Z_INDEX_STICKY_FRONTIER,
   Z_INDEX_STICKY_ROW,
 } from "../z_indexes.js";
 
@@ -165,6 +166,18 @@ import.meta.css = /* css */ `
     background: #444746;
     cursor: grab;
   }
+
+  .navi_table_sticky_column_frontier_ghost {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: rgba(68, 71, 70, 0.5);
+    pointer-events: none;
+    opacity: 0;
+    z-index: ${Z_INDEX_STICKY_FRONTIER};
+  }
 `;
 
 /**
@@ -191,4 +204,7 @@ export const TableStickyColumnFrontierHandle = () => {
       }}
     ></div>
   );
+};
+export const TableStickyColumnFrontierHandleGhost = () => {
+  return <div className="navi_table_sticky_column_frontier_ghost"></div>;
 };
