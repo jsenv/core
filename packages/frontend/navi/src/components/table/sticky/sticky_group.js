@@ -52,24 +52,43 @@ const initStickyGroup = (
   };
 
   const updateTableColumns = () => {
-    // Find all sticky columns by checking the first row
-    const headerRow = element.querySelector("thead tr");
-    if (!headerRow) {
+    // Find all sticky columns by checking all rows to identify which columns have sticky cells
+    const allStickyColumnCells = element.querySelectorAll(
+      "th[data-sticky-x], td[data-sticky-x]",
+    );
+    if (allStickyColumnCells.length === 0) {
       return;
     }
-    const stickyHeaderCells = headerRow.querySelectorAll("th[data-sticky-x]");
-    let cumulativeWidth = 0;
-    stickyHeaderCells.forEach((stickyHeaderCell, index) => {
-      const columnIndex = Array.from(headerRow.children).indexOf(
-        stickyHeaderCell,
-      );
-      const leftPosition = index === 0 ? 0 : cumulativeWidth;
 
-      // Set CSS variable on all cells in this column
-      const columnCells = element.querySelectorAll(
-        `th:nth-child(${columnIndex + 1})[data-sticky-x], td:nth-child(${columnIndex + 1})[data-sticky-x]`,
-      );
-      columnCells.forEach((cell) => {
+    // Get the first row to determine column indices (use any row that exists)
+    const firstRow = element.querySelector("tr");
+    if (!firstRow) {
+      return;
+    }
+
+    // Group sticky cells by column index
+    const stickyColumnsByIndex = new Map();
+    allStickyColumnCells.forEach((cell) => {
+      const row = cell.closest("tr");
+      const columnIndex = Array.from(row.children).indexOf(cell);
+      if (!stickyColumnsByIndex.has(columnIndex)) {
+        stickyColumnsByIndex.set(columnIndex, []);
+      }
+      stickyColumnsByIndex.get(columnIndex).push(cell);
+    });
+
+    // Sort columns by index and process them
+    const sortedColumnIndices = Array.from(stickyColumnsByIndex.keys()).sort(
+      (a, b) => a - b,
+    );
+    let cumulativeWidth = 0;
+
+    sortedColumnIndices.forEach((columnIndex, stickyIndex) => {
+      const cellsInColumn = stickyColumnsByIndex.get(columnIndex);
+      const leftPosition = stickyIndex === 0 ? 0 : cumulativeWidth;
+
+      // Set CSS variable on all sticky cells in this column
+      cellsInColumn.forEach((cell) => {
         cell.style.setProperty(LEFT_CSS_VAR, `${leftPosition}px`);
       });
 
@@ -84,11 +103,12 @@ const initStickyGroup = (
         }
       }
 
-      // Update cumulative width for next column
-      if (index === 0) {
-        cumulativeWidth = stickyHeaderCell.getBoundingClientRect().width;
+      // Update cumulative width for next column using the first cell in this column as reference
+      const referenceCell = cellsInColumn[0];
+      if (stickyIndex === 0) {
+        cumulativeWidth = referenceCell.getBoundingClientRect().width;
       } else {
-        cumulativeWidth += stickyHeaderCell.getBoundingClientRect().width;
+        cumulativeWidth += referenceCell.getBoundingClientRect().width;
       }
     });
 
