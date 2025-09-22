@@ -367,7 +367,7 @@ export const Table = forwardRef((props, ref) => {
         <colgroup>
           <col
             data-sticky-x={firstColIsSticky ? "" : undefined}
-            data-drag-sticky-frontier={firstColIsSticky ? "" : undefined}
+            data-drag-sticky-frontier-left={firstColIsSticky ? "" : undefined}
             data-drag-obstacle="resize-column,move-column"
             style={{ minWidth: "100px" }}
           ></col>
@@ -378,7 +378,7 @@ export const Table = forwardRef((props, ref) => {
               <col
                 key={col.id}
                 data-sticky-x={colIsSticky ? "" : undefined}
-                data-drag-sticky-frontier={colIsSticky ? "" : undefined}
+                data-drag-sticky-frontier-left={colIsSticky ? "" : undefined}
                 data-drag-obstacle={colIsSticky ? "resize-column" : undefined}
                 style={{
                   minWidth: col.width ? `${col.width}px` : undefined,
@@ -391,7 +391,7 @@ export const Table = forwardRef((props, ref) => {
         <thead>
           <tr
             data-sticky-y={firsRowIsSticky ? "" : undefined}
-            data-drag-sticky-frontier={firsRowIsSticky ? "" : undefined}
+            data-drag-sticky-frontier-top={firsRowIsSticky ? "" : undefined}
             data-drag-obstacle="resize-row,move-row"
           >
             <RowNumberHeaderCell
@@ -469,7 +469,9 @@ export const Table = forwardRef((props, ref) => {
                 data-row-id={row.id}
                 aria-selected={isRowSelected}
                 data-sticky-y={rowIsSticky ? "" : undefined}
-                data-drag-sticky-frontier={isStickyYFrontier ? "" : undefined}
+                data-drag-sticky-frontier-top={
+                  isStickyYFrontier ? "" : undefined
+                }
                 data-drag-obstacle={rowIsSticky ? "resize-row" : undefined}
                 style={{
                   height: rowOptions.height
