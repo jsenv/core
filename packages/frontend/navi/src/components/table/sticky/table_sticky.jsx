@@ -222,6 +222,8 @@ export const TableColumnStickyFrontier = ({
         if (!draggable) {
           return;
         }
+        e.preventDefault(); // prevent text selection
+        e.stopPropagation(); // prevent drag column
         initMoveColumnStickyFrontierByMousedown(e, {
           onGrab,
           onDrag,

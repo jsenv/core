@@ -659,6 +659,9 @@ const HeaderCell = ({
         if (!movable || stickyX) {
           return;
         }
+        if (e.button !== 0) {
+          return;
+        }
         initDragTableColumnByMousedown(e, {
           onGrab,
           onDrag,
