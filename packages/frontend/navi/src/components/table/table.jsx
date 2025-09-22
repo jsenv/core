@@ -413,7 +413,7 @@ export const Table = forwardRef((props, ref) => {
 
               return (
                 <HeaderCell
-                  stickyX={col.sticky}
+                  stickyX={colIndex < columnStickyFrontierIndex}
                   stickyY={firsRowIsSticky}
                   isStickyXFrontier={colIndex + 1 === columnStickyFrontierIndex}
                   isAfterStickyXFrontier={
@@ -487,7 +487,7 @@ export const Table = forwardRef((props, ref) => {
               >
                 <RowNumberCell
                   stickyX={firstColIsSticky}
-                  isStickyXFrontier={rowStickyFrontierIndex === 0} // Only if no data columns are sticky
+                  isStickyXFrontier={columnStickyFrontierIndex === 0} // Only if no data columns are sticky
                   isAfterStickyXFrontier={false} // Row number column can't be after sticky X frontier (it's the first column)
                   stickyY={rowIsSticky}
                   isStickyYFrontier={isStickyYFrontier}
