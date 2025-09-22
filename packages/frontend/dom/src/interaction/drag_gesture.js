@@ -17,6 +17,7 @@
  * **Constraint System:**
  * - Bounds constraints: Define rectangular areas elements must stay within
  * - Obstacle constraints: Define rectangular areas elements cannot overlap
+ * - Sticky frontiers: Trigger scrolling when encountered, allow movement beyond when scroll exhausted
  * - Floating point precision handling: Ensures reliable constraint detection
  * - Overlap resolution: Automatic collision detection and resolution
  *
@@ -34,6 +35,12 @@
  * **Usage:**
  * Call `createDragGesture(options)` to create a drag gesture system.
  * Configure constraints, interaction callbacks, visual feedback, and debug options.
+ *
+ * **Sticky Frontiers:**
+ * Elements with `[data-drag-sticky-frontier="dragName"]` create scroll triggers.
+ * When dragging encounters these elements, scrolling is triggered first.
+ * Once scroll is exhausted, dragging can continue beyond the frontier.
+ * This allows smooth scrolling behavior while maintaining drag flexibility.
  */
 
 import { getScrollableParent } from "../scroll.js";
@@ -154,6 +161,27 @@ import.meta.css = /* css */ `
     font-weight: bold;
     color: white;
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
+
+  .navi_sticky_frontier_marker {
+    position: fixed;
+    background-color: purple;
+    opacity: 0.3;
+    z-index: 9999;
+    pointer-events: none;
+    border: 2px dashed purple;
+  }
+
+  .navi_sticky_frontier_marker_label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: purple;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.8);
     pointer-events: none;
   }
 `;
@@ -277,7 +305,7 @@ export const createDragGesture = ({
       // Remove any existing markers from previous gestures
       document
         .querySelectorAll(
-          ".navi_debug_marker, .navi_obstacle_marker, .navi_constraint_feedback_line",
+          ".navi_debug_marker, .navi_obstacle_marker, .navi_sticky_frontier_marker, .navi_constraint_feedback_line",
         )
         .forEach((marker) => marker.remove());
     }
@@ -547,6 +575,24 @@ export const createDragGesture = ({
         }
       });
 
+      // Create markers for sticky frontiers
+      const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
+      stickyFrontiers.forEach((frontier, index) => {
+        const frontierBounds = getElementBounds(frontier, scrollableParent);
+
+        const frontierMarker = createStickyFrontierMarker(
+          `Sticky Frontier ${index + 1}`,
+          frontierBounds.left,
+          frontierBounds.top,
+          frontierBounds.right - frontierBounds.left,
+          frontierBounds.bottom - frontierBounds.top,
+        );
+
+        if (frontierMarker) {
+          currentConstraintMarkers.push(frontierMarker);
+        }
+      });
+
       // Create bound markers
       if (leftBound > 0) {
         const leftBoundViewport = currentPositionedParentRect.left + leftBound;
@@ -735,6 +781,53 @@ export const createDragGesture = ({
         // Bottom edge: if sticky element is positioned at or near the bottom edge
         if (Math.abs(stickyRect.bottom - visibleAreaBottom) < 10) {
           visibleAreaBottom = Math.min(visibleAreaBottom, stickyRect.top);
+        }
+      }
+
+      // Auto-detect sticky frontiers within scrollable parent and reduce visible area accordingly
+      // Sticky frontiers trigger scroll when encountered but allow movement beyond when scroll is exhausted
+      const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
+      for (const stickyFrontier of stickyFrontiers) {
+        const frontierRect = getElementBounds(stickyFrontier, scrollableParent);
+
+        // Check if scrolling is still possible in each direction
+        const canScrollLeft = scrollableParent.scrollLeft > 0;
+        const canScrollRight =
+          scrollableParent.scrollLeft <
+          scrollableParent.scrollWidth - scrollableParent.clientWidth;
+        const canScrollUp = scrollableParent.scrollTop > 0;
+        const canScrollDown =
+          scrollableParent.scrollTop <
+          scrollableParent.scrollHeight - scrollableParent.clientHeight;
+
+        // Determine which edge this sticky frontier affects based on its position
+        // Left edge: if sticky frontier is positioned at or near the left edge
+        if (Math.abs(frontierRect.left - visibleAreaLeft) < 10) {
+          // Only reduce visible area if we can still scroll left
+          if (canScrollLeft) {
+            visibleAreaLeft = Math.max(visibleAreaLeft, frontierRect.right);
+          }
+        }
+        // Right edge: if sticky frontier is positioned at or near the right edge
+        if (Math.abs(frontierRect.right - visibleAreaRight) < 10) {
+          // Only reduce visible area if we can still scroll right
+          if (canScrollRight) {
+            visibleAreaRight = Math.min(visibleAreaRight, frontierRect.left);
+          }
+        }
+        // Top edge: if sticky frontier is positioned at or near the top edge
+        if (Math.abs(frontierRect.top - visibleAreaTop) < 10) {
+          // Only reduce visible area if we can still scroll up
+          if (canScrollUp) {
+            visibleAreaTop = Math.max(visibleAreaTop, frontierRect.bottom);
+          }
+        }
+        // Bottom edge: if sticky frontier is positioned at or near the bottom edge
+        if (Math.abs(frontierRect.bottom - visibleAreaBottom) < 10) {
+          // Only reduce visible area if we can still scroll down
+          if (canScrollDown) {
+            visibleAreaBottom = Math.min(visibleAreaBottom, frontierRect.top);
+          }
         }
       }
 
@@ -975,18 +1068,44 @@ const queryObstacles = (element, { name, sticky }) => {
     if (name) {
       const obstacleAttributeValue =
         obstacle.getAttribute("data-drag-obstacle");
-      const obstacleNames = obstacleAttributeValue.split(",");
-      const found = obstacleNames.some(
-        (obstacleName) =>
-          obstacleName.trim().toLowerCase() === name.toLowerCase(),
-      );
-      if (!found) {
-        continue;
+      if (obstacleAttributeValue) {
+        const obstacleNames = obstacleAttributeValue.split(",");
+        const found = obstacleNames.some(
+          (obstacleName) =>
+            obstacleName.trim().toLowerCase() === name.toLowerCase(),
+        );
+        if (!found) {
+          continue;
+        }
       }
     }
     matchingObstacles.push(obstacle);
   }
   return matchingObstacles;
+};
+
+const queryStickyFrontiers = (element, { name }) => {
+  const frontiers = element.querySelectorAll("[data-drag-sticky-frontier]");
+  const matchingFrontiers = [];
+  for (const frontier of frontiers) {
+    if (name) {
+      const frontierAttributeValue = frontier.getAttribute(
+        "data-drag-sticky-frontier",
+      );
+      if (frontierAttributeValue) {
+        const frontierNames = frontierAttributeValue.split(",");
+        const found = frontierNames.some(
+          (frontierName) =>
+            frontierName.trim().toLowerCase() === name.toLowerCase(),
+        );
+        if (!found) {
+          continue;
+        }
+      }
+    }
+    matchingFrontiers.push(frontier);
+  }
+  return matchingFrontiers;
 };
 const getPositionedParent = (element) => {
   let parent = element.parentElement;
@@ -1248,6 +1367,26 @@ const validateConstraints = (
       }
     });
   });
+
+  // Validate sticky frontiers (development only, no actual constraints to validate but useful for debugging)
+  if (dragName) {
+    const stickyFrontiers = queryStickyFrontiers(document.documentElement, {
+      name: dragName,
+    });
+    if (stickyFrontiers.length > 0) {
+      console.debug(
+        `Found ${stickyFrontiers.length} sticky frontier(s) for drag operation "${dragName}"`,
+        {
+          dragName,
+          frontiers: stickyFrontiers.map((f, i) => ({
+            index: i,
+            element: f,
+            bounds: getElementBounds(f),
+          })),
+        },
+      );
+    }
+  }
 };
 
 /**
@@ -1584,6 +1723,27 @@ const createObstacleMarker = (name, left, top, width, height) => {
   // Add label
   const label = document.createElement("div");
   label.className = "navi_obstacle_marker_label";
+  label.textContent = name;
+  marker.appendChild(label);
+
+  document.body.appendChild(marker);
+  return marker;
+};
+
+const createStickyFrontierMarker = (name, left, top, width, height) => {
+  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
+
+  const marker = document.createElement("div");
+  marker.className = "navi_sticky_frontier_marker";
+  marker.style.left = `${left}px`;
+  marker.style.top = `${top}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
+  marker.title = name;
+
+  // Add label
+  const label = document.createElement("div");
+  label.className = "navi_sticky_frontier_marker_label";
   label.textContent = name;
   marker.appendChild(label);
 

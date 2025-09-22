@@ -117,7 +117,6 @@
         const columns = [];
         for (let i = 1; i <= count; i++) {
           const column = {
-            // sticky: i === 1,
             id: `col${i}`,
             accessorKey: `col${i}`,
             value: `Column ${i}`,
@@ -191,9 +190,8 @@
                     return newRows;
                   });
                 }}
-                // stickyHeader={false}
-                // rowColumnSticky={false}
-                // rows={[{ sticky: true }]}
+                columnStickyFrontierIndex={0}
+                rowStickyFrontierIndex={0}
                 borderCollapse
               />
             </div>
