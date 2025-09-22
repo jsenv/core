@@ -245,7 +245,9 @@ export const Table = forwardRef((props, ref) => {
     onRowResize,
     borderCollapse = true,
     columnStickyFrontierIndex = 0,
+    onColumnStickyFrontierChange,
     rowStickyFrontierIndex = 0,
+    // onRowStickyFrontierChange,
   } = props;
 
   const innerRef = useRef();
@@ -399,6 +401,8 @@ export const Table = forwardRef((props, ref) => {
               stickyY={firsRowIsSticky}
               isStickyXFrontier={columnStickyFrontierIndex === 0} // Only frontier if no other columns are sticky
               isStickyYFrontier={rowStickyFrontierIndex === 0} // Only frontier if no other rows are sticky
+              columnStickyFrontierIndex={columnStickyFrontierIndex}
+              onColumnStickyFrontierChange={onColumnStickyFrontierChange}
               onClick={() => {
                 ref.current.selectAll();
               }}
@@ -417,6 +421,8 @@ export const Table = forwardRef((props, ref) => {
                   }
                   isStickyYFrontier={rowStickyFrontierIndex === 0} // Header row is always the frontier (no rows above it)
                   isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
+                  columnStickyFrontierIndex={columnStickyFrontierIndex}
+                  onColumnStickyFrontierChange={onColumnStickyFrontierChange}
                   key={col.id}
                   columnAccessorKey={col.accessorKey}
                   columnIndex={index + 1}
@@ -486,6 +492,8 @@ export const Table = forwardRef((props, ref) => {
                   stickyY={rowIsSticky}
                   isStickyYFrontier={isStickyYFrontier}
                   isAfterStickyYFrontier={isAfterStickyYFrontier}
+                  columnStickyFrontierIndex={columnStickyFrontierIndex}
+                  onColumnStickyFrontierChange={onColumnStickyFrontierChange}
                   row={row}
                   rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                   columns={columns}
@@ -524,6 +532,10 @@ export const Table = forwardRef((props, ref) => {
                       stickyY={rowIsSticky}
                       isStickyYFrontier={isStickyYFrontier}
                       isAfterStickyYFrontier={isAfterStickyYFrontier}
+                      columnStickyFrontierIndex={columnStickyFrontierIndex}
+                      onColumnStickyFrontierChange={
+                        onColumnStickyFrontierChange
+                      }
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
                       row={row}
@@ -555,6 +567,8 @@ const RowNumberHeaderCell = ({
   stickyY,
   isStickyXFrontier,
   isStickyYFrontier,
+  columnStickyFrontierIndex,
+  onColumnStickyFrontierChange,
   ...rest
 }) => {
   return (
@@ -567,7 +581,16 @@ const RowNumberHeaderCell = ({
       style={{ textAlign: "center" }}
       {...rest}
     >
-      {isStickyXFrontier && <TableColumnStickyFrontier />}
+      {isStickyXFrontier && (
+        <TableColumnStickyFrontier
+          draggable={Boolean(onColumnStickyFrontierChange)}
+          onRelease={(_, index) => {
+            if (index !== columnStickyFrontierIndex) {
+              onColumnStickyFrontierChange(index);
+            }
+          }}
+        />
+      )}
     </th>
   );
 };
@@ -593,6 +616,8 @@ const HeaderCell = ({
   onRelease,
   onGrabResizeHandle,
   onReleaseResizeHandle,
+  columnStickyFrontierIndex,
+  onColumnStickyFrontierChange,
   style,
   children,
 }) => {
@@ -662,7 +687,16 @@ const HeaderCell = ({
         />
       )}
 
-      {isStickyXFrontier && <TableColumnStickyFrontier />}
+      {isStickyXFrontier && (
+        <TableColumnStickyFrontier
+          draggable={Boolean(onColumnStickyFrontierChange)}
+          onRelease={(_, index) => {
+            if (index !== columnStickyFrontierIndex) {
+              onColumnStickyFrontierChange(index);
+            }
+          }}
+        />
+      )}
     </th>
   );
 };
@@ -674,6 +708,8 @@ const RowNumberCell = ({
   isStickyYFrontier,
   isAfterStickyXFrontier,
   isAfterStickyYFrontier,
+  columnStickyFrontierIndex,
+  onColumnStickyFrontierChange,
   row,
   columns,
   rowWithSomeSelectedCell,
@@ -734,7 +770,16 @@ const RowNumberCell = ({
           rowMaxHeight={rowMaxHeight}
         />
       )}
-      {isStickyXFrontier && <TableColumnStickyFrontier />}
+      {isStickyXFrontier && (
+        <TableColumnStickyFrontier
+          draggable={Boolean(onColumnStickyFrontierChange)}
+          onRelease={(_, index) => {
+            if (index !== columnStickyFrontierIndex) {
+              onColumnStickyFrontierChange(index);
+            }
+          }}
+        />
+      )}
     </td>
   );
 };

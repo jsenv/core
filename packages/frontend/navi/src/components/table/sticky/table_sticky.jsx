@@ -209,11 +209,19 @@ import.meta.css = /* css */ `
  * so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
  * as a table cell uses a position relative)
  */
-export const TableColumnStickyFrontier = ({ onGrab, onDrag, onRelease }) => {
+export const TableColumnStickyFrontier = ({
+  draggable,
+  onGrab,
+  onDrag,
+  onRelease,
+}) => {
   return (
     <div
       className="navi_table_column_sticky_frontier"
       onMouseDown={(e) => {
+        if (!draggable) {
+          return;
+        }
         initMoveColumnStickyFrontierByMousedown(e, {
           onGrab,
           onDrag,
@@ -259,6 +267,7 @@ const initMoveColumnStickyFrontierByMousedown = (
     tableCell,
   );
 
+  let futureColumnStickyFrontierIndex;
   const dragToMoveGesture = createDragToMoveGesture({
     name: "move-column-sticky-frontier",
     direction: { x: true },
@@ -270,6 +279,8 @@ const initMoveColumnStickyFrontierByMousedown = (
       const ghostCenterX = ghostRect.left + ghostRect.width / 2;
 
       const onGhostHoverColumn = (targetColumnIndex) => {
+        futureColumnStickyFrontierIndex = targetColumnIndex;
+
         if (targetColumnIndex === columnIndex) {
           tableColumnStickyFrontierPreview.removeAttribute("data-visible");
           return;
@@ -315,9 +326,11 @@ const initMoveColumnStickyFrontierByMousedown = (
       }
 
       // Show or hide the preview based on the position
-      onDrag?.(gesture);
+      onDrag?.(gesture, futureColumnStickyFrontierIndex);
     },
-    onRelease,
+    onRelease: (gesture) => {
+      onRelease?.(gesture, futureColumnStickyFrontierIndex);
+    },
   });
   dragToMoveGesture.addTeardown(() => {
     tableColumnStickyFrontierPreview.removeAttribute("data-visible");

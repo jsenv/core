@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle } from "preact/compat";
 import { useRef } from "preact/hooks";
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { useSelectableElement } from "../selection/selection.jsx";
+import { TableColumnStickyFrontier } from "./sticky/table_sticky.jsx";
 
 import.meta.css = /* css */ `
   .navi_table {
@@ -52,6 +53,8 @@ export const TableCell = forwardRef((props, ref) => {
     isStickyYFrontier,
     isAfterStickyXFrontier,
     isAfterStickyYFrontier,
+    columnStickyFrontierIndex,
+    onColumnStickyFrontierChange,
     columnName,
     row,
     value,
@@ -102,6 +105,16 @@ export const TableCell = forwardRef((props, ref) => {
       <Editable editing={editing} onEditEnd={stopEditing} value={value}>
         {value}
       </Editable>
+      {isStickyXFrontier && (
+        <TableColumnStickyFrontier
+          draggable={Boolean(onColumnStickyFrontierChange)}
+          onRelease={(_, index) => {
+            if (index !== columnStickyFrontierIndex) {
+              onColumnStickyFrontierChange(index);
+            }
+          }}
+        />
+      )}
     </TagName>
   );
 });

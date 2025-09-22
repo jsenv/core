@@ -138,6 +138,9 @@
         const [selection, setSelection] = useState([]);
         const [columns, setColumns] = useState(() => generateColumns(10));
         const [rows, setRows] = useState([]);
+        const [columnStickyFrontierIndex, setColumnStickyFrontierIndex] =
+          useState(0);
+        const [rowStickyFrontierIndex, setRowStickyFrontierIndex] = useState(0);
 
         return (
           <div className="demo-container">
@@ -190,8 +193,10 @@
                     return newRows;
                   });
                 }}
-                columnStickyFrontierIndex={0}
-                rowStickyFrontierIndex={0}
+                columnStickyFrontierIndex={columnStickyFrontierIndex}
+                onColumnStickyFrontierChange={setColumnStickyFrontierIndex}
+                rowStickyFrontierIndex={rowStickyFrontierIndex}
+                onRowStickyFrontierChange={setRowStickyFrontierIndex}
                 borderCollapse
               />
             </div>
