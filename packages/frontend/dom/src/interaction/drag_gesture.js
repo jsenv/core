@@ -407,11 +407,12 @@ export const createDragGesture = ({
     constraintFunctions.push(boundsConstraint);
 
     // Check for obstacles and add obstacle constraint if found
-    const obstacles = queryObstacles(scrollableParent, { name });
+    const obstacles = createObstaclesFromQuerySelector(scrollableParent, {
+      name,
+      positionedParent,
+    });
     for (const obstacle of obstacles) {
-      constraintFunctions.push(
-        createObstacleConstraint(obstacle, { positionedParent }),
-      );
+      constraintFunctions.push(createObstacleConstraintFromObject(obstacle));
     }
 
     // Clean up debug markers when gesture ends
@@ -474,6 +475,8 @@ export const createDragGesture = ({
       visibleAreaBottom,
       elementWidth,
       elementHeight,
+      obstacleObjects,
+      stickyFrontierObjects,
     }) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
@@ -558,21 +561,14 @@ export const createDragGesture = ({
         }
       }
 
-      // Create markers for obstacles
-      obstacles.forEach((obstacle, index) => {
-        const obstacleLeftViewport =
-          currentPositionedParentRect.left + obstacle.left;
-        const obstacleTopViewport =
-          currentPositionedParentRect.top + obstacle.top;
-        const obstacleWidth = obstacle.right - obstacle.left;
-        const obstacleHeight = obstacle.bottom - obstacle.top;
-
+      // Create markers for obstacles using pre-calculated objects
+      obstacleObjects.forEach((obstacleObj) => {
         const obstacleMarker = createObstacleMarker(
-          `Obstacle ${index + 1}`,
-          obstacleLeftViewport,
-          obstacleTopViewport,
-          obstacleWidth,
-          obstacleHeight,
+          obstacleObj.name,
+          obstacleObj.viewportBounds.left,
+          obstacleObj.viewportBounds.top,
+          obstacleObj.viewportBounds.right - obstacleObj.viewportBounds.left,
+          obstacleObj.viewportBounds.bottom - obstacleObj.viewportBounds.top,
         );
 
         if (obstacleMarker) {
@@ -580,19 +576,15 @@ export const createDragGesture = ({
         }
       });
 
-      // Create markers for sticky frontiers
-      const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
-      stickyFrontiers.forEach((frontier, index) => {
-        const frontierBounds = getElementBounds(frontier, scrollableParent);
-
-        // Convert frontier bounds to viewport coordinates for marker positioning
-        // frontierBounds are already in viewport coordinates from getBoundingClientRect()
+      // Create markers for sticky frontiers using pre-calculated objects
+      stickyFrontierObjects.forEach((stickyFrontier) => {
+        // Bounds are already calculated in the sticky frontier object
         const frontierMarker = createStickyFrontierMarker(
-          `Sticky Frontier ${index + 1}`,
-          frontierBounds.left, // Already in viewport coordinates
-          frontierBounds.top, // Already in viewport coordinates
-          frontierBounds.right - frontierBounds.left,
-          frontierBounds.bottom - frontierBounds.top,
+          stickyFrontier.name,
+          stickyFrontier.bounds.left, // Already in viewport coordinates
+          stickyFrontier.bounds.top, // Already in viewport coordinates
+          stickyFrontier.bounds.right - stickyFrontier.bounds.left,
+          stickyFrontier.bounds.bottom - stickyFrontier.bounds.top,
         );
 
         if (frontierMarker) {
@@ -741,6 +733,16 @@ export const createDragGesture = ({
         }),
       );
 
+      // Calculate obstacles and sticky frontiers for visual markers (avoiding recalculation)
+      const obstacleObjects = createObstaclesFromQuerySelector(
+        scrollableParent,
+        { name, positionedParent },
+      );
+      const stickyFrontierObjects = createStickyFrontiersFromQuerySelector(
+        scrollableParent,
+        { name, scrollableParent },
+      );
+
       // Development safeguards: detect impossible/illogical constraints
       if (import.meta.dev) {
         validateConstraints(constraints, {
@@ -772,11 +774,11 @@ export const createDragGesture = ({
 
       // Auto-detect sticky frontiers within scrollable parent and reduce visible area accordingly
       // Sticky frontiers always reduce visible area - z-index handles visual layering when elements go behind frontiers
-      const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
+      // Use pre-calculated sticky frontiers to avoid recalculation
       // Current element position is no longer needed since frontiers specify their sides explicitly
-      for (const stickyFrontier of stickyFrontiers) {
-        const frontierRect = getElementBounds(stickyFrontier, scrollableParent);
-        const frontierSides = getFrontierSides(stickyFrontier, { name });
+      for (const stickyFrontierObject of stickyFrontierObjects) {
+        const frontierRect = stickyFrontierObject.bounds;
+        const frontierSides = stickyFrontierObject.sides;
 
         // Store original values for validation
         const originalVisibleAreaLeft = visibleAreaLeft;
@@ -820,9 +822,10 @@ export const createDragGesture = ({
             console.warn(
               `Sticky frontier created invalid horizontal visible area: visibleAreaLeft (${visibleAreaLeft}) > visibleAreaRight (${visibleAreaRight}). Original: left=${originalVisibleAreaLeft}, right=${originalVisibleAreaRight}`,
               {
-                frontierElement: stickyFrontier,
+                frontierElement: stickyFrontierObject.element,
                 frontierRect,
                 dragName: name,
+                frontierSides,
               },
             );
           }
@@ -830,9 +833,10 @@ export const createDragGesture = ({
             console.warn(
               `Sticky frontier created invalid vertical visible area: visibleAreaTop (${visibleAreaTop}) > visibleAreaBottom (${visibleAreaBottom}). Original: top=${originalVisibleAreaTop}, bottom=${originalVisibleAreaBottom}`,
               {
-                frontierElement: stickyFrontier,
+                frontierElement: stickyFrontierObject.element,
                 frontierRect,
                 dragName: name,
+                frontierSides,
               },
             );
           }
@@ -848,6 +852,8 @@ export const createDragGesture = ({
           visibleAreaBottom,
           elementWidth: currentElementWidth,
           elementHeight: currentElementHeight,
+          obstacleObjects,
+          stickyFrontierObjects,
         });
       }
 
@@ -1052,7 +1058,10 @@ export const createDragGesture = ({
   };
 };
 
-const queryObstacles = (element, { name, sticky }) => {
+const createObstaclesFromQuerySelector = (
+  element,
+  { name, sticky, positionedParent },
+) => {
   const obstacles = element.querySelectorAll("[data-drag-obstacle]");
   const matchingObstacles = [];
   for (const obstacle of obstacles) {
@@ -1080,26 +1089,48 @@ const queryObstacles = (element, { name, sticky }) => {
         }
       }
     }
-    matchingObstacles.push(obstacle);
+
+    // Create obstacle object with bounds
+    const obstacleBounds = getElementBounds(obstacle, positionedParent);
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+
+    const obstacleObject = {
+      type: "obstacle",
+      element: obstacle,
+      bounds: {
+        left: obstacleBounds.left - positionedParentRect.left,
+        top: obstacleBounds.top - positionedParentRect.top,
+        right: obstacleBounds.right - positionedParentRect.left,
+        bottom: obstacleBounds.bottom - positionedParentRect.top,
+      },
+      viewportBounds: obstacleBounds,
+      name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
+    };
+
+    matchingObstacles.push(obstacleObject);
   }
   return matchingObstacles;
 };
 
-const queryStickyFrontiers = (element, { name }) => {
+const createStickyFrontiersFromQuerySelector = (
+  element,
+  { name, scrollableParent },
+) => {
   const frontiers = element.querySelectorAll(
     "[data-drag-sticky-frontier-left], [data-drag-sticky-frontier-right], [data-drag-sticky-frontier-top], [data-drag-sticky-frontier-bottom]",
   );
-  const matchingFrontiers = [];
+  const matchingStickyFrontiers = [];
+
   for (const frontier of frontiers) {
     if (frontier.closest("[data-drag-ignore]")) {
       continue;
     }
 
-    // Check each side attribute for matching drag name
-    const sides = ["left", "right", "top", "bottom"];
-    let hasMatchingSide = false;
+    // Check each side attribute for matching drag name and collect matching sides
+    const sides = [];
+    const sideNames = ["left", "right", "top", "bottom"];
 
-    for (const side of sides) {
+    for (const side of sideNames) {
       const attributeValue = frontier.getAttribute(
         `data-drag-sticky-frontier-${side}`,
       );
@@ -1110,47 +1141,29 @@ const queryStickyFrontiers = (element, { name }) => {
             frontierName.trim().toLowerCase() === name.toLowerCase(),
         );
         if (found) {
-          hasMatchingSide = true;
-          break;
+          sides.push(side);
         }
       } else {
-        hasMatchingSide = true;
-        break;
-      }
-    }
-
-    if (hasMatchingSide) {
-      matchingFrontiers.push(frontier);
-    }
-  }
-  return matchingFrontiers;
-};
-
-const getFrontierSides = (frontier, { name }) => {
-  const sides = [];
-  const sideNames = ["left", "right", "top", "bottom"];
-
-  for (const side of sideNames) {
-    const attributeName = `data-drag-sticky-frontier-${side}`;
-    const attributeValue = frontier.getAttribute(attributeName);
-    if (attributeValue === null) {
-      continue;
-    }
-    if (attributeValue && name) {
-      const frontierNames = attributeValue.split(",");
-      const found = frontierNames.some(
-        (frontierName) =>
-          frontierName.trim().toLowerCase() === name.toLowerCase(),
-      );
-      if (found) {
         sides.push(side);
       }
-    } else {
-      sides.push(side);
+    }
+
+    if (sides.length > 0) {
+      // Create sticky frontier object with bounds
+      const frontierBounds = getElementBounds(frontier, scrollableParent);
+
+      const stickyFrontierObject = {
+        type: "sticky-frontier",
+        element: frontier,
+        sides,
+        bounds: frontierBounds,
+        name: `Sticky Frontier (${frontier.tagName.toLowerCase()}${frontier.id ? `#${frontier.id}` : ""}${frontier.className ? `.${frontier.className.split(" ").join(".")}` : ""}) - sides: ${sides.join(", ")}`,
+      };
+
+      matchingStickyFrontiers.push(stickyFrontierObject);
     }
   }
-
-  return sides;
+  return matchingStickyFrontiers;
 };
 
 const getPositionedParent = (element) => {
@@ -1291,22 +1304,10 @@ const createScrollableAreaConstraint = (
     };
   };
 };
-// Function to create constraint that respects solid obstacles
-const createObstacleConstraint = (obstacle, { positionedParent }) => {
+// Function to create constraint from obstacle object (no longer needs to recalculate bounds)
+const createObstacleConstraintFromObject = (obstacleObject) => {
   return () => {
-    const obstacleBounds = getElementBounds(obstacle, positionedParent);
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    // Convert obstacle coordinates to be relative to positioned parent
-    // getBoundingClientRect() already accounts for scroll position
-    return {
-      type: "obstacle",
-      left: obstacleBounds.left - positionedParentRect.left,
-      top: obstacleBounds.top - positionedParentRect.top,
-      right: obstacleBounds.right - positionedParentRect.left,
-      bottom: obstacleBounds.bottom - positionedParentRect.top,
-      element: obstacle,
-      name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
-    };
+    return obstacleObject;
   };
 };
 
@@ -1418,9 +1419,13 @@ const validateConstraints = (
 
   // Validate sticky frontiers (development only, no actual constraints to validate but useful for debugging)
   if (dragName) {
-    const stickyFrontiers = queryStickyFrontiers(scrollableParent, {
-      name: dragName,
-    });
+    const stickyFrontiers = createStickyFrontiersFromQuerySelector(
+      scrollableParent,
+      {
+        name: dragName,
+        scrollableParent,
+      },
+    );
     if (stickyFrontiers.length > 0) {
       console.debug(
         `Found ${stickyFrontiers.length} sticky frontier(s) for drag operation "${dragName}"`,
@@ -1428,8 +1433,9 @@ const validateConstraints = (
           dragName,
           frontiers: stickyFrontiers.map((f, i) => ({
             index: i,
-            element: f,
-            bounds: getElementBounds(f, scrollableParent),
+            element: f.element,
+            bounds: f.bounds,
+            sides: f.sides,
           })),
         },
       );
