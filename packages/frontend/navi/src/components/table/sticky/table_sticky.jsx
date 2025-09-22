@@ -167,11 +167,13 @@ import.meta.css = /* css */ `
   }
 `;
 
-// We "need" to inject this into every <td>,<th> so it follows correctly the position of the cell
-// And cells are in position sticky
-// And we can't have an absolute element per <td> because they are in position: relative
-// so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
-// as a table cell uses a position relative)
+/**
+ * We "need" to inject this into every <td>,<th> so it follows correctly the position of the cell
+ * And cells are in position sticky
+ * And we can't have an absolute element per <td> because they are in position: relative
+ * so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
+ * as a table cell uses a position relative)
+ */
 export const TableStickyColumnFrontierHandle = () => {
   return (
     <div
@@ -181,7 +183,7 @@ export const TableStickyColumnFrontierHandle = () => {
         // we need to
         // inject an element into the table to be able to move it because our
         // line is actually inside every <td>,<th>
-        //  It must be at the right left position. I guess in absolute.
+        // It must be at the right left position. I guess in absolute.
         // This element will have a 0.5 opacity
         // When we cross half the width of a column we inject a second vertical line where the new frontier would be
         // to tell user "hey if you grab here, the frontier will be there"
