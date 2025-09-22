@@ -276,7 +276,7 @@ const initMoveColumnStickyFrontierByMousedown = (
         }
         let previewPosition;
         if (targetColumnIndex === -1) {
-          previewPosition = 0;
+          previewPosition = ghostRect.width;
         } else {
           const colElement = colElements[targetColumnIndex];
           const columnRect = colElement.getBoundingClientRect();
