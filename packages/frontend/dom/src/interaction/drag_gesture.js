@@ -580,10 +580,12 @@ export const createDragGesture = ({
       stickyFrontiers.forEach((frontier, index) => {
         const frontierBounds = getElementBounds(frontier, positionedParent);
 
+        // Convert frontier bounds to viewport coordinates for marker positioning
+        // frontierBounds are already in viewport coordinates from getBoundingClientRect()
         const frontierMarker = createStickyFrontierMarker(
           `Sticky Frontier ${index + 1}`,
-          frontierBounds.left,
-          frontierBounds.top,
+          frontierBounds.left, // Already in viewport coordinates
+          frontierBounds.top, // Already in viewport coordinates
           frontierBounds.right - frontierBounds.left,
           frontierBounds.bottom - frontierBounds.top,
         );
@@ -786,49 +788,27 @@ export const createDragGesture = ({
       }
 
       // Auto-detect sticky frontiers within scrollable parent and reduce visible area accordingly
-      // Sticky frontiers trigger scroll when encountered but allow movement beyond when scroll is exhausted
+      // Sticky frontiers always reduce visible area - z-index handles visual layering when elements go behind frontiers
       const stickyFrontiers = queryStickyFrontiers(scrollableParent, { name });
       for (const stickyFrontier of stickyFrontiers) {
         const frontierRect = getElementBounds(stickyFrontier, positionedParent);
 
-        // Check if scrolling is still possible in each direction
-        const canScrollLeft = scrollableParent.scrollLeft > 0;
-        const canScrollRight =
-          scrollableParent.scrollLeft <
-          scrollableParent.scrollWidth - scrollableParent.clientWidth;
-        const canScrollUp = scrollableParent.scrollTop > 0;
-        const canScrollDown =
-          scrollableParent.scrollTop <
-          scrollableParent.scrollHeight - scrollableParent.clientHeight;
-
         // Determine which edge this sticky frontier affects based on its position
         // Left edge: if sticky frontier is positioned at or near the left edge
         if (Math.abs(frontierRect.left - visibleAreaLeft) < 10) {
-          // Only reduce visible area if we can still scroll left
-          if (canScrollLeft) {
-            visibleAreaLeft = Math.max(visibleAreaLeft, frontierRect.right);
-          }
+          visibleAreaLeft = Math.max(visibleAreaLeft, frontierRect.right);
         }
         // Right edge: if sticky frontier is positioned at or near the right edge
         if (Math.abs(frontierRect.right - visibleAreaRight) < 10) {
-          // Only reduce visible area if we can still scroll right
-          if (canScrollRight) {
-            visibleAreaRight = Math.min(visibleAreaRight, frontierRect.left);
-          }
+          visibleAreaRight = Math.min(visibleAreaRight, frontierRect.left);
         }
         // Top edge: if sticky frontier is positioned at or near the top edge
         if (Math.abs(frontierRect.top - visibleAreaTop) < 10) {
-          // Only reduce visible area if we can still scroll up
-          if (canScrollUp) {
-            visibleAreaTop = Math.max(visibleAreaTop, frontierRect.bottom);
-          }
+          visibleAreaTop = Math.max(visibleAreaTop, frontierRect.bottom);
         }
         // Bottom edge: if sticky frontier is positioned at or near the bottom edge
         if (Math.abs(frontierRect.bottom - visibleAreaBottom) < 10) {
-          // Only reduce visible area if we can still scroll down
-          if (canScrollDown) {
-            visibleAreaBottom = Math.min(visibleAreaBottom, frontierRect.top);
-          }
+          visibleAreaBottom = Math.min(visibleAreaBottom, frontierRect.top);
         }
       }
 
