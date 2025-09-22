@@ -962,7 +962,11 @@ const queryObstacles = (element, { name, sticky }) => {
   const obstacles = element.querySelectorAll("[data-drag-obstacle]");
   const matchingObstacles = [];
   for (const obstacle of obstacles) {
-    if (sticky && !obstacle.hasAttribute("data-sticky-obstacle")) {
+    if (
+      sticky &&
+      !obstacle.hasAttribute("data-sticky-x") &&
+      !obstacle.hasAttribute("data-sticky-y")
+    ) {
       continue;
     }
     if (obstacle.closest("[data-drag-obstacle-ignore]")) {
@@ -1000,38 +1004,48 @@ const getPositionedParent = (element) => {
   return document.body;
 };
 /**
- * Get element bounds, handling both normal positioning and data-sticky-obstacle
+ * Get element bounds, handling both normal positioning and data-sticky-x|y
  * @param {HTMLElement} element - The element to get bounds for
  * @param {HTMLElement} scrollableParent - The scrollable parent for coordinate conversion
  * @returns {Object} Bounds object with left, top, right, bottom properties
  */
 const getElementBounds = (element, scrollableParent) => {
-  const isVirtuallySticky = element.hasAttribute("data-sticky-obstacle");
-
-  if (isVirtuallySticky) {
-    // For sticky obstacles, calculate where they would appear in viewport when sticky
-    const computedStyle = getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
-    const scrollableRect = scrollableParent.getBoundingClientRect();
-
-    // Get sticky positioning values
-    const stickyLeft = parseFloat(computedStyle.left) || 0;
-    const stickyTop = parseFloat(computedStyle.top) || 0;
-    const width = rect.width;
-    const height = rect.height;
-
-    // Calculate where the sticky element would appear in viewport coordinates
-    // This is the scrollable container's viewport position + the sticky offset
+  const rect = element.getBoundingClientRect();
+  const isHorizontallySticky = element.hasAttribute("data-sticky-x");
+  const isVerticallySticky = element.hasAttribute("data-sticky-y");
+  const useStickyAttribute = isHorizontallySticky || isVerticallySticky;
+  if (!useStickyAttribute) {
+    return rect;
+  }
+  const computedStyle = getComputedStyle(element);
+  const hasPositionSticky = computedStyle.position === "sticky";
+  if (hasPositionSticky) {
     return {
-      left: scrollableRect.left + stickyLeft,
-      top: scrollableRect.top + stickyTop,
-      right: scrollableRect.left + stickyLeft + width,
-      bottom: scrollableRect.top + stickyTop + height,
+      sticky: true,
+      ...rect,
     };
   }
 
-  // For normal elements, use getBoundingClientRect directly
-  return element.getBoundingClientRect();
+  // handle vritually sticky obstacles (<col> or <tr>)
+  // are not really sticky but should be handled as such
+  let left = rect.left;
+  const scrollableRect = scrollableParent.getBoundingClientRect();
+  if (isHorizontallySticky) {
+    const stickyLeft = parseFloat(computedStyle.left) || 0;
+    left = scrollableRect.left + stickyLeft;
+  }
+  let top = rect.top;
+  if (isVerticallySticky) {
+    const stickyTop = parseFloat(computedStyle.top) || 0;
+    top = scrollableRect.top + stickyTop;
+  }
+  return {
+    sticky: true,
+    left,
+    top,
+    right: left + rect.width,
+    bottom: top + rect.height,
+  };
 };
 const createScrollableAreaConstraint = (
   scrollableParent,
@@ -1105,26 +1119,16 @@ const createScrollableAreaConstraint = (
 // Function to create constraint that respects solid obstacles
 const createObstacleConstraint = (obstacle, positionedParent) => {
   return () => {
-    const obstacleRect = obstacle.getBoundingClientRect();
-    // Check if element should be treated as sticky obstacle
-    const stickyData = obstacle.getAttribute("data-sticky-obstacle");
-
-    if (stickyData) {
-      // Get element's computed style for dimensions and current position
-      const computedStyle = getComputedStyle(obstacle);
-      const width = obstacleRect.width;
-      const height = obstacleRect.height;
-      const left = parseFloat(computedStyle.left) || 0;
-      const top = parseFloat(computedStyle.top) || 0;
-
+    const obstacleBounds = getElementBounds(obstacle);
+    if (obstacleBounds.sticky) {
       // Note: For sticky obstacles, left/top are already relative to positioned parent
       // since they come from getComputedStyle or are explicitly configured relative values
       return {
         type: "obstacle",
-        left,
-        top,
-        right: left + width,
-        bottom: top + height,
+        left: obstacleBounds.left,
+        top: obstacleBounds.top,
+        right: obstacleBounds.right,
+        bottom: obstacleBounds.bottom,
         element: obstacle,
         name: `sticky obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
       };
@@ -1135,10 +1139,10 @@ const createObstacleConstraint = (obstacle, positionedParent) => {
     // getBoundingClientRect() already accounts for scroll position
     return {
       type: "obstacle",
-      left: obstacleRect.left - positionedParentRect.left,
-      top: obstacleRect.top - positionedParentRect.top,
-      right: obstacleRect.right - positionedParentRect.left,
-      bottom: obstacleRect.bottom - positionedParentRect.top,
+      left: obstacleBounds.left - positionedParentRect.left,
+      top: obstacleBounds.top - positionedParentRect.top,
+      right: obstacleBounds.right - positionedParentRect.left,
+      bottom: obstacleBounds.bottom - positionedParentRect.top,
       element: obstacle,
       name: `obstacle (${obstacle.tagName.toLowerCase()}${obstacle.id ? `#${obstacle.id}` : ""}${obstacle.className ? `.${obstacle.className.split(" ").join(".")}` : ""})`,
     };

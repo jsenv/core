@@ -412,7 +412,7 @@ export const Table = forwardRef((props, ref) => {
         <colgroup>
           <col
             data-drag-obstacle="resize-column,move-column"
-            data-sticky-obstacle={stickyHeader ? "" : undefined}
+            data-sticky-x={stickyHeader ? "" : undefined}
             style={{ minWidth: "100px" }}
           ></col>
           {columns.map((col, index) => {
@@ -425,7 +425,7 @@ export const Table = forwardRef((props, ref) => {
                 data-drag-obstacle={
                   isDragObstable ? "resize-column,move-column" : undefined
                 }
-                data-sticky-obstacle={isDragObstable ? "" : undefined}
+                data-sticky-x={isDragObstable ? "" : undefined}
                 style={{
                   minWidth: col.width ? `${col.width}px` : undefined,
                   maxWidth: col.width ? `${col.width}px` : undefined,
@@ -437,7 +437,7 @@ export const Table = forwardRef((props, ref) => {
         <thead>
           <tr
             data-drag-obstacle="resize-row,move-row"
-            data-sticky-obstacle={stickyHeader ? "" : undefined}
+            data-sticky-y={stickyHeader ? "" : undefined}
           >
             <RowNumberHeaderCell
               stickyX={rowColumnSticky}
@@ -522,7 +522,7 @@ export const Table = forwardRef((props, ref) => {
                 data-drag-obstacle={
                   isDragObstacle ? "resize-row,move-row" : undefined
                 }
-                data-sticky-obstacle={isDragObstacle ? "" : undefined}
+                data-sticky-y={isDragObstacle ? "" : undefined}
                 style={{
                   height: rowOptions.height
                     ? `${rowOptions.height}px`
