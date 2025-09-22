@@ -195,12 +195,16 @@ import.meta.css = /* css */ `
  * so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
  * as a table cell uses a position relative)
  */
-export const TableColumnStickyFrontier = () => {
+export const TableColumnStickyFrontier = ({ onGrab, onDrag, onRelease }) => {
   return (
     <div
       className="navi_table_column_sticky_frontier"
       onMouseDown={(e) => {
-        initMoveColumnStickyFrontierByMousedown(e);
+        initMoveColumnStickyFrontierByMousedown(e, {
+          onGrab,
+          onDrag,
+          onRelease,
+        });
       }}
     ></div>
   );
@@ -224,11 +228,7 @@ export const TableColumnStickyFrontierPreview = () => {
 // At this stage user can see 3 frontiers. Where it is, the one he grab, the futurue one if he releases.
 const initMoveColumnStickyFrontierByMousedown = (
   mousedownEvent,
-  {
-    onGrab,
-    onDrag,
-    // onRelease
-  },
+  { onGrab, onDrag, onRelease },
 ) => {
   const tableCell = mousedownEvent.target.closest("th,td");
   const tableContainer = tableCell.closest(".navi_table_container");
@@ -240,12 +240,11 @@ const initMoveColumnStickyFrontierByMousedown = (
   const dragToMoveGesture = createDragToMoveGesture({
     name: "move-column-sticky-frontier",
     direction: { x: true },
+    keepMarkersOnRelease: true,
     backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
-    onGrab: () => {
-      onGrab({ columnWidth: 0 });
-    },
+    onGrab,
     onDrag,
-    // onRelease: (gesture) => {},
+    onRelease,
   });
 
   const tableColumnStickyFrontierGhost = tableContainer.querySelector(

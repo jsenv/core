@@ -1158,15 +1158,15 @@ const validateConstraints = (
 
   // Check for impossible bounds constraints
   boundsConstraints.forEach((bounds) => {
-    if (bounds.left > bounds.right) {
+    if (bounds.left >= bounds.right) {
       console.warn(
-        `Impossible bounds constraint: left (${bounds.left}) > right (${bounds.right})`,
+        `Impossible bounds constraint: left (${bounds.left}) >= right (${bounds.right})`,
         { constraint: bounds, dragName, element: bounds.element },
       );
     }
-    if (bounds.top > bounds.bottom) {
+    if (bounds.top >= bounds.bottom) {
       console.warn(
-        `Impossible bounds constraint: top (${bounds.top}) > bottom (${bounds.bottom})`,
+        `Impossible bounds constraint: top (${bounds.top}) >= bottom (${bounds.bottom})`,
         { constraint: bounds, dragName, element: bounds.element },
       );
     }
