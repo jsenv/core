@@ -737,6 +737,7 @@ export const createDragGesture = ({
           elementWidth: currentElementWidth,
           elementHeight: currentElementHeight,
           dragName: name,
+          scrollableParent,
           positionedParent,
         });
       }
@@ -1038,7 +1039,7 @@ const queryObstacles = (element, { name, sticky }) => {
     ) {
       continue;
     }
-    if (obstacle.closest("[data-drag-obstacle-ignore]")) {
+    if (obstacle.closest("[data-drag-ignore]")) {
       continue;
     }
     if (name) {
@@ -1064,6 +1065,9 @@ const queryStickyFrontiers = (element, { name }) => {
   const frontiers = element.querySelectorAll("[data-drag-sticky-frontier]");
   const matchingFrontiers = [];
   for (const frontier of frontiers) {
+    if (frontier.closest("[data-drag-ignore]")) {
+      continue;
+    }
     if (name) {
       const frontierAttributeValue = frontier.getAttribute(
         "data-drag-sticky-frontier",
@@ -1246,7 +1250,7 @@ const createObstacleConstraint = (obstacle, { positionedParent }) => {
  */
 const validateConstraints = (
   constraints,
-  { elementWidth, elementHeight, dragName, positionedParent },
+  { elementWidth, elementHeight, dragName, scrollableParent, positionedParent },
 ) => {
   const boundsConstraints = constraints.filter((c) => c.type === "bounds");
   const obstacleConstraints = constraints.filter((c) => c.type === "obstacle");
@@ -1342,7 +1346,7 @@ const validateConstraints = (
 
   // Validate sticky frontiers (development only, no actual constraints to validate but useful for debugging)
   if (dragName) {
-    const stickyFrontiers = queryStickyFrontiers(document.documentElement, {
+    const stickyFrontiers = queryStickyFrontiers(scrollableParent, {
       name: dragName,
     });
     if (stickyFrontiers.length > 0) {
