@@ -181,6 +181,7 @@ import.meta.css = /* css */ `
   }
   .navi_table_column_sticky_frontier_ghost {
     background: rgba(68, 71, 70, 0.5);
+    left: var(--table-column-right, 0);
   }
   .navi_table_column_sticky_frontier_preview {
     background: red;
@@ -223,19 +224,18 @@ export const TableColumnStickyFrontierPreview = () => {
 // At this stage user can see 3 frontiers. Where it is, the one he grab, the futurue one if he releases.
 const initMoveColumnStickyFrontierByMousedown = (
   mousedownEvent,
-  { onGrab, onDrag, onRelease },
+  {
+    onGrab,
+    onDrag,
+    // onRelease
+  },
 ) => {
   const tableCell = mousedownEvent.target.closest("th,td");
   const tableContainer = tableCell.closest(".navi_table_container");
-  const tableColumnStickyFrontier = tableContainer.querySelector(
-    ".navi_table_row_resizer",
-  );
-
-  // Calculate custom bounds for row resizing
-  const tableRowCellRect = tableCell.getBoundingClientRect();
+  const tableCellRect = tableCell.getBoundingClientRect();
   const tableContainerRect = tableContainer.getBoundingClientRect();
-  const currentRowCellTop = tableRowCellRect.top - tableContainerRect.top;
-  const currentRowCellHeight = tableRowCellRect.height;
+  const columnLeftRelative = tableCellRect.left - tableContainerRect.left;
+  const columnRightRelative = columnLeftRelative + tableCellRect.width;
 
   const dragToMoveGesture = createDragToMoveGesture({
     name: "move-column-sticky-frontier",
@@ -245,19 +245,24 @@ const initMoveColumnStickyFrontierByMousedown = (
       onGrab({ columnWidth: 0 });
     },
     onDrag,
-    onRelease: (gesture) => {
-      const newHeight = currentRowCellHeight + gesture.yMove;
-      onRelease({
-        height: newHeight,
-        currentHeight: currentRowCellHeight,
-      });
-    },
+    // onRelease: (gesture) => {},
   });
+
+  const tableColumnStickyFrontierGhost = tableContainer.querySelector(
+    ".navi_table_column_sticky_frontier_ghost",
+  );
+  tableColumnStickyFrontierGhost.style.setProperty(
+    "--table-column-right",
+    `${columnRightRelative}px`,
+  );
+  tableColumnStickyFrontierGhost.setAttribute("data-visible", "");
   dragToMoveGesture.addTeardown(() => {
-    tableRowResizer.style.top = "";
+    tableColumnStickyFrontierGhost.removeAttribute("data-visible");
+    tableColumnStickyFrontierGhost.style.removeProperty("--table-column-right");
+    tableColumnStickyFrontierGhost.style.left = ""; // reset left set by the drag
   });
 
   dragToMoveGesture.grabViaMousedown(mousedownEvent, {
-    element: tableRowResizer,
+    element: tableColumnStickyFrontierGhost,
   });
 };
