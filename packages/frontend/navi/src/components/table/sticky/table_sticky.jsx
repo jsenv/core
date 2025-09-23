@@ -233,6 +233,9 @@ export const TableColumnStickyFrontier = ({
       data-left={columnStickyFrontierIndex === -1 ? "" : undefined}
       inert={!onColumnStickyFrontierChange}
       onMouseDown={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag column
         initMoveColumnStickyFrontierByMousedown(e, {

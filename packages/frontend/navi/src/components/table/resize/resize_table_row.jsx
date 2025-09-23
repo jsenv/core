@@ -123,6 +123,9 @@ export const TableRowTopResizeHandle = ({
     <div
       className="navi_table_row_resize_handle_top"
       onMouseDown={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag row
         initResizeTableRowByMousedown(e, {
@@ -154,7 +157,10 @@ export const TableRowBottomResizeHandle = ({
     <div
       className="navi_table_row_resize_handle_bottom"
       onMouseDown={(e) => {
-        e.preventDefault();
+        if (e.button !== 0) {
+          return;
+        }
+        e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag row
         initResizeTableRowByMousedown(e, {
           rowMinHeight,

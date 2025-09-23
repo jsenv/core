@@ -131,8 +131,11 @@ export const TableColumnLeftResizeHandle = ({
     <div
       className="navi_table_column_resize_handle_left"
       onMouseDown={(e) => {
-        e.preventDefault();
-        e.stopPropagation(); // prevent drag column
+        if (e.button !== 0) {
+          return;
+        }
+        e.preventDefault(); // prevent text selection
+        e.stopPropagation(); // prevent drag column or drag sticky frontier
         initResizeTableColumnByMousedown(e, {
           columnMinWidth,
           columnMaxWidth,
@@ -162,8 +165,11 @@ export const TableColumnRightResizeHandle = ({
     <div
       className="navi_table_column_resize_handle_right"
       onMouseDown={(e) => {
-        e.preventDefault();
-        e.stopPropagation(); // prevent drag column
+        if (e.button !== 0) {
+          return;
+        }
+        e.preventDefault(); // prevent text selection
+        e.stopPropagation(); // prevent drag column or drag sticky frontier
         initResizeTableColumnByMousedown(e, {
           columnMinWidth,
           columnMaxWidth,
