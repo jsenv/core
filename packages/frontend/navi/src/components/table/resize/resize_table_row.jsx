@@ -5,23 +5,28 @@ import {
 } from "../z_indexes.js";
 
 import.meta.css = /* css */ `
-  .navi_table_row_resize_handle_top,
-  .navi_table_row_resize_handle_bottom {
+  .navi_table_row_resize_handle_top_interaction,
+  .navi_table_row_resize_handle_bottom_interaction {
     cursor: ns-resize;
     position: absolute;
-    width: 100%;
-    height: 8px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
     background: orange;
+    height: 8px;
     opacity: 0.5;
     z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
-  .navi_table_row_resize_handle_top {
+  .navi_table_row_resize_handle_top_interaction {
     top: 0;
   }
-  .navi_table_row_resize_handle_bottom {
+  .navi_table_row_resize_handle_bottom_interaction {
     bottom: 0;
+  }
+
+  [data-sticky-x-frontier] .navi_table_row_resize_handle_top_interaction,
+  [data-sticky-x-frontier] .navi_table_row_resize_handle_bottom_interaction {
+    /* Avoid overlaping the sticky frontier vertical line */
+    right: 5px;
   }
 
   .navi_table_row_resizer {
@@ -37,6 +42,10 @@ import.meta.css = /* css */ `
 
   .navi_table_row_resizer .navi_table_row_resize_handle_top,
   .navi_table_row_resizer .navi_table_row_resize_handle_bottom {
+    position: absolute;
+    width: 100%;
+    left: 50%;
+    transform: translateX(-50%);
     border-radius: 15px;
     background: #444746;
     /* opacity: 0.5; */
@@ -125,7 +134,7 @@ export const TableRowTopResizeHandle = ({
 }) => {
   return (
     <div
-      className="navi_table_row_resize_handle_top"
+      className="navi_table_row_resize_handle_top_interaction"
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -159,7 +168,7 @@ export const TableRowBottomResizeHandle = ({
 }) => {
   return (
     <div
-      className="navi_table_row_resize_handle_bottom"
+      className="navi_table_row_resize_handle_bottom_interaction"
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;

@@ -11,23 +11,27 @@ import.meta.css = /* css */ `
     box-sizing: border-box;
   }
 
-  .navi_table_column_resize_handle_left,
-  .navi_table_column_resize_handle_right {
+  .navi_table_column_resize_handle_left_interaction,
+  .navi_table_column_resize_handle_right_interaction {
     cursor: ew-resize;
     position: absolute;
     width: 8px;
-    height: 100%;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 0;
+    bottom: 0;
     background: orange;
     opacity: 0.5;
     z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
-  .navi_table_column_resize_handle_left {
+  .navi_table_column_resize_handle_left_interaction {
     left: 0;
   }
-  .navi_table_column_resize_handle_right {
+  .navi_table_column_resize_handle_right_interaction {
     right: 0;
+  }
+  [data-sticky-y-frontier] .navi_table_column_resize_handle_left_interaction,
+  [data-sticky-y-frontier] .navi_table_column_resize_handle_right_interaction {
+    /* Avoid overlaping the sticky frontier horizontal line */
+    bottom: 5px;
   }
 
   .navi_table_column_resizer {
@@ -43,6 +47,10 @@ import.meta.css = /* css */ `
 
   .navi_table_column_resizer .navi_table_column_resize_handle_left,
   .navi_table_column_resizer .navi_table_column_resize_handle_right {
+    position: absolute;
+    height: 100%;
+    top: 50%;
+    transform: translateY(-50%);
     border-radius: 15px;
     background: #444746;
     /* opacity: 0.5; */
@@ -133,7 +141,7 @@ export const TableColumnLeftResizeHandle = ({
 }) => {
   return (
     <div
-      className="navi_table_column_resize_handle_left"
+      className="navi_table_column_resize_handle_left_interaction"
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -167,7 +175,7 @@ export const TableColumnRightResizeHandle = ({
 }) => {
   return (
     <div
-      className="navi_table_column_resize_handle_right"
+      className="navi_table_column_resize_handle_right_interaction"
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
