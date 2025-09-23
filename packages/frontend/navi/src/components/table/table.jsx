@@ -668,6 +668,7 @@ const HeaderCell = ({
       selectionController={selectionController}
       value={value}
       // Header-specific data attributes
+      boldClone // ensure column width does not change when header becomes strong
       onMouseDown={(e) => {
         if (!movable) {
           return;
