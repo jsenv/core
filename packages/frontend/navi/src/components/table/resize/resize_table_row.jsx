@@ -1,5 +1,8 @@
 import { createDragToMoveGesture } from "@jsenv/dom";
-import { Z_INDEX_RESIZER_BACKDROP } from "../z_indexes.js";
+import {
+  Z_INDEX_RESIZER_BACKDROP,
+  Z_INDEX_RESIZER_HANDLE,
+} from "../z_indexes.js";
 
 import.meta.css = /* css */ `
   .navi_table_row_resize_handle_top,
@@ -10,9 +13,9 @@ import.meta.css = /* css */ `
     height: 8px;
     left: 50%;
     transform: translateX(-50%);
-    border-radius: 15px;
-    /* background: orange; */
-    /* opacity: 0.5; */
+    background: orange;
+    opacity: 0.5;
+    z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
   .navi_table_row_resize_handle_top {
     top: 0;
@@ -34,6 +37,7 @@ import.meta.css = /* css */ `
 
   .navi_table_row_resizer .navi_table_row_resize_handle_top,
   .navi_table_row_resizer .navi_table_row_resize_handle_bottom {
+    border-radius: 15px;
     background: #444746;
     /* opacity: 0.5; */
     width: 26px;
@@ -180,13 +184,14 @@ export const TableRowBottomResizeHandle = ({
   );
 };
 const onMouseEnterTopResizeHandle = (e) => {
-  const previousRow = e.target.closest("tr").previousElementSibling;
+  const currentRow = e.target.closest("tr");
+  const previousRow = findPreviousTableRow(currentRow);
   if (previousRow) {
-    updateTableRowResizerPosition(previousRow.querySelector("td"));
+    updateTableRowResizerPosition(previousRow.querySelector("th,td"));
   }
 };
 const onMouseEnterBottomResizeHandle = (e) => {
-  const rowCell = e.target.closest("td");
+  const rowCell = e.target.closest("th,td");
   updateTableRowResizerPosition(rowCell);
 };
 const onMouseLeaveTopResizeHandle = (e) => {
@@ -216,7 +221,7 @@ const initResizeTableRowByMousedown = (
     return; // No row to resize
   }
 
-  const tableCell = tableRow.querySelector("td");
+  const tableCell = tableRow.querySelector("th,td");
   const tableContainer = tableCell.closest(".navi_table_container");
   const tableRowResizer = tableContainer.querySelector(
     ".navi_table_row_resizer",
@@ -267,4 +272,18 @@ const initResizeTableRowByMousedown = (
   dragToMoveGesture.grabViaMousedown(mousedownEvent, {
     element: tableRowResizer,
   });
+};
+
+const findPreviousTableRow = (currentRow) => {
+  // First, try to find previous sibling within the same table section
+  const previousSibling = currentRow.previousElementSibling;
+  if (previousSibling) {
+    return previousSibling;
+  }
+
+  // Otherwise, get all rows in the table and find the previous one
+  const table = currentRow.closest("table");
+  const allRows = Array.from(table.querySelectorAll("tr"));
+  const currentIndex = allRows.indexOf(currentRow);
+  return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };

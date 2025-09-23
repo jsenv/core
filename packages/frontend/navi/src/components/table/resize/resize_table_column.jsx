@@ -1,5 +1,8 @@
 import { createDragToMoveGesture } from "@jsenv/dom";
-import { Z_INDEX_RESIZER_BACKDROP } from "../z_indexes.js";
+import {
+  Z_INDEX_RESIZER_BACKDROP,
+  Z_INDEX_RESIZER_HANDLE,
+} from "../z_indexes.js";
 
 import.meta.css = /* css */ `
   .navi_table th,
@@ -18,6 +21,7 @@ import.meta.css = /* css */ `
     transform: translateY(-50%);
     background: orange;
     opacity: 0.5;
+    z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
   .navi_table_column_resize_handle_left {
     left: 0;
