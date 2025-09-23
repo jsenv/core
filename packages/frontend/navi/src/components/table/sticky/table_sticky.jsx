@@ -2,8 +2,9 @@ import { createDragToMoveGesture, setAttribute } from "@jsenv/dom";
 import {
   Z_INDEX_STICKY_COLUMN,
   Z_INDEX_STICKY_CORNER,
-  Z_INDEX_STICKY_FRONTIER,
   Z_INDEX_STICKY_FRONTIER_BACKDROP,
+  Z_INDEX_STICKY_FRONTIER_GHOST,
+  Z_INDEX_STICKY_FRONTIER_PREVIEW,
   Z_INDEX_STICKY_ROW,
 } from "../z_indexes.js";
 
@@ -192,19 +193,20 @@ import.meta.css = /* css */ `
     width: var(--column-sticky-frontier-width);
     pointer-events: none;
     opacity: 0;
-    z-index: ${Z_INDEX_STICKY_FRONTIER};
   }
   .navi_table_column_sticky_frontier_ghost[data-visible],
   .navi_table_column_sticky_frontier_preview[data-visible] {
     opacity: 1;
   }
   .navi_table_column_sticky_frontier_ghost {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
     background: rgba(68, 71, 70, 0.5);
     left: calc(
       var(--table-column-right, 0px) - var(--column-sticky-frontier-width)
     );
   }
   .navi_table_column_sticky_frontier_preview {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
     background: red;
     left: calc(
       var(--table-column-preview-right, 0px) - var(
