@@ -173,7 +173,7 @@
                 onSelectionChange={(value) => {
                   setSelection(value);
                 }}
-                onColumnResize={({ column, width }) => {
+                onColumnResize={(width, columnIndex, column) => {
                   console.log(`Column ${column.id} resized to ${width}px`);
                   setColumns((prevColumns) =>
                     prevColumns.map((col) =>

@@ -16,9 +16,8 @@ import.meta.css = /* css */ `
     height: 100%;
     top: 50%;
     transform: translateY(-50%);
-    border-radius: 15px;
-    /* background: orange; */
-    /* opacity: 0.5; */
+    background: orange;
+    opacity: 0.5;
   }
   .navi_table_column_resize_handle_left {
     left: 0;
@@ -40,6 +39,7 @@ import.meta.css = /* css */ `
 
   .navi_table_column_resizer .navi_table_column_resize_handle_left,
   .navi_table_column_resizer .navi_table_column_resize_handle_right {
+    border-radius: 15px;
     background: #444746;
     /* opacity: 0.5; */
     width: 5px;

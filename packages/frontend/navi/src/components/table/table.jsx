@@ -242,7 +242,10 @@ export const Table = forwardRef((props, ref) => {
     selectionColor,
     onSelectionChange,
     onColumnResize,
-    onVirtualColumnResize,
+    generatedLeftColumnWidth = 100,
+    onGeneratedLeftColumnResize,
+    // generatedTopRowHeight = 30,
+    // onGeneratedTopRowResize,
     onRowResize,
     borderCollapse = true,
     columnStickyFrontierIndex = 0,
@@ -351,7 +354,10 @@ export const Table = forwardRef((props, ref) => {
             data-sticky-x={firstColIsSticky ? "" : undefined}
             data-drag-sticky-frontier-left={firstColIsSticky ? "" : undefined}
             data-drag-obstacle="move-column"
-            style={{ minWidth: "100px" }}
+            style={{
+              minWidth: `${generatedLeftColumnWidth}px`,
+              maxWidth: `${generatedLeftColumnWidth}px`,
+            }}
           ></col>
           {columns.map((col, index) => {
             const colIsSticky = index < columnStickyFrontierIndex;
@@ -386,12 +392,9 @@ export const Table = forwardRef((props, ref) => {
                 ref.current.selectAll();
               }}
               resizable
-              columnMinWidth={50}
-              onResizeRequested={({ width }, columnIndex) => {
-                onVirtualColumnResize?.({
-                  width,
-                  columnIndex,
-                });
+              columnMinWidth={generatedLeftColumnWidth}
+              onResizeRequested={({ width }) => {
+                onGeneratedLeftColumnResize?.(width);
               }}
             />
             {columns.map((col, colIndex) => {
@@ -428,10 +431,11 @@ export const Table = forwardRef((props, ref) => {
                     releaseColumn(colIndex);
                   }}
                   onResizeRequested={({ width }, columnIndex) => {
-                    onColumnResize?.({
+                    onColumnResize?.(
                       width,
-                      column: columns[columnIndex - 1],
-                    });
+                      columnIndex - 1,
+                      columns[columnIndex - 1],
+                    );
                   }}
                   style={{
                     maxWidth: col.width ? `${col.width}px` : undefined,
@@ -564,18 +568,18 @@ const RowNumberHeaderCell = ({
       style={{ textAlign: "center" }}
       {...rest}
     >
+      {isStickyXFrontier && (
+        <TableColumnStickyFrontier
+          columnStickyFrontierIndex={columnStickyFrontierIndex}
+          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
+        />
+      )}
       {resizable && (
         <TableColumnRightResizeHandle
           onGrab={(info) => onGrabResizeHandle(info, 0)}
           onRelease={(info) => onReleaseResizeHandle(info, 0)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
-        />
-      )}
-      {isStickyXFrontier && (
-        <TableColumnStickyFrontier
-          columnStickyFrontierIndex={columnStickyFrontierIndex}
-          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
         />
       )}
     </th>
@@ -743,17 +747,17 @@ const RowNumberCell = ({
         />
       )}
       {value}
+      {isStickyXFrontier && (
+        <TableColumnStickyFrontier
+          columnStickyFrontierIndex={columnStickyFrontierIndex}
+          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
+        />
+      )}
       {resizable && (
         <TableRowBottomResizeHandle
           onRelease={(info) => onResizeRequested(info, rowIndex)}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
-        />
-      )}
-      {isStickyXFrontier && (
-        <TableColumnStickyFrontier
-          columnStickyFrontierIndex={columnStickyFrontierIndex}
-          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
         />
       )}
     </td>
