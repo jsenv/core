@@ -244,7 +244,7 @@ export const Table = forwardRef((props, ref) => {
     onColumnResize,
     generatedLeftColumnWidth = 100,
     onGeneratedLeftColumnResize,
-    generatedTopRowHeight = 30,
+    generatedTopRowHeight,
     onGeneratedTopRowResize,
     onRowResize,
     borderCollapse = true,
@@ -380,6 +380,11 @@ export const Table = forwardRef((props, ref) => {
             data-sticky-y={firsRowIsSticky ? "" : undefined}
             data-drag-sticky-frontier-top={firsRowIsSticky ? "" : undefined}
             data-drag-obstacle="move-row"
+            style={{
+              height: generatedTopRowHeight
+                ? `${generatedTopRowHeight}px`
+                : undefined,
+            }}
           >
             <RowNumberHeaderCell
               stickyX={firstColIsSticky}
@@ -393,7 +398,7 @@ export const Table = forwardRef((props, ref) => {
               onColumnResizeRequested={(width) => {
                 onGeneratedLeftColumnResize?.(width);
               }}
-              rowMinHeight={generatedTopRowHeight}
+              rowMinHeight={30}
               onRowResizeRequested={(height) => {
                 onGeneratedTopRowResize?.(height);
               }}
@@ -494,7 +499,7 @@ export const Table = forwardRef((props, ref) => {
                   selectionController={selectionController}
                   value={rowIndex + 1}
                   resizable
-                  rowIndex={rowIndex}
+                  rowIndex={rowIndex + 1}
                   rowMinHeight={rowOptions.minHeight}
                   rowMaxHeight={rowOptions.maxHeight}
                   onResizeRequested={(height, rowIndex) => {
