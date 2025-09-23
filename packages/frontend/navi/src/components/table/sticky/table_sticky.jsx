@@ -255,11 +255,8 @@ const initMoveColumnStickyFrontierByMousedown = (
   const tableCell = mousedownEvent.target.closest("th,td");
   const table = tableCell.closest("table");
   const tableContainer = table.closest(".navi_table_container");
-  const tableCellRect = tableCell.getBoundingClientRect();
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  const columnLeftRelative = tableCellRect.left - tableContainerRect.left;
-  const columnRightRelative = columnLeftRelative + tableCellRect.width;
-
+  const colgroup = table.querySelector("colgroup");
+  const colElements = Array.from(colgroup.children);
   const tableColumnStickyFrontierGhost = tableContainer.querySelector(
     ".navi_table_column_sticky_frontier_ghost",
   );
@@ -267,10 +264,49 @@ const initMoveColumnStickyFrontierByMousedown = (
     ".navi_table_column_sticky_frontier_preview",
   );
 
-  const colgroup = table.querySelector("colgroup");
-  const colElements = Array.from(colgroup.children);
+  if (columnIndex === -1) {
+    tableColumnStickyFrontierGhost.style.setProperty(
+      "--table-column-right",
+      `0px`,
+    );
+  } else {
+    const tableCellRect = tableCell.getBoundingClientRect();
+    const tableContainerRect = tableContainer.getBoundingClientRect();
+    const columnLeftRelative = tableCellRect.left - tableContainerRect.left;
+    const columnRightRelative = columnLeftRelative + tableCellRect.width;
+    tableColumnStickyFrontierGhost.style.setProperty(
+      "--table-column-right",
+      `${columnRightRelative}px`,
+    );
+  }
+  tableColumnStickyFrontierGhost.setAttribute("data-visible", "");
 
   let futureColumnStickyFrontierIndex;
+  const onFutureColumnStickyFrontierIndexChange = (index) => {
+    futureColumnStickyFrontierIndex = index;
+
+    if (index === columnIndex) {
+      tableColumnStickyFrontierPreview.removeAttribute("data-visible");
+      return;
+    }
+    let previewPosition;
+    if (index === -1) {
+      previewPosition =
+        tableColumnStickyFrontierGhost.getBoundingClientRect().width;
+    } else {
+      const colElement = colElements[index];
+      const columnRect = colElement.getBoundingClientRect();
+      const tableContainerRect = tableContainer.getBoundingClientRect();
+      previewPosition = columnRect.right - tableContainerRect.left;
+    }
+
+    tableColumnStickyFrontierPreview.style.setProperty(
+      "--table-column-preview-right",
+      `${previewPosition}px`,
+    );
+    tableColumnStickyFrontierPreview.setAttribute("data-visible", "");
+  };
+
   const dragToMoveGesture = createDragToMoveGesture({
     name: "move-column-sticky-frontier",
     direction: { x: true },
@@ -278,35 +314,11 @@ const initMoveColumnStickyFrontierByMousedown = (
     backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
     onGrab,
     onDrag: (gesture) => {
-      const ghostRect = tableColumnStickyFrontierGhost.getBoundingClientRect();
-      const ghostCenterX = ghostRect.left + ghostRect.width / 2;
-
-      const onGhostHoverColumn = (targetColumnIndex) => {
-        futureColumnStickyFrontierIndex = targetColumnIndex;
-
-        if (targetColumnIndex === columnIndex) {
-          tableColumnStickyFrontierPreview.removeAttribute("data-visible");
-          return;
-        }
-        let previewPosition;
-        if (targetColumnIndex === -1) {
-          previewPosition = ghostRect.width;
-        } else {
-          const colElement = colElements[targetColumnIndex];
-          const columnRect = colElement.getBoundingClientRect();
-          const tableContainerRect = tableContainer.getBoundingClientRect();
-          previewPosition = columnRect.right - tableContainerRect.left;
-        }
-
-        tableColumnStickyFrontierPreview.style.setProperty(
-          "--table-column-preview-right",
-          `${previewPosition}px`,
-        );
-        tableColumnStickyFrontierPreview.setAttribute("data-visible", "");
-      };
-
-      // Find which column the ghost is currently over
-      ghost_over_target: {
+      update_frontier_index: {
+        const ghostRect =
+          tableColumnStickyFrontierGhost.getBoundingClientRect();
+        const ghostCenterX = ghostRect.left + ghostRect.width / 2;
+        // Find which column the ghost is currently over
         let i = 0;
         for (; i < colElements.length; i++) {
           const colElement = colElements[i];
@@ -320,39 +332,30 @@ const initMoveColumnStickyFrontierByMousedown = (
           // on the column, left or right side?
           const columnCenterX = columnRect.left + columnRect.width / 2;
           if (ghostCenterX < columnCenterX) {
-            onGhostHoverColumn(i - 1);
-            break ghost_over_target;
+            onFutureColumnStickyFrontierIndexChange(i - 1);
+            break;
           }
-          onGhostHoverColumn(i);
-          break ghost_over_target;
+          onFutureColumnStickyFrontierIndexChange(i);
+          break;
         }
       }
-
-      // Show or hide the preview based on the position
       onDrag?.(gesture, futureColumnStickyFrontierIndex);
     },
     onRelease: (gesture) => {
       onRelease?.(gesture, futureColumnStickyFrontierIndex);
     },
   });
+
   dragToMoveGesture.addTeardown(() => {
     tableColumnStickyFrontierPreview.removeAttribute("data-visible");
     tableColumnStickyFrontierPreview.style.removeProperty(
       "--table-column-preview-right",
     );
-  });
 
-  tableColumnStickyFrontierGhost.style.setProperty(
-    "--table-column-right",
-    `${columnRightRelative}px`,
-  );
-  tableColumnStickyFrontierGhost.setAttribute("data-visible", "");
-  dragToMoveGesture.addTeardown(() => {
     tableColumnStickyFrontierGhost.removeAttribute("data-visible");
     tableColumnStickyFrontierGhost.style.removeProperty("--table-column-right");
     tableColumnStickyFrontierGhost.style.left = ""; // reset left set by the drag
   });
-
   dragToMoveGesture.grabViaMousedown(mousedownEvent, {
     element: tableColumnStickyFrontierGhost,
   });
