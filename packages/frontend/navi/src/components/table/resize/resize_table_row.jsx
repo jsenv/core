@@ -4,6 +4,8 @@ import {
   Z_INDEX_RESIZER_HANDLE,
 } from "../z_indexes.js";
 
+const ROW_MIN_HEIGHT = 30;
+
 import.meta.css = /* css */ `
   .navi_table_row_resize_handle_top_interaction,
   .navi_table_row_resize_handle_bottom_interaction {
@@ -244,7 +246,9 @@ const initResizeTableRowByMousedown = (
 
   // Top bound: minimum height of 30px (can shrink row down to this height)
   const minHeight =
-    typeof rowMinHeight === "number" && rowMinHeight > 30 ? rowMinHeight : 30;
+    typeof rowMinHeight === "number" && rowMinHeight > ROW_MIN_HEIGHT
+      ? rowMinHeight
+      : ROW_MIN_HEIGHT;
   // Bottom bound: maximum height of 500px (can expand beyond scrollable parent if needed)
   const maxHeight =
     typeof rowMaxHeight === "number" && rowMaxHeight < 300 ? rowMaxHeight : 300;

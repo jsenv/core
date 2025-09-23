@@ -60,7 +60,9 @@ export const TableCell = forwardRef((props, ref) => {
     value,
     selectionController,
     grabbed,
-    ...rest
+    style,
+    columnWidth,
+    rowHeight,
   } = props;
 
   const cellId = `${columnName}:${row.id}`;
@@ -78,10 +80,35 @@ export const TableCell = forwardRef((props, ref) => {
     element: cellRef.current,
   }));
 
+  const innerStyle = { ...style };
+
+  if (
+    columnWidth === undefined ||
+    // when column width becomes too small the padding would prevent it from shrinking
+    columnWidth > 42
+  ) {
+    innerStyle.paddingLeft = "12px";
+    innerStyle.paddingRight = "12px";
+  }
+  if (
+    rowHeight === undefined ||
+    // when row height becomes too small the padding would prevent it from shrinking
+    rowHeight > 42
+  ) {
+    innerStyle.paddingTop = "8px";
+    innerStyle.paddingBottom = "8px";
+  }
+  if (columnWidth !== undefined) {
+    innerStyle.maxWidth = `${columnWidth}px`;
+  }
+  if (rowHeight !== undefined) {
+    innerStyle.maxHeight = `${rowHeight}px`;
+  }
+
   return (
     <TagName
       ref={cellRef}
-      {...rest}
+      style={innerStyle}
       data-sticky-x={stickyX ? "" : undefined}
       data-sticky-y={stickyY ? "" : undefined}
       data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}

@@ -153,11 +153,11 @@ import.meta.css = /* css */ `
   .navi_table th {
     background: lightgrey;
     font-weight: normal;
-    padding: 12px 8px;
+    padding: 0;
   }
 
   .navi_table td {
-    padding: 12px 8px;
+    padding: 0;
     user-select: none;
   }
 
@@ -554,12 +554,8 @@ export const Table = forwardRef((props, ref) => {
                       value={rowData[col.accessorKey]}
                       selectionController={selectionController}
                       grabbed={columnGrabbed}
-                      style={{
-                        maxWidth: col.width ? `${col.width}px` : undefined,
-                        maxHeight: rowOptions.height
-                          ? `${rowOptions.height}px`
-                          : undefined,
-                      }}
+                      columnWidth={col.width}
+                      rowHeight={rowOptions.height}
                     />
                   );
                 })}
