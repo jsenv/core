@@ -317,9 +317,11 @@ const initMoveColumnStickyFrontierByMousedown = (
     tableColumnStickyFrontierPreview.setAttribute("data-visible", "");
   };
 
+  // Find the column at the middle of the visible area to use as drag boundary
+  // The goal it to prevent user from dragging the frontier too far
+  // and ending with a situation where sticky columns take most/all the visible space
   let restoreColumnDragObstacleAttr = () => {};
   setup_middle_column_obstacle: {
-    // Find the column at the middle of the visible area to use as drag boundary
     const tableContainerWidth = tableContainerRect.width;
     const middleX = tableContainerWidth / 2;
     // Find if there's a column at the middle position
