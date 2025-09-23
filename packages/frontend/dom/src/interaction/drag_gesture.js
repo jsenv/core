@@ -70,7 +70,7 @@
 import { getScrollableParent } from "../scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 
-export let DRAG_DEBUG_VISUAL_MARKERS = false;
+export let DRAG_DEBUG_VISUAL_MARKERS = true;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = true;
 };
@@ -1415,13 +1415,21 @@ const validateConstraints = (
     const roundedElementWidth = roundForConstraints(elementWidth);
     const roundedElementHeight = roundForConstraints(elementHeight);
 
-    if (availableWidth < roundedElementWidth && availableWidth >= 0) {
+    // Math.round because some values comes from getBoundingClientRect() (floats)
+    // and some from scrollWidth/Height (integers) causing precision issues
+    if (
+      Math.round(availableWidth) < Math.round(roundedElementWidth) &&
+      availableWidth >= 0
+    ) {
       console.warn(
         `Bounds constraint too narrow: available width (${availableWidth.toFixed(2)}) < element width (${roundedElementWidth.toFixed(2)})`,
         { constraint: bounds, dragName, element: bounds.element },
       );
     }
-    if (availableHeight < roundedElementHeight && availableHeight >= 0) {
+    if (
+      Math.round(availableHeight) < Math.round(roundedElementHeight) &&
+      availableHeight >= 0
+    ) {
       console.warn(
         `Bounds constraint too short: available height (${availableHeight.toFixed(2)}) < element height (${roundedElementHeight.toFixed(2)})`,
         { constraint: bounds, dragName, element: bounds.element },
