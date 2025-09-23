@@ -234,11 +234,11 @@ const initResizeTableColumnByMousedown = (
     ".navi_table_column_resizer",
   );
 
-  // Calculate custom bounds for column resizing
   const tableCellRect = tableCell.getBoundingClientRect();
+  const tableCellWidth = tableCellRect.width;
   const tableContainerRect = tableContainer.getBoundingClientRect();
-  const currentCellLeft = tableCellRect.left - tableContainerRect.left;
-  const currentCellWidth = tableCellRect.width;
+  const cellLeftRelative = tableCellRect.left - tableContainerRect.left;
+  const minLeft = cellLeftRelative;
 
   // Left bound: minimum width of 50px (can shrink column down to this width)
   const minWidth =
@@ -250,9 +250,9 @@ const initResizeTableColumnByMousedown = (
     typeof columnMaxWidth === "number" && columnMaxWidth < 1000
       ? columnMaxWidth
       : 1000;
-  const customLeftBound = currentCellLeft + minWidth;
-  const maxExpandAmount = maxWidth - currentCellWidth;
-  const customRightBound = currentCellLeft + currentCellWidth + maxExpandAmount;
+  const customLeftBound = minLeft + minWidth;
+  const maxExpandAmount = maxWidth - tableCellWidth;
+  const customRightBound = minLeft + tableCellWidth + maxExpandAmount;
 
   const dragToMoveGesture = createDragToMoveGesture({
     name: "resize-column",
@@ -266,8 +266,8 @@ const initResizeTableColumnByMousedown = (
     },
     onDrag,
     onRelease: (gesture) => {
-      const newWidth = currentCellWidth + gesture.xMove;
-      onRelease(newWidth, currentCellWidth);
+      const newWidth = tableCellWidth + gesture.xMove;
+      onRelease(newWidth, tableCellWidth);
     },
   });
   dragToMoveGesture.addTeardown(() => {

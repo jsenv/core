@@ -394,7 +394,7 @@ export const Table = forwardRef((props, ref) => {
               columnStickyFrontierIndex={columnStickyFrontierIndex}
               onColumnStickyFrontierChange={onColumnStickyFrontierChange}
               resizable
-              columnMinWidth={generatedLeftColumnWidth}
+              columnMinWidth={50}
               onColumnResizeRequested={(width) => {
                 onGeneratedLeftColumnResize?.(width);
               }}
