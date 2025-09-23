@@ -498,6 +498,10 @@ export const Table = forwardRef((props, ref) => {
                   rowMinHeight={rowOptions.minHeight}
                   rowMaxHeight={rowOptions.maxHeight}
                   onResizeRequested={(height, rowIndex) => {
+                    if (rowIndex === 0) {
+                      onGeneratedTopRowResize?.(height);
+                      return;
+                    }
                     onRowResize?.(height, rowIndex - 1, rows[rowIndex - 1]);
                   }}
                 />
