@@ -464,9 +464,9 @@ export const Table = forwardRef((props, ref) => {
           </tr>
         </thead>
         <tbody>
-          {data.map((row, rowIndex) => {
+          {data.map((rowData, rowIndex) => {
             const rowOptions = rows[rowIndex] || {};
-            const isRowSelected = selectedRowIds.includes(row.id);
+            const isRowSelected = selectedRowIds.includes(rowData.id);
             const rowIsSticky = rowIndex < rowStickyFrontierIndex;
             const isStickyYFrontier = rowIndex + 1 === rowStickyFrontierIndex;
             const isAfterStickyYFrontier =
@@ -474,8 +474,8 @@ export const Table = forwardRef((props, ref) => {
 
             return (
               <tr
-                key={row.id}
-                data-row-id={row.id}
+                key={rowData.id}
+                data-row-id={rowData.id}
                 aria-selected={isRowSelected}
                 data-sticky-y={rowIsSticky ? "" : undefined}
                 data-drag-sticky-frontier-top={
@@ -483,6 +483,9 @@ export const Table = forwardRef((props, ref) => {
                 }
                 style={{
                   height: rowOptions.height
+                    ? `${rowOptions.height}px`
+                    : undefined,
+                  maxHeight: rowOptions.height
                     ? `${rowOptions.height}px`
                     : undefined,
                 }}
@@ -496,7 +499,7 @@ export const Table = forwardRef((props, ref) => {
                   isAfterStickyYFrontier={isAfterStickyYFrontier}
                   columnStickyFrontierIndex={columnStickyFrontierIndex}
                   onColumnStickyFrontierChange={onColumnStickyFrontierChange}
-                  row={row}
+                  row={rowData}
                   rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                   columns={columns}
                   selectionController={selectionController}
@@ -516,8 +519,8 @@ export const Table = forwardRef((props, ref) => {
                     maxWidth: generatedLeftColumnWidth
                       ? `${generatedLeftColumnWidth}px`
                       : undefined,
-                    maxHeight: generatedTopRowHeight
-                      ? `${generatedTopRowHeight}px`
+                    maxHeight: rowOptions.height
+                      ? `${rowOptions.height}px`
                       : undefined,
                   }}
                 />
@@ -527,7 +530,7 @@ export const Table = forwardRef((props, ref) => {
 
                   return (
                     <DataCell
-                      key={`${row.id}-${col.id}`}
+                      key={`${rowData.id}-${col.id}`}
                       stickyX={columnIsSticky}
                       isStickyXFrontier={
                         colIndex + 1 === columnStickyFrontierIndex
@@ -544,13 +547,15 @@ export const Table = forwardRef((props, ref) => {
                       }
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
-                      row={row}
-                      value={row[col.accessorKey]}
+                      row={rowData}
+                      value={rowData[col.accessorKey]}
                       selectionController={selectionController}
                       grabbed={columnGrabbed}
                       style={{
                         maxWidth: col.width ? `${col.width}px` : undefined,
-                        maxHeight: row.height ? `${row.height}px` : undefined,
+                        maxHeight: rowOptions.height
+                          ? `${rowOptions.height}px`
+                          : undefined,
                       }}
                     />
                   );
