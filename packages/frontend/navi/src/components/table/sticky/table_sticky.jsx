@@ -1,4 +1,4 @@
-import { createDragToMoveGesture } from "@jsenv/dom";
+import { createDragToMoveGesture, setAttribute } from "@jsenv/dom";
 import {
   Z_INDEX_STICKY_COLUMN,
   Z_INDEX_STICKY_CORNER,
@@ -315,6 +315,40 @@ const initMoveColumnStickyFrontierByMousedown = (
     tableColumnStickyFrontierPreview.setAttribute("data-visible", "");
   };
 
+  let obstacleColElement = null;
+  setup_middle_column_obstacle: {
+    // Find the column at the middle of the visible area to use as drag boundary
+    const tableContainerWidth = tableContainerRect.width;
+    const middleX = tableContainerWidth / 2;
+
+    // Find if there's a column at the middle position
+    for (let i = 0; i < colElements.length; i++) {
+      const colElement = colElements[i];
+      const columnRect = colElement.getBoundingClientRect();
+      const columnLeftRelative = columnRect.left - tableContainerRect.left;
+      const columnRightRelative = columnRect.right - tableContainerRect.left;
+
+      // Check if middleX falls within this column
+      if (middleX >= columnLeftRelative && middleX <= columnRightRelative) {
+        // Found column at middle position, use the next column as obstacle (if it exists)
+        if (i + 1 < colElements.length) {
+          obstacleColElement = colElements[i + 1];
+        }
+        break;
+      }
+    }
+  }
+
+  // Add drag obstacle to prevent dragging beyond the middle area
+  let restoreColumnDragObstacleAttr = () => {};
+  if (obstacleColElement) {
+    restoreColumnDragObstacleAttr = setAttribute(
+      obstacleColElement,
+      "data-drag-obstacle",
+      "move-column-left-sticky-frontier",
+    );
+  }
+
   const dragToMoveGesture = createDragToMoveGesture({
     name: "move-column-left-sticky-frontier",
     direction: { x: true },
@@ -352,7 +386,6 @@ const initMoveColumnStickyFrontierByMousedown = (
     onRelease: (gesture) => {
       onRelease?.(gesture, futureColumnStickyFrontierIndex);
     },
-    customRightBound: tableContainerRect.width / 2,
   });
 
   dragToMoveGesture.addTeardown(() => {
@@ -364,6 +397,8 @@ const initMoveColumnStickyFrontierByMousedown = (
     tableColumnStickyFrontierGhost.removeAttribute("data-visible");
     tableColumnStickyFrontierGhost.style.removeProperty("--table-column-right");
     tableColumnStickyFrontierGhost.style.left = ""; // reset left set by the drag
+
+    restoreColumnDragObstacleAttr();
   });
   dragToMoveGesture.grabViaMousedown(mousedownEvent, {
     element: tableColumnStickyFrontierGhost,

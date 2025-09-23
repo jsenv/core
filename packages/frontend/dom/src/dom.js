@@ -1,3 +1,20 @@
+// style and attributes getters/setters
+export {
+  addWillChange,
+  getStyle,
+  setAttribute,
+  setAttributes,
+  setStyles,
+} from "./style_and_attributes.js";
+
+// traversal
+export {
+  findAfter,
+  findAncestor,
+  findBefore,
+  findDescendant,
+} from "./traversal.js";
+
 export { elementIsVisible } from "./element_is_visible.js";
 export {
   activeElementSignal,
@@ -41,19 +58,8 @@ export { useMaxHeight } from "./size/hooks/use_max_height.js";
 export { useMaxWidth } from "./size/hooks/use_max_width.js";
 export { useResizeStatus } from "./size/hooks/use_resize_status.js";
 
+// sticky helper
 export { initPositionSticky } from "./position_sticky.js";
-export {
-  addWillChange,
-  getStyle,
-  setAttributes,
-  setStyles,
-} from "./style_and_attributes.js";
-export {
-  findAfter,
-  findAncestor,
-  findBefore,
-  findDescendant,
-} from "./traversal.js";
 
 // transition
 export {
