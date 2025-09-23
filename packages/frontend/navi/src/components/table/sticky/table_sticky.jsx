@@ -317,38 +317,38 @@ const initMoveColumnStickyFrontierByMousedown = (
     tableColumnStickyFrontierPreview.setAttribute("data-visible", "");
   };
 
-  let obstacleColElement = null;
+  let restoreColumnDragObstacleAttr = () => {};
   setup_middle_column_obstacle: {
     // Find the column at the middle of the visible area to use as drag boundary
     const tableContainerWidth = tableContainerRect.width;
     const middleX = tableContainerWidth / 2;
-
     // Find if there's a column at the middle position
     for (let i = 0; i < colElements.length; i++) {
       const colElement = colElements[i];
       const columnRect = colElement.getBoundingClientRect();
       const columnLeftRelative = columnRect.left - tableContainerRect.left;
       const columnRightRelative = columnRect.right - tableContainerRect.left;
-
-      // Check if middleX falls within this column
-      if (middleX >= columnLeftRelative && middleX <= columnRightRelative) {
-        // Found column at middle position, use the next column as obstacle (if it exists)
-        if (i + 1 < colElements.length) {
-          obstacleColElement = colElements[i + 1];
-        }
+      if (i + 1 === colElements.length) {
+        // no next column
         break;
       }
+      if (columnRightRelative < middleX) {
+        // column is before the middle
+        continue;
+      }
+      if (columnLeftRelative > middleX) {
+        // column is after the middle
+        continue;
+      }
+      // Add drag obstacle to prevent dragging beyond the middle area
+      const obstacleColElement = colElements[i + 1];
+      restoreColumnDragObstacleAttr = setAttribute(
+        obstacleColElement,
+        "data-drag-obstacle",
+        "move-column-left-sticky-frontier",
+      );
+      break;
     }
-  }
-
-  // Add drag obstacle to prevent dragging beyond the middle area
-  let restoreColumnDragObstacleAttr = () => {};
-  if (obstacleColElement) {
-    restoreColumnDragObstacleAttr = setAttribute(
-      obstacleColElement,
-      "data-drag-obstacle",
-      "move-column-left-sticky-frontier",
-    );
   }
 
   const dragToMoveGesture = createDragToMoveGesture({
