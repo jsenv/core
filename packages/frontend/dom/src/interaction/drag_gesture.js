@@ -1410,18 +1410,20 @@ const validateConstraints = (
       );
     }
 
-    const availableWidth = bounds.right - bounds.left;
-    const availableHeight = bounds.bottom - bounds.top;
+    const availableWidth = roundForConstraints(bounds.right - bounds.left);
+    const availableHeight = roundForConstraints(bounds.bottom - bounds.top);
+    const roundedElementWidth = roundForConstraints(elementWidth);
+    const roundedElementHeight = roundForConstraints(elementHeight);
 
-    if (availableWidth < elementWidth && availableWidth >= 0) {
+    if (availableWidth < roundedElementWidth && availableWidth >= 0) {
       console.warn(
-        `Bounds constraint too narrow: available width (${availableWidth.toFixed(2)}) < element width (${elementWidth.toFixed(2)})`,
+        `Bounds constraint too narrow: available width (${availableWidth.toFixed(2)}) < element width (${roundedElementWidth.toFixed(2)})`,
         { constraint: bounds, dragName, element: bounds.element },
       );
     }
-    if (availableHeight < elementHeight && availableHeight >= 0) {
+    if (availableHeight < roundedElementHeight && availableHeight >= 0) {
       console.warn(
-        `Bounds constraint too short: available height (${availableHeight.toFixed(2)}) < element height (${elementHeight.toFixed(2)})`,
+        `Bounds constraint too short: available height (${availableHeight.toFixed(2)}) < element height (${roundedElementHeight.toFixed(2)})`,
         { constraint: bounds, dragName, element: bounds.element },
       );
     }
