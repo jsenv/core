@@ -69,6 +69,7 @@
 
 import { getScrollableParent } from "../scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
+import { setStyles } from "../style_and_attributes.js";
 
 export let DRAG_DEBUG_VISUAL_MARKERS = true;
 export const enableDebugMarkers = () => {
@@ -258,6 +259,31 @@ export const createDragGesture = ({
       return null;
     }
 
+    const scrollableParent = getScrollableParent(element);
+    const computedStyle = getComputedStyle(element);
+    if (computedStyle.position === "sticky") {
+      const left = parseFloat(computedStyle.left) || 0;
+      const top = parseFloat(computedStyle.top) || 0;
+      const leftWithScroll = left + scrollableParent.scrollLeft;
+      const topWithScroll = top + scrollableParent.scrollTop;
+      const restoreStyles = setStyles(element, {
+        position: "relative",
+        left: `${leftWithScroll}px`,
+        top: `${topWithScroll}px`,
+      });
+      addTeardown(() => {
+        const elementRect = element.getBoundingClientRect();
+        const scrollableRect = scrollableParent.getBoundingClientRect();
+        const leftRelative = elementRect.left - scrollableRect.left;
+        const topRelative = elementRect.top - scrollableRect.top;
+        restoreStyles();
+        setStyles(element, {
+          left: `${leftRelative}px`,
+          top: `${topRelative}px`,
+        });
+      });
+    }
+
     const positionedParent = getPositionedParent(element);
     const positionedParentRect = positionedParent.getBoundingClientRect();
     const elementToImpactRect = elementToImpact.getBoundingClientRect();
@@ -278,7 +304,7 @@ export const createDragGesture = ({
       elementVisuallyImpactedRect.left - elementToImpactRect.left;
     const visualOffsetY =
       elementVisuallyImpactedRect.top - elementToImpactRect.top;
-    const scrollableParent = getScrollableParent(element);
+
     const initialScrollLeft = scrollableParent.scrollLeft;
     const initialScrollTop = scrollableParent.scrollTop;
 
