@@ -2,7 +2,6 @@ import { forwardRef, useImperativeHandle } from "preact/compat";
 import { useRef } from "preact/hooks";
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { useSelectableElement } from "../selection/selection.jsx";
-import { TableColumnStickyFrontier } from "./sticky/table_sticky.jsx";
 
 import.meta.css = /* css */ `
   .navi_table {
@@ -47,28 +46,35 @@ import.meta.css = /* css */ `
 export const TableCell = forwardRef((props, ref) => {
   const {
     isHead,
+    cellId,
+    boldClone,
     stickyX,
     stickyY,
     isStickyXFrontier,
     isStickyYFrontier,
     isAfterStickyXFrontier,
     isAfterStickyYFrontier,
-    columnStickyFrontierIndex,
-    onColumnStickyFrontierChange,
-    columnName,
-    row,
     value,
     selectionController,
     grabbed,
     style,
     columnWidth,
     rowHeight,
+    children,
+    // Header-specific props
+    className,
+    onClick,
+    onMouseDown,
+    cursor,
+    // Additional props for headers
+    selectionImpact,
+    columnContainsSelectedCell,
   } = props;
 
-  const cellId = `${columnName}:${row.id}`;
   const cellRef = useRef();
   const { selected } = useSelectableElement(cellRef, {
     selectionController,
+    selectionImpact,
     // value: cellId,
   });
   const { editing, startEditing, stopEditing } = useEditionController();
@@ -81,6 +87,10 @@ export const TableCell = forwardRef((props, ref) => {
   }));
 
   const innerStyle = { ...style };
+
+  if (cursor) {
+    innerStyle.cursor = cursor;
+  }
 
   if (
     columnWidth === undefined ||
@@ -108,6 +118,7 @@ export const TableCell = forwardRef((props, ref) => {
   return (
     <TagName
       ref={cellRef}
+      className={className}
       style={innerStyle}
       data-sticky-x={stickyX ? "" : undefined}
       data-sticky-y={stickyY ? "" : undefined}
@@ -117,11 +128,16 @@ export const TableCell = forwardRef((props, ref) => {
       data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
       tabIndex={-1}
       data-value={cellId}
-      data-selection-name="cell"
+      data-selection-name={isHead ? "column" : "cell"}
       data-selection-keyboard-toggle
       aria-selected={selected}
       data-editing={editing ? "" : undefined}
       data-grabbed={grabbed ? "" : undefined}
+      data-column-contains-selected-cell={
+        columnContainsSelectedCell ? "" : undefined
+      }
+      onClick={onClick}
+      onMouseDown={onMouseDown}
       onDoubleClick={(e) => {
         startEditing(e);
       }}
@@ -132,12 +148,12 @@ export const TableCell = forwardRef((props, ref) => {
       <Editable editing={editing} onEditEnd={stopEditing} value={value}>
         {value}
       </Editable>
-      {isStickyXFrontier && (
-        <TableColumnStickyFrontier
-          columnStickyFrontierIndex={columnStickyFrontierIndex}
-          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
-        />
+      {boldClone && (
+        <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
+          {value}
+        </span>
       )}
+      {children}
     </TagName>
   );
 });

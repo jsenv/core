@@ -459,9 +459,8 @@ export const Table = forwardRef((props, ref) => {
                       ? `${generatedTopRowHeight}px`
                       : undefined,
                   }}
-                >
-                  {col.value}
-                </HeaderCell>
+                  value={col.value}
+                />
               );
             })}
           </tr>
@@ -646,42 +645,26 @@ const HeaderCell = ({
   columnStickyFrontierIndex,
   onColumnStickyFrontierChange,
   style,
-  children,
+  value,
 }) => {
-  const cellRef = useRef();
-  const columnValue = `column:${columnAccessorKey}`;
-  const { selected } = useSelectableElement(cellRef, {
-    selectionController,
-    selectionImpact: () => {
-      const columnCells = data.map((row) => `${columnAccessorKey}:${row.id}`);
-      return columnCells;
-    },
-  });
-
   const columnContainsSelectedCell =
     columnWithSomeSelectedCell.includes(columnAccessorKey);
+
   return (
-    <th
-      ref={cellRef}
-      data-column-contains-selected={
-        columnContainsSelectedCell ? "" : undefined
-      }
-      data-value={columnValue}
-      data-selection-name="column"
-      data-selection-keyboard-toggle
-      aria-selected={selected}
-      data-sticky-x={stickyX ? "" : undefined}
-      data-sticky-y={stickyY ? "" : undefined}
-      data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
-      data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
-      data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
-      data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
-      data-grabbed={grabbed ? "" : undefined}
-      style={{
-        cursor: grabbed ? "grabbing" : "grab",
-        ...style,
-      }}
-      tabIndex={-1}
+    <TableCell
+      cellId={`header:${columnAccessorKey}`}
+      isHead={true}
+      stickyX={stickyX}
+      stickyY={stickyY}
+      isStickyXFrontier={isStickyXFrontier}
+      isStickyYFrontier={isStickyYFrontier}
+      isAfterStickyXFrontier={isAfterStickyXFrontier}
+      isAfterStickyYFrontier={isAfterStickyYFrontier}
+      columnStickyFrontierIndex={columnStickyFrontierIndex}
+      onColumnStickyFrontierChange={onColumnStickyFrontierChange}
+      grabbed={grabbed}
+      style={style}
+      cursor={grabbed ? "grabbing" : movable && !stickyX ? "grab" : undefined}
       onMouseDown={(e) => {
         if (!movable || stickyX) {
           return;
@@ -695,6 +678,14 @@ const HeaderCell = ({
           onRelease,
         });
       }}
+      selectionController={selectionController}
+      // Header-specific data attributes
+      selectionImpact={() => {
+        const columnCells = data.map((row) => `${columnAccessorKey}:${row.id}`);
+        return columnCells;
+      }}
+      columnContainsSelectedCell={columnContainsSelectedCell}
+      value={value}
     >
       {resizable && (
         <TableColumnLeftResizeHandle
@@ -703,10 +694,6 @@ const HeaderCell = ({
           columnMaxWidth={columnMaxWidth}
         />
       )}
-      <span>{children}</span>
-      <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
-        {children}
-      </span>
       {resizable && (
         <TableColumnRightResizeHandle
           onRelease={(width) => onResizeRequested(width, columnIndex)}
@@ -714,14 +701,13 @@ const HeaderCell = ({
           columnMaxWidth={columnMaxWidth}
         />
       )}
-
       {isStickyXFrontier && (
         <TableColumnStickyFrontier
           columnStickyFrontierIndex={columnStickyFrontierIndex}
           onColumnStickyFrontierChange={onColumnStickyFrontierChange}
         />
       )}
-    </th>
+    </TableCell>
   );
 };
 
@@ -802,6 +788,22 @@ const RowNumberCell = ({
   );
 };
 
-const DataCell = (props) => {
-  return <TableCell {...props} />;
+const DataCell = ({
+  isStickyXFrontier,
+  columnStickyFrontierIndex,
+  onColumnStickyFrontierChange,
+  columnName,
+  row,
+  ...rest
+}) => {
+  return (
+    <TableCell cellId={`${columnName}:${row.id}`} {...rest}>
+      {isStickyXFrontier && (
+        <TableColumnStickyFrontier
+          columnStickyFrontierIndex={columnStickyFrontierIndex}
+          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
+        />
+      )}
+    </TableCell>
+  );
 };
