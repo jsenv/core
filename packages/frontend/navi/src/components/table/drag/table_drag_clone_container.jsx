@@ -34,6 +34,10 @@ import.meta.css = /* css */ `
     opacity: 1;
   }
 
+  .navi_table_drag_clone_container .navi_table_column_sticky_frontier {
+    opacity: 0;
+  }
+
   .navi_table_container .navi_table_drag_clone_container th[data-sticky-y],
   .navi_table_container .navi_table_drag_clone_container td[data-sticky-y] {
     position: relative;
