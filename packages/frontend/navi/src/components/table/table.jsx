@@ -435,6 +435,10 @@ export const Table = forwardRef((props, ref) => {
                     releaseColumn(colIndex);
                   }}
                   onResizeRequested={(width, columnIndex) => {
+                    if (columnIndex === 0) {
+                      onGeneratedLeftColumnResize?.(width);
+                      return;
+                    }
                     onColumnResize?.(
                       width,
                       columnIndex - 1,

@@ -141,6 +141,9 @@
         const [columnStickyFrontierIndex, setColumnStickyFrontierIndex] =
           useState(0);
         const [rowStickyFrontierIndex, setRowStickyFrontierIndex] = useState(0);
+        const [generatedLeftColumnWidth, setGeneratedLeftColumnWidth] =
+          useState(100);
+        const [generatedTopRowHeight, setGeneratedTopRowHeight] = useState(50);
 
         return (
           <div className="demo-container">
@@ -193,6 +196,10 @@
                     return newRows;
                   });
                 }}
+                generatedLeftColumnWidth={generatedLeftColumnWidth}
+                onGeneratedLeftColumnResize={setGeneratedLeftColumnWidth}
+                generatedTopRowHeight={generatedTopRowHeight}
+                onGeneratedTopRowResize={setGeneratedTopRowHeight}
                 columnStickyFrontierIndex={columnStickyFrontierIndex}
                 onColumnStickyFrontierChange={setColumnStickyFrontierIndex}
                 rowStickyFrontierIndex={rowStickyFrontierIndex}
