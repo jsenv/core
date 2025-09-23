@@ -11,9 +11,9 @@ import.meta.css = /* css */ `
     position: absolute;
     left: 0;
     right: 0;
-    background: orange;
+    /* background: orange; */
+    /* opacity: 0.5; */
     height: 8px;
-    opacity: 0.5;
     z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
   .navi_table_row_resize_handle_top_interaction {

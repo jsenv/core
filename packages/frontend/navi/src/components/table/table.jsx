@@ -452,6 +452,9 @@ export const Table = forwardRef((props, ref) => {
                   }}
                   style={{
                     maxWidth: col.width ? `${col.width}px` : undefined,
+                    maxHeight: generatedTopRowHeight
+                      ? `${generatedTopRowHeight}px`
+                      : undefined,
                   }}
                 >
                   {col.value}
@@ -508,6 +511,14 @@ export const Table = forwardRef((props, ref) => {
                       return;
                     }
                     onRowResize?.(height, rowIndex - 1, rows[rowIndex - 1]);
+                  }}
+                  style={{
+                    maxWidth: generatedLeftColumnWidth
+                      ? `${generatedLeftColumnWidth}px`
+                      : undefined,
+                    maxHeight: generatedTopRowHeight
+                      ? `${generatedTopRowHeight}px`
+                      : undefined,
                   }}
                 />
                 {columns.map((col, colIndex) => {
@@ -729,6 +740,7 @@ const RowNumberCell = ({
   rowMinHeight,
   rowMaxHeight,
   onResizeRequested,
+  style,
 }) => {
   const cellRef = useRef();
 
@@ -758,7 +770,7 @@ const RowNumberCell = ({
       data-selection-name="row"
       data-selection-keyboard-toggle
       aria-selected={selected}
-      style={{ textAlign: "center" }}
+      style={{ textAlign: "center", ...style }}
       tabIndex={-1}
     >
       {resizable && (
