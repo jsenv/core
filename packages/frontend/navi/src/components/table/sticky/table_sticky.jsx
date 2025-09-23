@@ -172,6 +172,10 @@ import.meta.css = /* css */ `
     background: #444746;
     cursor: grab;
   }
+  .navi_table_column_sticky_frontier[data-left] {
+    left: 0;
+    right: auto;
+  }
   .navi_table_column_sticky_frontier_ghost,
   .navi_table_column_sticky_frontier_preview {
     position: absolute;
@@ -210,24 +214,24 @@ import.meta.css = /* css */ `
  * as a table cell uses a position relative)
  */
 export const TableColumnStickyFrontier = ({
-  draggable,
-  onGrab,
-  onDrag,
-  onRelease,
+  columnStickyFrontierIndex,
+  onColumnStickyFrontierChange,
 }) => {
   return (
     <div
       className="navi_table_column_sticky_frontier"
+      data-left={columnStickyFrontierIndex === -1 ? "" : undefined}
+      inert={!onColumnStickyFrontierChange}
       onMouseDown={(e) => {
-        if (!draggable) {
-          return;
-        }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag column
         initMoveColumnStickyFrontierByMousedown(e, {
-          onGrab,
-          onDrag,
-          onRelease,
+          columnIndex: columnStickyFrontierIndex,
+          onRelease: (_, index) => {
+            if (index !== columnStickyFrontierIndex) {
+              onColumnStickyFrontierChange(index);
+            }
+          },
         });
       }}
     ></div>
@@ -246,7 +250,7 @@ export const TableColumnStickyFrontierPreview = () => {
 // At this stage user can see 3 frontiers. Where it is, the one he grab, the futurue one if he releases.
 const initMoveColumnStickyFrontierByMousedown = (
   mousedownEvent,
-  { onGrab, onDrag, onRelease },
+  { columnIndex, onGrab, onDrag, onRelease },
 ) => {
   const tableCell = mousedownEvent.target.closest("th,td");
   const table = tableCell.closest("table");
@@ -265,9 +269,6 @@ const initMoveColumnStickyFrontierByMousedown = (
 
   const colgroup = table.querySelector("colgroup");
   const colElements = Array.from(colgroup.children);
-  const columnIndex = Array.from(tableCell.closest("tr").children).indexOf(
-    tableCell,
-  );
 
   let futureColumnStickyFrontierIndex;
   const dragToMoveGesture = createDragToMoveGesture({

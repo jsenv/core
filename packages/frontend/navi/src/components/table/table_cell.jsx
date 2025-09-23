@@ -107,12 +107,8 @@ export const TableCell = forwardRef((props, ref) => {
       </Editable>
       {isStickyXFrontier && (
         <TableColumnStickyFrontier
-          draggable={Boolean(onColumnStickyFrontierChange)}
-          onRelease={(_, index) => {
-            if (index !== columnStickyFrontierIndex) {
-              onColumnStickyFrontierChange(index);
-            }
-          }}
+          columnStickyFrontierIndex={columnStickyFrontierIndex}
+          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
         />
       )}
     </TagName>

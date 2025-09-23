@@ -583,12 +583,8 @@ const RowNumberHeaderCell = ({
     >
       {isStickyXFrontier && (
         <TableColumnStickyFrontier
-          draggable={Boolean(onColumnStickyFrontierChange)}
-          onRelease={(_, index) => {
-            if (index !== columnStickyFrontierIndex) {
-              onColumnStickyFrontierChange(index);
-            }
-          }}
+          columnStickyFrontierIndex={columnStickyFrontierIndex}
+          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
         />
       )}
     </th>
@@ -692,12 +688,8 @@ const HeaderCell = ({
 
       {isStickyXFrontier && (
         <TableColumnStickyFrontier
-          draggable={Boolean(onColumnStickyFrontierChange)}
-          onRelease={(_, index) => {
-            if (index !== columnStickyFrontierIndex) {
-              onColumnStickyFrontierChange(index);
-            }
-          }}
+          columnStickyFrontierIndex={columnStickyFrontierIndex}
+          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
         />
       )}
     </th>
@@ -775,12 +767,8 @@ const RowNumberCell = ({
       )}
       {isStickyXFrontier && (
         <TableColumnStickyFrontier
-          draggable={Boolean(onColumnStickyFrontierChange)}
-          onRelease={(_, index) => {
-            if (index !== columnStickyFrontierIndex) {
-              onColumnStickyFrontierChange(index);
-            }
-          }}
+          columnStickyFrontierIndex={columnStickyFrontierIndex}
+          onColumnStickyFrontierChange={onColumnStickyFrontierChange}
         />
       )}
     </td>
