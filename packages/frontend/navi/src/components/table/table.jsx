@@ -664,9 +664,12 @@ const HeaderCell = ({
       onColumnStickyFrontierChange={onColumnStickyFrontierChange}
       grabbed={grabbed}
       style={style}
-      cursor={grabbed ? "grabbing" : movable && !stickyX ? "grab" : undefined}
+      cursor={grabbed ? "grabbing" : movable ? "grab" : undefined}
+      selectionController={selectionController}
+      value={value}
+      // Header-specific data attributes
       onMouseDown={(e) => {
-        if (!movable || stickyX) {
+        if (!movable) {
           return;
         }
         if (e.button !== 0) {
@@ -678,14 +681,11 @@ const HeaderCell = ({
           onRelease,
         });
       }}
-      selectionController={selectionController}
-      // Header-specific data attributes
       selectionImpact={() => {
         const columnCells = data.map((row) => `${columnAccessorKey}:${row.id}`);
         return columnCells;
       }}
       columnContainsSelectedCell={columnContainsSelectedCell}
-      value={value}
     >
       {resizable && (
         <TableColumnLeftResizeHandle
