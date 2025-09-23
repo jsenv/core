@@ -492,14 +492,10 @@ export const createDragGesture = ({
 
     const drawVisualMarkers = ({
       constraints,
-      visibleAreaLeft,
-      visibleAreaRight,
-      visibleAreaTop,
-      visibleAreaBottom,
+      visibleArea,
       elementWidth,
       elementHeight,
       obstacleObjects,
-      stickyFrontierObjects,
     }) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
@@ -525,7 +521,7 @@ export const createDragGesture = ({
           createDebugMarker({
             name: "visibleAreaTop",
             x: 0,
-            y: visibleAreaTop,
+            y: visibleArea.top,
             color: "red",
             orientation: "horizontal",
           }),
@@ -534,7 +530,7 @@ export const createDragGesture = ({
           createDebugMarker({
             name: "visibleAreaBottom",
             x: 0,
-            y: visibleAreaBottom,
+            y: visibleArea.bottom,
             color: "orange",
             orientation: "horizontal",
           }),
@@ -544,7 +540,7 @@ export const createDragGesture = ({
         currentDebugMarkers.push(
           createDebugMarker({
             name: "visibleAreaLeft",
-            x: visibleAreaLeft,
+            x: visibleArea.left,
             y: 0,
             color: "blue",
             orientation: "vertical",
@@ -553,7 +549,7 @@ export const createDragGesture = ({
         currentDebugMarkers.push(
           createDebugMarker({
             name: "visibleAreaRight",
-            x: visibleAreaRight,
+            x: visibleArea.right,
             y: 0,
             color: "green",
             orientation: "vertical",
@@ -593,14 +589,7 @@ export const createDragGesture = ({
         }
       });
 
-      // Create markers for sticky frontiers using pre-calculated objects
-      stickyFrontierObjects.forEach((stickyFrontierObj) => {
-        const frontierMarker = createStickyFrontierMarker(stickyFrontierObj);
-
-        if (frontierMarker) {
-          currentConstraintMarkers.push(frontierMarker);
-        }
-      });
+      // Sticky frontier constraints are now consolidated into the visible area
 
       // Create bound markers - only for allowed movement directions
       if (direction.x) {
@@ -794,86 +783,30 @@ export const createDragGesture = ({
         );
       }
 
-      // Auto-detect sticky frontiers within scrollable parent and reduce visible area accordingly
-      // Sticky frontiers always reduce visible area - z-index handles visual layering when elements go behind frontiers
-      // Use pre-calculated sticky frontiers to avoid recalculation
-      // Current element position is no longer needed since frontiers specify their sides explicitly
-      for (const stickyFrontierObject of stickyFrontierObjects) {
-        const frontierRect = stickyFrontierObject.bounds;
-        const frontierSide = stickyFrontierObject.sides;
+      // Reduce sticky frontiers to a single visible area object
+      const visibleArea = reduceStickyFrontiersToVisibleArea(
+        {
+          left: visibleAreaLeft,
+          right: visibleAreaRight,
+          top: visibleAreaTop,
+          bottom: visibleAreaBottom,
+        },
+        stickyFrontierObjects,
+        { direction, dragName: name },
+      );
 
-        // Store original values for validation
-        const originalVisibleAreaLeft = visibleAreaLeft;
-        const originalVisibleAreaRight = visibleAreaRight;
-        const originalVisibleAreaTop = visibleAreaTop;
-        const originalVisibleAreaBottom = visibleAreaBottom;
-
-        // Apply constraints based on the specific side this frontier affects
-        switch (frontierSide) {
-          case "left":
-            // Frontier acts as a left barrier - constrains from the right edge of the frontier
-            if (direction.x && frontierRect.right > visibleAreaLeft) {
-              visibleAreaLeft = frontierRect.right;
-            }
-            break;
-          case "right":
-            // Frontier acts as a right barrier - constrains from the left edge of the frontier
-            if (direction.x && frontierRect.left < visibleAreaRight) {
-              visibleAreaRight = frontierRect.left;
-            }
-            break;
-          case "top":
-            // Frontier acts as a top barrier - constrains from the bottom edge of the frontier
-            if (direction.y && frontierRect.bottom > visibleAreaTop) {
-              visibleAreaTop = frontierRect.bottom;
-            }
-            break;
-          case "bottom":
-            // Frontier acts as a bottom barrier - constrains from the top edge of the frontier
-            if (direction.y && frontierRect.top < visibleAreaBottom) {
-              visibleAreaBottom = frontierRect.top;
-            }
-            break;
-        }
-
-        // Debug warnings for invalid visible areas caused by this specific frontier
-        if (import.meta.dev) {
-          if (visibleAreaLeft > visibleAreaRight) {
-            console.warn(
-              `Sticky frontier created invalid horizontal visible area: visibleAreaLeft (${visibleAreaLeft}) > visibleAreaRight (${visibleAreaRight}). Original: left=${originalVisibleAreaLeft}, right=${originalVisibleAreaRight}`,
-              {
-                frontierElement: stickyFrontierObject.element,
-                frontierRect,
-                dragName: name,
-                frontierSide,
-              },
-            );
-          }
-          if (visibleAreaTop > visibleAreaBottom) {
-            console.warn(
-              `Sticky frontier created invalid vertical visible area: visibleAreaTop (${visibleAreaTop}) > visibleAreaBottom (${visibleAreaBottom}). Original: top=${originalVisibleAreaTop}, bottom=${originalVisibleAreaBottom}`,
-              {
-                frontierElement: stickyFrontierObject.element,
-                frontierRect,
-                dragName: name,
-                frontierSide,
-              },
-            );
-          }
-        }
-      }
+      visibleAreaLeft = visibleArea.left;
+      visibleAreaRight = visibleArea.right;
+      visibleAreaTop = visibleArea.top;
+      visibleAreaBottom = visibleArea.bottom;
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
         drawVisualMarkers({
           constraints,
-          visibleAreaLeft,
-          visibleAreaRight,
-          visibleAreaTop,
-          visibleAreaBottom,
+          visibleArea,
           elementWidth: currentElementWidth,
           elementHeight: currentElementHeight,
           obstacleObjects,
-          stickyFrontierObjects,
         });
       }
 
@@ -1173,9 +1106,9 @@ const createStickyFrontierOnAxis = (
     const stickyFrontierObject = {
       type: "sticky-frontier",
       element: frontier,
-      sides: primarySide,
+      side: hasPrimary ? primarySide : oppositeSide,
       bounds: frontierBounds,
-      name: `Sticky Frontier (${getElementSelector(frontier)}) - side: ${primarySide}`,
+      name: `Sticky Frontier (${getElementSelector(frontier)}) - side: ${hasPrimary ? primarySide : oppositeSide}`,
     };
     matchingStickyFrontiers.push(stickyFrontierObject);
   }
@@ -1202,6 +1135,82 @@ const createVerticalStickyFrontiersFromQuerySelector = (
     primarySide: "top",
     oppositeSide: "bottom",
   });
+};
+
+const reduceStickyFrontiersToVisibleArea = (
+  initialVisibleArea,
+  stickyFrontierObjects,
+  { direction, dragName },
+) => {
+  let { left, right, top, bottom } = initialVisibleArea;
+
+  // Process each sticky frontier and reduce visible area accordingly
+  for (const stickyFrontierObject of stickyFrontierObjects) {
+    const frontierRect = stickyFrontierObject.bounds;
+    const frontierSide = stickyFrontierObject.side;
+
+    // Store original values for validation
+    const originalLeft = left;
+    const originalRight = right;
+    const originalTop = top;
+    const originalBottom = bottom;
+
+    // Apply constraints based on the specific side this frontier affects
+    switch (frontierSide) {
+      case "left":
+        // Frontier acts as a left barrier - constrains from the right edge of the frontier
+        if (direction.x && frontierRect.right > left) {
+          left = frontierRect.right;
+        }
+        break;
+      case "right":
+        // Frontier acts as a right barrier - constrains from the left edge of the frontier
+        if (direction.x && frontierRect.left < right) {
+          right = frontierRect.left;
+        }
+        break;
+      case "top":
+        // Frontier acts as a top barrier - constrains from the bottom edge of the frontier
+        if (direction.y && frontierRect.bottom > top) {
+          top = frontierRect.bottom;
+        }
+        break;
+      case "bottom":
+        // Frontier acts as a bottom barrier - constrains from the top edge of the frontier
+        if (direction.y && frontierRect.top < bottom) {
+          bottom = frontierRect.top;
+        }
+        break;
+    }
+
+    // Debug warnings for invalid visible areas caused by this specific frontier
+    if (import.meta.dev) {
+      if (left > right) {
+        console.warn(
+          `Sticky frontier created invalid horizontal visible area: left (${left}) > right (${right}). Original: left=${originalLeft}, right=${originalRight}`,
+          {
+            frontierElement: stickyFrontierObject.element,
+            frontierBounds: frontierRect,
+            dragName,
+            frontierSide,
+          },
+        );
+      }
+      if (top > bottom) {
+        console.warn(
+          `Sticky frontier created invalid vertical visible area: top (${top}) > bottom (${bottom}). Original: top=${originalTop}, bottom=${originalBottom}`,
+          {
+            frontierElement: stickyFrontierObject.element,
+            frontierBounds: frontierRect,
+            dragName,
+            frontierSide,
+          },
+        );
+      }
+    }
+  }
+
+  return { left, right, top, bottom };
 };
 
 const getElementSelector = (element) => {
@@ -1471,7 +1480,7 @@ const validateConstraints = (
           index: i,
           element: f.element,
           bounds: f.bounds,
-          sides: f.sides,
+          side: f.side,
         })),
       },
     );
@@ -1813,27 +1822,6 @@ const createObstacleMarker = (obstacleObj) => {
   const label = document.createElement("div");
   label.className = "navi_obstacle_marker_label";
   label.textContent = obstacleObj.name;
-  marker.appendChild(label);
-
-  document.body.appendChild(marker);
-  return marker;
-};
-
-const createStickyFrontierMarker = (stickyFrontierObj) => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
-
-  const marker = document.createElement("div");
-  marker.className = "navi_sticky_frontier_marker";
-  marker.style.left = `${stickyFrontierObj.bounds.left}px`;
-  marker.style.top = `${stickyFrontierObj.bounds.top}px`;
-  marker.style.width = `${stickyFrontierObj.bounds.right - stickyFrontierObj.bounds.left}px`;
-  marker.style.height = `${stickyFrontierObj.bounds.bottom - stickyFrontierObj.bounds.top}px`;
-  marker.title = stickyFrontierObj.name;
-
-  // Add label
-  const label = document.createElement("div");
-  label.className = "navi_sticky_frontier_marker_label";
-  label.textContent = stickyFrontierObj.name;
   marker.appendChild(label);
 
   document.body.appendChild(marker);
