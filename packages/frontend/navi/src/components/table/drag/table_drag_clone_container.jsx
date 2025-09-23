@@ -24,25 +24,30 @@ import.meta.css = /* css */ `
     /* background: rgba(0, 0, 0, 0.5); */
   }
 
-  .navi_table_drag_clone_container th,
-  .navi_table_drag_clone_container td {
+  /* We preprend ".navi_table_container" to ensure it propertly overrides */
+  .navi_table_container .navi_table_drag_clone_container th,
+  .navi_table_container .navi_table_drag_clone_container td {
     opacity: 0;
   }
-  .navi_table_drag_clone_container th[data-grabbed],
-  .navi_table_drag_clone_container td[data-grabbed] {
+  .navi_table_container .navi_table_drag_clone_container th[data-grabbed],
+  .navi_table_container .navi_table_drag_clone_container td[data-grabbed] {
     opacity: 1;
   }
 
-  .navi_table_drag_clone_container th[data-sticky-y],
-  .navi_table_drag_clone_container td[data-sticky-y] {
+  .navi_table_container .navi_table_drag_clone_container th[data-sticky-y],
+  .navi_table_container .navi_table_drag_clone_container td[data-sticky-y] {
     position: relative;
   }
-  .navi_table_drag_clone_container th[data-sticky-x],
-  .navi_table_drag_clone_container td[data-sticky-x] {
+  .navi_table_container .navi_table_drag_clone_container th[data-sticky-x],
+  .navi_table_container .navi_table_drag_clone_container td[data-sticky-x] {
     position: relative;
   }
-  .navi_table_drag_clone_container th[data-sticky-x][data-sticky-y],
-  .navi_table_drag_clone_container td[data-sticky-x][data-sticky-y] {
+  .navi_table_container
+    .navi_table_drag_clone_container
+    th[data-sticky-x][data-sticky-y],
+  .navi_table_container
+    .navi_table_drag_clone_container
+    td[data-sticky-x][data-sticky-y] {
     position: relative;
   }
 `;
