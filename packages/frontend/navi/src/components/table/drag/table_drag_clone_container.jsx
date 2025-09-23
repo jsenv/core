@@ -1,10 +1,15 @@
 import { useLayoutEffect, useRef } from "preact/compat";
-import { Z_INDEX_DRAGGING_CLONE } from "../z_indexes.js";
+import {
+  Z_INDEX_DRAGGING_CELL_PLACEHOLDER,
+  Z_INDEX_DRAGGING_CLONE,
+} from "../z_indexes.js";
 
 import.meta.css = /* css */ `
-  .navi_table th[data-grabbed],
-  .navi_table td[data-grabbed] {
-    opacity: 0;
+  .navi_table th[data-grabbed]::before,
+  .navi_table td[data-grabbed]::before,
+  .navi_table th[data-grabbed]::after,
+  .navi_table td[data-grabbed]::after {
+    box-shadow: none !important;
   }
 
   .navi_table_drag_clone_container {
@@ -53,6 +58,13 @@ import.meta.css = /* css */ `
     .navi_table_drag_clone_container
     td[data-sticky-x][data-sticky-y] {
     position: relative;
+  }
+
+  .navi_table_cell_placeholder {
+    position: absolute;
+    inset: 0;
+    background: lightgrey;
+    z-index: ${Z_INDEX_DRAGGING_CELL_PLACEHOLDER};
   }
 `;
 

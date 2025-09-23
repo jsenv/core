@@ -148,12 +148,13 @@ export const TableCell = forwardRef((props, ref) => {
       <Editable editing={editing} onEditEnd={stopEditing} value={value}>
         {value}
       </Editable>
+      {children}
       {boldClone && (
         <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
           {value}
         </span>
       )}
-      {children}
+      {grabbed && <div className="navi_table_cell_placeholder"></div>}
     </TagName>
   );
 });

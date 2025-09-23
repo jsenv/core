@@ -4,6 +4,7 @@ import {
   Z_INDEX_STICKY_CORNER,
   Z_INDEX_STICKY_FRONTIER_BACKDROP,
   Z_INDEX_STICKY_FRONTIER_GHOST,
+  Z_INDEX_STICKY_FRONTIER_HANDLE,
   Z_INDEX_STICKY_FRONTIER_PREVIEW,
   Z_INDEX_STICKY_ROW,
 } from "../z_indexes.js";
@@ -180,6 +181,7 @@ import.meta.css = /* css */ `
     width: var(--column-sticky-frontier-width);
     background: #444746;
     cursor: grab;
+    z-index: ${Z_INDEX_STICKY_FRONTIER_HANDLE};
   }
   .navi_table_column_sticky_frontier[data-left] {
     left: 0;

@@ -1,7 +1,5 @@
 import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
-const KEEP_ON_RELEASE = true;
-
 export const initDragTableColumnByMousedown = (
   mousedownEvent,
   { onGrab, onDrag, onRelease },
@@ -11,9 +9,6 @@ export const initDragTableColumnByMousedown = (
     teardownCallbackSet.add(callback);
   };
   const teardown = () => {
-    if (KEEP_ON_RELEASE) {
-      return;
-    }
     for (const callback of teardownCallbackSet) {
       callback();
     }
