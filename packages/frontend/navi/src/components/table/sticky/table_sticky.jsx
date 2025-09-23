@@ -28,6 +28,14 @@ import.meta.css = /* css */ `
     z-index: ${Z_INDEX_STICKY_CORNER};
   }
 
+  /* Useful because drag gesture will read this value to detect <col>, <tr> virtual position */
+  .navi_table col {
+    left: var(--sticky-group-left, 0);
+  }
+  .navi_table tr {
+    top: var(--sticky-group-top, 0);
+  }
+
   /* Positioning adjustments for ::after pseudo-elements on cells adjacent to sticky frontiers */
   /* These ensure selection and focus borders align with the ::before borders */
   .navi_table[data-border-collapse] th[data-after-sticky-x-frontier]::after,
