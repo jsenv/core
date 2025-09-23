@@ -224,7 +224,7 @@ const initResizeTableRowByMousedown = (
 ) => {
   let tableRow = mousedownEvent.target.closest("tr");
   if (isTop) {
-    tableRow = tableRow.previousElementSibling;
+    tableRow = findPreviousTableRow(tableRow);
   }
   if (!tableRow) {
     return; // No row to resize
