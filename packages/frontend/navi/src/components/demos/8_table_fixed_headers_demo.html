@@ -184,7 +184,7 @@
                     ),
                   );
                 }}
-                onRowResize={({ height, rowIndex }) => {
+                onRowResize={(height, rowIndex) => {
                   console.log(`Row ${rowIndex} resized to ${height}px`);
                   setRows((prevRows) => {
                     const newRows = [...prevRows];

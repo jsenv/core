@@ -534,6 +534,7 @@ export const Table = forwardRef((props, ref) => {
                       grabbed={columnGrabbed}
                       style={{
                         maxWidth: col.width ? `${col.width}px` : undefined,
+                        maxHeight: row.height ? `${row.height}px` : undefined,
                       }}
                     />
                   );
