@@ -244,8 +244,8 @@ export const Table = forwardRef((props, ref) => {
     onColumnResize,
     generatedLeftColumnWidth = 100,
     onGeneratedLeftColumnResize,
-    // generatedTopRowHeight = 30,
-    // onGeneratedTopRowResize,
+    generatedTopRowHeight = 30,
+    onGeneratedTopRowResize,
     onRowResize,
     borderCollapse = true,
     columnStickyFrontierIndex = 0,
@@ -388,13 +388,17 @@ export const Table = forwardRef((props, ref) => {
               isStickyYFrontier={rowStickyFrontierIndex <= 0} // Only frontier if no other rows are sticky
               columnStickyFrontierIndex={columnStickyFrontierIndex}
               onColumnStickyFrontierChange={onColumnStickyFrontierChange}
-              onClick={() => {
-                ref.current.selectAll();
-              }}
               resizable
               columnMinWidth={generatedLeftColumnWidth}
-              onResizeRequested={({ width }) => {
+              onColumnResizeRequested={(width) => {
                 onGeneratedLeftColumnResize?.(width);
+              }}
+              rowMinHeight={generatedTopRowHeight}
+              onRowResizeRequested={(height) => {
+                onGeneratedTopRowResize?.(height);
+              }}
+              onClick={() => {
+                ref.current.selectAll();
               }}
             />
             {columns.map((col, colIndex) => {
@@ -430,7 +434,7 @@ export const Table = forwardRef((props, ref) => {
                   onRelease={() => {
                     releaseColumn(colIndex);
                   }}
-                  onResizeRequested={({ width }, columnIndex) => {
+                  onResizeRequested={(width, columnIndex) => {
                     onColumnResize?.(
                       width,
                       columnIndex - 1,
@@ -489,12 +493,8 @@ export const Table = forwardRef((props, ref) => {
                   rowIndex={rowIndex}
                   rowMinHeight={rowOptions.minHeight}
                   rowMaxHeight={rowOptions.maxHeight}
-                  onResizeRequested={({ height }, rowIdx) => {
-                    onRowResize?.({
-                      height,
-                      row: data[rowIdx],
-                      rowIndex: rowIdx,
-                    });
+                  onResizeRequested={(height, rowIndex) => {
+                    onRowResize?.(height, rowIndex - 1, rows[rowIndex - 1]);
                   }}
                 />
                 {columns.map((col, colIndex) => {
@@ -554,9 +554,11 @@ const RowNumberHeaderCell = ({
   resizable,
   columnMinWidth,
   columnMaxWidth,
-  onGrabResizeHandle,
-  onReleaseResizeHandle,
-  ...rest
+  onColumnResizeRequested,
+  rowMinHeight,
+  rowMaxHeight,
+  onRowResizeRequested,
+  onClick,
 }) => {
   return (
     <th
@@ -566,7 +568,7 @@ const RowNumberHeaderCell = ({
       data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       style={{ textAlign: "center" }}
-      {...rest}
+      onClick={onClick}
     >
       {isStickyXFrontier && (
         <TableColumnStickyFrontier
@@ -576,10 +578,16 @@ const RowNumberHeaderCell = ({
       )}
       {resizable && (
         <TableColumnRightResizeHandle
-          onGrab={(info) => onGrabResizeHandle(info, 0)}
-          onRelease={(info) => onReleaseResizeHandle(info, 0)}
+          onRelease={(width) => onColumnResizeRequested(width, 0)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
+        />
+      )}
+      {resizable && (
+        <TableRowBottomResizeHandle
+          onRelease={(height) => onRowResizeRequested(height, 0)}
+          rowMinHeight={rowMinHeight}
+          rowMaxHeight={rowMaxHeight}
         />
       )}
     </th>
@@ -661,7 +669,7 @@ const HeaderCell = ({
     >
       {resizable && (
         <TableColumnLeftResizeHandle
-          onRelease={(info) => onResizeRequested(info, columnIndex - 1)}
+          onRelease={(width) => onResizeRequested(width, columnIndex - 1)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
@@ -672,7 +680,7 @@ const HeaderCell = ({
       </span>
       {resizable && (
         <TableColumnRightResizeHandle
-          onRelease={(info) => onResizeRequested(info, columnIndex)}
+          onRelease={(width) => onResizeRequested(width, columnIndex)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
@@ -741,7 +749,7 @@ const RowNumberCell = ({
     >
       {resizable && (
         <TableRowTopResizeHandle
-          onRelease={(info) => onResizeRequested(info, rowIndex - 1)}
+          onRelease={(height) => onResizeRequested(height, rowIndex - 1)}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
         />
@@ -755,7 +763,7 @@ const RowNumberCell = ({
       )}
       {resizable && (
         <TableRowBottomResizeHandle
-          onRelease={(info) => onResizeRequested(info, rowIndex)}
+          onRelease={(height) => onResizeRequested(height, rowIndex)}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
         />

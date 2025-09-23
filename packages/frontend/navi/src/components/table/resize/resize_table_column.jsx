@@ -254,15 +254,12 @@ const initResizeTableColumnByMousedown = (
     customRightBound,
     onGrab: () => {
       updateTableColumnResizerPosition(tableCell);
-      onGrab({ rowHeight: 0 });
+      onGrab?.();
     },
     onDrag,
     onRelease: (gesture) => {
       const newWidth = currentCellWidth + gesture.xMove;
-      onRelease({
-        width: newWidth,
-        currentWidth: currentCellWidth,
-      });
+      onRelease(newWidth, currentCellWidth);
     },
   });
   dragToMoveGesture.addTeardown(() => {

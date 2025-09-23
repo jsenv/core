@@ -252,15 +252,12 @@ const initResizeTableRowByMousedown = (
     customBottomBound,
     onGrab: () => {
       updateTableRowResizerPosition(tableRow);
-      onGrab({ columnWidth: 0 });
+      onGrab?.();
     },
     onDrag,
     onRelease: (gesture) => {
       const newHeight = currentRowCellHeight + gesture.yMove;
-      onRelease({
-        height: newHeight,
-        currentHeight: currentRowCellHeight,
-      });
+      onRelease(newHeight, currentRowCellHeight);
     },
   });
   dragToMoveGesture.addTeardown(() => {
