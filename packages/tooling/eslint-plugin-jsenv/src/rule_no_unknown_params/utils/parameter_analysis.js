@@ -230,6 +230,43 @@ export function isRestParameterPropagated(
       }
     }
 
+    // Look for JSX elements where rest param is used in spread attributes
+    if (
+      node.type === "JSXElement" &&
+      node.openingElement &&
+      node.openingElement.name &&
+      node.openingElement.name.type === "JSXIdentifier"
+    ) {
+      const componentName = node.openingElement.name.name;
+      const calledComponent = functionDefinitions.get(componentName);
+
+      // Skip only if component is completely unknown (not in functionDefinitions at all)
+      if (!calledComponent) {
+        return; // Skip components we can't analyze
+      }
+
+      for (const attr of node.openingElement.attributes) {
+        if (
+          attr.type === "JSXSpreadAttribute" &&
+          attr.argument &&
+          attr.argument.type === "Identifier"
+        ) {
+          // Check both direct name and resolved name through renaming
+          const originalName = resolveToOriginalVariable(
+            attr.argument.name,
+            renamingMap,
+          );
+          if (
+            attr.argument.name === restParamName ||
+            originalName === restParamName
+          ) {
+            found = true;
+            return;
+          }
+        }
+      }
+    }
+
     // Traverse child nodes, but skip the params to avoid false positives
     for (const key in node) {
       if (key === "parent" || (node === functionDef && key === "params"))

@@ -23,3 +23,13 @@ const ComponentWithoutProps = () => {
 export const Compi = () => {
   return <ComponentWithoutProps extra="value" another="value2" />;
 };
+
+export const Coucou = () => {
+  return <Some knownProp="value" extra="value" />;
+};
+const Some = (props) => {
+  return <Thing {...props} />;
+};
+const Thing = ({ knownProp }) => {
+  return <div>{knownProp}</div>;
+};

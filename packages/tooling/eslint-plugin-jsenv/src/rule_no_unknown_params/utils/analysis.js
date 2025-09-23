@@ -539,6 +539,105 @@ export function analyzeJSXElement(
 
   // Assume first parameter is props object
   const param = params[0];
+
+  // Handle non-destructured parameter (e.g., props => <Thing {...props} />)
+  if (param.type === "Identifier") {
+    const paramName = param.name;
+
+    // Check if this parameter is propagated to other components
+    const isParamPropagated = isRestParameterPropagated(
+      functionDef,
+      paramName,
+      functionDefinitions,
+    );
+
+    if (isParamPropagated) {
+      // Collect all given JSX attributes
+      const givenAttrs = openingElement.attributes
+        .filter(
+          (attr) =>
+            attr.type === "JSXAttribute" &&
+            attr.name &&
+            attr.name.type === "JSXIdentifier",
+        )
+        .map((attr) => attr.name.name);
+
+      // Check all JSX attributes through chaining
+      for (const attr of openingElement.attributes) {
+        if (
+          attr.type === "JSXAttribute" &&
+          attr.name &&
+          attr.name.type === "JSXIdentifier"
+        ) {
+          const attrName = attr.name.name;
+
+          // Skip React/JSX built-in props
+          if (IGNORED_JSX_PROPS.has(attrName)) {
+            continue;
+          }
+
+          // Check if this attribute is used in chaining
+          const chainResult = checkParameterChaining(
+            attrName,
+            functionDef,
+            functionDefinitions,
+            new Set(),
+            [],
+            maxChainDepth,
+          );
+
+          if (!chainResult.found) {
+            const { messageId, data, autofixes } = generateErrorMessage(
+              attrName,
+              componentName,
+              chainResult.chain,
+              functionDef,
+              functionDefinitions,
+              givenAttrs,
+              context.getFilename(),
+              maxChainDepth,
+              functionDefWrapper.sourceFile,
+              detailedMessage,
+            );
+
+            const fixes = [];
+            if (autofixes.remove) {
+              fixes.push((fixer) => createJSXRemoveFix(fixer, attr));
+            }
+            if (autofixes.rename) {
+              fixes.push((fixer) =>
+                createJSXRenameFix(fixer, attr, autofixes.rename),
+              );
+            }
+
+            // Only provide suggestions if we have a good rename candidate
+            const shouldSuggest = fixes.length > 1 && autofixes.rename;
+
+            context.report({
+              node: attr,
+              messageId,
+              data,
+              fix: fixes.length > 0 ? fixes[0] : undefined,
+              suggest: shouldSuggest
+                ? [
+                    {
+                      desc: `Remove '${attrName}'`,
+                      fix: fixes[0],
+                    },
+                    {
+                      desc: `Rename '${attrName}' to '${autofixes.rename}'`,
+                      fix: fixes[1],
+                    },
+                  ]
+                : undefined,
+            });
+          }
+        }
+      }
+    }
+    return;
+  }
+
   if (param.type !== "ObjectPattern") return;
 
   // Check if this ObjectPattern has a rest element (...rest)

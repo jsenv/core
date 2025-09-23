@@ -167,5 +167,40 @@ export const App = () => {
         },
       ],
     },
+    {
+      name: "JSX component with spread props and unknown prop at end of chain",
+      code: `const Some = (props) => {
+  return <Thing {...props} />;
+};
+const Thing = ({ knownProp }) => {
+  return <div>{knownProp}</div>;
+};
+
+export const App = () => {
+  return <Some knownProp="value" extra="value" />;
+};`,
+      output: `const Some = (props) => {
+  return <Thing {...props} />;
+};
+const Thing = ({ knownProp }) => {
+  return <div>{knownProp}</div>;
+};
+
+export const App = () => {
+  return <Some   />;
+};`,
+      errors: [
+        {
+          messageId: "not_found_param",
+          data: { param: "knownProp", func: "Some" },
+          type: "JSXAttribute",
+        },
+        {
+          messageId: "not_found_param",
+          data: { param: "extra", func: "Some" },
+          type: "JSXAttribute",
+        },
+      ],
+    },
   ],
 });
