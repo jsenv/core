@@ -769,36 +769,23 @@ export const createDragGesture = ({
       const availableWidth = scrollableParent.clientWidth;
       const availableHeight = scrollableParent.clientHeight;
 
-      const borderSizes = getBorderSizes(scrollableParent);
       // Calculate base visible area accounting for borders
-      let visibleAreaLeft = scrollableRect.left + borderSizes.left;
-      let visibleAreaRight = visibleAreaLeft + availableWidth;
-      let visibleAreaTop = scrollableRect.top + borderSizes.top;
-      let visibleAreaBottom = visibleAreaTop + availableHeight;
-
-      // Debug warning for invalid visible area
-      if (import.meta.dev && visibleAreaTop > visibleAreaBottom) {
-        console.warn(
-          `Invalid visible area detected: visibleAreaTop (${visibleAreaTop}) > visibleAreaBottom (${visibleAreaBottom})`,
-        );
-      }
+      const borderSizes = getBorderSizes(scrollableParent);
+      const visibleAreaBase = {
+        left: scrollableRect.left + borderSizes.left,
+        top: scrollableRect.top + borderSizes.top,
+        right: null,
+        bottom: null,
+      };
+      visibleAreaBase.right = visibleAreaBase.left + availableWidth;
+      visibleAreaBase.bottom = visibleAreaBase.top + availableHeight;
 
       // Reduce sticky frontiers to a single visible area object
       const visibleArea = reduceStickyFrontiersToVisibleArea(
-        {
-          left: visibleAreaLeft,
-          right: visibleAreaRight,
-          top: visibleAreaTop,
-          bottom: visibleAreaBottom,
-        },
+        visibleAreaBase,
         stickyFrontierObjects,
         { direction, dragName: name },
       );
-
-      visibleAreaLeft = visibleArea.left;
-      visibleAreaRight = visibleArea.right;
-      visibleAreaTop = visibleArea.top;
-      visibleAreaBottom = visibleArea.bottom;
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
         drawVisualMarkers({
@@ -834,10 +821,7 @@ export const createDragGesture = ({
         isGoingRight,
         isGoingUp,
         isGoingDown,
-        visibleAreaLeft,
-        visibleAreaRight,
-        visibleAreaTop,
-        visibleAreaBottom,
+        visibleArea,
       };
 
       if (isRelease) {
@@ -1149,45 +1133,42 @@ const reduceStickyFrontiersToVisibleArea = (
     const frontierRect = stickyFrontierObject.bounds;
     const frontierSide = stickyFrontierObject.side;
 
-    // Store original values for validation
-    const originalLeft = left;
-    const originalRight = right;
-    const originalTop = top;
-    const originalBottom = bottom;
-
     // Apply constraints based on the specific side this frontier affects
-    switch (frontierSide) {
-      case "left":
-        // Frontier acts as a left barrier - constrains from the right edge of the frontier
-        if (direction.x && frontierRect.right > left) {
-          left = frontierRect.right;
-        }
-        break;
-      case "right":
-        // Frontier acts as a right barrier - constrains from the left edge of the frontier
-        if (direction.x && frontierRect.left < right) {
-          right = frontierRect.left;
-        }
-        break;
-      case "top":
-        // Frontier acts as a top barrier - constrains from the bottom edge of the frontier
-        if (direction.y && frontierRect.bottom > top) {
-          top = frontierRect.bottom;
-        }
-        break;
-      case "bottom":
-        // Frontier acts as a bottom barrier - constrains from the top edge of the frontier
-        if (direction.y && frontierRect.top < bottom) {
-          bottom = frontierRect.top;
-        }
-        break;
+    if (frontierSide === "left") {
+      // Frontier acts as a left barrier - constrains from the right edge of the frontier
+      if (!direction.x || frontierRect.right <= left) {
+        continue;
+      }
+      const originalRight = right;
+      left = frontierRect.right;
+
+      // Debug warning for invalid visible area caused by this specific frontier
+      if (import.meta.dev && left > right) {
+        console.warn(
+          `Sticky frontier created invalid horizontal visible area: left (${left}) > right (${right}). Original: left=${frontierRect.right}, right=${originalRight}`,
+          {
+            frontierElement: stickyFrontierObject.element,
+            frontierBounds: frontierRect,
+            dragName,
+            frontierSide,
+          },
+        );
+      }
+      continue;
     }
 
-    // Debug warnings for invalid visible areas caused by this specific frontier
-    if (import.meta.dev) {
-      if (left > right) {
+    if (frontierSide === "right") {
+      // Frontier acts as a right barrier - constrains from the left edge of the frontier
+      if (!direction.x || frontierRect.left >= right) {
+        continue;
+      }
+      const originalLeft = left;
+      right = frontierRect.left;
+
+      // Debug warning for invalid visible area caused by this specific frontier
+      if (import.meta.dev && left > right) {
         console.warn(
-          `Sticky frontier created invalid horizontal visible area: left (${left}) > right (${right}). Original: left=${originalLeft}, right=${originalRight}`,
+          `Sticky frontier created invalid horizontal visible area: left (${left}) > right (${right}). Original: left=${originalLeft}, right=${frontierRect.left}`,
           {
             frontierElement: stickyFrontierObject.element,
             frontierBounds: frontierRect,
@@ -1196,9 +1177,21 @@ const reduceStickyFrontiersToVisibleArea = (
           },
         );
       }
-      if (top > bottom) {
+      continue;
+    }
+
+    if (frontierSide === "top") {
+      // Frontier acts as a top barrier - constrains from the bottom edge of the frontier
+      if (!direction.y || frontierRect.bottom <= top) {
+        continue;
+      }
+      const originalBottom = bottom;
+      top = frontierRect.bottom;
+
+      // Debug warning for invalid visible area caused by this specific frontier
+      if (import.meta.dev && top > bottom) {
         console.warn(
-          `Sticky frontier created invalid vertical visible area: top (${top}) > bottom (${bottom}). Original: top=${originalTop}, bottom=${originalBottom}`,
+          `Sticky frontier created invalid vertical visible area: top (${top}) > bottom (${bottom}). Original: top=${frontierRect.bottom}, bottom=${originalBottom}`,
           {
             frontierElement: stickyFrontierObject.element,
             frontierBounds: frontierRect,
@@ -1207,6 +1200,30 @@ const reduceStickyFrontiersToVisibleArea = (
           },
         );
       }
+      continue;
+    }
+
+    if (frontierSide === "bottom") {
+      // Frontier acts as a bottom barrier - constrains from the top edge of the frontier
+      if (!direction.y || frontierRect.top >= bottom) {
+        continue;
+      }
+      const originalTop = top;
+      bottom = frontierRect.top;
+
+      // Debug warning for invalid visible area caused by this specific frontier
+      if (import.meta.dev && top > bottom) {
+        console.warn(
+          `Sticky frontier created invalid vertical visible area: top (${top}) > bottom (${bottom}). Original: top=${originalTop}, bottom=${frontierRect.top}`,
+          {
+            frontierElement: stickyFrontierObject.element,
+            frontierBounds: frontierRect,
+            dragName,
+            frontierSide,
+          },
+        );
+      }
+      continue;
     }
   }
 

@@ -19,10 +19,7 @@ export const createDragToMoveGesture = (options) => {
           isGoingRight,
           elementToImpact,
           elementVisuallyImpacted,
-          visibleAreaLeft,
-          visibleAreaRight,
-          visibleAreaTop,
-          visibleAreaBottom,
+          visibleArea,
         } = gestureInfo;
 
         // Calculate initial position for elementToImpact (initialLeft/initialTop are now visual coordinates)
@@ -88,8 +85,8 @@ export const createDragToMoveGesture = (options) => {
             isGoingNegative: isGoingLeft,
             desiredElementStart: desiredElementLeft,
             desiredElementEnd: desiredElementRight,
-            visibleAreaStart: visibleAreaLeft,
-            visibleAreaEnd: visibleAreaRight,
+            visibleAreaStart: visibleArea.left,
+            visibleAreaEnd: visibleArea.right,
             currentScroll: scrollableParent.scrollLeft,
             initialPosition: initialLeftToImpact,
             moveAmount: gestureInfo.xMove,
@@ -110,8 +107,8 @@ export const createDragToMoveGesture = (options) => {
             isGoingNegative: isGoingUp,
             desiredElementStart: desiredElementTop,
             desiredElementEnd: desiredElementBottom,
-            visibleAreaStart: visibleAreaTop,
-            visibleAreaEnd: visibleAreaBottom,
+            visibleAreaStart: visibleArea.top,
+            visibleAreaEnd: visibleArea.bottom,
             currentScroll: scrollableParent.scrollTop,
             initialPosition: initialTopToImpact,
             moveAmount: gestureInfo.yMove,
