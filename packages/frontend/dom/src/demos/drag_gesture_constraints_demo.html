@@ -280,6 +280,148 @@
       </div>
     </div>
 
+    <!-- Test Case: Sticky Element with Scroll Issue -->
+    <div class="demo-section">
+      <h2 class="demo-title">
+        Test Case: Sticky Element Drag with Initial Scroll
+      </h2>
+      <div style="text-align: center; margin-bottom: 15px">
+        <button
+          id="resetScrollBtn"
+          style="
+            padding: 8px 16px;
+            margin-right: 10px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+          "
+        >
+          Reset Scroll to 0
+        </button>
+        <button
+          id="addScrollBtn"
+          style="
+            padding: 8px 16px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+          "
+        >
+          Add 200px Scroll
+        </button>
+        <div style="margin-top: 8px; font-size: 12px; color: #666">
+          Current scroll: <span id="scrollDisplay">0</span>px
+        </div>
+      </div>
+      <div
+        class="container"
+        id="stickyTestContainer"
+        style="border: 2px solid #333"
+      >
+        <div
+          style="
+            width: 1000px;
+            height: 280px;
+            background: linear-gradient(
+              90deg,
+              #f0f0f0 0%,
+              #e0e0e0 50%,
+              #d0d0d0 100%
+            );
+            position: relative;
+          "
+        >
+          <!-- Sticky element on the left -->
+          <div
+            class="draggable-rectangle"
+            id="stickyRectangle"
+            data-sticky-x
+            style="
+              left: 20px;
+              top: 110px;
+              position: sticky;
+              background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            "
+          >
+            STICKY
+          </div>
+          <!-- Grid lines for visual reference -->
+          <div
+            style="
+              position: absolute;
+              left: 100px;
+              top: 0;
+              width: 1px;
+              height: 100%;
+              background: #999;
+              opacity: 0.3;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 300px;
+              top: 0;
+              width: 1px;
+              height: 100%;
+              background: #999;
+              opacity: 0.3;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 500px;
+              top: 0;
+              width: 1px;
+              height: 100%;
+              background: #999;
+              opacity: 0.3;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 700px;
+              top: 0;
+              width: 1px;
+              height: 100%;
+              background: #999;
+              opacity: 0.3;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              left: 900px;
+              top: 0;
+              width: 1px;
+              height: 100%;
+              background: #999;
+              opacity: 0.3;
+            "
+          ></div>
+        </div>
+      </div>
+      <div
+        style="
+          text-align: center;
+          margin-top: 10px;
+          font-size: 12px;
+          color: #666;
+        "
+      >
+        <div>
+          Try dragging with scroll = 0, then set scroll = 200px and try again
+        </div>
+        <div>
+          The sticky element should respect bounds constraints in both cases
+        </div>
+      </div>
+    </div>
+
     <!-- Case 1: Horizontal Custom Bounds -->
     <div class="demo-section">
       <h2 class="demo-title">
@@ -342,6 +484,13 @@
         "horizontalContainer",
       );
       const verticalContainer = document.getElementById("verticalContainer");
+      const stickyRectangle = document.getElementById("stickyRectangle");
+      const stickyTestContainer = document.getElementById(
+        "stickyTestContainer",
+      );
+      const resetScrollBtn = document.getElementById("resetScrollBtn");
+      const addScrollBtn = document.getElementById("addScrollBtn");
+      const scrollDisplay = document.getElementById("scrollDisplay");
       const debugCheckbox = document.getElementById("debugMarkersCheckbox");
       const horizontalInfo = document.getElementById("horizontalInfo");
       const verticalInfo = document.getElementById("verticalInfo");
@@ -355,6 +504,67 @@
         } else {
           disableDebugMarkers();
         }
+      });
+
+      // Set up sticky test case
+      function updateScrollDisplay() {
+        scrollDisplay.textContent = Math.round(stickyTestContainer.scrollLeft);
+      }
+
+      resetScrollBtn.addEventListener("click", () => {
+        stickyTestContainer.scrollLeft = 0;
+        updateScrollDisplay();
+        console.log("Scroll reset to 0");
+      });
+
+      addScrollBtn.addEventListener("click", () => {
+        stickyTestContainer.scrollLeft = 200;
+        updateScrollDisplay();
+        console.log("Scroll set to 200px");
+      });
+
+      // Update scroll display initially and on scroll
+      updateScrollDisplay();
+      stickyTestContainer.addEventListener("scroll", updateScrollDisplay);
+
+      // Set up drag gesture for sticky element
+      stickyRectangle.addEventListener("mousedown", (event) => {
+        console.log(
+          "Sticky drag started with scrollLeft:",
+          stickyTestContainer.scrollLeft,
+        );
+
+        createDragToMoveGesture({
+          backdrop: false,
+          // No custom bounds - should respect scrollable area bounds
+          onGrab: (gestureInfo) => {
+            console.log("Sticky - Grab started", {
+              gestureInfo,
+              initialScrollLeft: gestureInfo.initialScrollLeft,
+              currentScrollLeft: stickyTestContainer.scrollLeft,
+            });
+            stickyRectangle.setAttribute("data-dragging", "");
+          },
+          onDragStart: (gestureInfo) => {
+            console.log("Sticky - Drag started", gestureInfo);
+          },
+          onDrag: (gestureInfo, phase) => {
+            console.log("Sticky - Dragging", {
+              phase,
+              xMove: gestureInfo.xMove,
+              yMove: gestureInfo.yMove,
+              initialLeft: gestureInfo.initialLeft,
+              initialScrollLeft: gestureInfo.initialScrollLeft,
+              currentScrollLeft: stickyTestContainer.scrollLeft,
+            });
+          },
+          onRelease: (gestureInfo) => {
+            console.log("Sticky - Drag released", gestureInfo);
+            stickyRectangle.removeAttribute("data-dragging");
+          },
+        }).grabViaMousedown(event, {
+          element: stickyRectangle,
+        });
       });
 
       // Set up drag gesture for horizontal constraints
