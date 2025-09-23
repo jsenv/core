@@ -242,6 +242,7 @@ export const Table = forwardRef((props, ref) => {
     selectionColor,
     onSelectionChange,
     onColumnResize,
+    onVirtualColumnResize,
     onRowResize,
     borderCollapse = true,
     columnStickyFrontierIndex = 0,
@@ -333,27 +334,6 @@ export const Table = forwardRef((props, ref) => {
     setGrabTarget(null);
   };
 
-  // ability to resize columns/rows
-  const [, setResizeInfo] = useState(null);
-  const grabColumnResizeHandle = (columnIndex, resizeInfo) => {
-    setResizeInfo({
-      ...resizeInfo,
-      target: `column:${columnIndex}`,
-    });
-  };
-  const releaseColumnResizeHandle = () => {
-    setResizeInfo(null);
-  };
-  const grabRowResizeHandle = (rowIndex, resizeInfo) => {
-    setResizeInfo({
-      ...resizeInfo,
-      target: `row:${rowIndex}`,
-    });
-  };
-  const releaseRowResizeHandle = () => {
-    setResizeInfo(null);
-  };
-
   const firstColIsSticky = columnStickyFrontierIndex > -1;
   const firsRowIsSticky = rowStickyFrontierIndex > -1;
 
@@ -370,7 +350,7 @@ export const Table = forwardRef((props, ref) => {
           <col
             data-sticky-x={firstColIsSticky ? "" : undefined}
             data-drag-sticky-frontier-left={firstColIsSticky ? "" : undefined}
-            data-drag-obstacle="resize-column,move-column"
+            data-drag-obstacle="move-column"
             style={{ minWidth: "100px" }}
           ></col>
           {columns.map((col, index) => {
@@ -381,7 +361,6 @@ export const Table = forwardRef((props, ref) => {
                 key={col.id}
                 data-sticky-x={colIsSticky ? "" : undefined}
                 data-drag-sticky-frontier-left={colIsSticky ? "" : undefined}
-                data-drag-obstacle={colIsSticky ? "resize-column" : undefined}
                 style={{
                   minWidth: col.width ? `${col.width}px` : undefined,
                   maxWidth: col.width ? `${col.width}px` : undefined,
@@ -394,7 +373,7 @@ export const Table = forwardRef((props, ref) => {
           <tr
             data-sticky-y={firsRowIsSticky ? "" : undefined}
             data-drag-sticky-frontier-top={firsRowIsSticky ? "" : undefined}
-            data-drag-obstacle="resize-row,move-row"
+            data-drag-obstacle="move-row"
           >
             <RowNumberHeaderCell
               stickyX={firstColIsSticky}
@@ -405,6 +384,14 @@ export const Table = forwardRef((props, ref) => {
               onColumnStickyFrontierChange={onColumnStickyFrontierChange}
               onClick={() => {
                 ref.current.selectAll();
+              }}
+              resizable
+              columnMinWidth={50}
+              onResizeRequested={({ width }, columnIndex) => {
+                onVirtualColumnResize?.({
+                  width,
+                  columnIndex,
+                });
               }}
             />
             {columns.map((col, colIndex) => {
@@ -440,11 +427,7 @@ export const Table = forwardRef((props, ref) => {
                   onRelease={() => {
                     releaseColumn(colIndex);
                   }}
-                  onGrabResizeHandle={(resizeInfo, columnIndex) => {
-                    grabColumnResizeHandle(columnIndex, resizeInfo);
-                  }}
-                  onReleaseResizeHandle={({ width }, columnIndex) => {
-                    releaseColumnResizeHandle(columnIndex);
+                  onResizeRequested={({ width }, columnIndex) => {
                     onColumnResize?.({
                       width,
                       column: columns[columnIndex - 1],
@@ -478,7 +461,6 @@ export const Table = forwardRef((props, ref) => {
                 data-drag-sticky-frontier-top={
                   isStickyYFrontier ? "" : undefined
                 }
-                data-drag-obstacle={rowIsSticky ? "resize-row" : undefined}
                 style={{
                   height: rowOptions.height
                     ? `${rowOptions.height}px`
@@ -503,11 +485,7 @@ export const Table = forwardRef((props, ref) => {
                   rowIndex={rowIndex}
                   rowMinHeight={rowOptions.minHeight}
                   rowMaxHeight={rowOptions.maxHeight}
-                  onGrabResizeHandle={(resizeInfo, rowIdx) => {
-                    grabRowResizeHandle(rowIdx, resizeInfo);
-                  }}
-                  onReleaseResizeHandle={({ height }, rowIdx) => {
-                    releaseRowResizeHandle(rowIdx);
+                  onResizeRequested={({ height }, rowIdx) => {
                     onRowResize?.({
                       height,
                       row: data[rowIdx],
@@ -569,6 +547,11 @@ const RowNumberHeaderCell = ({
   isStickyYFrontier,
   columnStickyFrontierIndex,
   onColumnStickyFrontierChange,
+  resizable,
+  columnMinWidth,
+  columnMaxWidth,
+  onGrabResizeHandle,
+  onReleaseResizeHandle,
   ...rest
 }) => {
   return (
@@ -581,6 +564,14 @@ const RowNumberHeaderCell = ({
       style={{ textAlign: "center" }}
       {...rest}
     >
+      {resizable && (
+        <TableColumnRightResizeHandle
+          onGrab={(info) => onGrabResizeHandle(info, 0)}
+          onRelease={(info) => onReleaseResizeHandle(info, 0)}
+          columnMinWidth={columnMinWidth}
+          columnMaxWidth={columnMaxWidth}
+        />
+      )}
       {isStickyXFrontier && (
         <TableColumnStickyFrontier
           columnStickyFrontierIndex={columnStickyFrontierIndex}
@@ -610,8 +601,7 @@ const HeaderCell = ({
   onGrab,
   onDrag,
   onRelease,
-  onGrabResizeHandle,
-  onReleaseResizeHandle,
+  onResizeRequested,
   columnStickyFrontierIndex,
   onColumnStickyFrontierChange,
   style,
@@ -665,10 +655,9 @@ const HeaderCell = ({
         });
       }}
     >
-      {resizable && columnIndex > 1 && (
+      {resizable && (
         <TableColumnLeftResizeHandle
-          onGrab={(info) => onGrabResizeHandle(info, columnIndex - 1)}
-          onRelease={(info) => onReleaseResizeHandle(info, columnIndex - 1)}
+          onRelease={(info) => onResizeRequested(info, columnIndex - 1)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
@@ -679,8 +668,7 @@ const HeaderCell = ({
       </span>
       {resizable && (
         <TableColumnRightResizeHandle
-          onGrab={(info) => onGrabResizeHandle(info, columnIndex)}
-          onRelease={(info) => onReleaseResizeHandle(info, columnIndex)}
+          onRelease={(info) => onResizeRequested(info, columnIndex)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
@@ -714,8 +702,7 @@ const RowNumberCell = ({
   rowIndex,
   rowMinHeight,
   rowMaxHeight,
-  onGrabResizeHandle,
-  onReleaseResizeHandle,
+  onResizeRequested,
 }) => {
   const cellRef = useRef();
 
@@ -748,10 +735,9 @@ const RowNumberCell = ({
       style={{ textAlign: "center" }}
       tabIndex={-1}
     >
-      {resizable && rowIndex > 0 && (
+      {resizable && (
         <TableRowTopResizeHandle
-          onGrab={(info) => onGrabResizeHandle(info, rowIndex - 1)}
-          onRelease={(info) => onReleaseResizeHandle(info, rowIndex - 1)}
+          onRelease={(info) => onResizeRequested(info, rowIndex - 1)}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
         />
@@ -759,8 +745,7 @@ const RowNumberCell = ({
       {value}
       {resizable && (
         <TableRowBottomResizeHandle
-          onGrab={(info) => onGrabResizeHandle(info, rowIndex)}
-          onRelease={(info) => onReleaseResizeHandle(info, rowIndex)}
+          onRelease={(info) => onResizeRequested(info, rowIndex)}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
         />
