@@ -40,6 +40,9 @@
  * Note how border disappear for sticky elements when using border-collapse (https://bugzilla.mozilla.org/show_bug.cgi?id=1727594)
  *
  * Next steps:
+ *
+ * - Consider wrapping into a <div> to apply padding to the div
+ *
  * - Finir vrai exemple de re-order de column (mise a jour du state + effet au survol)
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )

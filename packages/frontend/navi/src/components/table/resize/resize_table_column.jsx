@@ -62,7 +62,7 @@ import.meta.css = /* css */ `
     left: 2px;
   }
   .navi_table_column_resizer .navi_table_column_resize_handle_right {
-    right: 2px;
+    right: 3px;
   }
 
   .navi_table_column_resize_handle_container {
@@ -77,7 +77,7 @@ import.meta.css = /* css */ `
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 6px;
+    width: 5px;
     left: -3px;
     background: #c0c0c0;
     opacity: 0;
