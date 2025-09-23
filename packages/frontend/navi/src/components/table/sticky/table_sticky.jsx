@@ -271,6 +271,7 @@ const initMoveColumnStickyFrontierByMousedown = (
   const tableColumnStickyFrontierPreview = tableContainer.querySelector(
     ".navi_table_column_sticky_frontier_preview",
   );
+  const tableContainerRect = tableContainer.getBoundingClientRect();
 
   if (columnIndex === -1) {
     tableColumnStickyFrontierGhost.style.setProperty(
@@ -279,7 +280,6 @@ const initMoveColumnStickyFrontierByMousedown = (
     );
   } else {
     const tableCellRect = tableCell.getBoundingClientRect();
-    const tableContainerRect = tableContainer.getBoundingClientRect();
     const columnLeftRelative = tableCellRect.left - tableContainerRect.left;
     const columnRightRelative = columnLeftRelative + tableCellRect.width;
     tableColumnStickyFrontierGhost.style.setProperty(
@@ -289,7 +289,7 @@ const initMoveColumnStickyFrontierByMousedown = (
   }
   tableColumnStickyFrontierGhost.setAttribute("data-visible", "");
 
-  let futureColumnStickyFrontierIndex;
+  let futureColumnStickyFrontierIndex = columnIndex;
   const onFutureColumnStickyFrontierIndexChange = (index) => {
     futureColumnStickyFrontierIndex = index;
 
@@ -316,7 +316,7 @@ const initMoveColumnStickyFrontierByMousedown = (
   };
 
   const dragToMoveGesture = createDragToMoveGesture({
-    name: "move-column-sticky-frontier",
+    name: "move-column-left-sticky-frontier",
     direction: { x: true },
     // keepMarkersOnRelease: true,
     backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
@@ -352,6 +352,7 @@ const initMoveColumnStickyFrontierByMousedown = (
     onRelease: (gesture) => {
       onRelease?.(gesture, futureColumnStickyFrontierIndex);
     },
+    customRightBound: tableContainerRect.width / 2,
   });
 
   dragToMoveGesture.addTeardown(() => {
