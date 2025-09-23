@@ -399,8 +399,8 @@ export const Table = forwardRef((props, ref) => {
             <RowNumberHeaderCell
               stickyX={firstColIsSticky}
               stickyY={firsRowIsSticky}
-              isStickyXFrontier={columnStickyFrontierIndex === 0} // Only frontier if no other columns are sticky
-              isStickyYFrontier={rowStickyFrontierIndex === 0} // Only frontier if no other rows are sticky
+              isStickyXFrontier={columnStickyFrontierIndex <= 0} // Only frontier if no other columns are sticky
+              isStickyYFrontier={rowStickyFrontierIndex <= 0} // Only frontier if no other rows are sticky
               columnStickyFrontierIndex={columnStickyFrontierIndex}
               onColumnStickyFrontierChange={onColumnStickyFrontierChange}
               onClick={() => {
@@ -419,7 +419,7 @@ export const Table = forwardRef((props, ref) => {
                   isAfterStickyXFrontier={
                     colIndex + 1 === columnStickyFrontierIndex + 1
                   }
-                  isStickyYFrontier={rowStickyFrontierIndex === 0} // Header row is always the frontier (no rows above it)
+                  isStickyYFrontier={rowStickyFrontierIndex <= 0}
                   isAfterStickyYFrontier={false} // Header row can't be after sticky Y frontier
                   columnStickyFrontierIndex={columnStickyFrontierIndex}
                   onColumnStickyFrontierChange={onColumnStickyFrontierChange}
@@ -487,7 +487,7 @@ export const Table = forwardRef((props, ref) => {
               >
                 <RowNumberCell
                   stickyX={firstColIsSticky}
-                  isStickyXFrontier={columnStickyFrontierIndex === 0} // Only if no data columns are sticky
+                  isStickyXFrontier={columnStickyFrontierIndex <= 0} // Only if no data columns are sticky
                   isAfterStickyXFrontier={false} // Row number column can't be after sticky X frontier (it's the first column)
                   stickyY={rowIsSticky}
                   isStickyYFrontier={isStickyYFrontier}
