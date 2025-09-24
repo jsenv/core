@@ -162,13 +162,15 @@ export const createDragGesture = (options) => {
     const elementVisuallyImpactedRect =
       elementVisuallyImpacted.getBoundingClientRect();
     const parentRect = positionedParentRect;
+    const scrollLeftAtStart = scrollableParent.scrollLeft;
+    const scrollTopAtStart = scrollableParent.scrollTop;
 
     const computedStyle = getComputedStyle(element);
     if (computedStyle.position === "sticky") {
       const left = parseFloat(computedStyle.left) || 0;
       const top = parseFloat(computedStyle.top) || 0;
-      const leftWithScroll = left + scrollableParent.scrollLeft;
-      const topWithScroll = top + scrollableParent.scrollTop;
+      const leftWithScroll = left + scrollLeftAtStart;
+      const topWithScroll = top + scrollTopAtStart;
       const restoreStyles = setStyles(element, {
         position: "relative",
         left: `${leftWithScroll}px`,
@@ -188,9 +190,6 @@ export const createDragGesture = (options) => {
 
     const leftAtStart = elementVisuallyImpactedRect.left - parentRect.left;
     const topAtStart = elementVisuallyImpactedRect.top - parentRect.top;
-    const scrollLeftAtStart = scrollableParent.scrollLeft;
-    const scrollTopAtStart = scrollableParent.scrollTop;
-
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
     // All constraint calculations use visual coordinates (xMove, yMove)
@@ -334,7 +333,6 @@ export const createDragGesture = (options) => {
     ) => {
       const previousX = gestureInfo.x;
       const previousY = gestureInfo.y;
-
       const x = currentXRelative;
       const y = currentYRelative;
       const xDiff = previousX - currentXRelative;
@@ -345,7 +343,6 @@ export const createDragGesture = (options) => {
       let yMouseMove;
       let xMove;
       let yMove;
-
       if (interactionType === "scroll") {
         // For scroll events, keep existing mouse movement but recalculate total movement with new scroll
         xMouseMove = gestureInfo.xMouseMove; // Keep existing mouse movement
@@ -367,18 +364,13 @@ export const createDragGesture = (options) => {
         // For mouse movement and programmatic calls, calculate scroll offset first
         const currentScrollLeft = scrollableParent.scrollLeft;
         const currentScrollTop = scrollableParent.scrollTop;
-        const scrollDeltaX = direction.x
-          ? currentScrollLeft - scrollLeftAtStart
-          : 0;
-        const scrollDeltaY = direction.y
-          ? currentScrollTop - scrollTopAtStart
-          : 0;
+        const scrollDeltaX = currentScrollLeft - scrollLeftAtStart;
+        const scrollDeltaY = currentScrollTop - scrollTopAtStart;
 
         // For mouse movement, currentXRelative already includes scroll effects
         // So mouse movement = current position - start position - scroll offset
-        xMouseMove = direction.x ? x - gestureInfo.xAtStart - scrollDeltaX : 0;
-        yMouseMove = direction.y ? y - gestureInfo.yAtStart - scrollDeltaY : 0;
-
+        xMouseMove = x - gestureInfo.xAtStart - scrollDeltaX;
+        yMouseMove = y - gestureInfo.yAtStart - scrollDeltaY;
         // Total movement = mouse movement + scroll offset (should equal x - xAtStart)
         xMove = xMouseMove + scrollDeltaX;
         yMove = yMouseMove + scrollDeltaY;

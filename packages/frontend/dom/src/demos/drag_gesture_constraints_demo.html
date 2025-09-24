@@ -574,6 +574,7 @@
         const customRightBound = 500; // Cannot drag right of 500px from content start
 
         createDragToMoveGesture({
+          direction: { x: true },
           backdrop: false,
           customLeftBound,
           customRightBound,
