@@ -469,12 +469,12 @@
     </div>
 
     <script type="module">
+      import { createDragToMoveGesture } from "../interaction/drag_gesture.js";
       import {
         DRAG_DEBUG_VISUAL_MARKERS,
         enableDebugMarkers,
         disableDebugMarkers,
-        createDragToMoveGesture,
-      } from "../interaction/drag_gesture.js";
+      } from "../interaction/debug_markers.js";
 
       const horizontalRectangle = document.getElementById(
         "horizontalRectangle",
