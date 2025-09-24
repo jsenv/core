@@ -1,0 +1,79 @@
+export const setupConstraintFeedbackLine = () => {
+  // Set up constraint feedback line
+
+  const constraintFeedbackLine = createConstraintFeedbackLine();
+
+  // Track last known mouse position for constraint feedback line during scroll
+  let lastMouseX = null;
+  let lastMouseY = null;
+  // Internal function to update constraint feedback line
+  const onDrag = (gestureInfo, { mouseX, mouseY }) => {
+    const { xAtStart, yAtStart, positionedParent } = gestureInfo;
+
+    // Update last known mouse position if provided
+    if (mouseX !== null && mouseY !== null) {
+      lastMouseX = mouseX;
+      lastMouseY = mouseY;
+    }
+
+    // Use last known position if current position not available (e.g., during scroll)
+    const effectiveMouseX = mouseX !== null ? mouseX : lastMouseX;
+    const effectiveMouseY = mouseY !== null ? mouseY : lastMouseY;
+
+    if (effectiveMouseX === null || effectiveMouseY === null) {
+      return;
+    }
+
+    // Calculate current grab point position in viewport coordinates
+    // The grab point is where the mouse initially clicked on the element, but moves with the element
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+
+    // Current grab point = initial grab position + element movement
+    // xAtStart/yAtStart are relative to positioned parent, add current movement
+    const currentGrabPointX =
+      positionedParentRect.left + xAtStart + (gestureInfo.xMove || 0);
+    const currentGrabPointY =
+      positionedParentRect.top + yAtStart + (gestureInfo.yMove || 0);
+
+    // Calculate distance between mouse and current grab point
+    const deltaX = effectiveMouseX - currentGrabPointX;
+    const deltaY = effectiveMouseY - currentGrabPointY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    // Show line only when distance is significant (> 20px threshold)
+    const threshold = 20;
+    if (distance <= threshold) {
+      constraintFeedbackLine.removeAttribute("data-visible");
+      return;
+    }
+
+    // Calculate angle and position
+    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+    constraintFeedbackLine.setAttribute("data-visible", "");
+    // Position line at current grab point (follows element movement)
+    constraintFeedbackLine.style.left = `${currentGrabPointX}px`;
+    constraintFeedbackLine.style.top = `${currentGrabPointY}px`;
+    constraintFeedbackLine.style.width = `${distance}px`;
+    constraintFeedbackLine.style.transform = `rotate(${angle}deg)`;
+    // Fade in based on distance (more visible as distance increases)
+    const maxOpacity = 0.8;
+    const opacityFactor = Math.min((distance - threshold) / 100, 1);
+    constraintFeedbackLine.style.opacity = `${maxOpacity * opacityFactor}`;
+  };
+
+  return {
+    onDrag,
+    onRelease: () => {
+      constraintFeedbackLine.remove();
+    },
+  };
+};
+
+const createConstraintFeedbackLine = () => {
+  const line = document.createElement("div");
+  line.className = "navi_constraint_feedback_line";
+  line.title =
+    "Constraint feedback - shows distance between mouse and moving grab point";
+  document.body.appendChild(line);
+  return line;
+};

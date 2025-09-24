@@ -1,11 +1,15 @@
 export let DRAG_DEBUG_MARKERS = true;
-const KEEP_MARKERS_ON_RELEASE = true;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_MARKERS = true;
 };
 export const disableDebugMarkers = () => {
   DRAG_DEBUG_MARKERS = false;
 };
+
+// Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
+// Useful for debugging constraint systems and understanding why elements behave certain ways
+// When enabled, markers persist until next drag gesture starts or page is refreshed
+const KEEP_MARKERS_ON_RELEASE = true;
 
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
