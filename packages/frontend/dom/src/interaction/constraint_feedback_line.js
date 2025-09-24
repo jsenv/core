@@ -1,7 +1,5 @@
 export const setupConstraintFeedbackLine = ({
   positionedParent,
-  isStickyLeft,
-  isStickyTop,
   scrollLeftAtStart,
   scrollTopAtStart,
 }) => {
@@ -31,13 +29,9 @@ export const setupConstraintFeedbackLine = ({
     // For normal elements, use standard calculation
     const parentRect = positionedParent.getBoundingClientRect();
     currentGrabPointX = parentRect.left + xAtStart + gestureInfo.xMove;
-    if (isStickyLeft) {
-      currentGrabPointX -= scrollLeftAtStart;
-    }
+    currentGrabPointX -= scrollLeftAtStart;
     currentGrabPointY = parentRect.top + yAtStart + gestureInfo.yMove;
-    if (isStickyTop) {
-      currentGrabPointY -= scrollTopAtStart;
-    }
+    currentGrabPointY -= scrollTopAtStart;
 
     // Calculate distance between mouse and current grab point
     const deltaX = effectiveMouseX - currentGrabPointX;
