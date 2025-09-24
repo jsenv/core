@@ -110,15 +110,17 @@ export const createDragGesture = (options) => {
     backdrop = true,
     backdropZIndex = 1,
 
+    stickyFrontiers = true,
+    keepInScrollableArea = true,
+    obstacleQuerySelector = "[data-drag-obstacle]",
+
     // Custom bounds that override the default scrollable area bounds
     // Useful for scenarios like column resizing where you want custom min/max constraints
     customLeftBound,
     customRightBound,
     customTopBound,
     customBottomBound,
-    stickyFrontiers = true,
-    keepInScrollableArea = true,
-    obstacleQuerySelector = "[data-drag-obstacle]",
+
     // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
     // This provides intuitive feedback during drag operations when the element cannot reach the mouse
     // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
