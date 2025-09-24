@@ -71,51 +71,64 @@ import { getPositionedParent } from "../offset_parent.js";
 import { getScrollableParent } from "../scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
-import { validateConstraints } from "./constraint_validation.js";
+import {
+  applyConstraints,
+  createBoundConstraint,
+  prepareConstraints,
+} from "./constraint.js";
+import {
+  updateVisualMarkersOnDrag,
+  updateVisualMarkersOnGrab,
+  updateVisualMarkersOnRelease,
+} from "./debug_markers.js";
 import "./drag_gesture_css.js";
 import { createObstacleConstraintsFromQuerySelector } from "./drag_obstacles.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
-export let DRAG_DEBUG_VISUAL_MARKERS = true;
-export const enableDebugMarkers = () => {
-  DRAG_DEBUG_VISUAL_MARKERS = true;
-};
-export const disableDebugMarkers = () => {
-  DRAG_DEBUG_VISUAL_MARKERS = false;
+const BASIC_MODE_OPTIONS = {
+  backdrop: false,
+  stickyFrontiers: false,
+  keepInScrollableArea: false,
+  obstacleQuerySelector: null,
 };
 
-export const createDragGesture = ({
-  name,
-  onGrab,
-  onDragStart,
-  onDrag,
-  onRelease,
-  gestureAttribute,
-  threshold = 5,
-  direction: defaultDirection = { x: true, y: true },
-  backdrop = true,
-  backdropZIndex = 1,
-  // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
-  // This provides intuitive feedback during drag operations when the element cannot reach the mouse
-  // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
-  // initially grabbed the element, but moves with the element to show the current anchor position.
-  // It becomes visible when there's a significant distance between mouse and grab point.
-  constrainedFeedbackLine = true,
-  // Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
-  // Useful for debugging constraint systems and understanding why elements behave certain ways
-  // When enabled, markers persist until next drag gesture starts or page is refreshed
-  keepMarkersOnRelease = false,
-  // Custom bounds that override the default scrollable area bounds
-  // Useful for scenarios like column resizing where you want custom min/max constraints
-  customLeftBound,
-  customRightBound,
-  customTopBound,
-  customBottomBound,
-  stickyFrontiers = true,
-  keepInScrollableArea = true,
-  obstacleQuerySelector = "[data-drag-obstacle]",
-  lifecycle,
-}) => {
+export const createDragGesture = (options) => {
+  // for now force the basic mode because we just
+  // want to test auto scroll and snap during scroll
+  Object.assign(options, BASIC_MODE_OPTIONS);
+  const {
+    name,
+    onGrab,
+    onDragStart,
+    onDrag,
+    onRelease,
+    gestureAttribute,
+    threshold = 5,
+    direction: defaultDirection = { x: true, y: true },
+    backdrop = true,
+    backdropZIndex = 1,
+    // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
+    // This provides intuitive feedback during drag operations when the element cannot reach the mouse
+    // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
+    // initially grabbed the element, but moves with the element to show the current anchor position.
+    // It becomes visible when there's a significant distance between mouse and grab point.
+    constrainedFeedbackLine = true,
+    // Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
+    // Useful for debugging constraint systems and understanding why elements behave certain ways
+    // When enabled, markers persist until next drag gesture starts or page is refreshed
+    keepMarkersOnRelease = false,
+    // Custom bounds that override the default scrollable area bounds
+    // Useful for scenarios like column resizing where you want custom min/max constraints
+    customLeftBound,
+    customRightBound,
+    customTopBound,
+    customBottomBound,
+    stickyFrontiers = true,
+    keepInScrollableArea = true,
+    obstacleQuerySelector = "[data-drag-obstacle]",
+    lifecycle,
+  } = options;
+
   const teardownCallbackSet = new Set();
   const addTeardown = (callback) => {
     teardownCallbackSet.add(callback);
@@ -224,20 +237,6 @@ export const createDragGesture = ({
     let previousGestureInfo = null;
     let started = !threshold;
 
-    // Debug markers storage (separate from gestureInfo)
-    let currentDebugMarkers = [];
-    let currentConstraintMarkers = [];
-
-    // Clean up any existing persistent markers from previous drag gestures
-    if (keepMarkersOnRelease) {
-      // Remove any existing markers from previous gestures
-      document
-        .querySelectorAll(
-          ".navi_debug_marker, .navi_obstacle_marker, .navi_sticky_frontier_marker, .navi_constraint_feedback_line",
-        )
-        .forEach((marker) => marker.remove());
-    }
-
     // Set up backdrop
     if (backdrop) {
       const backdropElement = document.createElement("div");
@@ -321,12 +320,10 @@ export const createDragGesture = ({
       constraintFeedbackLine.style.opacity = `${maxOpacity * opacityFactor}`;
     };
 
-    // Set up constraints - collect all constraint functions
+    // Collect all constraint functions
     const constraintFunctions = [];
-
-    // Always add bounds constraint (scrollable area)
     if (keepInScrollableArea) {
-      const boundsConstraint = createScrollableAreaConstraint(
+      const boundsConstraintFunction = createScrollableAreaConstraint(
         scrollableParent,
         {
           customLeftBound,
@@ -335,32 +332,21 @@ export const createDragGesture = ({
           customBottomBound,
         },
       );
-      constraintFunctions.push(boundsConstraint);
+      constraintFunctions.push(boundsConstraintFunction);
     }
     if (obstacleQuerySelector) {
-      const obstacleConstraints = createObstacleConstraintsFromQuerySelector(
-        scrollableParent,
-        {
+      const obstacleConstraintFunctions =
+        createObstacleConstraintsFromQuerySelector(scrollableParent, {
           name,
           positionedParent,
           obstacleQuerySelector,
-        },
-      );
-      constraintFunctions.push(...obstacleConstraints);
+        });
+      constraintFunctions.push(...obstacleConstraintFunctions);
     }
 
-    // Clean up debug markers when gesture ends
+    updateVisualMarkersOnGrab();
     addTeardown(() => {
-      if (!keepMarkersOnRelease) {
-        currentDebugMarkers.forEach((marker) => {
-          marker.remove();
-        });
-        currentConstraintMarkers.forEach((marker) => {
-          marker.remove();
-        });
-        currentDebugMarkers = [];
-        currentConstraintMarkers = [];
-      }
+      updateVisualMarkersOnRelease();
     });
 
     // Set up dragging attribute
@@ -400,168 +386,6 @@ export const createDragGesture = ({
         });
       });
     }
-
-    const drawVisualMarkers = ({
-      constraints,
-      visibleArea,
-      elementWidth,
-      elementHeight,
-    }) => {
-      // Schedule removal of previous markers if they exist
-      const previousDebugMarkers = [...currentDebugMarkers];
-      const previousConstraintMarkers = [...currentConstraintMarkers];
-
-      if (
-        previousDebugMarkers.length > 0 ||
-        previousConstraintMarkers.length > 0
-      ) {
-        setTimeout(() => {
-          previousDebugMarkers.forEach((marker) => marker.remove());
-          previousConstraintMarkers.forEach((marker) => marker.remove());
-        }, 100);
-      }
-
-      // Clear current marker arrays
-      currentDebugMarkers.length = 0;
-      currentConstraintMarkers.length = 0;
-
-      // Add visual markers for visible area bounds - only for allowed movement directions
-      if (direction.y) {
-        currentDebugMarkers.push(
-          createDebugMarker({
-            name: "visibleAreaTop",
-            x: 0,
-            y: visibleArea.top,
-            color: "red",
-            orientation: "horizontal",
-          }),
-        );
-        currentDebugMarkers.push(
-          createDebugMarker({
-            name: "visibleAreaBottom",
-            x: 0,
-            y: visibleArea.bottom,
-            color: "orange",
-            orientation: "horizontal",
-          }),
-        );
-      }
-      if (direction.x) {
-        currentDebugMarkers.push(
-          createDebugMarker({
-            name: "visibleAreaLeft",
-            x: visibleArea.left,
-            y: 0,
-            color: "blue",
-            orientation: "vertical",
-          }),
-        );
-        currentDebugMarkers.push(
-          createDebugMarker({
-            name: "visibleAreaRight",
-            x: visibleArea.right,
-            y: 0,
-            color: "green",
-            orientation: "vertical",
-          }),
-        );
-      }
-
-      // Create dynamic constraint markers based on current element size
-      const currentPositionedParentRect =
-        positionedParent.getBoundingClientRect();
-
-      // For debug markers, we'll show bounds constraints and obstacle zones
-      let leftBound = 0;
-      let topBound = 0;
-      let rightBound = Infinity;
-      let bottomBound = Infinity;
-
-      // Extract bounds from bounds constraints and collect obstacle data
-      const obstacles = [];
-      for (const constraint of constraints) {
-        if (constraint.type === "bounds") {
-          leftBound = Math.max(leftBound, constraint.left);
-          topBound = Math.max(topBound, constraint.top);
-          rightBound = Math.min(rightBound, constraint.right);
-          bottomBound = Math.min(bottomBound, constraint.bottom);
-        } else if (constraint.type === "obstacle") {
-          obstacles.push(constraint);
-        }
-      }
-
-      // Create markers for obstacles using pre-calculated objects
-      obstacles.forEach((obstacleObj) => {
-        const obstacleMarker = createObstacleMarker(obstacleObj);
-
-        if (obstacleMarker) {
-          currentConstraintMarkers.push(obstacleMarker);
-        }
-      });
-
-      // Sticky frontier constraints are now consolidated into the visible area
-
-      // Create bound markers - only for allowed movement directions
-      if (direction.x) {
-        if (leftBound > 0) {
-          const leftBoundViewport =
-            currentPositionedParentRect.left + leftBound;
-          currentConstraintMarkers.push(
-            createDebugMarker({
-              name: "leftBound",
-              x: leftBoundViewport,
-              y: 0,
-              color: "red",
-              orientation: "vertical",
-            }),
-          );
-        }
-        if (rightBound !== Infinity) {
-          // For visual clarity, show rightBound at the right edge of the element
-          // when element is positioned at rightBound (not the left edge position)
-          const rightBoundViewport =
-            currentPositionedParentRect.left + rightBound + elementWidth;
-          currentConstraintMarkers.push(
-            createDebugMarker({
-              name: "rightBound",
-              x: rightBoundViewport,
-              y: 0,
-              color: "red",
-              orientation: "vertical",
-            }),
-          );
-        }
-      }
-      if (direction.y) {
-        if (topBound > 0) {
-          const topBoundViewport = currentPositionedParentRect.top + topBound;
-          currentConstraintMarkers.push(
-            createDebugMarker({
-              name: "topBound",
-              x: 0,
-              y: topBoundViewport,
-              color: "red",
-              orientation: "horizontal",
-            }),
-          );
-        }
-        if (bottomBound !== Infinity) {
-          // For visual clarity, show bottomBound at the bottom edge of the element
-          // when element is positioned at bottomBound (not the top edge position)
-          const bottomBoundViewport =
-            currentPositionedParentRect.top + bottomBound + elementHeight;
-          currentConstraintMarkers.push(
-            createDebugMarker({
-              name: "bottomBound",
-              x: 0,
-              y: bottomBoundViewport,
-              color: "red",
-              orientation: "horizontal",
-            }),
-          );
-        }
-      }
-    };
 
     const determineDragData = (
       currentXRelative,
@@ -635,21 +459,11 @@ export const createDragGesture = ({
       const currentElementWidth = currentElementRect.width;
       const currentElementHeight = currentElementRect.height;
 
-      const constraints = constraintFunctions.map((fn) =>
-        fn({
-          elementWidth: currentElementWidth,
-          elementHeight: currentElementHeight,
-        }),
-      );
-
-      // Development safeguards: detect impossible/illogical constraints
-      if (import.meta.dev) {
-        validateConstraints(constraints, {
-          elementWidth: currentElementWidth,
-          elementHeight: currentElementHeight,
-          dragName: name,
-        });
-      }
+      const constraints = prepareConstraints(constraintFunctions, {
+        name,
+        elementWidth: currentElementWidth,
+        elementHeight: currentElementHeight,
+      });
 
       const scrollableRect = scrollableParent.getBoundingClientRect();
       const availableWidth = scrollableParent.clientWidth;
@@ -676,14 +490,14 @@ export const createDragGesture = ({
         visibleArea = visibleAreaBase;
       }
 
-      if (DRAG_DEBUG_VISUAL_MARKERS) {
-        drawVisualMarkers({
-          constraints,
-          visibleArea,
-          elementWidth: currentElementWidth,
-          elementHeight: currentElementHeight,
-        });
-      }
+      updateVisualMarkersOnDrag({
+        direction,
+        constraints,
+        visibleArea,
+        positionedParent,
+        elementWidth: currentElementWidth,
+        elementHeight: currentElementHeight,
+      });
 
       const [finalXMove, finalYMove] = applyConstraints(constraints, {
         gestureInfo,
@@ -1053,115 +867,14 @@ const createScrollableAreaConstraint = (
       bottom = customBottomBound;
     }
 
-    const constraint = {
-      type: "bounds",
-      left,
-      top,
-      right,
-      bottom,
-      element: scrollableParent,
-      name: "scrollable area bounds",
-      apply: (xMove, yMove, { gestureInfo }) => {
-        const { leftAtStart, topAtStart } = gestureInfo;
-
-        // Apply bounds constraints directly using visual coordinates
-        // initialLeft/initialTop now represent elementVisuallyImpacted position
-        const minAllowedXMove = left - leftAtStart;
-        const maxAllowedXMove = right - leftAtStart;
-        const minAllowedYMove = top - topAtStart;
-        const maxAllowedYMove = bottom - topAtStart;
-        const constraints = [];
-        if (xMove < minAllowedXMove) {
-          constraints.push({ x: minAllowedXMove });
-        } else if (xMove > maxAllowedXMove) {
-          constraints.push({ x: maxAllowedXMove });
-        }
-        if (yMove < minAllowedYMove) {
-          constraints.push({ y: minAllowedYMove });
-        } else if (yMove > maxAllowedYMove) {
-          constraints.push({ y: maxAllowedYMove });
-        }
-        return constraints;
+    return createBoundConstraint(
+      { left, top, right, bottom },
+      {
+        element: scrollableParent,
+        name: "scrollable area",
       },
-    };
-    return constraint;
-  };
-};
-
-// Apply constraints on both X and Y axes
-const applyConstraints = (
-  constraints,
-  { gestureInfo, xMove, yMove, elementWidth, elementHeight, interactionType },
-) => {
-  // Capture original movement values for debug logging
-  const xMoveNoConstraint = xMove;
-  const yMoveNoConstraint = yMove;
-
-  for (const constraint of constraints) {
-    const enforcements = constraint.apply(xMove, yMove, {
-      gestureInfo,
-      elementWidth,
-      elementHeight,
-      interactionType,
-    });
-    if (!enforcements || enforcements.length === 0) {
-      continue;
-    }
-    for (const enforcement of enforcements) {
-      if (enforcement.x !== undefined) {
-        logConstraintEnforcement(
-          "x",
-          xMove,
-          enforcement.x,
-          constraint,
-          interactionType,
-        );
-        xMove = enforcement.x;
-        continue;
-      }
-      if (enforcement.y !== undefined) {
-        logConstraintEnforcement(
-          "y",
-          xMove,
-          enforcement.y,
-          constraint,
-          interactionType,
-        );
-        yMove = enforcement.y;
-        continue;
-      }
-    }
-  }
-  // Log when no constraints were applied (movement unchanged)
-  if (
-    DRAG_DEBUG_VISUAL_MARKERS &&
-    xMoveNoConstraint === xMove &&
-    yMoveNoConstraint === yMove
-  ) {
-    console.debug(
-      `Drag by ${interactionType}: no constraint enforcement needed (xMove=${xMove.toFixed(2)}, yMove=${yMove.toFixed(2)})`,
     );
-  }
-
-  return [xMove, yMove];
-};
-// Helper function for debug logging constraint enforcement
-const logConstraintEnforcement = (
-  axis,
-  originalValue,
-  constrainedValue,
-  constraint,
-  interactionType = "unknown",
-) => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS || originalValue === constrainedValue) {
-    return; // No constraint applied or debug disabled
-  }
-
-  const direction = constrainedValue > originalValue ? "increased" : "capped";
-  console.debug(
-    `Drag by ${interactionType}: ${axis} movement ${direction} from ${originalValue.toFixed(2)} to ${constrainedValue.toFixed(2)} by ${constraint.name}`,
-    constraint.element,
-  );
+  };
 };
 
 const definePropertyAsReadOnly = (object, propertyName) => {
@@ -1170,7 +883,6 @@ const definePropertyAsReadOnly = (object, propertyName) => {
     value: object[propertyName],
   });
 };
-
 const createConstraintFeedbackLine = () => {
   const line = document.createElement("div");
   line.className = "navi_constraint_feedback_line";
@@ -1178,50 +890,4 @@ const createConstraintFeedbackLine = () => {
     "Constraint feedback - shows distance between mouse and moving grab point";
   document.body.appendChild(line);
   return line;
-};
-const createDebugMarker = ({
-  name,
-  x,
-  y,
-  color = "red",
-  orientation = "vertical",
-}) => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) {
-    return null;
-  }
-
-  const marker = document.createElement("div");
-  marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
-  marker.style.left = `${x}px`;
-  marker.style.top = `${y}px`;
-  marker.title = name;
-
-  // Add label
-  const label = document.createElement("div");
-  label.className = `navi_debug_marker_label navi_debug_marker_label--${color}`;
-  label.textContent = name;
-  marker.appendChild(label);
-
-  document.body.appendChild(marker);
-  return marker;
-};
-const createObstacleMarker = (obstacleObj) => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) return null;
-
-  const marker = document.createElement("div");
-  marker.className = "navi_obstacle_marker";
-  marker.style.left = `${obstacleObj.viewportBounds.left}px`;
-  marker.style.top = `${obstacleObj.viewportBounds.top}px`;
-  marker.style.width = `${obstacleObj.viewportBounds.right - obstacleObj.viewportBounds.left}px`;
-  marker.style.height = `${obstacleObj.viewportBounds.bottom - obstacleObj.viewportBounds.top}px`;
-  marker.title = obstacleObj.name;
-
-  // Add label
-  const label = document.createElement("div");
-  label.className = "navi_obstacle_marker_label";
-  label.textContent = obstacleObj.name;
-  marker.appendChild(label);
-
-  document.body.appendChild(marker);
-  return marker;
 };
