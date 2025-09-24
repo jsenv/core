@@ -161,13 +161,13 @@ export const createObstacleContraint = (bounds, { element, name }) => {
         // Push up: element should not go past topBound - elementHeight
         const maxAllowedYMove = topBound - elementHeight - topAtStart;
         if (yMove > maxAllowedYMove) {
-          enforcements.push({ x: maxAllowedYMove });
+          enforcements.push({ y: maxAllowedYMove });
         }
       } else if (minDistance === distanceToBottom) {
         // Push down: element should not go before bottomBound
         const minAllowedYMove = bottomBound - topAtStart;
         if (yMove < minAllowedYMove) {
-          enforcements.push({ x: minAllowedYMove });
+          enforcements.push({ y: minAllowedYMove });
         }
       }
     }
@@ -273,7 +273,7 @@ export const applyConstraints = (
       if (direction.y && enforcement.y !== undefined) {
         logConstraintEnforcement(
           "y",
-          xMove,
+          yMove,
           enforcement.y,
           constraint,
           interactionType,
