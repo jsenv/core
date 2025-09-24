@@ -72,8 +72,7 @@ import { getScrollableParent } from "../scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
 import "./drag_gesture_css.js";
-import { getElementBounds } from "./element_bounds.js";
-import { getElementSelector } from "./element_log.js";
+import { createObstacleConstraintsFromQuerySelector } from "./drag_obstacles.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 export let DRAG_DEBUG_VISUAL_MARKERS = true;
@@ -111,6 +110,8 @@ export const createDragGesture = ({
   customRightBound,
   customTopBound,
   customBottomBound,
+  stickyFrontiers = true,
+  obstacleAttribute = true,
   lifecycle,
 }) => {
   const teardownCallbackSet = new Set();
@@ -330,13 +331,15 @@ export const createDragGesture = ({
     });
     constraintFunctions.push(boundsConstraint);
 
-    // Check for obstacles and add obstacle constraint if found
-    const obstacles = createObstaclesFromQuerySelector(scrollableParent, {
-      name,
-      positionedParent,
-    });
-    for (const obstacle of obstacles) {
-      constraintFunctions.push(createObstacleConstraintFromObject(obstacle));
+    if (obstacleAttribute) {
+      const obstacleConstraints = createObstacleConstraintsFromQuerySelector(
+        scrollableParent,
+        {
+          name,
+          positionedParent,
+        },
+      );
+      constraintFunctions.push(...obstacleConstraints);
     }
 
     // Clean up debug markers when gesture ends
@@ -396,7 +399,6 @@ export const createDragGesture = ({
       visibleArea,
       elementWidth,
       elementHeight,
-      obstacleObjects,
     }) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
@@ -482,7 +484,7 @@ export const createDragGesture = ({
       }
 
       // Create markers for obstacles using pre-calculated objects
-      obstacleObjects.forEach((obstacleObj) => {
+      obstacles.forEach((obstacleObj) => {
         const obstacleMarker = createObstacleMarker(obstacleObj);
 
         if (obstacleMarker) {
@@ -633,12 +635,6 @@ export const createDragGesture = ({
         }),
       );
 
-      // Calculate obstacles and sticky frontiers for visual markers (avoiding recalculation)
-      const obstacleObjects = createObstaclesFromQuerySelector(
-        scrollableParent,
-        { name, positionedParent },
-      );
-
       // Development safeguards: detect impossible/illogical constraints
       if (import.meta.dev) {
         validateConstraints(constraints, {
@@ -662,13 +658,16 @@ export const createDragGesture = ({
       };
       visibleAreaBase.right = visibleAreaBase.left + availableWidth;
       visibleAreaBase.bottom = visibleAreaBase.top + availableHeight;
-
-      // Reduce sticky frontiers to a single visible area object
-      const visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
-        scrollableParent,
-        direction,
-        dragName: name,
-      });
+      let visibleArea;
+      if (stickyFrontiers) {
+        visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
+          scrollableParent,
+          direction,
+          dragName: name,
+        });
+      } else {
+        visibleArea = visibleAreaBase;
+      }
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
         drawVisualMarkers({
@@ -676,7 +675,6 @@ export const createDragGesture = ({
           visibleArea,
           elementWidth: currentElementWidth,
           elementHeight: currentElementHeight,
-          obstacleObjects,
         });
       }
 
@@ -994,60 +992,6 @@ export const createDragToMoveGesture = (options) => {
   return dragToMoveGesture;
 };
 
-const createObstaclesFromQuerySelector = (
-  element,
-  { name, sticky, positionedParent },
-) => {
-  const obstacles = element.querySelectorAll("[data-drag-obstacle]");
-  const matchingObstacles = [];
-  for (const obstacle of obstacles) {
-    if (
-      sticky &&
-      !obstacle.hasAttribute("data-sticky-left") &&
-      !obstacle.hasAttribute("data-sticky-top")
-    ) {
-      continue;
-    }
-    if (obstacle.closest("[data-drag-ignore]")) {
-      continue;
-    }
-    if (name) {
-      const obstacleAttributeValue =
-        obstacle.getAttribute("data-drag-obstacle");
-      if (obstacleAttributeValue) {
-        const obstacleNames = obstacleAttributeValue.split(",");
-        const found = obstacleNames.some(
-          (obstacleName) =>
-            obstacleName.trim().toLowerCase() === name.toLowerCase(),
-        );
-        if (!found) {
-          continue;
-        }
-      }
-    }
-
-    // Create obstacle object with bounds
-    const obstacleBounds = getElementBounds(obstacle, positionedParent);
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-
-    const obstacleObject = {
-      type: "obstacle",
-      element: obstacle,
-      bounds: {
-        left: obstacleBounds.left - positionedParentRect.left,
-        top: obstacleBounds.top - positionedParentRect.top,
-        right: obstacleBounds.right - positionedParentRect.left,
-        bottom: obstacleBounds.bottom - positionedParentRect.top,
-      },
-      viewportBounds: obstacleBounds,
-      name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
-    };
-
-    matchingObstacles.push(obstacleObject);
-  }
-  return matchingObstacles;
-};
-
 const createScrollableAreaConstraint = (
   scrollableParent,
   { customLeftBound, customRightBound, customTopBound, customBottomBound } = {},
@@ -1115,12 +1059,6 @@ const createScrollableAreaConstraint = (
           ? "custom bounds constraint"
           : "scrollable area bounds",
     };
-  };
-};
-// Function to create constraint from obstacle object (no longer needs to recalculate bounds)
-const createObstacleConstraintFromObject = (obstacleObject) => {
-  return () => {
-    return obstacleObject;
   };
 };
 
