@@ -3,20 +3,13 @@ import { getElementBounds } from "./element_bounds.js";
 import { getElementSelector } from "./element_log.js";
 
 export const createObstacleConstraintsFromQuerySelector = (
-  element,
-  { name, sticky, positionedParent, obstacleQuerySelector },
+  scrollableElement,
+  { name, positionedParent, obstacleQuerySelector },
 ) => {
   const positionedParentRect = positionedParent.getBoundingClientRect();
-  const obstacles = element.querySelectorAll(obstacleQuerySelector);
-  const obstacleConstraints = [];
+  const obstacles = scrollableElement.querySelectorAll(obstacleQuerySelector);
+  const obstacleConstraintFunctions = [];
   for (const obstacle of obstacles) {
-    if (
-      sticky &&
-      !obstacle.hasAttribute("data-sticky-left") &&
-      !obstacle.hasAttribute("data-sticky-top")
-    ) {
-      continue;
-    }
     if (obstacle.closest("[data-drag-ignore]")) {
       continue;
     }
@@ -35,7 +28,7 @@ export const createObstacleConstraintsFromQuerySelector = (
       }
     }
 
-    const obstacleBounds = getElementBounds(element, positionedParentRect);
+    const obstacleBounds = getElementBounds(obstacle, positionedParent);
     const obstacleObject = createObstacleContraint(
       {
         left: obstacleBounds.left - positionedParentRect.left,
@@ -44,13 +37,13 @@ export const createObstacleConstraintsFromQuerySelector = (
         bottom: obstacleBounds.bottom - positionedParentRect.top,
       },
       {
-        name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${getElementSelector(element)})`,
+        name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
         element: obstacle,
       },
     );
-    obstacleConstraints.push(() => {
+    obstacleConstraintFunctions.push(() => {
       return obstacleObject;
     });
   }
-  return obstacleConstraints;
+  return obstacleConstraintFunctions;
 };
