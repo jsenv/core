@@ -674,23 +674,19 @@ export const createDragToMoveGesture = (options) => {
         }) => {
           keep_into_view: {
             if (isGoingPositive) {
-              console.log(
-                `Auto-scroll check (positive): desiredEnd=${desiredElementEnd} > visibleEnd=${visibleAreaEnd}?`,
-                desiredElementEnd > visibleAreaEnd,
-              );
               if (desiredElementEnd > visibleAreaEnd) {
                 const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
                 const scroll = currentScroll + scrollAmountNeeded;
                 console.log(
-                  `Auto-scrolling ${scrollProperty}: ${currentScroll} + ${scrollAmountNeeded} = ${scroll}`,
+                  `Auto-scroll needed: desiredEnd=${desiredElementEnd} > visibleEnd=${visibleAreaEnd}: scrolling by ${scrollAmountNeeded}`,
                 );
                 scrollableParent[scrollProperty] = scroll;
+              } else {
+                console.log(
+                  `Auto-scroll NOT needed: desiredEnd=${desiredElementEnd} <= visibleEnd=${visibleAreaEnd}`,
+                );
               }
             } else if (isGoingNegative) {
-              console.log(
-                `Auto-scroll check (negative): desiredStart=${desiredElementStart} < visibleStart=${visibleAreaStart}?`,
-                desiredElementStart < visibleAreaStart,
-              );
               if (desiredElementStart < visibleAreaStart) {
                 const scrollAmountNeeded =
                   visibleAreaStart - desiredElementStart;
