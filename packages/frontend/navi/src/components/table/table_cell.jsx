@@ -48,12 +48,12 @@ export const TableCell = forwardRef((props, ref) => {
     isHead,
     cellId,
     boldClone,
-    stickyX,
-    stickyY,
-    isStickyXFrontier,
-    isStickyYFrontier,
-    isAfterStickyXFrontier,
-    isAfterStickyYFrontier,
+    stickyLeft,
+    stickyTop,
+    isStickyLeftFrontier,
+    isStickyTopFrontier,
+    isAfterStickyLeftFrontier,
+    isAfterStickyTopFrontier,
     value,
     selectionController,
     grabbed,
@@ -120,12 +120,18 @@ export const TableCell = forwardRef((props, ref) => {
       ref={cellRef}
       className={className}
       style={innerStyle}
-      data-sticky-left={stickyX ? "" : undefined}
-      data-sticky-top={stickyY ? "" : undefined}
-      data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
-      data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
-      data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}
-      data-after-sticky-y-frontier={isAfterStickyYFrontier ? "" : undefined}
+      data-sticky-left={stickyLeft ? "" : undefined}
+      data-sticky-top={stickyTop ? "" : undefined}
+      data-sticky-left-frontier={
+        stickyLeft && isStickyLeftFrontier ? "" : undefined
+      }
+      data-sticky-top-frontier={
+        stickyTop && isStickyTopFrontier ? "" : undefined
+      }
+      data-after-sticky-left-frontier={
+        isAfterStickyLeftFrontier ? "" : undefined
+      }
+      data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
       tabIndex={-1}
       data-value={cellId}
       data-selection-name={isHead ? "column" : "cell"}
