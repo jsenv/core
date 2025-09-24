@@ -1,4 +1,10 @@
-export const setupConstraintFeedbackLine = ({ positionedParent }) => {
+export const setupConstraintFeedbackLine = ({
+  positionedParent,
+  isStickyLeft,
+  isStickyTop,
+  scrollLeftAtStart,
+  scrollTopAtStart,
+}) => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
   // Track last known mouse position for constraint feedback line during scroll
@@ -6,32 +12,33 @@ export const setupConstraintFeedbackLine = ({ positionedParent }) => {
   let lastMouseY = null;
   // Internal function to update constraint feedback line
   const onDrag = (gestureInfo, { mouseX, mouseY }) => {
-    const { xAtStart, yAtStart } = gestureInfo;
-
     // Update last known mouse position if provided
     if (mouseX !== null && mouseY !== null) {
       lastMouseX = mouseX;
       lastMouseY = mouseY;
     }
-
     // Use last known position if current position not available (e.g., during scroll)
     const effectiveMouseX = mouseX !== null ? mouseX : lastMouseX;
     const effectiveMouseY = mouseY !== null ? mouseY : lastMouseY;
-
     if (effectiveMouseX === null || effectiveMouseY === null) {
       return;
     }
 
+    const { xAtStart, yAtStart } = gestureInfo;
     // Calculate current grab point position in viewport coordinates
-    // The grab point is where the mouse initially clicked on the element, but moves with the element
+    let currentGrabPointX;
+    let currentGrabPointY;
+    // For normal elements, use standard calculation
     const positionedParentRect = positionedParent.getBoundingClientRect();
-
-    // Current grab point = initial grab position + element movement
-    // xAtStart/yAtStart are relative to positioned parent, add current movement
-    const currentGrabPointX =
+    currentGrabPointX =
       positionedParentRect.left + xAtStart + gestureInfo.xMove;
-    const currentGrabPointY =
-      positionedParentRect.top + yAtStart + gestureInfo.yMove;
+    if (isStickyLeft) {
+      currentGrabPointX -= scrollLeftAtStart;
+    }
+    currentGrabPointY = positionedParentRect.top + yAtStart + gestureInfo.yMove;
+    if (isStickyTop) {
+      currentGrabPointY -= scrollTopAtStart;
+    }
 
     // Calculate distance between mouse and current grab point
     const deltaX = effectiveMouseX - currentGrabPointX;

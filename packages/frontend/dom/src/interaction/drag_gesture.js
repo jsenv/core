@@ -270,6 +270,10 @@ export const createDragGesture = (options) => {
     if (showConstraintFeedbackLine) {
       constraintFeedbackLine = setupConstraintFeedbackLine({
         positionedParent,
+        isStickyLeft,
+        isStickyTop,
+        scrollLeftAtStart,
+        scrollTopAtStart,
       });
       addTeardown(() => {
         constraintFeedbackLine.onRelease();
