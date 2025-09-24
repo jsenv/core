@@ -737,12 +737,12 @@
     <script type="module">
       // Import the drag gesture functionality
       // Note: You'll need to adjust the import path based on your setup
+      import { createDragToMoveGesture } from "../interaction/drag_gesture.js";
       import {
-        DRAG_DEBUG_VISUAL_MARKERS,
+        DRAG_DEBUG_MARKERS,
         enableDebugMarkers,
         disableDebugMarkers,
-        createDragToMoveGesture,
-      } from "../interaction/drag_gesture.js";
+      } from "../interaction/debug_markers.js";
 
       const horizontalRectangle = document.getElementById(
         "horizontalRectangle",
@@ -752,7 +752,7 @@
       const debugCheckbox = document.getElementById("debugMarkersCheckbox");
 
       // Handle debug markers toggle
-      debugCheckbox.checked = DRAG_DEBUG_VISUAL_MARKERS;
+      debugCheckbox.checked = DRAG_DEBUG_MARKERS;
       debugCheckbox.addEventListener("change", (e) => {
         if (e.target.checked) {
           enableDebugMarkers();
