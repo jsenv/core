@@ -180,6 +180,7 @@ export function analyzeCallExpression(
   functionDefinitions,
   context,
   maxChainDepth = 40,
+  options = {},
 ) {
   const callee = node.callee;
 
@@ -308,7 +309,7 @@ export function analyzeCallExpression(
             );
 
             if (!chainResult.found) {
-              const { messageId, data, autofixes } = generateErrorMessage(
+              const errorMessage = generateErrorMessage(
                 keyName,
                 funcName,
                 chainResult.chain,
@@ -318,7 +319,15 @@ export function analyzeCallExpression(
                 context.getFilename(),
                 maxChainDepth,
                 functionDefWrapper.sourceFile,
+                options,
               );
+
+              // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
+              if (!errorMessage) {
+                continue;
+              }
+
+              const { messageId, data, autofixes } = errorMessage;
 
               const fixes = [];
               if (autofixes.remove) {
@@ -384,7 +393,7 @@ export function analyzeCallExpression(
           );
 
           if (!chainResult.found) {
-            const { messageId, data, autofixes } = generateErrorMessage(
+            const errorMessage = generateErrorMessage(
               keyName,
               funcName,
               chainResult.chain,
@@ -394,7 +403,15 @@ export function analyzeCallExpression(
               context.getFilename(),
               maxChainDepth,
               functionDefWrapper.sourceFile,
+              options,
             );
+
+            // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
+            if (!errorMessage) {
+              continue;
+            }
+
+            const { messageId, data, autofixes } = errorMessage;
 
             const fixes = [];
             if (autofixes.remove) {
@@ -440,7 +457,7 @@ export function analyzeJSXElement(
   functionDefinitions,
   context,
   maxChainDepth = 40,
-  detailedMessage = false,
+  options = {},
 ) {
   const openingElement = node.openingElement;
   if (!openingElement || !openingElement.name) return;
@@ -488,7 +505,7 @@ export function analyzeJSXElement(
           continue;
         }
 
-        const { messageId, data, autofixes } = generateErrorMessage(
+        const errorMessage = generateErrorMessage(
           attrName,
           componentName,
           [], // No chain for components with no params
@@ -498,8 +515,13 @@ export function analyzeJSXElement(
           context.getFilename(),
           maxChainDepth,
           functionDefWrapper.sourceFile,
-          detailedMessage,
+          options,
         );
+        // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
+        if (!errorMessage) {
+          continue;
+        }
+        const { messageId, data, autofixes } = errorMessage;
 
         const fixes = [];
         if (autofixes.remove) {
@@ -587,18 +609,23 @@ export function analyzeJSXElement(
           );
 
           if (!chainResult.found) {
-            const { messageId, data, autofixes } = generateErrorMessage(
+            const errorMessage = generateErrorMessage(
               attrName,
               componentName,
-              chainResult.chain,
+              [], // No chain for components with no params
               functionDef,
               functionDefinitions,
               givenAttrs,
               context.getFilename(),
               maxChainDepth,
               functionDefWrapper.sourceFile,
-              detailedMessage,
+              options,
             );
+            // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
+            if (!errorMessage) {
+              continue;
+            }
+            const { messageId, data, autofixes } = errorMessage;
 
             const fixes = [];
             if (autofixes.remove) {
@@ -709,18 +736,23 @@ export function analyzeJSXElement(
           );
 
           if (!chainResult.found) {
-            const { messageId, data, autofixes } = generateErrorMessage(
+            const errorMessage = generateErrorMessage(
               attrName,
               componentName,
-              chainResult.chain,
+              [], // No chain for components with no params
               functionDef,
               functionDefinitions,
               givenAttrs,
               context.getFilename(),
               maxChainDepth,
               functionDefWrapper.sourceFile,
-              detailedMessage,
+              options,
             );
+            // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
+            if (!errorMessage) {
+              continue;
+            }
+            const { messageId, data, autofixes } = errorMessage;
 
             const fixes = [];
             if (autofixes.remove) {
@@ -802,18 +834,23 @@ export function analyzeJSXElement(
         );
 
         if (!chainResult.found) {
-          const { messageId, data, autofixes } = generateErrorMessage(
+          const errorMessage = generateErrorMessage(
             attrName,
             componentName,
-            chainResult.chain,
+            [], // No chain for components with no params
             functionDef,
             functionDefinitions,
             givenAttrs,
             context.getFilename(),
             maxChainDepth,
             functionDefWrapper.sourceFile,
-            detailedMessage,
+            options,
           );
+          // Skip reporting if generateErrorMessage returns null (filtered out as non-typo)
+          if (!errorMessage) {
+            continue;
+          }
+          const { messageId, data, autofixes } = errorMessage;
 
           const fixes = [];
           if (autofixes.remove) {

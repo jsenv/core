@@ -30,7 +30,9 @@ export function generateErrorMessage(
   currentFilePath = null,
   maxChainDepth = 40,
   functionSourceFile = null,
+  options = {},
 ) {
+  const { reportAllUnknownParams = false } = options;
   // Collect all available parameters in the function and its chain
   const availableParams = collectChainParameters(
     functionDef,
@@ -49,6 +51,11 @@ export function generateErrorMessage(
     ? calculateSimilarity(paramName, bestSuggestion)
     : 0;
   const isHighConfidenceTypo = bestSimilarity > 0.8;
+
+  // If reportAllUnknownParams is false (default), only report likely typos
+  if (!reportAllUnknownParams && !isHighConfidenceTypo) {
+    return null; // Skip reporting this unknown parameter
+  }
 
   // Check if this is a case where user provided exactly expected + one extra
   const directParams = new Set();

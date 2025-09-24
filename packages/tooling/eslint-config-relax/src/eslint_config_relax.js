@@ -129,7 +129,7 @@ export const eslintConfigRelax = ({
         jsenv: jsenvPlugin,
       },
       rules: {
-        "jsenv/no-unknown-params": ["error"],
+        "jsenv/no-unknown-params": ["warn"], // Default: only report likely typos
       },
     },
     // node "module" files

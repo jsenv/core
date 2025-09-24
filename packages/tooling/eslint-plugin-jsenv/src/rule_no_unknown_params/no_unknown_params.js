@@ -37,6 +37,12 @@ export const noUnknownParamsRule = {
             default: 40,
             description: "Maximum depth for following function call chains",
           },
+          reportAllUnknownParams: {
+            type: "boolean",
+            default: false,
+            description:
+              "Report all unknown parameters, not just likely typos. When false (default), only reports parameters that appear to be typos based on similarity to available parameters.",
+          },
         },
         additionalProperties: false,
       },
@@ -64,6 +70,7 @@ export const noUnknownParamsRule = {
     const options = context.options[0] || {};
     const maxImportDepth = options.maxImportDepth || 12;
     const maxChainDepth = options.maxChainDepth || 40;
+    const reportAllUnknownParams = options.reportAllUnknownParams || false;
 
     const functionDefinitions = new Map();
     const callsToAnalyze = [];
@@ -207,6 +214,7 @@ export const noUnknownParamsRule = {
               functionDefinitions,
               context,
               maxChainDepth,
+              { reportAllUnknownParams },
             );
           }
 
@@ -217,6 +225,7 @@ export const noUnknownParamsRule = {
               functionDefinitions,
               context,
               maxChainDepth,
+              { reportAllUnknownParams },
             );
           }
         } finally {
