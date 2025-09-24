@@ -294,10 +294,10 @@ export const createDragGesture = ({
       });
     }
 
-    // Use elementVisuallyImpacted as primary coordinate system for all calculations
-    // This keeps constraint logic, logging, and calculations in meaningful visual coordinates
-    const initialLeft = elementVisuallyImpactedRect.left - parentRect.left;
-    const initialTop = elementVisuallyImpactedRect.top - parentRect.top;
+    const leftAtStart = elementVisuallyImpactedRect.left - parentRect.left;
+    const topAtStart = elementVisuallyImpactedRect.top - parentRect.top;
+    const scrollLeftAtStart = scrollableParent.scrollLeft;
+    const scrollTopAtStart = scrollableParent.scrollTop;
 
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
@@ -307,15 +307,20 @@ export const createDragGesture = ({
     const visualOffsetY =
       elementVisuallyImpactedRect.top - elementToImpactRect.top;
 
-    const initialScrollLeft = scrollableParent.scrollLeft;
-    const initialScrollTop = scrollableParent.scrollTop;
-
     const gestureInfo = {
       element,
       elementToImpact,
       elementVisuallyImpacted,
+
       xAtStart,
       yAtStart,
+      leftAtStart,
+      topAtStart,
+      scrollLeftAtStart,
+      scrollTopAtStart,
+      visualOffsetX,
+      visualOffsetY,
+
       x: xAtStart,
       y: yAtStart,
       xMove: 0,
@@ -324,24 +329,20 @@ export const createDragGesture = ({
       yMouseMove: 0, // Movement caused by mouse drag
       xChanged: false,
       yChanged: false,
+
       isGoingUp: undefined,
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
-      initialLeft,
-      initialTop,
-      initialScrollLeft,
-      initialScrollTop,
-      visualOffsetX,
-      visualOffsetY,
+
       interactionType,
     };
     definePropertyAsReadOnly(gestureInfo, "xAtStart");
     definePropertyAsReadOnly(gestureInfo, "yAtStart");
-    definePropertyAsReadOnly(gestureInfo, "initialLeft");
-    definePropertyAsReadOnly(gestureInfo, "initialTop");
-    definePropertyAsReadOnly(gestureInfo, "initialScrollLeft");
-    definePropertyAsReadOnly(gestureInfo, "initialScrollTop");
+    definePropertyAsReadOnly(gestureInfo, "leftAtStart");
+    definePropertyAsReadOnly(gestureInfo, "topAtStart");
+    definePropertyAsReadOnly(gestureInfo, "scrollLeftAtStart");
+    definePropertyAsReadOnly(gestureInfo, "scrollTopAtStart");
     definePropertyAsReadOnly(gestureInfo, "visualOffsetX");
     definePropertyAsReadOnly(gestureInfo, "visualOffsetY");
     let previousGestureInfo = null;
@@ -708,10 +709,10 @@ export const createDragGesture = ({
         const currentScrollLeft = scrollableParent.scrollLeft;
         const currentScrollTop = scrollableParent.scrollTop;
         const scrollDeltaX = direction.x
-          ? currentScrollLeft - initialScrollLeft
+          ? currentScrollLeft - scrollLeftAtStart
           : 0;
         const scrollDeltaY = direction.y
-          ? currentScrollTop - initialScrollTop
+          ? currentScrollTop - scrollTopAtStart
           : 0;
 
         xMove = xMouseMove + scrollDeltaX;
@@ -721,10 +722,10 @@ export const createDragGesture = ({
         const currentScrollLeft = scrollableParent.scrollLeft;
         const currentScrollTop = scrollableParent.scrollTop;
         const scrollDeltaX = direction.x
-          ? currentScrollLeft - initialScrollLeft
+          ? currentScrollLeft - scrollLeftAtStart
           : 0;
         const scrollDeltaY = direction.y
-          ? currentScrollTop - initialScrollTop
+          ? currentScrollTop - scrollTopAtStart
           : 0;
 
         // For mouse movement, currentXRelative already includes scroll effects
@@ -1014,6 +1015,128 @@ export const createDragGesture = ({
     grabViaMousedown,
     addTeardown,
   };
+};
+
+export const createDragToMoveGesture = (options) => {
+  const dragToMoveGesture = createDragGesture({
+    ...options,
+    lifecycle: {
+      drag: (
+        gestureInfo,
+        { direction, positionedParent, scrollableParent },
+      ) => {
+        const {
+          leftAtStart,
+          topAtStart,
+          visualOffsetX,
+          visualOffsetY,
+          isGoingDown,
+          isGoingUp,
+          isGoingLeft,
+          isGoingRight,
+          elementToImpact,
+          elementVisuallyImpacted,
+          visibleArea,
+        } = gestureInfo;
+
+        // Calculate initial position for elementToImpact (initialLeft/initialTop are now visual coordinates)
+        const initialLeftToImpact = leftAtStart - visualOffsetX;
+        const initialTopToImpact = topAtStart - visualOffsetY;
+        const elementVisuallyImpactedRect =
+          elementVisuallyImpacted.getBoundingClientRect();
+        const elementWidth = elementVisuallyImpactedRect.width;
+        const elementHeight = elementVisuallyImpactedRect.height;
+
+        // Calculate where element bounds would be in viewport coordinates
+        const currentPositionedParentRect =
+          positionedParent.getBoundingClientRect();
+
+        // Helper function to handle auto-scroll and element positioning for an axis
+        const moveAndKeepIntoView = ({
+          // axis,
+          isGoingPositive, // right/down
+          isGoingNegative, // left/up
+          desiredElementStart, // left/top edge of element
+          desiredElementEnd, // right/bottom edge of element
+          visibleAreaStart, // visible left/top boundary
+          visibleAreaEnd, // visible right/bottom boundary
+          currentScroll, // current scrollLeft or scrollTop value
+          initialPosition, // initialLeft or initialTop
+          moveAmount, // gestureInfo.xMove or gestureInfo.yMove
+          scrollProperty, // 'scrollLeft' or 'scrollTop'
+          styleProperty, // 'left' or 'top'
+        }) => {
+          keep_into_view: {
+            if (isGoingPositive) {
+              if (desiredElementEnd > visibleAreaEnd) {
+                const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
+                const scroll = currentScroll + scrollAmountNeeded;
+                scrollableParent[scrollProperty] = scroll;
+              }
+            } else if (isGoingNegative) {
+              if (desiredElementStart < visibleAreaStart) {
+                const scrollAmountNeeded =
+                  visibleAreaStart - desiredElementStart;
+                const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
+                scrollableParent[scrollProperty] = scroll;
+              }
+            }
+          }
+          move: {
+            const elementPosition = initialPosition + moveAmount;
+            if (elementToImpact) {
+              elementToImpact.style[styleProperty] = `${elementPosition}px`;
+            }
+          }
+        };
+
+        // Horizontal auto-scroll
+        if (direction.x) {
+          const desiredElementLeftRelative = leftAtStart + gestureInfo.xMove;
+          const desiredElementLeft =
+            desiredElementLeftRelative + currentPositionedParentRect.left;
+          const desiredElementRight = desiredElementLeft + elementWidth;
+          moveAndKeepIntoView({
+            // axis: "x",
+            isGoingPositive: isGoingRight,
+            isGoingNegative: isGoingLeft,
+            desiredElementStart: desiredElementLeft,
+            desiredElementEnd: desiredElementRight,
+            visibleAreaStart: visibleArea.left,
+            visibleAreaEnd: visibleArea.right,
+            currentScroll: scrollableParent.scrollLeft,
+            initialPosition: initialLeftToImpact,
+            moveAmount: gestureInfo.xMove,
+            scrollProperty: "scrollLeft",
+            styleProperty: "left",
+          });
+        }
+
+        // Vertical auto-scroll
+        if (direction.y) {
+          const desiredElementTopRelative = topAtStart + gestureInfo.yMove;
+          const desiredElementTop =
+            desiredElementTopRelative + currentPositionedParentRect.top;
+          const desiredElementBottom = desiredElementTop + elementHeight;
+          moveAndKeepIntoView({
+            // axis: "y",
+            isGoingPositive: isGoingDown,
+            isGoingNegative: isGoingUp,
+            desiredElementStart: desiredElementTop,
+            desiredElementEnd: desiredElementBottom,
+            visibleAreaStart: visibleArea.top,
+            visibleAreaEnd: visibleArea.bottom,
+            currentScroll: scrollableParent.scrollTop,
+            initialPosition: initialTopToImpact,
+            moveAmount: gestureInfo.yMove,
+            scrollProperty: "scrollTop",
+            styleProperty: "top",
+          });
+        }
+      },
+    },
+  });
+  return dragToMoveGesture;
 };
 
 const createObstaclesFromQuerySelector = (
@@ -1580,7 +1703,7 @@ const applyConstraints = (
   gestureInfo,
   { xMove, yMove, elementWidth, elementHeight, constraints, interactionType },
 ) => {
-  const { initialLeft, initialTop } = gestureInfo;
+  const { leftAtStart, topAtStart } = gestureInfo;
 
   // Capture original movement values for debug logging
   const originalXMove = xMove;
@@ -1590,10 +1713,10 @@ const applyConstraints = (
     if (constraint.type === "bounds") {
       // Apply bounds constraints directly using visual coordinates
       // initialLeft/initialTop now represent elementVisuallyImpacted position
-      const minAllowedXMove = constraint.left - initialLeft;
-      const maxAllowedXMove = constraint.right - initialLeft;
-      const minAllowedYMove = constraint.top - initialTop;
-      const maxAllowedYMove = constraint.bottom - initialTop;
+      const minAllowedXMove = constraint.left - leftAtStart;
+      const maxAllowedXMove = constraint.right - leftAtStart;
+      const minAllowedYMove = constraint.top - topAtStart;
+      const maxAllowedYMove = constraint.bottom - topAtStart;
       if (xMove < minAllowedXMove) {
         logConstraintEnforcement(
           "x",
@@ -1641,8 +1764,8 @@ const applyConstraints = (
       const actualCurrentYMove = gestureInfo.yMove || 0;
 
       // Calculate current visual position (initialLeft/initialTop are now visual coordinates)
-      const currentVisualLeft = initialLeft + actualCurrentXMove;
-      const currentVisualTop = initialTop + actualCurrentYMove;
+      const currentVisualLeft = leftAtStart + actualCurrentXMove;
+      const currentVisualTop = topAtStart + actualCurrentYMove;
 
       // Round coordinates to prevent floating point precision issues in boundary detection
       const currentActualLeft = roundForConstraints(currentVisualLeft);
@@ -1670,7 +1793,7 @@ const applyConstraints = (
 
       // Always check Y constraints if element is above or below
       if (isAbove || isBelow) {
-        const proposedLeft = initialLeft + xMove;
+        const proposedLeft = leftAtStart + xMove;
         const proposedRight = proposedLeft + elementWidth;
         const wouldHaveXOverlap =
           proposedLeft < rightBound && proposedRight > leftBound;
@@ -1678,7 +1801,7 @@ const applyConstraints = (
         if (wouldHaveXOverlap) {
           if (isAbove) {
             // Element above - prevent it from going down into obstacle
-            const maxAllowedYMove = topBound - elementHeight - initialTop;
+            const maxAllowedYMove = topBound - elementHeight - topAtStart;
             if (yMove > maxAllowedYMove) {
               logConstraintEnforcement(
                 "y",
@@ -1691,7 +1814,7 @@ const applyConstraints = (
             }
           } else if (isBelow) {
             // Element below - prevent it from going up into obstacle
-            const minAllowedYMove = bottomBound - initialTop;
+            const minAllowedYMove = bottomBound - topAtStart;
             if (yMove < minAllowedYMove) {
               logConstraintEnforcement(
                 "y",
@@ -1708,7 +1831,7 @@ const applyConstraints = (
 
       // Always check X constraints if element is on left or right (even after Y adjustment)
       if (isOnTheLeft || isOnTheRight) {
-        const proposedTop = initialTop + yMove; // Use potentially adjusted yMove
+        const proposedTop = topAtStart + yMove; // Use potentially adjusted yMove
         const proposedBottom = proposedTop + elementHeight;
         const wouldHaveYOverlap =
           proposedTop < bottomBound && proposedBottom > topBound;
@@ -1716,7 +1839,7 @@ const applyConstraints = (
         if (wouldHaveYOverlap) {
           if (isOnTheLeft) {
             // Element on left - prevent it from going right into obstacle
-            const maxAllowedXMove = leftBound - elementWidth - initialLeft;
+            const maxAllowedXMove = leftBound - elementWidth - leftAtStart;
             if (xMove > maxAllowedXMove) {
               logConstraintEnforcement(
                 "x",
@@ -1729,7 +1852,7 @@ const applyConstraints = (
             }
           } else if (isOnTheRight) {
             // Element on right - prevent it from going left into obstacle
-            const minAllowedXMove = rightBound - initialLeft;
+            const minAllowedXMove = rightBound - leftAtStart;
             if (xMove < minAllowedXMove) {
               logConstraintEnforcement(
                 "x",
@@ -1769,25 +1892,25 @@ const applyConstraints = (
 
         if (minDistance === distanceToLeft) {
           // Push left: element should not go past leftBound - elementWidth
-          const maxAllowedXMove = leftBound - elementWidth - initialLeft;
+          const maxAllowedXMove = leftBound - elementWidth - leftAtStart;
           if (xMove > maxAllowedXMove) {
             xMove = maxAllowedXMove;
           }
         } else if (minDistance === distanceToRight) {
           // Push right: element should not go before rightBound
-          const minAllowedXMove = rightBound - initialLeft;
+          const minAllowedXMove = rightBound - leftAtStart;
           if (xMove < minAllowedXMove) {
             xMove = minAllowedXMove;
           }
         } else if (minDistance === distanceToTop) {
           // Push up: element should not go past topBound - elementHeight
-          const maxAllowedYMove = topBound - elementHeight - initialTop;
+          const maxAllowedYMove = topBound - elementHeight - topAtStart;
           if (yMove > maxAllowedYMove) {
             yMove = maxAllowedYMove;
           }
         } else if (minDistance === distanceToBottom) {
           // Push down: element should not go before bottomBound
-          const minAllowedYMove = bottomBound - initialTop;
+          const minAllowedYMove = bottomBound - topAtStart;
           if (yMove < minAllowedYMove) {
             yMove = minAllowedYMove;
           }
