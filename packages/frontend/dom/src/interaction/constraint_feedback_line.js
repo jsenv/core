@@ -29,13 +29,12 @@ export const setupConstraintFeedbackLine = ({
     let currentGrabPointX;
     let currentGrabPointY;
     // For normal elements, use standard calculation
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    currentGrabPointX =
-      positionedParentRect.left + xAtStart + gestureInfo.xMove;
+    const parentRect = positionedParent.getBoundingClientRect();
+    currentGrabPointX = parentRect.left + xAtStart + gestureInfo.xMove;
     if (isStickyLeft) {
       currentGrabPointX -= scrollLeftAtStart;
     }
-    currentGrabPointY = positionedParentRect.top + yAtStart + gestureInfo.yMove;
+    currentGrabPointY = parentRect.top + yAtStart + gestureInfo.yMove;
     if (isStickyTop) {
       currentGrabPointY -= scrollTopAtStart;
     }
@@ -44,7 +43,6 @@ export const setupConstraintFeedbackLine = ({
     const deltaX = effectiveMouseX - currentGrabPointX;
     const deltaY = effectiveMouseY - currentGrabPointY;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
     // Show line only when distance is significant (> 20px threshold)
     const threshold = 20;
     if (distance <= threshold) {
