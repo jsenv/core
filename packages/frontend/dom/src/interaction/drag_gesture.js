@@ -436,6 +436,7 @@ export const createDragGesture = (options) => {
         yMove,
         elementWidth: currentElementWidth,
         elementHeight: currentElementHeight,
+        direction,
         interactionType,
       });
 
@@ -655,7 +656,6 @@ export const createDragToMoveGesture = (options) => {
           elementVisuallyImpacted.getBoundingClientRect();
         const elementWidth = elementVisuallyImpactedRect.width;
         const elementHeight = elementVisuallyImpactedRect.height;
-
         // Calculate where element bounds would be in viewport coordinates
         const parentRect = positionedParent.getBoundingClientRect();
 

@@ -227,7 +227,15 @@ const roundForConstraints = (value) => {
 // Apply constraints on both X and Y axes
 export const applyConstraints = (
   constraints,
-  { gestureInfo, xMove, yMove, elementWidth, elementHeight, interactionType },
+  {
+    gestureInfo,
+    xMove,
+    yMove,
+    elementWidth,
+    elementHeight,
+    direction,
+    interactionType,
+  },
 ) => {
   if (constraints.length === 0) {
     return [xMove, yMove];
@@ -248,7 +256,7 @@ export const applyConstraints = (
       continue;
     }
     for (const enforcement of enforcements) {
-      if (enforcement.x !== undefined) {
+      if (direction.x && enforcement.x !== undefined) {
         logConstraintEnforcement(
           "x",
           xMove,
@@ -259,7 +267,7 @@ export const applyConstraints = (
         xMove = enforcement.x;
         continue;
       }
-      if (enforcement.y !== undefined) {
+      if (direction.y && enforcement.y !== undefined) {
         logConstraintEnforcement(
           "y",
           xMove,
