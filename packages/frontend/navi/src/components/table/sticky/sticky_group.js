@@ -26,8 +26,8 @@ const initStickyGroup = (
   container,
   {
     elementSelector,
-    targetReceivingCumulativeStickyColumnPosition = ".navi_table_sticky_column_frontier",
-    targetReceivingCumulativeStickyRowPosition = ".navi_table_sticky_row_frontier",
+    targetReceivingCumulativeStickyColumnPosition = ".navi_table_sticky_left_frontier",
+    targetReceivingCumulativeStickyRowPosition = ".navi_table_sticky_top_frontier",
   } = {},
 ) => {
   if (!container) {
