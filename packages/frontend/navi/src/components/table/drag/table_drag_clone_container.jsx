@@ -85,12 +85,7 @@ export const TableDragCloneContainer = ({ dragging }) => {
   }, [dragging]);
 
   return (
-    <div
-      className="navi_table_drag_clone_container"
-      style={{
-        display: dragging ? "block" : "none",
-      }}
-    >
+    <div className="navi_table_drag_clone_container">
       <div
         ref={cloneParentElementRef}
         className="navi_table_drag_clone_positioner"

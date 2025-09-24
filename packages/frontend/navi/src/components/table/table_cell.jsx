@@ -145,7 +145,12 @@ export const TableCell = forwardRef((props, ref) => {
         startEditing(e);
       }}
     >
-      <Editable editing={editing} onEditEnd={stopEditing} value={value}>
+      <Editable
+        editing={editing}
+        onEditEnd={stopEditing}
+        value={value}
+        action={() => {}}
+      >
         {value}
       </Editable>
       {children}

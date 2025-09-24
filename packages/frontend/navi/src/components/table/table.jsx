@@ -41,8 +41,7 @@
  *
  * Next steps:
  *
- * - Consider wrapping into a <div> to apply padding to the div
- *
+ * - rename [data-sticky-x] into [data-sticky-left] and [data-sticky-y] into [data-sticky-top]
  * - Finir vrai exemple de re-order de column (mise a jour du state + effet au survol)
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )

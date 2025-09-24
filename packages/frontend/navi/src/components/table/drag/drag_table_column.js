@@ -36,26 +36,25 @@ export const initDragTableColumnByMousedown = (
     const scrollLeft = scrollableParent.scrollLeft || 0;
     const scrollTop = scrollableParent.scrollTop || 0;
 
-    const stickyElements = tableClone.querySelectorAll(
+    // important: only on cells, not on <col> nor <tr>
+    const stickyCells = tableClone.querySelectorAll(
       "th[data-sticky-x], td[data-sticky-x], th[data-sticky-y], td[data-sticky-y]",
     );
-    stickyElements.forEach((stickyElement) => {
-      const hasXSticky = stickyElement.hasAttribute("data-sticky-x");
-      const hasYSticky = stickyElement.hasAttribute("data-sticky-y");
+    stickyCells.forEach((stickyCell) => {
+      const hasXSticky = stickyCell.hasAttribute("data-sticky-x");
+      const hasYSticky = stickyCell.hasAttribute("data-sticky-y");
 
       // Use position: relative and calculate offsets to simulate sticky behavior
-      stickyElement.style.position = "relative";
-
+      stickyCell.style.position = "relative";
       if (hasXSticky) {
         // For horizontal sticky elements, offset left to simulate sticky behavior
         // The element should appear to stick at its original position relative to the scroll
-        stickyElement.style.left = `${scrollLeft}px`;
+        stickyCell.style.left = `${scrollLeft}px`;
       }
-
       if (hasYSticky) {
         // For vertical sticky elements, offset top to simulate sticky behavior
         // The element should appear to stick at its original position relative to the scroll
-        stickyElement.style.top = `${scrollTop}px`;
+        stickyCell.style.top = `${scrollTop}px`;
       }
     });
   }
@@ -80,11 +79,14 @@ export const initDragTableColumnByMousedown = (
 
   append_in_dom: {
     cloneParent.insertBefore(tableClone, cloneParent.firstChild);
-    cloneParent.closest(".navi_table_drag_clone_container").style.display =
-      "block";
+    const cloneContainer = cloneParent.closest(
+      ".navi_table_drag_clone_container",
+    );
+    cloneContainer.style.display = "block";
     addTeardown(() => {
-      tableClone.remove();
-      cloneParent.style.left = 0;
+      // cloneContainer.style.display = 'none';
+      // tableClone.remove();
+      // cloneParent.style.left = 0;
     });
   }
 
@@ -145,6 +147,7 @@ export const initDragTableColumnByMousedown = (
       onDrag,
       onRelease,
       keepMarkersOnRelease: true,
+      // keepIntoView: false,
     });
 
     const colgroupClone = tableClone.querySelector("colgroup");
