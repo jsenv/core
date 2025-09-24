@@ -82,7 +82,6 @@ import {
   updateVisualMarkersOnGrab,
   updateVisualMarkersOnRelease,
 } from "./debug_markers.js";
-import "./drag_gesture_css.js";
 import { createObstacleConstraintsFromQuerySelector } from "./drag_obstacles.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
@@ -831,3 +830,11 @@ const definePropertyAsReadOnly = (object, propertyName) => {
     value: object[propertyName],
   });
 };
+
+import.meta.css = /* css */ `
+  .navi_drag_gesture_backdrop {
+    position: fixed;
+    inset: 0;
+    user-select: none;
+  }
+`;

@@ -23,9 +23,7 @@ export const updateVisualMarkersOnGrab = () => {
   if (KEEP_MARKERS_ON_RELEASE) {
     // Remove any existing markers from previous gestures
     document
-      .querySelectorAll(
-        ".navi_debug_marker, .navi_obstacle_marker, .navi_sticky_frontier_marker, .navi_constraint_feedback_line",
-      )
+      .querySelectorAll(".navi_debug_marker, .navi_obstacle_marker")
       .forEach((marker) => marker.remove());
   }
 };
@@ -244,3 +242,94 @@ const createObstacleMarker = (obstacleObj, parentRect) => {
   document.body.appendChild(marker);
   return marker;
 };
+
+import.meta.css = /* css */ `
+  .navi_debug_marker {
+    position: fixed;
+    width: 2px;
+    height: 100vh;
+    z-index: 999999;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .navi_debug_marker--vertical {
+    width: 2px;
+    height: 100vh;
+  }
+
+  .navi_debug_marker--horizontal {
+    width: 100vw;
+    height: 2px;
+  }
+
+  .navi_debug_marker--red {
+    background-color: red;
+  }
+
+  .navi_debug_marker--blue {
+    background-color: blue;
+  }
+
+  .navi_debug_marker--green {
+    background-color: green;
+  }
+
+  .navi_debug_marker--orange {
+    background-color: orange;
+  }
+
+  .navi_debug_marker--purple {
+    background-color: purple;
+  }
+
+  .navi_debug_marker_label {
+    position: absolute;
+    top: 10px;
+    left: 5px;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.8);
+    pointer-events: none;
+  }
+
+  .navi_debug_marker_label--red {
+    color: red;
+  }
+
+  .navi_debug_marker_label--blue {
+    color: blue;
+  }
+
+  .navi_debug_marker_label--green {
+    color: green;
+  }
+
+  .navi_debug_marker_label--orange {
+    color: orange;
+  }
+
+  .navi_debug_marker_label--purple {
+    color: purple;
+  }
+
+  .navi_obstacle_marker {
+    position: fixed;
+    background-color: orange;
+    opacity: 0.6;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  .navi_obstacle_marker_label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
+`;
