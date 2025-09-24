@@ -268,7 +268,9 @@ export const createDragGesture = (options) => {
 
     let constraintFeedbackLine;
     if (showConstraintFeedbackLine) {
-      constraintFeedbackLine = setupConstraintFeedbackLine();
+      constraintFeedbackLine = setupConstraintFeedbackLine({
+        positionedParent,
+      });
       addTeardown(() => {
         constraintFeedbackLine.onRelease();
       });
@@ -518,7 +520,6 @@ export const createDragGesture = (options) => {
           constraintFeedbackLine.onDrag(gestureInfo, {
             mouseX,
             mouseY,
-            positionedParent,
           });
         }
         return;

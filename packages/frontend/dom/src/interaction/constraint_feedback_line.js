@@ -1,13 +1,11 @@
-export const setupConstraintFeedbackLine = () => {
-  // Set up constraint feedback line
-
+export const setupConstraintFeedbackLine = ({ positionedParent }) => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
   // Track last known mouse position for constraint feedback line during scroll
   let lastMouseX = null;
   let lastMouseY = null;
   // Internal function to update constraint feedback line
-  const onDrag = (gestureInfo, { mouseX, mouseY, positionedParent }) => {
+  const onDrag = (gestureInfo, { mouseX, mouseY }) => {
     const { xAtStart, yAtStart } = gestureInfo;
 
     // Update last known mouse position if provided
@@ -31,9 +29,9 @@ export const setupConstraintFeedbackLine = () => {
     // Current grab point = initial grab position + element movement
     // xAtStart/yAtStart are relative to positioned parent, add current movement
     const currentGrabPointX =
-      positionedParentRect.left + xAtStart + (gestureInfo.xMove || 0);
+      positionedParentRect.left + xAtStart + gestureInfo.xMove;
     const currentGrabPointY =
-      positionedParentRect.top + yAtStart + (gestureInfo.yMove || 0);
+      positionedParentRect.top + yAtStart + gestureInfo.yMove;
 
     // Calculate distance between mouse and current grab point
     const deltaX = effectiveMouseX - currentGrabPointX;
