@@ -1,3 +1,5 @@
+const CONSOLE_DEBUG_CONSTRAINTS = true;
+
 export const createBoundConstraint = (bounds, { element, name } = {}) => {
   const { left, top, right, bottom } = bounds;
 
@@ -227,6 +229,10 @@ export const applyConstraints = (
   constraints,
   { gestureInfo, xMove, yMove, elementWidth, elementHeight, interactionType },
 ) => {
+  if (constraints.length === 0) {
+    return [xMove, yMove];
+  }
+
   // Capture original movement values for debug logging
   const xMoveNoConstraint = xMove;
   const yMoveNoConstraint = yMove;
@@ -267,7 +273,11 @@ export const applyConstraints = (
     }
   }
   // Log when no constraints were applied (movement unchanged)
-  if (xMoveNoConstraint === xMove && yMoveNoConstraint === yMove) {
+  if (
+    CONSOLE_DEBUG_CONSTRAINTS &&
+    xMoveNoConstraint === xMove &&
+    yMoveNoConstraint === yMove
+  ) {
     console.debug(
       `Drag by ${interactionType}: no constraint enforcement needed (xMove=${xMove.toFixed(2)}, yMove=${yMove.toFixed(2)})`,
     );
@@ -281,6 +291,9 @@ const logConstraintEnforcement = (
   constraint,
   interactionType = "unknown",
 ) => {
+  if (!CONSOLE_DEBUG_CONSTRAINTS) {
+    return;
+  }
   const direction = constrainedValue > originalValue ? "increased" : "capped";
   console.debug(
     `Drag by ${interactionType}: ${axis} movement ${direction} from ${originalValue.toFixed(2)} to ${constrainedValue.toFixed(2)} by ${constraint.name}`,
