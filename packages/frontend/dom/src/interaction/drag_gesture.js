@@ -662,8 +662,7 @@ export const createDragToMoveGesture = (options) => {
         const elementHeight = elementVisuallyImpactedRect.height;
 
         // Calculate where element bounds would be in viewport coordinates
-        const currentPositionedParentRect =
-          positionedParent.getBoundingClientRect();
+        const parentRect = positionedParent.getBoundingClientRect();
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
@@ -708,7 +707,7 @@ export const createDragToMoveGesture = (options) => {
         if (direction.x) {
           const desiredElementLeftRelative = leftAtStart + gestureInfo.xMove;
           const desiredElementLeft =
-            desiredElementLeftRelative + currentPositionedParentRect.left;
+            desiredElementLeftRelative + parentRect.left;
           const desiredElementRight = desiredElementLeft + elementWidth;
           moveAndKeepIntoView({
             // axis: "x",
@@ -729,8 +728,7 @@ export const createDragToMoveGesture = (options) => {
         // Vertical auto-scroll
         if (direction.y) {
           const desiredElementTopRelative = topAtStart + gestureInfo.yMove;
-          const desiredElementTop =
-            desiredElementTopRelative + currentPositionedParentRect.top;
+          const desiredElementTop = desiredElementTopRelative + parentRect.top;
           const desiredElementBottom = desiredElementTop + elementHeight;
           moveAndKeepIntoView({
             // axis: "y",
