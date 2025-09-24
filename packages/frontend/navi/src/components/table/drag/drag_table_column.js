@@ -84,9 +84,9 @@ export const initDragTableColumnByMousedown = (
     );
     cloneContainer.style.display = "block";
     addTeardown(() => {
-      // cloneContainer.style.display = 'none';
-      // tableClone.remove();
-      // cloneParent.style.left = 0;
+      cloneContainer.style.display = "none";
+      tableClone.remove();
+      cloneParent.style.left = 0;
     });
   }
 
@@ -146,8 +146,6 @@ export const initDragTableColumnByMousedown = (
       onGrab,
       onDrag,
       onRelease,
-      keepMarkersOnRelease: true,
-      // keepIntoView: false,
     });
 
     const colgroupClone = tableClone.querySelector("colgroup");
