@@ -92,6 +92,7 @@ const BASIC_MODE_OPTIONS = {
   keepInScrollableArea: false,
   obstacleQuerySelector: null,
   showConstraintFeedbackLine: false,
+  dragViaScroll: false,
 };
 
 export const createDragGesture = (options) => {
@@ -113,6 +114,7 @@ export const createDragGesture = (options) => {
     stickyFrontiers = true,
     keepInScrollableArea = true,
     obstacleQuerySelector = "[data-drag-obstacle]",
+    dragViaScroll = true,
 
     // Custom bounds that override the default scrollable area bounds
     // Useful for scenarios like column resizing where you want custom min/max constraints
@@ -301,7 +303,7 @@ export const createDragGesture = (options) => {
     }
 
     // Set up scroll event handling to adjust drag position when scrolling occurs
-    update_on_scroll: {
+    if (dragViaScroll) {
       let isHandlingScroll = false;
       const handleScroll = () => {
         if (isHandlingScroll) {
@@ -681,16 +683,30 @@ export const createDragToMoveGesture = (options) => {
         }) => {
           keep_into_view: {
             if (isGoingPositive) {
+              console.log(
+                `Auto-scroll check (positive): desiredEnd=${desiredElementEnd} > visibleEnd=${visibleAreaEnd}?`,
+                desiredElementEnd > visibleAreaEnd,
+              );
               if (desiredElementEnd > visibleAreaEnd) {
                 const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
                 const scroll = currentScroll + scrollAmountNeeded;
+                console.log(
+                  `Auto-scrolling ${scrollProperty}: ${currentScroll} + ${scrollAmountNeeded} = ${scroll}`,
+                );
                 scrollableParent[scrollProperty] = scroll;
               }
             } else if (isGoingNegative) {
+              console.log(
+                `Auto-scroll check (negative): desiredStart=${desiredElementStart} < visibleStart=${visibleAreaStart}?`,
+                desiredElementStart < visibleAreaStart,
+              );
               if (desiredElementStart < visibleAreaStart) {
                 const scrollAmountNeeded =
                   visibleAreaStart - desiredElementStart;
                 const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
+                console.log(
+                  `Auto-scrolling ${scrollProperty}: ${currentScroll} - ${scrollAmountNeeded} = ${scroll}`,
+                );
                 scrollableParent[scrollProperty] = scroll;
               }
             }
