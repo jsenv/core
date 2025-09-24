@@ -88,16 +88,18 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 const BASIC_MODE_OPTIONS = {
   backdrop: false,
   stickyFrontiers: false,
-  keepInScrollableArea: true,
+  keepInScrollableArea: false,
   obstacleQuerySelector: null,
   showConstraintFeedbackLine: false,
   dragViaScroll: false,
 };
+// To help dbugging this flag can be used to reduce number of features to the bare minimum
+const ENFORCE_BASIC_MODE = false;
 
 export const createDragGesture = (options) => {
-  // for now force the basic mode because we just
-  // want to test auto scroll and snap during scroll
-  Object.assign(options, BASIC_MODE_OPTIONS);
+  if (ENFORCE_BASIC_MODE) {
+    Object.assign(options, BASIC_MODE_OPTIONS);
+  }
   const {
     name,
     onGrab,
@@ -187,15 +189,32 @@ export const createDragGesture = (options) => {
       });
     }
 
-    const leftAtStart = elementVisuallyImpactedRect.left - parentRect.left;
-    const topAtStart = elementVisuallyImpactedRect.top - parentRect.top;
+    let leftAtStart = elementVisuallyImpactedRect.left - parentRect.left;
+    let topAtStart = elementVisuallyImpactedRect.top - parentRect.top;
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
     // All constraint calculations use visual coordinates (xMove, yMove)
-    const visualOffsetX =
+    let visualOffsetX =
       elementVisuallyImpactedRect.left - elementToImpactRect.left;
-    const visualOffsetY =
+    let visualOffsetY =
       elementVisuallyImpactedRect.top - elementToImpactRect.top;
+
+    // Adjust coordinates for conceptually sticky elements
+    // Elements with data-sticky-left appear visually pinned to the left edge regardless of scroll,
+    // but their DOM position doesn't reflect this visual behavior. We need to adjust both their
+    // starting position and visual offset to account for scroll, ensuring drag calculations
+    // work with their apparent visual position rather than their DOM position.
+    const isStickyLeft =
+      elementVisuallyImpacted.hasAttribute(`data-sticky-left`);
+    if (isStickyLeft) {
+      leftAtStart += scrollLeftAtStart;
+      visualOffsetX += scrollLeftAtStart;
+    }
+    const isStickyTop = elementVisuallyImpacted.hasAttribute(`data-sticky-top`);
+    if (isStickyTop) {
+      topAtStart += scrollTopAtStart;
+      visualOffsetY += scrollTopAtStart;
+    }
 
     const gestureInfo = {
       element,
@@ -502,7 +521,11 @@ export const createDragGesture = (options) => {
 
       if (!dragData) {
         if (constraintFeedbackLine) {
-          constraintFeedbackLine.onDrag(gestureInfo, { mouseX, mouseY });
+          constraintFeedbackLine.onDrag(gestureInfo, {
+            mouseX,
+            mouseY,
+            positionedParent,
+          });
         }
         return;
       }
@@ -530,7 +553,11 @@ export const createDragGesture = (options) => {
         });
       }
       if (constraintFeedbackLine) {
-        constraintFeedbackLine.onDrag(gestureInfo, { mouseX, mouseY });
+        constraintFeedbackLine.onDrag(gestureInfo, {
+          mouseX,
+          mouseY,
+          positionedParent,
+        });
       }
       if (isRelease) {
         onDrag?.(gestureInfo, "end");

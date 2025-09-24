@@ -7,8 +7,8 @@ export const setupConstraintFeedbackLine = () => {
   let lastMouseX = null;
   let lastMouseY = null;
   // Internal function to update constraint feedback line
-  const onDrag = (gestureInfo, { mouseX, mouseY }) => {
-    const { xAtStart, yAtStart, positionedParent } = gestureInfo;
+  const onDrag = (gestureInfo, { mouseX, mouseY, positionedParent }) => {
+    const { xAtStart, yAtStart } = gestureInfo;
 
     // Update last known mouse position if provided
     if (mouseX !== null && mouseY !== null) {
