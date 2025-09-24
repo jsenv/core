@@ -102,7 +102,7 @@ export const createObstacleContraint = (bounds, { element, name }) => {
 
     // Always check X constraints if element is on left or right (using constrained Y move)
     if (isOnTheLeft || isOnTheRight) {
-      const proposedTop = topAtStart + constrainedYMove; // Use constrained yMove
+      const proposedTop = topAtStart + constrainedYMove;
       const proposedBottom = proposedTop + elementHeight;
       const wouldHaveYOverlap =
         proposedTop < bottomBound && proposedBottom > topBound;
