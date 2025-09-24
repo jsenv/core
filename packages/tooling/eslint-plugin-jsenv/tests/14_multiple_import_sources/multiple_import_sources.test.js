@@ -24,7 +24,8 @@ ruleTester.run(
     valid: [
       {
         // Valid usage from multiple import sources
-        options: [{ reportAllUnknownParams: true }],        code: `
+        options: [{ reportAllUnknownParams: true }],
+        code: `
         import { createUser, updateUser } from './user-ops.js';
         import { validateEmail, validateData } from './validators.js';
         
@@ -39,7 +40,8 @@ ruleTester.run(
     invalid: [
       {
         // Invalid parameters from multiple sources
-        options: [{ reportAllUnknownParams: true }],        code: `
+        options: [{ reportAllUnknownParams: true }],
+        code: `
         import { createUser, updateUser } from './user-ops.js';
         import { validateEmail, validateData } from './validators.js';
         

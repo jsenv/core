@@ -17,7 +17,8 @@ ruleTester.run("no-unknown-params caching mechanism", noUnknownParamsRule, {
   valid: [],
   invalid: [
     {
-        options: [{ reportAllUnknownParams: true }],      code: `
+      options: [{ reportAllUnknownParams: true }],
+      code: `
         import { extremeFunction } from "./extreme_function.js";
         
         extremeFunction({

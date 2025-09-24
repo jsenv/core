@@ -12,7 +12,8 @@ ruleTester.run("no-unknown-params - external functions", noUnknownParamsRule, {
   valid: [
     {
       name: "External function with rest parameters accepts any property",
-      options: [{ reportAllUnknownParams: true }],      code: `const processData = ({ type, ...options }) => {
+      options: [{ reportAllUnknownParams: true }],
+      code: `const processData = ({ type, ...options }) => {
   // console.log is an external function - we don't have its source code
   // When rest parameters are passed to external functions, assume all properties are valid
   console.log(type, options);
@@ -23,7 +24,8 @@ processData({ type: "user", name: "John", age: 30, email: "john@example.com", ex
     },
     {
       name: "External function called directly with object accepts any property",
-      options: [{ reportAllUnknownParams: true }],      code: `const handleUser = (userData) => {
+      options: [{ reportAllUnknownParams: true }],
+      code: `const handleUser = (userData) => {
   // JSON.stringify is external - assume it accepts any object structure
   return JSON.stringify(userData);
 };
@@ -37,7 +39,8 @@ createUser({ id: 1, name: "Alice", email: "alice@example.com", role: "admin", de
     },
     {
       name: "External function with Object methods accepts any property",
-      options: [{ reportAllUnknownParams: true }],      code: `const serializeConfig = (config) => {
+      options: [{ reportAllUnknownParams: true }],
+      code: `const serializeConfig = (config) => {
   // Object.assign is external
   return Object.assign({}, config, { timestamp: Date.now() });
 };
@@ -51,7 +54,8 @@ setupApp({ env: "prod", debug: true, cache: false, timeout: 5000, retries: 3 });
     },
     {
       name: "External library function accepts any configuration",
-      options: [{ reportAllUnknownParams: true }],      code: `const configureLibrary = (options) => {
+      options: [{ reportAllUnknownParams: true }],
+      code: `const configureLibrary = (options) => {
   // Assume this is an external library function we don't have source for
   return someLibrary.configure(options);
 };
@@ -67,7 +71,8 @@ initializeApp({ name: "MyApp", theme: "dark", animations: true, debugging: false
   invalid: [
     {
       name: "Internal function still validates parameters correctly",
-      options: [{ reportAllUnknownParams: true }],      code: `// This is an internal function - we have its source code
+      options: [{ reportAllUnknownParams: true }],
+      code: `// This is an internal function - we have its source code
 const processUser = ({ name, age }) => {
   console.log(name, age);
 };

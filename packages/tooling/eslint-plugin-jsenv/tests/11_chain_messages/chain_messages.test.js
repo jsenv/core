@@ -34,13 +34,15 @@ ruleTester.run("no-unknown-params - enhanced messages", noUnknownParamsRule, {
   valid: [
     {
       name: "all parameters recognized in chain",
-      options: [{ reportAllUnknownParams: true }],      code: validCode,
+      options: [{ reportAllUnknownParams: true }],
+      code: validCode,
     },
   ],
   invalid: [
     {
       name: "simple unknown parameter",
-      options: [{ reportAllUnknownParams: true }],      code: simpleInvalidCode,
+      options: [{ reportAllUnknownParams: true }],
+      code: simpleInvalidCode,
       output: `// Test case: Simple direct function call with completely unknown parameter
 function greet({ name }) {
   return \`Hello \${name}\`;
@@ -57,7 +59,8 @@ greet({  }); // 'xyz' is completely unknown and different from expected params
     },
     {
       name: "parameter with potential typo",
-      options: [{ reportAllUnknownParams: true }],      code: typoInvalidCode,
+      options: [{ reportAllUnknownParams: true }],
+      code: typoInvalidCode,
       output: `// Test case: Function call with typo in parameter name
 function authenticate({ username, password }) {
   return login(username, password);
@@ -98,7 +101,8 @@ authenticate({ username: "john", password: "secret" }); // 'passwd' should sugge
     },
     {
       name: "extraneous parameter",
-      options: [{ reportAllUnknownParams: true }],      code: extraneousInvalidCode,
+      options: [{ reportAllUnknownParams: true }],
+      code: extraneousInvalidCode,
       output: `// Test case: Extraneous parameter (user provided all expected params + one extra)
 function validate({ email, phone }) {
   console.log(email, phone);
@@ -115,7 +119,8 @@ validate({ email: "test@example.com", phone: "123" }); // 'extra' should trigger
     },
     {
       name: "unknown param in chain context",
-      options: [{ reportAllUnknownParams: true }],      code: chainInvalidCode,
+      options: [{ reportAllUnknownParams: true }],
+      code: chainInvalidCode,
       output: `// Test case: Chain with available parameters shown
 function step1({ id, ...rest }) {
   return step2({ ...rest });

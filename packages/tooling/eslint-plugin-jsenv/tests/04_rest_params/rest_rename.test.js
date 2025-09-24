@@ -12,7 +12,8 @@ ruleTester.run("no-unknown-params - rest renaming", noUnknownParamsRule, {
   valid: [
     {
       name: "rest param renamed and passed to function that uses the property",
-      options: [{ reportAllUnknownParams: true }],      code: `const validRestRename = ({ a, ...rest }) => {
+      options: [{ reportAllUnknownParams: true }],
+      code: `const validRestRename = ({ a, ...rest }) => {
   console.log(a);
   const titi = rest;
   targetFunction(titi);
@@ -28,7 +29,8 @@ validRestRename({ a: 1, c: true });`,
   invalid: [
     {
       name: "rest param renamed but property not used by target function",
-      options: [{ reportAllUnknownParams: true }],      code: `const invalidRestRename = ({ a, ...rest }) => {
+      options: [{ reportAllUnknownParams: true }],
+      code: `const invalidRestRename = ({ a, ...rest }) => {
   console.log(a);
   const titi = rest;
   targetFunction(titi);

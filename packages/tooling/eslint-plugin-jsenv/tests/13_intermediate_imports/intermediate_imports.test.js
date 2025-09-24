@@ -24,7 +24,8 @@ ruleTester.run(
     valid: [
       {
         // Test with intermediate file re-exports (should work)
-        options: [{ reportAllUnknownParams: true }],        code: `
+        options: [{ reportAllUnknownParams: true }],
+        code: `
         import { processData, validateUser } from './intermediate.js';
         processData({ id: 1, name: "John" });
         validateUser({ username: "john", email: "john@test.com" });
@@ -35,7 +36,8 @@ ruleTester.run(
     invalid: [
       {
         // Test with intermediate file chain: main -> intermediate -> helper
-        options: [{ reportAllUnknownParams: true }],        code: `
+        options: [{ reportAllUnknownParams: true }],
+        code: `
         import { processData, validateUser } from './intermediate.js';
         processData({ id: 1, name: "John", age: 30 });
         validateUser({ username: "john", email: "john@test.com", isActive: true });

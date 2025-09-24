@@ -12,14 +12,16 @@ ruleTester.run("no-unknown-params - arrow function", noUnknownParamsRule, {
   valid: [
     {
       name: "arrow function uses all parameters",
-      options: [{ reportAllUnknownParams: true }],      code: `const bar = ({ x }) => x * 2;
+      options: [{ reportAllUnknownParams: true }],
+      code: `const bar = ({ x }) => x * 2;
 bar({ x: 5 });`,
     },
   ],
   invalid: [
     {
       name: "arrow function with extra parameter",
-      options: [{ reportAllUnknownParams: true }],      code: `const bar = ({ x }) => x * 2;
+      options: [{ reportAllUnknownParams: true }],
+      code: `const bar = ({ x }) => x * 2;
 bar({ x: 5, y: 10 });`,
       output: `const bar = ({ x }) => x * 2;
 bar({ x: 5 });`,

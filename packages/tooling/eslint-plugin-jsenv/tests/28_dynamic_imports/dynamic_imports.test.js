@@ -13,7 +13,8 @@ ruleTester.run("no-unknown-params dynamic imports", noUnknownParamsRule, {
   valid: [
     {
       name: "parameters passed through dynamic import wrapper (external functions accept any params)",
-      options: [{ reportAllUnknownParams: true }],      code: `
+      options: [{ reportAllUnknownParams: true }],
+      code: `
         import { build } from "./build_wrapper.js";
 
         const test = async ({ expectedCount, ...params }) => {
@@ -35,7 +36,8 @@ ruleTester.run("no-unknown-params dynamic imports", noUnknownParamsRule, {
     },
     {
       name: "local function definition - parameters are validated",
-      options: [{ reportAllUnknownParams: true }],      code: `
+      options: [{ reportAllUnknownParams: true }],
+      code: `
         // Local build function that only accepts specific parameters
         const build = ({ logLevel, bundling, minification }) => {
           return { logLevel, bundling, minification };
@@ -61,7 +63,8 @@ ruleTester.run("no-unknown-params dynamic imports", noUnknownParamsRule, {
   invalid: [
     {
       name: "invalid parameter with local function definition",
-      options: [{ reportAllUnknownParams: true }],      code: `
+      options: [{ reportAllUnknownParams: true }],
+      code: `
         // Local build function that only accepts specific parameters
         const build = ({ logLevel, bundling, minification }) => {
           return { logLevel, bundling, minification };

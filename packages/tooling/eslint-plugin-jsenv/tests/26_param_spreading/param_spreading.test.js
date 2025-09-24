@@ -13,7 +13,8 @@ ruleTester.run("no-unknown-params parameter spreading", noUnknownParamsRule, {
   valid: [
     {
       name: "bundling parameter should not be flagged when spread to defined function",
-      options: [{ reportAllUnknownParams: true }],      code: `
+      options: [{ reportAllUnknownParams: true }],
+      code: `
 const test = async ({ expectedFileCount, ...params }) => {
   const { buildFileContents } = await build({
     logLevel: "warn",
@@ -42,7 +43,8 @@ await test({
     },
     {
       name: "bundling parameter should not be flagged when spread to external function",
-      options: [{ reportAllUnknownParams: true }],      code: `
+      options: [{ reportAllUnknownParams: true }],
+      code: `
 const test = async ({ expectedFileCount, ...params }) => {
   const { buildFileContents } = await externalBuild({
     logLevel: "warn",

@@ -12,7 +12,8 @@ ruleTester.run("no-unknown-params - scope resolution", noUnknownParamsRule, {
   valid: [
     {
       name: "function name reused in different scope (dynamic import)",
-      options: [{ reportAllUnknownParams: true }],      code: `export const createSecureServer = async ({ certificate, privateKey }) => {
+      options: [{ reportAllUnknownParams: true }],
+      code: `export const createSecureServer = async ({ certificate, privateKey }) => {
   const { createSecureServer } = await import("https");
   return createSecureServer({
     cert: certificate,
@@ -24,7 +25,8 @@ ruleTester.run("no-unknown-params - scope resolution", noUnknownParamsRule, {
   invalid: [
     {
       name: "simple case with extra parameter",
-      options: [{ reportAllUnknownParams: true }],      code: `const simpleFunction = ({ used }) => {
+      options: [{ reportAllUnknownParams: true }],
+      code: `const simpleFunction = ({ used }) => {
   return used;
 };
 

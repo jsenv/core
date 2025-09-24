@@ -20,7 +20,8 @@ ruleTester.run(
     valid: [
       {
         name: "inline function expressions in wrappers with valid props",
-      options: [{ reportAllUnknownParams: true }],        code: `// Test wrapper with inline function expression - valid case
+        options: [{ reportAllUnknownParams: true }],
+        code: `// Test wrapper with inline function expression - valid case
 const ValidForwardRef = forwardRef(({ title }) => {
   return <div>{title}</div>;
 });
@@ -37,7 +38,8 @@ ValidMemo({ name: "John" });`,
     invalid: [
       {
         name: "inline function expressions in wrappers with extra props",
-      options: [{ reportAllUnknownParams: true }],        code: `// Test wrapper with inline function expression - invalid case
+        options: [{ reportAllUnknownParams: true }],
+        code: `// Test wrapper with inline function expression - invalid case
 const ForwardRefInline = forwardRef(({ title }) => {
   return <div>{title}</div>;
 });

@@ -19,13 +19,15 @@ ruleTester.run("no-unknown-params - multiple parameters", noUnknownParamsRule, {
   valid: [
     {
       name: "multiple parameters with valid object destructuring",
-      options: [{ reportAllUnknownParams: true }],      code: validCode,
+      options: [{ reportAllUnknownParams: true }],
+      code: validCode,
     },
   ],
   invalid: [
     {
       name: "multiple parameters with extra property in object",
-      options: [{ reportAllUnknownParams: true }],      code: invalidCode,
+      options: [{ reportAllUnknownParams: true }],
+      code: invalidCode,
       output: `const toto = (a, { b, c }) => {
   console.log(a, b, c);
 };

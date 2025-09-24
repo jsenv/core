@@ -15,7 +15,8 @@ ruleTester.run(
     valid: [
       {
         name: "Object.keys() usage accepts any property via rest parameter",
-      options: [{ reportAllUnknownParams: true }],        code: `const stringifyAttributes = (object) => {
+        options: [{ reportAllUnknownParams: true }],
+        code: `const stringifyAttributes = (object) => {
   let string = "";
   Object.keys(object).forEach((key) => {
     const value = object[key];
@@ -36,7 +37,8 @@ createHtmlNode({ tagName: "div", src: "image.jpg", alt: "Image", className: "tes
       },
       {
         name: "Simple console.log usage accepts any property",
-      options: [{ reportAllUnknownParams: true }],        code: `const logObject = (obj) => {
+        options: [{ reportAllUnknownParams: true }],
+        code: `const logObject = (obj) => {
   console.log(obj);
 };
 
@@ -49,7 +51,8 @@ processData({ id: 1, name: "test", category: "data", extra: "info" });`,
       },
       {
         name: "Parameter used in expression accepts any property",
-      options: [{ reportAllUnknownParams: true }],        code: `const processConfig = (config) => {
+        options: [{ reportAllUnknownParams: true }],
+        code: `const processConfig = (config) => {
   return "Config: " + config;
 };
 
@@ -62,7 +65,8 @@ setup({ env: "prod", debug: true, cache: false, timeout: 5000 });`,
       },
       {
         name: "Parameter used in conditional accepts any property",
-      options: [{ reportAllUnknownParams: true }],        code: `const validateOptions = (opts) => {
+        options: [{ reportAllUnknownParams: true }],
+        code: `const validateOptions = (opts) => {
   if (opts) {
     return true;
   }
@@ -78,7 +82,8 @@ initialize({ mode: "test", verbose: true, strict: false });`,
       },
       {
         name: "Parameter used with property access accepts any property",
-      options: [{ reportAllUnknownParams: true }],        code: `const getTitle = (data) => {
+        options: [{ reportAllUnknownParams: true }],
+        code: `const getTitle = (data) => {
   return data.title || "Default";
 };
 
@@ -93,7 +98,8 @@ render({ type: "page", title: "Home", description: "Welcome", meta: {} });`,
     invalid: [
       {
         name: "Unused parameter should still report errors for unknown properties",
-      options: [{ reportAllUnknownParams: true }],        code: `const ignoreParam = (unused) => {
+        options: [{ reportAllUnknownParams: true }],
+        code: `const ignoreParam = (unused) => {
   return "fixed result";
 };
 
