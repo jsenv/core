@@ -171,6 +171,8 @@ export const createObstacleContraint = (bounds, { element, name }) => {
         }
       }
     }
+
+    return enforcements;
   };
 
   return {
