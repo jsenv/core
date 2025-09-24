@@ -120,8 +120,8 @@ export const TableCell = forwardRef((props, ref) => {
       ref={cellRef}
       className={className}
       style={innerStyle}
-      data-sticky-x={stickyX ? "" : undefined}
-      data-sticky-y={stickyY ? "" : undefined}
+      data-sticky-left={stickyX ? "" : undefined}
+      data-sticky-top={stickyY ? "" : undefined}
       data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}

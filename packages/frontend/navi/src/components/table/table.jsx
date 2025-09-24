@@ -41,7 +41,6 @@
  *
  * Next steps:
  *
- * - rename [data-sticky-x] into [data-sticky-left] and [data-sticky-y] into [data-sticky-top]
  * - Finir vrai exemple de re-order de column (mise a jour du state + effet au survol)
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
@@ -353,7 +352,7 @@ export const Table = forwardRef((props, ref) => {
       >
         <colgroup>
           <col
-            data-sticky-x={firstColIsSticky ? "" : undefined}
+            data-sticky-left={firstColIsSticky ? "" : undefined}
             data-drag-sticky-frontier-left={firstColIsSticky ? "" : undefined}
             data-drag-obstacle="move-column"
             style={{
@@ -367,7 +366,7 @@ export const Table = forwardRef((props, ref) => {
             return (
               <col
                 key={col.id}
-                data-sticky-x={colIsSticky ? "" : undefined}
+                data-sticky-left={colIsSticky ? "" : undefined}
                 data-drag-sticky-frontier-left={colIsSticky ? "" : undefined}
                 style={{
                   minWidth: col.width ? `${col.width}px` : undefined,
@@ -379,7 +378,7 @@ export const Table = forwardRef((props, ref) => {
         </colgroup>
         <thead>
           <tr
-            data-sticky-y={firsRowIsSticky ? "" : undefined}
+            data-sticky-top={firsRowIsSticky ? "" : undefined}
             data-drag-sticky-frontier-top={firsRowIsSticky ? "" : undefined}
             data-drag-obstacle="move-row"
             style={{
@@ -478,7 +477,7 @@ export const Table = forwardRef((props, ref) => {
                 key={rowData.id}
                 data-row-id={rowData.id}
                 aria-selected={isRowSelected}
-                data-sticky-y={rowIsSticky ? "" : undefined}
+                data-sticky-top={rowIsSticky ? "" : undefined}
                 data-drag-sticky-frontier-top={
                   isStickyYFrontier ? "" : undefined
                 }
@@ -590,8 +589,8 @@ const RowNumberHeaderCell = ({
   return (
     <th
       className="navi_row_number_cell"
-      data-sticky-x={stickyX ? "" : undefined}
-      data-sticky-y={stickyY ? "" : undefined}
+      data-sticky-left={stickyX ? "" : undefined}
+      data-sticky-top={stickyY ? "" : undefined}
       data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       style={{ textAlign: "center" }}
@@ -748,8 +747,8 @@ const RowNumberCell = ({
   return (
     <td
       ref={cellRef}
-      data-sticky-x={stickyX ? "" : undefined}
-      data-sticky-y={stickyY ? "" : undefined}
+      data-sticky-left={stickyX ? "" : undefined}
+      data-sticky-top={stickyY ? "" : undefined}
       data-sticky-x-frontier={stickyX && isStickyXFrontier ? "" : undefined}
       data-sticky-y-frontier={stickyY && isStickyYFrontier ? "" : undefined}
       data-after-sticky-x-frontier={isAfterStickyXFrontier ? "" : undefined}

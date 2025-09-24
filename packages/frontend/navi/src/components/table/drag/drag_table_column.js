@@ -38,11 +38,11 @@ export const initDragTableColumnByMousedown = (
 
     // important: only on cells, not on <col> nor <tr>
     const stickyCells = tableClone.querySelectorAll(
-      "th[data-sticky-x], td[data-sticky-x], th[data-sticky-y], td[data-sticky-y]",
+      "th[data-sticky-left], td[data-sticky-left], th[data-sticky-top], td[data-sticky-top]",
     );
     stickyCells.forEach((stickyCell) => {
-      const hasXSticky = stickyCell.hasAttribute("data-sticky-x");
-      const hasYSticky = stickyCell.hasAttribute("data-sticky-y");
+      const hasXSticky = stickyCell.hasAttribute("data-sticky-left");
+      const hasYSticky = stickyCell.hasAttribute("data-sticky-top");
 
       // Use position: relative and calculate offsets to simulate sticky behavior
       stickyCell.style.position = "relative";

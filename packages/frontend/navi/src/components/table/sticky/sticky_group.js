@@ -54,7 +54,7 @@ const initStickyGroup = (
   const updateTableColumns = () => {
     // Find all sticky columns by checking all rows to identify which columns have sticky cells
     const allStickyColumnCells = element.querySelectorAll(
-      "th[data-sticky-x], td[data-sticky-x]",
+      "th[data-sticky-left], td[data-sticky-left]",
     );
     if (allStickyColumnCells.length === 0) {
       return;
@@ -122,9 +122,9 @@ const initStickyGroup = (
     }
   };
   const updateTableRows = () => {
-    // Handle sticky rows by finding cells with data-sticky-y and grouping by row
+    // Handle sticky rows by finding cells with data-sticky-top and grouping by row
     const stickyCells = element.querySelectorAll(
-      "th[data-sticky-y], td[data-sticky-y]",
+      "th[data-sticky-top], td[data-sticky-top]",
     );
     if (stickyCells.length === 0) {
       return;
@@ -180,12 +180,12 @@ const initStickyGroup = (
   const updateLinearPositions = () => {
     // Handle linear container - detect direction from first sticky element
     const stickyElements = element.querySelectorAll(
-      "[data-sticky-x], [data-sticky-y]",
+      "[data-sticky-left], [data-sticky-top]",
     );
     if (stickyElements.length <= 1) return;
 
     const firstElement = stickyElements[0];
-    const isHorizontal = firstElement.hasAttribute("data-sticky-x");
+    const isHorizontal = firstElement.hasAttribute("data-sticky-left");
     const dimensionProperty = isHorizontal ? "width" : "height";
     const cssVariableName = isHorizontal ? LEFT_CSS_VAR : TOP_CSS_VAR;
 
@@ -225,8 +225,8 @@ const initStickyGroup = (
       if (mutation.type === "attributes") {
         // Check if the mutation affects sticky attributes
         if (
-          mutation.attributeName === "data-sticky-x" ||
-          mutation.attributeName === "data-sticky-y"
+          mutation.attributeName === "data-sticky-left" ||
+          mutation.attributeName === "data-sticky-top"
         ) {
           shouldUpdate = true;
         }
@@ -244,7 +244,7 @@ const initStickyGroup = (
     attributes: true,
     childList: true,
     subtree: true,
-    attributeFilter: ["data-sticky-x", "data-sticky-y"],
+    attributeFilter: ["data-sticky-left", "data-sticky-top"],
   });
 
   // Return cleanup function

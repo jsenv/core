@@ -1030,8 +1030,8 @@ const createObstaclesFromQuerySelector = (
   for (const obstacle of obstacles) {
     if (
       sticky &&
-      !obstacle.hasAttribute("data-sticky-x") &&
-      !obstacle.hasAttribute("data-sticky-y")
+      !obstacle.hasAttribute("data-sticky-left") &&
+      !obstacle.hasAttribute("data-sticky-top")
     ) {
       continue;
     }
@@ -1281,14 +1281,14 @@ const getPositionedParent = (element) => {
   return document.body;
 };
 /**
- * Get element bounds, handling both normal positioning and data-sticky-x|y
+ * Get element bounds, handling both normal positioning and data-sticky-left|top
  * @param {HTMLElement} element - The element to get bounds for
  * @returns {Object} Bounds object with left, top, right, bottom properties
  */
 const getElementBounds = (element, positionedParent) => {
   const rect = element.getBoundingClientRect();
-  const isHorizontallySticky = element.hasAttribute("data-sticky-x");
-  const isVerticallySticky = element.hasAttribute("data-sticky-y");
+  const isHorizontallySticky = element.hasAttribute("data-sticky-left");
+  const isVerticallySticky = element.hasAttribute("data-sticky-top");
   const useStickyAttribute = isHorizontallySticky || isVerticallySticky;
   if (!useStickyAttribute) {
     return rect;

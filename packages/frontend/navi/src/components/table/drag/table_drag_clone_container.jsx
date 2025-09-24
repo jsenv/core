@@ -43,20 +43,20 @@ import.meta.css = /* css */ `
     opacity: 0;
   }
 
-  .navi_table_container .navi_table_drag_clone_container th[data-sticky-y],
-  .navi_table_container .navi_table_drag_clone_container td[data-sticky-y] {
+  .navi_table_container .navi_table_drag_clone_container th[data-sticky-top],
+  .navi_table_container .navi_table_drag_clone_container td[data-sticky-top] {
     position: relative;
   }
-  .navi_table_container .navi_table_drag_clone_container th[data-sticky-x],
-  .navi_table_container .navi_table_drag_clone_container td[data-sticky-x] {
+  .navi_table_container .navi_table_drag_clone_container th[data-sticky-left],
+  .navi_table_container .navi_table_drag_clone_container td[data-sticky-left] {
     position: relative;
   }
   .navi_table_container
     .navi_table_drag_clone_container
-    th[data-sticky-x][data-sticky-y],
+    th[data-sticky-left][data-sticky-top],
   .navi_table_container
     .navi_table_drag_clone_container
-    td[data-sticky-x][data-sticky-y] {
+    td[data-sticky-left][data-sticky-top] {
     position: relative;
   }
 
