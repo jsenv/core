@@ -471,7 +471,7 @@
     <script type="module">
       import { createDragToMoveGesture } from "../interaction/drag_gesture.js";
       import {
-        DRAG_DEBUG_VISUAL_MARKERS,
+        DRAG_DEBUG_MARKERS,
         enableDebugMarkers,
         disableDebugMarkers,
       } from "../interaction/debug_markers.js";
@@ -497,7 +497,7 @@
       const boundsInfo = document.getElementById("boundsInfo");
 
       // Handle debug markers toggle
-      debugCheckbox.checked = DRAG_DEBUG_VISUAL_MARKERS;
+      debugCheckbox.checked = DRAG_DEBUG_MARKERS;
       debugCheckbox.addEventListener("change", (e) => {
         if (e.target.checked) {
           enableDebugMarkers();

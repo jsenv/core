@@ -1,16 +1,20 @@
-export let DRAG_DEBUG_VISUAL_MARKERS = true;
+export let DRAG_DEBUG_MARKERS = true;
 const KEEP_MARKERS_ON_RELEASE = true;
 export const enableDebugMarkers = () => {
-  DRAG_DEBUG_VISUAL_MARKERS = true;
+  DRAG_DEBUG_MARKERS = true;
 };
 export const disableDebugMarkers = () => {
-  DRAG_DEBUG_VISUAL_MARKERS = false;
+  DRAG_DEBUG_MARKERS = false;
 };
 
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 
 export const updateVisualMarkersOnGrab = () => {
+  if (!DRAG_DEBUG_MARKERS) {
+    return;
+  }
+
   // Clean up any existing persistent markers from previous drag gestures
   if (KEEP_MARKERS_ON_RELEASE) {
     // Remove any existing markers from previous gestures
@@ -29,7 +33,7 @@ export const updateVisualMarkersOnDrag = ({
   elementHeight,
   positionedParent,
 }) => {
-  if (!DRAG_DEBUG_VISUAL_MARKERS) {
+  if (!DRAG_DEBUG_MARKERS) {
     return;
   }
 
@@ -173,9 +177,14 @@ export const updateVisualMarkersOnDrag = ({
   }
 };
 export const updateVisualMarkersOnRelease = () => {
+  if (!DRAG_DEBUG_MARKERS) {
+    return;
+  }
+
   if (KEEP_MARKERS_ON_RELEASE) {
     return;
   }
+
   currentDebugMarkers.forEach((marker) => {
     marker.remove();
   });
