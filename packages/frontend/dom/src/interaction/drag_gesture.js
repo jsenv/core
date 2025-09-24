@@ -573,13 +573,15 @@ export const createDragGesture = (options) => {
       return null;
     }
 
+    const scrollableParent = getScrollableParent(element);
     const positionedParent = getPositionedParent(element);
     const parentRect = positionedParent.getBoundingClientRect();
     const mouseEventRelativeCoords = (mouseEvent) => {
       const xViewport = mouseEvent.clientX;
       const yViewport = mouseEvent.clientY;
-      const xRelative = xViewport - parentRect.left;
-      const yRelative = yViewport - parentRect.top;
+      const xRelative =
+        xViewport - parentRect.left + scrollableParent.scrollLeft;
+      const yRelative = yViewport - parentRect.top + scrollableParent.scrollTop;
       return [xRelative, yRelative];
     };
 
