@@ -665,6 +665,7 @@ export const createDragGesture = ({
 
       // Reduce sticky frontiers to a single visible area object
       const visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
+        scrollableParent,
         direction,
         dragName: name,
       });
