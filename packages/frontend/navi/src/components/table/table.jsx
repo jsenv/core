@@ -76,9 +76,9 @@ import {
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
 import {
-  TableLeftStickyFrontier,
-  TableLeftStickyFrontierGhost,
-  TableLeftStickyFrontierPreview,
+  TableStickyLeftFrontier,
+  TableStickyLeftFrontierGhost,
+  TableStickyLeftFrontierPreview,
 } from "./sticky/table_sticky.jsx";
 import { TableCell } from "./table_cell.jsx";
 
@@ -568,8 +568,8 @@ export const Table = forwardRef((props, ref) => {
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer />
       <TableRowResizer />
-      <TableLeftStickyFrontierGhost />
-      <TableLeftStickyFrontierPreview />
+      <TableStickyLeftFrontierGhost />
+      <TableStickyLeftFrontierPreview />
     </div>
   );
 });
@@ -603,7 +603,7 @@ const RowNumberHeaderCell = ({
       onClick={onClick}
     >
       {isStickyLeftFrontier && (
-        <TableLeftStickyFrontier
+        <TableStickyLeftFrontier
           stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
         />
@@ -707,7 +707,7 @@ const HeaderCell = ({
         />
       )}
       {isStickyLeftFrontier && (
-        <TableLeftStickyFrontier
+        <TableStickyLeftFrontier
           stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
         />
@@ -783,7 +783,7 @@ const RowNumberCell = ({
       )}
       {value}
       {isStickyLeftFrontier && (
-        <TableLeftStickyFrontier
+        <TableStickyLeftFrontier
           stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
         />
@@ -810,7 +810,7 @@ const DataCell = ({
   return (
     <TableCell cellId={`${columnName}:${row.id}`} {...rest}>
       {isStickyLeftFrontier && (
-        <TableLeftStickyFrontier
+        <TableStickyLeftFrontier
           stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
         />

@@ -229,13 +229,13 @@ import.meta.css = /* css */ `
  * so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
  * as a table cell uses a position relative)
  */
-export const TableLeftStickyFrontier = ({
+export const TableStickyLeftFrontier = ({
   stickyLeftFrontierColumnIndex,
   onStickyLeftFrontierChange,
 }) => {
   return (
     <div
-      className="navi_table_left_sticky_frontier"
+      className="navi_table_sticky_left_frontier"
       data-left={stickyLeftFrontierColumnIndex === -1 ? "" : undefined}
       inert={!onStickyLeftFrontierChange}
       onMouseDown={(e) => {
