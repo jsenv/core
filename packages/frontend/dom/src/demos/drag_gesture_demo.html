@@ -872,15 +872,9 @@
 
           controls.dragGesture = createDragToMoveGesture(dragOptions);
 
-          controls.dragInstance = controls.dragGesture.grab({
-            element: rectangle,
-            elementToMove: rectangle,
-            elementVisuallyMoving: rectangle,
+          controls.dragInstance = controls.dragGesture.grab(rectangle, {
             xAtStart,
             yAtStart,
-            addTeardown: () => {
-              // Store cleanup callbacks if needed
-            },
           });
 
           updateButtonStates(controls, true);

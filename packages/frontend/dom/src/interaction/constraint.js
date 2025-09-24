@@ -74,33 +74,9 @@ export const createObstacleContraint = (bounds, { element, name }) => {
     const isAbove = currentActualBottom <= topBound;
     const isBelow = currentActualTop >= bottomBound;
 
-    // Apply constraints based on element position - handle all cases including diagonal
+    // Apply constraints based on element position - prioritize the axis that prevents jumping
 
-    // Always check Y constraints if element is above or below
-    if (isAbove || isBelow) {
-      const proposedLeft = leftAtStart + constrainedXMove;
-      const proposedRight = proposedLeft + elementWidth;
-      const wouldHaveXOverlap =
-        proposedLeft < rightBound && proposedRight > leftBound;
-
-      if (wouldHaveXOverlap) {
-        if (isAbove) {
-          // Element above - prevent it from going down into obstacle
-          const maxAllowedYMove = topBound - elementHeight - topAtStart;
-          if (constrainedYMove > maxAllowedYMove) {
-            constrainedYMove = maxAllowedYMove;
-          }
-        } else if (isBelow) {
-          // Element below - prevent it from going up into obstacle
-          const minAllowedYMove = bottomBound - topAtStart;
-          if (constrainedYMove < minAllowedYMove) {
-            constrainedYMove = minAllowedYMove;
-          }
-        }
-      }
-    }
-
-    // Always check X constraints if element is on left or right (using constrained Y move)
+    // If element is positioned left/right of obstacle, apply X constraints first
     if (isOnTheLeft || isOnTheRight) {
       const proposedTop = topAtStart + constrainedYMove;
       const proposedBottom = proposedTop + elementHeight;
@@ -119,6 +95,30 @@ export const createObstacleContraint = (bounds, { element, name }) => {
           const minAllowedXMove = rightBound - leftAtStart;
           if (constrainedXMove < minAllowedXMove) {
             constrainedXMove = minAllowedXMove;
+          }
+        }
+      }
+    }
+
+    // If element is positioned above/below obstacle, apply Y constraints second (using constrained X)
+    if (isAbove || isBelow) {
+      const proposedLeft = leftAtStart + constrainedXMove; // Use constrained X move
+      const proposedRight = proposedLeft + elementWidth;
+      const wouldHaveXOverlap =
+        proposedLeft < rightBound && proposedRight > leftBound;
+
+      if (wouldHaveXOverlap) {
+        if (isAbove) {
+          // Element above - prevent it from going down into obstacle
+          const maxAllowedYMove = topBound - elementHeight - topAtStart;
+          if (constrainedYMove > maxAllowedYMove) {
+            constrainedYMove = maxAllowedYMove;
+          }
+        } else if (isBelow) {
+          // Element below - prevent it from going up into obstacle
+          const minAllowedYMove = bottomBound - topAtStart;
+          if (constrainedYMove < minAllowedYMove) {
+            constrainedYMove = minAllowedYMove;
           }
         }
       }
