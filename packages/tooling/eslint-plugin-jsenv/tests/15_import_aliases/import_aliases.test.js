@@ -34,6 +34,7 @@ ruleTester.run("no-unknown-params with import aliases", noUnknownParamsRule, {
   invalid: [
     {
       // Invalid parameters with aliases
+      options: [{ reportAllUnknownParams: true }],
       code: `
         import { createResource as createAPI, updateResource as updateAPI, deleteResource as deleteAPI } from './api-utils.js';
         

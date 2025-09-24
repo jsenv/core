@@ -38,6 +38,7 @@ ruleTester.run("no-unknown-params with many parameters", noUnknownParamsRule, {
   invalid: [
     {
       // This should show the shortened parameter list
+      options: [{ reportAllUnknownParams: true }],
       code: `
         function processComplexData({ 
           id, name, email, age, address, phone, 

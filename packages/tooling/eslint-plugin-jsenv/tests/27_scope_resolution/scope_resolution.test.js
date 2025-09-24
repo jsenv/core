@@ -13,7 +13,7 @@ ruleTester.run("no-unknown-params scope resolution", noUnknownParamsRule, {
   valid: [
     {
       name: "local function declaration shadows imported function",
-      code: `
+      options: [{ reportAllUnknownParams: true }],      code: `
         import { validate } from './external.js';
 
         {
@@ -29,7 +29,7 @@ ruleTester.run("no-unknown-params scope resolution", noUnknownParamsRule, {
     },
     {
       name: "local arrow function shadows imported function",
-      code: `
+      options: [{ reportAllUnknownParams: true }],      code: `
         import { process } from './utils.js';
 
         {
@@ -43,7 +43,7 @@ ruleTester.run("no-unknown-params scope resolution", noUnknownParamsRule, {
     },
     {
       name: "local function declaration in nested block",
-      code: `
+      options: [{ reportAllUnknownParams: true }],      code: `
         import { handler } from './handlers.js';
 
         function main() {
@@ -60,7 +60,7 @@ ruleTester.run("no-unknown-params scope resolution", noUnknownParamsRule, {
     },
     {
       name: "local function shadows import with rest parameters",
-      code: `
+      options: [{ reportAllUnknownParams: true }],      code: `
         import { build } from './external.js';
 
         {

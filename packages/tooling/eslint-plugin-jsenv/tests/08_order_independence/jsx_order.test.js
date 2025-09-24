@@ -20,7 +20,7 @@ ruleTester.run(
     valid: [
       {
         name: "JSX usage before component definition - valid",
-        code: `function ValidApp() {
+      options: [{ reportAllUnknownParams: true }],        code: `function ValidApp() {
   return <ValidComponent title="Hello" />;
 }
 
@@ -32,7 +32,7 @@ function ValidComponent({ title }) {
     invalid: [
       {
         name: "JSX usage before component definition - with extra prop",
-        code: `function App() {
+      options: [{ reportAllUnknownParams: true }],        code: `function App() {
   return <MyComponent title="Hello" extra="shouldWarn" />;
 }
 

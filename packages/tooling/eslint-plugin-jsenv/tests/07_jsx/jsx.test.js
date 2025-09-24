@@ -17,7 +17,7 @@ ruleTester.run("no-unknown-params - JSX components", noUnknownParamsRule, {
   valid: [
     {
       name: "JSX component with exact matching props",
-      code: `const Toto = ({ a }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const Toto = ({ a }) => {
   console.log(a);
   return null;
 };
@@ -28,7 +28,7 @@ export const ValidComponent = () => {
     },
     {
       name: "JSX component with rest parameters accepting extra props",
-      code: `const ComponentWithRest = ({ a, ...rest }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const ComponentWithRest = ({ a, ...rest }) => {
   console.log(a, rest);
   return null;
 };
@@ -39,7 +39,7 @@ export const ValidWithRest = () => {
     },
     {
       name: "JSX component with React built-in props (key, ref) should be ignored",
-      code: `const Button = ({ label }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const Button = ({ label }) => {
   return <button>{label}</button>;
 };
 
@@ -49,7 +49,7 @@ export const App = () => {
     },
     {
       name: "JSX component with children prop should be ignored",
-      code: `const Container = ({ className }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const Container = ({ className }) => {
   return <div className={className} />;
 };
 
@@ -61,7 +61,7 @@ export const App = () => {
   invalid: [
     {
       name: "JSX component with single unknown prop",
-      code: `const Toto = ({ a }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const Toto = ({ a }) => {
   console.log(a);
   return null;
 };
@@ -87,7 +87,7 @@ export const App = () => {
     },
     {
       name: "JSX component with multiple unknown props",
-      code: `const Button = ({ label }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const Button = ({ label }) => {
   return <button>{label}</button>;
 };
 
@@ -116,7 +116,7 @@ export const App = () => {
     },
     {
       name: "JSX component with mixed valid, invalid, and ignored props",
-      code: `const Button = ({ label, className }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const Button = ({ label, className }) => {
   return <button className={className}>{label}</button>;
 };
 
@@ -140,7 +140,7 @@ export const App = () => {
     },
     {
       name: "JSX component with no props receiving unknown props",
-      code: `const ComponentWithoutProps = () => {
+      options: [{ reportAllUnknownParams: true }],      code: `const ComponentWithoutProps = () => {
   return null;
 };
 
@@ -169,7 +169,7 @@ export const App = () => {
     },
     {
       name: "JSX component with spread props and unknown prop at end of chain",
-      code: `const Some = (props) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const Some = (props) => {
   return <Thing {...props} />;
 };
 const Thing = ({ knownProp }) => {

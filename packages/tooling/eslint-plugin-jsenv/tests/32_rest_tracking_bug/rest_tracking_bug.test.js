@@ -17,6 +17,7 @@ ruleTester.run(
     valid: [
       {
         name: "static import should work",
+        options: [{ reportAllUnknownParams: true }],
         code: `
         import { build } from "./fixtures/build.js";
 
@@ -32,6 +33,7 @@ ruleTester.run(
       },
       {
         name: "dynamic import should also work",
+        options: [{ reportAllUnknownParams: true }],
         code: `
         const test = async ({ expectedFileCount, ...params }) => {
           const { build } = await import("./fixtures/build.js");
@@ -46,6 +48,7 @@ ruleTester.run(
       },
       {
         name: "local function with dynamic import wrapper",
+        options: [{ reportAllUnknownParams: true }],
         code: `
         // Local function that dynamically imports and forwards parameters
         const buildWrapper = async (options) => {
@@ -67,6 +70,7 @@ ruleTester.run(
     invalid: [
       {
         name: "local function should show regular error message (detailed disabled by default)",
+        options: [{ reportAllUnknownParams: true }],
         code: `
         // Local function that only accepts specific params
         const build = ({ logLevel }) => ({ logLevel });

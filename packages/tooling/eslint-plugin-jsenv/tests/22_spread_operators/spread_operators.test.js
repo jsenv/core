@@ -28,7 +28,7 @@ ruleTester.run("no-unknown-params spread operators", noUnknownParamsRule, {
         function createWrapper({ callback, ...options }) {
           return createAction(callback, {
             name: "wrapper",
-            ...options, // Should pass any options through to createAction
+      options: [{ reportAllUnknownParams: true }],            ...options, // Should pass any options through to createAction
           });
         }
         

@@ -12,7 +12,7 @@ ruleTester.run("no-unknown-params - external imports", noUnknownParamsRule, {
   valid: [
     {
       name: "External package imports should accept rest parameters",
-      code: `import { build } from "@jsenv/core";
+      options: [{ reportAllUnknownParams: true }],      code: `import { build } from "@jsenv/core";
 
 const test = async ({ expectedFileCount, ...params }) => {
   console.log(expectedFileCount);
@@ -25,7 +25,7 @@ await test({
     },
     {
       name: "External namespace imports should work",
-      code: `import * as core from "@jsenv/core";
+      options: [{ reportAllUnknownParams: true }],      code: `import * as core from "@jsenv/core";
 
 const test = async ({ expectedFileCount, ...params }) => {
   console.log(expectedFileCount);
@@ -38,7 +38,7 @@ await test({
     },
     {
       name: "Multiple external imports should work",
-      code: `import { build, serve } from "@jsenv/core";
+      options: [{ reportAllUnknownParams: true }],      code: `import { build, serve } from "@jsenv/core";
 
 const test = async ({ expectedFileCount, ...buildParams }) => {
   console.log(expectedFileCount);

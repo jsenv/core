@@ -54,6 +54,7 @@ ruleTester.run(
     ],
     invalid: [
       {
+        options: [{ reportAllUnknownParams: true }],
         code: `
         function processUser({ 
           name, 

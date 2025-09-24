@@ -12,7 +12,7 @@ ruleTester.run("no-unknown-params - function chaining", noUnknownParamsRule, {
   valid: [
     {
       name: "parameter used through chaining with spread operator",
-      code: `const toto = ({ a, ...rest }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const toto = ({ a, ...rest }) => {
   console.log(a);
   tata({ ...rest, b: true });
 };
@@ -27,7 +27,7 @@ toto({ a: true, b: false });`,
   invalid: [
     {
       name: "parameter not used in chaining",
-      code: `const toto = ({ a, ...rest }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const toto = ({ a, ...rest }) => {
   console.log(a);
   tata({ ...rest, b: true });
 };

@@ -27,7 +27,7 @@ ruleTester.run("no-unknown-params inline function", noUnknownParamsRule, {
         });
       `,
       filename: "/test.js",
-      output: `
+      options: [{ reportAllUnknownParams: true }],      output: `
         function extremeFunction({ 
           a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
           aa, bb, cc, dd, ee, ff

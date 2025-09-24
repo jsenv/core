@@ -15,7 +15,7 @@ ruleTester.run(
     valid: [
       {
         name: "regular params should work",
-        code: `
+      options: [{ reportAllUnknownParams: true }],        code: `
         import { build } from "@jsenv/core";
 
         const test = async (params) => {
@@ -29,7 +29,7 @@ ruleTester.run(
       },
       {
         name: "rest destructuring should work like regular params",
-        code: `
+      options: [{ reportAllUnknownParams: true }],        code: `
         import { build } from "@jsenv/core";
 
         const test = async ({ ...params }) => {

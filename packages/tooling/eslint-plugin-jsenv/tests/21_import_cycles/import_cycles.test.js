@@ -32,6 +32,7 @@ ruleTester.run("no-unknown-params with import cycles", noUnknownParamsRule, {
     {
       // Test that we can analyze function parameters even with import cycles
       // Now that we parse files without recursively following imports, this should work
+      options: [{ reportAllUnknownParams: true }],
       code: `
         import { helperFunction } from "./file_b.js";
         

@@ -25,6 +25,7 @@ validKnownFunction({ name: "test" });`,
   invalid: [
     {
       name: "known functions analyzed, unknown functions ignored",
+      options: [{ reportAllUnknownParams: true }],
       code: `function knownFunction({ name }) {
   console.log(name);
 }

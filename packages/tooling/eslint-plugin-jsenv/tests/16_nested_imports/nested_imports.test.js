@@ -21,7 +21,7 @@ ruleTester.run("no-unknown-params with nested imports", noUnknownParamsRule, {
   valid: [
     {
       // Nested imports work correctly
-      code: `
+        options: [{ reportAllUnknownParams: true }],      code: `
         // Define the nested imports inline for testing
         function processItem({ item, config }) {
           return { processed: true, item, config };
@@ -49,7 +49,7 @@ ruleTester.run("no-unknown-params with nested imports", noUnknownParamsRule, {
   ],
   invalid: [
     {
-      code: `
+        options: [{ reportAllUnknownParams: true }],      code: `
         // Define the nested imports inline for testing
         function processItem({ item, config }) {
           return { processed: true, item, config };

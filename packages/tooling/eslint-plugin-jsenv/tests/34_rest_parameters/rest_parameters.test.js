@@ -15,7 +15,7 @@ ruleTester.run(
     valid: [
       {
         name: "Function with rest parameters should accept any spread params",
-        code: `
+      options: [{ reportAllUnknownParams: true }],        code: `
 const apiCall = (...args) => {
   return fetch(...args);
 };
@@ -29,7 +29,7 @@ wrapper({ endpoint: "/api", method: "POST", headers: {} });`,
       },
       {
         name: "Arrow function with rest parameters",
-        code: `
+      options: [{ reportAllUnknownParams: true }],        code: `
 const handler = (...args) => console.log(args);
 
 const process = ({ type, ...options }) => {
@@ -40,7 +40,7 @@ process({ type: "user", name: "John", age: 30 });`,
       },
       {
         name: "Function declaration with rest parameters",
-        code: `
+      options: [{ reportAllUnknownParams: true }],        code: `
 function execute(...params) {
   return params;
 }
@@ -53,7 +53,7 @@ run({ action: "start", timeout: 5000, retry: true });`,
       },
       {
         name: "Multiple rest parameter functions in chain",
-        code: `
+      options: [{ reportAllUnknownParams: true }],        code: `
 const final = (...args) => args;
 const middle = (...params) => final(...params);
 
@@ -65,7 +65,7 @@ start({ id: 1, name: "test", active: true });`,
       },
       {
         name: "Rest parameters with mixed parameter types",
-        code: `
+      options: [{ reportAllUnknownParams: true }],        code: `
 const api = (url, ...options) => ({ url, options });
 
 const request = ({ endpoint, ...config }) => {
@@ -76,7 +76,7 @@ request({ endpoint: "/users", method: "GET", headers: {} });`,
       },
       {
         name: "External import with rest parameters (should be treated as accepting any params)",
-        code: `
+      options: [{ reportAllUnknownParams: true }],        code: `
 import { build } from "@jsenv/core";
 
 const test = async ({ expectedFileCount, ...params }) => {
@@ -90,7 +90,7 @@ test({ minification: false, target: "node" });`,
     invalid: [
       {
         name: "Known function without rest params should still error",
-        code: `
+      options: [{ reportAllUnknownParams: true }],        code: `
 const handler = ({ name }) => console.log(name);
 
 const wrapper = ({ id, ...params }) => {

@@ -12,14 +12,14 @@ ruleTester.run("no-unknown-params - rest parameters", noUnknownParamsRule, {
   valid: [
     {
       name: "basic rest parameters accept extra properties",
-      code: `const toto = ({ a, ...rest }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const toto = ({ a, ...rest }) => {
   console.log(a, rest);
 };
 toto({ a: 1, b: 2, c: 3, d: 4 });`,
     },
     {
       name: "rest params propagated to functions that use the properties",
-      code: `function processOptions({ mode, ...rest }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function processOptions({ mode, ...rest }) {
   return helper({ mode, ...rest });
 }
 
@@ -31,7 +31,7 @@ processOptions({ mode: "dev", debug: true, verbose: false });`,
     },
     {
       name: "rest params not propagated (no-unused-vars handles unused rest)",
-      code: `function localProcessor({ key, ...settings }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function localProcessor({ key, ...settings }) {
   console.log(key);
 }
 
@@ -48,7 +48,7 @@ formatData({ format: "json", verbose: true, debug: false });`,
     },
     {
       name: "property renaming in destructuring - valid cases",
-      code: `const validRename = ({ a: b }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const validRename = ({ a: b }) => {
   console.log(b);
 };
 validRename({ a: true });
@@ -67,7 +67,7 @@ multipleRename({ prop1: 1, prop2: 2 });`,
   invalid: [
     {
       name: "mixed rest and non-rest parameters - extra in non-rest",
-      code: `function mixed({ config, ...settings }, { data, meta }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function mixed({ config, ...settings }, { data, meta }) {
   console.log(config, settings, data, meta);
 }
 mixed(
@@ -91,7 +91,7 @@ mixed(
     },
     {
       name: "rest params propagated but properties unused in chain",
-      code: `function initializeApp({ name, ...config }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function initializeApp({ name, ...config }) {
   console.log(\`Starting \${name}\`);
   return setupCore({ ...config });
 }
@@ -233,7 +233,7 @@ processRequest({
     },
     {
       name: "property renaming in destructuring - invalid cases",
-      code: `const invalidRename1 = ({ a: b }) => {
+      options: [{ reportAllUnknownParams: true }],      code: `const invalidRename1 = ({ a: b }) => {
   console.log(b);
 };
 invalidRename1({ b: true });

@@ -37,6 +37,7 @@ ruleTester.run(
         });
       `,
         filename: "/test.js",
+        options: [{ reportAllUnknownParams: true }],
         errors: [
           {
             message: `"invalidParam" not found in sevenParamFunction()`,

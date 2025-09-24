@@ -17,7 +17,7 @@ ruleTester.run("no-unknown-params - order independence", noUnknownParamsRule, {
   valid: [
     {
       name: "function call before definition - valid usage",
-      code: `doValidSomething({ name: "test" });
+      options: [{ reportAllUnknownParams: true }],      code: `doValidSomething({ name: "test" });
 
 function doValidSomething({ name }) {
   console.log(name);
@@ -27,7 +27,7 @@ function doValidSomething({ name }) {
   invalid: [
     {
       name: "function call before definition - with extra param",
-      code: `doSomething({ name: "test", extra: "value" });
+      options: [{ reportAllUnknownParams: true }],      code: `doSomething({ name: "test", extra: "value" });
 
 function doSomething({ name }) {
   console.log(name);

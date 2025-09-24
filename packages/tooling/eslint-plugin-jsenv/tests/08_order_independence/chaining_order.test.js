@@ -15,6 +15,7 @@ ruleTester.run(
     valid: [
       {
         name: "function chaining before definition - valid usage",
+        options: [{ reportAllUnknownParams: true }],
         code: `processValidData({ name: "test", age: 25 });
 
 function processValidData({ name, ...rest }) {
@@ -29,6 +30,7 @@ function handleValidRest({ age }) {
     invalid: [
       {
         name: "function chaining before definition - with unused param",
+        options: [{ reportAllUnknownParams: true }],
         code: `processData({ name: "test", age: 25, unused: "value" });
 
 function processData({ name, ...rest }) {

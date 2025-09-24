@@ -73,7 +73,7 @@ ruleTester.run("no-unknown-params safeguards", noUnknownParamsRule, {
         f1({ p1: 1, unknownParam: "test" });
       `,
       filename: mainFilePath,
-      options: [{ maxChainDepth: 2 }], // Very low limit - should stop early
+      options: [{ maxChainDepth: 2, reportAllUnknownParams: true }], // Very low limit - should stop early
       errors: [
         {
           messageId: "not_found_param_chain_with_suggestions",

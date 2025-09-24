@@ -17,7 +17,7 @@ ruleTester.run("no-unknown-params - wrapper functions", noUnknownParamsRule, {
   valid: [
     {
       name: "forwardRef wrapper with valid props",
-      code: `function MyComponent({ title, description }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function MyComponent({ title, description }) {
   return (
     <div>
       {title}: {description}
@@ -31,7 +31,7 @@ export const App = () => <WrappedComponent title="Hello" description="World" />;
     },
     {
       name: "memo wrapper with valid props",
-      code: `function MyComponent({ name, age }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function MyComponent({ name, age }) {
   return (
     <div>
       {name} is {age} years old
@@ -45,7 +45,7 @@ export const App = () => <MemoizedComponent name="John" age={25} />;`,
     },
     {
       name: "React.forwardRef and React.memo with valid props",
-      code: `function BaseComponent({ title, subtitle }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function BaseComponent({ title, subtitle }) {
   return (
     <h1>
       {title} - {subtitle}
@@ -65,7 +65,7 @@ export const App = () => (
     },
     {
       name: "Function.bind wrapper with valid props",
-      code: `function myFunction({ name, age }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function myFunction({ name, age }) {
   console.log(\`\${name} is \${age} years old\`);
 }
 
@@ -77,7 +77,7 @@ boundFunction({ name: "Alice", age: 30 });`,
   invalid: [
     {
       name: "forwardRef wrapper with extra prop",
-      code: `function MyComponent({ title }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function MyComponent({ title }) {
   return <div>{title}</div>;
 }
 
@@ -100,7 +100,7 @@ export const App = () => <WrappedComponent title="Hello"  />;`,
     },
     {
       name: "memo wrapper with extra prop",
-      code: `function MyComponent({ name }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function MyComponent({ name }) {
   return <div>Hello {name}</div>;
 }
 
@@ -123,7 +123,7 @@ export const App = () => <MemoizedComponent name="John"  />;`,
     },
     {
       name: "React wrappers with extra props",
-      code: `function BaseComponent({ title }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function BaseComponent({ title }) {
   return <h1>{title}</h1>;
 }
 
@@ -162,7 +162,7 @@ export const App = () => (
     },
     {
       name: "Function.bind wrapper with extra prop",
-      code: `function myFunction({ name }) {
+      options: [{ reportAllUnknownParams: true }],      code: `function myFunction({ name }) {
   console.log(\`Hello \${name}\`);
 }
 

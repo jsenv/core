@@ -35,6 +35,7 @@ ruleTester.run(
     ],
     invalid: [
       {
+        options: [{ reportAllUnknownParams: true }],
         // Test with local function definition WITHOUT rest parameter (should catch error)
         code: `
         function processData({ id, name }) {
@@ -58,6 +59,7 @@ ruleTester.run(
       },
       // Test with imports (this should work once import resolution is functional)
       {
+        options: [{ reportAllUnknownParams: true }],
         code: `
         import { processData } from './helper.js';
         processData({ id: 1, name: "John", age: 30 });

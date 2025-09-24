@@ -24,7 +24,7 @@ ruleTester.run("no-unknown-params with import errors", noUnknownParamsRule, {
         });
       `,
       filename: "/test.js",
-    },
+      options: [{ reportAllUnknownParams: true }],    },
     {
       // Test with missing import file
       code: `
@@ -35,7 +35,7 @@ ruleTester.run("no-unknown-params with import errors", noUnknownParamsRule, {
         });
       `,
       filename: "/test.js",
-    },
+      options: [{ reportAllUnknownParams: true }],    },
   ],
   invalid: [
     // No invalid tests here since we can't validate parameters

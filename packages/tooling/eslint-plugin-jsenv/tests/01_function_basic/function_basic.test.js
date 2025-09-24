@@ -21,6 +21,7 @@ foo({ a: 1 });`,
   invalid: [
     {
       name: "function with extra parameter",
+      options: [{ reportAllUnknownParams: true }],
       code: `function foo({ a }) {
   console.log(a);
 }
