@@ -208,6 +208,7 @@ export const createDragGesture = (options) => {
       topAtStart,
       scrollLeftAtStart,
       scrollTopAtStart,
+      interactionTypeAtStart: interactionType,
       visualOffsetX,
       visualOffsetY,
 
@@ -219,13 +220,12 @@ export const createDragGesture = (options) => {
       yMouseMove: 0, // Movement caused by mouse drag
       xChanged: false,
       yChanged: false,
+      interactionType,
 
       isGoingUp: undefined,
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
-
-      interactionType,
     };
     definePropertyAsReadOnly(gestureInfo, "xAtStart");
     definePropertyAsReadOnly(gestureInfo, "yAtStart");
@@ -233,6 +233,7 @@ export const createDragGesture = (options) => {
     definePropertyAsReadOnly(gestureInfo, "topAtStart");
     definePropertyAsReadOnly(gestureInfo, "scrollLeftAtStart");
     definePropertyAsReadOnly(gestureInfo, "scrollTopAtStart");
+    definePropertyAsReadOnly(gestureInfo, "interactionTypeAtStart");
     definePropertyAsReadOnly(gestureInfo, "visualOffsetX");
     definePropertyAsReadOnly(gestureInfo, "visualOffsetY");
     let previousGestureInfo = null;
@@ -454,6 +455,7 @@ export const createDragGesture = (options) => {
         isGoingUp,
         isGoingDown,
         visibleArea,
+        interactionType,
       };
 
       if (isRelease) {
