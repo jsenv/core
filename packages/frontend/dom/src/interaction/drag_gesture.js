@@ -88,10 +88,10 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 const BASIC_MODE_OPTIONS = {
   backdrop: false,
   stickyFrontiers: false,
-  keepInScrollableArea: false,
+  keepInScrollableArea: true,
   obstacleQuerySelector: null,
   showConstraintFeedbackLine: false,
-  dragViaScroll: false,
+  dragViaScroll: true,
 };
 
 export const createDragGesture = (options) => {
