@@ -14,9 +14,12 @@ const KEEP_MARKERS_ON_RELEASE = true;
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 
-export const updateVisualMarkersOnGrab = () => {
+export const setupVisualMarkers = ({ direction, positionedParent }) => {
   if (!DRAG_DEBUG_MARKERS) {
-    return;
+    return {
+      onDrag: () => {},
+      onRelease: () => {},
+    };
   }
 
   // Clean up any existing persistent markers from previous drag gestures
@@ -26,175 +29,167 @@ export const updateVisualMarkersOnGrab = () => {
       .querySelectorAll(".navi_debug_marker, .navi_obstacle_marker")
       .forEach((marker) => marker.remove());
   }
-};
-export const updateVisualMarkersOnDrag = ({
-  direction,
-  constraints,
-  visibleArea,
-  elementWidth,
-  elementHeight,
-  positionedParent,
-}) => {
-  if (!DRAG_DEBUG_MARKERS) {
-    return;
-  }
 
-  // Schedule removal of previous markers if they exist
-  const previousDebugMarkers = [...currentDebugMarkers];
-  const previousConstraintMarkers = [...currentConstraintMarkers];
+  return {
+    onDrag: ({ constraints, visibleArea, elementWidth, elementHeight }) => {
+      // Schedule removal of previous markers if they exist
+      const previousDebugMarkers = [...currentDebugMarkers];
+      const previousConstraintMarkers = [...currentConstraintMarkers];
 
-  if (previousDebugMarkers.length > 0 || previousConstraintMarkers.length > 0) {
-    setTimeout(() => {
-      previousDebugMarkers.forEach((marker) => marker.remove());
-      previousConstraintMarkers.forEach((marker) => marker.remove());
-    }, 100);
-  }
-
-  // Clear current marker arrays
-  currentDebugMarkers.length = 0;
-  currentConstraintMarkers.length = 0;
-
-  visible_area_markers: {
-    if (direction.x) {
-      currentDebugMarkers.push(
-        createDebugMarker({
-          name: "visibleAreaLeft",
-          x: visibleArea.left,
-          y: 0,
-          color: "blue",
-          orientation: "vertical",
-        }),
-      );
-      currentDebugMarkers.push(
-        createDebugMarker({
-          name: "visibleAreaRight",
-          x: visibleArea.right,
-          y: 0,
-          color: "green",
-          orientation: "vertical",
-        }),
-      );
-    }
-    if (direction.y) {
-      currentDebugMarkers.push(
-        createDebugMarker({
-          name: "visibleAreaTop",
-          x: 0,
-          y: visibleArea.top,
-          color: "red",
-          orientation: "horizontal",
-        }),
-      );
-      currentDebugMarkers.push(
-        createDebugMarker({
-          name: "visibleAreaBottom",
-          x: 0,
-          y: visibleArea.bottom,
-          color: "orange",
-          orientation: "horizontal",
-        }),
-      );
-    }
-  }
-
-  // Create dynamic constraint markers based on current element size
-  const parentRect = positionedParent.getBoundingClientRect();
-
-  // For debug markers, we'll show bounds constraints and obstacle zones
-  let leftBound = 0;
-  let topBound = 0;
-  let rightBound = Infinity;
-  let bottomBound = Infinity;
-  // Extract bounds from bounds constraints and collect obstacle data
-  for (const constraint of constraints) {
-    if (constraint.type === "bounds") {
-      leftBound = Math.max(leftBound, constraint.left);
-      topBound = Math.max(topBound, constraint.top);
-      rightBound = Math.min(rightBound, constraint.right);
-      bottomBound = Math.min(bottomBound, constraint.bottom);
-    } else if (constraint.type === "obstacle") {
-      const obstacleMarker = createObstacleMarker(constraint, parentRect);
-      currentConstraintMarkers.push(obstacleMarker);
-    }
-  }
-
-  bound_markers: {
-    if (direction.x) {
-      if (leftBound > 0) {
-        const leftBoundViewport = parentRect.left + leftBound;
-        currentConstraintMarkers.push(
-          createDebugMarker({
-            name: "leftBound",
-            x: leftBoundViewport,
-            y: 0,
-            color: "red",
-            orientation: "vertical",
-          }),
-        );
+      if (
+        previousDebugMarkers.length > 0 ||
+        previousConstraintMarkers.length > 0
+      ) {
+        setTimeout(() => {
+          previousDebugMarkers.forEach((marker) => marker.remove());
+          previousConstraintMarkers.forEach((marker) => marker.remove());
+        }, 100);
       }
-      if (rightBound !== Infinity) {
-        // For visual clarity, show rightBound at the right edge of the element
-        // when element is positioned at rightBound (not the left edge position)
-        const rightBoundViewport = parentRect.left + rightBound + elementWidth;
-        currentConstraintMarkers.push(
-          createDebugMarker({
-            name: "rightBound",
-            x: rightBoundViewport,
-            y: 0,
-            color: "red",
-            orientation: "vertical",
-          }),
-        );
-      }
-    }
-    if (direction.y) {
-      if (topBound > 0) {
-        const topBoundViewport = parentRect.top + topBound;
-        currentConstraintMarkers.push(
-          createDebugMarker({
-            name: "topBound",
-            x: 0,
-            y: topBoundViewport,
-            color: "red",
-            orientation: "horizontal",
-          }),
-        );
-      }
-      if (bottomBound !== Infinity) {
-        // For visual clarity, show bottomBound at the bottom edge of the element
-        // when element is positioned at bottomBound (not the top edge position)
-        const bottomBoundViewport =
-          parentRect.top + bottomBound + elementHeight;
-        currentConstraintMarkers.push(
-          createDebugMarker({
-            name: "bottomBound",
-            x: 0,
-            y: bottomBoundViewport,
-            color: "red",
-            orientation: "horizontal",
-          }),
-        );
-      }
-    }
-  }
-};
-export const updateVisualMarkersOnRelease = () => {
-  if (!DRAG_DEBUG_MARKERS) {
-    return;
-  }
 
-  if (KEEP_MARKERS_ON_RELEASE) {
-    return;
-  }
+      // Clear current marker arrays
+      currentDebugMarkers.length = 0;
+      currentConstraintMarkers.length = 0;
 
-  currentDebugMarkers.forEach((marker) => {
-    marker.remove();
-  });
-  currentConstraintMarkers.forEach((marker) => {
-    marker.remove();
-  });
-  currentDebugMarkers = [];
-  currentConstraintMarkers = [];
+      visible_area_markers: {
+        if (direction.x) {
+          currentDebugMarkers.push(
+            createDebugMarker({
+              name: "visibleAreaLeft",
+              x: visibleArea.left,
+              y: 0,
+              color: "blue",
+              orientation: "vertical",
+            }),
+          );
+          currentDebugMarkers.push(
+            createDebugMarker({
+              name: "visibleAreaRight",
+              x: visibleArea.right,
+              y: 0,
+              color: "green",
+              orientation: "vertical",
+            }),
+          );
+        }
+        if (direction.y) {
+          currentDebugMarkers.push(
+            createDebugMarker({
+              name: "visibleAreaTop",
+              x: 0,
+              y: visibleArea.top,
+              color: "red",
+              orientation: "horizontal",
+            }),
+          );
+          currentDebugMarkers.push(
+            createDebugMarker({
+              name: "visibleAreaBottom",
+              x: 0,
+              y: visibleArea.bottom,
+              color: "orange",
+              orientation: "horizontal",
+            }),
+          );
+        }
+      }
+
+      // Create dynamic constraint markers based on current element size
+      const parentRect = positionedParent.getBoundingClientRect();
+
+      // For debug markers, we'll show bounds constraints and obstacle zones
+      let leftBound = 0;
+      let topBound = 0;
+      let rightBound = Infinity;
+      let bottomBound = Infinity;
+      // Extract bounds from bounds constraints and collect obstacle data
+      for (const constraint of constraints) {
+        if (constraint.type === "bounds") {
+          leftBound = Math.max(leftBound, constraint.left);
+          topBound = Math.max(topBound, constraint.top);
+          rightBound = Math.min(rightBound, constraint.right);
+          bottomBound = Math.min(bottomBound, constraint.bottom);
+        } else if (constraint.type === "obstacle") {
+          const obstacleMarker = createObstacleMarker(constraint, parentRect);
+          currentConstraintMarkers.push(obstacleMarker);
+        }
+      }
+
+      bound_markers: {
+        if (direction.x) {
+          if (leftBound > 0) {
+            const leftBoundViewport = parentRect.left + leftBound;
+            currentConstraintMarkers.push(
+              createDebugMarker({
+                name: "leftBound",
+                x: leftBoundViewport,
+                y: 0,
+                color: "red",
+                orientation: "vertical",
+              }),
+            );
+          }
+          if (rightBound !== Infinity) {
+            // For visual clarity, show rightBound at the right edge of the element
+            // when element is positioned at rightBound (not the left edge position)
+            const rightBoundViewport =
+              parentRect.left + rightBound + elementWidth;
+            currentConstraintMarkers.push(
+              createDebugMarker({
+                name: "rightBound",
+                x: rightBoundViewport,
+                y: 0,
+                color: "red",
+                orientation: "vertical",
+              }),
+            );
+          }
+        }
+        if (direction.y) {
+          if (topBound > 0) {
+            const topBoundViewport = parentRect.top + topBound;
+            currentConstraintMarkers.push(
+              createDebugMarker({
+                name: "topBound",
+                x: 0,
+                y: topBoundViewport,
+                color: "red",
+                orientation: "horizontal",
+              }),
+            );
+          }
+          if (bottomBound !== Infinity) {
+            // For visual clarity, show bottomBound at the bottom edge of the element
+            // when element is positioned at bottomBound (not the top edge position)
+            const bottomBoundViewport =
+              parentRect.top + bottomBound + elementHeight;
+            currentConstraintMarkers.push(
+              createDebugMarker({
+                name: "bottomBound",
+                x: 0,
+                y: bottomBoundViewport,
+                color: "red",
+                orientation: "horizontal",
+              }),
+            );
+          }
+        }
+      }
+    },
+    onRelease: () => {
+      if (KEEP_MARKERS_ON_RELEASE) {
+        return;
+      }
+
+      currentDebugMarkers.forEach((marker) => {
+        marker.remove();
+      });
+      currentConstraintMarkers.forEach((marker) => {
+        marker.remove();
+      });
+      currentDebugMarkers = [];
+      currentConstraintMarkers = [];
+    },
+  };
 };
 
 const createDebugMarker = ({

@@ -77,11 +77,7 @@ import {
   prepareConstraints,
 } from "./constraint.js";
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
-import {
-  updateVisualMarkersOnDrag,
-  updateVisualMarkersOnGrab,
-  updateVisualMarkersOnRelease,
-} from "./debug_markers.js";
+import { setupVisualMarkers } from "./debug_markers.js";
 import { createObstacleConstraintsFromQuerySelector } from "./drag_obstacles.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
@@ -302,9 +298,9 @@ export const createDragGesture = (options) => {
       constraintFunctions.push(...obstacleConstraintFunctions);
     }
 
-    updateVisualMarkersOnGrab();
+    const visualMarkers = setupVisualMarkers({ direction, positionedParent });
     addTeardown(() => {
-      updateVisualMarkersOnRelease();
+      visualMarkers.onRelease();
     });
 
     // Set up dragging attribute
@@ -441,11 +437,9 @@ export const createDragGesture = (options) => {
         visibleArea = visibleAreaBase;
       }
 
-      updateVisualMarkersOnDrag({
-        direction,
+      visualMarkers.onDrag({
         constraints,
         visibleArea,
-        positionedParent,
         elementWidth: currentElementWidth,
         elementHeight: currentElementHeight,
       });
