@@ -67,9 +67,14 @@
  * ```
  */
 
+import { getPositionedParent } from "../offset_parent.js";
 import { getScrollableParent } from "../scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
+import "./drag_gesture_css.js";
+import { getElementBounds } from "./element_bounds.js";
+import { getElementSelector } from "./element_log.js";
+import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 export let DRAG_DEBUG_VISUAL_MARKERS = true;
 export const enableDebugMarkers = () => {
@@ -78,138 +83,6 @@ export const enableDebugMarkers = () => {
 export const disableDebugMarkers = () => {
   DRAG_DEBUG_VISUAL_MARKERS = false;
 };
-
-import.meta.css = /* css */ `
-  .navi_drag_gesture_backdrop {
-    position: fixed;
-    inset: 0;
-    user-select: none;
-  }
-
-  .navi_constraint_feedback_line {
-    position: fixed;
-    pointer-events: none;
-    z-index: 9998;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    transform-origin: left center;
-    border-top: 2px dotted rgba(59, 130, 246, 0.7);
-  }
-
-  .navi_constraint_feedback_line[data-visible] {
-    opacity: 1;
-  }
-
-  .navi_debug_marker {
-    position: fixed;
-    width: 2px;
-    height: 100vh;
-    z-index: 999999;
-    pointer-events: none;
-    opacity: 0.5;
-  }
-
-  .navi_debug_marker--vertical {
-    width: 2px;
-    height: 100vh;
-  }
-
-  .navi_debug_marker--horizontal {
-    width: 100vw;
-    height: 2px;
-  }
-
-  .navi_debug_marker--red {
-    background-color: red;
-  }
-
-  .navi_debug_marker--blue {
-    background-color: blue;
-  }
-
-  .navi_debug_marker--green {
-    background-color: green;
-  }
-
-  .navi_debug_marker--orange {
-    background-color: orange;
-  }
-
-  .navi_debug_marker--purple {
-    background-color: purple;
-  }
-
-  .navi_debug_marker_label {
-    position: absolute;
-    top: 10px;
-    left: 5px;
-    font-size: 12px;
-    font-weight: bold;
-    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.8);
-    pointer-events: none;
-  }
-
-  .navi_debug_marker_label--red {
-    color: red;
-  }
-
-  .navi_debug_marker_label--blue {
-    color: blue;
-  }
-
-  .navi_debug_marker_label--green {
-    color: green;
-  }
-
-  .navi_debug_marker_label--orange {
-    color: orange;
-  }
-
-  .navi_debug_marker_label--purple {
-    color: purple;
-  }
-
-  .navi_obstacle_marker {
-    position: fixed;
-    background-color: orange;
-    opacity: 0.6;
-    z-index: 9999;
-    pointer-events: none;
-  }
-
-  .navi_obstacle_marker_label {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 12px;
-    font-weight: bold;
-    color: white;
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
-    pointer-events: none;
-  }
-
-  .navi_sticky_frontier_marker {
-    position: fixed;
-    background-color: purple;
-    opacity: 0.1;
-    z-index: 9999;
-    pointer-events: none;
-    border: 2px dashed purple;
-  }
-
-  .navi_sticky_frontier_marker_label {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 12px;
-    font-weight: bold;
-    color: purple;
-    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.8);
-    pointer-events: none;
-  }
-`;
 
 export const createDragGesture = ({
   name,
@@ -765,23 +638,6 @@ export const createDragGesture = ({
         scrollableParent,
         { name, positionedParent },
       );
-      const stickyFrontierObjects = [];
-      if (direction.x) {
-        const horizontalFrontiers =
-          createHorizontalStickyFrontiersFromQuerySelector(scrollableParent, {
-            name,
-            scrollableParent,
-          });
-        stickyFrontierObjects.push(...horizontalFrontiers);
-      }
-      if (direction.y) {
-        const verticalFrontiers =
-          createVerticalStickyFrontiersFromQuerySelector(scrollableParent, {
-            name,
-            scrollableParent,
-          });
-        stickyFrontierObjects.push(...verticalFrontiers);
-      }
 
       // Development safeguards: detect impossible/illogical constraints
       if (import.meta.dev) {
@@ -789,7 +645,6 @@ export const createDragGesture = ({
           elementWidth: currentElementWidth,
           elementHeight: currentElementHeight,
           dragName: name,
-          stickyFrontierObjects, // Pass pre-calculated frontiers
         });
       }
 
@@ -809,11 +664,10 @@ export const createDragGesture = ({
       visibleAreaBase.bottom = visibleAreaBase.top + availableHeight;
 
       // Reduce sticky frontiers to a single visible area object
-      const visibleArea = reduceStickyFrontiersToVisibleArea(
-        visibleAreaBase,
-        stickyFrontierObjects,
-        { direction, dragName: name },
-      );
+      const visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
+        direction,
+        dragName: name,
+      });
 
       if (DRAG_DEBUG_VISUAL_MARKERS) {
         drawVisualMarkers({
@@ -1193,265 +1047,6 @@ const createObstaclesFromQuerySelector = (
   return matchingObstacles;
 };
 
-const createStickyFrontierOnAxis = (
-  element,
-  { name, scrollableParent, primarySide, oppositeSide },
-) => {
-  const primaryAttrName = `data-drag-sticky-${primarySide}-frontier`;
-  const oppositeAttrName = `data-drag-sticky-${oppositeSide}-frontier`;
-  const frontiers = element.querySelectorAll(
-    `[${primaryAttrName}], [${oppositeAttrName}]`,
-  );
-  const matchingStickyFrontiers = [];
-  for (const frontier of frontiers) {
-    if (frontier.closest("[data-drag-ignore]")) {
-      continue;
-    }
-    const hasPrimary = frontier.hasAttribute(primaryAttrName);
-    const hasOpposite = frontier.hasAttribute(oppositeAttrName);
-    // Check if element has both sides (invalid)
-    if (hasPrimary && hasOpposite) {
-      const elementSelector = getElementSelector(frontier);
-      console.warn(
-        `Sticky frontier element (${elementSelector}) has both ${primarySide} and ${oppositeSide} attributes. 
-  A sticky frontier should only have one side attribute.`,
-      );
-      continue;
-    }
-    const attrName = hasPrimary ? primaryAttrName : oppositeAttrName;
-    const attributeValue = frontier.getAttribute(attrName);
-    if (attributeValue && name) {
-      const frontierNames = attributeValue.split(",");
-      const isMatching = frontierNames.some(
-        (frontierName) =>
-          frontierName.trim().toLowerCase() === name.toLowerCase(),
-      );
-      if (!isMatching) {
-        continue;
-      }
-    }
-    const frontierBounds = getElementBounds(frontier, scrollableParent);
-    const stickyFrontierObject = {
-      type: "sticky-frontier",
-      element: frontier,
-      side: hasPrimary ? primarySide : oppositeSide,
-      bounds: frontierBounds,
-      name: `Sticky Frontier (${getElementSelector(frontier)}) - side: ${hasPrimary ? primarySide : oppositeSide}`,
-    };
-    matchingStickyFrontiers.push(stickyFrontierObject);
-  }
-  return matchingStickyFrontiers;
-};
-const createHorizontalStickyFrontiersFromQuerySelector = (
-  element,
-  { name, scrollableParent },
-) => {
-  return createStickyFrontierOnAxis(element, {
-    name,
-    scrollableParent,
-    primarySide: "left",
-    oppositeSide: "right",
-  });
-};
-const createVerticalStickyFrontiersFromQuerySelector = (
-  element,
-  { name, scrollableParent },
-) => {
-  return createStickyFrontierOnAxis(element, {
-    name,
-    scrollableParent,
-    primarySide: "top",
-    oppositeSide: "bottom",
-  });
-};
-
-const reduceStickyFrontiersToVisibleArea = (
-  initialVisibleArea,
-  stickyFrontierObjects,
-  { direction, dragName },
-) => {
-  let { left, right, top, bottom } = initialVisibleArea;
-
-  // Process each sticky frontier and reduce visible area accordingly
-  for (const stickyFrontierObject of stickyFrontierObjects) {
-    const frontierRect = stickyFrontierObject.bounds;
-    const frontierSide = stickyFrontierObject.side;
-
-    // Apply constraints based on the specific side this frontier affects
-    if (frontierSide === "left") {
-      // Frontier acts as a left barrier - constrains from the right edge of the frontier
-      if (!direction.x || frontierRect.right <= left) {
-        continue;
-      }
-      const originalRight = right;
-      left = frontierRect.right;
-
-      // Debug warning for invalid visible area caused by this specific frontier
-      if (import.meta.dev && left > right) {
-        console.warn(
-          `Sticky frontier created invalid horizontal visible area: left (${left}) > right (${right}). Original: left=${frontierRect.right}, right=${originalRight}`,
-          {
-            frontierElement: stickyFrontierObject.element,
-            frontierBounds: frontierRect,
-            dragName,
-            frontierSide,
-          },
-        );
-      }
-      continue;
-    }
-
-    if (frontierSide === "right") {
-      // Frontier acts as a right barrier - constrains from the left edge of the frontier
-      if (!direction.x || frontierRect.left >= right) {
-        continue;
-      }
-      const originalLeft = left;
-      right = frontierRect.left;
-
-      // Debug warning for invalid visible area caused by this specific frontier
-      if (import.meta.dev && left > right) {
-        console.warn(
-          `Sticky frontier created invalid horizontal visible area: left (${left}) > right (${right}). Original: left=${originalLeft}, right=${frontierRect.left}`,
-          {
-            frontierElement: stickyFrontierObject.element,
-            frontierBounds: frontierRect,
-            dragName,
-            frontierSide,
-          },
-        );
-      }
-      continue;
-    }
-
-    if (frontierSide === "top") {
-      // Frontier acts as a top barrier - constrains from the bottom edge of the frontier
-      if (!direction.y || frontierRect.bottom <= top) {
-        continue;
-      }
-      const originalBottom = bottom;
-      top = frontierRect.bottom;
-
-      // Debug warning for invalid visible area caused by this specific frontier
-      if (import.meta.dev && top > bottom) {
-        console.warn(
-          `Sticky frontier created invalid vertical visible area: top (${top}) > bottom (${bottom}). Original: top=${frontierRect.bottom}, bottom=${originalBottom}`,
-          {
-            frontierElement: stickyFrontierObject.element,
-            frontierBounds: frontierRect,
-            dragName,
-            frontierSide,
-          },
-        );
-      }
-      continue;
-    }
-
-    if (frontierSide === "bottom") {
-      // Frontier acts as a bottom barrier - constrains from the top edge of the frontier
-      if (!direction.y || frontierRect.top >= bottom) {
-        continue;
-      }
-      const originalTop = top;
-      bottom = frontierRect.top;
-
-      // Debug warning for invalid visible area caused by this specific frontier
-      if (import.meta.dev && top > bottom) {
-        console.warn(
-          `Sticky frontier created invalid vertical visible area: top (${top}) > bottom (${bottom}). Original: top=${originalTop}, bottom=${frontierRect.top}`,
-          {
-            frontierElement: stickyFrontierObject.element,
-            frontierBounds: frontierRect,
-            dragName,
-            frontierSide,
-          },
-        );
-      }
-      continue;
-    }
-  }
-
-  return { left, right, top, bottom };
-};
-
-const getElementSelector = (element) => {
-  const tagName = element.tagName.toLowerCase();
-  const id = element.id ? `#${element.id}` : "";
-  const className = element.className
-    ? `.${element.className.split(" ").join(".")}`
-    : "";
-  return `${tagName}${id}${className}`;
-};
-
-const getPositionedParent = (element) => {
-  let parent = element.parentElement;
-  while (parent && parent !== document.body) {
-    const position = window.getComputedStyle(parent).position;
-    if (
-      position === "relative" ||
-      position === "absolute" ||
-      position === "fixed"
-    ) {
-      return parent;
-    }
-    parent = parent.parentElement;
-  }
-  return document.body;
-};
-/**
- * Get element bounds, handling both normal positioning and data-sticky-left|top
- * @param {HTMLElement} element - The element to get bounds for
- * @returns {Object} Bounds object with left, top, right, bottom properties
- */
-const getElementBounds = (element, positionedParent) => {
-  const rect = element.getBoundingClientRect();
-  const isHorizontallySticky = element.hasAttribute("data-sticky-left");
-  const isVerticallySticky = element.hasAttribute("data-sticky-top");
-  const useStickyAttribute = isHorizontallySticky || isVerticallySticky;
-  if (!useStickyAttribute) {
-    return rect;
-  }
-  const computedStyle = getComputedStyle(element);
-  const hasPositionSticky = computedStyle.position === "sticky";
-  if (hasPositionSticky) {
-    return {
-      sticky: true,
-      ...rect,
-    };
-  }
-
-  // handle virtually sticky obstacles (<col> or <tr>)
-  // are not really sticky but should be handled as such
-  // For sticky elements, calculate current position based on scroll and sticky behavior
-  // The sticky element "sticks" at its CSS left position relative to the scrollable parent
-  let left;
-  const scrollableRect = positionedParent.getBoundingClientRect();
-  const borderSizes = getBorderSizes(positionedParent);
-  if (isHorizontallySticky) {
-    const stickyLeft = parseFloat(computedStyle.left) || 0;
-    const stickyPositionInViewport =
-      scrollableRect.left + borderSizes.left + stickyLeft;
-    left = stickyPositionInViewport;
-  } else {
-    left = rect.left;
-  }
-  let top;
-  if (isVerticallySticky) {
-    const stickyTop = parseFloat(computedStyle.top) || 0;
-    const stickyPositionInViewport =
-      scrollableRect.top + borderSizes.top + stickyTop;
-    top = stickyPositionInViewport;
-  } else {
-    top = rect.top;
-  }
-  return {
-    sticky: true,
-    left,
-    top,
-    right: left + rect.width,
-    bottom: top + rect.height,
-  };
-};
 const createScrollableAreaConstraint = (
   scrollableParent,
   { customLeftBound, customRightBound, customTopBound, customBottomBound } = {},
@@ -1534,7 +1129,7 @@ const createObstacleConstraintFromObject = (obstacleObject) => {
  */
 const validateConstraints = (
   constraints,
-  { elementWidth, elementHeight, dragName, stickyFrontierObjects },
+  { elementWidth, elementHeight, dragName },
 ) => {
   const boundsConstraints = constraints.filter((c) => c.type === "bounds");
   const obstacleConstraints = constraints.filter((c) => c.type === "obstacle");
@@ -1640,22 +1235,6 @@ const validateConstraints = (
       }
     });
   });
-
-  // Validate sticky frontiers (development only, no actual constraints to validate but useful for debugging)
-  if (dragName && stickyFrontierObjects.length > 0) {
-    console.debug(
-      `Found ${stickyFrontierObjects.length} sticky frontier(s) for drag operation "${dragName}"`,
-      {
-        dragName,
-        frontiers: stickyFrontierObjects.map((f, i) => ({
-          index: i,
-          element: f.element,
-          bounds: f.bounds,
-          side: f.side,
-        })),
-      },
-    );
-  }
 };
 
 /**
