@@ -260,6 +260,15 @@ export const createDragGesture = ({
     }
 
     const scrollableParent = getScrollableParent(element);
+    const positionedParent = getPositionedParent(element);
+
+    const scrollableRect = scrollableParent.getBoundingClientRect();
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+    const elementToImpactRect = elementToImpact.getBoundingClientRect();
+    const elementVisuallyImpactedRect =
+      elementVisuallyImpacted.getBoundingClientRect();
+    const parentRect = positionedParentRect;
+
     const computedStyle = getComputedStyle(element);
     if (computedStyle.position === "sticky") {
       const left = parseFloat(computedStyle.left) || 0;
@@ -273,7 +282,6 @@ export const createDragGesture = ({
       });
       addTeardown(() => {
         const elementRect = element.getBoundingClientRect();
-        const scrollableRect = scrollableParent.getBoundingClientRect();
         const leftRelative = elementRect.left - scrollableRect.left;
         const topRelative = elementRect.top - scrollableRect.top;
         restoreStyles();
@@ -284,18 +292,10 @@ export const createDragGesture = ({
       });
     }
 
-    const positionedParent = getPositionedParent(element);
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    const elementToImpactRect = elementToImpact.getBoundingClientRect();
-    const elementVisuallyImpactedRect =
-      elementVisuallyImpacted.getBoundingClientRect();
-
     // Use elementVisuallyImpacted as primary coordinate system for all calculations
     // This keeps constraint logic, logging, and calculations in meaningful visual coordinates
-    const initialLeft =
-      elementVisuallyImpactedRect.left - positionedParentRect.left;
-    const initialTop =
-      elementVisuallyImpactedRect.top - positionedParentRect.top;
+    const initialLeft = elementVisuallyImpactedRect.left - parentRect.left;
+    const initialTop = elementVisuallyImpactedRect.top - parentRect.top;
 
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
