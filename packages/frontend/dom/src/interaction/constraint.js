@@ -50,22 +50,19 @@ export const createObstacleContraint = (bounds, { element, name }) => {
   ) => {
     const { leftAtStart, topAtStart } = gestureInfo;
 
-    // Round constraint boundaries as well for consistent comparison
-
     // Determine current position relative to obstacle (WITHOUT movement)
-    const elementCurrentLeft = roundForConstraints(leftAtStart);
-    const elementCurrentRight = roundForConstraints(
-      elementCurrentLeft + elementWidth,
+    const currentLeft = roundForConstraints(leftAtStart + gestureInfo.xMove);
+    const currentRight = roundForConstraints(
+      leftAtStart + gestureInfo.xMove + elementWidth,
     );
-    const elementCurrentTop = roundForConstraints(topAtStart);
-    const elementCurrentBottom = roundForConstraints(
-      elementCurrentTop + elementHeight,
+    const currentTop = roundForConstraints(topAtStart + gestureInfo.yMove);
+    const currentBottom = roundForConstraints(
+      topAtStart + gestureInfo.yMove + elementHeight,
     );
-
-    const isOnTheLeft = elementCurrentRight <= leftBound;
-    const isOnTheRight = elementCurrentLeft >= rightBound;
-    const isAbove = elementCurrentBottom <= topBound;
-    const isBelow = elementCurrentTop >= bottomBound;
+    const isOnTheLeft = currentRight <= leftBound;
+    const isOnTheRight = currentLeft >= rightBound;
+    const isAbove = currentBottom <= topBound;
+    const isBelow = currentTop >= bottomBound;
 
     // Debug logging to understand element position
     if (CONSOLE_DEBUG_CONSTRAINTS) {
@@ -73,7 +70,7 @@ export const createObstacleContraint = (bounds, { element, name }) => {
         `Element position relative to obstacle: left=${isOnTheLeft}, right=${isOnTheRight}, above=${isAbove}, below=${isBelow}`,
       );
       console.log(
-        `Element: currentRight=${elementCurrentRight}, currentBottom=${elementCurrentBottom}`,
+        `Element: currentRight=${currentRight}, currentBottom=${currentBottom}`,
       );
       console.log(
         `Obstacle: leftBound=${leftBound}, rightBound=${rightBound}, topBound=${topBound}, bottomBound=${bottomBound}`,
@@ -146,23 +143,15 @@ export const createObstacleContraint = (bounds, { element, name }) => {
 
     // Element is overlapping with obstacle - push it out in the direction of least resistance
     // Calculate current visual position with movement applied
-    const currentVisualLeft = leftAtStart + xMove;
-    const currentVisualTop = topAtStart + yMove;
-    const currentActualLeft = roundForConstraints(currentVisualLeft);
-    const currentActualRight = roundForConstraints(
-      currentActualLeft + elementWidth,
-    );
-    const currentActualTop = roundForConstraints(currentVisualTop);
-    const currentActualBottom = roundForConstraints(
-      currentActualTop + elementHeight,
-    );
-
+    const futureLeft = leftAtStart + xMove;
+    const futureTop = topAtStart + yMove;
+    const futureRight = leftAtStart + xMove + elementWidth;
+    const futureBottom = topAtStart + yMove + elementHeight;
     // Calculate distances to push element out in each direction
-    const distanceToLeft = currentActualRight - leftBound; // Distance to push left
-    const distanceToRight = rightBound - currentActualLeft; // Distance to push right
-    const distanceToTop = currentActualBottom - topBound; // Distance to push up
-    const distanceToBottom = bottomBound - currentActualTop; // Distance to push down
-
+    const distanceToLeft = futureRight - leftBound; // Distance to push left
+    const distanceToRight = rightBound - futureLeft; // Distance to push right
+    const distanceToTop = futureBottom - topBound; // Distance to push up
+    const distanceToBottom = bottomBound - futureTop; // Distance to push down
     // Find the minimum distance (direction of least resistance)
     const minDistance = Math.min(
       distanceToLeft,
