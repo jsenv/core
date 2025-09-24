@@ -6,24 +6,25 @@ export const createBoundConstraint = (bounds, { element, name } = {}) => {
   const apply = (xMove, yMove, { gestureInfo }) => {
     const { leftAtStart, topAtStart } = gestureInfo;
 
+    let constrainedXMove = xMove;
+    let constrainedYMove = yMove;
     // Apply bounds constraints directly using visual coordinates
     // initialLeft/initialTop now represent elementVisuallyImpacted position
     const minAllowedXMove = left - leftAtStart;
     const maxAllowedXMove = right - leftAtStart;
     const minAllowedYMove = top - topAtStart;
     const maxAllowedYMove = bottom - topAtStart;
-    const constraints = [];
     if (xMove < minAllowedXMove) {
-      constraints.push({ x: minAllowedXMove });
+      constrainedXMove = minAllowedXMove;
     } else if (xMove > maxAllowedXMove) {
-      constraints.push({ x: maxAllowedXMove });
+      constrainedXMove = maxAllowedXMove;
     }
     if (yMove < minAllowedYMove) {
-      constraints.push({ y: minAllowedYMove });
+      constrainedYMove = minAllowedYMove;
     } else if (yMove > maxAllowedYMove) {
-      constraints.push({ y: maxAllowedYMove });
+      constrainedYMove = maxAllowedYMove;
     }
-    return constraints;
+    return [constrainedXMove, constrainedYMove];
   };
 
   return {
@@ -48,7 +49,8 @@ export const createObstacleContraint = (bounds, { element, name }) => {
     { gestureInfo, elementWidth, elementHeight },
   ) => {
     const { leftAtStart, topAtStart } = gestureInfo;
-    const enforcements = [];
+    let constrainedXMove = xMove;
+    let constrainedYMove = yMove;
 
     // Calculate current visual position (initialLeft/initialTop are now visual coordinates)
     const currentVisualLeft = leftAtStart + xMove;
@@ -76,7 +78,7 @@ export const createObstacleContraint = (bounds, { element, name }) => {
 
     // Always check Y constraints if element is above or below
     if (isAbove || isBelow) {
-      const proposedLeft = leftAtStart + xMove;
+      const proposedLeft = leftAtStart + constrainedXMove;
       const proposedRight = proposedLeft + elementWidth;
       const wouldHaveXOverlap =
         proposedLeft < rightBound && proposedRight > leftBound;
@@ -85,22 +87,22 @@ export const createObstacleContraint = (bounds, { element, name }) => {
         if (isAbove) {
           // Element above - prevent it from going down into obstacle
           const maxAllowedYMove = topBound - elementHeight - topAtStart;
-          if (yMove > maxAllowedYMove) {
-            enforcements.push({ y: maxAllowedYMove });
+          if (constrainedYMove > maxAllowedYMove) {
+            constrainedYMove = maxAllowedYMove;
           }
         } else if (isBelow) {
           // Element below - prevent it from going up into obstacle
           const minAllowedYMove = bottomBound - topAtStart;
-          if (yMove < minAllowedYMove) {
-            enforcements.push({ y: minAllowedYMove });
+          if (constrainedYMove < minAllowedYMove) {
+            constrainedYMove = minAllowedYMove;
           }
         }
       }
     }
 
-    // Always check X constraints if element is on left or right (even after Y adjustment)
+    // Always check X constraints if element is on left or right (using constrained Y move)
     if (isOnTheLeft || isOnTheRight) {
-      const proposedTop = topAtStart + yMove; // Use potentially adjusted yMove
+      const proposedTop = topAtStart + constrainedYMove; // Use constrained yMove
       const proposedBottom = proposedTop + elementHeight;
       const wouldHaveYOverlap =
         proposedTop < bottomBound && proposedBottom > topBound;
@@ -109,14 +111,14 @@ export const createObstacleContraint = (bounds, { element, name }) => {
         if (isOnTheLeft) {
           // Element on left - prevent it from going right into obstacle
           const maxAllowedXMove = leftBound - elementWidth - leftAtStart;
-          if (xMove > maxAllowedXMove) {
-            enforcements.push({ x: maxAllowedXMove });
+          if (constrainedXMove > maxAllowedXMove) {
+            constrainedXMove = maxAllowedXMove;
           }
         } else if (isOnTheRight) {
           // Element on right - prevent it from going left into obstacle
           const minAllowedXMove = rightBound - leftAtStart;
-          if (xMove < minAllowedXMove) {
-            enforcements.push({ x: minAllowedXMove });
+          if (constrainedXMove < minAllowedXMove) {
+            constrainedXMove = minAllowedXMove;
           }
         }
       }
@@ -148,31 +150,31 @@ export const createObstacleContraint = (bounds, { element, name }) => {
       if (minDistance === distanceToLeft) {
         // Push left: element should not go past leftBound - elementWidth
         const maxAllowedXMove = leftBound - elementWidth - leftAtStart;
-        if (xMove > maxAllowedXMove) {
-          enforcements.push({ x: maxAllowedXMove });
+        if (constrainedXMove > maxAllowedXMove) {
+          constrainedXMove = maxAllowedXMove;
         }
       } else if (minDistance === distanceToRight) {
         // Push right: element should not go before rightBound
         const minAllowedXMove = rightBound - leftAtStart;
-        if (xMove < minAllowedXMove) {
-          enforcements.push({ x: minAllowedXMove });
+        if (constrainedXMove < minAllowedXMove) {
+          constrainedXMove = minAllowedXMove;
         }
       } else if (minDistance === distanceToTop) {
         // Push up: element should not go past topBound - elementHeight
         const maxAllowedYMove = topBound - elementHeight - topAtStart;
-        if (yMove > maxAllowedYMove) {
-          enforcements.push({ y: maxAllowedYMove });
+        if (constrainedYMove > maxAllowedYMove) {
+          constrainedYMove = maxAllowedYMove;
         }
       } else if (minDistance === distanceToBottom) {
         // Push down: element should not go before bottomBound
         const minAllowedYMove = bottomBound - topAtStart;
-        if (yMove < minAllowedYMove) {
-          enforcements.push({ y: minAllowedYMove });
+        if (constrainedYMove < minAllowedYMove) {
+          constrainedYMove = minAllowedYMove;
         }
       }
     }
 
-    return enforcements;
+    return [constrainedXMove, constrainedYMove];
   };
 
   return {
@@ -246,56 +248,55 @@ export const applyConstraints = (
   // Capture original movement values for debug logging
   const xMoveNoConstraint = xMove;
   const yMoveNoConstraint = yMove;
+  let currentXMove = xMove;
+  let currentYMove = yMove;
 
   for (const constraint of constraints) {
-    const enforcements = constraint.apply(xMove, yMove, {
+    const result = constraint.apply(currentXMove, currentYMove, {
       gestureInfo,
       elementWidth,
       elementHeight,
       interactionType,
     });
-    if (!enforcements || enforcements.length === 0) {
+    if (!result) {
       continue;
     }
-    for (const enforcement of enforcements) {
-      if (direction.x && enforcement.x !== undefined) {
-        logConstraintEnforcement(
-          "x",
-          xMove,
-          enforcement.x,
-          constraint,
-          interactionType,
-          gestureInfo,
-        );
-        xMove = enforcement.x;
-        continue;
-      }
-      if (direction.y && enforcement.y !== undefined) {
-        logConstraintEnforcement(
-          "y",
-          yMove,
-          enforcement.y,
-          constraint,
-          interactionType,
-          gestureInfo,
-        );
-        yMove = enforcement.y;
-        continue;
-      }
+    const [constrainedXMove, constrainedYMove] = result;
+    if (direction.x && constrainedXMove !== currentXMove) {
+      logConstraintEnforcement(
+        "x",
+        currentXMove,
+        constrainedXMove,
+        constraint,
+        interactionType,
+        gestureInfo,
+      );
+      currentXMove = constrainedXMove;
+    }
+    if (direction.y && constrainedYMove !== currentYMove) {
+      logConstraintEnforcement(
+        "y",
+        currentYMove,
+        constrainedYMove,
+        constraint,
+        interactionType,
+        gestureInfo,
+      );
+      currentYMove = constrainedYMove;
     }
   }
   // Log when no constraints were applied (movement unchanged)
   if (
     CONSOLE_DEBUG_CONSTRAINTS &&
-    xMoveNoConstraint === xMove &&
-    yMoveNoConstraint === yMove
+    xMoveNoConstraint === currentXMove &&
+    yMoveNoConstraint === currentYMove
   ) {
     console.debug(
-      `Drag by ${interactionType}: no constraint enforcement needed (xMove=${xMove.toFixed(2)}, yMove=${yMove.toFixed(2)})`,
+      `Drag by ${interactionType}: no constraint enforcement needed (xMove=${currentXMove.toFixed(2)}, yMove=${currentYMove.toFixed(2)})`,
       gestureInfo,
     );
   }
-  return [xMove, yMove];
+  return [currentXMove, currentYMove];
 };
 const logConstraintEnforcement = (
   axis,
