@@ -263,6 +263,7 @@ export const applyConstraints = (
           enforcement.x,
           constraint,
           interactionType,
+          gestureInfo,
         );
         xMove = enforcement.x;
         continue;
@@ -274,6 +275,7 @@ export const applyConstraints = (
           enforcement.y,
           constraint,
           interactionType,
+          gestureInfo,
         );
         yMove = enforcement.y;
         continue;
@@ -288,6 +290,7 @@ export const applyConstraints = (
   ) {
     console.debug(
       `Drag by ${interactionType}: no constraint enforcement needed (xMove=${xMove.toFixed(2)}, yMove=${yMove.toFixed(2)})`,
+      gestureInfo,
     );
   }
   return [xMove, yMove];
@@ -298,6 +301,7 @@ const logConstraintEnforcement = (
   constrainedValue,
   constraint,
   interactionType = "unknown",
+  gestureInfo,
 ) => {
   if (!CONSOLE_DEBUG_CONSTRAINTS) {
     return;
@@ -306,6 +310,7 @@ const logConstraintEnforcement = (
   console.debug(
     `Drag by ${interactionType}: ${axis} movement ${direction} from ${originalValue.toFixed(2)} to ${constrainedValue.toFixed(2)} by ${constraint.name}`,
     constraint.element,
+    gestureInfo,
   );
 };
 
