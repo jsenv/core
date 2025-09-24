@@ -1009,38 +1009,42 @@ const createScrollableAreaConstraint = (
     const scrollHeight = scrollableParent.scrollHeight;
 
     // Calculate horizontal bounds: element can be positioned from left=0 to right=constraint
-    let left = 0;
-    let right;
-    if (elementWidth >= scrollWidth) {
-      // Element fills or exceeds container width - constraint to left edge only
-      right = scrollWidth;
+    let left;
+    if (customLeftBound === undefined) {
+      left = 0;
     } else {
-      // Normal case: element can move within available space
-      right = scrollWidth - elementWidth;
+      left = customLeftBound;
+    }
+    let right;
+    if (customRightBound === undefined) {
+      if (elementWidth >= scrollWidth) {
+        // Element fills or exceeds container width - constraint to left edge only
+        right = scrollWidth;
+      } else {
+        // Normal case: element can move within available space
+        right = scrollWidth - elementWidth;
+      }
+    } else {
+      right = customRightBound;
     }
 
     // Calculate vertical bounds: element can be positioned from top=0 to bottom=constraint
-    let top = 0;
-    let bottom;
-    if (elementHeight >= scrollHeight) {
-      // Element fills or exceeds container height - constraint to top edge only
-      bottom = scrollHeight;
+    let top;
+    if (customTopBound === undefined) {
+      top = 0;
     } else {
-      // Normal case: element can move within available space
-      bottom = scrollHeight - elementHeight;
-    }
-
-    // Override with custom bounds if provided
-    if (customLeftBound !== undefined) {
-      left = customLeftBound;
-    }
-    if (customRightBound !== undefined) {
-      right = customRightBound;
-    }
-    if (customTopBound !== undefined) {
       top = customTopBound;
     }
-    if (customBottomBound !== undefined) {
+    let bottom;
+    if (customBottomBound === undefined) {
+      if (elementHeight >= scrollHeight) {
+        // Element fills or exceeds container height - constraint to top edge only
+        bottom = scrollHeight;
+      } else {
+        // Normal case: element can move within available space
+        bottom = scrollHeight - elementHeight;
+      }
+    } else {
       bottom = customBottomBound;
     }
 
@@ -1051,13 +1055,7 @@ const createScrollableAreaConstraint = (
       right,
       bottom,
       element: scrollableParent,
-      name:
-        customLeftBound !== undefined ||
-        customRightBound !== undefined ||
-        customTopBound !== undefined ||
-        customBottomBound !== undefined
-          ? "custom bounds constraint"
-          : "scrollable area bounds",
+      name: "scrollable area bounds",
     };
   };
 };
