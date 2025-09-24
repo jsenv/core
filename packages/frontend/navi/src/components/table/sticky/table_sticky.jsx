@@ -170,50 +170,48 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_container {
-    --column-sticky-frontier-width: 5px;
+    --left-sticky-frontier-width: 5px;
   }
 
-  .navi_table_column_sticky_frontier {
+  .navi_table_left_sticky_frontier {
     position: absolute;
     right: 0;
     top: 0;
     bottom: 0;
-    width: var(--column-sticky-frontier-width);
+    width: var(--left-sticky-frontier-width);
     background: #444746;
     cursor: grab;
     z-index: ${Z_INDEX_STICKY_FRONTIER_HANDLE};
   }
-  .navi_table_column_sticky_frontier[data-left] {
+  .navi_table_left_sticky_frontier[data-left] {
     left: 0;
     right: auto;
   }
-  .navi_table_column_sticky_frontier_ghost,
-  .navi_table_column_sticky_frontier_preview {
+  .navi_table_left_sticky_frontier_ghost,
+  .navi_table_left_sticky_frontier_preview {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: var(--column-sticky-frontier-width);
+    width: var(--left-sticky-frontier-width);
     pointer-events: none;
     opacity: 0;
   }
-  .navi_table_column_sticky_frontier_ghost[data-visible],
-  .navi_table_column_sticky_frontier_preview[data-visible] {
+  .navi_table_left_sticky_frontier_ghost[data-visible],
+  .navi_table_left_sticky_frontier_preview[data-visible] {
     opacity: 1;
   }
-  .navi_table_column_sticky_frontier_ghost {
+  .navi_table_left_sticky_frontier_ghost {
     z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
     background: rgba(68, 71, 70, 0.5);
     left: calc(
-      var(--table-column-right, 0px) - var(--column-sticky-frontier-width)
+      var(--table-column-right, 0px) - var(--left-sticky-frontier-width)
     );
   }
-  .navi_table_column_sticky_frontier_preview {
+  .navi_table_left_sticky_frontier_preview {
     z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
     background: red;
     left: calc(
-      var(--table-column-preview-right, 0px) - var(
-          --column-sticky-frontier-width
-        )
+      var(--table-column-preview-right, 0px) - var(--left-sticky-frontier-width)
     );
   }
 `;
@@ -225,26 +223,26 @@ import.meta.css = /* css */ `
  * so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
  * as a table cell uses a position relative)
  */
-export const TableColumnStickyFrontier = ({
-  columnStickyFrontierIndex,
-  onColumnStickyFrontierChange,
+export const TableLeftStickyFrontier = ({
+  leftStickyFrontierIndex,
+  onLeftStickyFrontierChange,
 }) => {
   return (
     <div
-      className="navi_table_column_sticky_frontier"
-      data-left={columnStickyFrontierIndex === -1 ? "" : undefined}
-      inert={!onColumnStickyFrontierChange}
+      className="navi_table_left_sticky_frontier"
+      data-left={leftStickyFrontierIndex === -1 ? "" : undefined}
+      inert={!onLeftStickyFrontierChange}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
         }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag column
-        initMoveColumnStickyFrontierByMousedown(e, {
-          columnIndex: columnStickyFrontierIndex,
+        initMoveLeftStickyFrontierByMousedown(e, {
+          columnIndex: leftStickyFrontierIndex,
           onRelease: (_, index) => {
-            if (index !== columnStickyFrontierIndex) {
-              onColumnStickyFrontierChange(index);
+            if (index !== leftStickyFrontierIndex) {
+              onLeftStickyFrontierChange(index);
             }
           },
         });
@@ -252,18 +250,18 @@ export const TableColumnStickyFrontier = ({
     ></div>
   );
 };
-export const TableColumnStickyFrontierGhost = () => {
-  return <div className="navi_table_column_sticky_frontier_ghost"></div>;
+export const TableLeftStickyFrontierGhost = () => {
+  return <div className="navi_table_left_sticky_frontier_ghost"></div>;
 };
 
-export const TableColumnStickyFrontierPreview = () => {
-  return <div className="navi_table_column_sticky_frontier_preview"></div>;
+export const TableLeftStickyFrontierPreview = () => {
+  return <div className="navi_table_left_sticky_frontier_preview"></div>;
 };
 
 // When we cross half the width of a column we inject a second vertical line where the new frontier would be
 // to tell user "hey if you grab here, the frontier will be there"
 // At this stage user can see 3 frontiers. Where it is, the one he grab, the futurue one if he releases.
-const initMoveColumnStickyFrontierByMousedown = (
+const initMoveLeftStickyFrontierByMousedown = (
   mousedownEvent,
   { columnIndex, onGrab, onDrag, onRelease },
 ) => {
@@ -272,16 +270,16 @@ const initMoveColumnStickyFrontierByMousedown = (
   const tableContainer = table.closest(".navi_table_container");
   const colgroup = table.querySelector("colgroup");
   const colElements = Array.from(colgroup.children);
-  const tableColumnStickyFrontierGhost = tableContainer.querySelector(
-    ".navi_table_column_sticky_frontier_ghost",
+  const tableLeftStickyFrontierGhost = tableContainer.querySelector(
+    ".navi_table_left_sticky_frontier_ghost",
   );
-  const tableColumnStickyFrontierPreview = tableContainer.querySelector(
-    ".navi_table_column_sticky_frontier_preview",
+  const tableLeftStickyFrontierPreview = tableContainer.querySelector(
+    ".navi_table_left_sticky_frontier_preview",
   );
   const tableContainerRect = tableContainer.getBoundingClientRect();
 
   if (columnIndex === -1) {
-    tableColumnStickyFrontierGhost.style.setProperty(
+    tableLeftStickyFrontierGhost.style.setProperty(
       "--table-column-right",
       `0px`,
     );
@@ -289,25 +287,25 @@ const initMoveColumnStickyFrontierByMousedown = (
     const tableCellRect = tableCell.getBoundingClientRect();
     const columnLeftRelative = tableCellRect.left - tableContainerRect.left;
     const columnRightRelative = columnLeftRelative + tableCellRect.width;
-    tableColumnStickyFrontierGhost.style.setProperty(
+    tableLeftStickyFrontierGhost.style.setProperty(
       "--table-column-right",
       `${columnRightRelative}px`,
     );
   }
-  tableColumnStickyFrontierGhost.setAttribute("data-visible", "");
+  tableLeftStickyFrontierGhost.setAttribute("data-visible", "");
 
-  let futureColumnStickyFrontierIndex = columnIndex;
-  const onFutureColumnStickyFrontierIndexChange = (index) => {
-    futureColumnStickyFrontierIndex = index;
+  let futureLeftStickyFrontierIndex = columnIndex;
+  const onFutureLeftStickyFrontierIndexChange = (index) => {
+    futureLeftStickyFrontierIndex = index;
 
     if (index === columnIndex) {
-      tableColumnStickyFrontierPreview.removeAttribute("data-visible");
+      tableLeftStickyFrontierPreview.removeAttribute("data-visible");
       return;
     }
     let previewPosition;
     if (index === -1) {
       previewPosition =
-        tableColumnStickyFrontierGhost.getBoundingClientRect().width;
+        tableLeftStickyFrontierGhost.getBoundingClientRect().width;
     } else {
       const colElement = colElements[index];
       const columnRect = colElement.getBoundingClientRect();
@@ -315,11 +313,11 @@ const initMoveColumnStickyFrontierByMousedown = (
       previewPosition = columnRect.right - tableContainerRect.left;
     }
 
-    tableColumnStickyFrontierPreview.style.setProperty(
+    tableLeftStickyFrontierPreview.style.setProperty(
       "--table-column-preview-right",
       `${previewPosition}px`,
     );
-    tableColumnStickyFrontierPreview.setAttribute("data-visible", "");
+    tableLeftStickyFrontierPreview.setAttribute("data-visible", "");
   };
 
   // Find the column at the middle of the visible area to use as drag boundary
@@ -366,8 +364,7 @@ const initMoveColumnStickyFrontierByMousedown = (
     onGrab,
     onDrag: (gesture) => {
       update_frontier_index: {
-        const ghostRect =
-          tableColumnStickyFrontierGhost.getBoundingClientRect();
+        const ghostRect = tableLeftStickyFrontierGhost.getBoundingClientRect();
         const ghostCenterX = ghostRect.left + ghostRect.width / 2;
         // Find which column the ghost is currently over
         let i = 0;
@@ -383,33 +380,33 @@ const initMoveColumnStickyFrontierByMousedown = (
           // on the column, left or right side?
           const columnCenterX = columnRect.left + columnRect.width / 2;
           if (ghostCenterX < columnCenterX) {
-            onFutureColumnStickyFrontierIndexChange(i - 1);
+            onFutureLeftStickyFrontierIndexChange(i - 1);
             break;
           }
-          onFutureColumnStickyFrontierIndexChange(i);
+          onFutureLeftStickyFrontierIndexChange(i);
           break;
         }
       }
-      onDrag?.(gesture, futureColumnStickyFrontierIndex);
+      onDrag?.(gesture, futureLeftStickyFrontierIndex);
     },
     onRelease: (gesture) => {
-      onRelease?.(gesture, futureColumnStickyFrontierIndex);
+      onRelease?.(gesture, futureLeftStickyFrontierIndex);
     },
   });
 
   dragToMoveGesture.addTeardown(() => {
-    tableColumnStickyFrontierPreview.removeAttribute("data-visible");
-    tableColumnStickyFrontierPreview.style.removeProperty(
+    tableLeftStickyFrontierPreview.removeAttribute("data-visible");
+    tableLeftStickyFrontierPreview.style.removeProperty(
       "--table-column-preview-right",
     );
 
-    tableColumnStickyFrontierGhost.removeAttribute("data-visible");
-    tableColumnStickyFrontierGhost.style.removeProperty("--table-column-right");
-    tableColumnStickyFrontierGhost.style.left = ""; // reset left set by the drag
+    tableLeftStickyFrontierGhost.removeAttribute("data-visible");
+    tableLeftStickyFrontierGhost.style.removeProperty("--table-column-right");
+    tableLeftStickyFrontierGhost.style.left = ""; // reset left set by the drag
 
     restoreColumnDragObstacleAttr();
   });
   dragToMoveGesture.grabViaMousedown(mousedownEvent, {
-    element: tableColumnStickyFrontierGhost,
+    element: tableLeftStickyFrontierGhost,
   });
 };
