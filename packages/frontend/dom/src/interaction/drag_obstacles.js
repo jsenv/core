@@ -3,10 +3,10 @@ import { getElementSelector } from "./element_log.js";
 
 export const createObstacleConstraintsFromQuerySelector = (
   element,
-  { name, sticky, positionedParent },
+  { name, sticky, positionedParent, obstacleQuerySelector },
 ) => {
   const positionedParentRect = positionedParent.getBoundingClientRect();
-  const obstacles = element.querySelectorAll("[data-drag-obstacle]");
+  const obstacles = element.querySelectorAll(obstacleQuerySelector);
   const obstacleConstraints = [];
   for (const obstacle of obstacles) {
     if (

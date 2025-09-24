@@ -112,7 +112,8 @@ export const createDragGesture = ({
   customTopBound,
   customBottomBound,
   stickyFrontiers = true,
-  obstacleAttribute = true,
+  keepInScrollableArea = true,
+  obstacleQuerySelector = "[data-drag-obstacle]",
   lifecycle,
 }) => {
   const teardownCallbackSet = new Set();
@@ -324,20 +325,25 @@ export const createDragGesture = ({
     const constraintFunctions = [];
 
     // Always add bounds constraint (scrollable area)
-    const boundsConstraint = createScrollableAreaConstraint(scrollableParent, {
-      customLeftBound,
-      customRightBound,
-      customTopBound,
-      customBottomBound,
-    });
-    constraintFunctions.push(boundsConstraint);
-
-    if (obstacleAttribute) {
+    if (keepInScrollableArea) {
+      const boundsConstraint = createScrollableAreaConstraint(
+        scrollableParent,
+        {
+          customLeftBound,
+          customRightBound,
+          customTopBound,
+          customBottomBound,
+        },
+      );
+      constraintFunctions.push(boundsConstraint);
+    }
+    if (obstacleQuerySelector) {
       const obstacleConstraints = createObstacleConstraintsFromQuerySelector(
         scrollableParent,
         {
           name,
           positionedParent,
+          obstacleQuerySelector,
         },
       );
       constraintFunctions.push(...obstacleConstraints);
