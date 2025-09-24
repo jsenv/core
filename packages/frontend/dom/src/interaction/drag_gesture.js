@@ -1079,7 +1079,7 @@ const createStickyFrontierOnAxis = (
   element,
   { name, scrollableParent, primarySide, oppositeSide },
 ) => {
-  const primaryAttrName = `data-drag-sticky-${primarySide}}-frontier`;
+  const primaryAttrName = `data-drag-sticky-${primarySide}-frontier`;
   const oppositeAttrName = `data-drag-sticky-${oppositeSide}-frontier`;
   const frontiers = element.querySelectorAll(
     `[${primaryAttrName}], [${oppositeAttrName}]`,
