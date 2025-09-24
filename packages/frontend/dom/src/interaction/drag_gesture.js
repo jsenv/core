@@ -245,16 +245,18 @@ export const createDragGesture = ({
     teardownCallbackSet.add(callback);
   };
 
-  const grab = ({
+  const grab = (
     element,
-    elementToImpact = element,
-    elementVisuallyImpacted = elementToImpact,
-    direction = defaultDirection,
-    cursor = "grabbing",
-    xAtStart,
-    yAtStart,
-    interactionType,
-  }) => {
+    {
+      xAtStart = 0,
+      yAtStart = 0,
+      elementToImpact = element,
+      elementVisuallyImpacted = elementToImpact,
+      direction = defaultDirection,
+      cursor = "grabbing",
+      interactionType,
+    } = {},
+  ) => {
     if (!direction.x && !direction.y) {
       return null;
     }
@@ -326,7 +328,6 @@ export const createDragGesture = ({
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
-      isMouseUp: false,
       initialLeft,
       initialTop,
       initialScrollLeft,
@@ -931,13 +932,12 @@ export const createDragGesture = ({
       }
     };
 
-    const release = (
-      currentXRelative,
-      currentYRelative,
-      { interactionType = "programmatic" } = {},
-    ) => {
-      gestureInfo.isMouseUp = true;
-      drag(currentXRelative, currentYRelative, {
+    const release = ({
+      xAtRelease = gestureInfo.x,
+      yAtRelease = gestureInfo.y,
+      interactionType = "programmatic",
+    } = {}) => {
+      drag(xAtRelease, yAtRelease, {
         isRelease: true,
         interactionType,
       });
@@ -956,7 +956,7 @@ export const createDragGesture = ({
     };
   };
 
-  const grabViaMousedown = (mousedownEvent, options) => {
+  const grabViaMousedown = (mousedownEvent, { element, ...options } = {}) => {
     if (mousedownEvent.button !== 0) {
       return null;
     }
@@ -965,43 +965,38 @@ export const createDragGesture = ({
       return null;
     }
 
-    const xAtStart = mousedownEvent.clientX;
-    const yAtStart = mousedownEvent.clientY;
-
-    const element = options.element;
     const positionedParent = getPositionedParent(element);
-    const positionedParentRect = positionedParent.getBoundingClientRect();
+    const parentRect = positionedParent.getBoundingClientRect();
+    const mouseEventRelativeCoords = (mouseEvent) => {
+      const xViewport = mouseEvent.clientX;
+      const yViewport = mouseEvent.clientY;
+      const xRelative = xViewport - parentRect.left;
+      const yRelative = yViewport - parentRect.top;
+      return [xRelative, yRelative];
+    };
 
-    // Convert mouse start position to relative coordinates
-    const xAtStartRelative = xAtStart - positionedParentRect.left;
-    const yAtStartRelative = yAtStart - positionedParentRect.top;
-
-    const dragGesture = grab({
-      ...options,
-      xAtStart: xAtStartRelative,
-      yAtStart: yAtStartRelative,
+    const [xAtStart, yAtStart] = mouseEventRelativeCoords(mousedownEvent);
+    const dragGesture = grab(element, {
+      xAtStart,
+      yAtStart,
       interactionType: "mousedown",
+      ...options,
     });
 
-    const handleMouseMove = (e) => {
-      const currentPositionedParentRect =
-        positionedParent.getBoundingClientRect();
-      const currentXRelative = e.clientX - currentPositionedParentRect.left;
-      const currentYRelative = e.clientY - currentPositionedParentRect.top;
-      dragGesture.drag(currentXRelative, currentYRelative, {
-        mouseX: e.clientX,
-        mouseY: e.clientY,
+    const handleMouseMove = (mousemoveEvent) => {
+      const [x, y] = mouseEventRelativeCoords(mousemoveEvent);
+      dragGesture.drag(x, y, {
+        mouseX: mousemoveEvent.clientX,
+        mouseY: mousemoveEvent.clientY,
         interactionType: "mousemove",
       });
     };
 
-    const handleMouseUp = (e) => {
-      e.preventDefault();
-      const currentPositionedParentRect =
-        positionedParent.getBoundingClientRect();
-      const currentXRelative = e.clientX - currentPositionedParentRect.left;
-      const currentYRelative = e.clientY - currentPositionedParentRect.top;
-      dragGesture.release(currentXRelative, currentYRelative, {
+    const handleMouseUp = (mouseupEvent) => {
+      const [x, y] = mouseEventRelativeCoords(mouseupEvent);
+      dragGesture.release({
+        x,
+        y,
         interactionType: "mouseup",
       });
     };
