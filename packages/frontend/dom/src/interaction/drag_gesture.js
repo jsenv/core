@@ -91,7 +91,7 @@ const BASIC_MODE_OPTIONS = {
   keepInScrollableArea: true,
   obstacleQuerySelector: null,
   showConstraintFeedbackLine: false,
-  dragViaScroll: true,
+  dragViaScroll: false,
 };
 
 export const createDragGesture = (options) => {

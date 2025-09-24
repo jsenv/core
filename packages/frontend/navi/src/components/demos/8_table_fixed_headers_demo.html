@@ -342,6 +342,10 @@
       // Render the app
       render(<FixedHeadersDemo />, document.getElementById("root"));
 
+      setTimeout(() => {
+        document.querySelector(".table-container").scrollLeft = 1500;
+      }, 500);
+
       console.log("Fixed Headers Demo loaded with large dataset:");
       console.log(
         `- ${data.length} rows × 10 columns = ${data.length * 10} total cells`,
