@@ -181,21 +181,41 @@ import.meta.css = /* css */ `
     --sticky-top-frontier-height: 5px;
   }
 
-  .navi_table_sticky_left_frontier {
+  .navi_table_cell_sticky_frontier {
     position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: var(--sticky-left-frontier-width);
     background: #444746;
     opacity: 0.5;
     cursor: grab;
     z-index: ${Z_INDEX_STICKY_FRONTIER_HANDLE};
   }
-  .navi_table_sticky_left_frontier[data-left] {
+
+  .navi_table_cell_sticky_frontier[data-left] {
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--sticky-left-frontier-width);
+  }
+  .navi_table_cell_sticky_frontier[data-left][data-opposite] {
     left: 0;
     right: auto;
   }
+  .navi_table_cell_sticky_frontier[data-top] {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--sticky-top-frontier-height);
+  }
+  .navi_table_cell_sticky_frontier[data-top][data-opposite] {
+    top: 0;
+    bottom: auto;
+  }
+  .navi_table_cell_sticky_frontier[data-left][data-top] {
+    bottom: 0;
+    right: 0;
+    left: auto;
+    top: auto;
+  }
+
   .navi_table_sticky_left_frontier_ghost,
   .navi_table_sticky_left_frontier_preview {
     position: absolute;
@@ -228,21 +248,6 @@ import.meta.css = /* css */ `
     );
   }
 
-  .navi_table_sticky_top_frontier {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: var(--sticky-top-frontier-height);
-    background: #444746;
-    opacity: 0.5;
-    cursor: grab;
-    z-index: ${Z_INDEX_STICKY_FRONTIER_HANDLE};
-  }
-  .navi_table_sticky_top_frontier[data-top] {
-    top: 0;
-    bottom: auto;
-  }
   .navi_table_sticky_top_frontier_ghost,
   .navi_table_sticky_top_frontier_preview {
     position: absolute;
@@ -273,15 +278,6 @@ import.meta.css = /* css */ `
           --sticky-top-frontier-height
         )
     );
-  }
-
-  .navi_table_sticky_top_left_frontier {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    width: var(--sticky-left-frontier-width);
-    height: var(--sticky-top-frontier-height);
-    background: #444746;
   }
 
   /* Avoid overlaping between sticky frontiers and resize handles */
@@ -323,7 +319,13 @@ export const TableCellStickyFrontier = ({
 
   const isCorner = isOnStickyLeftFrontier && isOnStickyTopFrontier;
   if (isCorner) {
-    return <div className="navi_table_sticky_top_left_frontier"></div>;
+    return (
+      <div
+        className="navi_table_cell_sticky_frontier"
+        data-left=""
+        data-top=""
+      ></div>
+    );
   }
 
   const shouldDisplayStickyLeftFrontier =
@@ -338,13 +340,13 @@ export const TableCellStickyFrontier = ({
   return (
     <>
       {shouldDisplayStickyLeftFrontier && (
-        <TableStickyLeftFrontier
+        <TableCellStickyLeftFrontier
           stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
         />
       )}
       {shouldDisplayStickyTopFrontier && (
-        <TableStickyTopFrontier
+        <TableCellStickyTopFrontier
           stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
           onStickyTopFrontierChange={onStickyTopFrontierChange}
         />
@@ -370,14 +372,15 @@ export const TableStickyFrontier = () => {
  * so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
  * as a table cell uses a position relative)
  */
-const TableStickyLeftFrontier = ({
+const TableCellStickyLeftFrontier = ({
   stickyLeftFrontierColumnIndex,
   onStickyLeftFrontierChange,
 }) => {
   return (
     <div
-      className="navi_table_sticky_left_frontier"
-      data-left={stickyLeftFrontierColumnIndex === -1 ? "" : undefined}
+      className="navi_table_cell_sticky_frontier"
+      data-left=""
+      data-opposite={stickyLeftFrontierColumnIndex === -1 ? "" : undefined}
       inert={!onStickyLeftFrontierChange}
       onMouseDown={(e) => {
         if (e.button !== 0) {
@@ -404,14 +407,15 @@ const TableStickyLeftFrontierPreview = () => {
   return <div className="navi_table_sticky_left_frontier_preview"></div>;
 };
 
-const TableStickyTopFrontier = ({
+const TableCellStickyTopFrontier = ({
   stickyTopFrontierRowIndex,
   onStickyTopFrontierChange,
 }) => {
   return (
     <div
-      className="navi_table_sticky_top_frontier"
-      data-top={stickyTopFrontierRowIndex === -1 ? "" : undefined}
+      className="navi_table_cell_sticky_frontier"
+      data-top=""
+      data-opposite={stickyTopFrontierRowIndex === -1 ? "" : undefined}
       inert={!onStickyTopFrontierChange}
       onMouseDown={(e) => {
         if (e.button !== 0) {
