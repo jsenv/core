@@ -260,7 +260,6 @@ export const TableStickyLeftFrontier = ({
 export const TableStickyLeftFrontierGhost = () => {
   return <div className="navi_table_sticky_left_frontier_ghost"></div>;
 };
-
 export const TableStickyLeftFrontierPreview = () => {
   return <div className="navi_table_sticky_left_frontier_preview"></div>;
 };
@@ -368,6 +367,9 @@ const initMoveStickyLeftFrontierByMousedown = (
     direction: { x: true },
     // keepMarkersOnRelease: true,
     backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
+    // We're limiting ability to move the sticky frontier to a column
+    // But if there is already a scroll it means we might already have crossed that column
+    resetScroll: true,
     onGrab,
     onDrag: (gesture) => {
       update_frontier_index: {
