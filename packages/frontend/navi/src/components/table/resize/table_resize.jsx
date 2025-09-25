@@ -1,4 +1,5 @@
-import { createDragToMoveGesture } from "@jsenv/dom";
+import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
+
 import {
   Z_INDEX_RESIZER_BACKDROP,
   Z_INDEX_RESIZER_HANDLE,
@@ -108,9 +109,9 @@ import.meta.css = /* css */ `
     pointer-events: none;
     position: absolute;
     z-index: 1000000;
-    left: 0;
-    right: 0;
+    left: var(--table-scroll-left, 0);
     height: 10px;
+    width: var(--table-row-width, 100%);
     top: var(--table-cell-bottom, 0);
     opacity: 0;
   }
@@ -490,15 +491,25 @@ const updateTableRowResizerPosition = (rowCell) => {
   }
   const tableContainerRect = tableContainer.getBoundingClientRect();
   const tableRowTopRelative = tableRowCellRect.top - tableContainerRect.top;
-  const tableRowWidth = tableRowCellRect.width;
-  const tableRowHeight = tableRowCellRect.height;
+  const tableRowCellWidth = tableRowCellRect.width;
+  const tableRowCellHeight = tableRowCellRect.height;
+  const tableRow = rowCell.closest("tr");
+  const tableRowWidth = tableRow.getBoundingClientRect().width;
 
-  const tableRowRelativeBottom = tableRowTopRelative + tableRowHeight;
+  const scrollLeft = getScrollableParent(tableContainer).scrollLeft;
+
+  tableRowResizer.style.setProperty("--table-scroll-left", `${scrollLeft}px`);
+  tableRowResizer.style.setProperty("--table-row-width", `${tableRowWidth}px`);
+
+  const tableRowRelativeBottom = tableRowTopRelative + tableRowCellHeight;
   tableRowResizer.style.setProperty(
     "--table-cell-bottom",
     `${tableRowRelativeBottom}px`,
   );
-  tableRowResizer.style.setProperty("--table-cell-width", `${tableRowWidth}px`);
+  tableRowResizer.style.setProperty(
+    "--table-cell-width",
+    `${tableRowCellWidth}px`,
+  );
   tableRowResizer.setAttribute("data-hover", "");
 };
 const onMouseEnterTopResizeHandle = (e) => {
