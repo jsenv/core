@@ -299,6 +299,50 @@ import.meta.css = /* css */ `
   }
 `;
 
+export const TableCellStickyFrontier = ({
+  columnIndex,
+  rowIndex,
+  stickyLeftFrontierColumnIndex,
+  stickyTopFrontierRowIndex,
+  onStickyLeftFrontierChange,
+  onStickyTopFrontierChange,
+}) => {
+  let shouldDisplayStickyLeftFrontier = false;
+  let shouldDisplayStickyTopFrontier = false;
+
+  const isBeforeStickyLeftFrontier =
+    columnIndex < stickyLeftFrontierColumnIndex;
+  const isAfterStickyLeftFrontier = columnIndex > stickyLeftFrontierColumnIndex;
+  const isOnStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
+  const isBeforeStickyTopFrontier = rowIndex < stickyTopFrontierRowIndex;
+  const isAfterStickyTopFrontier = rowIndex > stickyTopFrontierRowIndex;
+  const isOnStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
+
+  if (isOnStickyLeftFrontier) {
+    shouldDisplayStickyLeftFrontier = true;
+  }
+  if (isOnStickyTopFrontier) {
+    shouldDisplayStickyTopFrontier = false;
+  }
+
+  return (
+    <>
+      {shouldDisplayStickyLeftFrontier && (
+        <TableStickyLeftFrontier
+          stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+          onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+        />
+      )}
+      {shouldDisplayStickyTopFrontier && (
+        <TableStickyTopFrontier
+          stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+          onStickyTopFrontierChange={onStickyTopFrontierChange}
+        />
+      )}
+    </>
+  );
+};
+
 /**
  * We "need" to inject this into every <td>,<th> so it follows correctly the position of the cell
  * And cells are in position sticky

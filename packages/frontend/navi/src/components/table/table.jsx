@@ -76,10 +76,9 @@ import {
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
 import {
-  TableStickyLeftFrontier,
+  TableCellStickyFrontier,
   TableStickyLeftFrontierGhost,
   TableStickyLeftFrontierPreview,
-  TableStickyTopFrontier,
   TableStickyTopFrontierGhost,
   TableStickyTopFrontierPreview,
 } from "./sticky/table_sticky.jsx";
@@ -575,6 +574,7 @@ export const Table = forwardRef((props, ref) => {
                       // other
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
+                      rowIndex={rowIndex + 1} // +1 because header row is first
                       row={rowData}
                       value={rowData[col.accessorKey]}
                       selectionController={selectionController}
@@ -634,18 +634,14 @@ const RowNumberHeaderCell = ({
       style={{ textAlign: "center" }}
       onClick={onClick}
     >
-      {(isStickyLeftFrontier || stickyLeftFrontierColumnIndex === -1) && (
-        <TableStickyLeftFrontier
-          stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-          onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-        />
-      )}
-      {(isStickyTopFrontier || stickyTopFrontierRowIndex === -1) && (
-        <TableStickyTopFrontier
-          stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-          onStickyTopFrontierChange={onStickyTopFrontierChange}
-        />
-      )}
+      <TableCellStickyFrontier
+        rowIndex={0}
+        columnIndex={0}
+        stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+        onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+        stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+        onStickyTopFrontierChange={onStickyTopFrontierChange}
+      />
       {resizable && (
         <TableColumnRightResizeHandle
           onRelease={(width) => onColumnResizeRequested(width, 0)}
@@ -727,18 +723,14 @@ const RowNumberCell = ({
         />
       )}
       {value}
-      {(isStickyLeftFrontier || stickyLeftFrontierColumnIndex === -1) && (
-        <TableStickyLeftFrontier
-          stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-          onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-        />
-      )}
-      {isStickyTopFrontier && (
-        <TableStickyTopFrontier
-          stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-          onStickyTopFrontierChange={onStickyTopFrontierChange}
-        />
-      )}
+      <TableCellStickyFrontier
+        columnIndex={0}
+        rowIndex={rowIndex}
+        stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+        onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+        stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+        onStickyTopFrontierChange={onStickyTopFrontierChange}
+      />
       {resizable && (
         <TableRowBottomResizeHandle
           onRelease={(height) => onResizeRequested(height, rowIndex)}
@@ -820,6 +812,14 @@ const HeaderCell = ({
       }}
       columnContainsSelectedCell={columnContainsSelectedCell}
     >
+      <TableCellStickyFrontier
+        rowIndex={0}
+        columnIndex={columnIndex}
+        stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+        onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+        stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+        onStickyTopFrontierChange={onStickyTopFrontierChange}
+      />
       {resizable && (
         <TableColumnLeftResizeHandle
           onRelease={(width) => onResizeRequested(width, columnIndex - 1)}
@@ -834,18 +834,6 @@ const HeaderCell = ({
           columnMaxWidth={columnMaxWidth}
         />
       )}
-      {isStickyLeftFrontier && (
-        <TableStickyLeftFrontier
-          stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-          onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-        />
-      )}
-      {(isStickyTopFrontier || stickyTopFrontierRowIndex === -1) && (
-        <TableStickyTopFrontier
-          stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-          onStickyTopFrontierChange={onStickyTopFrontierChange}
-        />
-      )}
     </TableCell>
   );
 };
@@ -858,23 +846,21 @@ const DataCell = ({
   stickyTopFrontierRowIndex,
   onStickyTopFrontierChange,
   columnName,
+  columnIndex,
+  rowIndex,
   row,
   ...rest
 }) => {
   return (
     <TableCell cellId={`${columnName}:${row.id}`} {...rest}>
-      {isStickyLeftFrontier && (
-        <TableStickyLeftFrontier
-          stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-          onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-        />
-      )}
-      {isStickyTopFrontier && (
-        <TableStickyTopFrontier
-          stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-          onStickyTopFrontierChange={onStickyTopFrontierChange}
-        />
-      )}
+      <TableCellStickyFrontier
+        rowIndex={rowIndex}
+        columnIndex={columnIndex}
+        stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+        onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+        stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+        onStickyTopFrontierChange={onStickyTopFrontierChange}
+      />
     </TableCell>
   );
 };
