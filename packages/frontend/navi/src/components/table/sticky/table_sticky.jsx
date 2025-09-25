@@ -199,7 +199,7 @@ import.meta.css = /* css */ `
   .navi_table_sticky_left_frontier_ghost,
   .navi_table_sticky_left_frontier_preview {
     position: absolute;
-    top: 0
+    top: 0;
     width: var(--sticky-left-frontier-width);
     height: var(--table-height, 100%);
     pointer-events: none;
@@ -554,6 +554,7 @@ const initMoveStickyFrontierByMousedown = (
   moveFrontierGesture.addTeardown(() => {
     previewElement.removeAttribute("data-visible");
     previewElement.style.removeProperty(previewVariableName);
+    ghostElement.removeAttribute("data-visible");
     ghostElement.style.removeProperty(ghostVariableName);
     ghostElement.style[axis === "x" ? "left" : "top"] = ""; // reset position set by drag
     restoreDragObstacleAttr();
