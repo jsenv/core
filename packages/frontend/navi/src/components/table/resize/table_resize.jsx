@@ -177,11 +177,13 @@ export const TableCellResizeHandles = ({
 }) => {
   return (
     <>
-      <TableColumnLeftResizeHandle
-        onRelease={(width) => onResizeRequested(width, columnIndex - 1)}
-        columnMinWidth={columnMinWidth}
-        columnMaxWidth={columnMaxWidth}
-      />
+      {columnIndex > 0 && (
+        <TableColumnLeftResizeHandle
+          onRelease={(width) => onResizeRequested(width, columnIndex - 1)}
+          columnMinWidth={columnMinWidth}
+          columnMaxWidth={columnMaxWidth}
+        />
+      )}
       <TableColumnRightResizeHandle
         onRelease={(width) => onResizeRequested(width, columnIndex)}
         columnMinWidth={columnMinWidth}
