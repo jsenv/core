@@ -341,12 +341,6 @@ const initResizeTableColumnByMousedown = (
     ".navi_table_column_resizer",
   );
 
-  const tableCellRect = tableCell.getBoundingClientRect();
-  const tableCellWidth = tableCellRect.width;
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  const cellLeftRelative = tableCellRect.left - tableContainerRect.left;
-  const minLeft = cellLeftRelative;
-
   const table = tableCell.closest("table");
   const colGroup = table.querySelector("colgroup");
   const collumnIndex = Array.from(tableCell.parentElement.children).indexOf(
@@ -355,12 +349,33 @@ const initResizeTableColumnByMousedown = (
   const col = colGroup.children[collumnIndex];
   const isStickyLeft = col.hasAttribute("data-sticky-left");
   if (isStickyLeft) {
-    tableColumnResizer.setAttribute("data-sticky-left", "");
+    //  tableColumnResizer.setAttribute("data-sticky-left", "");
   } else {
     tableColumnResizer.removeAttribute("data-sticky-left");
   }
 
-  //   const scrollableParent = getScrollableParent(table);
+  // techniquement ici si on est sticky on se fout un peu du scroll
+  // on veut juste drag dans la visible area
+  // et ne pas scroll
+  // dans ce cas on dirais a drag: ignoreScroll
+  // on peut aussi dans ce cas ignorer les sticky frontiers
+  // donc ptet l'argument c'est plutot de renommer keepInScrollableArea
+  // into areaContraint = 'scrollable'|'visible'|'none'
+  // et lorsqu'on utilise visible
+  // - on écoute pas le scroll
+  // - on se moque du scroll
+
+  const scrollableParent = getScrollableParent(table);
+  const scrollableParentRect = scrollableParent.getBoundingClientRect();
+
+  const tableCellRect = tableCell.getBoundingClientRect();
+  const tableCellWidth = tableCellRect.width;
+  const tableContainerRect = tableContainer.getBoundingClientRect();
+  const cellLeftRelative = isStickyLeft
+    ? tableCellRect.left - scrollableParentRect.left
+    : tableCellRect.left - tableContainerRect.left;
+  const minLeft = cellLeftRelative;
+
   //   const scrollLeft = scrollableParent.scrollLeft;
 
   // Left bound: minimum width of 50px (can shrink column down to this width)
@@ -381,8 +396,10 @@ const initResizeTableColumnByMousedown = (
     name: "resize-column",
     direction: { x: true },
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
-    customLeftBound,
-    customRightBound,
+    areaConstraint: {
+      left: customLeftBound,
+      right: customRightBound,
+    },
     onGrab: () => {
       updateTableColumnResizerPosition(tableCell);
       onGrab?.();

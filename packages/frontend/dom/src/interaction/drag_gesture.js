@@ -84,7 +84,7 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 const BASIC_MODE_OPTIONS = {
   backdrop: false,
   stickyFrontiers: false,
-  keepInScrollableArea: false,
+  areaConstraint: "none",
   obstacleQuerySelector: null,
   showConstraintFeedbackLine: false,
   dragViaScroll: false,
@@ -109,16 +109,9 @@ export const createDragGesture = (options) => {
     backdropZIndex = 1,
 
     stickyFrontiers = true,
-    keepInScrollableArea = true,
+    areaConstraint = "scrollable",
     obstacleQuerySelector = "[data-drag-obstacle]",
     dragViaScroll = true,
-
-    // Custom bounds that override the default scrollable area bounds
-    // Useful for scenarios like column resizing where you want custom min/max constraints
-    customLeftBound,
-    customRightBound,
-    customTopBound,
-    customBottomBound,
 
     // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
     // This provides intuitive feedback during drag operations when the element cannot reach the mouse
@@ -279,17 +272,94 @@ export const createDragGesture = (options) => {
 
     // Collect all constraint functions
     const constraintFunctions = [];
-    if (keepInScrollableArea) {
-      const boundsConstraintFunction = createScrollableAreaConstraint(
-        scrollableParent,
-        {
-          customLeftBound,
-          customRightBound,
-          customTopBound,
-          customBottomBound,
-        },
-      );
-      constraintFunctions.push(boundsConstraintFunction);
+    const getScrollRightBound = (elementWidth) => {
+      const scrollWidth = scrollableParent.scrollWidth;
+      if (elementWidth >= scrollWidth) {
+        // Element fills or exceeds container width - constraint to left edge only
+        return scrollWidth;
+      }
+      // Normal case: element can move within available space
+      return scrollWidth - elementWidth;
+    };
+    const getScrollBottomBound = (elementHeight) => {
+      const scrollHeight = scrollableParent.scrollHeight;
+      if (elementHeight >= scrollHeight) {
+        // Element fills or exceeds container height - constraint to top edge only
+        return scrollHeight;
+      }
+      // Normal case: element can move within available space
+      return scrollHeight - elementHeight;
+    };
+    const getVisibleRightBound = (elementWidth) => {
+      return elementWidth;
+    };
+    const getVisibleBottomBound = (elementHeight) => {
+      return elementHeight;
+    };
+
+    if (areaConstraint === "scrollable") {
+      const scrollableAreaConstraintFunction = ({
+        elementWidth,
+        elementHeight,
+      }) => {
+        // Handle floating point precision issues between getBoundingClientRect() and scroll dimensions
+        // - elementWidth/elementHeight: floats from getBoundingClientRect() (e.g., 2196.477294921875)
+        // - scrollWidth/scrollHeight: integers from browser's internal calculations (e.g., 2196)
+        //
+        // When element dimensions exceed or equal scroll dimensions due to precision differences,
+        // we cap the constraint bounds to prevent negative positioning that would push elements
+        // outside their intended scrollable area.
+        const left = 0;
+        const right = getScrollRightBound(elementWidth);
+        const top = 0;
+        const bottom = getScrollBottomBound(elementHeight);
+        return createBoundConstraint(
+          { left, top, right, bottom },
+          {
+            element: scrollableParent,
+            name: "scrollable area",
+          },
+        );
+      };
+      constraintFunctions.push(scrollableAreaConstraintFunction);
+    } else if (areaConstraint === "visible") {
+      const visibleAreaConstraintFunction = ({
+        elementWidth,
+        elementHeight,
+      }) => {
+        const left = 0;
+        const top = 0;
+        const right = getVisibleRightBound(elementWidth);
+        const bottom = getVisibleBottomBound(elementHeight);
+        return createBoundConstraint(
+          { left, top, right, bottom },
+          {
+            element: scrollableParent,
+            name: "visible area",
+          },
+        );
+      };
+      constraintFunctions.push(visibleAreaConstraintFunction);
+    } else if (typeof areaConstraint === "object") {
+      const customAreaConstraintFunction = ({
+        elementWidth,
+        elementHeight,
+      }) => {
+        const {
+          left = 0,
+          top = 0,
+          bottom = getScrollRightBound(elementWidth),
+          right = getScrollBottomBound(elementHeight),
+        } = areaConstraint;
+        return createBoundConstraint(
+          { left, top, right, bottom },
+          {
+            element: scrollableParent,
+            name: "custom area",
+          },
+        );
+      };
+      constraintFunctions.push(customAreaConstraintFunction);
     }
     if (obstacleQuerySelector) {
       const obstacleConstraintFunctions =
@@ -779,72 +849,6 @@ export const createDragToMoveGesture = (options) => {
     },
   });
   return dragToMoveGesture;
-};
-
-const createScrollableAreaConstraint = (
-  scrollableParent,
-  { customLeftBound, customRightBound, customTopBound, customBottomBound } = {},
-) => {
-  return ({ elementWidth, elementHeight }) => {
-    // Handle floating point precision issues between getBoundingClientRect() and scroll dimensions
-    // - elementWidth/elementHeight: floats from getBoundingClientRect() (e.g., 2196.477294921875)
-    // - scrollWidth/scrollHeight: integers from browser's internal calculations (e.g., 2196)
-    //
-    // When element dimensions exceed or equal scroll dimensions due to precision differences,
-    // we cap the constraint bounds to prevent negative positioning that would push elements
-    // outside their intended scrollable area.
-
-    const scrollWidth = scrollableParent.scrollWidth;
-    const scrollHeight = scrollableParent.scrollHeight;
-
-    // Calculate horizontal bounds: element can be positioned from left=0 to right=constraint
-    let left;
-    if (customLeftBound === undefined) {
-      left = 0;
-    } else {
-      left = customLeftBound;
-    }
-    let right;
-    if (customRightBound === undefined) {
-      if (elementWidth >= scrollWidth) {
-        // Element fills or exceeds container width - constraint to left edge only
-        right = scrollWidth;
-      } else {
-        // Normal case: element can move within available space
-        right = scrollWidth - elementWidth;
-      }
-    } else {
-      right = customRightBound;
-    }
-
-    // Calculate vertical bounds: element can be positioned from top=0 to bottom=constraint
-    let top;
-    if (customTopBound === undefined) {
-      top = 0;
-    } else {
-      top = customTopBound;
-    }
-    let bottom;
-    if (customBottomBound === undefined) {
-      if (elementHeight >= scrollHeight) {
-        // Element fills or exceeds container height - constraint to top edge only
-        bottom = scrollHeight;
-      } else {
-        // Normal case: element can move within available space
-        bottom = scrollHeight - elementHeight;
-      }
-    } else {
-      bottom = customBottomBound;
-    }
-
-    return createBoundConstraint(
-      { left, top, right, bottom },
-      {
-        element: scrollableParent,
-        name: "scrollable area",
-      },
-    );
-  };
 };
 
 const definePropertyAsReadOnly = (object, propertyName) => {
