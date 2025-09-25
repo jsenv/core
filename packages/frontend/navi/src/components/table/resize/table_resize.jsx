@@ -1,10 +1,3 @@
-/**
- * To fix:
- *
- * when resizing a sticky column + initial scroll we can resize to the right but not to the left
- *
- */
-
 import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
 import {
