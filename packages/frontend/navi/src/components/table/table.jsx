@@ -79,6 +79,7 @@ import { TableCell } from "./table_cell.jsx";
 import {
   TableColumnProvider,
   TableRowProvider,
+  TableSelectionProvider,
   TableStickyProvider,
 } from "./table_context.jsx";
 
@@ -387,15 +388,23 @@ export const Table = forwardRef((props, ref) => {
             );
           })}
         </colgroup>
-        <TableStickyProvider
+        <TableSelectionProvider
           value={{
-            stickyLeftFrontierColumnIndex,
-            stickyTopFrontierRowIndex,
-            onStickyLeftFrontierChange,
-            onStickyTopFrontierChange,
+            selectionController,
+            rowWithSomeSelectedCell,
+            columnWithSomeSelectedCell,
+            selectedRowIds,
           }}
         >
-          {/* {needTableHead && (
+          <TableStickyProvider
+            value={{
+              stickyLeftFrontierColumnIndex,
+              stickyTopFrontierRowIndex,
+              onStickyLeftFrontierChange,
+              onStickyTopFrontierChange,
+            }}
+          >
+            {/* {needTableHead && (
           <TableHead
             tableRef={ref}
             grabTarget={grabTarget}
@@ -414,21 +423,22 @@ export const Table = forwardRef((props, ref) => {
             selectionController={selectionController}
           />
         )} */}
-          <TableBody
-            grabTarget={grabTarget}
-            columns={columns}
-            data={data}
-            rows={rows}
-            selectedRowIds={selectedRowIds}
-            selectionController={selectionController}
-            stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-          />
-        </TableStickyProvider>
+            <TableBody
+              grabTarget={grabTarget}
+              columns={columns}
+              data={data}
+              rows={rows}
+              selectedRowIds={selectedRowIds}
+              selectionController={selectionController}
+              stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+            />
+          </TableStickyProvider>
+        </TableSelectionProvider>
       </table>
-      <TableDragCloneContainer dragging={Boolean(grabTarget)} />
+      {/* <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer />
       <TableRowResizer />
-      <TableStickyFrontier />
+      <TableStickyFrontier /> */}
     </div>
   );
 });

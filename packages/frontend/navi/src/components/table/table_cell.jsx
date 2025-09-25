@@ -7,6 +7,7 @@ import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import {
   useTableColumn,
   useTableRow,
+  useTableSelection,
   useTableSticky,
 } from "./table_context.jsx";
 
@@ -56,7 +57,6 @@ export const TableCell = forwardRef((props, ref) => {
     cellId,
     boldClone,
     value,
-    selectionController,
     grabbed,
     style,
     textAlign,
@@ -74,6 +74,7 @@ export const TableCell = forwardRef((props, ref) => {
   const column = useTableColumn();
   const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
     useTableSticky();
+  const { selectionController } = useTableSelection();
 
   const columnIndex = column.index;
   const rowIndex = row.index;
@@ -106,6 +107,7 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.cursor = cursor;
   }
 
+  const columnWidth = column.width;
   if (
     columnWidth === undefined ||
     // when column width becomes too small the padding would prevent it from shrinking
@@ -114,6 +116,7 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.paddingLeft = "12px";
     innerStyle.paddingRight = "12px";
   }
+  const rowHeight = row.height;
   if (
     rowHeight === undefined ||
     // when row height becomes too small the padding would prevent it from shrinking
