@@ -321,6 +321,122 @@ const onMouseLeaveRightResizeHandle = (e) => {
   );
   tableColumnResizer.removeAttribute("data-hover");
 };
+// Generic function to handle table cell resize for both axes
+const initResizeByMousedown = (
+  mousedownEvent,
+  {
+    tableCell,
+    minSize,
+    maxSize,
+    onGrab,
+    onDrag,
+    onRelease,
+    // Axis-specific configuration
+    axis, // 'x' or 'y'
+  },
+) => {
+  const table = tableCell.closest("table");
+  const tableContainer = table.closest(".navi_table_container");
+  const resizerSelector =
+    axis === "x" ? ".navi_table_column_resizer" : ".navi_table_row_resizer";
+  const resizer = tableContainer.querySelector(resizerSelector);
+  const updateResizerPosition =
+    axis === "x"
+      ? updateTableColumnResizerPosition
+      : updateTableRowResizerPosition;
+
+  // Detect sticky positioning for advanced constraint handling
+  let isSticky = false;
+  if (axis === "x") {
+    const colGroup = table.querySelector("colgroup");
+    const columnIndex = Array.from(tableCell.parentElement.children).indexOf(
+      tableCell,
+    );
+    const col = colGroup.children[columnIndex];
+    isSticky = col.hasAttribute("data-sticky-left");
+  } else {
+    const row = tableCell.closest("tr");
+    // For rows, check if the row has sticky-top attribute
+    isSticky = row.hasAttribute("data-sticky-top");
+  }
+
+  const scrollableParent = getScrollableParent(table);
+  const scrollableParentRect = scrollableParent.getBoundingClientRect();
+  const tableCellRect = tableCell.getBoundingClientRect();
+  const tableContainerRect = tableContainer.getBoundingClientRect();
+
+  // Calculate size and position based on axis
+  const currentSize = axis === "x" ? tableCellRect.width : tableCellRect.height;
+  const cellStartRelative = isSticky
+    ? axis === "x"
+      ? tableCellRect.left - scrollableParentRect.left
+      : tableCellRect.top - scrollableParentRect.top
+    : axis === "x"
+      ? tableCellRect.left - tableContainerRect.left
+      : tableCellRect.top - tableContainerRect.top;
+
+  // Calculate bounds based on axis
+  const defaultMinSize = axis === "x" ? 50 : ROW_MIN_HEIGHT;
+  const defaultMaxSize = axis === "x" ? 1000 : 300;
+
+  const minCellSize =
+    typeof minSize === "number" && minSize > defaultMinSize
+      ? minSize
+      : defaultMinSize;
+  const maxCellSize =
+    typeof maxSize === "number" && maxSize < defaultMaxSize
+      ? maxSize
+      : defaultMaxSize;
+
+  let customStartBound = cellStartRelative + minCellSize;
+  const maxExpandAmount = maxCellSize - currentSize;
+  let customEndBound = cellStartRelative + currentSize + maxExpandAmount;
+
+  if (isSticky) {
+    const scrollOffset =
+      axis === "x" ? scrollableParent.scrollLeft : scrollableParent.scrollTop;
+    customStartBound += scrollOffset;
+    customEndBound += scrollOffset;
+  }
+
+  // Build drag gesture configuration based on axis
+  const gestureName = axis === "x" ? "resize-column" : "resize-row";
+  const direction = axis === "x" ? { x: true } : { y: true };
+  const customAreaConstraint =
+    axis === "x"
+      ? { left: customStartBound, right: customEndBound }
+      : { top: customStartBound, bottom: customEndBound };
+
+  const dragToMoveGesture = createDragToMoveGesture({
+    name: gestureName,
+    direction,
+    backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
+    areaConstraint: isSticky ? "visible" : "none",
+    customAreaConstraint,
+    onGrab: () => {
+      updateResizerPosition(tableCell);
+      onGrab?.();
+    },
+    onDrag,
+    onRelease: (gesture) => {
+      const sizeChange = axis === "x" ? gesture.xMove : gesture.yMove;
+      const newSize = currentSize + sizeChange;
+      onRelease(newSize, currentSize);
+    },
+  });
+
+  dragToMoveGesture.addTeardown(() => {
+    const styleProperty = axis === "x" ? "left" : "top";
+    resizer.style[styleProperty] = "";
+    resizer.removeAttribute("data-resizing");
+  });
+
+  resizer.setAttribute("data-resizing", "");
+  dragToMoveGesture.grabViaMousedown(mousedownEvent, {
+    element: resizer,
+  });
+};
+
 const initResizeTableColumnByMousedown = (
   mousedownEvent,
   { columnMinWidth, columnMaxWidth, onGrab, onDrag, onRelease, isLeft },
@@ -329,82 +445,37 @@ const initResizeTableColumnByMousedown = (
   if (isLeft) {
     tableCell = tableCell.previousElementSibling;
   }
-  const tableContainer = tableCell.closest(".navi_table_container");
-  const tableColumnResizer = tableContainer.querySelector(
-    ".navi_table_column_resizer",
-  );
-
-  const table = tableCell.closest("table");
-  const colGroup = table.querySelector("colgroup");
-  const collumnIndex = Array.from(tableCell.parentElement.children).indexOf(
+  initResizeByMousedown(mousedownEvent, {
     tableCell,
-  );
-  const col = colGroup.children[collumnIndex];
-  const isStickyLeft = col.hasAttribute("data-sticky-left");
-  if (isStickyLeft) {
-    //  tableColumnResizer.setAttribute("data-sticky-left", "");
-  } else {
-    tableColumnResizer.removeAttribute("data-sticky-left");
-  }
-
-  const scrollableParent = getScrollableParent(table);
-  const scrollableParentRect = scrollableParent.getBoundingClientRect();
-
-  const tableCellRect = tableCell.getBoundingClientRect();
-  const tableCellWidth = tableCellRect.width;
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  const cellLeftRelative = isStickyLeft
-    ? tableCellRect.left - scrollableParentRect.left
-    : tableCellRect.left - tableContainerRect.left;
-
-  // Left bound: minimum width of 50px (can shrink column down to this width)
-  const minWidth =
-    typeof columnMinWidth === "number" && columnMinWidth > 50
-      ? columnMinWidth
-      : 50;
-  // Right bound: maximum width of 1000px (can expand beyond scrollable parent if needed)
-  const maxWidth =
-    typeof columnMaxWidth === "number" && columnMaxWidth < 1000
-      ? columnMaxWidth
-      : 1000;
-
-  let customLeftBound = cellLeftRelative + minWidth;
-  const maxExpandAmount = maxWidth - tableCellWidth;
-  let customRightBound = cellLeftRelative + tableCellWidth + maxExpandAmount;
-
-  if (isStickyLeft) {
-    const scrollLeft = scrollableParent.scrollLeft;
-    customLeftBound += scrollLeft;
-    customRightBound += scrollLeft;
-  }
-
-  const dragToMoveGesture = createDragToMoveGesture({
-    name: "resize-column",
-    direction: { x: true },
-    backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
-    areaConstraint: isStickyLeft ? "visible" : "none",
-    customAreaConstraint: {
-      left: customLeftBound,
-      right: customRightBound,
-    },
-    onGrab: () => {
-      updateTableColumnResizerPosition(tableCell);
-      onGrab?.();
-    },
+    minSize: columnMinWidth,
+    maxSize: columnMaxWidth,
+    onGrab,
     onDrag,
-    onRelease: (gesture) => {
-      const newWidth = tableCellWidth + gesture.xMove;
-      onRelease(newWidth, tableCellWidth);
-    },
+    onRelease,
+    axis: "x",
   });
-  dragToMoveGesture.addTeardown(() => {
-    tableColumnResizer.style.left = "";
-    tableColumnResizer.removeAttribute("data-resizing");
-  });
+};
 
-  tableColumnResizer.setAttribute("data-resizing", "");
-  dragToMoveGesture.grabViaMousedown(mousedownEvent, {
-    element: tableColumnResizer,
+const initResizeTableRowByMousedown = (
+  mousedownEvent,
+  { rowMinHeight, rowMaxHeight, onGrab, onDrag, onRelease, isTop },
+) => {
+  let tableCell = mousedownEvent.target.closest("td");
+  if (isTop) {
+    const tableRow = tableCell.closest("tr");
+    const previousTr = findPreviousTableRow(tableRow);
+    if (!previousTr) {
+      return;
+    }
+    // todo: select the "same" (the one at the same column index) table cell in previous row
+  }
+  initResizeByMousedown(mousedownEvent, {
+    minSize: rowMinHeight,
+    maxSize: rowMaxHeight,
+    onGrab,
+    onDrag,
+    onRelease,
+    axis: "y",
   });
 };
 
@@ -573,69 +644,7 @@ const onMouseLeaveBottomResizeHandle = (e) => {
   );
   tableRowResizer.removeAttribute("data-hover");
 };
-const initResizeTableRowByMousedown = (
-  mousedownEvent,
-  { rowMinHeight, rowMaxHeight, onGrab, onDrag, onRelease, isTop },
-) => {
-  let tableRow = mousedownEvent.target.closest("tr");
-  if (isTop) {
-    tableRow = findPreviousTableRow(tableRow);
-  }
-  if (!tableRow) {
-    return; // No row to resize
-  }
 
-  const tableCell = tableRow.querySelector("th,td");
-  const tableContainer = tableCell.closest(".navi_table_container");
-  const tableRowResizer = tableContainer.querySelector(
-    ".navi_table_row_resizer",
-  );
-
-  // Calculate custom bounds for row resizing
-  const tableRowCellRect = tableCell.getBoundingClientRect();
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  const currentRowCellTop = tableRowCellRect.top - tableContainerRect.top;
-  const currentRowCellHeight = tableRowCellRect.height;
-
-  // Top bound: minimum height of 30px (can shrink row down to this height)
-  const minHeight =
-    typeof rowMinHeight === "number" && rowMinHeight > ROW_MIN_HEIGHT
-      ? rowMinHeight
-      : ROW_MIN_HEIGHT;
-  // Bottom bound: maximum height of 300px (can expand beyond scrollable parent if needed)
-  const maxHeight =
-    typeof rowMaxHeight === "number" && rowMaxHeight < 300 ? rowMaxHeight : 300;
-  const customTopBound = currentRowCellTop + minHeight;
-  const maxExpandAmount = maxHeight - currentRowCellHeight;
-  const customBottomBound =
-    currentRowCellTop + currentRowCellHeight + maxExpandAmount;
-
-  const dragToMoveGesture = createDragToMoveGesture({
-    name: "resize-row",
-    direction: { y: true },
-    backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
-    customTopBound,
-    customBottomBound,
-    onGrab: () => {
-      updateTableRowResizerPosition(tableCell);
-      onGrab?.();
-    },
-    onDrag,
-    onRelease: (gesture) => {
-      const newHeight = currentRowCellHeight + gesture.yMove;
-      onRelease(newHeight, currentRowCellHeight);
-    },
-  });
-  dragToMoveGesture.addTeardown(() => {
-    tableRowResizer.style.top = "";
-    tableRowResizer.removeAttribute("data-resizing");
-  });
-
-  tableRowResizer.setAttribute("data-resizing", "");
-  dragToMoveGesture.grabViaMousedown(mousedownEvent, {
-    element: tableRowResizer,
-  });
-};
 const findPreviousTableRow = (currentRow) => {
   // First, try to find previous sibling within the same table section
   const previousSibling = currentRow.previousElementSibling;
