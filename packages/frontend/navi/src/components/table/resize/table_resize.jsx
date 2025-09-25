@@ -363,7 +363,6 @@ const initResizeTableColumnByMousedown = (
   const cellLeftRelative = isStickyLeft
     ? tableCellRect.left - scrollableParentRect.left
     : tableCellRect.left - tableContainerRect.left;
-  const minLeft = cellLeftRelative;
 
   // Left bound: minimum width of 50px (can shrink column down to this width)
   const minWidth =
@@ -375,16 +374,21 @@ const initResizeTableColumnByMousedown = (
     typeof columnMaxWidth === "number" && columnMaxWidth < 1000
       ? columnMaxWidth
       : 1000;
-  const customLeftBound = minLeft + minWidth;
+
+  let customLeftBound = cellLeftRelative + minWidth;
   const maxExpandAmount = maxWidth - tableCellWidth;
-  const customRightBound = minLeft + tableCellWidth + maxExpandAmount;
+  let customRightBound = cellLeftRelative + tableCellWidth + maxExpandAmount;
+
+  if (isStickyLeft) {
+    const scrollLeft = scrollableParent.scrollLeft;
+    customLeftBound += scrollLeft;
+    customRightBound += scrollLeft;
+  }
 
   const dragToMoveGesture = createDragToMoveGesture({
     name: "resize-column",
     direction: { x: true },
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
-    // en fait c'est relou, dans le cas sticky on veut override le constraint right qui serait le scroll
-    // donc ptet on pourrais mettre des mot clé pour s'aider ici?
     areaConstraint: isStickyLeft ? "visible" : undefined,
     customAreaConstraint: {
       left: customLeftBound,
