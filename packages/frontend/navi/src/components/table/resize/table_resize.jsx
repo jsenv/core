@@ -450,7 +450,7 @@ const initResizeTableRowByMousedown = (
   mousedownEvent,
   { rowMinHeight, rowMaxHeight, onGrab, onDrag, onRelease, isTop },
 ) => {
-  let tableCell = mousedownEvent.target.closest("td");
+  let tableCell = mousedownEvent.target.closest("th,td");
   if (isTop) {
     const tableRow = tableCell.closest("tr");
     const previousTr = findPreviousTableRow(tableRow);
@@ -458,10 +458,11 @@ const initResizeTableRowByMousedown = (
       return;
     }
     // Select the same table cell (same column index) in previous row
-    const currentCellIndex = Array.from(tableRow.children).indexOf(tableCell);
-    tableCell = previousTr.children[currentCellIndex];
+    const columnIndex = Array.from(tableRow.children).indexOf(tableCell);
+    tableCell = previousTr.children[columnIndex];
   }
   initResizeByMousedown(mousedownEvent, {
+    tableCell,
     minSize: rowMinHeight,
     maxSize: rowMaxHeight,
     onGrab,
