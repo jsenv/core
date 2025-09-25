@@ -18,23 +18,38 @@ import.meta.css = /* css */ `
     box-sizing: border-box;
   }
 
-  /* Column resize handles */
-  .navi_table_column_resize_handle_left_interaction,
-  .navi_table_column_resize_handle_right_interaction {
-    cursor: ew-resize;
+  .navi_table_cell_resize_handle {
     position: absolute;
-    width: 8px;
-    top: 0;
-    bottom: 0;
-    /* background: orange; */
+    background: orange;
     /* opacity: 0.5; */
     z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
-  .navi_table_column_resize_handle_left_interaction {
+  .navi_table_cell_resize_handle[data-left],
+  .navi_table_cell_resize_handle[data-right] {
+    cursor: ew-resize;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+  }
+  .navi_table_cell_resize_handle[data-left] {
     left: 0;
   }
-  .navi_table_column_resize_handle_right_interaction {
+  .navi_table_cell_resize_handle[data-right] {
     right: 0;
+  }
+
+  .navi_table_cell_resize_handle[data-top],
+  .navi_table_cell_resize_handle[data-bottom] {
+    cursor: ns-resize;
+    left: 0;
+    right: 0;
+    height: 8px;
+  }
+  .navi_table_cell_resize_handle[data-top] {
+    top: 0;
+  }
+  .navi_table_cell_resize_handle[data-bottom] {
+    bottom: 0;
   }
 
   .navi_table_column_resizer {
@@ -47,7 +62,6 @@ import.meta.css = /* css */ `
     left: var(--table-cell-right, 0);
     opacity: 0;
   }
-
   .navi_table_column_resizer .navi_table_column_resize_handle_left,
   .navi_table_column_resizer .navi_table_column_resize_handle_right {
     position: absolute;
@@ -95,25 +109,6 @@ import.meta.css = /* css */ `
     opacity: 1;
   }
 
-  /* Row resize handles */
-  .navi_table_row_resize_handle_top_interaction,
-  .navi_table_row_resize_handle_bottom_interaction {
-    cursor: ns-resize;
-    position: absolute;
-    left: 0;
-    right: 0;
-    /* background: orange; */
-    /* opacity: 0.5; */
-    height: 8px;
-    z-index: ${Z_INDEX_RESIZER_HANDLE};
-  }
-  .navi_table_row_resize_handle_top_interaction {
-    top: 0;
-  }
-  .navi_table_row_resize_handle_bottom_interaction {
-    bottom: 0;
-  }
-
   .navi_table_row_resizer {
     pointer-events: none;
     position: absolute;
@@ -124,7 +119,6 @@ import.meta.css = /* css */ `
     top: var(--table-cell-bottom, 0);
     opacity: 0;
   }
-
   .navi_table_row_resizer .navi_table_row_resize_handle_top,
   .navi_table_row_resizer .navi_table_row_resize_handle_bottom {
     position: absolute;
@@ -144,7 +138,6 @@ import.meta.css = /* css */ `
   .navi_table_row_resizer .navi_table_row_resize_handle_bottom {
     bottom: 3px;
   }
-
   .navi_table_row_resize_handle_container {
     position: absolute;
     left: 0;
@@ -152,7 +145,6 @@ import.meta.css = /* css */ `
     bottom: 0;
     width: var(--table-cell-width);
   }
-
   .navi_table_row_resizer_line {
     position: absolute;
     left: 0;
@@ -195,7 +187,8 @@ export const TableColumnLeftResizeHandle = ({
 }) => {
   return (
     <div
-      className="navi_table_column_resize_handle_left_interaction"
+      className="navi_table_cell_resize_handle"
+      data-left=""
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -220,7 +213,6 @@ export const TableColumnLeftResizeHandle = ({
     ></div>
   );
 };
-
 export const TableColumnRightResizeHandle = ({
   columnMinWidth,
   columnMaxWidth,
@@ -230,7 +222,8 @@ export const TableColumnRightResizeHandle = ({
 }) => {
   return (
     <div
-      className="navi_table_column_resize_handle_right_interaction"
+      className="navi_table_cell_resize_handle"
+      data-right=""
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -254,89 +247,6 @@ export const TableColumnRightResizeHandle = ({
     ></div>
   );
 };
-
-// Row resize components
-export const TableRowResizer = () => {
-  return (
-    <div className="navi_table_row_resizer">
-      <div className="navi_table_row_resize_handle_container">
-        <div className="navi_table_row_resize_handle_top"></div>
-        <div className="navi_table_row_resize_handle_bottom"></div>
-      </div>
-      <div className="navi_table_row_resizer_line"></div>
-    </div>
-  );
-};
-
-export const TableRowTopResizeHandle = ({
-  rowMinHeight,
-  rowMaxHeight,
-  onGrab,
-  onDrag,
-  onRelease,
-}) => {
-  return (
-    <div
-      className="navi_table_row_resize_handle_top_interaction"
-      onMouseDown={(e) => {
-        if (e.button !== 0) {
-          return;
-        }
-        e.preventDefault(); // prevent text selection
-        e.stopPropagation(); // prevent drag row
-        initResizeTableRowByMousedown(e, {
-          rowMinHeight,
-          rowMaxHeight,
-          onGrab,
-          onDrag,
-          onRelease,
-          isTop: true,
-        });
-      }}
-      onMouseEnter={(e) => {
-        onMouseEnterTopResizeHandle(e);
-      }}
-      onMouseLeave={(e) => {
-        onMouseLeaveTopResizeHandle(e);
-      }}
-    ></div>
-  );
-};
-
-export const TableRowBottomResizeHandle = ({
-  rowMinHeight,
-  rowMaxHeight,
-  onGrab,
-  onDrag,
-  onRelease,
-}) => {
-  return (
-    <div
-      className="navi_table_row_resize_handle_bottom_interaction"
-      onMouseDown={(e) => {
-        if (e.button !== 0) {
-          return;
-        }
-        e.preventDefault(); // prevent text selection
-        e.stopPropagation(); // prevent drag row
-        initResizeTableRowByMousedown(e, {
-          rowMinHeight,
-          rowMaxHeight,
-          onGrab,
-          onDrag,
-          onRelease,
-        });
-      }}
-      onMouseEnter={(e) => {
-        onMouseEnterBottomResizeHandle(e);
-      }}
-      onMouseLeave={(e) => {
-        onMouseLeaveBottomResizeHandle(e);
-      }}
-    ></div>
-  );
-};
-
 // Column resize helper functions
 const updateTableColumnResizerPosition = (tableCell) => {
   const tableCellRect = tableCell.getBoundingClientRect();
@@ -365,17 +275,14 @@ const updateTableColumnResizerPosition = (tableCell) => {
   );
   tableColumnResizer.setAttribute("data-hover", "");
 };
-
 const onMouseEnterLeftResizeHandle = (e) => {
   const previousCell = e.target.closest("th").previousElementSibling;
   updateTableColumnResizerPosition(previousCell);
 };
-
 const onMouseEnterRightResizeHandle = (e) => {
   const cell = e.target.closest("th");
   updateTableColumnResizerPosition(cell);
 };
-
 const onMouseLeaveLeftResizeHandle = (e) => {
   const tableContainer = e.target.closest(".navi_table_container");
   const tableColumnResizer = tableContainer.querySelector(
@@ -383,7 +290,6 @@ const onMouseLeaveLeftResizeHandle = (e) => {
   );
   tableColumnResizer.removeAttribute("data-hover");
 };
-
 const onMouseLeaveRightResizeHandle = (e) => {
   const tableContainer = e.target.closest(".navi_table_container");
   const tableColumnResizer = tableContainer.querySelector(
@@ -391,7 +297,6 @@ const onMouseLeaveRightResizeHandle = (e) => {
   );
   tableColumnResizer.removeAttribute("data-hover");
 };
-
 const initResizeTableColumnByMousedown = (
   mousedownEvent,
   { columnMinWidth, columnMaxWidth, onGrab, onDrag, onRelease, isLeft },
@@ -452,6 +357,88 @@ const initResizeTableColumnByMousedown = (
   });
 };
 
+// Row resize components
+export const TableRowResizer = () => {
+  return (
+    <div className="navi_table_row_resizer">
+      <div className="navi_table_row_resize_handle_container">
+        <div className="navi_table_row_resize_handle_top"></div>
+        <div className="navi_table_row_resize_handle_bottom"></div>
+      </div>
+      <div className="navi_table_row_resizer_line"></div>
+    </div>
+  );
+};
+export const TableRowTopResizeHandle = ({
+  rowMinHeight,
+  rowMaxHeight,
+  onGrab,
+  onDrag,
+  onRelease,
+}) => {
+  return (
+    <div
+      className="navi_table_cell_resize_handle"
+      data-top=""
+      onMouseDown={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        e.preventDefault(); // prevent text selection
+        e.stopPropagation(); // prevent drag row
+        initResizeTableRowByMousedown(e, {
+          rowMinHeight,
+          rowMaxHeight,
+          onGrab,
+          onDrag,
+          onRelease,
+          isTop: true,
+        });
+      }}
+      onMouseEnter={(e) => {
+        onMouseEnterTopResizeHandle(e);
+      }}
+      onMouseLeave={(e) => {
+        onMouseLeaveTopResizeHandle(e);
+      }}
+    ></div>
+  );
+};
+export const TableRowBottomResizeHandle = ({
+  rowMinHeight,
+  rowMaxHeight,
+  onGrab,
+  onDrag,
+  onRelease,
+}) => {
+  return (
+    <div
+      className="navi_table_cell_resize_handle"
+      data-bottom=""
+      onMouseDown={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        e.preventDefault(); // prevent text selection
+        e.stopPropagation(); // prevent drag row
+        initResizeTableRowByMousedown(e, {
+          rowMinHeight,
+          rowMaxHeight,
+          onGrab,
+          onDrag,
+          onRelease,
+        });
+      }}
+      onMouseEnter={(e) => {
+        onMouseEnterBottomResizeHandle(e);
+      }}
+      onMouseLeave={(e) => {
+        onMouseLeaveBottomResizeHandle(e);
+      }}
+    ></div>
+  );
+};
+
 // Row resize helper functions
 const updateTableRowResizerPosition = (rowCell) => {
   const tableRowCellRect = rowCell.getBoundingClientRect();
@@ -477,7 +464,6 @@ const updateTableRowResizerPosition = (rowCell) => {
   tableRowResizer.style.setProperty("--table-cell-width", `${tableRowWidth}px`);
   tableRowResizer.setAttribute("data-hover", "");
 };
-
 const onMouseEnterTopResizeHandle = (e) => {
   const currentRow = e.target.closest("tr");
   const previousRow = findPreviousTableRow(currentRow);
@@ -485,12 +471,10 @@ const onMouseEnterTopResizeHandle = (e) => {
     updateTableRowResizerPosition(previousRow.querySelector("th,td"));
   }
 };
-
 const onMouseEnterBottomResizeHandle = (e) => {
   const rowCell = e.target.closest("th,td");
   updateTableRowResizerPosition(rowCell);
 };
-
 const onMouseLeaveTopResizeHandle = (e) => {
   const tableContainer = e.target.closest(".navi_table_container");
   const tableRowResizer = tableContainer.querySelector(
@@ -498,7 +482,6 @@ const onMouseLeaveTopResizeHandle = (e) => {
   );
   tableRowResizer.removeAttribute("data-hover");
 };
-
 const onMouseLeaveBottomResizeHandle = (e) => {
   const tableContainer = e.target.closest(".navi_table_container");
   const tableRowResizer = tableContainer.querySelector(
@@ -506,7 +489,6 @@ const onMouseLeaveBottomResizeHandle = (e) => {
   );
   tableRowResizer.removeAttribute("data-hover");
 };
-
 const initResizeTableRowByMousedown = (
   mousedownEvent,
   { rowMinHeight, rowMaxHeight, onGrab, onDrag, onRelease, isTop },
@@ -570,7 +552,6 @@ const initResizeTableRowByMousedown = (
     element: tableRowResizer,
   });
 };
-
 const findPreviousTableRow = (currentRow) => {
   // First, try to find previous sibling within the same table section
   const previousSibling = currentRow.previousElementSibling;

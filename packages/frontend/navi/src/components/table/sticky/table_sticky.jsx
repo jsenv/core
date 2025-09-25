@@ -152,25 +152,21 @@ import.meta.css = /* css */ `
   }
 
   /* Avoid overlaping between sticky frontiers and resize handles */
+  [data-after-sticky-left-frontier] .navi_table_cell_resize_handle[data-top],
   [data-after-sticky-left-frontier]
-    .navi_table_row_resize_handle_top_interaction,
-  [data-after-sticky-left-frontier]
-    .navi_table_row_resize_handle_bottom_interaction {
+    .navi_table_cell_resize_handle[data-bottom] {
     left: var(--sticky-left-frontier-width);
   }
-  [data-sticky-left-frontier] .navi_table_row_resize_handle_top_interaction,
-  [data-sticky-left-frontier] .navi_table_row_resize_handle_bottom_interaction {
+  [data-sticky-left-frontier] .navi_table_cell_resize_handle[data-top],
+  [data-sticky-left-frontier] .navi_table_cell_resize_handle[data-bottom] {
     right: var(--sticky-left-frontier-width);
   }
-  [data-after-sticky-top-frontier]
-    .navi_table_column_resize_handle_left_interaction,
-  [data-after-sticky-top-frontier]
-    .navi_table_column_resize_handle_right_interaction {
+  [data-after-sticky-top-frontier] .navi_table_cell_resize_handle[data-left],
+  [data-after-sticky-top-frontier] .navi_table_cell_resize_handle[data-right] {
     top: var(--sticky-top-frontier-height);
   }
-  [data-sticky-top-frontier] .navi_table_column_resize_handle_left_interaction,
-  [data-sticky-top-frontier]
-    .navi_table_column_resize_handle_right_interaction {
+  [data-sticky-top-frontier] .navi_table_cell_resize_handle[data-left],
+  [data-sticky-top-frontier] .navi_table_cell_resize_handle[data-right] {
     bottom: var(--sticky-top-frontier-height);
   }
 
