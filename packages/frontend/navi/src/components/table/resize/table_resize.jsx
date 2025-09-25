@@ -169,7 +169,7 @@ export const TableColumnResizer = () => {
     </div>
   );
 };
-export const TableCellResizeHandles = ({
+export const TableCellColumnResizeHandles = ({
   columnIndex,
   columnMinWidth,
   columnMaxWidth,
@@ -192,8 +192,7 @@ export const TableCellResizeHandles = ({
     </>
   );
 };
-
-export const TableColumnLeftResizeHandle = ({
+const TableColumnLeftResizeHandle = ({
   columnMinWidth,
   columnMaxWidth,
   onGrab,
@@ -228,7 +227,7 @@ export const TableColumnLeftResizeHandle = ({
     ></div>
   );
 };
-export const TableColumnRightResizeHandle = ({
+const TableColumnRightResizeHandle = ({
   columnMinWidth,
   columnMaxWidth,
   onGrab,
@@ -384,7 +383,30 @@ export const TableRowResizer = () => {
     </div>
   );
 };
-export const TableRowTopResizeHandle = ({
+export const TableCellRowResizeHandles = ({
+  rowIndex,
+  rowMinHeight,
+  rowMaxHeight,
+  onResizeRequested,
+}) => {
+  return (
+    <>
+      {rowIndex > 0 && (
+        <TableRowTopResizeHandle
+          onRelease={(width) => onResizeRequested(width, rowIndex - 1)}
+          rowMinHeight={rowMinHeight}
+          rowMaxHeight={rowMaxHeight}
+        />
+      )}
+      <TableRowBottomResizeHandle
+        onRelease={(width) => onResizeRequested(width, rowIndex)}
+        rowMinHeight={rowMinHeight}
+        rowMaxHeight={rowMaxHeight}
+      />
+    </>
+  );
+};
+const TableRowTopResizeHandle = ({
   rowMinHeight,
   rowMaxHeight,
   onGrab,
@@ -419,7 +441,7 @@ export const TableRowTopResizeHandle = ({
     ></div>
   );
 };
-export const TableRowBottomResizeHandle = ({
+const TableRowBottomResizeHandle = ({
   rowMinHeight,
   rowMaxHeight,
   onGrab,

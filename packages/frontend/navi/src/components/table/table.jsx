@@ -61,11 +61,10 @@ import { useFocusGroup } from "../use_focus_group.js";
 import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
 import {
-  TableCellResizeHandles,
+  TableCellColumnResizeHandles,
+  TableCellRowResizeHandles,
   TableColumnResizer,
-  TableRowBottomResizeHandle,
   TableRowResizer,
-  TableRowTopResizeHandle,
 } from "./resize/table_resize.jsx";
 import {
   useTableSelection,
@@ -635,7 +634,7 @@ const RowNumberHeaderCell = ({
       />
 
       {resizable && (
-        <TableCellResizeHandles
+        <TableCellColumnResizeHandles
           columnIndex={0}
           onResizeRequested={onColumnResizeRequested}
           columnMinWidth={columnMinWidth}
@@ -643,8 +642,9 @@ const RowNumberHeaderCell = ({
         />
       )}
       {resizable && (
-        <TableRowBottomResizeHandle
-          onRelease={(height) => onRowResizeRequested(height, 0)}
+        <TableCellRowResizeHandles
+          rowIndex={0}
+          onResizeRequested={onRowResizeRequested}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
         />
@@ -708,13 +708,6 @@ const RowNumberCell = ({
       style={{ textAlign: "center", ...style }}
       tabIndex={-1}
     >
-      {resizable && (
-        <TableRowTopResizeHandle
-          onRelease={(height) => onResizeRequested(height, rowIndex - 1)}
-          rowMinHeight={rowMinHeight}
-          rowMaxHeight={rowMaxHeight}
-        />
-      )}
       {value}
       <TableCellStickyFrontier
         columnIndex={0}
@@ -724,9 +717,11 @@ const RowNumberCell = ({
         stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
         onStickyTopFrontierChange={onStickyTopFrontierChange}
       />
+
       {resizable && (
-        <TableRowBottomResizeHandle
-          onRelease={(height) => onResizeRequested(height, rowIndex)}
+        <TableCellRowResizeHandles
+          rowIndex={rowIndex}
+          onResizeRequested={onResizeRequested}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
         />
@@ -814,7 +809,7 @@ const HeaderCell = ({
         onStickyTopFrontierChange={onStickyTopFrontierChange}
       />
       {resizable && (
-        <TableCellResizeHandles
+        <TableCellColumnResizeHandles
           columnIndex={columnIndex}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
