@@ -96,7 +96,7 @@ export const createDragGesture = (options) => {
   if (ENFORCE_BASIC_MODE) {
     Object.assign(options, BASIC_MODE_OPTIONS);
   }
-  const {
+  let {
     name,
     onGrab,
     onDragStart,
@@ -110,6 +110,7 @@ export const createDragGesture = (options) => {
 
     stickyFrontiers = true,
     areaConstraint = "scrollable",
+    customAreaConstraint,
     obstacleQuerySelector = "[data-drag-obstacle]",
     dragViaScroll = true,
 
@@ -291,13 +292,49 @@ export const createDragGesture = (options) => {
       return scrollHeight - elementHeight;
     };
     const getVisibleRightBound = (elementWidth) => {
-      return elementWidth;
+      const availableWidth = scrollableParent.clientWidth;
+      if (elementWidth >= availableWidth) {
+        return availableWidth;
+      }
+      return availableWidth - elementWidth;
     };
     const getVisibleBottomBound = (elementHeight) => {
-      return elementHeight;
+      const availableHeight = scrollableParent.clientHeight;
+      if (elementHeight >= availableHeight) {
+        return availableHeight;
+      }
+      return availableHeight - elementHeight;
     };
 
-    if (areaConstraint === "scrollable") {
+    if (areaConstraint === "visible") {
+      stickyFrontiers = false;
+    }
+
+    if (customAreaConstraint) {
+      const customAreaConstraintFunction = ({
+        elementWidth,
+        elementHeight,
+      }) => {
+        let {
+          left = areaConstraint === "scollable" ? 0 : scrollLeftAtStart,
+          top = areaConstraint === "scrollable" ? 0 : scrollTopAtStart,
+          bottom = areaConstraint === "scrollable"
+            ? getScrollRightBound(elementWidth)
+            : getVisibleRightBound(elementWidth),
+          right = areaConstraint === "scrollable"
+            ? getScrollBottomBound(elementHeight)
+            : getVisibleBottomBound(elementHeight),
+        } = areaConstraint;
+        return createBoundConstraint(
+          { left, top, right, bottom },
+          {
+            element: scrollableParent,
+            name: "custom area",
+          },
+        );
+      };
+      constraintFunctions.push(customAreaConstraintFunction);
+    } else if (areaConstraint === "scrollable") {
       const scrollableAreaConstraintFunction = ({
         elementWidth,
         elementHeight,
@@ -327,10 +364,10 @@ export const createDragGesture = (options) => {
         elementWidth,
         elementHeight,
       }) => {
-        const left = 0;
-        const top = 0;
-        const right = getVisibleRightBound(elementWidth);
-        const bottom = getVisibleBottomBound(elementHeight);
+        const left = scrollLeftAtStart;
+        const top = scrollTopAtStart;
+        const right = scrollLeftAtStart + getVisibleRightBound(elementWidth);
+        const bottom = scrollTopAtStart + getVisibleBottomBound(elementHeight);
         return createBoundConstraint(
           { left, top, right, bottom },
           {
@@ -340,27 +377,8 @@ export const createDragGesture = (options) => {
         );
       };
       constraintFunctions.push(visibleAreaConstraintFunction);
-    } else if (typeof areaConstraint === "object") {
-      const customAreaConstraintFunction = ({
-        elementWidth,
-        elementHeight,
-      }) => {
-        const {
-          left = 0,
-          top = 0,
-          bottom = getScrollRightBound(elementWidth),
-          right = getScrollBottomBound(elementHeight),
-        } = areaConstraint;
-        return createBoundConstraint(
-          { left, top, right, bottom },
-          {
-            element: scrollableParent,
-            name: "custom area",
-          },
-        );
-      };
-      constraintFunctions.push(customAreaConstraintFunction);
     }
+
     if (obstacleQuerySelector) {
       const obstacleConstraintFunctions =
         createObstacleConstraintsFromQuerySelector(scrollableParent, {

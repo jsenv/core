@@ -354,17 +354,6 @@ const initResizeTableColumnByMousedown = (
     tableColumnResizer.removeAttribute("data-sticky-left");
   }
 
-  // techniquement ici si on est sticky on se fout un peu du scroll
-  // on veut juste drag dans la visible area
-  // et ne pas scroll
-  // dans ce cas on dirais a drag: ignoreScroll
-  // on peut aussi dans ce cas ignorer les sticky frontiers
-  // donc ptet l'argument c'est plutot de renommer keepInScrollableArea
-  // into areaContraint = 'scrollable'|'visible'|'none'
-  // et lorsqu'on utilise visible
-  // - on écoute pas le scroll
-  // - on se moque du scroll
-
   const scrollableParent = getScrollableParent(table);
   const scrollableParentRect = scrollableParent.getBoundingClientRect();
 
@@ -376,7 +365,7 @@ const initResizeTableColumnByMousedown = (
     : tableCellRect.left - tableContainerRect.left;
   const minLeft = cellLeftRelative;
 
-  //   const scrollLeft = scrollableParent.scrollLeft;
+  const scrollLeft = scrollableParent.scrollLeft;
 
   // Left bound: minimum width of 50px (can shrink column down to this width)
   const minWidth =
@@ -388,18 +377,21 @@ const initResizeTableColumnByMousedown = (
     typeof columnMaxWidth === "number" && columnMaxWidth < 1000
       ? columnMaxWidth
       : 1000;
-  const customLeftBound = minLeft + minWidth;
+  const customLeftBound = minLeft + minWidth + scrollLeft;
   const maxExpandAmount = maxWidth - tableCellWidth;
-  const customRightBound = minLeft + tableCellWidth + maxExpandAmount;
+  const customRightBound =
+    minLeft + scrollLeft + tableCellWidth + maxExpandAmount;
+  console.log({ customLeftBound });
 
   const dragToMoveGesture = createDragToMoveGesture({
     name: "resize-column",
     direction: { x: true },
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
-    areaConstraint: {
-      left: customLeftBound,
-      right: customRightBound,
-    },
+    areaConstraint: "visible",
+    // customAreaConstraint: {
+    //   left: customLeftBound,
+    //   right: customRightBound,
+    // },
     onGrab: () => {
       updateTableColumnResizerPosition(tableCell);
       onGrab?.();
