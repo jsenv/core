@@ -5,6 +5,11 @@ import {
 } from "../z_indexes.js";
 
 import.meta.css = /* css */ `
+  .navi_table_container {
+    --resizer-handle-color: #444746;
+    --resizer-color: #c0c0c0;
+  }
+
   .navi_table th,
   .navi_table td {
     /* ensure table cell padding does not count when we say column = 50px we want a column of 50px, not 50px + paddings */
@@ -18,8 +23,8 @@ import.meta.css = /* css */ `
     width: 8px;
     top: 0;
     bottom: 0;
-    background: orange;
-    opacity: 0.5;
+    /* background: orange; */
+    /* opacity: 0.5; */
     z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
   .navi_table_column_resize_handle_left_interaction {
@@ -47,7 +52,7 @@ import.meta.css = /* css */ `
     top: 50%;
     transform: translateY(-50%);
     border-radius: 15px;
-    background: #444746;
+    background: var(--resizer-handle-color);
     /* opacity: 0.5; */
     width: 5px;
     height: 26px;
@@ -74,7 +79,7 @@ import.meta.css = /* css */ `
     bottom: 0;
     width: 5px;
     left: -3px;
-    background: #c0c0c0;
+    background: var(--resizer-color);
     opacity: 0;
   }
 

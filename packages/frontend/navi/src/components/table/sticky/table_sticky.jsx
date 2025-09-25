@@ -15,6 +15,10 @@ import {
 } from "../z_indexes.js";
 
 import.meta.css = /* css */ `
+  .navi_table_container {
+    --sticky-frontier-color: #c0c0c0;
+  }
+
   .navi_table th[data-sticky-top],
   .navi_table td[data-sticky-top] {
     position: sticky;
@@ -41,6 +45,133 @@ import.meta.css = /* css */ `
   }
   .navi_table tr {
     top: var(--sticky-group-top, 0);
+  }
+
+  .navi_table_container {
+    --sticky-left-frontier-width: 5px;
+    --sticky-top-frontier-height: 5px;
+  }
+
+  .navi_table_cell_sticky_frontier {
+    position: absolute;
+    background: var(--sticky-frontier-color);
+    /* opacity: 0.5; */
+    cursor: grab;
+    z-index: ${Z_INDEX_STICKY_FRONTIER_HANDLE};
+  }
+
+  .navi_table_cell_sticky_frontier[data-left] {
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--sticky-left-frontier-width);
+  }
+  .navi_table_cell_sticky_frontier[data-left][data-opposite] {
+    left: 0;
+    right: auto;
+  }
+  .navi_table_cell_sticky_frontier[data-top] {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--sticky-top-frontier-height);
+  }
+  .navi_table_cell_sticky_frontier[data-top][data-opposite] {
+    top: 0;
+    bottom: auto;
+  }
+  .navi_table_cell_sticky_frontier[data-left][data-top] {
+    bottom: 0;
+    right: 0;
+    left: auto;
+    top: auto;
+  }
+
+  .navi_table_sticky_left_frontier_ghost,
+  .navi_table_sticky_left_frontier_preview {
+    position: absolute;
+    top: 0;
+    width: var(--sticky-left-frontier-width);
+    height: var(--table-height, 100%);
+    pointer-events: none;
+    opacity: 0;
+  }
+  .navi_table_sticky_left_frontier_ghost[data-visible],
+  .navi_table_sticky_left_frontier_preview[data-visible] {
+    opacity: 1;
+  }
+  .navi_table_sticky_left_frontier_ghost {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
+    background: rgba(68, 71, 70, 0.5);
+    left: calc(
+      var(--sticky-left-frontier-ghost-left, 0px) - var(
+          --sticky-left-frontier-width
+        )
+    );
+  }
+  .navi_table_sticky_left_frontier_preview {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
+    background: red;
+    left: calc(
+      var(--sticky-left-frontier-preview-left, 0px) - var(
+          --sticky-left-frontier-width
+        )
+    );
+  }
+
+  .navi_table_sticky_top_frontier_ghost,
+  .navi_table_sticky_top_frontier_preview {
+    position: absolute;
+    left: 0;
+    width: var(--table-width, 100%);
+    height: var(--sticky-top-frontier-height);
+    pointer-events: none;
+    opacity: 0;
+  }
+  .navi_table_sticky_top_frontier_ghost[data-visible],
+  .navi_table_sticky_top_frontier_preview[data-visible] {
+    opacity: 1;
+  }
+  .navi_table_sticky_top_frontier_ghost {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
+    background: rgba(68, 71, 70, 0.5);
+    top: calc(
+      var(--sticky-top-frontier-ghost-top, 0px) - var(
+          --sticky-top-frontier-height
+        )
+    );
+  }
+  .navi_table_sticky_top_frontier_preview {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
+    background: red;
+    top: calc(
+      var(--sticky-top-frontier-preview-top, 0px) - var(
+          --sticky-top-frontier-height
+        )
+    );
+  }
+
+  /* Avoid overlaping between sticky frontiers and resize handles */
+  [data-after-sticky-left-frontier]
+    .navi_table_row_resize_handle_top_interaction,
+  [data-after-sticky-left-frontier]
+    .navi_table_row_resize_handle_bottom_interaction {
+    left: var(--sticky-left-frontier-width);
+  }
+  [data-sticky-left-frontier] .navi_table_row_resize_handle_top_interaction,
+  [data-sticky-left-frontier] .navi_table_row_resize_handle_bottom_interaction {
+    right: var(--sticky-left-frontier-width);
+  }
+  [data-after-sticky-top-frontier]
+    .navi_table_column_resize_handle_left_interaction,
+  [data-after-sticky-top-frontier]
+    .navi_table_column_resize_handle_right_interaction {
+    top: var(--sticky-top-frontier-height);
+  }
+  [data-sticky-top-frontier] .navi_table_column_resize_handle_left_interaction,
+  [data-sticky-top-frontier]
+    .navi_table_column_resize_handle_right_interaction {
+    bottom: var(--sticky-top-frontier-height);
   }
 
   /* Positioning adjustments for ::after pseudo-elements on cells adjacent to sticky frontiers */
@@ -174,133 +305,6 @@ import.meta.css = /* css */ `
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
-  }
-
-  .navi_table_container {
-    --sticky-left-frontier-width: 5px;
-    --sticky-top-frontier-height: 5px;
-  }
-
-  .navi_table_cell_sticky_frontier {
-    position: absolute;
-    background: #444746;
-    opacity: 0.5;
-    cursor: grab;
-    z-index: ${Z_INDEX_STICKY_FRONTIER_HANDLE};
-  }
-
-  .navi_table_cell_sticky_frontier[data-left] {
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: var(--sticky-left-frontier-width);
-  }
-  .navi_table_cell_sticky_frontier[data-left][data-opposite] {
-    left: 0;
-    right: auto;
-  }
-  .navi_table_cell_sticky_frontier[data-top] {
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: var(--sticky-top-frontier-height);
-  }
-  .navi_table_cell_sticky_frontier[data-top][data-opposite] {
-    top: 0;
-    bottom: auto;
-  }
-  .navi_table_cell_sticky_frontier[data-left][data-top] {
-    bottom: 0;
-    right: 0;
-    left: auto;
-    top: auto;
-  }
-
-  .navi_table_sticky_left_frontier_ghost,
-  .navi_table_sticky_left_frontier_preview {
-    position: absolute;
-    top: 0;
-    width: var(--sticky-left-frontier-width);
-    height: var(--table-height, 100%);
-    pointer-events: none;
-    opacity: 0;
-  }
-  .navi_table_sticky_left_frontier_ghost[data-visible],
-  .navi_table_sticky_left_frontier_preview[data-visible] {
-    opacity: 1;
-  }
-  .navi_table_sticky_left_frontier_ghost {
-    z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
-    background: rgba(68, 71, 70, 0.5);
-    left: calc(
-      var(--sticky-left-frontier-ghost-left, 0px) - var(
-          --sticky-left-frontier-width
-        )
-    );
-  }
-  .navi_table_sticky_left_frontier_preview {
-    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
-    background: red;
-    left: calc(
-      var(--sticky-left-frontier-preview-left, 0px) - var(
-          --sticky-left-frontier-width
-        )
-    );
-  }
-
-  .navi_table_sticky_top_frontier_ghost,
-  .navi_table_sticky_top_frontier_preview {
-    position: absolute;
-    left: 0;
-    width: var(--table-width, 100%);
-    height: var(--sticky-top-frontier-height);
-    pointer-events: none;
-    opacity: 0;
-  }
-  .navi_table_sticky_top_frontier_ghost[data-visible],
-  .navi_table_sticky_top_frontier_preview[data-visible] {
-    opacity: 1;
-  }
-  .navi_table_sticky_top_frontier_ghost {
-    z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
-    background: rgba(68, 71, 70, 0.5);
-    top: calc(
-      var(--sticky-top-frontier-ghost-top, 0px) - var(
-          --sticky-top-frontier-height
-        )
-    );
-  }
-  .navi_table_sticky_top_frontier_preview {
-    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
-    background: red;
-    top: calc(
-      var(--sticky-top-frontier-preview-top, 0px) - var(
-          --sticky-top-frontier-height
-        )
-    );
-  }
-
-  /* Avoid overlaping between sticky frontiers and resize handles */
-  [data-after-sticky-left-frontier]
-    .navi_table_row_resize_handle_top_interaction,
-  [data-after-sticky-left-frontier]
-    .navi_table_row_resize_handle_bottom_interaction {
-    left: var(--sticky-left-frontier-width);
-  }
-  [data-sticky-left-frontier] .navi_table_row_resize_handle_top_interaction,
-  [data-sticky-left-frontier] .navi_table_row_resize_handle_bottom_interaction {
-    right: var(--sticky-left-frontier-width);
-  }
-  [data-after-sticky-top-frontier]
-    .navi_table_column_resize_handle_left_interaction,
-  [data-after-sticky-top-frontier]
-    .navi_table_column_resize_handle_right_interaction {
-    top: var(--sticky-top-frontier-height);
-  }
-  [data-sticky-top-frontier] .navi_table_column_resize_handle_left_interaction,
-  [data-sticky-top-frontier]
-    .navi_table_column_resize_handle_right_interaction {
-    bottom: var(--sticky-top-frontier-height);
   }
 `;
 

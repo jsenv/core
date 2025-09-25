@@ -13,8 +13,8 @@ import.meta.css = /* css */ `
     position: absolute;
     left: 0;
     right: 0;
-    background: orange;
-    opacity: 0.5;
+    /* background: orange; */
+    /* opacity: 0.5; */
     height: 8px;
     z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
