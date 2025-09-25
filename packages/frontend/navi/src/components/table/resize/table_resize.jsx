@@ -62,8 +62,7 @@ import.meta.css = /* css */ `
     left: var(--table-cell-right, 0);
     opacity: 0;
   }
-  .navi_table_column_resizer .navi_table_column_resize_handle_left,
-  .navi_table_column_resizer .navi_table_column_resize_handle_right {
+  .navi_table_column_resizer .navi_table_column_resize_handle {
     position: absolute;
     height: 100%;
     top: 50%;
@@ -75,13 +74,12 @@ import.meta.css = /* css */ `
     height: 26px;
     max-height: 80%;
   }
-  .navi_table_column_resizer .navi_table_column_resize_handle_left {
+  .navi_table_column_resizer .navi_table_column_resize_handle[data-left] {
     left: 2px;
   }
-  .navi_table_column_resizer .navi_table_column_resize_handle_right {
+  .navi_table_column_resizer .navi_table_column_resize_handle[data-right] {
     right: 3px;
   }
-
   .navi_table_column_resize_handle_container {
     position: absolute;
     top: 0;
@@ -89,7 +87,6 @@ import.meta.css = /* css */ `
     right: 0;
     height: var(--table-cell-height);
   }
-
   .navi_table_column_resizer_line {
     position: absolute;
     top: 0;
@@ -99,12 +96,10 @@ import.meta.css = /* css */ `
     background: var(--resizer-color);
     opacity: 0;
   }
-
   .navi_table_column_resizer[data-hover],
   .navi_table_column_resizer[data-resizing] {
     opacity: 1;
   }
-
   .navi_table_column_resizer[data-resizing] .navi_table_column_resizer_line {
     opacity: 1;
   }
@@ -119,8 +114,7 @@ import.meta.css = /* css */ `
     top: var(--table-cell-bottom, 0);
     opacity: 0;
   }
-  .navi_table_row_resizer .navi_table_row_resize_handle_top,
-  .navi_table_row_resizer .navi_table_row_resize_handle_bottom {
+  .navi_table_row_resizer .navi_table_row_resize_handle {
     position: absolute;
     width: 100%;
     left: 50%;
@@ -132,10 +126,10 @@ import.meta.css = /* css */ `
     height: 5px;
     max-width: 80%;
   }
-  .navi_table_row_resizer .navi_table_row_resize_handle_top {
+  .navi_table_row_resizer .navi_table_row_resize_handle[data-top] {
     top: 2px;
   }
-  .navi_table_row_resizer .navi_table_row_resize_handle_bottom {
+  .navi_table_row_resizer .navi_table_row_resize_handle[data-bottom] {
     bottom: 3px;
   }
   .navi_table_row_resize_handle_container {
@@ -154,12 +148,10 @@ import.meta.css = /* css */ `
     background: var(--resizer-color);
     opacity: 0;
   }
-
   .navi_table_row_resizer[data-hover],
   .navi_table_row_resizer[data-resizing] {
     opacity: 1;
   }
-
   .navi_table_row_resizer[data-resizing] .navi_table_row_resizer_line {
     opacity: 1;
   }
@@ -170,8 +162,8 @@ export const TableColumnResizer = () => {
   return (
     <div className="navi_table_column_resizer">
       <div className="navi_table_column_resize_handle_container">
-        <div className="navi_table_column_resize_handle_left"></div>
-        <div className="navi_table_column_resize_handle_right"></div>
+        <div className="navi_table_column_resize_handle" data-left=""></div>
+        <div className="navi_table_column_resize_handle" data-right=""></div>
       </div>
       <div className="navi_table_column_resizer_line"></div>
     </div>
@@ -362,8 +354,8 @@ export const TableRowResizer = () => {
   return (
     <div className="navi_table_row_resizer">
       <div className="navi_table_row_resize_handle_container">
-        <div className="navi_table_row_resize_handle_top"></div>
-        <div className="navi_table_row_resize_handle_bottom"></div>
+        <div className="navi_table_row_resize_handle" data-top=""></div>
+        <div className="navi_table_row_resize_handle" data-bottom=""></div>
       </div>
       <div className="navi_table_row_resizer_line"></div>
     </div>
