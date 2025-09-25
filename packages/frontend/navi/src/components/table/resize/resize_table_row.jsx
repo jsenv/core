@@ -13,8 +13,8 @@ import.meta.css = /* css */ `
     position: absolute;
     left: 0;
     right: 0;
-    /* background: orange; */
-    /* opacity: 0.5; */
+    background: orange;
+    opacity: 0.5;
     height: 8px;
     z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
@@ -25,8 +25,8 @@ import.meta.css = /* css */ `
     bottom: 0;
   }
 
-  [data-sticky-x-frontier] .navi_table_row_resize_handle_top_interaction,
-  [data-sticky-x-frontier] .navi_table_row_resize_handle_bottom_interaction {
+  [data-sticky-left-frontier] .navi_table_row_resize_handle_top_interaction,
+  [data-sticky-left-frontier] .navi_table_row_resize_handle_bottom_interaction {
     /* Avoid overlaping the sticky frontier vertical line */
     right: 5px;
   }

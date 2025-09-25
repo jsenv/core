@@ -595,10 +595,12 @@ const RowNumberHeaderCell = ({
       className="navi_row_number_cell"
       data-sticky-left={stickyLeft ? "" : undefined}
       data-sticky-top={stickyTop ? "" : undefined}
-      data-sticky-x-frontier={
+      data-sticky-left-frontier={
         stickyLeft && isStickyLeftFrontier ? "" : undefined
       }
-      data-sticky-y-frontier={stickyTop && isStickyTopFrontier ? "" : undefined}
+      data-sticky-top-frontier={
+        stickyTop && isStickyTopFrontier ? "" : undefined
+      }
       style={{ textAlign: "center" }}
       onClick={onClick}
     >

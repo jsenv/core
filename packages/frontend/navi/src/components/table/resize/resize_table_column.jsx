@@ -18,8 +18,8 @@ import.meta.css = /* css */ `
     width: 8px;
     top: 0;
     bottom: 0;
-    /* background: orange; */
-    /* opacity: 0.5; */
+    background: orange;
+    opacity: 0.5;
     z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
   .navi_table_column_resize_handle_left_interaction {
@@ -28,8 +28,9 @@ import.meta.css = /* css */ `
   .navi_table_column_resize_handle_right_interaction {
     right: 0;
   }
-  [data-sticky-y-frontier] .navi_table_column_resize_handle_left_interaction,
-  [data-sticky-y-frontier] .navi_table_column_resize_handle_right_interaction {
+  [data-sticky-top-frontier] .navi_table_column_resize_handle_left_interaction,
+  [data-sticky-top-frontier]
+    .navi_table_column_resize_handle_right_interaction {
     /* Avoid overlaping the sticky frontier horizontal line */
     bottom: 5px;
   }
