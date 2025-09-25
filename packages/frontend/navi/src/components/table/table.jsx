@@ -390,8 +390,10 @@ export const Table = forwardRef((props, ref) => {
             <RowNumberHeaderCell
               stickyLeft={firstColIsSticky}
               stickyTop={firsRowIsSticky}
-              isStickyLeftFrontier={stickyLeftFrontierColumnIndex <= 0} // Only frontier if no other columns are sticky
-              isStickyTopFrontier={stickyTopFrontierRowIndex <= 0} // Only frontier if no other rows are sticky
+              isStickyLeftFrontier={stickyLeftFrontierColumnIndex === 0} // Only frontier if no other columns are sticky
+              isStickyTopFrontier={stickyTopFrontierRowIndex === 0} // Only frontier if no other rows are sticky
+              isAfterStickyLeftFrontier={stickyLeftFrontierColumnIndex === -1}
+              isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
               stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
               onStickyLeftFrontierChange={onStickyLeftFrontierChange}
               resizable
@@ -421,8 +423,8 @@ export const Table = forwardRef((props, ref) => {
                   isAfterStickyLeftFrontier={
                     colIndex + 1 === stickyLeftFrontierColumnIndex + 1
                   }
-                  isStickyTopFrontier={stickyTopFrontierRowIndex <= 0}
-                  isAfterStickyTopFrontier={false} // Header row can't be after sticky Y frontier
+                  isStickyTopFrontier={stickyTopFrontierRowIndex === 0}
+                  isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
                   stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
                   onStickyLeftFrontierChange={onStickyLeftFrontierChange}
                   key={col.id}
@@ -495,7 +497,7 @@ export const Table = forwardRef((props, ref) => {
               >
                 <RowNumberCell
                   stickyLeft={firstColIsSticky}
-                  isStickyLeftFrontier={stickyLeftFrontierColumnIndex <= 0} // Only if no data columns are sticky
+                  isStickyLeftFrontier={stickyLeftFrontierColumnIndex === 0}
                   isAfterStickyLeftFrontier={
                     stickyLeftFrontierColumnIndex === -1
                   }
@@ -581,6 +583,8 @@ const RowNumberHeaderCell = ({
   stickyTop,
   isStickyLeftFrontier,
   isStickyTopFrontier,
+  isAfterStickyLeftFrontier,
+  isAfterStickyTopFrontier,
   stickyLeftFrontierColumnIndex,
   onStickyLeftFrontierChange,
   resizable,
@@ -597,21 +601,22 @@ const RowNumberHeaderCell = ({
       className="navi_row_number_cell"
       data-sticky-left={stickyLeft ? "" : undefined}
       data-sticky-top={stickyTop ? "" : undefined}
-      data-sticky-left-frontier={
-        stickyLeft && isStickyLeftFrontier ? "" : undefined
+      data-sticky-left-frontier={isStickyLeftFrontier ? "" : undefined}
+      data-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
+      data-after-sticky-left-frontier={
+        isAfterStickyLeftFrontier ? "" : undefined
       }
-      data-sticky-top-frontier={
-        stickyTop && isStickyTopFrontier ? "" : undefined
-      }
+      data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
       style={{ textAlign: "center" }}
       onClick={onClick}
     >
-      {isStickyLeftFrontier && (
-        <TableStickyLeftFrontier
-          stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-          onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-        />
-      )}
+      {isStickyLeftFrontier ||
+        (stickyLeftFrontierColumnIndex === -1 && (
+          <TableStickyLeftFrontier
+            stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+            onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+          />
+        ))}
       {resizable && (
         <TableColumnRightResizeHandle
           onRelease={(width) => onColumnResizeRequested(width, 0)}
@@ -629,6 +634,86 @@ const RowNumberHeaderCell = ({
     </th>
   );
 };
+const RowNumberCell = ({
+  stickyLeft,
+  stickyTop,
+  isStickyLeftFrontier,
+  isStickyTopFrontier,
+  isAfterStickyLeftFrontier,
+  isAfterStickyTopFrontier,
+  stickyLeftFrontierColumnIndex,
+  onStickyLeftFrontierChange,
+  row,
+  columns,
+  rowWithSomeSelectedCell,
+  selectionController,
+  value,
+  resizable,
+  rowIndex,
+  rowMinHeight,
+  rowMaxHeight,
+  onResizeRequested,
+  style,
+}) => {
+  const cellRef = useRef();
+
+  const rowValue = `row:${row.id}`;
+  const { selected } = useSelectableElement(cellRef, {
+    selectionController,
+    selectionImpact: () => {
+      // Return all data cells in this row that should be impacted
+      return columns.map((col) => `${col.accessorKey}:${row.id}`);
+    },
+  });
+
+  const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(row.id);
+
+  return (
+    <td
+      ref={cellRef}
+      data-sticky-left={stickyLeft ? "" : undefined}
+      data-sticky-top={stickyTop ? "" : undefined}
+      data-sticky-left-frontier={isStickyLeftFrontier ? "" : undefined}
+      data-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
+      data-after-sticky-left-frontier={
+        isAfterStickyLeftFrontier ? "" : undefined
+      }
+      data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
+      className="navi_row_number_cell"
+      data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
+      data-value={rowValue}
+      data-selection-name="row"
+      data-selection-keyboard-toggle
+      aria-selected={selected}
+      style={{ textAlign: "center", ...style }}
+      tabIndex={-1}
+    >
+      {resizable && (
+        <TableRowTopResizeHandle
+          onRelease={(height) => onResizeRequested(height, rowIndex - 1)}
+          rowMinHeight={rowMinHeight}
+          rowMaxHeight={rowMaxHeight}
+        />
+      )}
+      {value}
+      {isStickyLeftFrontier ||
+        (stickyLeftFrontierColumnIndex === -1 && (
+          <TableStickyLeftFrontier
+            stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+            onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+          />
+        ))}
+      {resizable && (
+        <TableRowBottomResizeHandle
+          onRelease={(height) => onResizeRequested(height, rowIndex)}
+          rowMinHeight={rowMinHeight}
+          rowMaxHeight={rowMaxHeight}
+        />
+      )}
+    </td>
+  );
+};
+
 const HeaderCell = ({
   stickyLeft,
   stickyTop,
@@ -717,85 +802,6 @@ const HeaderCell = ({
         />
       )}
     </TableCell>
-  );
-};
-
-const RowNumberCell = ({
-  stickyLeft,
-  stickyTop,
-  isStickyLeftFrontier,
-  isStickyTopFrontier,
-  isAfterStickyLeftFrontier,
-  isAfterStickyTopFrontier,
-  stickyLeftFrontierColumnIndex,
-  onStickyLeftFrontierChange,
-  row,
-  columns,
-  rowWithSomeSelectedCell,
-  selectionController,
-  value,
-  resizable,
-  rowIndex,
-  rowMinHeight,
-  rowMaxHeight,
-  onResizeRequested,
-  style,
-}) => {
-  const cellRef = useRef();
-
-  const rowValue = `row:${row.id}`;
-  const { selected } = useSelectableElement(cellRef, {
-    selectionController,
-    selectionImpact: () => {
-      // Return all data cells in this row that should be impacted
-      return columns.map((col) => `${col.accessorKey}:${row.id}`);
-    },
-  });
-
-  const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(row.id);
-
-  return (
-    <td
-      ref={cellRef}
-      data-sticky-left={stickyLeft ? "" : undefined}
-      data-sticky-top={stickyTop ? "" : undefined}
-      data-sticky-left-frontier={isStickyLeftFrontier ? "" : undefined}
-      data-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
-      data-after-sticky-left-frontier={
-        isAfterStickyLeftFrontier ? "" : undefined
-      }
-      data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
-      className="navi_row_number_cell"
-      data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
-      data-value={rowValue}
-      data-selection-name="row"
-      data-selection-keyboard-toggle
-      aria-selected={selected}
-      style={{ textAlign: "center", ...style }}
-      tabIndex={-1}
-    >
-      {resizable && (
-        <TableRowTopResizeHandle
-          onRelease={(height) => onResizeRequested(height, rowIndex - 1)}
-          rowMinHeight={rowMinHeight}
-          rowMaxHeight={rowMaxHeight}
-        />
-      )}
-      {value}
-      {isStickyLeftFrontier && (
-        <TableStickyLeftFrontier
-          stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-          onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-        />
-      )}
-      {resizable && (
-        <TableRowBottomResizeHandle
-          onRelease={(height) => onResizeRequested(height, rowIndex)}
-          rowMinHeight={rowMinHeight}
-          rowMaxHeight={rowMaxHeight}
-        />
-      )}
-    </td>
   );
 };
 
