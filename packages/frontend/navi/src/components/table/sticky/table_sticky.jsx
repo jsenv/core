@@ -182,6 +182,7 @@ import.meta.css = /* css */ `
     bottom: 0;
     width: var(--sticky-left-frontier-width);
     background: #444746;
+    opacity: 0.5;
     cursor: grab;
     z-index: ${Z_INDEX_STICKY_FRONTIER_HANDLE};
   }

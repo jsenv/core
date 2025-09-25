@@ -496,7 +496,9 @@ export const Table = forwardRef((props, ref) => {
                 <RowNumberCell
                   stickyLeft={firstColIsSticky}
                   isStickyLeftFrontier={stickyLeftFrontierColumnIndex <= 0} // Only if no data columns are sticky
-                  isAfterStickyLeftFrontier={false} // Row number column can't be after sticky X frontier (it's the first column)
+                  isAfterStickyLeftFrontier={
+                    stickyLeftFrontierColumnIndex === -1
+                  }
                   stickyTop={rowIsSticky}
                   isStickyTopFrontier={isStickyTopFrontier}
                   isAfterStickyTopFrontier={isAfterStickyTopFrontier}
@@ -757,12 +759,8 @@ const RowNumberCell = ({
       ref={cellRef}
       data-sticky-left={stickyLeft ? "" : undefined}
       data-sticky-top={stickyTop ? "" : undefined}
-      data-sticky-left-frontier={
-        stickyLeft && isStickyLeftFrontier ? "" : undefined
-      }
-      data-sticky-top-frontier={
-        stickyTop && isStickyTopFrontier ? "" : undefined
-      }
+      data-sticky-left-frontier={isStickyLeftFrontier ? "" : undefined}
+      data-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
       data-after-sticky-left-frontier={
         isAfterStickyLeftFrontier ? "" : undefined
       }
