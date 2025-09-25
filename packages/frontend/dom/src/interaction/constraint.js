@@ -1,27 +1,32 @@
 const CONSOLE_DEBUG_CONSTRAINTS = true;
 
-export const createBoundConstraint = (bounds, { element, name } = {}) => {
+export const createBoundConstraint = (
+  bounds,
+  { leftAtStart, topAtStart, element, name } = {},
+) => {
   const { left, top, right, bottom } = bounds;
 
-  const apply = (xMove, yMove, { gestureInfo }) => {
-    const { leftAtStart, topAtStart } = gestureInfo;
+  const minAllowedXMove = left === undefined ? undefined : left - leftAtStart;
+  const maxAllowedXMove = right === undefined ? undefined : right - leftAtStart;
+  const minAllowedYMove = top === undefined ? undefined : top - topAtStart;
+  const maxAllowedYMove =
+    bottom === undefined ? undefined : bottom - topAtStart;
 
+  const apply = (xMove, yMove) => {
     let constrainedXMove = xMove;
     let constrainedYMove = yMove;
     // Apply bounds constraints directly using visual coordinates
     // initialLeft/initialTop now represent elementVisuallyImpacted position
-    const minAllowedXMove = left - leftAtStart;
-    const maxAllowedXMove = right - leftAtStart;
-    const minAllowedYMove = top - topAtStart;
-    const maxAllowedYMove = bottom - topAtStart;
-    if (xMove < minAllowedXMove) {
+    if (minAllowedXMove !== undefined && xMove < minAllowedXMove) {
       constrainedXMove = minAllowedXMove;
-    } else if (xMove > maxAllowedXMove) {
+    }
+    if (maxAllowedXMove !== undefined && xMove > maxAllowedXMove) {
       constrainedXMove = maxAllowedXMove;
     }
-    if (yMove < minAllowedYMove) {
+    if (minAllowedYMove !== undefined && yMove < minAllowedYMove) {
       constrainedYMove = minAllowedYMove;
-    } else if (yMove > maxAllowedYMove) {
+    }
+    if (maxAllowedYMove !== undefined && yMove > maxAllowedYMove) {
       constrainedYMove = maxAllowedYMove;
     }
     return [constrainedXMove, constrainedYMove];

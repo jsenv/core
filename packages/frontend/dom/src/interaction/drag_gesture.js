@@ -310,31 +310,7 @@ export const createDragGesture = (options) => {
       stickyFrontiers = false;
     }
 
-    if (customAreaConstraint) {
-      const customAreaConstraintFunction = ({
-        elementWidth,
-        elementHeight,
-      }) => {
-        let {
-          left = areaConstraint === "scollable" ? 0 : scrollLeftAtStart,
-          top = areaConstraint === "scrollable" ? 0 : scrollTopAtStart,
-          bottom = areaConstraint === "scrollable"
-            ? getScrollRightBound(elementWidth)
-            : getVisibleRightBound(elementWidth),
-          right = areaConstraint === "scrollable"
-            ? getScrollBottomBound(elementHeight)
-            : getVisibleBottomBound(elementHeight),
-        } = areaConstraint;
-        return createBoundConstraint(
-          { left, top, right, bottom },
-          {
-            element: scrollableParent,
-            name: "custom area",
-          },
-        );
-      };
-      constraintFunctions.push(customAreaConstraintFunction);
-    } else if (areaConstraint === "scrollable") {
+    if (areaConstraint === "scrollable") {
       const scrollableAreaConstraintFunction = ({
         elementWidth,
         elementHeight,
@@ -353,6 +329,8 @@ export const createDragGesture = (options) => {
         return createBoundConstraint(
           { left, top, right, bottom },
           {
+            leftAtStart,
+            topAtStart,
             element: scrollableParent,
             name: "scrollable area",
           },
@@ -371,12 +349,25 @@ export const createDragGesture = (options) => {
         return createBoundConstraint(
           { left, top, right, bottom },
           {
+            leftAtStart,
+            topAtStart,
             element: scrollableParent,
             name: "visible area",
           },
         );
       };
       constraintFunctions.push(visibleAreaConstraintFunction);
+    }
+
+    if (customAreaConstraint) {
+      const customAreaConstraintFunction = () =>
+        createBoundConstraint(customAreaConstraint, {
+          leftAtStart,
+          topAtStart,
+          element: scrollableParent,
+          name: "custom area",
+        });
+      constraintFunctions.push(customAreaConstraintFunction);
     }
 
     if (obstacleQuerySelector) {

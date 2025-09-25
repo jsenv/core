@@ -383,8 +383,10 @@ const initResizeTableColumnByMousedown = (
     name: "resize-column",
     direction: { x: true },
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
+    // en fait c'est relou, dans le cas sticky on veut override le constraint right qui serait le scroll
+    // donc ptet on pourrais mettre des mot clé pour s'aider ici?
     areaConstraint: isStickyLeft ? "visible" : undefined,
-    areaConstraintReducer: {
+    customAreaConstraint: {
       left: customLeftBound,
       right: customRightBound,
     },
