@@ -118,8 +118,8 @@
         for (let i = 1; i <= count; i++) {
           const column = {
             id: `col${i}`,
-            accessorKey: `col${i}`,
-            value: `Column ${i}`,
+            header: `Column ${i}`,
+            cell: (data) => data[`col${i}`],
           };
           if (i === 1) {
             column.width = 50;

@@ -262,7 +262,7 @@ export const Table = forwardRef((props, ref) => {
         const allCellIds = [];
         data.forEach((row) => {
           columns.forEach((col) => {
-            allCellIds.push(`${col.accessorKey}:${row.id}`);
+            allCellIds.push(`${col.id}:${row.id}`);
           });
         });
         onSelectionChange(allCellIds);
@@ -406,13 +406,13 @@ export const Table = forwardRef((props, ref) => {
                 ref.current.selectAll();
               }}
             />
-            {columns.map((col, colIndex) => {
+            {columns.map((column, colIndex) => {
               const columnIsGrabbed = grabTarget === `column:${colIndex}`;
               // const isLastColumn = index === columns.length - 1;
 
               return (
                 <HeaderCell
-                  key={col.id}
+                  key={column.id}
                   // sticky left
                   stickyLeft={colIndex < stickyLeftFrontierColumnIndex}
                   isStickyLeftFrontier={
@@ -430,7 +430,7 @@ export const Table = forwardRef((props, ref) => {
                   stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
                   onStickyTopFrontierChange={onStickyTopFrontierChange}
                   // other
-                  columnAccessorKey={col.accessorKey}
+                  columnId={column.id}
                   columnIndex={colIndex + 1}
                   columnWithSomeSelectedCell={columnWithSomeSelectedCell}
                   data={data}
@@ -438,8 +438,8 @@ export const Table = forwardRef((props, ref) => {
                   grabbed={columnIsGrabbed}
                   movable
                   resizable
-                  columnMinWidth={col.minWidth}
-                  columnMaxWidth={col.maxWidth}
+                  columnMinWidth={column.minWidth}
+                  columnMaxWidth={column.maxWidth}
                   onGrab={() => {
                     grabColumn(colIndex);
                   }}
@@ -458,12 +458,16 @@ export const Table = forwardRef((props, ref) => {
                     );
                   }}
                   style={{
-                    maxWidth: col.width ? `${col.width}px` : undefined,
+                    maxWidth: column.width ? `${column.width}px` : undefined,
                     maxHeight: generatedTopRowHeight
                       ? `${generatedTopRowHeight}px`
                       : undefined,
                   }}
-                  value={col.value}
+                  value={
+                    typeof column.header === "function"
+                      ? column.header()
+                      : column.header
+                  }
                 />
               );
             })}
@@ -538,14 +542,14 @@ export const Table = forwardRef((props, ref) => {
                       : undefined,
                   }}
                 />
-                {columns.map((col, colIndex) => {
+                {columns.map((column, colIndex) => {
                   const columnGrabbed = grabTarget === `column:${colIndex}`;
                   const columnIsSticky =
                     colIndex < stickyLeftFrontierColumnIndex;
 
                   return (
                     <DataCell
-                      key={`${rowData.id}-${col.id}`}
+                      key={`${rowData.id}-${column.id}`}
                       // sticky left
                       stickyLeft={columnIsSticky}
                       isStickyLeftFrontier={
@@ -565,14 +569,18 @@ export const Table = forwardRef((props, ref) => {
                       stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
                       onStickyTopFrontierChange={onStickyTopFrontierChange}
                       // other
-                      columnName={col.accessorKey}
+                      columnId={column.id}
                       columnIndex={colIndex + 1} // +1 because number column is first
                       rowIndex={rowIndex + 1} // +1 because header row is first
                       row={rowData}
-                      value={rowData[col.accessorKey]}
+                      value={
+                        typeof column.cell === "function"
+                          ? column.cell(rowData)
+                          : column.cell
+                      }
                       selectionController={selectionController}
                       grabbed={columnGrabbed}
-                      columnWidth={col.width}
+                      columnWidth={column.width}
                       rowHeight={rowOptions.height}
                     />
                   );
@@ -682,7 +690,7 @@ const RowNumberCell = ({
     selectionController,
     selectionImpact: () => {
       // Return all data cells in this row that should be impacted
-      return columns.map((col) => `${col.accessorKey}:${row.id}`);
+      return columns.map((col) => `${col.id}:${row.id}`);
     },
   });
 
@@ -741,7 +749,7 @@ const HeaderCell = ({
   onStickyLeftFrontierChange,
   stickyTopFrontierRowIndex,
   onStickyTopFrontierChange,
-  columnAccessorKey,
+  columnId,
   columnWithSomeSelectedCell,
   columnMinWidth,
   columnMaxWidth,
@@ -760,11 +768,11 @@ const HeaderCell = ({
   value,
 }) => {
   const columnContainsSelectedCell =
-    columnWithSomeSelectedCell.includes(columnAccessorKey);
+    columnWithSomeSelectedCell.includes(columnId);
 
   return (
     <TableCell
-      cellId={`header:${columnAccessorKey}`}
+      cellId={`header:${columnId}`}
       isHead={true}
       stickyLeft={stickyLeft}
       stickyTop={stickyTop}
@@ -795,7 +803,7 @@ const HeaderCell = ({
         });
       }}
       selectionImpact={() => {
-        const columnCells = data.map((row) => `${columnAccessorKey}:${row.id}`);
+        const columnCells = data.map((row) => `${columnId}:${row.id}`);
         return columnCells;
       }}
       columnContainsSelectedCell={columnContainsSelectedCell}
