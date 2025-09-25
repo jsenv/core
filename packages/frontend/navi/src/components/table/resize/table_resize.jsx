@@ -365,8 +365,6 @@ const initResizeTableColumnByMousedown = (
     : tableCellRect.left - tableContainerRect.left;
   const minLeft = cellLeftRelative;
 
-  const scrollLeft = scrollableParent.scrollLeft;
-
   // Left bound: minimum width of 50px (can shrink column down to this width)
   const minWidth =
     typeof columnMinWidth === "number" && columnMinWidth > 50
@@ -377,21 +375,19 @@ const initResizeTableColumnByMousedown = (
     typeof columnMaxWidth === "number" && columnMaxWidth < 1000
       ? columnMaxWidth
       : 1000;
-  const customLeftBound = minLeft + minWidth + scrollLeft;
+  const customLeftBound = minLeft + minWidth;
   const maxExpandAmount = maxWidth - tableCellWidth;
-  const customRightBound =
-    minLeft + scrollLeft + tableCellWidth + maxExpandAmount;
-  console.log({ customLeftBound });
+  const customRightBound = minLeft + tableCellWidth + maxExpandAmount;
 
   const dragToMoveGesture = createDragToMoveGesture({
     name: "resize-column",
     direction: { x: true },
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
-    areaConstraint: "visible",
-    // customAreaConstraint: {
-    //   left: customLeftBound,
-    //   right: customRightBound,
-    // },
+    areaConstraint: isStickyLeft ? "visible" : undefined,
+    areaConstraintReducer: {
+      left: customLeftBound,
+      right: customRightBound,
+    },
     onGrab: () => {
       updateTableColumnResizerPosition(tableCell);
       onGrab?.();

@@ -347,9 +347,9 @@ export const createDragGesture = (options) => {
         // we cap the constraint bounds to prevent negative positioning that would push elements
         // outside their intended scrollable area.
         const left = 0;
-        const right = getScrollRightBound(elementWidth);
+        const right = left + getScrollRightBound(elementWidth);
         const top = 0;
-        const bottom = getScrollBottomBound(elementHeight);
+        const bottom = top + getScrollBottomBound(elementHeight);
         return createBoundConstraint(
           { left, top, right, bottom },
           {
@@ -366,8 +366,8 @@ export const createDragGesture = (options) => {
       }) => {
         const left = scrollLeftAtStart;
         const top = scrollTopAtStart;
-        const right = scrollLeftAtStart + getVisibleRightBound(elementWidth);
-        const bottom = scrollTopAtStart + getVisibleBottomBound(elementHeight);
+        const right = left + getVisibleRightBound(elementWidth);
+        const bottom = top + getVisibleBottomBound(elementHeight);
         return createBoundConstraint(
           { left, top, right, bottom },
           {
