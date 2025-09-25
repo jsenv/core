@@ -1,8 +1,4 @@
-import {
-  createDragToMoveGesture,
-  getScrollableParent,
-  setAttribute,
-} from "@jsenv/dom";
+import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
 import {
   Z_INDEX_STICKY_COLUMN,
@@ -483,44 +479,6 @@ const initMoveStickyFrontierByMousedown = (
   const ghostElement = tableContainer.querySelector(ghostSelector);
   const previewElement = tableContainer.querySelector(previewSelector);
 
-  // Find the element (column/row) at the middle of the visible area to use as drag boundary
-  // The goal it to prevent user from dragging the frontier too far
-  // and ending with a situation where sticky elements take most/all the visible space
-  const setupObstacle = (elements, tableContainerRect, gestureName) => {
-    const containerSize =
-      axis === "x" ? tableContainerRect.width : tableContainerRect.height;
-    const middle = containerSize / 2;
-
-    for (let i = 0; i < elements.length; i++) {
-      const element = elements[i];
-      const elementRect = element.getBoundingClientRect();
-      let startRelative;
-      let endRelative;
-
-      if (axis === "x") {
-        startRelative = elementRect.left - tableContainerRect.left;
-        endRelative = elementRect.right - tableContainerRect.left;
-      } else {
-        startRelative = elementRect.top - tableContainerRect.top;
-        endRelative = elementRect.bottom - tableContainerRect.top;
-      }
-
-      if (i + 1 === elements.length) {
-        break;
-      }
-      if (endRelative < middle) {
-        continue;
-      }
-      if (startRelative > middle) {
-        continue;
-      }
-
-      const obstacleElement = elements[i + 1];
-      return setAttribute(obstacleElement, "data-drag-obstacle", gestureName);
-    }
-    return () => {};
-  };
-
   // Reset scroll to prevent starting drag in obstacle position
   getScrollableParent(table)[scrollProperty] = 0;
 
@@ -587,16 +545,11 @@ const initMoveStickyFrontierByMousedown = (
     previewElement.setAttribute("data-visible", "");
   };
 
-  const restoreDragObstacleAttr = setupObstacle(
-    elements,
-    tableContainerRect,
-    gestureName,
-  );
-
   const moveFrontierGesture = createDragToMoveGesture({
     name: gestureName,
     direction: { [axis]: true },
     backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
+    areaConstraint: "visible",
 
     onGrab,
     onDrag: (gesture) => {
@@ -648,7 +601,6 @@ const initMoveStickyFrontierByMousedown = (
     ghostElement.removeAttribute("data-visible");
     ghostElement.style.removeProperty(ghostVariableName);
     ghostElement.style[axis === "x" ? "left" : "top"] = ""; // reset position set by drag
-    restoreDragObstacleAttr();
   });
 
   moveFrontierGesture.grabViaMousedown(mousedownEvent, {

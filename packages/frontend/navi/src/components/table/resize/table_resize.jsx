@@ -389,7 +389,7 @@ const initResizeTableColumnByMousedown = (
     name: "resize-column",
     direction: { x: true },
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
-    areaConstraint: isStickyLeft ? "visible" : undefined,
+    areaConstraint: isStickyLeft ? "visible" : "none",
     customAreaConstraint: {
       left: customLeftBound,
       right: customRightBound,
