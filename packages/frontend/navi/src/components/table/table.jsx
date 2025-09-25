@@ -228,6 +228,20 @@ import.meta.css = /* css */ `
   }
 `;
 
+export const createRowNumberColumn = () => {
+  return {
+    id: "row-number",
+    head: "coucou",
+    minWidth: 30,
+    width: 50,
+    textAlign: "center",
+    cell: (_, rowIndex) => rowIndex,
+    cellProps: {
+      className: "navi_row_number_cell",
+    },
+  };
+};
+
 const NO_SELECTION = [];
 export const Table = forwardRef((props, ref) => {
   let {
@@ -407,9 +421,16 @@ export const Table = forwardRef((props, ref) => {
                 }}
               >
                 {columns.map((column, colIndex) => {
+                  const textAlign = column.textAlign;
                   const columnGrabbed = grabTarget === `column:${colIndex}`;
                   const columnIsSticky =
                     colIndex < stickyLeftFrontierColumnIndex;
+
+                  const cellContent =
+                    typeof column.cell === "function"
+                      ? column.cell(rowData, rowIndex)
+                      : column.cell;
+                  const cellProps = column.cellProps;
 
                   return (
                     <DataCell
@@ -437,15 +458,13 @@ export const Table = forwardRef((props, ref) => {
                       columnIndex={colIndex + 1} // +1 because number column is first
                       rowIndex={rowIndex + 1} // +1 because header row is first
                       row={rowData}
-                      value={
-                        typeof column.cell === "function"
-                          ? column.cell(rowData)
-                          : column.cell
-                      }
+                      value={cellContent}
                       selectionController={selectionController}
                       grabbed={columnGrabbed}
                       columnWidth={column.width}
                       rowHeight={rowOptions.height}
+                      textAlign={textAlign}
+                      {...cellProps}
                     />
                   );
                 })}
@@ -493,6 +512,7 @@ const TableHead = ({
           const columnIsGrabbed = grabTarget === `column:${columnIndex}`;
           // const isLastColumn = index === columns.length - 1;
           const { header } = column;
+          const { textAlign } = column;
 
           return (
             <HeaderCell
@@ -538,6 +558,7 @@ const TableHead = ({
                 maxWidth: column.width ? `${column.width}px` : undefined,
                 maxHeight: firstRow.height ? `${firstRow.height}px` : undefined,
               }}
+              textAlign={textAlign}
               value={
                 header === undefined
                   ? ""
@@ -788,6 +809,7 @@ const HeaderCell = ({
 
   style,
   value,
+  textAlign,
 }) => {
   const columnContainsSelectedCell =
     columnWithSomeSelectedCell.includes(columnId);
@@ -809,6 +831,7 @@ const HeaderCell = ({
       cursor={grabbed ? "grabbing" : movable ? "grab" : undefined}
       selectionController={selectionController}
       value={value}
+      textAlign={textAlign}
       // Header-specific data attributes
       boldClone // ensure column width does not change when header becomes strong
       onMouseDown={(e) => {

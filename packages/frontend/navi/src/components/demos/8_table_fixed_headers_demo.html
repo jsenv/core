@@ -97,6 +97,7 @@
         Table,
         // eslint-disable-next-line no-unused-vars
         ActiveKeyboardShortcuts,
+        createRowNumberColumn,
       } from "@jsenv/navi";
 
       // Generate large dataset to force scrolling
@@ -115,6 +116,7 @@
       // Generate column definitions
       const generateColumns = (count = 10) => {
         const columns = [];
+        columns.push(createRowNumberColumn());
         for (let i = 1; i <= count; i++) {
           const column = {
             id: `col${i}`,

@@ -61,6 +61,7 @@ export const TableCell = forwardRef((props, ref) => {
     columnWidth,
     rowHeight,
     children,
+    textAlign,
     // Header-specific props
     className,
     onClick,
@@ -113,6 +114,9 @@ export const TableCell = forwardRef((props, ref) => {
   }
   if (rowHeight !== undefined) {
     innerStyle.maxHeight = `${rowHeight}px`;
+  }
+  if (textAlign) {
+    innerStyle.textAlign = textAlign;
   }
 
   return (

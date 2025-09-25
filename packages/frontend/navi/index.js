@@ -48,7 +48,7 @@ export {
   useSelectableElement,
   useSelectionController,
 } from "./src/components/selection/selection.jsx";
-export { Table } from "./src/components/table/table.jsx";
+export { Table, createRowNumberColumn } from "./src/components/table/table.jsx";
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition.jsx";
 export { useSignalSync } from "./src/components/use_signal_sync.js";
