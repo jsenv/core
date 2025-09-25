@@ -30,3 +30,9 @@ export const TableStickyProvider = TableStickyContext.Provider;
 export const useTableSticky = () => {
   return useContext(TableStickyContext);
 };
+
+const TableDragContext = createContext();
+export const TableDragProvider = TableDragContext.Provider;
+export const useTableDrag = () => {
+  return useContext(TableDragContext);
+};

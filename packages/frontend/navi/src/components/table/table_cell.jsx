@@ -6,6 +6,7 @@ import { useSelectableElement } from "../selection/selection.jsx";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import {
   useTableColumn,
+  useTableDrag,
   useTableRow,
   useTableSelection,
   useTableSticky,
@@ -57,7 +58,6 @@ export const TableCell = forwardRef((props, ref) => {
     cellId,
     boldClone,
     value,
-    grabbed,
     style,
     textAlign,
     // Header-specific props
@@ -75,9 +75,11 @@ export const TableCell = forwardRef((props, ref) => {
   const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
     useTableSticky();
   const { selectionController } = useTableSelection();
+  const { grabTarget } = useTableDrag();
 
   const columnIndex = column.index;
   const rowIndex = row.index;
+  const columnGrabbed = grabTarget === `column:${columnIndex}`;
   const stickyLeft = columnIndex < stickyLeftFrontierColumnIndex;
   const stickyTop = rowIndex < stickyTopFrontierRowIndex;
   const isStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
@@ -190,7 +192,7 @@ export const TableCell = forwardRef((props, ref) => {
           {value}
         </span>
       )}
-      {grabbed && <div className="navi_table_cell_placeholder"></div>}
+      {columnGrabbed && <div className="navi_table_cell_placeholder"></div>}
     </TagName>
   );
 });

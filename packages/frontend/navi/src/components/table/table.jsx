@@ -78,6 +78,7 @@ import {
 import { TableCell } from "./table_cell.jsx";
 import {
   TableColumnProvider,
+  TableDragProvider,
   TableRowProvider,
   TableSelectionProvider,
   TableStickyProvider,
@@ -359,6 +360,7 @@ export const Table = forwardRef((props, ref) => {
   const releaseColumn = () => {
     setGrabTarget(null);
   };
+
   const needTableHead = columns.some((col) => col.header !== undefined);
 
   return (
@@ -396,15 +398,22 @@ export const Table = forwardRef((props, ref) => {
             selectedRowIds,
           }}
         >
-          <TableStickyProvider
+          <TableDragProvider
             value={{
-              stickyLeftFrontierColumnIndex,
-              stickyTopFrontierRowIndex,
-              onStickyLeftFrontierChange,
-              onStickyTopFrontierChange,
+              grabTarget,
+              grabColumn,
+              releaseColumn,
             }}
           >
-            {/* {needTableHead && (
+            <TableStickyProvider
+              value={{
+                stickyLeftFrontierColumnIndex,
+                stickyTopFrontierRowIndex,
+                onStickyLeftFrontierChange,
+                onStickyTopFrontierChange,
+              }}
+            >
+              {/* {needTableHead && (
           <TableHead
             tableRef={ref}
             grabTarget={grabTarget}
@@ -423,18 +432,18 @@ export const Table = forwardRef((props, ref) => {
             selectionController={selectionController}
           />
         )} */}
-            <TableBody
-              grabTarget={grabTarget}
-              columns={columns}
-              data={data}
-              rows={rows}
-              selectedRowIds={selectedRowIds}
-              selectionController={selectionController}
-              stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-            />
-          </TableStickyProvider>
+              <TableBody
+                columns={columns}
+                data={data}
+                rows={rows}
+                selectedRowIds={selectedRowIds}
+                stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+              />
+            </TableStickyProvider>
+          </TableDragProvider>
         </TableSelectionProvider>
       </table>
+
       {/* <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer />
       <TableRowResizer />
@@ -444,13 +453,11 @@ export const Table = forwardRef((props, ref) => {
 });
 
 const TableBody = ({
-  grabTarget,
   columns,
   data,
   rows,
   selectedRowIds,
   stickyTopFrontierRowIndex,
-  selectionController,
 }) => {
   return (
     <tbody>
@@ -487,8 +494,6 @@ const TableBody = ({
               }}
             >
               {columns.map((column, columnIndex) => {
-                const textAlign = column.textAlign;
-                const columnGrabbed = grabTarget === `column:${columnIndex}`;
                 const columnValue = useMemo(() => {
                   return { ...column, index: columnIndex };
                 }, [column, columnIndex]);
@@ -504,9 +509,6 @@ const TableBody = ({
                     data,
 
                     // other
-                    selectionController,
-                    grabbed: columnGrabbed,
-                    textAlign,
                   });
                 } else {
                   tableCell = <TableCell value={cell} />;
