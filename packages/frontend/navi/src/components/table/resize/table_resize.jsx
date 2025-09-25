@@ -346,20 +346,10 @@ const initResizeByMousedown = (
       : updateTableRowResizerPosition;
 
   // Detect sticky positioning for advanced constraint handling
-  let isSticky = false;
-  if (axis === "x") {
-    const colGroup = table.querySelector("colgroup");
-    const columnIndex = Array.from(tableCell.parentElement.children).indexOf(
-      tableCell,
-    );
-    const col = colGroup.children[columnIndex];
-    isSticky = col.hasAttribute("data-sticky-left");
-  } else {
-    const row = tableCell.closest("tr");
-    // For rows, check if the row has sticky-top attribute
-    isSticky = row.hasAttribute("data-sticky-top");
-  }
-
+  const isSticky =
+    axis === "x"
+      ? tableCell.hasAttribute("data-sticky-left")
+      : tableCell.hasAttribute("data-sticky-top");
   const scrollableParent = getScrollableParent(table);
   const scrollableParentRect = scrollableParent.getBoundingClientRect();
   const tableCellRect = tableCell.getBoundingClientRect();
@@ -467,7 +457,9 @@ const initResizeTableRowByMousedown = (
     if (!previousTr) {
       return;
     }
-    // todo: select the "same" (the one at the same column index) table cell in previous row
+    // Select the same table cell (same column index) in previous row
+    const currentCellIndex = Array.from(tableRow.children).indexOf(tableCell);
+    tableCell = previousTr.children[currentCellIndex];
   }
   initResizeByMousedown(mousedownEvent, {
     minSize: rowMinHeight,
