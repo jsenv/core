@@ -98,6 +98,7 @@
         // eslint-disable-next-line no-unused-vars
         ActiveKeyboardShortcuts,
         createRowNumberColumn,
+        TableCell,
       } from "@jsenv/navi";
 
       // Generate large dataset to force scrolling
@@ -121,7 +122,9 @@
           const column = {
             id: `col${i}`,
             header: `Column ${i}`,
-            cell: (data) => data[`col${i}`],
+            cell: ({ rowIndex, data }) => (
+              <TableCell value={data[rowIndex][`col${i}`]} />
+            ),
           };
           if (i === 1) {
             column.width = 50;

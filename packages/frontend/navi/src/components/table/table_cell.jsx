@@ -1,7 +1,14 @@
 import { forwardRef, useImperativeHandle } from "preact/compat";
 import { useRef } from "preact/hooks";
+
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { useSelectableElement } from "../selection/selection.jsx";
+import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
+import {
+  useTableColumn,
+  useTableRow,
+  useTableSticky,
+} from "./table_context.jsx";
 
 import.meta.css = /* css */ `
   .navi_table {
@@ -48,19 +55,10 @@ export const TableCell = forwardRef((props, ref) => {
     isHead,
     cellId,
     boldClone,
-    stickyLeft,
-    stickyTop,
-    isStickyLeftFrontier,
-    isStickyTopFrontier,
-    isAfterStickyLeftFrontier,
-    isAfterStickyTopFrontier,
     value,
     selectionController,
     grabbed,
     style,
-    columnWidth,
-    rowHeight,
-    children,
     textAlign,
     // Header-specific props
     className,
@@ -71,6 +69,21 @@ export const TableCell = forwardRef((props, ref) => {
     selectionImpact,
     columnContainsSelectedCell,
   } = props;
+
+  const row = useTableRow();
+  const column = useTableColumn();
+  const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
+    useTableSticky();
+
+  const columnIndex = column.index;
+  const rowIndex = row.index;
+  const stickyLeft = columnIndex < stickyLeftFrontierColumnIndex;
+  const stickyTop = rowIndex < stickyTopFrontierRowIndex;
+  const isStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
+  const isAfterStickyLeftFrontier =
+    columnIndex === stickyLeftFrontierColumnIndex + 1;
+  const isStickyTopFrontier = false;
+  const isAfterStickyTopFrontier = false;
 
   const cellRef = useRef();
   const { selected } = useSelectableElement(cellRef, {
@@ -163,7 +176,12 @@ export const TableCell = forwardRef((props, ref) => {
       >
         {value}
       </Editable>
-      {children}
+      <TableCellStickyFrontier
+        rowIndex={rowIndex}
+        columnIndex={columnIndex}
+        stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+        stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+      />
       {boldClone && (
         <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
           {value}
