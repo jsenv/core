@@ -199,9 +199,9 @@ import.meta.css = /* css */ `
   .navi_table_sticky_left_frontier_ghost,
   .navi_table_sticky_left_frontier_preview {
     position: absolute;
-    top: 0;
-    bottom: 0;
+    top: 0
     width: var(--sticky-left-frontier-width);
+    height: var(--table-height, 100%);
     pointer-events: none;
     opacity: 0;
   }
@@ -247,7 +247,7 @@ import.meta.css = /* css */ `
   .navi_table_sticky_top_frontier_preview {
     position: absolute;
     left: 0;
-    right: 0;
+    width: var(--table-width, 100%);
     height: var(--sticky-top-frontier-height);
     pointer-events: none;
     opacity: 0;
@@ -373,7 +373,17 @@ const initMoveStickyLeftFrontierByMousedown = (
   // But if there is already a scroll we might already have crossed that column
   // Creating a scenario where we start the drag already at the right of an obstacle which won't provide a nice UX
   getScrollableParent(table).scrollLeft = 0;
+
+  const tableRect = table.getBoundingClientRect();
   const tableContainerRect = tableContainer.getBoundingClientRect();
+  tableStickyLeftFrontierGhost.style.setProperty(
+    "--table-height",
+    `${tableRect.height}px`,
+  );
+  tableStickyLeftFrontierPreview.style.setProperty(
+    "--table-height",
+    `${tableRect.height}px`,
+  );
 
   if (stickyLeftFrontierColumnIndex === -1) {
     tableStickyLeftFrontierGhost.style.setProperty(
@@ -532,7 +542,17 @@ const initMoveStickyTopFrontierByMousedown = (
   // But if there is already a scroll we might already have crossed that row
   // Creating a scenario where we start the drag already at the bottom of an obstacle which won't provide a nice UX
   getScrollableParent(table).scrollTop = 0;
+
+  const tableRect = table.getBoundingClientRect();
   const tableContainerRect = tableContainer.getBoundingClientRect();
+  tableStickyTopFrontierGhost.style.setProperty(
+    "--table-width",
+    `${tableRect.width}px`,
+  );
+  tableStickyTopFrontierPreview.style.setProperty(
+    "--table-width",
+    `${tableRect.width}px`,
+  );
 
   if (stickyTopFrontierRowIndex === -1) {
     tableStickyTopFrontierGhost.style.setProperty(
