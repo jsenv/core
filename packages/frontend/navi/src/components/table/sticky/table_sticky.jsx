@@ -351,341 +351,252 @@ export const TableStickyTopFrontierPreview = () => {
   return <div className="navi_table_sticky_top_frontier_preview"></div>;
 };
 
-// When we cross half the width of a column we inject a second vertical line where the new frontier would be
-// to tell user "hey if you grab here, the frontier will be there"
-// At this stage user can see 3 frontiers. Where it is, the one he grab, the futurue one if he releases.
+// Generic function to handle sticky frontier movement for both axes
+const initMoveStickyFrontierByMousedown = (
+  mousedownEvent,
+  {
+    frontierIndex,
+    onGrab,
+    onDrag,
+    onRelease,
+    // Axis-specific configuration
+    axis, // 'x' or 'y'
+    elements, // array of colElements or rowElements
+  },
+) => {
+  const tableCell = mousedownEvent.target.closest("th,td");
+  const table = tableCell.closest("table");
+  const tableContainer = table.closest(".navi_table_container");
+
+  // Get elements based on axis
+  const gestureName =
+    axis === "x" ? "move-sticky-left-frontier" : "move-sticky-top-frontier";
+  const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
+  const ghostSelector =
+    axis === "x"
+      ? ".navi_table_sticky_left_frontier_ghost"
+      : ".navi_table_sticky_top_frontier_ghost";
+  const previewSelector =
+    axis === "x"
+      ? ".navi_table_sticky_left_frontier_preview"
+      : ".navi_table_sticky_top_frontier_preview";
+  const ghostVariableName =
+    axis === "x"
+      ? "--sticky-left-frontier-ghost-left"
+      : "--sticky-top-frontier-ghost-top";
+  const previewVariableName =
+    axis === "x"
+      ? "--sticky-left-frontier-preview-left"
+      : "--sticky-top-frontier-preview-top";
+
+  const ghostElement = tableContainer.querySelector(ghostSelector);
+  const previewElement = tableContainer.querySelector(previewSelector);
+
+  // Find the element (column/row) at the middle of the visible area to use as drag boundary
+  // The goal it to prevent user from dragging the frontier too far
+  // and ending with a situation where sticky elements take most/all the visible space
+  const setupObstacle = (elements, tableContainerRect, gestureName) => {
+    const containerSize =
+      axis === "x" ? tableContainerRect.width : tableContainerRect.height;
+    const middle = containerSize / 2;
+
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i];
+      const elementRect = element.getBoundingClientRect();
+      let startRelative;
+      let endRelative;
+
+      if (axis === "x") {
+        startRelative = elementRect.left - tableContainerRect.left;
+        endRelative = elementRect.right - tableContainerRect.left;
+      } else {
+        startRelative = elementRect.top - tableContainerRect.top;
+        endRelative = elementRect.bottom - tableContainerRect.top;
+      }
+
+      if (i + 1 === elements.length) {
+        break;
+      }
+      if (endRelative < middle) {
+        continue;
+      }
+      if (startRelative > middle) {
+        continue;
+      }
+
+      const obstacleElement = elements[i + 1];
+      return setAttribute(obstacleElement, "data-drag-obstacle", gestureName);
+    }
+    return () => {};
+  };
+
+  // Reset scroll to prevent starting drag in obstacle position
+  getScrollableParent(table)[scrollProperty] = 0;
+
+  // Setup table dimensions for ghost/preview
+  const tableRect = table.getBoundingClientRect();
+  const tableContainerRect = tableContainer.getBoundingClientRect();
+  if (axis === "x") {
+    ghostElement.style.setProperty("--table-height", `${tableRect.height}px`);
+    previewElement.style.setProperty("--table-height", `${tableRect.height}px`);
+  } else {
+    ghostElement.style.setProperty("--table-width", `${tableRect.width}px`);
+    previewElement.style.setProperty("--table-width", `${tableRect.width}px`);
+  }
+
+  // Setup initial ghost position
+  if (frontierIndex === -1) {
+    ghostElement.style.setProperty(ghostVariableName, "0px");
+  } else {
+    const element = elements[frontierIndex];
+    const elementRect = element.getBoundingClientRect();
+    let position;
+
+    if (axis === "x") {
+      const elementLeftRelative = elementRect.left - tableContainerRect.left;
+      position = elementLeftRelative + elementRect.width;
+    } else {
+      const elementTopRelative = elementRect.top - tableContainerRect.top;
+      position = elementTopRelative + elementRect.height;
+    }
+
+    ghostElement.style.setProperty(ghostVariableName, `${position}px`);
+  }
+  ghostElement.setAttribute("data-visible", "");
+
+  let futureFrontierIndex = frontierIndex;
+  const onFutureFrontierIndexChange = (index) => {
+    futureFrontierIndex = index;
+
+    // We maintain a visible preview of the frontier
+    // to tell user "hey if you grab here, the frontier will be there"
+    // At this stage user can see 3 frontiers. Where it is, the one he grab, the future one if he releases.
+    if (index === frontierIndex) {
+      previewElement.removeAttribute("data-visible");
+      return;
+    }
+    let previewPosition;
+    if (index === -1) {
+      const ghostRect = ghostElement.getBoundingClientRect();
+      previewPosition = axis === "x" ? ghostRect.width : ghostRect.height;
+    } else {
+      const element = elements[index];
+      const elementRect = element.getBoundingClientRect();
+      const tableContainerRect = tableContainer.getBoundingClientRect();
+      if (axis === "x") {
+        previewPosition = elementRect.right - tableContainerRect.left;
+      } else {
+        previewPosition = elementRect.bottom - tableContainerRect.top;
+      }
+    }
+    previewElement.style.setProperty(
+      previewVariableName,
+      `${previewPosition}px`,
+    );
+    previewElement.setAttribute("data-visible", "");
+  };
+
+  const restoreDragObstacleAttr = setupObstacle(
+    elements,
+    tableContainerRect,
+    gestureName,
+  );
+
+  const moveFrontierGesture = createDragToMoveGesture({
+    name: gestureName,
+    direction: { [axis]: true },
+    backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
+
+    onGrab,
+    onDrag: (gesture) => {
+      const ghostRect = ghostElement.getBoundingClientRect();
+      const ghostCenter =
+        axis === "x"
+          ? ghostRect.left + ghostRect.width / 2
+          : ghostRect.top + ghostRect.height / 2;
+
+      for (let i = 0; i < elements.length; i++) {
+        const element = elements[i];
+        const elementRect = element.getBoundingClientRect();
+        let elementStart;
+        let elementEnd;
+
+        if (axis === "x") {
+          elementStart = elementRect.left;
+          elementEnd = elementRect.right;
+        } else {
+          elementStart = elementRect.top;
+          elementEnd = elementRect.bottom;
+        }
+
+        if (ghostCenter < elementStart) {
+          continue;
+        }
+        if (ghostCenter > elementEnd) {
+          continue;
+        }
+        // We are over this element, now decide if we are before or after the middle of the element
+        const elementCenter = elementStart + (elementEnd - elementStart) / 2;
+        if (ghostCenter < elementCenter) {
+          onFutureFrontierIndexChange(i - 1);
+        } else {
+          onFutureFrontierIndexChange(i);
+        }
+        break;
+      }
+      onDrag?.(gesture, futureFrontierIndex);
+    },
+    onRelease: (gesture) => {
+      onRelease?.(gesture, futureFrontierIndex);
+    },
+  });
+
+  moveFrontierGesture.addTeardown(() => {
+    previewElement.removeAttribute("data-visible");
+    previewElement.style.removeProperty(previewVariableName);
+    ghostElement.style.removeProperty(ghostVariableName);
+    ghostElement.style[axis === "x" ? "left" : "top"] = ""; // reset position set by drag
+    restoreDragObstacleAttr();
+  });
+
+  moveFrontierGesture.grabViaMousedown(mousedownEvent, {
+    element: ghostElement,
+  });
+};
+
 const initMoveStickyLeftFrontierByMousedown = (
   mousedownEvent,
   { stickyLeftFrontierColumnIndex, onGrab, onDrag, onRelease },
 ) => {
-  const tableCell = mousedownEvent.target.closest("th,td");
-  const table = tableCell.closest("table");
-  const tableContainer = table.closest(".navi_table_container");
+  const tableContainer = mousedownEvent.target.closest(".navi_table_container");
+  const table = tableContainer.querySelector("table");
   const colgroup = table.querySelector("colgroup");
   const colElements = Array.from(colgroup.children);
-  const tableStickyLeftFrontierGhost = tableContainer.querySelector(
-    ".navi_table_sticky_left_frontier_ghost",
-  );
-  const tableStickyLeftFrontierPreview = tableContainer.querySelector(
-    ".navi_table_sticky_left_frontier_preview",
-  );
-  // We must reset scroll because we're limiting ability to move the sticky frontier to a column
-  // But if there is already a scroll we might already have crossed that column
-  // Creating a scenario where we start the drag already at the right of an obstacle which won't provide a nice UX
-  getScrollableParent(table).scrollLeft = 0;
 
-  const tableRect = table.getBoundingClientRect();
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  tableStickyLeftFrontierGhost.style.setProperty(
-    "--table-height",
-    `${tableRect.height}px`,
-  );
-  tableStickyLeftFrontierPreview.style.setProperty(
-    "--table-height",
-    `${tableRect.height}px`,
-  );
-
-  if (stickyLeftFrontierColumnIndex === -1) {
-    tableStickyLeftFrontierGhost.style.setProperty(
-      "--sticky-left-frontier-ghost-left",
-      `0px`,
-    );
-  } else {
-    const tableCellRect = tableCell.getBoundingClientRect();
-    const columnLeftRelative = tableCellRect.left - tableContainerRect.left;
-    const columnRightRelative = columnLeftRelative + tableCellRect.width;
-    tableStickyLeftFrontierGhost.style.setProperty(
-      "--sticky-left-frontier-ghost-left",
-      `${columnRightRelative}px`,
-    );
-  }
-  tableStickyLeftFrontierGhost.setAttribute("data-visible", "");
-
-  let futureStickyLeftFrontierColumnIndex = stickyLeftFrontierColumnIndex;
-  const onFutureLeftStickyFrontierIndexChange = (index) => {
-    futureStickyLeftFrontierColumnIndex = index;
-
-    if (index === stickyLeftFrontierColumnIndex) {
-      tableStickyLeftFrontierPreview.removeAttribute("data-visible");
-      return;
-    }
-    let previewPosition;
-    if (index === -1) {
-      previewPosition =
-        tableStickyLeftFrontierGhost.getBoundingClientRect().width;
-    } else {
-      const colElement = colElements[index];
-      const columnRect = colElement.getBoundingClientRect();
-      const tableContainerRect = tableContainer.getBoundingClientRect();
-      previewPosition = columnRect.right - tableContainerRect.left;
-    }
-
-    tableStickyLeftFrontierPreview.style.setProperty(
-      "--sticky-left-frontier-preview-left",
-      `${previewPosition}px`,
-    );
-    tableStickyLeftFrontierPreview.setAttribute("data-visible", "");
-  };
-
-  // Find the column at the middle of the visible area to use as drag boundary
-  // The goal it to prevent user from dragging the frontier too far
-  // and ending with a situation where sticky columns take most/all the visible space
-  let restoreColumnDragObstacleAttr = () => {};
-  setup_middle_column_obstacle: {
-    const tableContainerWidth = tableContainerRect.width;
-    const middleX = tableContainerWidth / 2;
-    // Find if there's a column at the middle position
-    for (let i = 0; i < colElements.length; i++) {
-      const colElement = colElements[i];
-      const columnRect = colElement.getBoundingClientRect();
-      const columnLeftRelative = columnRect.left - tableContainerRect.left;
-      const columnRightRelative = columnRect.right - tableContainerRect.left;
-      if (i + 1 === colElements.length) {
-        // no next column
-        break;
-      }
-      if (columnRightRelative < middleX) {
-        // column is before the middle
-        continue;
-      }
-      if (columnLeftRelative > middleX) {
-        // column is after the middle
-        continue;
-      }
-      // Add drag obstacle to prevent dragging beyond the middle area
-      const obstacleColElement = colElements[i + 1];
-      restoreColumnDragObstacleAttr = setAttribute(
-        obstacleColElement,
-        "data-drag-obstacle",
-        "move-sticky-left-frontier",
-      );
-      break;
-    }
-  }
-
-  const moveStickyLeftFrontierGesture = createDragToMoveGesture({
-    name: "move-sticky-left-frontier",
-    direction: { x: true },
-    // keepMarkersOnRelease: true,
-    backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
-
+  return initMoveStickyFrontierByMousedown(mousedownEvent, {
+    frontierIndex: stickyLeftFrontierColumnIndex,
     onGrab,
-    onDrag: (gesture) => {
-      update_frontier_index: {
-        const ghostRect = tableStickyLeftFrontierGhost.getBoundingClientRect();
-        const ghostCenterX = ghostRect.left + ghostRect.width / 2;
-        // Find which column the ghost is currently over
-        let i = 0;
-        for (; i < colElements.length; i++) {
-          const colElement = colElements[i];
-          const columnRect = colElement.getBoundingClientRect();
-          if (ghostCenterX < columnRect.left) {
-            continue;
-          }
-          if (ghostCenterX > columnRect.right) {
-            continue;
-          }
-          // on the column, left or right side?
-          const columnCenterX = columnRect.left + columnRect.width / 2;
-          if (ghostCenterX < columnCenterX) {
-            onFutureLeftStickyFrontierIndexChange(i - 1);
-            break;
-          }
-          onFutureLeftStickyFrontierIndexChange(i);
-          break;
-        }
-      }
-      onDrag?.(gesture, futureStickyLeftFrontierColumnIndex);
-    },
-    onRelease: (gesture) => {
-      onRelease?.(gesture, futureStickyLeftFrontierColumnIndex);
-    },
-  });
-
-  moveStickyLeftFrontierGesture.addTeardown(() => {
-    tableStickyLeftFrontierPreview.removeAttribute("data-visible");
-    tableStickyLeftFrontierPreview.style.removeProperty(
-      "--sitkcy-left-frontier-preview-left",
-    );
-
-    tableStickyLeftFrontierGhost.removeAttribute("data-visible");
-    tableStickyLeftFrontierGhost.style.removeProperty(
-      "--sitkcy-left-frontier-ghost-left",
-    );
-    tableStickyLeftFrontierGhost.style.left = ""; // reset left set by the drag
-
-    restoreColumnDragObstacleAttr();
-  });
-  moveStickyLeftFrontierGesture.grabViaMousedown(mousedownEvent, {
-    element: tableStickyLeftFrontierGhost,
+    onDrag,
+    onRelease,
+    axis: "x",
+    elements: colElements,
   });
 };
 
-// When we cross half the height of a row we inject a second horizontal line where the new frontier would be
-// to tell user "hey if you grab here, the frontier will be there"
-// At this stage user can see 3 frontiers. Where it is, the one he grab, the future one if he releases.
 const initMoveStickyTopFrontierByMousedown = (
   mousedownEvent,
   { stickyTopFrontierRowIndex, onGrab, onDrag, onRelease },
 ) => {
-  const tableCell = mousedownEvent.target.closest("th,td");
-  const table = tableCell.closest("table");
-  const tableContainer = table.closest(".navi_table_container");
+  const tableContainer = mousedownEvent.target.closest(".navi_table_container");
+  const table = tableContainer.querySelector("table");
   const rowElements = Array.from(table.querySelectorAll("tr"));
-  const tableStickyTopFrontierGhost = tableContainer.querySelector(
-    ".navi_table_sticky_top_frontier_ghost",
-  );
-  const tableStickyTopFrontierPreview = tableContainer.querySelector(
-    ".navi_table_sticky_top_frontier_preview",
-  );
-  // We must reset scroll because we're limiting ability to move the sticky frontier to a row
-  // But if there is already a scroll we might already have crossed that row
-  // Creating a scenario where we start the drag already at the bottom of an obstacle which won't provide a nice UX
-  getScrollableParent(table).scrollTop = 0;
 
-  const tableRect = table.getBoundingClientRect();
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  tableStickyTopFrontierGhost.style.setProperty(
-    "--table-width",
-    `${tableRect.width}px`,
-  );
-  tableStickyTopFrontierPreview.style.setProperty(
-    "--table-width",
-    `${tableRect.width}px`,
-  );
-
-  if (stickyTopFrontierRowIndex === -1) {
-    tableStickyTopFrontierGhost.style.setProperty(
-      "--sticky-top-frontier-ghost-top",
-      `0px`,
-    );
-  } else {
-    const tableCellRect = tableCell.getBoundingClientRect();
-    const rowTopRelative = tableCellRect.top - tableContainerRect.top;
-    const rowBottomRelative = rowTopRelative + tableCellRect.height;
-    tableStickyTopFrontierGhost.style.setProperty(
-      "--sticky-top-frontier-ghost-top",
-      `${rowBottomRelative}px`,
-    );
-  }
-  tableStickyTopFrontierGhost.setAttribute("data-visible", "");
-
-  let futureStickyTopFrontierRowIndex = stickyTopFrontierRowIndex;
-  const onFutureStickyTopFrontierIndexChange = (index) => {
-    futureStickyTopFrontierRowIndex = index;
-
-    if (index === stickyTopFrontierRowIndex) {
-      tableStickyTopFrontierPreview.removeAttribute("data-visible");
-      return;
-    }
-    let previewPosition;
-    if (index === -1) {
-      previewPosition =
-        tableStickyTopFrontierGhost.getBoundingClientRect().height;
-    } else {
-      const rowElement = rowElements[index];
-      const rowRect = rowElement.getBoundingClientRect();
-      const tableContainerRect = tableContainer.getBoundingClientRect();
-      previewPosition = rowRect.bottom - tableContainerRect.top;
-    }
-
-    tableStickyTopFrontierPreview.style.setProperty(
-      "--sticky-top-frontier-preview-top",
-      `${previewPosition}px`,
-    );
-    tableStickyTopFrontierPreview.setAttribute("data-visible", "");
-  };
-
-  // Find the row at the middle of the visible area to use as drag boundary
-  // The goal it to prevent user from dragging the frontier too far
-  // and ending with a situation where sticky rows take most/all the visible space
-  let restoreRowDragObstacleAttr = () => {};
-  setup_middle_row_obstacle: {
-    const tableContainerHeight = tableContainerRect.height;
-    const middleY = tableContainerHeight / 2;
-    // Find if there's a row at the middle position
-    for (let i = 0; i < rowElements.length; i++) {
-      const rowElement = rowElements[i];
-      const rowRect = rowElement.getBoundingClientRect();
-      const rowTopRelative = rowRect.top - tableContainerRect.top;
-      const rowBottomRelative = rowRect.bottom - tableContainerRect.top;
-      if (i + 1 === rowElements.length) {
-        // no next row
-        break;
-      }
-      if (rowBottomRelative < middleY) {
-        // row is before the middle
-        continue;
-      }
-      if (rowTopRelative > middleY) {
-        // row is after the middle
-        continue;
-      }
-      // Add drag obstacle to prevent dragging beyond the middle area
-      const obstacleRowElement = rowElements[i + 1];
-      restoreRowDragObstacleAttr = setAttribute(
-        obstacleRowElement,
-        "data-drag-obstacle",
-        "move-sticky-top-frontier",
-      );
-      break;
-    }
-  }
-
-  const moveStickyTopFrontierGesture = createDragToMoveGesture({
-    name: "move-sticky-top-frontier",
-    direction: { y: true },
-    // keepMarkersOnRelease: true,
-    backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
-
+  return initMoveStickyFrontierByMousedown(mousedownEvent, {
+    frontierIndex: stickyTopFrontierRowIndex,
     onGrab,
-    onDrag: (gesture) => {
-      update_frontier_index: {
-        const ghostRect = tableStickyTopFrontierGhost.getBoundingClientRect();
-        const ghostCenterY = ghostRect.top + ghostRect.height / 2;
-        // Find which row the ghost is currently over
-        let i = 0;
-        for (; i < rowElements.length; i++) {
-          const rowElement = rowElements[i];
-          const rowRect = rowElement.getBoundingClientRect();
-          if (ghostCenterY < rowRect.top) {
-            continue;
-          }
-          if (ghostCenterY > rowRect.bottom) {
-            continue;
-          }
-          // on the row, top or bottom side?
-          const rowCenterY = rowRect.top + rowRect.height / 2;
-          if (ghostCenterY < rowCenterY) {
-            onFutureStickyTopFrontierIndexChange(i - 1);
-            break;
-          }
-          onFutureStickyTopFrontierIndexChange(i);
-          break;
-        }
-      }
-      onDrag?.(gesture, futureStickyTopFrontierRowIndex);
-    },
-    onRelease: (gesture) => {
-      onRelease?.(gesture, futureStickyTopFrontierRowIndex);
-    },
-  });
-
-  moveStickyTopFrontierGesture.addTeardown(() => {
-    tableStickyTopFrontierPreview.removeAttribute("data-visible");
-    tableStickyTopFrontierPreview.style.removeProperty(
-      "--sticky-top-frontier-preview-top",
-    );
-
-    tableStickyTopFrontierGhost.removeAttribute("data-visible");
-    tableStickyTopFrontierGhost.style.removeProperty(
-      "--sticky-top-frontier-ghost-top",
-    );
-    tableStickyTopFrontierGhost.style.top = ""; // reset top set by the drag
-
-    restoreRowDragObstacleAttr();
-  });
-  moveStickyTopFrontierGesture.grabViaMousedown(mousedownEvent, {
-    element: tableStickyTopFrontierGhost,
+    onDrag,
+    onRelease,
+    axis: "y",
+    elements: rowElements,
   });
 };
