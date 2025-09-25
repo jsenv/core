@@ -275,6 +275,15 @@ import.meta.css = /* css */ `
     );
   }
 
+  .navi_table_sticky_top_left_frontier {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: var(--sticky-left-frontier-width);
+    height: var(--sticky-top-frontier-height);
+    background: #444746;
+  }
+
   /* Avoid overlaping between sticky frontiers and resize handles */
   [data-after-sticky-left-frontier]
     .navi_table_row_resize_handle_top_interaction,
@@ -314,7 +323,7 @@ export const TableCellStickyFrontier = ({
 
   const isCorner = isOnStickyLeftFrontier && isOnStickyTopFrontier;
   if (isCorner) {
-    return <></>;
+    return <div className="navi_table_sticky_top_left_frontier"></div>;
   }
 
   const shouldDisplayStickyLeftFrontier =
@@ -340,6 +349,16 @@ export const TableCellStickyFrontier = ({
           onStickyTopFrontierChange={onStickyTopFrontierChange}
         />
       )}
+    </>
+  );
+};
+export const TableStickyFrontier = () => {
+  return (
+    <>
+      <TableStickyLeftFrontierGhost />
+      <TableStickyLeftFrontierPreview />
+      <TableStickyTopFrontierGhost />
+      <TableStickyTopFrontierPreview />
     </>
   );
 };
@@ -378,10 +397,10 @@ const TableStickyLeftFrontier = ({
     ></div>
   );
 };
-export const TableStickyLeftFrontierGhost = () => {
+const TableStickyLeftFrontierGhost = () => {
   return <div className="navi_table_sticky_left_frontier_ghost"></div>;
 };
-export const TableStickyLeftFrontierPreview = () => {
+const TableStickyLeftFrontierPreview = () => {
   return <div className="navi_table_sticky_left_frontier_preview"></div>;
 };
 
@@ -412,10 +431,10 @@ const TableStickyTopFrontier = ({
     ></div>
   );
 };
-export const TableStickyTopFrontierGhost = () => {
+const TableStickyTopFrontierGhost = () => {
   return <div className="navi_table_sticky_top_frontier_ghost"></div>;
 };
-export const TableStickyTopFrontierPreview = () => {
+const TableStickyTopFrontierPreview = () => {
   return <div className="navi_table_sticky_top_frontier_preview"></div>;
 };
 

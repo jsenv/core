@@ -77,10 +77,7 @@ import {
 import { useStickyGroup } from "./sticky/sticky_group.js";
 import {
   TableCellStickyFrontier,
-  TableStickyLeftFrontierGhost,
-  TableStickyLeftFrontierPreview,
-  TableStickyTopFrontierGhost,
-  TableStickyTopFrontierPreview,
+  TableStickyFrontier,
 } from "./sticky/table_sticky.jsx";
 import { TableCell } from "./table_cell.jsx";
 
@@ -592,10 +589,7 @@ export const Table = forwardRef((props, ref) => {
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer />
       <TableRowResizer />
-      <TableStickyLeftFrontierGhost />
-      <TableStickyLeftFrontierPreview />
-      <TableStickyTopFrontierGhost />
-      <TableStickyTopFrontierPreview />
+      <TableStickyFrontier />
     </div>
   );
 });
