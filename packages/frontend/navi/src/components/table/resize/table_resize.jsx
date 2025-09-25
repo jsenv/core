@@ -1,3 +1,10 @@
+/**
+ * To fix:
+ *
+ * when resizing a sticky column + initial scroll we can resize to the right but not to the left
+ *
+ */
+
 import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
 import {
@@ -339,6 +346,19 @@ const initResizeTableColumnByMousedown = (
   const tableContainerRect = tableContainer.getBoundingClientRect();
   const cellLeftRelative = tableCellRect.left - tableContainerRect.left;
   const minLeft = cellLeftRelative;
+
+  const table = tableCell.closest("table");
+  const colGroup = table.querySelector("colgroup");
+  const collumnIndex = Array.from(tableCell.parentElement.children).indexOf(
+    tableCell,
+  );
+  const col = colGroup.children[collumnIndex];
+  const isStickyLeft = col.hasAttribute("data-sticky-left");
+  if (isStickyLeft) {
+    tableColumnResizer.setAttribute("data-sticky-left", "");
+  } else {
+    tableColumnResizer.removeAttribute("data-sticky-left");
+  }
 
   // Left bound: minimum width of 50px (can shrink column down to this width)
   const minWidth =
