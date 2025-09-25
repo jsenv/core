@@ -64,12 +64,10 @@ import {
   TableColumnLeftResizeHandle,
   TableColumnResizer,
   TableColumnRightResizeHandle,
-} from "./resize/resize_table_column.jsx";
-import {
   TableRowBottomResizeHandle,
   TableRowResizer,
   TableRowTopResizeHandle,
-} from "./resize/resize_table_row.jsx";
+} from "./resize/table_resize.jsx";
 import {
   useTableSelection,
   useTableSelectionController,
