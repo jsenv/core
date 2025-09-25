@@ -238,10 +238,6 @@ export const Table = forwardRef((props, ref) => {
     selectionColor,
     onSelectionChange,
     onColumnResize,
-    generatedLeftColumnWidth = 100,
-    onGeneratedLeftColumnResize,
-    generatedTopRowHeight,
-    onGeneratedTopRowResize,
     onRowResize,
     borderCollapse = true,
     stickyLeftFrontierColumnIndex = 0,
@@ -333,8 +329,7 @@ export const Table = forwardRef((props, ref) => {
     setGrabTarget(null);
   };
 
-  const firstColIsSticky = stickyLeftFrontierColumnIndex > -1;
-  const firsRowIsSticky = stickyTopFrontierRowIndex > -1;
+  const needTableHead = columns.some((col) => col.header !== undefined);
 
   return (
     <div ref={tableContainerRef} className="navi_table_container">
@@ -346,15 +341,6 @@ export const Table = forwardRef((props, ref) => {
         data-border-collapse={borderCollapse ? "" : undefined}
       >
         <colgroup>
-          <col
-            data-sticky-left={firstColIsSticky ? "" : undefined}
-            data-drag-sticky-frontier-left={firstColIsSticky ? "" : undefined}
-            data-drag-obstacle="move-column"
-            style={{
-              minWidth: `${generatedLeftColumnWidth}px`,
-              maxWidth: `${generatedLeftColumnWidth}px`,
-            }}
-          ></col>
           {columns.map((col, index) => {
             const colIsSticky = index < stickyLeftFrontierColumnIndex;
 
@@ -363,6 +349,7 @@ export const Table = forwardRef((props, ref) => {
                 key={col.id}
                 data-sticky-left={colIsSticky ? "" : undefined}
                 data-drag-sticky-left-frontier={colIsSticky ? "" : undefined}
+                data-drag-obstacle={col.immovable ? "move-column" : undefined}
                 style={{
                   minWidth: col.width ? `${col.width}px` : undefined,
                   maxWidth: col.width ? `${col.width}px` : undefined,
@@ -371,108 +358,26 @@ export const Table = forwardRef((props, ref) => {
             );
           })}
         </colgroup>
-        <thead>
-          <tr
-            data-sticky-top={firsRowIsSticky ? "" : undefined}
-            data-drag-sticky-frontier-top={firsRowIsSticky ? "" : undefined}
-            data-drag-obstacle="move-row"
-            style={{
-              height: generatedTopRowHeight
-                ? `${generatedTopRowHeight}px`
-                : undefined,
-            }}
-          >
-            <RowNumberHeaderCell
-              stickyLeft={firstColIsSticky}
-              stickyTop={firsRowIsSticky}
-              isStickyLeftFrontier={stickyLeftFrontierColumnIndex === 0} // Only frontier if no other columns are sticky
-              isStickyTopFrontier={stickyTopFrontierRowIndex === 0} // Only frontier if no other rows are sticky
-              isAfterStickyLeftFrontier={stickyLeftFrontierColumnIndex === -1}
-              isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
-              stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-              onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-              stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-              onStickyTopFrontierChange={onStickyTopFrontierChange}
-              resizable
-              columnMinWidth={50}
-              onColumnResizeRequested={(width) => {
-                onGeneratedLeftColumnResize?.(width);
-              }}
-              rowMinHeight={30}
-              onRowResizeRequested={(height) => {
-                onGeneratedTopRowResize?.(height);
-              }}
-              onClick={() => {
-                ref.current.selectAll();
-              }}
-            />
-            {columns.map((column, colIndex) => {
-              const columnIsGrabbed = grabTarget === `column:${colIndex}`;
-              // const isLastColumn = index === columns.length - 1;
+        {needTableHead && (
+          <TableHead
+            tableRef={ref}
+            grabTarget={grabTarget}
+            grabColumn={grabColumn}
+            releaseColumn={releaseColumn}
+            columnWithSomeSelectedCell={columnWithSomeSelectedCell}
+            columns={columns}
+            data={data}
+            firstRow={rows[0] || {}}
+            stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+            stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+            onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+            onStickyTopFrontierChange={onStickyTopFrontierChange}
+            onRowResize={onRowResize}
+            onColumnResize={onColumnResize}
+            selectionController={selectionController}
+          />
+        )}
 
-              return (
-                <HeaderCell
-                  key={column.id}
-                  // sticky left
-                  stickyLeft={colIndex < stickyLeftFrontierColumnIndex}
-                  isStickyLeftFrontier={
-                    colIndex + 1 === stickyLeftFrontierColumnIndex
-                  }
-                  isAfterStickyLeftFrontier={
-                    colIndex + 1 === stickyLeftFrontierColumnIndex + 1
-                  }
-                  stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-                  onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-                  // sticky top
-                  stickyTop={firsRowIsSticky}
-                  isStickyTopFrontier={stickyTopFrontierRowIndex === 0}
-                  isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
-                  stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-                  onStickyTopFrontierChange={onStickyTopFrontierChange}
-                  // other
-                  columnId={column.id}
-                  columnIndex={colIndex + 1}
-                  columnWithSomeSelectedCell={columnWithSomeSelectedCell}
-                  data={data}
-                  selectionController={selectionController}
-                  grabbed={columnIsGrabbed}
-                  movable
-                  resizable
-                  columnMinWidth={column.minWidth}
-                  columnMaxWidth={column.maxWidth}
-                  onGrab={() => {
-                    grabColumn(colIndex);
-                  }}
-                  onRelease={() => {
-                    releaseColumn(colIndex);
-                  }}
-                  onResizeRequested={(width, columnIndex) => {
-                    if (columnIndex === 0) {
-                      onGeneratedLeftColumnResize?.(width);
-                      return;
-                    }
-                    onColumnResize?.(
-                      width,
-                      columnIndex - 1,
-                      columns[columnIndex - 1],
-                    );
-                  }}
-                  style={{
-                    maxWidth: column.width ? `${column.width}px` : undefined,
-                    maxHeight: generatedTopRowHeight
-                      ? `${generatedTopRowHeight}px`
-                      : undefined,
-                  }}
-                  value={
-                    typeof column.header === "function"
-                      ? column.header()
-                      : column.header
-                  }
-                />
-              );
-            })}
-          </tr>
-        </thead>
         <tbody>
           {data.map((rowData, rowIndex) => {
             const rowOptions = rows[rowIndex] || {};
@@ -501,47 +406,6 @@ export const Table = forwardRef((props, ref) => {
                     : undefined,
                 }}
               >
-                <RowNumberCell
-                  // sticky left
-                  stickyLeft={firstColIsSticky}
-                  isStickyLeftFrontier={stickyLeftFrontierColumnIndex === 0}
-                  isAfterStickyLeftFrontier={
-                    stickyLeftFrontierColumnIndex === -1
-                  }
-                  stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-                  onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-                  // sticky top
-                  stickyTop={rowIsSticky}
-                  isStickyTopFrontier={isStickyTopFrontier}
-                  isAfterStickyTopFrontier={isAfterStickyTopFrontier}
-                  stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-                  onStickyTopFrontierChange={onStickyTopFrontierChange}
-                  // other
-                  row={rowData}
-                  rowWithSomeSelectedCell={rowWithSomeSelectedCell}
-                  columns={columns}
-                  selectionController={selectionController}
-                  value={rowIndex + 1}
-                  resizable
-                  rowIndex={rowIndex + 1}
-                  rowMinHeight={rowOptions.minHeight}
-                  rowMaxHeight={rowOptions.maxHeight}
-                  onResizeRequested={(height, rowIndex) => {
-                    if (rowIndex === 0) {
-                      onGeneratedTopRowResize?.(height);
-                      return;
-                    }
-                    onRowResize?.(height, rowIndex - 1, rows[rowIndex - 1]);
-                  }}
-                  style={{
-                    maxWidth: generatedLeftColumnWidth
-                      ? `${generatedLeftColumnWidth}px`
-                      : undefined,
-                    maxHeight: rowOptions.height
-                      ? `${rowOptions.height}px`
-                      : undefined,
-                  }}
-                />
                 {columns.map((column, colIndex) => {
                   const columnGrabbed = grabTarget === `column:${colIndex}`;
                   const columnIsSticky =
@@ -598,145 +462,303 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 
-const RowNumberHeaderCell = ({
-  stickyLeft,
-  stickyTop,
-  isStickyLeftFrontier,
-  isStickyTopFrontier,
-  isAfterStickyLeftFrontier,
-  isAfterStickyTopFrontier,
-  stickyLeftFrontierColumnIndex,
-  onStickyLeftFrontierChange,
-  stickyTopFrontierRowIndex,
-  onStickyTopFrontierChange,
-  resizable,
-  columnMinWidth,
-  columnMaxWidth,
-  onColumnResizeRequested,
-  rowMinHeight,
-  rowMaxHeight,
-  onRowResizeRequested,
-  onClick,
-}) => {
-  return (
-    <th
-      className="navi_row_number_cell"
-      data-sticky-left={stickyLeft ? "" : undefined}
-      data-sticky-top={stickyTop ? "" : undefined}
-      data-sticky-left-frontier={isStickyLeftFrontier ? "" : undefined}
-      data-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
-      data-after-sticky-left-frontier={
-        isAfterStickyLeftFrontier ? "" : undefined
-      }
-      data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
-      style={{ textAlign: "center" }}
-      onClick={onClick}
-    >
-      <TableCellStickyFrontier
-        rowIndex={0}
-        columnIndex={0}
-        stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-        onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-        stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-        onStickyTopFrontierChange={onStickyTopFrontierChange}
-      />
-
-      {resizable && (
-        <TableCellColumnResizeHandles
-          columnIndex={0}
-          onResizeRequested={onColumnResizeRequested}
-          columnMinWidth={columnMinWidth}
-          columnMaxWidth={columnMaxWidth}
-        />
-      )}
-      {resizable && (
-        <TableCellRowResizeHandles
-          rowIndex={0}
-          onResizeRequested={onRowResizeRequested}
-          rowMinHeight={rowMinHeight}
-          rowMaxHeight={rowMaxHeight}
-        />
-      )}
-    </th>
-  );
-};
-const RowNumberCell = ({
-  stickyLeft,
-  stickyTop,
-  isStickyLeftFrontier,
-  isStickyTopFrontier,
-  isAfterStickyLeftFrontier,
-  isAfterStickyTopFrontier,
-  stickyLeftFrontierColumnIndex,
-  onStickyLeftFrontierChange,
-  stickyTopFrontierRowIndex,
-  onStickyTopFrontierChange,
-  row,
+const TableHead = ({
+  grabTarget,
+  grabColumn,
+  releaseColumn,
+  columnWithSomeSelectedCell,
   columns,
-  rowWithSomeSelectedCell,
+  data,
+  firstRow,
+  stickyLeftFrontierColumnIndex,
+  stickyTopFrontierRowIndex,
+  onStickyLeftFrontierChange,
+  onStickyTopFrontierChange,
+  onColumnResize,
   selectionController,
-  value,
-  resizable,
-  rowIndex,
-  rowMinHeight,
-  rowMaxHeight,
-  onResizeRequested,
-  style,
 }) => {
-  const cellRef = useRef();
-
-  const rowValue = `row:${row.id}`;
-  const { selected } = useSelectableElement(cellRef, {
-    selectionController,
-    selectionImpact: () => {
-      // Return all data cells in this row that should be impacted
-      return columns.map((col) => `${col.id}:${row.id}`);
-    },
-  });
-
-  const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(row.id);
+  const firsRowIsSticky = stickyTopFrontierRowIndex > -1;
 
   return (
-    <td
-      ref={cellRef}
-      data-sticky-left={stickyLeft ? "" : undefined}
-      data-sticky-top={stickyTop ? "" : undefined}
-      data-sticky-left-frontier={isStickyLeftFrontier ? "" : undefined}
-      data-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
-      data-after-sticky-left-frontier={
-        isAfterStickyLeftFrontier ? "" : undefined
-      }
-      data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
-      className="navi_row_number_cell"
-      data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
-      data-value={rowValue}
-      data-selection-name="row"
-      data-selection-keyboard-toggle
-      aria-selected={selected}
-      style={{ textAlign: "center", ...style }}
-      tabIndex={-1}
-    >
-      {value}
-      <TableCellStickyFrontier
-        columnIndex={0}
-        rowIndex={rowIndex}
-        stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-        onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-        stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-        onStickyTopFrontierChange={onStickyTopFrontierChange}
-      />
+    <thead>
+      <tr
+        data-sticky-top={firsRowIsSticky ? "" : undefined}
+        data-drag-sticky-frontier-top={firsRowIsSticky ? "" : undefined}
+        data-drag-obstacle="move-row"
+        style={{
+          height: firstRow.height ? `${firstRow.height}px` : undefined,
+        }}
+      >
+        {columns.map((column, columnIndex) => {
+          const columnIsGrabbed = grabTarget === `column:${columnIndex}`;
+          // const isLastColumn = index === columns.length - 1;
+          const { header } = column;
 
-      {resizable && (
-        <TableCellRowResizeHandles
-          rowIndex={rowIndex}
-          onResizeRequested={onResizeRequested}
-          rowMinHeight={rowMinHeight}
-          rowMaxHeight={rowMaxHeight}
-        />
-      )}
-    </td>
+          return (
+            <HeaderCell
+              key={column.id}
+              // sticky left
+              stickyLeft={columnIndex < stickyLeftFrontierColumnIndex}
+              isStickyLeftFrontier={
+                columnIndex + 1 === stickyLeftFrontierColumnIndex
+              }
+              isAfterStickyLeftFrontier={
+                columnIndex + 1 === stickyLeftFrontierColumnIndex + 1
+              }
+              stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+              onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+              // sticky top
+              stickyTop={firsRowIsSticky}
+              isStickyTopFrontier={stickyTopFrontierRowIndex === 0}
+              isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
+              stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+              onStickyTopFrontierChange={onStickyTopFrontierChange}
+              // other
+              columnId={column.id}
+              columnIndex={columnIndex + 1}
+              columnWithSomeSelectedCell={columnWithSomeSelectedCell}
+              data={data}
+              selectionController={selectionController}
+              grabbed={columnIsGrabbed}
+              movable
+              resizable
+              columnMinWidth={column.minWidth}
+              columnMaxWidth={column.maxWidth}
+              rowMinHeight={firstRow.minHeight}
+              onGrab={() => {
+                grabColumn(columnIndex);
+              }}
+              onRelease={() => {
+                releaseColumn(columnIndex);
+              }}
+              onResizeRequested={(width, columnIndex) => {
+                onColumnResize?.(width, columnIndex, columns[columnIndex]);
+              }}
+              style={{
+                maxWidth: column.width ? `${column.width}px` : undefined,
+                maxHeight: firstRow.height ? `${firstRow.height}px` : undefined,
+              }}
+              value={
+                header === undefined
+                  ? ""
+                  : typeof header === "function"
+                    ? header()
+                    : header
+              }
+            />
+          );
+        })}
+      </tr>
+    </thead>
   );
 };
+
+// const TopLeftTableCell =() => {
+//       return <RowNumberHeaderCell
+//           stickyLeft={firstColIsSticky}
+//           stickyTop={firsRowIsSticky}
+//           isStickyLeftFrontier={stickyLeftFrontierColumnIndex === 0} // Only frontier if no other columns are sticky
+//           isStickyTopFrontier={stickyTopFrontierRowIndex === 0} // Only frontier if no other rows are sticky
+//           isAfterStickyLeftFrontier={stickyLeftFrontierColumnIndex === -1}
+//           isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
+//           stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+//           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+//           stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+//           onStickyTopFrontierChange={onStickyTopFrontierChange}
+//           resizable
+//           columnMinWidth={50}
+//           onColumnResizeRequested={(width) => {
+//             onColumnResize?.(width, 0, columns[0]);
+//           }}
+//           rowMinHeight={30}
+//           onRowResizeRequested={(height) => {
+//             onRowResize?.(height, 0, firstRow);
+//           }}
+//           onClick={() => {
+//             tableRef.current.selectAll();
+//           }}
+//         />
+// }
+// const RowNumberHeaderCell = ({
+//   stickyLeft,
+//   stickyTop,
+//   isStickyLeftFrontier,
+//   isStickyTopFrontier,
+//   isAfterStickyLeftFrontier,
+//   isAfterStickyTopFrontier,
+//   stickyLeftFrontierColumnIndex,
+//   onStickyLeftFrontierChange,
+//   stickyTopFrontierRowIndex,
+//   onStickyTopFrontierChange,
+//   resizable,
+//   columnMinWidth,
+//   columnMaxWidth,
+//   onColumnResizeRequested,
+//   rowMinHeight,
+//   rowMaxHeight,
+//   onRowResizeRequested,
+//   onClick,
+// }) => {
+//   return (
+//     <th
+//       className="navi_row_number_cell"
+//       data-sticky-left={stickyLeft ? "" : undefined}
+//       data-sticky-top={stickyTop ? "" : undefined}
+//       data-sticky-left-frontier={isStickyLeftFrontier ? "" : undefined}
+//       data-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
+//       data-after-sticky-left-frontier={
+//         isAfterStickyLeftFrontier ? "" : undefined
+//       }
+//       data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
+//       style={{ textAlign: "center" }}
+//       onClick={onClick}
+//     >
+//       <TableCellStickyFrontier
+//         rowIndex={0}
+//         columnIndex={0}
+//         stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+//         onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+//         stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+//         onStickyTopFrontierChange={onStickyTopFrontierChange}
+//       />
+
+//       {resizable && (
+//         <TableCellColumnResizeHandles
+//           columnIndex={0}
+//           onResizeRequested={onColumnResizeRequested}
+//           columnMinWidth={columnMinWidth}
+//           columnMaxWidth={columnMaxWidth}
+//         />
+//       )}
+//       {resizable && (
+//         <TableCellRowResizeHandles
+//           rowIndex={0}
+//           onResizeRequested={onRowResizeRequested}
+//           rowMinHeight={rowMinHeight}
+//           rowMaxHeight={rowMaxHeight}
+//         />
+//       )}
+//     </th>
+//   );
+// };
+// const RowNumberCell = ({
+//   stickyLeft,
+//   stickyTop,
+//   isStickyLeftFrontier,
+//   isStickyTopFrontier,
+//   isAfterStickyLeftFrontier,
+//   isAfterStickyTopFrontier,
+//   stickyLeftFrontierColumnIndex,
+//   onStickyLeftFrontierChange,
+//   stickyTopFrontierRowIndex,
+//   onStickyTopFrontierChange,
+//   row,
+//   columns,
+//   rowWithSomeSelectedCell,
+//   selectionController,
+//   value,
+//   resizable,
+//   rowIndex,
+//   rowMinHeight,
+//   rowMaxHeight,
+//   onResizeRequested,
+//   style,
+// }) => {
+//   const cellRef = useRef();
+
+//   const rowValue = `row:${row.id}`;
+//   const { selected } = useSelectableElement(cellRef, {
+//     selectionController,
+//     selectionImpact: () => {
+//       // Return all data cells in this row that should be impacted
+//       return columns.map((col) => `${col.id}:${row.id}`);
+//     },
+//   });
+
+//   const rowContainsSelectedCell = rowWithSomeSelectedCell.includes(row.id);
+
+//   return (
+//     <td
+//       ref={cellRef}
+//       data-sticky-left={stickyLeft ? "" : undefined}
+//       data-sticky-top={stickyTop ? "" : undefined}
+//       data-sticky-left-frontier={isStickyLeftFrontier ? "" : undefined}
+//       data-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
+//       data-after-sticky-left-frontier={
+//         isAfterStickyLeftFrontier ? "" : undefined
+//       }
+//       data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
+//       className="navi_row_number_cell"
+//       data-row-contains-selected={rowContainsSelectedCell ? "" : undefined}
+//       data-value={rowValue}
+//       data-selection-name="row"
+//       data-selection-keyboard-toggle
+//       aria-selected={selected}
+//       style={{ textAlign: "center", ...style }}
+//       tabIndex={-1}
+//     >
+//       {value}
+//       <TableCellStickyFrontier
+//         columnIndex={0}
+//         rowIndex={rowIndex}
+//         stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+//         onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+//         stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+//         onStickyTopFrontierChange={onStickyTopFrontierChange}
+//       />
+
+//       {resizable && (
+//         <TableCellRowResizeHandles
+//           rowIndex={rowIndex}
+//           onResizeRequested={onResizeRequested}
+//           rowMinHeight={rowMinHeight}
+//           rowMaxHeight={rowMaxHeight}
+//         />
+//       )}
+//     </td>
+//   );
+// };
+// <RowNumberCell
+//                 // sticky left
+//                 stickyLeft={firstColIsSticky}
+//                 isStickyLeftFrontier={stickyLeftFrontierColumnIndex === 0}
+//                 isAfterStickyLeftFrontier={
+//                   stickyLeftFrontierColumnIndex === -1
+//                 }
+//                 stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+//                 onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+//                 // sticky top
+//                 stickyTop={rowIsSticky}
+//                 isStickyTopFrontier={isStickyTopFrontier}
+//                 isAfterStickyTopFrontier={isAfterStickyTopFrontier}
+//                 stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+//                 onStickyTopFrontierChange={onStickyTopFrontierChange}
+//                 // other
+//                 row={rowData}
+//                 rowWithSomeSelectedCell={rowWithSomeSelectedCell}
+//                 columns={columns}
+//                 selectionController={selectionController}
+//                 value={rowIndex + 1}
+//                 resizable
+//                 rowIndex={rowIndex + 1}
+//                 rowMinHeight={rowOptions.minHeight}
+//                 rowMaxHeight={rowOptions.maxHeight}
+//                 onResizeRequested={(height, rowIndex) => {
+//                   if (rowIndex === 0) {
+//                     onGeneratedTopRowResize?.(height);
+//                     return;
+//                   }
+//                   onRowResize?.(height, rowIndex - 1, rows[rowIndex - 1]);
+//                 }}
+//                 style={{
+//                   maxWidth: generatedLeftColumnWidth
+//                     ? `${generatedLeftColumnWidth}px`
+//                     : undefined,
+//                   maxHeight: rowOptions.height
+//                     ? `${rowOptions.height}px`
+//                     : undefined,
+//                 }}
+//               />
 
 const HeaderCell = ({
   stickyLeft,
@@ -835,14 +857,14 @@ const DataCell = ({
   isStickyTopFrontier,
   stickyTopFrontierRowIndex,
   onStickyTopFrontierChange,
-  columnName,
+  columnId,
   columnIndex,
   rowIndex,
   row,
   ...rest
 }) => {
   return (
-    <TableCell cellId={`${columnName}:${row.id}`} {...rest}>
+    <TableCell cellId={`${columnId}:${row.id}`} {...rest}>
       <TableCellStickyFrontier
         rowIndex={rowIndex}
         columnIndex={columnIndex}
