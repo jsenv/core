@@ -1,4 +1,9 @@
-import { createDragToMoveGesture, setAttribute } from "@jsenv/dom";
+import {
+  createDragToMoveGesture,
+  getScrollableParent,
+  setAttribute,
+} from "@jsenv/dom";
+
 import {
   Z_INDEX_STICKY_COLUMN,
   Z_INDEX_STICKY_CORNER,
@@ -282,6 +287,10 @@ const initMoveStickyLeftFrontierByMousedown = (
   const tableStickyLeftFrontierPreview = tableContainer.querySelector(
     ".navi_table_sticky_left_frontier_preview",
   );
+  // We must reset scroll because we're limiting ability to move the sticky frontier to a column
+  // But if there is already a scroll we might already have crossed that column
+  // Creating a scenario where we start the drag already at the right of an obstacle which won't provide a nice UX
+  getScrollableParent(table).scrollLeft = 0;
   const tableContainerRect = tableContainer.getBoundingClientRect();
 
   if (stickyLeftFrontierColumnIndex === -1) {
@@ -367,9 +376,7 @@ const initMoveStickyLeftFrontierByMousedown = (
     direction: { x: true },
     // keepMarkersOnRelease: true,
     backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
-    // We're limiting ability to move the sticky frontier to a column
-    // But if there is already a scroll it means we might already have crossed that column
-    resetScroll: true,
+
     onGrab,
     onDrag: (gesture) => {
       update_frontier_index: {

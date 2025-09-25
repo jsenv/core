@@ -112,7 +112,6 @@ export const createDragGesture = (options) => {
     keepInScrollableArea = true,
     obstacleQuerySelector = "[data-drag-obstacle]",
     dragViaScroll = true,
-    resetScroll = false, // might be important in some cases (dragging table sticky frontiers)
 
     // Custom bounds that override the default scrollable area bounds
     // Useful for scenarios like column resizing where you want custom min/max constraints
@@ -153,16 +152,6 @@ export const createDragGesture = (options) => {
 
     const scrollableParent = getScrollableParent(element);
     const positionedParent = getPositionedParent(element);
-
-    if (resetScroll) {
-      if (direction.x) {
-        scrollableParent.scrollLeft = 0;
-      }
-      if (direction.y) {
-        scrollableParent.scrollTop = 0;
-      }
-    }
-
     const scrollableRect = scrollableParent.getBoundingClientRect();
     const positionedParentRect = positionedParent.getBoundingClientRect();
     const elementToImpactRect = elementToImpact.getBoundingClientRect();
