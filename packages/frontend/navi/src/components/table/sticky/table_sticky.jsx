@@ -307,23 +307,24 @@ export const TableCellStickyFrontier = ({
   onStickyLeftFrontierChange,
   onStickyTopFrontierChange,
 }) => {
-  let shouldDisplayStickyLeftFrontier = false;
-  let shouldDisplayStickyTopFrontier = false;
   const isAfterStickyLeftFrontier = columnIndex > stickyLeftFrontierColumnIndex;
   const isOnStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
   const isAfterStickyTopFrontier = rowIndex > stickyTopFrontierRowIndex;
   const isOnStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
 
-  if (isOnStickyLeftFrontier) {
-    if (isAfterStickyTopFrontier) {
-      shouldDisplayStickyLeftFrontier = true;
-    }
+  const isCorner = isOnStickyLeftFrontier && isOnStickyTopFrontier;
+  if (isCorner) {
+    return <></>;
   }
-  if (isOnStickyTopFrontier) {
-    if (isAfterStickyLeftFrontier) {
-      shouldDisplayStickyTopFrontier = true;
-    }
-  }
+
+  const shouldDisplayStickyLeftFrontier =
+    (isOnStickyLeftFrontier && isAfterStickyTopFrontier) ||
+    // First column is responsible to display the sticky frontier on its left side
+    (stickyLeftFrontierColumnIndex === -1 && columnIndex === 0);
+  const shouldDisplayStickyTopFrontier =
+    (isOnStickyTopFrontier && isAfterStickyLeftFrontier) ||
+    // First row is responsible to display the sticky frontier on its top side
+    (stickyTopFrontierRowIndex === -1 && rowIndex === 0);
 
   return (
     <>
