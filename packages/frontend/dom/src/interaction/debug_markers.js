@@ -104,10 +104,11 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
       // Extract bounds from bounds constraints and collect obstacle data
       for (const constraint of constraints) {
         if (constraint.type === "bounds") {
-          leftBound = Math.max(leftBound, constraint.left);
-          topBound = Math.max(topBound, constraint.top);
-          rightBound = Math.min(rightBound, constraint.right);
-          bottomBound = Math.min(bottomBound, constraint.bottom);
+          const { bounds } = constraint;
+          leftBound = Math.max(leftBound, bounds.left);
+          topBound = Math.max(topBound, bounds.top);
+          rightBound = Math.min(rightBound, bounds.right);
+          bottomBound = Math.min(bottomBound, bounds.bottom);
         } else if (constraint.type === "obstacle") {
           const obstacleMarker = createObstacleMarker(constraint, parentRect);
           currentConstraintMarkers.push(obstacleMarker);

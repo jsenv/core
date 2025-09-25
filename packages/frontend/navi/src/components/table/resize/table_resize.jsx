@@ -360,6 +360,9 @@ const initResizeTableColumnByMousedown = (
     tableColumnResizer.removeAttribute("data-sticky-left");
   }
 
+  //   const scrollableParent = getScrollableParent(table);
+  //   const scrollLeft = scrollableParent.scrollLeft;
+
   // Left bound: minimum width of 50px (can shrink column down to this width)
   const minWidth =
     typeof columnMinWidth === "number" && columnMinWidth > 50
