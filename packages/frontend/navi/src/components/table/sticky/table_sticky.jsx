@@ -521,8 +521,7 @@ const initMoveStickyTopFrontierByMousedown = (
   const tableCell = mousedownEvent.target.closest("th,td");
   const table = tableCell.closest("table");
   const tableContainer = table.closest(".navi_table_container");
-  const tbody = table.querySelector("tbody");
-  const rowElements = Array.from(tbody.children);
+  const rowElements = Array.from(table.querySelectorAll("tr"));
   const tableStickyTopFrontierGhost = tableContainer.querySelector(
     ".navi_table_sticky_top_frontier_ghost",
   );
@@ -552,7 +551,7 @@ const initMoveStickyTopFrontierByMousedown = (
   tableStickyTopFrontierGhost.setAttribute("data-visible", "");
 
   let futureStickyTopFrontierRowIndex = stickyTopFrontierRowIndex;
-  const onFutureTopStickyFrontierIndexChange = (index) => {
+  const onFutureStickyTopFrontierIndexChange = (index) => {
     futureStickyTopFrontierRowIndex = index;
 
     if (index === stickyTopFrontierRowIndex) {
@@ -638,10 +637,10 @@ const initMoveStickyTopFrontierByMousedown = (
           // on the row, top or bottom side?
           const rowCenterY = rowRect.top + rowRect.height / 2;
           if (ghostCenterY < rowCenterY) {
-            onFutureTopStickyFrontierIndexChange(i - 1);
+            onFutureStickyTopFrontierIndexChange(i - 1);
             break;
           }
-          onFutureTopStickyFrontierIndexChange(i);
+          onFutureStickyTopFrontierIndexChange(i);
           break;
         }
       }
