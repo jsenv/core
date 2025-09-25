@@ -420,21 +420,24 @@ export const Table = forwardRef((props, ref) => {
 
               return (
                 <HeaderCell
+                  key={col.id}
+                  // sticky left
                   stickyLeft={colIndex < stickyLeftFrontierColumnIndex}
-                  stickyTop={firsRowIsSticky}
                   isStickyLeftFrontier={
                     colIndex + 1 === stickyLeftFrontierColumnIndex
                   }
                   isAfterStickyLeftFrontier={
                     colIndex + 1 === stickyLeftFrontierColumnIndex + 1
                   }
-                  isStickyTopFrontier={stickyTopFrontierRowIndex === 0}
-                  isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
                   stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
                   onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+                  // sticky top
+                  stickyTop={firsRowIsSticky}
+                  isStickyTopFrontier={stickyTopFrontierRowIndex === 0}
+                  isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
                   stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
                   onStickyTopFrontierChange={onStickyTopFrontierChange}
-                  key={col.id}
+                  // other
                   columnAccessorKey={col.accessorKey}
                   columnIndex={colIndex + 1}
                   columnWithSomeSelectedCell={columnWithSomeSelectedCell}
@@ -503,18 +506,21 @@ export const Table = forwardRef((props, ref) => {
                 }}
               >
                 <RowNumberCell
+                  // sticky left
                   stickyLeft={firstColIsSticky}
                   isStickyLeftFrontier={stickyLeftFrontierColumnIndex === 0}
                   isAfterStickyLeftFrontier={
                     stickyLeftFrontierColumnIndex === -1
                   }
+                  stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+                  onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+                  // sticky top
                   stickyTop={rowIsSticky}
                   isStickyTopFrontier={isStickyTopFrontier}
                   isAfterStickyTopFrontier={isAfterStickyTopFrontier}
-                  stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-                  onStickyLeftFrontierChange={onStickyLeftFrontierChange}
                   stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
                   onStickyTopFrontierChange={onStickyTopFrontierChange}
+                  // other
                   row={rowData}
                   rowWithSomeSelectedCell={rowWithSomeSelectedCell}
                   columns={columns}
@@ -548,6 +554,7 @@ export const Table = forwardRef((props, ref) => {
                   return (
                     <DataCell
                       key={`${rowData.id}-${col.id}`}
+                      // sticky left
                       stickyLeft={columnIsSticky}
                       isStickyLeftFrontier={
                         colIndex + 1 === stickyLeftFrontierColumnIndex
@@ -555,15 +562,17 @@ export const Table = forwardRef((props, ref) => {
                       isAfterStickyLeftFrontier={
                         colIndex + 1 === stickyLeftFrontierColumnIndex + 1
                       }
-                      stickyTop={rowIsSticky}
-                      isStickyTopFrontier={isStickyTopFrontier}
-                      isAfterStickyTopFrontier={isAfterStickyTopFrontier}
                       stickyLeftFrontierColumnIndex={
                         stickyLeftFrontierColumnIndex
                       }
                       onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+                      // sticky top
+                      stickyTop={rowIsSticky}
+                      isStickyTopFrontier={isStickyTopFrontier}
+                      isAfterStickyTopFrontier={isAfterStickyTopFrontier}
                       stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
                       onStickyTopFrontierChange={onStickyTopFrontierChange}
+                      // other
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
                       row={rowData}
