@@ -178,6 +178,7 @@ import.meta.css = /* css */ `
 
   .navi_table_container {
     --sticky-left-frontier-width: 5px;
+    --sticky-top-frontier-height: 5px;
   }
 
   .navi_table_sticky_left_frontier {
@@ -226,6 +227,53 @@ import.meta.css = /* css */ `
         )
     );
   }
+
+  .navi_table_sticky_top_frontier {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--sticky-top-frontier-height);
+    background: #444746;
+    opacity: 0.5;
+    cursor: grab;
+    z-index: ${Z_INDEX_STICKY_FRONTIER_HANDLE};
+  }
+  .navi_table_sticky_top_frontier[data-top] {
+    top: 0;
+    bottom: auto;
+  }
+  .navi_table_sticky_top_frontier_ghost,
+  .navi_table_sticky_top_frontier_preview {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: var(--sticky-top-frontier-height);
+    pointer-events: none;
+    opacity: 0;
+  }
+  .navi_table_sticky_top_frontier_ghost[data-visible],
+  .navi_table_sticky_top_frontier_preview[data-visible] {
+    opacity: 1;
+  }
+  .navi_table_sticky_top_frontier_ghost {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
+    background: rgba(68, 71, 70, 0.5);
+    top: calc(
+      var(--sticky-top-frontier-ghost-top, 0px) - var(
+          --sticky-top-frontier-height
+        )
+    );
+  }
+  .navi_table_sticky_top_frontier_preview {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
+    background: red;
+    top: calc(
+      var(--sticky-top-frontier-preview-top, 0px) - var(
+          --sticky-top-frontier-height
+        )
+    );
+  }
 `;
 
 /**
@@ -267,6 +315,40 @@ export const TableStickyLeftFrontierGhost = () => {
 };
 export const TableStickyLeftFrontierPreview = () => {
   return <div className="navi_table_sticky_left_frontier_preview"></div>;
+};
+
+export const TableStickyTopFrontier = ({
+  stickyTopFrontierRowIndex,
+  onStickyTopFrontierChange,
+}) => {
+  return (
+    <div
+      className="navi_table_sticky_top_frontier"
+      data-top={stickyTopFrontierRowIndex === -1 ? "" : undefined}
+      inert={!onStickyTopFrontierChange}
+      onMouseDown={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        e.preventDefault(); // prevent text selection
+        e.stopPropagation(); // prevent drag row
+        initMoveStickyTopFrontierByMousedown(e, {
+          stickyTopFrontierRowIndex,
+          onRelease: (_, index) => {
+            if (index !== stickyTopFrontierRowIndex) {
+              onStickyTopFrontierChange(index);
+            }
+          },
+        });
+      }}
+    ></div>
+  );
+};
+export const TableStickyTopFrontierGhost = () => {
+  return <div className="navi_table_sticky_top_frontier_ghost"></div>;
+};
+export const TableStickyTopFrontierPreview = () => {
+  return <div className="navi_table_sticky_top_frontier_preview"></div>;
 };
 
 // When we cross half the width of a column we inject a second vertical line where the new frontier would be
@@ -426,5 +508,165 @@ const initMoveStickyLeftFrontierByMousedown = (
   });
   moveStickyLeftFrontierGesture.grabViaMousedown(mousedownEvent, {
     element: tableStickyLeftFrontierGhost,
+  });
+};
+
+// When we cross half the height of a row we inject a second horizontal line where the new frontier would be
+// to tell user "hey if you grab here, the frontier will be there"
+// At this stage user can see 3 frontiers. Where it is, the one he grab, the future one if he releases.
+const initMoveStickyTopFrontierByMousedown = (
+  mousedownEvent,
+  { stickyTopFrontierRowIndex, onGrab, onDrag, onRelease },
+) => {
+  const tableCell = mousedownEvent.target.closest("th,td");
+  const table = tableCell.closest("table");
+  const tableContainer = table.closest(".navi_table_container");
+  const tbody = table.querySelector("tbody");
+  const rowElements = Array.from(tbody.children);
+  const tableStickyTopFrontierGhost = tableContainer.querySelector(
+    ".navi_table_sticky_top_frontier_ghost",
+  );
+  const tableStickyTopFrontierPreview = tableContainer.querySelector(
+    ".navi_table_sticky_top_frontier_preview",
+  );
+  // We must reset scroll because we're limiting ability to move the sticky frontier to a row
+  // But if there is already a scroll we might already have crossed that row
+  // Creating a scenario where we start the drag already at the bottom of an obstacle which won't provide a nice UX
+  getScrollableParent(table).scrollTop = 0;
+  const tableContainerRect = tableContainer.getBoundingClientRect();
+
+  if (stickyTopFrontierRowIndex === -1) {
+    tableStickyTopFrontierGhost.style.setProperty(
+      "--sticky-top-frontier-ghost-top",
+      `0px`,
+    );
+  } else {
+    const tableCellRect = tableCell.getBoundingClientRect();
+    const rowTopRelative = tableCellRect.top - tableContainerRect.top;
+    const rowBottomRelative = rowTopRelative + tableCellRect.height;
+    tableStickyTopFrontierGhost.style.setProperty(
+      "--sticky-top-frontier-ghost-top",
+      `${rowBottomRelative}px`,
+    );
+  }
+  tableStickyTopFrontierGhost.setAttribute("data-visible", "");
+
+  let futureStickyTopFrontierRowIndex = stickyTopFrontierRowIndex;
+  const onFutureTopStickyFrontierIndexChange = (index) => {
+    futureStickyTopFrontierRowIndex = index;
+
+    if (index === stickyTopFrontierRowIndex) {
+      tableStickyTopFrontierPreview.removeAttribute("data-visible");
+      return;
+    }
+    let previewPosition;
+    if (index === -1) {
+      previewPosition =
+        tableStickyTopFrontierGhost.getBoundingClientRect().height;
+    } else {
+      const rowElement = rowElements[index];
+      const rowRect = rowElement.getBoundingClientRect();
+      const tableContainerRect = tableContainer.getBoundingClientRect();
+      previewPosition = rowRect.bottom - tableContainerRect.top;
+    }
+
+    tableStickyTopFrontierPreview.style.setProperty(
+      "--sticky-top-frontier-preview-top",
+      `${previewPosition}px`,
+    );
+    tableStickyTopFrontierPreview.setAttribute("data-visible", "");
+  };
+
+  // Find the row at the middle of the visible area to use as drag boundary
+  // The goal it to prevent user from dragging the frontier too far
+  // and ending with a situation where sticky rows take most/all the visible space
+  let restoreRowDragObstacleAttr = () => {};
+  setup_middle_row_obstacle: {
+    const tableContainerHeight = tableContainerRect.height;
+    const middleY = tableContainerHeight / 2;
+    // Find if there's a row at the middle position
+    for (let i = 0; i < rowElements.length; i++) {
+      const rowElement = rowElements[i];
+      const rowRect = rowElement.getBoundingClientRect();
+      const rowTopRelative = rowRect.top - tableContainerRect.top;
+      const rowBottomRelative = rowRect.bottom - tableContainerRect.top;
+      if (i + 1 === rowElements.length) {
+        // no next row
+        break;
+      }
+      if (rowBottomRelative < middleY) {
+        // row is before the middle
+        continue;
+      }
+      if (rowTopRelative > middleY) {
+        // row is after the middle
+        continue;
+      }
+      // Add drag obstacle to prevent dragging beyond the middle area
+      const obstacleRowElement = rowElements[i + 1];
+      restoreRowDragObstacleAttr = setAttribute(
+        obstacleRowElement,
+        "data-drag-obstacle",
+        "move-sticky-top-frontier",
+      );
+      break;
+    }
+  }
+
+  const moveStickyTopFrontierGesture = createDragToMoveGesture({
+    name: "move-sticky-top-frontier",
+    direction: { y: true },
+    // keepMarkersOnRelease: true,
+    backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
+
+    onGrab,
+    onDrag: (gesture) => {
+      update_frontier_index: {
+        const ghostRect = tableStickyTopFrontierGhost.getBoundingClientRect();
+        const ghostCenterY = ghostRect.top + ghostRect.height / 2;
+        // Find which row the ghost is currently over
+        let i = 0;
+        for (; i < rowElements.length; i++) {
+          const rowElement = rowElements[i];
+          const rowRect = rowElement.getBoundingClientRect();
+          if (ghostCenterY < rowRect.top) {
+            continue;
+          }
+          if (ghostCenterY > rowRect.bottom) {
+            continue;
+          }
+          // on the row, top or bottom side?
+          const rowCenterY = rowRect.top + rowRect.height / 2;
+          if (ghostCenterY < rowCenterY) {
+            onFutureTopStickyFrontierIndexChange(i - 1);
+            break;
+          }
+          onFutureTopStickyFrontierIndexChange(i);
+          break;
+        }
+      }
+      onDrag?.(gesture, futureStickyTopFrontierRowIndex);
+    },
+    onRelease: (gesture) => {
+      onRelease?.(gesture, futureStickyTopFrontierRowIndex);
+    },
+  });
+
+  moveStickyTopFrontierGesture.addTeardown(() => {
+    tableStickyTopFrontierPreview.removeAttribute("data-visible");
+    tableStickyTopFrontierPreview.style.removeProperty(
+      "--sticky-top-frontier-preview-top",
+    );
+
+    tableStickyTopFrontierGhost.removeAttribute("data-visible");
+    tableStickyTopFrontierGhost.style.removeProperty(
+      "--sticky-top-frontier-ghost-top",
+    );
+    tableStickyTopFrontierGhost.style.top = ""; // reset top set by the drag
+
+    restoreRowDragObstacleAttr();
+  });
+  moveStickyTopFrontierGesture.grabViaMousedown(mousedownEvent, {
+    element: tableStickyTopFrontierGhost,
   });
 };

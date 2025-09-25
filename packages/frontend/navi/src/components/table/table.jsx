@@ -79,6 +79,9 @@ import {
   TableStickyLeftFrontier,
   TableStickyLeftFrontierGhost,
   TableStickyLeftFrontierPreview,
+  TableStickyTopFrontier,
+  TableStickyTopFrontierGhost,
+  TableStickyTopFrontierPreview,
 } from "./sticky/table_sticky.jsx";
 import { TableCell } from "./table_cell.jsx";
 
@@ -252,7 +255,7 @@ export const Table = forwardRef((props, ref) => {
     stickyLeftFrontierColumnIndex = 0,
     onStickyLeftFrontierChange,
     stickyTopFrontierRowIndex = 0,
-    // onStickyTopFrontierChange,
+    onStickyTopFrontierChange,
   } = props;
 
   const innerRef = useRef();
@@ -396,6 +399,8 @@ export const Table = forwardRef((props, ref) => {
               isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
               stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
               onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+              stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+              onStickyTopFrontierChange={onStickyTopFrontierChange}
               resizable
               columnMinWidth={50}
               onColumnResizeRequested={(width) => {
@@ -427,6 +432,8 @@ export const Table = forwardRef((props, ref) => {
                   isAfterStickyTopFrontier={stickyTopFrontierRowIndex === -1}
                   stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
                   onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+                  stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+                  onStickyTopFrontierChange={onStickyTopFrontierChange}
                   key={col.id}
                   columnAccessorKey={col.accessorKey}
                   columnIndex={colIndex + 1}
@@ -553,6 +560,8 @@ export const Table = forwardRef((props, ref) => {
                         stickyLeftFrontierColumnIndex
                       }
                       onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+                      stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+                      onStickyTopFrontierChange={onStickyTopFrontierChange}
                       columnName={col.accessorKey}
                       columnIndex={colIndex + 1} // +1 because number column is first
                       row={rowData}
@@ -574,6 +583,8 @@ export const Table = forwardRef((props, ref) => {
       <TableRowResizer />
       <TableStickyLeftFrontierGhost />
       <TableStickyLeftFrontierPreview />
+      <TableStickyTopFrontierGhost />
+      <TableStickyTopFrontierPreview />
     </div>
   );
 });
@@ -587,6 +598,8 @@ const RowNumberHeaderCell = ({
   isAfterStickyTopFrontier,
   stickyLeftFrontierColumnIndex,
   onStickyLeftFrontierChange,
+  stickyTopFrontierRowIndex,
+  onStickyTopFrontierChange,
   resizable,
   columnMinWidth,
   columnMaxWidth,
@@ -615,6 +628,13 @@ const RowNumberHeaderCell = ({
           <TableStickyLeftFrontier
             stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
             onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+          />
+        ))}
+      {isStickyTopFrontier ||
+        (stickyTopFrontierRowIndex === -1 && (
+          <TableStickyTopFrontier
+            stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+            onStickyTopFrontierChange={onStickyTopFrontierChange}
           />
         ))}
       {resizable && (
@@ -737,6 +757,8 @@ const HeaderCell = ({
   onResizeRequested,
   stickyLeftFrontierColumnIndex,
   onStickyLeftFrontierChange,
+  stickyTopFrontierRowIndex,
+  onStickyTopFrontierChange,
   style,
   value,
 }) => {
@@ -801,6 +823,12 @@ const HeaderCell = ({
           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
         />
       )}
+      {isStickyTopFrontier && (
+        <TableStickyTopFrontier
+          stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+          onStickyTopFrontierChange={onStickyTopFrontierChange}
+        />
+      )}
     </TableCell>
   );
 };
@@ -809,6 +837,9 @@ const DataCell = ({
   isStickyLeftFrontier,
   stickyLeftFrontierColumnIndex,
   onStickyLeftFrontierChange,
+  isStickyTopFrontier,
+  stickyTopFrontierRowIndex,
+  onStickyTopFrontierChange,
   columnName,
   row,
   ...rest
@@ -819,6 +850,12 @@ const DataCell = ({
         <TableStickyLeftFrontier
           stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+        />
+      )}
+      {isStickyTopFrontier && (
+        <TableStickyTopFrontier
+          stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+          onStickyTopFrontierChange={onStickyTopFrontierChange}
         />
       )}
     </TableCell>
