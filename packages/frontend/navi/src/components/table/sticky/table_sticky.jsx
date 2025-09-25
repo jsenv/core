@@ -309,20 +309,20 @@ export const TableCellStickyFrontier = ({
 }) => {
   let shouldDisplayStickyLeftFrontier = false;
   let shouldDisplayStickyTopFrontier = false;
-
-  const isBeforeStickyLeftFrontier =
-    columnIndex < stickyLeftFrontierColumnIndex;
   const isAfterStickyLeftFrontier = columnIndex > stickyLeftFrontierColumnIndex;
   const isOnStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
-  const isBeforeStickyTopFrontier = rowIndex < stickyTopFrontierRowIndex;
   const isAfterStickyTopFrontier = rowIndex > stickyTopFrontierRowIndex;
   const isOnStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
 
   if (isOnStickyLeftFrontier) {
-    shouldDisplayStickyLeftFrontier = true;
+    if (isAfterStickyTopFrontier) {
+      shouldDisplayStickyLeftFrontier = true;
+    }
   }
   if (isOnStickyTopFrontier) {
-    shouldDisplayStickyTopFrontier = true;
+    if (isAfterStickyLeftFrontier) {
+      shouldDisplayStickyTopFrontier = true;
+    }
   }
 
   return (
