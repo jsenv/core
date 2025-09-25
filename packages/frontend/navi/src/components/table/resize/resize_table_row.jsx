@@ -25,19 +25,6 @@ import.meta.css = /* css */ `
     bottom: 0;
   }
 
-  [data-after-sticky-left-frontier]
-    .navi_table_row_resize_handle_top_interaction,
-  [data-after-sticky-left-frontier]
-    .navi_table_row_resize_handle_bottom_interaction {
-    left: 5px;
-  }
-
-  [data-sticky-left-frontier] .navi_table_row_resize_handle_top_interaction,
-  [data-sticky-left-frontier] .navi_table_row_resize_handle_bottom_interaction {
-    /* Avoid overlaping the sticky frontier vertical line */
-    right: 5px;
-  }
-
   .navi_table_row_resizer {
     pointer-events: none;
     position: absolute;

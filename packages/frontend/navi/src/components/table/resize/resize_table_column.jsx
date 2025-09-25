@@ -28,12 +28,6 @@ import.meta.css = /* css */ `
   .navi_table_column_resize_handle_right_interaction {
     right: 0;
   }
-  [data-sticky-top-frontier] .navi_table_column_resize_handle_left_interaction,
-  [data-sticky-top-frontier]
-    .navi_table_column_resize_handle_right_interaction {
-    /* Avoid overlaping the sticky frontier horizontal line */
-    bottom: 5px;
-  }
 
   .navi_table_column_resizer {
     pointer-events: none;

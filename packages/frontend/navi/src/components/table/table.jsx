@@ -733,7 +733,7 @@ const RowNumberCell = ({
           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
         />
       )}
-      {(isStickyTopFrontier || stickyTopFrontierRowIndex === -1) && (
+      {isStickyTopFrontier && (
         <TableStickyTopFrontier
           stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
           onStickyTopFrontierChange={onStickyTopFrontierChange}
@@ -757,6 +757,10 @@ const HeaderCell = ({
   isStickyTopFrontier,
   isAfterStickyLeftFrontier,
   isAfterStickyTopFrontier,
+  stickyLeftFrontierColumnIndex,
+  onStickyLeftFrontierChange,
+  stickyTopFrontierRowIndex,
+  onStickyTopFrontierChange,
   columnAccessorKey,
   columnWithSomeSelectedCell,
   columnMinWidth,
@@ -771,10 +775,7 @@ const HeaderCell = ({
   onDrag,
   onRelease,
   onResizeRequested,
-  stickyLeftFrontierColumnIndex,
-  onStickyLeftFrontierChange,
-  stickyTopFrontierRowIndex,
-  onStickyTopFrontierChange,
+
   style,
   value,
 }) => {
@@ -839,7 +840,7 @@ const HeaderCell = ({
           onStickyLeftFrontierChange={onStickyLeftFrontierChange}
         />
       )}
-      {isStickyTopFrontier && (
+      {(isStickyTopFrontier || stickyTopFrontierRowIndex === -1) && (
         <TableStickyTopFrontier
           stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
           onStickyTopFrontierChange={onStickyTopFrontierChange}
