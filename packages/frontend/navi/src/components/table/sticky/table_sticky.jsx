@@ -322,7 +322,7 @@ export const TableCellStickyFrontier = ({
     shouldDisplayStickyLeftFrontier = true;
   }
   if (isOnStickyTopFrontier) {
-    shouldDisplayStickyTopFrontier = false;
+    shouldDisplayStickyTopFrontier = true;
   }
 
   return (
@@ -350,7 +350,7 @@ export const TableCellStickyFrontier = ({
  * so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
  * as a table cell uses a position relative)
  */
-export const TableStickyLeftFrontier = ({
+const TableStickyLeftFrontier = ({
   stickyLeftFrontierColumnIndex,
   onStickyLeftFrontierChange,
 }) => {
@@ -384,7 +384,7 @@ export const TableStickyLeftFrontierPreview = () => {
   return <div className="navi_table_sticky_left_frontier_preview"></div>;
 };
 
-export const TableStickyTopFrontier = ({
+const TableStickyTopFrontier = ({
   stickyTopFrontierRowIndex,
   onStickyTopFrontierChange,
 }) => {
