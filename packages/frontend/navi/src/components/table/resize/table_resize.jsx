@@ -20,7 +20,7 @@ import.meta.css = /* css */ `
 
   .navi_table_cell_resize_handle {
     position: absolute;
-    background: orange;
+    /* background: orange; */
     /* opacity: 0.5; */
     z-index: ${Z_INDEX_RESIZER_HANDLE};
   }
@@ -167,6 +167,27 @@ export const TableColumnResizer = () => {
       </div>
       <div className="navi_table_column_resizer_line"></div>
     </div>
+  );
+};
+export const TableCellResizeHandles = ({
+  columnIndex,
+  columnMinWidth,
+  columnMaxWidth,
+  onResizeRequested,
+}) => {
+  return (
+    <>
+      <TableColumnLeftResizeHandle
+        onRelease={(width) => onResizeRequested(width, columnIndex - 1)}
+        columnMinWidth={columnMinWidth}
+        columnMaxWidth={columnMaxWidth}
+      />
+      <TableColumnRightResizeHandle
+        onRelease={(width) => onResizeRequested(width, columnIndex)}
+        columnMinWidth={columnMinWidth}
+        columnMaxWidth={columnMaxWidth}
+      />
+    </>
   );
 };
 

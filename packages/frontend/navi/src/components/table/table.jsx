@@ -61,9 +61,8 @@ import { useFocusGroup } from "../use_focus_group.js";
 import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
 import {
-  TableColumnLeftResizeHandle,
+  TableCellResizeHandles,
   TableColumnResizer,
-  TableColumnRightResizeHandle,
   TableRowBottomResizeHandle,
   TableRowResizer,
   TableRowTopResizeHandle,
@@ -634,9 +633,11 @@ const RowNumberHeaderCell = ({
         stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
         onStickyTopFrontierChange={onStickyTopFrontierChange}
       />
+
       {resizable && (
-        <TableColumnRightResizeHandle
-          onRelease={(width) => onColumnResizeRequested(width, 0)}
+        <TableCellResizeHandles
+          columnIndex={0}
+          onResizeRequested={onColumnResizeRequested}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
@@ -813,17 +814,11 @@ const HeaderCell = ({
         onStickyTopFrontierChange={onStickyTopFrontierChange}
       />
       {resizable && (
-        <TableColumnLeftResizeHandle
-          onRelease={(width) => onResizeRequested(width, columnIndex - 1)}
+        <TableCellResizeHandles
+          columnIndex={columnIndex}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
-        />
-      )}
-      {resizable && (
-        <TableColumnRightResizeHandle
-          onRelease={(width) => onResizeRequested(width, columnIndex)}
-          columnMinWidth={columnMinWidth}
-          columnMaxWidth={columnMaxWidth}
+          onResizeRequested={onResizeRequested}
         />
       )}
     </TableCell>
