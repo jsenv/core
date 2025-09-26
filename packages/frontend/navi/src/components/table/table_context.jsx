@@ -25,6 +25,12 @@ export const useTableRow = () => {
   return useContext(TableRowContext);
 };
 
+const TableCellContext = createContext();
+export const TableCellProvider = TableCellContext.Provider;
+export const useTableCell = () => {
+  return useContext(TableCellContext);
+};
+
 const TableSelectionContext = createContext();
 export const TableSelectionProvider = TableSelectionContext.Provider;
 export const useTableSelection = () => {

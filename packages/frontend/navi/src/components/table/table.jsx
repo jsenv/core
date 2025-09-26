@@ -65,6 +65,7 @@ import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
 import { TableCell } from "./table_cell.jsx";
 import {
+  TableCellProvider,
   TableColumnProvider,
   TableDragProvider,
   TableRowProvider,
@@ -227,13 +228,14 @@ export const createRowNumberColumn = () => {
   return {
     id: "row-number",
     head: (props, key) => {
+      const { selectAll } = useTableSelection();
       return (
-        <TableHeaderCell
+        <TableCell
           key={key}
           {...props}
           value="coucou"
           onClick={() => {
-            tableRef.current.selectAll();
+            selectAll();
           }}
         />
       );
@@ -361,18 +363,19 @@ export const Table = forwardRef((props, ref) => {
         data-border-collapse={borderCollapse ? "" : undefined}
       >
         <colgroup>
-          {columns.map((col, index) => {
+          {columns.map((column, index) => {
             const colIsSticky = index < stickyLeftFrontierColumnIndex;
-
             return (
               <col
-                key={col.id}
+                key={column.id}
                 data-sticky-left={colIsSticky ? "" : undefined}
                 data-drag-sticky-left-frontier={colIsSticky ? "" : undefined}
-                data-drag-obstacle={col.immovable ? "move-column" : undefined}
+                data-drag-obstacle={
+                  column.immovable ? "move-column" : undefined
+                }
                 style={{
-                  minWidth: col.width ? `${col.width}px` : undefined,
-                  maxWidth: col.width ? `${col.width}px` : undefined,
+                  minWidth: column.width ? `${column.width}px` : undefined,
+                  maxWidth: column.width ? `${column.width}px` : undefined,
                 }}
               />
             );
@@ -450,15 +453,7 @@ const TableBody = ({
   return (
     <tbody>
       {data.map((rowData, rowIndex) => {
-        const rowOptions = rows[rowIndex] || {};
-        const row = useMemo(() => {
-          return {
-            ...rowOptions,
-            ...rowData,
-            index: rowIndex,
-          };
-        }, [rowOptions, rowData, rowIndex]);
-
+        const row = rows[rowIndex] || {};
         const isRowSelected = selectedRowIds.includes(row.id);
         const rowIsSticky = rowIndex < stickyTopFrontierRowIndex;
         const isStickyTopFrontier = rowIndex + 1 === stickyTopFrontierRowIndex;
@@ -473,12 +468,8 @@ const TableBody = ({
                 isStickyTopFrontier ? "" : undefined
               }
               style={{
-                height: rowOptions.height
-                  ? `${rowOptions.height}px`
-                  : undefined,
-                maxHeight: rowOptions.height
-                  ? `${rowOptions.height}px`
-                  : undefined,
+                height: row.height ? `${row.height}px` : undefined,
+                maxHeight: row.height ? `${row.height}px` : undefined,
               }}
             >
               {columns.map((column, columnIndex) => {
@@ -495,13 +486,19 @@ const TableBody = ({
                     columnIndex,
                     rowIndex,
                     data,
+                    rowData,
                   });
                 } else {
                   tableCell = <TableCell value={cell} />;
                 }
+
+                const tableCellContextValue = { columnIndex, rowIndex };
+
                 return (
                   <TableColumnProvider key={tableCellId} value={columnValue}>
-                    {tableCell}
+                    <TableCellProvider value={tableCellContextValue}>
+                      {tableCell}
+                    </TableCellProvider>
                   </TableColumnProvider>
                 );
               })}

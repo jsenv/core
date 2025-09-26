@@ -55,12 +55,14 @@ import.meta.css = /* css */ `
 `;
 
 export const TableCell = forwardRef((props, ref) => {
-  const {
+  let {
     cellId,
     value,
     style,
     textAlign,
     editable = true,
+    canResizeWidth,
+    canResizeHeight,
     // Header-specific props
     className,
     onClick,
@@ -82,6 +84,14 @@ export const TableCell = forwardRef((props, ref) => {
 
   const columnIndex = column.index;
   const rowIndex = row.index;
+
+  if (canResizeWidth === undefined && rowIndex === 0) {
+    canResizeWidth = true;
+  }
+  if (canResizeHeight === undefined && columnIndex === 0) {
+    canResizeHeight = true;
+  }
+
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
   const stickyLeft = columnIndex < stickyLeftFrontierColumnIndex;
   const stickyTop = rowIndex < stickyTopFrontierRowIndex;
