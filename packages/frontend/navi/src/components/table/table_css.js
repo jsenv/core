@@ -93,7 +93,7 @@ import.meta.css = /* css */ `
   }
   .navi_table td[data-editing] input {
     padding: 0;
-    padding-left: 8px;
+    padding-left: 12px;
   }
   .navi_table [data-sticky-left-frontier] {
     /* padding-left: 12px; */
