@@ -66,6 +66,7 @@ import {
   useSelectableElement,
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
+import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import {
   TableCellColumnResizeHandles,
   TableCellRowResizeHandles,
@@ -352,7 +353,7 @@ export const TableRow = ({ id, height, children }) => {
 export const TableCell = forwardRef((props, ref) => {
   let {
     className,
-    canDrag,
+    canDragColumn,
     canResizeWidth,
     canResizeHeight,
     selectionImpact,
@@ -360,7 +361,6 @@ export const TableCell = forwardRef((props, ref) => {
     cursor,
     textAlign,
     onClick,
-    onMouseDown,
     children,
     action,
   } = props;
@@ -439,10 +439,10 @@ export const TableCell = forwardRef((props, ref) => {
     // value: selectionId,
   });
 
-  const { grabTarget } = useTableDrag();
+  const { grabTarget, grabColumn, releaseColumn } = useTableDrag();
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
-  if (canDrag === undefined) {
-    canDrag = rowIndex === 0;
+  if (canDragColumn === undefined) {
+    canDragColumn = rowIndex === 0;
   }
 
   if (canResizeWidth === undefined && rowIndex === 0) {
@@ -511,7 +511,19 @@ export const TableCell = forwardRef((props, ref) => {
         columnContainsSelectedCell ? "" : undefined
       }
       onClick={onClick}
-      onMouseDown={onMouseDown}
+      onMouseDown={(e) => {
+        if (!canDragColumn) {
+          return;
+        }
+        if (e.button !== 0) {
+          return;
+        }
+        initDragTableColumnByMousedown(e, {
+          onGrab: () => grabColumn(columnIndex),
+          onDrag: () => {},
+          onRelease: () => releaseColumn(columnIndex),
+        });
+      }}
       onDoubleClick={(e) => {
         if (!editable) {
           return;
