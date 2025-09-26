@@ -50,7 +50,9 @@ export const TableUIContainer = ({ grabTarget }) => {
     if (!element) {
       return null;
     }
-    const table = element.closest("table");
+    const table = element
+      .closest(".navi_table_container")
+      .querySelector("table");
     const updateScrollDimensions = () => {
       const { width, height } = table.getBoundingClientRect();
       element.style.setProperty("--table-width", `${width}px`);
