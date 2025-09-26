@@ -120,11 +120,11 @@ const createBaseSelection = ({
       return;
     }
 
-    // const allValues = [];
-    // for (const element of registry) {
-    //   const value = getElementValue(element);
-    //   allValues.push(value);
-    // }
+    const allValues = [];
+    for (const element of registry) {
+      const value = getElementValue(element);
+      allValues.push(value);
+    }
 
     const oldSelectedSet = new Set(currentValue);
     const newSelectedSet = new Set(newValue);
@@ -138,7 +138,7 @@ const createBaseSelection = ({
     for (const newSelected of newSelectedSet) {
       const element = getElementByValue(newSelected);
       if (element._selectionImpact) {
-        const impactedValues = element._selectionImpact();
+        const impactedValues = element._selectionImpact(allValues);
         for (const impactedValue of impactedValues) {
           selectionSet.add(impactedValue);
         }
@@ -147,7 +147,7 @@ const createBaseSelection = ({
     for (const willBeUnselected of willBeUnselectedSet) {
       const element = getElementByValue(willBeUnselected);
       if (element._selectionImpact) {
-        const impactedValues = element._selectionImpact();
+        const impactedValues = element._selectionImpact(allValues);
         for (const impactedValue of impactedValues) {
           if (selectionSet.has(impactedValue)) {
             // want to be selected -> keep it
