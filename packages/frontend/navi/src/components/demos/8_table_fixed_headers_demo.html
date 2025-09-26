@@ -227,7 +227,8 @@
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.map((rowData, rowIndex) => {
+                  {data.map((rowData, dataIndex) => {
+                    const rowIndex = dataIndex + 1;
                     return (
                       <TableRow
                         key={rowData.id}
