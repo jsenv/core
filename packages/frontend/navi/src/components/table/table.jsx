@@ -27,6 +27,7 @@ import {
   TableDragProvider,
   TableSelectionProvider,
   TableStickyProvider,
+  useTableSticky,
 } from "./table_context.jsx";
 import "./table_css.js";
 
@@ -202,11 +203,25 @@ export const Table = forwardRef((props, ref) => {
 export const Colgroup = ({ children }) => {
   return <colgroup>{children}</colgroup>;
 };
-export const Col = ({ width }) => {
+export const Col = ({ width, immovable }) => {
   const columns = useColumns();
   const columnIndex = columns.length;
   columns[columnIndex] = { width };
-  return <col />;
+
+  const { stickyLeftFrontierColumnIndex } = useTableSticky();
+  const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
+
+  return (
+    <col
+      data-sticky-left={isStickyLeft ? "" : undefined}
+      data-drag-sticky-left-frontier={isStickyLeft ? "" : undefined}
+      data-drag-obstacle={immovable ? "move-column" : undefined}
+      style={{
+        minWidth: width ? `${width}px` : undefined,
+        maxWidth: width ? `${width}px` : undefined,
+      }}
+    />
+  );
 };
 
 const TableSectionContext = createContext();
