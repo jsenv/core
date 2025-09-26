@@ -1,3 +1,55 @@
+/**
+ * Table Component with Custom Border and Selection System
+ *
+ * PROBLEM: We want to draw selected table cells with a clear visual perimeter
+ *
+ * ATTEMPTED SOLUTIONS & THEIR ISSUES:
+ *
+ * 1. Drawing selection outside the table:
+ *    - z-index issues: Hard to ensure selection appears above all table elements
+ *    - Performance issues: Constant recalculation during resizing, scrolling, etc.
+ *    - Positioning complexity: Managing absolute positioning relative to table cells
+ *
+ * 2. Using native CSS table cell borders:
+ *    - Border rendering artifacts: CSS borders are not rendered as straight lines,
+ *      making selection perimeter imperfect (especially with thick borders)
+ *    - Border-collapse compatibility: Native border-collapse causes sticky elements
+ *      to lose borders while scrolling in some browsers
+ *    - Dimension changes: Custom border-collapse (manually disabling adjacent borders)
+ *      changes cell dimensions, making selection outline visible and inconsistent
+ *
+ * SOLUTION: Custom border system using box-shadow
+ *
+ * KEY PRINCIPLES:
+ * - Use inset box-shadow to ensure borders appear above table cell backgrounds
+ * - Use ::before pseudo-elements with position: absolute for flexible positioning
+ * - Each cell draws its own borders independently (no border-collapse by default)
+ * - Selection borders override table borders using higher CSS specificity
+ * - Sticky borders use thicker box-shadows in accent color (yellow)
+ *
+ * TECHNICAL IMPLEMENTATION:
+ * - All borders use inset box-shadow with specific directional mapping:
+ *   * Top: inset 0 1px 0 0
+ *   * Right: inset -1px 0 0 0
+ *   * Bottom: inset 0 -1px 0 0
+ *   * Left: inset 1px 0 0 0
+ * - Selection borders (blue) override table borders (red) in same pseudo-element
+ * - Sticky borders replace regular borders with thicker colored variants
+ * - Border-collapse mode available as optional feature for future use
+ *
+ * Note how border disappear for sticky elements when using border-collapse (https://bugzilla.mozilla.org/show_bug.cgi?id=1727594)
+ *
+ * Next steps:
+ *
+ * - Finir vrai exemple de re-order de column (mise a jour du state + effet au survol)
+ * - Can add a column (+ button at the end of table headers)
+ * - Can add a row (+ button at the end of the row number column )
+ * - Delete a row (how?)
+ * - Delete a column (how?)
+ * - Rename a column (I guess with enter, double click, A-Z keys)
+ * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
+ */
+
 import { createContext } from "preact";
 import { forwardRef } from "preact/compat";
 import {
@@ -298,6 +350,7 @@ export const TableRow = ({ id, height, children }) => {
 export const TableCell = forwardRef((props, ref) => {
   let {
     className,
+    canDrag,
     canResizeWidth,
     canResizeHeight,
     selectionImpact,
@@ -341,14 +394,28 @@ export const TableCell = forwardRef((props, ref) => {
 
   const { selectionController, columnContainsSelectedCell } =
     useTableSelection();
+
   const { selected } = useSelectableElement(cellRef, {
     selectionController,
-    selectionImpact,
+    selectionImpact:
+      selectionImpact === undefined
+        ? rowIndex === 0
+          ? (allValues) => {
+              const columnCells = data.map(
+                (row) => `cell:${columnIndex}-${rowIndex}`,
+              );
+              return columnCells;
+            }
+          : undefined
+        : selectionImpact,
     // value: id,
   });
 
   const { grabTarget } = useTableDrag();
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
+  if (canDrag === undefined) {
+    canDrag = rowIndex === 0;
+  }
 
   if (canResizeWidth === undefined && rowIndex === 0) {
     canResizeWidth = true;

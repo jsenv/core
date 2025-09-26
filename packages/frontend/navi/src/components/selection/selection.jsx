@@ -120,6 +120,12 @@ const createBaseSelection = ({
       return;
     }
 
+    // const allValues = [];
+    // for (const element of registry) {
+    //   const value = getElementValue(element);
+    //   allValues.push(value);
+    // }
+
     const oldSelectedSet = new Set(currentValue);
     const newSelectedSet = new Set(newValue);
     const willBeUnselectedSet = new Set();
