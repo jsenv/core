@@ -75,6 +75,8 @@ import {
   useTableResizeContextValue,
 } from "./resize/table_resize_context.js";
 import {
+  parseTableSelectionValue,
+  stringifyTableSelectionValue,
   useTableSelectionController,
   useTableSelectionData,
 } from "./selection/table_selection.js";
@@ -261,8 +263,8 @@ export const Colgroup = ({ children }) => {
 export const Col = ({ id, width, immovable }) => {
   const columns = useColumns();
   const columnIndex = columns.length;
-  const selectionId = `column:${columnIndex}`;
-  columns[columnIndex] = { id, selectionId, width, immovable };
+  const selectionValue = stringifyTableSelectionValue(`column`, columnIndex);
+  columns[columnIndex] = { id, selectionValue, width, immovable };
 
   const { stickyLeftFrontierColumnIndex } = useTableSticky();
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
@@ -305,8 +307,8 @@ export const TableRow = ({ id, height, children }) => {
   const columns = useColumns();
   const rows = useRows();
   const rowIndex = rows.length;
-  const selectionId = `row:${rowIndex}`;
-  const row = { id, selectionId, height };
+  const selectionValue = stringifyTableSelectionValue(`row`, rowIndex);
+  const row = { id, selectionValue, height };
   rows[rowIndex] = row;
 
   const { stickyTopFrontierRowIndex } = useTableSticky();
@@ -314,7 +316,7 @@ export const TableRow = ({ id, height, children }) => {
   const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
 
   const { selectedRowIndexes } = useTableSelection();
-  const isRowSelected = selectedRowIndexes.includes(selectionId);
+  const isRowSelected = selectedRowIndexes.includes(rowIndex);
 
   return (
     <tr
@@ -378,7 +380,10 @@ export const TableCell = forwardRef((props, ref) => {
   const isInTableHead = useIsInTableHead();
   const TagName = isInTableHead ? "th" : "td";
 
-  const selectionId = `cell:${rowIndex}-${columnIndex}`;
+  const selectionValue = stringifyTableSelectionValue("cell", {
+    rowIndex,
+    columnIndex,
+  });
 
   const editable = Boolean(action);
 
@@ -398,26 +403,30 @@ export const TableCell = forwardRef((props, ref) => {
   if (selectionImpact === undefined) {
     if (rowIndex === 0 && columnIndex === 0) {
       selectionImpact = (allValues) => {
-        const cells = allValues.filter((v) => {
-          return v.startsWith("cell:");
-        });
+        const cells = allValues.filter(
+          (v) => parseTableSelectionValue(v).type === "cell",
+        );
         return cells;
       };
     } else if (rowIndex === 0) {
       selectionImpact = (allValues) => {
         const columnCells = allValues.filter((v) => {
-          return v.startsWith(`cell:${columnIndex}-`);
+          const selectionValueInfo = parseTableSelectionValue(v);
+          return (
+            selectionValueInfo.type === "cell" &&
+            selectionValueInfo.columnIndex === columnIndex
+          );
         });
         return columnCells;
       };
     } else if (columnIndex === 0) {
       selectionImpact = (allValues) => {
         const rowCells = allValues.filter((v) => {
-          if (!v.startsWith(`cell:`)) {
-            return false;
-          }
-          const [, cellRowIndex] = v.slice("cell:".length).split("-");
-          return cellRowIndex === String(rowIndex);
+          const selectionValueInfo = parseTableSelectionValue(v);
+          return (
+            selectionValueInfo.type === "cell" &&
+            selectionValueInfo.rowIndex === rowIndex
+          );
         });
         return rowCells;
       };
@@ -495,7 +504,7 @@ export const TableCell = forwardRef((props, ref) => {
       data-selection-name={isInTableHead ? "column" : "cell"}
       data-selection-keyboard-toggle
       aria-selected={selected}
-      data-value={selectionId}
+      data-value={selectionValue}
       data-editing={editing ? "" : undefined}
       data-grabbed={columnGrabbed ? "" : undefined}
       data-column-contains-selected-cell={

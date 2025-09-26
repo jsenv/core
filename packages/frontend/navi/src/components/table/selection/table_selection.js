@@ -228,6 +228,41 @@ const updateSelectionBorders = (tableElement, selectionController) => {
   });
 };
 
+export const parseTableSelectionValue = (selectionValue) => {
+  if (selectionValue.startsWith("cell:")) {
+    const [cellRowIndex, cellColumnIndex] = selectionValue
+      .slice("cell:".length)
+      .split("-");
+    return {
+      type: "cell",
+      rowIndex: Number(cellRowIndex),
+      columnIndex: Number(cellColumnIndex),
+    };
+  }
+  if (selectionValue.startsWith("row:")) {
+    const rowIndex = selectionValue.slice("row:".length);
+    return { type: "row", rowIndex: Number(rowIndex) };
+  }
+  if (selectionValue.startsWith("column:")) {
+    const columnIndex = selectionValue.slice("column:".length);
+    return { type: "column", columnIndex: Number(columnIndex) };
+  }
+  return { type: "unknown" };
+};
+export const stringifyTableSelectionValue = (type, value) => {
+  if (type === "cell") {
+    const { rowIndex, columnIndex } = value;
+    return `cell:${rowIndex}-${columnIndex}`;
+  }
+  if (type === "row") {
+    return `row:${value}`;
+  }
+  if (type === "column") {
+    return `column:${value}`;
+  }
+  return "";
+};
+
 export const useTableSelectionData = (selection) => {
   const {
     rowWithSomeSelectedCell,
@@ -240,19 +275,19 @@ export const useTableSelectionData = (selection) => {
     const selectedRowIndexes = [];
 
     for (const item of selection) {
-      if (item.startsWith("row:")) {
-        const rowIndex = item.slice("row:".length);
+      const selectionValueInfo = parseTableSelectionValue(item);
+      if (selectionValueInfo.type === "row") {
+        const { rowIndex } = selectionValueInfo;
         selectedRowIndexes.push(rowIndex);
         continue;
       }
-      if (item.startsWith("column:")) {
-        const columnIndex = item.slice("column:".length);
+      if (selectionValueInfo.type === "column") {
+        const { columnIndex } = selectionValueInfo;
         selectedColumnIndexes.push(columnIndex);
         continue;
       }
-      if (item.startsWith("cell:")) {
-        const cellId = item.slice("cell:".length);
-        const [columnIndex, rowIndex] = cellId.split("-");
+      if (selectionValueInfo.type === "cell") {
+        const { columnIndex, rowIndex } = selectionValueInfo;
         // Add to some-selected tracking
         if (!columnWithSomeSelectedCell.includes(columnIndex)) {
           columnWithSomeSelectedCell.push(columnIndex);
