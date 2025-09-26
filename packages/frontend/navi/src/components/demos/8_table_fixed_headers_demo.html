@@ -366,7 +366,10 @@
                   const key = "col1:row-1";
                   setEditableCellData((prev) => {
                     const newMap = new Map(prev);
-                    newMap.set(key, `Edited at ${new Date().toLocaleTimeString()}`);
+                    newMap.set(
+                      key,
+                      `Edited at ${new Date().toLocaleTimeString()}`,
+                    );
                     return newMap;
                   });
                 }}
