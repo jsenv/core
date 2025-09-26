@@ -128,35 +128,18 @@
         return data;
       };
 
-      // Generate column definitions
-      const generateColumns = (count = 10) => {
-        const columns = [];
-        // columns.push(createRowNumberColumn());
-        for (let i = 1; i <= count; i++) {
-          const column = {
-            id: `col${i}`,
-            header: `Column ${i}`,
-            cell: ({ rowIndex, data }) => (
-              <TableCell value={data[rowIndex][`col${i}`]} />
-            ),
-          };
-          if (i === 1) {
-            column.width = 50;
-          }
-          columns.push(column);
-        }
-        return columns;
-      };
-
       // Create large dataset (50 rows x 10 columns = 500 cells)
       const data = generateLargeDataset(50, 10);
+      const columns = Array.from({ length: 10 }, (_, i) => ({
+        id: `col${i + 1}`,
+      }));
 
       // eslint-disable-next-line no-unused-vars
       const FixedHeadersDemo = () => {
         const tableRef = useRef(null);
         const [selection, setSelection] = useState([]);
-        const [columns, setColumns] = useState(() => generateColumns(10));
-        const [rows, setRows] = useState([]);
+        const [columnWidths, setColumnWidths] = useState([]);
+        const [rowHeights, setRowHeights] = useState([]);
         const [
           stickyLeftFrontierColumnIndex,
           setStickyLeftFrontierColumnIndex,
@@ -194,22 +177,16 @@
                 }}
                 onColumnResize={(width, columnIndex, column) => {
                   console.log(column, `resized to ${width}px`);
-                  setColumns((prevColumns) =>
-                    prevColumns.map((col) =>
-                      col.id === column.id ? { ...col, width } : col,
-                    ),
-                  );
+                  setColumnWidths((columnWidths) => {
+                    columnWidths[columnIndex] = width;
+                    return [...columnWidths];
+                  });
                 }}
                 onRowResize={(height, rowIndex, row) => {
                   console.log(row, `resized to ${height}px`, rowIndex);
-                  setRows((prevRows) => {
-                    const newRows = [...prevRows];
-                    // Ensure we have enough rows in the array
-                    while (newRows.length <= rowIndex) {
-                      newRows.push({});
-                    }
-                    newRows[rowIndex] = { ...newRows[rowIndex], height };
-                    return newRows;
+                  setRowHeights((rowHeights) => {
+                    rowHeights[rowIndex] = height;
+                    return [...rowHeights];
                   });
                 }}
                 stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
@@ -220,12 +197,16 @@
               >
                 <Colgroup>
                   <RowNumberCol />
-                  {columns.map((column) => (
-                    <Col key={column.id} id={column.id} width={column.width} />
+                  {columns.map((column, columnIndex) => (
+                    <Col
+                      key={column.id}
+                      id={column.id}
+                      width={columnWidths[columnIndex + 1]}
+                    />
                   ))}
                 </Colgroup>
                 <TableHead>
-                  <TableRow height={rows[0]?.height}>
+                  <TableRow height={rowHeights[0]}>
                     <RowNumberTableCell />
                     {columns.map((col) => (
                       <TableCell key={col.id}>{col.header}</TableCell>
@@ -236,10 +217,7 @@
                   {data.map((rowData, dataIndex) => {
                     const rowIndex = dataIndex + 1;
                     return (
-                      <TableRow
-                        key={rowData.id}
-                        height={rows[rowIndex]?.height}
-                      >
+                      <TableRow key={rowData.id} height={rowHeights[rowIndex]}>
                         <RowNumberTableCell />
                         {columns.map((col) => (
                           <TableCell key={col.id}>{rowData[col.id]}</TableCell>
@@ -288,14 +266,8 @@
               <div>
                 Row heights:{" "}
                 <span>
-                  {rows.some((row) => row.height)
-                    ? JSON.stringify(
-                        Object.fromEntries(
-                          rows
-                            .map((row, index) => [index, row.height])
-                            .filter(([, height]) => height),
-                        ),
-                      )
+                  {rowHeights.length
+                    ? JSON.stringify(rowHeights)
                     : "Default (auto)"}
                 </span>
               </div>
@@ -338,19 +310,14 @@
               </button>
               <button
                 onClick={() => {
-                  setColumns((prevColumns) =>
-                    prevColumns.map((col) => {
-                      const { width, ...colWithoutWidth } = col;
-                      return colWithoutWidth;
-                    }),
-                  );
+                  setColumnWidths([]);
                 }}
               >
                 Reset Column Widths
               </button>
               <button
                 onClick={() => {
-                  setRows([]);
+                  setRowHeights([]);
                 }}
               >
                 Reset Row Heights
