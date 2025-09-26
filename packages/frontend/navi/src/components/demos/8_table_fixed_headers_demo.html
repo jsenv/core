@@ -150,32 +150,23 @@
         const [stickyTopFrontierRowIndex, setStickyTopFrontierRowIndex] =
           useState(0);
 
-        // Simple state-based editable cell data
-        const [editableCellData, setEditableCellData] = useState(() => {
-          const cellMap = new Map();
-          data.forEach((row) => {
-            columns.forEach((col) => {
-              const key = `${col.id}:${row.id}`;
-              cellMap.set(key, row[col.id]);
-            });
-          });
-          return cellMap;
+        // Local state with 2D array for cell values
+        const [cellValues, setCellValues] = useState(() => {
+          return data.map((row) => columns.map((col) => row[col.id]));
         });
 
-        // Action function for updating cell values
-        const createCellAction = (rowId, colId) => (newValue) => {
-          const key = `${colId}:${rowId}`;
-          setEditableCellData((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(key, newValue);
-            return newMap;
+        // Action function for updating cell values using row/column indices
+        const createCellAction = (dataRowIndex, dataColIndex) => (newValue) => {
+          setCellValues((prevValues) => {
+            const newValues = prevValues.map((row, rowIdx) =>
+              rowIdx === dataRowIndex
+                ? row.map((cell, colIdx) =>
+                    colIdx === dataColIndex ? newValue : cell,
+                  )
+                : [...row],
+            );
+            return newValues;
           });
-        };
-
-        // Helper to get current cell value
-        const getCellValue = (rowId, colId) => {
-          const key = `${colId}:${rowId}`;
-          return editableCellData.get(key);
         };
 
         return (
@@ -249,19 +240,24 @@
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {data.map((rowData, dataIndex) => {
-                    const rowIndex = dataIndex + 1;
+                  {data.map((rowData, dataRowIndex) => {
+                    const rowIndex = dataRowIndex + 1;
                     return (
                       <TableRow key={rowData.id} height={rowHeights[rowIndex]}>
                         <RowNumberTableCell />
-                        {columns.map((col) => (
-                          <TableCell
-                            key={col.id}
-                            action={createCellAction(rowData.id, col.id)}
-                          >
-                            {getCellValue(rowData.id, col.id)}
-                          </TableCell>
-                        ))}
+                        {columns.map((col, dataColIndex) => {
+                          return (
+                            <TableCell
+                              key={col.id}
+                              action={createCellAction(
+                                dataRowIndex,
+                                dataColIndex,
+                              )}
+                            >
+                              {cellValues[dataRowIndex][dataColIndex]}
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     );
                   })}
@@ -291,7 +287,9 @@
               </div>
               <div>
                 Editable cells:{" "}
-                <span>{editableCellData.size} cells with editing enabled</span>
+                <span>
+                  {data.length * columns.length} cells with editing enabled
+                </span>
               </div>
               <div>
                 Column widths:{" "}
@@ -363,14 +361,17 @@
               <button
                 onClick={() => {
                   // Set a sample cell to demonstrate editing works
-                  const key = "col1:row-1";
-                  setEditableCellData((prev) => {
-                    const newMap = new Map(prev);
-                    newMap.set(
-                      key,
-                      `Edited at ${new Date().toLocaleTimeString()}`,
+                  setCellValues((prevValues) => {
+                    const newValues = prevValues.map((row, rowIdx) =>
+                      rowIdx === 0
+                        ? row.map((cell, colIdx) =>
+                            colIdx === 0
+                              ? `Edited at ${new Date().toLocaleTimeString()}`
+                              : cell,
+                          )
+                        : [...row],
                     );
-                    return newMap;
+                    return newValues;
                   });
                 }}
               >
@@ -415,6 +416,7 @@
       console.log(
         `- ${data.length} rows × 10 columns = ${data.length * 10} total cells`,
       );
+      console.log("- Double-click data cells to edit values");
       console.log("- Scroll the table to test fixed header behavior");
       console.log(
         "- Use selection features to test interaction with scrolling",
