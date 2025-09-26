@@ -382,6 +382,7 @@ export const TableCell = forwardRef((props, ref) => {
     textAlign,
     onClick,
     action,
+    name,
     valueSignal,
     children,
   } = props;
@@ -558,6 +559,7 @@ export const TableCell = forwardRef((props, ref) => {
           onEditEnd={stopEditing}
           value={children}
           action={action}
+          name={name}
           valueSignal={valueSignal}
         >
           {children}

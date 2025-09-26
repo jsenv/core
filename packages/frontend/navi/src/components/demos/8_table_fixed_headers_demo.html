@@ -175,8 +175,9 @@
         };
 
         // Action function for updating cell values using row/column indices
-        const createCellAction = (dataRowIndex, dataColIndex) => (newValue) => {
-          setCellValue(dataRowIndex, dataColIndex, newValue);
+        const createCellAction = (dataRowIndex, dataColIndex) => (params) => {
+          debugger;
+          setCellValue(dataRowIndex, dataColIndex, cell);
         };
 
         return (
@@ -266,6 +267,7 @@
                                 dataRowIndex,
                                 dataColIndex,
                               )}
+                              name="cell"
                               valueSignal={cellValueSignal}
                             >
                               {cellValue}
