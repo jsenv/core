@@ -353,6 +353,7 @@ export const TableRow = ({ id, height, children }) => {
 export const TableCell = forwardRef((props, ref) => {
   let {
     className,
+    canSelectAll,
     canDragColumn,
     canResizeWidth,
     canResizeHeight,
@@ -401,7 +402,7 @@ export const TableCell = forwardRef((props, ref) => {
     useTableSelection();
 
   if (selectionImpact === undefined) {
-    if (rowIndex === 0 && columnIndex === 0) {
+    if (rowIndex === 0 && columnIndex === 0 && canSelectAll) {
       selectionImpact = (allValues) => {
         const cells = allValues.filter(
           (v) => parseTableSelectionValue(v).type === "cell",
