@@ -109,6 +109,10 @@
         TableBody,
         // eslint-disable-next-line no-unused-vars
         TableRow,
+        // eslint-disable-next-line no-unused-vars
+        RowNumberCol,
+        // eslint-disable-next-line no-unused-vars
+        RowNumberTableCell,
       } from "@jsenv/navi";
 
       // Generate large dataset to force scrolling
@@ -215,12 +219,14 @@
                 borderCollapse
               >
                 <Colgroup>
+                  <RowNumberCol />
                   {columns.map((column) => (
                     <Col key={column.id} id={column.id} width={column.width} />
                   ))}
                 </Colgroup>
                 <TableHead>
                   <TableRow height={rows[0]?.height}>
+                    <RowNumberTableCell />
                     {columns.map((col) => (
                       <TableCell key={col.id}>{col.header}</TableCell>
                     ))}
@@ -234,6 +240,7 @@
                         key={rowData.id}
                         height={rows[rowIndex]?.height}
                       >
+                        <RowNumberTableCell />
                         {columns.map((col) => (
                           <TableCell key={col.id}>{rowData[col.id]}</TableCell>
                         ))}

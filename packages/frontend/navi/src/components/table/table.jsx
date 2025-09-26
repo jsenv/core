@@ -598,6 +598,23 @@ export const TableCell = forwardRef((props, ref) => {
   );
 });
 
+export const RowNumberCol = ({
+  width = 50,
+  minWidth = 30,
+  maxWidth = 100,
+  ...rest
+}) => {
+  return (
+    <Col
+      id="row_number"
+      width={width}
+      minWidth={minWidth}
+      maxWidth={maxWidth}
+      immovable
+      {...rest}
+    />
+  );
+};
 export const RowNumberTableCell = ({ children, ...props }) => {
   const columnIndex = useColumnIndex();
   const rowIndex = useRowIndex();

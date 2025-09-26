@@ -52,6 +52,7 @@ export {
 export {
   Col,
   Colgroup,
+  RowNumberCol,
   RowNumberTableCell,
   Table,
   TableBody,
