@@ -487,24 +487,32 @@ export const TableCell = forwardRef((props, ref) => {
   );
 });
 
-// TODO: use a resize observer to keep it up-to-date
 const TableUIContainer = ({ children }) => {
   const ref = useRef();
 
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) {
-      return;
+      return null;
     }
     const tableContainer = element.closest(".navi_table_container");
-    element.style.setProperty(
-      "--table-scroll-width",
-      `${tableContainer.scrollWidth}px`,
-    );
-    element.style.setProperty(
-      "--table-scroll-height",
-      `${tableContainer.scrollHeight}px`,
-    );
+    const updateScrollDimensions = () => {
+      element.style.setProperty(
+        "--table-scroll-width",
+        `${tableContainer.scrollWidth}px`,
+      );
+      element.style.setProperty(
+        "--table-scroll-height",
+        `${tableContainer.scrollHeight}px`,
+      );
+    };
+
+    updateScrollDimensions();
+    const resizeObserver = new ResizeObserver(updateScrollDimensions);
+    resizeObserver.observe(tableContainer);
+    return () => {
+      resizeObserver.disconnect();
+    };
   }, []);
 
   return (
