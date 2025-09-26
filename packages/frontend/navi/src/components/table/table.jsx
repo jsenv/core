@@ -50,7 +50,7 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
-import { createContext } from "preact";
+import { createContext, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -329,6 +329,8 @@ export const TableRow = ({ id, height, children }) => {
 
   const { selectedRowIndexes } = useTableSelection();
   const isRowSelected = selectedRowIndexes.includes(rowIndex);
+
+  children = toChildArray(children);
 
   return (
     <tr
