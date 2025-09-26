@@ -8,9 +8,26 @@ import {
   useState,
 } from "preact/hooks";
 
+import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
+import { createSelectionKeyboardShortcuts } from "../selection/selection.jsx";
+import { useFocusGroup } from "../use_focus_group.js";
 import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
 import { TableColumnResizer, TableRowResizer } from "./resize/table_resize.jsx";
+import {
+  TableResizeProvider,
+  useTableResizeContextValue,
+} from "./resize/table_resize_context.js";
+import {
+  useTableSelection,
+  useTableSelectionController,
+} from "./selection/table_selection.js";
+import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
+import {
+  TableDragProvider,
+  TableSelectionProvider,
+  TableStickyProvider,
+} from "./table_context.jsx";
 import "./table_css.js";
 
 const ColGroupRefContext = createContext();
@@ -22,7 +39,19 @@ const TableRowIndexRefContext = createContext();
 const useTableRowIndexRef = () => useContext(TableRowIndexRefContext);
 
 export const Table = forwardRef((props, ref) => {
-  const { children } = props;
+  const {
+    selection = [],
+    selectionColor,
+    onSelectionChange,
+    onColumnResize,
+    onRowResize,
+    borderCollapse = true,
+    stickyLeftFrontierColumnIndex = 0,
+    onStickyLeftFrontierChange,
+    stickyTopFrontierRowIndex = 0,
+    onStickyTopFrontierChange,
+    children,
+  } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => {
@@ -36,7 +65,81 @@ export const Table = forwardRef((props, ref) => {
   const colGroupRef = useRef();
   colGroupRef.current = [];
 
-  // ability to drag columns
+  // selection
+  const selectionController = useTableSelectionController({
+    tableRef: innerRef,
+    selection,
+    onSelectionChange,
+    selectionColor,
+  });
+  const {
+    rowWithSomeSelectedCell,
+    columnWithSomeSelectedCell,
+    selectedRowIds,
+  } = useTableSelection(selection);
+  const selectionContextValue = {
+    selectionController,
+    rowWithSomeSelectedCell,
+    columnWithSomeSelectedCell,
+    selectedRowIds,
+  };
+
+  useFocusGroup(innerRef);
+
+  // sticky
+  useStickyGroup(tableContainerRef, { elementSelector: "table" });
+  const stickyContextValue = {
+    stickyLeftFrontierColumnIndex,
+    stickyTopFrontierRowIndex,
+    onStickyLeftFrontierChange,
+    onStickyTopFrontierChange,
+  };
+
+  useKeyboardShortcuts(innerRef, [
+    ...createSelectionKeyboardShortcuts(selectionController, {
+      toggleEnabled: true,
+    }),
+    {
+      key: "enter",
+      description: "Edit table cell content",
+      handler: () => {
+        // Find the currently focused cell
+        const activeCell = document.activeElement.closest("td");
+        if (!activeCell) {
+          return false;
+        }
+        activeCell.dispatchEvent(
+          new CustomEvent("editrequested", { bubbles: false }),
+        );
+        return true;
+      },
+    },
+    {
+      key: "a-z",
+      description: "Start editing table cell content",
+      handler: (e) => {
+        const activeCell = document.activeElement.closest("td");
+        if (!activeCell) {
+          return false;
+        }
+        activeCell.dispatchEvent(
+          new CustomEvent("editrequested", {
+            bubbles: false,
+            detail: { initialValue: e.key },
+          }),
+        );
+        return true;
+      },
+    },
+  ]);
+
+  // resize
+  const resizeContextValue = useTableResizeContextValue({
+    onColumnResize,
+    onRowResize,
+  });
+
+  // drag columns
   const [grabTarget, setGrabTarget] = useState(null);
   const grabColumn = (columnIndex) => {
     setGrabTarget(`column:${columnIndex}`);
@@ -44,15 +147,34 @@ export const Table = forwardRef((props, ref) => {
   const releaseColumn = () => {
     setGrabTarget(null);
   };
+  const dragContextValue = {
+    grabTarget,
+    grabColumn,
+    releaseColumn,
+  };
 
   return (
     <div ref={tableContainerRef} className="navi_table_container">
-      <table>
-        <ColGroupRefContext.Provider value={colGroupRef}>
-          <TableRowIndexRefContext.Provider value={tableRowIndexRef}>
-            {children}
-          </TableRowIndexRefContext.Provider>
-        </ColGroupRefContext.Provider>
+      <table
+        ref={innerRef}
+        className="navi_table"
+        aria-multiselectable="true"
+        data-multiselection={selection.length > 1 ? "" : undefined}
+        data-border-collapse={borderCollapse ? "" : undefined}
+      >
+        <TableResizeProvider value={resizeContextValue}>
+          <TableSelectionProvider value={selectionContextValue}>
+            <TableDragProvider value={dragContextValue}>
+              <TableStickyProvider value={stickyContextValue}>
+                <ColGroupRefContext.Provider value={colGroupRef}>
+                  <TableRowIndexRefContext.Provider value={tableRowIndexRef}>
+                    {children}
+                  </TableRowIndexRefContext.Provider>
+                </ColGroupRefContext.Provider>
+              </TableStickyProvider>
+            </TableDragProvider>
+          </TableSelectionProvider>
+        </TableResizeProvider>
       </table>
       <TableUIContainer>
         <TableDragCloneContainer dragging={Boolean(grabTarget)} />
@@ -137,6 +259,7 @@ export const TableCell = ({ children }) => {
   );
 };
 
+// TODO: use a resize observer to keep it up-to-date
 const TableUIContainer = ({ children }) => {
   const ref = useRef();
 

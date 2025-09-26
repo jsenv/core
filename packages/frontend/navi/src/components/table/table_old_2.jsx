@@ -374,8 +374,6 @@ export const Table = forwardRef((props, ref) => {
     setGrabTarget(null);
   };
 
-  const needTableHead = columns.some((col) => col.header !== undefined);
-
   const resizeContextValue = useTableResizeContextValue({
     onColumnResize,
     onRowResize,
