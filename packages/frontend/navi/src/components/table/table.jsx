@@ -381,8 +381,9 @@ export const TableCell = forwardRef((props, ref) => {
     cursor,
     textAlign,
     onClick,
-    children,
     action,
+    valueSignal,
+    children,
   } = props;
 
   const cellRef = useRef();
@@ -557,6 +558,7 @@ export const TableCell = forwardRef((props, ref) => {
           onEditEnd={stopEditing}
           value={children}
           action={action}
+          valueSignal={valueSignal}
         >
           {children}
         </Editable>

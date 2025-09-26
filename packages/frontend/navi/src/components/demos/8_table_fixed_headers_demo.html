@@ -155,18 +155,22 @@
           return data.map((row) => columns.map((col) => row[col.id]));
         });
 
-        // Action function for updating cell values using row/column indices
-        const createCellAction = (dataRowIndex, dataColIndex) => (newValue) => {
+        const setCellValue = (dataRowIndex, dataColIndex, value) => {
           setCellValues((prevValues) => {
             const newValues = prevValues.map((row, rowIdx) =>
               rowIdx === dataRowIndex
                 ? row.map((cell, colIdx) =>
-                    colIdx === dataColIndex ? newValue : cell,
+                    colIdx === dataColIndex ? value : cell,
                   )
                 : [...row],
             );
             return newValues;
           });
+        };
+
+        // Action function for updating cell values using row/column indices
+        const createCellAction = (dataRowIndex, dataColIndex) => (newValue) => {
+          setCellValue(dataRowIndex, dataColIndex, newValue);
         };
 
         return (
@@ -246,6 +250,9 @@
                       <TableRow key={rowData.id} height={rowHeights[rowIndex]}>
                         <RowNumberTableCell />
                         {columns.map((col, dataColIndex) => {
+                          const cellValue =
+                            cellValues[dataRowIndex][dataColIndex];
+                          const cellValueSignal = useSignalSync(cellValue);
                           return (
                             <TableCell
                               key={col.id}
@@ -253,8 +260,9 @@
                                 dataRowIndex,
                                 dataColIndex,
                               )}
+                              valueSignal={cellValueSignal}
                             >
-                              {cellValues[dataRowIndex][dataColIndex]}
+                              {cellValue}
                             </TableCell>
                           );
                         })}
