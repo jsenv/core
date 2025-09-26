@@ -252,15 +252,9 @@
               <div>
                 Column widths:{" "}
                 <span>
-                  {columns.some((col) => col.width)
-                    ? JSON.stringify(
-                        Object.fromEntries(
-                          columns
-                            .filter((col) => col.width)
-                            .map((col) => [col.id, col.width]),
-                        ),
-                      )
-                    : "Default (120px each)"}
+                  {columnWidths.length
+                    ? JSON.stringify(columnWidths)
+                    : "Default (auto)"}
                 </span>
               </div>
               <div>
