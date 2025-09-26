@@ -195,7 +195,7 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       // eslint-disable-next-line no-unused-vars
-      import { Input, useSignalSync } from "@jsenv/navi";
+      import { Input } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -204,10 +204,6 @@
         const [loadingC, setLoadingC] = useState(false);
         const [loadingD, setLoadingD] = useState(false);
         const [initialVal, setInitialVal] = useState("Hello world");
-        const [signalValue, setSignalValue] = useState(
-          "Signal controlled value",
-        );
-        const valueSignal = useSignalSync(signalValue);
 
         return (
           <div className="demo-grid">
@@ -322,52 +318,6 @@
                   Set timestamp
                 </button>
                 <button onClick={() => setInitialVal("")}>Clear</button>
-              </div>
-            </div>
-
-            <div className="demo-card">
-              <h3 className="demo-title">🎯 Signal-Based Value</h3>
-              <div className="control-group">
-                <h4>@jsenv/navi Input with valueSignal</h4>
-                <Input
-                  valueSignal={valueSignal}
-                  placeholder="Signal-controlled input..."
-                />
-              </div>
-              <div className="control-group">
-                <h4>Native HTML Input (for comparison)</h4>
-                <input
-                  value={signalValue}
-                  onInput={(e) => setSignalValue(e.currentTarget.value)}
-                  placeholder="Native input..."
-                />
-              </div>
-              <div className="result-display">
-                Current signal value: "{valueSignal.value}"
-              </div>
-              <div className="button-group">
-                <button
-                  onClick={() => setSignalValue("Signal updated externally")}
-                >
-                  Update via setState
-                </button>
-                <button
-                  onClick={() =>
-                    setSignalValue(
-                      `Signal @ ${new Date().toLocaleTimeString()}`,
-                    )
-                  }
-                >
-                  Set signal timestamp
-                </button>
-                <button
-                  onClick={() => {
-                    valueSignal.value = "Direct signal update";
-                  }}
-                >
-                  Update signal directly
-                </button>
-                <button onClick={() => setSignalValue("")}>Clear signal</button>
               </div>
             </div>
           </div>

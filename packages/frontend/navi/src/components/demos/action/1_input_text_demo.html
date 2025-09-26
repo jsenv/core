@@ -120,7 +120,14 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       // eslint-disable-next-line no-unused-vars
-      import { Field, Input, Form, Button, createAction, useSignalSync } from "@jsenv/navi";
+      import {
+        Field,
+        Input,
+        Form,
+        Button,
+        createAction,
+        useSignalSync,
+      } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -132,6 +139,7 @@
               <BasicInputDemo />
               <InputWithInitialValueDemo />
               <InputWithExternalControlDemo />
+              <InputWithSignalDemo />
               <FormInputDemo />
               <FormWithExternalControlDemo />
               <SharedActionDemo />
@@ -265,6 +273,64 @@
             >
               Current value: "{inputValue}"<br />
               {result || "Click buttons to change value, then submit..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputWithSignalDemo = () => {
+        const [signalValue, setSignalValue] = useState(
+          "Signal controlled value",
+        );
+        const valueSignal = useSignalSync(signalValue);
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Input with valueSignal</h3>
+            <div className="control-group">
+              <label htmlFor="signal-input">Signal-controlled input:</label>
+              <Input
+                id="signal-input"
+                name="text"
+                valueSignal={valueSignal}
+                placeholder="Signal-controlled input..."
+                action={async ({ text }) => {
+                  setResult("Processing...");
+                  await delay(800);
+                  const response = `✅ Signal value submitted: "${text}"`;
+                  setResult(response);
+                  return response;
+                }}
+              />
+            </div>
+            <div className="button-group">
+              <button onClick={() => setSignalValue("Updated via setState")}>
+                Update via setState
+              </button>
+              <button
+                onClick={() =>
+                  setSignalValue(`Signal @ ${new Date().toLocaleTimeString()}`)
+                }
+              >
+                Set timestamp
+              </button>
+              <button
+                onClick={() => {
+                  valueSignal.value = "Direct signal update";
+                }}
+              >
+                Update signal directly
+              </button>
+              <button onClick={() => setSignalValue("")}>Clear</button>
+            </div>
+            <div
+              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
+            >
+              Current signal value: "{valueSignal.value}"
+              <br />
+              {result || "Type or use buttons to change value..."}
             </div>
           </div>
         );

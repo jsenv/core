@@ -175,10 +175,11 @@
         };
 
         // Action function for updating cell values using row/column indices
-        const createCellAction = (dataRowIndex, dataColIndex) => (params) => {
-          debugger;
-          setCellValue(dataRowIndex, dataColIndex, cell);
-        };
+        const createCellAction =
+          (dataRowIndex, dataColIndex) =>
+          ({ cell }) => {
+            setCellValue(dataRowIndex, dataColIndex, cell);
+          };
 
         return (
           <div className="demo-container">
