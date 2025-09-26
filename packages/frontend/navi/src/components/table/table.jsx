@@ -18,8 +18,8 @@ import {
   useTableResizeContextValue,
 } from "./resize/table_resize_context.js";
 import {
-  useTableSelection,
   useTableSelectionController,
+  useTableSelectionData,
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
@@ -27,6 +27,7 @@ import {
   TableDragProvider,
   TableSelectionProvider,
   TableStickyProvider,
+  useTableSelection,
   useTableSticky,
 } from "./table_context.jsx";
 import "./table_css.js";
@@ -87,7 +88,7 @@ export const Table = forwardRef((props, ref) => {
     rowWithSomeSelectedCell,
     columnWithSomeSelectedCell,
     selectedRowIds,
-  } = useTableSelection(selection);
+  } = useTableSelectionData(selection);
   const selectionContextValue = {
     selectionController,
     rowWithSomeSelectedCell,

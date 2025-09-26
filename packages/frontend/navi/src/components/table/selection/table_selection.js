@@ -228,7 +228,7 @@ const updateSelectionBorders = (tableElement, selectionController) => {
   });
 };
 
-export const useTableSelection = (selection) => {
+export const useTableSelectionData = (selection) => {
   const {
     rowWithSomeSelectedCell,
     columnWithSomeSelectedCell,
