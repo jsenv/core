@@ -35,8 +35,15 @@ const useColumns = () => useContext(ColumnsRefContext).current;
 const ColumnContext = createContext();
 const useColumn = () => useContext(ColumnContext);
 
-const TableRowIndexRefContext = createContext();
-const useTableRowIndexRef = () => useContext(TableRowIndexRefContext);
+const RowsRefContext = createContext();
+const useRows = () => useContext(RowsRefContext).current;
+const RowContext = createContext();
+const useRow = () => useContext(RowContext);
+
+const ColumnIndexContext = createContext();
+const useColumnIndex = () => useContext(ColumnIndexContext);
+const RowIndexContext = createContext();
+const useRowIndex = () => useContext(RowIndexContext);
 
 export const Table = forwardRef((props, ref) => {
   const {
@@ -172,9 +179,11 @@ export const Table = forwardRef((props, ref) => {
             <TableDragProvider value={dragContextValue}>
               <TableStickyProvider value={stickyContextValue}>
                 <ColumnsRefContext.Provider value={columnsRef}>
-                  <TableRowIndexRefContext.Provider value={tableRowIndexRef}>
-                    {children}
-                  </TableRowIndexRefContext.Provider>
+                  <RowIndexContext.Provider value={tableRowIndexRef}>
+                    <RowsRefContext.Provider value={rowsRef}>
+                      {children}
+                    </RowsRefContext.Provider>
+                  </RowIndexContext.Provider>
                 </ColumnsRefContext.Provider>
               </TableStickyProvider>
             </TableDragProvider>
@@ -200,56 +209,61 @@ export const Col = ({ width }) => {
   return <col />;
 };
 
-const TableHeadContext = createContext();
-const useIsInTableHead = () => useContext(TableHeadContext) === true;
+const TableSectionContext = createContext();
+const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 export const TableHead = ({ children }) => {
   return (
     <thead>
-      <TableHeadContext.Provider value={true}>
+      <TableSectionContext.Provider value="head">
         {children}
-      </TableHeadContext.Provider>
+      </TableSectionContext.Provider>
     </thead>
   );
 };
 export const TableBody = ({ children }) => {
-  return <tbody>{children}</tbody>;
+  return (
+    <tbody>
+      <TableSectionContext.Provider value="body">
+        {children}
+      </TableSectionContext.Provider>
+    </tbody>
+  );
 };
 
-const CellColumnIndexContext = createContext();
-const useCellColumnIndex = () => useContext(CellColumnIndexContext);
-const CellRowIndexContext = createContext();
-const useCellRowIndex = () => useContext(CellRowIndexContext);
-
-export const TableRow = ({ children }) => {
-  const tableRowIndexRef = useTableRowIndexRef();
-  tableRowIndexRef.current++;
-  const tableRowIndex = tableRowIndexRef.current;
+export const TableRow = ({ children, height }) => {
   const columns = useColumns();
+  const rows = useRows();
+  const rowIndex = rows.length;
+  const row = { height };
+  rows[rowIndex] = row;
 
   return (
     <tr>
-      <CellRowIndexContext.Provider value={tableRowIndex}>
-        {children.map((child, columnIndex) => {
-          const column = columns[columnIndex];
-          return (
-            <CellColumnIndexContext.Provider
-              key={columnIndex}
-              value={columnIndex}
-            >
-              <ColumnContext.Provider value={column}>
-                {child}
-              </ColumnContext.Provider>
-            </CellColumnIndexContext.Provider>
-          );
-        })}
-      </CellRowIndexContext.Provider>
+      <RowContext.Provider value={row}>
+        <RowIndexContext.Provider value={rowIndex}>
+          {children.map((child, columnIndex) => {
+            const column = columns[columnIndex];
+            return (
+              <ColumnIndexContext.Provider
+                key={columnIndex}
+                value={columnIndex}
+              >
+                <ColumnContext.Provider value={column}>
+                  {child}
+                </ColumnContext.Provider>
+              </ColumnIndexContext.Provider>
+            );
+          })}
+        </RowIndexContext.Provider>
+      </RowContext.Provider>
     </tr>
   );
 };
 export const TableCell = ({ children }) => {
-  const columnIndex = useCellColumnIndex();
-  const rowIndex = useCellRowIndex();
+  const columnIndex = useColumnIndex();
+  const rowIndex = useRowIndex();
   const column = useColumn();
+  const row = useRow();
   const isInTableHead = useIsInTableHead();
   const TagName = isInTableHead ? "th" : "td";
 
@@ -258,6 +272,7 @@ export const TableCell = ({ children }) => {
       data-row-index={rowIndex}
       data-column-index={columnIndex}
       data-column-width={column.width}
+      data-row-height={row.height}
     >
       {children}
     </TagName>
