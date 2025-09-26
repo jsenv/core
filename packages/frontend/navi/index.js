@@ -49,8 +49,15 @@ export {
   useSelectionController,
 } from "./src/components/selection/selection.jsx";
 // Table start
-export { Table, createRowNumberColumn } from "./src/components/table/table.jsx";
-export { TableCell } from "./src/components/table/table_cell.jsx";
+export {
+  Col,
+  Colgroup,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "./src/components/table/table.jsx";
 // Table end
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition.jsx";

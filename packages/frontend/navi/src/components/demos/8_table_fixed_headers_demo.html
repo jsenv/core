@@ -98,7 +98,18 @@
         // eslint-disable-next-line no-unused-vars
         ActiveKeyboardShortcuts,
         createRowNumberColumn,
+        // eslint-disable-next-line no-unused-vars
         TableCell,
+        // eslint-disable-next-line no-unused-vars
+        Colgroup,
+        // eslint-disable-next-line no-unused-vars
+        Col,
+        // eslint-disable-next-line no-unused-vars
+        TableHead,
+        // eslint-disable-next-line no-unused-vars
+        TableBody,
+        // eslint-disable-next-line no-unused-vars
+        TableRow,
       } from "@jsenv/navi";
 
       // Generate large dataset to force scrolling
@@ -149,9 +160,6 @@
         ] = useState(2);
         const [stickyTopFrontierRowIndex, setStickyTopFrontierRowIndex] =
           useState(0);
-        const [generatedLeftColumnWidth, setGeneratedLeftColumnWidth] =
-          useState(100);
-        const [generatedTopRowHeight, setGeneratedTopRowHeight] = useState();
 
         return (
           <div className="demo-container">
@@ -177,9 +185,6 @@
             <div className="table-container">
               <Table
                 ref={tableRef}
-                data={data}
-                columns={columns}
-                rows={rows}
                 selection={selection}
                 onSelectionChange={(value) => {
                   setSelection(value);
@@ -204,16 +209,39 @@
                     return newRows;
                   });
                 }}
-                generatedLeftColumnWidth={generatedLeftColumnWidth}
-                onGeneratedLeftColumnResize={setGeneratedLeftColumnWidth}
-                generatedTopRowHeight={generatedTopRowHeight}
-                onGeneratedTopRowResize={setGeneratedTopRowHeight}
                 stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
                 onStickyLeftFrontierChange={setStickyLeftFrontierColumnIndex}
                 stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
                 onStickyTopFrontierChange={setStickyTopFrontierRowIndex}
                 borderCollapse
-              />
+              >
+                <Colgroup>
+                  {columns.map((col) => (
+                    <Col key={col.id} width={col.width} />
+                  ))}
+                </Colgroup>
+                <TableHead>
+                  <TableRow>
+                    {columns.map((col) => (
+                      <TableCell key={col.id}>{col.header}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {data.map((rowData, rowIndex) => {
+                    return (
+                      <TableRow
+                        key={rowData.id}
+                        height={rows[rowIndex]?.height}
+                      >
+                        {columns.map((col) => (
+                          <TableCell key={col.id}>{rowData[col.id]}</TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
 
             <div className="status">

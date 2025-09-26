@@ -91,7 +91,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render, createContext } from "preact";
-      import { useContext } from "preact/hooks";
+      import { useContext, useRef, useState } from "preact/hooks";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -108,18 +108,37 @@
 
         return (
           <Table>
-            {data.map((rowData, rowIndex) => {
-              return (
-                <TableRow key={rowIndex}>
-                  {rowData.map((cellData, columnIndex) => {
-                    return <TableCell key={columnIndex}>{cellData}</TableCell>;
-                  })}
-                </TableRow>
-              );
-            })}
+            <ColGroup>
+              {data[0].map((_, index) => (
+                <Col key={index} width={100 + index * 20} />
+              ))}
+            </ColGroup>
+            <TableHead>
+              <TableRow>
+                {data[0].map((header, index) => (
+                  <TableCell key={index}>{header}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data.map((rowData, rowIndex) => {
+                return (
+                  <TableRow key={rowIndex}>
+                    {rowData.map((cellData, columnIndex) => {
+                      return (
+                        <TableCell key={columnIndex}>{cellData}</TableCell>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
           </Table>
         );
       };
+
+      const TableRowIndexRefContext = createContext();
+      const useTableRowIndexRef = () => useContext(TableRowIndexRefContext);
 
       const RowIndexContext = createContext();
       const useRowIndex = () => useContext(RowIndexContext);
@@ -128,30 +147,69 @@
 
       // eslint-disable-next-line no-unused-vars
       const Table = ({ children }) => {
+        const tableRowIndexRef = useRef();
+        tableRowIndexRef.current = -1;
+
+        const colGroupRef = useRef();
+        colGroupRef.current = [];
+
         return (
           <table>
-            {children.map((child, index) => {
-              return (
-                <RowIndexContext.Provider value={index} key={index}>
-                  {child}
-                </RowIndexContext.Provider>
-              );
-            })}
+            <ColGroupContext.Provider value={colGroupRef}>
+              <TableRowIndexRefContext.Provider value={tableRowIndexRef}>
+                {children}
+              </TableRowIndexRefContext.Provider>
+            </ColGroupContext.Provider>
           </table>
         );
       };
 
+      const ColGroupContext = createContext();
+      const useColGroup = () => useContext(ColGroupContext).current;
+      const ColumnContext = createContext();
+      const useColumn = () => useContext(ColumnContext);
+
+      // eslint-disable-next-line no-unused-vars
+      const ColGroup = ({ children }) => {
+        return <colgroup>{children}</colgroup>;
+      };
+      // eslint-disable-next-line no-unused-vars
+      const Col = ({ width }) => {
+        const colGroup = useColGroup();
+        const colIndex = colGroup.length;
+        colGroup[colIndex] = { width };
+        return <col />;
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TableHead = ({ children }) => {
+        return <thead>{children}</thead>;
+      };
+      // eslint-disable-next-line no-unused-vars
+      const TableBody = ({ children }) => {
+        return <tbody>{children}</tbody>;
+      };
       // eslint-disable-next-line no-unused-vars
       const TableRow = ({ children }) => {
+        const tableRowIndexRef = useTableRowIndexRef();
+        tableRowIndexRef.current++;
+        const tableRowIndex = tableRowIndexRef.current;
+        const colGroup = useColGroup();
+
         return (
           <tr>
-            {children.map((child, index) => {
-              return (
-                <ColumnIndexContext.Provider value={index}>
-                  {child}
-                </ColumnIndexContext.Provider>
-              );
-            })}
+            <RowIndexContext.Provider value={tableRowIndex}>
+              {children.map((child, columnIndex) => {
+                const col = colGroup[columnIndex];
+                return (
+                  <ColumnIndexContext.Provider value={columnIndex}>
+                    <ColumnContext.Provider value={col}>
+                      {child}
+                    </ColumnContext.Provider>
+                  </ColumnIndexContext.Provider>
+                );
+              })}
+            </RowIndexContext.Provider>
           </tr>
         );
       };
@@ -160,9 +218,17 @@
       const TableCell = ({ children }) => {
         const columnIndex = useColumnIndex();
         const rowIndex = useRowIndex();
+        const column = useColumn();
+        const [value, setValue] = useState(
+          ` Cell ${columnIndex}:${rowIndex} ${column.width}`,
+        );
         return (
-          <td>
-            Cell {columnIndex}:{rowIndex}
+          <td
+            onClick={() => {
+              setValue("clicked");
+            }}
+          >
+            {value}
           </td>
         );
       };
