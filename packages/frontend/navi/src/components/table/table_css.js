@@ -1,0 +1,164 @@
+import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
+
+/*
+ * Box-shadow border mapping template:
+ *
+ * box-shadow:
+ *   inset 0 1px 0 0 color,    // Top border
+ *   inset 1px 0 0 0 color,    // Left border
+ *   inset -1px 0 0 0 color,   // Right border
+ *   inset 0 -1px 0 0 color;   // Bottom border
+ */
+
+import.meta.css = /* css */ `
+  .navi_table_container {
+    --border-color: #e1e1e1;
+    --focus-border-color: #0078d4;
+
+    position: relative;
+  }
+
+  .navi_table {
+    border-radius: 2px;
+    border-spacing: 0; /* Required for manual border collapse */
+  }
+
+  .navi_table th,
+  .navi_table td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Table borders using ::before pseudo-elements */
+  /* Default: each cell draws all its own borders (no border-collapse) */
+  .navi_table th,
+  .navi_table td {
+    border: none; /* Remove default borders - we'll use pseudo-elements */
+    /* Required for pseudo-element positioning */
+    position: relative;
+  }
+
+  .navi_table th::before,
+  .navi_table td::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+  .navi_table th::after,
+  .navi_table td::after {
+    content: "";
+    position: absolute;
+    /* Default: include bottom and right borders (owned by this cell) */
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .navi_table th,
+  .navi_table td {
+    text-align: left;
+    background: white;
+  }
+
+  .navi_table th {
+    background: lightgrey;
+    font-weight: normal;
+    padding: 0;
+  }
+
+  .navi_table td {
+    padding: 0;
+    user-select: none;
+  }
+
+  .navi_table th {
+    user-select: none;
+  }
+
+  /* Number column specific styling */
+  .navi_row_number_cell {
+    text-align: center;
+    background: #fafafa;
+    font-weight: 500;
+    color: #666;
+    user-select: none;
+  }
+
+  .navi_table_cell_content_bold_clone {
+    font-weight: bold; /* force bold to compute max width */
+    visibility: hidden; /* not visible */
+    display: block; /* in-flow so it contributes to width */
+    height: 0; /* zero height so it doesn't change layout height */
+    overflow: hidden; /* avoid any accidental height */
+    pointer-events: none; /* inert */
+  }
+
+  /* Border-collapse mode: each cell only owns specific borders to avoid doubling */
+
+  /* Base rule: all cells get right and bottom borders */
+  .navi_table[data-border-collapse] th::before,
+  .navi_table[data-border-collapse] td::before {
+    box-shadow:
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header cells (all th) get top border in addition to right and bottom */
+  .navi_table[data-border-collapse] th::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* First column cells get left border in addition to right and bottom */
+  .navi_table[data-border-collapse] th:first-child::before,
+  .navi_table[data-border-collapse] td:first-child::before {
+    box-shadow:
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Header first column gets all four borders */
+  .navi_table[data-border-collapse] th:first-child::before {
+    box-shadow:
+      inset 0 1px 0 0 var(--border-color),
+      inset 1px 0 0 0 var(--border-color),
+      inset -1px 0 0 0 var(--border-color),
+      inset 0 -1px 0 0 var(--border-color);
+  }
+
+  /* Focus styles */
+  .navi_table td:focus,
+  .navi_table th:focus {
+    outline: none; /* Remove default outline */
+  }
+
+  .navi_table th:focus::after,
+  .navi_table td:focus::after {
+    box-shadow:
+      inset 0 2px 0 0 var(--focus-border-color),
+      inset -2px 0 0 0 var(--focus-border-color),
+      inset 0 -2px 0 0 var(--focus-border-color),
+      inset 2px 0 0 0 var(--focus-border-color) !important;
+  }
+
+  .navi_table_ui_container {
+    position: absolute;
+    z-index: ${Z_INDEX_TABLE_UI_CONTAINER};
+    user-select: none;
+    overflow: hidden;
+    left: 0;
+    top: 0;
+    width: var(--table-scroll-width, 0);
+    height: var(--table-scroll-height, 0);
+    pointer-events: none;
+  }
+`;

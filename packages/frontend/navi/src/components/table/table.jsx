@@ -1,5 +1,17 @@
 import { createContext } from "preact";
-import { useContext, useRef } from "preact/hooks";
+import { forwardRef } from "preact/compat";
+import {
+  useContext,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
+
+import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
+import { TableColumnResizer, TableRowResizer } from "./resize/table_resize.jsx";
+import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
+import "./table_css.js";
 
 const ColGroupRefContext = createContext();
 const useColGroup = () => useContext(ColGroupRefContext).current;
@@ -9,23 +21,48 @@ const useColumn = () => useContext(ColumnContext);
 const TableRowIndexRefContext = createContext();
 const useTableRowIndexRef = () => useContext(TableRowIndexRefContext);
 
-export const Table = ({ children }) => {
+export const Table = forwardRef((props, ref) => {
+  const { children } = props;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => {
+    return innerRef.current;
+  });
+  const tableContainerRef = useRef();
+
   const tableRowIndexRef = useRef();
   tableRowIndexRef.current = -1;
 
   const colGroupRef = useRef();
   colGroupRef.current = [];
 
+  // ability to drag columns
+  const [grabTarget, setGrabTarget] = useState(null);
+  const grabColumn = (columnIndex) => {
+    setGrabTarget(`column:${columnIndex}`);
+  };
+  const releaseColumn = () => {
+    setGrabTarget(null);
+  };
+
   return (
-    <table>
-      <ColGroupRefContext.Provider value={colGroupRef}>
-        <TableRowIndexRefContext.Provider value={tableRowIndexRef}>
-          {children}
-        </TableRowIndexRefContext.Provider>
-      </ColGroupRefContext.Provider>
-    </table>
+    <div ref={tableContainerRef} className="navi_table_container">
+      <table>
+        <ColGroupRefContext.Provider value={colGroupRef}>
+          <TableRowIndexRefContext.Provider value={tableRowIndexRef}>
+            {children}
+          </TableRowIndexRefContext.Provider>
+        </ColGroupRefContext.Provider>
+      </table>
+      <TableUIContainer>
+        <TableDragCloneContainer dragging={Boolean(grabTarget)} />
+        <TableColumnResizer />
+        <TableRowResizer />
+        <TableStickyFrontier />
+      </TableUIContainer>
+    </div>
   );
-};
+});
 export const Colgroup = ({ children }) => {
   return <colgroup>{children}</colgroup>;
 };
@@ -97,5 +134,31 @@ export const TableCell = ({ children }) => {
     >
       {children}
     </TagName>
+  );
+};
+
+const TableUIContainer = ({ children }) => {
+  const ref = useRef();
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return;
+    }
+    const tableContainer = element.closest(".navi_table_container");
+    element.style.setProperty(
+      "--table-scroll-width",
+      `${tableContainer.scrollWidth}px`,
+    );
+    element.style.setProperty(
+      "--table-scroll-height",
+      `${tableContainer.scrollHeight}px`,
+    );
+  }, []);
+
+  return (
+    <div ref={ref} className="navi_table_ui_container">
+      {children}
+    </div>
   );
 };
