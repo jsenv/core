@@ -299,7 +299,7 @@ export const TableRow = ({ id, children, height }) => {
 };
 export const TableCell = forwardRef((props, ref) => {
   let {
-    id,
+    cellId,
     className,
     canResizeWidth,
     canResizeHeight,
@@ -307,10 +307,10 @@ export const TableCell = forwardRef((props, ref) => {
     style,
     cursor,
     textAlign,
-    editable = true,
     onClick,
     onMouseDown,
     children,
+    action,
   } = props;
 
   const cellRef = useRef();
@@ -328,9 +328,11 @@ export const TableCell = forwardRef((props, ref) => {
   const isInTableHead = useIsInTableHead();
   const TagName = isInTableHead ? "th" : "td";
 
-  if (id === undefined) {
-    id = `${rowIndex}:${columnIndex}`;
+  if (cellId === undefined) {
+    cellId = `cell:${rowIndex}-${columnIndex}`;
   }
+
+  const editable = Boolean(action);
 
   const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
     useTableSticky();
@@ -409,10 +411,10 @@ export const TableCell = forwardRef((props, ref) => {
       }
       data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
       tabIndex={-1}
-      data-value={id}
       data-selection-name={isInTableHead ? "column" : "cell"}
       data-selection-keyboard-toggle
       aria-selected={selected}
+      data-value={cellId}
       data-editing={editing ? "" : undefined}
       data-grabbed={columnGrabbed ? "" : undefined}
       data-column-contains-selected-cell={
@@ -438,7 +440,7 @@ export const TableCell = forwardRef((props, ref) => {
           editing={editing}
           onEditEnd={stopEditing}
           value={children}
-          action={() => {}}
+          action={action}
         >
           {children}
         </Editable>

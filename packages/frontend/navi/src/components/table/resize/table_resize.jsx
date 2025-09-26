@@ -7,6 +7,9 @@ import {
 import { useTableResize } from "./table_resize_context.js";
 
 const ROW_MIN_HEIGHT = 30;
+const ROW_MAX_HEIGHT = 100;
+const COLUMN_MIN_WIDTH = 50;
+const COLUMN_MAX_WIDTH = 500;
 
 import.meta.css = /* css */ `
   .navi_table_container {
@@ -363,8 +366,8 @@ const initResizeByMousedown = (
       : tableCellRect.top - tableContainerRect.top;
 
   // Calculate bounds based on axis
-  const defaultMinSize = axis === "x" ? 50 : ROW_MIN_HEIGHT;
-  const defaultMaxSize = axis === "x" ? 1000 : 300;
+  const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
+  const defaultMaxSize = axis === "x" ? COLUMN_MAX_WIDTH : ROW_MAX_HEIGHT;
 
   const minCellSize =
     typeof minSize === "number" && minSize > defaultMinSize
