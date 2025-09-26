@@ -132,6 +132,7 @@
       const data = generateLargeDataset(50, 10);
       const columns = Array.from({ length: 10 }, (_, i) => ({
         id: `col${i + 1}`,
+        header: `Column ${i + 1}`,
       }));
 
       // eslint-disable-next-line no-unused-vars
