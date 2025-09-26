@@ -147,7 +147,7 @@ export const Table = forwardRef((props, ref) => {
   tableRowIndexRef.current = -1;
 
   const columnsRef = useRef();
-  columnsRef.current = [];
+  // Note: columnsRef.current is initialized in Colgroup component
 
   const rowsRef = useRef();
   rowsRef.current = [];
@@ -272,6 +272,10 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 export const Colgroup = ({ children }) => {
+  const columnsRef = useContext(ColumnsRefContext);
+  // Reset columns array when Colgroup re-renders to ensure sync with Col components
+  columnsRef.current = [];
+
   return <colgroup>{children}</colgroup>;
 };
 export const Col = ({ id, width, immovable }) => {
