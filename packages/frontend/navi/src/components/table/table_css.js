@@ -1,4 +1,4 @@
-import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
+import { Z_INDEX_EDITING, Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
 
 /*
  * Box-shadow border mapping template:
@@ -148,6 +148,44 @@ import.meta.css = /* css */ `
       inset -2px 0 0 0 var(--focus-border-color),
       inset 0 -2px 0 0 var(--focus-border-color),
       inset 2px 0 0 0 var(--focus-border-color) !important;
+  }
+
+  .navi_table {
+    font-size: 16px;
+    font-family: Arial;
+
+    --editing-border-color: #a8c7fa;
+  }
+
+  .navi_table td[data-editing] {
+    padding: 0;
+  }
+
+  .navi_table td[data-editing] .navi_table_cell_content {
+    outline: 2px solid #a8c7fa;
+    outline-offset: 0px;
+  }
+
+  .navi_table td[data-editing] input {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    flex-grow: 1;
+    padding: 0;
+    padding-left: 8px;
+    border-radius: 0; /* match table cell border-radius */
+    border: none;
+    font-size: 16px;
+  }
+
+  .navi_table td[data-editing] input[type="number"]::-webkit-inner-spin-button {
+    width: 14px;
+    height: 30px;
+  }
+
+  .navi_table td[data-editing] {
+    outline: 2px solid var(--editing-border-color);
+    z-index: ${Z_INDEX_EDITING};
   }
 
   .navi_table_ui_container {

@@ -8,11 +8,20 @@ import {
   useState,
 } from "preact/hooks";
 
+import { Editable, useEditionController } from "../edition/editable.jsx";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
-import { createSelectionKeyboardShortcuts } from "../selection/selection.jsx";
+import {
+  createSelectionKeyboardShortcuts,
+  useSelectableElement,
+} from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
 import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
-import { TableColumnResizer, TableRowResizer } from "./resize/table_resize.jsx";
+import {
+  TableCellColumnResizeHandles,
+  TableCellRowResizeHandles,
+  TableColumnResizer,
+  TableRowResizer,
+} from "./resize/table_resize.jsx";
 import {
   TableResizeProvider,
   useTableResizeContextValue,
@@ -22,11 +31,15 @@ import {
   useTableSelectionData,
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
-import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
+import {
+  TableCellStickyFrontier,
+  TableStickyFrontier,
+} from "./sticky/table_sticky.jsx";
 import {
   TableDragProvider,
   TableSelectionProvider,
   TableStickyProvider,
+  useTableDrag,
   useTableSelection,
   useTableSticky,
 } from "./table_context.jsx";
@@ -295,7 +308,30 @@ export const TableRow = ({ id, children, height }) => {
     </tr>
   );
 };
-export const TableCell = ({ children }) => {
+export const TableCell = forwardRef((props, ref) => {
+  let {
+    id,
+    className,
+    canResizeWidth,
+    canResizeHeight,
+    selectionImpact,
+    style,
+    cursor,
+    textAlign,
+    editable = true,
+    onClick,
+    onMouseDown,
+    children,
+  } = props;
+
+  const cellRef = useRef();
+  const { editing, startEditing, stopEditing } = useEditionController();
+  useImperativeHandle(ref, () => ({
+    startEditing,
+    stopEditing,
+    element: cellRef.current,
+  }));
+
   const columnIndex = useColumnIndex();
   const rowIndex = useRowIndex();
   const column = useColumn();
@@ -303,17 +339,153 @@ export const TableCell = ({ children }) => {
   const isInTableHead = useIsInTableHead();
   const TagName = isInTableHead ? "th" : "td";
 
+  if (id === undefined) {
+    id = `${rowIndex}:${columnIndex}`;
+  }
+
+  const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
+    useTableSticky();
+  const stickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
+  const stickyTop = rowIndex <= stickyTopFrontierRowIndex;
+  const isStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
+  const isAfterStickyLeftFrontier =
+    columnIndex === stickyLeftFrontierColumnIndex + 1;
+  const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
+  const isAfterStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex + 1;
+
+  const { selectionController, columnContainsSelectedCell } =
+    useTableSelection();
+  const { selected } = useSelectableElement(cellRef, {
+    selectionController,
+    selectionImpact,
+    // value: id,
+  });
+
+  const { grabTarget } = useTableDrag();
+  const columnGrabbed = grabTarget === `column:${columnIndex}`;
+
+  if (canResizeWidth === undefined && rowIndex === 0) {
+    canResizeWidth = true;
+  }
+  if (canResizeHeight === undefined && columnIndex === 0) {
+    canResizeHeight = true;
+  }
+  const innerStyle = { ...style };
+  if (cursor) {
+    innerStyle.cursor = cursor;
+  }
+  const columnWidth = column.width;
+  if (
+    columnWidth === undefined ||
+    // when column width becomes too small the padding would prevent it from shrinking
+    columnWidth > 42
+  ) {
+    innerStyle.paddingLeft = "12px";
+    innerStyle.paddingRight = "12px";
+  }
+  const rowHeight = row.height;
+  if (
+    rowHeight === undefined ||
+    // when row height becomes too small the padding would prevent it from shrinking
+    rowHeight > 42
+  ) {
+    innerStyle.paddingTop = "8px";
+    innerStyle.paddingBottom = "8px";
+  }
+  if (columnWidth !== undefined) {
+    innerStyle.maxWidth = `${columnWidth}px`;
+  }
+  if (rowHeight !== undefined) {
+    innerStyle.maxHeight = `${rowHeight}px`;
+  }
+  if (textAlign) {
+    innerStyle.textAlign = textAlign;
+  }
+
   return (
     <TagName
-      data-row-index={rowIndex}
-      data-column-index={columnIndex}
-      data-column-width={column.width}
-      data-row-height={row.height}
+      ref={cellRef}
+      className={className}
+      style={innerStyle}
+      data-sticky-left={stickyLeft ? "" : undefined}
+      data-sticky-top={stickyTop ? "" : undefined}
+      data-sticky-left-frontier={
+        stickyLeft && isStickyLeftFrontier ? "" : undefined
+      }
+      data-sticky-top-frontier={
+        stickyTop && isStickyTopFrontier ? "" : undefined
+      }
+      data-after-sticky-left-frontier={
+        isAfterStickyLeftFrontier ? "" : undefined
+      }
+      data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
+      tabIndex={-1}
+      data-value={id}
+      data-selection-name={isInTableHead ? "column" : "cell"}
+      data-selection-keyboard-toggle
+      aria-selected={selected}
+      data-editing={editing ? "" : undefined}
+      data-grabbed={columnGrabbed ? "" : undefined}
+      data-column-contains-selected-cell={
+        columnContainsSelectedCell ? "" : undefined
+      }
+      onClick={onClick}
+      onMouseDown={onMouseDown}
+      onDoubleClick={(e) => {
+        if (!editable) {
+          return;
+        }
+        startEditing(e);
+      }}
+      oneditrequested={(e) => {
+        if (!editable) {
+          return;
+        }
+        startEditing(e);
+      }}
     >
-      {children}
+      {editable ? (
+        <Editable
+          editing={editing}
+          onEditEnd={stopEditing}
+          value={children}
+          action={() => {}}
+        >
+          {children}
+        </Editable>
+      ) : (
+        children
+      )}
+      <TableCellStickyFrontier
+        rowIndex={rowIndex}
+        columnIndex={columnIndex}
+        stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
+        stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+      />
+      {canResizeWidth && (
+        <TableCellColumnResizeHandles
+          columnIndex={columnIndex}
+          columnMinWidth={column.minWidth}
+          columnMaxWidth={column.maxWidth}
+        />
+      )}
+      {canResizeHeight && (
+        <TableCellRowResizeHandles
+          rowIndex={rowIndex}
+          rowMinHeight={row.minHeight}
+          rowMaxHeight={row.maxHeight}
+        />
+      )}
+
+      {isInTableHead && (
+        <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
+          {children}
+        </span>
+      )}
+      {columnGrabbed && <div className="navi_table_cell_placeholder"></div>}
     </TagName>
   );
-};
+});
 
 // TODO: use a resize observer to keep it up-to-date
 const TableUIContainer = ({ children }) => {
