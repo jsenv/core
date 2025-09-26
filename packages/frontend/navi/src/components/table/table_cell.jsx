@@ -7,10 +7,12 @@ import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import {
   useTableColumn,
   useTableDrag,
+  useTableHead,
   useTableRow,
   useTableSelection,
   useTableSticky,
 } from "./table_context.jsx";
+import { Z_INDEX_EDITING } from "./z_indexes.js";
 
 import.meta.css = /* css */ `
   .navi_table {
@@ -48,18 +50,17 @@ import.meta.css = /* css */ `
 
   .navi_table td[data-editing] {
     outline: 2px solid var(--editing-border-color);
-    z-index: 2; /* To go above neighbours, but should not be too big to stay under the sticky cells */
+    z-index: ${Z_INDEX_EDITING};
   }
 `;
 
 export const TableCell = forwardRef((props, ref) => {
   const {
-    isHead,
     cellId,
-    boldClone,
     value,
     style,
     textAlign,
+    editable = true,
     // Header-specific props
     className,
     onClick,
@@ -70,6 +71,8 @@ export const TableCell = forwardRef((props, ref) => {
     columnContainsSelectedCell,
   } = props;
 
+  const tableHead = useTableHead();
+  const isInTableHead = Boolean(tableHead);
   const row = useTableRow();
   const column = useTableColumn();
   const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
@@ -95,7 +98,6 @@ export const TableCell = forwardRef((props, ref) => {
     // value: cellId,
   });
   const { editing, startEditing, stopEditing } = useEditionController();
-  const TagName = isHead ? "th" : "td";
 
   useImperativeHandle(ref, () => ({
     startEditing,
@@ -137,6 +139,8 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.textAlign = textAlign;
   }
 
+  const TagName = isInTableHead ? "th" : "td";
+
   return (
     <TagName
       ref={cellRef}
@@ -156,38 +160,48 @@ export const TableCell = forwardRef((props, ref) => {
       data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
       tabIndex={-1}
       data-value={cellId}
-      data-selection-name={isHead ? "column" : "cell"}
+      data-selection-name={isInTableHead ? "column" : "cell"}
       data-selection-keyboard-toggle
       aria-selected={selected}
       data-editing={editing ? "" : undefined}
-      data-grabbed={grabbed ? "" : undefined}
+      data-grabbed={columnGrabbed ? "" : undefined}
       data-column-contains-selected-cell={
         columnContainsSelectedCell ? "" : undefined
       }
       onClick={onClick}
       onMouseDown={onMouseDown}
       onDoubleClick={(e) => {
+        if (!editable) {
+          return;
+        }
         startEditing(e);
       }}
       oneditrequested={(e) => {
+        if (!editable) {
+          return;
+        }
         startEditing(e);
       }}
     >
-      <Editable
-        editing={editing}
-        onEditEnd={stopEditing}
-        value={value}
-        action={() => {}}
-      >
-        {value}
-      </Editable>
+      {editable ? (
+        <Editable
+          editing={editing}
+          onEditEnd={stopEditing}
+          value={value}
+          action={() => {}}
+        >
+          {value}
+        </Editable>
+      ) : (
+        value
+      )}
       <TableCellStickyFrontier
         rowIndex={rowIndex}
         columnIndex={columnIndex}
         stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
         stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
       />
-      {boldClone && (
+      {isInTableHead && (
         <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
           {value}
         </span>

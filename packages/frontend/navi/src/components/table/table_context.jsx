@@ -7,6 +7,12 @@ export const useTable = () => {
   return useContext(TableContext);
 };
 
+const TableHeadContext = createContext();
+export const TableHeadProvider = TableHeadContext.Provider;
+export const useTableHead = () => {
+  return useContext(TableHeadContext);
+};
+
 const TableColumnContext = createContext();
 export const TableColumnProvider = TableColumnContext.Provider;
 export const useTableColumn = () => {

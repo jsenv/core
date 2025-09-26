@@ -53,28 +53,16 @@
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useMemo, useRef, useState } from "preact/hooks";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
-import {
-  createSelectionKeyboardShortcuts,
-  useSelectableElement,
-} from "../selection/selection.jsx";
+import { createSelectionKeyboardShortcuts } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
-import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
-import {
-  TableCellColumnResizeHandles,
-  TableCellRowResizeHandles,
-  TableColumnResizer,
-  TableRowResizer,
-} from "./resize/table_resize.jsx";
+import { TableColumnResizer, TableRowResizer } from "./resize/table_resize.jsx";
 import {
   useTableSelection,
   useTableSelectionController,
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
-import {
-  TableCellStickyFrontier,
-  TableStickyFrontier,
-} from "./sticky/table_sticky.jsx";
+import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
 import { TableCell } from "./table_cell.jsx";
 import {
   TableColumnProvider,
@@ -444,10 +432,10 @@ export const Table = forwardRef((props, ref) => {
         </TableSelectionProvider>
       </table>
 
-      {/* <TableDragCloneContainer dragging={Boolean(grabTarget)} />
+      <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer />
       <TableRowResizer />
-      <TableStickyFrontier /> */}
+      <TableStickyFrontier />
     </div>
   );
 });
@@ -507,8 +495,6 @@ const TableBody = ({
                     columnIndex,
                     rowIndex,
                     data,
-
-                    // other
                   });
                 } else {
                   tableCell = <TableCell value={cell} />;
