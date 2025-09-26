@@ -64,6 +64,10 @@ import { useFocusGroup } from "../use_focus_group.js";
 import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
 import { TableColumnResizer, TableRowResizer } from "./resize/table_resize.jsx";
 import {
+  TableResizeProvider,
+  useTableResizeContextValue,
+} from "./resize/table_resize_context.js";
+import {
   useTableSelection,
   useTableSelectionController,
 } from "./selection/table_selection.js";
@@ -74,7 +78,6 @@ import {
   TableCellProvider,
   TableColumnProvider,
   TableDragProvider,
-  TableResizeProvider,
   TableRowProvider,
   TableSelectionProvider,
   TableStickyProvider,
@@ -373,6 +376,13 @@ export const Table = forwardRef((props, ref) => {
 
   const needTableHead = columns.some((col) => col.header !== undefined);
 
+  const resizeContextValue = useTableResizeContextValue({
+    onColumnResize,
+    onRowResize,
+    columns,
+    rows,
+  });
+
   return (
     <div ref={tableContainerRef} className="navi_table_container">
       <table
@@ -383,8 +393,8 @@ export const Table = forwardRef((props, ref) => {
         data-border-collapse={borderCollapse ? "" : undefined}
       >
         <colgroup>
-          {columns.map((column, index) => {
-            const colIsSticky = index < stickyLeftFrontierColumnIndex;
+          {columns.map((column, columnIndex) => {
+            const colIsSticky = columnIndex < stickyLeftFrontierColumnIndex;
             return (
               <col
                 key={column.id}
@@ -401,12 +411,7 @@ export const Table = forwardRef((props, ref) => {
             );
           })}
         </colgroup>
-        <TableResizeProvider
-          value={{
-            onColumnResize,
-            onRowResize,
-          }}
-        >
+        <TableResizeProvider value={resizeContextValue}>
           <TableSelectionProvider
             value={{
               selectionController,

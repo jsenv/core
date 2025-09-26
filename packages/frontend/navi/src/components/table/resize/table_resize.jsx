@@ -1,10 +1,10 @@
 import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
-import { useTableResize } from "../table_context.jsx";
 import {
   Z_INDEX_RESIZER_BACKDROP,
   Z_INDEX_RESIZER_HANDLE,
 } from "../z_indexes.js";
+import { useTableResize } from "./table_resize_context.js";
 
 const ROW_MIN_HEIGHT = 30;
 

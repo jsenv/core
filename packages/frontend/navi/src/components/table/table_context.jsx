@@ -43,12 +43,6 @@ export const useTableSticky = () => {
   return useContext(TableStickyContext);
 };
 
-const TableResizeContext = createContext();
-export const TableResizeProvider = TableResizeContext.Provider;
-export const useTableResize = () => {
-  return useContext(TableResizeContext);
-};
-
 const TableDragContext = createContext();
 export const TableDragProvider = TableDragContext.Provider;
 export const useTableDrag = () => {

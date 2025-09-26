@@ -96,13 +96,13 @@ export const TableCell = forwardRef((props, ref) => {
   }
 
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
-  const stickyLeft = columnIndex < stickyLeftFrontierColumnIndex;
-  const stickyTop = rowIndex < stickyTopFrontierRowIndex;
+  const stickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
+  const stickyTop = rowIndex <= stickyTopFrontierRowIndex;
   const isStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
   const isAfterStickyLeftFrontier =
     columnIndex === stickyLeftFrontierColumnIndex + 1;
-  const isStickyTopFrontier = false;
-  const isAfterStickyTopFrontier = false;
+  const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
+  const isAfterStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex + 1;
 
   const cellRef = useRef();
   const { selected } = useSelectableElement(cellRef, {
