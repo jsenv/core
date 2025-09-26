@@ -24,7 +24,7 @@ import.meta.css = /* css */ `
     opacity: 1;
   }
 
-  .navi_table_drag_clone_container .navi_table_left_sticky_frontier {
+  .navi_table_drag_clone_container .navi_table_cell_sticky_frontier {
     opacity: 0;
   }
 
