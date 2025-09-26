@@ -206,10 +206,11 @@ export const Table = forwardRef((props, ref) => {
 export const Colgroup = ({ children }) => {
   return <colgroup>{children}</colgroup>;
 };
-export const Col = ({ columnId, width, immovable }) => {
+export const Col = ({ id, width, immovable }) => {
   const columns = useColumns();
   const columnIndex = columns.length;
-  columns[columnIndex] = { columnId, width, immovable };
+  const selectionId = `column:${columnIndex}`;
+  columns[columnIndex] = { id, selectionId, width, immovable };
 
   const { stickyLeftFrontierColumnIndex } = useTableSticky();
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
@@ -248,26 +249,24 @@ export const TableBody = ({ children }) => {
   );
 };
 
-export const TableRow = ({ rowId, height, children }) => {
+export const TableRow = ({ id, height, children }) => {
   const columns = useColumns();
   const rows = useRows();
   const rowIndex = rows.length;
-  const row = { rowId, height };
+  const selectionId = `row:${id || rowIndex}`;
+  const row = { id, selectionId, height };
   rows[rowIndex] = row;
 
   const { stickyTopFrontierRowIndex } = useTableSticky();
   const isStickyTop = rowIndex <= stickyTopFrontierRowIndex;
   const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
 
-  if (rowId === undefined) {
-    rowId = rowIndex;
-  }
   const { selectedRowIds } = useTableSelection();
-  const isRowSelected = selectedRowIds.includes(rowId);
+  const isRowSelected = selectedRowIds.includes(selectionId);
 
   return (
     <tr
-      data-row-id={rowId}
+      data-row-id={id ? id : undefined}
       aria-selected={isRowSelected}
       data-sticky-top={isStickyTop ? "" : undefined}
       data-drag-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
@@ -298,7 +297,6 @@ export const TableRow = ({ rowId, height, children }) => {
 };
 export const TableCell = forwardRef((props, ref) => {
   let {
-    cellId,
     className,
     canResizeWidth,
     canResizeHeight,
@@ -327,9 +325,7 @@ export const TableCell = forwardRef((props, ref) => {
   const isInTableHead = useIsInTableHead();
   const TagName = isInTableHead ? "th" : "td";
 
-  if (cellId === undefined) {
-    cellId = `cell:${rowIndex}-${columnIndex}`;
-  }
+  const selectionId = `cell:${row.id || rowIndex}-${column.id || columnIndex}`;
 
   const editable = Boolean(action);
 
@@ -413,7 +409,7 @@ export const TableCell = forwardRef((props, ref) => {
       data-selection-name={isInTableHead ? "column" : "cell"}
       data-selection-keyboard-toggle
       aria-selected={selected}
-      data-value={cellId}
+      data-value={selectionId}
       data-editing={editing ? "" : undefined}
       data-grabbed={columnGrabbed ? "" : undefined}
       data-column-contains-selected-cell={

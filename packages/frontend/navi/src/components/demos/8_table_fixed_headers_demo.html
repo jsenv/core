@@ -215,12 +215,12 @@
                 borderCollapse
               >
                 <Colgroup>
-                  {columns.map((col) => (
-                    <Col key={col.id} id={col.id} width={col.width} />
+                  {columns.map((column) => (
+                    <Col key={column.id} id={column.id} width={column.width} />
                   ))}
                 </Colgroup>
                 <TableHead>
-                  <TableRow>
+                  <TableRow height={rows[0]?.height}>
                     {columns.map((col) => (
                       <TableCell key={col.id}>{col.header}</TableCell>
                     ))}
@@ -232,7 +232,6 @@
                     return (
                       <TableRow
                         key={rowData.id}
-                        rowId={rowIndex}
                         height={rows[rowIndex]?.height}
                       >
                         {columns.map((col) => (
