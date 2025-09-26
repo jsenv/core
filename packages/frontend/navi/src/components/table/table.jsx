@@ -51,7 +51,13 @@
  */
 
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import { createSelectionKeyboardShortcuts } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
@@ -73,6 +79,7 @@ import {
   TableSelectionProvider,
   TableStickyProvider,
 } from "./table_context.jsx";
+import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
 
 /*
  * Box-shadow border mapping template:
@@ -222,6 +229,18 @@ import.meta.css = /* css */ `
       inset -2px 0 0 0 var(--focus-border-color),
       inset 0 -2px 0 0 var(--focus-border-color),
       inset 2px 0 0 0 var(--focus-border-color) !important;
+  }
+
+  .navi_table_ui_container {
+    position: absolute;
+    z-index: ${Z_INDEX_TABLE_UI_CONTAINER};
+    user-select: none;
+    overflow: hidden;
+    left: 0;
+    top: 0;
+    width: var(--table-scroll-width, 0);
+    height: var(--table-scroll-height, 0);
+    pointer-events: none;
   }
 `;
 
@@ -443,13 +462,41 @@ export const Table = forwardRef((props, ref) => {
         </TableResizeProvider>
       </table>
 
-      <TableDragCloneContainer dragging={Boolean(grabTarget)} />
-      <TableColumnResizer />
-      <TableRowResizer />
-      <TableStickyFrontier />
+      <TableUIContainer>
+        <TableDragCloneContainer dragging={Boolean(grabTarget)} />
+        <TableColumnResizer />
+        <TableRowResizer />
+        <TableStickyFrontier />
+      </TableUIContainer>
     </div>
   );
 });
+
+const TableUIContainer = ({ children }) => {
+  const ref = useRef();
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return;
+    }
+    const tableContainer = element.closest(".navi_table_container");
+    element.style.setProperty(
+      "--table-scroll-width",
+      `${tableContainer.scrollWidth}px`,
+    );
+    element.style.setProperty(
+      "--table-scroll-height",
+      `${tableContainer.scrollHeight}px`,
+    );
+  }, []);
+
+  return (
+    <div ref={ref} className="navi_table_ui_container">
+      {children}
+    </div>
+  );
+};
 
 const TableBody = ({
   columns,

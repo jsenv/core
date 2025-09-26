@@ -302,11 +302,11 @@ const updateTableColumnResizerPosition = (tableCell) => {
   tableColumnResizer.setAttribute("data-hover", "");
 };
 const onMouseEnterLeftResizeHandle = (e) => {
-  const previousCell = e.target.closest("th").previousElementSibling;
+  const previousCell = e.target.closest("th,td").previousElementSibling;
   updateTableColumnResizerPosition(previousCell);
 };
 const onMouseEnterRightResizeHandle = (e) => {
-  const cell = e.target.closest("th");
+  const cell = e.target.closest("th,td");
   updateTableColumnResizerPosition(cell);
 };
 const onMouseLeaveLeftResizeHandle = (e) => {
@@ -433,7 +433,7 @@ const initResizeTableColumnByMousedown = (
   mousedownEvent,
   { columnMinWidth, columnMaxWidth, onGrab, onDrag, onRelease, isLeft },
 ) => {
-  let tableCell = mousedownEvent.target.closest("th");
+  let tableCell = mousedownEvent.target.closest("th,td");
   if (isLeft) {
     tableCell = tableCell.previousElementSibling;
   }

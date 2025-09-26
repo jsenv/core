@@ -15,7 +15,7 @@ export const initDragTableColumnByMousedown = (
     teardownCallbackSet.clear();
   };
 
-  const tableCell = mousedownEvent.target.closest("td, th");
+  const tableCell = mousedownEvent.target.closest("th, td");
   const table = tableCell.closest("table");
   const columnIndex = Array.from(tableCell.parentNode.children).indexOf(
     tableCell,
@@ -23,7 +23,7 @@ export const initDragTableColumnByMousedown = (
 
   const cloneParent = table
     .closest(".navi_table_container")
-    .querySelector(".navi_table_drag_clone_positioner");
+    .querySelector(".navi_table_drag_clone_container");
   const tableClone = table.cloneNode(true);
   // ensure [data-drag-obstacle] inside the table clone are ignored
   tableClone.setAttribute("data-drag-ignore", "");
