@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Table Fixed Headers Demo - Large Dataset</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        margin: 0px;
+        padding: 0;
+        background: #f5f5f5;
+      }
+
+      .demo-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      /* Container with fixed size to force scrolling */
+      .table-container {
+        height: 400px;
+        width: 600px;
+        /* border: 2px solid yellow; */
+        overflow: auto;
+        /* overscroll-behavior: contain; */
+        /* margin: 20px 50px; */
+      }
+
+      /* Status display */
+      .status {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f0f8ff;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+      }
+
+      .actions {
+        margin-top: 15px;
+      }
+
+      button {
+        background: #0078d4;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 8px;
+      }
+
+      button:hover {
+        background: #106ebe;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .info {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 4px;
+        padding: 15px;
+        margin: 15px 0;
+      }
+
+      .info h3 {
+        margin-top: 0;
+        color: #856404;
+      }
+
+      .info p {
+        margin-bottom: 0;
+        color: #856404;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render, createContext } from "preact";
+      import { useContext } from "preact/hooks";
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const rows = 10;
+        const cols = 5;
+        const data = [];
+        for (let i = 1; i <= rows; i++) {
+          const row = [];
+          for (let j = 1; j <= cols; j++) {
+            row.push(`Cell ${i}-${j}`);
+          }
+          data.push(row);
+        }
+
+        return (
+          <Table>
+            {data.map((rowData, rowIndex) => {
+              return (
+                <TableRow key={rowIndex}>
+                  {rowData.map((cellData, columnIndex) => {
+                    return <TableCell key={columnIndex}>{cellData}</TableCell>;
+                  })}
+                </TableRow>
+              );
+            })}
+          </Table>
+        );
+      };
+
+      const RowIndexContext = createContext();
+      const useRowIndex = () => useContext(RowIndexContext);
+      const ColumnIndexContext = createContext();
+      const useColumnIndex = () => useContext(ColumnIndexContext);
+
+      // eslint-disable-next-line no-unused-vars
+      const Table = ({ children }) => {
+        return (
+          <table>
+            {children.map((child, index) => {
+              return (
+                <RowIndexContext.Provider value={index} key={index}>
+                  {child}
+                </RowIndexContext.Provider>
+              );
+            })}
+          </table>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TableRow = ({ children }) => {
+        return (
+          <tr>
+            {children.map((child, index) => {
+              return (
+                <ColumnIndexContext.Provider value={index}>
+                  {child}
+                </ColumnIndexContext.Provider>
+              );
+            })}
+          </tr>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TableCell = ({ children }) => {
+        const columnIndex = useColumnIndex();
+        const rowIndex = useRowIndex();
+        return (
+          <td>
+            Cell {columnIndex}:{rowIndex}
+          </td>
+        );
+      };
+
+      // Render the app
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

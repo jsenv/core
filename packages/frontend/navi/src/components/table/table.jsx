@@ -514,7 +514,7 @@ const TableBody = ({
     <tbody>
       {data.map((rowData, rowIndex) => {
         const row = rows[rowIndex] || {};
-        const isRowSelected = selectedRowIds.includes(row.id);
+        const isRowSelected = selectedRowIds.includes(rowIndex);
         const rowIsSticky = rowIndex < stickyTopFrontierRowIndex;
         const isStickyTopFrontier = rowIndex + 1 === stickyTopFrontierRowIndex;
 
