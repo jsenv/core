@@ -206,10 +206,10 @@ export const Table = forwardRef((props, ref) => {
 export const Colgroup = ({ children }) => {
   return <colgroup>{children}</colgroup>;
 };
-export const Col = ({ width, immovable }) => {
+export const Col = ({ id, width, immovable }) => {
   const columns = useColumns();
   const columnIndex = columns.length;
-  columns[columnIndex] = { width };
+  columns[columnIndex] = { id, width, immovable };
 
   const { stickyLeftFrontierColumnIndex } = useTableSticky();
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;

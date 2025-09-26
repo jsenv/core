@@ -189,15 +189,15 @@
                   setSelection(value);
                 }}
                 onColumnResize={(width, columnIndex, column) => {
-                  console.log(`Column ${column.id} resized to ${width}px`);
+                  console.log(column, `resized to ${width}px`);
                   setColumns((prevColumns) =>
                     prevColumns.map((col) =>
                       col.id === column.id ? { ...col, width } : col,
                     ),
                   );
                 }}
-                onRowResize={(height, rowIndex) => {
-                  console.log(`Row ${rowIndex} resized to ${height}px`);
+                onRowResize={(height, rowIndex, row) => {
+                  console.log(row, `resized to ${height}px`);
                   setRows((prevRows) => {
                     const newRows = [...prevRows];
                     // Ensure we have enough rows in the array
@@ -216,7 +216,7 @@
               >
                 <Colgroup>
                   {columns.map((col) => (
-                    <Col key={col.id} width={col.width} />
+                    <Col key={col.id} id={col.id} width={col.width} />
                   ))}
                 </Colgroup>
                 <TableHead>
@@ -231,6 +231,7 @@
                     return (
                       <TableRow
                         key={rowData.id}
+                        id={rowIndex}
                         height={rows[rowIndex]?.height}
                       >
                         {columns.map((col) => (
