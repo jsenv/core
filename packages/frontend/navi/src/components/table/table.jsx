@@ -144,15 +144,15 @@ export const Table = forwardRef((props, ref) => {
     selectionColor,
   });
   const {
-    rowWithSomeSelectedCell,
     columnWithSomeSelectedCell,
-    selectedRowIds,
+    rowWithSomeSelectedCell,
+    selectedRowIndexes,
   } = useTableSelectionData(selection);
   const selectionContextValue = {
     selectionController,
     rowWithSomeSelectedCell,
     columnWithSomeSelectedCell,
-    selectedRowIds,
+    selectedRowIndexes,
   };
 
   useFocusGroup(innerRef);
@@ -305,7 +305,7 @@ export const TableRow = ({ id, height, children }) => {
   const columns = useColumns();
   const rows = useRows();
   const rowIndex = rows.length;
-  const selectionId = `row:${id || rowIndex}`;
+  const selectionId = `row:${rowIndex}`;
   const row = { id, selectionId, height };
   rows[rowIndex] = row;
 
@@ -313,8 +313,8 @@ export const TableRow = ({ id, height, children }) => {
   const isStickyTop = rowIndex <= stickyTopFrontierRowIndex;
   const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
 
-  const { selectedRowIds } = useTableSelection();
-  const isRowSelected = selectedRowIds.includes(selectionId);
+  const { selectedRowIndexes } = useTableSelection();
+  const isRowSelected = selectedRowIndexes.includes(selectionId);
 
   return (
     <tr
@@ -378,7 +378,7 @@ export const TableCell = forwardRef((props, ref) => {
   const isInTableHead = useIsInTableHead();
   const TagName = isInTableHead ? "th" : "td";
 
-  const selectionId = `cell:${row.id || rowIndex}-${column.id || columnIndex}`;
+  const selectionId = `cell:${rowIndex}-${columnIndex}`;
 
   const editable = Boolean(action);
 
@@ -395,20 +395,39 @@ export const TableCell = forwardRef((props, ref) => {
   const { selectionController, columnContainsSelectedCell } =
     useTableSelection();
 
+  if (selectionImpact === undefined) {
+    if (rowIndex === 0 && columnIndex === 0) {
+      selectionImpact = (allValues) => {
+        const cells = allValues.filter((v) => {
+          return v.startsWith("cell:");
+        });
+        return cells;
+      };
+    } else if (rowIndex === 0) {
+      selectionImpact = (allValues) => {
+        const columnCells = allValues.filter((v) => {
+          return v.startsWith(`cell:${columnIndex}-`);
+        });
+        return columnCells;
+      };
+    } else if (columnIndex === 0) {
+      selectionImpact = (allValues) => {
+        const rowCells = allValues.filter((v) => {
+          if (!v.startsWith(`cell:`)) {
+            return false;
+          }
+          const [, cellRowIndex] = v.slice("cell:".length).split("-");
+          return cellRowIndex === String(rowIndex);
+        });
+        return rowCells;
+      };
+    }
+  }
+
   const { selected } = useSelectableElement(cellRef, {
     selectionController,
-    selectionImpact:
-      selectionImpact === undefined
-        ? rowIndex === 0
-          ? (allValues) => {
-              const columnCells = data.map(
-                (row) => `cell:${columnIndex}-${rowIndex}`,
-              );
-              return columnCells;
-            }
-          : undefined
-        : selectionImpact,
-    // value: id,
+    selectionImpact,
+    // value: selectionId,
   });
 
   const { grabTarget } = useTableDrag();

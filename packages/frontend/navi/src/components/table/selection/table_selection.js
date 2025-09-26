@@ -232,48 +232,48 @@ export const useTableSelectionData = (selection) => {
   const {
     rowWithSomeSelectedCell,
     columnWithSomeSelectedCell,
-    selectedRowIds,
+    selectedRowIndexes,
   } = useMemo(() => {
-    const rowWithSomeSelectedCell = [];
     const columnWithSomeSelectedCell = [];
-    const selectedRowIds = [];
-    const selectedColumnIds = [];
+    const rowWithSomeSelectedCell = [];
+    const selectedColumnIndexes = [];
+    const selectedRowIndexes = [];
 
     for (const item of selection) {
       if (item.startsWith("row:")) {
-        const rowId = item.slice("row:".length);
-        selectedRowIds.push(rowId);
+        const rowIndex = item.slice("row:".length);
+        selectedRowIndexes.push(rowIndex);
         continue;
       }
       if (item.startsWith("column:")) {
-        const columnId = item.slice("column:".length);
-        selectedColumnIds.push(columnId);
+        const columnIndex = item.slice("column:".length);
+        selectedColumnIndexes.push(columnIndex);
         continue;
       }
       if (item.startsWith("cell:")) {
         const cellId = item.slice("cell:".length);
-        const [columnId, rowId] = cellId.split("-");
+        const [columnIndex, rowIndex] = cellId.split("-");
         // Add to some-selected tracking
-        if (!rowWithSomeSelectedCell.includes(rowId)) {
-          rowWithSomeSelectedCell.push(rowId);
+        if (!columnWithSomeSelectedCell.includes(columnIndex)) {
+          columnWithSomeSelectedCell.push(columnIndex);
         }
-        if (!columnWithSomeSelectedCell.includes(columnId)) {
-          columnWithSomeSelectedCell.push(columnId);
+        if (!rowWithSomeSelectedCell.includes(rowIndex)) {
+          rowWithSomeSelectedCell.push(rowIndex);
         }
       }
     }
 
     return {
-      rowWithSomeSelectedCell,
       columnWithSomeSelectedCell,
-      selectedRowIds,
-      selectedColumnIds,
+      rowWithSomeSelectedCell,
+      selectedColumnIndexes,
+      selectedRowIndexes,
     };
   }, [selection]);
 
   return {
-    rowWithSomeSelectedCell,
     columnWithSomeSelectedCell,
-    selectedRowIds,
+    rowWithSomeSelectedCell,
+    selectedRowIndexes,
   };
 };
