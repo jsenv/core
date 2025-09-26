@@ -68,6 +68,7 @@ import {
   TableCellProvider,
   TableColumnProvider,
   TableDragProvider,
+  TableResizeProvider,
   TableRowProvider,
   TableSelectionProvider,
   TableStickyProvider,
@@ -381,30 +382,36 @@ export const Table = forwardRef((props, ref) => {
             );
           })}
         </colgroup>
-        <TableSelectionProvider
+        <TableResizeProvider
           value={{
-            selectionController,
-            rowWithSomeSelectedCell,
-            columnWithSomeSelectedCell,
-            selectedRowIds,
+            onColumnResize,
+            onRowResize,
           }}
         >
-          <TableDragProvider
+          <TableSelectionProvider
             value={{
-              grabTarget,
-              grabColumn,
-              releaseColumn,
+              selectionController,
+              rowWithSomeSelectedCell,
+              columnWithSomeSelectedCell,
+              selectedRowIds,
             }}
           >
-            <TableStickyProvider
+            <TableDragProvider
               value={{
-                stickyLeftFrontierColumnIndex,
-                stickyTopFrontierRowIndex,
-                onStickyLeftFrontierChange,
-                onStickyTopFrontierChange,
+                grabTarget,
+                grabColumn,
+                releaseColumn,
               }}
             >
-              {/* {needTableHead && (
+              <TableStickyProvider
+                value={{
+                  stickyLeftFrontierColumnIndex,
+                  stickyTopFrontierRowIndex,
+                  onStickyLeftFrontierChange,
+                  onStickyTopFrontierChange,
+                }}
+              >
+                {/* {needTableHead && (
           <TableHead
             tableRef={ref}
             grabTarget={grabTarget}
@@ -423,16 +430,17 @@ export const Table = forwardRef((props, ref) => {
             selectionController={selectionController}
           />
         )} */}
-              <TableBody
-                columns={columns}
-                data={data}
-                rows={rows}
-                selectedRowIds={selectedRowIds}
-                stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-              />
-            </TableStickyProvider>
-          </TableDragProvider>
-        </TableSelectionProvider>
+                <TableBody
+                  columns={columns}
+                  data={data}
+                  rows={rows}
+                  selectedRowIds={selectedRowIds}
+                  stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+                />
+              </TableStickyProvider>
+            </TableDragProvider>
+          </TableSelectionProvider>
+        </TableResizeProvider>
       </table>
 
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />

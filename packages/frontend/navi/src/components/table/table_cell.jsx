@@ -3,8 +3,13 @@ import { useRef } from "preact/hooks";
 
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { useSelectableElement } from "../selection/selection.jsx";
+import {
+  TableCellColumnResizeHandles,
+  TableCellRowResizeHandles,
+} from "./resize/table_resize.jsx";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import {
+  useTableCell,
   useTableColumn,
   useTableDrag,
   useTableHead,
@@ -77,13 +82,11 @@ export const TableCell = forwardRef((props, ref) => {
   const isInTableHead = Boolean(tableHead);
   const row = useTableRow();
   const column = useTableColumn();
+  const { columnIndex, rowIndex } = useTableCell();
   const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
     useTableSticky();
   const { selectionController } = useTableSelection();
   const { grabTarget } = useTableDrag();
-
-  const columnIndex = column.index;
-  const rowIndex = row.index;
 
   if (canResizeWidth === undefined && rowIndex === 0) {
     canResizeWidth = true;
@@ -211,6 +214,21 @@ export const TableCell = forwardRef((props, ref) => {
         stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
         stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
       />
+      {canResizeWidth && (
+        <TableCellColumnResizeHandles
+          columnIndex={columnIndex}
+          columnMinWidth={column.minWidth}
+          columnMaxWidth={column.maxWidth}
+        />
+      )}
+      {canResizeHeight && (
+        <TableCellRowResizeHandles
+          rowIndex={rowIndex}
+          rowMinHeight={row.minHeight}
+          rowMaxHeight={row.maxHeight}
+        />
+      )}
+
       {isInTableHead && (
         <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
           {value}

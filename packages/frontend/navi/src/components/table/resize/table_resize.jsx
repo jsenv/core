@@ -1,5 +1,6 @@
 import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
+import { useTableResize } from "../table_context.jsx";
 import {
   Z_INDEX_RESIZER_BACKDROP,
   Z_INDEX_RESIZER_HANDLE,
@@ -174,19 +175,20 @@ export const TableCellColumnResizeHandles = ({
   columnIndex,
   columnMinWidth,
   columnMaxWidth,
-  onResizeRequested,
 }) => {
+  const { onColumnResize } = useTableResize();
+
   return (
     <>
       {columnIndex > 0 && (
         <TableColumnLeftResizeHandle
-          onRelease={(width) => onResizeRequested(width, columnIndex - 1)}
+          onRelease={(width) => onColumnResize(width, columnIndex - 1)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
       )}
       <TableColumnRightResizeHandle
-        onRelease={(width) => onResizeRequested(width, columnIndex)}
+        onRelease={(width) => onColumnResize(width, columnIndex)}
         columnMinWidth={columnMinWidth}
         columnMaxWidth={columnMaxWidth}
       />
@@ -488,19 +490,20 @@ export const TableCellRowResizeHandles = ({
   rowIndex,
   rowMinHeight,
   rowMaxHeight,
-  onResizeRequested,
 }) => {
+  const { onRowResize } = useTableResize();
+
   return (
     <>
       {rowIndex > 0 && (
         <TableRowTopResizeHandle
-          onRelease={(width) => onResizeRequested(width, rowIndex - 1)}
+          onRelease={(width) => onRowResize(width, rowIndex - 1)}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
         />
       )}
       <TableRowBottomResizeHandle
-        onRelease={(width) => onResizeRequested(width, rowIndex)}
+        onRelease={(width) => onRowResize(width, rowIndex)}
         rowMinHeight={rowMinHeight}
         rowMaxHeight={rowMaxHeight}
       />
