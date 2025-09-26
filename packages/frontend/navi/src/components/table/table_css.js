@@ -95,6 +95,11 @@ import.meta.css = /* css */ `
     padding: 0;
     padding-left: 8px;
   }
+  .navi_table [data-sticky-left-frontier] {
+    /* padding-left: 12px; */
+    /* 12 px + 5px of the sticky frontier */
+    /* padding-right: 17px; */
+  }
 
   .navi_table th,
   .navi_table td {

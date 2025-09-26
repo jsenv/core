@@ -13,6 +13,8 @@ import {
 import.meta.css = /* css */ `
   .navi_table_container {
     --sticky-frontier-color: #c0c0c0;
+    --sticky-left-frontier-width: 5px;
+    --sticky-top-frontier-height: 5px;
   }
 
   .navi_table th[data-sticky-top],
@@ -41,11 +43,6 @@ import.meta.css = /* css */ `
   }
   .navi_table tr {
     top: var(--sticky-group-top, 0);
-  }
-
-  .navi_table_container {
-    --sticky-left-frontier-width: 5px;
-    --sticky-top-frontier-height: 5px;
   }
 
   .navi_table_cell_sticky_frontier {
