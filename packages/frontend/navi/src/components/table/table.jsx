@@ -245,15 +245,35 @@ export const TableBody = ({ children }) => {
   );
 };
 
-export const TableRow = ({ children, height }) => {
+export const TableRow = ({ id, children, height }) => {
   const columns = useColumns();
   const rows = useRows();
   const rowIndex = rows.length;
   const row = { height };
   rows[rowIndex] = row;
 
+  const { stickyTopFrontierRowIndex } = useTableSticky();
+  const isStickyTop = rowIndex <= stickyTopFrontierRowIndex;
+  const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
+
+  const { selectedRowIds } = useTableSelection();
+  const isRowSelected = selectedRowIds.includes(rowIndex);
+
+  if (id === undefined) {
+    id = rowIndex;
+  }
+
   return (
-    <tr>
+    <tr
+      data-row-id={id}
+      aria-selected={isRowSelected}
+      data-sticky-top={isStickyTop ? "" : undefined}
+      data-drag-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
+      style={{
+        height: height ? `${height}px` : undefined,
+        maxHeight: height ? `${height}px` : undefined,
+      }}
+    >
       <RowContext.Provider value={row}>
         <RowIndexContext.Provider value={rowIndex}>
           {children.map((child, columnIndex) => {
