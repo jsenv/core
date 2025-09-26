@@ -3,7 +3,6 @@ import { forwardRef } from "preact/compat";
 import {
   useContext,
   useImperativeHandle,
-  useLayoutEffect,
   useRef,
   useState,
 } from "preact/hooks";
@@ -15,12 +14,9 @@ import {
   useSelectableElement,
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
-import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
 import {
   TableCellColumnResizeHandles,
   TableCellRowResizeHandles,
-  TableColumnResizer,
-  TableRowResizer,
 } from "./resize/table_resize.jsx";
 import {
   TableResizeProvider,
@@ -31,10 +27,7 @@ import {
   useTableSelectionData,
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
-import {
-  TableCellStickyFrontier,
-  TableStickyFrontier,
-} from "./sticky/table_sticky.jsx";
+import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import {
   TableDragProvider,
   TableSelectionProvider,
@@ -44,6 +37,7 @@ import {
   useTableSticky,
 } from "./table_context.jsx";
 import "./table_css.js";
+import { TableUIContainer } from "./table_ui.jsx";
 
 const ColumnsRefContext = createContext();
 const useColumns = () => useContext(ColumnsRefContext).current;
@@ -205,12 +199,7 @@ export const Table = forwardRef((props, ref) => {
           </TableSelectionProvider>
         </TableResizeProvider>
       </table>
-      <TableUIContainer>
-        <TableDragCloneContainer dragging={Boolean(grabTarget)} />
-        <TableColumnResizer />
-        <TableRowResizer />
-        <TableStickyFrontier />
-      </TableUIContainer>
+      <TableUIContainer grabTarget={grabTarget} />
     </div>
   );
 });
@@ -486,38 +475,3 @@ export const TableCell = forwardRef((props, ref) => {
     </TagName>
   );
 });
-
-const TableUIContainer = ({ children }) => {
-  const ref = useRef();
-
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) {
-      return null;
-    }
-    const tableContainer = element.closest(".navi_table_container");
-    const updateScrollDimensions = () => {
-      element.style.setProperty(
-        "--table-scroll-width",
-        `${tableContainer.scrollWidth}px`,
-      );
-      element.style.setProperty(
-        "--table-scroll-height",
-        `${tableContainer.scrollHeight}px`,
-      );
-    };
-
-    updateScrollDimensions();
-    const resizeObserver = new ResizeObserver(updateScrollDimensions);
-    resizeObserver.observe(tableContainer);
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-
-  return (
-    <div ref={ref} className="navi_table_ui_container">
-      {children}
-    </div>
-  );
-};
