@@ -156,6 +156,12 @@
         });
 
         const setCellValue = (dataRowIndex, dataColIndex, value) => {
+          console.log(
+            "update cell value at",
+            `${dataColIndex}:${dataRowIndex}`,
+            "to",
+            value,
+          );
           setCellValues((prevValues) => {
             const newValues = prevValues.map((row, rowIdx) =>
               rowIdx === dataRowIndex
