@@ -59,7 +59,7 @@ import.meta.css = /* css */ `
     position: absolute;
     z-index: 1000000;
     top: var(--table-scroll-top, 0);
-    height: var(--table-column-height, 100%);
+    bottom: 0;
     width: 10px;
     left: var(--table-cell-right, 0);
     opacity: 0;
@@ -111,8 +111,8 @@ import.meta.css = /* css */ `
     position: absolute;
     z-index: 1000000;
     left: var(--table-scroll-left, 0);
+    right: 0;
     height: 10px;
-    width: var(--table-row-width, 100%);
     top: var(--table-cell-bottom, 0);
     opacity: 0;
   }
@@ -291,13 +291,8 @@ const updateTableColumnResizerPosition = (tableCell) => {
   );
 
   const table = tableCell.closest("table");
-  const tableColumnHeight = table.getBoundingClientRect().height;
-  const scrollLeft = getScrollableParent(table).scrollTop;
-  tableColumnResizer.style.setProperty("--table-scroll-top", `${scrollLeft}px`);
-  tableColumnResizer.style.setProperty(
-    "--table-column-height",
-    `${tableColumnHeight}px`,
-  );
+  const scrollTop = getScrollableParent(table).scrollTop;
+  tableColumnResizer.style.setProperty("--table-scroll-top", `${scrollTop}px`);
 
   tableColumnResizer.setAttribute("data-hover", "");
 };
@@ -607,11 +602,8 @@ const updateTableRowResizerPosition = (rowCell) => {
   );
 
   const table = rowCell.closest("table");
-  const tableRow = rowCell.closest("tr");
-  const tableRowWidth = tableRow.getBoundingClientRect().width;
   const scrollLeft = getScrollableParent(table).scrollLeft;
   tableRowResizer.style.setProperty("--table-scroll-left", `${scrollLeft}px`);
-  tableRowResizer.style.setProperty("--table-row-width", `${tableRowWidth}px`);
 
   tableRowResizer.setAttribute("data-hover", "");
 };

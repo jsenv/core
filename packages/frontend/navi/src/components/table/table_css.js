@@ -1,4 +1,4 @@
-import { Z_INDEX_EDITING, Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
+import { Z_INDEX_EDITING } from "./z_indexes.js";
 
 /*
  * Box-shadow border mapping template:
@@ -186,17 +186,5 @@ import.meta.css = /* css */ `
   .navi_table td[data-editing] {
     outline: 2px solid var(--editing-border-color);
     z-index: ${Z_INDEX_EDITING};
-  }
-
-  .navi_table_ui_container {
-    position: absolute;
-    z-index: ${Z_INDEX_TABLE_UI_CONTAINER};
-    user-select: none;
-    overflow: hidden;
-    left: 0;
-    top: 0;
-    width: var(--table-scroll-width, 0);
-    height: var(--table-scroll-height, 0);
-    pointer-events: none;
   }
 `;
