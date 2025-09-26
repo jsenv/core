@@ -9,13 +9,9 @@ export const useTableResize = () => {
 export const useTableResizeContextValue = ({
   onColumnResize,
   onRowResize,
-  columns,
-  rows,
+  columnsRef,
+  rowsRef,
 }) => {
-  const columnsRef = useRef();
-  columnsRef.current = columns;
-  const rowsRef = useRef();
-  rowsRef.current = rows;
   const onColumnResizeRef = useRef();
   onColumnResizeRef.current = onColumnResize;
   const onRowResizeRef = useRef();
@@ -24,16 +20,14 @@ export const useTableResizeContextValue = ({
   const resizeContextValue = useMemo(() => {
     const onColumnResizeWithColumn = (width, columnIndex) => {
       const columns = columnsRef.current;
-      return onColumnResizeRef.current?.(
-        width,
-        columnIndex,
-        columns[columnIndex],
-      );
+      const column = columns[columnIndex];
+      return onColumnResizeRef.current?.(width, columnIndex, column);
     };
 
     const onRowResizeWithRow = (height, rowIndex) => {
       const rows = rowsRef.current;
-      return onRowResizeRef.current?.(height, rowIndex, rows[rowIndex]);
+      const row = rows[rowIndex];
+      return onRowResizeRef.current?.(height, rowIndex, row);
     };
 
     return {

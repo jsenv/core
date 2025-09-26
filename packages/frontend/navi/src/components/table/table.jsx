@@ -30,8 +30,8 @@ import {
 } from "./table_context.jsx";
 import "./table_css.js";
 
-const ColGroupRefContext = createContext();
-const useColGroup = () => useContext(ColGroupRefContext).current;
+const ColumnsRefContext = createContext();
+const useColumns = () => useContext(ColumnsRefContext).current;
 const ColumnContext = createContext();
 const useColumn = () => useContext(ColumnContext);
 
@@ -62,8 +62,11 @@ export const Table = forwardRef((props, ref) => {
   const tableRowIndexRef = useRef();
   tableRowIndexRef.current = -1;
 
-  const colGroupRef = useRef();
-  colGroupRef.current = [];
+  const columnsRef = useRef();
+  columnsRef.current = [];
+
+  const rowsRef = useRef();
+  rowsRef.current = [];
 
   // selection
   const selectionController = useTableSelectionController({
@@ -137,6 +140,8 @@ export const Table = forwardRef((props, ref) => {
   const resizeContextValue = useTableResizeContextValue({
     onColumnResize,
     onRowResize,
+    columnsRef,
+    rowsRef,
   });
 
   // drag columns
@@ -166,11 +171,11 @@ export const Table = forwardRef((props, ref) => {
           <TableSelectionProvider value={selectionContextValue}>
             <TableDragProvider value={dragContextValue}>
               <TableStickyProvider value={stickyContextValue}>
-                <ColGroupRefContext.Provider value={colGroupRef}>
+                <ColumnsRefContext.Provider value={columnsRef}>
                   <TableRowIndexRefContext.Provider value={tableRowIndexRef}>
                     {children}
                   </TableRowIndexRefContext.Provider>
-                </ColGroupRefContext.Provider>
+                </ColumnsRefContext.Provider>
               </TableStickyProvider>
             </TableDragProvider>
           </TableSelectionProvider>
@@ -189,9 +194,9 @@ export const Colgroup = ({ children }) => {
   return <colgroup>{children}</colgroup>;
 };
 export const Col = ({ width }) => {
-  const colGroup = useColGroup();
-  const colIndex = colGroup.length;
-  colGroup[colIndex] = { width };
+  const columns = useColumns();
+  const columnIndex = columns.length;
+  columns[columnIndex] = { width };
   return <col />;
 };
 
@@ -219,19 +224,19 @@ export const TableRow = ({ children }) => {
   const tableRowIndexRef = useTableRowIndexRef();
   tableRowIndexRef.current++;
   const tableRowIndex = tableRowIndexRef.current;
-  const colGroup = useColGroup();
+  const columns = useColumns();
 
   return (
     <tr>
       <CellRowIndexContext.Provider value={tableRowIndex}>
         {children.map((child, columnIndex) => {
-          const col = colGroup[columnIndex];
+          const column = columns[columnIndex];
           return (
             <CellColumnIndexContext.Provider
               key={columnIndex}
               value={columnIndex}
             >
-              <ColumnContext.Provider value={col}>
+              <ColumnContext.Provider value={column}>
                 {child}
               </ColumnContext.Provider>
             </CellColumnIndexContext.Provider>
