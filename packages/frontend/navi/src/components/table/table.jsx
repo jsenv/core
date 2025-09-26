@@ -552,7 +552,11 @@ const TableBody = ({
                   tableCell = <TableCell value={cell} />;
                 }
 
-                const tableCellContextValue = { columnIndex, rowIndex };
+                const tableCellContextValue = {
+                  id: tableCellId,
+                  columnIndex,
+                  rowIndex,
+                };
 
                 return (
                   <TableColumnProvider key={tableCellId} value={columnValue}>

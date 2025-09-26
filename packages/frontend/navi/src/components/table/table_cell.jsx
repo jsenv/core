@@ -61,7 +61,6 @@ import.meta.css = /* css */ `
 
 export const TableCell = forwardRef((props, ref) => {
   let {
-    cellId,
     value,
     style,
     textAlign,
@@ -82,7 +81,7 @@ export const TableCell = forwardRef((props, ref) => {
   const isInTableHead = Boolean(tableHead);
   const row = useTableRow();
   const column = useTableColumn();
-  const { columnIndex, rowIndex } = useTableCell();
+  const { id, columnIndex, rowIndex } = useTableCell();
   const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
     useTableSticky();
   const { selectionController } = useTableSelection();
@@ -108,7 +107,7 @@ export const TableCell = forwardRef((props, ref) => {
   const { selected } = useSelectableElement(cellRef, {
     selectionController,
     selectionImpact,
-    // value: cellId,
+    // value: id,
   });
   const { editing, startEditing, stopEditing } = useEditionController();
 
@@ -172,7 +171,7 @@ export const TableCell = forwardRef((props, ref) => {
       }
       data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
       tabIndex={-1}
-      data-value={cellId}
+      data-value={id}
       data-selection-name={isInTableHead ? "column" : "cell"}
       data-selection-keyboard-toggle
       aria-selected={selected}
