@@ -783,23 +783,24 @@ export const createDragToMoveGesture = (options) => {
               if (desiredElementEnd > visibleAreaEnd) {
                 const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
                 const scroll = currentScroll + scrollAmountNeeded;
-                console.log(
-                  `Auto-scroll needed: desiredEnd=${desiredElementEnd} > visibleEnd=${visibleAreaEnd}: scrolling by ${scrollAmountNeeded}`,
-                );
+                // console.log(
+                //   `Auto-scroll needed: desiredEnd=${desiredElementEnd} > visibleEnd=${visibleAreaEnd}: scrolling by ${scrollAmountNeeded}`,
+                // );
                 scrollableParent[scrollProperty] = scroll;
-              } else {
-                console.log(
-                  `Auto-scroll NOT needed: desiredEnd=${desiredElementEnd} <= visibleEnd=${visibleAreaEnd}`,
-                );
               }
+              // } else {
+              //   console.log(
+              //     `Auto-scroll NOT needed: desiredEnd=${desiredElementEnd} <= visibleEnd=${visibleAreaEnd}`,
+              //   );
+              // }
             } else if (isGoingNegative) {
               if (desiredElementStart < visibleAreaStart) {
                 const scrollAmountNeeded =
                   visibleAreaStart - desiredElementStart;
                 const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
-                console.log(
-                  `Auto-scrolling ${scrollProperty}: ${currentScroll} - ${scrollAmountNeeded} = ${scroll}`,
-                );
+                // console.log(
+                //   `Auto-scrolling ${scrollProperty}: ${currentScroll} - ${scrollAmountNeeded} = ${scroll}`,
+                // );
                 scrollableParent[scrollProperty] = scroll;
               }
             }

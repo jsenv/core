@@ -159,7 +159,7 @@ export const useTableSelectionController = ({
 
 const updateSelectionBorders = (tableElement, selectionController) => {
   // Find all selected cells
-  const cells = Array.from(tableElement.querySelectorAll("td, th"));
+  const cells = Array.from(tableElement.querySelectorAll("th, td"));
   const selectedCells = [];
   for (const cell of cells) {
     if (selectionController.isElementSelected(cell)) {
@@ -241,22 +241,25 @@ export const useTableSelectionData = (selection) => {
 
     for (const item of selection) {
       if (item.startsWith("row:")) {
-        const rowId = item.slice(4);
+        const rowId = item.slice("row:".length);
         selectedRowIds.push(rowId);
         continue;
       }
       if (item.startsWith("column:")) {
-        const columnId = item.slice(7);
+        const columnId = item.slice("column:".length);
         selectedColumnIds.push(columnId);
         continue;
       }
-      const [columnName, rowId] = item.split(":");
-      // Add to some-selected tracking
-      if (!rowWithSomeSelectedCell.includes(rowId)) {
-        rowWithSomeSelectedCell.push(rowId);
-      }
-      if (!columnWithSomeSelectedCell.includes(columnName)) {
-        columnWithSomeSelectedCell.push(columnName);
+      if (item.startsWith("cell:")) {
+        const cellId = item.slice("cell:".length);
+        const [columnId, rowId] = cellId.split("-");
+        // Add to some-selected tracking
+        if (!rowWithSomeSelectedCell.includes(rowId)) {
+          rowWithSomeSelectedCell.push(rowId);
+        }
+        if (!columnWithSomeSelectedCell.includes(columnId)) {
+          columnWithSomeSelectedCell.push(columnId);
+        }
       }
     }
 

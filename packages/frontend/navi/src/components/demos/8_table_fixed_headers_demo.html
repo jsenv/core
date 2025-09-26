@@ -197,7 +197,7 @@
                   );
                 }}
                 onRowResize={(height, rowIndex, row) => {
-                  console.log(row, `resized to ${height}px`);
+                  console.log(row, `resized to ${height}px`, rowIndex);
                   setRows((prevRows) => {
                     const newRows = [...prevRows];
                     // Ensure we have enough rows in the array
@@ -231,7 +231,7 @@
                     return (
                       <TableRow
                         key={rowData.id}
-                        id={rowIndex}
+                        rowId={rowIndex}
                         height={rows[rowIndex]?.height}
                       >
                         {columns.map((col) => (

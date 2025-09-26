@@ -1,4 +1,4 @@
-const CONSOLE_DEBUG_CONSTRAINTS = true;
+const CONSOLE_DEBUG_CONSTRAINTS = false;
 
 export const createBoundConstraint = (
   bounds,

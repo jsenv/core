@@ -206,10 +206,10 @@ export const Table = forwardRef((props, ref) => {
 export const Colgroup = ({ children }) => {
   return <colgroup>{children}</colgroup>;
 };
-export const Col = ({ id, width, immovable }) => {
+export const Col = ({ columnId, width, immovable }) => {
   const columns = useColumns();
   const columnIndex = columns.length;
-  columns[columnIndex] = { id, width, immovable };
+  columns[columnIndex] = { columnId, width, immovable };
 
   const { stickyLeftFrontierColumnIndex } = useTableSticky();
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
@@ -248,27 +248,26 @@ export const TableBody = ({ children }) => {
   );
 };
 
-export const TableRow = ({ id, children, height }) => {
+export const TableRow = ({ rowId, height, children }) => {
   const columns = useColumns();
   const rows = useRows();
   const rowIndex = rows.length;
-  const row = { height };
+  const row = { rowId, height };
   rows[rowIndex] = row;
 
   const { stickyTopFrontierRowIndex } = useTableSticky();
   const isStickyTop = rowIndex <= stickyTopFrontierRowIndex;
   const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
 
-  const { selectedRowIds } = useTableSelection();
-  const isRowSelected = selectedRowIds.includes(rowIndex);
-
-  if (id === undefined) {
-    id = rowIndex;
+  if (rowId === undefined) {
+    rowId = rowIndex;
   }
+  const { selectedRowIds } = useTableSelection();
+  const isRowSelected = selectedRowIds.includes(rowId);
 
   return (
     <tr
-      data-row-id={id}
+      data-row-id={rowId}
       aria-selected={isRowSelected}
       data-sticky-top={isStickyTop ? "" : undefined}
       data-drag-sticky-top-frontier={isStickyTopFrontier ? "" : undefined}
