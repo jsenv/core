@@ -83,14 +83,6 @@ import {
 } from "./selection/table_selection.js";
 import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
-import {
-  TableDragProvider,
-  TableSelectionProvider,
-  TableStickyProvider,
-  useTableDrag,
-  useTableSelection,
-  useTableSticky,
-} from "./table_context.jsx";
 import "./table_css.js";
 import { TableUIContainer } from "./table_ui.jsx";
 
@@ -108,6 +100,27 @@ const ColumnIndexContext = createContext();
 const useColumnIndex = () => useContext(ColumnIndexContext);
 const RowIndexContext = createContext();
 const useRowIndex = () => useContext(RowIndexContext);
+
+const TableSectionContext = createContext();
+const useIsInTableHead = () => useContext(TableSectionContext) === "head";
+
+const TableSelectionContext = createContext();
+const TableSelectionProvider = TableSelectionContext.Provider;
+const useTableSelection = () => {
+  return useContext(TableSelectionContext);
+};
+
+const TableStickyContext = createContext();
+const TableStickyProvider = TableStickyContext.Provider;
+const useTableSticky = () => {
+  return useContext(TableStickyContext);
+};
+
+const TableDragContext = createContext();
+const TableDragProvider = TableDragContext.Provider;
+const useTableDrag = () => {
+  return useContext(TableDragContext);
+};
 
 export const Table = forwardRef((props, ref) => {
   const {
@@ -283,8 +296,6 @@ export const Col = ({ id, width, immovable }) => {
   );
 };
 
-const TableSectionContext = createContext();
-const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 export const TableHead = ({ children }) => {
   return (
     <thead>
@@ -388,8 +399,12 @@ export const TableCell = forwardRef((props, ref) => {
 
   const editable = Boolean(action);
 
-  const { stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex } =
-    useTableSticky();
+  const {
+    stickyLeftFrontierColumnIndex,
+    stickyTopFrontierRowIndex,
+    onStickyLeftFrontierChange,
+    onStickyTopFrontierChange,
+  } = useTableSticky();
   const stickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
   const stickyTop = rowIndex <= stickyTopFrontierRowIndex;
   const isStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
@@ -555,6 +570,8 @@ export const TableCell = forwardRef((props, ref) => {
         columnIndex={columnIndex}
         stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
         stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
+        onStickyLeftFrontierChange={onStickyLeftFrontierChange}
+        onStickyTopFrontierChange={onStickyTopFrontierChange}
       />
       {canResizeWidth && (
         <TableCellColumnResizeHandles
@@ -580,3 +597,15 @@ export const TableCell = forwardRef((props, ref) => {
     </TagName>
   );
 });
+
+export const RowNumberTableCell = ({ children, ...props }) => {
+  const columnIndex = useColumnIndex();
+  const rowIndex = useRowIndex();
+  const isTopLeftCell = columnIndex === 0 && rowIndex === 0;
+
+  return (
+    <TableCell canSelectAll={isTopLeftCell} textAlign="center" {...props}>
+      {isTopLeftCell ? "" : rowIndex}
+    </TableCell>
+  );
+};

@@ -1,6 +1,5 @@
 import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
-import { useTableSticky } from "../table_context.jsx";
 import {
   Z_INDEX_STICKY_COLUMN,
   Z_INDEX_STICKY_CORNER,
@@ -306,10 +305,9 @@ export const TableCellStickyFrontier = ({
   rowIndex,
   stickyLeftFrontierColumnIndex,
   stickyTopFrontierRowIndex,
+  onStickyLeftFrontierChange,
+  onStickyTopFrontierChange,
 }) => {
-  const { onStickyLeftFrontierChange, onStickyTopFrontierChange } =
-    useTableSticky();
-
   const isAfterStickyLeftFrontier = columnIndex > stickyLeftFrontierColumnIndex;
   const isOnStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
   const isAfterStickyTopFrontier = rowIndex > stickyTopFrontierRowIndex;
