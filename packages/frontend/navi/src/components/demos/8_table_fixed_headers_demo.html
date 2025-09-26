@@ -113,6 +113,8 @@
         RowNumberCol,
         // eslint-disable-next-line no-unused-vars
         RowNumberTableCell,
+        // eslint-disable-next-line no-unused-vars
+        useSignalSync,
       } from "@jsenv/navi";
 
       // Generate large dataset to force scrolling
@@ -148,22 +150,54 @@
         const [stickyTopFrontierRowIndex, setStickyTopFrontierRowIndex] =
           useState(0);
 
+        // Simple state-based editable cell data
+        const [editableCellData, setEditableCellData] = useState(() => {
+          const cellMap = new Map();
+          data.forEach((row) => {
+            columns.forEach((col) => {
+              const key = `${col.id}:${row.id}`;
+              cellMap.set(key, row[col.id]);
+            });
+          });
+          return cellMap;
+        });
+
+        // Action function for updating cell values
+        const createCellAction = (rowId, colId) => (newValue) => {
+          const key = `${colId}:${rowId}`;
+          setEditableCellData((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(key, newValue);
+            return newMap;
+          });
+        };
+
+        // Helper to get current cell value
+        const getCellValue = (rowId, colId) => {
+          const key = `${colId}:${rowId}`;
+          return editableCellData.get(key);
+        };
+
         return (
           <div className="demo-container">
             <h1>Table Fixed Headers Demo - Large Dataset</h1>
 
             <div className="info">
-              <h3>Testing Fixed Row/Column Headers</h3>
+              <h3>Testing Fixed Row/Column Headers with Cell Editing</h3>
               <p>
                 This demo contains a large dataset (50 rows × 10 columns = 500
                 cells) in a constrained container to force scrolling. The goal
                 is to test and implement fixed first row (header) and first
-                column behavior.
+                column behavior, plus cell editing functionality.
               </p>
             </div>
 
             <p>
-              <strong>Current behavior:</strong> The table will scroll normally.
+              <strong>Current behavior:</strong> The table will scroll normally
+              with editable cells.
+              <br />
+              <strong>Cell editing:</strong> Double-click any data cell to edit
+              its value. Press Enter to save or Escape to cancel.
               <br />
               <strong>Desired behavior:</strong> First row and first column
               should remain fixed while scrolling.
@@ -221,7 +255,12 @@
                       <TableRow key={rowData.id} height={rowHeights[rowIndex]}>
                         <RowNumberTableCell />
                         {columns.map((col) => (
-                          <TableCell key={col.id}>{rowData[col.id]}</TableCell>
+                          <TableCell
+                            key={col.id}
+                            action={createCellAction(rowData.id, col.id)}
+                          >
+                            {getCellValue(rowData.id, col.id)}
+                          </TableCell>
                         ))}
                       </TableRow>
                     );
@@ -249,6 +288,10 @@
               </div>
               <div>
                 Total selection count: <span>{selection.length}</span>
+              </div>
+              <div>
+                Editable cells:{" "}
+                <span>{editableCellData.size} cells with editing enabled</span>
               </div>
               <div>
                 Column widths:{" "}
@@ -317,6 +360,19 @@
               >
                 Reset Row Heights
               </button>
+              <button
+                onClick={() => {
+                  // Set a sample cell to demonstrate editing works
+                  const key = "col1:row-1";
+                  setEditableCellData((prev) => {
+                    const newMap = new Map(prev);
+                    newMap.set(key, `Edited at ${new Date().toLocaleTimeString()}`);
+                    return newMap;
+                  });
+                }}
+              >
+                Demo Edit Cell (1,1)
+              </button>
             </div>
 
             <div>
@@ -333,7 +389,11 @@
                 <br />
                 3. Test selection behavior while scrolled
                 <br />
-                4. Check if borders and selection overlay work correctly with
+                4. <strong>Double-click any data cell to edit its value</strong>
+                <br />
+                5. Use Enter to save changes, Escape to cancel editing
+                <br />
+                6. Check if borders and selection overlay work correctly with
                 fixed headers
               </p>
             </div>

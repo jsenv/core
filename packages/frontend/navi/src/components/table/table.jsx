@@ -41,6 +41,8 @@
  *
  * Next steps:
  *
+ * - Selected cell borders X sticky frontier
+ * - Un example d'update du contenu d'une cellule
  * - Finir vrai exemple de re-order de column (mise a jour du state + effet au survol)
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
@@ -478,23 +480,7 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.cursor = cursor;
   }
   const columnWidth = column.width;
-  if (
-    columnWidth === undefined ||
-    // when column width becomes too small the padding would prevent it from shrinking
-    columnWidth > 42
-  ) {
-    innerStyle.paddingLeft = "12px";
-    innerStyle.paddingRight = "12px";
-  }
   const rowHeight = row.height;
-  if (
-    rowHeight === undefined ||
-    // when row height becomes too small the padding would prevent it from shrinking
-    rowHeight > 42
-  ) {
-    innerStyle.paddingTop = "8px";
-    innerStyle.paddingBottom = "8px";
-  }
   if (columnWidth !== undefined) {
     innerStyle.maxWidth = `${columnWidth}px`;
   }
@@ -523,6 +509,12 @@ export const TableCell = forwardRef((props, ref) => {
       }
       data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
       tabIndex={-1}
+      data-height-is-xxs={
+        rowHeight !== undefined && rowHeight < 42 ? "" : undefined
+      }
+      data-width-is-xxs={
+        columnWidth !== undefined && columnWidth < 42 ? "" : undefined
+      }
       data-selection-name={isInTableHead ? "column" : "cell"}
       data-selection-keyboard-toggle
       aria-selected={selected}

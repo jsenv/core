@@ -72,12 +72,32 @@ import.meta.css = /* css */ `
     padding: 0;
   }
 
+  /* padding */
+  .navi_table th,
   .navi_table td {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .navi_table [data-width-xxs] {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .navi_table [data-height-xxs] {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .navi_table td[data-editing] {
     padding: 0;
-    user-select: none;
+  }
+  .navi_table td[data-editing] input {
+    padding: 0;
+    padding-left: 8px;
   }
 
-  .navi_table th {
+  .navi_table th,
+  .navi_table td {
     user-select: none;
   }
 
@@ -157,10 +177,6 @@ import.meta.css = /* css */ `
     --editing-border-color: #a8c7fa;
   }
 
-  .navi_table td[data-editing] {
-    padding: 0;
-  }
-
   .navi_table td[data-editing] .navi_table_cell_content {
     outline: 2px solid #a8c7fa;
     outline-offset: 0px;
@@ -171,8 +187,6 @@ import.meta.css = /* css */ `
     height: 100%;
     display: inline-flex;
     flex-grow: 1;
-    padding: 0;
-    padding-left: 8px;
     border-radius: 0; /* match table cell border-radius */
     border: none;
     font-size: 16px;
