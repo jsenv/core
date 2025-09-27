@@ -123,10 +123,46 @@ export const useActionBoundToOneParam = (
     previousParamsSignalRef.current !== paramsSignal;
   previousParamsSignalRef.current = paramsSignal;
 
-  const boundAction = useBoundAction(
-    action,
-    externalValueSignal ? null : paramsSignal,
-  );
+  let boundActionParamsSignal;
+  if (externalValueSignal) {
+    /**
+     * when code is passing a signal directly (like <Input valueSignal={signal} />)
+     * it usually means the action was already bound to the params signal
+     *
+     * For instance code doing this:
+     *
+     * ```js
+     * const action = DATABASE.POST.bindParams(valueSignal);
+     * ```
+     *
+     * So we could detect that by testing if action bound params === externalValueSignal
+     *
+     * We should also support other cases where the action was not bound directly to the signal
+     * like this:
+     *
+     * ```js
+     * const action =  DATABASE.PUT.bindParams({
+     *   datname: 'users',
+     *   columnName: 'name',
+     *   columnValue: valueSignal,
+     * });
+     * ```
+     *
+     * But in the end we just consider that action was bound and don't re-bind it without detecting anything.
+     *
+     * However there is one case where we are sure the action was not bound to the params and needs to be:
+     * When action is a regular function
+     *
+     */
+
+    if (isFunctionButNotAnActionFunction(action)) {
+      boundActionParamsSignal = externalValueSignal;
+    }
+  } else {
+    boundActionParamsSignal = paramsSignal;
+  }
+
+  const boundAction = useBoundAction(action, boundActionParamsSignal);
   const getValue = externalValueSignal
     ? useCallback(() => paramsSignal.value, [paramsSignal])
     : useCallback(() => paramsSignal.value[name], [paramsSignal]);
@@ -310,12 +346,15 @@ const useBoundAction = (action, actionParamsSignal) => {
   if (!action) {
     return null;
   }
-  if (typeof action === "function" && !action.isAction) {
+  if (isFunctionButNotAnActionFunction(action)) {
     let actionInstance = actionRef.current;
     if (!actionInstance) {
-      actionInstance = createAction((...args) => {
-        return actionCallbackRef.current(...args);
-      });
+      actionInstance = createAction(
+        (...args) => {
+          return actionCallbackRef.current(...args);
+        },
+        { name: action.name },
+      );
       if (actionParamsSignal) {
         actionInstance = actionInstance.bindParams(actionParamsSignal);
       }
@@ -328,4 +367,8 @@ const useBoundAction = (action, actionParamsSignal) => {
     return action.bindParams(actionParamsSignal);
   }
   return action;
+};
+
+const isFunctionButNotAnActionFunction = (action) => {
+  return typeof action === "function" && !action.isAction;
 };
