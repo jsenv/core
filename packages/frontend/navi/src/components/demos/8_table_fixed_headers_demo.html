@@ -113,8 +113,6 @@
         RowNumberCol,
         // eslint-disable-next-line no-unused-vars
         RowNumberTableCell,
-        // eslint-disable-next-line no-unused-vars
-        useSignalSync,
       } from "@jsenv/navi";
 
       // Generate large dataset to force scrolling
@@ -173,13 +171,6 @@
             return newValues;
           });
         };
-
-        // Action function for updating cell values using row/column indices
-        const createCellAction =
-          (dataRowIndex, dataColIndex) =>
-          ({ cell }) => {
-            setCellValue(dataRowIndex, dataColIndex, cell);
-          };
 
         return (
           <div className="demo-container">
@@ -260,16 +251,14 @@
                         {columns.map((col, dataColIndex) => {
                           const cellValue =
                             cellValues[dataRowIndex][dataColIndex];
-                          const cellValueSignal = useSignalSync(cellValue);
+
                           return (
                             <TableCell
                               key={col.id}
-                              action={createCellAction(
-                                dataRowIndex,
-                                dataColIndex,
-                              )}
                               name="cell"
-                              valueSignal={cellValueSignal}
+                              action={({ cell }) => {
+                                setCellValue(dataRowIndex, dataColIndex, cell);
+                              }}
                             >
                               {cellValue}
                             </TableCell>
