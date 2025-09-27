@@ -51,6 +51,24 @@ import.meta.css = /* css */ `
     background: lightgrey;
     z-index: ${Z_INDEX_DRAGGING_CELL_PLACEHOLDER};
   }
+
+  .navi_table_column_drop_preview {
+    position: absolute;
+    left: var(--table-left);
+    top: var(--table-top);
+    width: var(--table-width);
+    height: var(--table-height);
+    pointer-events: none;
+  }
+
+  .navi_table_column_drop_preview_ui {
+    position: absolute;
+    top: -10px;
+    width: 5px;
+    left: var(--table-column-drop-target-left);
+    background: yellow;
+    height: 10px;
+  }
 `;
 
 export const TableDragCloneContainer = () => {

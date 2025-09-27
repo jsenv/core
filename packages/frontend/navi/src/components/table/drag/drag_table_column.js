@@ -14,6 +14,10 @@ export const initDragTableColumnByMousedown = (
     }
     teardownCallbackSet.clear();
   };
+  const dragEffectCallbackSet = new Set();
+  const addDragEffect = (callback) => {
+    dragEffectCallbackSet.add(callback);
+  };
 
   const tableCell = mousedownEvent.target.closest("th, td");
   const table = tableCell.closest("table");
@@ -139,17 +143,49 @@ export const initDragTableColumnByMousedown = (
     });
   }
 
+  const colgroupClone = tableClone.querySelector("colgroup");
+  const colClone = colgroupClone.children[columnIndex];
+
+  drop_preview: {
+    const dropPreview = document.createElement("div");
+    dropPreview.className = "navi_table_column_drop_preview";
+    const dropPreviewUI = document.createElement("div");
+    dropPreviewUI.className = "navi_table_column_drop_preview_ui";
+
+    const tableRect = table.getBoundingClientRect();
+    dropPreview.style.setProperty("--table-left", `${tableRect.left}px`);
+    dropPreview.style.setProperty("--table-top", `${tableRect.top}px`);
+    dropPreview.style.setProperty("--table-width", `${tableRect.width}px`);
+    dropPreview.style.setProperty("--table-height", `${tableRect.height}px`);
+
+    addDragEffect(() => {
+      const draggedColumnLeft = colClone.getBoundingClientRect().left;
+      dropPreviewUI.style.setProperty(
+        "--table-column-drop-target-left",
+        `${draggedColumnLeft}px`,
+      );
+    });
+
+    document.body.appendChild(dropPreview);
+    addTeardown(() => {
+      // dropPreview.remove();
+    });
+  }
+
   init_drag_gesture: {
     const dragToMoveGesture = createDragToMoveGesture({
       name: "move-column",
       direction: { x: true },
       onGrab,
-      onDrag,
+      onDrag: (gestureInfo) => {
+        for (const dragEffect of dragEffectCallbackSet) {
+          dragEffect(gestureInfo);
+        }
+        onDrag(gestureInfo);
+      },
       onRelease,
     });
 
-    const colgroupClone = tableClone.querySelector("colgroup");
-    const colClone = colgroupClone.children[columnIndex];
     dragToMoveGesture.grabViaMousedown(mousedownEvent, {
       element: table,
       elementToImpact: cloneParent,
