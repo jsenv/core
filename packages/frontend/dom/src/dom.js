@@ -15,6 +15,7 @@ export {
   findDescendant,
 } from "./traversal.js";
 
+export { getBoundingDocumentRect } from "./bounding_document_rect.js";
 export { elementIsVisible } from "./element_is_visible.js";
 export {
   activeElementSignal,

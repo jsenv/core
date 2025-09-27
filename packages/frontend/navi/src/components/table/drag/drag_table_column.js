@@ -1,4 +1,8 @@
-import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
+import {
+  createDragToMoveGesture,
+  getBoundingDocumentRect,
+  getScrollableParent,
+} from "@jsenv/dom";
 
 export const initDragTableColumnByMousedown = (
   mousedownEvent,
@@ -152,14 +156,16 @@ export const initDragTableColumnByMousedown = (
     const dropPreviewUI = document.createElement("div");
     dropPreviewUI.className = "navi_table_column_drop_preview_ui";
 
-    const tableRect = table.getBoundingClientRect();
+    const tableRect = getBoundingDocumentRect(table);
     dropPreview.style.setProperty("--table-left", `${tableRect.left}px`);
     dropPreview.style.setProperty("--table-top", `${tableRect.top}px`);
     dropPreview.style.setProperty("--table-width", `${tableRect.width}px`);
     dropPreview.style.setProperty("--table-height", `${tableRect.height}px`);
 
     addDragEffect(() => {
-      const draggedColumnLeft = colClone.getBoundingClientRect().left;
+      const draggedColumnRect = colClone.getBoundingClientRect();
+      // Convert viewport coordinates to document coordinates
+      const draggedColumnLeft = draggedColumnRect.left + window.scrollX;
       dropPreviewUI.style.setProperty(
         "--table-column-drop-target-left",
         `${draggedColumnLeft}px`,
