@@ -126,33 +126,17 @@ export const useActionBoundToOneParam = (
   let boundActionParamsSignal;
   if (externalValueSignal) {
     /**
-     * when code is passing a signal directly (like <Input valueSignal={signal} />)
-     * it usually means the action was already bound to the params signal
+     * When an external signal is provided (like <Input valueSignal={signal} />),
+     * we assume the action is already bound to appropriate params.
      *
-     * For instance code doing this:
+     * Examples of pre-bound actions:
+     * - Simple binding: DATABASE.POST.bindParams(valueSignal)
+     * - Complex binding: DATABASE.PUT.bindParams({ columnValue: valueSignal })
      *
-     * ```js
-     * const action = DATABASE.POST.bindParams(valueSignal);
-     * ```
+     * We avoid re-binding in these cases to preserve the original action configuration.
      *
-     * So we could detect that by testing if action bound params === externalValueSignal
-     *
-     * We should also support other cases where the action was not bound directly to the signal
-     * like this:
-     *
-     * ```js
-     * const action =  DATABASE.PUT.bindParams({
-     *   datname: 'users',
-     *   columnName: 'name',
-     *   columnValue: valueSignal,
-     * });
-     * ```
-     *
-     * But in the end we just consider that action was bound and don't re-bind it without detecting anything.
-     *
-     * However there is one case where we are sure the action was not bound to the params and needs to be:
-     * When action is a regular function
-     *
+     * Exception: If the action is a plain function (not an action object),
+     * we bind it to the external signal since it clearly needs parameter binding.
      */
 
     if (isFunctionButNotAnActionFunction(action)) {
