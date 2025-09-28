@@ -732,6 +732,10 @@ export const createDragGesture = (options) => {
 };
 
 export const createDragToMoveGesture = (options) => {
+  // Track whether sticky elements have entered visible area (needed for auto-scroll logic)
+  let hasEnteredVisibleAreaLeft = false;
+  let hasEnteredVisibleAreaTop = false;
+
   const dragToMoveGesture = createDragGesture({
     ...options,
     lifecycle: {
@@ -763,6 +767,20 @@ export const createDragToMoveGesture = (options) => {
         // Calculate where element bounds would be in viewport coordinates
         const parentRect = positionedParent.getBoundingClientRect();
 
+        // Check initial position - if element starts within visible area, allow auto-scroll immediately
+        if (
+          !hasEnteredVisibleAreaLeft &&
+          elementVisuallyImpactedRect.left >= visibleArea.left
+        ) {
+          hasEnteredVisibleAreaLeft = true;
+        }
+        if (
+          !hasEnteredVisibleAreaTop &&
+          elementVisuallyImpactedRect.top >= visibleArea.top
+        ) {
+          hasEnteredVisibleAreaTop = true;
+        }
+
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
           // axis,
@@ -777,6 +795,7 @@ export const createDragToMoveGesture = (options) => {
           moveAmount, // gestureInfo.xMove or gestureInfo.yMove
           scrollProperty, // 'scrollLeft' or 'scrollTop'
           styleProperty, // 'left' or 'top'
+          canAutoScrollNegative, // whether auto-scroll is allowed for sticky elements when going negative
         }) => {
           keep_into_view: {
             if (isGoingPositive) {
@@ -794,7 +813,10 @@ export const createDragToMoveGesture = (options) => {
               //   );
               // }
             } else if (isGoingNegative) {
-              if (desiredElementStart < visibleAreaStart) {
+              if (
+                canAutoScrollNegative &&
+                desiredElementStart < visibleAreaStart
+              ) {
                 const scrollAmountNeeded =
                   visibleAreaStart - desiredElementStart;
                 const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
@@ -819,6 +841,20 @@ export const createDragToMoveGesture = (options) => {
           const desiredElementLeft =
             desiredElementLeftRelative + parentRect.left;
           const desiredElementRight = desiredElementLeft + elementWidth;
+
+          // Track if sticky element has entered visible area for horizontal scrolling
+          if (
+            !hasEnteredVisibleAreaLeft &&
+            isGoingLeft &&
+            desiredElementLeft > visibleArea.left
+          ) {
+            hasEnteredVisibleAreaLeft = true;
+          }
+          // Determine if auto-scroll is allowed for sticky elements when going left
+          const canAutoScrollLeft =
+            !elementVisuallyImpacted.hasAttribute("data-sticky-left") ||
+            hasEnteredVisibleAreaLeft;
+
           moveAndKeepIntoView({
             // axis: "x",
             isGoingPositive: isGoingRight,
@@ -832,6 +868,7 @@ export const createDragToMoveGesture = (options) => {
             moveAmount: gestureInfo.xMove,
             scrollProperty: "scrollLeft",
             styleProperty: "left",
+            canAutoScrollNegative: canAutoScrollLeft,
           });
         }
 
@@ -840,6 +877,21 @@ export const createDragToMoveGesture = (options) => {
           const desiredElementTopRelative = topAtStart + gestureInfo.yMove;
           const desiredElementTop = desiredElementTopRelative + parentRect.top;
           const desiredElementBottom = desiredElementTop + elementHeight;
+
+          // Track if sticky element has entered visible area for vertical scrolling
+          if (
+            !hasEnteredVisibleAreaTop &&
+            isGoingUp &&
+            desiredElementTop > visibleArea.top
+          ) {
+            hasEnteredVisibleAreaTop = true;
+          }
+
+          // Determine if auto-scroll is allowed for sticky elements when going up
+          const canAutoScrollUp =
+            !elementVisuallyImpacted.hasAttribute("data-sticky-top") ||
+            hasEnteredVisibleAreaTop;
+
           moveAndKeepIntoView({
             // axis: "y",
             isGoingPositive: isGoingDown,
@@ -853,6 +905,7 @@ export const createDragToMoveGesture = (options) => {
             moveAmount: gestureInfo.yMove,
             scrollProperty: "scrollTop",
             styleProperty: "top",
+            canAutoScrollNegative: canAutoScrollUp,
           });
         }
       },
