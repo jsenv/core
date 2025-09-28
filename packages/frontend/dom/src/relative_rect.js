@@ -15,25 +15,46 @@
  * @param {Element} domElement - The DOM element to get coordinates for
  * @returns {Object} Rectangle with document coordinates and viewport reference
  */
-export const getBoundingDocumentRect = (domElement) => {
+export const getRelativeRect = (domElement, secondDomElement) => {
+  if (domElement === document) {
+    return domElement.getBoundingClientRect();
+  }
+  if (secondDomElement === undefined) {
+    secondDomElement = domElement.offsetParent;
+    const left = domElement.offsetLeft;
+    const top = domElement.offsetTop;
+    const { width, height } = domElement.getBoundingClientRect();
+    return {
+      left,
+      top,
+      right: left + width,
+      bottom: top + height,
+      width,
+      height,
+    };
+  }
+
+  if (!secondDomElement.contains(domElement)) {
+    throw new Error(
+      "getRelativeRect: secondDomElement must contain domElement",
+    );
+  }
   let left = domElement.offsetLeft;
   let top = domElement.offsetTop;
   let domElementAncestor = domElement.offsetParent;
-  while (domElementAncestor) {
+  while (domElementAncestor !== secondDomElement) {
     left += domElementAncestor.offsetLeft;
     top += domElementAncestor.offsetTop;
     domElementAncestor = domElementAncestor.offsetParent;
   }
-  const boundingClientRect = domElement.getBoundingClientRect();
-  const width = boundingClientRect.width;
-  const height = boundingClientRect.height;
+  const clientRect = domElement.getBoundingClientRect();
+  const { width, height } = clientRect;
   return {
-    boundingClientRect, // viewport coordinates for reference
     left,
     top,
-    width,
-    height,
     right: left + width,
     bottom: top + height,
+    width,
+    height,
   };
 };

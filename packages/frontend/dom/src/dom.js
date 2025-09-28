@@ -15,7 +15,6 @@ export {
   findDescendant,
 } from "./traversal.js";
 
-export { getBoundingDocumentRect } from "./bounding_document_rect.js";
 export { elementIsVisible } from "./element_is_visible.js";
 export {
   activeElementSignal,
@@ -27,6 +26,7 @@ export { initFocusGroup } from "./focus/focus_group.js";
 export { preventFocusNav } from "./focus/focus_nav_event_marker.js";
 export { trapFocusInside } from "./focus/focus_trap.js";
 export { canInterceptKeys } from "./keyboard.js";
+export { getRelativeRect } from "./relative_rect.js";
 export {
   getAncestorScrolls,
   getScrollableParent,

@@ -1,6 +1,6 @@
 import {
   createDragToMoveGesture,
-  getBoundingDocumentRect,
+  getRelativeRect,
   getScrollableParent,
 } from "@jsenv/dom";
 
@@ -156,7 +156,7 @@ export const initDragTableColumnByMousedown = (
     const dropPreviewUI = document.createElement("div");
     dropPreviewUI.className = "navi_table_column_drop_preview_ui";
 
-    const tableRect = getBoundingDocumentRect(table);
+    const tableRect = getRelativeRect(table, document.body);
     dropPreview.style.setProperty("--table-left", `${tableRect.left}px`);
     dropPreview.style.setProperty("--table-top", `${tableRect.top}px`);
     dropPreview.style.setProperty("--table-width", `${tableRect.width}px`);
