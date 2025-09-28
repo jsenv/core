@@ -4,6 +4,50 @@ import {
   getScrollableParent,
 } from "@jsenv/dom";
 
+import.meta.css = /* css */ `
+  .navi_table_column_drop_preview {
+    position: absolute;
+    left: var(--table-left);
+    top: var(--table-top);
+    width: var(--table-width);
+    height: var(--table-height);
+    pointer-events: none;
+  }
+
+  .navi_table_column_drop_preview_ui {
+    position: absolute;
+    top: -10px;
+    left: var(--table-column-drop-target-left);
+    background: yellow;
+    display: flex;
+  }
+
+  .navi_table_column_drop_preview_ui svg {
+    width: 10px;
+    height: 10px;
+  }
+`;
+
+const dropPreviewTemplate = /* html */ `
+  <div
+    class="navi_table_column_drop_preview"
+  >
+    <div class="navi_table_column_drop_preview_ui">
+      <svg fill="currentColor" viewBox="0 0 30.727 30.727" xml:space="preserve">
+        <path
+          d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0
+		l11.095,11.093L26.461,6.647c0.977-0.976,2.559-0.976,3.535,0C30.971,7.624,30.971,9.206,29.994,10.183z"
+        />
+      </svg>
+    </div>
+  </div>
+`;
+const createDropPreview = () => {
+  const dropPreview = document.createElement("div");
+  dropPreview.innerHTML = dropPreviewTemplate;
+  return dropPreview.firstElementChild;
+};
+
 export const initDragTableColumnByMousedown = (
   mousedownEvent,
   { onGrab, onDrag, onRelease },
@@ -151,10 +195,10 @@ export const initDragTableColumnByMousedown = (
   const colClone = colgroupClone.children[columnIndex];
 
   drop_preview: {
-    const dropPreview = document.createElement("div");
-    dropPreview.className = "navi_table_column_drop_preview";
-    const dropPreviewUI = document.createElement("div");
-    dropPreviewUI.className = "navi_table_column_drop_preview_ui";
+    const dropPreview = createDropPreview();
+    const dropPreviewUI = dropPreview.querySelector(
+      ".navi_table_column_drop_preview_ui",
+    );
 
     const tableRect = getRelativeRect(table, document.body);
     dropPreview.style.setProperty("--table-left", `${tableRect.left}px`);
@@ -163,7 +207,7 @@ export const initDragTableColumnByMousedown = (
     dropPreview.style.setProperty("--table-height", `${tableRect.height}px`);
 
     addDragEffect(() => {
-      const draggedColumnRect = colClone.getBoundingClientRect();
+      const draggedColumnRect = getRelativeRect(colClone, document.body);
       // Convert viewport coordinates to document coordinates
       const draggedColumnLeft = draggedColumnRect.left + window.scrollX;
       dropPreviewUI.style.setProperty(
