@@ -88,7 +88,7 @@ import { TableUI } from "./table_ui.jsx";
 import {
   useChildTrackerProvider,
   useTrackChild,
-} from "./use_child_tracker.jsx";
+} from "./use_children_tracker.jsx";
 
 const ColumnsRefContext = createContext();
 const useColumns = () => useContext(ColumnsRefContext).current;
@@ -156,7 +156,7 @@ export const Table = forwardRef((props, ref) => {
   const rowsRef = useRef();
   rowsRef.current = [];
 
-  const columnsRef = useRef();
+  const columnsRef = useChildrenTracker();
 
   // selection
   const selectionController = useTableSelectionController({
@@ -268,13 +268,13 @@ export const Table = forwardRef((props, ref) => {
             <TableSelectionProvider value={selectionContextValue}>
               <TableDragProvider value={dragContextValue}>
                 <TableStickyProvider value={stickyContextValue}>
-                  <ColumnsRefContext.Provider value={columnsRef}>
+                  <ChildrenContext.Provider value={columnsRef}>
                     <RowIndexContext.Provider value={tableRowIndexRef}>
                       <RowsRefContext.Provider value={rowsRef}>
                         {children}
                       </RowsRefContext.Provider>
                     </RowIndexContext.Provider>
-                  </ColumnsRefContext.Provider>
+                  </ChildrenContext.Provider>
                 </TableStickyProvider>
               </TableDragProvider>
             </TableSelectionProvider>
@@ -286,8 +286,7 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 export const Colgroup = ({ children }) => {
-  const columns = useColumns();
-  const ColumnTrackerProvider = useChildTrackerProvider(columns);
+  const ColumnTrackerProvider = useChildTrackerProvider();
 
   return (
     <colgroup>

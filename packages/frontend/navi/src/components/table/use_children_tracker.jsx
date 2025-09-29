@@ -1,10 +1,27 @@
 import { createContext } from "preact";
 import { useContext, useMemo, useRef } from "preact/hooks";
 
+export const useChildrenTracker = () => {
+  const childrenRef = useRef([]);
+  const children = childrenRef.current;
+  children.length = 0;
+  return childrenRef;
+};
+const ChildrenContext = createContext();
+export const useChildrenProvider = (childrenRef) => {
+  return useMemo(() => {
+    const ChildrenProvider = ({ children }) => (
+      <ChildrenContext.Provider value={childrenRef}>
+        {children}
+      </ChildrenContext.Provider>
+    );
+    return ChildrenProvider;
+  }, []);
+};
+
 const ParentRenderIdContext = createContext();
 const ChildIndexCountRefContext = createContext();
-const ChildArrayContext = createContext();
-export const useChildTrackerProvider = (childArray) => {
+export const useChildTrackerProvider = () => {
   const childIndexCountRef = useRef();
   const renderIdRef = useRef();
 
@@ -17,9 +34,7 @@ export const useChildTrackerProvider = (childArray) => {
     const ChildTrackerProvider = ({ children }) => (
       <ParentRenderIdContext.Provider value={renderId}>
         <ChildIndexCountRefContext.Provider value={childIndexCountRef}>
-          <ChildArrayContext.Provider value={childArray}>
-            {children}
-          </ChildArrayContext.Provider>
+          {children}
         </ChildIndexCountRefContext.Provider>
       </ParentRenderIdContext.Provider>
     );
@@ -32,7 +47,7 @@ export const useChildTrackerProvider = (childArray) => {
  * @returns {number} The child's index in the parent's children array
  */
 export const useTrackChild = (childData) => {
-  const childArray = useContext(ChildArrayContext);
+  const children = useContext(ChildrenContext);
   const childIndexCountRef = useContext(ChildIndexCountRefContext);
   const parentRenderId = useContext(ParentRenderIdContext);
   const parentRenderIdRef = useRef();
@@ -41,7 +56,7 @@ export const useTrackChild = (childData) => {
 
   if (prevParentRenderId === parentRenderId) {
     const childIndex = childIndexRef.current;
-    childArray[childIndex] = childData;
+    children[childIndex] = childData;
     return childIndex;
   }
   const childIndexCount = childIndexCountRef.current;
@@ -49,12 +64,12 @@ export const useTrackChild = (childData) => {
   childIndexCountRef.current = childIndex + 1;
   parentRenderIdRef.current = parentRenderId;
   childIndexRef.current = childIndex;
-  childArray[childIndex] = childData;
+  children[childIndex] = childData;
   return childIndex;
 };
 
 export const useTrackedChild = (childIndex) => {
-  const childArrayRef = useContext(ChildArrayContext);
-  const childArray = childArrayRef.current;
-  return childArray[childIndex];
+  const children = useContext(ChildrenContext);
+  const childData = children[childIndex];
+  return childData;
 };
