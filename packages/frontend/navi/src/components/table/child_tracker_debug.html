@@ -108,7 +108,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useState, useEffect } from "preact/hooks";
       import { createChildTracker } from "./use_child_tracker.jsx";
 
       // Debug logging
@@ -174,8 +174,8 @@
         );
       };
 
-      // Global app state
-      let globalState = {
+      // Initial state
+      const initialState = {
         renderKey: 0,
         children: [
           { id: "a", name: "First", color: "red" },
@@ -183,12 +183,9 @@
         ],
       };
 
-      let setGlobalState;
-
       // eslint-disable-next-line no-unused-vars
       const AppWrapper = () => {
-        const [state, setState] = useState(globalState);
-        setGlobalState = setState;
+        const [state, setState] = useState(initialState);
 
         // eslint-disable-next-line no-unused-vars
         const ColumnsTrackerProvider = useChildTrackerProvider();
@@ -196,6 +193,83 @@
         const TrackChildProvider = useTrackChildProvider();
 
         log(`🎬 App render ${state.renderKey}`);
+
+        // Setup event handlers once
+        useEffect(() => {
+          const handleRerender = () => {
+            log("🔄 Manual parent re-render triggered");
+            setState((prev) => ({ ...prev, renderKey: prev.renderKey + 1 }));
+          };
+
+          const handleAddChild = () => {
+            setState((prev) => {
+              const newId = String.fromCharCode(97 + prev.children.length);
+              const newChild = {
+                id: newId,
+                name: `Child ${newId.toUpperCase()}`,
+                color: ["green", "purple", "orange", "pink"][
+                  prev.children.length % 4
+                ],
+              };
+              log(`➕ Added child: ${JSON.stringify(newChild)}`);
+              return {
+                ...prev,
+                children: [...prev.children, newChild],
+              };
+            });
+          };
+
+          const handleRemoveChild = () => {
+            setState((prev) => {
+              if (prev.children.length > 0) {
+                const removed = prev.children[prev.children.length - 1];
+                log(`➖ Removed child: ${JSON.stringify(removed)}`);
+                return {
+                  ...prev,
+                  children: prev.children.slice(0, -1),
+                };
+              }
+              return prev;
+            });
+          };
+
+          const handleUpdateChild = () => {
+            const index = parseInt(
+              document.getElementById("child-index").value,
+            );
+            const newValue = document.getElementById("child-value").value;
+
+            setState((prev) => {
+              if (index >= 0 && index < prev.children.length) {
+                const updatedChildren = [...prev.children];
+                updatedChildren[index] = {
+                  ...updatedChildren[index],
+                  name: newValue,
+                };
+                log(`🔄 Updated child ${index} name to: ${newValue}`);
+                return { ...prev, children: updatedChildren };
+              }
+              log(
+                `❌ Invalid index ${index} (max: ${prev.children.length - 1})`,
+              );
+              return prev;
+            });
+          };
+
+          // Attach event listeners
+          document.getElementById("rerender-parent").onclick = handleRerender;
+          document.getElementById("add-child").onclick = handleAddChild;
+          document.getElementById("remove-child").onclick = handleRemoveChild;
+          document.getElementById("update-child").onclick = handleUpdateChild;
+
+          // Cleanup
+          return () => {
+            document.getElementById("rerender-parent").onclick = null;
+            document.getElementById("add-child").onclick = null;
+            document.getElementById("remove-child").onclick = null;
+            document.getElementById("update-child").onclick = null;
+          };
+        }, []);
 
         return (
           <div>
@@ -229,61 +303,7 @@
         );
       };
 
-      // Event handlers
-      document.getElementById("rerender-parent").onclick = () => {
-        log("🔄 Manual parent re-render triggered");
-        globalState = { ...globalState, renderKey: globalState.renderKey + 1 };
-        setGlobalState(globalState);
-      };
-
-      document.getElementById("add-child").onclick = () => {
-        const newId = String.fromCharCode(97 + globalState.children.length);
-        const newChild = {
-          id: newId,
-          name: `Child ${newId.toUpperCase()}`,
-          color: ["green", "purple", "orange", "pink"][
-            globalState.children.length % 4
-          ],
-        };
-        globalState = {
-          ...globalState,
-          children: [...globalState.children, newChild],
-        };
-        setGlobalState(globalState);
-        log(`➕ Added child: ${JSON.stringify(newChild)}`);
-      };
-
-      document.getElementById("remove-child").onclick = () => {
-        if (globalState.children.length > 0) {
-          const removed = globalState.children[globalState.children.length - 1];
-          globalState = {
-            ...globalState,
-            children: globalState.children.slice(0, -1),
-          };
-          setGlobalState(globalState);
-          log(`➖ Removed child: ${JSON.stringify(removed)}`);
-        }
-      };
-
-      document.getElementById("update-child").onclick = () => {
-        const index = parseInt(document.getElementById("child-index").value);
-        const newValue = document.getElementById("child-value").value;
-
-        if (index >= 0 && index < globalState.children.length) {
-          const updatedChildren = [...globalState.children];
-          updatedChildren[index] = {
-            ...updatedChildren[index],
-            name: newValue,
-          };
-          globalState = { ...globalState, children: updatedChildren };
-          setGlobalState(globalState);
-          log(`🔄 Updated child ${index} name to: ${newValue}`);
-        } else {
-          log(
-            `❌ Invalid index ${index} (max: ${globalState.children.length - 1})`,
-          );
-        }
-      };
+      // Event handlers are now managed within React components
 
       // Initial render
       render(<AppWrapper />, document.getElementById("app"));
