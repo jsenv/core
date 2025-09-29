@@ -6,6 +6,14 @@ import {
   useTrackedItems,
 } from "./use_item_tracker.jsx";
 
+// Initial state
+const initialState = {
+  renderKey: 0,
+  items: [
+    { id: "a", name: "First", color: "red" },
+    { id: "b", name: "Second", color: "blue" },
+  ],
+};
 export const App = () => {
   const [state, setState] = useState(initialState);
 
@@ -102,32 +110,24 @@ const Producer = ({ state, ItemProducerProvider }) => {
 };
 
 const Consumer = ({ ItemConsumerProvider }) => {
-  <ItemConsumerProvider>
-    <div className="section">
-      <h3>Item Consumers</h3>
-      <ItemConsumer itemIndex={0} />
-      <ItemConsumer itemIndex={1} />
-      <ItemConsumer itemIndex={2} />
-      <ItemConsumer itemIndex={3} />
-    </div>
+  return (
+    <ItemConsumerProvider>
+      <div className="section">
+        <h3>Item Consumers</h3>
+        <ItemConsumer itemIndex={0} />
+        <ItemConsumer itemIndex={1} />
+        <ItemConsumer itemIndex={2} />
+        <ItemConsumer itemIndex={3} />
+      </div>
 
-    <div className="section">
-      <ValuesDisplay />
-    </div>
-  </ItemConsumerProvider>;
-};
-
-// Debug logging
-const log = (message) => {
-  const timestamp = new Date().toLocaleTimeString();
-  const logElement = document.getElementById("logs");
-  logElement.textContent += `[${timestamp}] ${message}\n`;
-  logElement.scrollTop = logElement.scrollHeight;
-  console.log(message);
+      <div className="section">
+        <ValuesDisplay />
+      </div>
+    </ItemConsumerProvider>
+  );
 };
 
 // Item data display with controls
-
 const ItemData = ({ item, index, onUpdate, onRemove, onAddAfter }) => {
   const colors = ["red", "blue", "green", "purple", "orange", "pink"];
 
@@ -185,24 +185,13 @@ const ItemConsumer = ({ itemIndex }) => {
   );
 };
 
-// Initial state
-const initialState = {
-  renderKey: 0,
-  items: [
-    { id: "a", name: "First", color: "red" },
-    { id: "b", name: "Second", color: "blue" },
-  ],
-};
-
 // Hidden item that only tracks data, doesn't render anything visible
-
 const HiddenItem = ({ id, name, color }) => {
   useTrackItem({ id, name, color });
   return null; // Render nothing
 };
 
 // Values display
-
 const ValuesDisplay = () => {
   const items = useTrackedItems();
   return (
@@ -217,4 +206,13 @@ const ValuesDisplay = () => {
       <pre>{JSON.stringify(items, null, 2)}</pre>
     </div>
   );
+};
+
+// Debug logging
+const log = (message) => {
+  const timestamp = new Date().toLocaleTimeString();
+  const logElement = document.getElementById("logs");
+  logElement.textContent += `[${timestamp}] ${message}\n`;
+  logElement.scrollTop = logElement.scrollHeight;
+  console.log(message);
 };
