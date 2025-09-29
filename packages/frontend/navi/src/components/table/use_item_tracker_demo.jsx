@@ -163,7 +163,7 @@ const ItemData = ({ item, index, onUpdate, onRemove, onAddAfter }) => {
 const ItemConsumer = ({ itemIndex }) => {
   const [renderKey, setRenderKey] = useState(0);
   const itemData = useTrackedItem(itemIndex);
-  log(`👁️ Consumer ${itemIndex} render #${renderKey}`);
+  log(`👁️ Consumer ${itemIndex} render, ${itemData?.color}`);
 
   return (
     <div className="item-consumer">

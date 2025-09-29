@@ -58,7 +58,7 @@ export const useItemTracker = () => {
     // Consumer provider - uses state, causes re-renders only for this subtree
     const ItemConsumerProvider = ({ children }) => {
       // Move the state here so it only affects this subtree
-      const [consumerItems, setConsumerItems] = useState([]);
+      const [consumerItems, setConsumerItems] = useState(itemsRef.current);
 
       // Flush to consumer state after render
       useLayoutEffect(() => {
