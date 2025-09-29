@@ -75,9 +75,9 @@ export const App = () => {
       </div>
 
       <div className="section">
-        <h3>Item Data Controls</h3>
+        <h3>App Data Controls (affects both producer & consumer)</h3>
         {state.items.map((item, index) => (
-          <ItemData
+          <AppDataControls
             key={`${item.id}-${state.renderKey}`}
             item={item}
             index={index}
@@ -97,14 +97,17 @@ export const App = () => {
 const Producer = ({ state, ItemProducerProvider }) => {
   return (
     <ItemProducerProvider>
-      {state.items.map((item) => (
-        <HiddenItem
-          key={`${item.id}-${state.renderKey}`}
-          id={item.id}
-          name={item.name}
-          color={item.color}
-        />
-      ))}
+      <div className="section">
+        <h3>Producer Items (with local overrides)</h3>
+        {state.items.map((item) => (
+          <ProducerItem
+            key={`${item.id}-${state.renderKey}`}
+            id={item.id}
+            name={item.name}
+            color={item.color}
+          />
+        ))}
+      </div>
     </ItemProducerProvider>
   );
 };
@@ -127,14 +130,69 @@ const Consumer = ({ ItemConsumerProvider }) => {
   );
 };
 
-// Item data display with controls
-const ItemData = ({ item, index, onUpdate, onRemove, onAddAfter }) => {
+// Producer item with local state for testing overrides
+const ProducerItem = ({ id, name, color: initialColor }) => {
+  const [localColor, setLocalColor] = useState(initialColor);
+  const [renderKey, setRenderKey] = useState(0);
+  const colors = ["red", "blue", "green", "purple", "orange", "pink"];
+
+  // Track the item with current local state
+  const itemIndex = useTrackItem({ id, name, color: localColor });
+
+  return (
+    <div className="item-data">
+      <div className="item-info">
+        <strong>Producer Item {itemIndex}:</strong> id={id}, name={name}, color=
+        {localColor}
+        <small> (render #{renderKey})</small>
+      </div>
+      <div className="item-controls">
+        <select
+          value={localColor}
+          onChange={(e) => {
+            log(
+              `🎨 Producer override: ${id} color changed to ${e.target.value}`,
+            );
+            setLocalColor(e.target.value);
+          }}
+        >
+          {colors.map((color) => (
+            <option key={color} value={color}>
+              {color}
+            </option>
+          ))}
+        </select>
+        <button
+          className="rerender"
+          onClick={() => {
+            log(`🔄 Re-rendering producer item ${id}`);
+            setRenderKey((prev) => prev + 1);
+          }}
+        >
+          Re-render Producer
+        </button>
+        <button
+          onClick={() => {
+            log(`🔄 Reset producer item ${id} to original color`);
+            setLocalColor(initialColor);
+          }}
+        >
+          Reset Color
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// App data controls that affect the global state
+const AppDataControls = ({ item, index, onUpdate, onRemove, onAddAfter }) => {
   const colors = ["red", "blue", "green", "purple", "orange", "pink"];
 
   return (
     <div className="item-data">
       <div className="item-info">
-        <strong>Item {index}:</strong> id={item.id}, name={item.name}, color=
+        <strong>App Data {index}:</strong> id={item.id}, name={item.name},
+        color=
         {item.color}
       </div>
       <div className="item-controls">
@@ -183,12 +241,6 @@ const ItemConsumer = ({ itemIndex }) => {
       </button>
     </div>
   );
-};
-
-// Hidden item that only tracks data, doesn't render anything visible
-const HiddenItem = ({ id, name, color }) => {
-  useTrackItem({ id, name, color });
-  return null; // Render nothing
 };
 
 // Values display

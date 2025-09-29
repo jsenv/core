@@ -32,7 +32,7 @@ export const useItemTracker = () => {
     const registerItem = (index, value) => {
       const hasValue = index in items;
       if (hasValue) {
-        const currentValue = items.current[index];
+        const currentValue = items[index];
         if (compareTwoJsValues(currentValue, value)) {
           return;
         }
