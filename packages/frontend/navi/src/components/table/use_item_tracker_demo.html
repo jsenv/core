@@ -110,6 +110,7 @@
       import { render } from "preact";
       import { useState, useEffect } from "preact/hooks";
       import {
+        // eslint-disable-next-line no-unused-vars
         ItemTrackerProvider,
         useItemTracker,
         useTrackItem,
@@ -183,7 +184,6 @@
       const AppWrapper = () => {
         const [state, setState] = useState(initialState);
 
-        // eslint-disable-next-line no-unused-vars
         const itemTracker = useItemTracker();
 
         log(`🎬 App render ${state.renderKey}`);
