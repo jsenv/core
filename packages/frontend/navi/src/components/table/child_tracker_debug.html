@@ -106,9 +106,10 @@
       <div id="app"></div>
     </div>
 
-    <script type="module">
-      import { createElement as h, render, createContext } from "preact";
-      import { useState, useRef, useContext, useMemo } from "preact/hooks";
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { createChildTracker } from "./use_child_tracker.jsx";
 
       // Debug logging
       const log = (message) => {
@@ -117,152 +118,6 @@
         logElement.textContent += `[${timestamp}] ${message}\n`;
         logElement.scrollTop = logElement.scrollHeight;
         console.log(message);
-      };
-
-      // Child tracker implementation
-      const createChildTracker = () => {
-        const ChildTrackerValuesContext = createContext();
-        const ChildTrackerContext = createContext();
-
-        const useChildTrackerProvider = () => {
-          log("🔄 useChildTrackerProvider called");
-          const [values, setValues] = useState([]);
-
-          const childTracker = useMemo(() => {
-            const setValue = (index, value) => {
-              log(`📝 setValue(${index}, ${JSON.stringify(value)})`);
-              setValues((prev) => {
-                const newChildren = [...prev];
-                newChildren[index] = value;
-                log(`📊 Updated values: ${JSON.stringify(newChildren)}`);
-                return newChildren;
-              });
-            };
-
-            const reset = () => {
-              log("🔄 Resetting values");
-              setValues([]);
-            };
-
-            return { setValue, reset };
-          }, []);
-
-          const ChildTrackerProvider = useMemo(() => {
-            const ChildTrackerProvider = ({ children }) => {
-              log(
-                `🏠 ChildTrackerProvider render, values: ${JSON.stringify(values)}`,
-              );
-              return h(
-                ChildTrackerValuesContext.Provider,
-                { value: values },
-                h(
-                  ChildTrackerContext.Provider,
-                  { value: childTracker },
-                  children,
-                ),
-              );
-            };
-            return ChildTrackerProvider;
-          }, [values, childTracker]);
-
-          ChildTrackerProvider.values = values;
-          return ChildTrackerProvider;
-        };
-
-        const useValues = () => {
-          const values = useContext(ChildTrackerValuesContext);
-          log(`📖 useValues called, got: ${JSON.stringify(values)}`);
-          return values || [];
-        };
-
-        const ParentRenderIdContext = createContext();
-        const ChildCountRefContext = createContext();
-
-        const useTrackChildProvider = () => {
-          const childTracker = useContext(ChildTrackerContext);
-          const childCountRef = useRef();
-
-          childCountRef.current = 0;
-          const renderId = {};
-
-          log("🔄 useTrackChildProvider: resetting child tracker");
-          if (childTracker) {
-            childTracker.reset();
-          }
-
-          return useMemo(() => {
-            const TrackChildProvider = ({ children }) => {
-              log("🎯 TrackChildProvider render");
-              return h(
-                ParentRenderIdContext.Provider,
-                { value: renderId },
-                h(
-                  ChildCountRefContext.Provider,
-                  { value: childCountRef },
-                  children,
-                ),
-              );
-            };
-            return TrackChildProvider;
-          }, [renderId]);
-        };
-
-        const useTrackChild = (childData) => {
-          const childTracker = useContext(ChildTrackerContext);
-          const childCountRef = useContext(ChildCountRefContext);
-          const parentRenderId = useContext(ParentRenderIdContext);
-          const parentRenderIdRef = useRef();
-          const childIndexRef = useRef();
-          const childDataRef = useRef();
-          const prevParentRenderId = parentRenderIdRef.current;
-
-          log(`🧩 useTrackChild called with: ${JSON.stringify(childData)}`);
-
-          if (prevParentRenderId === parentRenderId) {
-            const childIndex = childIndexRef.current;
-            log(`♻️ Same render cycle, reusing index ${childIndex}`);
-
-            // Check if data changed
-            if (
-              JSON.stringify(childDataRef.current) !== JSON.stringify(childData)
-            ) {
-              log(`📝 Data changed for index ${childIndex}, updating`);
-              if (childTracker) {
-                childTracker.setValue(childIndex, childData);
-              }
-              childDataRef.current = childData;
-            }
-            return childIndex;
-          }
-
-          const childCount = childCountRef.current || 0;
-          const childIndex = childCount;
-          childCountRef.current = childIndex + 1;
-          parentRenderIdRef.current = parentRenderId;
-          childIndexRef.current = childIndex;
-          childDataRef.current = childData;
-
-          log(`🆕 New render cycle, assigning index ${childIndex}`);
-          if (childTracker) {
-            childTracker.setValue(childIndex, childData);
-          }
-          return childIndex;
-        };
-
-        const useTrackedChild = (childIndex) => {
-          const values = useValues();
-          const value = values[childIndex];
-          log(`🔍 useTrackedChild(${childIndex}) = ${JSON.stringify(value)}`);
-          return value;
-        };
-
-        return {
-          useValues,
-          useChildTrackerProvider,
-          useTrackChildProvider,
-          useTrackChild,
-          useTrackedChild,
-        };
       };
 
       // Create tracker instance
@@ -278,39 +133,41 @@
       const Child = ({ id, name, color }) => {
         const childIndex = useTrackChild({ id, name, color });
 
-        return h(
-          "div",
-          { className: "child-item" },
-          h("strong", null, `Child ${childIndex}: `),
-          h("span", null, `id=${id}, name=${name}, color=${color}`),
+        return (
+          <div className="child-item">
+            <strong>Child {childIndex}: </strong>
+            <span>
+              id={id}, name={name}, color={color}
+            </span>
+          </div>
         );
       };
 
       const ChildConsumer = ({ childIndex }) => {
         const childData = useTrackedChild(childIndex);
 
-        return h(
-          "div",
-          { className: "child-consumer" },
-          h("strong", null, `Consumer for index ${childIndex}: `),
-          h("span", null, childData ? JSON.stringify(childData) : "undefined"),
+        return (
+          <div className="child-consumer">
+            <strong>Consumer for index {childIndex}: </strong>
+            <span>{childData ? JSON.stringify(childData) : "undefined"}</span>
+          </div>
         );
       };
 
       const ValuesDisplay = () => {
         const values = useValues();
 
-        return h(
-          "div",
-          {
-            style: {
+        return (
+          <div
+            style={{
               background: "#fff3e0",
               padding: "10px",
               borderRadius: "4px",
-            },
-          },
-          h("strong", null, "All Values: "),
-          h("pre", null, JSON.stringify(values, null, 2)),
+            }}
+          >
+            <strong>All Values: </strong>
+            <pre>{JSON.stringify(values, null, 2)}</pre>
+          </div>
         );
       };
 
@@ -334,45 +191,35 @@
 
         log(`🎬 App render ${state.renderKey}`);
 
-        return h(
-          "div",
-          null,
-          h(
-            "div",
-            { style: { marginBottom: "20px" } },
-            h("strong", null, `Render #${state.renderKey}`),
-          ),
+        return (
+          <div>
+            <div style={{ marginBottom: "20px" }}>
+              <strong>Render #{state.renderKey}</strong>
+            </div>
 
-          h(
-            ColumnsTrackerProvider,
-            null,
-            h(
-              TrackChildProvider,
-              null,
-              h(ValuesDisplay),
-              h(
-                "div",
-                { style: { margin: "20px 0" } },
-                h("h3", null, "Children:"),
-                ...state.children.map((child) =>
-                  h(Child, {
-                    key: `${child.id}-${state.renderKey}`,
-                    id: child.id,
-                    name: child.name,
-                    color: child.color,
-                  }),
-                ),
-              ),
-              h(
-                "div",
-                { style: { margin: "20px 0" } },
-                h("h3", null, "Consumers:"),
-                h(ChildConsumer, { childIndex: 0 }),
-                h(ChildConsumer, { childIndex: 1 }),
-                h(ChildConsumer, { childIndex: 2 }),
-              ),
-            ),
-          ),
+            <ColumnsTrackerProvider>
+              <TrackChildProvider>
+                <ValuesDisplay />
+                <div style={{ margin: "20px 0" }}>
+                  <h3>Children:</h3>
+                  {state.children.map((child) => (
+                    <Child
+                      key={`${child.id}-${state.renderKey}`}
+                      id={child.id}
+                      name={child.name}
+                      color={child.color}
+                    />
+                  ))}
+                </div>
+                <div style={{ margin: "20px 0" }}>
+                  <h3>Consumers:</h3>
+                  <ChildConsumer childIndex={0} />
+                  <ChildConsumer childIndex={1} />
+                  <ChildConsumer childIndex={2} />
+                </div>
+              </TrackChildProvider>
+            </ColumnsTrackerProvider>
+          </div>
         );
       };
 
@@ -433,7 +280,7 @@
       };
 
       // Initial render
-      render(h(AppWrapper), document.getElementById("app"));
+      render(<AppWrapper />, document.getElementById("app"));
       log("🚀 App initialized");
     </script>
   </body>
