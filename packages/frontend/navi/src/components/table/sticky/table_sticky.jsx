@@ -476,8 +476,9 @@ const initMoveStickyFrontierByMousedown = (
   const ghostElement = tableContainer.querySelector(ghostSelector);
   const previewElement = tableContainer.querySelector(previewSelector);
 
+  const scrollableParent = getScrollableParent(table);
   // Reset scroll to prevent starting drag in obstacle position
-  getScrollableParent(table)[scrollProperty] = 0;
+  scrollableParent[scrollProperty] = 0;
 
   // Setup table dimensions for ghost/preview
   const tableRect = table.getBoundingClientRect();
