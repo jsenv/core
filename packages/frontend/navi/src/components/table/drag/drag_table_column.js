@@ -240,38 +240,38 @@ export const initDragTableColumnByMousedown = (
     // Get all column elements for drop target detection
 
     addDragEffect(() => {
-      // const draggedColumnRect = getVisualRect(colClone, tableRoot);
-      // const draggedColumnLeft = draggedColumnRect.left;
-
-      // Detect which column we're hovering over (similar to table_sticky.jsx logic)
+      // Detect drop target using ghost left/right edges for more intuitive dropping
       const ghostRect = colClone.getBoundingClientRect();
-      const ghostCenter = ghostRect.left + ghostRect.width / 2;
+      const ghostLeft = ghostRect.left;
+      const ghostRight = ghostRect.right;
+
+      let newDropTargetColumnIndex = dropTargetColumnIndex; // default to current target
+
       for (let i = 0; i < colElements.length; i++) {
         const colElement = colElements[i];
         const colElementRect = colElement.getBoundingClientRect();
         const colStart = colElementRect.left;
         const colEnd = colElementRect.right;
-
-        if (ghostCenter < colStart) {
-          continue;
-        }
-        if (ghostCenter > colEnd) {
-          continue;
-        }
-        // We are over this column, decide if we drop before or after based on center
         const colCenter = colStart + (colEnd - colStart) / 2;
-        if (ghostCenter < colCenter) {
-          onDropTargetColumnIndexChange(i - 1);
-        } else {
-          onDropTargetColumnIndexChange(i);
+
+        // Check if ghost left side is in the left half of this column
+        if (ghostLeft >= colStart && ghostLeft < colCenter) {
+          newDropTargetColumnIndex = i; // drop on this column
+          break;
         }
-        break;
+        // Check if ghost right side is in the right half of this column
+        if (ghostRight > colCenter && ghostRight <= colEnd) {
+          newDropTargetColumnIndex = i; // Drop after this column
+          break;
+        }
       }
+
+      onDropTargetColumnIndexChange(newDropTargetColumnIndex);
     });
 
     document.body.appendChild(dropPreview);
     addTeardown(() => {
-      // dropPreview.remove();
+      dropPreview.remove();
     });
   }
 
