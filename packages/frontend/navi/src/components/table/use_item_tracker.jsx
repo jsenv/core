@@ -1,4 +1,5 @@
 // https://github.com/reach/reach-ui/tree/b3d94d22811db6b5c0f272b9a7e2e3c1bb4699ae/packages/descendants
+// https://github.com/pacocoursey/use-descendants/tree/master
 
 import { createContext } from "preact";
 import { useContext, useMemo, useRef } from "preact/hooks";
