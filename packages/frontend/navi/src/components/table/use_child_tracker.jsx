@@ -28,18 +28,16 @@ export const createChildTracker = () => {
     const ChildTrackerProvider = useMemo(() => {
       const ChildTrackerProvider = ({ children }) => {
         return (
-          <ChildTrackerValuesContext.Provider value={values}>
-            <ChildTrackerContext.Provider value={childTracker}>
-              {children}
-            </ChildTrackerContext.Provider>
-          </ChildTrackerValuesContext.Provider>
+          <ChildTrackerContext.Provider value={childTracker}>
+            {children}
+          </ChildTrackerContext.Provider>
         );
       };
       return ChildTrackerProvider;
-    }, [values]);
+    }, []);
     ChildTrackerProvider.values = values;
 
-    return ChildTrackerProvider;
+    return [values, ChildTrackerProvider];
   };
 
   const useValues = () => {
@@ -108,6 +106,7 @@ export const createChildTracker = () => {
   };
 
   return {
+    ChildTrackerValuesContext,
     useValues,
     useChildTrackerProvider,
     useTrackChildProvider,

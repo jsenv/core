@@ -127,6 +127,9 @@
         useTrackChildProvider,
         useTrackChild,
         useTrackedChild,
+
+        // eslint-disable-next-line no-unused-vars
+        ChildTrackerValuesContext,
       } = createChildTracker();
 
       // Demo components
@@ -188,7 +191,7 @@
         const [state, setState] = useState(initialState);
 
         // eslint-disable-next-line no-unused-vars
-        const ChildTrackerProvider = useChildTrackerProvider();
+        const [values, ChildTrackerProvider] = useChildTrackerProvider();
 
         log(`🎬 App render ${state.renderKey}`);
 
@@ -276,20 +279,20 @@
             </div>
 
             <ChildTrackerProvider>
-              <Intermediate state={state} />
+              <ChildRenderer state={state} />
+              <Intermediate state={state} values={values} />
             </ChildTrackerProvider>
           </div>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
-      const Intermediate = ({ state }) => {
+      const ChildRenderer = ({ state }) => {
         // eslint-disable-next-line no-unused-vars
         const TrackChildProvider = useTrackChildProvider();
 
         return (
           <TrackChildProvider>
-            <ValuesDisplay />
             <div style={{ margin: "20px 0" }}>
               <h3>Children:</h3>
               {state.children.map((child) => (
@@ -301,13 +304,22 @@
                 />
               ))}
             </div>
+          </TrackChildProvider>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Intermediate = ({ state, values }) => {
+        return (
+          <ChildTrackerValuesContext.Provider value={values}>
+            <ValuesDisplay />
             <div style={{ margin: "20px 0" }}>
               <h3>Consumers:</h3>
               <ChildConsumer childIndex={0} />
               <ChildConsumer childIndex={1} />
               <ChildConsumer childIndex={2} />
             </div>
-          </TrackChildProvider>
+          </ChildTrackerValuesContext.Provider>
         );
       };
 
