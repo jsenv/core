@@ -81,23 +81,40 @@ export const App = () => {
       </div>
 
       <Producer state={state} ItemProducerProvider={ItemProducerProvider} />
-
-      {/* Consumer side - uses state, re-renders when needed */}
-      <ItemConsumerProvider>
-        <div className="section">
-          <h3>Item Consumers</h3>
-          <ItemConsumer itemIndex={0} />
-          <ItemConsumer itemIndex={1} />
-          <ItemConsumer itemIndex={2} />
-          <ItemConsumer itemIndex={3} />
-        </div>
-
-        <div className="section">
-          <ValuesDisplay />
-        </div>
-      </ItemConsumerProvider>
+      <Consumer ItemConsumerProvider={ItemConsumerProvider} />
     </div>
   );
+};
+
+const Producer = ({ state, ItemProducerProvider }) => {
+  return (
+    <ItemProducerProvider>
+      {state.items.map((item) => (
+        <HiddenItem
+          key={`${item.id}-${state.renderKey}`}
+          id={item.id}
+          name={item.name}
+          color={item.color}
+        />
+      ))}
+    </ItemProducerProvider>
+  );
+};
+
+const Consumer = ({ ItemConsumerProvider }) => {
+  <ItemConsumerProvider>
+    <div className="section">
+      <h3>Item Consumers</h3>
+      <ItemConsumer itemIndex={0} />
+      <ItemConsumer itemIndex={1} />
+      <ItemConsumer itemIndex={2} />
+      <ItemConsumer itemIndex={3} />
+    </div>
+
+    <div className="section">
+      <ValuesDisplay />
+    </div>
+  </ItemConsumerProvider>;
 };
 
 // Debug logging
@@ -175,25 +192,6 @@ const initialState = {
     { id: "a", name: "First", color: "red" },
     { id: "b", name: "Second", color: "blue" },
   ],
-};
-
-const Producer = ({
-  state,
-
-  ItemProducerProvider,
-}) => {
-  return (
-    <ItemProducerProvider>
-      {state.items.map((item) => (
-        <HiddenItem
-          key={`${item.id}-${state.renderKey}`}
-          id={item.id}
-          name={item.name}
-          color={item.color}
-        />
-      ))}
-    </ItemProducerProvider>
-  );
 };
 
 // Hidden item that only tracks data, doesn't render anything visible
