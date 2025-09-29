@@ -181,6 +181,7 @@
       const ItemConsumer = ({ itemIndex }) => {
         const [renderKey, setRenderKey] = useState(0);
         const itemData = useTrackedItem(itemIndex);
+        log(`👁️ Consumer ${itemIndex} render #${renderKey}`);
 
         return (
           <div className="item-consumer">
