@@ -130,6 +130,7 @@
       } = createChildTracker();
 
       // Demo components
+      // eslint-disable-next-line no-unused-vars
       const Child = ({ id, name, color }) => {
         const childIndex = useTrackChild({ id, name, color });
 
@@ -143,6 +144,7 @@
         );
       };
 
+      // eslint-disable-next-line no-unused-vars
       const ChildConsumer = ({ childIndex }) => {
         const childData = useTrackedChild(childIndex);
 
@@ -154,6 +156,7 @@
         );
       };
 
+      // eslint-disable-next-line no-unused-vars
       const ValuesDisplay = () => {
         const values = useValues();
 
@@ -182,11 +185,14 @@
 
       let setGlobalState;
 
+      // eslint-disable-next-line no-unused-vars
       const AppWrapper = () => {
         const [state, setState] = useState(globalState);
         setGlobalState = setState;
 
+        // eslint-disable-next-line no-unused-vars
         const ColumnsTrackerProvider = useChildTrackerProvider();
+        // eslint-disable-next-line no-unused-vars
         const TrackChildProvider = useTrackChildProvider();
 
         log(`🎬 App render ${state.renderKey}`);
