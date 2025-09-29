@@ -84,7 +84,7 @@ import {
 import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
-import { TableUIContainer } from "./table_ui.jsx";
+import { TableUI } from "./table_ui.jsx";
 
 const ColumnsRefContext = createContext();
 const useColumns = () => useContext(ColumnsRefContext).current;
@@ -276,7 +276,7 @@ export const Table = forwardRef((props, ref) => {
             </TableSelectionProvider>
           </TableResizeProvider>
         </table>
-        <TableUIContainer grabTarget={grabTarget} />
+        <TableUI grabTarget={grabTarget} />
       </div>
     </div>
   );

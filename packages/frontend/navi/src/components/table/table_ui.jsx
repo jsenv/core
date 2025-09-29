@@ -29,7 +29,7 @@ import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
  */
 
 import.meta.css = /* css */ `
-  .navi_table_ui_container {
+  .navi_table_ui {
     position: absolute;
     z-index: ${Z_INDEX_TABLE_UI_CONTAINER};
     user-select: none;
@@ -42,7 +42,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableUIContainer = ({ grabTarget }) => {
+export const TableUI = ({ grabTarget }) => {
   const ref = useRef();
 
   useLayoutEffect(() => {
@@ -68,7 +68,7 @@ export const TableUIContainer = ({ grabTarget }) => {
   }, []);
 
   return (
-    <div ref={ref} className="navi_table_ui_container">
+    <div ref={ref} className="navi_table_ui">
       <TableDragCloneContainer dragging={Boolean(grabTarget)} />
       <TableColumnResizer />
       <TableRowResizer />
