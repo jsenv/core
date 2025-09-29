@@ -16,6 +16,9 @@ import.meta.css = /* css */ `
     --focus-border-color: #0078d4;
 
     position: relative;
+    overflow: auto;
+    max-width: var(--table-max-width, none);
+    max-height: var(--table-max-height, none);
   }
 
   .navi_table {

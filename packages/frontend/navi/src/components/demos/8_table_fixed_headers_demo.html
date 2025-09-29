@@ -24,16 +24,6 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
 
-      /* Container with fixed size to force scrolling */
-      .table-container {
-        height: 400px;
-        width: 600px;
-        /* border: 2px solid yellow; */
-        overflow: auto;
-        /* overscroll-behavior: contain; */
-        /* margin: 20px 50px; */
-      }
-
       /* Status display */
       .status {
         margin-top: 20px;
@@ -223,6 +213,8 @@
                 stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
                 onStickyTopFrontierChange={setStickyTopFrontierRowIndex}
                 borderCollapse
+                maxHeight={400}
+                maxWidth={600}
               >
                 <Colgroup>
                   <RowNumberCol width={columnWidths[0]} />
@@ -417,7 +409,7 @@
       render(<FixedHeadersDemo />, document.getElementById("root"));
 
       setTimeout(() => {
-        document.querySelector(".table-container").scrollLeft = 1500;
+        document.querySelector(".navi_table_container").scrollLeft = 1500;
       }, 500);
 
       console.log("Fixed Headers Demo loaded with large dataset:");

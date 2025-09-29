@@ -136,6 +136,8 @@ export const Table = forwardRef((props, ref) => {
     onStickyLeftFrontierChange,
     stickyTopFrontierRowIndex = 0,
     onStickyTopFrontierChange,
+    maxWidth,
+    maxHeight,
     children,
   } = props;
 
@@ -245,7 +247,14 @@ export const Table = forwardRef((props, ref) => {
   };
 
   return (
-    <div ref={tableContainerRef} className="navi_table_container">
+    <div
+      ref={tableContainerRef}
+      className="navi_table_container"
+      style={{
+        "--table-max-width": maxWidth ? `${maxWidth}px` : undefined,
+        "--table-max-height": maxHeight ? `${maxHeight}px` : undefined,
+      }}
+    >
       <table
         ref={innerRef}
         className="navi_table"

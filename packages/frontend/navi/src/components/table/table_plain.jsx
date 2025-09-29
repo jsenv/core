@@ -8,7 +8,6 @@
 import { getCoreRowModel } from "@tanstack/table-core";
 import { forwardRef } from "preact/compat";
 import { useMemo } from "preact/hooks";
-import "./table.css" with { type: "css" };
 import { useTable } from "./use_table.js";
 
 export const TablePlain = forwardRef((props, ref) => {
