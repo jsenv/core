@@ -79,9 +79,7 @@ export const useItemTracker = () => {
     };
 
     return { getItem, setItem, flushToState, useTrackItemProvider };
-  }, []); // Remove trackedItems dependency!
-
-  // Attach trackedItems to the tracker without recreating it
+  }, []);
   itemTracker.trackedItems = trackedItems;
 
   return itemTracker;
