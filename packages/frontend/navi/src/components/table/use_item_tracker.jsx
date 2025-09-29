@@ -43,27 +43,27 @@
  *
  * return (
  *   <table>
- *     <ItemConsumerProvider>
- *       <colgroup>
- *         <ColumnElements /> // Uses tracked columns
- *       </colgroup>
- *     </ItemConsumerProvider>
  *     <ItemProducerProvider>
- *       <tbody>
- *         {rows.map(row => <TableRow row={row} />)} // Registers columns
- *       </tbody>
+ *       <colgroup>
+ *         <ColumnElements /> // Registers columns
+ *       </colgroup>
  *     </ItemProducerProvider>
+ *     <ItemConsumerProvider>
+ *       <tbody>
+ *         {rows.map(row => <TableRow row={row} />)} // Uses tracked columns
+ *       </tbody>
+ *     </ItemConsumerProvider>
  *   </table>
  * );
  *
- * function TableCell({ column }) {
+ * function ColumnElement({ column }) {
  *   const index = useTrackItem(column); // Registers column, returns index
- *   return <td>{column.content}</td>;
+ *   return <col width={column.width} />;
  * }
  *
- * function ColumnElements() {
- *   const columns = useTrackedItems(); // Gets all tracked columns reactively
- *   return columns.map(col => <col key={col.id} width={col.width} />);
+ * function TableCell({ columnIndex }) {
+ *   const column = useTrackedItem(columnIndex); // Gets tracked column reactively
+ *   return <td style={{ width: column.width }}>{column.content}</td>;
  * }
  * ```
  *
@@ -83,29 +83,22 @@ import {
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 
 // Producer contexts (ref-based, no re-renders)
-// These contexts use refs and mutable data to avoid triggering re-renders
-const ProducerTrackerContext = createContext(); // Main tracker object with registerItem, etc.
-const ProducerItemCountRefContext = createContext(); // Current item count for index assignment
-const ProducerListRenderIdContext = createContext(); // Render cycle detection (new object per render)
+const ProducerTrackerContext = createContext();
+const ProducerItemCountRefContext = createContext();
+const ProducerListRenderIdContext = createContext();
 
 // Consumer contexts (state-based, re-renders)
-// These contexts use state to provide reactivity to consumer components
-const ConsumerItemsContext = createContext(); // Array of tracked items (reactive state)
+const ConsumerItemsContext = createContext();
 
 export const useItemTracker = () => {
-  // Core storage: mutable array that doesn't trigger re-renders when modified
   const itemsRef = useRef([]);
   const items = itemsRef.current;
-
-  // Tracking refs for render cycle management
-  const itemCountRef = useRef(); // Assigns sequential indices to items
-  const pendingFlushRef = useRef(false); // Tracks if consumer state needs updating
-  const producerIsRenderingRef = useRef(false); // Prevents state updates during render
+  const itemCountRef = useRef();
+  const pendingFlushRef = useRef(false);
+  const producerIsRenderingRef = useRef(false);
 
   const itemTracker = useMemo(() => {
-    // Producer methods (ref-based)
     const registerItem = (index, value) => {
-      // Skip update if value hasn't changed (optimization)
       const hasValue = index in items;
       if (hasValue) {
         const currentValue = items[index];
@@ -114,17 +107,13 @@ export const useItemTracker = () => {
         }
       }
 
-      // Update the mutable items array (doesn't cause re-renders)
       items[index] = value;
 
       if (producerIsRenderingRef.current) {
-        // During render cycle: don't flush immediately
         // Consumer will sync after producer render completes
-        // (this is why consumer MUST render after producer in the tree)
         return;
       }
 
-      // Outside render cycle: mark for immediate flush to consumers
       pendingFlushRef.current = true;
     };
 
@@ -134,31 +123,29 @@ export const useItemTracker = () => {
 
     // Producer provider - uses refs, never causes re-renders in parent
     const ItemProducerProvider = ({ children }) => {
-      // Reset state for new render cycle
-      items.length = 0; // Clear previous items
-      itemCountRef.current = 0; // Reset item counter
-      pendingFlushRef.current = false; // Clear pending state
-      producerIsRenderingRef.current = true; // Mark as rendering
-      const listRenderId = {}; // New object = new render cycle
+      items.length = 0;
+      itemCountRef.current = 0;
+      pendingFlushRef.current = false;
+      producerIsRenderingRef.current = true;
+      const listRenderId = {};
 
-      // Mark rendering as complete after layout
       useLayoutEffect(() => {
         producerIsRenderingRef.current = false;
       });
 
       // CRITICAL: Sync consumer state on subsequent renders
-      // This handles the case where app re-renders (e.g., state change)
-      // and we need to update consumer state with newly registered items
+      // This handles cases where the app re-renders (e.g., parent state change)
+      // and we need to notify consumers that the producer has rebuilt its items.
+      // Without this, consumers would show stale data until manual interaction.
       const renderedOnce = useRef(false);
       useLayoutEffect(() => {
         if (!renderedOnce.current) {
           renderedOnce.current = true;
-          return; // Skip first render (initial state is correct)
+          return;
         }
-        // Force consumer sync after producer rebuilds items array
         pendingFlushRef.current = true;
         itemTracker.flushToConsumers();
-      }, [listRenderId]); // listRenderId changes every render
+      }, [listRenderId]);
 
       return (
         <ProducerItemCountRefContext.Provider value={itemCountRef}>
@@ -173,23 +160,18 @@ export const useItemTracker = () => {
 
     // Consumer provider - uses state, causes re-renders only for this subtree
     const ItemConsumerProvider = ({ children }) => {
-      // Initialize with current items state (after producer reset/rebuild)
-      // This captures the items array after ItemProducerProvider has reset it
       const [consumerItems, setConsumerItems] = useState(itemsRef.current);
 
-      // Flush pending changes from producer to consumer state
-      // Only updates when pendingFlushRef indicates changes are waiting
       const flushToConsumers = () => {
         if (!pendingFlushRef.current) {
-          return; // No pending changes
+          return;
         }
-        const itemsCopy = [...items]; // Create immutable copy for React state
-        pendingFlushRef.current = false; // Clear pending flag
-        setConsumerItems(itemsCopy); // Trigger re-render of consumer subtree
+        const itemsCopy = [...items];
+        pendingFlushRef.current = false;
+        setConsumerItems(itemsCopy);
       };
       itemTracker.flushToConsumers = flushToConsumers;
 
-      // Flush to consumer state after render
       useLayoutEffect(() => {
         flushToConsumers();
       });
@@ -218,25 +200,25 @@ export const useItemTracker = () => {
 
 // Hook for producers to register items (ref-based, no re-renders)
 export const useTrackItem = (data) => {
-  // Get producer context values
-  const listRenderId = useContext(ProducerListRenderIdContext); // Changes every render
-  const itemCountRef = useContext(ProducerItemCountRefContext); // Item counter
-  const itemTracker = useContext(ProducerTrackerContext); // Registration methods
-
-  // Per-component refs for tracking state
-  const listRenderIdRef = useRef(); // Previous render ID
-  const itemIndexRef = useRef(); // This item's assigned index
-  const dataRef = useRef(); // Previous data value
+  const listRenderId = useContext(ProducerListRenderIdContext);
+  const itemCountRef = useContext(ProducerItemCountRefContext);
+  const itemTracker = useContext(ProducerTrackerContext);
+  const listRenderIdRef = useRef();
+  const itemIndexRef = useRef();
+  const dataRef = useRef();
   const prevListRenderId = listRenderIdRef.current;
 
-  // Flush any pending changes from individual item updates
+  // CRITICAL: Handle individual item updates outside full render cycles
+  // This is essential for cases where only a single producer item re-renders
+  // (e.g., local state change in a column component) without the parent
+  // ItemProducerProvider re-rendering. Without this, consumer state would
+  // become stale until the next full app re-render.
   useLayoutEffect(() => {
     if (itemTracker.pendingFlushRef.current) {
       itemTracker.flushToConsumers();
     }
   });
 
-  // Same render cycle: update existing item
   if (prevListRenderId === listRenderId) {
     const itemIndex = itemIndexRef.current;
     itemTracker.registerItem(itemIndex, data);
