@@ -109,7 +109,12 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState, useEffect } from "preact/hooks";
-      import { createChildTracker } from "./use_child_tracker.jsx";
+      import {
+        useItemTracker,
+        useTrackItem,
+        useTrackedItem,
+        useTrackedItems,
+      } from "./use_item_tracker.jsx";
 
       // Debug logging
       const log = (message) => {
@@ -120,20 +125,10 @@
         console.log(message);
       };
 
-      // Create tracker instance
-      const {
-        useChildTrackerProvider,
-        useTrackChildProvider,
-        useTrackChild,
-        useTrackedChild,
-        // eslint-disable-next-line no-unused-vars
-        ChildTrackerValuesContext,
-      } = createChildTracker();
-
       // Demo components
       // eslint-disable-next-line no-unused-vars
       const Child = ({ id, name, color }) => {
-        const childIndex = useTrackChild({ id, name, color });
+        const childIndex = useTrackItem({ id, name, color });
 
         return (
           <div className="child-item">
@@ -146,8 +141,8 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const ChildConsumer = ({ childIndex, values }) => {
-        const childData = useTrackedChild(childIndex);
+      const ChildConsumer = ({ childIndex }) => {
+        const childData = useTrackedItem(childIndex);
 
         return (
           <div className="child-consumer">
@@ -158,7 +153,8 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const ValuesDisplay = ({ values }) => {
+      const ValuesDisplay = () => {
+        const items = useTrackedItems();
         return (
           <div
             style={{
@@ -168,7 +164,7 @@
             }}
           >
             <strong>All Values: </strong>
-            <pre>{JSON.stringify(values, null, 2)}</pre>
+            <pre>{JSON.stringify(items, null, 2)}</pre>
           </div>
         );
       };
@@ -186,9 +182,8 @@
       const AppWrapper = () => {
         const [state, setState] = useState(initialState);
 
-        const [values, setValues] = useState([]);
         // eslint-disable-next-line no-unused-vars
-        const ChildTrackerProvider = useChildTrackerProvider(values, setValues);
+        const itemTracker = useItemTracker();
 
         log(`🎬 App render ${state.renderKey}`);
 
@@ -277,20 +272,20 @@
 
             <ChildTrackerProvider>
               <ChildRenderer state={state} />
-              <Intermediate state={state} values={values} />
+              <Intermediate state={state} />
             </ChildTrackerProvider>
           </div>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
-      const ChildRenderer = ({ state }) => {
+      const ChildRenderer = ({ state, itemTracker }) => {
         log("Render all child");
         // eslint-disable-next-line no-unused-vars
-        const TrackChildProvider = useTrackChildProvider();
+        const TrackItemProvider = itemTracker.useTrackItemProvider();
 
         return (
-          <TrackChildProvider>
+          <TrackItemProvider>
             <div style={{ margin: "20px 0" }}>
               <h3>Children:</h3>
               {state.children.map((child) => (
@@ -302,21 +297,21 @@
                 />
               ))}
             </div>
-          </TrackChildProvider>
+          </TrackItemProvider>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
-      const Intermediate = ({ state, values }) => {
+      const Intermediate = ({ state }) => {
         log("render child values display and consumers");
         return (
           <>
-            <ValuesDisplay values={values} />
+            <ValuesDisplay />
             <div style={{ margin: "20px 0" }}>
               <h3>Consumers:</h3>
-              <ChildConsumer childIndex={0} values={values} />
-              <ChildConsumer childIndex={1} values={values} />
-              <ChildConsumer childIndex={2} values={values} />
+              <ChildConsumer childIndex={0} />
+              <ChildConsumer childIndex={1} />
+              <ChildConsumer childIndex={2} />
             </div>
           </>
         );
