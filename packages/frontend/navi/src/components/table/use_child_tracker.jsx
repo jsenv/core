@@ -48,13 +48,13 @@ export const createChildTracker = () => {
   };
 
   const ParentRenderIdContext = createContext();
-  const ChildIndexCountRefContext = createContext();
+  const ChildCountRefContext = createContext();
   const useTrackChildProvider = () => {
     const childTracker = useContext(ChildTrackerContext);
-    const childIndexCountRef = useRef();
+    const childCountRef = useRef();
     const renderIdRef = useRef();
 
-    childIndexCountRef.current = 0;
+    childCountRef.current = 0;
     renderIdRef.current = {};
     const renderId = {};
     renderIdRef.current = renderId;
@@ -64,9 +64,9 @@ export const createChildTracker = () => {
     return useMemo(() => {
       const TrackChildProvider = ({ children }) => (
         <ParentRenderIdContext.Provider value={renderId}>
-          <ChildIndexCountRefContext.Provider value={childIndexCountRef}>
+          <ChildCountRefContext.Provider value={childCountRef}>
             {children}
-          </ChildIndexCountRefContext.Provider>
+          </ChildCountRefContext.Provider>
         </ParentRenderIdContext.Provider>
       );
       return TrackChildProvider;
@@ -75,7 +75,7 @@ export const createChildTracker = () => {
 
   const useTrackChild = (childData) => {
     const childTracker = useContext(ChildTrackerContext);
-    const childIndexCountRef = useContext(ChildIndexCountRefContext);
+    const childCountRef = useContext(ChildCountRefContext);
     const parentRenderId = useContext(ParentRenderIdContext);
     const parentRenderIdRef = useRef();
     const childIndexRef = useRef();
@@ -91,9 +91,9 @@ export const createChildTracker = () => {
       childDataRef.current = childData;
       return childIndex;
     }
-    const childIndexCount = childIndexCountRef.current;
-    const childIndex = childIndexCount;
-    childIndexCountRef.current = childIndex + 1;
+    const childCount = childCountRef.current;
+    const childIndex = childCount;
+    childCountRef.current = childIndex + 1;
     parentRenderIdRef.current = parentRenderId;
     childIndexRef.current = childIndex;
     childDataRef.current = childData;
