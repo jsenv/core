@@ -201,14 +201,18 @@ export const initDragTableColumnByMousedown = (
       ".navi_table_column_drop_preview_ui",
     );
 
-    const tableRect = getRelativeRect(table, document.body);
-    dropPreview.style.setProperty("--table-left", `${tableRect.left}px`);
-    dropPreview.style.setProperty("--table-top", `${tableRect.top}px`);
-    dropPreview.style.setProperty("--table-width", `${tableRect.width}px`);
-    dropPreview.style.setProperty("--table-height", `${tableRect.height}px`);
+    const tableRoot = table.closest(".navi_table_root");
+    const tableRootRect = getRelativeRect(tableRoot, document.body);
+    dropPreview.style.setProperty("--table-left", `${tableRootRect.left}px`);
+    dropPreview.style.setProperty("--table-top", `${tableRootRect.top}px`);
+    dropPreview.style.setProperty("--table-width", `${tableRootRect.width}px`);
+    dropPreview.style.setProperty(
+      "--table-height",
+      `${tableRootRect.height}px`,
+    );
 
     addDragEffect(() => {
-      const draggedColumnRect = getRelativeRect(colClone, tableContainer);
+      const draggedColumnRect = getRelativeRect(colClone, tableRoot);
       const draggedColumnLeft = draggedColumnRect.left;
       dropPreviewUI.style.setProperty(
         "--table-column-drop-target-left",
