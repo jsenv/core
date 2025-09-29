@@ -41,8 +41,6 @@
  *
  * Next steps:
  *
- * - Selected cell borders X sticky frontier
- * - Un example d'update du contenu d'une cellule
  * - Finir vrai exemple de re-order de column (mise a jour du state + effet au survol)
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )

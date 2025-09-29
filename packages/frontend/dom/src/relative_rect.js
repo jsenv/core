@@ -1,19 +1,20 @@
 /**
- * Gets the bounding rectangle of an element relative to the document origin,
- * providing coordinates that remain stable regardless of viewport scroll position.
+ * Gets the bounding rectangle of an element relative to another element or its offset parent.
  *
- * This is useful when you need to:
- * - Position absolutely positioned elements relative to document.body
- * - Create overlays, tooltips, or dropdowns that need precise positioning
- * - Implement drag and drop with elements appended to document.body
- * - Calculate distances between elements on the page
- * - Position elements that persist across scroll events
+ * This function provides flexible element positioning calculations:
+ * - With one element: Returns position relative to its offsetParent
+ * - With two elements: Returns position of first element relative to second element
+ * - Special case: Returns viewport coordinates when element is document
  *
- * Unlike getBoundingClientRect() which returns viewport coordinates,
- * this function returns document coordinates that don't change when scrolling.
+ * Use cases:
+ * - Calculate element positions within their positioning context
+ * - Determine relative positioning between nested elements
+ * - Layout calculations for drag and drop operations
+ * - Positioning elements relative to their containers
  *
- * @param {Element} domElement - The DOM element to get coordinates for
- * @returns {Object} Rectangle with document coordinates and viewport reference
+ * @param {Element|Document} domElement - The element to get coordinates for
+ * @param {Element} [secondDomElement] - The reference element (defaults to domElement's offsetParent)
+ * @returns {Object} Rectangle with coordinates relative to the reference element
  */
 export const getRelativeRect = (domElement, secondDomElement) => {
   if (domElement === document) {
