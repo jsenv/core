@@ -22,27 +22,47 @@ const ConsumerItemsContext = createContext();
 
 export const useItemTracker = () => {
   const itemsRef = useRef([]);
+  const items = itemsRef.current;
   const itemCountRef = useRef();
   const pendingFlushRef = useRef(false);
+  const producerIsRenderingRef = useRef(false);
 
   const itemTracker = useMemo(() => {
     // Producer methods (ref-based)
     const registerItem = (index, value) => {
-      itemsRef.current[index] = value;
+      const hasValue = index in items;
+      if (hasValue) {
+        const currentValue = items.current[index];
+        if (compareTwoJsValues(currentValue, value)) {
+          return;
+        }
+      }
+      items[index] = value;
+      if (producerIsRenderingRef.current) {
+        // no need to update state as producer is rendering
+        // which means consumer will also re-render
+        // (this is part of why consumer MUST be after producer in the render tree)
+        return;
+      }
       pendingFlushRef.current = true;
     };
 
     const getProducerItem = (itemIndex) => {
-      return itemsRef.current[itemIndex];
+      return items[itemIndex];
     };
 
     // Producer provider - uses refs, never causes re-renders in parent
     const ItemProducerProvider = ({ children }) => {
       // Reset for new render cycle
-      itemsRef.current.length = 0;
+      items.length = 0;
       itemCountRef.current = 0;
       pendingFlushRef.current = false;
+      producerIsRenderingRef.current = true;
       const listRenderId = {};
+
+      useLayoutEffect(() => {
+        producerIsRenderingRef.current = false;
+      });
 
       return (
         <ProducerItemCountRefContext.Provider value={itemCountRef}>
@@ -65,9 +85,9 @@ export const useItemTracker = () => {
         if (!pendingFlushRef.current) {
           return;
         }
-        const items = itemsRef.current;
+        const itemsCopy = [...items];
         pendingFlushRef.current = false;
-        setConsumerItems([...items]);
+        setConsumerItems(itemsCopy);
       });
 
       return (
@@ -103,9 +123,6 @@ export const useTrackItem = (data) => {
 
   if (prevListRenderId === listRenderId) {
     const itemIndex = itemIndexRef.current;
-    if (compareTwoJsValues(dataRef.current, data)) {
-      return itemIndex;
-    }
     itemTracker.registerItem(itemIndex, data);
     dataRef.current = data;
     return itemIndex;
