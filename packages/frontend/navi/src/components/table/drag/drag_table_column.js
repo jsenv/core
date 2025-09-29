@@ -1,7 +1,7 @@
 import {
   createDragToMoveGesture,
-  getRelativeRect,
   getScrollableParent,
+  getVisualRect,
 } from "@jsenv/dom";
 
 import.meta.css = /* css */ `
@@ -202,7 +202,7 @@ export const initDragTableColumnByMousedown = (
     );
 
     const tableRoot = table.closest(".navi_table_root");
-    const tableRootRect = getRelativeRect(tableRoot, document.body);
+    const tableRootRect = getVisualRect(tableRoot, document.body);
     dropPreview.style.setProperty("--table-left", `${tableRootRect.left}px`);
     dropPreview.style.setProperty("--table-top", `${tableRootRect.top}px`);
     dropPreview.style.setProperty("--table-width", `${tableRootRect.width}px`);
@@ -212,7 +212,7 @@ export const initDragTableColumnByMousedown = (
     );
 
     addDragEffect(() => {
-      const draggedColumnRect = getRelativeRect(colClone, tableRoot);
+      const draggedColumnRect = getVisualRect(colClone, tableRoot);
       const draggedColumnLeft = draggedColumnRect.left;
       dropPreviewUI.style.setProperty(
         "--table-column-drop-target-left",
@@ -246,7 +246,7 @@ export const initDragTableColumnByMousedown = (
       elementVisuallyImpacted: colClone,
     });
     dragToMoveGesture.addTeardown(() => {
-      teardown();
+      // teardown();
     });
   }
 };

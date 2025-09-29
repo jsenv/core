@@ -26,7 +26,7 @@ export { initFocusGroup } from "./focus/focus_group.js";
 export { preventFocusNav } from "./focus/focus_nav_event_marker.js";
 export { trapFocusInside } from "./focus/focus_trap.js";
 export { canInterceptKeys } from "./keyboard.js";
-export { getRelativeRect } from "./relative_rect.js";
+export { getVisualRect } from "./relative_rect.js";
 export {
   getAncestorScrolls,
   getScrollableParent,
