@@ -64,6 +64,16 @@ export const useItemTracker = () => {
         producerIsRenderingRef.current = false;
       });
 
+      const renderedOnce = useRef(false);
+      useLayoutEffect(() => {
+        if (!renderedOnce.current) {
+          renderedOnce.current = true;
+          return;
+        }
+        pendingFlushRef.current = true;
+        itemTracker.flushToConsumers();
+      }, [listRenderId]);
+
       return (
         <ProducerItemCountRefContext.Provider value={itemCountRef}>
           <ProducerListRenderIdContext.Provider value={listRenderId}>
