@@ -4,6 +4,8 @@ import {
   getVisualRect,
 } from "@jsenv/dom";
 
+import { getDropTargetIndex } from "../drop_target_detection.js";
+
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
     position: absolute;
@@ -240,33 +242,15 @@ export const initDragTableColumnByMousedown = (
     // Get all column elements for drop target detection
 
     addDragEffect(() => {
-      // Detect drop target using ghost left/right edges for more intuitive dropping
-      const ghostRect = colClone.getBoundingClientRect();
-      const ghostLeft = ghostRect.left;
-      const ghostRight = ghostRect.right;
-
-      let newDropTargetColumnIndex = dropTargetColumnIndex; // default to current target
-
-      for (let i = 0; i < colElements.length; i++) {
-        const colElement = colElements[i];
-        const colElementRect = colElement.getBoundingClientRect();
-        const colStart = colElementRect.left;
-        const colEnd = colElementRect.right;
-        const colCenter = colStart + (colEnd - colStart) / 2;
-
-        // Check if ghost left side is in the left half of this column
-        if (ghostLeft >= colStart && ghostLeft < colCenter) {
-          newDropTargetColumnIndex = i; // drop on this column
-          break;
-        }
-        // Check if ghost right side is in the right half of this column
-        if (ghostRight > colCenter && ghostRight <= colEnd) {
-          newDropTargetColumnIndex = i; // Drop after this column
-          break;
-        }
+      const detectedDropTargetColumnIndex = getDropTargetIndex({
+        draggedElement: colClone,
+        targetElements: colElements,
+        axis: "x",
+        defaultIndex: dropTargetColumnIndex,
+      });
+      if (detectedDropTargetColumnIndex !== dropTargetColumnIndex) {
+        onDropTargetColumnIndexChange(detectedDropTargetColumnIndex);
       }
-
-      onDropTargetColumnIndexChange(newDropTargetColumnIndex);
     });
 
     document.body.appendChild(dropPreview);

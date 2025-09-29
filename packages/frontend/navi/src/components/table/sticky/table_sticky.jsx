@@ -1,5 +1,6 @@
 import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
+import { getDropTargetIndex } from "../drop_target_detection.js";
 import {
   Z_INDEX_STICKY_COLUMN,
   Z_INDEX_STICKY_CORNER,
@@ -551,41 +552,18 @@ const initMoveStickyFrontierByMousedown = (
 
     onGrab,
     onDrag: (gesture) => {
-      const ghostRect = ghostElement.getBoundingClientRect();
-      const ghostCenter =
-        axis === "x"
-          ? ghostRect.left + ghostRect.width / 2
-          : ghostRect.top + ghostRect.height / 2;
+      const detectedFrontierIndex = getDropTargetIndex({
+        draggedElement: ghostElement,
+        targetElements: elements,
+        axis,
+        defaultIndex: futureFrontierIndex,
+        mode: "frontier",
+      });
 
-      for (let i = 0; i < elements.length; i++) {
-        const element = elements[i];
-        const elementRect = element.getBoundingClientRect();
-        let elementStart;
-        let elementEnd;
-
-        if (axis === "x") {
-          elementStart = elementRect.left;
-          elementEnd = elementRect.right;
-        } else {
-          elementStart = elementRect.top;
-          elementEnd = elementRect.bottom;
-        }
-
-        if (ghostCenter < elementStart) {
-          continue;
-        }
-        if (ghostCenter > elementEnd) {
-          continue;
-        }
-        // We are over this element, now decide if we are before or after the middle of the element
-        const elementCenter = elementStart + (elementEnd - elementStart) / 2;
-        if (ghostCenter < elementCenter) {
-          onFutureFrontierIndexChange(i - 1);
-        } else {
-          onFutureFrontierIndexChange(i);
-        }
-        break;
+      if (detectedFrontierIndex !== futureFrontierIndex) {
+        onFutureFrontierIndexChange(detectedFrontierIndex);
       }
+
       onDrag?.(gesture, futureFrontierIndex);
     },
     onRelease: (gesture) => {
