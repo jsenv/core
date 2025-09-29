@@ -1,0 +1,117 @@
+import { createContext } from "preact";
+import { useContext, useMemo, useRef, useState } from "preact/hooks";
+
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+
+export const createChildTracker = () => {
+  const ChildTrackerValuesContext = createContext();
+  const ChildTrackerContext = createContext();
+
+  const useChildTrackerProvider = () => {
+    const [values, setValues] = useState([]);
+    const childTracker = useMemo(() => {
+      const setValue = (index, value) => {
+        setValues((prev) => {
+          const newChildren = [...prev];
+          newChildren[index] = value;
+          return newChildren;
+        });
+      };
+
+      const reset = () => {
+        setValues([]);
+      };
+
+      return { setValue, reset };
+    }, []);
+
+    const ChildTrackerProvider = useMemo(() => {
+      const ChildTrackerProvider = ({ children }) => {
+        return (
+          <ChildTrackerValuesContext.Provider value={values}>
+            <ChildTrackerContext.Provider value={childTracker}>
+              {children}
+            </ChildTrackerContext.Provider>
+          </ChildTrackerValuesContext.Provider>
+        );
+      };
+      return ChildTrackerProvider;
+    }, [values]);
+    ChildTrackerProvider.values = values;
+
+    return ChildTrackerProvider;
+  };
+
+  const useValues = () => {
+    const values = useContext(ChildTrackerValuesContext);
+    return values;
+  };
+
+  const ParentRenderIdContext = createContext();
+  const ChildIndexCountRefContext = createContext();
+  const useTrackChildProvider = () => {
+    const childTracker = useContext(ChildTrackerContext);
+    const childIndexCountRef = useRef();
+    const renderIdRef = useRef();
+
+    childIndexCountRef.current = 0;
+    renderIdRef.current = {};
+    const renderId = {};
+    renderIdRef.current = renderId;
+
+    childTracker.reset();
+
+    return useMemo(() => {
+      const TrackChildProvider = ({ children }) => (
+        <ParentRenderIdContext.Provider value={renderId}>
+          <ChildIndexCountRefContext.Provider value={childIndexCountRef}>
+            {children}
+          </ChildIndexCountRefContext.Provider>
+        </ParentRenderIdContext.Provider>
+      );
+      return TrackChildProvider;
+    }, []);
+  };
+
+  const useTrackChild = (childData) => {
+    const childTracker = useContext(ChildTrackerContext);
+    const childIndexCountRef = useContext(ChildIndexCountRefContext);
+    const parentRenderId = useContext(ParentRenderIdContext);
+    const parentRenderIdRef = useRef();
+    const childIndexRef = useRef();
+    const childDataRef = useRef();
+    const prevParentRenderId = parentRenderIdRef.current;
+
+    if (prevParentRenderId === parentRenderId) {
+      const childIndex = childIndexRef.current;
+      if (compareTwoJsValues(childDataRef.current, childData)) {
+        return childIndex;
+      }
+      childTracker.setValue(childIndex, childData);
+      childDataRef.current = childData;
+      return childIndex;
+    }
+    const childIndexCount = childIndexCountRef.current;
+    const childIndex = childIndexCount;
+    childIndexCountRef.current = childIndex + 1;
+    parentRenderIdRef.current = parentRenderId;
+    childIndexRef.current = childIndex;
+    childDataRef.current = childData;
+    childTracker.setValue(childIndex, childData);
+    return childIndex;
+  };
+
+  const useTrackedChild = (childIndex) => {
+    const values = useValues();
+    const value = values[childIndex];
+    return value;
+  };
+
+  return {
+    useValues,
+    useChildTrackerProvider,
+    useTrackChildProvider,
+    useTrackChild,
+    useTrackedChild,
+  };
+};

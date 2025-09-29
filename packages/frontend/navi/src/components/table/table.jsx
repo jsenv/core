@@ -85,15 +85,14 @@ import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
-import { createChildrenTracker } from "./use_children_tracker.jsx";
+import { createChildTracker } from "./use_child_tracker.jsx";
 
 const {
-  ChildrenContext: ColumnsContext,
-  useChildrenTracker: useColumnsTracker,
-  useChildTrackerProvider: useColumnTrackerProvider,
+  useChildTrackerProvider: useColumnsTrackerProvider,
+  useTrackChildProvider: useTrackColumnProvider,
   useTrackChild: useTrackColumn,
-  useChildren: useColumns,
-} = createChildrenTracker();
+  useValues: useColumns,
+} = createChildTracker();
 
 const ColumnContext = createContext();
 const useColumn = () => useContext(ColumnContext);
@@ -158,7 +157,8 @@ export const Table = forwardRef((props, ref) => {
   const rowsRef = useRef();
   rowsRef.current = [];
 
-  const columns = useColumnsTracker();
+  const ColumnsTrackerProvider = useColumnsTrackerProvider();
+  const columns = ColumnsTrackerProvider.chilPropsArray;
 
   // selection
   const selectionController = useTableSelectionController({
@@ -270,13 +270,13 @@ export const Table = forwardRef((props, ref) => {
             <TableSelectionProvider value={selectionContextValue}>
               <TableDragProvider value={dragContextValue}>
                 <TableStickyProvider value={stickyContextValue}>
-                  <ColumnsContext.Provider value={columns}>
+                  <ColumnsTrackerProvider>
                     <RowIndexContext.Provider value={tableRowIndexRef}>
                       <RowsRefContext.Provider value={rowsRef}>
                         {children}
                       </RowsRefContext.Provider>
                     </RowIndexContext.Provider>
-                  </ColumnsContext.Provider>
+                  </ColumnsTrackerProvider>
                 </TableStickyProvider>
               </TableDragProvider>
             </TableSelectionProvider>
@@ -288,11 +288,11 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 export const Colgroup = ({ children }) => {
-  const ColumnTrackerProvider = useColumnTrackerProvider();
+  const TrackColumnProvider = useTrackColumnProvider();
 
   return (
     <colgroup>
-      <ColumnTrackerProvider>{children}</ColumnTrackerProvider>
+      <TrackColumnProvider>{children}</TrackColumnProvider>
     </colgroup>
   );
 };
