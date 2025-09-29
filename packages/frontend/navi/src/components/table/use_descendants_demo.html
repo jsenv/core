@@ -122,7 +122,6 @@
 
       // Create tracker instance
       const {
-        useValues,
         useChildTrackerProvider,
         useTrackChildProvider,
         useTrackChild,
@@ -147,7 +146,7 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const ChildConsumer = ({ childIndex }) => {
+      const ChildConsumer = ({ childIndex, values }) => {
         const childData = useTrackedChild(childIndex);
 
         return (
@@ -159,9 +158,7 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const ValuesDisplay = () => {
-        const values = useValues();
-
+      const ValuesDisplay = ({ values }) => {
         return (
           <div
             style={{
@@ -189,8 +186,9 @@
       const AppWrapper = () => {
         const [state, setState] = useState(initialState);
 
+        const [values, setValues] = useState([]);
         // eslint-disable-next-line no-unused-vars
-        const [values, ChildTrackerProvider] = useChildTrackerProvider();
+        const ChildTrackerProvider = useChildTrackerProvider(values, setValues);
 
         log(`🎬 App render ${state.renderKey}`);
 
@@ -312,15 +310,15 @@
       const Intermediate = ({ state, values }) => {
         log("render child values display and consumers");
         return (
-          <ChildTrackerValuesContext.Provider value={values}>
-            <ValuesDisplay />
+          <>
+            <ValuesDisplay values={values} />
             <div style={{ margin: "20px 0" }}>
               <h3>Consumers:</h3>
-              <ChildConsumer childIndex={0} />
-              <ChildConsumer childIndex={1} />
-              <ChildConsumer childIndex={2} />
+              <ChildConsumer childIndex={0} values={values} />
+              <ChildConsumer childIndex={1} values={values} />
+              <ChildConsumer childIndex={2} values={values} />
             </div>
-          </ChildTrackerValuesContext.Provider>
+          </>
         );
       };
 

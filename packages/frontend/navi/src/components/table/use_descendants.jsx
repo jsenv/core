@@ -1,5 +1,7 @@
+// https://github.com/reach/reach-ui/tree/b3d94d22811db6b5c0f272b9a7e2e3c1bb4699ae/packages/descendants
+
 import { createContext } from "preact";
-import { useContext, useMemo, useRef, useState } from "preact/hooks";
+import { useContext, useMemo, useRef } from "preact/hooks";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 
@@ -7,8 +9,7 @@ export const createChildTracker = () => {
   const ChildTrackerValuesContext = createContext();
   const ChildTrackerContext = createContext();
 
-  const useChildTrackerProvider = () => {
-    const [values, setValues] = useState([]);
+  const useChildTrackerProvider = (values, setValues) => {
     const childTracker = useMemo(() => {
       const setValue = (index, value) => {
         setValues((prev) => {
@@ -42,7 +43,7 @@ export const createChildTracker = () => {
     }, []);
     ChildTrackerProvider.values = values;
 
-    return [values, ChildTrackerProvider];
+    return ChildTrackerProvider;
   };
 
   const useValues = () => {
