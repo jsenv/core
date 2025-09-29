@@ -7,9 +7,13 @@
  * USE CASE:
  * This is specifically designed for scenarios where item registration and usage are SEPARATE,
  * such as HTML tables with <colgroup> elements:
- * - Table cells register their column data during render
- * - <colgroup> needs access to all columns to generate proper <col> elements
- * - Registration happens in table body, usage happens in table header
+ * - <colgroup> contains <col> elements that need to register their column data
+ * - Table cells in <tbody> need to read column data to render correctly
+ * - <colgroup> renders first (producer), <tbody> renders later (consumer)
+ * - Column data flows from colgroup → table cells, not the other way around
+ *
+ * Real-world example: Dynamic table where column widths are defined in <colgroup>
+ * but table cells need those widths for proper rendering and layout calculations.
  *
  * For simpler cases where item definition and usage are colocated (same component tree),
  * prefer more straightforward approaches like useState or useRef directly.
@@ -109,11 +113,19 @@ export const useItemTracker = () => {
 
       items[index] = value;
 
+      // CRITICAL DECISION POINT: How should consumers be notified?
       if (producerIsRenderingRef.current) {
-        // Consumer will sync after producer render completes
+        // SCENARIO 1: We're in a full render cycle (app state changed)
+        // The consumer will automatically sync after producer finishes
+        // because ItemProducerProvider's useLayoutEffect (line ~147) will
+        // trigger flushToConsumers() for all newly registered items.
         return;
       }
 
+      // SCENARIO 2: Individual item update outside render cycle
+      // (e.g., user interaction changed a single column's local state)
+      // We must manually mark for flush so useTrackItem's useLayoutEffect
+      // (line ~218) can immediately sync this change to consumers.
       pendingFlushRef.current = true;
     };
 
@@ -164,6 +176,9 @@ export const useItemTracker = () => {
 
       const flushToConsumers = () => {
         if (!pendingFlushRef.current) {
+          // Early return: No changes waiting to be flushed
+          // This prevents unnecessary re-renders when called during
+          // full render cycles where state is already synchronized
           return;
         }
         const itemsCopy = [...items];
@@ -209,10 +224,10 @@ export const useTrackItem = (data) => {
   const prevListRenderId = listRenderIdRef.current;
 
   // CRITICAL: Handle individual item updates outside full render cycles
-  // This is essential for cases where only a single producer item re-renders
-  // (e.g., local state change in a column component) without the parent
-  // ItemProducerProvider re-rendering. Without this, consumer state would
-  // become stale until the next full app re-render.
+  // This connects to registerItem's pendingFlushRef.current = true (line ~125)
+  // When a single producer item changes (local state), registerItem marks
+  // pendingFlushRef = true, and this effect immediately flushes to consumers.
+  // Without this, individual changes would wait until the next full app render.
   useLayoutEffect(() => {
     if (itemTracker.pendingFlushRef.current) {
       itemTracker.flushToConsumers();
