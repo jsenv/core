@@ -40,6 +40,7 @@ export const useItemTracker = () => {
     const flushToConsumerState = () => {
       if (pendingFlushRef.current) {
         const items = [...itemsRef.current];
+        console.log("set consumer items");
         setConsumerItems(items);
         pendingFlushRef.current = false;
       }
@@ -52,11 +53,6 @@ export const useItemTracker = () => {
       itemCountRef.current = 0;
       pendingFlushRef.current = false;
       const listRenderId = {};
-
-      // Flush to consumer state after render
-      useLayoutEffect(() => {
-        flushToConsumerState();
-      });
 
       return (
         <ProducerItemCountRefContext.Provider value={itemCountRef}>
@@ -71,6 +67,11 @@ export const useItemTracker = () => {
 
     // Consumer provider - uses state, causes re-renders only for this subtree
     const ItemConsumerProvider = ({ children }) => {
+      // Flush to consumer state after render
+      useLayoutEffect(() => {
+        flushToConsumerState();
+      });
+
       return (
         <ConsumerTrackerContext.Provider value={itemTracker}>
           {children}

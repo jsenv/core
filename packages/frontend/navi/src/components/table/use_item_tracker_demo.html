@@ -281,16 +281,14 @@
 
             {/* Producer side - uses refs, no re-renders */}
             <ItemProducerProvider>
-              <ItemProducerProvider>
-                {state.items.map((item) => (
-                  <HiddenItem
-                    key={`${item.id}-${state.renderKey}`}
-                    id={item.id}
-                    name={item.name}
-                    color={item.color}
-                  />
-                ))}
-              </ItemProducerProvider>
+              {state.items.map((item) => (
+                <HiddenItem
+                  key={`${item.id}-${state.renderKey}`}
+                  id={item.id}
+                  name={item.name}
+                  color={item.color}
+                />
+              ))}
             </ItemProducerProvider>
 
             {/* Consumer side - uses state, re-renders when needed */}
