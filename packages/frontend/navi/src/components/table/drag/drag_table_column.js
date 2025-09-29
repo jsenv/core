@@ -73,9 +73,10 @@ export const initDragTableColumnByMousedown = (
     tableCell,
   );
 
-  const cloneParent = table
-    .closest(".navi_table_container")
-    .querySelector(".navi_table_drag_clone_container");
+  const tableContainer = table.closest(".navi_table_container");
+  const cloneParent = tableContainer.querySelector(
+    ".navi_table_drag_clone_container",
+  );
   const tableClone = table.cloneNode(true);
   // ensure [data-drag-obstacle] inside the table clone are ignored
   tableClone.setAttribute("data-drag-ignore", "");
@@ -207,9 +208,8 @@ export const initDragTableColumnByMousedown = (
     dropPreview.style.setProperty("--table-height", `${tableRect.height}px`);
 
     addDragEffect(() => {
-      const draggedColumnRect = getRelativeRect(colClone, document.body);
-      // Convert viewport coordinates to document coordinates
-      const draggedColumnLeft = draggedColumnRect.left + window.scrollX;
+      const draggedColumnRect = getRelativeRect(colClone, tableContainer);
+      const draggedColumnLeft = draggedColumnRect.left;
       dropPreviewUI.style.setProperty(
         "--table-column-drop-target-left",
         `${draggedColumnLeft}px`,
