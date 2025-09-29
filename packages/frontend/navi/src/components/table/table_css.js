@@ -11,14 +11,18 @@ import { Z_INDEX_EDITING } from "./z_indexes.js";
  */
 
 import.meta.css = /* css */ `
+  .navi_table_container_wrapper {
+    position: relative;
+    overflow: auto;
+    max-width: var(--table-max-width, none);
+    max-height: var(--table-max-height, none);
+  }
+
   .navi_table_container {
     --border-color: #e1e1e1;
     --focus-border-color: #0078d4;
 
     position: relative;
-    overflow: auto;
-    max-width: var(--table-max-width, none);
-    max-height: var(--table-max-height, none);
   }
 
   .navi_table {

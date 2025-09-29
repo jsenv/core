@@ -248,37 +248,38 @@ export const Table = forwardRef((props, ref) => {
 
   return (
     <div
-      ref={tableContainerRef}
-      className="navi_table_container"
+      className="navi_table_container_wrapper"
       style={{
         "--table-max-width": maxWidth ? `${maxWidth}px` : undefined,
         "--table-max-height": maxHeight ? `${maxHeight}px` : undefined,
       }}
     >
-      <table
-        ref={innerRef}
-        className="navi_table"
-        aria-multiselectable="true"
-        data-multiselection={selection.length > 1 ? "" : undefined}
-        data-border-collapse={borderCollapse ? "" : undefined}
-      >
-        <TableResizeProvider value={resizeContextValue}>
-          <TableSelectionProvider value={selectionContextValue}>
-            <TableDragProvider value={dragContextValue}>
-              <TableStickyProvider value={stickyContextValue}>
-                <ColumnsRefContext.Provider value={columnsRef}>
-                  <RowIndexContext.Provider value={tableRowIndexRef}>
-                    <RowsRefContext.Provider value={rowsRef}>
-                      {children}
-                    </RowsRefContext.Provider>
-                  </RowIndexContext.Provider>
-                </ColumnsRefContext.Provider>
-              </TableStickyProvider>
-            </TableDragProvider>
-          </TableSelectionProvider>
-        </TableResizeProvider>
-      </table>
-      <TableUIContainer grabTarget={grabTarget} />
+      <div ref={tableContainerRef} className="navi_table_container">
+        <table
+          ref={innerRef}
+          className="navi_table"
+          aria-multiselectable="true"
+          data-multiselection={selection.length > 1 ? "" : undefined}
+          data-border-collapse={borderCollapse ? "" : undefined}
+        >
+          <TableResizeProvider value={resizeContextValue}>
+            <TableSelectionProvider value={selectionContextValue}>
+              <TableDragProvider value={dragContextValue}>
+                <TableStickyProvider value={stickyContextValue}>
+                  <ColumnsRefContext.Provider value={columnsRef}>
+                    <RowIndexContext.Provider value={tableRowIndexRef}>
+                      <RowsRefContext.Provider value={rowsRef}>
+                        {children}
+                      </RowsRefContext.Provider>
+                    </RowIndexContext.Provider>
+                  </ColumnsRefContext.Provider>
+                </TableStickyProvider>
+              </TableDragProvider>
+            </TableSelectionProvider>
+          </TableResizeProvider>
+        </table>
+        <TableUIContainer grabTarget={grabTarget} />
+      </div>
     </div>
   );
 });
