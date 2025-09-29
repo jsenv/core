@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Child Tracker Debug</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f5f5f5;
+      }
+      .debug-panel {
+        background: white;
+        padding: 20px;
+        margin: 10px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .child-item {
+        background: #e3f2fd;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        border-left: 4px solid #2196f3;
+      }
+      .child-consumer {
+        background: #f3e5f5;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 4px;
+        border-left: 4px solid #9c27b0;
+      }
+      button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #45a049;
+      }
+      .log {
+        background: #1e1e1e;
+        color: #00ff00;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        max-height: 200px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 10px 0;
+      }
+      .input-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      input[type="text"],
+      input[type="number"] {
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Child Tracker Debug</h1>
+
+    <div class="debug-panel">
+      <h2>Controls</h2>
+      <div class="controls">
+        <button id="rerender-parent">Re-render Parent</button>
+        <button id="add-child">Add Child</button>
+        <button id="remove-child">Remove Child</button>
+        <div class="input-group">
+          <label>Child Index:</label>
+          <input type="number" id="child-index" value="0" min="0" />
+        </div>
+        <div class="input-group">
+          <label>New Value:</label>
+          <input type="text" id="child-value" value="updated value" />
+        </div>
+        <button id="update-child">Update Child Value</button>
+      </div>
+    </div>
+
+    <div class="debug-panel">
+      <h2>Logs</h2>
+      <div id="logs" class="log"></div>
+      <button onclick="document.getElementById('logs').textContent = ''">
+        Clear Logs
+      </button>
+    </div>
+
+    <div class="debug-panel">
+      <h2>App</h2>
+      <div id="app"></div>
+    </div>
+
+    <script type="module">
+      import { createElement as h, render, createContext } from "preact";
+      import { useState, useRef, useContext, useMemo } from "preact/hooks";
+
+      // Debug logging
+      const log = (message) => {
+        const timestamp = new Date().toLocaleTimeString();
+        const logElement = document.getElementById("logs");
+        logElement.textContent += `[${timestamp}] ${message}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+        console.log(message);
+      };
+
+      // Child tracker implementation
+      const createChildTracker = () => {
+        const ChildTrackerValuesContext = createContext();
+        const ChildTrackerContext = createContext();
+
+        const useChildTrackerProvider = () => {
+          log("🔄 useChildTrackerProvider called");
+          const [values, setValues] = useState([]);
+
+          const childTracker = useMemo(() => {
+            const setValue = (index, value) => {
+              log(`📝 setValue(${index}, ${JSON.stringify(value)})`);
+              setValues((prev) => {
+                const newChildren = [...prev];
+                newChildren[index] = value;
+                log(`📊 Updated values: ${JSON.stringify(newChildren)}`);
+                return newChildren;
+              });
+            };
+
+            const reset = () => {
+              log("🔄 Resetting values");
+              setValues([]);
+            };
+
+            return { setValue, reset };
+          }, []);
+
+          const ChildTrackerProvider = useMemo(() => {
+            const ChildTrackerProvider = ({ children }) => {
+              log(
+                `🏠 ChildTrackerProvider render, values: ${JSON.stringify(values)}`,
+              );
+              return h(
+                ChildTrackerValuesContext.Provider,
+                { value: values },
+                h(
+                  ChildTrackerContext.Provider,
+                  { value: childTracker },
+                  children,
+                ),
+              );
+            };
+            return ChildTrackerProvider;
+          }, [values, childTracker]);
+
+          ChildTrackerProvider.values = values;
+          return ChildTrackerProvider;
+        };
+
+        const useValues = () => {
+          const values = useContext(ChildTrackerValuesContext);
+          log(`📖 useValues called, got: ${JSON.stringify(values)}`);
+          return values || [];
+        };
+
+        const ParentRenderIdContext = createContext();
+        const ChildCountRefContext = createContext();
+
+        const useTrackChildProvider = () => {
+          const childTracker = useContext(ChildTrackerContext);
+          const childCountRef = useRef();
+
+          childCountRef.current = 0;
+          const renderId = {};
+
+          log("🔄 useTrackChildProvider: resetting child tracker");
+          if (childTracker) {
+            childTracker.reset();
+          }
+
+          return useMemo(() => {
+            const TrackChildProvider = ({ children }) => {
+              log("🎯 TrackChildProvider render");
+              return h(
+                ParentRenderIdContext.Provider,
+                { value: renderId },
+                h(
+                  ChildCountRefContext.Provider,
+                  { value: childCountRef },
+                  children,
+                ),
+              );
+            };
+            return TrackChildProvider;
+          }, [renderId]);
+        };
+
+        const useTrackChild = (childData) => {
+          const childTracker = useContext(ChildTrackerContext);
+          const childCountRef = useContext(ChildCountRefContext);
+          const parentRenderId = useContext(ParentRenderIdContext);
+          const parentRenderIdRef = useRef();
+          const childIndexRef = useRef();
+          const childDataRef = useRef();
+          const prevParentRenderId = parentRenderIdRef.current;
+
+          log(`🧩 useTrackChild called with: ${JSON.stringify(childData)}`);
+
+          if (prevParentRenderId === parentRenderId) {
+            const childIndex = childIndexRef.current;
+            log(`♻️ Same render cycle, reusing index ${childIndex}`);
+
+            // Check if data changed
+            if (
+              JSON.stringify(childDataRef.current) !== JSON.stringify(childData)
+            ) {
+              log(`📝 Data changed for index ${childIndex}, updating`);
+              if (childTracker) {
+                childTracker.setValue(childIndex, childData);
+              }
+              childDataRef.current = childData;
+            }
+            return childIndex;
+          }
+
+          const childCount = childCountRef.current || 0;
+          const childIndex = childCount;
+          childCountRef.current = childIndex + 1;
+          parentRenderIdRef.current = parentRenderId;
+          childIndexRef.current = childIndex;
+          childDataRef.current = childData;
+
+          log(`🆕 New render cycle, assigning index ${childIndex}`);
+          if (childTracker) {
+            childTracker.setValue(childIndex, childData);
+          }
+          return childIndex;
+        };
+
+        const useTrackedChild = (childIndex) => {
+          const values = useValues();
+          const value = values[childIndex];
+          log(`🔍 useTrackedChild(${childIndex}) = ${JSON.stringify(value)}`);
+          return value;
+        };
+
+        return {
+          useValues,
+          useChildTrackerProvider,
+          useTrackChildProvider,
+          useTrackChild,
+          useTrackedChild,
+        };
+      };
+
+      // Create tracker instance
+      const {
+        useValues,
+        useChildTrackerProvider,
+        useTrackChildProvider,
+        useTrackChild,
+        useTrackedChild,
+      } = createChildTracker();
+
+      // Demo components
+      const Child = ({ id, name, color }) => {
+        const childIndex = useTrackChild({ id, name, color });
+
+        return h(
+          "div",
+          { className: "child-item" },
+          h("strong", null, `Child ${childIndex}: `),
+          h("span", null, `id=${id}, name=${name}, color=${color}`),
+        );
+      };
+
+      const ChildConsumer = ({ childIndex }) => {
+        const childData = useTrackedChild(childIndex);
+
+        return h(
+          "div",
+          { className: "child-consumer" },
+          h("strong", null, `Consumer for index ${childIndex}: `),
+          h("span", null, childData ? JSON.stringify(childData) : "undefined"),
+        );
+      };
+
+      const ValuesDisplay = () => {
+        const values = useValues();
+
+        return h(
+          "div",
+          {
+            style: {
+              background: "#fff3e0",
+              padding: "10px",
+              borderRadius: "4px",
+            },
+          },
+          h("strong", null, "All Values: "),
+          h("pre", null, JSON.stringify(values, null, 2)),
+        );
+      };
+
+      // Global app state
+      let globalState = {
+        renderKey: 0,
+        children: [
+          { id: "a", name: "First", color: "red" },
+          { id: "b", name: "Second", color: "blue" },
+        ],
+      };
+
+      let setGlobalState;
+
+      const AppWrapper = () => {
+        const [state, setState] = useState(globalState);
+        setGlobalState = setState;
+
+        const ColumnsTrackerProvider = useChildTrackerProvider();
+        const TrackChildProvider = useTrackChildProvider();
+
+        log(`🎬 App render ${state.renderKey}`);
+
+        return h(
+          "div",
+          null,
+          h(
+            "div",
+            { style: { marginBottom: "20px" } },
+            h("strong", null, `Render #${state.renderKey}`),
+          ),
+
+          h(
+            ColumnsTrackerProvider,
+            null,
+            h(
+              TrackChildProvider,
+              null,
+              h(ValuesDisplay),
+              h(
+                "div",
+                { style: { margin: "20px 0" } },
+                h("h3", null, "Children:"),
+                ...state.children.map((child) =>
+                  h(Child, {
+                    key: `${child.id}-${state.renderKey}`,
+                    id: child.id,
+                    name: child.name,
+                    color: child.color,
+                  }),
+                ),
+              ),
+              h(
+                "div",
+                { style: { margin: "20px 0" } },
+                h("h3", null, "Consumers:"),
+                h(ChildConsumer, { childIndex: 0 }),
+                h(ChildConsumer, { childIndex: 1 }),
+                h(ChildConsumer, { childIndex: 2 }),
+              ),
+            ),
+          ),
+        );
+      };
+
+      // Event handlers
+      document.getElementById("rerender-parent").onclick = () => {
+        log("🔄 Manual parent re-render triggered");
+        globalState = { ...globalState, renderKey: globalState.renderKey + 1 };
+        setGlobalState(globalState);
+      };
+
+      document.getElementById("add-child").onclick = () => {
+        const newId = String.fromCharCode(97 + globalState.children.length);
+        const newChild = {
+          id: newId,
+          name: `Child ${newId.toUpperCase()}`,
+          color: ["green", "purple", "orange", "pink"][
+            globalState.children.length % 4
+          ],
+        };
+        globalState = {
+          ...globalState,
+          children: [...globalState.children, newChild],
+        };
+        setGlobalState(globalState);
+        log(`➕ Added child: ${JSON.stringify(newChild)}`);
+      };
+
+      document.getElementById("remove-child").onclick = () => {
+        if (globalState.children.length > 0) {
+          const removed = globalState.children[globalState.children.length - 1];
+          globalState = {
+            ...globalState,
+            children: globalState.children.slice(0, -1),
+          };
+          setGlobalState(globalState);
+          log(`➖ Removed child: ${JSON.stringify(removed)}`);
+        }
+      };
+
+      document.getElementById("update-child").onclick = () => {
+        const index = parseInt(document.getElementById("child-index").value);
+        const newValue = document.getElementById("child-value").value;
+
+        if (index >= 0 && index < globalState.children.length) {
+          const updatedChildren = [...globalState.children];
+          updatedChildren[index] = {
+            ...updatedChildren[index],
+            name: newValue,
+          };
+          globalState = { ...globalState, children: updatedChildren };
+          setGlobalState(globalState);
+          log(`🔄 Updated child ${index} name to: ${newValue}`);
+        } else {
+          log(
+            `❌ Invalid index ${index} (max: ${globalState.children.length - 1})`,
+          );
+        }
+      };
+
+      // Initial render
+      render(h(AppWrapper), document.getElementById("app"));
+      log("🚀 App initialized");
+    </script>
+  </body>
+</html>
