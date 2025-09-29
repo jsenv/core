@@ -19,7 +19,6 @@ const ProducerListRenderIdContext = createContext();
 
 // Consumer contexts (state-based, re-renders)
 const ConsumerItemsContext = createContext();
-const ConsumerFlushContext = createContext();
 
 export const useItemTracker = () => {
   const itemsRef = useRef([]);
@@ -89,6 +88,7 @@ export const useItemTracker = () => {
         pendingFlushRef.current = false;
         setConsumerItems(itemsCopy);
       };
+      itemTracker.flushToConsumers = flushToConsumers;
 
       // Flush to consumer state after render
       useLayoutEffect(() => {
@@ -96,11 +96,9 @@ export const useItemTracker = () => {
       });
 
       return (
-        <ConsumerFlushContext.Provider value={flushToConsumers}>
-          <ConsumerItemsContext.Provider value={consumerItems}>
-            {children}
-          </ConsumerItemsContext.Provider>
-        </ConsumerFlushContext.Provider>
+        <ConsumerItemsContext.Provider value={consumerItems}>
+          {children}
+        </ConsumerItemsContext.Provider>
       );
     };
 
@@ -128,11 +126,10 @@ export const useTrackItem = (data) => {
   const itemIndexRef = useRef();
   const dataRef = useRef();
   const prevListRenderId = listRenderIdRef.current;
-  const flushToConsumers = useContext(ConsumerFlushContext);
 
   useLayoutEffect(() => {
     if (itemTracker.pendingFlushRef.current) {
-      flushToConsumers();
+      itemTracker.flushToConsumers();
     }
   });
 
