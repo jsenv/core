@@ -19,6 +19,7 @@ const ProducerListRenderIdContext = createContext();
 
 // Consumer contexts (state-based, re-renders)
 const ConsumerItemsContext = createContext();
+const ConsumerFlushContext = createContext();
 
 export const useItemTracker = () => {
   const itemsRef = useRef([]);
@@ -80,24 +81,31 @@ export const useItemTracker = () => {
       // Move the state here so it only affects this subtree
       const [consumerItems, setConsumerItems] = useState(itemsRef.current);
 
-      // Flush to consumer state after render
-      useLayoutEffect(() => {
+      const flushToConsumers = () => {
         if (!pendingFlushRef.current) {
           return;
         }
         const itemsCopy = [...items];
         pendingFlushRef.current = false;
         setConsumerItems(itemsCopy);
+      };
+
+      // Flush to consumer state after render
+      useLayoutEffect(() => {
+        flushToConsumers();
       });
 
       return (
-        <ConsumerItemsContext.Provider value={consumerItems}>
-          {children}
-        </ConsumerItemsContext.Provider>
+        <ConsumerFlushContext.Provider value={flushToConsumers}>
+          <ConsumerItemsContext.Provider value={consumerItems}>
+            {children}
+          </ConsumerItemsContext.Provider>
+        </ConsumerFlushContext.Provider>
       );
     };
 
     return {
+      pendingFlushRef,
       itemsRef,
       registerItem,
       getProducerItem,
@@ -120,6 +128,13 @@ export const useTrackItem = (data) => {
   const itemIndexRef = useRef();
   const dataRef = useRef();
   const prevListRenderId = listRenderIdRef.current;
+  const flushToConsumers = useContext(ConsumerFlushContext);
+
+  useLayoutEffect(() => {
+    if (itemTracker.pendingFlushRef.current) {
+      flushToConsumers();
+    }
+  });
 
   if (prevListRenderId === listRenderId) {
     const itemIndex = itemIndexRef.current;
