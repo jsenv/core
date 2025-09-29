@@ -301,27 +301,25 @@ export const initDragTableColumnByMousedown = (
 
 /**
  * Creates a MutationObserver that syncs attribute changes from original table to clone
- * @param {HTMLElement} originalTable - The original table element
+ * @param {HTMLElement} table - The original table element
  * @param {HTMLElement} cloneTable - The cloned table element
  * @returns {MutationObserver} The observer instance with disconnect method
  */
-const createTableAttributeSync = (originalTable, cloneTable) => {
+const createTableAttributeSync = (table, tableClone) => {
   // Create a map to quickly find corresponding elements in the clone
   const createElementMap = () => {
     const map = new Map();
-    const originalCells = originalTable.querySelectorAll("td, th");
-    const cloneCells = cloneTable.querySelectorAll("td, th");
-
-    for (let i = 0; i < originalCells.length; i++) {
-      if (cloneCells[i]) {
-        map.set(originalCells[i], cloneCells[i]);
+    const cells = table.querySelectorAll("th, td");
+    const cellClones = tableClone.querySelectorAll("th, td");
+    for (let i = 0; i < cells.length; i++) {
+      if (cellClones[i]) {
+        map.set(cells[i], cellClones[i]);
       }
     }
     return map;
   };
 
   const elementMap = createElementMap();
-
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.type === "attributes") {
@@ -347,7 +345,7 @@ const createTableAttributeSync = (originalTable, cloneTable) => {
   });
 
   // Observe attribute changes on all table cells
-  const cellsToObserve = originalTable.querySelectorAll("td, th");
+  const cellsToObserve = table.querySelectorAll("th, td");
   cellsToObserve.forEach((cell) => {
     observer.observe(cell, {
       attributes: true,
