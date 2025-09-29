@@ -246,7 +246,7 @@ export const Table = forwardRef((props, ref) => {
 
   return (
     <div
-      className="navi_table_container_wrapper"
+      className="navi_table_root"
       style={{
         "--table-max-width": maxWidth ? `${maxWidth}px` : undefined,
         "--table-max-height": maxHeight ? `${maxHeight}px` : undefined,
