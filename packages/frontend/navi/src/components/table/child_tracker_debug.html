@@ -188,9 +188,7 @@
         const [state, setState] = useState(initialState);
 
         // eslint-disable-next-line no-unused-vars
-        const ColumnsTrackerProvider = useChildTrackerProvider();
-        // eslint-disable-next-line no-unused-vars
-        const TrackChildProvider = useTrackChildProvider();
+        const ChildTrackerProvider = useChildTrackerProvider();
 
         log(`🎬 App render ${state.renderKey}`);
 
@@ -277,29 +275,39 @@
               <strong>Render #{state.renderKey}</strong>
             </div>
 
-            <ColumnsTrackerProvider>
-              <TrackChildProvider>
-                <ValuesDisplay />
-                <div style={{ margin: "20px 0" }}>
-                  <h3>Children:</h3>
-                  {state.children.map((child) => (
-                    <Child
-                      key={`${child.id}-${state.renderKey}`}
-                      id={child.id}
-                      name={child.name}
-                      color={child.color}
-                    />
-                  ))}
-                </div>
-                <div style={{ margin: "20px 0" }}>
-                  <h3>Consumers:</h3>
-                  <ChildConsumer childIndex={0} />
-                  <ChildConsumer childIndex={1} />
-                  <ChildConsumer childIndex={2} />
-                </div>
-              </TrackChildProvider>
-            </ColumnsTrackerProvider>
+            <ChildTrackerProvider>
+              <Intermediate state={state} />
+            </ChildTrackerProvider>
           </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Intermediate = ({ state }) => {
+        // eslint-disable-next-line no-unused-vars
+        const TrackChildProvider = useTrackChildProvider();
+
+        return (
+          <TrackChildProvider>
+            <ValuesDisplay />
+            <div style={{ margin: "20px 0" }}>
+              <h3>Children:</h3>
+              {state.children.map((child) => (
+                <Child
+                  key={`${child.id}-${state.renderKey}`}
+                  id={child.id}
+                  name={child.name}
+                  color={child.color}
+                />
+              ))}
+            </div>
+            <div style={{ margin: "20px 0" }}>
+              <h3>Consumers:</h3>
+              <ChildConsumer childIndex={0} />
+              <ChildConsumer childIndex={1} />
+              <ChildConsumer childIndex={2} />
+            </div>
+          </TrackChildProvider>
         );
       };
 
