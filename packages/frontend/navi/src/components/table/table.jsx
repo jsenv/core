@@ -85,13 +85,15 @@ import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
-import {
-  useChildTrackerProvider,
-  useTrackChild,
-} from "./use_children_tracker.jsx";
+import { createChildrenTracker } from "./use_children_tracker.jsx";
 
-const ColumnsRefContext = createContext();
-const useColumns = () => useContext(ColumnsRefContext).current;
+const {
+  ChildrenContext: ColumnsContext,
+  useChildrenTracker: useColumnsTracker,
+  useChildTrackerProvider: useColumnTrackerProvider,
+  useTrackChild: useTrackColumn,
+  useChildren: useColumns,
+} = createChildrenTracker();
 
 const ColumnContext = createContext();
 const useColumn = () => useContext(ColumnContext);
@@ -156,7 +158,7 @@ export const Table = forwardRef((props, ref) => {
   const rowsRef = useRef();
   rowsRef.current = [];
 
-  const columnsRef = useChildrenTracker();
+  const columns = useColumnsTracker();
 
   // selection
   const selectionController = useTableSelectionController({
@@ -230,7 +232,7 @@ export const Table = forwardRef((props, ref) => {
   const resizeContextValue = useTableResizeContextValue({
     onColumnResize,
     onRowResize,
-    columnsRef,
+    columns,
     rowsRef,
   });
 
@@ -268,13 +270,13 @@ export const Table = forwardRef((props, ref) => {
             <TableSelectionProvider value={selectionContextValue}>
               <TableDragProvider value={dragContextValue}>
                 <TableStickyProvider value={stickyContextValue}>
-                  <ChildrenContext.Provider value={columnsRef}>
+                  <ColumnsContext.Provider value={columns}>
                     <RowIndexContext.Provider value={tableRowIndexRef}>
                       <RowsRefContext.Provider value={rowsRef}>
                         {children}
                       </RowsRefContext.Provider>
                     </RowIndexContext.Provider>
-                  </ChildrenContext.Provider>
+                  </ColumnsContext.Provider>
                 </TableStickyProvider>
               </TableDragProvider>
             </TableSelectionProvider>
@@ -286,7 +288,7 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 export const Colgroup = ({ children }) => {
-  const ColumnTrackerProvider = useChildTrackerProvider();
+  const ColumnTrackerProvider = useColumnTrackerProvider();
 
   return (
     <colgroup>
@@ -295,7 +297,7 @@ export const Colgroup = ({ children }) => {
   );
 };
 export const Col = ({ id, width, immovable }) => {
-  const columnIndex = useTrackChild({ id, width, immovable });
+  const columnIndex = useTrackColumn({ id, width, immovable });
   const { stickyLeftFrontierColumnIndex } = useTableSticky();
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
 

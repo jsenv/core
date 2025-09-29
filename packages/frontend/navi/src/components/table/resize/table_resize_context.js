@@ -9,7 +9,7 @@ export const useTableResize = () => {
 export const useTableResizeContextValue = ({
   onColumnResize,
   onRowResize,
-  columnsRef,
+  columns,
   rowsRef,
 }) => {
   const onColumnResizeRef = useRef();
@@ -19,7 +19,6 @@ export const useTableResizeContextValue = ({
 
   const resizeContextValue = useMemo(() => {
     const onColumnResizeWithColumn = (width, columnIndex) => {
-      const columns = columnsRef.current;
       const column = columns[columnIndex];
       return onColumnResizeRef.current?.(width, columnIndex, column);
     };
