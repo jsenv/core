@@ -33,6 +33,10 @@ import.meta.css = /* css */ `
     width: 10px;
     height: 10px;
   }
+
+  .navi_table_column_drop_preview_ui[data-after] {
+    transform: translateX(-100%);
+  }
 `;
 
 const dropPreviewTemplate = /* html */ `
@@ -212,23 +216,6 @@ export const initDragTableColumnByMousedown = (
     ".navi_table_column_drop_preview_ui",
   );
 
-  const onDropTargetColumnIndexChange = (newDropTargetColumnIndex) => {
-    dropTargetColumnIndex = newDropTargetColumnIndex;
-    if (dropTargetColumnIndex === columnIndex) {
-      dropPreviewUI.removeAttribute("data-visible");
-      return;
-    }
-    const targetColumn = colElements[dropTargetColumnIndex];
-    console.log(targetColumn);
-    const targetColumnVisualRect = getVisualRect(targetColumn, tableRoot);
-    const targetColumnVisualLeft = targetColumnVisualRect.left;
-    dropPreviewUI.style.setProperty(
-      "--table-column-drop-target-left",
-      `${targetColumnVisualLeft}px`,
-    );
-    dropPreviewUI.setAttribute("data-visible", "");
-  };
-
   drop_preview: {
     const tableRootRect = getVisualRect(tableRoot, document.body);
     dropPreview.style.setProperty("--table-left", `${tableRootRect.left}px`);
@@ -240,6 +227,27 @@ export const initDragTableColumnByMousedown = (
     );
 
     // Get all column elements for drop target detection
+    const updateDropTargetPosition = (newDropTargetColumnIndex) => {
+      dropTargetColumnIndex = newDropTargetColumnIndex;
+      if (dropTargetColumnIndex === columnIndex) {
+        dropPreviewUI.removeAttribute("data-visible");
+        return;
+      }
+      const targetColumn = colElements[dropTargetColumnIndex];
+      const targetColumnVisualRect = getVisualRect(targetColumn, tableRoot);
+      let targetColumnVisualLeft = targetColumnVisualRect.left;
+      if (dropTargetColumnIndex > columnIndex) {
+        targetColumnVisualLeft += targetColumnVisualRect.width;
+        dropPreviewUI.setAttribute("data-after", "");
+      } else {
+        dropPreviewUI.removeAttribute("data-after");
+      }
+      dropPreviewUI.style.setProperty(
+        "--table-column-drop-target-left",
+        `${targetColumnVisualLeft}px`,
+      );
+      dropPreviewUI.setAttribute("data-visible", "");
+    };
 
     addDragEffect(() => {
       const dropTargetInfo = getDropTargetInfo({
@@ -248,9 +256,14 @@ export const initDragTableColumnByMousedown = (
         axis: "x",
         defaultIndex: dropTargetColumnIndex,
       });
-      if (dropTargetInfo && dropTargetInfo.index !== dropTargetColumnIndex) {
-        onDropTargetColumnIndexChange(dropTargetInfo.index);
+      if (!dropTargetInfo) {
+        return;
       }
+      // we need to update target position even when
+      // index do not changed to take scroll into account
+      // (because arrwo is positioned into document to be able to overflow
+      // but outside the scrollable container to avoid having impact on scrollbars)
+      updateDropTargetPosition(dropTargetInfo.index);
     });
 
     document.body.appendChild(dropPreview);
