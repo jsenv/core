@@ -85,7 +85,7 @@ const BASIC_MODE_OPTIONS = {
   backdrop: false,
   stickyFrontiers: false,
   areaConstraint: "none",
-  obstacleQuerySelector: null,
+  obstacleAttributeName: null,
   showConstraintFeedbackLine: false,
   dragViaScroll: false,
 };
@@ -111,7 +111,7 @@ export const createDragGesture = (options) => {
     stickyFrontiers = true,
     areaConstraint = "scrollable",
     customAreaConstraint,
-    obstacleQuerySelector = "[data-drag-obstacle]",
+    obstacleAttributeName = "data-drag-obstacle",
     dragViaScroll = true,
 
     // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
@@ -370,12 +370,12 @@ export const createDragGesture = (options) => {
       constraintFunctions.push(customAreaConstraintFunction);
     }
 
-    if (obstacleQuerySelector) {
+    if (obstacleAttributeName) {
       const obstacleConstraintFunctions =
         createObstacleConstraintsFromQuerySelector(scrollableParent, {
           name,
           positionedParent,
-          obstacleQuerySelector,
+          obstacleAttributeName,
         });
       constraintFunctions.push(...obstacleConstraintFunctions);
     }
