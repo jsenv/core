@@ -4,11 +4,21 @@
 /*
  * Item Tracker System - A Preact hook for tracking dynamic lists without infinite re-renders
  *
+ * USE CASE:
+ * This is specifically designed for scenarios where item registration and usage are SEPARATE,
+ * such as HTML tables with <colgroup> elements:
+ * - Table cells register their column data during render
+ * - <colgroup> needs access to all columns to generate proper <col> elements
+ * - Registration happens in table body, usage happens in table header
+ *
+ * For simpler cases where item definition and usage are colocated (same component tree),
+ * prefer more straightforward approaches like useState or useRef directly.
+ *
  * PROBLEM SOLVED:
- * When building dynamic lists (like tables), we often need to:
- * 1. Collect data from child components during render
+ * When building dynamic lists with separated registration/usage, we often need to:
+ * 1. Collect data from child components during render (registration)
  * 2. Track changes to individual items
- * 3. Provide access to the full list to other components
+ * 3. Provide access to the full list to other components (usage)
  *
  * Naive approaches cause infinite re-render loops because:
  * - setState during render causes the parent to re-render
@@ -32,22 +42,28 @@
  * const [ItemProducerProvider, ItemConsumerProvider] = useItemTracker();
  *
  * return (
- *   <ItemProducerProvider>
- *     {items.map(item => <ProducerItem item={item} />)}
- *   </ItemProducerProvider>
- *   <ItemConsumerProvider>
- *     <ConsumerComponent />
- *   </ItemConsumerProvider>
+ *   <table>
+ *     <ItemConsumerProvider>
+ *       <colgroup>
+ *         <ColumnElements /> // Uses tracked columns
+ *       </colgroup>
+ *     </ItemConsumerProvider>
+ *     <ItemProducerProvider>
+ *       <tbody>
+ *         {rows.map(row => <TableRow row={row} />)} // Registers columns
+ *       </tbody>
+ *     </ItemProducerProvider>
+ *   </table>
  * );
  *
- * function ProducerItem({ item }) {
- *   const index = useTrackItem(item); // Registers item, returns index
- *   return <div>Item {index}: {item.name}</div>;
+ * function TableCell({ column }) {
+ *   const index = useTrackItem(column); // Registers column, returns index
+ *   return <td>{column.content}</td>;
  * }
  *
- * function ConsumerComponent() {
- *   const items = useTrackedItems(); // Gets all tracked items reactively
- *   return <div>Total: {items.length}</div>;
+ * function ColumnElements() {
+ *   const columns = useTrackedItems(); // Gets all tracked columns reactively
+ *   return columns.map(col => <col key={col.id} width={col.width} />);
  * }
  * ```
  *
