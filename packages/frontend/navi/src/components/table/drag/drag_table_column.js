@@ -4,7 +4,7 @@ import {
   getVisualRect,
 } from "@jsenv/dom";
 
-import { getDropTargetIndex } from "../drop_target_detection.js";
+import { getDropTargetInfo } from "../drop_target_detection.js";
 
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
@@ -242,14 +242,14 @@ export const initDragTableColumnByMousedown = (
     // Get all column elements for drop target detection
 
     addDragEffect(() => {
-      const detectedDropTargetColumnIndex = getDropTargetIndex({
+      const dropTargetInfo = getDropTargetInfo({
         draggedElement: colClone,
         targetElements: colElements,
         axis: "x",
         defaultIndex: dropTargetColumnIndex,
       });
-      if (detectedDropTargetColumnIndex !== dropTargetColumnIndex) {
-        onDropTargetColumnIndexChange(detectedDropTargetColumnIndex);
+      if (dropTargetInfo && dropTargetInfo.index !== dropTargetColumnIndex) {
+        onDropTargetColumnIndexChange(dropTargetInfo.index);
       }
     });
 

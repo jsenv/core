@@ -10,13 +10,7 @@
  * @param {string} [params.mode='direct'] - 'direct' returns element index, 'frontier' returns before/after index
  * @returns {number} The index of the target element where the drop should occur
  */
-export const getDropTargetIndex = ({
-  draggedElement,
-  targetElements,
-  axis,
-  defaultIndex = 0,
-  mode = "direct",
-}) => {
+export const getDropTargetInfo = ({ draggedElement, targetElements, axis }) => {
   const draggedRect = draggedElement.getBoundingClientRect();
 
   // Get the start and end positions of the dragged element based on axis
@@ -49,14 +43,14 @@ export const getDropTargetIndex = ({
 
     // Check if dragged element's start edge is in the left/top half of this target
     if (draggedStart >= targetStart && draggedStart < targetCenter) {
-      return mode === "frontier" ? Math.max(0, i - 1) : i;
+      return { element: targetElement, index: i, position: "start" };
     }
 
     // Check if dragged element's end edge is in the right/bottom half of this target
     if (draggedEnd > targetCenter && draggedEnd <= targetEnd) {
-      return mode === "frontier" ? i : i;
+      return { element: targetElement, index: i, position: "end" };
     }
   }
 
-  return defaultIndex;
+  return null;
 };

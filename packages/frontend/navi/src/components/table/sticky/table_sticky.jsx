@@ -1,6 +1,6 @@
 import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
 
-import { getDropTargetIndex } from "../drop_target_detection.js";
+import { getDropTargetInfo } from "../drop_target_detection.js";
 import {
   Z_INDEX_STICKY_COLUMN,
   Z_INDEX_STICKY_CORNER,
@@ -552,18 +552,23 @@ const initMoveStickyFrontierByMousedown = (
 
     onGrab,
     onDrag: (gesture) => {
-      const detectedFrontierIndex = getDropTargetIndex({
+      const dropTargetInfo = getDropTargetInfo({
         draggedElement: ghostElement,
         targetElements: elements,
         axis,
         defaultIndex: futureFrontierIndex,
-        mode: "frontier",
+        // mode: "frontier",
       });
-
-      if (detectedFrontierIndex !== futureFrontierIndex) {
-        onFutureFrontierIndexChange(detectedFrontierIndex);
+      if (dropTargetInfo) {
+        const dropColumnIndex = dropTargetInfo.index;
+        const dropFrontierIndex =
+          dropTargetInfo.position === "start"
+            ? dropColumnIndex - 1
+            : dropColumnIndex;
+        if (dropFrontierIndex !== futureFrontierIndex) {
+          onFutureFrontierIndexChange(dropFrontierIndex);
+        }
       }
-
       onDrag?.(gesture, futureFrontierIndex);
     },
     onRelease: (gesture) => {
