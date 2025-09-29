@@ -288,6 +288,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const ChildRenderer = ({ state }) => {
+        log("Render all child");
         // eslint-disable-next-line no-unused-vars
         const TrackChildProvider = useTrackChildProvider();
 
@@ -310,6 +311,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const Intermediate = ({ state, values }) => {
+        log("render child values display and consumers");
         return (
           <ChildTrackerValuesContext.Provider value={values}>
             <ValuesDisplay />

@@ -19,7 +19,12 @@ export const createChildTracker = () => {
       };
 
       const reset = () => {
-        setValues([]);
+        setValues((prev) => {
+          if (prev.length === 0) {
+            return prev;
+          }
+          return [];
+        });
       };
 
       return { setValue, reset };
