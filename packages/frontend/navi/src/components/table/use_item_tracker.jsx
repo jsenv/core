@@ -14,15 +14,21 @@ const ItemCountRefContext = createContext();
 const ListRenderIdContext = createContext();
 
 export const useItemTracker = () => {
-  const itemsRef = useRef([]);
+  const itemMapRef = useRef(new Map());
+  const itemMap = itemMapRef.current;
   const itemCountRef = useRef();
   const itemTracker = useMemo(() => {
-    const setItem = (index, value) => {
-      itemsRef.current[index] = value;
+    const getItem = (itemId) => {
+      const info = itemMap.get(itemId);
+      return info;
+    };
+
+    const setItem = (itemId, index, value) => {
+      itemMap.set(itemId, { index, value });
     };
 
     const useTrackItemProvider = () => {
-      itemsRef.current = [];
+      itemMap.clear();
       itemCountRef.current = 0;
       const listRenderId = {};
       return useMemo(() => {
@@ -41,13 +47,22 @@ export const useItemTracker = () => {
       }, []);
     };
 
-    return { itemsRef, setItem, useTrackItemProvider };
+    return { itemMap, getItem, setItem, useTrackItemProvider };
   }, []);
 
   return itemTracker;
 };
 
+const randomId = () => Math.random().toString(36).substr(2, 9);
+
 export const useTrackItem = (data) => {
+  const componentIdRef = useRef();
+  if (!componentIdRef.current) {
+    componentIdRef.current = randomId();
+  }
+  const componentId = componentIdRef.current;
+  console.log({ componentId });
+
   const listRenderId = useContext(ListRenderIdContext);
   const itemCountRef = useContext(ItemCountRefContext);
   const itemTracker = useContext(TrackItemContext);
@@ -61,7 +76,7 @@ export const useTrackItem = (data) => {
     if (compareTwoJsValues(dataRef.current, data)) {
       return itemIndex;
     }
-    itemTracker.setItem(itemIndex, data);
+    itemTracker.setItem(componentId, itemIndex, data);
     dataRef.current = data;
     return itemIndex;
   }
@@ -71,13 +86,16 @@ export const useTrackItem = (data) => {
   itemCountRef.current = itemIndex + 1;
   itemIndexRef.current = itemIndex;
   dataRef.current = data;
-  itemTracker.setItem(itemIndex, data);
+  itemTracker.setItem(componentId, itemIndex, data);
   return itemIndex;
 };
 
 export const useTrackedItems = () => {
   const itemTracker = useContext(ItemTrackerContext);
-  const items = itemTracker.itemsRef.current;
+  const items = [];
+  for (const [, info] of itemTracker.itemMap) {
+    items[info.index] = info.value;
+  }
   return items;
 };
 export const useTrackedItem = (itemIndex) => {

@@ -134,13 +134,6 @@
         console.log(message);
       };
 
-      // Hidden item that only tracks data, doesn't render anything visible
-      // eslint-disable-next-line no-unused-vars
-      const HiddenItem = ({ id, name, color }) => {
-        useTrackItem({ id, name, color });
-        return null; // Render nothing
-      };
-
       // Item data display with controls
       // eslint-disable-next-line no-unused-vars
       const ItemData = ({ item, index, onUpdate, onRemove, onAddAfter }) => {
@@ -203,24 +196,6 @@
         );
       };
 
-      // Values display
-      // eslint-disable-next-line no-unused-vars
-      const ValuesDisplay = () => {
-        const items = useTrackedItems();
-        return (
-          <div
-            style={{
-              background: "#fff3e0",
-              padding: "10px",
-              borderRadius: "4px",
-            }}
-          >
-            <strong>All Tracked Items:</strong>
-            <pre>{JSON.stringify(items, null, 2)}</pre>
-          </div>
-        );
-      };
-
       // Initial state
       const initialState = {
         renderKey: 0,
@@ -233,7 +208,8 @@
       // eslint-disable-next-line no-unused-vars
       const AppWrapper = () => {
         const [state, setState] = useState(initialState);
-        const itemTracker = useItemTracker();
+        const [items, setItems] = useState([]);
+        const itemTracker = useItemTracker(items, setItems);
 
         log(`🎬 App render ${state.renderKey}`);
 
@@ -340,6 +316,31 @@
               />
             ))}
           </TrackItemProvider>
+        );
+      };
+
+      // Hidden item that only tracks data, doesn't render anything visible
+      // eslint-disable-next-line no-unused-vars
+      const HiddenItem = ({ id, name, color }) => {
+        useTrackItem({ id, name, color });
+        return null; // Render nothing
+      };
+
+      // Values display
+      // eslint-disable-next-line no-unused-vars
+      const ValuesDisplay = () => {
+        const items = useTrackedItems();
+        return (
+          <div
+            style={{
+              background: "#fff3e0",
+              padding: "10px",
+              borderRadius: "4px",
+            }}
+          >
+            <strong>All Tracked Items:</strong>
+            <pre>{JSON.stringify(items, null, 2)}</pre>
+          </div>
         );
       };
 
