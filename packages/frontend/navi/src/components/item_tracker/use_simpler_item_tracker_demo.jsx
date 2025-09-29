@@ -81,12 +81,18 @@ export const App = () => {
       <SimpleItemTrackerProvider>
         <div className="section">
           <h3>📋 Table with Tracked Rows</h3>
+          <p style={{ fontSize: "12px", margin: "0 0 10px 0", color: "#666" }}>
+            💡 Change colors using the dropdown in each row to trigger
+            individual row re-renders. Notice how only that specific row
+            re-renders and updates its tracked data.
+          </p>
           <div className="table-container">
             <table className="table">
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Category</th>
+                  <th>Color</th>
+                  <th>Color Override</th>
                 </tr>
               </thead>
               <tbody>
@@ -94,6 +100,7 @@ export const App = () => {
                   <TableRow key={id} name={name} color={color}>
                     <TableCell column="name" />
                     <TableCell column="color" />
+                    {/* Color selector is rendered directly in TableRow */}
                   </TableRow>
                 ))}
               </tbody>
@@ -121,16 +128,45 @@ const log = (message) => {
 const TableRowIndexContext = createContext();
 
 // Demo components
-const TableRow = ({ children, name, color }) => {
-  // Register this row and get its index
-  const rowIndex = useTrackItem({ name, color });
+const TableRow = ({ children, name, color: initialColor }) => {
+  // Local state for color override
+  const [localColor, setLocalColor] = useState(initialColor);
 
-  log(`🎬 TableRow ${rowIndex} render (${name})`);
+  // Use local color if it differs from initial, otherwise use initial
+  const currentColor = localColor !== initialColor ? localColor : initialColor;
+
+  // Register this row and get its index
+  const rowIndex = useTrackItem({ name, color: currentColor });
+
+  log(`🎬 TableRow ${rowIndex} render (${name}, color: ${currentColor})`);
+
+  const handleColorChange = (event) => {
+    const newColor = event.target.value;
+    setLocalColor(newColor);
+    log(`🎨 Row ${rowIndex} color changed to ${newColor}`);
+  };
 
   return (
-    <tr className={`table-row table-row--${color}`}>
+    <tr className={`table-row table-row--${currentColor}`}>
       <TableRowIndexContext.Provider value={rowIndex}>
         {children}
+        <td>
+          <select
+            value={currentColor}
+            onChange={handleColorChange}
+            style={{ fontSize: "10px", padding: "2px" }}
+          >
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="yellow">Yellow</option>
+          </select>
+          {localColor !== initialColor && (
+            <small style={{ marginLeft: "4px", opacity: 0.7 }}>
+              (overridden)
+            </small>
+          )}
+        </td>
       </TableRowIndexContext.Provider>
     </tr>
   );
