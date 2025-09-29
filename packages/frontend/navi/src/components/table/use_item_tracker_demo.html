@@ -117,8 +117,6 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import {
-        // eslint-disable-next-line no-unused-vars
-        ItemTrackerProvider,
         useItemTracker,
         useTrackItem,
         useTrackedItem,
@@ -208,8 +206,6 @@
       // eslint-disable-next-line no-unused-vars
       const AppWrapper = () => {
         const [state, setState] = useState(initialState);
-        const [items, setItems] = useState([]);
-        const itemTracker = useItemTracker(items, setItems);
 
         log(`🎬 App render ${state.renderKey}`);
 
@@ -248,6 +244,9 @@
           });
         };
 
+        // eslint-disable-next-line no-unused-vars
+        const [ItemProducerProvider, ItemConsumerProvider] = useItemTracker();
+
         return (
           <div>
             <div style={{ marginBottom: "20px" }}>
@@ -266,23 +265,36 @@
               </button>
             </div>
 
-            <ItemTrackerProvider value={itemTracker}>
-              <div className="section">
-                <h3>Item Data Controls</h3>
-                {state.items.map((item, index) => (
-                  <ItemData
+            <div className="section">
+              <h3>Item Data Controls</h3>
+              {state.items.map((item, index) => (
+                <ItemData
+                  key={`${item.id}-${state.renderKey}`}
+                  item={item}
+                  index={index}
+                  onUpdate={handleUpdateItem}
+                  onRemove={handleRemoveItem}
+                  onAddAfter={handleAddAfter}
+                />
+              ))}
+            </div>
+
+            {/* Producer side - uses refs, no re-renders */}
+            <ItemProducerProvider>
+              <ItemProducerProvider>
+                {state.items.map((item) => (
+                  <HiddenItem
                     key={`${item.id}-${state.renderKey}`}
-                    item={item}
-                    index={index}
-                    onUpdate={handleUpdateItem}
-                    onRemove={handleRemoveItem}
-                    onAddAfter={handleAddAfter}
+                    id={item.id}
+                    name={item.name}
+                    color={item.color}
                   />
                 ))}
-              </div>
+              </ItemProducerProvider>
+            </ItemProducerProvider>
 
-              <HiddenItemTracker state={state} itemTracker={itemTracker} />
-
+            {/* Consumer side - uses state, re-renders when needed */}
+            <ItemConsumerProvider>
               <div className="section">
                 <h3>Item Consumers</h3>
                 <ItemConsumer itemIndex={0} />
@@ -294,28 +306,8 @@
               <div className="section">
                 <ValuesDisplay />
               </div>
-            </ItemTrackerProvider>
+            </ItemConsumerProvider>
           </div>
-        );
-      };
-
-      // Component that renders hidden tracking items
-      // eslint-disable-next-line no-unused-vars
-      const HiddenItemTracker = ({ state, itemTracker }) => {
-        // eslint-disable-next-line no-unused-vars
-        const TrackItemProvider = itemTracker.useTrackItemProvider();
-
-        return (
-          <TrackItemProvider>
-            {state.items.map((item) => (
-              <HiddenItem
-                key={`${item.id}-${state.renderKey}`}
-                id={item.id}
-                name={item.name}
-                color={item.color}
-              />
-            ))}
-          </TrackItemProvider>
         );
       };
 

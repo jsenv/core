@@ -12,83 +12,94 @@ import {
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 
-const ItemTrackerContext = createContext();
-export const ItemTrackerProvider = ItemTrackerContext.Provider;
+// Producer contexts (ref-based, no re-renders)
+const ProducerTrackerContext = createContext();
+const ProducerItemCountRefContext = createContext();
+const ProducerListRenderIdContext = createContext();
 
-const TrackItemContext = createContext();
-const ItemCountRefContext = createContext();
-const ListRenderIdContext = createContext();
-const FlushContext = createContext();
+// Consumer contexts (state-based, re-renders)
+const ConsumerTrackerContext = createContext();
 
 export const useItemTracker = () => {
   const itemsRef = useRef([]);
   const itemCountRef = useRef();
-  const [trackedItems, setTrackedItems] = useState([]);
+  const [consumerItems, setConsumerItems] = useState([]);
   const pendingFlushRef = useRef(false);
 
   const itemTracker = useMemo(() => {
-    const getItem = (itemIndex) => {
-      const items = itemsRef.current;
-      const item = items[itemIndex];
-      return item;
-    };
-
-    const setItem = (index, value) => {
-      const items = itemsRef.current;
-      items[index] = value;
-      // Mark that we need to flush to state after render
+    // Producer methods (ref-based)
+    const registerItem = (index, value) => {
+      itemsRef.current[index] = value;
       pendingFlushRef.current = true;
     };
 
-    const flushToState = () => {
+    const getProducerItem = (itemIndex) => {
+      return itemsRef.current[itemIndex];
+    };
+
+    const flushToConsumerState = () => {
       if (pendingFlushRef.current) {
-        const items = itemsRef.current;
+        const items = [...itemsRef.current];
+        setConsumerItems(items);
         pendingFlushRef.current = false;
-        setTrackedItems([...items]);
       }
     };
 
-    const useTrackItemProvider = () => {
+    // Producer provider - uses refs, never causes re-renders in parent
+    const ItemProducerProvider = ({ children }) => {
+      // Reset for new render cycle
       itemsRef.current.length = 0;
       itemCountRef.current = 0;
-      setTrackedItems([]);
       pendingFlushRef.current = false;
       const listRenderId = {};
 
-      return useMemo(() => {
-        const TrackItemProvider = ({ children }) => {
-          // Flush after each render cycle
-          useLayoutEffect(() => {
-            flushToState();
-          });
+      // Flush to consumer state after render
+      useLayoutEffect(() => {
+        flushToConsumerState();
+      });
 
-          return (
-            <ItemCountRefContext.Provider value={itemCountRef}>
-              <ListRenderIdContext.Provider value={listRenderId}>
-                <FlushContext.Provider value={flushToState}>
-                  <TrackItemContext.Provider value={itemTracker}>
-                    {children}
-                  </TrackItemContext.Provider>
-                </FlushContext.Provider>
-              </ListRenderIdContext.Provider>
-            </ItemCountRefContext.Provider>
-          );
-        };
-        return TrackItemProvider;
-      }, []);
+      return (
+        <ProducerItemCountRefContext.Provider value={itemCountRef}>
+          <ProducerListRenderIdContext.Provider value={listRenderId}>
+            <ProducerTrackerContext.Provider value={itemTracker}>
+              {children}
+            </ProducerTrackerContext.Provider>
+          </ProducerListRenderIdContext.Provider>
+        </ProducerItemCountRefContext.Provider>
+      );
     };
 
-    return { getItem, setItem, flushToState, useTrackItemProvider };
-  }, []);
-  itemTracker.trackedItems = trackedItems;
+    // Consumer provider - uses state, causes re-renders only for this subtree
+    const ItemConsumerProvider = ({ children }) => {
+      return (
+        <ConsumerTrackerContext.Provider value={itemTracker}>
+          {children}
+        </ConsumerTrackerContext.Provider>
+      );
+    };
 
-  return itemTracker;
+    return {
+      registerItem,
+      getProducerItem,
+      flushToConsumerState,
+      ItemProducerProvider,
+      ItemConsumerProvider,
+    };
+  }, []); // No dependencies to avoid recreation
+
+  // Attach consumer items without recreating tracker
+  itemTracker.consumerItems = consumerItems;
+
+  const { ItemProducerProvider, ItemConsumerProvider } = itemTracker;
+
+  return [ItemProducerProvider, ItemConsumerProvider];
 };
 
+// Hook for producers to register items (ref-based, no re-renders)
 export const useTrackItem = (data) => {
-  const listRenderId = useContext(ListRenderIdContext);
-  const itemCountRef = useContext(ItemCountRefContext);
-  const itemTracker = useContext(TrackItemContext);
+  const listRenderId = useContext(ProducerListRenderIdContext);
+  const itemCountRef = useContext(ProducerItemCountRefContext);
+  const itemTracker = useContext(ProducerTrackerContext);
   const listRenderIdRef = useRef();
   const itemIndexRef = useRef();
   const dataRef = useRef();
@@ -99,7 +110,7 @@ export const useTrackItem = (data) => {
     if (compareTwoJsValues(dataRef.current, data)) {
       return itemIndex;
     }
-    itemTracker.setItem(itemIndex, data);
+    itemTracker.registerItem(itemIndex, data);
     dataRef.current = data;
     return itemIndex;
   }
@@ -109,18 +120,20 @@ export const useTrackItem = (data) => {
   itemCountRef.current = itemIndex + 1;
   itemIndexRef.current = itemIndex;
   dataRef.current = data;
-  itemTracker.setItem(itemIndex, data);
+  itemTracker.registerItem(itemIndex, data);
   return itemIndex;
 };
 
+// Hooks for consumers to read items (state-based, re-renders)
 export const useTrackedItems = () => {
-  const itemTracker = useContext(ItemTrackerContext);
-  const trackedItems = itemTracker.trackedItems;
-  return trackedItems;
+  const itemTracker = useContext(ConsumerTrackerContext);
+  return itemTracker.consumerItems;
 };
 
 export const useTrackedItem = (itemIndex) => {
   const items = useTrackedItems();
-  const item = items[itemIndex];
-  return item;
+  return items[itemIndex];
 };
+
+// Legacy exports for backward compatibility
+export const ItemTrackerProvider = ConsumerTrackerContext.Provider;
