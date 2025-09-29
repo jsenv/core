@@ -40,7 +40,7 @@ export const useItemTracker = () => {
       }, []);
     };
 
-    return { setItem, useTrackItemProvider };
+    return { itemsRef, setItem, useTrackItemProvider };
   }, []);
 
   return itemTracker;
@@ -75,7 +75,7 @@ export const useTrackItem = (data) => {
 };
 
 export const useTrackedItems = () => {
-  const itemTracker = useContext(TrackItemContext);
+  const itemTracker = useContext(ItemTrackerContext);
   const items = itemTracker.itemsRef.current;
   return items;
 };

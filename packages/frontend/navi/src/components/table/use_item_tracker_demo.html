@@ -110,6 +110,7 @@
       import { render } from "preact";
       import { useState, useEffect } from "preact/hooks";
       import {
+        ItemTrackerProvider,
         useItemTracker,
         useTrackItem,
         useTrackedItem,
@@ -270,10 +271,10 @@
               <strong>Render #{state.renderKey}</strong>
             </div>
 
-            <ChildTrackerProvider>
-              <ChildRenderer state={state} />
+            <ItemTrackerProvider value={itemTracker}>
+              <ChildRenderer state={state} itemTracker={itemTracker} />
               <Intermediate state={state} />
-            </ChildTrackerProvider>
+            </ItemTrackerProvider>
           </div>
         );
       };
