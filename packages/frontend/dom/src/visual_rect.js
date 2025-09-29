@@ -26,15 +26,19 @@ export const getVisualRect = (domElement, secondDomElement) => {
     let left = domElement.offsetLeft;
     let top = domElement.offsetTop;
 
-    // Account for scroll positions in scrollable ancestors
+    // Accumulate scroll offsets from all scrollable ancestors up to secondDomElement
+    let scrollLeft = 0;
+    let scrollTop = 0;
     let scrollableAncestor = domElement.parentElement;
     while (scrollableAncestor && scrollableAncestor !== secondDomElement) {
-      if (scrollableAncestor.scrollLeft || scrollableAncestor.scrollTop) {
-        left -= scrollableAncestor.scrollLeft;
-        top -= scrollableAncestor.scrollTop;
-      }
+      scrollLeft += scrollableAncestor.scrollLeft;
+      scrollTop += scrollableAncestor.scrollTop;
       scrollableAncestor = scrollableAncestor.parentElement;
     }
+
+    // Apply visual positioning (layout position minus scroll offsets)
+    left -= scrollLeft;
+    top -= scrollTop;
 
     const { width, height } = domElement.getBoundingClientRect();
     return {
@@ -54,28 +58,29 @@ export const getVisualRect = (domElement, secondDomElement) => {
   let top = domElement.offsetTop;
   let domElementAncestor = domElement.offsetParent;
 
-  // Walk up the offsetParent chain and subtract scroll positions
+  // Accumulate layout positions from offsetParent chain
   while (domElementAncestor !== secondDomElement) {
     left += domElementAncestor.offsetLeft;
     top += domElementAncestor.offsetTop;
-
-    // Subtract scroll positions from scrollable ancestors between current and next offsetParent
-    let scrollableAncestor = domElementAncestor.parentElement;
-    const nextOffsetParent = domElementAncestor.offsetParent;
-    while (
-      scrollableAncestor &&
-      scrollableAncestor !== nextOffsetParent &&
-      scrollableAncestor !== secondDomElement
-    ) {
-      if (scrollableAncestor.scrollLeft || scrollableAncestor.scrollTop) {
-        left -= scrollableAncestor.scrollLeft;
-        top -= scrollableAncestor.scrollTop;
-      }
-      scrollableAncestor = scrollableAncestor.parentElement;
-    }
-
     domElementAncestor = domElementAncestor.offsetParent;
   }
+
+  // Accumulate scroll offsets from all scrollable ancestors up to and including secondDomElement
+  let scrollLeft = 0;
+  let scrollTop = 0;
+  let scrollableAncestor = domElement.parentElement;
+  while (scrollableAncestor) {
+    scrollLeft += scrollableAncestor.scrollLeft;
+    scrollTop += scrollableAncestor.scrollTop;
+    if (scrollableAncestor === secondDomElement) {
+      break;
+    }
+    scrollableAncestor = scrollableAncestor.parentElement;
+  }
+
+  // Apply visual positioning (layout position minus scroll offsets)
+  left -= scrollLeft;
+  top -= scrollTop;
   const clientRect = domElement.getBoundingClientRect();
   const { width, height } = clientRect;
   return {

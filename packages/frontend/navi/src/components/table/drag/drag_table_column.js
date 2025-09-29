@@ -246,7 +246,7 @@ export const initDragTableColumnByMousedown = (
       elementVisuallyImpacted: colClone,
     });
     dragToMoveGesture.addTeardown(() => {
-      // teardown();
+      teardown();
     });
   }
 };
