@@ -85,9 +85,14 @@ import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
+import { createChildIndexTracker } from "./use_child_index.jsx";
+
+// Create column index tracker
+const columnIndexTracker = createChildIndexTracker();
 
 const ColumnsRefContext = createContext();
 const useColumns = () => useContext(ColumnsRefContext).current;
+
 const ColumnContext = createContext();
 const useColumn = () => useContext(ColumnContext);
 
@@ -97,7 +102,7 @@ const RowContext = createContext();
 const useRow = () => useContext(RowContext);
 
 const ColumnIndexContext = createContext();
-const useColumnIndex = () => useContext(ColumnIndexContext);
+const useColumnIndexFromContext = () => useContext(ColumnIndexContext);
 const RowIndexContext = createContext();
 const useRowIndex = () => useContext(RowIndexContext);
 
@@ -283,14 +288,18 @@ export const Table = forwardRef((props, ref) => {
 });
 export const Colgroup = ({ children }) => {
   const columnsRef = useContext(ColumnsRefContext);
-  // Reset columns array when Colgroup re-renders to ensure sync with Col components
-  columnsRef.current = [];
+  const ColumnIndexTrackerProvider =
+    columnIndexTracker.useChildIndexParent(columnsRef);
 
-  return <colgroup>{children}</colgroup>;
+  return (
+    <ColumnIndexTrackerProvider>
+      <colgroup>{children}</colgroup>
+    </ColumnIndexTrackerProvider>
+  );
 };
 export const Col = ({ id, width, immovable }) => {
   const columns = useColumns();
-  const columnIndex = columns.length;
+  const columnIndex = columnIndexTracker.useChildIndex();
   const selectionValue = stringifyTableSelectionValue(`column`, columnIndex);
   columns[columnIndex] = { id, selectionValue, width, immovable };
 
@@ -403,7 +412,7 @@ export const TableCell = forwardRef((props, ref) => {
     element: cellRef.current,
   }));
 
-  const columnIndex = useColumnIndex();
+  const columnIndex = useColumnIndexFromContext();
   const rowIndex = useRowIndex();
   const column = useColumn();
   const row = useRow();
@@ -626,7 +635,7 @@ export const RowNumberCol = ({
   );
 };
 export const RowNumberTableCell = ({ children, ...props }) => {
-  const columnIndex = useColumnIndex();
+  const columnIndex = useColumnIndexFromContext();
   const rowIndex = useRowIndex();
   const isTopLeftCell = columnIndex === 0 && rowIndex === 0;
 
