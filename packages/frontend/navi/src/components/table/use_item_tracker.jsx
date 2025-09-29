@@ -136,7 +136,7 @@ export const useItemTracker = () => {
       // CRITICAL: Sync consumer state on subsequent renders
       // This handles cases where the app re-renders (e.g., parent state change)
       // and we need to notify consumers that the producer has rebuilt its items.
-      // Without this, consumers would show stale data until manual interaction.
+      // Without this, consumers would show stale data until something forces then to refresh.
       const renderedOnce = useRef(false);
       useLayoutEffect(() => {
         if (!renderedOnce.current) {
@@ -226,13 +226,13 @@ export const useTrackItem = (data) => {
     return itemIndex;
   }
   // New render cycle: assign new index and register
-  listRenderIdRef.current = listRenderId; // Update render ID
-  const itemCount = itemCountRef.current; // Get next available index
-  const itemIndex = itemCount; // Assign sequential index
-  itemCountRef.current = itemIndex + 1; // Increment counter for next item
-  itemIndexRef.current = itemIndex; // Store this item's index
-  dataRef.current = data; // Store data for comparison
-  itemTracker.registerItem(itemIndex, data); // Register with tracker
+  listRenderIdRef.current = listRenderId;
+  const itemCount = itemCountRef.current;
+  const itemIndex = itemCount;
+  itemCountRef.current = itemIndex + 1;
+  itemIndexRef.current = itemIndex;
+  dataRef.current = data;
+  itemTracker.registerItem(itemIndex, data);
   return itemIndex;
 };
 
