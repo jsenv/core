@@ -20,6 +20,11 @@ import.meta.css = /* css */ `
     left: var(--table-column-drop-target-left);
     background: yellow;
     display: flex;
+    opacity: 0;
+  }
+
+  .navi_table_column_drop_preview_ui[data-visible] {
+    opacity: 1;
   }
 
   .navi_table_column_drop_preview_ui svg {
@@ -72,6 +77,9 @@ export const initDragTableColumnByMousedown = (
   const columnIndex = Array.from(tableCell.parentNode.children).indexOf(
     tableCell,
   );
+
+  // Track the drop target column index (starts as current column)
+  let dropTargetColumnIndex = columnIndex;
 
   const tableContainer = table.closest(".navi_table_container");
   const cloneParent = tableContainer.querySelector(
@@ -192,16 +200,34 @@ export const initDragTableColumnByMousedown = (
     });
   }
 
+  const tableRoot = table.closest(".navi_table_root");
+  const colgroup = table.querySelector("colgroup");
+  const colElements = Array.from(colgroup.children);
   const colgroupClone = tableClone.querySelector("colgroup");
   const colClone = colgroupClone.children[columnIndex];
+  const dropPreview = createDropPreview();
+  const dropPreviewUI = dropPreview.querySelector(
+    ".navi_table_column_drop_preview_ui",
+  );
+
+  const onDropTargetColumnIndexChange = (newDropTargetColumnIndex) => {
+    dropTargetColumnIndex = newDropTargetColumnIndex;
+    if (dropTargetColumnIndex === columnIndex) {
+      dropPreviewUI.removeAttribute("data-visible");
+      return;
+    }
+    const targetColumn = colElements[dropTargetColumnIndex];
+    console.log(targetColumn);
+    const targetColumnVisualRect = getVisualRect(targetColumn, tableRoot);
+    const targetColumnVisualLeft = targetColumnVisualRect.left;
+    dropPreviewUI.style.setProperty(
+      "--table-column-drop-target-left",
+      `${targetColumnVisualLeft}px`,
+    );
+    dropPreviewUI.setAttribute("data-visible", "");
+  };
 
   drop_preview: {
-    const dropPreview = createDropPreview();
-    const dropPreviewUI = dropPreview.querySelector(
-      ".navi_table_column_drop_preview_ui",
-    );
-
-    const tableRoot = table.closest(".navi_table_root");
     const tableRootRect = getVisualRect(tableRoot, document.body);
     dropPreview.style.setProperty("--table-left", `${tableRootRect.left}px`);
     dropPreview.style.setProperty("--table-top", `${tableRootRect.top}px`);
@@ -211,13 +237,36 @@ export const initDragTableColumnByMousedown = (
       `${tableRootRect.height}px`,
     );
 
+    // Get all column elements for drop target detection
+
     addDragEffect(() => {
-      const draggedColumnRect = getVisualRect(colClone, tableRoot);
-      const draggedColumnLeft = draggedColumnRect.left;
-      dropPreviewUI.style.setProperty(
-        "--table-column-drop-target-left",
-        `${draggedColumnLeft}px`,
-      );
+      // const draggedColumnRect = getVisualRect(colClone, tableRoot);
+      // const draggedColumnLeft = draggedColumnRect.left;
+
+      // Detect which column we're hovering over (similar to table_sticky.jsx logic)
+      const ghostRect = colClone.getBoundingClientRect();
+      const ghostCenter = ghostRect.left + ghostRect.width / 2;
+      for (let i = 0; i < colElements.length; i++) {
+        const colElement = colElements[i];
+        const colElementRect = colElement.getBoundingClientRect();
+        const colStart = colElementRect.left;
+        const colEnd = colElementRect.right;
+
+        if (ghostCenter < colStart) {
+          continue;
+        }
+        if (ghostCenter > colEnd) {
+          continue;
+        }
+        // We are over this column, decide if we drop before or after based on center
+        const colCenter = colStart + (colEnd - colStart) / 2;
+        if (ghostCenter < colCenter) {
+          onDropTargetColumnIndexChange(i - 1);
+        } else {
+          onDropTargetColumnIndexChange(i);
+        }
+        break;
+      }
     });
 
     document.body.appendChild(dropPreview);
@@ -235,9 +284,11 @@ export const initDragTableColumnByMousedown = (
         for (const dragEffect of dragEffectCallbackSet) {
           dragEffect(gestureInfo);
         }
-        onDrag(gestureInfo);
+        onDrag?.(gestureInfo, dropTargetColumnIndex);
       },
-      onRelease,
+      onRelease: (gestureInfo) => {
+        onRelease?.(gestureInfo, dropTargetColumnIndex);
+      },
     });
 
     dragToMoveGesture.grabViaMousedown(mousedownEvent, {
