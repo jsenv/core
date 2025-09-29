@@ -1,9 +1,10 @@
-import { useState } from "preact/hooks";
+import { createContext } from "preact";
+import { useContext, useState } from "preact/hooks";
 import {
-  useGetAllItems,
-  useGetItem,
-  useRegisterItem,
   useSimpleItemTracker,
+  useTrackedItem,
+  useTrackedItems,
+  useTrackItem,
 } from "./use_simple_item_tracker.jsx";
 
 // Main demo app
@@ -32,15 +33,12 @@ export const App = () => {
 
   const addRow = () => {
     const colors = ["red", "blue", "green", "yellow"];
-    const categories = ["Type A", "Type B", "Type C"];
     const newId = String.fromCharCode(97 + rows.length);
 
     const newRow = {
       id: newId,
       name: `Row ${newId.toUpperCase()}`,
       color: colors[Math.floor(Math.random() * colors.length)],
-      category: categories[Math.floor(Math.random() * categories.length)],
-      value: Math.floor(Math.random() * 500) + 100,
     };
 
     setRows((prev) => [...prev, newRow]);
@@ -89,21 +87,13 @@ export const App = () => {
                 <tr>
                   <th>Name</th>
                   <th>Category</th>
-                  <th>Value</th>
-                  <th>Color</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((rowData) => (
-                  <TableRow key={rowData.id} rowData={rowData}>
-                    {({ rowIndex }) => (
-                      <>
-                        <TableCell rowIndex={rowIndex} column="name" />
-                        <TableCell rowIndex={rowIndex} column="category" />
-                        <TableCell rowIndex={rowIndex} column="value" />
-                        <TableCell rowIndex={rowIndex} column="color" />
-                      </>
-                    )}
+                {rows.map(({ id, name, color }) => (
+                  <TableRow key={id} name={name} color={color}>
+                    <TableCell column="name" />
+                    <TableCell column="color" />
                   </TableRow>
                 ))}
               </tbody>
@@ -128,23 +118,27 @@ const log = (message) => {
   logContainer.scrollTop = logContainer.scrollHeight;
 };
 
-// Demo components
-const TableRow = ({ rowData, children }) => {
-  // Register this row and get its index
-  const rowIndex = useRegisterItem(rowData);
+const TableRowIndexContext = createContext();
 
-  log(`🎬 TableRow ${rowIndex} render (${rowData.name})`);
+// Demo components
+const TableRow = ({ children, name, color }) => {
+  // Register this row and get its index
+  const rowIndex = useTrackItem({ name, color });
+
+  log(`🎬 TableRow ${rowIndex} render (${name})`);
 
   return (
-    <tr className={`table-row table-row--${rowData.color}`}>
-      {children({ rowIndex, rowData })}
+    <tr className={`table-row table-row--${color}`}>
+      <TableRowIndexContext.Provider value={rowIndex}>
+        {children}
+      </TableRowIndexContext.Provider>
     </tr>
   );
 };
 
-const TableCell = ({ rowIndex, column }) => {
-  // Get the row data by index
-  const rowData = useGetItem(rowIndex);
+const TableCell = ({ column }) => {
+  const rowIndex = useContext(TableRowIndexContext);
+  const rowData = useTrackedItem(rowIndex);
 
   if (!rowData) {
     return <td>❌ Row {rowIndex} not found</td>;
@@ -163,12 +157,12 @@ const TableCell = ({ rowIndex, column }) => {
 };
 
 const TrackedRowsList = () => {
-  const allItems = useGetAllItems();
+  const rows = useTrackedItems();
 
   return (
     <div className="tracked-rows">
-      <strong>All Tracked Rows ({allItems.length}):</strong>
-      {allItems.map((item, index) => (
+      <strong>All Tracked Rows ({rows.length}):</strong>
+      {rows.map((item, index) => (
         <div key={index} className="tracked-row-item">
           <span>
             #{index}: {item.name}
@@ -178,7 +172,7 @@ const TrackedRowsList = () => {
           </span>
         </div>
       ))}
-      {allItems.length === 0 && (
+      {rows.length === 0 && (
         <div style={{ opacity: 0.6, fontStyle: "italic" }}>
           No rows tracked yet
         </div>

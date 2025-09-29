@@ -53,28 +53,28 @@ const SimpleItemTrackerContext = createContext();
 
 export const useSimpleItemTracker = () => {
   const itemsRef = useRef([]);
+  const items = itemsRef.current;
   const itemCountRef = useRef(0);
 
-  const tracker = useMemo(
-    () => ({
+  const tracker = useMemo(() => {
+    return {
       registerItem: (data) => {
         const index = itemCountRef.current++;
-        itemsRef.current[index] = data;
+        items[index] = data;
         return index;
       },
       getItem: (index) => {
-        return itemsRef.current[index];
+        return items[index];
       },
       getAllItems: () => {
-        return [...itemsRef.current];
+        return items;
       },
       reset: () => {
-        itemsRef.current.length = 0;
+        items.length = 0;
         itemCountRef.current = 0;
       },
-    }),
-    [],
-  );
+    };
+  }, []);
 
   const SimpleItemTrackerProvider = ({ children }) => {
     // Reset on each render to start fresh
@@ -91,32 +91,28 @@ export const useSimpleItemTracker = () => {
 };
 
 // Hook for registering items (producers)
-export const useRegisterItem = (data) => {
+export const useTrackItem = (data) => {
   const tracker = useContext(SimpleItemTrackerContext);
   if (!tracker) {
     throw new Error(
-      "useRegisterItem must be used within SimpleItemTrackerProvider",
+      "useTrackItem must be used within SimpleItemTrackerProvider",
     );
   }
   return tracker.registerItem(data);
 };
 
-// Hook for accessing items by index (consumers)
-export const useGetItem = (index) => {
-  const tracker = useContext(SimpleItemTrackerContext);
-  if (!tracker) {
-    throw new Error("useGetItem must be used within SimpleItemTrackerProvider");
-  }
-  return tracker.getItem(index);
-};
-
-// Hook for accessing all items (consumers)
-export const useGetAllItems = () => {
+export const useTrackedItems = () => {
   const tracker = useContext(SimpleItemTrackerContext);
   if (!tracker) {
     throw new Error(
-      "useGetAllItems must be used within SimpleItemTrackerProvider",
+      "useTrackedItems must be used within SimpleItemTrackerProvider",
     );
   }
   return tracker.getAllItems();
+};
+
+export const useTrackedItem = (index) => {
+  const trackedItems = useTrackedItems();
+  const item = trackedItems[index];
+  return item;
 };
