@@ -1,12 +1,18 @@
 import { useRef, useState } from "preact/hooks";
 import { createIsolatedItemTracker } from "./use_isolated_item_tracker.jsx";
 
-// Initial state
+// Initial state for table columns
 const initialState = {
   renderKey: 0,
-  items: [
-    { id: "a", name: "First", color: "red" },
-    { id: "b", name: "Second", color: "blue" },
+  columns: [
+    { id: "name", label: "Name", width: "200px", sortable: true },
+    { id: "email", label: "Email", width: "250px", sortable: true },
+    { id: "status", label: "Status", width: "100px", sortable: false },
+  ],
+  tableData: [
+    { name: "John Doe", email: "john@example.com", status: "Active" },
+    { name: "Jane Smith", email: "jane@example.com", status: "Inactive" },
+    { name: "Bob Johnson", email: "bob@example.com", status: "Pending" },
   ],
 };
 
@@ -18,38 +24,34 @@ export const App = () => {
 
   log(`🎬 App render ${state.renderKey}`);
 
-  const handleUpdateItem = (index, newItem) => {
+  const handleUpdateColumn = (index, newColumn) => {
     setState((prev) => {
-      const newItems = [...prev.items];
-      newItems[index] = newItem;
-      log(`🔄 Updated item ${index}: ${JSON.stringify(newItem)}`);
-      return { ...prev, items: newItems };
+      const newColumns = [...prev.columns];
+      newColumns[index] = newColumn;
+      log(`🔄 Updated column ${index}: ${JSON.stringify(newColumn)}`);
+      return { ...prev, columns: newColumns };
     });
   };
 
-  const handleRemoveItem = (index) => {
+  const handleRemoveColumn = (index) => {
     setState((prev) => {
-      const newItems = prev.items.filter((_, i) => i !== index);
-      log(`➖ Removed item ${index}`);
-      return { ...prev, items: newItems };
+      const newColumns = prev.columns.filter((_, i) => i !== index);
+      log(`➖ Removed column ${index}`);
+      return { ...prev, columns: newColumns };
     });
   };
 
-  const handleAddAfter = (index) => {
+  const handleAddColumn = () => {
     setState((prev) => {
-      const newId = String.fromCharCode(97 + prev.items.length);
-      const newItem = {
+      const newId = `col${prev.columns.length + 1}`;
+      const newColumn = {
         id: newId,
-        name: `Item ${newId.toUpperCase()}`,
-        color: "green",
+        label: `Column ${prev.columns.length + 1}`,
+        width: "150px",
+        sortable: true,
       };
-      const newItems = [
-        ...prev.items.slice(0, index + 1),
-        newItem,
-        ...prev.items.slice(index + 1),
-      ];
-      log(`➕ Added item after ${index}: ${JSON.stringify(newItem)}`);
-      return { ...prev, items: newItems };
+      log(`➕ Added column: ${JSON.stringify(newColumn)}`);
+      return { ...prev, columns: [...prev.columns, newColumn] };
     });
   };
 
@@ -72,151 +74,255 @@ export const App = () => {
         >
           Re-render App
         </button>
+        <button style={{ marginLeft: "10px" }} onClick={handleAddColumn}>
+          ➕ Add Column
+        </button>
       </div>
 
       <div className="section">
-        <h3>App Data Controls (affects both producer & consumer)</h3>
-        {state.items.map((item, index) => (
-          <AppDataControls
-            key={`${item.id}-${state.renderKey}`}
-            item={item}
+        <h3>Column Configuration (affects both producer & consumer)</h3>
+        {state.columns.map((column, index) => (
+          <ColumnDataControls
+            key={`${column.id}-${state.renderKey}`}
+            column={column}
             index={index}
-            onUpdate={handleUpdateItem}
-            onRemove={handleRemoveItem}
-            onAddAfter={handleAddAfter}
+            onUpdate={handleUpdateColumn}
+            onRemove={handleRemoveColumn}
           />
         ))}
       </div>
 
-      <Producer state={state} ColumnProducerProvider={ColumnProducerProvider} />
-      <Consumer ColumnConsumerProvider={ColumnConsumerProvider} />
+      {/* Producer: Table with colgroup that registers columns */}
+      <TableProducer
+        state={state}
+        ColumnProducerProvider={ColumnProducerProvider}
+      />
+
+      {/* Consumer: Components that read column data */}
+      <ColumnConsumers ColumnConsumerProvider={ColumnConsumerProvider} />
     </div>
   );
 };
 
-const Producer = ({ state, ColumnProducerProvider }) => {
+// Producer: Table with colgroup that registers columns
+const TableProducer = ({ state, ColumnProducerProvider }) => {
   return (
     <ColumnProducerProvider>
       <div className="section">
-        <h3>Producer Items (with local overrides)</h3>
-        {state.items.map((item) => (
-          <ProducerItem
-            key={`${item.id}-${state.renderKey}`}
-            id={item.id}
-            name={item.name}
-            color={item.color}
-          />
-        ))}
+        <h3>🏗️ Producer: Table with Column Registration</h3>
+        <p style={{ fontSize: "12px", margin: "0 0 10px 0", color: "#666" }}>
+          💡 The colgroup below registers column definitions. Change widths to
+          trigger individual column re-renders.
+        </p>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          {/* This colgroup registers the columns - this is the PRODUCER */}
+          <colgroup>
+            {state.columns.map((column) => (
+              <ColumnDefinition
+                key={`${column.id}-${state.renderKey}`}
+                id={column.id}
+                label={column.label}
+                width={column.width}
+                sortable={column.sortable}
+              />
+            ))}
+          </colgroup>
+          <thead>
+            <tr>
+              {state.columns.map((column) => (
+                <th
+                  key={column.id}
+                  style={{
+                    border: "1px solid #ddd",
+                    padding: "8px",
+                    background: "#f5f5f5",
+                  }}
+                >
+                  {column.label}
+                  {column.sortable && " ↕️"}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {state.tableData.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {state.columns.map((column) => (
+                  <td
+                    key={column.id}
+                    style={{ border: "1px solid #ddd", padding: "8px" }}
+                  >
+                    {row[column.id] || `row${rowIndex}-${column.id}`}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </ColumnProducerProvider>
   );
 };
 
-const Consumer = ({ ColumnConsumerProvider }) => {
+// Consumer: Components that read column data
+const ColumnConsumers = ({ ColumnConsumerProvider }) => {
   return (
     <ColumnConsumerProvider>
       <div className="section">
-        <h3>Item Consumers</h3>
-        <ItemConsumer itemIndex={0} />
-        <ItemConsumer itemIndex={1} />
-        <ItemConsumer itemIndex={2} />
-        <ItemConsumer itemIndex={3} />
+        <h3>👁️ Consumers: Components Reading Column Data</h3>
+        <p style={{ fontSize: "12px", margin: "0 0 10px 0", color: "#666" }}>
+          These components read column data by index. They re-render when column
+          data changes.
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+          <ColumnConsumer columnIndex={0} />
+          <ColumnConsumer columnIndex={1} />
+          <ColumnConsumer columnIndex={2} />
+          <ColumnConsumer columnIndex={3} />
+        </div>
       </div>
 
       <div className="section">
-        <ValuesDisplay />
+        <h3>📊 All Tracked Columns</h3>
+        <AllColumnsDisplay />
       </div>
     </ColumnConsumerProvider>
   );
 };
 
-// Producer item with local state for testing overrides
-const ProducerItem = ({ id, name, color: initialColor }) => {
-  const [localColor, setLocalColor] = useState(initialColor);
-  const outColorRef = useRef(initialColor);
-  if (outColorRef.current !== initialColor) {
-    outColorRef.current = initialColor;
-    setLocalColor(initialColor);
+// Column definition component with local state for testing overrides
+const ColumnDefinition = ({ id, label, width: initialWidth, sortable }) => {
+  const [localWidth, setLocalWidth] = useState(initialWidth);
+  const [localSortable, setLocalSortable] = useState(sortable);
+  const outWidthRef = useRef(initialWidth);
+  const outSortableRef = useRef(sortable);
+
+  // Reset local state when props change
+  if (outWidthRef.current !== initialWidth) {
+    outWidthRef.current = initialWidth;
+    setLocalWidth(initialWidth);
   }
+  if (outSortableRef.current !== sortable) {
+    outSortableRef.current = sortable;
+    setLocalSortable(sortable);
+  }
+
   const [renderKey, setRenderKey] = useState(0);
-  const colors = ["red", "blue", "green", "purple", "orange", "pink"];
 
-  // Track the item with current local state
-  const columnIndex = useRegisterColumn({ id, name, color: localColor });
+  // Register the column with current local state
+  const columnIndex = useRegisterColumn({
+    id,
+    label,
+    width: localWidth,
+    sortable: localSortable,
+  });
 
-  log(`🎨 Producer item ${id} render, ${localColor}`);
+  log(`�️ Column producer ${id} (index ${columnIndex}) render`);
+
+  const widthOptions = ["100px", "150px", "200px", "250px", "300px"];
 
   return (
-    <div className="item-data">
-      <div className="item-info">
-        <strong>Producer Item {columnIndex}:</strong> id={id}, name={name},
-        color=
-        {localColor}
-        <small> (render #{renderKey})</small>
+    <>
+      <col style={{ width: localWidth }} />
+      <div className="column-producer-controls">
+        <div className="item-info">
+          <strong>Column Producer {columnIndex}:</strong> id={id}, label={label}
+          , width={localWidth}, sortable={localSortable ? "yes" : "no"}
+          <small> (render #{renderKey})</small>
+        </div>
+        <div className="item-controls">
+          <select
+            value={localWidth}
+            onChange={(e) => {
+              log(
+                `📏 Column ${id} width changed to ${e.target.value} (local override)`,
+              );
+              setLocalWidth(e.target.value);
+            }}
+          >
+            {widthOptions.map((width) => (
+              <option key={width} value={width}>
+                {width}
+              </option>
+            ))}
+          </select>
+          <label style={{ marginLeft: "10px" }}>
+            <input
+              type="checkbox"
+              checked={localSortable}
+              onChange={(e) => {
+                log(`🔄 Column ${id} sortable changed to ${e.target.checked}`);
+                setLocalSortable(e.target.checked);
+              }}
+            />
+            Sortable
+          </label>
+          <button
+            className="rerender"
+            onClick={() => {
+              log(`🔄 Re-rendering column producer ${id}`);
+              setRenderKey((prev) => prev + 1);
+            }}
+          >
+            Re-render Producer
+          </button>
+          <button
+            onClick={() => {
+              log(`🔄 Reset column ${id} to original state`);
+              setLocalWidth(initialWidth);
+              setLocalSortable(sortable);
+            }}
+          >
+            Reset
+          </button>
+        </div>
       </div>
-      <div className="item-controls">
-        <select
-          value={localColor}
-          onChange={(e) => {
-            log(
-              `🎨 Producer override: ${id} color changed to ${e.target.value}`,
-            );
-            setLocalColor(e.target.value);
-          }}
-        >
-          {colors.map((color) => (
-            <option key={color} value={color}>
-              {color}
-            </option>
-          ))}
-        </select>
-        <button
-          className="rerender"
-          onClick={() => {
-            log(`🔄 Re-rendering producer item ${id}`);
-            setRenderKey((prev) => prev + 1);
-          }}
-        >
-          Re-render Producer
-        </button>
-        <button
-          onClick={() => {
-            log(`🔄 Reset producer item ${id} to original color`);
-            setLocalColor(initialColor);
-          }}
-        >
-          Reset Color
-        </button>
-      </div>
-    </div>
+    </>
   );
 };
 
-// App data controls that affect the global state
-const AppDataControls = ({ item, index, onUpdate, onRemove, onAddAfter }) => {
-  const colors = ["red", "blue", "green", "purple", "orange", "pink"];
+// Column data controls that affect the global state
+const ColumnDataControls = ({ column, index, onUpdate, onRemove }) => {
+  const widthOptions = ["100px", "150px", "200px", "250px", "300px"];
 
   return (
     <div className="item-data">
       <div className="item-info">
-        <strong>App Data {index}:</strong> id={item.id}, name={item.name},
-        color=
-        {item.color}
+        <strong>App Column {index}:</strong> id={column.id}, label=
+        {column.label}, width={column.width}, sortable=
+        {column.sortable ? "yes" : "no"}
       </div>
       <div className="item-controls">
+        <input
+          value={column.label}
+          onChange={(e) =>
+            onUpdate(index, { ...column, label: e.target.value })
+          }
+          placeholder="Column label"
+          style={{ marginRight: "5px" }}
+        />
         <select
-          value={item.color}
-          onChange={(e) => onUpdate(index, { ...item, color: e.target.value })}
+          value={column.width}
+          onChange={(e) =>
+            onUpdate(index, { ...column, width: e.target.value })
+          }
         >
-          {colors.map((color) => (
-            <option key={color} value={color}>
-              {color}
+          {widthOptions.map((width) => (
+            <option key={width} value={width}>
+              {width}
             </option>
           ))}
         </select>
-        <button className="add" onClick={() => onAddAfter(index)}>
-          Add After
-        </button>
+        <label style={{ margin: "0 10px" }}>
+          <input
+            type="checkbox"
+            checked={column.sortable}
+            onChange={(e) =>
+              onUpdate(index, { ...column, sortable: e.target.checked })
+            }
+          />
+          Sortable
+        </label>
         <button className="remove" onClick={() => onRemove(index)}>
           Remove
         </button>
@@ -225,23 +331,34 @@ const AppDataControls = ({ item, index, onUpdate, onRemove, onAddAfter }) => {
   );
 };
 
-// Item consumer with re-render button
-const ItemConsumer = ({ itemIndex }) => {
+// Column consumer with re-render button
+const ColumnConsumer = ({ columnIndex }) => {
   const [renderKey, setRenderKey] = useState(0);
-  const itemData = useColumn(itemIndex);
-  log(`👁️ Consumer ${itemIndex} render, ${itemData?.color}`);
+  const columnData = useColumn(columnIndex);
+  log(`👁️ Consumer ${columnIndex} render, ${columnData?.label}`);
 
   return (
     <div className="item-consumer">
       <div>
-        <strong>Consumer for index {itemIndex}:</strong>
-        <span>{itemData ? JSON.stringify(itemData) : "undefined"}</span>
+        <strong>Consumer for column {columnIndex}:</strong>
+        <div style={{ fontSize: "11px", marginTop: "4px" }}>
+          {columnData ? (
+            <div>
+              <div>ID: {columnData.id}</div>
+              <div>Label: {columnData.label}</div>
+              <div>Width: {columnData.width}</div>
+              <div>Sortable: {columnData.sortable ? "yes" : "no"}</div>
+            </div>
+          ) : (
+            "undefined"
+          )}
+        </div>
         <small> (render #{renderKey})</small>
       </div>
       <button
         className="rerender"
         onClick={() => {
-          log(`🔄 Re-rendering consumer ${itemIndex}`);
+          log(`🔄 Re-rendering column consumer ${columnIndex}`);
           setRenderKey((prev) => prev + 1);
         }}
       >
@@ -251,9 +368,9 @@ const ItemConsumer = ({ itemIndex }) => {
   );
 };
 
-// Values display
-const ValuesDisplay = () => {
-  const items = useColumns();
+// All columns display
+const AllColumnsDisplay = () => {
+  const columns = useColumns();
   return (
     <div
       style={{
@@ -262,8 +379,10 @@ const ValuesDisplay = () => {
         borderRadius: "4px",
       }}
     >
-      <strong>All Tracked Items:</strong>
-      <pre>{JSON.stringify(items, null, 2)}</pre>
+      <strong>All Tracked Columns ({columns.length}):</strong>
+      <pre style={{ fontSize: "11px", margin: "8px 0 0 0" }}>
+        {JSON.stringify(columns, null, 2)}
+      </pre>
     </div>
   );
 };
