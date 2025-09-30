@@ -81,7 +81,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useState, useMemo } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
         Table,
@@ -103,17 +103,18 @@
         RowNumberCol,
         // eslint-disable-next-line no-unused-vars
         RowNumberTableCell,
+        useCells,
       } from "@jsenv/navi";
 
       // Generate large dataset to force scrolling
       const generateLargeDataset = (rows = 50, cols = 10) => {
         const data = [];
         for (let i = 1; i <= rows; i++) {
-          const row = { id: `row-${i}`, index: i };
+          const rowCells = [];
           for (let j = 1; j <= cols; j++) {
-            row[`col${j}`] = `Cell ${i}-${j}`;
+            rowCells.push(`Cell ${i}-${j}`);
           }
-          data.push(row);
+          data.push(rowCells);
         }
         return data;
       };
@@ -146,49 +147,10 @@
           .map((colId) => columns.find((col) => col.id === colId))
           .filter(Boolean); // Remove any undefined columns
 
-        // Base cell values in original column order
-        const [baseCellValues, setBaseCellValues] = useState(() => {
-          return data.map((row) => columns.map((col) => row[col.id]));
+        // Use custom hook for cell management
+        const [cellValues, setCellValue, setBaseCellValues] = useCells(data, {
+          columnOrder,
         });
-
-        // Derived state: sort cell values according to column order
-        const cellValues = useMemo(() => {
-          return baseCellValues.map((row) =>
-            columnOrder.map((colId) => {
-              const originalColIndex = columns.findIndex(
-                (col) => col.id === colId,
-              );
-              return originalColIndex >= 0 ? row[originalColIndex] : "";
-            }),
-          );
-        }, [baseCellValues, columnOrder]);
-
-        const setCellValue = (dataRowIndex, columnIndex, value) => {
-          // Find the original column index from the sorted column index
-          const sortedColId = sortedColumns[columnIndex]?.id;
-          const originalColIndex = columns.findIndex(
-            (col) => col.id === sortedColId,
-          );
-
-          if (originalColIndex >= 0) {
-            console.log(
-              "update cell value at",
-              `${columnIndex}:${dataRowIndex} (original: ${originalColIndex}:${dataRowIndex})`,
-              "to",
-              value,
-            );
-            setBaseCellValues((prevValues) => {
-              const newValues = prevValues.map((row, rowIdx) =>
-                rowIdx === dataRowIndex
-                  ? row.map((cell, colIdx) =>
-                      colIdx === originalColIndex ? value : cell,
-                    )
-                  : [...row],
-              );
-              return newValues;
-            });
-          }
-        };
 
         return (
           <div className="demo-container">

@@ -60,6 +60,7 @@ export {
   Thead,
   Tr,
 } from "./src/components/table/table.jsx";
+export { useCells } from "./src/components/table/use_cells.js";
 // Table end
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";
 export { UITransition } from "./src/components/ui_transition.jsx";
