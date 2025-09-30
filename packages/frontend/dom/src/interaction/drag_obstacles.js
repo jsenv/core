@@ -31,7 +31,14 @@ export const createObstacleConstraintsFromQuerySelector = (
     }
 
     obstacleConstraintFunctions.push(() => {
-      const obstacleBounds = getElementBounds(obstacle, gestureInfo);
+      const obstacleBounds = getElementBounds(obstacle, {
+        positionedParent: gestureInfo.positionedParent,
+        scrollableParent: gestureInfo.scrollableParent,
+        useNonStickyLeftEvenIfStickyLeft:
+          !gestureInfo.hasCrossedVisibleAreaLeftOnce,
+        useNonStickyTopEvenIfStickyTop:
+          !gestureInfo.hasCrossedVisibleAreaTopOnce,
+      });
       const positionedParentRect = positionedParent.getBoundingClientRect();
 
       obstacleBounds.left -= positionedParentRect.left;

@@ -10,8 +10,8 @@ export const getElementBounds = (
   {
     positionedParent,
     scrollableParent,
-    hasCrossedVisibleAreaLeftOnce = true,
-    hasCrossedVisibleAreaTopOnce = true,
+    useNonStickyLeftEvenIfStickyLeft = false,
+    useNonStickyTopEvenIfStickyTop = false,
   } = {},
 ) => {
   const rect = element.getBoundingClientRect();
@@ -42,8 +42,7 @@ export const getElementBounds = (
     const stickyPositionInViewport =
       parentRect.left + borderSizes.left + stickyLeft;
     left = stickyPositionInViewport;
-
-    if (!hasCrossedVisibleAreaLeftOnce) {
+    if (useNonStickyLeftEvenIfStickyLeft) {
       const scrollLeft = scrollableParent.scrollLeft;
       left += scrollLeft;
     }
@@ -56,7 +55,7 @@ export const getElementBounds = (
     const stickyPositionInViewport =
       parentRect.top + borderSizes.top + stickyTop;
     top = stickyPositionInViewport;
-    if (!hasCrossedVisibleAreaTopOnce) {
+    if (useNonStickyTopEvenIfStickyTop) {
       const scrollTop = scrollableParent.scrollTop;
       top += scrollTop;
     }
