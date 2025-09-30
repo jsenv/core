@@ -1,5 +1,5 @@
 import { useRef, useState } from "preact/hooks";
-import { createIsolatedItemTracker } from "./use_item_tracker_isolated.jsx";
+import { createIsolatedItemTracker } from "./use_isolated_item_tracker.jsx";
 
 // Initial state
 const initialState = {
