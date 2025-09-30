@@ -31,32 +31,34 @@ export const createObstacleConstraintsFromQuerySelector = (
       }
     }
 
-    obstacleConstraintFunctions.push(() => {
-      const obstacleBounds = getElementBounds(obstacle, positionedParent);
+    obstacleConstraintFunctions.push(
+      ({ leftIsOnVisibleArea, topIsOnVisibleArea }) => {
+        const obstacleBounds = getElementBounds(obstacle, positionedParent);
 
-      obstacleBounds.left -= positionedParentRect.left;
-      obstacleBounds.right -= positionedParentRect.left;
-      obstacleBounds.top -= positionedParentRect.top;
-      obstacleBounds.bottom -= positionedParentRect.top;
+        obstacleBounds.left -= positionedParentRect.left;
+        obstacleBounds.right -= positionedParentRect.left;
+        obstacleBounds.top -= positionedParentRect.top;
+        obstacleBounds.bottom -= positionedParentRect.top;
 
-      if (obstacleBounds.sticky) {
-        if (isStickyLeft) {
-          const scrollLeft = scrollableElement.scrollLeft;
-          obstacleBounds.left += scrollLeft;
-          obstacleBounds.right += scrollLeft;
+        if (obstacleBounds.sticky) {
+          if (isStickyLeft && !leftIsOnVisibleArea) {
+            const scrollLeft = scrollableElement.scrollLeft;
+            obstacleBounds.left += scrollLeft;
+            obstacleBounds.right += scrollLeft;
+          }
+          if (isStickyTop && !topIsOnVisibleArea) {
+            const scrollTop = scrollableElement.scrollTop;
+            obstacleBounds.top += scrollTop;
+            obstacleBounds.bottom += scrollTop;
+          }
         }
-        if (isStickyTop) {
-          const scrollTop = scrollableElement.scrollTop;
-          obstacleBounds.top += scrollTop;
-          obstacleBounds.bottom += scrollTop;
-        }
-      }
-      const obstacleObject = createObstacleContraint(obstacleBounds, {
-        name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
-        element: obstacle,
-      });
-      return obstacleObject;
-    });
+        const obstacleObject = createObstacleContraint(obstacleBounds, {
+          name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
+          element: obstacle,
+        });
+        return obstacleObject;
+      },
+    );
   }
   return obstacleConstraintFunctions;
 };

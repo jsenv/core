@@ -533,11 +533,21 @@ export const createDragGesture = (options) => {
         visibleArea = visibleAreaBase;
       }
 
+      const elementLeftRelative = leftAtStart + gestureInfo.xMove;
+      const elementLeft = elementLeftRelative + parentRect.left;
+      const elementTopRelative = topAtStart + gestureInfo.yMove;
+      const elementTop = elementTopRelative + parentRect.top;
+      const leftIsOnVisibleArea = elementLeft >= visibleArea.left;
+      const topIsOnVisibleArea = elementTop >= visibleArea.top;
+      console.log(elementLeft, visibleArea.left, leftIsOnVisibleArea);
+
       const constraints = prepareConstraints(constraintFunctions, {
         name,
         elementWidth: currentElementWidth,
         elementHeight: currentElementHeight,
         visibleArea,
+        leftIsOnVisibleArea,
+        topIsOnVisibleArea,
       });
 
       visualMarkers.onDrag({

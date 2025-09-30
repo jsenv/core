@@ -203,24 +203,11 @@ export const createObstacleContraint = (bounds, { element, name }) => {
   };
 };
 
-export const prepareConstraints = (
-  constraintFunctions,
-  { name, elementWidth, elementHeight, visibleArea },
-) => {
-  const constraints = constraintFunctions.map((fn) =>
-    fn({
-      elementWidth,
-      elementHeight,
-      visibleArea,
-    }),
-  );
+export const prepareConstraints = (constraintFunctions, constraintInfo) => {
+  const constraints = constraintFunctions.map((fn) => fn(constraintInfo));
   // Development safeguards: detect impossible/illogical constraints
   if (import.meta.dev) {
-    validateConstraints(constraints, {
-      elementWidth,
-      elementHeight,
-      dragName: name,
-    });
+    validateConstraints(constraints, constraintInfo);
   }
   return constraints;
 };
@@ -341,7 +328,7 @@ const logConstraintEnforcement = (
  */
 const validateConstraints = (
   constraints,
-  { elementWidth, elementHeight, dragName },
+  { elementWidth, elementHeight, name: dragName },
 ) => {
   const boundsConstraints = constraints.filter((c) => c.type === "bounds");
   const obstacleConstraints = constraints.filter((c) => c.type === "obstacle");
