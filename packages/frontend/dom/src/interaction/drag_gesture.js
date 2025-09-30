@@ -534,16 +534,18 @@ export const createDragGesture = (options) => {
       }
 
       // Use helper function to compute sticky element position
-      const [leftInContainer] = computeStickyElementPosition({
+      const stickyPositionInfo = computeStickyElementPosition({
         stickyElement: elementVisuallyImpacted,
         scrollableContainer: scrollableParent,
         computedStyle,
         isStickyLeft,
         isStickyTop,
       });
+      const leftInContainer = stickyPositionInfo[0]; // leftPositionInContainer
       const leftIsOnVisibleArea = leftInContainer >= visibleArea.left;
       console.log(
         `leftInContainer=${leftInContainer}, visibleArea.left=${visibleArea.left}, leftIsOnVisibleArea=${leftIsOnVisibleArea}`,
+        stickyPositionInfo,
       );
       let topIsOnVisibleArea;
       // if (isStickyTop) {
@@ -996,25 +998,56 @@ const computeStickyElementPosition = ({
   const currentScrollLeft = scrollableContainer.scrollLeft;
   const currentScrollTop = scrollableContainer.scrollTop;
 
+  console.log("=== computeStickyElementPosition LOGS ===");
+  console.log(
+    "elementViewportLeft (element.getBoundingClientRect().left):",
+    elementViewportLeft,
+  );
+  console.log(
+    "containerViewportLeft (container.getBoundingClientRect().left):",
+    containerViewportLeft,
+  );
+  console.log("currentScrollLeft (container.scrollLeft):", currentScrollLeft);
+  console.log("isStickyLeft:", isStickyLeft);
+  console.log("computedStyle.left:", computedStyle.left);
+
   let leftPositionInContainer;
   if (isStickyLeft) {
     // Get the sticky left threshold from CSS
     const stickyLeftThreshold = parseFloat(computedStyle.left) || 0;
+    console.log(
+      "stickyLeftThreshold (parsed from CSS left):",
+      stickyLeftThreshold,
+    );
 
-    // Calculate how far we've scrolled past the sticky threshold
+    // For a sticky element, its position in the table's coordinate system is:
+    // currentScrollLeft + stickyLeftThreshold
+    // This represents where the element would be if it were not sticky
+    leftPositionInContainer = currentScrollLeft + stickyLeftThreshold;
+    console.log(
+      "FIXED leftPositionInContainer (scrollLeft + stickyThreshold):",
+      leftPositionInContainer,
+    );
+
+    // Alternative calculation for comparison (the old buggy way)
     const scrolledPastStickyThreshold = Math.max(
       0,
       currentScrollLeft - stickyLeftThreshold,
     );
-
-    // The element's conceptual position is:
-    // - Its visual position relative to container + amount we've scrolled past sticky point
     const elementVisualLeftInContainer =
       elementViewportLeft - containerViewportLeft;
-    leftPositionInContainer =
+    const oldCalculation =
       elementVisualLeftInContainer + scrolledPastStickyThreshold;
+    console.log(
+      "OLD BUGGY calculation (visual + scrolledPast):",
+      oldCalculation,
+    );
   } else {
     leftPositionInContainer = elementViewportLeft - containerViewportLeft;
+    console.log(
+      "NON-STICKY leftPositionInContainer (elementViewport - containerViewport):",
+      leftPositionInContainer,
+    );
   }
 
   let topPositionInContainer;
@@ -1031,6 +1064,8 @@ const computeStickyElementPosition = ({
   } else {
     topPositionInContainer = elementViewportTop - containerViewportTop;
   }
+
+  console.log("=== END computeStickyElementPosition LOGS ===");
   return [leftPositionInContainer, topPositionInContainer];
 };
 
