@@ -545,19 +545,17 @@ export const createDragGesture = (options) => {
 
       const elementLeftRelative = leftAtStart + gestureInfo.xMove;
       const elementLeft = elementLeftRelative + parentRect.left;
+      const elementTopRelative = topAtStart + gestureInfo.yMove;
+      const elementTop = elementTopRelative + parentRect.top;
 
-      // Check initial position - if element starts within visible area, allow auto-scroll immediately
       if (!hasCrossedVisibleAreaLeftOnce && elementLeft >= visibleArea.left) {
         gestureInfo.hasCrossedVisibleAreaLeftOnce =
           hasCrossedVisibleAreaLeftOnce = true;
       }
-      // if (
-      //   !hasCrossedVisibleAreaTopOnce &&
-      //   top >= visibleArea.top
-      // ) {
-      //   gestureInfo.hasCrossedVisibleAreaTopOnce =
-      //     hasCrossedVisibleAreaTopOnce = true;
-      // }
+      if (!hasCrossedVisibleAreaTopOnce && elementTop >= visibleArea.top) {
+        gestureInfo.hasCrossedVisibleAreaTopOnce =
+          hasCrossedVisibleAreaTopOnce = true;
+      }
 
       const constraints = prepareConstraints(constraintFunctions, {
         name,
