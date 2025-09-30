@@ -349,7 +349,6 @@ export const Tr = ({ id, height, children }) => {
   const selectionValue = stringifyTableSelectionValue(`row`, rowIndex);
   const row = { id, selectionValue, height };
   rows[rowIndex] = row;
-
   const ColumnConsumerProvider = useColumnConsumerProvider();
 
   const { stickyTopFrontierRowIndex } = useTableSticky();
@@ -372,28 +371,33 @@ export const Tr = ({ id, height, children }) => {
         maxHeight: height ? `${height}px` : undefined,
       }}
     >
-      <RowContext.Provider value={row}>
-        <RowIndexContext.Provider value={rowIndex}>
-          <ColumnConsumerProvider>
-            {children.map((child, columnIndex) => {
-              const column = useColumnByIndex(columnIndex);
-              return (
-                <ColumnIndexContext.Provider
-                  key={columnIndex}
-                  value={columnIndex}
-                >
-                  <ColumnContext.Provider value={column}>
-                    {child}
-                  </ColumnContext.Provider>
-                </ColumnIndexContext.Provider>
-              );
-            })}
-          </ColumnConsumerProvider>
-        </RowIndexContext.Provider>
-      </RowContext.Provider>
+      <ColumnConsumerProvider>
+        {/* We use <TableRowCells /> component to be able to provide it the <ColumnConsumerProvider />  */}
+        <TableRowCells rowIndex={rowIndex} row={row}>
+          {children}
+        </TableRowCells>
+      </ColumnConsumerProvider>
     </tr>
   );
 };
+
+const TableRowCells = ({ rowIndex, row, children }) => {
+  return children.map((child, columnIndex) => {
+    const column = useColumnByIndex(columnIndex);
+    return (
+      <RowContext.Provider key={columnIndex} value={row}>
+        <RowIndexContext.Provider value={rowIndex}>
+          <ColumnIndexContext.Provider key={columnIndex} value={columnIndex}>
+            <ColumnContext.Provider value={column}>
+              {child}
+            </ColumnContext.Provider>
+          </ColumnIndexContext.Provider>
+        </RowIndexContext.Provider>
+      </RowContext.Provider>
+    );
+  });
+};
+
 export const TableCell = forwardRef((props, ref) => {
   let {
     className,

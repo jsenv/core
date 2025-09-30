@@ -192,6 +192,11 @@ export const createIsolatedItemTracker = () => {
   // Hooks for consumers to read items (state-based, re-renders)
   const useTrackedIsolatedItems = () => {
     const consumerItems = useContext(ConsumerItemsContext);
+    if (!consumerItems) {
+      throw new Error(
+        "useTrackedIsolatedItems must be used within <ItemConsumerProvider />",
+      );
+    }
     return consumerItems;
   };
 
