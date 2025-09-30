@@ -395,6 +395,7 @@ export const createDragGesture = (options) => {
           name,
           positionedParent,
           obstacleAttributeName,
+          draggedElementIsSticky: isStickyLeft || isStickyTop,
         });
       constraintFunctions.push(...obstacleConstraintFunctions);
     }
