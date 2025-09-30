@@ -39,157 +39,166 @@ import {
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 
-// Producer contexts (ref-based, no re-renders)
-const ProducerTrackerContext = createContext();
-const ProducerItemCountRefContext = createContext();
-const ProducerListRenderIdContext = createContext();
+export const createIsolatedItemTracker = () => {
+  // Producer contexts (ref-based, no re-renders)
+  const ProducerTrackerContext = createContext();
+  const ProducerItemCountRefContext = createContext();
+  const ProducerListRenderIdContext = createContext();
 
-// Consumer contexts (state-based, re-renders)
-const ConsumerItemsContext = createContext();
+  // Consumer contexts (state-based, re-renders)
+  const ConsumerItemsContext = createContext();
 
-export const useItemTrackerIsolated = () => {
-  const itemsRef = useRef([]);
-  const items = itemsRef.current;
-  const itemCountRef = useRef();
-  const pendingFlushRef = useRef(false);
-  const producerIsRenderingRef = useRef(false);
+  const useIsolatedItemTrackerProvider = () => {
+    const itemsRef = useRef([]);
+    const items = itemsRef.current;
+    const itemCountRef = useRef();
+    const pendingFlushRef = useRef(false);
+    const producerIsRenderingRef = useRef(false);
 
-  const itemTracker = useMemo(() => {
-    const registerItem = (index, value) => {
-      const hasValue = index in items;
-      if (hasValue) {
-        const currentValue = items[index];
-        if (compareTwoJsValues(currentValue, value)) {
+    const itemTracker = useMemo(() => {
+      const registerItem = (index, value) => {
+        const hasValue = index in items;
+        if (hasValue) {
+          const currentValue = items[index];
+          if (compareTwoJsValues(currentValue, value)) {
+            return;
+          }
+        }
+
+        items[index] = value;
+
+        if (producerIsRenderingRef.current) {
+          // Consumer will sync after producer render completes
           return;
         }
-      }
 
-      items[index] = value;
-
-      if (producerIsRenderingRef.current) {
-        // Consumer will sync after producer render completes
-        return;
-      }
-
-      pendingFlushRef.current = true;
-    };
-
-    const getProducerItem = (itemIndex) => {
-      return items[itemIndex];
-    };
-
-    const ItemProducerProvider = ({ children }) => {
-      items.length = 0;
-      itemCountRef.current = 0;
-      pendingFlushRef.current = false;
-      producerIsRenderingRef.current = true;
-      const listRenderId = {};
-
-      useLayoutEffect(() => {
-        producerIsRenderingRef.current = false;
-      });
-
-      // CRITICAL: Sync consumer state on subsequent renders
-      const renderedOnce = useRef(false);
-      useLayoutEffect(() => {
-        if (!renderedOnce.current) {
-          renderedOnce.current = true;
-          return;
-        }
         pendingFlushRef.current = true;
-        itemTracker.flushToConsumers();
-      }, [listRenderId]);
-
-      return (
-        <ProducerItemCountRefContext.Provider value={itemCountRef}>
-          <ProducerListRenderIdContext.Provider value={listRenderId}>
-            <ProducerTrackerContext.Provider value={itemTracker}>
-              {children}
-            </ProducerTrackerContext.Provider>
-          </ProducerListRenderIdContext.Provider>
-        </ProducerItemCountRefContext.Provider>
-      );
-    };
-
-    const ItemConsumerProvider = ({ children }) => {
-      const [consumerItems, setConsumerItems] = useState(itemsRef.current);
-
-      const flushToConsumers = () => {
-        if (!pendingFlushRef.current) {
-          return;
-        }
-        const itemsCopy = [...items];
-        pendingFlushRef.current = false;
-        setConsumerItems(itemsCopy);
       };
-      itemTracker.flushToConsumers = flushToConsumers;
 
-      useLayoutEffect(() => {
-        flushToConsumers();
-      });
+      const getProducerItem = (itemIndex) => {
+        return items[itemIndex];
+      };
 
-      return (
-        <ConsumerItemsContext.Provider value={consumerItems}>
-          {children}
-        </ConsumerItemsContext.Provider>
-      );
-    };
+      const ItemProducerProvider = ({ children }) => {
+        items.length = 0;
+        itemCountRef.current = 0;
+        pendingFlushRef.current = false;
+        producerIsRenderingRef.current = true;
+        const listRenderId = {};
 
-    return {
-      pendingFlushRef,
-      itemsRef,
-      registerItem,
-      getProducerItem,
-      ItemProducerProvider,
-      ItemConsumerProvider,
-    };
-  }, []);
+        useLayoutEffect(() => {
+          producerIsRenderingRef.current = false;
+        });
 
-  const { ItemProducerProvider, ItemConsumerProvider } = itemTracker;
+        // CRITICAL: Sync consumer state on subsequent renders
+        const renderedOnce = useRef(false);
+        useLayoutEffect(() => {
+          if (!renderedOnce.current) {
+            renderedOnce.current = true;
+            return;
+          }
+          pendingFlushRef.current = true;
+          itemTracker.flushToConsumers();
+        }, [listRenderId]);
 
-  return [ItemProducerProvider, ItemConsumerProvider];
-};
+        return (
+          <ProducerItemCountRefContext.Provider value={itemCountRef}>
+            <ProducerListRenderIdContext.Provider value={listRenderId}>
+              <ProducerTrackerContext.Provider value={itemTracker}>
+                {children}
+              </ProducerTrackerContext.Provider>
+            </ProducerListRenderIdContext.Provider>
+          </ProducerItemCountRefContext.Provider>
+        );
+      };
 
-// Hook for producers to register items (ref-based, no re-renders)
-export const useTrackItem = (data) => {
-  const listRenderId = useContext(ProducerListRenderIdContext);
-  const itemCountRef = useContext(ProducerItemCountRefContext);
-  const itemTracker = useContext(ProducerTrackerContext);
-  const listRenderIdRef = useRef();
-  const itemIndexRef = useRef();
-  const dataRef = useRef();
-  const prevListRenderId = listRenderIdRef.current;
+      const ItemConsumerProvider = ({ children }) => {
+        const [consumerItems, setConsumerItems] = useState(items);
 
-  useLayoutEffect(() => {
-    if (itemTracker.pendingFlushRef.current) {
-      itemTracker.flushToConsumers();
+        const flushToConsumers = () => {
+          if (!pendingFlushRef.current) {
+            return;
+          }
+          const itemsCopy = [...items];
+          pendingFlushRef.current = false;
+          setConsumerItems(itemsCopy);
+        };
+        itemTracker.flushToConsumers = flushToConsumers;
+
+        useLayoutEffect(() => {
+          flushToConsumers();
+        });
+
+        return (
+          <ConsumerItemsContext.Provider value={consumerItems}>
+            {children}
+          </ConsumerItemsContext.Provider>
+        );
+      };
+
+      return {
+        pendingFlushRef,
+        registerItem,
+        getProducerItem,
+        ItemProducerProvider,
+        ItemConsumerProvider,
+      };
+    }, []);
+
+    const { ItemProducerProvider, ItemConsumerProvider } = itemTracker;
+
+    return [ItemProducerProvider, ItemConsumerProvider];
+  };
+
+  // Hook for producers to register items (ref-based, no re-renders)
+  const useTrackIsolatedItem = (data) => {
+    const listRenderId = useContext(ProducerListRenderIdContext);
+    const itemCountRef = useContext(ProducerItemCountRefContext);
+    const itemTracker = useContext(ProducerTrackerContext);
+    const listRenderIdRef = useRef();
+    const itemIndexRef = useRef();
+    const dataRef = useRef();
+    const prevListRenderId = listRenderIdRef.current;
+
+    useLayoutEffect(() => {
+      if (itemTracker.pendingFlushRef.current) {
+        itemTracker.flushToConsumers();
+      }
+    });
+
+    if (prevListRenderId === listRenderId) {
+      const itemIndex = itemIndexRef.current;
+      itemTracker.registerItem(itemIndex, data);
+      dataRef.current = data;
+      return itemIndex;
     }
-  });
 
-  if (prevListRenderId === listRenderId) {
-    const itemIndex = itemIndexRef.current;
-    itemTracker.registerItem(itemIndex, data);
+    listRenderIdRef.current = listRenderId;
+    const itemCount = itemCountRef.current;
+    const itemIndex = itemCount;
+    itemCountRef.current = itemIndex + 1;
+    itemIndexRef.current = itemIndex;
     dataRef.current = data;
+    itemTracker.registerItem(itemIndex, data);
     return itemIndex;
-  }
+  };
 
-  listRenderIdRef.current = listRenderId;
-  const itemCount = itemCountRef.current;
-  const itemIndex = itemCount;
-  itemCountRef.current = itemIndex + 1;
-  itemIndexRef.current = itemIndex;
-  dataRef.current = data;
-  itemTracker.registerItem(itemIndex, data);
-  return itemIndex;
-};
+  const useTrackedIsolatedItem = (itemIndex) => {
+    const items = useTrackedIsolatedItems();
+    const item = items[itemIndex];
+    return item;
+  };
 
-// Hooks for consumers to read items (state-based, re-renders)
-export const useTrackedItems = () => {
-  const consumerItems = useContext(ConsumerItemsContext);
-  return consumerItems;
-};
+  // Hooks for consumers to read items (state-based, re-renders)
+  const useTrackedIsolatedItems = () => {
+    const consumerItems = useContext(ConsumerItemsContext);
+    return consumerItems;
+  };
 
-export const useTrackedItem = (itemIndex) => {
-  const items = useTrackedItems();
-  return items[itemIndex];
+  return [
+    useIsolatedItemTrackerProvider,
+    useTrackIsolatedItem,
+    useTrackedIsolatedItem,
+    useTrackedIsolatedItems,
+  ];
 };

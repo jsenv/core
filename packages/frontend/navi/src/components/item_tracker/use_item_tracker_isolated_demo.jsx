@@ -1,10 +1,5 @@
 import { useRef, useState } from "preact/hooks";
-import {
-  useItemTrackerIsolated,
-  useTrackItem,
-  useTrackedItem,
-  useTrackedItems,
-} from "./use_item_tracker_isolated.jsx";
+import { createIsolatedItemTracker } from "./use_item_tracker_isolated.jsx";
 
 // Initial state
 const initialState = {
@@ -14,6 +9,10 @@ const initialState = {
     { id: "b", name: "Second", color: "blue" },
   ],
 };
+
+const [useColumnTrackerProviders, useRegisterColumn, useColumn, useColumns] =
+  createIsolatedItemTracker();
+
 export const App = () => {
   const [state, setState] = useState(initialState);
 
@@ -54,7 +53,8 @@ export const App = () => {
     });
   };
 
-  const [ItemProducerProvider, ItemConsumerProvider] = useItemTrackerIsolated();
+  const [ColumnProducerProvider, ColumnConsumerProvider] =
+    useColumnTrackerProviders();
 
   return (
     <div>
@@ -88,15 +88,15 @@ export const App = () => {
         ))}
       </div>
 
-      <Producer state={state} ItemProducerProvider={ItemProducerProvider} />
-      <Consumer ItemConsumerProvider={ItemConsumerProvider} />
+      <Producer state={state} ColumnProducerProvider={ColumnProducerProvider} />
+      <Consumer ColumnConsumerProvider={ColumnConsumerProvider} />
     </div>
   );
 };
 
-const Producer = ({ state, ItemProducerProvider }) => {
+const Producer = ({ state, ColumnProducerProvider }) => {
   return (
-    <ItemProducerProvider>
+    <ColumnProducerProvider>
       <div className="section">
         <h3>Producer Items (with local overrides)</h3>
         {state.items.map((item) => (
@@ -108,13 +108,13 @@ const Producer = ({ state, ItemProducerProvider }) => {
           />
         ))}
       </div>
-    </ItemProducerProvider>
+    </ColumnProducerProvider>
   );
 };
 
-const Consumer = ({ ItemConsumerProvider }) => {
+const Consumer = ({ ColumnConsumerProvider }) => {
   return (
-    <ItemConsumerProvider>
+    <ColumnConsumerProvider>
       <div className="section">
         <h3>Item Consumers</h3>
         <ItemConsumer itemIndex={0} />
@@ -126,7 +126,7 @@ const Consumer = ({ ItemConsumerProvider }) => {
       <div className="section">
         <ValuesDisplay />
       </div>
-    </ItemConsumerProvider>
+    </ColumnConsumerProvider>
   );
 };
 
@@ -142,14 +142,15 @@ const ProducerItem = ({ id, name, color: initialColor }) => {
   const colors = ["red", "blue", "green", "purple", "orange", "pink"];
 
   // Track the item with current local state
-  const itemIndex = useTrackItem({ id, name, color: localColor });
+  const columnIndex = useRegisterColumn({ id, name, color: localColor });
 
   log(`🎨 Producer item ${id} render, ${localColor}`);
 
   return (
     <div className="item-data">
       <div className="item-info">
-        <strong>Producer Item {itemIndex}:</strong> id={id}, name={name}, color=
+        <strong>Producer Item {columnIndex}:</strong> id={id}, name={name},
+        color=
         {localColor}
         <small> (render #{renderKey})</small>
       </div>
@@ -227,7 +228,7 @@ const AppDataControls = ({ item, index, onUpdate, onRemove, onAddAfter }) => {
 // Item consumer with re-render button
 const ItemConsumer = ({ itemIndex }) => {
   const [renderKey, setRenderKey] = useState(0);
-  const itemData = useTrackedItem(itemIndex);
+  const itemData = useColumn(itemIndex);
   log(`👁️ Consumer ${itemIndex} render, ${itemData?.color}`);
 
   return (
@@ -252,7 +253,7 @@ const ItemConsumer = ({ itemIndex }) => {
 
 // Values display
 const ValuesDisplay = () => {
-  const items = useTrackedItems();
+  const items = useColumns();
   return (
     <div
       style={{
