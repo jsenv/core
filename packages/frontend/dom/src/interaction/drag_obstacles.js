@@ -9,7 +9,6 @@ export const createObstacleConstraintsFromQuerySelector = (
   const obstacles = scrollableElement.querySelectorAll(
     `[${obstacleAttributeName}]`,
   );
-  const positionedParentRect = positionedParent.getBoundingClientRect();
   const obstacleConstraintFunctions = [];
   for (const obstacle of obstacles) {
     if (obstacle.closest("[data-drag-ignore]")) {
@@ -34,6 +33,7 @@ export const createObstacleConstraintsFromQuerySelector = (
     obstacleConstraintFunctions.push(
       ({ hasCrossedVisibleAreaLeftOnce, hasCrossedVisibleAreaTopOnce }) => {
         const obstacleBounds = getElementBounds(obstacle, positionedParent);
+        const positionedParentRect = positionedParent.getBoundingClientRect();
 
         obstacleBounds.left -= positionedParentRect.left;
         obstacleBounds.right -= positionedParentRect.left;
