@@ -1,13 +1,13 @@
 # Item Tracker
 
-A Preact hook system for tracking dynamic lists without infinite re-renders, designed to enable true component composition where components work like native HTML elements.
+A Preact hook system for tracking dynamic lists, designed to prevent infinite re-renders while enabling component composition similar to native HTML elements.
 
 ## The Problem
 
-In React/Preact, you can wrap up any elements into a component and then render the new component instead. It's beautiful:
+In React/Preact, you can wrap elements into components while maintaining the same compositional flexibility:
 
 ```jsx
-// Native HTML - you can style and configure each option individually
+// Native HTML
 <select>
   <option>Eastern</option>
   <option>Central</option>
@@ -15,7 +15,7 @@ In React/Preact, you can wrap up any elements into a component and then render t
   <option className="highlighted">Pacific</option>
 </select>
 
-// Component abstraction - same flexibility!
+// Component abstraction - same flexibility
 <TimezoneSelect>
   <TimezoneOption value="est">Eastern</TimezoneOption>
   <TimezoneOption value="cst">Central</TimezoneOption>
@@ -24,197 +24,142 @@ In React/Preact, you can wrap up any elements into a component and then render t
 </TimezoneSelect>
 ```
 
-Everything works perfectly! You get the same composition and flexibility as native elements.
+However, when building components that need to coordinate between children, the parent component needs to know about its children's properties.
 
-But when we want to create more sophisticated components that need to coordinate between children, we hit a wall.
-
-Consider a data table where we want the same compositional freedom:
+Consider a table where column definitions need to be shared with table cells:
 
 ```jsx
-// What we want to write (clean composition)
-<DataTable>
-  <Column id="name" width="200px" sortable>
-    Name
-  </Column>
-  <Column id="email" width="300px" resizable>
-    Email Address
-  </Column>
-  <Column id="status" width="100px" filterable={false}>
-    Status
-  </Column>
-</DataTable>
+// Desired API - clean composition
+<Table>
+  <colgroup>
+    <Col id="name" width="200px" sortable />
+    <Col id="email" width="300px" resizable />
+    <Col id="status" width="100px" />
+  </colgroup>
+  <tbody>
+    <tr>
+      <Cell column="name">{user.name}</Cell>
+      <Cell column="email">{user.email}</Cell>
+      <Cell column="status">{user.status}</Cell>
+    </tr>
+  </tbody>
+</Table>
 ```
 
-The `DataTable` needs to know about its columns to render headers, handle sorting, manage column widths, etc. Each `Column` needs to be able to configure itself independently, just like native HTML elements.
+The challenge: `<Cell>` components need access to column configuration defined by `<Col>` components, but they're not in a parent-child relationship.
 
-But here's the problem: **how does the parent `DataTable` know what columns exist and what their properties are?**
+## Alternative Approaches
 
-### The Pain of Current Solutions
-
-Most libraries force you to abandon composition and use configuration objects instead:
+Most libraries use configuration objects instead of components:
 
 ```jsx
-// What we're forced to write (configuration hell)
-<DataTable
+<Table
   columns={[
-    { id: "name", label: "Name", width: "200px", sortable: true },
-    { id: "email", label: "Email Address", width: "300px", resizable: true },
-    { id: "status", label: "Status", width: "100px", filterable: false },
-  ]}
-/>
-```
-
-This works, but you lose all the flexibility. What if you want to customize just one column?
-
-```jsx
-// Trying to customize individual columns leads to API hell
-<DataTable
-  columns={[
-    { id: "name", label: "Name", width: "200px", sortable: true },
-    {
-      id: "email",
-      label: "Email Address",
-      width: "300px",
-      resizable: true,
-      // Need special styling for this one column? Tough luck!
-      className: "email-column",
-      onHeaderClick: handleEmailHeaderClick,
-      cellRenderer: (value) => <EmailCell value={value} />,
-      headerRenderer: () => <EmailHeader />,
-    },
-    { id: "status", label: "Status", width: "100px", filterable: false },
-  ]}
-/>
-```
-
-Soon you need escape hatches for everything:
-
-```jsx
-<DataTable
-  columns={columns}
-  columnClassNames={["", "email-column", ""]}
-  onColumnHeaderClick={[null, handleEmailHeaderClick, null]}
-  cellRenderers={[null, EmailCellRenderer, null]}
-  headerRenderers={[null, EmailHeaderRenderer, null]}
-  getColumnProps={(column, index) => {
-    if (index === 1) return { "aria-label": "Email addresses" };
-    return {};
-  }}
-  renderColumn={(column, index) => {
-    if (index === 1) {
-      return <SpecialEmailColumn {...column} />;
-    }
-    return <DefaultColumn {...column} />;
-  }}
-/>
-```
-
-**This is insane!** We went from simple, composable components to a configuration nightmare with dozens of escape hatches.
-
-Compare this to what we want - the same simplicity as native HTML:
-
-```jsx
-// What we actually want (true composition)
-<DataTable>
-  <Column id="name" width="200px" sortable>
-    Name
-  </Column>
-  <Column
-    id="email"
-    width="300px"
-    resizable
-    className="email-column"
-    onHeaderClick={handleEmailHeaderClick}
-    aria-label="Email addresses"
-  >
-    <EmailHeader />
-    {/* Custom cell rendering */}
-    {(value) => <EmailCell value={value} />}
-  </Column>
-  <Column id="status" width="100px" filterable={false}>
-    Status
-  </Column>
-</DataTable>
-```
-
-**This is the goal:** Components that work like native elements, where you can configure each child individually without forcing the parent to know about every possible customization.
-
-The problem is: how does the parent component (`DataTable`) discover its children (`Column`) and their properties without breaking React's rendering rules?
-
-## Common Solutions (And Why They Fail)
-
-### Option 1: Give Up on Composition (Most Common)
-
-The solution most people turn to is to bail out of the element API and turn to configuration arrays:
-
-```jsx
-// Instead of composable elements...
-<DataTable
-  columns={[
-    { id: "name", label: "Name", width: "200px", sortable: true },
-    { id: "email", label: "Email Address", width: "300px", resizable: true },
-    { id: "status", label: "Status", width: "100px", filterable: false },
+    { id: "name", width: "200px", sortable: true },
+    { id: "email", width: "300px", resizable: true },
+    { id: "status", width: "100px" },
   ]}
   data={tableData}
 />
 ```
 
-This makes the implementation easier because a single owner controls all the state and rendering. It's way easier to know the column index and handle interactions when everything is in one place.
-
-But you lose composition. What happens when you want to add a `className` to one column? Or custom rendering for just the email column? You end up with increasingly complex APIs:
+This approach works but requires complex APIs when you need to customize individual columns:
 
 ```jsx
-<DataTable
+<Table
   columns={columns}
-  // More and more escape hatches...
-  columnClassNames={["", "email-special", ""]}
   getColumnProps={(column, index) => {
-    if (index === 1) return { "aria-label": "Email addresses" };
+    if (column.id === "email") return { className: "email-column" };
     return {};
   }}
   cellRenderers={{
     email: (value) => <EmailCell value={value} />,
   }}
-  headerRenderers={{
-    email: () => <CustomEmailHeader />,
-  }}
-  // The API keeps growing...
-  onColumnResize={handleColumnResize}
-  onColumnSort={handleColumnSort}
-  renderColumnFilter={(column) => <ColumnFilter column={column} />}
 />
 ```
 
-Because the rendering is in the same owner as the state, we have to poke holes in the component to change anything about how it renders.
-
-All that complexity, just so the `DataTable` knows what columns exist!
-
-Had we stuck to elements, we could have done this:
+With component composition, the same customization is more straightforward:
 
 ```jsx
-<DataTable>
-  <Column id="name" width="200px" sortable>
-    Name
-  </Column>
-  <Column
-    id="email"
-    width="300px"
-    resizable
-    className="email-special"
-    aria-label="Email addresses"
-  >
-    <CustomEmailHeader />
-    {(value) => <EmailCell value={value} />}
-  </Column>
-  <Column id="status" width="100px" filterable={false}>
-    Status
-  </Column>
-</DataTable>
+<Table>
+  <colgroup>
+    <Col id="name" width="200px" sortable />
+    <Col id="email" width="300px" resizable className="email-column" />
+    <Col id="status" width="100px" />
+  </colgroup>
+  <tbody>
+    <tr>
+      <Cell column="name">{user.name}</Cell>
+      <Cell column="email">
+        <EmailCell value={user.email} />
+      </Cell>
+      <Cell column="status">{user.status}</Cell>
+    </tr>
+  </tbody>
+</Table>
 ```
 
-But how will the `DataTable` know about its columns?
+The problem is: how does the parent component discover its children's properties without causing infinite re-renders?
 
-### Option 2: `cloneElement` and Type Checking
+## Our Solution
+
+The Item Tracker provides hooks that enable component composition while preventing infinite re-renders. It offers two approaches depending on your component structure:
+
+**For library authors**, the system provides hooks to build components with clean APIs:
+
+```jsx
+// Internal implementation
+function Table({ children }) {
+  const ColTrackerProvider = useItemTrackerProvider();
+
+  return (
+    <ColTrackerProvider>
+      <table>
+        <TableHeaders /> {/* Reads column data */}
+        <tbody>{children}</tbody>
+      </table>
+    </ColTrackerProvider>
+  );
+}
+
+function Col({ id, width, sortable, ...props }) {
+  const colIndex = useTrackItem({ id, width, sortable, ...props });
+  return <col style={{ width }} />;
+}
+
+function Cell({ column, children }) {
+  const columns = useTrackedItems();
+  const colData = columns.find((col) => col.id === column);
+  return <td style={{ width: colData.width }}>{children}</td>;
+}
+```
+
+**For end users**, this enables clean, component-based APIs:
+
+```jsx
+// User-facing API
+<Table>
+  <colgroup>
+    <Col id="name" width="200px" sortable className="name-col" />
+    <Col id="email" width="300px" resizable />
+    <Col id="status" width="100px" />
+  </colgroup>
+  <tbody>
+    <tr>
+      <Cell column="name">{user.name}</Cell>
+      <Cell column="email">{user.email}</Cell>
+      <Cell column="status">{user.status}</Cell>
+    </tr>
+  </tbody>
+</Table>
+```
+
+Key features:
+
+- **Prevents infinite re-renders** through ref-based item registration
+- **Enables true composition** - items can be registered anywhere in the component tree
+- **No configuration objects** - each component configures itself through props
+- **Dynamic lists** - supports adding, removing, and reordering items### Option 2: `cloneElement` and Type Checking
 
 We can use `React.cloneElement` to keep composition while passing data to children:
 
