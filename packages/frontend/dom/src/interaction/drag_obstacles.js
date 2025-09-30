@@ -4,7 +4,7 @@ import { getElementSelector } from "./element_log.js";
 
 export const createObstacleConstraintsFromQuerySelector = (
   scrollableElement,
-  { name, positionedParent, obstacleAttributeName, isStickyLeft, isStickyTop },
+  { name, positionedParent, obstacleAttributeName, gestureInfo },
 ) => {
   const obstacles = scrollableElement.querySelectorAll(
     `[${obstacleAttributeName}]`,
@@ -30,35 +30,20 @@ export const createObstacleConstraintsFromQuerySelector = (
       }
     }
 
-    obstacleConstraintFunctions.push(
-      ({ hasCrossedVisibleAreaLeftOnce, hasCrossedVisibleAreaTopOnce }) => {
-        const obstacleBounds = getElementBounds(obstacle, positionedParent);
-        const positionedParentRect = positionedParent.getBoundingClientRect();
+    obstacleConstraintFunctions.push(() => {
+      const obstacleBounds = getElementBounds(obstacle, gestureInfo);
+      const positionedParentRect = positionedParent.getBoundingClientRect();
 
-        obstacleBounds.left -= positionedParentRect.left;
-        obstacleBounds.right -= positionedParentRect.left;
-        obstacleBounds.top -= positionedParentRect.top;
-        obstacleBounds.bottom -= positionedParentRect.top;
-
-        if (obstacleBounds.sticky) {
-          if (isStickyLeft && !hasCrossedVisibleAreaLeftOnce) {
-            const scrollLeft = scrollableElement.scrollLeft;
-            obstacleBounds.left += scrollLeft;
-            obstacleBounds.right += scrollLeft;
-          }
-          if (isStickyTop && !hasCrossedVisibleAreaTopOnce) {
-            const scrollTop = scrollableElement.scrollTop;
-            obstacleBounds.top += scrollTop;
-            obstacleBounds.bottom += scrollTop;
-          }
-        }
-        const obstacleObject = createObstacleContraint(obstacleBounds, {
-          name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
-          element: obstacle,
-        });
-        return obstacleObject;
-      },
-    );
+      obstacleBounds.left -= positionedParentRect.left;
+      obstacleBounds.right -= positionedParentRect.left;
+      obstacleBounds.top -= positionedParentRect.top;
+      obstacleBounds.bottom -= positionedParentRect.top;
+      const obstacleObject = createObstacleContraint(obstacleBounds, {
+        name: `${obstacleBounds.sticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
+        element: obstacle,
+      });
+      return obstacleObject;
+    });
   }
   return obstacleConstraintFunctions;
 };

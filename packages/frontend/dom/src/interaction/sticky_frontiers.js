@@ -146,7 +146,9 @@ const createStickyFrontierOnAxis = (
         continue;
       }
     }
-    const frontierBounds = getElementBounds(frontier, scrollableParent);
+    const frontierBounds = getElementBounds(frontier, {
+      positionedParent: scrollableParent,
+    });
     const stickyFrontierObject = {
       type: "sticky-frontier",
       element: frontier,

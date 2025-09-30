@@ -19,8 +19,8 @@ export const getDropTargetInfo = ({
   axis,
   gestureInfo,
 }) => {
-  const { positionedParent } = gestureInfo;
-  const draggedBounds = getElementBounds(draggedElement, positionedParent);
+  const draggedBounds = getElementBounds(draggedElement, gestureInfo);
+  console.log(draggedBounds, gestureInfo);
 
   // Get the start and end positions of the dragged element based on axis
   let draggedStart;

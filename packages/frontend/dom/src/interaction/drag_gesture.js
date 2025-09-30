@@ -229,6 +229,7 @@ export const createDragGesture = (options) => {
       elementToImpact,
       elementVisuallyImpacted,
       positionedParent,
+      scrollableParent,
 
       xAtStart,
       yAtStart,
@@ -403,8 +404,7 @@ export const createDragGesture = (options) => {
           name,
           positionedParent,
           obstacleAttributeName,
-          isStickyLeft,
-          isStickyTop,
+          gestureInfo,
         });
       constraintFunctions.push(...obstacleConstraintFunctions);
     }
@@ -541,21 +541,21 @@ export const createDragGesture = (options) => {
         visibleArea = visibleAreaBase;
       }
 
-      let { hasCrossedVisibleAreaLeftOnce, hasCrossedVisibleAreaTopOnce } =
-        gestureInfo;
-
       const elementLeftRelative = leftAtStart + gestureInfo.xMove;
       const elementLeft = elementLeftRelative + parentRect.left;
       const elementTopRelative = topAtStart + gestureInfo.yMove;
       const elementTop = elementTopRelative + parentRect.top;
-
-      if (!hasCrossedVisibleAreaLeftOnce && elementLeft >= visibleArea.left) {
-        gestureInfo.hasCrossedVisibleAreaLeftOnce =
-          hasCrossedVisibleAreaLeftOnce = true;
+      if (
+        !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
+        elementLeft >= visibleArea.left
+      ) {
+        gestureInfo.hasCrossedVisibleAreaLeftOnce = true;
       }
-      if (!hasCrossedVisibleAreaTopOnce && elementTop >= visibleArea.top) {
-        gestureInfo.hasCrossedVisibleAreaTopOnce =
-          hasCrossedVisibleAreaTopOnce = true;
+      if (
+        !gestureInfo.hasCrossedVisibleAreaTopOnce &&
+        elementTop >= visibleArea.top
+      ) {
+        gestureInfo.hasCrossedVisibleAreaTopOnce = true;
       }
 
       const constraints = prepareConstraints(constraintFunctions, {
@@ -563,8 +563,6 @@ export const createDragGesture = (options) => {
         elementWidth: currentElementWidth,
         elementHeight: currentElementHeight,
         visibleArea,
-        hasCrossedVisibleAreaLeftOnce,
-        hasCrossedVisibleAreaTopOnce,
       });
 
       visualMarkers.onDrag({

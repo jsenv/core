@@ -5,7 +5,15 @@ import { getBorderSizes } from "../size/get_border_sizes.js";
  * @param {HTMLElement} element - The element to get bounds for
  * @returns {Object} Bounds object with left, top, right, bottom properties
  */
-export const getElementBounds = (element, positionedParent) => {
+export const getElementBounds = (
+  element,
+  {
+    positionedParent,
+    scrollableParent,
+    hasCrossedVisibleAreaLeftOnce = true,
+    hasCrossedVisibleAreaTopOnce = true,
+  } = {},
+) => {
   const rect = element.getBoundingClientRect();
   const isHorizontallySticky = element.hasAttribute("data-sticky-left");
   const isVerticallySticky = element.hasAttribute("data-sticky-top");
@@ -34,6 +42,11 @@ export const getElementBounds = (element, positionedParent) => {
     const stickyPositionInViewport =
       parentRect.left + borderSizes.left + stickyLeft;
     left = stickyPositionInViewport;
+
+    if (!hasCrossedVisibleAreaLeftOnce) {
+      const scrollLeft = scrollableParent.scrollLeft;
+      left += scrollLeft;
+    }
   } else {
     left = rect.left;
   }
@@ -43,6 +56,10 @@ export const getElementBounds = (element, positionedParent) => {
     const stickyPositionInViewport =
       parentRect.top + borderSizes.top + stickyTop;
     top = stickyPositionInViewport;
+    if (!hasCrossedVisibleAreaTopOnce) {
+      const scrollTop = scrollableParent.scrollTop;
+      top += scrollTop;
+    }
   } else {
     top = rect.top;
   }
