@@ -205,12 +205,13 @@ export const createObstacleContraint = (bounds, { element, name }) => {
 
 export const prepareConstraints = (
   constraintFunctions,
-  { name, elementWidth, elementHeight },
+  { name, elementWidth, elementHeight, visibleArea },
 ) => {
   const constraints = constraintFunctions.map((fn) =>
     fn({
       elementWidth,
       elementHeight,
+      visibleArea,
     }),
   );
   // Development safeguards: detect impossible/illogical constraints

@@ -395,7 +395,8 @@ export const createDragGesture = (options) => {
           name,
           positionedParent,
           obstacleAttributeName,
-          draggedElementIsSticky: isStickyLeft || isStickyTop,
+          isStickyLeft,
+          isStickyTop,
         });
       constraintFunctions.push(...obstacleConstraintFunctions);
     }
@@ -507,13 +508,6 @@ export const createDragGesture = (options) => {
         elementVisuallyImpacted.getBoundingClientRect();
       const currentElementWidth = currentElementRect.width;
       const currentElementHeight = currentElementRect.height;
-
-      const constraints = prepareConstraints(constraintFunctions, {
-        name,
-        elementWidth: currentElementWidth,
-        elementHeight: currentElementHeight,
-      });
-
       const scrollableRect = scrollableParent.getBoundingClientRect();
       const availableWidth = scrollableParent.clientWidth;
       const availableHeight = scrollableParent.clientHeight;
@@ -538,6 +532,13 @@ export const createDragGesture = (options) => {
       } else {
         visibleArea = visibleAreaBase;
       }
+
+      const constraints = prepareConstraints(constraintFunctions, {
+        name,
+        elementWidth: currentElementWidth,
+        elementHeight: currentElementHeight,
+        visibleArea,
+      });
 
       visualMarkers.onDrag({
         constraints,
