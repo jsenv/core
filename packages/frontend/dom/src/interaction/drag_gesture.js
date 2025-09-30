@@ -230,6 +230,8 @@ export const createDragGesture = (options) => {
       elementVisuallyImpacted,
       positionedParent,
       scrollableParent,
+      isStickyLeft,
+      isStickyTop,
 
       xAtStart,
       yAtStart,

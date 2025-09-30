@@ -1,5 +1,3 @@
-import { getElementBounds } from "./element_bounds.js";
-
 /**
  * Detects the drop target index based on the position of a dragged element relative to potential drop targets.
  * Uses edge-based detection for more intuitive dropping behavior.
@@ -19,13 +17,10 @@ export const getDropTargetInfo = ({
   axis,
   gestureInfo,
 }) => {
-  const draggedBounds = getElementBounds(draggedElement, {
-    positionedParent: gestureInfo.positionedParent,
-    scrollableParent: gestureInfo.scrollableParent,
-    // ignoreStickyLeft: gestureInfo.hasCrossedVisibleAreaLeftOnce,
-    // ignoreStickyTop: gestureInfo.hasCrossedVisibleAreaTopOnce,
-  });
-  console.log(draggedBounds, gestureInfo);
+  const getRect = (element) => {
+    return element.getBoundingClientRect();
+  };
+  const draggedBounds = getRect(draggedElement);
 
   // Get the start and end positions of the dragged element based on axis
   let draggedStart;
@@ -33,28 +28,42 @@ export const getDropTargetInfo = ({
   let draggedCenter;
   if (axis === "x") {
     draggedStart = draggedBounds.left;
-    draggedEnd = draggedBounds.right;
+    if (gestureInfo.isStickyLeft) {
+      const computedStyle = getComputedStyle(draggedElement);
+      const stickyValue = parseFloat(computedStyle.left);
+      const visualOffset = gestureInfo.visualOffsetX;
+      const adjust = visualOffset - stickyValue;
+      draggedStart += adjust;
+    }
+    draggedEnd = draggedStart + draggedBounds.width;
     draggedCenter = draggedStart + (draggedEnd - draggedStart) / 2;
   } else {
     draggedStart = draggedBounds.top;
-    draggedEnd = draggedBounds.bottom;
+    if (gestureInfo.isStickyTop) {
+      const computedStyle = getComputedStyle(draggedElement);
+      const stickyValue = parseFloat(computedStyle.top);
+      const visualOffset = gestureInfo.visualOffsetY;
+      const adjust = visualOffset - stickyValue;
+      draggedStart += adjust;
+    }
+    draggedEnd = draggedStart + draggedBounds.height;
     draggedCenter = draggedStart + (draggedEnd - draggedStart) / 2;
   }
 
   const candidates = [];
   for (let i = 0; i < targetElements.length; i++) {
     const targetElement = targetElements[i];
-    const targetRect = targetElement.getBoundingClientRect();
+    const targetBounds = getRect(targetElement);
 
     // Get target element bounds based on axis
     let targetStart;
     let targetEnd;
     if (axis === "x") {
-      targetStart = targetRect.left;
-      targetEnd = targetRect.right;
+      targetStart = targetBounds.left;
+      targetEnd = targetBounds.right;
     } else {
-      targetStart = targetRect.top;
-      targetEnd = targetRect.bottom;
+      targetStart = targetBounds.top;
+      targetEnd = targetBounds.bottom;
     }
 
     const targetCenter = targetStart + (targetEnd - targetStart) / 2;
