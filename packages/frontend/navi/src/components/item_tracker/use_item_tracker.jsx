@@ -16,35 +16,49 @@ import { useContext, useMemo, useRef } from "preact/hooks";
  *
  * USAGE:
  * ```jsx
- * const ItemTrackerProvider = useItemTracker();
+ * // Create domain-specific tracker hooks
+ * const [useRowTrackerProvider, useRegisterRow, useRow, useRows] = createItemTracker();
  *
- * return (
- *   <ItemTrackerProvider>
- *     <table>
- *       <tbody>
- *         {rows.map(rowData => (
- *           <TableRow key={rowData.id} rowData={rowData}>
- *             {({ rowIndex }) => (
- *               <>
- *                 <TableCell rowIndex={rowIndex} column="name" />
- *                 <TableCell rowIndex={rowIndex} column="value" />
- *               </>
- *             )}
- *           </TableRow>
- *         ))}
- *       </tbody>
- *     </table>
- *   </ItemTrackerProvider>
- * );
+ * function App() {
+ *   const RowTrackerProvider = useRowTrackerProvider();
  *
- * function TableRow({ rowData, children }) {
- *   const rowIndex = useRegisterItem(rowData);
- *   return <tr>{children({ rowIndex, rowData })}</tr>;
+ *   return (
+ *     <RowTrackerProvider>
+ *       <table>
+ *         <tbody>
+ *           {rows.map(({ id, name, color }) => (
+ *             <TableRow key={id} name={name} color={color}>
+ *               <TableCell column="name" />
+ *               <TableCell column="color" />
+ *             </TableRow>
+ *           ))}
+ *         </tbody>
+ *       </table>
+ *       <TrackedRowsList />
+ *     </RowTrackerProvider>
+ *   );
  * }
  *
- * function TableCell({ rowIndex, column }) {
- *   const rowData = useGetItem(rowIndex);
+ * function TableRow({ name, color, children }) {
+ *   const rowIndex = useRegisterRow({ name, color });
+ *   return (
+ *     <tr>
+ *       <TableRowIndexContext.Provider value={rowIndex}>
+ *         {children}
+ *       </TableRowIndexContext.Provider>
+ *     </tr>
+ *   );
+ * }
+ *
+ * function TableCell({ column }) {
+ *   const rowIndex = useContext(TableRowIndexContext);
+ *   const rowData = useRow(rowIndex);
  *   return <td>{rowData[column]}</td>;
+ * }
+ *
+ * function TrackedRowsList() {
+ *   const rows = useRows();
+ *   return <div>Total rows: {rows.length}</div>;
  * }
  * ```
  */
