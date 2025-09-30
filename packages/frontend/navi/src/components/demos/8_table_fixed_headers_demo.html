@@ -131,6 +131,9 @@
         const [selection, setSelection] = useState([]);
         const [columnWidths, setColumnWidths] = useState([]);
         const [rowHeights, setRowHeights] = useState([]);
+        const [columnOrder, setColumnOrder] = useState(
+          columns.map((col) => col.id),
+        );
         const [
           stickyLeftFrontierColumnIndex,
           setStickyLeftFrontierColumnIndex,
@@ -138,28 +141,53 @@
         const [stickyTopFrontierRowIndex, setStickyTopFrontierRowIndex] =
           useState(0);
 
+        // Derived state: sort columns according to columnOrder
+        const sortedColumns = columnOrder
+          .map((colId) => columns.find((col) => col.id === colId))
+          .filter(Boolean); // Remove any undefined columns
+
         // Local state with 2D array for cell values
         const [cellValues, setCellValues] = useState(() => {
           return data.map((row) => columns.map((col) => row[col.id]));
         });
 
-        const setCellValue = (dataRowIndex, dataColIndex, value) => {
-          console.log(
-            "update cell value at",
-            `${dataColIndex}:${dataRowIndex}`,
-            "to",
-            value,
+        // Derived state: sort cell values according to column order
+        const sortedCellValues = cellValues.map((row) =>
+          columnOrder
+            .map((colId) => {
+              const originalColIndex = columns.findIndex(
+                (col) => col.id === colId,
+              );
+              return originalColIndex >= 0 ? row[originalColIndex] : "";
+            })
+            .filter((_, index) => index < sortedColumns.length),
+        );
+
+        const setCellValue = (dataRowIndex, sortedColIndex, value) => {
+          // Find the original column index from the sorted column index
+          const sortedColId = sortedColumns[sortedColIndex]?.id;
+          const originalColIndex = columns.findIndex(
+            (col) => col.id === sortedColId,
           );
-          setCellValues((prevValues) => {
-            const newValues = prevValues.map((row, rowIdx) =>
-              rowIdx === dataRowIndex
-                ? row.map((cell, colIdx) =>
-                    colIdx === dataColIndex ? value : cell,
-                  )
-                : [...row],
+
+          if (originalColIndex >= 0) {
+            console.log(
+              "update cell value at",
+              `${sortedColIndex}:${dataRowIndex} (original: ${originalColIndex}:${dataRowIndex})`,
+              "to",
+              value,
             );
-            return newValues;
-          });
+            setCellValues((prevValues) => {
+              const newValues = prevValues.map((row, rowIdx) =>
+                rowIdx === dataRowIndex
+                  ? row.map((cell, colIdx) =>
+                      colIdx === originalColIndex ? value : cell,
+                    )
+                  : [...row],
+              );
+              return newValues;
+            });
+          }
         };
 
         return (
@@ -212,13 +240,17 @@
                 onStickyLeftFrontierChange={setStickyLeftFrontierColumnIndex}
                 stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
                 onStickyTopFrontierChange={setStickyTopFrontierRowIndex}
+                onColumnOrderChange={(newColumnOrder) => {
+                  console.log("Column order changed:", newColumnOrder);
+                  setColumnOrder(newColumnOrder);
+                }}
                 borderCollapse
                 maxHeight={400}
                 maxWidth={600}
               >
                 <Colgroup>
                   <RowNumberCol width={columnWidths[0]} />
-                  {columns.map((column, columnIndex) => (
+                  {sortedColumns.map((column, columnIndex) => (
                     <Col
                       key={column.id}
                       id={column.id}
@@ -229,7 +261,7 @@
                 <Thead>
                   <Tr height={rowHeights[0]}>
                     <RowNumberTableCell />
-                    {columns.map((col) => (
+                    {sortedColumns.map((col) => (
                       <TableCell key={col.id}>{col.header}</TableCell>
                     ))}
                   </Tr>
@@ -240,16 +272,20 @@
                     return (
                       <Tr key={rowData.id} height={rowHeights[rowIndex]}>
                         <RowNumberTableCell />
-                        {columns.map((col, dataColIndex) => {
+                        {sortedColumns.map((col, sortedColIndex) => {
                           const cellValue =
-                            cellValues[dataRowIndex][dataColIndex];
+                            sortedCellValues[dataRowIndex][sortedColIndex];
 
                           return (
                             <TableCell
                               key={col.id}
                               name="cell"
                               action={({ cell }) => {
-                                setCellValue(dataRowIndex, dataColIndex, cell);
+                                setCellValue(
+                                  dataRowIndex,
+                                  sortedColIndex,
+                                  cell,
+                                );
                               }}
                             >
                               {cellValue}
@@ -267,8 +303,8 @@
               <div>
                 Dataset size:{" "}
                 <span>
-                  {data.length} rows × {columns.length} columns ={" "}
-                  {data.length * columns.length} cells
+                  {data.length} rows × {sortedColumns.length} columns ={" "}
+                  {data.length * sortedColumns.length} cells
                 </span>
               </div>
               <div>
@@ -286,8 +322,12 @@
               <div>
                 Editable cells:{" "}
                 <span>
-                  {data.length * columns.length} cells with editing enabled
+                  {data.length * sortedColumns.length} cells with editing
+                  enabled
                 </span>
+              </div>
+              <div>
+                Column order: <span>{JSON.stringify(columnOrder)}</span>
               </div>
               <div>
                 Column widths:{" "}
@@ -320,13 +360,13 @@
                   tableRef.current.selectAll();
                 }}
               >
-                Select All ({data.length * columns.length} cells)
+                Select All ({data.length * sortedColumns.length} cells)
               </button>
               <button
                 onClick={() => {
                   // Select first row
-                  const firstRowCells = columns.map(
-                    (col) => `${col.accessorKey}:row-1`,
+                  const firstRowCells = sortedColumns.map(
+                    (col) => `${col.id}:row-1`,
                   );
                   setSelection(firstRowCells);
                 }}
@@ -336,7 +376,9 @@
               <button
                 onClick={() => {
                   // Select first column
-                  const firstColCells = data.map((row) => `col1:${row.id}`);
+                  const firstColCells = data.map(
+                    (row) => `${sortedColumns[0]?.id}:${row.id}`,
+                  );
                   setSelection(firstColCells);
                 }}
               >
@@ -374,6 +416,35 @@
                 }}
               >
                 Demo Edit Cell (1,1)
+              </button>
+              <button
+                onClick={() => {
+                  // Reverse column order
+                  setColumnOrder([...columnOrder].reverse());
+                }}
+              >
+                Reverse Column Order
+              </button>
+              <button
+                onClick={() => {
+                  // Shuffle column order
+                  const shuffled = [...columnOrder];
+                  for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                  }
+                  setColumnOrder(shuffled);
+                }}
+              >
+                Shuffle Columns
+              </button>
+              <button
+                onClick={() => {
+                  // Reset to original column order
+                  setColumnOrder(columns.map((col) => col.id));
+                }}
+              >
+                Reset Column Order
               </button>
             </div>
 
