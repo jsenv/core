@@ -85,7 +85,7 @@ export const initDragTableColumnByMousedown = (
   );
 
   // Track the drop target column index (starts as current column)
-  let dropTargetColumnIndex = columnIndex;
+  let dropColumnIndex = columnIndex;
 
   const tableContainer = table.closest(".navi_table_container");
   const cloneParent = tableContainer.querySelector(
@@ -225,18 +225,25 @@ export const initDragTableColumnByMousedown = (
       "--table-height",
       `${tableRootRect.height}px`,
     );
+    const dropCandidateElements = colElements.filter(
+      (col) =>
+        !(col.getAttribute("data-drag-obstacle") || "").includes("move-column"),
+    );
 
     // Get all column elements for drop target detection
-    const updateDropTargetPosition = (newDropTargetColumnIndex) => {
-      dropTargetColumnIndex = newDropTargetColumnIndex;
-      if (dropTargetColumnIndex === columnIndex) {
+    const updateDropTarget = (dropTargetInfo) => {
+      const targetColumn = dropTargetInfo.element;
+      const targetColumnIndex = colElements.indexOf(targetColumn);
+
+      dropColumnIndex = targetColumnIndex;
+      if (dropColumnIndex === columnIndex) {
         dropPreviewUI.removeAttribute("data-visible");
         return;
       }
-      const targetColumn = colElements[dropTargetColumnIndex];
+
       const targetColumnVisualRect = getVisualRect(targetColumn, tableRoot);
       let targetColumnVisualLeft = targetColumnVisualRect.left;
-      if (dropTargetColumnIndex > columnIndex) {
+      if (dropColumnIndex > columnIndex) {
         targetColumnVisualLeft += targetColumnVisualRect.width;
         dropPreviewUI.setAttribute("data-after", "");
       } else {
@@ -246,20 +253,15 @@ export const initDragTableColumnByMousedown = (
         "--table-column-drop-target-left",
         `${targetColumnVisualLeft}px`,
       );
+      dropPreviewUI.setAttribute("data-drop-column-index", dropColumnIndex);
       dropPreviewUI.setAttribute("data-visible", "");
     };
-
-    const dropCandidateElements = colElements.filter(
-      (col) =>
-        !(col.getAttribute("data-drag-obstacle") || "").includes("move-column"),
-    );
 
     addDragEffect(() => {
       const dropTargetInfo = getDropTargetInfo({
         draggedElement: colClone,
         targetElements: dropCandidateElements,
         axis: "x",
-        defaultIndex: dropTargetColumnIndex,
       });
       if (!dropTargetInfo) {
         return;
@@ -268,7 +270,7 @@ export const initDragTableColumnByMousedown = (
       // index do not changed to take scroll into account
       // (because arrwo is positioned into document to be able to overflow
       // but outside the scrollable container to avoid having impact on scrollbars)
-      updateDropTargetPosition(dropTargetInfo.index);
+      updateDropTarget(dropTargetInfo);
     });
 
     document.body.appendChild(dropPreview);
@@ -286,10 +288,10 @@ export const initDragTableColumnByMousedown = (
         for (const dragEffect of dragEffectCallbackSet) {
           dragEffect(gestureInfo);
         }
-        onDrag?.(gestureInfo, dropTargetColumnIndex);
+        onDrag?.(gestureInfo, dropColumnIndex);
       },
       onRelease: (gestureInfo) => {
-        onRelease?.(gestureInfo, dropTargetColumnIndex);
+        onRelease?.(gestureInfo, dropColumnIndex);
       },
     });
 
