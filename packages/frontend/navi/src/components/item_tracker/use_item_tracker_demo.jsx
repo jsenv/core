@@ -1,270 +1,218 @@
-import { useState } from "preact/hooks";
+import { createContext } from "preact";
+import { useContext, useState } from "preact/hooks";
 import {
   useItemTracker,
-  useTrackItem,
   useTrackedItem,
   useTrackedItems,
+  useTrackItem,
 } from "./use_item_tracker.jsx";
 
-// Initial state
-const initialState = {
-  renderKey: 0,
-  items: [
-    { id: "a", name: "First", color: "red" },
-    { id: "b", name: "Second", color: "blue" },
-  ],
-};
+// Main demo app
 export const App = () => {
-  const [state, setState] = useState(initialState);
+  const [rows, setRows] = useState([
+    {
+      id: "a",
+      name: "First Row",
+      color: "red",
+      category: "Type A",
+      value: 100,
+    },
+    {
+      id: "b",
+      name: "Second Row",
+      color: "blue",
+      category: "Type B",
+      value: 200,
+    },
+  ]);
+  const [renderKey, setRenderKey] = useState(0);
 
-  log(`🎬 App render ${state.renderKey}`);
+  log(`🎬 App render #${renderKey}`);
 
-  const handleUpdateItem = (index, newItem) => {
-    setState((prev) => {
-      const newItems = [...prev.items];
-      newItems[index] = newItem;
-      log(`🔄 Updated item ${index}: ${JSON.stringify(newItem)}`);
-      return { ...prev, items: newItems };
-    });
+  const ItemTrackerProvider = useItemTracker();
+
+  const addRow = () => {
+    const colors = ["red", "blue", "green", "yellow"];
+    const newId = String.fromCharCode(97 + rows.length);
+
+    const newRow = {
+      id: newId,
+      name: `Row ${newId.toUpperCase()}`,
+      color: colors[Math.floor(Math.random() * colors.length)],
+    };
+
+    setRows((prev) => [...prev, newRow]);
+    log(`➕ Added row: ${JSON.stringify(newRow)}`);
   };
 
-  const handleRemoveItem = (index) => {
-    setState((prev) => {
-      const newItems = prev.items.filter((_, i) => i !== index);
-      log(`➖ Removed item ${index}`);
-      return { ...prev, items: newItems };
-    });
+  const removeLastRow = () => {
+    if (rows.length > 0) {
+      const removed = rows[rows.length - 1];
+      setRows((prev) => prev.slice(0, -1));
+      log(`➖ Removed row: ${removed.name}`);
+    }
   };
 
-  const handleAddAfter = (index) => {
-    setState((prev) => {
-      const newId = String.fromCharCode(97 + prev.items.length);
-      const newItem = {
-        id: newId,
-        name: `Item ${newId.toUpperCase()}`,
-        color: "green",
-      };
-      const newItems = [
-        ...prev.items.slice(0, index + 1),
-        newItem,
-        ...prev.items.slice(index + 1),
-      ];
-      log(`➕ Added item after ${index}: ${JSON.stringify(newItem)}`);
-      return { ...prev, items: newItems };
-    });
+  const forceRerender = () => {
+    setRenderKey((prev) => prev + 1);
+    log(`🔄 Forced re-render #${renderKey + 1}`);
   };
-
-  const [ItemProducerProvider, ItemConsumerProvider] = useItemTracker();
 
   return (
     <div>
-      <div style={{ marginBottom: "20px" }}>
-        <strong>App Render #{state.renderKey}</strong>
-        <button
-          style={{ marginLeft: "10px" }}
-          onClick={() => {
-            log("🔄 Manual app re-render triggered");
-            setState((prev) => ({
-              ...prev,
-              renderKey: prev.renderKey + 1,
-            }));
-          }}
-        >
-          Re-render App
-        </button>
-      </div>
-
       <div className="section">
-        <h3>App Data Controls (affects both producer & consumer)</h3>
-        {state.items.map((item, index) => (
-          <AppDataControls
-            key={`${item.id}-${state.renderKey}`}
-            item={item}
-            index={index}
-            onUpdate={handleUpdateItem}
-            onRemove={handleRemoveItem}
-            onAddAfter={handleAddAfter}
-          />
-        ))}
+        <h3>🎮 Controls</h3>
+        <div className="controls">
+          <button className="btn btn--primary" onClick={addRow}>
+            ➕ Add Row
+          </button>
+          <button className="btn" onClick={removeLastRow}>
+            ➖ Remove Last Row
+          </button>
+          <button className="btn" onClick={forceRerender}>
+            🔄 Force Re-render
+          </button>
+          <span style={{ fontSize: "11px", opacity: 0.7 }}>
+            Render #{renderKey}
+          </span>
+        </div>
       </div>
 
-      <Producer state={state} ItemProducerProvider={ItemProducerProvider} />
-      <Consumer ItemConsumerProvider={ItemConsumerProvider} />
+      <ItemTrackerProvider>
+        <div className="section">
+          <h3>📋 Table with Tracked Rows</h3>
+          <p style={{ fontSize: "12px", margin: "0 0 10px 0", color: "#666" }}>
+            💡 Change colors using the dropdown in each row to trigger
+            individual row re-renders. Notice how only that specific row
+            re-renders and updates its tracked data.
+          </p>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Color</th>
+                  <th>Color Override</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(({ id, name, color }) => (
+                  <TableRow key={id} name={name} color={color}>
+                    <TableCell column="name" />
+                    <TableCell column="color" />
+                    {/* Color selector is rendered directly in TableRow */}
+                  </TableRow>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="section">
+          <h3>🔍 Tracked Items Debug</h3>
+          <TrackedRowsList />
+        </div>
+      </ItemTrackerProvider>
     </div>
   );
 };
 
-const Producer = ({ state, ItemProducerProvider }) => {
-  return (
-    <ItemProducerProvider>
-      <div className="section">
-        <h3>Producer Items (with local overrides)</h3>
-        {state.items.map((item) => (
-          <ProducerItem
-            key={`${item.id}-${state.renderKey}`}
-            id={item.id}
-            name={item.name}
-            color={item.color}
-          />
-        ))}
-      </div>
-    </ItemProducerProvider>
-  );
-};
-
-const Consumer = ({ ItemConsumerProvider }) => {
-  return (
-    <ItemConsumerProvider>
-      <div className="section">
-        <h3>Item Consumers</h3>
-        <ItemConsumer itemIndex={0} />
-        <ItemConsumer itemIndex={1} />
-        <ItemConsumer itemIndex={2} />
-        <ItemConsumer itemIndex={3} />
-      </div>
-
-      <div className="section">
-        <ValuesDisplay />
-      </div>
-    </ItemConsumerProvider>
-  );
-};
-
-// Producer item with local state for testing overrides
-const ProducerItem = ({ id, name, color: initialColor }) => {
-  const [localColor, setLocalColor] = useState(initialColor);
-  const [renderKey, setRenderKey] = useState(0);
-  const colors = ["red", "blue", "green", "purple", "orange", "pink"];
-
-  // Track the item with current local state
-  const itemIndex = useTrackItem({ id, name, color: localColor });
-
-  return (
-    <div className="item-data">
-      <div className="item-info">
-        <strong>Producer Item {itemIndex}:</strong> id={id}, name={name}, color=
-        {localColor}
-        <small> (render #{renderKey})</small>
-      </div>
-      <div className="item-controls">
-        <select
-          value={localColor}
-          onChange={(e) => {
-            log(
-              `🎨 Producer override: ${id} color changed to ${e.target.value}`,
-            );
-            setLocalColor(e.target.value);
-          }}
-        >
-          {colors.map((color) => (
-            <option key={color} value={color}>
-              {color}
-            </option>
-          ))}
-        </select>
-        <button
-          className="rerender"
-          onClick={() => {
-            log(`🔄 Re-rendering producer item ${id}`);
-            setRenderKey((prev) => prev + 1);
-          }}
-        >
-          Re-render Producer
-        </button>
-        <button
-          onClick={() => {
-            log(`🔄 Reset producer item ${id} to original color`);
-            setLocalColor(initialColor);
-          }}
-        >
-          Reset Color
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// App data controls that affect the global state
-const AppDataControls = ({ item, index, onUpdate, onRemove, onAddAfter }) => {
-  const colors = ["red", "blue", "green", "purple", "orange", "pink"];
-
-  return (
-    <div className="item-data">
-      <div className="item-info">
-        <strong>App Data {index}:</strong> id={item.id}, name={item.name},
-        color=
-        {item.color}
-      </div>
-      <div className="item-controls">
-        <select
-          value={item.color}
-          onChange={(e) => onUpdate(index, { ...item, color: e.target.value })}
-        >
-          {colors.map((color) => (
-            <option key={color} value={color}>
-              {color}
-            </option>
-          ))}
-        </select>
-        <button className="add" onClick={() => onAddAfter(index)}>
-          Add After
-        </button>
-        <button className="remove" onClick={() => onRemove(index)}>
-          Remove
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Item consumer with re-render button
-const ItemConsumer = ({ itemIndex }) => {
-  const [renderKey, setRenderKey] = useState(0);
-  const itemData = useTrackedItem(itemIndex);
-  log(`👁️ Consumer ${itemIndex} render, ${itemData?.color}`);
-
-  return (
-    <div className="item-consumer">
-      <div>
-        <strong>Consumer for index {itemIndex}:</strong>
-        <span>{itemData ? JSON.stringify(itemData) : "undefined"}</span>
-        <small> (render #{renderKey})</small>
-      </div>
-      <button
-        className="rerender"
-        onClick={() => {
-          log(`🔄 Re-rendering consumer ${itemIndex}`);
-          setRenderKey((prev) => prev + 1);
-        }}
-      >
-        Re-render
-      </button>
-    </div>
-  );
-};
-
-// Values display
-const ValuesDisplay = () => {
-  const items = useTrackedItems();
-  return (
-    <div
-      style={{
-        background: "#fff3e0",
-        padding: "10px",
-        borderRadius: "4px",
-      }}
-    >
-      <strong>All Tracked Items:</strong>
-      <pre>{JSON.stringify(items, null, 2)}</pre>
-    </div>
-  );
-};
-
-// Debug logging
+// Simple logging
+const logContainer = document.getElementById("log");
 const log = (message) => {
   const timestamp = new Date().toLocaleTimeString();
-  const logElement = document.getElementById("logs");
-  logElement.textContent += `[${timestamp}] ${message}\n`;
-  logElement.scrollTop = logElement.scrollHeight;
-  console.log(message);
+  logContainer.textContent += `[${timestamp}] ${message}\n`;
+  logContainer.scrollTop = logContainer.scrollHeight;
+};
+
+const TableRowIndexContext = createContext();
+
+// Demo components
+const TableRow = ({ children, name, color: initialColor }) => {
+  // Local state for color override
+  const [localColor, setLocalColor] = useState(initialColor);
+
+  // Use local color if it differs from initial, otherwise use initial
+  const currentColor = localColor !== initialColor ? localColor : initialColor;
+
+  // Register this row and get its index
+  const rowIndex = useTrackItem({ name, color: currentColor });
+
+  log(`🎬 TableRow ${rowIndex} render (${name}, color: ${currentColor})`);
+
+  const handleColorChange = (event) => {
+    const newColor = event.target.value;
+    setLocalColor(newColor);
+    log(`🎨 Row ${rowIndex} color changed to ${newColor}`);
+  };
+
+  return (
+    <tr className={`table-row table-row--${currentColor}`}>
+      <TableRowIndexContext.Provider value={rowIndex}>
+        {children}
+        <td>
+          <select
+            value={currentColor}
+            onChange={handleColorChange}
+            style={{ fontSize: "10px", padding: "2px" }}
+          >
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="yellow">Yellow</option>
+          </select>
+          {localColor !== initialColor && (
+            <small style={{ marginLeft: "4px", opacity: 0.7 }}>
+              (overridden)
+            </small>
+          )}
+        </td>
+      </TableRowIndexContext.Provider>
+    </tr>
+  );
+};
+
+const TableCell = ({ column }) => {
+  const rowIndex = useContext(TableRowIndexContext);
+  const rowData = useTrackedItem(rowIndex);
+
+  if (!rowData) {
+    return <td>❌ Row {rowIndex} not found</td>;
+  }
+
+  const cellContent = rowData[column] || `${column}?`;
+
+  return (
+    <td title={`Row ${rowIndex}, Column ${column}`}>
+      {cellContent}
+      <small style={{ opacity: 0.6, marginLeft: "4px" }}>
+        (row {rowIndex})
+      </small>
+    </td>
+  );
+};
+
+const TrackedRowsList = () => {
+  const rows = useTrackedItems();
+
+  return (
+    <div className="tracked-rows">
+      <strong>All Tracked Rows ({rows.length}):</strong>
+      {rows.map((item, index) => (
+        <div key={index} className="tracked-row-item">
+          <span>
+            #{index}: {item.name}
+          </span>
+          <span style={{ color: item.color, fontWeight: "bold" }}>
+            {item.color}
+          </span>
+        </div>
+      ))}
+      {rows.length === 0 && (
+        <div style={{ opacity: 0.6, fontStyle: "italic" }}>
+          No rows tracked yet
+        </div>
+      )}
+    </div>
+  );
 };
