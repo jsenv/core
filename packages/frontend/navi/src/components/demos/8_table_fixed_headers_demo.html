@@ -132,7 +132,7 @@
         const [selection, setSelection] = useState([]);
         const [columnWidths, setColumnWidths] = useState([]);
         const [rowHeights, setRowHeights] = useState([]);
-        const [columnOrder, setColumnOrder] = useState(
+        const [columnOrderedIds, setColumnOrderedIds] = useState(
           columns.map((col) => col.id),
         );
         const [
@@ -143,14 +143,14 @@
           useState(0);
 
         // Derived state: sort columns according to columnOrder
-        const sortedColumns = columnOrder
+        const sortedColumns = columnOrderedIds
           .map((colId) => columns.find((col) => col.id === colId))
           .filter(Boolean); // Remove any undefined columns
 
         // Use custom hook for cell management
         const [cellValues, setCellValue, setBaseCellValues] = useCells(data, {
           columnIds: columns.map((col) => col.id),
-          columnOrder,
+          columnOrderedIds,
         });
 
         return (
@@ -205,7 +205,7 @@
                 onStickyTopFrontierChange={setStickyTopFrontierRowIndex}
                 onColumnOrderChange={(newColumnOrder) => {
                   console.log("Column order changed:", newColumnOrder);
-                  setColumnOrder(newColumnOrder);
+                  setColumnOrderedIds(newColumnOrder);
                 }}
                 borderCollapse
                 maxHeight={400}
@@ -286,7 +286,7 @@
                 </span>
               </div>
               <div>
-                Column order: <span>{JSON.stringify(columnOrder)}</span>
+                Column order: <span>{JSON.stringify(columnOrderedIds)}</span>
               </div>
               <div>
                 Column widths:{" "}
@@ -380,7 +380,7 @@
               <button
                 onClick={() => {
                   // Reverse column order
-                  setColumnOrder([...columnOrder].reverse());
+                  setColumnOrderedIds([...columnOrderedIds].reverse());
                 }}
               >
                 Reverse Column Order
@@ -388,12 +388,12 @@
               <button
                 onClick={() => {
                   // Shuffle column order
-                  const shuffled = [...columnOrder];
+                  const shuffled = [...columnOrderedIds];
                   for (let i = shuffled.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
                   }
-                  setColumnOrder(shuffled);
+                  setColumnOrderedIds(shuffled);
                 }}
               >
                 Shuffle Columns
@@ -401,7 +401,7 @@
               <button
                 onClick={() => {
                   // Reset to original column order
-                  setColumnOrder(columns.map((col) => col.id));
+                  setColumnOrderedIds(columns.map((col) => col.id));
                 }}
               >
                 Reset Column Order
