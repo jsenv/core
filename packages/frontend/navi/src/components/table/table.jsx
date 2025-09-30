@@ -41,7 +41,10 @@
  *
  * Next steps:
  *
- * - Finir vrai exemple de re-order de column (mise a jour du state + effet au survol)
+ * - Finir vrai exemple de re-order de column (mise a jour du state)
+ *   A priori on veut un onColumnOrderChange qui recoit un tableau de column ids dans l'ordre voulu
+ *   notons aussi qu'un drop dans la zone sticky va surement déplacer la frontiere au passage
+ *   et qu'un drop en dehors de meme
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
  * - Delete a row (how?)
@@ -145,6 +148,7 @@ export const Table = forwardRef((props, ref) => {
     onStickyLeftFrontierChange,
     stickyTopFrontierRowIndex = 0,
     onStickyTopFrontierChange,
+    onColumnOrderChange,
     maxWidth,
     maxHeight,
     children,
@@ -252,6 +256,7 @@ export const Table = forwardRef((props, ref) => {
     grabTarget,
     grabColumn,
     releaseColumn,
+    onColumnOrderChange,
   };
 
   return (
@@ -490,10 +495,11 @@ export const TableCell = forwardRef((props, ref) => {
     // value: selectionId,
   });
 
-  const { grabTarget, grabColumn, releaseColumn } = useTableDrag();
+  const { grabTarget, grabColumn, releaseColumn, onColumnOrderChange } =
+    useTableDrag();
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
   if (canDragColumn === undefined) {
-    canDragColumn = rowIndex === 0 && !column.immovable;
+    canDragColumn = rowIndex === 0 && !column.immovable && onColumnOrderChange;
   }
 
   if (canResizeWidth === undefined && rowIndex === 0) {
