@@ -538,31 +538,30 @@ export const createDragGesture = (options) => {
       const elementTopRelative = topAtStart + gestureInfo.yMove;
       const elementTop = elementTopRelative + parentRect.top;
 
-      // Determine if element is on the visible area vs sticky area
+      // For sticky elements, we need to detect if they've crossed into the sticky area
+      // The sticky frontier is where the element would "stick" when scrolling
       let leftIsOnVisibleArea;
       let topIsOnVisibleArea;
 
       if (isStickyLeft) {
-        // For sticky left elements, use the sticky frontier from visibleArea
-        // visibleArea.left is in viewport coordinates, so compare directly with elementLeft
-        leftIsOnVisibleArea = elementLeft >= visibleArea.left;
+        const stickyFrontierLeft = visibleArea.left;
+        leftIsOnVisibleArea = elementLeft >= stickyFrontierLeft;
         console.log(
-          `Sticky Left Debug: elementLeft=${elementLeft}, visibleArea.left=${visibleArea.left}, leftIsOnVisibleArea=${leftIsOnVisibleArea}`,
+          `Sticky Left Debug: elementLeft=${elementLeft}, stickyFrontierLeft=${stickyFrontierLeft}, leftIsOnVisibleArea=${leftIsOnVisibleArea}`,
         );
       } else {
-        // For non-sticky elements, they're always considered on visible area
+        // For non-sticky elements, use the normal visible area
         leftIsOnVisibleArea = true;
       }
 
       if (isStickyTop) {
-        // For sticky top elements, use the sticky frontier from visibleArea
-        // visibleArea.top is in viewport coordinates, so compare directly with elementTop
-        topIsOnVisibleArea = elementTop >= visibleArea.top;
+        const stickyFrontierTop = visibleArea.top;
+        topIsOnVisibleArea = elementTop >= stickyFrontierTop;
         console.log(
-          `Sticky Top Debug: elementTop=${elementTop}, visibleArea.top=${visibleArea.top}, topIsOnVisibleArea=${topIsOnVisibleArea}`,
+          `Sticky Top Debug: elementTop=${elementTop}, stickyFrontierTop=${stickyFrontierTop}, topIsOnVisibleArea=${topIsOnVisibleArea}`,
         );
       } else {
-        // For non-sticky elements, they're always considered on visible area
+        // For non-sticky elements, use the normal visible area
         topIsOnVisibleArea = true;
       }
 
