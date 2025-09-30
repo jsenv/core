@@ -537,9 +537,42 @@ export const createDragGesture = (options) => {
       const elementLeft = elementLeftRelative + parentRect.left;
       const elementTopRelative = topAtStart + gestureInfo.yMove;
       const elementTop = elementTopRelative + parentRect.top;
-      const leftIsOnVisibleArea = elementLeft >= visibleArea.left;
-      const topIsOnVisibleArea = elementTop >= visibleArea.top;
-      console.log(elementLeft, visibleArea.left, leftIsOnVisibleArea);
+
+      // Determine if element is on the visible area vs sticky area
+      let leftIsOnVisibleArea;
+      let topIsOnVisibleArea;
+
+      if (isStickyLeft) {
+        // For sticky left elements, use the sticky frontier from visibleArea
+        // visibleArea.left is in viewport coordinates, so compare directly with elementLeft
+        leftIsOnVisibleArea = elementLeft >= visibleArea.left;
+        console.log(
+          `Sticky Left Debug: elementLeft=${elementLeft}, visibleArea.left=${visibleArea.left}, leftIsOnVisibleArea=${leftIsOnVisibleArea}`,
+        );
+      } else {
+        // For non-sticky elements, they're always considered on visible area
+        leftIsOnVisibleArea = true;
+      }
+
+      if (isStickyTop) {
+        // For sticky top elements, use the sticky frontier from visibleArea
+        // visibleArea.top is in viewport coordinates, so compare directly with elementTop
+        topIsOnVisibleArea = elementTop >= visibleArea.top;
+        console.log(
+          `Sticky Top Debug: elementTop=${elementTop}, visibleArea.top=${visibleArea.top}, topIsOnVisibleArea=${topIsOnVisibleArea}`,
+        );
+      } else {
+        // For non-sticky elements, they're always considered on visible area
+        topIsOnVisibleArea = true;
+      }
+
+      console.log(`Element position: left=${elementLeft}, top=${elementTop}`);
+      console.log(
+        `Visible area: left=${visibleArea.left}, top=${visibleArea.top}`,
+      );
+      console.log(
+        `Is on visible area: left=${leftIsOnVisibleArea}, top=${topIsOnVisibleArea}`,
+      );
 
       const constraints = prepareConstraints(constraintFunctions, {
         name,
