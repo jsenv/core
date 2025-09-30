@@ -576,8 +576,10 @@
         createDragToMoveGesture({
           direction: { x: true },
           backdrop: false,
-          customLeftBound,
-          customRightBound,
+          customAreaConstraint: {
+            left: customLeftBound,
+            right: customRightBound,
+          },
           onGrab: (gestureInfo) => {
             console.log("Horizontal - Grab started", gestureInfo);
             horizontalRectangle.setAttribute("data-dragging", "");
@@ -610,8 +612,10 @@
 
         createDragToMoveGesture({
           backdrop: false,
-          customTopBound,
-          customBottomBound,
+          customAreaConstraint: {
+            top: customTopBound,
+            bottom: customBottomBound,
+          },
           onGrab: (gestureInfo) => {
             console.log("Vertical - Grab started", gestureInfo);
             verticalRectangle.setAttribute("data-dragging", "");
