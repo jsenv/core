@@ -1,10 +1,9 @@
 import {
   createDragToMoveGesture,
+  getDropTargetInfo,
   getScrollableParent,
   getVisualRect,
 } from "@jsenv/dom";
-
-import { getDropTargetInfo } from "../drop_target_detection.js";
 
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
@@ -257,11 +256,12 @@ export const initDragTableColumnByMousedown = (
       dropPreviewUI.setAttribute("data-visible", "");
     };
 
-    addDragEffect(() => {
+    addDragEffect((gestureInfo) => {
       const dropTargetInfo = getDropTargetInfo({
         draggedElement: colClone,
         targetElements: dropCandidateElements,
         axis: "x",
+        gestureInfo,
       });
       if (!dropTargetInfo) {
         return;

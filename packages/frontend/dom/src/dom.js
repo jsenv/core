@@ -82,3 +82,4 @@ export {
   createDragToMoveGesture,
 } from "./interaction/drag_gesture.js";
 export { startDragToResizeGesture } from "./interaction/drag_to_resize_gesture.js";
+export { getDropTargetInfo } from "./interaction/drop_target_detection.js";

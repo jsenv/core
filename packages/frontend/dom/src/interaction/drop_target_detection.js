@@ -1,3 +1,5 @@
+import { getElementBounds } from "./element_bounds.js";
+
 /**
  * Detects the drop target index based on the position of a dragged element relative to potential drop targets.
  * Uses edge-based detection for more intuitive dropping behavior.
@@ -11,20 +13,26 @@
  * @param {string} [params.mode='direct'] - 'direct' returns element index, 'frontier' returns before/after index
  * @returns {number} The index of the target element where the drop should occur
  */
-export const getDropTargetInfo = ({ draggedElement, targetElements, axis }) => {
-  const draggedRect = draggedElement.getBoundingClientRect();
+export const getDropTargetInfo = ({
+  draggedElement,
+  targetElements,
+  axis,
+  gestureInfo,
+}) => {
+  const { positionedParent } = gestureInfo;
+  const draggedBounds = getElementBounds(draggedElement, positionedParent);
 
   // Get the start and end positions of the dragged element based on axis
   let draggedStart;
   let draggedEnd;
   let draggedCenter;
   if (axis === "x") {
-    draggedStart = draggedRect.left;
-    draggedEnd = draggedRect.right;
+    draggedStart = draggedBounds.left;
+    draggedEnd = draggedBounds.right;
     draggedCenter = draggedStart + (draggedEnd - draggedStart) / 2;
   } else {
-    draggedStart = draggedRect.top;
-    draggedEnd = draggedRect.bottom;
+    draggedStart = draggedBounds.top;
+    draggedEnd = draggedBounds.bottom;
     draggedCenter = draggedStart + (draggedEnd - draggedStart) / 2;
   }
 
