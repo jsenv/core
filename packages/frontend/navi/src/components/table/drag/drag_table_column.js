@@ -20,7 +20,7 @@ import.meta.css = /* css */ `
     position: absolute;
     top: -10px;
     left: var(--table-column-drop-target-left);
-    background: yellow;
+    /* background: yellow; */
     display: flex;
     opacity: 0;
   }
@@ -100,8 +100,8 @@ export const initDragTableColumnByMousedown = (
     // because position would not work as the clone is not in a scrollable container
     // but an absolutely positioned element
     const scrollableParent = getScrollableParent(table);
-    const scrollLeft = scrollableParent.scrollLeft || 0;
-    const scrollTop = scrollableParent.scrollTop || 0;
+    const scrollLeft = scrollableParent.scrollLeft;
+    const scrollTop = scrollableParent.scrollTop;
 
     // important: only on cells, not on <col> nor <tr>
     const stickyCells = tableClone.querySelectorAll(
@@ -249,10 +249,15 @@ export const initDragTableColumnByMousedown = (
       dropPreviewUI.setAttribute("data-visible", "");
     };
 
+    const dropCandidateElements = colElements.filter(
+      (col) =>
+        !(col.getAttribute("data-drag-obstacle") || "").includes("move-column"),
+    );
+
     addDragEffect(() => {
       const dropTargetInfo = getDropTargetInfo({
         draggedElement: colClone,
-        targetElements: colElements,
+        targetElements: dropCandidateElements,
         axis: "x",
         defaultIndex: dropTargetColumnIndex,
       });
