@@ -73,7 +73,7 @@ This approach works but requires complex APIs when you need to customize individ
     return {};
   }}
   cellRenderers={{
-    email: (value) => <EmailCell value={value} />,
+    email: (value) => value.toLowerCase(),
   }}
 />
 ```
@@ -82,20 +82,18 @@ With component composition, the same customization is more straightforward:
 
 ```jsx
 <Table>
-  <colgroup>
+  <Colgroup>
     <Col id="name" width="200px" sortable />
     <Col id="email" width="300px" resizable className="email-column" />
     <Col id="status" width="100px" />
-  </colgroup>
-  <tbody>
-    <tr>
-      <Cell column="name">{user.name}</Cell>
-      <Cell column="email">
-        <EmailCell value={user.email} />
-      </Cell>
-      <Cell column="status">{user.status}</Cell>
-    </tr>
-  </tbody>
+  </Colgroup>
+  <Tbody>
+    <Tr>
+      <TableCell column="name">{user.name}</TableCell>
+      <TableCell column="email">{user.email.toLowerCase()}</TableCell>
+      <TableCell column="status">{user.status}</TableCell>
+    </Tr>
+  </Tbody>
 </Table>
 ```
 
@@ -114,10 +112,10 @@ function Table({ children }) {
 
   return (
     <ColTrackerProvider>
-      <table>
+      <Table>
         <TableHeaders /> {/* Reads column data */}
-        <tbody>{children}</tbody>
-      </table>
+        <Tbody>{children}</Tbody>
+      </Table>
     </ColTrackerProvider>
   );
 }
@@ -127,7 +125,7 @@ function Col({ id, width, sortable, ...props }) {
   return <col style={{ width }} />;
 }
 
-function Cell({ column, children }) {
+function TableCell({ column, children }) {
   const columns = useTrackedItems();
   const colData = columns.find((col) => col.id === column);
   return <td style={{ width: colData.width }}>{children}</td>;
@@ -139,18 +137,18 @@ function Cell({ column, children }) {
 ```jsx
 // User-facing API
 <Table>
-  <colgroup>
+  <Colgroup>
     <Col id="name" width="200px" sortable className="name-col" />
     <Col id="email" width="300px" resizable />
     <Col id="status" width="100px" />
-  </colgroup>
-  <tbody>
-    <tr>
-      <Cell column="name">{user.name}</Cell>
-      <Cell column="email">{user.email}</Cell>
-      <Cell column="status">{user.status}</Cell>
-    </tr>
-  </tbody>
+  </Colgroup>
+  <Tbody>
+    <Tr>
+      <TableCell column="name">{user.name}</TableCell>
+      <TableCell column="email">{user.email}</TableCell>
+      <TableCell column="status">{user.status}</TableCell>
+    </Tr>
+  </Tbody>
 </Table>
 ```
 
@@ -227,16 +225,16 @@ function App() {
   return (
     <div>
       {/* Producer tree: Registers column data */}
-      <table>
-        <colgroup>
+      <Table>
+        <Colgroup>
           <ColumnProducerProvider>
             {columns.map((col) => (
-              <ColumnDefinition key={col.id} {...col} />
+              <Col key={col.id} {...col} />
             ))}
           </ColumnProducerProvider>
-        </colgroup>
+        </Colgroup>
         {/* Table content */}
-      </table>
+      </Table>
 
       {/* Consumer tree: Reads column data */}
       <ColumnConsumerProvider>
@@ -247,7 +245,7 @@ function App() {
   );
 }
 
-function ColumnDefinition({ id, label, width, sortable }) {
+function Col({ id, label, width, sortable }) {
   const columnIndex = useRegisterColumn({ id, label, width, sortable });
   return <col style={{ width }} />;
 }
@@ -299,11 +297,11 @@ Register items anywhere in the producer tree:
 <ColumnProducerProvider>
   <div>
     <SomeWrapper>
-      <ColumnDefinition id="name" width="200px" />
+      <Col id="name" width="200px" />
     </SomeWrapper>
   </div>
   <AnotherComponent>
-    <ColumnDefinition id="email" width="300px" />
+    <Col id="email" width="300px" />
   </AnotherComponent>
 </ColumnProducerProvider>
 ```
@@ -372,45 +370,45 @@ Add, remove, and reorder items without breaking:
 The isolated tracker was specifically designed for HTML table structures:
 
 ```jsx
-<table>
+<Table>
   {/* PRODUCER: Column definitions register metadata */}
   <ColumnProducerProvider>
-    <colgroup>
-      <ColumnDefinition
+    <Colgroup>
+      <Col
         id="name"
         label="Full Name"
         width="200px"
         sortable={true}
         filterable={true}
       />
-      <ColumnDefinition
+      <Col
         id="email"
         label="Email Address"
         width="300px"
         sortable={true}
         filterable={false}
       />
-    </colgroup>
+    </Colgroup>
   </ColumnProducerProvider>
 
   {/* CONSUMER: Table cells read column metadata */}
   <ColumnConsumerProvider>
-    <thead>
-      <tr>
-        <TableHeader columnIndex={0} /> {/* Reads name column */}
-        <TableHeader columnIndex={1} /> {/* Reads email column */}
-      </tr>
-    </thead>
-    <tbody>
+    <Thead>
+      <Tr>
+        <TableCell columnIndex={0} /> {/* Reads name column */}
+        <TableCell columnIndex={1} /> {/* Reads email column */}
+      </Tr>
+    </Thead>
+    <Tbody>
       {data.map((row) => (
-        <tr key={row.id}>
+        <Tr key={row.id}>
           <TableCell columnIndex={0} value={row.name} />
           <TableCell columnIndex={1} value={row.email} />
-        </tr>
+        </Tr>
       ))}
-    </tbody>
+    </Tbody>
   </ColumnConsumerProvider>
-</table>
+</Table>
 ```
 
 This enables:

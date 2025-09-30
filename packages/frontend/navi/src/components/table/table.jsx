@@ -60,6 +60,8 @@ import {
 } from "preact/hooks";
 
 import { Editable, useEditionController } from "../edition/editable.jsx";
+import { createIsolatedItemTracker } from "../item_tracker/use_isolated_item_tracker.jsx";
+import { createItemTracker } from "../item_tracker/use_item_tracker.jsx";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
   createSelectionKeyboardShortcuts,
@@ -85,7 +87,6 @@ import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
-import { createChildTracker } from "./use_child_tracker.jsx";
 
 const {
   useChildTrackerProvider: useColumnsTrackerProvider,
@@ -314,7 +315,7 @@ export const Col = ({ id, width, immovable }) => {
   );
 };
 
-export const TableHead = ({ children }) => {
+export const Thead = ({ children }) => {
   return (
     <thead>
       <TableSectionContext.Provider value="head">
@@ -323,7 +324,7 @@ export const TableHead = ({ children }) => {
     </thead>
   );
 };
-export const TableBody = ({ children }) => {
+export const Tbody = ({ children }) => {
   return (
     <tbody>
       <TableSectionContext.Provider value="body">
@@ -333,7 +334,7 @@ export const TableBody = ({ children }) => {
   );
 };
 
-export const TableRow = ({ id, height, children }) => {
+export const Tr = ({ id, height, children }) => {
   const columns = useColumns();
   const rows = useRows();
   const rowIndex = rows.length;
