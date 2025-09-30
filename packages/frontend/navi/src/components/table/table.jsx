@@ -499,7 +499,8 @@ export const TableCell = forwardRef((props, ref) => {
     useTableDrag();
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
   if (canDragColumn === undefined) {
-    canDragColumn = rowIndex === 0 && !column.immovable && onColumnOrderChange;
+    canDragColumn =
+      rowIndex === 0 && !column.immovable && Boolean(onColumnOrderChange);
   }
 
   if (canResizeWidth === undefined && rowIndex === 0) {
