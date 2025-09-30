@@ -72,7 +72,20 @@ export const createItemTracker = () => {
     const itemCountRef = useRef(0);
 
     const tracker = useMemo(() => {
+      const ItemTrackerProvider = ({ children }) => {
+        // Reset on each render to start fresh
+        tracker.reset();
+
+        return (
+          <ItemTrackerContext.Provider value={tracker}>
+            {children}
+          </ItemTrackerContext.Provider>
+        );
+      };
+      ItemTrackerProvider.items = items;
+
       return {
+        ItemTrackerProvider,
         items,
         registerItem: (data) => {
           const index = itemCountRef.current++;
@@ -92,17 +105,7 @@ export const createItemTracker = () => {
       };
     }, []);
 
-    const ItemTrackerProvider = ({ children }) => {
-      // Reset on each render to start fresh
-      tracker.reset();
-
-      return (
-        <ItemTrackerContext.Provider value={tracker}>
-          {children}
-        </ItemTrackerContext.Provider>
-      );
-    };
-    return ItemTrackerProvider;
+    return tracker.ItemTrackerProvider;
   };
 
   const useTrackItem = (data) => {

@@ -10,7 +10,7 @@ export const useTableResizeContextValue = ({
   onColumnResize,
   onRowResize,
   columns,
-  rowsRef,
+  rows,
 }) => {
   const onColumnResizeRef = useRef();
   onColumnResizeRef.current = onColumnResize;
@@ -24,7 +24,6 @@ export const useTableResizeContextValue = ({
     };
 
     const onRowResizeWithRow = (height, rowIndex) => {
-      const rows = rowsRef.current;
       const row = rows[rowIndex];
       return onRowResizeRef.current?.(height, rowIndex, row);
     };

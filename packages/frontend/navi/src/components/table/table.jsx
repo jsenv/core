@@ -61,7 +61,7 @@ import {
 
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { createIsolatedItemTracker } from "../item_tracker/use_isolated_item_tracker.jsx";
-// import { createItemTracker } from "../item_tracker/use_item_tracker.jsx";
+import { createItemTracker } from "../item_tracker/use_item_tracker.jsx";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
   createSelectionKeyboardShortcuts,
@@ -90,6 +90,8 @@ import { TableUI } from "./table_ui.jsx";
 
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] =
   createIsolatedItemTracker();
+const [useRowTrackerProvider, useRegisterRow, useRowByIndex] =
+  createItemTracker();
 
 const ColumnProducerProviderContext = createContext();
 const useColumnProducerProvider = () =>
@@ -102,8 +104,6 @@ const useColumnConsumerProvider = () =>
 const ColumnContext = createContext();
 const useColumn = () => useContext(ColumnContext);
 
-const RowsRefContext = createContext();
-const useRows = () => useContext(RowsRefContext).current;
 const RowContext = createContext();
 const useRow = () => useContext(RowContext);
 
@@ -159,11 +159,10 @@ export const Table = forwardRef((props, ref) => {
   const tableRowIndexRef = useRef();
   tableRowIndexRef.current = -1;
 
-  const rowsRef = useRef();
-  rowsRef.current = [];
-
   const [ColumnProducerProvider, ColumnConsumerProvider, columns] =
     useColumnTrackerProviders();
+  const RowTrackerProvider = useRowTrackerProvider();
+  const rows = RowTrackerProvider.items;
 
   // selection
   const selectionController = useTableSelectionController({
@@ -238,7 +237,7 @@ export const Table = forwardRef((props, ref) => {
     onColumnResize,
     onRowResize,
     columns,
-    rowsRef,
+    rows,
   });
 
   // drag columns
@@ -281,11 +280,11 @@ export const Table = forwardRef((props, ref) => {
                     <ColumnConsumerProviderContext.Provider
                       value={ColumnConsumerProvider}
                     >
-                      <RowIndexContext.Provider value={tableRowIndexRef}>
-                        <RowsRefContext.Provider value={rowsRef}>
+                      <RowTrackerProvider>
+                        <RowIndexContext.Provider value={tableRowIndexRef}>
                           {children}
-                        </RowsRefContext.Provider>
-                      </RowIndexContext.Provider>
+                        </RowIndexContext.Provider>
+                      </RowTrackerProvider>
                     </ColumnConsumerProviderContext.Provider>
                   </ColumnProducerProviderContext.Provider>
                 </TableStickyProvider>
@@ -344,11 +343,8 @@ export const Tbody = ({ children }) => {
 };
 
 export const Tr = ({ id, height, children }) => {
-  const rows = useRows();
-  const rowIndex = rows.length;
-  const selectionValue = stringifyTableSelectionValue(`row`, rowIndex);
-  const row = { id, selectionValue, height };
-  rows[rowIndex] = row;
+  const rowIndex = useRegisterRow({ id, height });
+  const row = useRowByIndex(rowIndex);
   const ColumnConsumerProvider = useColumnConsumerProvider();
 
   const { stickyTopFrontierRowIndex } = useTableSticky();
@@ -387,7 +383,7 @@ const TableRowCells = ({ rowIndex, row, children }) => {
     return (
       <RowContext.Provider key={columnIndex} value={row}>
         <RowIndexContext.Provider value={rowIndex}>
-          <ColumnIndexContext.Provider key={columnIndex} value={columnIndex}>
+          <ColumnIndexContext.Provider value={columnIndex}>
             <ColumnContext.Provider value={column}>
               {child}
             </ColumnContext.Provider>
