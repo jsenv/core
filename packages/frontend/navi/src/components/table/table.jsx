@@ -61,7 +61,7 @@ import {
 
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { createIsolatedItemTracker } from "../item_tracker/use_isolated_item_tracker.jsx";
-import { createItemTracker } from "../item_tracker/use_item_tracker.jsx";
+// import { createItemTracker } from "../item_tracker/use_item_tracker.jsx";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import {
   createSelectionKeyboardShortcuts,
@@ -88,12 +88,16 @@ import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
 
-const {
-  useChildTrackerProvider: useColumnsTrackerProvider,
-  useTrackChildProvider: useTrackColumnProvider,
-  useTrackChild: useTrackColumn,
-  useValues: useColumns,
-} = createChildTracker();
+const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] =
+  createIsolatedItemTracker();
+
+const ColumnProducerProviderContext = createContext();
+const useColumnProducerProvider = () =>
+  useContext(ColumnProducerProviderContext);
+
+const ColumnConsumerProviderContext = createContext();
+const useColumnConsumerProvider = () =>
+  useContext(ColumnConsumerProviderContext);
 
 const ColumnContext = createContext();
 const useColumn = () => useContext(ColumnContext);
@@ -104,7 +108,7 @@ const RowContext = createContext();
 const useRow = () => useContext(RowContext);
 
 const ColumnIndexContext = createContext();
-const useColumnIndexFromContext = () => useContext(ColumnIndexContext);
+const useColumnIndex = () => useContext(ColumnIndexContext);
 const RowIndexContext = createContext();
 const useRowIndex = () => useContext(RowIndexContext);
 
@@ -158,8 +162,8 @@ export const Table = forwardRef((props, ref) => {
   const rowsRef = useRef();
   rowsRef.current = [];
 
-  const ColumnsTrackerProvider = useColumnsTrackerProvider();
-  const columns = ColumnsTrackerProvider.chilPropsArray;
+  const [ColumnProducerProvider, ColumnConsumerProvider, columns] =
+    useColumnTrackerProviders();
 
   // selection
   const selectionController = useTableSelectionController({
@@ -271,13 +275,19 @@ export const Table = forwardRef((props, ref) => {
             <TableSelectionProvider value={selectionContextValue}>
               <TableDragProvider value={dragContextValue}>
                 <TableStickyProvider value={stickyContextValue}>
-                  <ColumnsTrackerProvider>
-                    <RowIndexContext.Provider value={tableRowIndexRef}>
-                      <RowsRefContext.Provider value={rowsRef}>
-                        {children}
-                      </RowsRefContext.Provider>
-                    </RowIndexContext.Provider>
-                  </ColumnsTrackerProvider>
+                  <ColumnProducerProviderContext.Provider
+                    value={ColumnProducerProvider}
+                  >
+                    <ColumnConsumerProviderContext.Provider
+                      value={ColumnConsumerProvider}
+                    >
+                      <RowIndexContext.Provider value={tableRowIndexRef}>
+                        <RowsRefContext.Provider value={rowsRef}>
+                          {children}
+                        </RowsRefContext.Provider>
+                      </RowIndexContext.Provider>
+                    </ColumnConsumerProviderContext.Provider>
+                  </ColumnProducerProviderContext.Provider>
                 </TableStickyProvider>
               </TableDragProvider>
             </TableSelectionProvider>
@@ -289,16 +299,15 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 export const Colgroup = ({ children }) => {
-  const TrackColumnProvider = useTrackColumnProvider();
-
+  const ColumnProducerProvider = useColumnProducerProvider();
   return (
     <colgroup>
-      <TrackColumnProvider>{children}</TrackColumnProvider>
+      <ColumnProducerProvider>{children}</ColumnProducerProvider>
     </colgroup>
   );
 };
 export const Col = ({ id, width, immovable }) => {
-  const columnIndex = useTrackColumn({ id, width, immovable });
+  const columnIndex = useRegisterColumn({ id, width, immovable });
   const { stickyLeftFrontierColumnIndex } = useTableSticky();
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
 
@@ -335,12 +344,13 @@ export const Tbody = ({ children }) => {
 };
 
 export const Tr = ({ id, height, children }) => {
-  const columns = useColumns();
   const rows = useRows();
   const rowIndex = rows.length;
   const selectionValue = stringifyTableSelectionValue(`row`, rowIndex);
   const row = { id, selectionValue, height };
   rows[rowIndex] = row;
+
+  const ColumnConsumerProvider = useColumnConsumerProvider();
 
   const { stickyTopFrontierRowIndex } = useTableSticky();
   const isStickyTop = rowIndex <= stickyTopFrontierRowIndex;
@@ -364,19 +374,21 @@ export const Tr = ({ id, height, children }) => {
     >
       <RowContext.Provider value={row}>
         <RowIndexContext.Provider value={rowIndex}>
-          {children.map((child, columnIndex) => {
-            const column = columns[columnIndex];
-            return (
-              <ColumnIndexContext.Provider
-                key={columnIndex}
-                value={columnIndex}
-              >
-                <ColumnContext.Provider value={column}>
-                  {child}
-                </ColumnContext.Provider>
-              </ColumnIndexContext.Provider>
-            );
-          })}
+          <ColumnConsumerProvider>
+            {children.map((child, columnIndex) => {
+              const column = useColumnByIndex(columnIndex);
+              return (
+                <ColumnIndexContext.Provider
+                  key={columnIndex}
+                  value={columnIndex}
+                >
+                  <ColumnContext.Provider value={column}>
+                    {child}
+                  </ColumnContext.Provider>
+                </ColumnIndexContext.Provider>
+              );
+            })}
+          </ColumnConsumerProvider>
         </RowIndexContext.Provider>
       </RowContext.Provider>
     </tr>
@@ -408,7 +420,7 @@ export const TableCell = forwardRef((props, ref) => {
     element: cellRef.current,
   }));
 
-  const columnIndex = useColumnIndexFromContext();
+  const columnIndex = useColumnIndex();
   const rowIndex = useRowIndex();
   const column = useColumn();
   const row = useRow();
@@ -631,7 +643,7 @@ export const RowNumberCol = ({
   );
 };
 export const RowNumberTableCell = ({ children, ...props }) => {
-  const columnIndex = useColumnIndexFromContext();
+  const columnIndex = useColumnIndex();
   const rowIndex = useRowIndex();
   const isTopLeftCell = columnIndex === 0 && rowIndex === 0;
 

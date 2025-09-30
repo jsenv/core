@@ -55,10 +55,10 @@ export {
   RowNumberCol,
   RowNumberTableCell,
   Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableRow,
+  Tbody,
+  Thead,
+  Tr,
 } from "./src/components/table/table.jsx";
 // Table end
 export { Tab, TabList } from "./src/components/tablist/tablist.jsx";

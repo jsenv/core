@@ -94,11 +94,11 @@
         // eslint-disable-next-line no-unused-vars
         Col,
         // eslint-disable-next-line no-unused-vars
-        TableHead,
+        Thead,
         // eslint-disable-next-line no-unused-vars
-        TableBody,
+        Tbody,
         // eslint-disable-next-line no-unused-vars
-        TableRow,
+        Tr,
         // eslint-disable-next-line no-unused-vars
         RowNumberCol,
         // eslint-disable-next-line no-unused-vars
@@ -226,19 +226,19 @@
                     />
                   ))}
                 </Colgroup>
-                <TableHead>
-                  <TableRow height={rowHeights[0]}>
+                <Thead>
+                  <Tr height={rowHeights[0]}>
                     <RowNumberTableCell />
                     {columns.map((col) => (
                       <TableCell key={col.id}>{col.header}</TableCell>
                     ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
+                  </Tr>
+                </Thead>
+                <Tbody>
                   {data.map((rowData, dataRowIndex) => {
                     const rowIndex = dataRowIndex + 1;
                     return (
-                      <TableRow key={rowData.id} height={rowHeights[rowIndex]}>
+                      <Tr key={rowData.id} height={rowHeights[rowIndex]}>
                         <RowNumberTableCell />
                         {columns.map((col, dataColIndex) => {
                           const cellValue =
@@ -256,10 +256,10 @@
                             </TableCell>
                           );
                         })}
-                      </TableRow>
+                      </Tr>
                     );
                   })}
-                </TableBody>
+                </Tbody>
               </Table>
             </div>
 

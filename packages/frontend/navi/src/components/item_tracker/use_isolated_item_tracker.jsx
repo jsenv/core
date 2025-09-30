@@ -147,7 +147,7 @@ export const createIsolatedItemTracker = () => {
 
     const { ItemProducerProvider, ItemConsumerProvider } = itemTracker;
 
-    return [ItemProducerProvider, ItemConsumerProvider];
+    return [ItemProducerProvider, ItemConsumerProvider, items];
   };
 
   // Hook for producers to register items (ref-based, no re-renders)
