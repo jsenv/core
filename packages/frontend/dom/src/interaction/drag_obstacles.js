@@ -32,7 +32,7 @@ export const createObstacleConstraintsFromQuerySelector = (
     }
 
     obstacleConstraintFunctions.push(
-      ({ leftIsOnVisibleArea, topIsOnVisibleArea }) => {
+      ({ hasCrossedVisibleAreaLeftOnce, hasCrossedVisibleAreaTopOnce }) => {
         const obstacleBounds = getElementBounds(obstacle, positionedParent);
 
         obstacleBounds.left -= positionedParentRect.left;
@@ -41,12 +41,12 @@ export const createObstacleConstraintsFromQuerySelector = (
         obstacleBounds.bottom -= positionedParentRect.top;
 
         if (obstacleBounds.sticky) {
-          if (isStickyLeft && !leftIsOnVisibleArea) {
+          if (isStickyLeft && !hasCrossedVisibleAreaLeftOnce) {
             const scrollLeft = scrollableElement.scrollLeft;
             obstacleBounds.left += scrollLeft;
             obstacleBounds.right += scrollLeft;
           }
-          if (isStickyTop && !topIsOnVisibleArea) {
+          if (isStickyTop && !hasCrossedVisibleAreaTopOnce) {
             const scrollTop = scrollableElement.scrollTop;
             obstacleBounds.top += scrollTop;
             obstacleBounds.bottom += scrollTop;

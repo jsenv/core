@@ -253,6 +253,13 @@ export const createDragGesture = (options) => {
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
+
+      // Track whether elements have entered visible area once
+      // Elements may start outside the visible area (mostly when sticky + sticky frontiers)
+      // In that case until they cross the visible sides
+      // they won't trigger auto-scroll and sticky obstacles can collide independently of the scroll
+      hasCrossedVisibleAreaLeftOnce: false,
+      hasCrossedVisibleAreaTopOnce: false,
     };
     definePropertyAsReadOnly(gestureInfo, "xAtStart");
     definePropertyAsReadOnly(gestureInfo, "yAtStart");
@@ -533,26 +540,23 @@ export const createDragGesture = (options) => {
         visibleArea = visibleAreaBase;
       }
 
-      // Use helper function to compute sticky element position
-      const stickyPositionInfo = computeStickyElementPosition({
-        stickyElement: elementVisuallyImpacted,
-        scrollableContainer: scrollableParent,
-        computedStyle,
-        isStickyLeft,
-        isStickyTop,
-      });
-      const leftInContainer = stickyPositionInfo[0]; // leftPositionInContainer
-      const leftIsOnVisibleArea = leftInContainer >= visibleArea.left;
-      console.log(
-        `leftInContainer=${leftInContainer}, visibleArea.left=${visibleArea.left}, leftIsOnVisibleArea=${leftIsOnVisibleArea}`,
-        stickyPositionInfo,
-      );
-      let topIsOnVisibleArea;
-      // if (isStickyTop) {
-      //   const stickyFrontierTop = visibleArea.top;
-      //   topIsOnVisibleArea = visualTop >= stickyFrontierTop;
-      // } else {
-      //   topIsOnVisibleArea = true;
+      let { hasCrossedVisibleAreaLeftOnce, hasCrossedVisibleAreaTopOnce } =
+        gestureInfo;
+
+      const elementLeftRelative = leftAtStart + gestureInfo.xMove;
+      const elementLeft = elementLeftRelative + parentRect.left;
+
+      // Check initial position - if element starts within visible area, allow auto-scroll immediately
+      if (!hasCrossedVisibleAreaLeftOnce && elementLeft >= visibleArea.left) {
+        gestureInfo.hasCrossedVisibleAreaLeftOnce =
+          hasCrossedVisibleAreaLeftOnce = true;
+      }
+      // if (
+      //   !hasCrossedVisibleAreaTopOnce &&
+      //   top >= visibleArea.top
+      // ) {
+      //   gestureInfo.hasCrossedVisibleAreaTopOnce =
+      //     hasCrossedVisibleAreaTopOnce = true;
       // }
 
       const constraints = prepareConstraints(constraintFunctions, {
@@ -560,8 +564,8 @@ export const createDragGesture = (options) => {
         elementWidth: currentElementWidth,
         elementHeight: currentElementHeight,
         visibleArea,
-        leftIsOnVisibleArea,
-        topIsOnVisibleArea,
+        hasCrossedVisibleAreaLeftOnce,
+        hasCrossedVisibleAreaTopOnce,
       });
 
       visualMarkers.onDrag({
@@ -777,10 +781,6 @@ export const createDragGesture = (options) => {
 };
 
 export const createDragToMoveGesture = (options) => {
-  // Track whether sticky elements have entered visible area (needed for auto-scroll logic)
-  let hasEnteredVisibleAreaLeft = false;
-  let hasEnteredVisibleAreaTop = false;
-
   const dragToMoveGesture = createDragGesture({
     ...options,
     lifecycle: {
@@ -800,6 +800,8 @@ export const createDragToMoveGesture = (options) => {
           elementToImpact,
           elementVisuallyImpacted,
           visibleArea,
+          hasCrossedVisibleAreaLeftOnce,
+          hasCrossedVisibleAreaTopOnce,
         } = gestureInfo;
 
         // Calculate initial position for elementToImpact (initialLeft/initialTop are now visual coordinates)
@@ -811,20 +813,6 @@ export const createDragToMoveGesture = (options) => {
         const elementHeight = elementVisuallyImpactedRect.height;
         // Calculate where element bounds would be in viewport coordinates
         const parentRect = positionedParent.getBoundingClientRect();
-
-        // Check initial position - if element starts within visible area, allow auto-scroll immediately
-        if (
-          !hasEnteredVisibleAreaLeft &&
-          elementVisuallyImpactedRect.left >= visibleArea.left
-        ) {
-          hasEnteredVisibleAreaLeft = true;
-        }
-        if (
-          !hasEnteredVisibleAreaTop &&
-          elementVisuallyImpactedRect.top >= visibleArea.top
-        ) {
-          hasEnteredVisibleAreaTop = true;
-        }
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
@@ -887,18 +875,10 @@ export const createDragToMoveGesture = (options) => {
             desiredElementLeftRelative + parentRect.left;
           const desiredElementRight = desiredElementLeft + elementWidth;
 
-          // Track if sticky element has entered visible area for horizontal scrolling
-          if (
-            !hasEnteredVisibleAreaLeft &&
-            isGoingLeft &&
-            desiredElementLeft > visibleArea.left
-          ) {
-            hasEnteredVisibleAreaLeft = true;
-          }
           // Determine if auto-scroll is allowed for sticky elements when going left
           const canAutoScrollLeft =
             !elementVisuallyImpacted.hasAttribute("data-sticky-left") ||
-            hasEnteredVisibleAreaLeft;
+            hasCrossedVisibleAreaLeftOnce;
 
           moveAndKeepIntoView({
             // axis: "x",
@@ -923,19 +903,10 @@ export const createDragToMoveGesture = (options) => {
           const desiredElementTop = desiredElementTopRelative + parentRect.top;
           const desiredElementBottom = desiredElementTop + elementHeight;
 
-          // Track if sticky element has entered visible area for vertical scrolling
-          if (
-            !hasEnteredVisibleAreaTop &&
-            isGoingUp &&
-            desiredElementTop > visibleArea.top
-          ) {
-            hasEnteredVisibleAreaTop = true;
-          }
-
           // Determine if auto-scroll is allowed for sticky elements when going up
           const canAutoScrollUp =
             !elementVisuallyImpacted.hasAttribute("data-sticky-top") ||
-            hasEnteredVisibleAreaTop;
+            hasCrossedVisibleAreaTopOnce;
 
           moveAndKeepIntoView({
             // axis: "y",
