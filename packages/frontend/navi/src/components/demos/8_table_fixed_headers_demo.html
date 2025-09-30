@@ -81,7 +81,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef, useState } from "preact/hooks";
+      import { useRef, useState, useMemo } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
         Table,
@@ -146,26 +146,26 @@
           .map((colId) => columns.find((col) => col.id === colId))
           .filter(Boolean); // Remove any undefined columns
 
-        // Local state with 2D array for cell values
-        const [cellValues, setCellValues] = useState(() => {
+        // Base cell values in original column order
+        const [baseCellValues, setBaseCellValues] = useState(() => {
           return data.map((row) => columns.map((col) => row[col.id]));
         });
 
         // Derived state: sort cell values according to column order
-        const sortedCellValues = cellValues.map((row) =>
-          columnOrder
-            .map((colId) => {
+        const cellValues = useMemo(() => {
+          return baseCellValues.map((row) =>
+            columnOrder.map((colId) => {
               const originalColIndex = columns.findIndex(
                 (col) => col.id === colId,
               );
               return originalColIndex >= 0 ? row[originalColIndex] : "";
-            })
-            .filter((_, index) => index < sortedColumns.length),
-        );
+            }),
+          );
+        }, [baseCellValues, columnOrder]);
 
-        const setCellValue = (dataRowIndex, sortedColIndex, value) => {
+        const setCellValue = (dataRowIndex, columnIndex, value) => {
           // Find the original column index from the sorted column index
-          const sortedColId = sortedColumns[sortedColIndex]?.id;
+          const sortedColId = sortedColumns[columnIndex]?.id;
           const originalColIndex = columns.findIndex(
             (col) => col.id === sortedColId,
           );
@@ -173,11 +173,11 @@
           if (originalColIndex >= 0) {
             console.log(
               "update cell value at",
-              `${sortedColIndex}:${dataRowIndex} (original: ${originalColIndex}:${dataRowIndex})`,
+              `${columnIndex}:${dataRowIndex} (original: ${originalColIndex}:${dataRowIndex})`,
               "to",
               value,
             );
-            setCellValues((prevValues) => {
+            setBaseCellValues((prevValues) => {
               const newValues = prevValues.map((row, rowIdx) =>
                 rowIdx === dataRowIndex
                   ? row.map((cell, colIdx) =>
@@ -267,25 +267,20 @@
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {data.map((rowData, dataRowIndex) => {
+                  {cellValues.map((rowCells, dataRowIndex) => {
                     const rowIndex = dataRowIndex + 1;
+                    const rowData = data[dataRowIndex];
                     return (
                       <Tr key={rowData.id} height={rowHeights[rowIndex]}>
                         <RowNumberTableCell />
-                        {sortedColumns.map((col, sortedColIndex) => {
-                          const cellValue =
-                            sortedCellValues[dataRowIndex][sortedColIndex];
-
+                        {rowCells.map((cellValue, columnIndex) => {
+                          const col = sortedColumns[columnIndex];
                           return (
                             <TableCell
-                              key={col.id}
+                              key={col?.id || columnIndex}
                               name="cell"
                               action={({ cell }) => {
-                                setCellValue(
-                                  dataRowIndex,
-                                  sortedColIndex,
-                                  cell,
-                                );
+                                setCellValue(dataRowIndex, columnIndex, cell);
                               }}
                             >
                               {cellValue}
@@ -303,8 +298,9 @@
               <div>
                 Dataset size:{" "}
                 <span>
-                  {data.length} rows × {sortedColumns.length} columns ={" "}
-                  {data.length * sortedColumns.length} cells
+                  {cellValues.length} rows × {cellValues[0]?.length || 0}{" "}
+                  columns = {cellValues.length * (cellValues[0]?.length || 0)}{" "}
+                  cells
                 </span>
               </div>
               <div>
@@ -322,8 +318,8 @@
               <div>
                 Editable cells:{" "}
                 <span>
-                  {data.length * sortedColumns.length} cells with editing
-                  enabled
+                  {cellValues.length * (cellValues[0]?.length || 0)} cells with
+                  editing enabled
                 </span>
               </div>
               <div>
@@ -360,7 +356,8 @@
                   tableRef.current.selectAll();
                 }}
               >
-                Select All ({data.length * sortedColumns.length} cells)
+                Select All ({cellValues.length * (cellValues[0]?.length || 0)}{" "}
+                cells)
               </button>
               <button
                 onClick={() => {
@@ -401,7 +398,7 @@
               <button
                 onClick={() => {
                   // Set a sample cell to demonstrate editing works
-                  setCellValues((prevValues) => {
+                  setBaseCellValues((prevValues) => {
                     const newValues = prevValues.map((row, rowIdx) =>
                       rowIdx === 0
                         ? row.map((cell, colIdx) =>
