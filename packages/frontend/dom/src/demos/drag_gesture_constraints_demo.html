@@ -540,7 +540,7 @@
           onGrab: (gestureInfo) => {
             console.log("Sticky - Grab started", {
               gestureInfo,
-              initialScrollLeft: gestureInfo.initialScrollLeft,
+              scrollLeftAtStart: gestureInfo.scrollLeftAtStart,
               currentScrollLeft: stickyTestContainer.scrollLeft,
             });
             stickyRectangle.setAttribute("data-dragging", "");
@@ -553,8 +553,8 @@
               phase,
               xMove: gestureInfo.xMove,
               yMove: gestureInfo.yMove,
-              initialLeft: gestureInfo.initialLeft,
-              initialScrollLeft: gestureInfo.initialScrollLeft,
+              leftAtStart: gestureInfo.leftAtStart,
+              scrollLeftAtStart: gestureInfo.scrollLeftAtStart,
               currentScrollLeft: stickyTestContainer.scrollLeft,
             });
           },

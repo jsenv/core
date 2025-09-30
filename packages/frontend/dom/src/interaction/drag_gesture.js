@@ -148,35 +148,52 @@ export const createDragGesture = (options) => {
     const positionedParent = getPositionedParent(element);
     const scrollableRect = scrollableParent.getBoundingClientRect();
     const positionedParentRect = positionedParent.getBoundingClientRect();
-    const elementToImpactRect = elementToImpact.getBoundingClientRect();
-    const elementVisuallyImpactedRect =
-      elementVisuallyImpacted.getBoundingClientRect();
     const parentRect = positionedParentRect;
     const scrollLeftAtStart = scrollableParent.scrollLeft;
     const scrollTopAtStart = scrollableParent.scrollTop;
 
     const computedStyle = getComputedStyle(element);
+    let isStickyLeft = elementVisuallyImpacted.hasAttribute(`data-sticky-left`);
+    let isStickyTop = elementVisuallyImpacted.hasAttribute(`data-sticky-top`);
     if (computedStyle.position === "sticky") {
-      const left = parseFloat(computedStyle.left) || 0;
-      const top = parseFloat(computedStyle.top) || 0;
-      const leftWithScroll = left + scrollLeftAtStart;
-      const topWithScroll = top + scrollTopAtStart;
-      const restoreStyles = setStyles(element, {
-        position: "relative",
-        left: `${leftWithScroll}px`,
-        top: `${topWithScroll}px`,
-      });
-      addTeardown(() => {
-        const elementRect = element.getBoundingClientRect();
-        const leftRelative = elementRect.left - scrollableRect.left;
-        const topRelative = elementRect.top - scrollableRect.top;
-        restoreStyles();
-        setStyles(element, {
-          left: `${leftRelative}px`,
-          top: `${topRelative}px`,
+      isStickyLeft = computedStyle.left !== "auto";
+      isStickyTop = computedStyle.top !== "auto";
+
+      if (isStickyLeft || isStickyTop) {
+        const stylesToSet = {
+          position: "relative",
+        };
+        if (isStickyLeft) {
+          const left = parseFloat(computedStyle.left) || 0;
+          const leftWithScroll = left + scrollLeftAtStart;
+          stylesToSet.left = `${leftWithScroll}px`;
+        }
+        if (isStickyTop) {
+          const top = parseFloat(computedStyle.top) || 0;
+          const topWithScroll = top + scrollTopAtStart;
+          stylesToSet.top = `${topWithScroll}px`;
+        }
+        const restoreStyles = setStyles(element, stylesToSet);
+        addTeardown(() => {
+          const stylesToSetOnTeardown = {};
+          const elementRect = element.getBoundingClientRect();
+          restoreStyles();
+          if (isStickyLeft) {
+            const leftRelative = elementRect.left - scrollableRect.left;
+            stylesToSetOnTeardown.left = `${leftRelative}px`;
+          }
+          if (isStickyTop) {
+            const topRelative = elementRect.top - scrollableRect.top;
+            stylesToSetOnTeardown.top = `${topRelative}px`;
+          }
+          setStyles(element, stylesToSetOnTeardown);
         });
-      });
+      }
     }
+
+    const elementToImpactRect = elementToImpact.getBoundingClientRect();
+    const elementVisuallyImpactedRect =
+      elementVisuallyImpacted.getBoundingClientRect();
 
     let leftAtStart = elementVisuallyImpactedRect.left - parentRect.left;
     let topAtStart = elementVisuallyImpactedRect.top - parentRect.top;
@@ -187,19 +204,15 @@ export const createDragGesture = (options) => {
       elementVisuallyImpactedRect.left - elementToImpactRect.left;
     let visualOffsetY =
       elementVisuallyImpactedRect.top - elementToImpactRect.top;
-
     // Adjust coordinates for conceptually sticky elements
     // Elements with data-sticky-left appear visually pinned to the left edge regardless of scroll,
     // but their DOM position doesn't reflect this visual behavior. We need to adjust both their
     // starting position and visual offset to account for scroll, ensuring drag calculations
     // work with their apparent visual position rather than their DOM position.
-    const isStickyLeft =
-      elementVisuallyImpacted.hasAttribute(`data-sticky-left`);
     if (isStickyLeft) {
       leftAtStart += scrollLeftAtStart;
       visualOffsetX += scrollLeftAtStart;
     }
-    const isStickyTop = elementVisuallyImpacted.hasAttribute(`data-sticky-top`);
     if (isStickyTop) {
       topAtStart += scrollTopAtStart;
       visualOffsetY += scrollTopAtStart;
