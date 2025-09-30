@@ -1,11 +1,9 @@
 import { createContext } from "preact";
 import { useContext, useState } from "preact/hooks";
-import {
-  useItemTracker,
-  useTrackedItem,
-  useTrackedItems,
-  useTrackItem,
-} from "./use_item_tracker.jsx";
+import { createItemTracker } from "./use_item_tracker.jsx";
+
+const [useRowTrackerProvider, useRegisterRow, useRow, useRows] =
+  createItemTracker();
 
 // Main demo app
 export const App = () => {
@@ -29,7 +27,7 @@ export const App = () => {
 
   log(`🎬 App render #${renderKey}`);
 
-  const ItemTrackerProvider = useItemTracker();
+  const RowTrackerProvider = useRowTrackerProvider();
 
   const addRow = () => {
     const colors = ["red", "blue", "green", "yellow"];
@@ -78,7 +76,7 @@ export const App = () => {
         </div>
       </div>
 
-      <ItemTrackerProvider>
+      <RowTrackerProvider>
         <div className="section">
           <h3>📋 Table with Tracked Rows</h3>
           <p style={{ fontSize: "12px", margin: "0 0 10px 0", color: "#666" }}>
@@ -112,7 +110,7 @@ export const App = () => {
           <h3>🔍 Tracked Items Debug</h3>
           <TrackedRowsList />
         </div>
-      </ItemTrackerProvider>
+      </RowTrackerProvider>
     </div>
   );
 };
@@ -136,7 +134,7 @@ const TableRow = ({ children, name, color: initialColor }) => {
   const currentColor = localColor !== initialColor ? localColor : initialColor;
 
   // Register this row and get its index
-  const rowIndex = useTrackItem({ name, color: currentColor });
+  const rowIndex = useRegisterRow({ name, color: currentColor });
 
   log(`🎬 TableRow ${rowIndex} render (${name}, color: ${currentColor})`);
 
@@ -174,7 +172,7 @@ const TableRow = ({ children, name, color: initialColor }) => {
 
 const TableCell = ({ column }) => {
   const rowIndex = useContext(TableRowIndexContext);
-  const rowData = useTrackedItem(rowIndex);
+  const rowData = useRow(rowIndex);
 
   if (!rowData) {
     return <td>❌ Row {rowIndex} not found</td>;
@@ -193,7 +191,7 @@ const TableCell = ({ column }) => {
 };
 
 const TrackedRowsList = () => {
-  const rows = useTrackedItems();
+  const rows = useRows();
 
   return (
     <div className="tracked-rows">

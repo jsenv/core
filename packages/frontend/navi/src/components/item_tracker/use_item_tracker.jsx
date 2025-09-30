@@ -49,70 +49,78 @@ import { useContext, useMemo, useRef } from "preact/hooks";
  * ```
  */
 
-const SimpleItemTrackerContext = createContext();
+export const createItemTracker = () => {
+  const ItemTrackerContext = createContext();
 
-export const useItemTracker = () => {
-  const itemsRef = useRef([]);
-  const items = itemsRef.current;
-  const itemCountRef = useRef(0);
+  const useItemTrackerProvider = () => {
+    const itemsRef = useRef([]);
+    const items = itemsRef.current;
+    const itemCountRef = useRef(0);
 
-  const tracker = useMemo(() => {
-    return {
-      registerItem: (data) => {
-        const index = itemCountRef.current++;
-        items[index] = data;
-        return index;
-      },
-      getItem: (index) => {
-        return items[index];
-      },
-      getAllItems: () => {
-        return items;
-      },
-      reset: () => {
-        items.length = 0;
-        itemCountRef.current = 0;
-      },
+    const tracker = useMemo(() => {
+      return {
+        items,
+        registerItem: (data) => {
+          const index = itemCountRef.current++;
+          items[index] = data;
+          return index;
+        },
+        getItem: (index) => {
+          return items[index];
+        },
+        getAllItems: () => {
+          return items;
+        },
+        reset: () => {
+          items.length = 0;
+          itemCountRef.current = 0;
+        },
+      };
+    }, []);
+
+    const ItemTrackerProvider = ({ children }) => {
+      // Reset on each render to start fresh
+      tracker.reset();
+
+      return (
+        <ItemTrackerContext.Provider value={tracker}>
+          {children}
+        </ItemTrackerContext.Provider>
+      );
     };
-  }, []);
-
-  const SimpleItemTrackerProvider = ({ children }) => {
-    // Reset on each render to start fresh
-    tracker.reset();
-
-    return (
-      <SimpleItemTrackerContext.Provider value={tracker}>
-        {children}
-      </SimpleItemTrackerContext.Provider>
-    );
+    return ItemTrackerProvider;
   };
 
-  return SimpleItemTrackerProvider;
-};
+  const useTrackItem = (data) => {
+    const tracker = useContext(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error(
+        "useTrackItem must be used within SimpleItemTrackerProvider",
+      );
+    }
+    return tracker.registerItem(data);
+  };
 
-// Hook for registering items (producers)
-export const useTrackItem = (data) => {
-  const tracker = useContext(SimpleItemTrackerContext);
-  if (!tracker) {
-    throw new Error(
-      "useTrackItem must be used within SimpleItemTrackerProvider",
-    );
-  }
-  return tracker.registerItem(data);
-};
+  const useTrackedItem = (index) => {
+    const trackedItems = useTrackedItems();
+    const item = trackedItems[index];
+    return item;
+  };
 
-export const useTrackedItems = () => {
-  const tracker = useContext(SimpleItemTrackerContext);
-  if (!tracker) {
-    throw new Error(
-      "useTrackedItems must be used within SimpleItemTrackerProvider",
-    );
-  }
-  return tracker.getAllItems();
-};
+  const useTrackedItems = () => {
+    const tracker = useContext(ItemTrackerContext);
+    if (!tracker) {
+      throw new Error(
+        "useTrackedItems must be used within SimpleItemTrackerProvider",
+      );
+    }
+    return tracker.items;
+  };
 
-export const useTrackedItem = (index) => {
-  const trackedItems = useTrackedItems();
-  const item = trackedItems[index];
-  return item;
+  return [
+    useItemTrackerProvider,
+    useTrackItem,
+    useTrackedItem,
+    useTrackedItems,
+  ];
 };

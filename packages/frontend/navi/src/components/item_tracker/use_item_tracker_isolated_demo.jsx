@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
 import {
   useItemTrackerIsolated,
   useTrackItem,
@@ -133,11 +133,18 @@ const Consumer = ({ ItemConsumerProvider }) => {
 // Producer item with local state for testing overrides
 const ProducerItem = ({ id, name, color: initialColor }) => {
   const [localColor, setLocalColor] = useState(initialColor);
+  const outColorRef = useRef(initialColor);
+  if (outColorRef.current !== initialColor) {
+    outColorRef.current = initialColor;
+    setLocalColor(initialColor);
+  }
   const [renderKey, setRenderKey] = useState(0);
   const colors = ["red", "blue", "green", "purple", "orange", "pink"];
 
   // Track the item with current local state
   const itemIndex = useTrackItem({ id, name, color: localColor });
+
+  log(`🎨 Producer item ${id} render, ${localColor}`);
 
   return (
     <div className="item-data">
