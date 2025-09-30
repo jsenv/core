@@ -149,6 +149,7 @@
 
         // Use custom hook for cell management
         const [cellValues, setCellValue, setBaseCellValues] = useCells(data, {
+          columnIds: columns.map((col) => col.id),
           columnOrder,
         });
 
