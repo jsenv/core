@@ -28,35 +28,61 @@ export const useCellsAndColumns = (cells, columns) => {
 
   // Base cell values in original column order (2D array: rows x columns)
   const [baseCells, setBaseCells] = useState(cells);
+
   // Memoized index mapping for performance - maps display index to original index
-  const displayToOriginalIndexes = useMemo(() => {
-    return orderedColumnIds.map((displayColId) => {
-      const originalIndex = columnIds.indexOf(displayColId);
-      return originalIndex >= 0 ? originalIndex : -1;
-    });
+  const columnOrderedIndexMap = useMemo(() => {
+    const indexMap = new Map();
+    for (let columnIndex = 0; columnIndex < columnIds.length; columnIndex++) {
+      const columnIdAtThisIndex = orderedColumnIds[columnIndex];
+      const originalIndex = columnIds.indexOf(columnIdAtThisIndex);
+      indexMap.set(columnIndex, originalIndex);
+    }
+    return indexMap;
   }, [columnIds, orderedColumnIds]);
+
   // Derived state: reorder cell values according to column display order
   const orderedCells = useMemo(() => {
-    return baseCells.map((row) =>
-      displayToOriginalIndexes.map((originalIndex) =>
-        originalIndex >= 0 ? row[originalIndex] : "",
-      ),
-    );
-  }, [baseCells, displayToOriginalIndexes]);
+    const reorderedCells = [];
+    for (let rowIndex = 0; rowIndex < baseCells.length; rowIndex++) {
+      const originalRow = baseCells[rowIndex];
+      const reorderedRow = [];
+      for (
+        let columnIndex = 0;
+        columnIndex < orderedColumnIds.length;
+        columnIndex++
+      ) {
+        const originalIndex = columnOrderedIndexMap.get(columnIndex);
+        const cellValue =
+          originalIndex !== undefined ? originalRow[originalIndex] : "";
+        reorderedRow.push(cellValue);
+      }
+      reorderedCells.push(reorderedRow);
+    }
+    return reorderedCells;
+  }, [baseCells, columnOrderedIndexMap, orderedColumnIds.length]);
+
   const setCellValue = ({ rowIndex, columnIndex }, value) => {
-    const originalColumnIndex = displayToOriginalIndexes[columnIndex];
-    if (originalColumnIndex < 0) {
+    const originalColumnIndex = columnOrderedIndexMap.get(columnIndex);
+    if (originalColumnIndex === undefined) {
       console.warn(`Invalid column index: ${columnIndex}`);
       return;
     }
-    setBaseCells((previousValues) => {
-      return previousValues.map((row, currentRowIndex) =>
-        currentRowIndex === rowIndex
-          ? row.map((cell, currentColumnIndex) =>
-              currentColumnIndex === originalColumnIndex ? value : cell,
-            )
-          : row,
-      );
+    setBaseCells((previousCells) => {
+      const newCells = [];
+      for (let y = 0; y < previousCells.length; y++) {
+        const currentRow = previousCells[y];
+        if (y !== rowIndex) {
+          newCells.push(currentRow);
+          continue;
+        }
+        const newRow = [];
+        for (let x = 0; x < currentRow.length; x++) {
+          const cellValue = x === originalColumnIndex ? value : currentRow[x];
+          newRow.push(cellValue);
+        }
+        newCells.push(newRow);
+      }
+      return newCells;
     });
   };
 
