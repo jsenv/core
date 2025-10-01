@@ -101,11 +101,7 @@
         RowNumberTableCell,
       } from "../table/table.jsx";
       /* eslint-enable no-unused-vars */
-      import {
-        useCells,
-        useOrderedColumnIds,
-        useOrderedColumns,
-      } from "../table/use_cells.js";
+      import { useCellsAndColumns } from "../table/use_cells_and_columns.js";
 
       window.clearLog = () => {
         document.getElementById("log").textContent = "";
@@ -127,22 +123,10 @@
           { id: "col2", name: "Column B" },
         ]);
 
-        // Column order (this is what gets changed during reordering)
-        const columnIds = columnConfig.map((col) => col.id);
-        const [columnOrderedIds, setColumnOrderedIds] =
-          useOrderedColumnIds(columnIds);
-        const orderedColumns = useOrderedColumns(
-          columnConfig,
-          columnOrderedIds,
-        );
-
         // Simple single row of data
         const initialCellData = [["A1", "B1"]];
-
-        const [cellValues, setCellValue] = useCells(initialCellData, {
-          columnIds,
-          columnOrderedIds,
-        });
+        const { cells, setCellValue, columns, setColumnOrder } =
+          useCellsAndColumns(columnConfig, initialCellData);
 
         log(`🎬 Demo render - columnOrder: [${columnOrderedIds.join(", ")}]`);
 
@@ -150,7 +134,7 @@
           log(
             `🔄 Column order changing from [${columnOrderedIds.join(", ")}] to [${newColumnOrder.join(", ")}]`,
           );
-          setColumnOrderedIds(newColumnOrder);
+          setColumnOrder(newColumnOrder);
         };
 
         const handleCellEdit = ({ rowIndex, columnIndex }, value) => {
@@ -197,7 +181,7 @@
               <div>
                 <strong>Cell Values:</strong>
               </div>
-              <pre>{JSON.stringify(cellValues, null, 2)}</pre>
+              <pre>{JSON.stringify(cells, null, 2)}</pre>
             </div>
 
             <Table
@@ -207,30 +191,20 @@
             >
               <Colgroup>
                 <RowNumberCol width={50} />
-                {orderedColumns.map((colConfig) => {
-                  log(
-                    `🏗️ Rendering Col: id=${colConfig.id}, width=${colConfig?.width}`,
-                  );
-                  return (
-                    <Col
-                      key={colConfig.id}
-                      id={colConfig.id}
-                      width={colConfig?.width}
-                    />
-                  );
+                {columns.map((col) => {
+                  log(`🏗️ Rendering Col: id=${col.id}, width=${col?.width}`);
+                  return <Col key={col.id} id={col.id} width={col?.width} />;
                 })}
               </Colgroup>
 
               <Thead>
                 <Tr>
                   <RowNumberTableCell />
-                  {orderedColumns.map((colConfig) => {
-                    log(
-                      `🏗️ Rendering Header: id=${colConfig.id}, name=${colConfig?.name}`,
-                    );
+                  {columns.map((col) => {
+                    log(`🏗️ Rendering Header: id=${col.id}, name=${col?.name}`);
                     return (
-                      <TableCell key={colConfig.id}>
-                        {colConfig?.name} (id: {colConfig.id})
+                      <TableCell key={col.id}>
+                        {col?.name} (id: {col.id})
                       </TableCell>
                     );
                   })}
@@ -238,7 +212,7 @@
               </Thead>
 
               <Tbody>
-                {cellValues.map((rowValues, rowIndex) => (
+                {cells.map((rowValues, rowIndex) => (
                   <Tr key={rowIndex}>
                     <RowNumberTableCell />
                     {rowValues.map((cellValue, columnIndex) => {
