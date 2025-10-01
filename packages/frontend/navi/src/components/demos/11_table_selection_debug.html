@@ -98,12 +98,6 @@
     <p>Simple 2x2 table to debug selection behavior and external control.</p>
 
     <div class="debug-section">
-      <h2>Debug Log</h2>
-      <div id="log" class="log"></div>
-      <button onclick="clearLog()" class="btn-warning">Clear Log</button>
-    </div>
-
-    <div class="debug-section">
       <h2>External Selection Controls</h2>
       <div class="controls">
         <button id="select-none" class="btn-danger">Clear Selection</button>
@@ -138,6 +132,12 @@
       <div id="selection-state" class="selection-info">
         No selection data yet...
       </div>
+    </div>
+
+    <div class="debug-section">
+      <h2>Debug Log</h2>
+      <div id="log" class="log"></div>
+      <button onclick="clearLog()" class="btn-warning">Clear Log</button>
     </div>
 
     <script type="module" jsenv-type="module/jsx">
@@ -231,7 +231,7 @@
         );
 
         // Selection state (controlled from outside)
-        const [selectedCells, setSelectedCells] = useState(new Set());
+        const [selectedCells, setSelectedCells] = useState([]);
 
         // Log selection changes
         useEffect(() => {
@@ -256,7 +256,7 @@
         // External control functions
         const selectNone = () => {
           log(`🚫 External: Clear selection`);
-          setSelectedCells(new Set());
+          setSelectedCells([]);
         };
 
         const selectAll = () => {
@@ -331,11 +331,6 @@
 
         return (
           <div>
-            <div className="state-display">
-              <h3>Current Cell Values</h3>
-              <pre>{JSON.stringify(cells, null, 2)}</pre>
-            </div>
-
             <Table
               selectedCells={selectedCells}
               onSelectionChange={handleSelectionChange}
@@ -387,11 +382,6 @@
                 ))}
               </Tbody>
             </Table>
-
-            <div className="state-display">
-              <h3>Column Configuration</h3>
-              <pre>{JSON.stringify(columnConfig, null, 2)}</pre>
-            </div>
           </div>
         );
       };
