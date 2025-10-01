@@ -134,7 +134,7 @@ export const useTableSelectionController = ({
     layout: "grid",
     value: selection,
     onChange: (value) => {
-      onSelectionChange(value);
+      onSelectionChange?.(value);
     },
     selectAllName: "cell",
   });
