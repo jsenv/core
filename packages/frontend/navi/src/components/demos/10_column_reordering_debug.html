@@ -65,21 +65,6 @@
         margin: 0;
         font-size: 12px;
       }
-      table {
-        border-collapse: collapse;
-        width: 100%;
-        margin: 10px 0;
-      }
-      th,
-      td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-      }
-      th {
-        background: #f8f9fa;
-        font-weight: bold;
-      }
     </style>
   </head>
 
@@ -134,9 +119,9 @@
       const ColumnReorderingDemo = () => {
         // Initial column configuration
         const [columnConfig] = useState([
-          { id: "col1", name: "Column A", width: 150 },
-          { id: "col2", name: "Column B", width: 150 },
-          { id: "col3", name: "Column C", width: 150 },
+          { id: "col1", name: "Column A" },
+          { id: "col2", name: "Column B" },
+          { id: "col3", name: "Column C" },
         ]);
 
         // Column order (this is what gets changed during reordering)
