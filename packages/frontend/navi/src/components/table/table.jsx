@@ -89,6 +89,11 @@ import {
 } from "./selection/table_selection.js";
 import { useTableSelectionController } from "./selection/table_selection.jsx";
 import { useStickyGroup } from "./sticky/sticky_group.js";
+import {
+  TableStickyProvider,
+  useTableSticky,
+  useTableStickyContextValue,
+} from "./sticky/table_sticky.js";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
@@ -150,9 +155,6 @@ export const Table = forwardRef((props, ref) => {
   });
   const tableContainerRef = useRef();
 
-  const tableRowIndexRef = useRef();
-  tableRowIndexRef.current = -1;
-
   const [ColumnProducerProvider, ColumnConsumerProvider, columns] =
     useColumnTrackerProviders();
   const RowTrackerProvider = useRowTrackerProvider();
@@ -174,12 +176,12 @@ export const Table = forwardRef((props, ref) => {
 
   // sticky
   useStickyGroup(tableContainerRef, { elementSelector: "table" });
-  const stickyContextValue = {
+  const stickyContextValue = useTableStickyContextValue({
     stickyLeftFrontierColumnIndex,
     stickyTopFrontierRowIndex,
     onStickyLeftFrontierChange,
     onStickyTopFrontierChange,
-  };
+  });
 
   useKeyboardShortcuts(innerRef, [
     ...createSelectionKeyboardShortcuts(selectionController, {
@@ -268,11 +270,7 @@ export const Table = forwardRef((props, ref) => {
                     <ColumnConsumerProviderContext.Provider
                       value={ColumnConsumerProvider}
                     >
-                      <RowTrackerProvider>
-                        <RowIndexContext.Provider value={tableRowIndexRef}>
-                          {children}
-                        </RowIndexContext.Provider>
-                      </RowTrackerProvider>
+                      <RowTrackerProvider>{children}</RowTrackerProvider>
                     </ColumnConsumerProviderContext.Provider>
                   </ColumnProducerProviderContext.Provider>
                 </TableStickyProvider>
