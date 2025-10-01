@@ -422,7 +422,7 @@ export const TableCell = forwardRef((props, ref) => {
     rowIndex,
     columnIndex,
   });
-  const { selectionController, columnContainsSelectedCell } =
+  const { selection, selectionController, columnContainsSelectedCell } =
     useTableSelection();
   if (selectionImpact === undefined) {
     if (rowIndex === 0 && columnIndex === 0 && canSelectAll) {
@@ -457,6 +457,7 @@ export const TableCell = forwardRef((props, ref) => {
     }
   }
   const { selected } = useSelectableElement(cellRef, {
+    selection,
     selectionController,
     selectionImpact,
     // value: selectionId,
