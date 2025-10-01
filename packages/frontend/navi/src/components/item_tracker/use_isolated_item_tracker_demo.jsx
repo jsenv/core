@@ -55,6 +55,34 @@ export const App = () => {
     });
   };
 
+  const handleMoveColumnUp = (index) => {
+    if (index === 0) return; // Can't move first column up
+    setState((prev) => {
+      const newColumns = [...prev.columns];
+      // Swap with previous column
+      [newColumns[index - 1], newColumns[index]] = [
+        newColumns[index],
+        newColumns[index - 1],
+      ];
+      log(`⬆️ Moved column ${index} up to position ${index - 1}`);
+      return { ...prev, columns: newColumns };
+    });
+  };
+
+  const handleMoveColumnDown = (index) => {
+    setState((prev) => {
+      if (index === prev.columns.length - 1) return prev; // Can't move last column down
+      const newColumns = [...prev.columns];
+      // Swap with next column
+      [newColumns[index], newColumns[index + 1]] = [
+        newColumns[index + 1],
+        newColumns[index],
+      ];
+      log(`⬇️ Moved column ${index} down to position ${index + 1}`);
+      return { ...prev, columns: newColumns };
+    });
+  };
+
   const [ColumnProducerProvider, ColumnConsumerProvider] =
     useColumnTrackerProviders();
 
@@ -86,8 +114,11 @@ export const App = () => {
             key={`${column.id}-${state.renderKey}`}
             column={column}
             index={index}
+            totalColumns={state.columns.length}
             onUpdate={handleUpdateColumn}
             onRemove={handleRemoveColumn}
+            onMoveUp={handleMoveColumnUp}
+            onMoveDown={handleMoveColumnDown}
           />
         ))}
       </div>
@@ -282,8 +313,18 @@ const ColumnDefinition = ({ id, label, width: initialWidth, sortable }) => {
 };
 
 // Column data controls that affect the global state
-const ColumnDataControls = ({ column, index, onUpdate, onRemove }) => {
+const ColumnDataControls = ({
+  column,
+  index,
+  totalColumns,
+  onUpdate,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+}) => {
   const widthOptions = ["100px", "150px", "200px", "250px", "300px"];
+  const isFirst = index === 0;
+  const isLast = index === totalColumns - 1;
 
   return (
     <div className="item-data">
@@ -293,6 +334,28 @@ const ColumnDataControls = ({ column, index, onUpdate, onRemove }) => {
         {column.sortable ? "yes" : "no"}
       </div>
       <div className="item-controls">
+        <button
+          onClick={() => onMoveUp(index)}
+          disabled={isFirst}
+          title={isFirst ? "Already at top" : "Move up"}
+          style={{
+            background: isFirst ? "#ccc" : "#2196f3",
+            cursor: isFirst ? "not-allowed" : "pointer",
+          }}
+        >
+          ⬆️
+        </button>
+        <button
+          onClick={() => onMoveDown(index)}
+          disabled={isLast}
+          title={isLast ? "Already at bottom" : "Move down"}
+          style={{
+            background: isLast ? "#ccc" : "#2196f3",
+            cursor: isLast ? "not-allowed" : "pointer",
+          }}
+        >
+          ⬇️
+        </button>
         <input
           value={column.label}
           onChange={(e) =>
