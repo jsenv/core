@@ -276,8 +276,13 @@ export const Colgroup = ({ children }) => {
     </colgroup>
   );
 };
-export const Col = ({ id, width, immovable }) => {
-  const columnIndex = useRegisterColumn({ id, width, immovable });
+export const Col = ({ id, width, immovable, backgroundColor }) => {
+  const columnIndex = useRegisterColumn({
+    id,
+    width,
+    immovable,
+    backgroundColor,
+  });
   const { stickyLeftFrontierColumnIndex } = useTableSticky();
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
 
@@ -382,6 +387,10 @@ export const TableCell = forwardRef((props, ref) => {
     valueSignal,
     children,
   } = props;
+  const column = useColumn();
+  const row = useRow();
+  const { backgroundColor = column.backgroundColor || row.backgroundColor } =
+    props;
 
   const cellRef = useRef();
   const { editing, startEditing, stopEditing } = useEditionController();
@@ -393,8 +402,7 @@ export const TableCell = forwardRef((props, ref) => {
 
   const columnIndex = useColumnIndex();
   const rowIndex = useRowIndex();
-  const column = useColumn();
-  const row = useRow();
+
   const isInTableHead = useIsInTableHead();
   const TagName = isInTableHead ? "th" : "td";
 
@@ -489,6 +497,9 @@ export const TableCell = forwardRef((props, ref) => {
   }
   if (textAlign) {
     innerStyle.textAlign = textAlign;
+  }
+  if (backgroundColor) {
+    innerStyle.backgroundColor = backgroundColor;
   }
 
   return (
