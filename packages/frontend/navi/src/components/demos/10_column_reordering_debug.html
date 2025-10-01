@@ -121,12 +121,16 @@
         const [columnConfig] = useState([
           { id: "col1", name: "Column A" },
           { id: "col2", name: "Column B" },
+          { id: "col3", name: "Column C" },
         ]);
 
         // Simple single row of data
-        const initialCellData = [["A1", "B1"]];
+        const initialCellData = [["A1", "B1", "C1"]];
         const { cells, setCellValue, columns, setColumnOrder } =
           useCellsAndColumns(columnConfig, initialCellData);
+
+        // Get current column order for logging and display
+        const columnOrderedIds = columns.map((col) => col.id);
 
         log(`🎬 Demo render - columnOrder: [${columnOrderedIds.join(", ")}]`);
 
@@ -146,17 +150,25 @@
 
         // Test buttons for manual reordering
         const moveFirstToLast = () => {
-          const newOrder = [columnOrderedIds[0], columnOrderedIds[1]];
+          const newOrder = [
+            columnOrderedIds[1],
+            columnOrderedIds[2],
+            columnOrderedIds[0],
+          ];
           handleColumnOrderChange(newOrder);
         };
 
         const moveLastToFirst = () => {
-          const newOrder = [columnOrderedIds[1], columnOrderedIds[0]];
+          const newOrder = [
+            columnOrderedIds[2],
+            columnOrderedIds[0],
+            columnOrderedIds[1],
+          ];
           handleColumnOrderChange(newOrder);
         };
 
         const resetOrder = () => {
-          handleColumnOrderChange(["col1", "col2"]);
+          handleColumnOrderChange(["col1", "col2", "col3"]);
         };
 
         return (
