@@ -1,0 +1,292 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Column Reordering Debug Demo</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f5f5f5;
+      }
+      .debug-section {
+        background: white;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .controls {
+        margin: 10px 0;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .btn-primary {
+        background: #007bff;
+        color: white;
+      }
+      .btn-success {
+        background: #28a745;
+        color: white;
+      }
+      .btn-warning {
+        background: #ffc107;
+        color: black;
+      }
+      .log {
+        background: #2d3748;
+        color: #68d391;
+        padding: 12px;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        margin: 10px 0;
+      }
+      .state-display {
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 12px;
+        margin: 10px 0;
+      }
+      pre {
+        margin: 0;
+        font-size: 12px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 10px 0;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background: #f8f9fa;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Column Reordering Debug Demo</h1>
+    <p>
+      Simple demo with 3 columns and 1 row to debug column reordering issues.
+    </p>
+
+    <div class="debug-section">
+      <h2>Debug Log</h2>
+      <div id="log" class="log"></div>
+      <button onclick="clearLog()" class="btn-warning">Clear Log</button>
+    </div>
+
+    <div class="debug-section">
+      <h2>Demo</h2>
+      <div id="root"></div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      /* eslint-disable no-unused-vars */
+      import {
+        Table,
+        Colgroup,
+        Col,
+        Thead,
+        Tbody,
+        Tr,
+        TableCell,
+        RowNumberCol,
+        RowNumberTableCell,
+      } from "../table/table.jsx";
+      /* eslint-enable no-unused-vars */
+      import { useCells } from "../table/use_cells.js";
+
+      window.clearLog = () => {
+        document.getElementById("log").textContent = "";
+      };
+
+      const log = (message) => {
+        const timestamp = new Date().toLocaleTimeString();
+        const logElement = document.getElementById("log");
+        logElement.textContent += `[${timestamp}] ${message}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+        console.log(`[DEBUG] ${message}`);
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ColumnReorderingDemo = () => {
+        // Initial column configuration
+        const [columnConfig] = useState([
+          { id: "col1", name: "Column A", width: 150 },
+          { id: "col2", name: "Column B", width: 150 },
+          { id: "col3", name: "Column C", width: 150 },
+        ]);
+
+        // Column order (this is what gets changed during reordering)
+        const [columnOrder, setColumnOrder] = useState([
+          "col1",
+          "col2",
+          "col3",
+        ]);
+
+        // Simple single row of data
+        const initialCellData = [["A1", "B1", "C1"]];
+
+        const [cellValues, setCellValue] = useCells(initialCellData, {
+          columnIds: columnConfig.map((col) => col.id),
+          columnOrderedIds: columnOrder,
+        });
+
+        log(`🎬 Demo render - columnOrder: [${columnOrder.join(", ")}]`);
+
+        const handleColumnOrderChange = (newColumnOrder) => {
+          log(
+            `🔄 Column order changing from [${columnOrder.join(", ")}] to [${newColumnOrder.join(", ")}]`,
+          );
+          setColumnOrder(newColumnOrder);
+        };
+
+        const handleCellEdit = (rowIndex, colIndex, value) => {
+          log(
+            `✏️ Cell edit: row=${rowIndex}, col=${colIndex}, value="${value}"`,
+          );
+          setCellValue(rowIndex, colIndex, value);
+        };
+
+        // Test buttons for manual reordering
+        const moveFirstToLast = () => {
+          const newOrder = [columnOrder[1], columnOrder[2], columnOrder[0]];
+          handleColumnOrderChange(newOrder);
+        };
+
+        const moveLastToFirst = () => {
+          const newOrder = [columnOrder[2], columnOrder[0], columnOrder[1]];
+          handleColumnOrderChange(newOrder);
+        };
+
+        const resetOrder = () => {
+          handleColumnOrderChange(["col1", "col2", "col3"]);
+        };
+
+        return (
+          <div>
+            <div className="controls">
+              <button onClick={moveFirstToLast} className="btn-primary">
+                Move First → Last
+              </button>
+              <button onClick={moveLastToFirst} className="btn-primary">
+                Move Last → First
+              </button>
+              <button onClick={resetOrder} className="btn-success">
+                Reset Order
+              </button>
+            </div>
+
+            <div className="state-display">
+              <h3>Current State</h3>
+              <div>
+                <strong>Column Order:</strong> [{columnOrder.join(", ")}]
+              </div>
+              <div>
+                <strong>Cell Values:</strong>
+              </div>
+              <pre>{JSON.stringify(cellValues, null, 2)}</pre>
+            </div>
+
+            <Table
+              onColumnOrderChange={handleColumnOrderChange}
+              maxWidth={600}
+              maxHeight={400}
+            >
+              <Colgroup>
+                <RowNumberCol width={50} />
+                {columnOrder.map((columnId) => {
+                  const colConfig = columnConfig.find(
+                    (col) => col.id === columnId,
+                  );
+                  log(
+                    `🏗️ Rendering Col: id=${columnId}, width=${colConfig?.width}`,
+                  );
+                  return (
+                    <Col
+                      key={columnId}
+                      id={columnId}
+                      width={colConfig?.width}
+                    />
+                  );
+                })}
+              </Colgroup>
+
+              <Thead>
+                <Tr>
+                  <RowNumberTableCell />
+                  {columnOrder.map((columnId, displayIndex) => {
+                    const colConfig = columnConfig.find(
+                      (col) => col.id === columnId,
+                    );
+                    log(
+                      `🏗️ Rendering Header: id=${columnId}, displayIndex=${displayIndex}, name=${colConfig?.name}`,
+                    );
+                    return (
+                      <TableCell key={columnId}>
+                        {colConfig?.name} (id: {columnId})
+                      </TableCell>
+                    );
+                  })}
+                </Tr>
+              </Thead>
+
+              <Tbody>
+                <Tr>
+                  <RowNumberTableCell />
+                  {columnOrder.map((columnId, displayIndex) => {
+                    const cellValue = cellValues[0]?.[displayIndex] || "";
+                    log(
+                      `🏗️ Rendering Cell: id=${columnId}, displayIndex=${displayIndex}, value="${cellValue}"`,
+                    );
+                    return (
+                      <TableCell
+                        key={columnId}
+                        action={(value) =>
+                          handleCellEdit(0, displayIndex, value)
+                        }
+                      >
+                        {cellValue}
+                      </TableCell>
+                    );
+                  })}
+                </Tr>
+              </Tbody>
+            </Table>
+
+            <div className="state-display">
+              <h3>Column Configuration</h3>
+              <pre>{JSON.stringify(columnConfig, null, 2)}</pre>
+            </div>
+          </div>
+        );
+      };
+
+      // Initial render
+      log("🚀 Starting Column Reordering Demo");
+      render(<ColumnReorderingDemo />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
