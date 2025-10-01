@@ -1008,7 +1008,6 @@ export const useSelectableElement = (
 
   const [selected, setSelected] = useState(false);
   debug("selection", "useSelectableElement: initial selected state:", selected);
-
   // Update selected state when selection value changes
   useLayoutEffect(() => {
     const element = elementRef.current;
