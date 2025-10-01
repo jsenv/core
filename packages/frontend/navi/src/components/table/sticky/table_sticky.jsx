@@ -559,7 +559,7 @@ const initMoveStickyFrontierByMousedown = (
       if (dropTargetInfo) {
         const dropColumnIndex = dropTargetInfo.index;
         const dropFrontierIndex =
-          dropTargetInfo.size[axis] === "start"
+          dropTargetInfo.elementSide[axis] === "start"
             ? dropColumnIndex - 1
             : dropColumnIndex;
         if (dropFrontierIndex !== futureFrontierIndex) {

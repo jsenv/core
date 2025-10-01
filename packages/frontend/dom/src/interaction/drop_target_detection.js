@@ -68,9 +68,9 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
   const targetCenterX = targetBounds.left + targetBounds.width / 2;
   const targetCenterY = targetBounds.top + targetBounds.height / 2;
   const result = {
-    element: targetElement,
     index: targetIndex,
-    side: {
+    element: targetElement,
+    elementSide: {
       x: mouseX < targetCenterX ? "start" : "end",
       y: mouseY < targetCenterY ? "start" : "end",
     },
