@@ -41,15 +41,10 @@
  *
  * Next steps:
  *
- * - Finir vrai exemple de re-order de column (mise a jour du state)
- *   A priori on veut un onColumnOrderChange qui recoit un tableau de column ids dans l'ordre voulu
- *   notons aussi qu'un drop dans la zone sticky va surement déplacer la frontiere au passage
- *   et qu'un drop en dehors de meme
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
  * - Delete a row (how?)
  * - Delete a column (how?)
- * - Rename a column (I guess with enter, double click, A-Z keys)
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 

@@ -27,7 +27,16 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
   let targetElement = null;
   let targetIndex = -1;
 
-  const someTargetIsCol = targetElements.some((el) => el.tagName === "COL");
+  let someTargetIsCol;
+  let someTargetIsTr;
+  for (const targetElement of targetElements) {
+    if (!someTargetIsCol && targetElement.tagName === "COL") {
+      someTargetIsCol = true;
+    }
+    if (!someTargetIsTr && targetElement.tagName === "TR") {
+      someTargetIsTr = true;
+    }
+  }
 
   for (const element of elementsUnderMouse) {
     // First, check if the element itself is a target
@@ -39,24 +48,39 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
     }
     // Special case: if element is <td> or <th> and not in targets,
     // try to find its corresponding <col> element
-    if (!someTargetIsCol) {
-      continue;
-    }
     const isTableCell = element.tagName === "TD" || element.tagName === "TH";
     if (!isTableCell) {
       continue;
     }
-    const tableCellCol = findTableCellCol(element, targetElements);
-    if (!tableCellCol) {
-      continue;
+    try_col: {
+      if (!someTargetIsCol) {
+        break try_col;
+      }
+      const tableCellCol = findTableCellCol(element, targetElements);
+      if (!tableCellCol) {
+        break try_col;
+      }
+      const colIndex = targetElements.indexOf(tableCellCol);
+      if (colIndex === -1) {
+        break try_col;
+      }
+      targetElement = tableCellCol;
+      targetIndex = colIndex;
+      break;
     }
-    const colIndex = targetElements.indexOf(tableCellCol);
-    if (colIndex === -1) {
-      continue;
+    try_tr: {
+      if (!someTargetIsTr) {
+        break try_tr;
+      }
+      const tableRow = element.closest("tr");
+      const rowIndex = targetElements.indexOf(tableRow);
+      if (rowIndex === -1) {
+        break try_tr;
+      }
+      targetElement = tableRow;
+      targetIndex = rowIndex;
+      break;
     }
-    targetElement = tableCellCol;
-    targetIndex = colIndex;
-    break;
   }
 
   if (!targetElement) {
