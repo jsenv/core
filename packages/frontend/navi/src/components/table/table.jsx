@@ -79,13 +79,15 @@ import {
 import {
   TableSizeProvider,
   useTableSizeContextValue,
-} from "./resize/table_size_context.js";
+} from "./resize/table_size.js";
 import {
   parseTableSelectionValue,
   stringifyTableSelectionValue,
-  useTableSelectionController,
-  useTableSelectionData,
+  TableSelectionProvider,
+  useTableSelection,
+  useTableSelectionContextValue,
 } from "./selection/table_selection.js";
+import { useTableSelectionController } from "./selection/table_selection.jsx";
 import { useStickyGroup } from "./sticky/sticky_group.js";
 import { TableCellStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
@@ -117,12 +119,6 @@ const useRowIndex = () => useContext(RowIndexContext);
 
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
-
-const TableSelectionContext = createContext();
-const TableSelectionProvider = TableSelectionContext.Provider;
-const useTableSelection = () => {
-  return useContext(TableSelectionContext);
-};
 
 const TableStickyContext = createContext();
 const TableStickyProvider = TableStickyContext.Provider;
@@ -175,17 +171,10 @@ export const Table = forwardRef((props, ref) => {
     onSelectionChange,
     selectionColor,
   });
-  const {
-    columnWithSomeSelectedCell,
-    rowWithSomeSelectedCell,
-    selectedRowIndexes,
-  } = useTableSelectionData(selection);
-  const selectionContextValue = {
+  const selectionContextValue = useTableSelectionContextValue(
+    selection,
     selectionController,
-    rowWithSomeSelectedCell,
-    columnWithSomeSelectedCell,
-    selectedRowIndexes,
-  };
+  );
 
   useFocusGroup(innerRef);
 

@@ -2,10 +2,8 @@ import { createContext } from "preact";
 import { useContext, useMemo, useRef } from "preact/hooks";
 
 const TableSizeContext = createContext();
+
 export const TableSizeProvider = TableSizeContext.Provider;
-export const useTableSize = () => {
-  return useContext(TableSizeContext);
-};
 export const useTableSizeContextValue = ({
   onColumnSizeChange,
   onRowSizeChange,
@@ -35,4 +33,8 @@ export const useTableSizeContextValue = ({
   }, []);
 
   return tableSizeContextValue;
+};
+
+export const useTableSize = () => {
+  return useContext(TableSizeContext);
 };

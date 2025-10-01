@@ -4,7 +4,7 @@ import {
   Z_INDEX_RESIZER_BACKDROP,
   Z_INDEX_RESIZER_HANDLE,
 } from "../z_indexes.js";
-import { useTableSize } from "./table_size_context.js";
+import { useTableSize } from "./table_size.js";
 
 const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
