@@ -498,7 +498,7 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.textAlign = textAlign;
   }
   if (backgroundColor) {
-    innerStyle.backgroundColor = backgroundColor;
+    innerStyle["--background-color"] = backgroundColor;
   }
 
   return (

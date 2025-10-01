@@ -70,11 +70,11 @@ import.meta.css = /* css */ `
   .navi_table th,
   .navi_table td {
     text-align: left;
-    background: white;
+    background-color: var(--background-color, white);
   }
 
   .navi_table th {
-    background: lightgrey;
+    background-color: var(--background-color, lightgrey);
     font-weight: normal;
     padding: 0;
   }

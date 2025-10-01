@@ -1,0 +1,355 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Table Selection Debug Demo</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f5f5f5;
+      }
+      .debug-section {
+        background: white;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .controls {
+        margin: 10px 0;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .btn-primary {
+        background: #007bff;
+        color: white;
+      }
+      .btn-success {
+        background: #28a745;
+        color: white;
+      }
+      .btn-warning {
+        background: #ffc107;
+        color: black;
+      }
+      .btn-danger {
+        background: #dc3545;
+        color: white;
+      }
+      .log {
+        background: #2d3748;
+        color: #68d391;
+        padding: 12px;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        margin: 10px 0;
+      }
+      .state-display {
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+        padding: 12px;
+        margin: 10px 0;
+      }
+      pre {
+        margin: 0;
+        font-size: 12px;
+      }
+      .selection-info {
+        background: #fff3cd;
+        border: 1px solid #ffeeba;
+        border-radius: 4px;
+        padding: 10px;
+        margin: 10px 0;
+      }
+      .coordinate-buttons {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 5px;
+        max-width: 200px;
+      }
+      .coord-label {
+        font-weight: bold;
+        text-align: center;
+        background: #e9ecef;
+        padding: 5px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Table Selection Debug Demo</h1>
+    <p>Simple 2x2 table to debug selection behavior and external control.</p>
+
+    <div class="debug-section">
+      <h2>Debug Log</h2>
+      <div id="log" class="log"></div>
+      <button onclick="clearLog()" class="btn-warning">Clear Log</button>
+    </div>
+
+    <div class="debug-section">
+      <h2>External Selection Controls</h2>
+      <div class="controls">
+        <button id="select-none" class="btn-danger">Clear Selection</button>
+        <button id="select-all" class="btn-primary">Select All</button>
+        <button id="select-row-0" class="btn-primary">Select Row 0</button>
+        <button id="select-row-1" class="btn-primary">Select Row 1</button>
+        <button id="select-col-0" class="btn-primary">Select Column 0</button>
+        <button id="select-col-1" class="btn-primary">Select Column 1</button>
+      </div>
+
+      <h3>Select Individual Cells</h3>
+      <div class="coordinate-buttons">
+        <div class="coord-label">Y\X</div>
+        <div class="coord-label">0</div>
+        <div class="coord-label">1</div>
+        <div class="coord-label">0</div>
+        <button id="select-0-0" class="btn-success">(0,0)</button>
+        <button id="select-0-1" class="btn-success">(0,1)</button>
+        <div class="coord-label">1</div>
+        <button id="select-1-0" class="btn-success">(1,0)</button>
+        <button id="select-1-1" class="btn-success">(1,1)</button>
+      </div>
+    </div>
+
+    <div class="debug-section">
+      <h2>Demo Table (2x2)</h2>
+      <div id="root"></div>
+    </div>
+
+    <div class="debug-section">
+      <h2>Selection State</h2>
+      <div id="selection-state" class="selection-info">
+        No selection data yet...
+      </div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState, useEffect } from "preact/hooks";
+      /* eslint-disable no-unused-vars */
+      import {
+        Table,
+        Colgroup,
+        Col,
+        RowNumberCol,
+        Thead,
+        Tbody,
+        Tr,
+        TableCell,
+        RowNumberTableCell,
+      } from "../table/table.jsx";
+      /* eslint-enable no-unused-vars */
+      import { useCellsAndColumns } from "../table/use_cells_and_columns.js";
+
+      window.clearLog = () => {
+        document.getElementById("log").textContent = "";
+      };
+
+      const log = (message) => {
+        const timestamp = new Date().toLocaleTimeString();
+        const logElement = document.getElementById("log");
+        logElement.textContent += `[${timestamp}] ${message}\n`;
+        logElement.scrollTop = logElement.scrollHeight;
+        console.log(`[DEBUG] ${message}`);
+      };
+
+      const updateSelectionDisplay = (selection) => {
+        const selectionElement = document.getElementById("selection-state");
+        if (!selection || selection.size === 0) {
+          selectionElement.innerHTML = "<strong>No cells selected</strong>";
+          return;
+        }
+
+        const selectedCells = Array.from(selection).map((cellId) => {
+          const [rowIndex, columnIndex] = cellId.split("-").map(Number);
+          return `(${rowIndex},${columnIndex})`;
+        });
+
+        selectionElement.innerHTML = `
+          <strong>Selected cells:</strong> ${selectedCells.join(", ")}<br>
+          <strong>Total count:</strong> ${selection.size}<br>
+          <strong>Raw IDs:</strong> ${Array.from(selection).join(", ")}
+        `;
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const TableSelectionDemo = () => {
+        // Simple 2x2 table configuration
+        const [columnConfig] = useState([
+          { id: "col1", name: "Column A" },
+          { id: "col2", name: "Column B" },
+        ]);
+
+        // 2x2 cell data
+        const initialCellData = [
+          ["A1", "B1"],
+          ["A2", "B2"],
+        ];
+
+        const { cells, setCellValue, columns } = useCellsAndColumns(
+          initialCellData,
+          columnConfig,
+        );
+
+        // Selection state (controlled from outside)
+        const [selectedCells, setSelectedCells] = useState(new Set());
+
+        // Log selection changes
+        useEffect(() => {
+          log(
+            `🎯 Selection changed: ${Array.from(selectedCells).join(", ") || "none"}`,
+          );
+          updateSelectionDisplay(selectedCells);
+        }, [selectedCells]);
+
+        const handleCellEdit = ({ rowIndex, columnIndex }, value) => {
+          log(
+            `✏️ Cell edit: row=${rowIndex}, col=${columnIndex}, value="${value}"`,
+          );
+          setCellValue({ rowIndex, columnIndex }, value);
+        };
+
+        const handleSelectionChange = (newSelection) => {
+          log(`🔄 Selection changing from internal table interaction`);
+          setSelectedCells(newSelection);
+        };
+
+        // External control functions
+        const selectNone = () => {
+          log(`🚫 External: Clear selection`);
+          setSelectedCells(new Set());
+        };
+
+        const selectAll = () => {
+          log(`📱 External: Select all cells`);
+          setSelectedCells(new Set(["0-0", "0-1", "1-0", "1-1"]));
+        };
+
+        const selectRow = (rowIndex) => {
+          log(`📏 External: Select row ${rowIndex}`);
+          const rowCells = [`${rowIndex}-0`, `${rowIndex}-1`];
+          setSelectedCells(new Set(rowCells));
+        };
+
+        const selectColumn = (columnIndex) => {
+          log(`📐 External: Select column ${columnIndex}`);
+          const columnCells = [`0-${columnIndex}`, `1-${columnIndex}`];
+          setSelectedCells(new Set(columnCells));
+        };
+
+        const selectCell = (rowIndex, columnIndex) => {
+          log(`🎯 External: Select single cell (${rowIndex},${columnIndex})`);
+          setSelectedCells(new Set([`${rowIndex}-${columnIndex}`]));
+        };
+
+        // Setup external control button handlers
+        useEffect(() => {
+          const setupButton = (id, handler) => {
+            const button = document.getElementById(id);
+            if (button) {
+              button.onclick = handler;
+            }
+          };
+
+          setupButton("select-none", selectNone);
+          setupButton("select-all", selectAll);
+          setupButton("select-row-0", () => selectRow(0));
+          setupButton("select-row-1", () => selectRow(1));
+          setupButton("select-col-0", () => selectColumn(0));
+          setupButton("select-col-1", () => selectColumn(1));
+          setupButton("select-0-0", () => selectCell(0, 0));
+          setupButton("select-0-1", () => selectCell(0, 1));
+          setupButton("select-1-0", () => selectCell(1, 0));
+          setupButton("select-1-1", () => selectCell(1, 1));
+        }, []);
+
+        log(`🎬 Demo render - cells: ${cells.length}x${cells[0]?.length}`);
+
+        return (
+          <div>
+            <div className="state-display">
+              <h3>Current Cell Values</h3>
+              <pre>{JSON.stringify(cells, null, 2)}</pre>
+            </div>
+
+            <Table
+              selectedCells={selectedCells}
+              onSelectionChange={handleSelectionChange}
+              maxWidth={400}
+              maxHeight={300}
+            >
+              <Colgroup>
+                <RowNumberCol width={60} />
+                {columns.map((col) => {
+                  log(`🏗️ Rendering Col: id=${col.id}`);
+                  return <Col key={col.id} id={col.id} width={120} />;
+                })}
+              </Colgroup>
+
+              <Thead>
+                <Tr>
+                  <RowNumberTableCell />
+                  {columns.map((col) => {
+                    log(`🏗️ Rendering Header: id=${col.id}, name=${col?.name}`);
+                    return <TableCell key={col.id}>{col?.name}</TableCell>;
+                  })}
+                </Tr>
+              </Thead>
+
+              <Tbody>
+                {cells.map((rowValues, rowIndex) => (
+                  <Tr key={rowIndex}>
+                    <RowNumberTableCell />
+                    {rowValues.map((cellValue, columnIndex) => {
+                      const cellId = `${rowIndex}-${columnIndex}`;
+                      const isSelected = selectedCells.has(cellId);
+                      log(
+                        `🏗️ Rendering Cell: (${rowIndex},${columnIndex}) value="${cellValue}" selected=${isSelected}`,
+                      );
+                      return (
+                        <TableCell
+                          key={columnIndex}
+                          action={(value) =>
+                            handleCellEdit({ rowIndex, columnIndex }, value)
+                          }
+                        >
+                          {cellValue}
+                        </TableCell>
+                      );
+                    })}
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+
+            <div className="state-display">
+              <h3>Column Configuration</h3>
+              <pre>{JSON.stringify(columnConfig, null, 2)}</pre>
+            </div>
+          </div>
+        );
+      };
+
+      // Initial render
+      log("🚀 Starting Table Selection Demo");
+      render(<TableSelectionDemo />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
