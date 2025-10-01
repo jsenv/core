@@ -97,8 +97,6 @@
         Tbody,
         Tr,
         TableCell,
-        RowNumberCol,
-        RowNumberTableCell,
       } from "../table/table.jsx";
       /* eslint-enable no-unused-vars */
       import { useCells } from "../table/use_cells.js";
@@ -201,7 +199,6 @@
               maxHeight={400}
             >
               <Colgroup>
-                <RowNumberCol width={50} />
                 {columnOrder.map((columnId) => {
                   const colConfig = columnConfig.find(
                     (col) => col.id === columnId,
@@ -221,7 +218,6 @@
 
               <Thead>
                 <Tr>
-                  <RowNumberTableCell />
                   {columnOrder.map((columnId, displayIndex) => {
                     const colConfig = columnConfig.find(
                       (col) => col.id === columnId,
@@ -240,7 +236,6 @@
 
               <Tbody>
                 <Tr>
-                  <RowNumberTableCell />
                   {columnOrder.map((columnId, displayIndex) => {
                     const cellValue = cellValues[0]?.[displayIndex] || "";
                     log(

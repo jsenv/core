@@ -33,7 +33,6 @@ export const useTableDragContextValue = ({ onColumnOrderChange, columns }) => {
         columnIdsWithNewOrder.push(columnIds[i]);
       }
     }
-    debugger;
     onColumnOrderChange(columnIdsWithNewOrder);
   };
 
