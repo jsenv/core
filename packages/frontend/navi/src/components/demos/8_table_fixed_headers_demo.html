@@ -185,14 +185,14 @@
                 onSelectionChange={(value) => {
                   setSelection(value);
                 }}
-                onColumnResize={(width, columnIndex, column) => {
+                onColumnSizeChange={(width, columnIndex, column) => {
                   console.log(column, `resized to ${width}px`);
                   setColumnWidths((columnWidths) => {
                     columnWidths[columnIndex] = width;
                     return [...columnWidths];
                   });
                 }}
-                onRowResize={(height, rowIndex, row) => {
+                onRowSizeChange={(height, rowIndex, row) => {
                   console.log(row, `resized to ${height}px`, rowIndex);
                   setRowHeights((rowHeights) => {
                     rowHeights[rowIndex] = height;

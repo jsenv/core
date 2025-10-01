@@ -4,7 +4,7 @@ import {
   Z_INDEX_RESIZER_BACKDROP,
   Z_INDEX_RESIZER_HANDLE,
 } from "../z_indexes.js";
-import { useTableResize } from "./table_resize_context.js";
+import { useTableSizeController } from "./table_size_context.js";
 
 const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
@@ -179,19 +179,19 @@ export const TableCellColumnResizeHandles = ({
   columnMinWidth,
   columnMaxWidth,
 }) => {
-  const { onColumnResize } = useTableResize();
+  const { onColumnSizeChange } = useTableSizeController();
 
   return (
     <>
       {columnIndex > 0 && (
         <TableColumnLeftResizeHandle
-          onRelease={(width) => onColumnResize(width, columnIndex - 1)}
+          onRelease={(width) => onColumnSizeChange(width, columnIndex - 1)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
       )}
       <TableColumnRightResizeHandle
-        onRelease={(width) => onColumnResize(width, columnIndex)}
+        onRelease={(width) => onColumnSizeChange(width, columnIndex)}
         columnMinWidth={columnMinWidth}
         columnMaxWidth={columnMaxWidth}
       />
@@ -489,19 +489,19 @@ export const TableCellRowResizeHandles = ({
   rowMinHeight,
   rowMaxHeight,
 }) => {
-  const { onRowResize } = useTableResize();
+  const { onRowSizeChange } = useTableSizeController();
 
   return (
     <>
       {rowIndex > 0 && (
         <TableRowTopResizeHandle
-          onRelease={(width) => onRowResize(width, rowIndex - 1)}
+          onRelease={(width) => onRowSizeChange(width, rowIndex - 1)}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
         />
       )}
       <TableRowBottomResizeHandle
-        onRelease={(width) => onRowResize(width, rowIndex)}
+        onRelease={(width) => onRowSizeChange(width, rowIndex)}
         rowMinHeight={rowMinHeight}
         rowMaxHeight={rowMaxHeight}
       />

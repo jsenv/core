@@ -1,0 +1,38 @@
+import { createContext } from "preact";
+import { useContext, useMemo, useRef } from "preact/hooks";
+
+const TableSizeControllerContext = createContext();
+export const TableSizeControllerProvider = TableSizeControllerContext.Provider;
+export const useTableSizeController = () => {
+  return useContext(TableSizeControllerContext);
+};
+export const useTableSizeControllerContextValue = ({
+  onColumnSizeChange,
+  onRowSizeChange,
+  columns,
+  rows,
+}) => {
+  const onColumnSizeChangeRef = useRef();
+  onColumnSizeChangeRef.current = onColumnSizeChange;
+  const onRowSizeChangeRef = useRef();
+  onRowSizeChangeRef.current = onRowSizeChange;
+
+  const sizeController = useMemo(() => {
+    const onColumnSizeChangeWithColumn = (width, columnIndex) => {
+      const column = columns[columnIndex];
+      return onColumnSizeChangeRef.current?.(width, columnIndex, column);
+    };
+
+    const onRowSizeChangeWithRow = (height, rowIndex) => {
+      const row = rows[rowIndex];
+      return onRowSizeChangeRef.current?.(height, rowIndex, row);
+    };
+
+    return {
+      onColumnSizeChange: onColumnSizeChangeWithColumn,
+      onRowSizeChange: onRowSizeChangeWithRow,
+    };
+  }, []);
+
+  return sizeController;
+};
