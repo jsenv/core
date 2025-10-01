@@ -93,10 +93,12 @@
         Table,
         Colgroup,
         Col,
+        RowNumberCol,
         Thead,
         Tbody,
         Tr,
         TableCell,
+        RowNumberTableCell,
       } from "../table/table.jsx";
       /* eslint-enable no-unused-vars */
       import { useCells } from "../table/use_cells.js";
@@ -119,24 +121,22 @@
         const [columnConfig] = useState([
           { id: "col1", name: "Column A" },
           { id: "col2", name: "Column B" },
-          { id: "col3", name: "Column C" },
         ]);
 
         // Column order (this is what gets changed during reordering)
-        const [columnOrder, setColumnOrder] = useState([
-          "col1",
-          "col2",
-          "col3",
-        ]);
+        const [columnOrder, setColumnOrder] = useState(["col1", "col2"]);
 
         const sortedColumns = [];
         for (const columnId of columnOrder) {
+          if (columnId === "row_number") {
+            continue;
+          }
           const column = columnConfig.find((col) => col.id === columnId);
           sortedColumns.push(column);
         }
 
         // Simple single row of data
-        const initialCellData = [["A1", "B1", "C1"]];
+        const initialCellData = [["A1", "B1"]];
 
         const [cellValues, setCellValue] = useCells(initialCellData, {
           columnIds: columnConfig.map((col) => col.id),
@@ -161,17 +161,17 @@
 
         // Test buttons for manual reordering
         const moveFirstToLast = () => {
-          const newOrder = [columnOrder[1], columnOrder[2], columnOrder[0]];
+          const newOrder = [columnOrder[0], columnOrder[1]];
           handleColumnOrderChange(newOrder);
         };
 
         const moveLastToFirst = () => {
-          const newOrder = [columnOrder[2], columnOrder[0], columnOrder[1]];
+          const newOrder = [columnOrder[1], columnOrder[0]];
           handleColumnOrderChange(newOrder);
         };
 
         const resetOrder = () => {
-          handleColumnOrderChange(["col1", "col2", "col3"]);
+          handleColumnOrderChange(["col1", "col2"]);
         };
 
         return (
@@ -205,6 +205,7 @@
               maxHeight={400}
             >
               <Colgroup>
+                <RowNumberCol width={50} />
                 {sortedColumns.map((colConfig) => {
                   log(
                     `🏗️ Rendering Col: id=${colConfig.id}, width=${colConfig?.width}`,
@@ -221,6 +222,7 @@
 
               <Thead>
                 <Tr>
+                  <RowNumberTableCell />
                   {sortedColumns.map((colConfig) => {
                     log(
                       `🏗️ Rendering Header: id=${colConfig.id}, name=${colConfig?.name}`,
@@ -237,6 +239,7 @@
               <Tbody>
                 {cellValues.map((rowValues, rowIndex) => (
                   <Tr key={rowIndex}>
+                    <RowNumberTableCell />
                     {rowValues.map((cellValue, columnIndex) => {
                       log(
                         `🏗️ Rendering Cell: rowIndex=${rowIndex}, columnIndex=${columnIndex},  value="${cellValue}"`,
