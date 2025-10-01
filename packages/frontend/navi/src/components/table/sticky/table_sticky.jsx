@@ -373,12 +373,18 @@ const TableCellStickyLeftFrontier = ({
   stickyLeftFrontierColumnIndex,
   onStickyLeftFrontierChange,
 }) => {
+  const canMoveFrontier = Boolean(onStickyLeftFrontierChange);
+
+  if (stickyLeftFrontierColumnIndex === -1 && !canMoveFrontier) {
+    // no need to display sticky frontier when non movable and nothing is sticky
+    return null;
+  }
   return (
     <div
       className="navi_table_cell_sticky_frontier"
       data-left=""
       data-opposite={stickyLeftFrontierColumnIndex === -1 ? "" : undefined}
-      inert={!onStickyLeftFrontierChange}
+      inert={!canMoveFrontier}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
@@ -408,12 +414,19 @@ const TableCellStickyTopFrontier = ({
   stickyTopFrontierRowIndex,
   onStickyTopFrontierChange,
 }) => {
+  const canMoveFrontier = Boolean(onStickyTopFrontierChange);
+
+  if (stickyTopFrontierRowIndex === -1 && !canMoveFrontier) {
+    // no need to display sticky frontier when non movable and nothing is sticky
+    return null;
+  }
+
   return (
     <div
       className="navi_table_cell_sticky_frontier"
       data-top=""
       data-opposite={stickyTopFrontierRowIndex === -1 ? "" : undefined}
-      inert={!onStickyTopFrontierChange}
+      inert={!canMoveFrontier}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
