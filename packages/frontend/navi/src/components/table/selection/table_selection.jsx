@@ -141,17 +141,21 @@ export const useTableSelectionController = ({
 
   useLayoutEffect(() => {
     const table = tableRef.current;
-    if (table) {
-      updateSelectionBorders(table, selectionController);
+    if (!table) {
+      return;
     }
+    updateSelectionBorders(table, selectionController);
   }, [selectionController.value]);
 
   useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table) {
+      return;
+    }
     if (selectionColor) {
-      tableRef.current?.style.setProperty(
-        "--selection-border-color",
-        selectionColor,
-      );
+      table.style.setProperty("--selection-border-color", selectionColor);
+    } else {
+      table.style.removeProperty("--selection-border-color");
     }
   }, [selectionColor]);
 
