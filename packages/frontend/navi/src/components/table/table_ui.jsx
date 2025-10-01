@@ -42,7 +42,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableUI = ({ grabTarget }) => {
+export const TableUI = () => {
   const ref = useRef();
 
   useLayoutEffect(() => {
@@ -69,7 +69,7 @@ export const TableUI = ({ grabTarget }) => {
 
   return (
     <div ref={ref} className="navi_table_ui">
-      <TableDragCloneContainer dragging={Boolean(grabTarget)} />
+      <TableDragCloneContainer />
       <TableColumnResizer />
       <TableRowResizer />
       <TableStickyFrontier />

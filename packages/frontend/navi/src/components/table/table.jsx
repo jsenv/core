@@ -55,12 +55,7 @@
 
 import { createContext, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { createIsolatedItemTracker } from "../item_tracker/use_isolated_item_tracker.jsx";
@@ -72,6 +67,11 @@ import {
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
 import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
+import {
+  TableDragProvider,
+  useTableDrag,
+  useTableDragContextValue,
+} from "./drag/table_drag.js";
 import {
   TableCellColumnResizeHandles,
   TableCellRowResizeHandles,
@@ -124,12 +124,6 @@ const useRowIndex = () => useContext(RowIndexContext);
 
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
-
-const TableDragContext = createContext();
-const TableDragProvider = TableDragContext.Provider;
-const useTableDrag = () => {
-  return useContext(TableDragContext);
-};
 
 export const Table = forwardRef((props, ref) => {
   const {
@@ -230,19 +224,9 @@ export const Table = forwardRef((props, ref) => {
   });
 
   // drag columns
-  const [grabTarget, setGrabTarget] = useState(null);
-  const grabColumn = (columnIndex) => {
-    setGrabTarget(`column:${columnIndex}`);
-  };
-  const releaseColumn = () => {
-    setGrabTarget(null);
-  };
-  const dragContextValue = {
-    grabTarget,
-    grabColumn,
-    releaseColumn,
+  const dragContextValue = useTableDragContextValue({
     onColumnOrderChange,
-  };
+  });
 
   return (
     <div
@@ -278,7 +262,7 @@ export const Table = forwardRef((props, ref) => {
             </TableSelectionProvider>
           </TableSizeProvider>
         </table>
-        <TableUI grabTarget={grabTarget} />
+        <TableUI />
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 import { createContext } from "preact";
-import { useContext, useMemo, useRef } from "preact/hooks";
+import { useContext, useMemo } from "preact/hooks";
+
+import { useStableCallback } from "../../use_stable_callback.js";
 
 const TableSizeContext = createContext();
 
@@ -10,20 +12,18 @@ export const useTableSizeContextValue = ({
   columns,
   rows,
 }) => {
-  const onColumnSizeChangeRef = useRef();
-  onColumnSizeChangeRef.current = onColumnSizeChange;
-  const onRowSizeChangeRef = useRef();
-  onRowSizeChangeRef.current = onRowSizeChange;
+  onColumnSizeChange = useStableCallback(onColumnSizeChange);
+  onRowSizeChange = useStableCallback(onRowSizeChange);
 
   const tableSizeContextValue = useMemo(() => {
     const onColumnSizeChangeWithColumn = (width, columnIndex) => {
       const column = columns[columnIndex];
-      return onColumnSizeChangeRef.current?.(width, columnIndex, column);
+      return onColumnSizeChange(width, columnIndex, column);
     };
 
     const onRowSizeChangeWithRow = (height, rowIndex) => {
       const row = rows[rowIndex];
-      return onRowSizeChangeRef.current?.(height, rowIndex, row);
+      return onRowSizeChange(height, rowIndex, row);
     };
 
     return {
