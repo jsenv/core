@@ -45,8 +45,13 @@ import { useRef } from "preact/hooks";
 export const useStableCallback = (callback) => {
   const callbackRef = useRef();
   callbackRef.current = callback;
-
   const stableCallbackRef = useRef();
+
+  // Return original falsy value directly when callback is not a function
+  if (!callback) {
+    return callback;
+  }
+
   const existingStableCallback = stableCallbackRef.current;
   if (existingStableCallback) {
     return existingStableCallback;

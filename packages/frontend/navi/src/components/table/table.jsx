@@ -45,6 +45,7 @@
  *   A priori on veut un onColumnOrderChange qui recoit un tableau de column ids dans l'ordre voulu
  *   notons aussi qu'un drop dans la zone sticky va surement déplacer la frontiere au passage
  *   et qu'un drop en dehors de meme
+ * - Si je passe pas onRoewSizeChange et onColumnSizeChange on ne doit pas pouvoir resize
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
  * - Delete a row (how?)
