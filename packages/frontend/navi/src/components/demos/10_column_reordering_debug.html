@@ -129,6 +129,12 @@
           "col3",
         ]);
 
+        const sortedColumns = [];
+        for (const columnId of columnOrder) {
+          const column = columnConfig.find((col) => col.id === columnId);
+          sortedColumns.push(column);
+        }
+
         // Simple single row of data
         const initialCellData = [["A1", "B1", "C1"]];
 
@@ -199,17 +205,14 @@
               maxHeight={400}
             >
               <Colgroup>
-                {columnOrder.map((columnId) => {
-                  const colConfig = columnConfig.find(
-                    (col) => col.id === columnId,
-                  );
+                {sortedColumns.map((colConfig) => {
                   log(
-                    `🏗️ Rendering Col: id=${columnId}, width=${colConfig?.width}`,
+                    `🏗️ Rendering Col: id=${colConfig.id}, width=${colConfig?.width}`,
                   );
                   return (
                     <Col
-                      key={columnId}
-                      id={columnId}
+                      key={colConfig.id}
+                      id={colConfig.id}
                       width={colConfig?.width}
                     />
                   );
@@ -218,16 +221,13 @@
 
               <Thead>
                 <Tr>
-                  {columnOrder.map((columnId, displayIndex) => {
-                    const colConfig = columnConfig.find(
-                      (col) => col.id === columnId,
-                    );
+                  {sortedColumns.map((colConfig) => {
                     log(
-                      `🏗️ Rendering Header: id=${columnId}, displayIndex=${displayIndex}, name=${colConfig?.name}`,
+                      `🏗️ Rendering Header: id=${colConfig.id}, name=${colConfig?.name}`,
                     );
                     return (
-                      <TableCell key={columnId}>
-                        {colConfig?.name} (id: {columnId})
+                      <TableCell key={colConfig.id}>
+                        {colConfig?.name} (id: {colConfig.id})
                       </TableCell>
                     );
                   })}
@@ -237,16 +237,15 @@
               <Tbody>
                 {cellValues.map((rowValues, rowIndex) => (
                   <Tr key={rowIndex}>
-                    {rowValues.map((cellValue, displayIndex) => {
-                      const columnId = columnOrder[displayIndex];
+                    {rowValues.map((cellValue, columnIndex) => {
                       log(
-                        `🏗️ Rendering Cell: rowIndex=${rowIndex}, displayIndex=${displayIndex}, columnId=${columnId}, value="${cellValue}"`,
+                        `🏗️ Rendering Cell: rowIndex=${rowIndex}, columnIndex=${columnIndex},  value="${cellValue}"`,
                       );
                       return (
                         <TableCell
-                          key={displayIndex}
+                          key={columnIndex}
                           action={(value) =>
-                            handleCellEdit(rowIndex, displayIndex, value)
+                            handleCellEdit(rowIndex, columnIndex, value)
                           }
                         >
                           {cellValue}

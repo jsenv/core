@@ -142,10 +142,11 @@
         const [stickyTopFrontierRowIndex, setStickyTopFrontierRowIndex] =
           useState(0);
 
-        // Derived state: sort columns according to columnOrder
-        const sortedColumns = columnOrderedIds
-          .map((colId) => columns.find((col) => col.id === colId))
-          .filter(Boolean); // Remove any undefined columns
+        const sortedColumns = [];
+        for (const columnId of columnOrderedIds) {
+          const column = columns.find((col) => col.id === columnId);
+          sortedColumns.push(column);
+        }
 
         // Use custom hook for cell management
         const [cellValues, setCellValue, setBaseCellValues] = useCells(data, {
