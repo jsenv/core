@@ -19,30 +19,22 @@ export const useTableDragContextValue = ({ onColumnOrderChange, columns }) => {
       return;
     }
     const columnIds = columns.map((col) => col.id);
-    // Compute new column order with a single loop
     const columnIdsWithNewOrder = [];
-    const draggedColumnId = columnIds[columnIndex];
-    let insertedDraggedColumn = false;
-
+    const columnIdAtCurrentPosition = columnIds[columnIndex];
+    const columnIdAtNewPosition = columnIds[newColumnIndex];
     for (let i = 0; i < columnIds.length; i++) {
-      // Skip the original position of the dragged column
-      if (i === columnIndex) {
+      if (i === newColumnIndex) {
+        // At the new position, put the dragged column
+        columnIdsWithNewOrder.push(columnIdAtCurrentPosition);
         continue;
       }
-      // Check if we should insert the dragged column before this position
-      if (
-        !insertedDraggedColumn &&
-        columnIdsWithNewOrder.length === newColumnIndex
-      ) {
-        columnIdsWithNewOrder.push(draggedColumnId);
-        insertedDraggedColumn = true;
+      if (i === columnIndex) {
+        // At the old position, put what was at the new position
+        columnIdsWithNewOrder.push(columnIdAtNewPosition);
+        continue;
       }
-      // Add the current column
+      // Everything else stays the same
       columnIdsWithNewOrder.push(columnIds[i]);
-    }
-    // If we haven't inserted the dragged column yet, it goes at the end
-    if (!insertedDraggedColumn) {
-      columnIdsWithNewOrder.push(draggedColumnId);
     }
     onColumnOrderChange(columnIdsWithNewOrder);
   };
