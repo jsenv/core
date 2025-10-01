@@ -54,16 +54,6 @@ export const useTableSelection = () => {
 };
 
 export const parseTableSelectionValue = (selectionValue) => {
-  if (selectionValue.startsWith("cell:")) {
-    const [cellRowIndex, cellColumnIndex] = selectionValue
-      .slice("cell:".length)
-      .split("-");
-    return {
-      type: "cell",
-      rowIndex: Number(cellRowIndex),
-      columnIndex: Number(cellColumnIndex),
-    };
-  }
   if (selectionValue.startsWith("row:")) {
     const rowIndex = selectionValue.slice("row:".length);
     return { type: "row", rowIndex: Number(rowIndex) };
@@ -72,12 +62,17 @@ export const parseTableSelectionValue = (selectionValue) => {
     const columnIndex = selectionValue.slice("column:".length);
     return { type: "column", columnIndex: Number(columnIndex) };
   }
-  return { type: "unknown" };
+  const [cellRowIndex, cellColumnIndex] = selectionValue.split(",");
+  return {
+    type: "cell",
+    rowIndex: Number(cellRowIndex),
+    columnIndex: Number(cellColumnIndex),
+  };
 };
 export const stringifyTableSelectionValue = (type, value) => {
   if (type === "cell") {
     const { rowIndex, columnIndex } = value;
-    return `cell:${rowIndex}-${columnIndex}`;
+    return `${rowIndex},${columnIndex}`;
   }
   if (type === "row") {
     return `row:${value}`;
