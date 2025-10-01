@@ -225,6 +225,7 @@ export const createDragGesture = (options) => {
     }
 
     const gestureInfo = {
+      direction,
       element,
       elementToImpact,
       elementVisuallyImpacted,
@@ -265,6 +266,7 @@ export const createDragGesture = (options) => {
       hasCrossedVisibleAreaLeftOnce: false,
       hasCrossedVisibleAreaTopOnce: false,
     };
+    definePropertyAsReadOnly(gestureInfo, "direction");
     definePropertyAsReadOnly(gestureInfo, "xAtStart");
     definePropertyAsReadOnly(gestureInfo, "yAtStart");
     definePropertyAsReadOnly(gestureInfo, "leftAtStart");

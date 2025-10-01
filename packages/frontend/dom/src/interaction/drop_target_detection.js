@@ -1,120 +1,55 @@
 /**
- * Detects the drop target index based on the position of a dragged element relative to potential drop targets.
- * Uses edge-based detection for more intuitive dropping behavior.
- * When multiple targets overlap, picks the one with the best overlap or closest center.
+ * Detects the drop target based on what element is actually under the mouse cursor.
+ * Uses document.elementsFromPoint() to respect visual stacking order naturally.
  *
- * @param {Object} params - Configuration object
- * @param {Element} params.draggedElement - The element being dragged (ghost/clone)
- * @param {Element[]} params.targetElements - Array of potential drop target elements
- * @param {string} params.axis - The axis to check ('x' or 'y')
- * @param {number} params.defaultIndex - Default index to return if no match found
- * @param {string} [params.mode='direct'] - 'direct' returns element index, 'frontier' returns before/after index
- * @returns {number} The index of the target element where the drop should occur
+ * @param {Object} gestureInfo - Gesture information containing mouse coordinates and direction
+ * @param {number} gestureInfo.x - Mouse X position relative to positioned parent
+ * @param {number} gestureInfo.y - Mouse Y position relative to positioned parent
+ * @param {Object} gestureInfo.direction - Direction configuration {x: boolean, y: boolean}
+ * @param {Element} gestureInfo.positionedParent - The positioned parent element
+ * @param {Element} gestureInfo.scrollableParent - The scrollable parent element
+ * @param {Element[]} targetElements - Array of potential drop target elements
+ * @returns {Object|null} Drop target info with xSide/ySide or null if no valid target found
  */
-export const getDropTargetInfo = ({
-  draggedElement,
-  targetElements,
-  axis,
-  gestureInfo,
-}) => {
-  const getRect = (element) => {
-    return element.getBoundingClientRect();
-  };
-  const draggedBounds = getRect(draggedElement);
+export const getDropTargetInfo = (gestureInfo, targetElements) => {
+  const { positionedParent, scrollableParent } = gestureInfo;
 
-  // Get the start and end positions of the dragged element based on axis
-  let draggedStart;
-  let draggedEnd;
-  let draggedCenter;
-  if (axis === "x") {
-    draggedStart = draggedBounds.left;
-    if (gestureInfo.isStickyLeft) {
-      const computedStyle = getComputedStyle(draggedElement);
-      const stickyValue = parseFloat(computedStyle.left);
-      const visualOffset = gestureInfo.visualOffsetX;
-      const adjust = visualOffset - stickyValue;
-      draggedStart += adjust;
-    }
-    draggedEnd = draggedStart + draggedBounds.width;
-    draggedCenter = draggedStart + (draggedEnd - draggedStart) / 2;
-  } else {
-    draggedStart = draggedBounds.top;
-    if (gestureInfo.isStickyTop) {
-      const computedStyle = getComputedStyle(draggedElement);
-      const stickyValue = parseFloat(computedStyle.top);
-      const visualOffset = gestureInfo.visualOffsetY;
-      const adjust = visualOffset - stickyValue;
-      draggedStart += adjust;
-    }
-    draggedEnd = draggedStart + draggedBounds.height;
-    draggedCenter = draggedStart + (draggedEnd - draggedStart) / 2;
-  }
+  // Convert relative coordinates back to viewport coordinates for elementsFromPoint
+  const parentRect = positionedParent.getBoundingClientRect();
+  const mouseX = gestureInfo.x + parentRect.left - scrollableParent.scrollLeft;
+  const mouseY = gestureInfo.y + parentRect.top - scrollableParent.scrollTop;
 
-  const candidates = [];
-  for (let i = 0; i < targetElements.length; i++) {
-    const targetElement = targetElements[i];
-    const targetBounds = getRect(targetElement);
+  // Get all elements under the mouse cursor (respects stacking order)
+  const elementsUnderMouse = document.elementsFromPoint(mouseX, mouseY);
 
-    // Get target element bounds based on axis
-    let targetStart;
-    let targetEnd;
-    if (axis === "x") {
-      targetStart = targetBounds.left;
-      targetEnd = targetBounds.right;
-    } else {
-      targetStart = targetBounds.top;
-      targetEnd = targetBounds.bottom;
-    }
+  // Find the first target element in the stack (topmost visible target)
+  let targetElement = null;
+  let targetIndex = -1;
 
-    const targetCenter = targetStart + (targetEnd - targetStart) / 2;
-
-    // Check if dragged element's start edge is in the left/top half of this target
-    if (draggedStart >= targetStart && draggedStart < targetCenter) {
-      const overlapAmount = Math.min(draggedEnd, targetCenter) - draggedStart;
-      const distanceToCenter = Math.abs(draggedCenter - targetCenter);
-      candidates.push({
-        element: targetElement,
-        index: i,
-        position: "start",
-        overlapAmount,
-        distanceToCenter,
-      });
-    }
-
-    // Check if dragged element's end edge is in the right/bottom half of this target
-    if (draggedEnd > targetCenter && draggedEnd <= targetEnd) {
-      const overlapAmount = draggedEnd - Math.max(draggedStart, targetCenter);
-      const distanceToCenter = Math.abs(draggedCenter - targetCenter);
-      candidates.push({
-        element: targetElement,
-        index: i,
-        position: "end",
-        overlapAmount,
-        distanceToCenter,
-      });
+  for (const element of elementsUnderMouse) {
+    const index = targetElements.indexOf(element);
+    if (index !== -1) {
+      targetElement = element;
+      targetIndex = index;
+      break;
     }
   }
 
-  if (candidates.length === 0) {
+  if (!targetElement) {
     return null;
   }
 
-  if (candidates.length === 1) {
-    return candidates[0];
-  }
-
-  // Multiple candidates - pick the best one
-  // Strategy: prioritize by overlap amount, then by distance to center
-  candidates.sort((a, b) => {
-    // First, prefer larger overlap
-    const overlapDiff = b.overlapAmount - a.overlapAmount;
-    if (Math.abs(overlapDiff) > 1) {
-      // Use small threshold to handle floating point precision
-      return overlapDiff;
-    }
-    // If overlap is similar, prefer closer to center
-    return a.distanceToCenter - b.distanceToCenter;
-  });
-
-  return candidates[0];
+  // Determine position within the target for both axes
+  const targetBounds = targetElement.getBoundingClientRect();
+  const targetCenterX = targetBounds.left + targetBounds.width / 2;
+  const targetCenterY = targetBounds.top + targetBounds.height / 2;
+  const result = {
+    element: targetElement,
+    index: targetIndex,
+    side: {
+      x: mouseX < targetCenterX ? "start" : "end",
+      y: mouseY < targetCenterY ? "start" : "end",
+    },
+  };
+  return result;
 };

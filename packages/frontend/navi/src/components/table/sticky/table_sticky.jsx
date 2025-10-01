@@ -555,16 +555,11 @@ const initMoveStickyFrontierByMousedown = (
 
     onGrab,
     onDrag: (gestureInfo) => {
-      const dropTargetInfo = getDropTargetInfo({
-        draggedElement: ghostElement,
-        targetElements: elements,
-        axis,
-        gestureInfo,
-      });
+      const dropTargetInfo = getDropTargetInfo(gestureInfo, elements);
       if (dropTargetInfo) {
         const dropColumnIndex = dropTargetInfo.index;
         const dropFrontierIndex =
-          dropTargetInfo.position === "start"
+          dropTargetInfo.size[axis] === "start"
             ? dropColumnIndex - 1
             : dropColumnIndex;
         if (dropFrontierIndex !== futureFrontierIndex) {

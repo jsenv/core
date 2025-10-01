@@ -257,12 +257,10 @@ export const initDragTableColumnByMousedown = (
     };
 
     addDragEffect((gestureInfo) => {
-      const dropTargetInfo = getDropTargetInfo({
-        draggedElement: colClone,
-        targetElements: dropCandidateElements,
-        axis: "x",
+      const dropTargetInfo = getDropTargetInfo(
         gestureInfo,
-      });
+        dropCandidateElements,
+      );
       if (!dropTargetInfo) {
         return;
       }
