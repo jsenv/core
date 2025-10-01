@@ -16,15 +16,19 @@ export const useTableSizeContextValue = ({
   onRowSizeChange = useStableCallback(onRowSizeChange);
 
   const tableSizeContextValue = useMemo(() => {
-    const onColumnSizeChangeWithColumn = (width, columnIndex) => {
-      const column = columns[columnIndex];
-      return onColumnSizeChange(width, columnIndex, column);
-    };
+    const onColumnSizeChangeWithColumn = onColumnSizeChange
+      ? (width, columnIndex) => {
+          const column = columns[columnIndex];
+          return onColumnSizeChange(width, columnIndex, column);
+        }
+      : onColumnSizeChange;
 
-    const onRowSizeChangeWithRow = (height, rowIndex) => {
-      const row = rows[rowIndex];
-      return onRowSizeChange(height, rowIndex, row);
-    };
+    const onRowSizeChangeWithRow = onRowSizeChange
+      ? (height, rowIndex) => {
+          const row = rows[rowIndex];
+          return onRowSizeChange(height, rowIndex, row);
+        }
+      : onRowSizeChange;
 
     return {
       onColumnSizeChange: onColumnSizeChangeWithColumn,

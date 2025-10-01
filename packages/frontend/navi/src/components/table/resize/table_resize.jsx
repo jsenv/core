@@ -180,21 +180,24 @@ export const TableCellColumnResizeHandles = ({
   columnMaxWidth,
 }) => {
   const { onColumnSizeChange } = useTableSize();
+  const canResize = Boolean(onColumnSizeChange);
 
   return (
     <>
-      {columnIndex > 0 && (
+      {canResize && columnIndex > 0 && (
         <TableColumnLeftResizeHandle
           onRelease={(width) => onColumnSizeChange(width, columnIndex - 1)}
           columnMinWidth={columnMinWidth}
           columnMaxWidth={columnMaxWidth}
         />
       )}
-      <TableColumnRightResizeHandle
-        onRelease={(width) => onColumnSizeChange(width, columnIndex)}
-        columnMinWidth={columnMinWidth}
-        columnMaxWidth={columnMaxWidth}
-      />
+      {canResize && (
+        <TableColumnRightResizeHandle
+          onRelease={(width) => onColumnSizeChange(width, columnIndex)}
+          columnMinWidth={columnMinWidth}
+          columnMaxWidth={columnMaxWidth}
+        />
+      )}
     </>
   );
 };
@@ -490,21 +493,24 @@ export const TableCellRowResizeHandles = ({
   rowMaxHeight,
 }) => {
   const { onRowSizeChange } = useTableSize();
+  const canResize = Boolean(onRowSizeChange);
 
   return (
     <>
-      {rowIndex > 0 && (
+      {canResize && rowIndex > 0 && (
         <TableRowTopResizeHandle
           onRelease={(width) => onRowSizeChange(width, rowIndex - 1)}
           rowMinHeight={rowMinHeight}
           rowMaxHeight={rowMaxHeight}
         />
       )}
-      <TableRowBottomResizeHandle
-        onRelease={(width) => onRowSizeChange(width, rowIndex)}
-        rowMinHeight={rowMinHeight}
-        rowMaxHeight={rowMaxHeight}
-      />
+      {canResize && (
+        <TableRowBottomResizeHandle
+          onRelease={(width) => onRowSizeChange(width, rowIndex)}
+          rowMinHeight={rowMinHeight}
+          rowMaxHeight={rowMaxHeight}
+        />
+      )}
     </>
   );
 };
