@@ -9,7 +9,7 @@
  * @param {Element} gestureInfo.positionedParent - The positioned parent element
  * @param {Element} gestureInfo.scrollableParent - The scrollable parent element
  * @param {Element[]} targetElements - Array of potential drop target elements
- * @returns {Object|null} Drop target info with xSide/ySide or null if no valid target found
+ * @returns {Object|null} Drop target info with elementSide or null if no valid target found
  */
 export const getDropTargetInfo = (gestureInfo, targetElements) => {
   const { positionedParent, scrollableParent } = gestureInfo;

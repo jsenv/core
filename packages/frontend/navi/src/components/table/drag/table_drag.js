@@ -22,14 +22,16 @@ export const useTableDragContextValue = ({ onColumnOrderChange, columns }) => {
     // Compute new column order with a single loop
     const columnIdsWithNewOrder = [];
     const draggedColumnId = columnIds[columnIndex];
+
     for (let i = 0; i < columnIds.length; i++) {
       if (i === newColumnIndex) {
         // Insert the dragged column at its new position
         columnIdsWithNewOrder.push(draggedColumnId);
-        continue;
       }
-      // Add all other columns (skip the original position)
-      columnIdsWithNewOrder.push(columnIds[i]);
+      if (i !== columnIndex) {
+        // Add all other columns (skip the original position)
+        columnIdsWithNewOrder.push(columnIds[i]);
+      }
     }
     debugger;
     onColumnOrderChange(columnIdsWithNewOrder);
