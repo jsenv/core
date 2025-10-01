@@ -1,5 +1,7 @@
 import { createContext } from "preact";
-import { useContext, useMemo, useRef } from "preact/hooks";
+import { useContext, useMemo } from "preact/hooks";
+
+import { useStableCallback } from "../../use_stable_callback.js";
 
 const TableStickyContext = createContext();
 export const TableStickyProvider = TableStickyContext.Provider;
@@ -10,17 +12,14 @@ export const useTableStickyContextValue = ({
   onStickyLeftFrontierChange,
   onStickyTopFrontierChange,
 }) => {
-  const onStickyFrontierLeftChangeRef = useRef();
-  onStickyFrontierLeftChangeRef.current = onStickyLeftFrontierChange;
-  const onStickyFrontierTopChangeRef = useRef();
-  onStickyFrontierTopChangeRef.current = onStickyTopFrontierChange;
+  onStickyLeftFrontierChange = useStableCallback(onStickyLeftFrontierChange);
+  onStickyTopFrontierChange = useStableCallback(onStickyTopFrontierChange);
 
   return useMemo(() => {
     return {
       stickyLeftFrontierColumnIndex,
       stickyTopFrontierRowIndex,
-      onStickyLeftFrontierChange: (...args) =>
-        onStickyFrontierLeftChangeRef.current?.(...args),
+      onStickyLeftFrontierChange,
       onStickyTopFrontierChange,
     };
   }, [stickyLeftFrontierColumnIndex, stickyTopFrontierRowIndex]);
