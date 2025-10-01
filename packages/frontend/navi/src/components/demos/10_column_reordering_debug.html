@@ -119,9 +119,9 @@
       const ColumnReorderingDemo = () => {
         // Initial column configuration
         const [columnConfig] = useState([
-          { id: "col1", name: "Column A" },
-          { id: "col2", name: "Column B" },
-          { id: "col3", name: "Column C" },
+          { id: "col1", name: "Column A", backgroundColor: "#ffebee" },
+          { id: "col2", name: "Column B", backgroundColor: "#e8f5e8" },
+          { id: "col3", name: "Column C", backgroundColor: "#e3f2fd" },
         ]);
 
         // Simple single row of data
@@ -205,7 +205,14 @@
                 <RowNumberCol width={50} />
                 {columns.map((col) => {
                   log(`🏗️ Rendering Col: id=${col.id}, width=${col?.width}`);
-                  return <Col key={col.id} id={col.id} width={col?.width} />;
+                  return (
+                    <Col
+                      key={col.id}
+                      id={col.id}
+                      width={col?.width}
+                      backgroundColor={col.backgroundColor}
+                    />
+                  );
                 })}
               </Colgroup>
 
