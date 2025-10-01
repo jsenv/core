@@ -226,6 +226,7 @@ export const Table = forwardRef((props, ref) => {
   // drag columns
   const dragContextValue = useTableDragContextValue({
     onColumnOrderChange,
+    columns,
   });
 
   return (
@@ -534,7 +535,8 @@ export const TableCell = forwardRef((props, ref) => {
         initDragTableColumnByMousedown(e, {
           onGrab: () => grabColumn(columnIndex),
           onDrag: () => {},
-          onRelease: () => releaseColumn(columnIndex),
+          onRelease: (_, newColumnIndex) =>
+            releaseColumn(columnIndex, newColumnIndex),
         });
       }}
       onDoubleClick={(e) => {
