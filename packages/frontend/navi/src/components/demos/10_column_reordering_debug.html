@@ -127,7 +127,7 @@
         // Simple single row of data
         const initialCellData = [["A1", "B1", "C1"]];
         const { cells, setCellValue, columns, setColumnOrder } =
-          useCellsAndColumns(columnConfig, initialCellData);
+          useCellsAndColumns(initialCellData, columnConfig);
 
         // Get current column order for logging and display
         const columnOrderedIds = columns.map((col) => col.id);
