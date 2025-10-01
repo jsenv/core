@@ -79,9 +79,9 @@
       }
       .coordinate-buttons {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 5px;
-        max-width: 200px;
+        max-width: 300px;
       }
       .coord-label {
         font-weight: bold;
@@ -108,17 +108,24 @@
         <button id="select-col-1" class="btn-primary">Select Column 1</button>
       </div>
 
-      <h3>Select Individual Cells</h3>
+      <h3>Select Individual Cells (including headers & row numbers)</h3>
       <div class="coordinate-buttons">
         <div class="coord-label">Y\X</div>
-        <div class="coord-label">0</div>
-        <div class="coord-label">1</div>
-        <div class="coord-label">0</div>
-        <button id="select-0-0" class="btn-success">(0,0)</button>
-        <button id="select-0-1" class="btn-success">(0,1)</button>
-        <div class="coord-label">1</div>
-        <button id="select-1-0" class="btn-success">(1,0)</button>
-        <button id="select-1-1" class="btn-success">(1,1)</button>
+        <div class="coord-label">Row#</div>
+        <div class="coord-label">Col A</div>
+        <div class="coord-label">Col B</div>
+        <div class="coord-label">Header</div>
+        <button id="select-header-rownumber" class="btn-success">Row#</button>
+        <button id="select-header-0" class="btn-success">H(0)</button>
+        <button id="select-header-1" class="btn-success">H(1)</button>
+        <div class="coord-label">Row 1</div>
+        <button id="select-rownumber-0" class="btn-success">R#1</button>
+        <button id="select-0-0" class="btn-success">(1,1)</button>
+        <button id="select-0-1" class="btn-success">(1,2)</button>
+        <div class="coord-label">Row 2</div>
+        <button id="select-rownumber-1" class="btn-success">R#2</button>
+        <button id="select-1-0" class="btn-success">(2,1)</button>
+        <button id="select-1-1" class="btn-success">(2,2)</button>
       </div>
     </div>
 
@@ -306,6 +313,36 @@
           setSelectedCells([cellValue]);
         };
 
+        const selectHeaderCell = (columnIndex) => {
+          log(`📋 External: Select header cell for column ${columnIndex}`);
+          // Headers are at row index -1 in the visual table
+          const headerValue = stringifyTableSelectionValue("cell", {
+            rowIndex: 0,
+            columnIndex,
+          });
+          setSelectedCells([headerValue]);
+        };
+
+        const selectRowNumberCell = (rowIndex) => {
+          log(`🔢 External: Select row number cell for row ${rowIndex}`);
+          // Row numbers are at column index -1 in the visual table
+          const rowNumberValue = stringifyTableSelectionValue("cell", {
+            rowIndex,
+            columnIndex: 0,
+          });
+          setSelectedCells([rowNumberValue]);
+        };
+
+        const selectHeaderRowNumberCell = () => {
+          log(`🏠 External: Select header row number cell`);
+          // Corner cell is at (-1, -1) in the visual table
+          const cornerValue = stringifyTableSelectionValue("cell", {
+            rowIndex: 0,
+            columnIndex: 0,
+          });
+          setSelectedCells([cornerValue]);
+        };
+
         // Setup external control button handlers
         useEffect(() => {
           const setupButton = (id, handler) => {
@@ -321,10 +358,17 @@
           setupButton("select-row-1", () => selectRow(1));
           setupButton("select-col-0", () => selectColumn(0));
           setupButton("select-col-1", () => selectColumn(1));
-          setupButton("select-0-0", () => selectCell(0, 0));
-          setupButton("select-0-1", () => selectCell(0, 1));
-          setupButton("select-1-0", () => selectCell(1, 0));
-          setupButton("select-1-1", () => selectCell(1, 1));
+          setupButton("select-0-0", () => selectCell(1, 1));
+          setupButton("select-0-1", () => selectCell(1, 2));
+          setupButton("select-1-0", () => selectCell(2, 1));
+          setupButton("select-1-1", () => selectCell(2, 2));
+          // Header cells: visual column 0 and 1 at header row -1
+          setupButton("select-header-rownumber", selectHeaderRowNumberCell);
+          setupButton("select-header-0", () => selectHeaderCell(1));
+          setupButton("select-header-1", () => selectHeaderCell(2));
+          // Row number cells: visual row 0 and 1 at row number column -1
+          setupButton("select-rownumber-0", () => selectRowNumberCell(1));
+          setupButton("select-rownumber-1", () => selectRowNumberCell(2));
         }, []);
 
         log(`🎬 Demo render - cells: ${cells.length}x${cells[0]?.length}`);
