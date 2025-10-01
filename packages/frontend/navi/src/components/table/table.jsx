@@ -120,12 +120,6 @@ const useRowIndex = () => useContext(RowIndexContext);
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 
-const TableStickyContext = createContext();
-const TableStickyProvider = TableStickyContext.Provider;
-const useTableSticky = () => {
-  return useContext(TableStickyContext);
-};
-
 const TableDragContext = createContext();
 const TableDragProvider = TableDragContext.Provider;
 const useTableDrag = () => {
