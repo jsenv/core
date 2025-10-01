@@ -49,6 +49,7 @@ export {
   useSelectionController,
 } from "./src/components/selection/selection.jsx";
 // Table start
+export { stringifyTableSelectionValue } from "./src/components/table/selection/table_selection.js";
 export {
   Col,
   Colgroup,

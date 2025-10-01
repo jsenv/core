@@ -104,6 +104,7 @@
         // eslint-disable-next-line no-unused-vars
         RowNumberTableCell,
         useCellsAndColumns,
+        stringifyTableSelectionValue,
       } from "@jsenv/navi";
 
       // Generate large dataset to force scrolling
@@ -134,7 +135,6 @@
         const [rowHeights, setRowHeights] = useState([]);
         const { cells, setCellValue, columns, setColumnOrder } =
           useCellsAndColumns(data, columnsConfig);
-
         const [
           stickyLeftFrontierColumnIndex,
           setStickyLeftFrontierColumnIndex,
@@ -297,22 +297,37 @@
             <div className="actions">
               <button
                 onClick={() => {
-                  tableRef.current.clearSelection();
+                  setSelection([]);
                 }}
               >
                 Clear Selection
               </button>
               <button
                 onClick={() => {
-                  tableRef.current.selectAll();
+                  const allCells = [];
+                  for (let y = 0; y < cells.length; y++) {
+                    for (let x = 0; x < (cells[0]?.length || 0); x++) {
+                      allCells.push(
+                        stringifyTableSelectionValue("cell", {
+                          rowIndex: y + 1,
+                          columnIndex: x + 1,
+                        }),
+                      );
+                    }
+                  }
+                  setSelection(allCells);
                 }}
               >
                 Select All ({cells.length * (cells[0]?.length || 0)} cells)
               </button>
               <button
                 onClick={() => {
-                  // Select first row
-                  const firstRowCells = columns.map((col) => `${col.id}:row-1`);
+                  const firstRowCells = columns.map((_, columnIndex) =>
+                    stringifyTableSelectionValue("cell", {
+                      rowIndex: 0,
+                      columnIndex: columnIndex + 1,
+                    }),
+                  );
                   setSelection(firstRowCells);
                 }}
               >
@@ -321,8 +336,11 @@
               <button
                 onClick={() => {
                   // Select first column
-                  const firstColCells = data.map(
-                    (row) => `${columns[0]?.id}:${row.id}`,
+                  const firstColCells = data.map((_, rowIndex) =>
+                    stringifyTableSelectionValue("cell", {
+                      rowIndex,
+                      columnIndex: 0,
+                    }),
                   );
                   setSelection(firstColCells);
                 }}
@@ -364,7 +382,6 @@
               </button>
               <button
                 onClick={() => {
-                  // Reverse column order
                   setColumnOrder([...columns.map((c) => c.id)].reverse());
                 }}
               >
@@ -372,7 +389,6 @@
               </button>
               <button
                 onClick={() => {
-                  // Shuffle column order
                   const shuffled = [...columns.map((c) => c.id)];
                   for (let i = shuffled.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -385,8 +401,7 @@
               </button>
               <button
                 onClick={() => {
-                  // Reset to original column order
-                  setColumnOrder(columns.map((col) => col.id));
+                  setColumnOrder(columnsConfig.map((col) => col.id));
                 }}
               >
                 Reset Column Order

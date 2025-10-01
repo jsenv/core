@@ -43,17 +43,12 @@ export const useCellsAndColumns = (cells, columns) => {
   // Derived state: reorder cell values according to column display order
   const orderedCells = useMemo(() => {
     const reorderedCells = [];
-    for (let rowIndex = 0; rowIndex < baseCells.length; rowIndex++) {
-      const originalRow = baseCells[rowIndex];
+    for (let y = 0; y < baseCells.length; y++) {
+      const originalRow = baseCells[y];
       const reorderedRow = [];
-      for (
-        let columnIndex = 0;
-        columnIndex < orderedColumnIds.length;
-        columnIndex++
-      ) {
-        const originalIndex = columnOrderedIndexMap.get(columnIndex);
-        const cellValue =
-          originalIndex !== undefined ? originalRow[originalIndex] : "";
+      for (let x = 0; x < orderedColumnIds.length; x++) {
+        const columnOrderedIndex = columnOrderedIndexMap.get(x);
+        const cellValue = originalRow[columnOrderedIndex];
         reorderedRow.push(cellValue);
       }
       reorderedCells.push(reorderedRow);
