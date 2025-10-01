@@ -77,8 +77,8 @@ import {
   TableCellRowResizeHandles,
 } from "./resize/table_resize.jsx";
 import {
-  TableSizeControllerProvider,
-  useTableSizeControllerContextValue,
+  TableSizeProvider,
+  useTableSizeContextValue,
 } from "./resize/table_size_context.js";
 import {
   parseTableSelectionValue,
@@ -237,7 +237,7 @@ export const Table = forwardRef((props, ref) => {
   ]);
 
   // resizing
-  const sizeController = useTableSizeControllerContextValue({
+  const tableSizeContextValue = useTableSizeContextValue({
     onColumnSizeChange,
     onRowSizeChange,
     columns,
@@ -275,7 +275,7 @@ export const Table = forwardRef((props, ref) => {
           data-multiselection={selection.length > 1 ? "" : undefined}
           data-border-collapse={borderCollapse ? "" : undefined}
         >
-          <TableSizeControllerProvider value={sizeController}>
+          <TableSizeProvider value={tableSizeContextValue}>
             <TableSelectionProvider value={selectionContextValue}>
               <TableDragProvider value={dragContextValue}>
                 <TableStickyProvider value={stickyContextValue}>
@@ -295,7 +295,7 @@ export const Table = forwardRef((props, ref) => {
                 </TableStickyProvider>
               </TableDragProvider>
             </TableSelectionProvider>
-          </TableSizeControllerProvider>
+          </TableSizeProvider>
         </table>
         <TableUI grabTarget={grabTarget} />
       </div>

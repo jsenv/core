@@ -1,12 +1,12 @@
 import { createContext } from "preact";
 import { useContext, useMemo, useRef } from "preact/hooks";
 
-const TableSizeControllerContext = createContext();
-export const TableSizeControllerProvider = TableSizeControllerContext.Provider;
-export const useTableSizeController = () => {
-  return useContext(TableSizeControllerContext);
+const TableSizeContext = createContext();
+export const TableSizeProvider = TableSizeContext.Provider;
+export const useTableSize = () => {
+  return useContext(TableSizeContext);
 };
-export const useTableSizeControllerContextValue = ({
+export const useTableSizeContextValue = ({
   onColumnSizeChange,
   onRowSizeChange,
   columns,
@@ -17,7 +17,7 @@ export const useTableSizeControllerContextValue = ({
   const onRowSizeChangeRef = useRef();
   onRowSizeChangeRef.current = onRowSizeChange;
 
-  const sizeController = useMemo(() => {
+  const tableSizeContextValue = useMemo(() => {
     const onColumnSizeChangeWithColumn = (width, columnIndex) => {
       const column = columns[columnIndex];
       return onColumnSizeChangeRef.current?.(width, columnIndex, column);
@@ -34,5 +34,5 @@ export const useTableSizeControllerContextValue = ({
     };
   }, []);
 
-  return sizeController;
+  return tableSizeContextValue;
 };

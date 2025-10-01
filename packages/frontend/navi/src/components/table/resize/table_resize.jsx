@@ -4,7 +4,7 @@ import {
   Z_INDEX_RESIZER_BACKDROP,
   Z_INDEX_RESIZER_HANDLE,
 } from "../z_indexes.js";
-import { useTableSizeController } from "./table_size_context.js";
+import { useTableSize } from "./table_size_context.js";
 
 const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
@@ -179,7 +179,7 @@ export const TableCellColumnResizeHandles = ({
   columnMinWidth,
   columnMaxWidth,
 }) => {
-  const { onColumnSizeChange } = useTableSizeController();
+  const { onColumnSizeChange } = useTableSize();
 
   return (
     <>
@@ -489,7 +489,7 @@ export const TableCellRowResizeHandles = ({
   rowMinHeight,
   rowMaxHeight,
 }) => {
-  const { onRowSizeChange } = useTableSizeController();
+  const { onRowSizeChange } = useTableSize();
 
   return (
     <>
