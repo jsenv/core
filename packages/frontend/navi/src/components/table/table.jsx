@@ -380,7 +380,6 @@ export const TableCell = forwardRef((props, ref) => {
     selectionImpact,
     style,
     cursor,
-    textAlign,
     onClick,
     action,
     name,
@@ -389,8 +388,10 @@ export const TableCell = forwardRef((props, ref) => {
   } = props;
   const column = useColumn();
   const row = useRow();
-  const { backgroundColor = column.backgroundColor || row.backgroundColor } =
-    props;
+  const {
+    textAlign = column.textAlign,
+    backgroundColor = column.backgroundColor || row.backgroundColor,
+  } = props;
 
   const cellRef = useRef();
   const { editing, startEditing, stopEditing } = useEditionController();
@@ -429,7 +430,6 @@ export const TableCell = forwardRef((props, ref) => {
 
   const { selectionController, columnContainsSelectedCell } =
     useTableSelection();
-
   if (selectionImpact === undefined) {
     if (rowIndex === 0 && columnIndex === 0 && canSelectAll) {
       selectionImpact = (allValues) => {
@@ -462,7 +462,6 @@ export const TableCell = forwardRef((props, ref) => {
       };
     }
   }
-
   const { selected } = useSelectableElement(cellRef, {
     selectionController,
     selectionImpact,
@@ -488,10 +487,10 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.cursor = cursor;
   }
   const columnWidth = column.width;
-  const rowHeight = row.height;
   if (columnWidth !== undefined) {
     innerStyle.maxWidth = `${columnWidth}px`;
   }
+  const rowHeight = row.height;
   if (rowHeight !== undefined) {
     innerStyle.maxHeight = `${rowHeight}px`;
   }
