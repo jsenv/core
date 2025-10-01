@@ -62,7 +62,7 @@ export const parseTableSelectionValue = (selectionValue) => {
     const columnIndex = selectionValue.slice("column:".length);
     return { type: "column", columnIndex: Number(columnIndex) };
   }
-  const [cellRowIndex, cellColumnIndex] = selectionValue.split(",");
+  const [cellRowIndex, cellColumnIndex] = selectionValue.split("-");
   return {
     type: "cell",
     rowIndex: Number(cellRowIndex),
@@ -72,7 +72,7 @@ export const parseTableSelectionValue = (selectionValue) => {
 export const stringifyTableSelectionValue = (type, value) => {
   if (type === "cell") {
     const { rowIndex, columnIndex } = value;
-    return `${rowIndex},${columnIndex}`;
+    return `${rowIndex}-${columnIndex}`;
   }
   if (type === "row") {
     return `row:${value}`;
@@ -81,4 +81,44 @@ export const stringifyTableSelectionValue = (type, value) => {
     return `column:${value}`;
   }
   return "";
+};
+
+/**
+ * Check if a specific cell is selected
+ * @param {Array} selection - The selection set or array
+ * @param {{rowIndex: number, columnIndex: number}} cellPosition - Cell coordinates
+ * @returns {boolean} True if the cell is selected
+ */
+export const isCellSelected = (selection, { rowIndex, columnIndex }) => {
+  const cellSelectionValue = stringifyTableSelectionValue("cell", {
+    rowIndex,
+    columnIndex,
+  });
+
+  return selection.includes(cellSelectionValue);
+};
+
+/**
+ * Check if a specific row is selected
+ * @param {Array} selection - The selection set or array
+ * @param {number} rowIndex - Row index
+ * @returns {boolean} True if the row is selected
+ */
+export const isRowSelected = (selection, rowIndex) => {
+  const rowSelectionValue = stringifyTableSelectionValue("row", rowIndex);
+  return selection.includes(rowSelectionValue);
+};
+
+/**
+ * Check if a specific column is selected
+ * @param {Array} selection - The selection set or array
+ * @param {number} columnIndex - Column index
+ * @returns {boolean} True if the column is selected
+ */
+export const isColumnSelected = (selection, columnIndex) => {
+  const columnSelectionValue = stringifyTableSelectionValue(
+    "column",
+    columnIndex,
+  );
+  return selection.has(columnSelectionValue);
 };

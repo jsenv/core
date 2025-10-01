@@ -157,6 +157,10 @@
       } from "../table/table.jsx";
       /* eslint-enable no-unused-vars */
       import { useCellsAndColumns } from "../table/use_cells_and_columns.js";
+      import {
+        stringifyTableSelectionValue,
+        isCellSelected,
+      } from "../table/selection/table_selection.js";
 
       window.clearLog = () => {
         document.getElementById("log").textContent = "";
@@ -173,19 +177,37 @@
       const updateSelectionDisplay = (selection) => {
         const selectionElement = document.getElementById("selection-state");
         if (!selection || selection.size === 0) {
-          selectionElement.innerHTML = "<strong>No cells selected</strong>";
+          selectionElement.innerHTML = "<strong>No selection</strong>";
           return;
         }
 
-        const selectedCells = Array.from(selection).map((cellId) => {
-          const [rowIndex, columnIndex] = cellId.split("-").map(Number);
-          return `(${rowIndex},${columnIndex})`;
+        const selectionArray = Array.from(selection);
+        const cellSelections = [];
+        const rowSelections = [];
+        const columnSelections = [];
+
+        selectionArray.forEach((item) => {
+          if (item.startsWith("row:")) {
+            rowSelections.push(item.slice(4));
+          } else if (item.startsWith("column:")) {
+            columnSelections.push(item.slice(7));
+          } else {
+            cellSelections.push(`(${item})`);
+          }
         });
 
+        let displayParts = [];
+        if (cellSelections.length > 0)
+          displayParts.push(`Cells: ${cellSelections.join(", ")}`);
+        if (rowSelections.length > 0)
+          displayParts.push(`Rows: ${rowSelections.join(", ")}`);
+        if (columnSelections.length > 0)
+          displayParts.push(`Columns: ${columnSelections.join(", ")}`);
+
         selectionElement.innerHTML = `
-          <strong>Selected cells:</strong> ${selectedCells.join(", ")}<br>
+          <strong>Selection:</strong> ${displayParts.join(" | ")}<br>
           <strong>Total count:</strong> ${selection.size}<br>
-          <strong>Raw IDs:</strong> ${Array.from(selection).join(", ")}
+          <strong>Raw values:</strong> ${selectionArray.join(", ")}
         `;
       };
 
@@ -239,24 +261,49 @@
 
         const selectAll = () => {
           log(`📱 External: Select all cells`);
-          setSelectedCells(new Set(["0-0", "0-1", "1-0", "1-1"]));
+          const allCells = [
+            stringifyTableSelectionValue("cell", {
+              rowIndex: 0,
+              columnIndex: 0,
+            }),
+            stringifyTableSelectionValue("cell", {
+              rowIndex: 0,
+              columnIndex: 1,
+            }),
+            stringifyTableSelectionValue("cell", {
+              rowIndex: 1,
+              columnIndex: 0,
+            }),
+            stringifyTableSelectionValue("cell", {
+              rowIndex: 1,
+              columnIndex: 1,
+            }),
+          ];
+          setSelectedCells(allCells);
         };
 
         const selectRow = (rowIndex) => {
           log(`📏 External: Select row ${rowIndex}`);
-          const rowCells = [`${rowIndex}-0`, `${rowIndex}-1`];
-          setSelectedCells(new Set(rowCells));
+          const rowValue = stringifyTableSelectionValue("row", rowIndex);
+          setSelectedCells([rowValue]);
         };
 
         const selectColumn = (columnIndex) => {
           log(`📐 External: Select column ${columnIndex}`);
-          const columnCells = [`0-${columnIndex}`, `1-${columnIndex}`];
-          setSelectedCells(new Set(columnCells));
+          const columnValue = stringifyTableSelectionValue(
+            "column",
+            columnIndex,
+          );
+          setSelectedCells([columnValue]);
         };
 
         const selectCell = (rowIndex, columnIndex) => {
           log(`🎯 External: Select single cell (${rowIndex},${columnIndex})`);
-          setSelectedCells(new Set([`${rowIndex}-${columnIndex}`]));
+          const cellValue = stringifyTableSelectionValue("cell", {
+            rowIndex,
+            columnIndex,
+          });
+          setSelectedCells([cellValue]);
         };
 
         // Setup external control button handlers
@@ -318,8 +365,10 @@
                   <Tr key={rowIndex}>
                     <RowNumberTableCell />
                     {rowValues.map((cellValue, columnIndex) => {
-                      const cellId = `${rowIndex}-${columnIndex}`;
-                      const isSelected = selectedCells.has(cellId);
+                      const isSelected = isCellSelected(selectedCells, {
+                        rowIndex,
+                        columnIndex,
+                      });
                       log(
                         `🏗️ Rendering Cell: (${rowIndex},${columnIndex}) value="${cellValue}" selected=${isSelected}`,
                       );
