@@ -616,7 +616,7 @@ export const RowNumberCol = ({
     />
   );
 };
-export const RowNumberTableCell = ({ children, ...props }) => {
+export const RowNumberTableCell = (props) => {
   const columnIndex = useColumnIndex();
   const rowIndex = useRowIndex();
   const isTopLeftCell = columnIndex === 0 && rowIndex === 0;

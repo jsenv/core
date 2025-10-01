@@ -101,7 +101,11 @@
         RowNumberTableCell,
       } from "../table/table.jsx";
       /* eslint-enable no-unused-vars */
-      import { useCells } from "../table/use_cells.js";
+      import {
+        useCells,
+        useOrderedColumnIds,
+        useOrderedColumns,
+      } from "../table/use_cells.js";
 
       window.clearLog = () => {
         document.getElementById("log").textContent = "";
@@ -124,32 +128,29 @@
         ]);
 
         // Column order (this is what gets changed during reordering)
-        const [columnOrder, setColumnOrder] = useState(["col1", "col2"]);
-
-        const sortedColumns = [];
-        for (const columnId of columnOrder) {
-          if (columnId === "row_number") {
-            continue;
-          }
-          const column = columnConfig.find((col) => col.id === columnId);
-          sortedColumns.push(column);
-        }
+        const columnIds = columnConfig.map((col) => col.id);
+        const [columnOrderedIds, setColumnOrderedIds] =
+          useOrderedColumnIds(columnIds);
+        const orderedColumns = useOrderedColumns(
+          columnConfig,
+          columnOrderedIds,
+        );
 
         // Simple single row of data
         const initialCellData = [["A1", "B1"]];
 
         const [cellValues, setCellValue] = useCells(initialCellData, {
-          columnIds: columnConfig.map((col) => col.id),
-          columnOrderedIds: columnOrder,
+          columnIds,
+          columnOrderedIds,
         });
 
-        log(`🎬 Demo render - columnOrder: [${columnOrder.join(", ")}]`);
+        log(`🎬 Demo render - columnOrder: [${columnOrderedIds.join(", ")}]`);
 
         const handleColumnOrderChange = (newColumnOrder) => {
           log(
-            `🔄 Column order changing from [${columnOrder.join(", ")}] to [${newColumnOrder.join(", ")}]`,
+            `🔄 Column order changing from [${columnOrderedIds.join(", ")}] to [${newColumnOrder.join(", ")}]`,
           );
-          setColumnOrder(newColumnOrder);
+          setColumnOrderedIds(newColumnOrder);
         };
 
         const handleCellEdit = ({ rowIndex, columnIndex }, value) => {
@@ -161,12 +162,12 @@
 
         // Test buttons for manual reordering
         const moveFirstToLast = () => {
-          const newOrder = [columnOrder[0], columnOrder[1]];
+          const newOrder = [columnOrderedIds[0], columnOrderedIds[1]];
           handleColumnOrderChange(newOrder);
         };
 
         const moveLastToFirst = () => {
-          const newOrder = [columnOrder[1], columnOrder[0]];
+          const newOrder = [columnOrderedIds[1], columnOrderedIds[0]];
           handleColumnOrderChange(newOrder);
         };
 
@@ -191,7 +192,7 @@
             <div className="state-display">
               <h3>Current State</h3>
               <div>
-                <strong>Column Order:</strong> [{columnOrder.join(", ")}]
+                <strong>Column Order:</strong> [{columnOrderedIds.join(", ")}]
               </div>
               <div>
                 <strong>Cell Values:</strong>
@@ -206,7 +207,7 @@
             >
               <Colgroup>
                 <RowNumberCol width={50} />
-                {sortedColumns.map((colConfig) => {
+                {orderedColumns.map((colConfig) => {
                   log(
                     `🏗️ Rendering Col: id=${colConfig.id}, width=${colConfig?.width}`,
                   );
@@ -223,7 +224,7 @@
               <Thead>
                 <Tr>
                   <RowNumberTableCell />
-                  {sortedColumns.map((colConfig) => {
+                  {orderedColumns.map((colConfig) => {
                     log(
                       `🏗️ Rendering Header: id=${colConfig.id}, name=${colConfig?.name}`,
                     );

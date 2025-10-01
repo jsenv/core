@@ -1,5 +1,29 @@
 import { useMemo, useState } from "preact/hooks";
 
+export const useOrderedColumnIds = (columnIds) => {
+  const [columnOrderedIds, setColumnOrderedIds] = useState(columnIds);
+
+  const facadeColumnOrderedIds = [];
+  for (const columnId of columnOrderedIds) {
+    if (!columnIds.includes(columnId)) {
+      // generated column (like the row column)
+      continue;
+    }
+    facadeColumnOrderedIds.push(columnId);
+  }
+
+  return [facadeColumnOrderedIds, setColumnOrderedIds];
+};
+
+export const useOrderedColumns = (columns, columnOrderedIds) => {
+  const orderedColumns = [];
+  for (const columnId of columnOrderedIds) {
+    const column = columns.find((col) => col.id === columnId);
+    orderedColumns.push(column);
+  }
+  return orderedColumns;
+};
+
 /**
  * Custom hook for managing cell values with column reordering support.
  *
