@@ -79,9 +79,9 @@
       }
       .coordinate-buttons {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 5px;
-        max-width: 300px;
+        max-width: 250px;
       }
       .coord-label {
         font-weight: bold;
@@ -108,21 +108,14 @@
         <button id="select-col-1" class="btn-primary">Select Column 1</button>
       </div>
 
-      <h3>Select Individual Cells (including headers & row numbers)</h3>
+      <h3>Select Individual Cells</h3>
       <div class="coordinate-buttons">
-        <div class="coord-label">Y\X</div>
-        <div class="coord-label">Row#</div>
-        <div class="coord-label">Col A</div>
-        <div class="coord-label">Col B</div>
-        <div class="coord-label">Header</div>
         <button id="select-header-rownumber" class="btn-success">Row#</button>
         <button id="select-header-0" class="btn-success">H(0)</button>
         <button id="select-header-1" class="btn-success">H(1)</button>
-        <div class="coord-label">Row 1</div>
         <button id="select-rownumber-0" class="btn-success">R#1</button>
         <button id="select-0-0" class="btn-success">(1,1)</button>
         <button id="select-0-1" class="btn-success">(1,2)</button>
-        <div class="coord-label">Row 2</div>
         <button id="select-rownumber-1" class="btn-success">R#2</button>
         <button id="select-1-0" class="btn-success">(2,1)</button>
         <button id="select-1-1" class="btn-success">(2,2)</button>
