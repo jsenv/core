@@ -58,11 +58,11 @@ export const useCells = (initialData, { columnIds, columnOrderedIds }) => {
    * @param {number} displayColumnIndex - Column index in display order (0-based)
    * @param {*} value - New cell value
    */
-  const setCellValue = (rowIndex, displayColumnIndex, value) => {
-    const originalColumnIndex = displayToOriginalIndexes[displayColumnIndex];
+  const setCellValue = ({ rowIndex, columnIndex }, value) => {
+    const originalColumnIndex = displayToOriginalIndexes[columnIndex];
 
     if (originalColumnIndex < 0) {
-      console.warn(`Invalid column index: ${displayColumnIndex}`);
+      console.warn(`Invalid column index: ${columnIndex}`);
       return;
     }
 

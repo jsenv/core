@@ -152,11 +152,11 @@
           setColumnOrder(newColumnOrder);
         };
 
-        const handleCellEdit = (rowIndex, colIndex, value) => {
+        const handleCellEdit = ({ rowIndex, columnIndex }, value) => {
           log(
-            `✏️ Cell edit: row=${rowIndex}, col=${colIndex}, value="${value}"`,
+            `✏️ Cell edit: row=${rowIndex}, col=${columnIndex}, value="${value}"`,
           );
-          setCellValue(rowIndex, colIndex, value);
+          setCellValue({ rowIndex, columnIndex }, value);
         };
 
         // Test buttons for manual reordering
@@ -248,7 +248,7 @@
                         <TableCell
                           key={columnIndex}
                           action={(value) =>
-                            handleCellEdit(rowIndex, columnIndex, value)
+                            handleCellEdit({ rowIndex, columnIndex }, value)
                           }
                         >
                           {cellValue}
