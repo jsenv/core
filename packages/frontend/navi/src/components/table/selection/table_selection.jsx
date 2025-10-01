@@ -133,9 +133,7 @@ export const useTableSelectionController = ({
     elementRef: tableRef,
     layout: "grid",
     value: selection,
-    onChange: (value) => {
-      onSelectionChange?.(value);
-    },
+    onChange: onSelectionChange,
     selectAllName: "cell",
   });
 

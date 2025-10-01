@@ -6,8 +6,10 @@ import {
   useRef,
   useState,
 } from "preact/hooks";
+
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { createCallbackController } from "../callback_controller.js";
+import { useStableCallback } from "../use_stable_callback.js";
 
 const DEBUG = {
   registration: false, // Element registration/unregistration
@@ -35,8 +37,7 @@ export const useSelectionController = ({
     throw new Error("useSelectionController: elementRef is required");
   }
 
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  onChange = useStableCallback(onChange);
 
   const currentValueRef = useRef(value);
   currentValueRef.current = value;
@@ -44,9 +45,9 @@ export const useSelectionController = ({
   const lastInternalValueRef = useRef(null);
 
   const selectionController = useMemo(() => {
-    const onChange = (newValue, ...args) => {
+    const innerOnChange = (newValue, ...args) => {
       lastInternalValueRef.current = newValue;
-      onChangeRef.current(newValue, ...args);
+      onChange?.(newValue, ...args);
     };
 
     const getCurrentValue = () => currentValueRef.current;
@@ -54,17 +55,19 @@ export const useSelectionController = ({
     if (layout === "grid") {
       return createGridSelection({
         getCurrentValue,
-        onChange,
+        onChange: innerOnChange,
+        enabled: Boolean(onChange),
         multiple,
         selectAllName,
       });
     }
     return createLinearSelection({
       getCurrentValue,
-      onChange,
+      onChange: innerOnChange,
       axis: layout,
       elementRef,
       multiple,
+      enabled: Boolean(onChange),
       selectAllName,
     });
   }, [layout, multiple, elementRef]);
@@ -72,6 +75,10 @@ export const useSelectionController = ({
   useEffect(() => {
     selectionController.element = elementRef.current;
   }, [selectionController]);
+
+  useLayoutEffect(() => {
+    selectionController.enabled = Boolean(onChange);
+  }, [selectionController, onChange]);
 
   // Smart sync: only update selection when value changes externally
   useEffect(() => {
@@ -93,6 +100,7 @@ const createBaseSelection = ({
   registry,
   onChange,
   type,
+  enabled,
   multiple,
   selectAllName,
   navigationMethods: {
@@ -115,6 +123,11 @@ const createBaseSelection = ({
   };
 
   const update = (newValue, event) => {
+    if (!baseSelection.enabled) {
+      console.warn("cannot change selection: no onChange provided");
+      return;
+    }
+
     const currentValue = getCurrentValue();
     if (compareTwoJsValues(newValue, currentValue)) {
       return;
@@ -333,6 +346,7 @@ const createBaseSelection = ({
   const baseSelection = {
     type,
     multiple,
+    enabled,
     get value() {
       return getCurrentValue();
     },
@@ -1031,6 +1045,9 @@ export const useSelectableElement = (
     let cleanup = () => {};
 
     const handleMouseDown = (e) => {
+      if (!selectionController.enabled) {
+        return;
+      }
       if (e.button !== 0) {
         // Only handle left mouse button
         return;
@@ -1336,7 +1353,9 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Add element above to selection",
       key: "command+shift+up",
-      enabled: selectionController.axis !== "horizontal",
+      enabled: () =>
+        selectionController.enabled &&
+        selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1344,7 +1363,9 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select element above",
       key: "up",
-      enabled: selectionController.axis !== "horizontal",
+      enabled: () =>
+        selectionController.enabled &&
+        selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) =>
           selectionController.getElementAbove(selectableElement),
@@ -1354,7 +1375,9 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Add element below to selection",
       key: "command+shift+down",
-      enabled: selectionController.axis !== "horizontal",
+      enabled: () =>
+        selectionController.enabled &&
+        selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1362,7 +1385,9 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select element below",
       key: "down",
-      enabled: selectionController.axis !== "horizontal",
+      enabled: () =>
+        selectionController.enabled &&
+        selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) => {
           return selectionController.getElementBelow(selectableElement);
@@ -1372,7 +1397,9 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Add left element to selection",
       key: "command+shift+left",
-      enabled: selectionController.axis !== "horizontal",
+      enabled: () =>
+        selectionController.enabled &&
+        selectionController.axis !== "horizontal",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1380,7 +1407,8 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select left element",
       key: "left",
-      enabled: selectionController.axis !== "vertical",
+      enabled: () =>
+        selectionController.enabled && selectionController.axis !== "vertical",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) => {
           return selectionController.getElementBefore(selectableElement);
@@ -1390,7 +1418,8 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Add right element to selection",
       key: "command+shift+right",
-      enabled: selectionController.axis !== "vertical",
+      enabled: () =>
+        selectionController.enabled && selectionController.axis !== "vertical",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1398,7 +1427,8 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select right element",
       key: "right",
-      enabled: selectionController.axis !== "vertical",
+      enabled: () =>
+        selectionController.enabled && selectionController.axis !== "vertical",
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) => {
           return selectionController.getElementAfter(selectableElement);
@@ -1408,6 +1438,7 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Set element as anchor for shift selections",
       key: "shift",
+      enabled: () => selectionController.enabled,
       handler: (keyboardEvent) => {
         const element = getSelectableElement(keyboardEvent);
         selectionController.setAnchorElement(element);
@@ -1417,6 +1448,7 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select all",
       key: "command+a",
+      enabled: () => selectionController.enabled,
       handler: (keyboardEvent) => {
         selectionController.selectAll(keyboardEvent);
         return true;
@@ -1425,6 +1457,9 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Toggle element selected state",
       enabled: (keyboardEvent) => {
+        if (!selectionController.enabled) {
+          return false;
+        }
         if (!toggleEnabled) {
           return false;
         }
