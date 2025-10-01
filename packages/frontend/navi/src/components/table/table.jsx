@@ -298,7 +298,6 @@ export const Col = ({ id, width, immovable, backgroundColor }) => {
     />
   );
 };
-
 export const Thead = ({ children }) => {
   return (
     <thead>
@@ -317,7 +316,6 @@ export const Tbody = ({ children }) => {
     </tbody>
   );
 };
-
 export const Tr = ({ id, height, children }) => {
   const rowIndex = useRegisterRow({ id, height });
   const row = useRowByIndex(rowIndex);
@@ -352,7 +350,6 @@ export const Tr = ({ id, height, children }) => {
     </tr>
   );
 };
-
 const TableRowCells = ({ rowIndex, row, children }) => {
   return children.map((child, columnIndex) => {
     const column = useColumnByIndex(columnIndex);
@@ -369,7 +366,6 @@ const TableRowCells = ({ rowIndex, row, children }) => {
     );
   });
 };
-
 export const TableCell = forwardRef((props, ref) => {
   let {
     className,
@@ -394,6 +390,11 @@ export const TableCell = forwardRef((props, ref) => {
   } = props;
 
   const cellRef = useRef();
+  const columnIndex = useColumnIndex();
+  const rowIndex = useRowIndex();
+
+  // editing
+  const editable = Boolean(action);
   const { editing, startEditing, stopEditing } = useEditionController();
   useImperativeHandle(ref, () => ({
     startEditing,
@@ -401,19 +402,7 @@ export const TableCell = forwardRef((props, ref) => {
     element: cellRef.current,
   }));
 
-  const columnIndex = useColumnIndex();
-  const rowIndex = useRowIndex();
-
-  const isInTableHead = useIsInTableHead();
-  const TagName = isInTableHead ? "th" : "td";
-
-  const selectionValue = stringifyTableSelectionValue("cell", {
-    rowIndex,
-    columnIndex,
-  });
-
-  const editable = Boolean(action);
-
+  // stickyness
   const {
     stickyLeftFrontierColumnIndex,
     stickyTopFrontierRowIndex,
@@ -428,6 +417,11 @@ export const TableCell = forwardRef((props, ref) => {
   const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
   const isAfterStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex + 1;
 
+  // selection
+  const selectionValue = stringifyTableSelectionValue("cell", {
+    rowIndex,
+    columnIndex,
+  });
   const { selectionController, columnContainsSelectedCell } =
     useTableSelection();
   if (selectionImpact === undefined) {
@@ -468,6 +462,7 @@ export const TableCell = forwardRef((props, ref) => {
     // value: selectionId,
   });
 
+  // moving column
   const { grabTarget, grabColumn, releaseColumn, onColumnOrderChange } =
     useTableDrag();
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
@@ -476,13 +471,23 @@ export const TableCell = forwardRef((props, ref) => {
       rowIndex === 0 && !column.immovable && Boolean(onColumnOrderChange);
   }
 
+  // resizing
   if (canResizeWidth === undefined && rowIndex === 0) {
     canResizeWidth = true;
   }
   if (canResizeHeight === undefined && columnIndex === 0) {
     canResizeHeight = true;
   }
-  const innerStyle = { ...style };
+
+  // display
+  const isInTableHead = useIsInTableHead();
+  const TagName = isInTableHead ? "th" : "td";
+  const innerStyle = {
+    ...style,
+  };
+  if (backgroundColor) {
+    innerStyle["--background-color"] = backgroundColor;
+  }
   if (cursor) {
     innerStyle.cursor = cursor;
   }
@@ -496,9 +501,6 @@ export const TableCell = forwardRef((props, ref) => {
   }
   if (textAlign) {
     innerStyle.textAlign = textAlign;
-  }
-  if (backgroundColor) {
-    innerStyle["--background-color"] = backgroundColor;
   }
 
   return (
