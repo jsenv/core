@@ -235,24 +235,26 @@
               </Thead>
 
               <Tbody>
-                <Tr>
-                  {columnOrder.map((columnId, displayIndex) => {
-                    const cellValue = cellValues[0]?.[displayIndex] || "";
-                    log(
-                      `🏗️ Rendering Cell: id=${columnId}, displayIndex=${displayIndex}, value="${cellValue}"`,
-                    );
-                    return (
-                      <TableCell
-                        key={columnId}
-                        action={(value) =>
-                          handleCellEdit(0, displayIndex, value)
-                        }
-                      >
-                        {cellValue}
-                      </TableCell>
-                    );
-                  })}
-                </Tr>
+                {cellValues.map((rowValues, rowIndex) => (
+                  <Tr key={rowIndex}>
+                    {rowValues.map((cellValue, displayIndex) => {
+                      const columnId = columnOrder[displayIndex];
+                      log(
+                        `🏗️ Rendering Cell: rowIndex=${rowIndex}, displayIndex=${displayIndex}, columnId=${columnId}, value="${cellValue}"`,
+                      );
+                      return (
+                        <TableCell
+                          key={displayIndex}
+                          action={(value) =>
+                            handleCellEdit(rowIndex, displayIndex, value)
+                          }
+                        >
+                          {cellValue}
+                        </TableCell>
+                      );
+                    })}
+                  </Tr>
+                ))}
               </Tbody>
             </Table>
 
