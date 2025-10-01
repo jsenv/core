@@ -21,18 +21,42 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
 
   // Get all elements under the mouse cursor (respects stacking order)
   const elementsUnderMouse = document.elementsFromPoint(mouseX, mouseY);
+  console.log({ mouseX }, elementsUnderMouse);
 
   // Find the first target element in the stack (topmost visible target)
   let targetElement = null;
   let targetIndex = -1;
 
+  const someTargetIsCol = targetElements.some((el) => el.tagName === "COL");
+
   for (const element of elementsUnderMouse) {
-    const index = targetElements.indexOf(element);
-    if (index !== -1) {
+    // First, check if the element itself is a target
+    const directIndex = targetElements.indexOf(element);
+    if (directIndex !== -1) {
       targetElement = element;
-      targetIndex = index;
+      targetIndex = directIndex;
       break;
     }
+    // Special case: if element is <td> or <th> and not in targets,
+    // try to find its corresponding <col> element
+    if (!someTargetIsCol) {
+      continue;
+    }
+    const isTableCell = element.tagName === "TD" || element.tagName === "TH";
+    if (!isTableCell) {
+      continue;
+    }
+    const tableCellCol = findTableCellCol(element, targetElements);
+    if (!tableCellCol) {
+      continue;
+    }
+    const colIndex = targetElements.indexOf(tableCellCol);
+    if (colIndex === -1) {
+      continue;
+    }
+    targetElement = tableCellCol;
+    targetIndex = colIndex;
+    break;
   }
 
   if (!targetElement) {
@@ -52,4 +76,24 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
     },
   };
   return result;
+};
+
+/**
+ * Find the corresponding <col> element for a given <td> or <th> cell
+ * @param {Element} cellElement - The <td> or <th> element
+ * @param {Element[]} targetColElements - Array of <col> elements to search in
+ * @returns {Element|null} The corresponding <col> element or null if not found
+ */
+const findTableCellCol = (cellElement) => {
+  const table = cellElement.closest("table");
+  const colgroup = table.querySelector("colgroup");
+  if (!colgroup) {
+    return null;
+  }
+  const cols = Array.from(colgroup.querySelectorAll("col"));
+  const row = cellElement.closest("tr");
+  const cellsInRow = Array.from(row.children);
+  const columnIndex = cellsInRow.indexOf(cellElement);
+  const correspondingCol = cols[columnIndex];
+  return correspondingCol;
 };
