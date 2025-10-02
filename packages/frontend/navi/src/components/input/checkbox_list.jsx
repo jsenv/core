@@ -1,12 +1,6 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
@@ -18,11 +12,13 @@ import {
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
+import { useStableCallback } from "../use_stable_callback.js";
 import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
+  FieldGroupOnValueChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
   FieldGroupValueContext,
@@ -42,18 +38,26 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     id,
     name,
     value,
+    onValueChange,
     readOnly,
     disabled,
     required,
     loading,
-    onInput,
     onChange,
-    onValueChange,
     children,
   } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+
+  const onCheckboxValueChange = useStableCallback(
+    onValueChange
+      ? (_, e) => {
+          const checkedValues = collectCheckedValues(innerRef.current, name);
+          onValueChange(checkedValues, e);
+        }
+      : undefined,
+  );
 
   return (
     <div
@@ -62,28 +66,23 @@ const CheckboxListBasic = forwardRef((props, ref) => {
       className="navi_checkbox_list"
       data-checkbox-list
       data-action={props["data-action"]}
-      onInput={(e) => {
-        if (onValueChange) {
-          const checkedValues = collectCheckedValues(innerRef.current, name);
-          onValueChange(checkedValues, e);
-        }
-        onInput?.(e);
-      }}
-      onChange={(e) => {
-        onChange?.(e);
-      }}
+      onChange={onChange}
     >
       <FieldGroupNameContext.Provider value={name}>
         <FieldGroupValueContext.Provider value={value}>
-          <FieldGroupReadOnlyContext.Provider value={readOnly}>
-            <FieldGroupDisabledContext.Provider value={disabled}>
-              <FieldGroupRequiredContext.Provider value={required}>
-                <FieldGroupLoadingContext.Provider value={loading}>
-                  {children}
-                </FieldGroupLoadingContext.Provider>
-              </FieldGroupRequiredContext.Provider>
-            </FieldGroupDisabledContext.Provider>
-          </FieldGroupReadOnlyContext.Provider>
+          <FieldGroupOnValueChangeContext.Provider
+            value={onCheckboxValueChange}
+          >
+            <FieldGroupReadOnlyContext.Provider value={readOnly}>
+              <FieldGroupDisabledContext.Provider value={disabled}>
+                <FieldGroupRequiredContext.Provider value={required}>
+                  <FieldGroupLoadingContext.Provider value={loading}>
+                    {children}
+                  </FieldGroupLoadingContext.Provider>
+                </FieldGroupRequiredContext.Provider>
+              </FieldGroupDisabledContext.Provider>
+            </FieldGroupReadOnlyContext.Provider>
+          </FieldGroupOnValueChangeContext.Provider>
         </FieldGroupValueContext.Provider>
       </FieldGroupNameContext.Provider>
     </div>
@@ -108,39 +107,7 @@ export const CheckboxList = forwardRef((props, ref) => {
     InsideForm: CheckboxListInsideForm,
   });
 });
-export const Checkbox = forwardRef((props, ref) => {
-  const { name, value, checked, readOnly, disabled, required, loading } = props;
-  const groupName = useContext(FieldGroupNameContext);
-  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupRequired = useContext(FieldGroupRequiredContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const innerName = name || groupName;
-  const innerReadOnly = readOnly || groupReadOnly;
-  const innerDisabled = disabled || groupDisabled;
-  const innerRequired = required || groupRequired;
-  const innerLoading =
-    loading || (groupLoading && groupActionRequester === innerRef.current);
-
-  return (
-    <InputCheckbox
-      ref={innerRef}
-      name={innerName}
-      value={value}
-      checked={checked}
-      readOnly={innerReadOnly}
-      disabled={innerDisabled}
-      required={innerRequired}
-      loading={innerLoading}
-      {...props}
-    />
-  );
-});
+export const Checkbox = InputCheckbox;
 
 const CheckboxListWithAction = forwardRef((props, ref) => {
   const {

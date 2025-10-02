@@ -1,6 +1,11 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
@@ -13,6 +18,16 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
+import {
+  FieldGroupActionRequesterContext,
+  FieldGroupDisabledContext,
+  FieldGroupLoadingContext,
+  FieldGroupNameContext,
+  FieldGroupOnValueChangeContext,
+  FieldGroupReadOnlyContext,
+  FieldGroupRequiredContext,
+} from "./field_group_context.js";
+import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
 import.meta.css = /* css */ `
@@ -128,53 +143,73 @@ export const InputCheckbox = forwardRef((props, ref) => {
 
 const InputCheckboxBasic = forwardRef((props, ref) => {
   const {
-    autoFocus,
-    constraints = [],
+    name,
     value = "on",
-    checked,
-    loading,
+    onValueChange,
     readOnly,
     disabled,
+    required,
+    loading,
+
+    autoFocus,
+    constraints = [],
     onClick,
-    onChange,
     appeareance = "custom", // "custom" or "default"
     ...rest
   } = props;
-
-  const innerRef = useRef();
+  const groupName = useContext(FieldGroupNameContext);
+  const groupOnValueChange = useContext(FieldGroupOnValueChangeContext);
+  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
+  const groupDisabled = useContext(FieldGroupDisabledContext);
+  const groupRequired = useContext(FieldGroupRequiredContext);
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const setInputReadOnly = useContext(ReadOnlyContext);
+  const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
 
-  const [innerChecked, setInnerChecked] = useState(checked);
-  const checkedRef = useRef(checked);
-  if (checkedRef.current !== checked) {
-    setInnerChecked(checked);
-    checkedRef.current = checked;
+  const innerName = name || groupName;
+  const innerOnValueChange = onValueChange || groupOnValueChange;
+  const innerReadOnly = readOnly || groupReadOnly || !innerOnValueChange;
+  const innerDisabled = disabled || groupDisabled;
+  const innerRequired = required || groupRequired;
+  const innerLoading =
+    loading || (groupLoading && groupActionRequester === innerRef.current);
+  if (setInputReadOnly) {
+    setInputReadOnly(innerReadOnly);
   }
 
-  const handleChange = (e) => {
-    const isChecked = e.target.checked;
-    setInnerChecked(isChecked);
-    onChange?.(e);
-  };
+  useAutoFocus(innerRef, autoFocus);
+  useConstraints(innerRef, constraints);
 
   const inputCheckbox = (
     <input
       ref={innerRef}
+      name={innerName}
       type="checkbox"
       value={value}
-      checked={innerChecked}
-      data-readonly={readOnly && !disabled ? "" : undefined}
+      data-readonly={innerReadOnly && !disabled ? "" : undefined}
+      disabled={innerDisabled}
+      required={innerRequired}
       data-validation-message-arrow-x="center"
-      disabled={disabled}
       onClick={(e) => {
         if (readOnly) {
           e.preventDefault();
         }
         onClick?.(e);
       }}
-      onChange={handleChange}
+      onInput={
+        innerOnValueChange
+          ? (e) => {
+              const checkbox = e.target;
+              const checkboxIsChecked = checkbox.checked;
+              const cehckboxValueOrUndefined = checkboxIsChecked
+                ? value
+                : undefined;
+              innerOnValueChange(cehckboxValueOrUndefined, e);
+            }
+          : undefined
+      }
       {...rest}
     />
   );
@@ -188,7 +223,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
 
   return (
     <LoadableInlineElement
-      loading={loading}
+      loading={innerLoading}
       inset={-1}
       targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
       color="light-dark(#355fcc, #3b82f6)"
