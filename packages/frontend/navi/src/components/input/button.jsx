@@ -12,25 +12,42 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import "./field_css.js";
 
 /**
+ * We need a content the visually shrink (scale down) but the button interactive are must remain intact
+ * Otherwise a click on the edges of the button cannot not trigger the click event (mouseup occurs outside the button)
+ **/
+
+/**
  * We have to re-define the CSS of button because getComputedStyle(button).borderColor returns
  * rgb(0, 0, 0) while being visually grey in chrome
  * So we redefine chrome styles so that loader can keep up with the actual color visible to the user
- *
  */
 import.meta.css = /* css */ `
   button[data-custom] {
+    border: none;
+    background: none;
+    display: inline-block;
+    padding: 0;
+  }
+
+  button[data-custom] .button-content {
     transition-duration: 0.15s;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-property: transform;
+    display: inline-flex;
+    position: relative;
+    padding-block: 1px;
+    padding-inline: 6px;
   }
-  button[data-custom]:active {
+
+  button[data-custom]:active .button-content {
     transform: scale(0.9);
   }
-  button[data-custom]:disabled {
+
+  button[data-custom]:disabled .button-content {
     transform: none;
   }
 
-  button[data-custom] > .shadow {
+  button[data-custom] .button-content > .shadow {
     position: absolute;
     inset: calc(
       -1 * (var(--button-border-width) + var(--button-outline-width))
@@ -38,7 +55,7 @@ import.meta.css = /* css */ `
     pointer-events: none;
     border-radius: inherit;
   }
-  button[data-custom]:active > .shadow {
+  button[data-custom]:active > .button-content > .shadow {
     box-shadow:
       inset 0 3px 6px rgba(0, 0, 0, 0.2),
       inset 0 1px 2px rgba(0, 0, 0, 0.3),
@@ -46,7 +63,7 @@ import.meta.css = /* css */ `
       inset 2px 0 4px rgba(0, 0, 0, 0.1),
       inset -2px 0 4px rgba(0, 0, 0, 0.1);
   }
-  button[data-custom]:disabled > .shadow {
+  button[data-custom]:disabled > .button-content > .shadow {
     box-shadow: none;
   }
 `;
@@ -61,19 +78,19 @@ export const Button = forwardRef((props, ref) => {
 
 const ButtonBasic = forwardRef((props, ref) => {
   const {
-    autoFocus,
-    constraints = [],
-    loading,
     readOnly,
-    children,
+    loading,
+    constraints = [],
+    autoFocus,
     appearance = "custom",
     discrete,
     style = {},
+    children,
     ...rest
   } = props;
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
@@ -88,40 +105,43 @@ const ButtonBasic = forwardRef((props, ref) => {
   outlineWidth = resolveCSSSize(outlineWidth);
 
   return (
-    <LoadableInlineElement
-      loading={loading}
-      inset={
-        borderWidth -
-        // -1 is the outline offset thing
-        1
-      }
-      color="light-dark(#355fcc, #3b82f6)"
+    <button
+      ref={innerRef}
+      {...rest}
+      data-custom={appearance === "custom" ? "" : undefined}
+      aria-busy={loading}
+      style={{
+        ...restStyle,
+        "--button-border-width": `${borderWidth}px`,
+        "--button-outline-width": `${outlineWidth}px`,
+        "--button-border-color": borderColor,
+      }}
     >
-      <button
-        ref={innerRef}
-        {...rest}
-        data-field=""
-        data-field-with-background=""
-        data-field-with-hover=""
-        data-field-with-border={borderWidth ? "" : undefined}
-        data-field-with-border-hover={discrete ? "" : undefined}
-        data-field-with-background-hover={discrete ? "" : undefined}
-        data-custom={appearance === "custom" ? "" : undefined}
-        data-validation-message-arrow-x="center"
-        data-readonly={readOnly ? "" : undefined}
-        aria-busy={loading}
-        style={{
-          ...restStyle,
-          "--button-border-width": `${borderWidth}px`,
-          "--button-outline-width": `${outlineWidth}px`,
-          "--button-border-color": borderColor,
-          "position": "relative",
-        }}
+      <LoadableInlineElement
+        loading={loading}
+        inset={
+          borderWidth -
+          // -1 is the outline offset thing
+          1
+        }
+        color="light-dark(#355fcc, #3b82f6)"
       >
-        {children}
-        <span className="shadow"></span>
-      </button>
-    </LoadableInlineElement>
+        <span
+          className="button-content"
+          data-field=""
+          data-field-with-background=""
+          data-field-with-hover=""
+          data-field-with-border={borderWidth ? "" : undefined}
+          data-field-with-border-hover={discrete ? "" : undefined}
+          data-field-with-background-hover={discrete ? "" : undefined}
+          data-validation-message-arrow-x="center"
+          data-readonly={readOnly ? "" : undefined}
+        >
+          {children}
+          <span className="shadow"></span>
+        </span>
+      </LoadableInlineElement>
+    </button>
   );
 });
 

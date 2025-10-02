@@ -9,7 +9,7 @@ import.meta.css = /* css */ `
     position: relative;
     width: fit-content;
     display: inline-flex;
-    height: 100%;
+    height: fit-content;
   }
 
   .navi_loading_rectangle_wrapper {
