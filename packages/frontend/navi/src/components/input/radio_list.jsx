@@ -56,15 +56,15 @@ const RadioListBasic = forwardRef((props, ref) => {
     <div ref={innerRef} className="navi_radio_list" onChange={onChange}>
       <FieldGroupNameContext.Provider value={name}>
         <FieldGroupValueContext.Provider value={value}>
-          <FieldGroupRequiredContext.Provider value={required}>
+          <FieldGroupReadOnlyContext.Provider value={readOnly}>
             <FieldGroupDisabledContext.Provider value={disabled}>
-              <FieldGroupLoadingContext.Provider value={loading}>
-                <FieldGroupReadOnlyContext.Provider value={readOnly}>
+              <FieldGroupRequiredContext.Provider value={required}>
+                <FieldGroupLoadingContext.Provider value={loading}>
                   {children}
-                </FieldGroupReadOnlyContext.Provider>
-              </FieldGroupLoadingContext.Provider>
+                </FieldGroupLoadingContext.Provider>
+              </FieldGroupRequiredContext.Provider>
             </FieldGroupDisabledContext.Provider>
-          </FieldGroupRequiredContext.Provider>
+          </FieldGroupReadOnlyContext.Provider>
         </FieldGroupValueContext.Provider>
       </FieldGroupNameContext.Provider>
     </div>

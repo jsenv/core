@@ -18,6 +18,10 @@
         Form,
         // eslint-disable-next-line no-unused-vars
         CheckboxList,
+        // eslint-disable-next-line no-unused-vars
+        Label,
+        // eslint-disable-next-line no-unused-vars
+        Checkbox,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -38,7 +42,14 @@
             <p>
               <strong>Action + log after 1s</strong>
             </p>
-            <PickFavoriteColors value={["red", "blue"]} />
+            <PickFavoriteColors
+              name="colors"
+              value={["red", "blue"]}
+              action={async ({ colors }) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                console.log(`Colors selected: ${JSON.stringify(colors)}`);
+              }}
+            />
           </div>
         );
       };
@@ -56,7 +67,11 @@
                 window.alert(`Colors selected: ${JSON.stringify(colors)}`);
               }}
             >
-              <PickFavoriteColors name="colors" value={["blue"]} />
+              <PickFavoriteColors
+                id="form_alert_1"
+                name="colors"
+                value={["blue"]}
+              />
 
               <Button type="submit">Submit</Button>
               <Button type="reset">Reset</Button>
@@ -78,7 +93,6 @@
               }}
             >
               <PickFavoriteColors name="colors" value={["red", "blue"]} />
-
               <Button type="submit">Submit</Button>
               <Button type="reset">Reset</Button>
             </Form>
@@ -89,18 +103,23 @@
       // eslint-disable-next-line no-unused-vars
       const PickFavoriteColors = ({ name, value, action }) => {
         return (
-          <CheckboxList
-            name={name}
-            label="Select your favorite colors:"
-            value={value}
-            action={action}
-          >
-            {[
-              { label: "Red", value: "red" },
-              { label: "Blue", value: "blue" },
-              { label: "Green", value: "green" },
-            ]}
-          </CheckboxList>
+          <fieldset>
+            <legend>Select your favorite colors:</legend>
+            <CheckboxList name={name} value={value} action={action}>
+              <Label>
+                Red
+                <Checkbox value="red" />
+              </Label>
+              <Label>
+                Blue
+                <Checkbox value="blue" />
+              </Label>
+              <Label>
+                Green
+                <Checkbox value="green" />
+              </Label>
+            </CheckboxList>
+          </fieldset>
         );
       };
 
