@@ -199,110 +199,13 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const [loadingB, setLoadingB] = useState(false);
-        const [loadingC, setLoadingC] = useState(false);
-        const [loadingD, setLoadingD] = useState(false);
-        const [initialVal, setInitialVal] = useState("Hello world");
-
         return (
           <div className="demo-grid">
             <LoadingDemo />
-            <div className="demo-card">
-              <h3 className="demo-title">⚡ Action Input</h3>
-              <div className="control-group">
-                <h4>@jsenv/navi Input with Action</h4>
-                <Input
-                  name="action-input"
-                  action={() => {}}
-                  loading={loadingB}
-                  placeholder="placeholder..."
-                />
-              </div>
-              <div className="control-group">
-                <h4>Native HTML Input</h4>
-                <input placeholder="placeholder..." />
-              </div>
-              <div className="button-group">
-                <button onClick={() => setLoadingB(!loadingB)}>
-                  {loadingB ? "Stop Loading" : "Start Loading"}
-                </button>
-              </div>
-            </div>
-
-            <div className="demo-card">
-              <h3 className="demo-title">🔒 Read-only State</h3>
-              <div className="control-group">
-                <h4>@jsenv/navi Read-only</h4>
-                <Input
-                  value="This is read-only content"
-                  readOnly
-                  loading={loadingC}
-                />
-              </div>
-              <div className="control-group">
-                <h4>Native Read-only</h4>
-                <input readOnly value="This is read-only content" />
-              </div>
-              <div className="button-group">
-                <button onClick={() => setLoadingC(!loadingC)}>
-                  {loadingC ? "Stop Loading" : "Start Loading"}
-                </button>
-              </div>
-            </div>
-
-            <div className="demo-card">
-              <h3 className="demo-title">🚫 Disabled State</h3>
-              <div className="control-group">
-                <h4>@jsenv/navi Disabled</h4>
-                <Input
-                  disabled
-                  loading={loadingD}
-                  placeholder="Disabled input..."
-                />
-              </div>
-              <div className="control-group">
-                <h4>Native Disabled</h4>
-                <input disabled placeholder="Disabled input..." />
-              </div>
-              <div className="button-group">
-                <button onClick={() => setLoadingD(!loadingD)}>
-                  {loadingD ? "Stop Loading" : "Start Loading"}
-                </button>
-              </div>
-            </div>
-
-            <div className="demo-card">
-              <h3 className="demo-title">📝 Initial Value (no action)</h3>
-              <div className="control-group">
-                <h4>@jsenv/navi Input</h4>
-                <Input
-                  value={initialVal}
-                  onInput={(e) => setInitialVal(e.currentTarget.value)}
-                  placeholder="Type here..."
-                />
-              </div>
-              <div className="control-group">
-                <h4>Native HTML Input</h4>
-                <input
-                  value={initialVal}
-                  onInput={(e) => setInitialVal(e.currentTarget.value)}
-                  placeholder="Type here..."
-                />
-              </div>
-              <div className="button-group">
-                <button onClick={() => setInitialVal("Updated from outside")}>
-                  Set from outside
-                </button>
-                <button
-                  onClick={() =>
-                    setInitialVal(`Value @ ${new Date().toLocaleTimeString()}`)
-                  }
-                >
-                  Set timestamp
-                </button>
-                <button onClick={() => setInitialVal("")}>Clear</button>
-              </div>
-            </div>
+            <ActionDemo />
+            <ReadOnlyDemo />
+            <DisabledDemo />
+            <InitialValueDemo />
           </div>
         );
       };
@@ -332,6 +235,131 @@
               <button onClick={() => setLoading(!loading)}>
                 {loading ? "Stop Loading" : "Start Loading"}
               </button>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ActionDemo = () => {
+        const [value, setValue] = useState();
+        const [loading, setLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">⚡ Action Input</h3>
+            <div className="control-group">
+              <h4>@jsenv/navi Input with Action</h4>
+              <Input
+                name="action-input"
+                value={value}
+                onValueChange={setValue}
+                action={() => {}}
+                loading={loading}
+                placeholder="placeholder..."
+              />
+            </div>
+            <div className="control-group">
+              <h4>Native HTML Input</h4>
+              <input placeholder="placeholder..." />
+            </div>
+            <div className="button-group">
+              <button onClick={() => setLoading(!loading)}>
+                {loading ? "Stop Loading" : "Start Loading"}
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ReadOnlyDemo = () => {
+        // not giving onValueChange param makes it read-only
+        const [loading, setLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">🔒 Read-only State</h3>
+            <div className="control-group">
+              <h4>@jsenv/navi Read-only</h4>
+              <Input value="This is read-only content" loading={loading} />
+            </div>
+            <div className="control-group">
+              <h4>Native Read-only</h4>
+              <input readOnly value="This is read-only content" />
+            </div>
+            <div className="button-group">
+              <button onClick={() => setLoading(!loading)}>
+                {loading ? "Stop Loading" : "Start Loading"}
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DisabledDemo = () => {
+        const [loading, setLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">🚫 Disabled State</h3>
+            <div className="control-group">
+              <h4>@jsenv/navi Disabled</h4>
+              <Input
+                disabled
+                loading={loading}
+                placeholder="Disabled input..."
+              />
+            </div>
+            <div className="control-group">
+              <h4>Native Disabled</h4>
+              <input disabled placeholder="Disabled input..." />
+            </div>
+            <div className="button-group">
+              <button onClick={() => setLoading(!loading)}>
+                {loading ? "Stop Loading" : "Start Loading"}
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InitialValueDemo = () => {
+        const [value, setValue] = useState("hello world");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">📝 Initial Value (no action)</h3>
+            <div className="control-group">
+              <h4>@jsenv/navi Input</h4>
+              <Input
+                value={value}
+                onValueChange={setValue}
+                placeholder="Type here..."
+              />
+            </div>
+            <div className="control-group">
+              <h4>Native HTML Input</h4>
+              <input
+                value={value}
+                onInput={(e) => setValue(e.currentTarget.value)}
+                placeholder="Type here..."
+              />
+            </div>
+            <div className="button-group">
+              <button onClick={() => setValue("Updated from outside")}>
+                Set from outside
+              </button>
+              <button
+                onClick={() =>
+                  setValue(`Value @ ${new Date().toLocaleTimeString()}`)
+                }
+              >
+                Set timestamp
+              </button>
+              <button onClick={() => setValue("")}>Clear</button>
             </div>
           </div>
         );
