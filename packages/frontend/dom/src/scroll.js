@@ -100,7 +100,10 @@ export const getScrollableParentSet = (element) => {
       break;
     }
     scrollableParentSet.add(scrollableParent);
-    if (scrollableParent === document) {
+    if (
+      scrollableParent === document ||
+      scrollableParent === document.documentElement
+    ) {
       break;
     }
     elementOrScrollableParent = scrollableParent;

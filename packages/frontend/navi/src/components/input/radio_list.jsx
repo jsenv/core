@@ -91,12 +91,12 @@ export const RadioList = forwardRef((props, ref) => {
 export const Radio = forwardRef((props, ref) => {
   const { name, value, checked, disabled, required, loading, readOnly } = props;
   const radioListName = useContext(RadioListNameContext);
+  const radioListValue = useContext(RadioListValueContext);
+  const radioListReadOnly = useContext(RadioListReadOnlyContext);
   const radioListDisabled = useContext(RadioListDisabledContext);
   const radioListRequired = useContext(RadioListRequiredContext);
   const radioListLoading = useContext(RadioListLoadingContext);
   const radioListLoadRequester = useContext(RadioListLoadRequesterContext);
-  const radioListValue = useContext(RadioListValueContext);
-  const radioListReadOnly = useContext(RadioListReadOnlyContext);
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
