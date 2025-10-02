@@ -18,7 +18,22 @@
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { useNetworkSpeed } from "./network_speed.js";
 
+import.meta.css = /* css */ `
+  .navi_rectangle_loading {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    display: block;
+  }
+
+  .navi_rectangle_loading[data-visible] {
+    opacity: 1;
+  }
+`;
+
 export const RectangleLoading = ({
+  shouldShowSpinner,
   color = "currentColor",
   radius = 0,
   size = 2,
@@ -62,7 +77,11 @@ export const RectangleLoading = ({
   }, []);
 
   return (
-    <div name="rectangle_loading" ref={containerRef}>
+    <span
+      ref={containerRef}
+      className="navi_rectangle_loading"
+      data-visible={shouldShowSpinner ? "" : undefined}
+    >
       {containerWidth > 0 && containerHeight > 0 && (
         <RectangleLoadingSvg
           radius={radius}
@@ -72,7 +91,7 @@ export const RectangleLoading = ({
           strokeWidth={size}
         />
       )}
-    </div>
+    </span>
   );
 };
 

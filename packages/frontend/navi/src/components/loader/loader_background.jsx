@@ -12,16 +12,18 @@ import.meta.css = /* css */ `
     height: 100%;
   }
 
-  [name="loading_rectangle_wrapper"] {
+  .navi_loading_rectangle_wrapper {
     pointer-events: none;
     position: absolute;
     z-index: 1;
+    opacity: 0;
+    top: var(--rectangle-top, 0);
+    left: var(--rectangle-left, 0);
+    bottom: var(--rectangle-bottom, 0);
+    right: var(--rectangle-right, 0);
   }
-
-  [name="rectangle_loading"] {
-    position: relative;
-    width: 100%;
-    height: 100%;
+  .navi_loading_rectangle_wrapper[data-visible] {
+    opacity: 1;
   }
 `;
 
@@ -293,17 +295,23 @@ const LoaderBackgroundBasic = ({
     <>
       <span
         ref={rectangleRef}
-        name="loading_rectangle_wrapper"
+        className="navi_loading_rectangle_wrapper"
+        data-visible={shouldShowSpinner ? "" : undefined}
         style={{
-          display: shouldShowSpinner ? "block" : "none",
-          top: `${spacingTop}px`,
-          left: `${spacingLeft}px`,
-          bottom: `${spacingBottom}px`,
-          right: `${spacingRight}px`,
+          "--rectangle-top": `${spacingTop}px`,
+          "--rectangle-left": `${spacingLeft}px`,
+          "--rectangle-bottom": `${spacingBottom}px`,
+          "--rectangle-right": `${spacingRight}px`,
         }}
       >
-        {shouldShowSpinner && (
+        {/* We want to start rendering the loading asap
+        so it can start to rotate as soon as we start to load
+        This feels more natural when the loader appears with some initial rotation
+        correspondong to the time it took to display it. It feels like it was busy
+        And we don't display immeditaly in case it's very fast (<300ms) */}
+        {loading && (
           <RectangleLoading
+            shouldShowSpinner={shouldShowSpinner}
             color={currentColor}
             radius={borderRadius}
             size={size}

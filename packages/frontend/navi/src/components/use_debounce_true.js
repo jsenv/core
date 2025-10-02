@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 export const useDebounceTrue = (value, delay = 300) => {
-  const [debouncedValue, setDebouncedValue] = useState(false);
+  const [debouncedTrue, setDebouncedTrue] = useState(false);
   const timerRef = useRef(null);
 
-  useEffect(() => {
-    // If value becomes true, start a timer
+  useLayoutEffect(() => {
+    // If value is true or becomes true, start a timer
     if (value) {
       timerRef.current = setTimeout(() => {
-        setDebouncedValue(true);
+        setDebouncedTrue(true);
       }, delay);
     } else {
       // If value becomes false, clear any pending timer and immediately set to false
@@ -16,7 +16,7 @@ export const useDebounceTrue = (value, delay = 300) => {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      setDebouncedValue(false);
+      setDebouncedTrue(false);
     }
 
     // Cleanup function
@@ -27,5 +27,5 @@ export const useDebounceTrue = (value, delay = 300) => {
     };
   }, [value, delay]);
 
-  return debouncedValue;
+  return debouncedTrue;
 };
