@@ -1,11 +1,16 @@
 import { resolveCSSSize } from "@jsenv/dom";
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import {
+  FieldGroupActionRequesterContext,
+  FieldGroupLoadingContext,
+} from "../field_group_context.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
@@ -86,11 +91,17 @@ const ButtonBasic = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
+
+  const innerLoading =
+    loading || (groupLoading && groupActionRequester === innerRef.current);
 
   let {
     border,
@@ -107,13 +118,15 @@ const ButtonBasic = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       data-custom={appearance === "custom" ? "" : undefined}
-      aria-busy={loading}
+      data-readonly-silent={readOnly ? "" : undefined}
+      data-readonly={readOnly ? "" : undefined}
+      aria-busy={innerLoading}
       style={{
         ...restStyle,
       }}
     >
       <LoadableInlineElement
-        loading={loading}
+        loading={innerLoading}
         inset={-1}
         color="light-dark(#355fcc, #3b82f6)"
       >
@@ -197,16 +210,13 @@ const ButtonWithAction = forwardRef((props, ref) => {
 });
 
 const ButtonInsideForm = forwardRef((props, ref) => {
-  const { formContext, type, loading, readOnly, onClick, children, ...rest } =
-    props;
-  const { formAction, formIsBusy, formIsReadOnly, formActionRequester } =
-    formContext;
+  const { formContext, type, onClick, children, ...rest } = props;
+  const { formAction } = formContext;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
   const wouldSubmitFormByType = type === "submit" || type === "image";
-  const innerReadOnly = readOnly || formIsReadOnly;
 
   const handleClick = (event) => {
     const buttonElement = innerRef.current;
@@ -220,7 +230,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       wouldSubmitForm = wouldSubmitFormBecauseSingleButtonWithoutType;
     }
     if (!wouldSubmitForm) {
-      if (innerReadOnly) {
+      if (buttonElement.hasAttribute("data-readonly")) {
         event.preventDefault();
       }
       return;
@@ -240,11 +250,6 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       type={type}
-      loading={
-        loading || (formIsBusy && formActionRequester === innerRef.current)
-      }
-      readOnly={innerReadOnly}
-      data-readonly-silent={formIsReadOnly ? "" : undefined}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
@@ -261,7 +266,6 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     type,
     action,
     loading,
-    readOnly,
     children,
     onClick,
     actionErrorEffect,
@@ -279,16 +283,18 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       "Button with type submit/reset/image should not have their own action",
     );
   }
+  const { formParamsSignal } = formContext;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const { formIsReadOnly, formParamsSignal } = formContext;
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const { loading: actionLoading } = useActionStatus(actionBoundToFormParams);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
+
+  const innerLoading = loading || actionLoading;
 
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
@@ -334,9 +340,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       type={type}
-      loading={loading || actionLoading}
-      readOnly={readOnly || formIsReadOnly}
-      data-readonly-silent={!readOnly && formIsReadOnly ? "" : undefined}
+      loading={innerLoading}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);

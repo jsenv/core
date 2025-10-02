@@ -16,11 +16,17 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
+
 import { FormContext } from "./action_execution/form_context.js";
 import { renderActionableComponent } from "./action_execution/render_actionable_component.jsx";
 import { useFormActionBoundToFormParams } from "./action_execution/use_action.js";
 import { useExecuteAction } from "./action_execution/use_execute_action.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
+import {
+  FieldGroupActionRequesterContext,
+  FieldGroupLoadingContext,
+  FieldGroupReadOnlyContext,
+} from "./field_group_context.js";
 import {
   useActionEvents,
   useRequestedActionStatus,
@@ -102,20 +108,25 @@ const FormWithAction = forwardRef((props, ref) => {
         requestAction(e.target, boundAction, { event: e });
       }}
     >
-      <FormContext.Provider
-        value={{
-          formAllowConcurrentActions,
-          formAction: boundAction,
-          formParamsSignal,
-          formActionRequester,
-          formIsReadOnly,
-          formIsBusy,
-          formActionAborted,
-          formActionError,
-        }}
-      >
-        {children}
-      </FormContext.Provider>
+      <FieldGroupReadOnlyContext.Provider value={formIsReadOnly}>
+        <FieldGroupLoadingContext.Provider value={formIsBusy}>
+          <FieldGroupActionRequesterContext.Provider
+            value={formActionRequester}
+          >
+            <FormContext.Provider
+              value={{
+                formAllowConcurrentActions,
+                formAction: boundAction,
+                formParamsSignal,
+                formActionAborted,
+                formActionError,
+              }}
+            >
+              {children}
+            </FormContext.Provider>
+          </FieldGroupActionRequesterContext.Provider>
+        </FieldGroupLoadingContext.Provider>
+      </FieldGroupReadOnlyContext.Provider>
     </form>
   );
 });

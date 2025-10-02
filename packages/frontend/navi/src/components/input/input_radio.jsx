@@ -3,8 +3,6 @@ import { forwardRef } from "preact/compat";
 import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { LoadableInlineElement } from "../loader/loader_background.jsx";
-import { useAutoFocus } from "../use_auto_focus.js";
 import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
@@ -13,7 +11,9 @@ import {
   FieldGroupOnValueChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
-} from "./field_group_context.js";
+} from "../field_group_context.js";
+import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import { useAutoFocus } from "../use_auto_focus.js";
 import { ReadOnlyContext } from "./label.jsx";
 
 import.meta.css = /* css */ `

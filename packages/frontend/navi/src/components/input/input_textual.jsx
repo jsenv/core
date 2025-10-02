@@ -34,6 +34,10 @@ import {
   useOneFormParam,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
+import {
+  FieldGroupActionRequesterContext,
+  FieldGroupLoadingContext,
+} from "../field_group_context.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
@@ -66,6 +70,8 @@ const InputTextualBasic = forwardRef((props, ref) => {
     appearance = "custom",
     ...rest
   } = props;
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
 
   const setInputReadOnly = useContext(ReadOnlyContext);
   const innerRef = useRef();
@@ -82,7 +88,9 @@ const InputTextualBasic = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
-  const innerReadOnly = readOnly || !onValueChange;
+  const innerLoading =
+    loading || (groupLoading && groupActionRequester === innerRef.current);
+  const innerReadOnly = readOnly || !onValueChange || innerLoading;
   const valueForTheBrowser =
     type === "datetime-local" ? convertToLocalTimezone(value) : value;
 
@@ -272,8 +280,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   });
 
   const innerLoading = loading || actionLoading;
-  const innerReadOnly =
-    readOnly || innerLoading || (!onValueChange && !valueSignal);
+  const innerReadOnly = readOnly || (!onValueChange && !valueSignal);
 
   return (
     <InputTextualBasic
@@ -317,19 +324,16 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     id,
     name,
     value: externalValue,
-    loading,
-    readOnly,
     onValueChange,
     onKeyDown,
     ...rest
   } = props;
+  const { formAction } = formContext;
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const { formAction, formIsBusy, formIsReadOnly, formActionRequester } =
-    formContext;
   const [value, setValue] = useOneFormParam(name, externalValue, navState, "");
   useEffect(() => {
     setNavState(value);
@@ -345,10 +349,6 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     },
   });
 
-  const innerReadOnly = readOnly || formIsReadOnly;
-  const innerLoading =
-    loading || (formIsBusy && formActionRequester === innerRef.current);
-
   return (
     <InputTextualBasic
       {...rest}
@@ -356,8 +356,6 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       id={id}
       name={name}
       value={value}
-      readOnly={innerReadOnly}
-      loading={innerLoading}
       onValueChange={innerOnValueChange}
       onKeyDown={(e) => {
         if (e.key === "Enter") {

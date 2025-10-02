@@ -15,9 +15,6 @@ import {
   useOneFormParam,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { LoadableInlineElement } from "../loader/loader_background.jsx";
-import { useActionEvents } from "../use_action_events.js";
-import { useAutoFocus } from "../use_auto_focus.js";
 import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
@@ -26,7 +23,10 @@ import {
   FieldGroupOnValueChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
-} from "./field_group_context.js";
+} from "../field_group_context.js";
+import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import { useActionEvents } from "../use_action_events.js";
+import { useAutoFocus } from "../use_auto_focus.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
@@ -348,17 +348,13 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
 
 const InputCheckboxInsideForm = forwardRef((props, ref) => {
   const {
-    formContext,
     id,
     name,
     value = "on",
     checked: checkedExternal,
-    readOnly,
     onChange,
     ...rest
   } = props;
-  const { formIsReadOnly } = formContext;
-
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
@@ -393,7 +389,6 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
       id={id}
       name={name}
       checked={checked}
-      readOnly={readOnly || formIsReadOnly}
       onChange={(e) => {
         const checkboxIsChecked = e.target.checked;
         setCheckedValue(checkboxIsChecked ? value : undefined);
