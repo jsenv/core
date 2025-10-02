@@ -346,7 +346,6 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   };
   useFormEvents(innerRef, {
     onFormReset: (e) => {
-      console.log("reset", name, "to", undefined);
       innerOnValueChange(undefined, e);
     },
   });

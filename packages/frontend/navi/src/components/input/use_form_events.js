@@ -1,10 +1,16 @@
 import { useLayoutEffect } from "preact/hooks";
+
 import { addManyEventListeners } from "../../utils/add_many_event_listeners.js";
+import { useStableCallback } from "../use_stable_callback.js";
 
 export const useFormEvents = (
   elementRef,
   { onFormReset, onFormActionAbort, onFormActionError },
 ) => {
+  onFormReset = useStableCallback(onFormReset);
+  onFormActionAbort = useStableCallback(onFormActionAbort);
+  onFormActionError = useStableCallback(onFormActionError);
+
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
