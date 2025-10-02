@@ -18,6 +18,10 @@
         Form,
         // eslint-disable-next-line no-unused-vars
         RadioList,
+        // eslint-disable-next-line no-unused-vars
+        Radio,
+        // eslint-disable-next-line no-unused-vars
+        Label,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -25,188 +29,219 @@
         return (
           <div>
             <div style="display: flex; flex-direction: row; gap: 30px">
-              <div>
-                <p>
-                  <strong>No action </strong>
-                </p>
-
-                <RadioList
-                  id="no_action"
-                  name="color"
-                  label="Select your favorite color:"
-                >
-                  {[
-                    { label: "Red", value: "red" },
-                    { label: "Blue", value: "blue" },
-                    { label: "Green", value: "green" },
-                  ]}
-                </RadioList>
-              </div>
-
-              <div>
-                <p>
-                  <strong>action log after 1s</strong>
-                </p>
-
-                <RadioList
-                  id="action_alert"
-                  name="color_alert"
-                  label="Select your favorite color:"
-                  action={async ({ color_alert }) => {
-                    await new Promise((resolve) => setTimeout(resolve, 1_000));
-                    console.log(
-                      `Color selected: ${JSON.stringify(color_alert)}`,
-                    );
-                  }}
-                >
-                  {[
-                    { label: "Red", value: "red" },
-                    { label: "Blue", value: "blue" },
-                    { label: "Green", value: "green" },
-                  ]}
-                </RadioList>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Form + log after 1s</strong>
-                </p>
-                <Form
-                  action={async ({ color }) => {
-                    await new Promise((resolve) => setTimeout(resolve, 1_000));
-                    console.log(`Color selected: ${JSON.stringify(color)}`);
-                  }}
-                >
-                  <RadioList
-                    id="color_form_log"
-                    label="Select your favorite color:"
-                    name="color"
-                  >
-                    {[
-                      { label: "Red", id: "red", value: "red" },
-                      { label: "Blue", id: "blue", value: "blue" },
-                      { label: "Green", id: "green", value: "green" },
-                    ]}
-                  </RadioList>
-
-                  <Button type="submit">Submit</Button>
-                  <Button type="reset">Reset</Button>
-                </Form>
-              </div>
+              <NoStateNoAction />
+              <ActionLogAfter1s />
+              <ActionThrowAfter1s />
             </div>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <FormLogAfter1s />
+              <FormThrowAfter1s />
+              <FormPreCheckedThrowAfter1s />
+            </div>
+            <div style="display: flex; flex-direction: row; gap: 30px">
+              <FormRequired />
+            </div>
+          </div>
+        );
+      };
 
-            <div>
-              <p>
-                <strong>Action + throw after 1s</strong>
-              </p>
+      // eslint-disable-next-line no-unused-vars
+      const PickFavoriteColor = ({
+        id,
+        name = "color",
+        value,
+        action,
+        required,
+        ...rest
+      }) => {
+        return (
+          <fieldset>
+            <legend>Select your favorite color:</legend>
+            <RadioList
+              id={id}
+              name={name}
+              value={value}
+              action={action}
+              required={required}
+              {...rest}
+            >
+              <Label>
+                Red
+                <Radio value="red" />
+              </Label>
+              <Label>
+                Blue
+                <Radio value="blue" />
+              </Label>
+              <Label>
+                Green
+                <Radio value="green" />
+              </Label>
+            </RadioList>
+          </fieldset>
+        );
+      };
 
+      // eslint-disable-next-line no-unused-vars
+      const NoStateNoAction = () => {
+        return (
+          <div>
+            <p>
+              <strong>No state, no action</strong>
+            </p>
+
+            <PickFavoriteColor name="color" />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ActionLogAfter1s = () => {
+        return (
+          <div>
+            <p>
+              <strong>action log after 1s</strong>
+            </p>
+
+            <PickFavoriteColor
+              name="color_alert"
+              action={async ({ color_alert }) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                console.log(`Color selected: ${JSON.stringify(color_alert)}`);
+              }}
+            />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ActionThrowAfter1s = () => {
+        return (
+          <div>
+            <p>
+              <strong>Action + throw after 1s</strong>
+            </p>
+
+            <PickFavoriteColor
+              name="color_action_throw"
+              action={async ({ color_action_throw }) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                throw new Error(
+                  `Color selected: ${JSON.stringify(color_action_throw)}`,
+                );
+              }}
+            />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const FormLogAfter1s = () => {
+        return (
+          <div>
+            <p>
+              <strong>Form + log after 1s</strong>
+            </p>
+            <Form
+              action={async ({ color }) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                console.log(`Color selected: ${JSON.stringify(color)}`);
+              }}
+            >
+              <PickFavoriteColor name="color" />
+              <Button type="submit">Submit</Button>
+              <Button type="reset">Reset</Button>
+            </Form>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const FormThrowAfter1s = () => {
+        return (
+          <div>
+            <p>
+              <strong>Form + throw after 1s</strong>
+            </p>
+            <Form
+              action={async ({ color_form_throw }) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                throw new Error(
+                  `Color selected: ${JSON.stringify(color_form_throw)}`,
+                );
+              }}
+            >
+              <PickFavoriteColor
+                id="color_form_throw"
+                name="color_form_throw"
+              />
+              <Button type="submit">Submit</Button>
+              <Button type="reset">Reset</Button>
+            </Form>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const FormPreCheckedThrowAfter1s = () => {
+        return (
+          <div>
+            <p>
+              <strong>Form + pre-checked throw after 1s</strong>
+            </p>
+            <Form
+              action={async ({ color_form_checked_throw }) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                throw new Error(
+                  `Color selected: ${JSON.stringify(color_form_checked_throw)}`,
+                );
+              }}
+            >
               <RadioList
-                id="color_action_throw"
-                name="color_action_throw"
-                label="Select your favorite color:"
-                action={async ({ color_action_throw }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(
-                    `Color selected: ${JSON.stringify(color_action_throw)}`,
-                  );
-                }}
+                id="color_form_checked_throw"
+                name="color_form_checked_throw"
+                value="red"
               >
-                {[
-                  { label: "Red", id: "red", value: "red" },
-                  { label: "Blue", id: "blue", value: "blue" },
-                  { label: "Green", id: "green", value: "green" },
-                ]}
+                <Label>
+                  Red
+                  <Radio value="red" />
+                </Label>
+                <Label>
+                  Blue
+                  <Radio value="blue" />
+                </Label>
+                <Label>
+                  Green
+                  <Radio value="green" />
+                </Label>
               </RadioList>
-            </div>
 
-            <div>
-              <div>
-                <p>
-                  <strong>Form + throw after 1s</strong>
-                </p>
-                <Form
-                  action={async ({ color_form_throw }) => {
-                    await new Promise((resolve) => setTimeout(resolve, 1_000));
-                    throw new Error(
-                      `Color selected: ${JSON.stringify(color_form_throw)}`,
-                    );
-                  }}
-                >
-                  <RadioList
-                    id="color_form_throw"
-                    name="color_form_throw"
-                    label="Select your favorite color:"
-                  >
-                    {[
-                      { label: "Red", id: "red", value: "red" },
-                      { label: "Blue", id: "blue", value: "blue" },
-                      { label: "Green", id: "green", value: "green" },
-                    ]}
-                  </RadioList>
+              <Button type="submit">Submit</Button>
+              <Button type="reset">Reset</Button>
+            </Form>
+          </div>
+        );
+      };
 
-                  <Button type="submit">Submit</Button>
-                  <Button type="reset">Reset</Button>
-                </Form>
-              </div>
-            </div>
-
-            <div>
-              <p>
-                <strong>Form + ref checked throw after 1s</strong>
-              </p>
-              <Form
-                action={async ({ color_form_checked_throw }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(
-                    `Color selected: ${JSON.stringify(color_form_checked_throw)}`,
-                  );
-                }}
-              >
-                <RadioList
-                  id="color_form_checked_throw"
-                  name="color_form_checked_throw"
-                  label="Select your favorite color:"
-                  value="red"
-                >
-                  {[
-                    { label: "Red", id: "red", value: "red" },
-                    { label: "Blue", id: "blue", value: "blue" },
-                    { label: "Green", id: "green", value: "green" },
-                  ]}
-                </RadioList>
-
-                <Button type="submit">Submit</Button>
-                <Button type="reset">Reset</Button>
-              </Form>
-            </div>
-
-            <div>
-              <p>
-                <strong>Form + required</strong>
-              </p>
-              <Form
-                action={async () => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
-                }}
-              >
-                <RadioList
-                  id="color_form_required"
-                  label="Select your favorite color:"
-                  name="color"
-                  required
-                  data-required-message="Veuillez sélectionner une couleur"
-                >
-                  {[
-                    { label: "Red", id: "red", value: "red" },
-                    { label: "Blue", id: "blue", value: "blue" },
-                    { label: "Green", id: "green", value: "green" },
-                  ]}
-                </RadioList>
-
-                <Button type="submit">Submit</Button>
-                <Button type="reset">Reset</Button>
-              </Form>
-            </div>
+      // eslint-disable-next-line no-unused-vars
+      const FormRequired = () => {
+        return (
+          <div>
+            <p>
+              <strong>Form + required</strong>
+            </p>
+            <Form
+              action={async () => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+              }}
+            >
+              <PickFavoriteColor
+                required
+                data-required-message="Veuillez sélectionner une couleur"
+              />
+              <Button type="submit">Submit</Button>
+              <Button type="reset">Reset</Button>
+            </Form>
           </div>
         );
       };
