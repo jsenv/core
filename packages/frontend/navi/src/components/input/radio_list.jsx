@@ -58,6 +58,9 @@ const RadioListBasic = forwardRef((props, ref) => {
       ref={innerRef}
       className="navi_radio_list"
       onChange={(e) => {
+        onChange?.(e);
+      }}
+      onInput={(e) => {
         if (onValueChange) {
           const radioList = innerRef.current;
           const checkedRadio = radioList.querySelector(
@@ -66,7 +69,6 @@ const RadioListBasic = forwardRef((props, ref) => {
           const newValue = checkedRadio ? checkedRadio.value : undefined;
           onValueChange(newValue, e);
         }
-        onChange?.(e);
       }}
     >
       <FieldGroupNameContext.Provider value={name}>
@@ -274,8 +276,9 @@ const RadioListInsideForm = forwardRef((props, ref) => {
       name={name}
       value={value}
       readOnly={readOnly || formIsReadOnly}
-      onValueChange={(value) => {
+      onValueChange={(value, e) => {
         setValue(value);
+        onValueChange?.(value, e);
       }}
     >
       {/* Reset form context so that input radio within

@@ -152,6 +152,8 @@
           setValue(v);
         };
 
+        const [, setRenderKey] = useState(null);
+
         return (
           <div>
             <p>
@@ -171,6 +173,16 @@
               <Button type="submit">Submit</Button>
               <Button type="reset">Reset</Button>
             </Form>
+            <button
+              onClick={() => {
+                setRenderKey({});
+              }}
+            >
+              Rerender
+            </button>
+            <button onClick={() => setValue("red")}>Set value to red</button>
+            <button onClick={() => setValue("blue")}>Set value to blue</button>
+            <button onClick={() => setValue(undefined)}>Reset value</button>
           </div>
         );
       };
