@@ -50,17 +50,11 @@ import.meta.css = /* css */ `
   .custom_radio svg {
     width: 100%;
     height: 100%;
-    transition: all 0.15s ease;
     pointer-events: none;
-  }
-
-  .custom_radio svg .custom_radio_border {
-    transition: all 0.15s ease;
   }
 
   .custom_radio svg .custom_radio_dashed_border {
     display: none;
-    transition: all 0.15s ease;
   }
 
   .custom_radio svg .custom_radio_marker {
@@ -68,6 +62,15 @@ import.meta.css = /* css */ `
     opacity: 0;
     transform-origin: center;
     transform: scale(0.3);
+  }
+
+  .custom_radio[data-transition] svg {
+    transition: all 0.15s ease;
+  }
+  .custom_radio[data-transition] svg .custom_radio_dashed_border {
+    transition: all 0.15s ease;
+  }
+  .custom_radio[data-transition] svg .custom_radio_border {
     transition: all 0.15s ease;
   }
 
