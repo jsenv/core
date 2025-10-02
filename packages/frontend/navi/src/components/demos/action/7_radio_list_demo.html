@@ -125,6 +125,8 @@
 
       // eslint-disable-next-line no-unused-vars
       const ActionThrowAfter1s = () => {
+        const [value, setValue] = useState();
+
         return (
           <div>
             <p>
@@ -139,6 +141,8 @@
                   `Color selected: ${JSON.stringify(color_action_throw)}`,
                 );
               }}
+              value={value}
+              onValueChange={setValue}
             />
           </div>
         );
@@ -189,6 +193,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const FormThrowAfter1s = () => {
+        const [value, setValue] = useState();
         return (
           <div>
             <p>
@@ -205,6 +210,8 @@
               <PickFavoriteColor
                 id="color_form_throw"
                 name="color_form_throw"
+                value={value}
+                onValueChange={setValue}
               />
               <Button type="submit">Submit</Button>
               <Button type="reset">Reset</Button>
