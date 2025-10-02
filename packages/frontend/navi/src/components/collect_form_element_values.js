@@ -72,8 +72,11 @@ const getFormElementValue = (formElement) => {
 };
 
 const getValue = (formElement) => {
-  const hasDataFormValueAttribute = formElement.hasAttribute("data-form-value");
-  return hasDataFormValueAttribute
-    ? formElement.getAttribute("data-form-value")
-    : formElement.value;
+  const hasDataValueAttribute = formElement.hasAttribute("data-value");
+  if (hasDataValueAttribute) {
+    // happens for "datetime-local" inputs to keep the timezone
+    // consistent when sending to the server
+    return formElement.getAttribute("data-value");
+  }
+  return formElement.value;
 };

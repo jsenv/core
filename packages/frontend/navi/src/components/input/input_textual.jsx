@@ -82,14 +82,15 @@ const InputTextualBasic = forwardRef((props, ref) => {
   useConstraints(innerRef, constraints);
 
   const innerReadOnly = readOnly || !onValueChange;
-  const valueDisplayed =
+  const valueForTheBrowser =
     type === "datetime-local" ? convertToLocalTimezone(value) : value;
 
   const inputTextual = (
     <input
       ref={innerRef}
       type={type}
-      value={valueDisplayed}
+      value={valueForTheBrowser}
+      data-value={value}
       data-field=""
       data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
@@ -274,15 +275,12 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   return (
     <InputTextualBasic
       {...rest}
-      data-action={boundAction}
       ref={innerRef}
       type={type}
       id={id}
       name={name}
       value={value}
-      data-form-value={
-        type === "datetime-local" ? convertToUTCTimezone(value) : undefined
-      }
+      data-action={boundAction}
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
       onValueChange={(value, e) => {
@@ -318,7 +316,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     value: externalValue,
     loading,
     readOnly,
-    onInput,
+    onValueChange,
     onKeyDown,
     ...rest
   } = props;
@@ -334,6 +332,10 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     setNavState(value);
   }, [value]);
 
+  const innerReadOnly = readOnly || formIsReadOnly;
+  const innerLoading =
+    loading || (formIsBusy && formActionRequester === innerRef.current);
+
   return (
     <InputTextualBasic
       {...rest}
@@ -341,15 +343,11 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       id={id}
       name={name}
       value={value}
-      data-form-value={convertToUTCTimezone(value)}
-      loading={
-        loading || (formIsBusy && formActionRequester === innerRef.current)
-      }
-      readOnly={readOnly || formIsReadOnly}
-      onInput={(e) => {
-        const inputValue = e.target.value;
-        setValue(convertToUTCTimezone(inputValue));
-        onInput?.(e);
+      readOnly={innerReadOnly}
+      loading={innerLoading}
+      onValueChange={(inputValue, e) => {
+        setValue(inputValue);
+        onValueChange?.(inputValue, e);
       }}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
