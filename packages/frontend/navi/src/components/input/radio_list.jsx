@@ -1,6 +1,14 @@
 import { requestAction } from "@jsenv/validation";
+import { createContext } from "preact";
 import { forwardRef } from "preact/compat";
-import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "preact/hooks";
+
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -10,17 +18,67 @@ import {
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
-import { useRefArray } from "../use_ref_array.js";
-import { Field } from "./field.jsx";
 import { InputRadio } from "./input_radio.jsx";
 import { useFormEvents } from "./use_form_event.js";
 
 import.meta.css = /* css */ `
-  .radio_list {
+  .navi_radio_list {
     display: flex;
     flex-direction: column;
   }
 `;
+
+const RadioListNameContext = createContext();
+const RadioListValueContext = createContext();
+const RadioListDisabledContext = createContext();
+const RadioListRequiredContext = createContext();
+const RadioListLoadingContext = createContext();
+const RadioListLoadRequesterContext = createContext();
+const RadioListReadOnlyContext = createContext();
+
+const RadioListBasic = forwardRef((props, ref) => {
+  const {
+    id,
+    name,
+    label,
+    loading,
+    disabled,
+    readOnly,
+    children,
+    required,
+    value,
+    onChange,
+    ...rest
+  } = props;
+
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  return (
+    <div
+      ref={innerRef}
+      {...rest}
+      className="navi_radio_list"
+      onChange={(event) => {
+        onChange?.(event);
+      }}
+    >
+      <RadioListNameContext.Provider value={name}>
+        <RadioListValueContext.Provider value={value}>
+          <RadioListRequiredContext.Provider value={required}>
+            <RadioListDisabledContext.Provider value={disabled}>
+              <RadioListLoadingContext.Provider value={loading}>
+                <RadioListReadOnlyContext.Provider value={readOnly}>
+                  {children}
+                </RadioListReadOnlyContext.Provider>
+              </RadioListLoadingContext.Provider>
+            </RadioListDisabledContext.Provider>
+          </RadioListRequiredContext.Provider>
+        </RadioListValueContext.Provider>
+      </RadioListNameContext.Provider>
+    </div>
+  );
+});
 
 export const RadioList = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
@@ -30,93 +88,40 @@ export const RadioList = forwardRef((props, ref) => {
   });
 });
 
-const RadioListControlled = forwardRef((props, ref) => {
-  const {
-    name,
-    value,
-    label,
-    loading,
-    disabled,
-    readOnly,
-    children,
-    onChange,
-    required,
-    ...rest
-  } = props;
+export const Radio = forwardRef((props, ref) => {
+  const { name, value, checked, disabled, required, loading, readOnly } = props;
+  const radioListName = useContext(RadioListNameContext);
+  const radioListDisabled = useContext(RadioListDisabledContext);
+  const radioListRequired = useContext(RadioListRequiredContext);
+  const radioListLoading = useContext(RadioListLoadingContext);
+  const radioListLoadRequester = useContext(RadioListLoadRequesterContext);
+  const radioListValue = useContext(RadioListValueContext);
+  const radioListReadOnly = useContext(RadioListReadOnlyContext);
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  return (
-    <fieldset className="radio_list" ref={innerRef} {...rest}>
-      {label ? <legend>{label}</legend> : null}
-      {children.map((child) => {
-        const {
-          label,
-          readOnly: childReadOnly,
-          disabled: childDisabled,
-          loading: childLoading,
-          onChange: childOnChange,
-          value: childValue,
-          ...childRest
-        } = child;
-
-        const radio = (
-          <InputRadio
-            {...childRest}
-            // ignoreForm: each input is controller by this list
-            // we don't want the input to try to update the form because it's already done here
-            ignoreForm
-            name={name}
-            value={childValue}
-            checked={childValue === value}
-            readOnly={readOnly || childReadOnly}
-            disabled={disabled || childDisabled}
-            loading={loading || childLoading}
-            required={required}
-            onChange={(event) => {
-              onChange(event);
-              childOnChange?.(event);
-            }}
-          />
-        );
-
-        return <Field key={childValue} input={radio} label={label} />;
-      })}
-    </fieldset>
-  );
-});
-
-const RadioListBasic = forwardRef((props, ref) => {
-  const { value: initialValue, id, children, ...rest } = props;
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const [navState, setNavState] = useNavState(id);
-  const valueAtStart = navState === undefined ? initialValue : navState;
-  const [value, setValue] = useState(valueAtStart);
-  useEffect(() => {
-    setNavState(value);
-  }, [value]);
+  const innerName = name || radioListName;
+  const innerChecked = checked || value === radioListValue;
+  const innerReadOnly = readOnly || radioListReadOnly;
+  const innerDisabled = disabled || radioListDisabled;
+  const innerRequired = required || radioListRequired;
+  const innerLoading =
+    loading ||
+    (radioListLoading && radioListLoadRequester === innerRef.current);
 
   return (
-    <RadioListControlled
+    <InputRadio
       ref={innerRef}
+      name={innerName}
       value={value}
-      onChange={(event) => {
-        const radio = event.target;
-        const radioIsChecked = radio.checked;
-        if (!radioIsChecked) {
-          return;
-        }
-        const value = radio.value;
-        setValue(value);
-      }}
-      {...rest}
-    >
-      {children}
-    </RadioListControlled>
+      checked={innerChecked}
+      readOnly={innerReadOnly}
+      disabled={innerDisabled}
+      required={innerRequired}
+      loading={innerLoading}
+      {...props}
+    />
   );
 });
 
@@ -125,6 +130,8 @@ const RadioListWithAction = forwardRef((props, ref) => {
     id,
     name,
     value: externalValue,
+    loading,
+    readOnly,
     valueSignal,
     action,
     children,
@@ -152,7 +159,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const actionRequesterRef = useRef(null);
+  const [actionRequester, setActionRequester] = useState(null);
   useEffect(() => {
     setNavState(value);
   }, [value]);
@@ -165,7 +172,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
     },
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
-      actionRequesterRef.current = actionEvent.detail.requester;
+      setActionRequester(actionEvent.detail.requester);
       executeAction(actionEvent);
     },
     onStart: onActionStart,
@@ -183,14 +190,16 @@ const RadioListWithAction = forwardRef((props, ref) => {
     },
   });
 
-  const childRefArray = useRefArray(children, (child) => child.value);
+  const innerLoading = loading || actionLoading;
 
   return (
-    <RadioListControlled
+    <RadioListBasic
       ref={innerRef}
       name={name}
       value={value}
       data-action={boundAction}
+      loading={innerLoading}
+      readOnly={readOnly || innerLoading}
       onChange={(event) => {
         const radio = event.target;
         const radioIsChecked = radio.checked;
@@ -200,26 +209,17 @@ const RadioListWithAction = forwardRef((props, ref) => {
         const value = radio.value;
         setValue(value);
         const radioListContainer = innerRef.current;
-        requestAction(boundAction, {
+        requestAction(radioListContainer, boundAction, {
           event,
-          target: radioListContainer,
           requester: radio,
         });
       }}
       {...rest}
     >
-      {children.map((child, i) => {
-        const childRef = childRefArray[i];
-        return {
-          ...child,
-          ref: childRef,
-          loading:
-            child.loading ||
-            (actionLoading && actionRequesterRef.current === childRef.current),
-          readOnly: child.readOnly || actionLoading,
-        };
-      })}
-    </RadioListControlled>
+      <RadioListLoadRequesterContext.Provider value={actionRequester}>
+        {children}
+      </RadioListLoadRequesterContext.Provider>
+    </RadioListBasic>
   );
 });
 
@@ -261,7 +261,7 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   });
 
   return (
-    <RadioListControlled
+    <RadioListBasic
       ref={innerRef}
       name={name}
       value={value}
@@ -278,6 +278,6 @@ const RadioListInsideForm = forwardRef((props, ref) => {
       {...rest}
     >
       {children}
-    </RadioListControlled>
+    </RadioListBasic>
   );
 });

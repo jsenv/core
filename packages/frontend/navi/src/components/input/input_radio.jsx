@@ -1,9 +1,16 @@
 import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "preact/hooks";
+
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { ReadOnlyContext } from "./label.jsx";
 
 import.meta.css = /* css */ `
   .custom_radio_wrapper {
@@ -190,6 +197,11 @@ const InputRadioBasic = forwardRef((props, ref) => {
     appeareance = "custom", // "custom" or "default"
     ...rest
   } = props;
+
+  const setInputReadOnly = useContext(ReadOnlyContext);
+  if (setInputReadOnly) {
+    setInputReadOnly(readOnly);
+  }
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
