@@ -1,6 +1,12 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
@@ -11,8 +17,6 @@ import {
   useOneFormArrayParam,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { useActionEvents } from "../use_action_events.js";
-import { useStableCallback } from "../use_stable_callback.js";
 import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
@@ -22,7 +26,9 @@ import {
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
   FieldGroupValueContext,
-} from "./field_group_context.js";
+} from "../field_group_context.js";
+import { useActionEvents } from "../use_action_events.js";
+import { useStableCallback } from "../use_stable_callback.js";
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
@@ -210,15 +216,27 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
 
 const CheckboxListInsideForm = forwardRef((props, ref) => {
   const {
-    formContext,
     id,
     name,
-    readOnly,
     value: externalValue,
     onValueChange,
+    readOnly,
+    disabled,
+    loading,
     children,
   } = props;
-  const { formIsReadOnly } = formContext;
+  // here we forward form context. For instance when form is readOnly it propagates to all checkboxes
+  const formLoading = useContext(FieldGroupLoadingContext);
+  const formReadonly = useContext(FieldGroupReadOnlyContext);
+  const formDisabled = useContext(FieldGroupDisabledContext);
+
+  const innerLoading = loading || formLoading;
+  const innerReadOnly = readOnly || formReadonly || !onValueChange;
+  const innerDisabled = disabled || formDisabled;
+  const innerOnValueChange = (checkedValues, e) => {
+    setValueArray(checkedValues);
+    onValueChange?.(checkedValues, e);
+  };
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -233,12 +251,6 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
   useEffect(() => {
     setNavState(valueArray);
   }, [valueArray]);
-
-  const innerReadOnly = readOnly || formIsReadOnly || !onValueChange;
-  const innerOnValueChange = (checkedValues, e) => {
-    setValueArray(checkedValues);
-    onValueChange?.(checkedValues, e);
-  };
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
@@ -257,8 +269,10 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       value={valueArray}
-      readOnly={innerReadOnly}
       onValueChange={innerOnValueChange}
+      readOnly={innerReadOnly}
+      loading={innerLoading}
+      disabled={innerDisabled}
     >
       {/* Reset form context so that input checkbox within
       do not try to do this. They are handled by the <CheckboxList /> */}
