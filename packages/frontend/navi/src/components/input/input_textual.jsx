@@ -63,9 +63,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
     autoFocusVisible,
     autoSelect,
     appearance = "custom",
-
-    cancelOnEscape,
-    cancelOnBlurInvalid,
     ...rest
   } = props;
 
@@ -84,23 +81,26 @@ const InputTextualBasic = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
-  if (type === "datetime-local") {
-    value = convertToLocalTimezone(value);
-  }
-
   const innerReadOnly = readOnly || !onValueChange;
+  const valueDisplayed =
+    type === "datetime-local" ? convertToLocalTimezone(value) : value;
 
   const inputTextual = (
     <input
       ref={innerRef}
       type={type}
-      value={value}
+      value={valueDisplayed}
       data-field=""
       data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
       readOnly={innerReadOnly}
       onInput={(e) => {
-        const inputValue = e.target.value;
+        const inputValueRaw =
+          type === "number" ? e.target.valueAsNumber : e.target.value;
+        const inputValue =
+          type === "datetime-local"
+            ? convertToUTCTimezone(inputValueRaw)
+            : inputValueRaw;
         onValueChange?.(inputValue, e);
         onInput?.(e);
       }}
@@ -185,7 +185,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     action,
     valueSignal,
     onCancel,
-    onBlur,
     onActionPrevented,
     onActionStart,
     onActionError,
@@ -286,15 +285,12 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       }
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
+      onValueChange={(value, e) => {
+        setValue(value);
+        onValueChange?.(value, e);
+      }}
       onInput={(e) => {
         valueAtInteractionRef.current = null;
-        const inputValue =
-          type === "number" ? e.target.valueAsNumber : e.target.value;
-        setValue(
-          type === "datetime-local"
-            ? convertToUTCTimezone(inputValue)
-            : inputValue,
-        );
         onInput?.(e);
       }}
       onKeyDown={(e) => {
@@ -309,9 +305,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          */
         valueAtInteractionRef.current = e.target.value;
         requestAction(e.target, boundAction, { event: e });
-      }}
-      onBlur={(e) => {
-        onBlur?.(e);
       }}
     />
   );
