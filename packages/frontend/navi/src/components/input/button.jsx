@@ -219,9 +219,8 @@ const ButtonInsideForm = forwardRef((props, ref) => {
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const innerLoading = loading || formActionLoading;
-
   const wouldSubmitFormByType = type === "submit" || type === "image";
+  const innerLoading = loading || (formActionLoading && wouldSubmitFormByType);
 
   const handleClick = (event) => {
     const buttonElement = innerRef.current;
