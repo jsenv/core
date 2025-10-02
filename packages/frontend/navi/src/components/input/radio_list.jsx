@@ -11,6 +11,7 @@ import {
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
+import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneParam,
@@ -277,7 +278,9 @@ const RadioListInsideForm = forwardRef((props, ref) => {
       }}
       {...rest}
     >
-      {children}
+      {/* Reset form context so that input radio within
+      do not try to do this. They are handled by the <RadioList /> */}
+      <FormContext.Provider value={undefined}>{children}</FormContext.Provider>
     </RadioListBasic>
   );
 });

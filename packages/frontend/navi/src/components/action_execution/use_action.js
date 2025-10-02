@@ -1,10 +1,11 @@
 import { signal } from "@preact/signals";
-import { useCallback, useRef } from "preact/hooks";
+import { useCallback, useContext, useRef } from "preact/hooks";
+
 import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
 import { isSignal } from "../../utils/stringify_for_display.js";
 import { useInitialValue } from "../use_initial_value.js";
-import { useFormContext } from "./form_context.js";
+import { FormContext } from "./form_context.js";
 
 let debug = false;
 let componentActionIdCounter = 0;
@@ -50,7 +51,7 @@ export const useOneFormParam = (
   fallbackValue,
   defaultValue,
 ) => {
-  const { formParamsSignal } = useFormContext();
+  const { formParamsSignal } = useContext(FormContext);
   const previousFormParamsSignalRef = useRef(null);
   const formActionChanged =
     previousFormParamsSignalRef.current !== null &&
