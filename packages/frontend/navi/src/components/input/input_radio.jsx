@@ -1,15 +1,19 @@
 import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
+import {
+  FieldGroupActionRequesterContext,
+  FieldGroupDisabledContext,
+  FieldGroupLoadingContext,
+  FieldGroupNameContext,
+  FieldGroupOnValueChangeContext,
+  FieldGroupReadOnlyContext,
+  FieldGroupRequiredContext,
+} from "./field_group_context.js";
 import { ReadOnlyContext } from "./label.jsx";
 
 import.meta.css = /* css */ `
@@ -189,56 +193,76 @@ export const InputRadio = forwardRef((props, ref) => {
 
 const InputRadioBasic = forwardRef((props, ref) => {
   const {
-    autoFocus,
-    constraints = [],
+    name,
+    value,
+    onValueChange,
     checked,
+
     readOnly,
     disabled,
+    required,
     loading,
+
+    autoFocus,
+    constraints = [],
+
     onClick,
-    onChange,
     appeareance = "custom", // "custom" or "default"
     ...rest
   } = props;
-
+  const groupName = useContext(FieldGroupNameContext);
+  const groupOnValueChange = useContext(FieldGroupOnValueChangeContext);
+  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
+  const groupDisabled = useContext(FieldGroupDisabledContext);
+  const groupRequired = useContext(FieldGroupRequiredContext);
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
   const setInputReadOnly = useContext(ReadOnlyContext);
-  if (setInputReadOnly) {
-    setInputReadOnly(readOnly);
-  }
-
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  useAutoFocus(innerRef, autoFocus);
-  useConstraints(innerRef, constraints);
 
-  const [innerChecked, setInnerChecked] = useState(checked);
-  const checkedRef = useRef(checked);
-  if (checkedRef.current !== checked) {
-    setInnerChecked(checked);
-    checkedRef.current = checked;
+  const innerName = name || groupName;
+  const innerOnValueChange = onValueChange || groupOnValueChange;
+  const innerReadOnly = readOnly || groupReadOnly || !innerOnValueChange;
+  const innerDisabled = disabled || groupDisabled;
+  const innerRequired = required || groupRequired;
+  const innerLoading =
+    loading || (groupLoading && groupActionRequester === innerRef.current);
+  if (setInputReadOnly) {
+    setInputReadOnly(innerReadOnly);
   }
 
-  const handleChange = (e) => {
-    const isChecked = e.target.checked;
-    setInnerChecked(isChecked);
-    onChange?.(e);
-  };
+  useAutoFocus(innerRef, autoFocus);
+  useConstraints(innerRef, constraints);
 
   const inputRadio = (
     <input
       ref={innerRef}
       type="radio"
-      checked={innerChecked}
-      data-readonly={readOnly && !disabled ? "" : undefined}
-      disabled={disabled}
+      name={innerName}
+      value={value}
+      checked={checked}
+      data-readonly={innerReadOnly && !disabled ? "" : undefined}
+      disabled={innerDisabled}
+      required={innerRequired}
       data-validation-message-arrow-x="center"
       onClick={(e) => {
-        if (readOnly) {
+        if (innerReadOnly) {
           e.preventDefault();
         }
         onClick?.(e);
       }}
-      onChange={handleChange}
+      onInput={
+        innerOnValueChange
+          ? (e) => {
+              const radio = innerRef.current;
+              const radioValueOrUndefined = radio.checked
+                ? radio.value
+                : undefined;
+              innerOnValueChange(radioValueOrUndefined, e);
+            }
+          : undefined
+      }
       {...rest}
     />
   );
@@ -251,7 +275,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
 
   return (
     <LoadableInlineElement
-      loading={loading}
+      loading={innerLoading}
       targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
       inset={-2.5}
       color="light-dark(#355fcc, #3b82f6)"

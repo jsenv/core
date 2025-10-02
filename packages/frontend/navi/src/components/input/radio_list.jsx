@@ -1,12 +1,6 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
@@ -18,11 +12,13 @@ import {
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
+import { useStableCallback } from "../use_stable_callback.js";
 import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
+  FieldGroupOnValueChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
   FieldGroupValueContext,
@@ -54,34 +50,22 @@ const RadioListBasic = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   return (
-    <div
-      ref={innerRef}
-      className="navi_radio_list"
-      onChange={(e) => {
-        onChange?.(e);
-      }}
-      onInput={(e) => {
-        if (onValueChange) {
-          const radioList = innerRef.current;
-          const checkedRadio = radioList.querySelector(
-            'input[type="radio"]:checked',
-          );
-          const newValue = checkedRadio ? checkedRadio.value : undefined;
-          onValueChange(newValue, e);
-        }
-      }}
-    >
+    <div ref={innerRef} className="navi_radio_list" onChange={onChange}>
       <FieldGroupNameContext.Provider value={name}>
         <FieldGroupValueContext.Provider value={value}>
-          <FieldGroupReadOnlyContext.Provider value={readOnly}>
-            <FieldGroupDisabledContext.Provider value={disabled}>
-              <FieldGroupRequiredContext.Provider value={required}>
-                <FieldGroupLoadingContext.Provider value={loading}>
-                  {children}
-                </FieldGroupLoadingContext.Provider>
-              </FieldGroupRequiredContext.Provider>
-            </FieldGroupDisabledContext.Provider>
-          </FieldGroupReadOnlyContext.Provider>
+          <FieldGroupOnValueChangeContext.Provider
+            value={useStableCallback(onValueChange)}
+          >
+            <FieldGroupReadOnlyContext.Provider value={readOnly}>
+              <FieldGroupDisabledContext.Provider value={disabled}>
+                <FieldGroupRequiredContext.Provider value={required}>
+                  <FieldGroupLoadingContext.Provider value={loading}>
+                    {children}
+                  </FieldGroupLoadingContext.Provider>
+                </FieldGroupRequiredContext.Provider>
+              </FieldGroupDisabledContext.Provider>
+            </FieldGroupReadOnlyContext.Provider>
+          </FieldGroupOnValueChangeContext.Provider>
         </FieldGroupValueContext.Provider>
       </FieldGroupNameContext.Provider>
     </div>
@@ -95,40 +79,7 @@ export const RadioList = forwardRef((props, ref) => {
     InsideForm: RadioListInsideForm,
   });
 });
-export const Radio = forwardRef((props, ref) => {
-  const { id, name, value, checked, disabled, required, loading, readOnly } =
-    props;
-  const groupName = useContext(FieldGroupNameContext);
-  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupRequired = useContext(FieldGroupRequiredContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const innerName = name || groupName;
-  const innerReadOnly = readOnly || groupReadOnly;
-  const innerDisabled = disabled || groupDisabled;
-  const innerRequired = required || groupRequired;
-  const innerLoading =
-    loading || (groupLoading && groupActionRequester === innerRef.current);
-
-  return (
-    <InputRadio
-      ref={innerRef}
-      id={id}
-      name={innerName}
-      value={value}
-      checked={checked}
-      readOnly={innerReadOnly}
-      disabled={innerDisabled}
-      required={innerRequired}
-      loading={innerLoading}
-    />
-  );
-});
+export const Radio = InputRadio;
 
 const RadioListWithAction = forwardRef((props, ref) => {
   const {
