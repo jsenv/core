@@ -276,9 +276,9 @@ const RadioListInsideForm = forwardRef((props, ref) => {
       name={name}
       value={value}
       readOnly={readOnly || formIsReadOnly}
-      onValueChange={(value, e) => {
-        setValue(value);
-        onValueChange?.(value, e);
+      onValueChange={(checkedValueOrUndefined, e) => {
+        setValue(checkedValueOrUndefined);
+        onValueChange?.(checkedValueOrUndefined, e);
       }}
     >
       {/* Reset form context so that input radio within

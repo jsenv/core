@@ -215,6 +215,8 @@
 
       // eslint-disable-next-line no-unused-vars
       const FormPreCheckedThrowAfter1s = () => {
+        const [value, setValue] = useState("red");
+
         return (
           <div>
             <p>
@@ -228,24 +230,12 @@
                 );
               }}
             >
-              <RadioList
+              <PickFavoriteColor
                 id="color_form_checked_throw"
                 name="color_form_checked_throw"
-                value="red"
-              >
-                <Label>
-                  Red
-                  <Radio value="red" />
-                </Label>
-                <Label>
-                  Blue
-                  <Radio value="blue" />
-                </Label>
-                <Label>
-                  Green
-                  <Radio value="green" />
-                </Label>
-              </RadioList>
+                value={value}
+                onValueChange={setValue}
+              />
 
               <Button type="submit">Submit</Button>
               <Button type="reset">Reset</Button>
@@ -256,6 +246,8 @@
 
       // eslint-disable-next-line no-unused-vars
       const FormRequired = () => {
+        const [value, setValue] = useState();
+
         return (
           <div>
             <p>
@@ -269,6 +261,8 @@
               <PickFavoriteColor
                 required
                 data-required-message="Veuillez sélectionner une couleur"
+                value={value}
+                onValueChange={setValue}
               />
               <Button type="submit">Submit</Button>
               <Button type="reset">Reset</Button>

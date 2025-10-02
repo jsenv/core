@@ -46,6 +46,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     disabled,
     required,
     loading,
+    onInput,
     onChange,
     onValueChange,
     children,
@@ -61,12 +62,15 @@ const CheckboxListBasic = forwardRef((props, ref) => {
       className="navi_checkbox_list"
       data-checkbox-list
       data-action={props["data-action"]}
+      onInput={(e) => {
+        if (onValueChange) {
+          const checkedValues = collectCheckedValues(innerRef.current, name);
+          onValueChange(checkedValues, e);
+        }
+        onInput?.(e);
+      }}
       onChange={(e) => {
         onChange?.(e);
-        if (onValueChange) {
-          const values = collectCheckedValues(innerRef.current, name);
-          onValueChange(values, e);
-        }
       }}
     >
       <FieldGroupNameContext.Provider value={name}>
@@ -85,8 +89,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     </div>
   );
 });
-
-export const collectCheckedValues = (checkboxList, name) => {
+const collectCheckedValues = (checkboxList, name) => {
   const values = [];
   const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
   const checkboxWithSameName = checkboxList.querySelectorAll(checkboxSelector);
@@ -225,18 +228,18 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       data-action={boundAction}
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
+      onValueChange={(checkedValues, e) => {
+        setValueArray(checkedValues);
+        onValueChange?.(checkedValues, e);
+      }}
       onChange={(event) => {
         const checkboxList = innerRef.current;
-        const checkedValues = collectCheckedValues(checkboxList, name);
-        setValueArray(checkedValues);
-
         const checkbox = event.target;
         requestAction(checkboxList, boundAction, {
           event,
           requester: checkbox,
         });
       }}
-      onValueChange={onValueChange}
     >
       <FieldGroupActionRequesterContext.Provider value={actionRequester}>
         {children}
@@ -269,8 +272,8 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
-      resetValueArray();
-      onValueChange?.(initialValueArray, e);
+      setValueArray([]);
+      onValueChange?.([], e);
     },
     onFormActionAbort: (e) => {
       resetValueArray();
@@ -288,13 +291,10 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
       name={name}
       value={valueArray}
       readOnly={readOnly || formIsReadOnly}
-      onChange={(e) => {
-        const checkboxList = innerRef.current;
-        const checkedValues = collectCheckedValues(checkboxList, name);
+      onValueChange={(checkedValues, e) => {
         setValueArray(checkedValues);
         onValueChange?.(checkedValues, e);
       }}
-      onValueChange={null}
     >
       {/* Reset form context so that input checkbox within
       do not try to do this. They are handled by the <CheckboxList /> */}
