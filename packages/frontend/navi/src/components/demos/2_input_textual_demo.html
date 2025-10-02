@@ -199,7 +199,6 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const [loading, setLoading] = useState(false);
         const [loadingB, setLoadingB] = useState(false);
         const [loadingC, setLoadingC] = useState(false);
         const [loadingD, setLoadingD] = useState(false);
@@ -207,23 +206,7 @@
 
         return (
           <div className="demo-grid">
-            <div className="demo-card">
-              <h3 className="demo-title">💫 Loading State</h3>
-              <div className="control-group">
-                <h4>@jsenv/navi Input</h4>
-                <Input loading={loading} placeholder="Enter some text..." />
-              </div>
-              <div className="control-group">
-                <h4>Native HTML Input</h4>
-                <input placeholder="Enter some text..." />
-              </div>
-              <div className="button-group">
-                <button onClick={() => setLoading(!loading)}>
-                  {loading ? "Stop Loading" : "Start Loading"}
-                </button>
-              </div>
-            </div>
-
+            <LoadingDemo />
             <div className="demo-card">
               <h3 className="demo-title">⚡ Action Input</h3>
               <div className="control-group">
@@ -319,6 +302,36 @@
                 </button>
                 <button onClick={() => setInitialVal("")}>Clear</button>
               </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const LoadingDemo = () => {
+        const [value, setValue] = useState();
+        const [loading, setLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">💫 Loading State</h3>
+            <div className="control-group">
+              <h4>@jsenv/navi Input</h4>
+              <Input
+                loading={loading}
+                value={value}
+                onValueChange={setValue}
+                placeholder="Enter some text..."
+              />
+            </div>
+            <div className="control-group">
+              <h4>Native HTML Input</h4>
+              <input placeholder="Enter some text..." />
+            </div>
+            <div className="button-group">
+              <button onClick={() => setLoading(!loading)}>
+                {loading ? "Stop Loading" : "Start Loading"}
+              </button>
             </div>
           </div>
         );

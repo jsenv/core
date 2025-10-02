@@ -151,6 +151,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const BasicInputDemo = () => {
+        const [value, setValue] = useState();
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
 
@@ -163,6 +164,8 @@
                 id="basic-input"
                 name="text"
                 placeholder="Type something..."
+                value={value}
+                onValueChange={setValue}
                 action={async ({ text }) => {
                   setIsLoading(true);
                   setResult("Processing...");
