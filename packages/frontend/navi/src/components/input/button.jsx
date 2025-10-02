@@ -10,6 +10,7 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import {
   FieldGroupActionRequesterContext,
   FieldGroupLoadingContext,
+  FieldGroupReadOnlyContext,
 } from "../field_group_context.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
@@ -93,6 +94,7 @@ const ButtonBasic = forwardRef((props, ref) => {
   } = props;
   const groupLoading = useContext(FieldGroupLoadingContext);
   const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const groupReadonly = useContext(FieldGroupReadOnlyContext);
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -102,6 +104,7 @@ const ButtonBasic = forwardRef((props, ref) => {
 
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
+  const innerReadOnly = readOnly || groupReadonly;
 
   let {
     border,
@@ -118,8 +121,8 @@ const ButtonBasic = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       data-custom={appearance === "custom" ? "" : undefined}
-      data-readonly-silent={readOnly ? "" : undefined}
-      data-readonly={readOnly ? "" : undefined}
+      data-readonly-silent={innerReadOnly ? "" : undefined}
+      data-readonly={innerReadOnly ? "" : undefined}
       aria-busy={innerLoading}
       style={{
         ...restStyle,
@@ -139,7 +142,7 @@ const ButtonBasic = forwardRef((props, ref) => {
           data-field-with-border-hover={discrete ? "" : undefined}
           data-field-with-background-hover={discrete ? "" : undefined}
           data-validation-message-arrow-x="center"
-          data-readonly={readOnly ? "" : undefined}
+          data-readonly={innerReadOnly ? "" : undefined}
           style={{
             "--field-border-width": `${borderWidth}px`,
             "--field-outline-width": `${outlineWidth}px`,
