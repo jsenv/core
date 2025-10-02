@@ -140,7 +140,7 @@ const LoaderBackgroundBasic = ({
 }) => {
   const shouldShowSpinner = useDebounceTrue(loading, 300);
   const rectangleRef = useRef(null);
-  const [outlineOffset, setOutlineOffset] = useState(0);
+  const [, setOutlineOffset] = useState(0);
   const [borderRadius, setBorderRadius] = useState(0);
   const [borderTopWidth, setBorderTopWidth] = useState(0);
   const [borderLeftWidth, setBorderLeftWidth] = useState(0);
@@ -254,20 +254,20 @@ const LoaderBackgroundBasic = ({
   }, [color, targetSelector]);
 
   spacingTop += inset;
-  spacingTop += outlineOffset;
-  spacingTop -= borderTopWidth;
+  // spacingTop += outlineOffset;
+  // spacingTop -= borderTopWidth;
   spacingTop += marginTop;
   spacingLeft += inset;
-  spacingLeft += outlineOffset;
-  spacingLeft -= borderLeftWidth;
+  // spacingLeft += outlineOffset;
+  // spacingLeft -= borderLeftWidth;
   spacingLeft += marginLeft;
   spacingRight += inset;
-  spacingRight += outlineOffset;
-  spacingRight -= borderRightWidth;
+  // spacingRight += outlineOffset;
+  // spacingRight -= borderRightWidth;
   spacingRight += marginRight;
   spacingBottom += inset;
-  spacingBottom += outlineOffset;
-  spacingBottom -= borderBottomWidth;
+  // spacingBottom += outlineOffset;
+  // spacingBottom -= borderBottomWidth;
   spacingBottom += marginBottom;
   if (targetSelector) {
     // oversimplification that actually works
@@ -284,12 +284,13 @@ const LoaderBackgroundBasic = ({
     borderRightWidth,
     borderBottomWidth,
   );
-  const size = Math.max(2, maxBorderWidth / 2);
-
-  spacingTop += size / 4;
-  spacingLeft += size / 4;
-  spacingRight += size / 4;
-  spacingBottom += size / 4;
+  const halfMaxBorderSize = maxBorderWidth / 2;
+  const size = halfMaxBorderSize < 2 ? 2 : halfMaxBorderSize;
+  const lineHalfSize = size / 2;
+  spacingTop -= lineHalfSize;
+  spacingLeft -= lineHalfSize;
+  spacingRight -= lineHalfSize;
+  spacingBottom -= lineHalfSize;
 
   return (
     <>

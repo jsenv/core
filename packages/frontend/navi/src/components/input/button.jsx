@@ -29,7 +29,7 @@ import.meta.css = /* css */ `
     padding: 0;
   }
 
-  button[data-custom] .button-content {
+  button[data-custom] .navi_button_content {
     transition-duration: 0.15s;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-property: transform;
@@ -39,23 +39,21 @@ import.meta.css = /* css */ `
     padding-inline: 6px;
   }
 
-  button[data-custom]:active .button-content {
+  button[data-custom]:active .navi_button_content {
     transform: scale(0.9);
   }
 
-  button[data-custom]:disabled .button-content {
+  button[data-custom]:disabled .navi_button_content {
     transform: none;
   }
 
-  button[data-custom] .button-content > .shadow {
+  button[data-custom] .navi_button_shadow {
     position: absolute;
-    inset: calc(
-      -1 * (var(--button-border-width) + var(--button-outline-width))
-    );
+    inset: calc(-1 * (var(--field-border-width) + var(--field-outline-width)));
     pointer-events: none;
     border-radius: inherit;
   }
-  button[data-custom]:active > .button-content > .shadow {
+  button[data-custom]:active .navi_button_shadow {
     box-shadow:
       inset 0 3px 6px rgba(0, 0, 0, 0.2),
       inset 0 1px 2px rgba(0, 0, 0, 0.3),
@@ -63,7 +61,7 @@ import.meta.css = /* css */ `
       inset 2px 0 4px rgba(0, 0, 0, 0.1),
       inset -2px 0 4px rgba(0, 0, 0, 0.1);
   }
-  button[data-custom]:disabled > .button-content > .shadow {
+  button[data-custom]:disabled > .navi_button_shadow {
     box-shadow: none;
   }
 `;
@@ -112,22 +110,15 @@ const ButtonBasic = forwardRef((props, ref) => {
       aria-busy={loading}
       style={{
         ...restStyle,
-        "--button-border-width": `${borderWidth}px`,
-        "--button-outline-width": `${outlineWidth}px`,
-        "--button-border-color": borderColor,
       }}
     >
       <LoadableInlineElement
         loading={loading}
-        inset={
-          borderWidth -
-          // -1 is the outline offset thing
-          1
-        }
+        inset={-1}
         color="light-dark(#355fcc, #3b82f6)"
       >
         <span
-          className="button-content"
+          className="navi_button_content"
           data-field=""
           data-field-with-background=""
           data-field-with-hover=""
@@ -136,9 +127,14 @@ const ButtonBasic = forwardRef((props, ref) => {
           data-field-with-background-hover={discrete ? "" : undefined}
           data-validation-message-arrow-x="center"
           data-readonly={readOnly ? "" : undefined}
+          style={{
+            "--field-border-width": `${borderWidth}px`,
+            "--field-outline-width": `${outlineWidth}px`,
+            "--field-border-color": borderColor,
+          }}
         >
           {children}
-          <span className="shadow"></span>
+          <span className="navi_button_shadow"></span>
         </span>
       </LoadableInlineElement>
     </button>
