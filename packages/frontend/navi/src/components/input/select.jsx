@@ -12,7 +12,7 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useRefArray } from "../use_ref_array.js";
-import { useFormEvents } from "./use_form_event.js";
+import { useFormEvents } from "./use_form_events.js";
 
 import.meta.css = /* css */ `
   .navi_select[data-readonly] {

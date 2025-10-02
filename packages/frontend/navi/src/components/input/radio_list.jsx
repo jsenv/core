@@ -20,7 +20,7 @@ import {
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { useActionEvents } from "../use_action_events.js";
 import { InputRadio } from "./input_radio.jsx";
-import { useFormEvents } from "./use_form_event.js";
+import { useFormEvents } from "./use_form_events.js";
 
 import.meta.css = /* css */ `
   .navi_radio_list {

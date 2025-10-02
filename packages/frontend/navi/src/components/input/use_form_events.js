@@ -7,8 +7,15 @@ export const useFormEvents = (
 ) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
-    const form = element.form;
+    if (!element) {
+      return null;
+    }
 
+    const form = element.form;
+    if (!form) {
+      console.warn("No form found for element", element);
+      return null;
+    }
     return addManyEventListeners(form, {
       reset: onFormReset,
       actionabort: onFormActionAbort,

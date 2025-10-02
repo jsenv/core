@@ -14,7 +14,7 @@ import { useRefArray } from "../use_ref_array.js";
 import { useStateArray } from "../use_state_array.js";
 import { Field } from "./field.jsx";
 import { InputCheckbox } from "./input_checkbox.jsx";
-import { useFormEvents } from "./use_form_event.js";
+import { useFormEvents } from "./use_form_events.js";
 
 import.meta.css = /* css */ `
   .checkbox_list {
