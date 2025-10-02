@@ -194,6 +194,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const InputWithInitialValueDemo = () => {
+        const [value, setValue] = useState("Hello World!");
         const [result, setResult] = useState("");
 
         return (
@@ -204,7 +205,8 @@
               <Input
                 id="initial-input"
                 name="text"
-                value="Hello World!"
+                value={value}
+                onValueChange={setValue}
                 action={async ({ text }) => {
                   setResult("Processing...");
                   await delay(800);
@@ -225,7 +227,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const InputWithExternalControlDemo = () => {
-        const [inputValue, setInputValue] = useState(undefined);
+        const [value, setValue] = useState(undefined);
         const [result, setResult] = useState("");
 
         return (
@@ -238,7 +240,8 @@
               <Input
                 id="controlled-input"
                 name="text"
-                value={inputValue}
+                value={value}
+                onValueChange={setValue}
                 placeholder="Use buttons below to set value"
                 action={async ({ text }) => {
                   setResult("Processing...");
@@ -252,21 +255,21 @@
             <div className="button-group">
               <button
                 onClick={() => {
-                  setInputValue("Preset Value 1");
+                  setValue("Preset Value 1");
                 }}
               >
                 Set Value 1
               </button>
               <button
                 onClick={() => {
-                  setInputValue("Preset Value 2");
+                  setValue("Preset Value 2");
                 }}
               >
                 Set Value 2
               </button>
               <button
                 onClick={() => {
-                  setInputValue("");
+                  setValue("");
                 }}
               >
                 Clear
@@ -275,7 +278,7 @@
             <div
               className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
             >
-              Current value: "{inputValue}"<br />
+              Current value: "{value}"<br />
               {result || "Click buttons to change value, then submit..."}
             </div>
           </div>
