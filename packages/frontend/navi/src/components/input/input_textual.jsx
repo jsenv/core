@@ -52,27 +52,32 @@ const InputTextualBasic = forwardRef((props, ref) => {
   let {
     type,
     value,
+    onValueChange,
+    onInput,
+
+    readOnly,
+    loading,
+    constraints = [],
+
     autoFocus,
     autoFocusVisible,
     autoSelect,
-    constraints = [],
-    loading,
     appearance = "custom",
 
     cancelOnEscape,
     cancelOnBlurInvalid,
-    readOnly,
     ...rest
   } = props;
 
-  // infom any <label> parent of our readOnly state
   const setInputReadOnly = useContext(ReadOnlyContext);
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  // infom any <label> parent of our readOnly state
   if (setInputReadOnly) {
     setInputReadOnly(readOnly);
   }
 
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
   useAutoFocus(innerRef, autoFocus, {
     autoFocusVisible,
     autoSelect,
@@ -83,6 +88,8 @@ const InputTextualBasic = forwardRef((props, ref) => {
     value = convertToLocalTimezone(value);
   }
 
+  const innerReadOnly = readOnly || !onValueChange;
+
   const inputTextual = (
     <input
       ref={innerRef}
@@ -91,7 +98,12 @@ const InputTextualBasic = forwardRef((props, ref) => {
       data-field=""
       data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
-      readOnly={readOnly}
+      readOnly={innerReadOnly}
+      onInput={(e) => {
+        const inputValue = e.target.value;
+        onValueChange?.(inputValue, e);
+        onInput?.(e);
+      }}
       {...rest}
     />
   );
@@ -162,22 +174,25 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   const {
     id,
     type,
-    action,
+
     name,
     value: externalValue,
-    valueSignal,
-    cancelOnBlurInvalid,
-    cancelOnEscape,
-    actionErrorEffect,
+    onValueChange,
+    onInput,
     readOnly,
     loading,
-    onInput,
+
+    action,
+    valueSignal,
     onCancel,
     onBlur,
     onActionPrevented,
     onActionStart,
     onActionError,
     onActionEnd,
+    cancelOnBlurInvalid,
+    cancelOnEscape,
+    actionErrorEffect,
     ...rest
   } = props;
   if (import.meta.dev && !name && !valueSignal) {
@@ -188,7 +203,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [boundAction, value, setValue, resetValue] = useActionBoundToOneParam(
+  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(
     action,
     name,
     valueSignal ? valueSignal : externalValue,
@@ -241,7 +256,8 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          */
         valueAtInteractionRef.current = e.target.value;
       }
-      resetValue();
+      setValue(initialValue);
+      onValueChange?.(initialValue, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,

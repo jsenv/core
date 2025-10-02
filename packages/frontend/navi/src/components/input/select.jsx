@@ -137,7 +137,7 @@ const SelectWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState, resetNavState] = useNavState(id);
-  const [boundAction, value, setValue, resetValue] = useActionBoundToOneParam(
+  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(
     action,
     name,
     valueSignal ? valueSignal : externalValue,
@@ -155,7 +155,7 @@ const SelectWithAction = forwardRef((props, ref) => {
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       resetNavState();
-      resetValue();
+      setValue(initialValue);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -165,11 +165,11 @@ const SelectWithAction = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      resetValue();
+      setValue(initialValue);
       onActionAbort?.(e);
     },
     onError: (error) => {
-      resetValue();
+      setValue(initialValue);
       onActionError?.(error);
     },
     onEnd: () => {
@@ -232,7 +232,7 @@ const SelectInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [value, setValue, resetValue] = useOneFormParam(
+  const [value, setValue, initialValue] = useOneFormParam(
     name,
     externalValue,
     navState,
@@ -246,10 +246,10 @@ const SelectInsideForm = forwardRef((props, ref) => {
       setValue(undefined);
     },
     onFormActionAbort: () => {
-      resetValue();
+      setValue(initialValue);
     },
     onFormActionError: () => {
-      resetValue();
+      setValue(initialValue);
     },
   });
 

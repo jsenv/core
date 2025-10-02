@@ -107,13 +107,12 @@ const RadioListWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState, resetNavState] = useNavState(id);
-  const [boundAction, value, setValue, resetValue, initialValue] =
-    useActionBoundToOneParam(
-      action,
-      name,
-      valueSignal ? valueSignal : externalValue,
-      navState,
-    );
+  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(
+    action,
+    name,
+    valueSignal ? valueSignal : externalValue,
+    navState,
+  );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
@@ -126,7 +125,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       resetNavState();
-      resetValue();
+      setValue(initialValue);
       onValueChange?.(initialValue, e);
       onCancel?.(e, reason);
     },
@@ -137,18 +136,17 @@ const RadioListWithAction = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      resetValue();
+      setValue(initialValue);
       onValueChange?.(initialValue, e);
       onActionAbort?.(e);
     },
     onError: (error) => {
-      resetValue();
+      setValue(initialValue);
       onValueChange?.(initialValue, error);
       onActionError?.(error);
     },
     onEnd: (e) => {
       resetNavState();
-      onValueChange?.(initialValue, e);
       onActionEnd?.(e);
     },
   });
@@ -200,7 +198,7 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [value, setValue, resetValue, initialValue] = useOneFormParam(
+  const [value, setValue, initialValue] = useOneFormParam(
     name,
     externalValue,
     navState,
@@ -215,11 +213,11 @@ const RadioListInsideForm = forwardRef((props, ref) => {
       onValueChange?.(undefined, e);
     },
     onFormActionAbort: (e) => {
-      resetValue();
+      setValue(initialValue);
       onValueChange?.(initialValue, e);
     },
     onFormActionError: (e) => {
-      resetValue();
+      setValue(initialValue);
       onValueChange?.(initialValue, e);
     },
   });
