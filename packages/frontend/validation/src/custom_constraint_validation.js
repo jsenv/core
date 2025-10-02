@@ -46,10 +46,10 @@ let debug = false;
 const validationInProgressWeakSet = new WeakSet();
 
 export const requestAction = (
+  target,
   action,
   {
     event,
-    target = event.target,
     requester = target,
     method = "rerun",
     meta = {},

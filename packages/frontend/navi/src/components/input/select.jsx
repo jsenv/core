@@ -194,9 +194,8 @@ const SelectWithAction = forwardRef((props, ref) => {
         const optionSelected = select.querySelector(
           `option[value="${selectedValue}"]`,
         );
-        requestAction(boundAction, {
+        requestAction(radioListContainer, boundAction, {
           event,
-          target: radioListContainer,
           requester: optionSelected,
         });
       }}

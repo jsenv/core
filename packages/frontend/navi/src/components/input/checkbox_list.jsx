@@ -212,9 +212,8 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
           removeValue(checkboxValue, valueArray);
         }
         const checkboxListContainer = innerRef.current;
-        requestAction(boundAction, {
+        requestAction(checkboxListContainer, boundAction, {
           event,
-          target: checkboxListContainer,
           requester: checkbox,
         });
       }}

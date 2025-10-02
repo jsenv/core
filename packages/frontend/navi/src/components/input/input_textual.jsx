@@ -212,7 +212,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       valueAtInteractionRef.current = null;
       return;
     }
-    requestAction(boundAction, { event: e });
+    requestAction(e.target, boundAction, { event: e });
   });
 
   useActionEvents(innerRef, {
@@ -292,7 +292,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          * We need to prevent the next change event otherwise we would request action twice
          */
         valueAtInteractionRef.current = e.target.value;
-        requestAction(boundAction, { event: e });
+        requestAction(e.target, boundAction, { event: e });
       }}
       onBlur={(e) => {
         onBlur?.(e);
@@ -350,9 +350,8 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
             "button[type='submit'], input[type='submit'], input[type='image']",
           );
           e.preventDefault();
-          requestAction(formAction, {
+          requestAction(form, formAction, {
             event: e,
-            target: form,
             requester: formSubmitButton ? formSubmitButton : inputElement,
           });
         }

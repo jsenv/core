@@ -139,9 +139,8 @@ export const useKeyboardShortcuts = (
             return false;
           }
           const { action } = shortcutCandidate;
-          return requestAction(action, {
+          return requestAction(element, action, {
             event: keyboardEvent,
-            target: element,
             requester: document.activeElement,
             confirmMessage: shortcutCandidate.confirmMessage,
             meta: {

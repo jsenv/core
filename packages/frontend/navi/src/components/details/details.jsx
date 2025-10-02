@@ -225,7 +225,7 @@ const DetailsWithAction = forwardRef((props, ref) => {
       onToggle={(toggleEvent) => {
         const isOpen = toggleEvent.newState === "open";
         if (isOpen) {
-          requestAction(effectiveAction, {
+          requestAction(toggleEvent.target, effectiveAction, {
             event: toggleEvent,
             method: "run",
           });

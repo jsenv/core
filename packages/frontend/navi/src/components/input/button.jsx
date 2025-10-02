@@ -159,7 +159,7 @@ const ButtonWithAction = forwardRef((props, ref) => {
 
   const handleClick = (event) => {
     event.preventDefault();
-    requestAction(boundAction, { event });
+    requestAction(event.target, boundAction, { event });
   };
   const innerLoading = loading || actionLoading;
 
@@ -212,9 +212,8 @@ const ButtonInsideForm = forwardRef((props, ref) => {
     // prevent default behavior that would submit the form
     // we want to go through the action execution process (with validation and all)
     event.preventDefault();
-    requestAction(formAction, {
+    requestAction(form, formAction, {
       event,
-      target: form,
       requester: buttonElement,
       meta: { isSubmit: true },
     });
@@ -310,7 +309,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     // je vois pas encore comment je vais faire ca mais a priori
     // on va juste le faire "manuellement"
     // en utilisnt un truc du formContext
-    requestAction(actionBoundToFormParams, { event });
+    requestAction(event.target, actionBoundToFormParams, { event });
   };
 
   return (
