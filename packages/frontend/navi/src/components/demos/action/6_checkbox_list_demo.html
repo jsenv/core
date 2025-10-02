@@ -24,82 +24,83 @@
       const App = () => {
         return (
           <div style="display: flex; flex-direction: row; gap: 30px">
-            <div>
-              <p>
-                <strong>Action + log after 1s</strong>
-              </p>
-              <CheckboxList
-                name="colors"
-                label="Select your favorite colors:"
-                value={["red", "blue"]}
-                action={async ({ colors }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  console.log(`Colors selected: ${JSON.stringify(colors)}`);
-                }}
-              >
-                {[
-                  { label: "Red", value: "red" },
-                  { label: "Blue", value: "blue" },
-                  { label: "Green", value: "green" },
-                ]}
-              </CheckboxList>
-            </div>
-
-            <div>
-              <p>
-                <strong>Form + alert after 1s</strong>
-              </p>
-              <Form
-                action={async ({ colors }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  // eslint-disable-next-line no-alert
-                  window.alert(`Colors selected: ${JSON.stringify(colors)}`);
-                }}
-              >
-                <CheckboxList
-                  id="form_alert_1"
-                  name="colors"
-                  label="Select your favorite colors:"
-                  value={["blue"]}
-                >
-                  {[
-                    { label: "Red", id: "red", value: "red" },
-                    { label: "Blue", id: "blue", value: "blue" },
-                    { label: "Green", id: "green", value: "green" },
-                  ]}
-                </CheckboxList>
-
-                <Button type="submit">Submit</Button>
-                <Button type="reset">Reset</Button>
-              </Form>
-            </div>
-
-            <div>
-              <p>
-                <strong>Form + throw after 1s</strong>
-              </p>
-              <Form
-                action={async ({ colors }) => {
-                  await new Promise((resolve) => setTimeout(resolve, 1_000));
-                  throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
-                }}
-              >
-                <CheckboxList
-                  label="Select your favorite colors:"
-                  name="colors"
-                  value={["red", "blue"]}
-                >
-                  {[
-                    { label: "Red", value: "red" },
-                    { label: "Blue", value: "blue" },
-                    { label: "Green", value: "green" },
-                  ]}
-                </CheckboxList>
-                <Button type="submit">Submit</Button>
-                <Button type="reset">Reset</Button>
-              </Form>
-            </div>
+            <ActionLogAfter1s />
+            <FormAlertAfter1s />
+            <FormThrowAfter1s />
           </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const ActionLogAfter1s = () => {
+        return (
+          <div>
+            <p>
+              <strong>Action + log after 1s</strong>
+            </p>
+            <PickFavoriteColors value={["red", "blue"]} />
+          </div>
+        );
+      };
+      // eslint-disable-next-line no-unused-vars
+      const FormAlertAfter1s = () => {
+        return (
+          <div>
+            <p>
+              <strong>Form + alert after 1s</strong>
+            </p>
+            <Form
+              action={async ({ colors }) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                // eslint-disable-next-line no-alert
+                window.alert(`Colors selected: ${JSON.stringify(colors)}`);
+              }}
+            >
+              <PickFavoriteColors name="colors" value={["blue"]} />
+
+              <Button type="submit">Submit</Button>
+              <Button type="reset">Reset</Button>
+            </Form>
+          </div>
+        );
+      };
+      // eslint-disable-next-line no-unused-vars
+      const FormThrowAfter1s = () => {
+        return (
+          <div>
+            <p>
+              <strong>Form + throw after 1s</strong>
+            </p>
+            <Form
+              action={async ({ colors }) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
+              }}
+            >
+              <PickFavoriteColors name="colors" value={["red", "blue"]} />
+
+              <Button type="submit">Submit</Button>
+              <Button type="reset">Reset</Button>
+            </Form>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PickFavoriteColors = ({ name, value, action }) => {
+        return (
+          <CheckboxList
+            name={name}
+            label="Select your favorite colors:"
+            value={value}
+            action={action}
+          >
+            {[
+              { label: "Red", value: "red" },
+              { label: "Blue", value: "blue" },
+              { label: "Green", value: "green" },
+            ]}
+          </CheckboxList>
         );
       };
 
