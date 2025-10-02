@@ -35,7 +35,10 @@ export {
 export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
 export { Form } from "./src/components/form.jsx";
 export { Button } from "./src/components/input/button.jsx";
-export { CheckboxList } from "./src/components/input/checkbox_list.jsx";
+export {
+  Checkbox,
+  CheckboxList,
+} from "./src/components/input/checkbox_list.jsx";
 export { Field } from "./src/components/input/field.jsx";
 export { Input } from "./src/components/input/input.jsx";
 export { Label } from "./src/components/input/label.jsx";
