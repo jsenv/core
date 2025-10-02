@@ -77,22 +77,6 @@
       button:hover {
         background: #f8f9fa;
       }
-      button[type="submit"] {
-        background: #007bff;
-        color: white;
-        border-color: #007bff;
-      }
-      button[type="submit"]:hover {
-        background: #0056b3;
-      }
-      button[type="reset"] {
-        background: #6c757d;
-        color: white;
-        border-color: #6c757d;
-      }
-      button[type="reset"]:hover {
-        background: #545b62;
-      }
       input {
         width: 100%;
         padding: 8px 12px;
@@ -349,6 +333,8 @@
       const FormInputDemo = () => {
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
+        const [username, setUsername] = useState();
+        const [email, setEmail] = useState();
 
         return (
           <div className="demo-card">
@@ -376,6 +362,8 @@
                   id="form-username"
                   name="username"
                   placeholder="Enter username"
+                  value={username}
+                  onValueChange={setUsername}
                 />
               </div>
               <div className="control-group">
@@ -385,6 +373,8 @@
                   name="email"
                   type="email"
                   placeholder="Enter email"
+                  value={email}
+                  onValueChange={setEmail}
                 />
               </div>
               <div className="button-group">

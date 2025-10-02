@@ -209,7 +209,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
   const innerReadOnly = readOnly || formIsReadOnly;
 
   const handleClick = (event) => {
-    const buttonElement = event.target;
+    const buttonElement = innerRef.current;
     const { form } = buttonElement;
     let wouldSubmitForm = wouldSubmitFormByType;
     if (!wouldSubmitForm && type === undefined) {
