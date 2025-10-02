@@ -232,7 +232,6 @@ const InputRadioBasic = forwardRef((props, ref) => {
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
-
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 

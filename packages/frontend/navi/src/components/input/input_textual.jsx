@@ -186,7 +186,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     type,
 
     name,
-    value: externalValue,
+    value,
     onValueChange,
     action,
     valueSignal,
@@ -212,20 +212,24 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(
-    action,
-    name,
-    valueSignal ? valueSignal : externalValue,
-    navState,
-    "",
-  );
+  const [boundAction, , setActionValue, initialValue] =
+    useActionBoundToOneParam(
+      action,
+      name,
+      valueSignal ? valueSignal : value,
+      navState,
+      "",
+    );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  useEffect(() => {
-    setNavState(value);
-  }, [value]);
+
+  const innerOnValueChange = (inputValue, e) => {
+    setNavState(inputValue);
+    setActionValue(inputValue);
+    onValueChange?.(inputValue, e);
+  };
 
   const valueAtInteractionRef = useRef(null);
   useOnInputChange(innerRef, (e) => {
@@ -238,12 +242,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     }
     requestAction(e.target, boundAction, { event: e });
   });
-
-  const innerOnValueChange = (value, e) => {
-    setValue(value);
-    onValueChange?.(value, e);
-  };
-
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       if (reason.startsWith("blur_invalid")) {
@@ -320,28 +318,18 @@ const InputTextualWithAction = forwardRef((props, ref) => {
 });
 
 const InputTextualInsideForm = forwardRef((props, ref) => {
-  const {
-    formContext,
-    id,
-    name,
-    value: externalValue,
-    onValueChange,
-    onKeyDown,
-    ...rest
-  } = props;
+  const { formContext, id, name, value, onValueChange, onKeyDown, ...rest } =
+    props;
   const { formAction } = formContext;
 
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [value, setValue] = useOneFormParam(name, externalValue, navState, "");
-  useEffect(() => {
-    setNavState(value);
-  }, [value]);
-
+  const [, setFormValue] = useOneFormParam(name, value, navState, "");
   const innerOnValueChange = (inputValue, e) => {
-    setValue(inputValue);
+    setNavState(inputValue);
+    setFormValue(inputValue);
     onValueChange?.(inputValue, e);
   };
   useFormEvents(innerRef, {
