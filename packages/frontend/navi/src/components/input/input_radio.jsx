@@ -2,11 +2,12 @@ import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef, useState } from "preact/hooks";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { LoaderBackground } from "../loader/loader_background.jsx";
+import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 import.meta.css = /* css */ `
   .custom_radio_wrapper {
+    position: relative;
     display: inline-flex;
     box-sizing: content-box;
 
@@ -233,18 +234,16 @@ const InputRadioBasic = forwardRef((props, ref) => {
       inputRadio
     );
 
-  const inputRadioWithLoader = (
-    <LoaderBackground
+  return (
+    <LoadableInlineElement
       loading={loading}
       targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
-      inset={-2}
+      inset={-2.5}
       color="light-dark(#355fcc, #3b82f6)"
     >
       {inputRadioDisplayed}
-    </LoaderBackground>
+    </LoadableInlineElement>
   );
-
-  return inputRadioWithLoader;
 });
 const CustomRadio = ({ children }) => {
   return (

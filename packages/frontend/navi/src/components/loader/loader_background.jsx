@@ -241,7 +241,6 @@ const LoaderBackgroundBasic = ({
           setCurrentColor(newDetectedColor);
         }
       }
-
       // updateStyles is very cheap so we run it every frame
       animationFrame = requestAnimationFrame(updateStyles);
     };
