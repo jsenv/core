@@ -476,6 +476,9 @@
 
       // eslint-disable-next-line no-unused-vars
       const SharedActionDemo = () => {
+        // we have 2 states to simulate they belong to different components
+        const [valueA, setValueA] = useState();
+        const [valueB, setValueB] = useState();
         const [result, setResult] = useState("");
 
         return (
@@ -487,6 +490,8 @@
                 id="shared-input-1"
                 name="name"
                 placeholder="Enter name for input 1"
+                value={valueA}
+                onValueChange={setValueA}
                 action={sharedAction}
                 onActionStart={() => {
                   setResult("Processing...");
@@ -504,6 +509,8 @@
                 id="shared-input-2"
                 name="name"
                 placeholder="Enter name for input 2"
+                value={valueB}
+                onValueChange={setValueB}
                 action={sharedAction}
               />
             </div>
