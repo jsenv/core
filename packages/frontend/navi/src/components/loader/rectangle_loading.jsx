@@ -24,12 +24,20 @@ export const RectangleLoading = ({
   size = 2,
 }) => {
   const containerRef = useRef(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    let animationFrameId = null;
+    if (!container) {
+      return null;
+    }
 
+    const { width, height } = container.getBoundingClientRect();
+    setContainerWidth(width);
+    setContainerHeight(height);
+
+    let animationFrameId = null;
     // Create a resize observer to detect changes in the container's dimensions
     const resizeObserver = new ResizeObserver((entries) => {
       // Use requestAnimationFrame to debounce updates
@@ -38,21 +46,13 @@ export const RectangleLoading = ({
       }
 
       animationFrameId = requestAnimationFrame(() => {
-        for (const entry of entries) {
-          const { width, height } = entry.contentRect;
-          setDimensions({ width, height });
-        }
+        const [containerEntry] = entries;
+        const { width, height } = containerEntry.contentRect;
+        setContainerWidth(width);
+        setContainerHeight(height);
       });
     });
-
     resizeObserver.observe(container);
-
-    // Initial measurement
-    setDimensions({
-      width: container.offsetWidth,
-      height: container.offsetHeight,
-    });
-
     return () => {
       if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
@@ -63,12 +63,12 @@ export const RectangleLoading = ({
 
   return (
     <div name="rectangle_loading" ref={containerRef}>
-      {dimensions.width > 0 && dimensions.height > 0 && (
+      {containerWidth > 0 && containerHeight > 0 && (
         <RectangleLoadingSvg
           radius={radius}
           color={color}
-          width={dimensions.width}
-          height={dimensions.height}
+          width={containerWidth}
+          height={containerHeight}
           strokeWidth={size}
         />
       )}

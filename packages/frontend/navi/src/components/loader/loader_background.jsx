@@ -302,11 +302,13 @@ const LoaderBackgroundBasic = ({
           right: `${spacingRight}px`,
         }}
       >
-        <RectangleLoading
-          color={currentColor}
-          radius={borderRadius}
-          size={size}
-        />
+        {shouldShowSpinner && (
+          <RectangleLoading
+            color={currentColor}
+            radius={borderRadius}
+            size={size}
+          />
+        )}
       </span>
       {children}
     </>
