@@ -16,6 +16,7 @@ import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import "./field_css.js";
+import { useFormEvents } from "./use_form_events.js";
 
 /**
  * We need a content the visually shrink (scale down) but the button interactive are must remain intact
@@ -272,7 +273,6 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     loading,
     children,
     onClick,
-    actionErrorEffect,
     onActionPrevented,
     onActionStart,
     onActionAbort,
@@ -294,34 +294,33 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const { loading: actionLoading } = useActionStatus(actionBoundToFormParams);
-  const executeAction = useExecuteAction(innerRef, {
-    errorEffect: actionErrorEffect,
-  });
-
   const innerLoading = loading || actionLoading;
 
-  useActionEvents(innerRef, {
-    onPrevented: onActionPrevented,
-    onAction: executeAction,
-    onStart: (e) => {
-      const form = innerRef.current.form;
-      form.dispatchEvent(new CustomEvent("actionstart", { detail: e.detail }));
-      onActionStart?.(e);
+  useFormEvents(innerRef, {
+    onFormActionPrevented: (e) => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionPrevented?.(e);
+      }
     },
-    onAbort: (e) => {
-      const form = innerRef.current.form;
-      form.dispatchEvent(new CustomEvent("actionabort", { detail: e.detail }));
-      onActionAbort?.(e);
+    onFormActionStart: (e) => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionStart?.(e);
+      }
     },
-    onError: (error) => {
-      const form = innerRef.current.form;
-      form.dispatchEvent(new CustomEvent("actionerror", { detail: { error } }));
-      onActionError?.(error);
+    onFormActionAbort: (e) => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionAbort?.(e);
+      }
     },
-    onEnd: (e) => {
-      const form = innerRef.current.form;
-      form.dispatchEvent(new CustomEvent("actionend", { detail: e.detail }));
-      onActionEnd?.(e);
+    onFormActionError: (e) => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionError?.(e.detail.error);
+      }
+    },
+    onFormActionEnd: (e) => {
+      if (e.detail.action === actionBoundToFormParams) {
+        onActionEnd?.(e);
+      }
     },
   });
 
@@ -334,9 +333,12 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       loading={innerLoading}
       onClick={(event) => {
         const button = innerRef.current;
+        const form = button.form;
         event.preventDefault();
-        requestAction(button, actionBoundToFormParams, { event });
-
+        requestAction(form, actionBoundToFormParams, {
+          event,
+          requester: button,
+        });
         onClick?.(event);
       }}
     >

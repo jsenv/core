@@ -5,11 +5,21 @@ import { useStableCallback } from "../use_stable_callback.js";
 
 export const useFormEvents = (
   elementRef,
-  { onFormReset, onFormActionAbort, onFormActionError },
+  {
+    onFormReset,
+    onFormActionPrevented,
+    onFormActionStart,
+    onFormActionAbort,
+    onFormActionError,
+    onFormActionEnd,
+  },
 ) => {
   onFormReset = useStableCallback(onFormReset);
+  onFormActionPrevented = useStableCallback(onFormActionPrevented);
+  onFormActionStart = useStableCallback(onFormActionStart);
   onFormActionAbort = useStableCallback(onFormActionAbort);
   onFormActionError = useStableCallback(onFormActionError);
+  onFormActionEnd = useStableCallback(onFormActionEnd);
 
   useLayoutEffect(() => {
     const element = elementRef.current;
@@ -28,10 +38,18 @@ export const useFormEvents = (
     }
     return addManyEventListeners(form, {
       reset: onFormReset,
+      actionprevented: onFormActionPrevented,
+      actionstart: onFormActionStart,
       actionabort: onFormActionAbort,
-      actionerror: (e) => {
-        onFormActionError?.(e.detail.error);
-      },
+      actionerror: onFormActionError,
+      actionend: onFormActionEnd,
     });
-  }, [onFormReset, onFormActionAbort, onFormActionError]);
+  }, [
+    onFormReset,
+    onFormActionPrevented,
+    onFormActionStart,
+    onFormActionAbort,
+    onFormActionError,
+    onFormActionEnd,
+  ]);
 };
