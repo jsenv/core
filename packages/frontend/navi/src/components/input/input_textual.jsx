@@ -19,11 +19,13 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import {
+  useContext,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
 } from "preact/hooks";
+
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -36,6 +38,7 @@ import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import "./field_css.js";
+import { ReadOnlyContext } from "./label.jsx";
 
 export const InputTextual = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
@@ -56,12 +59,17 @@ const InputTextualBasic = forwardRef((props, ref) => {
     loading,
     appearance = "custom",
 
-    // eslint-disable-next-line no-unused-vars
     cancelOnEscape,
-    // eslint-disable-next-line no-unused-vars
     cancelOnBlurInvalid,
+    readOnly,
     ...rest
   } = props;
+
+  // infom any <label> parent of our readOnly state
+  const setInputReadOnly = useContext(ReadOnlyContext);
+  if (setInputReadOnly) {
+    setInputReadOnly(readOnly);
+  }
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -83,6 +91,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
       data-field=""
       data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
+      readOnly={readOnly}
       {...rest}
     />
   );
