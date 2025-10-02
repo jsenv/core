@@ -47,13 +47,23 @@ const RadioListBasic = forwardRef((props, ref) => {
     required,
     value,
     onChange,
+    onValueChange,
   } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
   return (
-    <div ref={innerRef} className="navi_radio_list" onChange={onChange}>
+    <div
+      ref={innerRef}
+      className="navi_radio_list"
+      onChange={(e) => {
+        if (onValueChange) {
+          onValueChange();
+        }
+        onChange?.(e);
+      }}
+    >
       <FieldGroupNameContext.Provider value={name}>
         <FieldGroupValueContext.Provider value={value}>
           <FieldGroupReadOnlyContext.Provider value={readOnly}>
@@ -123,6 +133,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
     loading,
     action,
     valueSignal,
+    onValueChange,
 
     onCancel,
     onActionPrevented,
@@ -138,12 +149,13 @@ const RadioListWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState, resetNavState] = useNavState(id);
-  const [boundAction, value, setValue, resetValue] = useActionBoundToOneParam(
-    action,
-    name,
-    valueSignal ? valueSignal : externalValue,
-    navState,
-  );
+  const [boundAction, value, setValue, resetValue, initialValue] =
+    useActionBoundToOneParam(
+      action,
+      name,
+      valueSignal ? valueSignal : externalValue,
+      navState,
+    );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
@@ -157,6 +169,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
     onCancel: (e, reason) => {
       resetNavState();
       resetValue();
+      onValueChange?.(initialValue, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -167,14 +180,17 @@ const RadioListWithAction = forwardRef((props, ref) => {
     onStart: onActionStart,
     onAbort: (e) => {
       resetValue();
+      onValueChange?.(initialValue, e);
       onActionAbort?.(e);
     },
     onError: (error) => {
       resetValue();
+      onValueChange?.(initialValue, error);
       onActionError?.(error);
     },
     onEnd: (e) => {
       resetNavState();
+      onValueChange?.(initialValue, e);
       onActionEnd?.(e);
     },
   });
@@ -189,17 +205,15 @@ const RadioListWithAction = forwardRef((props, ref) => {
       data-action={boundAction}
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
-      onChange={(event) => {
-        const radio = event.target;
-        const radioIsChecked = radio.checked;
-        if (!radioIsChecked) {
-          return;
-        }
-        const value = radio.value;
+      onValueChange={(value, e) => {
         setValue(value);
+        onValueChange?.(value, e);
+      }}
+      onChange={(e) => {
+        const radio = e.target;
         const radioListContainer = innerRef.current;
         requestAction(radioListContainer, boundAction, {
-          event,
+          event: e,
           requester: radio,
         });
       }}
@@ -218,8 +232,8 @@ const RadioListInsideForm = forwardRef((props, ref) => {
     name,
     readOnly,
     value: externalValue,
+    onValueChange,
     children,
-    ...rest
   } = props;
   const { formIsReadOnly } = formContext;
 
@@ -227,7 +241,7 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [value, setValue, resetValue] = useOneFormParam(
+  const [value, setValue, resetValue, initialValue] = useOneFormParam(
     name,
     externalValue,
     navState,
@@ -237,14 +251,17 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   }, [value]);
 
   useFormEvents(innerRef, {
-    onFormReset: () => {
+    onFormReset: (e) => {
       setValue(undefined);
+      onValueChange?.(undefined, e);
     },
-    onFormActionAbort: () => {
+    onFormActionAbort: (e) => {
       resetValue();
+      onValueChange?.(initialValue, e);
     },
-    onFormActionError: () => {
+    onFormActionError: (e) => {
       resetValue();
+      onValueChange?.(initialValue, e);
     },
   });
 
@@ -254,16 +271,9 @@ const RadioListInsideForm = forwardRef((props, ref) => {
       name={name}
       value={value}
       readOnly={readOnly || formIsReadOnly}
-      onChange={(event) => {
-        const radio = event.target;
-        const radioIsChecked = radio.checked;
-        if (!radioIsChecked) {
-          return;
-        }
-        const value = radio.value;
+      onValueChange={(value) => {
         setValue(value);
       }}
-      {...rest}
     >
       {/* Reset form context so that input radio within
       do not try to do this. They are handled by the <RadioList /> */}
