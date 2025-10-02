@@ -59,7 +59,12 @@ const RadioListBasic = forwardRef((props, ref) => {
       className="navi_radio_list"
       onChange={(e) => {
         if (onValueChange) {
-          onValueChange();
+          const radioList = innerRef.current;
+          const checkedRadio = radioList.querySelector(
+            'input[type="radio"]:checked',
+          );
+          const newValue = checkedRadio ? checkedRadio.value : undefined;
+          onValueChange(newValue, e);
         }
         onChange?.(e);
       }}
@@ -89,9 +94,9 @@ export const RadioList = forwardRef((props, ref) => {
   });
 });
 export const Radio = forwardRef((props, ref) => {
-  const { name, value, checked, disabled, required, loading, readOnly } = props;
+  const { id, name, value, checked, disabled, required, loading, readOnly } =
+    props;
   const groupName = useContext(FieldGroupNameContext);
-  const groupValue = useContext(FieldGroupValueContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupRequired = useContext(FieldGroupRequiredContext);
@@ -102,7 +107,6 @@ export const Radio = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const innerName = name || groupName;
-  const innerChecked = checked || value === groupValue;
   const innerReadOnly = readOnly || groupReadOnly;
   const innerDisabled = disabled || groupDisabled;
   const innerRequired = required || groupRequired;
@@ -112,14 +116,14 @@ export const Radio = forwardRef((props, ref) => {
   return (
     <InputRadio
       ref={innerRef}
+      id={id}
       name={innerName}
       value={value}
-      checked={innerChecked}
+      checked={checked}
       readOnly={innerReadOnly}
       disabled={innerDisabled}
       required={innerRequired}
       loading={innerLoading}
-      {...props}
     />
   );
 });
@@ -224,7 +228,6 @@ const RadioListWithAction = forwardRef((props, ref) => {
     </RadioListBasic>
   );
 });
-
 const RadioListInsideForm = forwardRef((props, ref) => {
   const {
     formContext,

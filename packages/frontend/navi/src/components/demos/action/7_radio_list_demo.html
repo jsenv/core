@@ -11,6 +11,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
         Button,
@@ -67,15 +68,15 @@
             >
               <Label>
                 Red
-                <Radio value="red" />
+                <Radio value="red" checked={value === "red"} />
               </Label>
               <Label>
                 Blue
-                <Radio value="blue" />
+                <Radio value="blue" checked={value === "blue"} />
               </Label>
               <Label>
                 Green
-                <Radio value="green" />
+                <Radio value="green" checked={value === "green"} />
               </Label>
             </RadioList>
           </fieldset>
@@ -97,6 +98,12 @@
 
       // eslint-disable-next-line no-unused-vars
       const ActionLogAfter1s = () => {
+        const [value, setValue] = useState();
+        const onValueChange = (v, e) => {
+          console.log("value changed to", v, e);
+          setValue(v);
+        };
+
         return (
           <div>
             <p>
@@ -105,6 +112,8 @@
 
             <PickFavoriteColor
               name="color_alert"
+              value={value}
+              onValueChange={onValueChange}
               action={async ({ color_alert }) => {
                 await new Promise((resolve) => setTimeout(resolve, 1_000));
                 console.log(`Color selected: ${JSON.stringify(color_alert)}`);
@@ -137,6 +146,12 @@
 
       // eslint-disable-next-line no-unused-vars
       const FormLogAfter1s = () => {
+        const [value, setValue] = useState();
+        const onValueChange = (v, e) => {
+          console.log("value changed to", v, e);
+          setValue(v);
+        };
+
         return (
           <div>
             <p>
@@ -148,7 +163,11 @@
                 console.log(`Color selected: ${JSON.stringify(color)}`);
               }}
             >
-              <PickFavoriteColor name="color" />
+              <PickFavoriteColor
+                name="color"
+                value={value}
+                onValueChange={onValueChange}
+              />
               <Button type="submit">Submit</Button>
               <Button type="reset">Reset</Button>
             </Form>
