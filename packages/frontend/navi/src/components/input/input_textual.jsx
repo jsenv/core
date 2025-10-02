@@ -330,28 +330,18 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   const [navState, setNavState] = useNavState(id);
   const { formAction, formIsBusy, formIsReadOnly, formActionRequester } =
     formContext;
-  const [value, setValue, initialValue] = useOneFormParam(
-    name,
-    externalValue,
-    navState,
-    "",
-  );
+  const [value, setValue] = useOneFormParam(name, externalValue, navState, "");
   useEffect(() => {
     setNavState(value);
   }, [value]);
 
+  const innerOnValueChange = (inputValue, e) => {
+    setValue(inputValue);
+    onValueChange?.(inputValue, e);
+  };
   useFormEvents(innerRef, {
     onFormReset: (e) => {
-      setValue(undefined);
-      onValueChange?.(undefined, e);
-    },
-    onFormActionAbort: (e) => {
-      setValue(initialValue);
-      onValueChange?.(initialValue, e);
-    },
-    onFormActionError: (e) => {
-      setValue(initialValue);
-      onValueChange?.(initialValue, e);
+      innerOnValueChange(undefined, e);
     },
   });
 
@@ -368,10 +358,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       value={value}
       readOnly={innerReadOnly}
       loading={innerLoading}
-      onValueChange={(inputValue, e) => {
-        setValue(inputValue);
-        onValueChange?.(inputValue, e);
-      }}
+      onValueChange={innerOnValueChange}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           const inputElement = e.target;

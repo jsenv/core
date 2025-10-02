@@ -122,11 +122,18 @@ const RadioListWithAction = forwardRef((props, ref) => {
     setNavState(value);
   }, [value]);
 
+  const innerLoading = loading || actionLoading;
+  const innerReadOnly =
+    readOnly || innerLoading || (!onValueChange && !valueSignal);
+  const innerOnValueChange = (value, e) => {
+    setValue(value);
+    onValueChange?.(value, e);
+  };
+
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       resetNavState();
-      setValue(initialValue);
-      onValueChange?.(initialValue, e);
+      innerOnValueChange(initialValue, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -136,13 +143,11 @@ const RadioListWithAction = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      setValue(initialValue);
-      onValueChange?.(initialValue, e);
+      innerOnValueChange(initialValue, e);
       onActionAbort?.(e);
     },
     onError: (error) => {
-      setValue(initialValue);
-      onValueChange?.(initialValue, error);
+      innerOnValueChange(initialValue, error);
       onActionError?.(error);
     },
     onEnd: (e) => {
@@ -151,21 +156,16 @@ const RadioListWithAction = forwardRef((props, ref) => {
     },
   });
 
-  const innerLoading = loading || actionLoading;
-
   return (
     <RadioListBasic
       ref={innerRef}
       name={name}
       value={value}
+      onValueChange={innerOnValueChange}
       data-action={boundAction}
-      loading={innerLoading}
-      readOnly={readOnly || innerLoading}
       required={required}
-      onValueChange={(value, e) => {
-        setValue(value);
-        onValueChange?.(value, e);
-      }}
+      readOnly={innerReadOnly}
+      loading={innerLoading}
       onChange={(e) => {
         const radio = e.target;
         const radioListContainer = innerRef.current;
@@ -207,18 +207,21 @@ const RadioListInsideForm = forwardRef((props, ref) => {
     setNavState(value);
   }, [value]);
 
+  const innerReadOnly = readOnly || formIsReadOnly || !onValueChange;
+  const innerOnValueChange = (value, e) => {
+    setValue(value);
+    onValueChange?.(value, e);
+  };
+
   useFormEvents(innerRef, {
     onFormReset: (e) => {
-      setValue(undefined);
-      onValueChange?.(undefined, e);
+      innerOnValueChange(undefined, e);
     },
     onFormActionAbort: (e) => {
-      setValue(initialValue);
-      onValueChange?.(initialValue, e);
+      innerOnValueChange(initialValue, e);
     },
     onFormActionError: (e) => {
-      setValue(initialValue);
-      onValueChange?.(initialValue, e);
+      innerOnValueChange(initialValue, e);
     },
   });
 
@@ -227,11 +230,8 @@ const RadioListInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       value={value}
-      onValueChange={(checkedValueOrUndefined, e) => {
-        setValue(checkedValueOrUndefined);
-        onValueChange?.(checkedValueOrUndefined, e);
-      }}
-      readOnly={readOnly || formIsReadOnly}
+      onValueChange={innerOnValueChange}
+      readOnly={innerReadOnly}
       required={required}
     >
       {/* Reset form context so that input radio within
