@@ -11,6 +11,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         // eslint-disable-next-line no-unused-vars
         Button,
@@ -37,6 +38,8 @@
 
       // eslint-disable-next-line no-unused-vars
       const ActionLogAfter1s = () => {
+        const [value, setValue] = useState(["red", "blue"]);
+
         return (
           <div>
             <p>
@@ -44,7 +47,8 @@
             </p>
             <PickFavoriteColors
               name="colors"
-              value={["red", "blue"]}
+              value={value}
+              onValueChange={setValue}
               action={async ({ colors }) => {
                 await new Promise((resolve) => setTimeout(resolve, 1_000));
                 console.log(`Colors selected: ${JSON.stringify(colors)}`);
@@ -55,6 +59,8 @@
       };
       // eslint-disable-next-line no-unused-vars
       const FormAlertAfter1s = () => {
+        const [value, setValue] = useState(["blue"]);
+
         return (
           <div>
             <p>
@@ -70,7 +76,8 @@
               <PickFavoriteColors
                 id="form_alert_1"
                 name="colors"
-                value={["blue"]}
+                value={value}
+                onValueChange={setValue}
               />
 
               <Button type="submit">Submit</Button>
@@ -81,6 +88,7 @@
       };
       // eslint-disable-next-line no-unused-vars
       const FormThrowAfter1s = () => {
+        const [value, setValue] = useState(["red", "blue"]);
         return (
           <div>
             <p>
@@ -92,7 +100,11 @@
                 throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
               }}
             >
-              <PickFavoriteColors name="colors" value={["red", "blue"]} />
+              <PickFavoriteColors
+                name="colors"
+                value={value}
+                onValueChange={setValue}
+              />
               <Button type="submit">Submit</Button>
               <Button type="reset">Reset</Button>
             </Form>
@@ -101,11 +113,21 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const PickFavoriteColors = ({ name, value = [], action }) => {
+      const PickFavoriteColors = ({
+        name,
+        value = [],
+        action,
+        onValueChange,
+      }) => {
         return (
           <fieldset>
             <legend>Select your favorite colors:</legend>
-            <CheckboxList name={name} value={value} action={action}>
+            <CheckboxList
+              name={name}
+              value={value}
+              action={action}
+              onValueChange={onValueChange}
+            >
               <Label>
                 Red
                 <Checkbox value="red" checked={value.includes("red")} />

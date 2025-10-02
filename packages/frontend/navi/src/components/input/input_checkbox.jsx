@@ -1,6 +1,7 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -9,7 +10,7 @@ import {
   useOneFormParam,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { LoaderBackground } from "../loader/loader_background.jsx";
+import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { useFormEvents } from "./use_form_events.js";
@@ -185,18 +186,16 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       inputCheckbox
     );
 
-  const inputCheckboxWithLoader = (
-    <LoaderBackground
+  return (
+    <LoadableInlineElement
       loading={loading}
       inset={-1}
       targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
       color="light-dark(#355fcc, #3b82f6)"
     >
       {inputCheckboxDisplayed}
-    </LoaderBackground>
+    </LoadableInlineElement>
   );
-
-  return inputCheckboxWithLoader;
 });
 const CustomCheckbox = ({ children }) => {
   return (

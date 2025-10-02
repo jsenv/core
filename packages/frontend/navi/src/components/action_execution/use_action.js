@@ -87,7 +87,7 @@ export const useOneFormParam = (
     setValue(initialValue);
   }, [initialValue, formParamsSignal]);
 
-  return [getValue(), setValue, resetValue];
+  return [getValue(), setValue, resetValue, initialValue];
 };
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
@@ -191,7 +191,7 @@ export const useActionBoundToOneParam = (
     setValue(initialValue);
   }, [initialValue, paramsSignal]);
 
-  return [boundAction, value, setValue, reset];
+  return [boundAction, value, setValue, reset, initialValue];
 };
 
 // export const useActionBoundToOneBooleanParam = (action, name, value) => {
@@ -209,17 +209,18 @@ export const useActionBoundToOneParam = (
 export const useActionBoundToOneArrayParam = (
   action,
   name,
-  initialValue,
+  externalValue,
   fallbackValue,
   defaultValue = [],
 ) => {
-  const [boundAction, value, setValue, resetValue] = useActionBoundToOneParam(
-    action,
-    name,
-    initialValue,
-    fallbackValue,
-    defaultValue,
-  );
+  const [boundAction, value, setValue, resetValue, initialValue] =
+    useActionBoundToOneParam(
+      action,
+      name,
+      externalValue,
+      fallbackValue,
+      defaultValue,
+    );
 
   const add = (valueToAdd, valueArray = value) => {
     setValue(addIntoArray(valueArray, valueToAdd));
@@ -229,17 +230,20 @@ export const useActionBoundToOneArrayParam = (
     setValue(removeFromArray(valueArray, valueToRemove));
   };
 
-  return [boundAction, value, add, remove, resetValue, setValue];
+  const result = [boundAction, value, setValue, resetValue, initialValue];
+  result.add = add;
+  result.remove = remove;
+  return result;
 };
 export const useOneFormArrayParam = (
   name,
-  initialValue,
+  externalValue,
   fallbackValue,
   defaultValue = [],
 ) => {
-  const [getValue, setValue, resetValue] = useOneFormParam(
+  const [getValue, setValue, resetValue, initialValue] = useOneFormParam(
     name,
-    initialValue,
+    externalValue,
     fallbackValue,
     defaultValue,
   );
@@ -249,7 +253,10 @@ export const useOneFormArrayParam = (
   const remove = (valueToRemove, valueArray = getValue()) => {
     setValue(removeFromArray(valueArray, valueToRemove));
   };
-  return [getValue, add, remove, resetValue, setValue];
+  const result = [getValue, setValue, resetValue, initialValue];
+  result.add = add;
+  result.remove = remove;
+  return result;
 };
 
 // used by <details> to just call their action
