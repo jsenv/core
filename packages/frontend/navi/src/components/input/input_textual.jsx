@@ -271,7 +271,8 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   });
 
   const innerLoading = loading || actionLoading;
-  const innerReadOnly = readOnly || innerLoading || !onValueChange;
+  const innerReadOnly =
+    readOnly || innerLoading || (!onValueChange && !valueSignal);
 
   return (
     <InputTextualBasic
