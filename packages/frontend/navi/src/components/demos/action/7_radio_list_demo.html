@@ -55,7 +55,7 @@
         ...rest
       }) => {
         return (
-          <fieldset>
+          <fieldset data-required-message={rest["data-required-message"]}>
             <legend>Select your favorite color:</legend>
             <RadioList
               id={id}
