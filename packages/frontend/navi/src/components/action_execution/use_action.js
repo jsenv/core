@@ -229,7 +229,7 @@ export const useActionBoundToOneArrayParam = (
     setValue(removeFromArray(valueArray, valueToRemove));
   };
 
-  return [boundAction, value, add, remove, resetValue];
+  return [boundAction, value, add, remove, resetValue, setValue];
 };
 export const useOneFormArrayParam = (
   name,
@@ -249,7 +249,7 @@ export const useOneFormArrayParam = (
   const remove = (valueToRemove, valueArray = getValue()) => {
     setValue(removeFromArray(valueArray, valueToRemove));
   };
-  return [getValue, add, remove, resetValue];
+  return [getValue, add, remove, resetValue, setValue];
 };
 
 // used by <details> to just call their action

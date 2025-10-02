@@ -79,6 +79,18 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   );
 });
 
+export const collectCheckedValues = (checkboxList, name) => {
+  const values = [];
+  const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
+  const checkboxWithSameName = checkboxList.querySelectorAll(checkboxSelector);
+  for (const checkboxElement of checkboxWithSameName) {
+    if (checkboxElement.checked) {
+      values.push(checkboxElement.value);
+    }
+  }
+  return values;
+};
+
 export const CheckboxList = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
     Basic: CheckboxListBasic,
@@ -89,7 +101,6 @@ export const CheckboxList = forwardRef((props, ref) => {
 export const Checkbox = forwardRef((props, ref) => {
   const { name, value, checked, readOnly, disabled, required, loading } = props;
   const groupName = useContext(FieldGroupNameContext);
-  const groupValue = useContext(FieldGroupValueContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupRequired = useContext(FieldGroupRequiredContext);
@@ -100,7 +111,6 @@ export const Checkbox = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const innerName = name || groupName;
-  const innerChecked = checked || value === groupValue;
   const innerReadOnly = readOnly || groupReadOnly;
   const innerDisabled = disabled || groupDisabled;
   const innerRequired = required || groupRequired;
@@ -112,7 +122,7 @@ export const Checkbox = forwardRef((props, ref) => {
       ref={innerRef}
       name={innerName}
       value={value}
-      checked={innerChecked}
+      checked={checked}
       readOnly={innerReadOnly}
       disabled={innerDisabled}
       required={innerRequired}
@@ -145,7 +155,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState, resetNavState] = useNavState(id);
-  const [boundAction, valueArray, addValue, removeValue, resetValueArray] =
+  const [boundAction, valueArray, , , resetValueArray, setValueArray] =
     useActionBoundToOneArrayParam(
       action,
       name,
@@ -199,16 +209,12 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
       onChange={(event) => {
+        const checkboxList = innerRef.current;
+        const checkedValues = collectCheckedValues(checkboxList, name);
+        setValueArray(checkedValues);
+
         const checkbox = event.target;
-        const checkboxIsChecked = checkbox.checked;
-        const checkboxValue = checkbox.value;
-        if (checkboxIsChecked) {
-          addValue(checkboxValue, valueArray);
-        } else {
-          removeValue(checkboxValue, valueArray);
-        }
-        const checkboxListContainer = innerRef.current;
-        requestAction(checkboxListContainer, boundAction, {
+        requestAction(checkboxList, boundAction, {
           event,
           requester: checkbox,
         });
@@ -236,8 +242,12 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [valueArray, addValue, removeValue, resetValueArray] =
-    useOneFormArrayParam(name, externalValue, navState, []);
+  const [valueArray, , , resetValueArray, setValueArray] = useOneFormArrayParam(
+    name,
+    externalValue,
+    navState,
+    [],
+  );
   useEffect(() => {
     setNavState(valueArray);
   }, [valueArray]);
@@ -260,15 +270,10 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
       name={name}
       value={valueArray}
       readOnly={readOnly || formIsReadOnly}
-      onChange={(event) => {
-        const checkbox = event.target;
-        const checkboxIsChecked = checkbox.checked;
-        const checkboxValue = checkbox.value;
-        if (checkboxIsChecked) {
-          addValue(checkboxValue, valueArray);
-        } else {
-          removeValue(checkboxValue, valueArray);
-        }
+      onChange={() => {
+        const checkboxList = innerRef.current;
+        const checkedValues = collectCheckedValues(checkboxList, name);
+        setValueArray(checkedValues);
       }}
     >
       {/* Reset form context so that input checkbox within
