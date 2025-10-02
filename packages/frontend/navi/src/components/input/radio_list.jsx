@@ -137,6 +137,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
     value: externalValue,
     readOnly,
     loading,
+    required,
     action,
     valueSignal,
     onValueChange,
@@ -211,6 +212,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
       data-action={boundAction}
       loading={innerLoading}
       readOnly={readOnly || innerLoading}
+      required={required}
       onValueChange={(value, e) => {
         setValue(value);
         onValueChange?.(value, e);
@@ -235,9 +237,10 @@ const RadioListInsideForm = forwardRef((props, ref) => {
     formContext,
     id,
     name,
-    readOnly,
     value: externalValue,
     onValueChange,
+    readOnly,
+    required,
     children,
   } = props;
   const { formIsReadOnly } = formContext;
@@ -275,11 +278,12 @@ const RadioListInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       value={value}
-      readOnly={readOnly || formIsReadOnly}
       onValueChange={(checkedValueOrUndefined, e) => {
         setValue(checkedValueOrUndefined);
         onValueChange?.(checkedValueOrUndefined, e);
       }}
+      readOnly={readOnly || formIsReadOnly}
+      required={required}
     >
       {/* Reset form context so that input radio within
       do not try to do this. They are handled by the <RadioList /> */}
