@@ -277,7 +277,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
     <LoadableInlineElement
       loading={innerLoading}
       targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
-      inset={-2.5}
+      inset={-1}
       color="light-dark(#355fcc, #3b82f6)"
     >
       {inputRadioDisplayed}
