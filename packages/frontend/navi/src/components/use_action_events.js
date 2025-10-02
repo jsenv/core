@@ -55,9 +55,9 @@ export const useRequestedActionStatus = (elementRef) => {
       setActionPending(false);
       setActionAborted(true);
     },
-    onError: (e) => {
+    onError: (error) => {
       setActionPending(false);
-      setActionError(e);
+      setActionError(error);
     },
     onEnd: () => {
       setActionPending(false);

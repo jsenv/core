@@ -159,13 +159,13 @@ const ButtonWithAction = forwardRef((props, ref) => {
     action,
     loading,
     readOnly,
-    children,
     onClick,
     actionErrorEffect,
     onActionPrevented,
     onActionStart,
     onActionError,
     onActionEnd,
+    children,
     ...rest
   } = props;
 
@@ -188,7 +188,8 @@ const ButtonWithAction = forwardRef((props, ref) => {
 
   const handleClick = (event) => {
     event.preventDefault();
-    requestAction(event.target, boundAction, { event });
+    const button = innerRef.current;
+    requestAction(button, boundAction, { event });
   };
   const innerLoading = loading || actionLoading;
 
@@ -300,39 +301,26 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: (e) => {
-      e.target.form.dispatchEvent(
-        new CustomEvent("actionstart", { detail: e.detail }),
-      );
+      const form = innerRef.current.form;
+      form.dispatchEvent(new CustomEvent("actionstart", { detail: e.detail }));
       onActionStart?.(e);
     },
     onAbort: (e) => {
-      e.target.form.dispatchEvent(
-        new CustomEvent("actionabort", { detail: e.detail }),
-      );
+      const form = innerRef.current.form;
+      form.dispatchEvent(new CustomEvent("actionabort", { detail: e.detail }));
       onActionAbort?.(e);
     },
-    onError: (e) => {
-      e.target.form.dispatchEvent(
-        new CustomEvent("actionerror", { detail: e.detail }),
-      );
-      onActionError?.(e);
+    onError: (error) => {
+      const form = innerRef.current.form;
+      form.dispatchEvent(new CustomEvent("actionerror", { detail: { error } }));
+      onActionError?.(error);
     },
     onEnd: (e) => {
-      e.target.form.dispatchEvent(
-        new CustomEvent("actionend", { detail: e.detail }),
-      );
+      const form = innerRef.current.form;
+      form.dispatchEvent(new CustomEvent("actionend", { detail: e.detail }));
       onActionEnd?.(e);
     },
   });
-
-  const handleClick = (event) => {
-    event.preventDefault();
-    // lorsque cette action s'éxecute elle doit mettre le form en mode busy
-    // je vois pas encore comment je vais faire ca mais a priori
-    // on va juste le faire "manuellement"
-    // en utilisnt un truc du formContext
-    requestAction(event.target, actionBoundToFormParams, { event });
-  };
 
   return (
     <ButtonBasic
@@ -342,7 +330,10 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
       type={type}
       loading={innerLoading}
       onClick={(event) => {
-        handleClick(event);
+        const button = innerRef.current;
+        event.preventDefault();
+        requestAction(button, actionBoundToFormParams, { event });
+
         onClick?.(event);
       }}
     >

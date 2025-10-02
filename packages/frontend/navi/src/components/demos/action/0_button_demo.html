@@ -165,9 +165,7 @@
               min="5"
               name="count"
               value={count}
-              onInput={(e) => {
-                setCount(e.target.valueAsNumber);
-              }}
+              onValueChange={setCount}
             />
 
             <Form
