@@ -223,11 +223,12 @@ const InputRadioBasic = forwardRef((props, ref) => {
 
   const innerName = name || groupName;
   const innerOnValueChange = onValueChange || groupOnValueChange;
-  const innerReadOnly = readOnly || groupReadOnly || !innerOnValueChange;
   const innerDisabled = disabled || groupDisabled;
   const innerRequired = required || groupRequired;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
+  const innerReadOnly =
+    readOnly || groupReadOnly || !innerOnValueChange || innerLoading;
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }

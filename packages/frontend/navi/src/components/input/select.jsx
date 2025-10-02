@@ -217,16 +217,7 @@ const SelectWithAction = forwardRef((props, ref) => {
 });
 
 const SelectInsideForm = forwardRef((props, ref) => {
-  const {
-    formContext,
-    id,
-    name,
-    readOnly,
-    value: externalValue,
-    children,
-    ...rest
-  } = props;
-  const { formIsReadOnly } = formContext;
+  const { id, name, value: externalValue, children, ...rest } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -258,7 +249,6 @@ const SelectInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       value={value}
-      readOnly={readOnly || formIsReadOnly}
       onChange={(event) => {
         const select = event.target;
         const selectedValue = select.checked;

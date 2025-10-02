@@ -1,6 +1,12 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
@@ -11,8 +17,6 @@ import {
   useOneFormParam,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { useActionEvents } from "../use_action_events.js";
-import { useStableCallback } from "../use_stable_callback.js";
 import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
@@ -22,7 +26,9 @@ import {
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
   FieldGroupValueContext,
-} from "./field_group_context.js";
+} from "../field_group_context.js";
+import { useActionEvents } from "../use_action_events.js";
+import { useStableCallback } from "../use_stable_callback.js";
 import { InputRadio } from "./input_radio.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
@@ -183,16 +189,27 @@ const RadioListWithAction = forwardRef((props, ref) => {
 });
 const RadioListInsideForm = forwardRef((props, ref) => {
   const {
-    formContext,
     id,
     name,
     value: externalValue,
     onValueChange,
     readOnly,
+    disabled,
     required,
+    loading,
     children,
   } = props;
-  const { formIsReadOnly } = formContext;
+  // here we forward form context. For instance when form is readOnly it propagates to all checkboxes
+  const formLoading = useContext(FieldGroupLoadingContext);
+  const formReadonly = useContext(FieldGroupReadOnlyContext);
+  const formDisabled = useContext(FieldGroupDisabledContext);
+  const innerReadOnly = readOnly || formReadonly || !onValueChange;
+  const innerLoading = loading || formLoading;
+  const innerDisabled = disabled || formDisabled;
+  const innerOnValueChange = (value, e) => {
+    setValue(value);
+    onValueChange?.(value, e);
+  };
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -206,12 +223,6 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   useEffect(() => {
     setNavState(value);
   }, [value]);
-
-  const innerReadOnly = readOnly || formIsReadOnly || !onValueChange;
-  const innerOnValueChange = (value, e) => {
-    setValue(value);
-    onValueChange?.(value, e);
-  };
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
@@ -232,7 +243,9 @@ const RadioListInsideForm = forwardRef((props, ref) => {
       value={value}
       onValueChange={innerOnValueChange}
       readOnly={innerReadOnly}
+      disabled={innerDisabled}
       required={required}
+      loading={innerLoading}
     >
       {/* Reset form context so that input radio within
       do not try to do this. They are handled by the <RadioList /> */}
