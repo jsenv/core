@@ -213,11 +213,13 @@ const ButtonWithAction = forwardRef((props, ref) => {
 });
 
 const ButtonInsideForm = forwardRef((props, ref) => {
-  const { formContext, type, onClick, children, ...rest } = props;
+  const { formContext, type, onClick, children, loading, ...rest } = props;
   const { formAction } = formContext;
+  const { loading: formActionLoading } = useActionStatus(formAction);
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+  const innerLoading = loading || formActionLoading;
 
   const wouldSubmitFormByType = type === "submit" || type === "image";
 
@@ -253,6 +255,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       type={type}
+      loading={innerLoading}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
