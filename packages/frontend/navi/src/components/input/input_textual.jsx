@@ -39,6 +39,7 @@ import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import "./field_css.js";
 import { ReadOnlyContext } from "./label.jsx";
+import { useFormEvents } from "./use_form_events.js";
 
 export const InputTextual = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
@@ -329,10 +330,30 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   const [navState, setNavState] = useNavState(id);
   const { formAction, formIsBusy, formIsReadOnly, formActionRequester } =
     formContext;
-  const [value, setValue] = useOneFormParam(name, externalValue, navState, "");
+  const [value, setValue, initialValue] = useOneFormParam(
+    name,
+    externalValue,
+    navState,
+    "",
+  );
   useEffect(() => {
     setNavState(value);
   }, [value]);
+
+  useFormEvents(innerRef, {
+    onFormReset: (e) => {
+      setValue(undefined);
+      onValueChange?.(undefined, e);
+    },
+    onFormActionAbort: (e) => {
+      setValue(initialValue);
+      onValueChange?.(initialValue, e);
+    },
+    onFormActionError: (e) => {
+      setValue(initialValue);
+      onValueChange?.(initialValue, e);
+    },
+  });
 
   const innerReadOnly = readOnly || formIsReadOnly;
   const innerLoading =
