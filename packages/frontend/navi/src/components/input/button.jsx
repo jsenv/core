@@ -105,7 +105,7 @@ const ButtonBasic = forwardRef((props, ref) => {
 
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
-  const innerReadOnly = readOnly || groupReadonly;
+  const innerReadOnly = readOnly || groupReadonly || innerLoading;
 
   let {
     border,
@@ -162,7 +162,6 @@ const ButtonWithAction = forwardRef((props, ref) => {
   const {
     action,
     loading,
-    readOnly,
     onClick,
     actionErrorEffect,
     onActionPrevented,
@@ -203,7 +202,6 @@ const ButtonWithAction = forwardRef((props, ref) => {
       ref={innerRef}
       {...rest}
       loading={innerLoading}
-      readOnly={readOnly || innerLoading}
       onClick={(event) => {
         handleClick(event);
         onClick?.(event);
