@@ -188,12 +188,12 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     name,
     value: externalValue,
     onValueChange,
+    action,
+    valueSignal,
     onInput,
     readOnly,
     loading,
 
-    action,
-    valueSignal,
     onCancel,
     onActionPrevented,
     onActionStart,
@@ -239,6 +239,11 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     requestAction(e.target, boundAction, { event: e });
   });
 
+  const innerOnValueChange = (value, e) => {
+    setValue(value);
+    onValueChange?.(value, e);
+  };
+
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       if (reason.startsWith("blur_invalid")) {
@@ -265,8 +270,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          */
         valueAtInteractionRef.current = e.target.value;
       }
-      setValue(initialValue);
-      onValueChange?.(initialValue, e);
+      innerOnValueChange(initialValue, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -293,10 +297,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       data-action={boundAction}
       loading={innerLoading}
       readOnly={innerReadOnly}
-      onValueChange={(value, e) => {
-        setValue(value);
-        onValueChange?.(value, e);
-      }}
+      onValueChange={innerOnValueChange}
       onInput={(e) => {
         valueAtInteractionRef.current = null;
         onInput?.(e);
@@ -345,6 +346,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   };
   useFormEvents(innerRef, {
     onFormReset: (e) => {
+      console.log("reset", name, "to", undefined);
       innerOnValueChange(undefined, e);
     },
   });
