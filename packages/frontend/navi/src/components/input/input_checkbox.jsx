@@ -158,13 +158,6 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     onInput,
     ...rest
   } = props;
-  if (import.meta.dev) {
-    if (Object.hasOwn(props, "checked") && !onCheckedChange) {
-      console.warn(
-        `<input type="checkbox" /> is controlled by "checked" prop. Use "onCheckedChange" or "defaultChecked" prop too to make it interactive.`,
-      );
-    }
-  }
   const groupName = useContext(FieldGroupNameContext);
   const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
@@ -190,6 +183,14 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   }
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
+
+  if (import.meta.dev) {
+    if (Object.hasOwn(props, "checked") && !innerOnCheckedChange) {
+      console.warn(
+        `<input type="checkbox" /> is controlled by "checked" prop. Use "onCheckedChange" or "defaultChecked" prop too to make it interactive.`,
+      );
+    }
+  }
 
   const inputCheckbox = (
     <input
