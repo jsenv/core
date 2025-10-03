@@ -1,4 +1,4 @@
-import { signal, useSignal } from "@preact/signals";
+import { useSignal } from "@preact/signals";
 import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { createAction } from "../../actions.js";
@@ -7,23 +7,6 @@ import { useInitialValue } from "../use_initial_value.js";
 import { FormContext } from "./form_context.js";
 
 let debug = false;
-let componentActionIdCounter = 0;
-const useComponentActionCacheKey = () => {
-  const componentActionCacheKeyRef = useRef(null);
-  // It's very important to use an object here as componentId and not just in integer
-  // because this key will be used as a key in a WeakMap
-  // and if we pass an integer the browser allows itself to garbage collect it
-  // but not if it's an object as the useRef above keeps referencing it
-  // this is a subtle different and might be the reason why WeakMap does not accept primitive as keys
-  if (!componentActionCacheKeyRef.current) {
-    const id = ++componentActionIdCounter;
-    componentActionCacheKeyRef.current = {
-      id,
-      toString: () => `component_action_id_${id}`,
-    };
-  }
-  return componentActionCacheKeyRef.current;
-};
 
 // used by <form> to have their own action bound to many parameters
 // any form element within the <form> will update these params
@@ -31,13 +14,15 @@ const useComponentActionCacheKey = () => {
 // (could also be used by <fieldset> but I think fieldset are not going to be used this way and
 // we will reserve this behavior to <form>)
 export const useFormActionBoundToFormParams = (action) => {
-  const actionCacheKey = useComponentActionCacheKey();
-  const cacheKey = typeof action === "function" ? actionCacheKey : action;
-  const [formParamsSignal, updateFormParams] = useActionParamsSignal(cacheKey);
+  const formParamsSignal = useSignal({});
   const formActionBoundActionToFormParams = useBoundAction(
     action,
     formParamsSignal,
   );
+  const updateFormParams = useCallback((value) => {
+    formParamsSignal.value = value;
+  }, []);
+
   return [
     formActionBoundActionToFormParams,
     formParamsSignal,
@@ -50,13 +35,11 @@ export const useOneFormParam = (
   fallbackValue,
   defaultValue,
 ) => {
-  const { formParamsSignal } = useContext(FormContext);
-  const previousFormParamsSignalRef = useRef(null);
-  const formActionChanged =
-    previousFormParamsSignalRef.current !== null &&
-    previousFormParamsSignalRef.current !== formParamsSignal;
-  previousFormParamsSignalRef.current = formParamsSignal;
+  if (!name) {
+    throw new Error("useOneFormParam: name is required");
+  }
 
+  const { formParamsSignal } = useContext(FormContext);
   const getValue = useCallback(
     () => formParamsSignal.value[name],
     [formParamsSignal],
@@ -73,6 +56,11 @@ export const useOneFormParam = (
     defaultValue,
     setValue,
   );
+  const previousFormParamsSignalRef = useRef(null);
+  const formActionChanged =
+    previousFormParamsSignalRef.current !== null &&
+    previousFormParamsSignalRef.current !== formParamsSignal;
+  previousFormParamsSignalRef.current = formParamsSignal;
   if (formActionChanged) {
     if (debug) {
       console.debug(
@@ -167,35 +155,6 @@ export const useOneFormArrayParam = (
 // used by <details> to just call their action
 export const useAction = (action, paramsSignal) => {
   return useBoundAction(action, paramsSignal);
-};
-
-const sharedSignalCache = new WeakMap();
-const useActionParamsSignal = (cacheKey, valueSignal) => {
-  if (valueSignal) {
-    return [
-      valueSignal,
-      (value) => {
-        valueSignal.value = value;
-      },
-    ];
-  }
-
-  // ✅ cacheKey peut être componentId (Symbol) ou action (objet)
-  const fromCache = sharedSignalCache.get(cacheKey);
-  if (fromCache) {
-    return fromCache;
-  }
-
-  const paramsSignal = signal({});
-  const result = [
-    paramsSignal,
-    (value) => updateParamsSignal(paramsSignal, value, cacheKey),
-  ];
-  sharedSignalCache.set(cacheKey, result);
-  if (debug) {
-    console.debug(`Created params signal for ${cacheKey} with params:`, {});
-  }
-  return result;
 };
 
 export const updateParamsSignal = (paramsSignal, object, cacheKey) => {

@@ -111,7 +111,6 @@
         // eslint-disable-next-line no-unused-vars
         Button,
         createAction,
-        useSignalSync,
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -124,7 +123,6 @@
               <BasicInputDemo />
               <InputWithInitialValueDemo />
               <InputWithExternalControlDemo />
-              <InputWithSignalDemo />
               <FormInputDemo />
               <FormWithExternalControlDemo />
               <SharedActionDemo />
@@ -135,7 +133,6 @@
 
       // eslint-disable-next-line no-unused-vars
       const BasicInputDemo = () => {
-        const [value, setValue] = useState();
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
 
@@ -148,9 +145,7 @@
                 id="basic-input"
                 name="text"
                 placeholder="Type something..."
-                value={value}
-                onValueChange={setValue}
-                action={async ({ text }) => {
+                action={async (text) => {
                   setIsLoading(true);
                   setResult("Processing...");
                   try {
@@ -191,7 +186,7 @@
                 name="text"
                 value={value}
                 onValueChange={setValue}
-                action={async ({ text }) => {
+                action={async (text) => {
                   setResult("Processing...");
                   await delay(800);
                   const response = `✅ Submitted: "${text}"`;
@@ -227,7 +222,7 @@
                 value={value}
                 onValueChange={setValue}
                 placeholder="Use buttons below to set value"
-                action={async ({ text }) => {
+                action={async (text) => {
                   setResult("Processing...");
                   await delay(600);
                   const response = `✅ Action executed with: "${text}"`;
@@ -264,66 +259,6 @@
             >
               Current value: "{value}"<br />
               {result || "Click buttons to change value, then submit..."}
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const InputWithSignalDemo = () => {
-        const [signalValue, setSignalValue] = useState(
-          "Signal controlled value",
-        );
-        const valueSignal = useSignalSync(signalValue);
-        const [result, setResult] = useState("");
-
-        const inputWithSignalAction = async (text) => {
-          setResult("Processing...");
-          await delay(800);
-          const response = `✅ Signal value submitted: "${text}"`;
-          setResult(response);
-          return response;
-        };
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Input with valueSignal</h3>
-            <div className="control-group">
-              <label htmlFor="signal-input">Signal-controlled input:</label>
-              <Input
-                id="signal-input"
-                name="text"
-                valueSignal={valueSignal}
-                placeholder="Signal-controlled input..."
-                action={inputWithSignalAction}
-              />
-            </div>
-            <div className="button-group">
-              <button onClick={() => setSignalValue("Updated via setState")}>
-                Update via setState
-              </button>
-              <button
-                onClick={() =>
-                  setSignalValue(`Signal @ ${new Date().toLocaleTimeString()}`)
-                }
-              >
-                Set timestamp
-              </button>
-              <button
-                onClick={() => {
-                  valueSignal.value = "Direct signal update";
-                }}
-              >
-                Update signal directly
-              </button>
-              <button onClick={() => setSignalValue("")}>Clear</button>
-            </div>
-            <div
-              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
-            >
-              Current signal value: "{valueSignal.value}"
-              <br />
-              {result || "Type or use buttons to change value..."}
             </div>
           </div>
         );
