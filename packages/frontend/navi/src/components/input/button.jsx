@@ -96,17 +96,14 @@ const ButtonBasic = forwardRef((props, ref) => {
   const groupLoading = useContext(FieldGroupLoadingContext);
   const groupActionRequester = useContext(FieldGroupActionRequesterContext);
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
-
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly = readOnly || groupReadonly || innerLoading;
-
   let {
     border,
     borderWidth = border === "none" || discrete ? 0 : 1,
@@ -216,12 +213,11 @@ const ButtonInsideForm = forwardRef((props, ref) => {
   const { formContext, type, onClick, children, loading, ...rest } = props;
   const { formAction } = formContext;
   const { loading: formActionLoading } = useActionStatus(formAction);
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+
   const wouldSubmitFormByType = type === "submit" || type === "image";
   const innerLoading = loading || (formActionLoading && wouldSubmitFormByType);
-
   const handleClick = (event) => {
     const buttonElement = innerRef.current;
     const { form } = buttonElement;
@@ -288,14 +284,12 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     );
   }
   const { formParamsSignal } = formContext;
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-
   const actionBoundToFormParams = useAction(action, formParamsSignal);
   const { loading: actionLoading } = useActionStatus(actionBoundToFormParams);
-  const innerLoading = loading || actionLoading;
 
+  const innerLoading = loading || actionLoading;
   useFormEvents(innerRef, {
     onFormActionPrevented: (e) => {
       if (e.detail.action === actionBoundToFormParams) {
