@@ -3,7 +3,7 @@ import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
-import { isSignal } from "../../utils/stringify_for_display.js";
+import { isSignal } from "../../utils/is_signal.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { FormContext } from "./form_context.js";
 

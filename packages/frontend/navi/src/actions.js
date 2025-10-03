@@ -1,5 +1,6 @@
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { batch, computed, effect, signal } from "@preact/signals";
+
 import {
   getActionPrivateProperties,
   setActionPrivateProperties,
@@ -12,13 +13,11 @@ import {
   RUNNING,
 } from "./action_run_states.js";
 import { SYMBOL_OBJECT_SIGNAL } from "./symbol_object_signal.js";
+import { isSignal } from "./utils/is_signal.js";
 import { createIterableWeakSet } from "./utils/iterable_weak_set.js";
 import { createJsValueWeakMap } from "./utils/js_value_weak_map.js";
 import { mergeTwoJsValues } from "./utils/merge_two_js_values.js";
-import {
-  isSignal,
-  stringifyForDisplay,
-} from "./utils/stringify_for_display.js";
+import { stringifyForDisplay } from "./utils/stringify_for_display.js";
 import { weakEffect } from "./utils/weak_effect.js";
 
 const ACTION_AS_FUNCTION = true;

@@ -1,3 +1,7 @@
+import { getSignalType } from "./is_signal.js";
+
+const MAX_ENTRIES = 5;
+
 export const stringifyForDisplay = (
   value,
   maxDepth = 2,
@@ -125,26 +129,3 @@ export const stringifyForDisplay = (
 
   return String(value);
 };
-
-export const isSignal = (value) => {
-  return getSignalType(value) !== null;
-};
-
-const BRAND_SYMBOL = Symbol.for("preact-signals");
-export const getSignalType = (value) => {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  if (value.brand !== BRAND_SYMBOL) {
-    return null;
-  }
-
-  if (typeof value._fn === "function") {
-    return "computed";
-  }
-
-  return "signal";
-};
-
-const MAX_ENTRIES = 5;
