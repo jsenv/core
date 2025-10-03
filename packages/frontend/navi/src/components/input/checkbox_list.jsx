@@ -36,6 +36,15 @@ import.meta.css = /* css */ `
   }
 `;
 
+export const CheckboxList = forwardRef((props, ref) => {
+  return renderActionableComponent(props, ref, {
+    Basic: CheckboxListBasic,
+    WithAction: CheckboxListWithAction,
+    InsideForm: CheckboxListInsideForm,
+  });
+});
+export const Checkbox = InputCheckbox;
+
 const CheckboxListBasic = forwardRef((props, ref) => {
   const {
     name,
@@ -105,15 +114,6 @@ const collectCheckedValues = (checkboxList, name) => {
   }
   return checkedValues.length === 0 ? undefined : checkedValues;
 };
-
-export const CheckboxList = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
-    Basic: CheckboxListBasic,
-    WithAction: CheckboxListWithAction,
-    InsideForm: CheckboxListInsideForm,
-  });
-});
-export const Checkbox = InputCheckbox;
 
 const CheckboxListWithAction = forwardRef((props, ref) => {
   const {
@@ -199,7 +199,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     </CheckboxListBasic>
   );
 });
-
 const CheckboxListInsideForm = forwardRef((props, ref) => {
   const { id, name, value, onValueChange, children, ...rest } = props;
   const innerRef = useRef();

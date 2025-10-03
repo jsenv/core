@@ -211,10 +211,10 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
         onClick?.(e);
       }}
       onInput={(e) => {
-        if (onCheckedChange) {
+        if (innerOnCheckedChange) {
           const checkbox = e.target;
           const checkboxIsChecked = checkbox.checked;
-          onCheckedChange(checkboxIsChecked, e);
+          innerOnCheckedChange(checkboxIsChecked, e);
         }
         onInput?.(e);
       }}
