@@ -154,6 +154,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     onInput,
     ...rest
   } = props;
+  const valueIsSignal = isSignal(value);
   const groupName = useContext(FieldGroupNameContext);
   const groupOnValueChange = useContext(FieldGroupOnValueChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
@@ -165,6 +166,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
+  const innerValue = valueIsSignal ? value.value : value;
   const innerName = name || groupName;
   const innerOnValueChange = onValueChange || groupOnValueChange;
   const innerDisabled = disabled || groupDisabled;
@@ -186,7 +188,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       ref={innerRef}
       name={innerName}
       type="checkbox"
-      value={value}
+      value={innerValue}
       data-readonly={innerReadOnly ? "" : undefined}
       disabled={innerDisabled}
       required={innerRequired}

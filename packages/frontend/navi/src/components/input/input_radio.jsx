@@ -210,6 +210,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
     appeareance = "custom", // "custom" or "default"
     ...rest
   } = props;
+  const valueIsSignal = isSignal(value);
   const groupName = useContext(FieldGroupNameContext);
   const groupOnValueChange = useContext(FieldGroupOnValueChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
@@ -220,9 +221,8 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const setInputReadOnly = useContext(ReadOnlyContext);
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const valueIsSignal = isSignal(value);
-  const uiValue = valueIsSignal ? value.value : value;
 
+  const innerValue = valueIsSignal ? value.value : value;
   const innerName = name || groupName;
   const innerOnValueChange = onValueChange || groupOnValueChange;
   const innerDisabled = disabled || groupDisabled;
@@ -246,7 +246,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
       ref={innerRef}
       type="radio"
       name={innerName}
-      value={uiValue}
+      value={innerValue}
       data-readonly={innerReadOnly && !disabled ? "" : undefined}
       disabled={innerDisabled}
       required={innerRequired}
