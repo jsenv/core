@@ -39,7 +39,7 @@ import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
-  FieldGroupOnValueChangeContext,
+  FieldGroupOnFieldChangeContext,
   FieldGroupReadOnlyContext,
 } from "../field_group_context.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
@@ -78,24 +78,12 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const valueIsSignal = isSignal(value);
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-
-  const groupOnValueChange = useContext(FieldGroupOnValueChangeContext);
+  const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupActionRequester = useContext(FieldGroupActionRequesterContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
   const setInputReadOnly = useContext(ReadOnlyContext);
-
-  // infom any <label> parent of our readOnly state
-  if (setInputReadOnly) {
-    setInputReadOnly(readOnly);
-  }
-
-  useAutoFocus(innerRef, autoFocus, {
-    autoFocusVisible,
-    autoSelect,
-  });
-  useConstraints(innerRef, constraints);
 
   let innerValue = value;
   if (valueIsSignal) {
@@ -104,7 +92,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
   if (type === "datetime-local") {
     innerValue = convertToLocalTimezone(innerValue);
   }
-  const innerOnValueChange = onValueChange || groupOnValueChange;
+  const innerOnValueChange = onValueChange || groupOnFieldChange;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
@@ -113,6 +101,15 @@ const InputTextualBasic = forwardRef((props, ref) => {
     innerLoading ||
     (!innerOnValueChange && !valueIsSignal);
   const innerDisabled = disabled || groupDisabled;
+  // infom any <label> parent of our readOnly state
+  if (setInputReadOnly) {
+    setInputReadOnly(readOnly);
+  }
+  useAutoFocus(innerRef, autoFocus, {
+    autoFocusVisible,
+    autoSelect,
+  });
+  useConstraints(innerRef, constraints);
 
   const inputTextual = (
     <input

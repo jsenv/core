@@ -2,14 +2,13 @@ import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 
-import { isSignal } from "../../utils/is_signal.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnValueChangeContext,
+  FieldGroupOnFieldChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "../field_group_context.js";
@@ -195,8 +194,8 @@ export const InputRadio = forwardRef((props, ref) => {
 const InputRadioBasic = forwardRef((props, ref) => {
   const {
     name,
+    onCheckedChange,
     value,
-    onValueChange,
 
     readOnly,
     disabled,
@@ -206,13 +205,20 @@ const InputRadioBasic = forwardRef((props, ref) => {
     autoFocus,
     constraints = [],
 
-    onClick,
     appeareance = "custom", // "custom" or "default"
+    onClick,
+    onInput,
     ...rest
   } = props;
-  const valueIsSignal = isSignal(value);
+  if (import.meta.dev) {
+    if (Object.hasOwn(props, "checked") && !onCheckedChange) {
+      console.warn(
+        `<input type="radio" /> is controlled by "checked" prop. Use "onCheckedChange" prop too to make it interactive.`,
+      );
+    }
+  }
   const groupName = useContext(FieldGroupNameContext);
-  const groupOnValueChange = useContext(FieldGroupOnValueChangeContext);
+  const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupRequired = useContext(FieldGroupRequiredContext);
@@ -222,18 +228,15 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
-  const innerValue = valueIsSignal ? value.value : value;
+  const innerValue = value;
   const innerName = name || groupName;
-  const innerOnValueChange = onValueChange || groupOnValueChange;
+  const innerOnCheckedChange = onCheckedChange || groupOnFieldChange;
   const innerDisabled = disabled || groupDisabled;
   const innerRequired = required || groupRequired;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly ||
-    groupReadOnly ||
-    innerLoading ||
-    (!innerOnValueChange && !valueIsSignal);
+    readOnly || groupReadOnly || innerLoading || !innerOnCheckedChange;
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
@@ -258,11 +261,12 @@ const InputRadioBasic = forwardRef((props, ref) => {
         onClick?.(e);
       }}
       onInput={(e) => {
-        if (innerOnValueChange) {
+        if (innerOnCheckedChange) {
           const radio = innerRef.current;
-          const uiValue = radio.checked ? radio.value : undefined;
-          innerOnValueChange(uiValue, e);
+          const radioIsChecked = radio.checked;
+          innerOnCheckedChange(radioIsChecked, e);
         }
+        onInput?.(e);
       }}
     />
   );

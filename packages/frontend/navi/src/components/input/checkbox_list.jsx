@@ -21,7 +21,7 @@ import {
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnValueChangeContext,
+  FieldGroupOnFieldChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "../field_group_context.js";
@@ -50,7 +50,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const groupOnValueChange = useContext(FieldGroupOnValueChangeContext);
+  const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
@@ -60,12 +60,12 @@ const CheckboxListBasic = forwardRef((props, ref) => {
 
   const valueIsSignal = isSignal(value);
   const innerOnValueChange =
-    onValueChange || groupOnValueChange
+    onValueChange || groupOnFieldChange
       ? (_, e) => {
           const checkboxList = innerRef.current;
           const checkedValues = collectCheckedValues(checkboxList, name);
           onValueChange?.(checkedValues, e);
-          groupOnValueChange?.(checkedValues, e);
+          groupOnFieldChange?.(checkedValues, e);
         }
       : undefined;
   const innerLoading = loading || groupLoading;
@@ -87,7 +87,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
       {...rest}
     >
       <FieldGroupNameContext.Provider value={name}>
-        <FieldGroupOnValueChangeContext.Provider
+        <FieldGroupOnFieldChangeContext.Provider
           value={useStableCallback(innerOnValueChange)}
         >
           <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
@@ -99,7 +99,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
               </FieldGroupRequiredContext.Provider>
             </FieldGroupDisabledContext.Provider>
           </FieldGroupReadOnlyContext.Provider>
-        </FieldGroupOnValueChangeContext.Provider>
+        </FieldGroupOnFieldChangeContext.Provider>
       </FieldGroupNameContext.Provider>
     </div>
   );
