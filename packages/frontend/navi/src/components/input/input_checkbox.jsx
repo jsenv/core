@@ -380,16 +380,31 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   );
 });
 
+/**
+ * Things happening here
+ *
+ * Main goal is to keep track of the "activeValue" that will be given to the action or form.
+ *
+ * The active value is either the value of the checkbox (default "on") when checked,
+ * or undefined when not checked.
+ *
+ * We need to
+ *
+ * - Know if the checkbox is checked right now (checked prop + eventually defaultChecked + user interaction )
+ * - When checked is a signal we pass activeValueSignal to the action instead of the value
+ * - Ensure checkbox checked state is updated when checkedSignal is updated
+ *
+ */
 const useCheckedController = (checkboxRef, props, useActiveState) => {
   const { id, checked, value = "on" } = props;
 
   const innerChecked = useChecked(checkboxRef, props);
   const checkedIsSignal = isSignal(checked);
-  const valueForAction = innerChecked ? value : undefined;
-  const valueSignal = useSignal(valueForAction);
+  const activeValueNow = innerChecked ? value : undefined;
+  const activeValueSignal = useSignal(activeValueNow);
   const [navState, setNavState] = useNavState(id);
   const [activeValue, setActiveValue, initialValue] = useActiveState(
-    checkedIsSignal ? valueSignal : valueForAction,
+    checkedIsSignal ? activeValueSignal : activeValueNow,
     navState ? value : undefined,
   );
   const initialChecked = Boolean(initialValue);
@@ -398,7 +413,7 @@ const useCheckedController = (checkboxRef, props, useActiveState) => {
     const valueToSet = uiChecked ? value : undefined;
     if (checkedIsSignal) {
       checked.value = uiChecked;
-      valueSignal.value = valueToSet;
+      activeValueSignal.value = valueToSet;
     }
     if (initialChecked) {
       setNavState(uiChecked ? undefined : false);
