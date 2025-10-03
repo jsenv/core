@@ -64,7 +64,7 @@ const FormWithAction = forwardRef((props, ref) => {
   // - receive "requestsubmit" custom event ensure submit is prevented
   // (and also execute action without validation if form.submit() is ever called)
   useConstraints(innerRef, []);
-  const [boundAction, formParamsSignal, setFormParams] =
+  const [formActionBoundToFormParams, formParamsSignal, setFormParams] =
     useFormActionBoundToFormParams(action);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
@@ -95,7 +95,7 @@ const FormWithAction = forwardRef((props, ref) => {
   return (
     <form
       {...rest}
-      data-action={boundAction.name}
+      data-action={formActionBoundToFormParams.name}
       data-method={action.meta?.httpVerb || method || "GET"}
       ref={innerRef}
       // eslint-disable-next-line react/no-unknown-property
@@ -103,7 +103,7 @@ const FormWithAction = forwardRef((props, ref) => {
         // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
         // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
         e.preventDefault();
-        requestAction(e.target, boundAction, { event: e });
+        requestAction(e.target, formActionBoundToFormParams, { event: e });
       }}
     >
       <FieldGroupReadOnlyContext.Provider value={formIsReadOnly}>
@@ -114,7 +114,7 @@ const FormWithAction = forwardRef((props, ref) => {
             <FormContext.Provider
               value={{
                 formAllowConcurrentActions,
-                formAction: boundAction,
+                formAction: formActionBoundToFormParams,
                 formParamsSignal,
                 formActionAborted,
                 formActionError,
