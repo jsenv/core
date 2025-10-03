@@ -94,11 +94,11 @@ export const useActionBoundToOneParam = (
   fallbackValue,
   defaultValue,
 ) => {
-  const valueSignal = useSignal();
-  const boundAction = useBoundAction(action, valueSignal);
-  const getValue = useCallback(() => valueSignal.value, []);
+  const actionFirstArgSignal = useSignal();
+  const boundAction = useBoundAction(action, actionFirstArgSignal);
+  const getValue = useCallback(() => actionFirstArgSignal.value, []);
   const setValue = useCallback((value) => {
-    valueSignal.value = value;
+    actionFirstArgSignal.value = value;
   }, []);
   const initialValue = useInitialValue(
     name,

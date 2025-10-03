@@ -665,7 +665,8 @@ export const createAction = (callback, rootOptions = {}) => {
       if (isSignal(newParamsOrSignal)) {
         const combinedParamsSignal = computed(() => {
           const newParams = newParamsOrSignal.value;
-          return mergeTwoJsValues(params, newParams);
+          const result = mergeTwoJsValues(params, newParams);
+          return result;
         });
         return createActionProxyFromSignal(
           action,
