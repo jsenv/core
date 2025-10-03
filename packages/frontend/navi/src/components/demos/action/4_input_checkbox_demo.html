@@ -144,7 +144,7 @@
               <BasicCheckboxDemo />
               <CheckboxDefaultCheckedDemo />
               <CheckboxWithExternalControlDemo />
-              <CheckboxWithSignalControlDemo />
+              <CheckboxControlledAndActionObjectDemo />
               <CheckboxErrorDemo />
               <FormCheckboxDemo />
               <SharedActionDemo />
@@ -167,7 +167,7 @@
                   id="basic-checkbox"
                   type="checkbox"
                   name="enabled"
-                  action={async ({ enabled }) => {
+                  action={async (enabled) => {
                     setStatus("loading");
                     setResult("Processing...");
                     try {
@@ -212,7 +212,7 @@
                   type="checkbox"
                   name="agreed"
                   defaultChecked
-                  action={async ({ agreed }) => {
+                  action={async (agreed) => {
                     setResult("Processing...");
                     await delay(800);
                     const response = `${agreed ? "✅" : "☐"} Agreement: ${agreed ? "accepted" : "declined"}`;
@@ -261,7 +261,7 @@
                     name="notifications"
                     checked={isChecked}
                     onCheckedChange={setIsChecked}
-                    action={async ({ notifications }) => {
+                    action={async (notifications) => {
                       setResult("Processing...");
                       await delay(600);
                       const response = `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
@@ -319,20 +319,18 @@
         );
       };
 
-      // Create an action that's bound to the signal
       const toggleAction = createAction(async ({ notifications }) => {
         await delay(600);
         return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
       });
-
       // eslint-disable-next-line no-unused-vars
-      const CheckboxWithSignalControlDemo = () => {
+      const CheckboxControlledAndActionObjectDemo = () => {
         const [result, setResult] = useState("");
         const [checked, setChecked] = useState(undefined);
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Checkbox with Signal Control</h3>
+            <h3 className="demo-title">Checkbox controlled + action object</h3>
             <div className="control-group">
               <div className="checkbox-group">
                 <Input
@@ -408,7 +406,7 @@
                   id="error-checkbox"
                   type="checkbox"
                   name="dangerous"
-                  action={async ({ dangerous }) => {
+                  action={async (dangerous) => {
                     setStatus("loading");
                     setResult("Processing...");
                     try {
@@ -567,7 +565,6 @@
           </div>
         );
       };
-
       const sharedToggleAction = createAction(async (params) => {
         await delay(800);
         const featureName = Object.keys(params).find((key) =>

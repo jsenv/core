@@ -28,7 +28,6 @@ import {
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { useSignalSync } from "../use_signal_sync.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
@@ -396,24 +395,18 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
  *
  */
 const useCheckedController = (checkboxRef, props, useActiveState) => {
-  const { id, checked, value = "on" } = props;
+  const { id, value = "on" } = props;
 
   const innerChecked = useChecked(checkboxRef, props);
-  const checkedIsSignal = isSignal(checked);
   const activeValueNow = innerChecked ? value : undefined;
-  const activeValueSignal = useSignalSync(activeValueNow);
   const [navState, setNavState] = useNavState(id);
   const [activeValue, setActiveValue, initialActiveValue] = useActiveState(
-    checkedIsSignal ? activeValueSignal : activeValueNow,
+    activeValueNow,
     navState ? value : undefined,
   );
   const initialChecked = Boolean(initialActiveValue);
   const setChecked = (uiChecked) => {
     const valueToSet = uiChecked ? value : undefined;
-    if (checkedIsSignal) {
-      checked.value = uiChecked;
-      activeValueSignal.value = valueToSet;
-    }
     if (initialChecked) {
       setNavState(uiChecked ? undefined : false);
     } else {
@@ -430,11 +423,7 @@ const useChecked = (checkboxRef, props) => {
   const { checked, defaultChecked } = props;
   let innerChecked;
   if (Object.hasOwn(props, "checked")) {
-    if (isSignal(checked)) {
-      innerChecked = checked.value;
-    } else {
-      innerChecked = checked;
-    }
+    innerChecked = checked;
   } else {
     innerChecked = interactedRef.current ? false : defaultChecked;
   }
