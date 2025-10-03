@@ -1,14 +1,10 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-} from "preact/hooks";
+import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
+import { isSignal } from "../../utils/is_signal.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneParam,
@@ -153,8 +149,9 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
 
     autoFocus,
     constraints = [],
-    onClick,
     appeareance = "custom", // "custom" or "default"
+    onClick,
+    onInput,
     ...rest
   } = props;
   const groupName = useContext(FieldGroupNameContext);
@@ -175,7 +172,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || !innerOnValueChange || innerLoading;
+    readOnly || groupReadOnly || innerLoading || !innerOnValueChange;
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
@@ -185,11 +182,12 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
 
   const inputCheckbox = (
     <input
+      {...rest}
       ref={innerRef}
       name={innerName}
       type="checkbox"
       value={value}
-      data-readonly={innerReadOnly && !disabled ? "" : undefined}
+      data-readonly={innerReadOnly ? "" : undefined}
       disabled={innerDisabled}
       required={innerRequired}
       data-validation-message-arrow-x="center"
@@ -199,19 +197,15 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
         }
         onClick?.(e);
       }}
-      onInput={
-        innerOnValueChange
-          ? (e) => {
-              const checkbox = e.target;
-              const checkboxIsChecked = checkbox.checked;
-              const cehckboxValueOrUndefined = checkboxIsChecked
-                ? value
-                : undefined;
-              innerOnValueChange(cehckboxValueOrUndefined, e);
-            }
-          : undefined
-      }
-      {...rest}
+      onInput={(e) => {
+        if (innerOnValueChange) {
+          const checkbox = e.target;
+          const checkboxIsChecked = checkbox.checked;
+          const uiValue = checkboxIsChecked ? value : undefined;
+          innerOnValueChange(uiValue, e);
+        }
+        onInput?.(e);
+      }}
     />
   );
 
@@ -257,12 +251,9 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     name,
     value = "on",
     checked,
-    valueSignal,
     onValueChange,
 
     action,
-    readOnly,
-    loading,
     onCancel,
     onChange,
     actionErrorEffect,
@@ -273,7 +264,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
-  if (import.meta.dev && !name && !valueSignal) {
+  if (import.meta.dev && !name && !isSignal(value)) {
     console.warn(`InputCheckboxWithAction requires a name prop to be set.`);
   }
 
@@ -285,27 +276,23 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     useActionBoundToOneParam(
       action,
       name,
-      valueSignal ? valueSignal : checked ? value : undefined,
+      isSignal(value) ? value : checked ? value : undefined,
       navState ? value : undefined,
     );
-  useEffect(() => {
+  const { loading: actionLoading } = useActionStatus(boundAction);
+  const executeAction = useExecuteAction(innerRef, {
+    errorEffect: actionErrorEffect,
+  });
+
+  const innerOnValueChange = (uiValue, e) => {
     if (checked) {
       setNavState(checked ? false : undefined);
     } else {
       setNavState(checked ? true : undefined);
     }
-  }, [checked]);
-  const { loading: actionLoading } = useActionStatus(boundAction);
-  const executeAction = useExecuteAction(innerRef, {
-    errorEffect: actionErrorEffect,
-  });
-  const innerLoading = loading || actionLoading;
-  const innerReadOnly = readOnly || (!onValueChange && !valueSignal);
-  const innerOnValueChange = (value, e) => {
-    setActionValue(value);
-    onValueChange?.(value, e);
+    setActionValue(uiValue);
+    onValueChange?.(uiValue, e);
   };
-
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       if (reason === "blur_invalid") {
@@ -333,58 +320,45 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   });
 
   return (
-    <InputCheckboxBasic
-      {...rest}
-      ref={innerRef}
-      id={id}
-      name={name}
-      value={value}
-      onValueChange={innerOnValueChange}
-      checked={checked}
-      data-action={boundAction}
-      loading={innerLoading}
-      readOnly={innerReadOnly}
-      onChange={(e) => {
-        requestAction(e.target, boundAction, { event: e });
-        onChange?.(e);
-      }}
-    />
+    <FieldGroupLoadingContext.Provider value={actionLoading}>
+      <InputCheckboxBasic
+        {...rest}
+        ref={innerRef}
+        id={id}
+        name={name}
+        value={value}
+        onValueChange={innerOnValueChange}
+        checked={checked}
+        data-action={boundAction}
+        onChange={(e) => {
+          requestAction(e.target, boundAction, { event: e });
+          onChange?.(e);
+        }}
+      />
+    </FieldGroupLoadingContext.Provider>
   );
 });
 
 const InputCheckboxInsideForm = forwardRef((props, ref) => {
-  const {
-    id,
-    name,
-    value = "on",
-    onValueChange,
-    checked,
-    readOnly,
-    ...rest
-  } = props;
-
+  const { id, name, value = "on", onValueChange, checked, ...rest } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-
   const [navState, setNavState] = useNavState(id);
   const [, setFormValue, initialValue] = useOneFormParam(
     name,
     checked ? value : undefined,
     navState ? value : undefined,
   );
-  useEffect(() => {
+
+  const innerOnValueChange = (uiValue, e) => {
     if (checked) {
       setNavState(checked ? false : undefined);
     } else {
       setNavState(checked ? true : undefined);
     }
-  }, [checked]);
-
-  const innerOnValueChange = (value, e) => {
-    setFormValue(initialValue);
-    onValueChange?.(value, e);
+    setFormValue(uiValue);
+    onValueChange?.(uiValue, e);
   };
-  const innerReadOnly = readOnly || !onValueChange;
 
   useFormEvents(innerRef, {
     onFormActionAbort: (e) => {
@@ -403,7 +377,6 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
       name={name}
       onValueChange={innerOnValueChange}
       checked={checked}
-      readOnly={innerReadOnly}
     />
   );
 });

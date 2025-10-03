@@ -28,6 +28,7 @@ import {
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
+import { isSignal } from "../../utils/is_signal.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneParam,
@@ -36,7 +37,10 @@ import {
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import {
   FieldGroupActionRequesterContext,
+  FieldGroupDisabledContext,
   FieldGroupLoadingContext,
+  FieldGroupOnValueChangeContext,
+  FieldGroupReadOnlyContext,
 } from "../field_group_context.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
@@ -61,8 +65,9 @@ const InputTextualBasic = forwardRef((props, ref) => {
     onInput,
 
     readOnly,
-    loading,
+    disabled,
     constraints = [],
+    loading,
 
     autoFocus,
     autoFocusVisible,
@@ -70,12 +75,16 @@ const InputTextualBasic = forwardRef((props, ref) => {
     appearance = "custom",
     ...rest
   } = props;
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
-
-  const setInputReadOnly = useContext(ReadOnlyContext);
+  const valueIsSignal = isSignal(value);
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+
+  const groupOnValueChange = useContext(FieldGroupOnValueChangeContext);
+  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
+  const groupDisabled = useContext(FieldGroupDisabledContext);
+  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const setInputReadOnly = useContext(ReadOnlyContext);
 
   // infom any <label> parent of our readOnly state
   if (setInputReadOnly) {
@@ -88,22 +97,34 @@ const InputTextualBasic = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
+  let innerValue = value;
+  if (valueIsSignal) {
+    innerValue = value.value;
+  }
+  if (type === "datetime-local") {
+    innerValue = convertToLocalTimezone(innerValue);
+  }
+  const innerOnValueChange = onValueChange || groupOnValueChange;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
-  const innerReadOnly = readOnly || !onValueChange || innerLoading;
-  const valueForTheBrowser =
-    type === "datetime-local" ? convertToLocalTimezone(value) : value;
+  const innerReadOnly =
+    readOnly ||
+    groupReadOnly ||
+    innerLoading ||
+    (!innerOnValueChange && !valueIsSignal);
+  const innerDisabled = disabled || groupDisabled;
 
   const inputTextual = (
     <input
       ref={innerRef}
       type={type}
-      value={valueForTheBrowser}
-      data-value={value}
+      value={innerValue}
+      data-value={valueIsSignal ? value.value : value}
       data-field=""
       data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
       readOnly={innerReadOnly}
+      disabled={innerDisabled}
       onInput={(e) => {
         const inputValueRaw =
           type === "number" ? e.target.valueAsNumber : e.target.value;
@@ -111,7 +132,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
           type === "datetime-local"
             ? convertToUTCTimezone(inputValueRaw)
             : inputValueRaw;
-        onValueChange?.(inputValue, e);
+        innerOnValueChange?.(inputValue, e);
         onInput?.(e);
       }}
       {...rest}
@@ -120,7 +141,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
 
   return (
     <LoadableInlineElement
-      loading={loading}
+      loading={innerLoading}
       color="light-dark(#355fcc, #3b82f6)"
     >
       {inputTextual}
@@ -190,9 +211,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     onValueChange,
     action,
     valueSignal,
-    onInput,
-    readOnly,
-    loading,
 
     onCancel,
     onActionPrevented,
@@ -202,36 +220,29 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     cancelOnBlurInvalid,
     cancelOnEscape,
     actionErrorEffect,
+    onInput,
+    onKeyDown,
     ...rest
   } = props;
   if (import.meta.dev && !name && !valueSignal) {
     console.warn(`InputTextual with action requires a name prop to be set.`);
   }
-
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-
   const [navState, setNavState] = useNavState(id);
   const [boundAction, , setActionValue, initialValue] =
-    useActionBoundToOneParam(
-      action,
-      name,
-      valueSignal ? valueSignal : value,
-      navState,
-      "",
-    );
+    useActionBoundToOneParam(action, name, value, navState, "");
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-
-  const innerOnValueChange = (inputValue, e) => {
-    setNavState(inputValue);
-    setActionValue(inputValue);
-    onValueChange?.(inputValue, e);
-  };
-
   const valueAtInteractionRef = useRef(null);
+
+  const innerOnValueChange = (uiValue, e) => {
+    setNavState(uiValue);
+    setActionValue(uiValue);
+    onValueChange?.(uiValue, e);
+  };
   useOnInputChange(innerRef, (e) => {
     if (
       valueAtInteractionRef.current !== null &&
@@ -281,39 +292,37 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     },
   });
 
-  const innerLoading = loading || actionLoading;
-  const innerReadOnly = readOnly || (!onValueChange && !valueSignal);
-
   return (
-    <InputTextualBasic
-      {...rest}
-      ref={innerRef}
-      type={type}
-      id={id}
-      name={name}
-      value={value}
-      data-action={boundAction}
-      loading={innerLoading}
-      readOnly={innerReadOnly}
-      onValueChange={innerOnValueChange}
-      onInput={(e) => {
-        valueAtInteractionRef.current = null;
-        onInput?.(e);
-      }}
-      onKeyDown={(e) => {
-        if (e.key !== "Enter") {
-          return;
-        }
-        e.preventDefault();
-        /**
-         * Browser trigger a "change" event right after the enter is pressed
-         * if the input value has changed.
-         * We need to prevent the next change event otherwise we would request action twice
-         */
-        valueAtInteractionRef.current = e.target.value;
-        requestAction(e.target, boundAction, { event: e });
-      }}
-    />
+    <FieldGroupLoadingContext.Provider value={actionLoading}>
+      <InputTextualBasic
+        {...rest}
+        ref={innerRef}
+        type={type}
+        id={id}
+        name={name}
+        value={value}
+        data-action={boundAction}
+        onValueChange={innerOnValueChange}
+        onInput={(e) => {
+          valueAtInteractionRef.current = null;
+          onInput?.(e);
+        }}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") {
+            return;
+          }
+          e.preventDefault();
+          /**
+           * Browser trigger a "change" event right after the enter is pressed
+           * if the input value has changed.
+           * We need to prevent the next change event otherwise we would request action twice
+           */
+          valueAtInteractionRef.current = e.target.value;
+          requestAction(e.target, boundAction, { event: e });
+          onKeyDown?.(e);
+        }}
+      />
+    </FieldGroupLoadingContext.Provider>
   );
 });
 
@@ -321,16 +330,15 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   const { formContext, id, name, value, onValueChange, onKeyDown, ...rest } =
     props;
   const { formAction } = formContext;
-
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-
   const [navState, setNavState] = useNavState(id);
   const [, setFormValue] = useOneFormParam(name, value, navState, "");
-  const innerOnValueChange = (inputValue, e) => {
-    setNavState(inputValue);
-    setFormValue(inputValue);
-    onValueChange?.(inputValue, e);
+
+  const innerOnValueChange = (uiValue, e) => {
+    setNavState(uiValue);
+    setFormValue(uiValue);
+    onValueChange?.(uiValue, e);
   };
   useFormEvents(innerRef, {
     onFormReset: (e) => {
