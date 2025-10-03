@@ -1209,18 +1209,20 @@ const createActionProxyFromSignal = (
     };
     Object.defineProperty(actionProxy, "name", {
       configurable: true,
-      writable: true,
-      value: undefined,
+      get() {
+        return nameSignal.value;
+      },
     });
   } else {
-    actionProxy = {};
+    actionProxy = {
+      get name() {
+        return nameSignal.value;
+      },
+    };
   }
   Object.assign(actionProxy, {
     isProxy: true,
     callback: undefined,
-    get name() {
-      return nameSignal.value;
-    },
     params: undefined,
     isPrerun: undefined,
     runningState: undefined,
