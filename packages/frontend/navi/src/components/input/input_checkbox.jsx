@@ -1,5 +1,4 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
-import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -29,6 +28,7 @@ import {
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { useSignalSync } from "../use_signal_sync.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
@@ -401,14 +401,13 @@ const useCheckedController = (checkboxRef, props, useActiveState) => {
   const innerChecked = useChecked(checkboxRef, props);
   const checkedIsSignal = isSignal(checked);
   const activeValueNow = innerChecked ? value : undefined;
-  const activeValueSignal = useSignal(activeValueNow);
+  const activeValueSignal = useSignalSync(activeValueNow);
   const [navState, setNavState] = useNavState(id);
-  const [activeValue, setActiveValue, initialValue] = useActiveState(
+  const [activeValue, setActiveValue, initialActiveValue] = useActiveState(
     checkedIsSignal ? activeValueSignal : activeValueNow,
     navState ? value : undefined,
   );
-  const initialChecked = Boolean(initialValue);
-
+  const initialChecked = Boolean(initialActiveValue);
   const setChecked = (uiChecked) => {
     const valueToSet = uiChecked ? value : undefined;
     if (checkedIsSignal) {
