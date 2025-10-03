@@ -29,8 +29,6 @@
       const App = () => {
         return (
           <div style="display: flex; flex-direction: row; gap: 30px">
-            <ActionLogAfter1s />
-            <FormAlertAfter1s />
             <FormThrowAfter1s />
           </div>
         );
@@ -67,7 +65,7 @@
               <strong>Form + alert after 1s</strong>
             </p>
             <Form
-              action={async (colors) => {
+              action={async ({ colors }) => {
                 await new Promise((resolve) => setTimeout(resolve, 1_000));
                 // eslint-disable-next-line no-alert
                 window.alert(`Colors selected: ${JSON.stringify(colors)}`);
@@ -95,7 +93,7 @@
               <strong>Form + throw after 1s</strong>
             </p>
             <Form
-              action={async (colors) => {
+              action={async ({ colors }) => {
                 await new Promise((resolve) => setTimeout(resolve, 1_000));
                 throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
               }}

@@ -53,19 +53,6 @@ export const useOneFormParam = (
     defaultValue,
     setValue,
   );
-  const previousFormParamsSignalRef = useRef(null);
-  const formActionChanged =
-    previousFormParamsSignalRef.current !== null &&
-    previousFormParamsSignalRef.current !== formParamsSignal;
-  previousFormParamsSignalRef.current = formParamsSignal;
-  if (formActionChanged) {
-    if (debug) {
-      console.debug(
-        `useOneFormParam(${name}) form action changed, re-initializing with: ${initialValue}`,
-      );
-    }
-    setValue(initialValue);
-  }
 
   return [getValue(), setValue, initialValue];
 };
