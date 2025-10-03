@@ -58,26 +58,26 @@ const FormWithAction = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   // instantiation validation to:
   // - receive "requestsubmit" custom event ensure submit is prevented
   // (and also execute action without validation if form.submit() is ever called)
   useConstraints(innerRef, []);
-
   const [boundAction, formParamsSignal, setFormParams] =
     useFormActionBoundToFormParams(action);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-
   const {
     actionPending: formIsBusy,
     actionRequester: formActionRequester,
     actionAborted: formActionAborted,
     actionError: formActionError,
   } = useRequestedActionStatus(innerRef);
+
+  const formIsReadOnly =
+    readOnly || (formIsBusy && !formAllowConcurrentActions);
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
@@ -91,8 +91,6 @@ const FormWithAction = forwardRef((props, ref) => {
     onError: onActionError,
     onEnd: onActionEnd,
   });
-  const formIsReadOnly =
-    readOnly || (formIsBusy && !formAllowConcurrentActions);
 
   return (
     <form

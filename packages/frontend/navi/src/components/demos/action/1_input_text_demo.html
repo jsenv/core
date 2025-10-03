@@ -333,8 +333,6 @@
       const FormInputDemo = () => {
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
-        const [username, setUsername] = useState();
-        const [email, setEmail] = useState();
 
         return (
           <div className="demo-card">
@@ -362,8 +360,6 @@
                   id="form-username"
                   name="username"
                   placeholder="Enter username"
-                  value={username}
-                  onValueChange={setUsername}
                 />
               </div>
               <div className="control-group">
@@ -373,8 +369,6 @@
                   name="email"
                   type="email"
                   placeholder="Enter email"
-                  value={email}
-                  onValueChange={setEmail}
                 />
               </div>
               <div className="button-group">
