@@ -145,59 +145,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
     </LoadableInlineElement>
   );
 });
-
-// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
-// datetime-local does not support timezones
-const convertToLocalTimezone = (dateTimeString) => {
-  const date = new Date(dateTimeString);
-  // Check if the date is valid
-  if (isNaN(date.getTime())) {
-    return dateTimeString;
-  }
-
-  // Format to YYYY-MM-DDThh:mm:ss
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
-
-/**
- * Converts a datetime string without timezone (local time) to UTC format with 'Z' notation
- *
- * @param {string} localDateTimeString - Local datetime string without timezone (e.g., "2023-07-15T14:30:00")
- * @returns {string} Datetime string in UTC with 'Z' notation (e.g., "2023-07-15T12:30:00Z")
- */
-const convertToUTCTimezone = (localDateTimeString) => {
-  if (!localDateTimeString) {
-    return localDateTimeString;
-  }
-
-  try {
-    // Create a Date object using the local time string
-    // The browser will interpret this as local timezone
-    const localDate = new Date(localDateTimeString);
-
-    // Check if the date is valid
-    if (isNaN(localDate.getTime())) {
-      return localDateTimeString;
-    }
-
-    // Convert to UTC ISO string
-    const utcString = localDate.toISOString();
-
-    // Return the UTC string (which includes the 'Z' notation)
-    return utcString;
-  } catch (error) {
-    console.error("Error converting local datetime to UTC:", error);
-    return localDateTimeString;
-  }
-};
-
 const InputTextualWithAction = forwardRef((props, ref) => {
   const {
     id,
@@ -322,7 +269,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     </FieldGroupLoadingContext.Provider>
   );
 });
-
 const InputTextualInsideForm = forwardRef((props, ref) => {
   const { formContext, id, name, value, onValueChange, onKeyDown, ...rest } =
     props;
@@ -436,4 +382,54 @@ const useOnInputChange = (inputRef, callback) => {
       input.removeEventListener("blur", onblur);
     };
   }, []);
+};
+// As explained in https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/datetime-local#setting_timezones
+// datetime-local does not support timezones
+const convertToLocalTimezone = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  // Check if the date is valid
+  if (isNaN(date.getTime())) {
+    return dateTimeString;
+  }
+
+  // Format to YYYY-MM-DDThh:mm:ss
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+/**
+ * Converts a datetime string without timezone (local time) to UTC format with 'Z' notation
+ *
+ * @param {string} localDateTimeString - Local datetime string without timezone (e.g., "2023-07-15T14:30:00")
+ * @returns {string} Datetime string in UTC with 'Z' notation (e.g., "2023-07-15T12:30:00Z")
+ */
+const convertToUTCTimezone = (localDateTimeString) => {
+  if (!localDateTimeString) {
+    return localDateTimeString;
+  }
+
+  try {
+    // Create a Date object using the local time string
+    // The browser will interpret this as local timezone
+    const localDate = new Date(localDateTimeString);
+
+    // Check if the date is valid
+    if (isNaN(localDate.getTime())) {
+      return localDateTimeString;
+    }
+
+    // Convert to UTC ISO string
+    const utcString = localDate.toISOString();
+
+    // Return the UTC string (which includes the 'Z' notation)
+    return utcString;
+  } catch (error) {
+    console.error("Error converting local datetime to UTC:", error);
+    return localDateTimeString;
+  }
 };
