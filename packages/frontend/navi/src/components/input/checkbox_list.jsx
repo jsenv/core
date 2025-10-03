@@ -9,6 +9,7 @@ import {
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
+import { isSignal } from "../../utils/is_signal.js";
 import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
@@ -48,41 +49,50 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     disabled,
     required,
     loading,
-    onChange,
     children,
+    ...rest
   } = props;
+
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const groupReadonly = useContext(FieldGroupReadOnlyContext);
+  const groupDisabled = useContext(FieldGroupDisabledContext);
+
+  const valueIsSignal = isSignal(value);
+  const innerLoading = loading || groupLoading;
+  const innerReadOnly =
+    readOnly ||
+    groupReadonly ||
+    innerLoading ||
+    (!onValueChange && !valueIsSignal);
+  const innerDisabled = disabled || groupDisabled;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-
-  const onCheckboxValueChange = useStableCallback(
-    onValueChange
-      ? (_, e) => {
-          const checkboxList = innerRef.current;
-          const checkedValues = collectCheckedValues(checkboxList, name);
-          onValueChange(checkedValues, e);
-        }
-      : undefined,
-  );
+  const onCheckboxValueChange = useStableCallback(onValueChange, (_, e) => {
+    const checkboxList = innerRef.current;
+    const checkedValues = collectCheckedValues(checkboxList, name);
+    return [checkedValues, e];
+  });
 
   return (
     <div
       ref={innerRef}
       id={id}
+      name={name}
       className="navi_checkbox_list"
       data-checkbox-list
       data-action={props["data-action"]}
-      onChange={onChange}
+      {...rest}
     >
       <FieldGroupNameContext.Provider value={name}>
         <FieldGroupValueContext.Provider value={value}>
           <FieldGroupOnValueChangeContext.Provider
             value={onCheckboxValueChange}
           >
-            <FieldGroupReadOnlyContext.Provider value={readOnly}>
-              <FieldGroupDisabledContext.Provider value={disabled}>
+            <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
+              <FieldGroupDisabledContext.Provider value={innerDisabled}>
                 <FieldGroupRequiredContext.Provider value={required}>
-                  <FieldGroupLoadingContext.Provider value={loading}>
+                  <FieldGroupLoadingContext.Provider value={innerLoading}>
                     {children}
                   </FieldGroupLoadingContext.Provider>
                 </FieldGroupRequiredContext.Provider>
@@ -120,7 +130,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     id,
     name,
     value,
-    readOnly,
     loading,
     action,
     valueSignal,
@@ -133,6 +142,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     onActionError,
     onActionEnd,
     children,
+    ...rest
   } = props;
 
   const innerRef = useRef();
@@ -153,8 +163,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   });
 
   const innerLoading = loading || actionLoading;
-  const innerReadOnly =
-    readOnly || innerLoading || (!onValueChange && !valueSignal);
   const innerOnValueChange = (uiValue, e) => {
     setNavState(uiValue);
     setActionValue(uiValue);
@@ -189,12 +197,12 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
 
   return (
     <CheckboxListBasic
+      {...rest}
       ref={innerRef}
       name={name}
       value={value}
       onValueChange={innerOnValueChange}
       data-action={boundAction}
-      readOnly={innerReadOnly}
       loading={innerLoading}
       onChange={(event) => {
         const checkboxList = innerRef.current;
@@ -213,20 +221,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
 });
 
 const CheckboxListInsideForm = forwardRef((props, ref) => {
-  const {
-    id,
-    name,
-    value,
-    onValueChange,
-    readOnly,
-    disabled,
-    loading,
-    children,
-  } = props;
-  // here we forward form context. For instance when form is readOnly it propagates to all checkboxes
-  const formLoading = useContext(FieldGroupLoadingContext);
-  const formReadonly = useContext(FieldGroupReadOnlyContext);
-  const formDisabled = useContext(FieldGroupDisabledContext);
+  const { id, name, value, onValueChange, children, ...rest } = props;
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -238,9 +233,6 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
     undefined,
   );
 
-  const innerLoading = loading || formLoading;
-  const innerReadOnly = readOnly || formReadonly || !onValueChange;
-  const innerDisabled = disabled || formDisabled;
   const innerOnValueChange = (uiValue, e) => {
     setNavState(uiValue);
     setFormValue(uiValue);
@@ -261,13 +253,11 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
 
   return (
     <CheckboxListBasic
+      {...rest}
       ref={innerRef}
       name={name}
       value={value}
       onValueChange={innerOnValueChange}
-      readOnly={innerReadOnly}
-      loading={innerLoading}
-      disabled={innerDisabled}
     >
       {/* Reset form context so that input checkbox within
       do not try to do this. They are handled by the <CheckboxList /> */}

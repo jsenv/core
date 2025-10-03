@@ -42,7 +42,7 @@
 
 import { useRef } from "preact/hooks";
 
-export const useStableCallback = (callback) => {
+export const useStableCallback = (callback, mapper) => {
   const callbackRef = useRef();
   callbackRef.current = callback;
   const stableCallbackRef = useRef();
@@ -57,7 +57,11 @@ export const useStableCallback = (callback) => {
     return existingStableCallback;
   }
   const stableCallback = (...args) => {
-    return callbackRef.current?.(...args);
+    const currentCallback = callbackRef.current;
+    if (mapper) {
+      args = mapper(...args);
+    }
+    return currentCallback(...args);
   };
   stableCallbackRef.current = stableCallback;
   return stableCallback;
