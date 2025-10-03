@@ -326,12 +326,8 @@ const CustomRadio = ({ children }) => {
 
 const InputRadioWithAction = () => {
   throw new Error(
-    `Do not use <Input type="radio" />, use <RadioList /> instead`,
+    `<Input type="radio" /> with an action make no sense. Use <RadioList action={something} /> instead`,
   );
 };
 
-const InputRadioInsideForm = () => {
-  throw new Error(
-    `Do not use <Input type="radio" />, use <RadioList /> instead`,
-  );
-};
+const InputRadioInsideForm = InputRadioBasic;
