@@ -1,6 +1,11 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+import {
+  useContext,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
@@ -23,6 +28,7 @@ import {
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { useSignalSync } from "../use_signal_sync.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
@@ -178,7 +184,6 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
-
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
@@ -253,6 +258,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     name,
     value = "on",
     checked,
+    defaultChecked,
     onValueChange,
 
     action,
@@ -266,8 +272,9 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
+  const valueIsSignal = isSignal(value);
   if (import.meta.dev) {
-    if (!name && !isSignal(value)) {
+    if (!name && !valueIsSignal) {
       console.warn(`InputCheckboxWithAction requires a name prop to be set.`);
     }
     if (checked !== undefined) {
@@ -276,15 +283,25 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       );
     }
   }
+  const innerValue = valueIsSignal ? value.value : value;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
+  const [innerChecked, setInnerChecked] = useState();
+  const checkedExternalRef = useRef(checked || defaultChecked);
+  const checkedExternalPrev = checkedExternalRef.current;
+  if (checkedExternalPrev !== checked) {
+    checkedExternalRef.current = checked;
+    setInnerChecked(checked);
+  }
+
+  const valueSignal = useSignalSync(innerChecked ? innerValue : undefined);
   const [boundAction, , setActionValue, initialValue] =
     useActionBoundToOneParam(
       action,
       name,
-      isSignal(value) ? value : checked ? value : undefined,
-      navState ? value : undefined,
+      valueSignal,
+      navState ? innerValue : undefined,
     );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -292,11 +309,13 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   });
 
   const innerOnValueChange = (uiValue, e) => {
-    if (uiValue) {
+    const uiChecked = Boolean(uiValue);
+    if (uiChecked) {
       setNavState(checked ? false : undefined);
     } else {
       setNavState(checked ? true : undefined);
     }
+    setInnerChecked(uiChecked);
     setActionValue(uiValue);
     onValueChange?.(uiValue, e);
   };
@@ -335,7 +354,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
         name={name}
         value={value}
         onValueChange={innerOnValueChange}
-        checked={checked}
+        checked={innerChecked}
         data-action={boundAction}
         onChange={(e) => {
           requestAction(e.target, boundAction, { event: e });
