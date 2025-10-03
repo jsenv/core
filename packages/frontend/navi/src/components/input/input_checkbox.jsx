@@ -28,6 +28,7 @@ import {
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { useSignalSync } from "../use_signal_sync.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
@@ -293,11 +294,13 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
   const innerChecked = useChecked(innerRef, props);
+  const innerValue = innerChecked ? value : undefined;
+  const valueSignal = useSignalSync(innerValue);
   const [boundAction, actionValue, setActionValue, initialValue] =
     useActionBoundToOneParam(
       action,
       name,
-      innerChecked ? value : undefined,
+      valueSignal,
       navState ? value : undefined,
     );
   const initialChecked = Boolean(initialValue);
@@ -307,13 +310,16 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   });
 
   const innerOnCheckedChange = (uiChecked, e) => {
+    if (checkedIsSignal) {
+      checked.value = uiChecked;
+    }
     if (initialChecked) {
       setNavState(uiChecked ? undefined : false);
     } else {
       setNavState(uiChecked ? true : undefined);
     }
     setActionValue(uiChecked ? value : undefined);
-    onCheckedChange?.(uiChecked ? value : undefined, e);
+    onCheckedChange?.(uiChecked, e);
   };
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
@@ -411,12 +417,11 @@ const useChecked = (checkboxRef, props) => {
   const { checked, defaultChecked } = props;
   let innerChecked;
   if (Object.hasOwn(props, "checked")) {
-    innerChecked = checked;
-    // if (isSignal(checked)) {
-    //   innerChecked = checked.value;
-    // } else {
-    //   innerChecked = checked;
-    // }
+    if (isSignal(checked)) {
+      innerChecked = checked.value;
+    } else {
+      innerChecked = checked;
+    }
   } else {
     innerChecked = interactedRef.current ? false : defaultChecked;
   }

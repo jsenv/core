@@ -128,14 +128,15 @@ export const useActionBoundToOneParam = (
      * Exception: If the action is a plain function (not an action object),
      * we bind it to the external signal since it clearly needs parameter binding.
      */
-
     if (isFunctionButNotAnActionFunction(action)) {
       boundActionParamsSignal = externalValueSignal;
+    } else {
+      // Directly use the action supposed to be already bound to the signal
+      boundActionParamsSignal = null;
     }
   } else {
     boundActionParamsSignal = paramsSignal;
   }
-
   const boundAction = useBoundAction(action, boundActionParamsSignal);
   const getValue = externalValueSignal
     ? useCallback(() => paramsSignal.value, [paramsSignal])

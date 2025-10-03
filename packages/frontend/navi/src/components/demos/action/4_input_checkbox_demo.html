@@ -360,7 +360,7 @@
               <button
                 onClick={() => {
                   console.log("Setting signal to true");
-                  valueSignal.value = "on";
+                  checkedSignal.value = true;
                 }}
               >
                 Enable via Signal
@@ -368,7 +368,7 @@
               <button
                 onClick={() => {
                   console.log("Setting signal to false");
-                  valueSignal.value = false;
+                  checkedSignal.value = false;
                 }}
               >
                 Disable via Signal
@@ -379,7 +379,7 @@
                     "Toggling signal, current value:",
                     valueSignal.value,
                   );
-                  valueSignal.value = valueSignal.value === "on" ? false : "on";
+                  checkedSignal.value = !checkedSignal.value;
                 }}
               >
                 Toggle Signal
