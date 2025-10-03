@@ -1,4 +1,5 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
+import { useSignal } from "@preact/signals";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
@@ -28,7 +29,6 @@ import {
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { useSignalSync } from "../use_signal_sync.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
@@ -294,13 +294,13 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
   const innerChecked = useChecked(innerRef, props);
-  const innerValue = innerChecked ? value : undefined;
-  const valueSignal = useSignalSync(innerValue);
-  const [boundAction, actionValue, setActionValue, initialValue] =
+  const valueForAction = innerChecked ? value : undefined;
+  const valueSignal = useSignal(valueForAction);
+  const [boundAction, , setActionValue, initialValue] =
     useActionBoundToOneParam(
       action,
       name,
-      valueSignal,
+      checkedIsSignal ? valueSignal : valueForAction,
       navState ? value : undefined,
     );
   const initialChecked = Boolean(initialValue);
@@ -313,6 +313,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     if (checkedIsSignal) {
       checked.value = uiChecked;
     }
+    valueSignal.value = uiChecked ? value : undefined;
     if (initialChecked) {
       setNavState(uiChecked ? undefined : false);
     } else {
@@ -354,10 +355,10 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
         ref={innerRef}
         id={id}
         name={name}
-        checked={Boolean(actionValue)}
+        checked={checked}
         onCheckedChange={innerOnCheckedChange}
-        data-action={boundAction}
         value={value}
+        data-action={boundAction}
         onChange={(e) => {
           requestAction(e.target, boundAction, { event: e });
           onChange?.(e);
