@@ -1202,7 +1202,20 @@ const createActionProxyFromSignal = (
   };
 
   const nameSignal = signal();
-  const actionProxy = {
+  let actionProxy;
+  if (ACTION_AS_FUNCTION) {
+    actionProxy = function actionProxyFunction() {
+      return actionProxy.rerun();
+    };
+    Object.defineProperty(actionProxy, "name", {
+      configurable: true,
+      writable: true,
+      value: undefined,
+    });
+  } else {
+    actionProxy = {};
+  }
+  Object.assign(actionProxy, {
     isProxy: true,
     callback: undefined,
     get name() {
@@ -1234,7 +1247,7 @@ const createActionProxyFromSignal = (
     replaceParams: null, // Will be set below
     toString: () => actionProxy.name,
     meta: {},
-  };
+  });
   Object.preventExtensions(actionProxy);
 
   onActionTargetChange((actionTarget) => {
