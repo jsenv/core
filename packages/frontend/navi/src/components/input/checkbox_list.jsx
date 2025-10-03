@@ -2,7 +2,6 @@ import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import {
   useContext,
-  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -59,7 +58,8 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   const onCheckboxValueChange = useStableCallback(
     onValueChange
       ? (_, e) => {
-          const checkedValues = collectCheckedValues(innerRef.current, name);
+          const checkboxList = innerRef.current;
+          const checkedValues = collectCheckedValues(checkboxList, name);
           onValueChange(checkedValues, e);
         }
       : undefined,
@@ -95,15 +95,15 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   );
 });
 const collectCheckedValues = (checkboxList, name) => {
-  const values = [];
+  const checkedValues = [];
   const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
   const checkboxWithSameName = checkboxList.querySelectorAll(checkboxSelector);
   for (const checkboxElement of checkboxWithSameName) {
     if (checkboxElement.checked) {
-      values.push(checkboxElement.value);
+      checkedValues.push(checkboxElement.value);
     }
   }
-  return values;
+  return checkedValues.length === 0 ? undefined : checkedValues;
 };
 
 export const CheckboxList = forwardRef((props, ref) => {
@@ -119,7 +119,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   const {
     id,
     name,
-    value: externalValue,
+    value,
     readOnly,
     loading,
     action,
@@ -139,34 +139,32 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState, resetNavState] = useNavState(id);
-  const [boundAction, valueArray, setValueArray, initialValueArray] =
+  const [boundAction, , setActionValue, initialValue] =
     useActionBoundToOneArrayParam(
       action,
       name,
-      valueSignal ? valueSignal : externalValue,
+      valueSignal ? valueSignal : value,
       navState,
-      [],
+      undefined,
     );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  useEffect(() => {
-    setNavState(valueArray);
-  }, [valueArray]);
 
   const innerLoading = loading || actionLoading;
   const innerReadOnly =
     readOnly || innerLoading || (!onValueChange && !valueSignal);
-  const innerOnValueChange = (checkedValues, e) => {
-    setValueArray(checkedValues);
-    onValueChange?.(checkedValues, e);
+  const innerOnValueChange = (uiValue, e) => {
+    setNavState(uiValue);
+    setActionValue(uiValue);
+    onValueChange?.(uiValue, e);
   };
   const [actionRequester, setActionRequester] = useState(null);
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       resetNavState();
-      innerOnValueChange(initialValueArray, e);
+      innerOnValueChange(initialValue, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -176,11 +174,11 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      innerOnValueChange(initialValueArray, e);
+      innerOnValueChange(initialValue, e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      innerOnValueChange(initialValueArray, e);
+      innerOnValueChange(initialValue, e);
       onActionError?.(e);
     },
     onEnd: (e) => {
@@ -193,7 +191,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     <CheckboxListBasic
       ref={innerRef}
       name={name}
-      value={valueArray}
+      value={value}
       onValueChange={innerOnValueChange}
       data-action={boundAction}
       readOnly={innerReadOnly}
@@ -218,7 +216,7 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
   const {
     id,
     name,
-    value: externalValue,
+    value,
     onValueChange,
     readOnly,
     disabled,
@@ -230,37 +228,34 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
   const formReadonly = useContext(FieldGroupReadOnlyContext);
   const formDisabled = useContext(FieldGroupDisabledContext);
 
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  const [navState, setNavState] = useNavState(id);
+  const [, setFormValue, initialValue] = useOneFormArrayParam(
+    name,
+    value,
+    navState,
+    undefined,
+  );
+
   const innerLoading = loading || formLoading;
   const innerReadOnly = readOnly || formReadonly || !onValueChange;
   const innerDisabled = disabled || formDisabled;
-  const innerOnValueChange = (checkedValues, e) => {
-    setValueArray(checkedValues);
-    onValueChange?.(checkedValues, e);
+  const innerOnValueChange = (uiValue, e) => {
+    setNavState(uiValue);
+    setFormValue(uiValue);
+    onValueChange?.(uiValue, e);
   };
-
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-
-  const [navState, setNavState] = useNavState(id);
-  const [valueArray, setValueArray, initialValueArray] = useOneFormArrayParam(
-    name,
-    externalValue,
-    navState,
-    [],
-  );
-  useEffect(() => {
-    setNavState(valueArray);
-  }, [valueArray]);
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
-      innerOnValueChange([], e);
+      innerOnValueChange(undefined, e);
     },
     onFormActionAbort: (e) => {
-      innerOnValueChange(initialValueArray, e);
+      innerOnValueChange(initialValue, e);
     },
     onFormActionError: (e) => {
-      innerOnValueChange(initialValueArray, e);
+      innerOnValueChange(initialValue, e);
     },
   });
 
@@ -268,7 +263,7 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
     <CheckboxListBasic
       ref={innerRef}
       name={name}
-      value={valueArray}
+      value={value}
       onValueChange={innerOnValueChange}
       readOnly={innerReadOnly}
       loading={innerLoading}

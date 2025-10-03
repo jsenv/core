@@ -191,7 +191,7 @@ export const useActionBoundToOneArrayParam = (
   name,
   externalValue,
   fallbackValue,
-  defaultValue = [],
+  defaultValue,
 ) => {
   const [boundAction, value, setValue, initialValue] = useActionBoundToOneParam(
     action,
@@ -218,7 +218,7 @@ export const useOneFormArrayParam = (
   name,
   externalValue,
   fallbackValue,
-  defaultValue = [],
+  defaultValue,
 ) => {
   const [getValue, setValue, initialValue] = useOneFormParam(
     name,
