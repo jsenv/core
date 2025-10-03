@@ -200,26 +200,30 @@ const useBoundAction = (action, actionParamsSignal) => {
     return null;
   }
   if (isFunctionButNotAnActionFunction(action)) {
-    let actionInstance = actionRef.current;
-    if (!actionInstance) {
-      actionInstance = createAction(
-        (...args) => {
-          return actionCallbackRef.current?.(...args);
-        },
-        {
-          name: action.name,
-          // We don't want to give empty params by default
-          // we want to give undefined for regular functions
-          params: undefined,
-        },
-      );
-      if (actionParamsSignal) {
-        actionInstance = actionInstance.bindParams(actionParamsSignal);
-      }
-      actionRef.current = actionInstance;
-    }
     actionCallbackRef.current = action;
-    return actionInstance;
+    const existingAction = actionRef.current;
+    if (existingAction) {
+      return existingAction;
+    }
+    const actionFromFunction = createAction(
+      (...args) => {
+        return actionCallbackRef.current?.(...args);
+      },
+      {
+        name: action.name,
+        // We don't want to give empty params by default
+        // we want to give undefined for regular functions
+        params: undefined,
+      },
+    );
+    if (!actionParamsSignal) {
+      actionRef.current = actionFromFunction;
+      return actionFromFunction;
+    }
+    const actionBoundToParams =
+      actionFromFunction.bindParams(actionParamsSignal);
+    actionRef.current = actionBoundToParams;
+    return actionBoundToParams;
   }
   if (actionParamsSignal) {
     return action.bindParams(actionParamsSignal);
