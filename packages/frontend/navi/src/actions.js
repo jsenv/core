@@ -20,11 +20,12 @@ import { mergeTwoJsValues } from "./utils/merge_two_js_values.js";
 import { stringifyForDisplay } from "./utils/stringify_for_display.js";
 import { weakEffect } from "./utils/weak_effect.js";
 
-const ACTION_AS_FUNCTION = true;
-let DEBUG = false;
+let DEBUG = true;
 export const enableDebugActions = () => {
   DEBUG = true;
 };
+
+const ACTION_AS_FUNCTION = true;
 
 let dispatchActions = (params) => {
   const { requestedResult } = updateActions({
