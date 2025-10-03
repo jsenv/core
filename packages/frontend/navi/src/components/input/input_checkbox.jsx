@@ -312,8 +312,8 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   const innerOnCheckedChange = (uiChecked, e) => {
     if (checkedIsSignal) {
       checked.value = uiChecked;
+      valueSignal.value = uiChecked ? value : undefined;
     }
-    valueSignal.value = uiChecked ? value : undefined;
     if (initialChecked) {
       setNavState(uiChecked ? undefined : false);
     } else {
