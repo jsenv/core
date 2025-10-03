@@ -40,13 +40,10 @@ export const useOneFormParam = (
   }
 
   const { formParamsSignal } = useContext(FormContext);
-  const getValue = useCallback(
-    () => formParamsSignal.value[name],
-    [formParamsSignal],
-  );
+  const getValue = useCallback(() => formParamsSignal.value[name], []);
   const setValue = useCallback(
     (value) => updateParamsSignal(formParamsSignal, { [name]: value }),
-    [formParamsSignal],
+    [],
   );
 
   const initialValue = useInitialValue(
@@ -157,7 +154,7 @@ export const useAction = (action, paramsSignal) => {
   return useBoundAction(action, paramsSignal);
 };
 
-export const updateParamsSignal = (paramsSignal, object, cacheKey) => {
+export const updateParamsSignal = (paramsSignal, object) => {
   const currentParams = paramsSignal.peek();
   const paramsCopy = { ...currentParams };
   let modified = false;
@@ -177,7 +174,7 @@ export const updateParamsSignal = (paramsSignal, object, cacheKey) => {
   if (modified) {
     if (debug) {
       console.debug(
-        `Updating params for ${cacheKey} with new params:`,
+        `Updating params with new params:`,
         object,
         `result:`,
         paramsCopy,
@@ -186,7 +183,7 @@ export const updateParamsSignal = (paramsSignal, object, cacheKey) => {
     paramsSignal.value = paramsCopy;
   } else if (debug) {
     console.debug(
-      `No change in params for ${cacheKey}, not updating.`,
+      `No change in params, not updating.`,
       `current params:`,
       currentParams,
       `new params:`,
