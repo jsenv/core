@@ -20,7 +20,7 @@ import { mergeTwoJsValues } from "./utils/merge_two_js_values.js";
 import { stringifyForDisplay } from "./utils/stringify_for_display.js";
 import { weakEffect } from "./utils/weak_effect.js";
 
-let DEBUG = true;
+let DEBUG = false;
 export const enableDebugActions = () => {
   DEBUG = true;
 };

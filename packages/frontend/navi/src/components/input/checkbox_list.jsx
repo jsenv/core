@@ -9,6 +9,7 @@ import {
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
+import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneArrayParam,
@@ -236,7 +237,11 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
       value={value}
       onValueChange={innerOnValueChange}
     >
-      {children}
+      {/* <input type="checkbox" /> must not try to update the <form>
+     The checkbox list is doing it with the array of checked values
+     Without this we would likely have form complaining the input has no name
+     or the input overriding the checkbox list */}
+      <FormContext.Provider value={null}>{children}</FormContext.Provider>
     </CheckboxListBasic>
   );
 });
