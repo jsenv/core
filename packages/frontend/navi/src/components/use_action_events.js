@@ -19,6 +19,9 @@ export const useActionEvents = (
 ) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
+    if (!element) {
+      return null;
+    }
 
     return addManyEventListeners(element, {
       cancel: (e) => {

@@ -161,6 +161,9 @@ const LoaderBackgroundBasic = ({
     let animationFrame;
     const updateStyles = () => {
       const rectangle = rectangleRef.current;
+      if (!rectangle) {
+        return;
+      }
       const container = rectangle.parentElement;
       const containedElement = rectangle.nextElementSibling;
       const target = targetSelector
