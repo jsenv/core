@@ -9,7 +9,6 @@ import {
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
-import { isSignal } from "../../utils/is_signal.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneArrayParam,
@@ -39,9 +38,7 @@ import.meta.css = /* css */ `
 
 const CheckboxListBasic = forwardRef((props, ref) => {
   const {
-    id,
     name,
-    value,
     onValueChange,
     readOnly,
     disabled,
@@ -54,11 +51,9 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const valueIsSignal = isSignal(value);
   const innerOnValueChange =
     onValueChange || groupOnFieldChange
       ? (_, e) => {
@@ -70,20 +65,15 @@ const CheckboxListBasic = forwardRef((props, ref) => {
       : undefined;
   const innerLoading = loading || groupLoading;
   const innerReadOnly =
-    readOnly ||
-    groupReadonly ||
-    innerLoading ||
-    (!innerOnValueChange && !valueIsSignal);
+    readOnly || groupReadonly || innerLoading || !innerOnValueChange;
   const innerDisabled = disabled || groupDisabled;
 
   return (
     <div
       ref={innerRef}
-      id={id}
       name={name}
       className="navi_checkbox_list"
       data-checkbox-list
-      data-action={props["data-action"]}
       {...rest}
     >
       <FieldGroupNameContext.Provider value={name}>
@@ -131,7 +121,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     name,
     value,
     action,
-    valueSignal,
     onValueChange,
     actionErrorEffect,
     onCancel,
@@ -147,13 +136,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState, resetNavState] = useNavState(id);
   const [boundAction, , setActionValue, initialValue] =
-    useActionBoundToOneArrayParam(
-      action,
-      name,
-      valueSignal ? valueSignal : value,
-      navState,
-      undefined,
-    );
+    useActionBoundToOneArrayParam(action, name, value, navState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,

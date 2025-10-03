@@ -9,7 +9,6 @@ import {
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
-import { isSignal } from "../../utils/is_signal.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneParam,
@@ -54,7 +53,6 @@ const RadioListBasic = forwardRef((props, ref) => {
     readOnly,
     children,
     required,
-    value,
     onValueChange,
     ...rest
   } = props;
@@ -65,7 +63,6 @@ const RadioListBasic = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const valueIsSignal = isSignal(value);
   const innerOnValueChange =
     onValueChange || groupOnFieldChange
       ? (value, e) => {
@@ -75,10 +72,7 @@ const RadioListBasic = forwardRef((props, ref) => {
       : undefined;
   const innerLoading = loading || groupLoading;
   const innerReadOnly =
-    readOnly ||
-    groupReadonly ||
-    innerLoading ||
-    (!innerOnValueChange && !valueIsSignal);
+    readOnly || groupReadonly || innerLoading || !innerOnValueChange;
   const innerDisabled = disabled || groupDisabled;
 
   return (

@@ -28,7 +28,6 @@ import {
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
-import { isSignal } from "../../utils/is_signal.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneParam,
@@ -75,7 +74,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
     appearance = "custom",
     ...rest
   } = props;
-  const valueIsSignal = isSignal(value);
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
@@ -86,9 +84,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const setInputReadOnly = useContext(ReadOnlyContext);
 
   let innerValue = value;
-  if (valueIsSignal) {
-    innerValue = value.value;
-  }
   if (type === "datetime-local") {
     innerValue = convertToLocalTimezone(innerValue);
   }
@@ -96,10 +91,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly ||
-    groupReadOnly ||
-    innerLoading ||
-    (!innerOnValueChange && !valueIsSignal);
+    readOnly || groupReadOnly || innerLoading || !innerOnValueChange;
   const innerDisabled = disabled || groupDisabled;
   // infom any <label> parent of our readOnly state
   if (setInputReadOnly) {
@@ -116,7 +108,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
       ref={innerRef}
       type={type}
       value={innerValue}
-      data-value={valueIsSignal ? value.value : value}
+      data-value={value}
       data-field=""
       data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
@@ -154,7 +146,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     value,
     onValueChange,
     action,
-    valueSignal,
 
     onCancel,
     onActionPrevented,
@@ -168,9 +159,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     onKeyDown,
     ...rest
   } = props;
-  if (import.meta.dev && !name && !valueSignal) {
-    console.warn(`InputTextual with action requires a name prop to be set.`);
-  }
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);

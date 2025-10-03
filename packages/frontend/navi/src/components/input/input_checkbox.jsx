@@ -9,7 +9,6 @@ import {
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
-import { isSignal } from "../../utils/is_signal.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneParam,
@@ -145,7 +144,6 @@ export const InputCheckbox = forwardRef((props, ref) => {
 const InputCheckboxBasic = forwardRef((props, ref) => {
   const {
     name,
-    checked,
     onCheckedChange,
     value = "on",
     readOnly,
@@ -160,13 +158,8 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     onInput,
     ...rest
   } = props;
-  const checkedIsSignal = isSignal(checked);
   if (import.meta.dev) {
-    if (
-      !checkedIsSignal &&
-      Object.hasOwn(props, "checked") &&
-      !onCheckedChange
-    ) {
+    if (Object.hasOwn(props, "checked") && !onCheckedChange) {
       console.warn(
         `<input type="checkbox" /> is controlled by "checked" prop. Use "onCheckedChange" or "defaultChecked" prop too to make it interactive.`,
       );
@@ -184,7 +177,6 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const innerChecked = useChecked(innerRef, props);
-  const innerValue = value;
   const innerName = name || groupName;
   const innerOnCheckedChange = onCheckedChange || groupOnFieldChange;
   const innerDisabled = disabled || groupDisabled;
@@ -206,7 +198,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       type="checkbox"
       name={innerName}
       checked={innerChecked}
-      value={innerValue}
+      value={value}
       data-readonly={innerReadOnly ? "" : undefined}
       disabled={innerDisabled}
       required={innerRequired}
