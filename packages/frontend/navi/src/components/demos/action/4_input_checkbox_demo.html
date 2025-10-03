@@ -122,7 +122,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { signal } from "@preact/signals";
+      import { signal, computed } from "@preact/signals";
       import {
         createAction,
         // eslint-disable-next-line no-unused-vars
@@ -322,11 +322,13 @@
         return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
       });
       // Create a signal to control the checkbox state
-      const valueSignal = signal(undefined);
+      const checkedSignal = signal(undefined);
+      const valueSignal = computed(() => {
+        return checkedSignal.value ? "on" : undefined;
+      });
       const toggleActionBound = toggleAction.bindParams({
         notifications: valueSignal,
       });
-
       // eslint-disable-next-line no-unused-vars
       const CheckboxWithSignalControlDemo = () => {
         const [result, setResult] = useState("");
@@ -340,7 +342,7 @@
                   id="signal-controlled-checkbox"
                   type="checkbox"
                   name="notifications_signal"
-                  value={valueSignal}
+                  checked={checkedSignal}
                   action={toggleActionBound}
                   onActionStart={() => {
                     setResult("Processing...");

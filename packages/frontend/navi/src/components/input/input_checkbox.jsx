@@ -145,6 +145,7 @@ export const InputCheckbox = forwardRef((props, ref) => {
 const InputCheckboxBasic = forwardRef((props, ref) => {
   const {
     name,
+    checked,
     onCheckedChange,
     value = "on",
     readOnly,
@@ -159,8 +160,13 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     onInput,
     ...rest
   } = props;
+  const checkedIsSignal = isSignal(checked);
   if (import.meta.dev) {
-    if (Object.hasOwn(props, "checked") && !onCheckedChange) {
+    if (
+      !checkedIsSignal &&
+      Object.hasOwn(props, "checked") &&
+      !onCheckedChange
+    ) {
       console.warn(
         `<input type="checkbox" /> is controlled by "checked" prop. Use "onCheckedChange" or "defaultChecked" prop too to make it interactive.`,
       );
@@ -177,6 +183,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
+  const innerChecked = useChecked(innerRef, props);
   const innerValue = value;
   const innerName = name || groupName;
   const innerOnCheckedChange = onCheckedChange || groupOnFieldChange;
@@ -196,8 +203,9 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     <input
       {...rest}
       ref={innerRef}
-      name={innerName}
       type="checkbox"
+      name={innerName}
+      checked={innerChecked}
       value={innerValue}
       data-readonly={innerReadOnly ? "" : undefined}
       disabled={innerDisabled}
@@ -261,6 +269,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     id,
     name,
     value = "on",
+    checked,
     onCheckedChange,
 
     action,
@@ -274,23 +283,22 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
-  const valueIsSignal = isSignal(value);
+  const checkedIsSignal = isSignal(checked);
   if (import.meta.dev) {
-    if (!name && !valueIsSignal) {
-      console.warn(`InputCheckboxWithAction requires a name prop to be set.`);
+    if (!name && !checkedIsSignal) {
+      console.warn(`InputCheckboxWithAction requires a "name" prop.`);
     }
   }
-  const innerValue = valueIsSignal ? value.value : value;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
-  const [innerChecked] = useCheckboxCheckedInfo(innerRef, props);
+  const innerChecked = useChecked(innerRef, props);
   const [boundAction, actionValue, setActionValue, initialValue] =
     useActionBoundToOneParam(
       action,
       name,
-      innerChecked ? innerValue : undefined,
-      navState ? innerValue : undefined,
+      innerChecked ? value : undefined,
+      navState ? value : undefined,
     );
   const initialChecked = Boolean(initialValue);
   const { loading: actionLoading } = useActionStatus(boundAction);
@@ -304,8 +312,8 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     } else {
       setNavState(uiChecked ? true : undefined);
     }
-    setActionValue(uiChecked ? innerValue : undefined);
-    onCheckedChange?.(uiChecked ? innerValue : undefined, e);
+    setActionValue(uiChecked ? value : undefined);
+    onCheckedChange?.(uiChecked ? value : undefined, e);
   };
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
@@ -358,7 +366,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
-  const [innerChecked] = useCheckboxCheckedInfo(innerRef, props);
+  const innerChecked = useChecked(innerRef, props);
   const [formValue, setFormValue, initialValue] = useOneFormParam(
     name,
     innerChecked ? value : undefined,
@@ -398,13 +406,20 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   );
 });
 
-const useCheckboxCheckedInfo = (checkboxRef, props) => {
+const useChecked = (checkboxRef, props) => {
   const interactedRef = useRef(false);
-  const checked = Object.hasOwn(props, "checked")
-    ? props.checked
-    : interactedRef.current
-      ? false
-      : props.defaultChecked;
+  const { checked, defaultChecked } = props;
+  let innerChecked;
+  if (Object.hasOwn(props, "checked")) {
+    innerChecked = checked;
+    // if (isSignal(checked)) {
+    //   innerChecked = checked.value;
+    // } else {
+    //   innerChecked = checked;
+    // }
+  } else {
+    innerChecked = interactedRef.current ? false : defaultChecked;
+  }
 
   useLayoutEffect(() => {
     const checkbox = checkboxRef.current;
@@ -420,5 +435,5 @@ const useCheckboxCheckedInfo = (checkboxRef, props) => {
     };
   }, []);
 
-  return [checked];
+  return innerChecked;
 };
