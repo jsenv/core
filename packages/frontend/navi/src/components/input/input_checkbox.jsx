@@ -264,13 +264,18 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     onActionEnd,
     ...rest
   } = props;
-  if (import.meta.dev && !name && !isSignal(value)) {
-    console.warn(`InputCheckboxWithAction requires a name prop to be set.`);
+  if (import.meta.dev) {
+    if (!name && !isSignal(value)) {
+      console.warn(`InputCheckboxWithAction requires a name prop to be set.`);
+    }
+    if (checked !== undefined) {
+      console.warn(
+        `InputCheckboxWithAction does not support prop "checked", use defaultChecked.`,
+      );
+    }
   }
-
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-
   const [navState, setNavState] = useNavState(id);
   const [boundAction, , setActionValue, initialValue] =
     useActionBoundToOneParam(
