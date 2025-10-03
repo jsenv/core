@@ -248,7 +248,7 @@ const useBoundAction = (action, actionParamsSignal) => {
     if (!actionInstance) {
       actionInstance = createAction(
         (...args) => {
-          return actionCallbackRef.current(...args);
+          return actionCallbackRef.current?.(...args);
         },
         {
           name: action.name,
