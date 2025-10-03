@@ -239,7 +239,7 @@
                   id="initial-checkbox"
                   type="checkbox"
                   name="agreed"
-                  checked={true}
+                  checked
                   action={async ({ agreed }) => {
                     setResult("Processing...");
                     await delay(800);
@@ -366,7 +366,7 @@
                   id="signal-controlled-checkbox"
                   type="checkbox"
                   name="notifications_signal"
-                  valueSignal={valueSignal}
+                  value={valueSignal}
                   action={toggleActionBound}
                   onActionStart={() => {
                     setResult("Processing...");

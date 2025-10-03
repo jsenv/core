@@ -285,7 +285,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   });
 
   const innerOnValueChange = (uiValue, e) => {
-    if (checked) {
+    if (uiValue) {
       setNavState(checked ? false : undefined);
     } else {
       setNavState(checked ? true : undefined);
@@ -351,7 +351,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   );
 
   const innerOnValueChange = (uiValue, e) => {
-    if (checked) {
+    if (uiValue) {
       setNavState(checked ? false : undefined);
     } else {
       setNavState(checked ? true : undefined);
