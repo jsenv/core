@@ -143,7 +143,7 @@
           <>
             <div className="demo-grid">
               <BasicCheckboxDemo />
-              <CheckboxWithInitialValueDemo />
+              <CheckboxDefaultCheckedDemo />
               <CheckboxWithExternalControlDemo />
               <CheckboxWithSignalControlDemo />
               <CheckboxErrorDemo />
@@ -200,7 +200,7 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const CheckboxWithInitialValueDemo = () => {
+      const CheckboxDefaultCheckedDemo = () => {
         const [result, setResult] = useState("");
 
         return (
@@ -251,20 +251,21 @@
             <h3 className="demo-title">Checkbox with External Control</h3>
             <div className="control-group">
               <div className="checkbox-group">
-                <Input
-                  id="controlled-checkbox"
-                  type="checkbox"
-                  name="notifications"
-                  checked={isChecked}
-                  action={async ({ notifications }) => {
-                    setResult("Processing...");
-                    await delay(600);
-                    const response = `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
-                    setResult(response);
-                    return response;
-                  }}
-                />
-                <label htmlFor="controlled-checkbox">
+                <label>
+                  <Input
+                    // id="controlled-checkbox"
+                    type="checkbox"
+                    name="notifications"
+                    checked={isChecked}
+                    onCheckedChange={setIsChecked}
+                    action={async ({ notifications }) => {
+                      setResult("Processing...");
+                      await delay(600);
+                      const response = `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
+                      setResult(response);
+                      return response;
+                    }}
+                  />
                   Enable notifications
                 </label>
               </div>
