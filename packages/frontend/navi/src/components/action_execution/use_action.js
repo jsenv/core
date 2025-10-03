@@ -101,25 +101,18 @@ export const useActionBoundToOneParam = (
     externalValueSignal = externalValue;
     externalValue = externalValueSignal.peek();
   }
-
   if (action.isProxy && !externalValueSignal) {
+    // Otherwise action.bindParams will create an other action
     throw new Error(
-      `useActionBoundToOneParam(${name}) action is a proxy but no valueSignal provided`,
+      `value given in props must be a signal when action is a proxy`,
     );
   }
-
   const actionCacheKey = useComponentActionCacheKey();
   const cacheKey = typeof action === "function" ? actionCacheKey : action;
   const [paramsSignal, updateParams] = useActionParamsSignal(
     cacheKey,
     externalValueSignal,
   );
-  const previousParamsSignalRef = useRef(null);
-  const actionChanged =
-    previousParamsSignalRef.current !== null &&
-    previousParamsSignalRef.current !== paramsSignal;
-  previousParamsSignalRef.current = paramsSignal;
-
   let boundActionParamsSignal;
   if (externalValueSignal) {
     /**
@@ -173,6 +166,11 @@ export const useActionBoundToOneParam = (
     defaultValue,
     setValue,
   );
+  const previousParamsSignalRef = useRef(null);
+  const actionChanged =
+    previousParamsSignalRef.current !== null &&
+    previousParamsSignalRef.current !== paramsSignal;
+  previousParamsSignalRef.current = paramsSignal;
   if (actionChanged) {
     if (debug) {
       console.debug(
