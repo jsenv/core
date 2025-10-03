@@ -698,12 +698,15 @@ export const createAction = (callback, rootOptions = {}) => {
         if (signalMap.size === 0) {
           // Pas de signals, merge statique normal
           if (params === null || typeof params !== "object") {
-            return createChildAction(newParamsOrSignal, options);
+            return createChildAction({
+              ...options,
+              params: newParamsOrSignal,
+            });
           }
           const combinedParams = mergeTwoJsValues(params, newParamsOrSignal);
           return createChildAction({
-            params: combinedParams,
             ...options,
+            params: combinedParams,
           });
         }
 

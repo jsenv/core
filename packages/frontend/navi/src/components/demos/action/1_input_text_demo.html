@@ -110,7 +110,6 @@
         Form,
         // eslint-disable-next-line no-unused-vars
         Button,
-        createAction,
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -125,7 +124,6 @@
               <InputWithExternalControlDemo />
               <FormInputDemo />
               <FormWithExternalControlDemo />
-              <SharedActionDemo />
             </div>
           </>
         );
@@ -269,43 +267,31 @@
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
 
+        const formDemoAction = async ({ username, email }) => {
+          setIsLoading(true);
+          setResult("Submitting form...");
+          try {
+            await delay(1200);
+            const response = `✅ Form submitted!\nUsername: ${username}\nEmail: ${email}`;
+            setResult(response);
+            return response;
+          } catch (error) {
+            setResult(`❌ Form error: ${error.message}`);
+            throw error;
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
         return (
           <div className="demo-card">
             <h3 className="demo-title">Input inside Form</h3>
-            <Form
-              action={async ({ username, email }) => {
-                setIsLoading(true);
-                setResult("Submitting form...");
-                try {
-                  await delay(1200);
-                  const response = `✅ Form submitted!\nUsername: ${username}\nEmail: ${email}`;
-                  setResult(response);
-                  return response;
-                } catch (error) {
-                  setResult(`❌ Form error: ${error.message}`);
-                  throw error;
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-            >
+            <Form action={formDemoAction}>
               <div className="control-group">
                 <label htmlFor="form-username">Username:</label>
-                <Input
-                  id="form-username"
-                  name="username"
-                  placeholder="Enter username"
-                />
+                <Input name="username" placeholder="Enter username" />
               </div>
-              <div className="control-group">
-                <label htmlFor="form-email">Email:</label>
-                <Input
-                  id="form-email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter email"
-                />
-              </div>
+              <div className="control-group"></div>
               <div className="button-group">
                 <Button type="submit">Submit Form</Button>
                 <Button type="reset">Reset</Button>
@@ -402,61 +388,6 @@
           </div>
         );
       };
-
-      // eslint-disable-next-line no-unused-vars
-      const SharedActionDemo = () => {
-        // we have 2 states to simulate they belong to different components
-        const [valueA, setValueA] = useState();
-        const [valueB, setValueB] = useState();
-        const [result, setResult] = useState("");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Shared Action Example</h3>
-            <div className="control-group">
-              <label htmlFor="shared-input-1">Input 1 (shared action):</label>
-              <Input
-                id="shared-input-1"
-                name="name"
-                placeholder="Enter name for input 1"
-                value={valueA}
-                onValueChange={setValueA}
-                action={sharedAction}
-                onActionStart={() => {
-                  setResult("Processing...");
-                }}
-                onActionEnd={(e) => {
-                  setResult(e.detail.data);
-                }}
-              />
-            </div>
-            <div className="control-group">
-              <label htmlFor="shared-input-2">
-                Input 2 (same shared action):
-              </label>
-              <Input
-                id="shared-input-2"
-                name="name"
-                placeholder="Enter name for input 2"
-                value={valueB}
-                onValueChange={setValueB}
-                action={sharedAction}
-              />
-            </div>
-            <div
-              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
-            >
-              {result || "Type in either input and submit..."}
-            </div>
-          </div>
-        );
-      };
-
-      const sharedAction = createAction(async ({ name }) => {
-        await delay(800);
-        const response = `✅ Hello ${name}! (from shared action)`;
-        return response;
-      });
 
       render(<App />, document.querySelector("#root"));
     </script>
