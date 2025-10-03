@@ -2,6 +2,7 @@ import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 
+import { isSignal } from "../../utils/is_signal.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   FieldGroupActionRequesterContext,
@@ -196,7 +197,6 @@ const InputRadioBasic = forwardRef((props, ref) => {
     name,
     value,
     onValueChange,
-    checked,
 
     readOnly,
     disabled,
@@ -220,6 +220,8 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const setInputReadOnly = useContext(ReadOnlyContext);
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
+  const valueIsSignal = isSignal(value);
+  const uiValue = valueIsSignal ? value.value : value;
 
   const innerName = name || groupName;
   const innerOnValueChange = onValueChange || groupOnValueChange;
@@ -228,7 +230,10 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || !innerOnValueChange || innerLoading;
+    readOnly ||
+    groupReadOnly ||
+    innerLoading ||
+    (!innerOnValueChange && !valueIsSignal);
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
@@ -237,11 +242,11 @@ const InputRadioBasic = forwardRef((props, ref) => {
 
   const inputRadio = (
     <input
+      {...rest}
       ref={innerRef}
       type="radio"
       name={innerName}
-      value={value}
-      checked={checked}
+      value={uiValue}
       data-readonly={innerReadOnly && !disabled ? "" : undefined}
       disabled={innerDisabled}
       required={innerRequired}
@@ -252,18 +257,13 @@ const InputRadioBasic = forwardRef((props, ref) => {
         }
         onClick?.(e);
       }}
-      onInput={
-        innerOnValueChange
-          ? (e) => {
-              const radio = innerRef.current;
-              const radioValueOrUndefined = radio.checked
-                ? radio.value
-                : undefined;
-              innerOnValueChange(radioValueOrUndefined, e);
-            }
-          : undefined
-      }
-      {...rest}
+      onInput={(e) => {
+        if (innerOnValueChange) {
+          const radio = innerRef.current;
+          const uiValue = radio.checked ? radio.value : undefined;
+          innerOnValueChange(uiValue, e);
+        }
+      }}
     />
   );
   const inputRadioDisplayed =
