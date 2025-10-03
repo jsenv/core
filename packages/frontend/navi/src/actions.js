@@ -569,10 +569,10 @@ export const createAction = (callback, rootOptions = {}) => {
 
   let rootAction;
 
-  const createActionCore = (
-    {
+  const createActionCore = (options, { parentAction } = {}) => {
+    let {
       name = callback.name || "anonymous",
-      params = initialParamsDefault,
+      params,
       isPrerun = true,
       runningState = IDLE,
       aborted = false,
@@ -587,9 +587,12 @@ export const createAction = (callback, rootOptions = {}) => {
       meta = {},
       dataEffect,
       completeSideEffect,
-    },
-    { parentAction } = {},
-  ) => {
+    } = options;
+    if (!Object.hasOwn(options, "params")) {
+      // even undefined should be respect it's only when not provided at all we use default
+      params = initialParamsDefault;
+    }
+
     const initialData = data;
     const paramsSignal = signal(params);
     const isPrerunSignal = signal(isPrerun);

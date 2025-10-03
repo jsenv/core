@@ -1,9 +1,8 @@
-import { signal } from "@preact/signals";
+import { signal, useSignal } from "@preact/signals";
 import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
-import { isSignal } from "../../utils/is_signal.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { FormContext } from "./form_context.js";
 
@@ -95,71 +94,12 @@ export const useActionBoundToOneParam = (
   fallbackValue,
   defaultValue,
 ) => {
-  const externalValueIsSignal = isSignal(externalValue);
-  let externalValueSignal;
-  if (externalValueIsSignal) {
-    externalValueSignal = externalValue;
-    externalValue = externalValueSignal.peek();
-  }
-  if (action.isProxy && !externalValueSignal) {
-    // Otherwise action.bindParams will create an other action
-    throw new Error(
-      `value given in props must be a signal when action is a proxy`,
-    );
-  }
-  const actionCacheKey = useComponentActionCacheKey();
-  const cacheKey = typeof action === "function" ? actionCacheKey : action;
-  const [paramsSignal, updateParams] = useActionParamsSignal(
-    cacheKey,
-    externalValueSignal,
-  );
-  let boundActionParamsSignal;
-  if (externalValueSignal) {
-    /**
-     * When an external signal is provided (like <Input valueSignal={signal} />),
-     * we assume the action is already bound to appropriate params.
-     *
-     * Examples of pre-bound actions:
-     * - Simple binding: DATABASE.POST.bindParams(valueSignal)
-     * - Complex binding: DATABASE.PUT.bindParams({ columnValue: valueSignal })
-     *
-     * We avoid re-binding in these cases to preserve the original action configuration.
-     *
-     * Exception: If the action is a plain function (not an action object),
-     * we bind it to the external signal since it clearly needs parameter binding.
-     */
-    if (isFunctionButNotAnActionFunction(action)) {
-      boundActionParamsSignal = externalValueSignal;
-    } else {
-      // Directly use the action supposed to be already bound to the signal
-      boundActionParamsSignal = null;
-    }
-  } else {
-    boundActionParamsSignal = paramsSignal;
-  }
-  const boundAction = useBoundAction(action, boundActionParamsSignal);
-  const getValue = externalValueSignal
-    ? useCallback(() => paramsSignal.value, [paramsSignal])
-    : useCallback(() => paramsSignal.value[name], [paramsSignal]);
-  const setValue = externalValueSignal
-    ? useCallback(
-        (value) => {
-          paramsSignal.value = value;
-        },
-        [paramsSignal],
-      )
-    : useCallback(
-        (value) => {
-          if (debug) {
-            console.debug(
-              `useActionBoundToOneParam(${name}) set value to ${value} (old value is ${getValue()} )`,
-            );
-          }
-          return updateParams({ [name]: value });
-        },
-        [updateParams],
-      );
-
+  const valueSignal = useSignal();
+  const boundAction = useBoundAction(action, valueSignal);
+  const getValue = useCallback(() => valueSignal.value, []);
+  const setValue = useCallback((value) => {
+    valueSignal.value = value;
+  }, []);
   const initialValue = useInitialValue(
     name,
     externalValue,
@@ -167,19 +107,6 @@ export const useActionBoundToOneParam = (
     defaultValue,
     setValue,
   );
-  const previousParamsSignalRef = useRef(null);
-  const actionChanged =
-    previousParamsSignalRef.current !== null &&
-    previousParamsSignalRef.current !== paramsSignal;
-  previousParamsSignalRef.current = paramsSignal;
-  if (actionChanged) {
-    if (debug) {
-      console.debug(
-        `useActionBoundToOneParam(${name}) action changed, re-initializing with: ${initialValue}`,
-      );
-    }
-    setValue(initialValue);
-  }
   const value = getValue();
 
   return [boundAction, value, setValue, initialValue];
@@ -323,7 +250,12 @@ const useBoundAction = (action, actionParamsSignal) => {
         (...args) => {
           return actionCallbackRef.current(...args);
         },
-        { name: action.name },
+        {
+          name: action.name,
+          // We don't want to give empty params by default
+          // we want to give undefined for regular functions
+          params: undefined,
+        },
       );
       if (actionParamsSignal) {
         actionInstance = actionInstance.bindParams(actionParamsSignal);

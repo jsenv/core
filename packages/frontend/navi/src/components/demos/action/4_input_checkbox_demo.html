@@ -122,7 +122,6 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { signal, computed } from "@preact/signals";
       import {
         createAction,
         // eslint-disable-next-line no-unused-vars
@@ -325,17 +324,11 @@
         await delay(600);
         return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
       });
-      // Create a signal to control the checkbox state
-      const checkedSignal = signal(undefined);
-      const valueSignal = computed(() => {
-        return checkedSignal.value ? "on" : undefined;
-      });
-      const toggleActionBound = toggleAction.bindParams({
-        notifications: valueSignal,
-      });
+
       // eslint-disable-next-line no-unused-vars
       const CheckboxWithSignalControlDemo = () => {
         const [result, setResult] = useState("");
+        const [checked, setChecked] = useState(undefined);
 
         return (
           <div className="demo-card">
@@ -345,9 +338,12 @@
                 <Input
                   id="signal-controlled-checkbox"
                   type="checkbox"
-                  name="notifications_signal"
-                  checked={checkedSignal}
-                  action={toggleActionBound}
+                  // name="notifications_signal"
+                  checked={checked}
+                  onCheckedChange={setChecked}
+                  action={(notifications) => {
+                    return toggleAction({ notifications });
+                  }}
                   onActionStart={() => {
                     setResult("Processing...");
                   }}
@@ -364,7 +360,7 @@
               <button
                 onClick={() => {
                   console.log("Setting signal to true");
-                  checkedSignal.value = true;
+                  setChecked(true);
                 }}
               >
                 Enable via Signal
@@ -372,18 +368,15 @@
               <button
                 onClick={() => {
                   console.log("Setting signal to false");
-                  checkedSignal.value = false;
+                  setChecked(false);
                 }}
               >
                 Disable via Signal
               </button>
               <button
                 onClick={() => {
-                  console.log(
-                    "Toggling signal, current value:",
-                    valueSignal.value,
-                  );
-                  checkedSignal.value = !checkedSignal.value;
+                  console.log("Toggling signal, current state:", checked);
+                  setChecked(!checked);
                 }}
               >
                 Toggle Signal
@@ -392,7 +385,7 @@
             <div
               className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
             >
-              Signal value: {valueSignal.value}
+              Checked: {String(checked)}
               <br />
               {result ||
                 "Use buttons to control checkbox via signal, action will trigger automatically..."}
