@@ -146,6 +146,8 @@
               <CheckboxActionDemo />
               <CheckboxActionDefaultCheckedDemo />
               <CheckboxActionControlledDemo />
+              <CheckboxActionErrorDemo />
+              <CheckboxDefaultCheckedActionErrorDemo />
             </div>
           </>
         );
@@ -360,51 +362,8 @@
           </div>
         );
       };
-
-      const toggleAction = createAction(async ({ notifications }) => {
-        await delay(600);
-        return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
-      });
-
       // eslint-disable-next-line no-unused-vars
-      const CheckboxWithActionDemo = () => {
-        const [result, setResult] = useState("");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Checkbox with Action Object</h3>
-            <div className="control-group">
-              <div className="checkbox-group">
-                <Input
-                  id="action-object-checkbox"
-                  type="checkbox"
-                  name="notifications"
-                  action={(notifications) => {
-                    return toggleAction({ notifications });
-                  }}
-                  onActionStart={() => {
-                    setResult("Processing...");
-                  }}
-                  onActionEnd={(e) => {
-                    setResult(e.detail.data);
-                  }}
-                />
-                <label htmlFor="action-object-checkbox">
-                  Enable notifications (with action object)
-                </label>
-              </div>
-            </div>
-            <div
-              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
-            >
-              {result || "Toggle checkbox to trigger action object..."}
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const CheckboxErrorDemo = () => {
+      const CheckboxActionErrorDemo = () => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
 
@@ -446,9 +405,8 @@
           </div>
         );
       };
-
       // eslint-disable-next-line no-unused-vars
-      const CheckboxErrorInitiallyCheckedDemo = () => {
+      const CheckboxDefaultCheckedActionErrorDemo = () => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
 
@@ -488,6 +446,48 @@
             >
               {result ||
                 "This checkbox starts checked and will always trigger an error..."}
+            </div>
+          </div>
+        );
+      };
+
+      const toggleAction = createAction(async ({ notifications }) => {
+        await delay(600);
+        return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
+      });
+
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxWithActionDemo = () => {
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Checkbox with Action Object</h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <Input
+                  id="action-object-checkbox"
+                  type="checkbox"
+                  name="notifications"
+                  action={(notifications) => {
+                    return toggleAction({ notifications });
+                  }}
+                  onActionStart={() => {
+                    setResult("Processing...");
+                  }}
+                  onActionEnd={(e) => {
+                    setResult(e.detail.data);
+                  }}
+                />
+                <label htmlFor="action-object-checkbox">
+                  Enable notifications (with action object)
+                </label>
+              </div>
+            </div>
+            <div
+              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
+            >
+              {result || "Toggle checkbox to trigger action object..."}
             </div>
           </div>
         );

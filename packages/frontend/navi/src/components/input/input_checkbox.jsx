@@ -3,7 +3,6 @@ import { forwardRef } from "preact/compat";
 import {
   useContext,
   useImperativeHandle,
-  useLayoutEffect,
   useRef,
   useState,
 } from "preact/hooks";
@@ -272,7 +271,6 @@ const CustomCheckbox = ({ children }) => {
     </div>
   );
 };
-
 const useCheckedController = (props) => {
   const { id, defaultChecked, checked } = props;
   const hasCheckedProp = Object.hasOwn(props, "checked");
@@ -425,117 +423,3 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
     />
   );
 });
-
-/**
- * Things happening here
- *
- * Main goal is to keep track of the "activeValue" that will be given to the action or form.
- *
- * The active value is either the value of the checkbox (default "on") when checked,
- * or undefined when not checked.
- *
- * We need to
- *
- * - Know if the checkbox is checked right now (checked prop + eventually defaultChecked + user interaction)
- *
- */
-const useCheckedControllerOld = (checkboxRef, props, useActiveState) => {
-  const { id, value = "on", defaultChecked, checked } = props;
-
-  const hasCheckedProp = Object.hasOwn(props, "checked");
-  const interactedRef = useRef(false);
-  const [navState, setNavState] = useNavState(id);
-  useLayoutEffect(() => {
-    const checkbox = checkboxRef.current;
-    if (!checkbox) {
-      return null;
-    }
-    const oninput = () => {
-      interactedRef.current = true;
-    };
-    checkbox.addEventListener("input", oninput);
-    return () => {
-      checkbox.removeEventListener("input", oninput);
-    };
-  }, []);
-  let uiCheckedInitialValue;
-  if (hasCheckedProp) {
-    // controlled by "checked" prop
-    uiCheckedInitialValue = Boolean(checked);
-  } else if (defaultChecked) {
-    // fallback to "defaultChecked" prop
-    // if (interactedRef.current) {
-    //   // an interaction occured our local state prevails
-    //   uiCheckedAtStart = undefined;
-    // } else {
-    uiCheckedInitialValue = true;
-    // }
-  } else if (navState) {
-    uiCheckedInitialValue = true;
-  }
-  // we are done deciding the initial value for uiChecked
-  // now we will use a local state to track if the UI is checked
-  const [uiChecked, setUIChecked] = useState(uiCheckedInitialValue);
-
-  // as soon as we interact
-
-  const activeValueNow = innerChecked ? value : undefined;
-
-  const [activeValue, setActiveValue, initialActiveValue] = useActiveState(
-    activeValueNow,
-    navState ? value : undefined,
-    innerDefaultChecked ? value : undefined,
-  );
-  const initialChecked = Boolean(initialActiveValue);
-  const setChecked = (uiChecked) => {
-    const valueToSet = uiChecked ? value : undefined;
-    if (initialChecked) {
-      setNavState(uiChecked ? undefined : false);
-    } else {
-      setNavState(uiChecked ? true : undefined);
-    }
-    setActiveValue(valueToSet);
-  };
-
-  const cancelInteraction = () => {
-    setNavState(undefined);
-    interactedRef.current = false;
-  };
-  const endInteraction = () => {
-    setNavState(undefined);
-  };
-
-  return [
-    uiChecked,
-    setUIChecked,
-    initialChecked,
-    { cancelInteraction, endInteraction },
-  ];
-};
-
-const useChecked = (checkboxRef, props) => {
-  const interactedRef = useRef(false);
-  const { checked, defaultChecked } = props;
-  let innerChecked;
-  if (Object.hasOwn(props, "checked")) {
-    innerChecked = checked;
-  } else {
-    innerChecked = interactedRef.current ? false : defaultChecked;
-  }
-
-  useLayoutEffect(() => {
-    const checkbox = checkboxRef.current;
-    if (!checkbox) {
-      return null;
-    }
-    const oninput = () => {
-      interactedRef.current = true;
-    };
-    checkbox.addEventListener("input", oninput);
-    return () => {
-      checkbox.removeEventListener("input", oninput);
-    };
-  }, []);
-
-  return innerChecked;
-};
