@@ -58,6 +58,10 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   return <CheckboxListControlled {...props} ref={ref} {...uncontrolledProps} />;
 });
 const CheckboxListControlled = forwardRef((props, ref) => {
+  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
+  const groupReadonly = useContext(FieldGroupReadOnlyContext);
+  const groupDisabled = useContext(FieldGroupDisabledContext);
+  const groupLoading = useContext(FieldGroupLoadingContext);
   const {
     name,
     onUIStateChange,
@@ -68,10 +72,6 @@ const CheckboxListControlled = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
-  const groupReadonly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 

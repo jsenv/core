@@ -150,6 +150,14 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   );
 });
 const InputCheckboxControlled = forwardRef((props, ref) => {
+  const groupName = useContext(FieldGroupNameContext);
+  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
+  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
+  const groupDisabled = useContext(FieldGroupDisabledContext);
+  const groupRequired = useContext(FieldGroupRequiredContext);
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const setInputReadOnly = useContext(ReadOnlyContext);
   const {
     name,
     onUIStateChange,
@@ -166,14 +174,6 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
     onInput,
     ...rest
   } = props;
-  const groupName = useContext(FieldGroupNameContext);
-  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
-  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupRequired = useContext(FieldGroupRequiredContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
-  const setInputReadOnly = useContext(ReadOnlyContext);
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 

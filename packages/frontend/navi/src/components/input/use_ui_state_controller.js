@@ -1,5 +1,6 @@
-import { useRef, useState } from "preact/hooks";
+import { useContext, useRef, useState } from "preact/hooks";
 
+import { FieldGroupOnUIStateChangeContext } from "../field_group_context.js";
 import { useInitialValue } from "../use_initial_value.js";
 
 export const useValueController = (props, navState) => {
@@ -83,6 +84,7 @@ const useUncontrolledUIProps = (
   props,
   { fieldComponentName, statePropName, defaultStatePropName, fallbackState },
 ) => {
+  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const { onUIStateChange, readOnly } = props;
   const [uiState, setUIState] = useUIStateController(props, {
     statePropName,
@@ -90,6 +92,13 @@ const useUncontrolledUIProps = (
     fallbackState,
   });
 
+  const innerOnUIStateChange =
+    onUIStateChange && groupOnUIStateChange
+      ? (uiState, e) => {
+          onUIStateChange(uiState, e);
+          groupOnUIStateChange(uiState, e);
+        }
+      : onUIStateChange || groupOnUIStateChange;
   let innerReadOnly = readOnly;
   /**
    * This check is needed only for basic input because
@@ -101,7 +110,7 @@ const useUncontrolledUIProps = (
    * The component re-renders so it's the action/form that is considered as responsible
    * to update the state and as a result allowed to have "checked" prop without "onUIStateChange"
    */
-  if (Object.hasOwn(props, statePropName) && !onUIStateChange) {
+  if (Object.hasOwn(props, statePropName) && !innerOnUIStateChange) {
     innerReadOnly = true;
     if (import.meta.dev) {
       console.warn(
@@ -114,7 +123,7 @@ const useUncontrolledUIProps = (
     [statePropName]: uiState,
     onUIStateChange: (inputValue, e) => {
       setUIState(inputValue);
-      onUIStateChange?.(inputValue, e);
+      innerOnUIStateChange?.(inputValue, e);
     },
     readOnly: innerReadOnly,
   };
