@@ -59,11 +59,13 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {
-  const { onUIStateChange } = props;
+  const { onUIStateChange, readOnly } = props;
   const [uiValue, setUiValue] = useValueController(props);
 
-  if (import.meta.dev) {
-    if (Object.hasOwn(props, "value") && !onUIStateChange) {
+  let innerReadOnly = readOnly;
+  if (Object.hasOwn(props, "value") && !onUIStateChange) {
+    innerReadOnly = true;
+    if (import.meta.dev) {
       const { type = "text" } = props;
       console.warn(
         `<input type="${type}" /> is controlled by "value" prop. Replace it by "defaultValue" or combine it with "onUIStateChange" to make input interactive.`,
@@ -76,11 +78,11 @@ const InputTextualBasic = forwardRef((props, ref) => {
       {...props}
       ref={ref}
       value={uiValue}
-      readOnly={!onUIStateChange}
       onUIStateChange={(inputValue, e) => {
         setUiValue(inputValue);
         onUIStateChange?.(inputValue, e);
       }}
+      readOnly={innerReadOnly}
     />
   );
 });
