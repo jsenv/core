@@ -144,6 +144,7 @@
               <CheckboxDemo />
               <CheckboxDefaultCheckedDemo />
               <CheckboxActionDemo />
+              <CheckboxActionDefaultCheckedDemo />
             </div>
           </>
         );
@@ -151,6 +152,36 @@
 
       // eslint-disable-next-line no-unused-vars
       const CheckboxDemo = () => {
+        const [result, setResult] = useState("");
+        const [status] = useState("idle");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Basic Checkbox</h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <label>
+                  <Input
+                    type="checkbox"
+                    name="enabled"
+                    onCheckedChange={(checked) => {
+                      setResult(checked ? "checked" : "unchecked");
+                    }}
+                  />
+                  Enable feature
+                </label>
+              </div>
+            </div>
+            <div
+              className={`result-display ${status === "loading" ? "result-loading" : status === "success" ? "result-success" : status === "error" ? "result-error" : ""}`}
+            >
+              {result || "Check or uncheck to see action..."}
+            </div>
+          </div>
+        );
+      };
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxDefaultCheckedDemo = () => {
         const [result, setResult] = useState("");
         const [status] = useState("idle");
 
@@ -180,7 +211,6 @@
           </div>
         );
       };
-
       // eslint-disable-next-line no-unused-vars
       const CheckboxActionDemo = () => {
         const [result, setResult] = useState("");
@@ -224,9 +254,8 @@
           </div>
         );
       };
-
       // eslint-disable-next-line no-unused-vars
-      const CheckboxDefaultCheckedDemo = () => {
+      const CheckboxActionDefaultCheckedDemo = () => {
         const [result, setResult] = useState("");
 
         return (
