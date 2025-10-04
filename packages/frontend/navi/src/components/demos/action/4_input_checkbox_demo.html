@@ -143,11 +143,10 @@
             <div className="demo-grid">
               <BasicCheckboxDemo />
               <CheckboxDefaultCheckedDemo />
-              <CheckboxWithExternalControlDemo />
-              <CheckboxControlledAndActionObjectDemo />
+              <ControlledCheckboxDemo />
+              <CheckboxWithActionDemo />
               <CheckboxErrorDemo />
-              <FormCheckboxDemo />
-              <SharedActionDemo />
+              <CheckboxErrorInitiallyCheckedDemo />
             </div>
           </>
         );
@@ -235,19 +234,16 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const CheckboxWithExternalControlDemo = () => {
+      const ControlledCheckboxDemo = () => {
         const [isChecked, setIsChecked] = useState(undefined);
         const [result, setResult] = useState("");
 
         // Debug logging
-        console.log(
-          "CheckboxWithExternalControlDemo render - isChecked:",
-          isChecked,
-        );
+        console.log("ControlledCheckboxDemo render - isChecked:", isChecked);
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Checkbox with External Control</h3>
+            <h3 className="demo-title">Controlled Checkbox</h3>
             <p>
               Reset button won't override UI, use false to override. (This is
               because checked=undefined won't override the UI state)
@@ -256,7 +252,6 @@
               <div className="checkbox-group">
                 <label>
                   <Input
-                    // id="controlled-checkbox"
                     type="checkbox"
                     name="notifications"
                     checked={isChecked}
@@ -323,22 +318,20 @@
         await delay(600);
         return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
       });
+
       // eslint-disable-next-line no-unused-vars
-      const CheckboxControlledAndActionObjectDemo = () => {
+      const CheckboxWithActionDemo = () => {
         const [result, setResult] = useState("");
-        const [checked, setChecked] = useState(undefined);
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Checkbox controlled + action object</h3>
+            <h3 className="demo-title">Checkbox with Action Object</h3>
             <div className="control-group">
               <div className="checkbox-group">
                 <Input
-                  id="signal-controlled-checkbox"
+                  id="action-object-checkbox"
                   type="checkbox"
-                  // name="notifications_signal"
-                  checked={checked}
-                  onCheckedChange={setChecked}
+                  name="notifications"
                   action={(notifications) => {
                     return toggleAction({ notifications });
                   }}
@@ -349,44 +342,15 @@
                     setResult(e.detail.data);
                   }}
                 />
-                <label htmlFor="signal-controlled-checkbox">
-                  Enable notifications (signal controlled)
+                <label htmlFor="action-object-checkbox">
+                  Enable notifications (with action object)
                 </label>
               </div>
-            </div>
-            <div className="button-group">
-              <button
-                onClick={() => {
-                  console.log("Setting signal to true");
-                  setChecked(true);
-                }}
-              >
-                Enable via Signal
-              </button>
-              <button
-                onClick={() => {
-                  console.log("Setting signal to false");
-                  setChecked(false);
-                }}
-              >
-                Disable via Signal
-              </button>
-              <button
-                onClick={() => {
-                  console.log("Toggling signal, current state:", checked);
-                  setChecked(!checked);
-                }}
-              >
-                Toggle Signal
-              </button>
             </div>
             <div
               className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
             >
-              Checked: {String(checked)}
-              <br />
-              {result ||
-                "Use buttons to control checkbox via signal, action will trigger automatically..."}
+              {result || "Toggle checkbox to trigger action object..."}
             </div>
           </div>
         );
@@ -437,143 +401,50 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const FormCheckboxDemo = () => {
+      const CheckboxErrorInitiallyCheckedDemo = () => {
         const [result, setResult] = useState("");
-        const [isLoading, setIsLoading] = useState(false);
+        const [status, setStatus] = useState("idle");
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Checkboxes inside Form</h3>
-            <Form
-              action={async ({ username, newsletter, updates, marketing }) => {
-                setIsLoading(true);
-                setResult("Submitting preferences...");
-                try {
-                  await delay(1200);
-                  const prefs = [];
-                  if (newsletter) prefs.push("newsletter");
-                  if (updates) prefs.push("updates");
-                  if (marketing) prefs.push("marketing");
-                  const response = `✅ User: ${username}\nSubscriptions: ${prefs.length > 0 ? prefs.join(", ") : "none"}`;
-                  setResult(response);
-                  return response;
-                } catch (error) {
-                  setResult(`❌ Form error: ${error.message}`);
-                  throw error;
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-            >
-              <input type="hidden" name="username" value="john_doe" />
-              <div className="control-group">
-                <div className="checkbox-group">
-                  <Input
-                    id="form-newsletter"
-                    type="checkbox"
-                    name="newsletter"
-                    checked={true}
-                  />
-                  <label htmlFor="form-newsletter">
-                    Newsletter subscription
-                  </label>
-                </div>
-                <div className="checkbox-group">
-                  <Input id="form-updates" type="checkbox" name="updates" />
-                  <label htmlFor="form-updates">Product updates</label>
-                </div>
-                <div className="checkbox-group">
-                  <Input id="form-marketing" type="checkbox" name="marketing" />
-                  <label htmlFor="form-marketing">Marketing emails</label>
-                </div>
-              </div>
-              <div className="button-group">
-                <Button type="submit">Save Preferences</Button>
-                <Button type="reset">Reset</Button>
-              </div>
-            </Form>
-            <div
-              className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
-            >
-              {result || "Select preferences and submit..."}
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const SharedActionDemo = () => {
-        const [result, setResult] = useState("");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Shared Action Example</h3>
-            <p
-              style={{
-                margin: "0 0 15px 0",
-                fontSize: "14px",
-                color: "#666",
-                lineHeight: "1.4",
-              }}
-            >
-              <strong>Note:</strong> The checkbox states are not synced here,
-              which is normal. In a real application, both checkboxes would
-              typically be controlled by the same external state to keep them
-              synchronized.
-            </p>
+            <h3 className="demo-title">Checkbox Error (Initially Checked)</h3>
             <div className="control-group">
               <div className="checkbox-group">
                 <Input
-                  id="shared-checkbox-1"
+                  id="error-initial-checkbox"
                   type="checkbox"
-                  name="feature1"
-                  action={sharedToggleAction}
-                  onActionStart={() => {
+                  name="risky"
+                  defaultChecked
+                  action={async (risky) => {
+                    setStatus("loading");
                     setResult("Processing...");
-                  }}
-                  onActionEnd={(e) => {
-                    setResult(e.detail.data);
+                    try {
+                      await delay(1200);
+                      throw new Error(
+                        `Operation failed for ${risky ? "enabled" : "disabled"} risky feature`,
+                      );
+                    } catch (error) {
+                      setResult(`❌ ${error.message}`);
+                      setStatus("error");
+                      throw error;
+                    }
                   }}
                 />
-                <label htmlFor="shared-checkbox-1">
-                  Feature 1 (shared action)
-                </label>
-              </div>
-              <div className="checkbox-group">
-                <Input
-                  id="shared-checkbox-2"
-                  type="checkbox"
-                  name="feature2"
-                  action={sharedToggleAction}
-                  onActionStart={() => {
-                    setResult("Processing...");
-                  }}
-                  onActionEnd={(e) => {
-                    setResult(e.detail.data);
-                  }}
-                />
-                <label htmlFor="shared-checkbox-2">
-                  Feature 2 (same shared action)
+                <label htmlFor="error-initial-checkbox">
+                  <span className={`status-indicator status-${status}`}></span>
+                  Enable risky feature (starts checked, always fails)
                 </label>
               </div>
             </div>
             <div
-              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
+              className={`result-display ${status === "loading" ? "result-loading" : status === "error" ? "result-error" : ""}`}
             >
-              {result || "Toggle either checkbox to see shared action..."}
+              {result ||
+                "This checkbox starts checked and will always trigger an error..."}
             </div>
           </div>
         );
       };
-      const sharedToggleAction = createAction(async (params) => {
-        await delay(800);
-        const featureName = Object.keys(params).find((key) =>
-          key.startsWith("feature"),
-        );
-        const isEnabled = params[featureName];
-        const response = `${isEnabled ? "✅" : "☐"} ${featureName} ${isEnabled ? "enabled" : "disabled"} (from shared action)`;
-        return response;
-      });
 
       render(<App />, document.querySelector("#root"));
     </script>
