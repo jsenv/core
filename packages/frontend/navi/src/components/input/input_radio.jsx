@@ -8,7 +8,7 @@ import {
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnFieldChangeContext,
+  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "../field_group_context.js";
@@ -218,7 +218,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
     }
   }
   const groupName = useContext(FieldGroupNameContext);
-  const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
+  const groupOnFieldChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupRequired = useContext(FieldGroupRequiredContext);

@@ -21,7 +21,7 @@ import {
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnFieldChangeContext,
+  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "../field_group_context.js";
@@ -57,7 +57,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
+  const groupOnFieldChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
@@ -87,7 +87,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
       {...rest}
     >
       <FieldGroupNameContext.Provider value={name}>
-        <FieldGroupOnFieldChangeContext.Provider
+        <FieldGroupOnUIStateChangeContext.Provider
           value={useStableCallback(innerOnValueChange)}
         >
           <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
@@ -99,7 +99,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
               </FieldGroupRequiredContext.Provider>
             </FieldGroupDisabledContext.Provider>
           </FieldGroupReadOnlyContext.Provider>
-        </FieldGroupOnFieldChangeContext.Provider>
+        </FieldGroupOnUIStateChangeContext.Provider>
       </FieldGroupNameContext.Provider>
     </div>
   );

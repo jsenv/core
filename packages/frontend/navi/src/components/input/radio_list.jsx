@@ -20,7 +20,7 @@ import {
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnFieldChangeContext,
+  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "../field_group_context.js";
@@ -56,7 +56,7 @@ const RadioListBasic = forwardRef((props, ref) => {
     onValueChange,
     ...rest
   } = props;
-  const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
+  const groupOnFieldChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
@@ -78,7 +78,7 @@ const RadioListBasic = forwardRef((props, ref) => {
   return (
     <div ref={innerRef} className="navi_radio_list" {...rest}>
       <FieldGroupNameContext.Provider value={name}>
-        <FieldGroupOnFieldChangeContext.Provider
+        <FieldGroupOnUIStateChangeContext.Provider
           value={useStableCallback(innerOnValueChange)}
         >
           <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
@@ -90,7 +90,7 @@ const RadioListBasic = forwardRef((props, ref) => {
               </FieldGroupRequiredContext.Provider>
             </FieldGroupDisabledContext.Provider>
           </FieldGroupReadOnlyContext.Provider>
-        </FieldGroupOnFieldChangeContext.Provider>
+        </FieldGroupOnUIStateChangeContext.Provider>
       </FieldGroupNameContext.Provider>
     </div>
   );
