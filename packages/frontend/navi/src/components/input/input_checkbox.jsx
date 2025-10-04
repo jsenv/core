@@ -352,14 +352,14 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     setActionValue(uiCheckedState ? value : undefined);
     onUIStateChange?.(uiCheckedState, e);
   };
+  // In this situation updating the ui state === calling associated action
+  // so cance/abort/error have to revert the ui state to the one before user interaction
+  // to show back the real state of the checkbox (not the one user tried to set)
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       if (reason === "blur_invalid") {
         return;
       }
-      // In this situation updating the ui state === trying to call associated action
-      // so when it's aborted we have to revert the ui state to the one before user interaction
-      // to show back the real state of the checkbox (not the one user tried to set)
       innerOnUIStateChange(externalCheckedState, e);
       onCancel?.(e, reason);
     },
@@ -367,16 +367,10 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     onAction: executeAction,
     onStart: onActionStart,
     onAbort: (e) => {
-      // In this situation updating the ui state === trying to call associated action
-      // so when it's aborted we have to revert the ui state to the one before user interaction
-      // to show back the real state of the checkbox (not the one user tried to set)
       innerOnUIStateChange(externalCheckedState, e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      // In this situation updating the ui state === trying to call associated action
-      // so when it's failing we have to revert the ui state to the one before user interaction
-      // to show back the real state of the checkbox (not the one user tried to set)
       innerOnUIStateChange(externalCheckedState, e);
       onActionError?.(e);
     },
@@ -407,7 +401,6 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   const { id, name, value = "on", onCheckedChange, ...rest } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-
   const [navState, setNavState] = useNavState(id);
   const [checkedState, setCheckedState, externalCheckedState] =
     useCheckedController(props, navState);
@@ -441,7 +434,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
     onFormActionEnd: () => {
       // form side effect is a success
       // we can get rid of the nav state
-      // that was keeping the ui state in case or reload without submission
+      // that was keeping the ui state in case user navigates away without submission
       setNavState(undefined);
     },
   });

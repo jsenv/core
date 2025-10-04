@@ -50,42 +50,6 @@ import "./field_css.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
-export const InputTextual = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
-    Basic: InputTextualBasic,
-    WithAction: InputTextualWithAction,
-    InsideForm: InputTextualInsideForm,
-  });
-});
-
-const InputTextualBasic = forwardRef((props, ref) => {
-  const { onUIStateChange, readOnly } = props;
-  const [uiValue, setUiValue] = useValueController(props);
-
-  let innerReadOnly = readOnly;
-  if (Object.hasOwn(props, "value") && !onUIStateChange) {
-    innerReadOnly = true;
-    if (import.meta.dev) {
-      const { type = "text" } = props;
-      console.warn(
-        `<input type="${type}" /> is controlled by "value" prop. Replace it by "defaultValue" or combine it with "onUIStateChange" to make input interactive.`,
-      );
-    }
-  }
-
-  return (
-    <InputTextualControlled
-      {...props}
-      ref={ref}
-      value={uiValue}
-      onUIStateChange={(inputValue, e) => {
-        setUiValue(inputValue);
-        onUIStateChange?.(inputValue, e);
-      }}
-      readOnly={innerReadOnly}
-    />
-  );
-});
 const useValueController = (props) => {
   const { id, defaultValue, value } = props;
   const hasValueProp = Object.hasOwn(props, "value");
@@ -124,6 +88,44 @@ const useValueController = (props) => {
 
   return [uiState, onUIStateChange, externalState];
 };
+
+export const InputTextual = forwardRef((props, ref) => {
+  return renderActionableComponent(props, ref, {
+    Basic: InputTextualBasic,
+    WithAction: InputTextualWithAction,
+    InsideForm: InputTextualInsideForm,
+  });
+});
+
+const InputTextualBasic = forwardRef((props, ref) => {
+  const { onUIStateChange, readOnly } = props;
+  const [uiValue, setUiValue] = useValueController(props);
+
+  let innerReadOnly = readOnly;
+  if (Object.hasOwn(props, "value") && !onUIStateChange) {
+    innerReadOnly = true;
+    if (import.meta.dev) {
+      const { type = "text" } = props;
+      console.warn(
+        `<input type="${type}" /> is controlled by "value" prop. Replace it by "defaultValue" or combine it with "onUIStateChange" to make input interactive.`,
+      );
+    }
+  }
+
+  return (
+    <InputTextualControlled
+      {...props}
+      ref={ref}
+      value={uiValue}
+      onUIStateChange={(inputValue, e) => {
+        setUiValue(inputValue);
+        onUIStateChange?.(inputValue, e);
+      }}
+      readOnly={innerReadOnly}
+    />
+  );
+});
+
 const InputTextualControlled = forwardRef((props, ref) => {
   const {
     type,
@@ -229,10 +231,11 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const [value, setValue, initialValue] = useValueController(props);
+  const [valueState, setValueState, externalValueState] =
+    useValueController(props);
   const [boundAction, , setActionValue] = useActionBoundToOneParam(
     action,
-    initialValue,
+    externalValueState,
   );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -241,7 +244,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   const valueAtInteractionRef = useRef(null);
 
   const innerOnUIStateChange = (uiState, e) => {
-    setValue(uiState);
+    setValueState(uiState);
     setActionValue(uiState);
     onUIStateChange?.(uiState, e);
   };
@@ -255,6 +258,10 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     }
     requestAction(e.target, boundAction, { event: e });
   });
+  // here updating the input won't call the associated action
+  // (user have to blur or press enter for this to happen)
+  // so we can keep the ui state on cancel/abort/error and let user decide
+  // to update ui state or retry via blur/enter as is
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       if (reason.startsWith("blur_invalid")) {
@@ -281,7 +288,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          */
         valueAtInteractionRef.current = e.target.value;
       }
-      innerOnUIStateChange(initialValue, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -299,7 +305,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
         type={type}
         id={id}
         name={name}
-        value={value}
+        value={valueState}
         data-action={boundAction.name}
         onUIStateChange={innerOnUIStateChange}
         onInput={(e) => {
@@ -329,17 +335,35 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   const { formAction } = formContext;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const [value, setValue, initialValue] = useValueController(props);
-  const [, setFormParam] = useOneFormParam(name, initialValue);
+  const [navState, setNavState] = useNavState(id);
+  const [valueState, setValueState, externalValueState] = useValueController(
+    props,
+    navState,
+  );
+  const [, setFormParam] = useOneFormParam(name, externalValueState);
 
   const innerOnUIStateChange = (uiState, e) => {
-    setValue(uiState);
+    setValueState(uiState);
     setFormParam(uiState);
+    setNavState(uiState);
     onUIStateChange?.(uiState, e);
   };
   useFormEvents(innerRef, {
-    onFormReset: (e) => {
-      innerOnUIStateChange(initialValue, e);
+    onFormActionAbort: () => {
+      // user might want to re-submit as is
+      // or change the ui state before re-submitting
+      // we can't decide for him
+    },
+    onFormActionError: () => {
+      // user might want to re-submit as is
+      // or change the ui state before re-submitting
+      // we can't decide for him
+    },
+    onFormActionEnd: () => {
+      // form action is a success
+      // we can get rid of the nav state
+      // that was keeping the ui state in case user navigates aways without submission
+      setNavState(undefined);
     },
   });
 
@@ -349,7 +373,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       id={id}
       name={name}
-      value={value}
+      value={valueState}
       onUIStateChange={innerOnUIStateChange}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
