@@ -28,7 +28,7 @@ export const useFormActionBoundToFormParams = (action) => {
     updateFormParams,
   ];
 };
-export const useOneFormParam = (name, initialValue) => {
+export const useOneFormParam = (name, externalValue) => {
   if (!name) {
     throw new Error("useOneFormParam: name is required");
   }
@@ -49,7 +49,12 @@ export const useOneFormParam = (name, initialValue) => {
     // This is not stricly required as form will collect values upon submission
     // but this allow to see the form [data-action] in devtools being in sync
     mountedRef.current = true;
-    setValue(initialValue);
+    setValue(externalValue);
+  }
+  const externalValueRef = useRef(externalValue);
+  if (externalValue !== externalValueRef.current) {
+    externalValueRef.current = externalValue;
+    setValue(externalValue);
   }
 
   const value = getValue();
@@ -58,13 +63,19 @@ export const useOneFormParam = (name, initialValue) => {
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
-export const useActionBoundToOneParam = (action, initialValue) => {
-  const actionFirstArgSignal = useSignal(initialValue);
+export const useActionBoundToOneParam = (action, externalValue) => {
+  const actionFirstArgSignal = useSignal(externalValue);
   const boundAction = useBoundAction(action, actionFirstArgSignal);
   const getValue = useCallback(() => actionFirstArgSignal.value, []);
   const setValue = useCallback((value) => {
     actionFirstArgSignal.value = value;
   }, []);
+  const externalValueRef = useRef(externalValue);
+  if (externalValue !== externalValueRef.current) {
+    externalValueRef.current = externalValue;
+    setValue(externalValue);
+  }
+
   const value = getValue();
   return [boundAction, value, setValue];
 };
