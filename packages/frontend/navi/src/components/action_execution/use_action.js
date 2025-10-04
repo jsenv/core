@@ -3,7 +3,7 @@ import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
-import { useInitialValue } from "../use_initial_value.js";
+import { resolveInitialValue } from "../use_initial_value.js";
 import { FormContext } from "./form_context.js";
 
 let debug = false;
@@ -39,19 +39,17 @@ export const useOneFormParam = (
     throw new Error("useOneFormParam: name is required");
   }
 
+  const initialValue = resolveInitialValue(
+    externalValue,
+    fallbackValue,
+    defaultValue,
+  );
+
   const { formParamsSignal } = useContext(FormContext);
   const getValue = useCallback(() => formParamsSignal.value[name], []);
   const setValue = useCallback(
     (value) => updateParamsSignal(formParamsSignal, { [name]: value }),
     [],
-  );
-
-  const initialValue = useInitialValue(
-    name,
-    externalValue,
-    fallbackValue,
-    defaultValue,
-    setValue,
   );
 
   return [getValue(), setValue, initialValue];
@@ -61,24 +59,22 @@ export const useOneFormParam = (
 // when inside a <form> the form params are updated when the form element single param is updated
 export const useActionBoundToOneParam = (
   action,
-  name,
   externalValue,
   fallbackValue,
   defaultValue,
 ) => {
-  const actionFirstArgSignal = useSignal();
+  const initialValue = resolveInitialValue(
+    externalValue,
+    fallbackValue,
+    defaultValue,
+  );
+  const actionFirstArgSignal = useSignal(initialValue);
   const boundAction = useBoundAction(action, actionFirstArgSignal);
   const getValue = useCallback(() => actionFirstArgSignal.value, []);
   const setValue = useCallback((value) => {
     actionFirstArgSignal.value = value;
   }, []);
-  const initialValue = useInitialValue(
-    name,
-    externalValue,
-    fallbackValue,
-    defaultValue,
-    setValue,
-  );
+
   const value = getValue();
 
   return [boundAction, value, setValue, initialValue];
