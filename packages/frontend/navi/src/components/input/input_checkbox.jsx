@@ -186,7 +186,7 @@ const useCheckedController = (props) => {
   }
   const externalState = externalStateRef.current;
 
-  const onCheckedChange = (checked) => {
+  const onUIStateChange = (checked) => {
     if (externalState) {
       setNavState(checked ? undefined : false);
     } else {
@@ -195,7 +195,7 @@ const useCheckedController = (props) => {
     setUIState(checked);
   };
 
-  return [uiState, onCheckedChange, externalState];
+  return [uiState, onUIStateChange, externalState];
 };
 const InputCheckboxControlled = forwardRef((props, ref) => {
   const {
@@ -242,7 +242,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   if (import.meta.dev) {
     if (Object.hasOwn(props, "checked") && !innerOnCheckedChange) {
       console.warn(
-        `<input type="checkbox" /> is controlled by "checked" prop. Use "onCheckedChange" or "defaultChecked" prop too to make it interactive.`,
+        `<input type="checkbox" /> is controlled by "checked" prop. Replace it by "defaultChecked" or combine it with "onCheckedChange" to make input interactive.`,
       );
     }
   }

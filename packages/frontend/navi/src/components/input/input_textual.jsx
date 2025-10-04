@@ -24,6 +24,7 @@ import {
   useImperativeHandle,
   useLayoutEffect,
   useRef,
+  useState,
 } from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
@@ -44,6 +45,7 @@ import {
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
+import { useInitialValue } from "../use_initial_value.js";
 import "./field_css.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
@@ -73,7 +75,44 @@ const InputTextualBasic = forwardRef((props, ref) => {
     />
   );
 });
-const useValueController = () => {};
+const useValueController = (props) => {
+  const { id, defaultValue, value } = props;
+  const hasValueProp = Object.hasOwn(props, "value");
+  const [navState, setNavState] = useNavState(id);
+  const externalStateInitial = useInitialValue(() => {
+    if (hasValueProp) {
+      // controlled by "value" prop
+      return value;
+    }
+    if (defaultValue) {
+      return defaultValue;
+    }
+    if (navState) {
+      return navState;
+    }
+    return "";
+  });
+  const externalStateRef = useRef(externalStateInitial);
+  const [uiState, setUIState] = useState(externalStateInitial);
+  const valueRef = useRef(value);
+  if (hasValueProp && value !== valueRef.current) {
+    valueRef.current = value;
+    externalStateRef.current = value;
+    setUIState(value);
+  }
+  const externalState = externalStateRef.current;
+
+  const onUIStateChange = (uiValue) => {
+    if (externalState) {
+      setNavState(uiValue ? undefined : false);
+    } else {
+      setNavState(uiValue ? true : undefined);
+    }
+    setUIState(uiValue);
+  };
+
+  return [uiState, onUIStateChange, externalState];
+};
 const InputTextualControlled = forwardRef((props, ref) => {
   const {
     type,
@@ -121,6 +160,14 @@ const InputTextualControlled = forwardRef((props, ref) => {
   });
   useConstraints(innerRef, constraints);
 
+  if (import.meta.dev) {
+    if (Object.hasOwn(props, "value") && !onValueChange) {
+      console.warn(
+        `<input type="${type}" /> is controlled by "value" prop. Replace it by "defaultValue" or combine it with "onValueChange" to make input interactive.`,
+      );
+    }
+  }
+
   const inputTextual = (
     <input
       ref={innerRef}
@@ -162,7 +209,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     type,
 
     name,
-    value,
     onValueChange,
     action,
 
@@ -180,19 +226,21 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState(id);
-  const [boundAction, , setActionValue, initialValue] =
-    useActionBoundToOneParam(action, name, value, navState, "");
+  const [value, setValue, initialValue] = useValueController(props);
+  const [boundAction, , setActionValue] = useActionBoundToOneParam(
+    action,
+    initialValue,
+  );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const valueAtInteractionRef = useRef(null);
 
-  const innerOnValueChange = (uiValue, e) => {
-    setNavState(uiValue);
-    setActionValue(uiValue);
-    onValueChange?.(uiValue, e);
+  const innerOnUIStateChange = (uiState, e) => {
+    setValue(uiState);
+    setActionValue(uiState);
+    onValueChange?.(uiState, e);
   };
   useOnInputChange(innerRef, (e) => {
     if (
@@ -230,30 +278,27 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          */
         valueAtInteractionRef.current = e.target.value;
       }
-      innerOnValueChange(initialValue, e);
+      innerOnUIStateChange(initialValue, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
     onError: onActionError,
-    onEnd: (e) => {
-      setNavState(undefined);
-      onActionEnd?.(e);
-    },
+    onEnd: onActionEnd,
   });
 
   return (
     <FieldGroupLoadingContext.Provider value={actionLoading}>
-      <InputTextualBasic
+      <InputTextualControlled
         {...rest}
         ref={innerRef}
         type={type}
         id={id}
         name={name}
         value={value}
-        data-action={boundAction}
-        onValueChange={innerOnValueChange}
+        data-action={boundAction.name}
+        onValueChange={innerOnUIStateChange}
         onInput={(e) => {
           valueAtInteractionRef.current = null;
           onInput?.(e);
@@ -277,22 +322,21 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   );
 });
 const InputTextualInsideForm = forwardRef((props, ref) => {
-  const { formContext, id, name, value, onValueChange, onKeyDown, ...rest } =
-    props;
+  const { formContext, id, name, onValueChange, onKeyDown, ...rest } = props;
   const { formAction } = formContext;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState(id);
-  const [, setFormValue] = useOneFormParam(name, value, navState, "");
+  const [value, setValue, initialValue] = useValueController(props);
+  const [, setFormParam] = useOneFormParam(name, initialValue);
 
-  const innerOnValueChange = (uiValue, e) => {
-    setNavState(uiValue);
-    setFormValue(uiValue);
-    onValueChange?.(uiValue, e);
+  const innerOnUIStateChange = (uiState, e) => {
+    setValue(uiState);
+    setFormParam(uiState);
+    onValueChange?.(uiState, e);
   };
   useFormEvents(innerRef, {
     onFormReset: (e) => {
-      innerOnValueChange(undefined, e);
+      innerOnUIStateChange(initialValue, e);
     },
   });
 
@@ -303,7 +347,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       id={id}
       name={name}
       value={value}
-      onValueChange={innerOnValueChange}
+      onValueChange={innerOnUIStateChange}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           const inputElement = e.target;
