@@ -20,7 +20,7 @@ import {
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnFieldChangeContext,
+  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "../field_group_context.js";
@@ -152,9 +152,9 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       ref={ref}
       checked={uiChecked}
       readOnly={!onCheckedChange}
-      onCheckedChange={(checked, e) => {
-        setUiChecked(checked);
-        onCheckedChange?.(checked, e);
+      onCheckedChange={(checkboxChecked, e) => {
+        setUiChecked(checkboxChecked);
+        onCheckedChange?.(checkboxChecked, e);
       }}
     />
   );
@@ -197,7 +197,6 @@ const useCheckedController = (props) => {
 
   return [uiState, onCheckedChange, externalState];
 };
-
 const InputCheckboxControlled = forwardRef((props, ref) => {
   const {
     name,
@@ -216,7 +215,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
     ...rest
   } = props;
   const groupName = useContext(FieldGroupNameContext);
-  const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
+  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupRequired = useContext(FieldGroupRequiredContext);
@@ -227,7 +226,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const innerName = name || groupName;
-  const innerOnCheckedChange = onCheckedChange || groupOnFieldChange;
+  const innerOnCheckedChange = onCheckedChange || groupOnUIStateChange;
   const innerDisabled = disabled || groupDisabled;
   const innerRequired = required || groupRequired;
   const innerLoading =

@@ -38,7 +38,7 @@ import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
-  FieldGroupOnFieldChangeContext,
+  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
 } from "../field_group_context.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
@@ -57,7 +57,25 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {
-  let {
+  const { onValueChange } = props;
+  const [uiValue, setUiValue] = useValueController(props);
+
+  return (
+    <InputTextualControlled
+      {...props}
+      ref={ref}
+      value={uiValue}
+      readOnly={!onValueChange}
+      onValueChange={(inputValue, e) => {
+        setUiValue(inputValue);
+        onValueChange?.(inputValue, e);
+      }}
+    />
+  );
+});
+const useValueController = () => {};
+const InputTextualControlled = forwardRef((props, ref) => {
+  const {
     type,
     value,
     onValueChange,
@@ -74,20 +92,20 @@ const InputTextualBasic = forwardRef((props, ref) => {
     appearance = "custom",
     ...rest
   } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  const groupOnFieldChange = useContext(FieldGroupOnFieldChangeContext);
+  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupActionRequester = useContext(FieldGroupActionRequesterContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
   const setInputReadOnly = useContext(ReadOnlyContext);
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
 
   let innerValue = value;
   if (type === "datetime-local") {
     innerValue = convertToLocalTimezone(innerValue);
   }
-  const innerOnValueChange = onValueChange || groupOnFieldChange;
+  const innerOnValueChange = onValueChange || groupOnUIStateChange;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
@@ -137,6 +155,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
     </LoadableInlineElement>
   );
 });
+
 const InputTextualWithAction = forwardRef((props, ref) => {
   const {
     id,
