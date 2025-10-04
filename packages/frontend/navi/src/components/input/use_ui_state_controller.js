@@ -1,6 +1,9 @@
 import { useContext, useRef, useState } from "preact/hooks";
 
-import { FieldGroupOnUIStateChangeContext } from "../field_group_context.js";
+import {
+  FieldGroupOnUIStateChangeContext,
+  FieldGroupUIStateContext,
+} from "../field_group_context.js";
 import { useInitialValue } from "../use_initial_value.js";
 
 export const useValueController = (props, navState) => {
@@ -14,9 +17,9 @@ export const useValueController = (props, navState) => {
     navState,
   );
 };
-export const useUncontrolledValueProps = (props, fieldComponentName) => {
+export const useUncontrolledValueProps = (props, Component) => {
   return useUncontrolledUIProps(props, {
-    fieldComponentName,
+    Component,
     statePropName: "value",
     defaultStatePropName: "defaultValue",
     fallbackState: "",
@@ -35,9 +38,9 @@ export const useCheckedController = (props, navState) => {
     navState,
   );
 };
-export const useUncontrolledCheckedProps = (props, fieldComponentName) => {
+export const useUncontrolledCheckedProps = (props, Component) => {
   return useUncontrolledUIProps(props, {
-    fieldComponentName,
+    Component,
     statePropName: "checked",
     defaultStatePropName: "defaultChecked",
     fallbackState: false,
@@ -82,8 +85,9 @@ const useUIStateController = (
 };
 const useUncontrolledUIProps = (
   props,
-  { fieldComponentName, statePropName, defaultStatePropName, fallbackState },
+  { Component, statePropName, defaultStatePropName, fallbackState },
 ) => {
+  const groupUIState = useContext(FieldGroupUIStateContext);
   const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const { onUIStateChange, readOnly } = props;
   const [uiState, setUIState] = useUIStateController(props, {
@@ -114,7 +118,7 @@ const useUncontrolledUIProps = (
     innerReadOnly = true;
     if (import.meta.dev) {
       console.warn(
-        `${fieldComponentName} is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
+        `<${Component.name} /> is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
       );
     }
   }

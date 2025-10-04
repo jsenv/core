@@ -24,6 +24,7 @@ import {
   FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
+  FieldGroupUIStateContext,
 } from "../field_group_context.js";
 import { useActionEvents } from "../use_action_events.js";
 import { useStableCallback } from "../use_stable_callback.js";
@@ -51,10 +52,7 @@ export const CheckboxList = forwardRef((props, ref) => {
 export const Checkbox = InputCheckbox;
 
 const CheckboxListBasic = forwardRef((props, ref) => {
-  const uncontrolledProps = useUncontrolledValueProps(
-    props,
-    `<CheckboxList />`,
-  );
+  const uncontrolledProps = useUncontrolledValueProps(props, CheckboxListBasic);
   return <CheckboxListControlled {...props} ref={ref} {...uncontrolledProps} />;
 });
 const CheckboxListControlled = forwardRef((props, ref) => {
@@ -64,6 +62,7 @@ const CheckboxListControlled = forwardRef((props, ref) => {
   const groupLoading = useContext(FieldGroupLoadingContext);
   const {
     name,
+    value,
     onUIStateChange,
     readOnly,
     disabled,
@@ -98,19 +97,21 @@ const CheckboxListControlled = forwardRef((props, ref) => {
       {...rest}
     >
       <FieldGroupNameContext.Provider value={name}>
-        <FieldGroupOnUIStateChangeContext.Provider
-          value={useStableCallback(innerOnUIStateChange)}
-        >
-          <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
-            <FieldGroupDisabledContext.Provider value={innerDisabled}>
-              <FieldGroupRequiredContext.Provider value={required}>
-                <FieldGroupLoadingContext.Provider value={innerLoading}>
-                  {children}
-                </FieldGroupLoadingContext.Provider>
-              </FieldGroupRequiredContext.Provider>
-            </FieldGroupDisabledContext.Provider>
-          </FieldGroupReadOnlyContext.Provider>
-        </FieldGroupOnUIStateChangeContext.Provider>
+        <FieldGroupUIStateContext.Provider value={value}>
+          <FieldGroupOnUIStateChangeContext.Provider
+            value={useStableCallback(innerOnUIStateChange)}
+          >
+            <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
+              <FieldGroupDisabledContext.Provider value={innerDisabled}>
+                <FieldGroupRequiredContext.Provider value={required}>
+                  <FieldGroupLoadingContext.Provider value={innerLoading}>
+                    {children}
+                  </FieldGroupLoadingContext.Provider>
+                </FieldGroupRequiredContext.Provider>
+              </FieldGroupDisabledContext.Provider>
+            </FieldGroupReadOnlyContext.Provider>
+          </FieldGroupOnUIStateChangeContext.Provider>
+        </FieldGroupUIStateContext.Provider>
       </FieldGroupNameContext.Provider>
     </div>
   );

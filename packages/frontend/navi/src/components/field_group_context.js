@@ -1,6 +1,7 @@
 import { createContext } from "preact";
 
 export const FieldGroupNameContext = createContext();
+export const FieldGroupUIStateContext = createContext();
 export const FieldGroupOnUIStateChangeContext = createContext();
 export const FieldGroupReadOnlyContext = createContext();
 export const FieldGroupDisabledContext = createContext();

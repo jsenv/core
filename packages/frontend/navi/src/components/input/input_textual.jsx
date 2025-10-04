@@ -61,10 +61,7 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {
-  const uncontrolledProps = useUncontrolledValueProps(
-    props,
-    `<input type="${props.type || "text"}" />`,
-  );
+  const uncontrolledProps = useUncontrolledValueProps(props, InputTextualBasic);
   return <InputTextualControlled {...props} ref={ref} {...uncontrolledProps} />;
 });
 
