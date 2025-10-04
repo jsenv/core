@@ -145,7 +145,6 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
     props,
     `<input type="checkbox" />`,
   );
-
   return (
     <InputCheckboxControlled {...props} ref={ref} {...uncontrolledProps} />
   );

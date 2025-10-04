@@ -29,6 +29,10 @@ import { useActionEvents } from "../use_action_events.js";
 import { useStableCallback } from "../use_stable_callback.js";
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { useFormEvents } from "./use_form_events.js";
+import {
+  useUncontrolledValueProps,
+  useValueController,
+} from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .navi_checkbox_list {
@@ -47,6 +51,13 @@ export const CheckboxList = forwardRef((props, ref) => {
 export const Checkbox = InputCheckbox;
 
 const CheckboxListBasic = forwardRef((props, ref) => {
+  const uncontrolledProps = useUncontrolledValueProps(
+    props,
+    `<CheckboxList />`,
+  );
+  return <CheckboxListControlled {...props} ref={ref} {...uncontrolledProps} />;
+});
+const CheckboxListControlled = forwardRef((props, ref) => {
   const {
     name,
     onUIStateChange,
@@ -118,9 +129,7 @@ const collectCheckedValues = (checkboxList, name) => {
 
 const CheckboxListWithAction = forwardRef((props, ref) => {
   const {
-    id,
     name,
-    value,
     action,
     onUIStateChange,
     actionErrorEffect,
@@ -135,24 +144,26 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState, resetNavState] = useNavState(id);
-  const [boundAction, , setActionValue, initialValue] =
-    useActionBoundToOneArrayParam(action, name, value, navState);
+  const [valueState, setValueState, externalValueState] =
+    useValueController(props);
+  const [boundAction, , setActionValue] = useActionBoundToOneArrayParam(
+    action,
+    externalValueState,
+  );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const [actionRequester, setActionRequester] = useState(null);
 
-  const innerOnUIStateChange = (uiValue, e) => {
-    setNavState(uiValue);
-    setActionValue(uiValue);
-    onUIStateChange?.(uiValue, e);
+  const innerOnUIStateChange = (uiState, e) => {
+    setValueState(uiState);
+    setActionValue(uiState);
+    onUIStateChange?.(uiState, e);
   };
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
-      resetNavState();
-      innerOnUIStateChange(initialValue, e);
+      innerOnUIStateChange(externalValueState, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -162,15 +173,14 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      innerOnUIStateChange(initialValue, e);
+      innerOnUIStateChange(externalValueState, e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      innerOnUIStateChange(initialValue, e);
+      innerOnUIStateChange(externalValueState, e);
       onActionError?.(e);
     },
     onEnd: (e) => {
-      resetNavState();
       onActionEnd?.(e);
     },
   });
@@ -180,7 +190,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       name={name}
-      value={value}
+      value={valueState}
       onUIStateChange={innerOnUIStateChange}
       data-action={boundAction}
       onChange={(event) => {
