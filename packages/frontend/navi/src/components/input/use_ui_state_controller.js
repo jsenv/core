@@ -52,6 +52,7 @@ const useUIStateController = (
   {
     statePropName,
     defaultStatePropName,
+    hasGroup,
     groupState,
     fallbackState,
     mapStateValue,
@@ -59,10 +60,10 @@ const useUIStateController = (
   navState,
 ) => {
   const hasUIStateProp = Object.hasOwn(props, statePropName);
-  const state = groupState || props[statePropName];
+  const state = props[statePropName];
   const defaultState = props[defaultStatePropName];
   const externalStateInitial = useInitialValue(() => {
-    if (groupState) {
+    if (hasGroup) {
       return groupState;
     }
     if (hasUIStateProp) {
@@ -82,8 +83,15 @@ const useUIStateController = (
   });
   const externalStateRef = useRef(externalStateInitial);
   const [uiState, setUIState] = useState(externalStateInitial);
+  const groupstateRef = useRef(groupState);
+  if (hasGroup && groupState !== groupstateRef.current) {
+    groupstateRef.current = groupState;
+    externalStateRef.current = groupState;
+    setUIState(groupState);
+  }
+
   const stateRef = useRef(state);
-  if (hasUIStateProp && state !== stateRef.current) {
+  if (!hasGroup && hasUIStateProp && state !== stateRef.current) {
     stateRef.current = state;
     externalStateRef.current = state;
     setUIState(state);
@@ -98,14 +106,17 @@ const useUncontrolledUIProps = (
 ) => {
   const groupUIStateController = useContext(FieldGroupUIStateControllerContext);
   const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
-  const groupState =
-    groupUIStateController && groupUIStateController.type === componentType
-      ? groupUIStateController.getUIState(props)
-      : undefined;
+  const hasGroup =
+    groupUIStateController && groupUIStateController.type === componentType;
+  const groupState = hasGroup
+    ? groupUIStateController.getUIState(props)
+    : undefined;
+
   const { onUIStateChange, readOnly } = props;
   const [uiState, setUIState] = useUIStateController(props, {
     statePropName,
     defaultStatePropName,
+    hasGroup,
     groupState,
     fallbackState,
   });
