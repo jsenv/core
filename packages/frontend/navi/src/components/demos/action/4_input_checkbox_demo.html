@@ -148,6 +148,7 @@
               <CheckboxActionControlledDemo />
               <CheckboxActionErrorDemo />
               <CheckboxDefaultCheckedActionErrorDemo />
+              <CheckboxActionObjectDemo />
             </div>
           </>
         );
@@ -454,9 +455,8 @@
         await delay(600);
         return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
       });
-
       // eslint-disable-next-line no-unused-vars
-      const CheckboxWithActionDemo = () => {
+      const CheckboxActionObjectDemo = () => {
         const [result, setResult] = useState("");
 
         return (
@@ -464,21 +464,20 @@
             <h3 className="demo-title">Checkbox with Action Object</h3>
             <div className="control-group">
               <div className="checkbox-group">
-                <Input
-                  id="action-object-checkbox"
-                  type="checkbox"
-                  name="notifications"
-                  action={(notifications) => {
-                    return toggleAction({ notifications });
-                  }}
-                  onActionStart={() => {
-                    setResult("Processing...");
-                  }}
-                  onActionEnd={(e) => {
-                    setResult(e.detail.data);
-                  }}
-                />
-                <label htmlFor="action-object-checkbox">
+                <label>
+                  <Input
+                    type="checkbox"
+                    name="notifications"
+                    action={(notifications) => {
+                      return toggleAction({ notifications });
+                    }}
+                    onActionStart={() => {
+                      setResult("Processing...");
+                    }}
+                    onActionEnd={(e) => {
+                      setResult(e.detail.data);
+                    }}
+                  />
                   Enable notifications (with action object)
                 </label>
               </div>
