@@ -147,7 +147,7 @@
                 <Input
                   name="text"
                   placeholder="Type something..."
-                  onValueChange={(text) => {
+                  onUIStateChange={(text) => {
                     setResult(text ? `Current value: "${text}"` : "");
                   }}
                 />
@@ -162,8 +162,6 @@
 
       // eslint-disable-next-line no-unused-vars
       const InputWithDefaultValueDemo = () => {
-        const [result, setResult] = useState("");
-
         return (
           <div className="demo-card">
             <h3 className="demo-title">Input with Default Value</h3>
@@ -174,15 +172,11 @@
                   name="text"
                   defaultValue="Hello World!"
                   placeholder="Enter text..."
-                  onValueChange={(text) => {
-                    setResult(text ? `Current value: "${text}"` : "");
-                  }}
                 />
               </label>
             </div>
             <div className="result-display">
-              {result ||
-                "Input starts with default value. Modify to see changes..."}
+              Input starts with default value.
             </div>
           </div>
         );
@@ -202,7 +196,7 @@
                 <Input
                   name="text"
                   value={value}
-                  onValueChange={(text) => {
+                  onUIStateChange={(text) => {
                     setValue(text);
                     setResult(
                       text ? `Value set to: "${text}"` : "Value cleared",
@@ -426,7 +420,7 @@
                 <Input
                   name="text"
                   value={value}
-                  onValueChange={setValue}
+                  onUIStateChange={setValue}
                   action={async (text) => {
                     setResult("Processing...");
                     await delay(800);
@@ -460,7 +454,6 @@
                 <Input
                   name="text"
                   value={value}
-                  onValueChange={setValue}
                   placeholder="Use buttons below to set value"
                   action={async (text) => {
                     setResult("Processing...");
