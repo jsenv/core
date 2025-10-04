@@ -147,7 +147,9 @@
               <CheckboxActionDefaultCheckedDemo />
               <CheckboxActionControlledDemo />
               <CheckboxActionErrorDemo />
-              <CheckboxDefaultCheckedActionErrorDemo />
+              <CheckboxActionErrorDefaultCheckedDemo />
+              <CheckboxActionErrorOnUncheckedDemo />
+              <CheckboxActionControlledErrorDemo />
               <CheckboxActionObjectDemo />
             </div>
           </>
@@ -191,7 +193,7 @@
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Basic Checkbox</h3>
+            <h3 className="demo-title">Basic Checkbox (Default Checked)</h3>
             <div className="control-group">
               <div className="checkbox-group">
                 <label>
@@ -222,7 +224,7 @@
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Basic Checkbox with Action</h3>
+            <h3 className="demo-title">Checkbox with Action</h3>
             <div className="control-group">
               <div className="checkbox-group">
                 <label>
@@ -264,7 +266,9 @@
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Checkbox checked at start</h3>
+            <h3 className="demo-title">
+              Checkbox with Action (Default Checked)
+            </h3>
             <div className="control-group">
               <div className="checkbox-group">
                 <label>
@@ -299,7 +303,7 @@
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Controlled Checkbox</h3>
+            <h3 className="demo-title">Checkbox with Action (Controlled)</h3>
             <p>
               Reset button won't override UI, use false to override. (This is
               because checked=undefined won't override the UI state)
@@ -370,7 +374,7 @@
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Checkbox with Error Handling</h3>
+            <h3 className="demo-title">Checkbox with Action (Always Fails)</h3>
             <div className="control-group">
               <div className="checkbox-group">
                 <label>
@@ -406,13 +410,15 @@
         );
       };
       // eslint-disable-next-line no-unused-vars
-      const CheckboxDefaultCheckedActionErrorDemo = () => {
+      const CheckboxActionErrorDefaultCheckedDemo = () => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Checkbox Error (Initially Checked)</h3>
+            <h3 className="demo-title">
+              Checkbox with Action (Default Checked, Always Fails)
+            </h3>
             <div className="control-group">
               <div className="checkbox-group">
                 <Input
@@ -446,6 +452,142 @@
             >
               {result ||
                 "This checkbox starts checked and will always trigger an error..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxActionErrorOnUncheckedDemo = () => {
+        const [result, setResult] = useState("");
+        const [status, setStatus] = useState("idle");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">
+              Checkbox with Action (Fails When Unchecked)
+            </h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <label>
+                  <Input
+                    type="checkbox"
+                    name="protection"
+                    action={async (protection) => {
+                      setStatus("loading");
+                      setResult("Processing...");
+                      try {
+                        await delay(1000);
+                        if (!protection) {
+                          throw new Error(
+                            "Protection must be enabled for security",
+                          );
+                        }
+                        const response = `✅ Protection ${protection ? "enabled" : "disabled"}`;
+                        setResult(response);
+                        setStatus("success");
+                        return response;
+                      } catch (error) {
+                        setResult(`❌ ${error.message}`);
+                        setStatus("error");
+                        throw error;
+                      }
+                    }}
+                  />
+                  <span className={`status-indicator status-${status}`}></span>
+                  Enable security protection (fails when unchecked)
+                </label>
+              </div>
+            </div>
+            <div
+              className={`result-display ${status === "loading" ? "result-loading" : status === "success" ? "result-success" : status === "error" ? "result-error" : ""}`}
+            >
+              {result ||
+                "Toggle checkbox - succeeds when checked, fails when unchecked..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxActionControlledErrorDemo = () => {
+        const [checked, setChecked] = useState(false);
+        const [result, setResult] = useState("");
+        const [status, setStatus] = useState("idle");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">
+              Checkbox with Action (Controlled, Fails When Checked)
+            </h3>
+            <div className="control-group">
+              <div className="checkbox-group">
+                <label>
+                  <Input
+                    type="checkbox"
+                    name="experimental"
+                    checked={checked}
+                    action={async (experimental) => {
+                      setStatus("loading");
+                      setResult("Processing...");
+                      try {
+                        await delay(1200);
+                        if (experimental) {
+                          throw new Error(
+                            "Experimental features are currently disabled",
+                          );
+                        }
+                        const response = `✅ Experimental features ${experimental ? "enabled" : "disabled"}`;
+                        setResult(response);
+                        setStatus("success");
+                        setChecked(Boolean(experimental));
+                        return response;
+                      } catch (error) {
+                        setResult(`❌ ${error.message}`);
+                        setStatus("error");
+                        throw error;
+                      }
+                    }}
+                  />
+                  <span className={`status-indicator status-${status}`}></span>
+                  Enable experimental features
+                </label>
+              </div>
+            </div>
+            <div className="button-group">
+              <button
+                onClick={() => {
+                  setChecked(true);
+                }}
+              >
+                Enable
+              </button>
+              <button
+                onClick={() => {
+                  setChecked(false);
+                }}
+              >
+                Disable
+              </button>
+              <button
+                onClick={() => {
+                  setChecked(undefined);
+                }}
+              >
+                Reset
+              </button>
+            </div>
+            <div
+              className={`result-display ${status === "loading" ? "result-loading" : status === "success" ? "result-success" : status === "error" ? "result-error" : ""}`}
+            >
+              Current state:{" "}
+              {checked === undefined
+                ? "undefined"
+                : checked
+                  ? "checked"
+                  : "unchecked"}
+              <br />
+              {result || "Controlled checkbox that fails when checked..."}
             </div>
           </div>
         );
