@@ -61,6 +61,24 @@
         border-color: #bee5eb;
         color: #0c5460;
       }
+      nav a {
+        color: #007bff;
+        text-decoration: none;
+      }
+      nav a:hover {
+        text-decoration: underline;
+      }
+      h2 {
+        margin-top: 40px;
+        margin-bottom: 20px;
+        padding-top: 20px;
+        border-top: 2px solid #e0e0e0;
+      }
+      h2:first-of-type {
+        margin-top: 0;
+        border-top: none;
+        padding-top: 0;
+      }
       .button-group {
         display: flex;
         gap: 10px;
@@ -208,30 +226,53 @@
       const App = () => {
         return (
           <>
-            <h2>Basic Input Examples (No Actions)</h2>
+            <div className="demo-card" style={{ marginBottom: "30px" }}>
+              <h2>Input Text Demo - Overview</h2>
+              <p>
+                This demo showcases different ways to use the Input component
+                with text inputs.
+              </p>
+              <nav>
+                <h3>Sections:</h3>
+                <ul style={{ marginLeft: "20px" }}>
+                  <li>
+                    <a href="#basic-inputs">
+                      1. Basic Input (no action/no form)
+                    </a>{" "}
+                    - Simple inputs with value handling
+                  </li>
+                  <li>
+                    <a href="#input-actions">2. Input with Actions</a> - Inputs
+                    that trigger actions on value change, including error
+                    handling
+                  </li>
+                  <li>
+                    <a href="#input-forms">3. Input inside Form</a> - Form
+                    integration patterns
+                  </li>
+                </ul>
+              </nav>
+            </div>
+
+            <h2 id="basic-inputs">1. Basic Input (no action/no form)</h2>
             <div className="demo-grid">
               <BasicInputNoActionDemo />
               <InputWithDefaultValueDemo />
               <InputControlledDemo />
             </div>
 
-            <h2>Input Examples with Actions</h2>
+            <h2 id="input-actions">2. Input with Actions</h2>
             <div className="demo-grid">
               <BasicInputDemo />
               <InputWithInitialValueDemo />
               <InputWithExternalControlDemo />
-            </div>
-
-            <h2>Input Examples with Error Handling</h2>
-            <div className="demo-grid">
               <InputWithErrorDemo />
               <InputWithValidationErrorDemo />
             </div>
 
-            <h2>Form Examples</h2>
+            <h2 id="input-forms">3. Input inside Form</h2>
             <div className="demo-grid">
               <FormInputDemo />
-              <FormWithExternalControlDemo />
             </div>
           </>
         );
@@ -498,89 +539,6 @@
               className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
             >
               {result || "Fill form and submit..."}
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const FormWithExternalControlDemo = () => {
-        const [username, setUsername] = useState(undefined);
-        const [email, setEmail] = useState(undefined);
-        const [result, setResult] = useState("");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Form with External Control</h3>
-            <Form
-              action={async (params) => {
-                setResult("Submitting form...");
-                await delay(1000);
-                const response = `✅ Form submitted!\nUsername: ${params.username}\nEmail: ${params.email}`;
-                setResult(response);
-                return response;
-              }}
-            >
-              <div className="control-group">
-                <label htmlFor="controlled-form-username">Username:</label>
-                <Input
-                  id="controlled-form-username"
-                  name="username"
-                  value={username}
-                  onValueChange={setUsername}
-                  placeholder="Controlled by buttons"
-                />
-              </div>
-              <div className="control-group">
-                <label htmlFor="controlled-form-email">Email:</label>
-                <Input
-                  id="controlled-form-email"
-                  name="email"
-                  value={email}
-                  onValueChange={setEmail}
-                  placeholder="Controlled by buttons"
-                />
-              </div>
-              <div className="button-group">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsername("john_doe");
-                    setEmail("john@example.com");
-                  }}
-                >
-                  Set User 1
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsername("jane_smith");
-                    setEmail("jane@example.com");
-                  }}
-                >
-                  Set User 2
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsername("");
-                    setEmail("");
-                  }}
-                >
-                  Clear All
-                </button>
-              </div>
-              <div className="button-group">
-                <Button type="submit">Submit Form</Button>
-                <Button type="reset">Reset</Button>
-              </div>
-            </Form>
-            <div
-              className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
-            >
-              Current: {username} / {email}
-              <br />
-              {result || "Use buttons to set values, then submit..."}
             </div>
           </div>
         );
