@@ -95,22 +95,24 @@
       button:hover {
         background: #f8f9fa;
       }
-      input {
+      .control-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 15px;
+        font-weight: 500;
+        color: #555;
+      }
+      label input {
+        display: block;
+        margin-top: 5px;
         width: 100%;
         padding: 8px 12px;
         border: 1px solid #ccc;
         border-radius: 4px;
         font-size: 14px;
         box-sizing: border-box;
-      }
-      .control-group {
-        margin-bottom: 15px;
-      }
-      label {
-        display: block;
-        margin-bottom: 5px;
-        font-weight: 500;
-        color: #555;
       }
     </style>
   </head>
@@ -140,15 +142,16 @@
           <div className="demo-card">
             <h3 className="demo-title">Basic Input (No Action)</h3>
             <div className="control-group">
-              <label htmlFor="basic-no-action-input">Enter some text:</label>
-              <Input
-                id="basic-no-action-input"
-                name="text"
-                placeholder="Type something..."
-                onValueChange={(text) => {
-                  setResult(text ? `Current value: "${text}"` : "");
-                }}
-              />
+              <label>
+                Enter some text:
+                <Input
+                  name="text"
+                  placeholder="Type something..."
+                  onValueChange={(text) => {
+                    setResult(text ? `Current value: "${text}"` : "");
+                  }}
+                />
+              </label>
             </div>
             <div className="result-display">
               {result || "Type in the input to see the value..."}
@@ -165,18 +168,17 @@
           <div className="demo-card">
             <h3 className="demo-title">Input with Default Value</h3>
             <div className="control-group">
-              <label htmlFor="default-value-input">
+              <label>
                 Input with default value:
+                <Input
+                  name="text"
+                  defaultValue="Hello World!"
+                  placeholder="Enter text..."
+                  onValueChange={(text) => {
+                    setResult(text ? `Current value: "${text}"` : "");
+                  }}
+                />
               </label>
-              <Input
-                id="default-value-input"
-                name="text"
-                defaultValue="Hello World!"
-                placeholder="Enter text..."
-                onValueChange={(text) => {
-                  setResult(text ? `Current value: "${text}"` : "");
-                }}
-              />
             </div>
             <div className="result-display">
               {result ||
@@ -195,16 +197,19 @@
           <div className="demo-card">
             <h3 className="demo-title">Controlled Input</h3>
             <div className="control-group">
-              <label htmlFor="controlled-input">Controlled input:</label>
-              <Input
-                id="controlled-input"
-                name="text"
-                value={value}
-                onValueChange={(text) => {
-                  setValue(text);
-                  setResult(text ? `Value set to: "${text}"` : "Value cleared");
-                }}
-              />
+              <label>
+                Controlled input:
+                <Input
+                  name="text"
+                  value={value}
+                  onValueChange={(text) => {
+                    setValue(text);
+                    setResult(
+                      text ? `Value set to: "${text}"` : "Value cleared",
+                    );
+                  }}
+                />
+              </label>
             </div>
             <div className="button-group">
               <button onClick={() => setValue("Preset Text 1")}>
@@ -288,27 +293,26 @@
           <div className="demo-card">
             <h3 className="demo-title">Input with Action (Always Fails)</h3>
             <div className="control-group">
-              <label htmlFor="error-input">
+              <label>
                 Enter text (will always fail):
+                <Input
+                  name="text"
+                  placeholder="Type something..."
+                  action={async (text) => {
+                    setIsLoading(true);
+                    setResult("Processing...");
+                    try {
+                      await delay(1200);
+                      throw new Error(`Processing failed for input: "${text}"`);
+                    } catch (error) {
+                      setResult(`❌ ${error.message}`);
+                      throw error;
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                />
               </label>
-              <Input
-                id="error-input"
-                name="text"
-                placeholder="Type something..."
-                action={async (text) => {
-                  setIsLoading(true);
-                  setResult("Processing...");
-                  try {
-                    await delay(1200);
-                    throw new Error(`Processing failed for input: "${text}"`);
-                  } catch (error) {
-                    setResult(`❌ ${error.message}`);
-                    throw error;
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-              />
             </div>
             <div
               className={`result-display ${isLoading ? "result-loading" : result.startsWith("❌") ? "result-error" : ""}`}
@@ -330,34 +334,33 @@
               Input with Validation (Fails on Short Text)
             </h3>
             <div className="control-group">
-              <label htmlFor="validation-input">
+              <label>
                 Enter text (min 5 characters):
-              </label>
-              <Input
-                id="validation-input"
-                name="text"
-                placeholder="Must be at least 5 characters..."
-                action={async (text) => {
-                  setIsLoading(true);
-                  setResult("Validating...");
-                  try {
-                    await delay(800);
-                    if (!text || text.length < 5) {
-                      throw new Error(
-                        "Text must be at least 5 characters long",
-                      );
+                <Input
+                  name="text"
+                  placeholder="Must be at least 5 characters..."
+                  action={async (text) => {
+                    setIsLoading(true);
+                    setResult("Validating...");
+                    try {
+                      await delay(800);
+                      if (!text || text.length < 5) {
+                        throw new Error(
+                          "Text must be at least 5 characters long",
+                        );
+                      }
+                      const response = `✅ Valid input: "${text}" (${text.length} characters)`;
+                      setResult(response);
+                      return response;
+                    } catch (error) {
+                      setResult(`❌ Validation failed: ${error.message}`);
+                      throw error;
+                    } finally {
+                      setIsLoading(false);
                     }
-                    const response = `✅ Valid input: "${text}" (${text.length} characters)`;
-                    setResult(response);
-                    return response;
-                  } catch (error) {
-                    setResult(`❌ Validation failed: ${error.message}`);
-                    throw error;
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-              />
+                  }}
+                />
+              </label>
             </div>
             <div
               className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
@@ -377,27 +380,28 @@
           <div className="demo-card">
             <h3 className="demo-title">Basic Input with Action</h3>
             <div className="control-group">
-              <label htmlFor="basic-input">Enter some text:</label>
-              <Input
-                id="basic-input"
-                name="text"
-                placeholder="Type something..."
-                action={async (text) => {
-                  setIsLoading(true);
-                  setResult("Processing...");
-                  try {
-                    await delay(1000);
-                    const response = `✅ Processed: "${text}"`;
-                    setResult(response);
-                    return response;
-                  } catch (error) {
-                    setResult(`❌ Error: ${error.message}`);
-                    throw error;
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-              />
+              <label>
+                Enter some text:
+                <Input
+                  name="text"
+                  placeholder="Type something..."
+                  action={async (text) => {
+                    setIsLoading(true);
+                    setResult("Processing...");
+                    try {
+                      await delay(1000);
+                      const response = `✅ Processed: "${text}"`;
+                      setResult(response);
+                      return response;
+                    } catch (error) {
+                      setResult(`❌ Error: ${error.message}`);
+                      throw error;
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                />
+              </label>
             </div>
             <div
               className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
@@ -417,20 +421,21 @@
           <div className="demo-card">
             <h3 className="demo-title">Input with Initial Value</h3>
             <div className="control-group">
-              <label htmlFor="initial-input">Input with preset value:</label>
-              <Input
-                id="initial-input"
-                name="text"
-                value={value}
-                onValueChange={setValue}
-                action={async (text) => {
-                  setResult("Processing...");
-                  await delay(800);
-                  const response = `✅ Submitted: "${text}"`;
-                  setResult(response);
-                  return response;
-                }}
-              />
+              <label>
+                Input with preset value:
+                <Input
+                  name="text"
+                  value={value}
+                  onValueChange={setValue}
+                  action={async (text) => {
+                    setResult("Processing...");
+                    await delay(800);
+                    const response = `✅ Submitted: "${text}"`;
+                    setResult(response);
+                    return response;
+                  }}
+                />
+              </label>
             </div>
             <div
               className={`result-display ${result.startsWith("✅") ? "result-success" : ""}`}
@@ -450,23 +455,22 @@
           <div className="demo-card">
             <h3 className="demo-title">Input with External Control</h3>
             <div className="control-group">
-              <label htmlFor="controlled-input">
+              <label>
                 Externally controlled input:
+                <Input
+                  name="text"
+                  value={value}
+                  onValueChange={setValue}
+                  placeholder="Use buttons below to set value"
+                  action={async (text) => {
+                    setResult("Processing...");
+                    await delay(600);
+                    const response = `✅ Action executed with: "${text}"`;
+                    setResult(response);
+                    return response;
+                  }}
+                />
               </label>
-              <Input
-                id="controlled-input"
-                name="text"
-                value={value}
-                onValueChange={setValue}
-                placeholder="Use buttons below to set value"
-                action={async (text) => {
-                  setResult("Processing...");
-                  await delay(600);
-                  const response = `✅ Action executed with: "${text}"`;
-                  setResult(response);
-                  return response;
-                }}
-              />
             </div>
             <div className="button-group">
               <button
@@ -527,8 +531,10 @@
             <h3 className="demo-title">Input inside Form</h3>
             <Form action={formDemoAction}>
               <div className="control-group">
-                <label htmlFor="form-username">Username:</label>
-                <Input name="username" placeholder="Enter username" />
+                <label>
+                  Username:
+                  <Input name="username" placeholder="Enter username" />
+                </label>
               </div>
               <div className="control-group"></div>
               <div className="button-group">
@@ -563,7 +569,9 @@
               throw new Error("Please provide a valid email address");
             }
             if (username === "admin") {
-              throw new Error("Username 'admin' is reserved and cannot be used");
+              throw new Error(
+                "Username 'admin' is reserved and cannot be used",
+              );
             }
             // This will never be reached due to the conditions above
             const response = `✅ Form submitted!\nUsername: ${username}\nEmail: ${email}`;
@@ -580,25 +588,30 @@
         return (
           <div className="demo-card">
             <h3 className="demo-title">Form with Validation Errors</h3>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
-              This form demonstrates server-side validation errors. Try: empty fields, username &lt; 3 chars, invalid email, or "admin" username.
+            <p
+              style={{ fontSize: "14px", color: "#666", marginBottom: "15px" }}
+            >
+              This form demonstrates server-side validation errors. Try: empty
+              fields, username &lt; 3 chars, invalid email, or "admin" username.
             </p>
             <Form action={formErrorAction}>
               <div className="control-group">
-                <label htmlFor="error-form-username">Username:</label>
-                <Input 
-                  id="error-form-username"
-                  name="username" 
-                  placeholder="Enter username (try 'admin' or < 3 chars)" 
-                />
+                <label>
+                  Username:
+                  <Input
+                    name="username"
+                    placeholder="Enter username (try 'admin' or < 3 chars)"
+                  />
+                </label>
               </div>
               <div className="control-group">
-                <label htmlFor="error-form-email">Email:</label>
-                <Input 
-                  id="error-form-email"
-                  name="email" 
-                  placeholder="Enter email (try invalid format)" 
-                />
+                <label>
+                  Email:
+                  <Input
+                    name="email"
+                    placeholder="Enter email (try invalid format)"
+                  />
+                </label>
               </div>
               <div className="button-group">
                 <Button type="submit">Submit Form</Button>
