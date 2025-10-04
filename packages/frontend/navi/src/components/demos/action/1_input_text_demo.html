@@ -147,7 +147,9 @@
           <div className="demo-card">
             <h3 className="demo-title">Input with Default Value</h3>
             <div className="control-group">
-              <label htmlFor="default-value-input">Input with default value:</label>
+              <label htmlFor="default-value-input">
+                Input with default value:
+              </label>
               <Input
                 id="default-value-input"
                 name="text"
@@ -159,7 +161,8 @@
               />
             </div>
             <div className="result-display">
-              {result || "Input starts with default value. Modify to see changes..."}
+              {result ||
+                "Input starts with default value. Modify to see changes..."}
             </div>
           </div>
         );
@@ -186,8 +189,12 @@
               />
             </div>
             <div className="button-group">
-              <button onClick={() => setValue("Preset Text 1")}>Set Text 1</button>
-              <button onClick={() => setValue("Preset Text 2")}>Set Text 2</button>
+              <button onClick={() => setValue("Preset Text 1")}>
+                Set Text 1
+              </button>
+              <button onClick={() => setValue("Preset Text 2")}>
+                Set Text 2
+              </button>
               <button onClick={() => setValue("")}>Clear</button>
             </div>
             <div className="result-display">
@@ -207,20 +214,20 @@
               <InputWithDefaultValueDemo />
               <InputControlledDemo />
             </div>
-            
+
             <h2>Input Examples with Actions</h2>
             <div className="demo-grid">
               <BasicInputDemo />
               <InputWithInitialValueDemo />
               <InputWithExternalControlDemo />
             </div>
-            
+
             <h2>Input Examples with Error Handling</h2>
             <div className="demo-grid">
               <InputWithErrorDemo />
               <InputWithValidationErrorDemo />
             </div>
-            
+
             <h2>Form Examples</h2>
             <div className="demo-grid">
               <FormInputDemo />
@@ -239,7 +246,9 @@
           <div className="demo-card">
             <h3 className="demo-title">Input with Action (Always Fails)</h3>
             <div className="control-group">
-              <label htmlFor="error-input">Enter text (will always fail):</label>
+              <label htmlFor="error-input">
+                Enter text (will always fail):
+              </label>
               <Input
                 id="error-input"
                 name="text"
@@ -275,9 +284,13 @@
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Input with Validation (Fails on Short Text)</h3>
+            <h3 className="demo-title">
+              Input with Validation (Fails on Short Text)
+            </h3>
             <div className="control-group">
-              <label htmlFor="validation-input">Enter text (min 5 characters):</label>
+              <label htmlFor="validation-input">
+                Enter text (min 5 characters):
+              </label>
               <Input
                 id="validation-input"
                 name="text"
@@ -288,7 +301,9 @@
                   try {
                     await delay(800);
                     if (!text || text.length < 5) {
-                      throw new Error("Text must be at least 5 characters long");
+                      throw new Error(
+                        "Text must be at least 5 characters long",
+                      );
                     }
                     const response = `✅ Valid input: "${text}" (${text.length} characters)`;
                     setResult(response);
