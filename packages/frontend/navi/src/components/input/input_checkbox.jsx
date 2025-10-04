@@ -286,7 +286,7 @@ const useCheckedController = (props) => {
     if (navState) {
       return true;
     }
-    return undefined;
+    return false;
   });
   // we are done deciding the initial value for uiChecked
   // now we will use a local state to track if the UI is checked

@@ -372,26 +372,25 @@
             <h3 className="demo-title">Checkbox with Error Handling</h3>
             <div className="control-group">
               <div className="checkbox-group">
-                <Input
-                  id="error-checkbox"
-                  type="checkbox"
-                  name="dangerous"
-                  action={async (dangerous) => {
-                    setStatus("loading");
-                    setResult("Processing...");
-                    try {
-                      await delay(1500);
-                      throw new Error(
-                        `Action failed for ${dangerous ? "checked" : "unchecked"} state`,
-                      );
-                    } catch (error) {
-                      setResult(`❌ ${error.message}`);
-                      setStatus("error");
-                      throw error;
-                    }
-                  }}
-                />
-                <label htmlFor="error-checkbox">
+                <label>
+                  <Input
+                    type="checkbox"
+                    name="dangerous"
+                    action={async (dangerous) => {
+                      setStatus("loading");
+                      setResult("Processing...");
+                      try {
+                        await delay(1500);
+                        throw new Error(
+                          `Action failed for ${dangerous ? "checked" : "unchecked"} state`,
+                        );
+                      } catch (error) {
+                        setResult(`❌ ${error.message}`);
+                        setStatus("error");
+                        throw error;
+                      }
+                    }}
+                  />
                   <span className={`status-indicator status-${status}`}></span>
                   Dangerous operation (always fails)
                 </label>
