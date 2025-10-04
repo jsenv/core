@@ -1,0 +1,121 @@
+import { useRef, useState } from "preact/hooks";
+
+import { useInitialValue } from "../use_initial_value.js";
+
+export const useValueController = (props, navState) => {
+  return useUIStateController(
+    props,
+    {
+      statePropName: "value",
+      defaultStatePropName: "defaultValue",
+      fallbackState: "",
+    },
+    navState,
+  );
+};
+export const useUncontrolledValueProps = (props, fieldComponentName) => {
+  return useUncontrolledUIProps(props, {
+    fieldComponentName,
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
+    fallbackState: "",
+  });
+};
+
+export const useCheckedController = (props, navState) => {
+  return useUIStateController(
+    props,
+    {
+      statePropName: "checked",
+      defaultStatePropName: "defaultChecked",
+      fallbackState: false,
+      mapStateValue: Boolean,
+    },
+    navState,
+  );
+};
+export const useUncontrolledCheckedProps = (props, fieldComponentName) => {
+  return useUncontrolledUIProps(props, {
+    fieldComponentName,
+    statePropName: "checked",
+    defaultStatePropName: "defaultChecked",
+    fallbackState: false,
+  });
+};
+
+const useUIStateController = (
+  props,
+  { statePropName, defaultStatePropName, fallbackState, mapStateValue },
+  navState,
+) => {
+  const hasUIStateProp = Object.hasOwn(props, statePropName);
+  const state = props[statePropName];
+  const defaultState = props[defaultStatePropName];
+  const externalStateInitial = useInitialValue(() => {
+    if (hasUIStateProp) {
+      // controlled by state prop ("value" or "checked")
+      return mapStateValue ? mapStateValue(state) : state;
+    }
+    if (defaultState) {
+      // not controlled but want an initial state (a value or being checked)
+      return mapStateValue ? mapStateValue(defaultState) : defaultState;
+    }
+    if (navState) {
+      // not controlled but want to use value from nav state
+      // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
+      return mapStateValue ? mapStateValue(navState) : navState;
+    }
+    return mapStateValue ? mapStateValue(fallbackState) : fallbackState;
+  });
+  const externalStateRef = useRef(externalStateInitial);
+  const [uiState, setUIState] = useState(externalStateInitial);
+  const stateRef = useRef(state);
+  if (hasUIStateProp && state !== stateRef.current) {
+    stateRef.current = state;
+    externalStateRef.current = state;
+    setUIState(state);
+  }
+  const externalState = externalStateRef.current;
+
+  return [uiState, setUIState, externalState];
+};
+const useUncontrolledUIProps = (
+  props,
+  { fieldComponentName, statePropName, defaultStatePropName, fallbackState },
+) => {
+  const { onUIStateChange, readOnly } = props;
+  const [uiState, setUIState] = useUIStateController(props, {
+    statePropName,
+    defaultStatePropName,
+    fallbackState,
+  });
+
+  let innerReadOnly = readOnly;
+  /**
+   * This check is needed only for basic input because
+   * When using action/form we consider the action/form code
+   * will have a side effect that will re-render the component with the up-to-date state
+   *
+   * In practice we set the checked from the backend state
+   * We use action to fetch the new state and update the local state
+   * The component re-renders so it's the action/form that is considered as responsible
+   * to update the state and as a result allowed to have "checked" prop without "onUIStateChange"
+   */
+  if (Object.hasOwn(props, statePropName) && !onUIStateChange) {
+    innerReadOnly = true;
+    if (import.meta.dev) {
+      console.warn(
+        `${fieldComponentName} is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
+      );
+    }
+  }
+
+  return {
+    [statePropName]: uiState,
+    onUIStateChange: (inputValue, e) => {
+      setUIState(inputValue);
+      onUIStateChange?.(inputValue, e);
+    },
+    readOnly: innerReadOnly,
+  };
+};

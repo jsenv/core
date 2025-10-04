@@ -49,7 +49,7 @@ export const Checkbox = InputCheckbox;
 const CheckboxListBasic = forwardRef((props, ref) => {
   const {
     name,
-    onValueChange,
+    onUIStateChange,
     readOnly,
     disabled,
     required,
@@ -57,25 +57,25 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const groupOnFieldChange = useContext(FieldGroupOnUIStateChangeContext);
+  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const innerOnValueChange =
-    onValueChange || groupOnFieldChange
+  const innerOnUIStateChange =
+    onUIStateChange || groupOnUIStateChange
       ? (_, e) => {
           const checkboxList = innerRef.current;
           const checkedValues = collectCheckedValues(checkboxList, name);
-          onValueChange?.(checkedValues, e);
-          groupOnFieldChange?.(checkedValues, e);
+          onUIStateChange?.(checkedValues, e);
+          groupOnUIStateChange?.(checkedValues, e);
         }
       : undefined;
   const innerLoading = loading || groupLoading;
   const innerReadOnly =
-    readOnly || groupReadonly || innerLoading || !innerOnValueChange;
+    readOnly || groupReadonly || innerLoading || !innerOnUIStateChange;
   const innerDisabled = disabled || groupDisabled;
 
   return (
@@ -88,7 +88,7 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     >
       <FieldGroupNameContext.Provider value={name}>
         <FieldGroupOnUIStateChangeContext.Provider
-          value={useStableCallback(innerOnValueChange)}
+          value={useStableCallback(innerOnUIStateChange)}
         >
           <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
             <FieldGroupDisabledContext.Provider value={innerDisabled}>
@@ -122,7 +122,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     name,
     value,
     action,
-    onValueChange,
+    onUIStateChange,
     actionErrorEffect,
     onCancel,
     onActionPrevented,
@@ -144,15 +144,15 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   });
   const [actionRequester, setActionRequester] = useState(null);
 
-  const innerOnValueChange = (uiValue, e) => {
+  const innerOnUIStateChange = (uiValue, e) => {
     setNavState(uiValue);
     setActionValue(uiValue);
-    onValueChange?.(uiValue, e);
+    onUIStateChange?.(uiValue, e);
   };
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       resetNavState();
-      innerOnValueChange(initialValue, e);
+      innerOnUIStateChange(initialValue, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -162,11 +162,11 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      innerOnValueChange(initialValue, e);
+      innerOnUIStateChange(initialValue, e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      innerOnValueChange(initialValue, e);
+      innerOnUIStateChange(initialValue, e);
       onActionError?.(e);
     },
     onEnd: (e) => {
@@ -181,7 +181,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       value={value}
-      onValueChange={innerOnValueChange}
+      onUIStateChange={innerOnUIStateChange}
       data-action={boundAction}
       onChange={(event) => {
         const checkboxList = innerRef.current;
@@ -201,7 +201,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   );
 });
 const CheckboxListInsideForm = forwardRef((props, ref) => {
-  const { id, name, value, onValueChange, children, ...rest } = props;
+  const { id, name, value, onUIStateChange, children, ...rest } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
@@ -212,20 +212,20 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
     undefined,
   );
 
-  const innerOnValueChange = (uiValue, e) => {
+  const innerOnUIStateChange = (uiValue, e) => {
     setNavState(uiValue);
     setFormValue(uiValue);
-    onValueChange?.(uiValue, e);
+    onUIStateChange?.(uiValue, e);
   };
   useFormEvents(innerRef, {
     onFormReset: (e) => {
-      innerOnValueChange(undefined, e);
+      innerOnUIStateChange(undefined, e);
     },
     onFormActionAbort: (e) => {
-      innerOnValueChange(initialValue, e);
+      innerOnUIStateChange(initialValue, e);
     },
     onFormActionError: (e) => {
-      innerOnValueChange(initialValue, e);
+      innerOnUIStateChange(initialValue, e);
     },
   });
 
@@ -235,7 +235,7 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       value={value}
-      onValueChange={innerOnValueChange}
+      onUIStateChange={innerOnUIStateChange}
     >
       {/* <input type="checkbox" /> must not try to update the <form>
      The checkbox list is doing it with the array of checked values

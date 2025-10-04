@@ -1,11 +1,6 @@
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import {
-  useContext,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
@@ -27,9 +22,12 @@ import {
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { useInitialValue } from "../use_initial_value.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
+import {
+  useCheckedController,
+  useUncontrolledCheckedProps,
+} from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .custom_checkbox_wrapper {
@@ -134,39 +132,6 @@ import.meta.css = /* css */ `
   }
 `;
 
-const useCheckedController = (props, navState) => {
-  const { defaultChecked, checked } = props;
-  const hasCheckedProp = Object.hasOwn(props, "checked");
-  const externalStateInitial = useInitialValue(() => {
-    if (hasCheckedProp) {
-      // controlled by "checked" prop
-      return Boolean(checked);
-    }
-    if (defaultChecked) {
-      return true;
-    }
-    if (navState) {
-      return true;
-    }
-    return false;
-  });
-  const externalStateRef = useRef(externalStateInitial);
-  const [uiState, setUIState] = useState(externalStateInitial);
-  const checkedRef = useRef(checked);
-  if (hasCheckedProp && checked !== checkedRef.current) {
-    checkedRef.current = checked;
-    externalStateRef.current = checked;
-    setUIState(checked);
-  }
-  const externalState = externalStateRef.current;
-
-  const onUIStateChange = (checked) => {
-    setUIState(checked);
-  };
-
-  return [uiState, onUIStateChange, externalState];
-};
-
 export const InputCheckbox = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
     Basic: InputCheckboxBasic,
@@ -176,41 +141,13 @@ export const InputCheckbox = forwardRef((props, ref) => {
 });
 
 const InputCheckboxBasic = forwardRef((props, ref) => {
-  const { onUIStateChange, readOnly } = props;
-  const [uiChecked, setUiChecked] = useCheckedController(props);
-
-  let innerReadOnly = readOnly;
-  if (Object.hasOwn(props, "checked") && !onUIStateChange) {
-    /**
-     * This check is needed only for basic input because
-     * When using action/form we consider the action/form code
-     * will have a side effect that will re-render the component with the up-to-date state
-     *
-     * In pracice we set the checked from the backend state
-     * We use action to fetch the new state and update the local state
-     * The component re-renders so it's the action/form that is considered as responsible
-     * to update the state and as a result allowed to have "checked" prop without "onUIStateChange"
-     *
-     */
-    innerReadOnly = true;
-    if (import.meta.dev) {
-      console.warn(
-        `<input type="checkbox" /> is controlled by "checked" prop. Replace it by "defaultChecked" or combine it with "onUIStateChange" to make input interactive.`,
-      );
-    }
-  }
+  const uncontrolledProps = useUncontrolledCheckedProps(
+    props,
+    `<input type="checkbox" />`,
+  );
 
   return (
-    <InputCheckboxControlled
-      {...props}
-      ref={ref}
-      checked={uiChecked}
-      onUIStateChange={(checkboxChecked, e) => {
-        setUiChecked(checkboxChecked);
-        onUIStateChange?.(checkboxChecked, e);
-      }}
-      readOnly={innerReadOnly}
-    />
+    <InputCheckboxControlled {...props} ref={ref} {...uncontrolledProps} />
   );
 });
 const InputCheckboxControlled = forwardRef((props, ref) => {

@@ -24,7 +24,6 @@ import {
   useImperativeHandle,
   useLayoutEffect,
   useRef,
-  useState,
 } from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
@@ -45,49 +44,13 @@ import {
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { useInitialValue } from "../use_initial_value.js";
 import "./field_css.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
-
-const useValueController = (props) => {
-  const { id, defaultValue, value } = props;
-  const hasValueProp = Object.hasOwn(props, "value");
-  const [navState, setNavState] = useNavState(id);
-  const externalStateInitial = useInitialValue(() => {
-    if (hasValueProp) {
-      // controlled by "value" prop
-      return value;
-    }
-    if (defaultValue) {
-      return defaultValue;
-    }
-    if (navState) {
-      return navState;
-    }
-    return "";
-  });
-  const externalStateRef = useRef(externalStateInitial);
-  const [uiState, setUIState] = useState(externalStateInitial);
-  const valueRef = useRef(value);
-  if (hasValueProp && value !== valueRef.current) {
-    valueRef.current = value;
-    externalStateRef.current = value;
-    setUIState(value);
-  }
-  const externalState = externalStateRef.current;
-
-  const onUIStateChange = (uiValue) => {
-    if (externalState) {
-      setNavState(uiValue ? undefined : false);
-    } else {
-      setNavState(uiValue ? true : undefined);
-    }
-    setUIState(uiValue);
-  };
-
-  return [uiState, onUIStateChange, externalState];
-};
+import {
+  useUncontrolledValueProps,
+  useValueController,
+} from "./use_ui_state_controller.js";
 
 export const InputTextual = forwardRef((props, ref) => {
   return renderActionableComponent(props, ref, {
@@ -98,32 +61,11 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {
-  const { onUIStateChange, readOnly } = props;
-  const [uiValue, setUiValue] = useValueController(props);
-
-  let innerReadOnly = readOnly;
-  if (Object.hasOwn(props, "value") && !onUIStateChange) {
-    innerReadOnly = true;
-    if (import.meta.dev) {
-      const { type = "text" } = props;
-      console.warn(
-        `<input type="${type}" /> is controlled by "value" prop. Replace it by "defaultValue" or combine it with "onUIStateChange" to make input interactive.`,
-      );
-    }
-  }
-
-  return (
-    <InputTextualControlled
-      {...props}
-      ref={ref}
-      value={uiValue}
-      onUIStateChange={(inputValue, e) => {
-        setUiValue(inputValue);
-        onUIStateChange?.(inputValue, e);
-      }}
-      readOnly={innerReadOnly}
-    />
+  const uncontrolledProps = useUncontrolledValueProps(
+    props,
+    `<input type="${props.type || "text"}" />`,
   );
+  return <InputTextualControlled {...props} ref={ref} {...uncontrolledProps} />;
 });
 
 const InputTextualControlled = forwardRef((props, ref) => {
