@@ -53,7 +53,7 @@ export const CheckboxList = forwardRef((props, ref) => {
 export const Checkbox = InputCheckbox;
 
 const CheckboxListBasic = forwardRef((props, ref) => {
-  const uncontrolledProps = useUncontrolledValueProps(props, "checkbox");
+  const uncontrolledProps = useUncontrolledValueProps(props, "checkbox_list");
   return <CheckboxListControlled {...props} ref={ref} {...uncontrolledProps} />;
 });
 const CheckboxListControlled = forwardRef((props, ref) => {
@@ -92,7 +92,7 @@ const CheckboxListControlled = forwardRef((props, ref) => {
   const checkboxController = useMemo(() => {
     return {
       type: "checkbox",
-      getUIState: (checkboxValue) => value?.includes(checkboxValue),
+      getUIState: (checkboxProps) => value?.includes(checkboxProps.value),
     };
   }, [value]);
 

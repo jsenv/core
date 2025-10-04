@@ -38,9 +38,9 @@ export const useCheckedController = (props, navState) => {
     navState,
   );
 };
-export const useUncontrolledCheckedProps = (props, Component) => {
+export const useUncontrolledCheckedProps = (props, componentType) => {
   return useUncontrolledUIProps(props, {
-    Component,
+    componentType,
     statePropName: "checked",
     defaultStatePropName: "defaultChecked",
     fallbackState: false,
@@ -97,16 +97,16 @@ const useUncontrolledUIProps = (
   { componentType, statePropName, defaultStatePropName, fallbackState },
 ) => {
   const groupUIStateController = useContext(FieldGroupUIStateControllerContext);
-
   const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
+  const groupState =
+    groupUIStateController && groupUIStateController.type === componentType
+      ? groupUIStateController.getUIState(props)
+      : undefined;
   const { onUIStateChange, readOnly } = props;
   const [uiState, setUIState] = useUIStateController(props, {
     statePropName,
     defaultStatePropName,
-    groupState:
-      groupUIStateController && groupUIStateController.type === componentType
-        ? groupUIStateController.getUIState(props.value)
-        : undefined,
+    groupState,
     fallbackState,
   });
 

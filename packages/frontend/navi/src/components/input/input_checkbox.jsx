@@ -141,10 +141,7 @@ export const InputCheckbox = forwardRef((props, ref) => {
 });
 
 const InputCheckboxBasic = forwardRef((props, ref) => {
-  const uncontrolledProps = useUncontrolledCheckedProps(
-    props,
-    InputCheckboxBasic,
-  );
+  const uncontrolledProps = useUncontrolledCheckedProps(props, "checkbox");
   return (
     <InputCheckboxControlled {...props} ref={ref} {...uncontrolledProps} />
   );
