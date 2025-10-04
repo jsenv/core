@@ -312,7 +312,6 @@ const CustomCheckbox = ({ children }) => {
 
 const InputCheckboxWithAction = forwardRef((props, ref) => {
   const {
-    id,
     name,
     value = "on",
     onCheckedChange,
@@ -330,7 +329,6 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-
   const [checked, setChecked, initialChecked] = useCheckedController(props);
   const [boundAction, , setActionValue] = useActionBoundToOneParam(
     action,
@@ -376,7 +374,6 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       <InputCheckboxControlled
         {...rest}
         ref={innerRef}
-        id={id}
         name={name}
         checked={checked}
         onCheckedChange={innerOnCheckedChange}
@@ -391,18 +388,15 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   );
 });
 const InputCheckboxInsideForm = forwardRef((props, ref) => {
-  const { name, onCheckedChange, ...rest } = props;
+  const { name, value = "on", onCheckedChange, ...rest } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const [checked, setChecked, initialChecked] = useCheckedController(
-    innerRef,
-    props,
-    (externalValue, fallbackValue) =>
-      useOneFormParam(name, externalValue, fallbackValue),
-  );
+  const [checked, setChecked, initialChecked] = useCheckedController(props);
+  const [, setFormParam] = useOneFormParam(name, checked, initialChecked);
 
   const innerOnCheckedChange = (uiChecked, e) => {
     setChecked(uiChecked);
+    setFormParam(uiChecked ? value : undefined);
     onCheckedChange?.(uiChecked, e);
   };
   useFormEvents(innerRef, {
@@ -415,12 +409,13 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   });
 
   return (
-    <InputCheckboxBasic
+    <InputCheckboxControlled
       {...rest}
       ref={innerRef}
       name={name}
       checked={checked}
       onCheckedChange={innerOnCheckedChange}
+      value={value}
     />
   );
 });

@@ -151,6 +151,7 @@
               <CheckboxActionErrorOnUncheckedDemo />
               <CheckboxActionControlledErrorDemo />
               <CheckboxActionObjectDemo />
+              <CheckboxFormControlledErrorDemo />
             </div>
           </>
         );
@@ -636,6 +637,82 @@
               className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
             >
               {result || "Toggle checkbox to trigger action object..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const CheckboxFormControlledErrorDemo = () => {
+        const [agreed, setAgreed] = useState(false);
+        const [result, setResult] = useState("");
+        const [status, setStatus] = useState("idle");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">
+              Form with Controlled Checkbox (Fails When Unchecked)
+            </h3>
+            <Form
+              action={async ({ terms }) => {
+                setStatus("loading");
+                setResult("Processing form...");
+                try {
+                  await delay(1000);
+                  if (!terms) {
+                    throw new Error(
+                      "You must agree to the terms and conditions to proceed",
+                    );
+                  }
+                  setAgreed(Boolean(terms));
+                  const response = "✅ Form submitted successfully!";
+                  setResult(response);
+                  setStatus("success");
+                  return response;
+                } catch (error) {
+                  setResult(`❌ ${error.message}`);
+                  setStatus("error");
+                  throw error;
+                }
+              }}
+            >
+              <div className="control-group">
+                <div className="checkbox-group">
+                  <label>
+                    <Input type="checkbox" name="terms" checked={agreed} />
+                    <span
+                      className={`status-indicator status-${status}`}
+                    ></span>
+                    I agree to the terms and conditions
+                  </label>
+                </div>
+              </div>
+              <div className="button-group">
+                <Button type="submit">Submit Form</Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgreed(true);
+                  }}
+                >
+                  Accept Terms
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAgreed(false);
+                  }}
+                >
+                  Decline Terms
+                </button>
+              </div>
+            </Form>
+            <div
+              className={`result-display ${status === "loading" ? "result-loading" : status === "success" ? "result-success" : status === "error" ? "result-error" : ""}`}
+            >
+              Terms agreed: {agreed ? "Yes" : "No"}
+              <br />
+              {result || "Fill out the form and agree to terms to submit..."}
             </div>
           </div>
         );
