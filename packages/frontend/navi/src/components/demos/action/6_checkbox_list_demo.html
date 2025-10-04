@@ -47,10 +47,10 @@
             <PickFavoriteColors
               name="colors"
               value={value}
-              onValueChange={setValue}
               action={async (colors) => {
                 await new Promise((resolve) => setTimeout(resolve, 1_000));
                 console.log(`Colors selected: ${JSON.stringify(colors)}`);
+                setValue(colors);
               }}
             />
           </div>
@@ -59,7 +59,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const ActionThrowAfter1s = () => {
-        const [value, setValue] = useState(["blue"]);
+        const [value] = useState(["blue"]);
 
         return (
           <div>
@@ -69,10 +69,10 @@
             <PickFavoriteColors
               name="colors"
               value={value}
-              onValueChange={setValue}
               action={async (colors) => {
                 await new Promise((resolve) => setTimeout(resolve, 1_000));
                 throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
+                // setValue(colors);
               }}
             />
           </div>
@@ -93,13 +93,13 @@
                 await new Promise((resolve) => setTimeout(resolve, 1_000));
                 // eslint-disable-next-line no-alert
                 window.alert(`Colors selected: ${JSON.stringify(colors)}`);
+                setValue(colors);
               }}
             >
               <PickFavoriteColors
                 id="form_alert_1"
                 name="colors"
                 value={value}
-                onValueChange={setValue}
               />
 
               <Button type="submit">Submit</Button>
@@ -110,7 +110,7 @@
       };
       // eslint-disable-next-line no-unused-vars
       const FormThrowAfter1s = () => {
-        const [value, setValue] = useState(["red", "blue"]);
+        const [value] = useState(["red", "blue"]);
         return (
           <div>
             <p>
@@ -120,13 +120,10 @@
               action={async ({ colors }) => {
                 await new Promise((resolve) => setTimeout(resolve, 1_000));
                 throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
+                // setValue(colors);
               }}
             >
-              <PickFavoriteColors
-                name="colors"
-                value={value}
-                onValueChange={setValue}
-              />
+              <PickFavoriteColors name="colors" value={value} />
               <Button type="submit">Submit</Button>
               <Button type="reset">Reset</Button>
             </Form>
@@ -139,7 +136,7 @@
         name,
         value = [],
         action,
-        onValueChange,
+        onUIStateChange,
       }) => {
         return (
           <fieldset>
@@ -148,7 +145,7 @@
               name={name}
               value={value}
               action={action}
-              onValueChange={onValueChange}
+              onUIStateChange={onUIStateChange}
             >
               <Label>
                 Red
