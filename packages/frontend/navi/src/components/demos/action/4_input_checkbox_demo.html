@@ -113,6 +113,24 @@
           opacity: 0.5;
         }
       }
+      nav a {
+        color: #007bff;
+        text-decoration: none;
+      }
+      nav a:hover {
+        text-decoration: underline;
+      }
+      h2 {
+        margin-top: 40px;
+        margin-bottom: 20px;
+        padding-top: 20px;
+        border-top: 2px solid #e0e0e0;
+      }
+      h2:first-of-type {
+        margin-top: 0;
+        border-top: none;
+        padding-top: 0;
+      }
     </style>
   </head>
   <body>
@@ -140,9 +158,42 @@
       const App = () => {
         return (
           <>
+            <div className="demo-card" style={{ marginBottom: "30px" }}>
+              <h2>Checkbox Demo - Overview</h2>
+              <p>
+                This demo showcases different ways to use the Input component
+                with checkboxes.
+              </p>
+              <nav>
+                <h3>Sections:</h3>
+                <ul style={{ marginLeft: "20px" }}>
+                  <li>
+                    <a href="#basic-checkboxes">
+                      1. Basic Checkbox (no action/no form)
+                    </a>{" "}
+                    - Simple checkboxes with value handling
+                  </li>
+                  <li>
+                    <a href="#checkbox-actions">2. Checkbox with Actions</a> -
+                    Checkboxes that trigger actions on change, including error
+                    handling
+                  </li>
+                  <li>
+                    <a href="#checkbox-forms">3. Checkbox inside Form</a> - Form
+                    integration patterns
+                  </li>
+                </ul>
+              </nav>
+            </div>
+
+            <h2 id="basic-checkboxes">1. Basic Checkbox (no action/no form)</h2>
             <div className="demo-grid">
               <CheckboxDemo />
               <CheckboxDefaultCheckedDemo />
+            </div>
+
+            <h2 id="checkbox-actions">2. Checkbox with Actions</h2>
+            <div className="demo-grid">
               <CheckboxActionDemo />
               <CheckboxActionDefaultCheckedDemo />
               <CheckboxActionControlledDemo />
@@ -151,6 +202,10 @@
               <CheckboxActionErrorOnUncheckedDemo />
               <CheckboxActionControlledErrorDemo />
               <CheckboxActionObjectDemo />
+            </div>
+
+            <h2 id="checkbox-forms">3. Checkbox inside Form</h2>
+            <div className="demo-grid">
               <CheckboxFormControlledErrorDemo />
             </div>
           </>

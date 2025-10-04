@@ -143,22 +143,24 @@ export const InputCheckbox = forwardRef((props, ref) => {
 });
 
 const InputCheckboxBasic = forwardRef((props, ref) => {
-  const { onUIStateChange } = props;
+  const { onUIStateChange, readOnly } = props;
   const [uiChecked, setUiChecked] = useCheckedController(props);
 
-  /**
-   * This check is needed only for basic input because
-   * When using action/form we consider the action/form code
-   * will have a side effect that will re-render the component with the up-to-date state
-   *
-   * In pracice we set the checked from the backend state
-   * We use action to fetch the new state and update the local state
-   * The component re-renders so it's the action/form that is considered as responsible
-   * to update the state and as a result allowed to have "checked" prop without "onUIStateChange"
-   *
-   */
-  if (import.meta.dev) {
-    if (Object.hasOwn(props, "checked") && !onUIStateChange) {
+  let innerReadOnly = readOnly;
+  if (Object.hasOwn(props, "checked") && !onUIStateChange) {
+    /**
+     * This check is needed only for basic input because
+     * When using action/form we consider the action/form code
+     * will have a side effect that will re-render the component with the up-to-date state
+     *
+     * In pracice we set the checked from the backend state
+     * We use action to fetch the new state and update the local state
+     * The component re-renders so it's the action/form that is considered as responsible
+     * to update the state and as a result allowed to have "checked" prop without "onUIStateChange"
+     *
+     */
+    innerReadOnly = true;
+    if (import.meta.dev) {
       console.warn(
         `<input type="checkbox" /> is controlled by "checked" prop. Replace it by "defaultChecked" or combine it with "onUIStateChange" to make input interactive.`,
       );
@@ -170,11 +172,11 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       {...props}
       ref={ref}
       checked={uiChecked}
-      readOnly={!onUIStateChange}
       onUIStateChange={(checkboxChecked, e) => {
         setUiChecked(checkboxChecked);
         onUIStateChange?.(checkboxChecked, e);
       }}
+      readOnly={innerReadOnly}
     />
   );
 });
