@@ -145,6 +145,7 @@
               <CheckboxDefaultCheckedDemo />
               <CheckboxActionDemo />
               <CheckboxActionDefaultCheckedDemo />
+              <CheckboxActionControlledDemo />
             </div>
           </>
         );
@@ -288,10 +289,9 @@
           </div>
         );
       };
-
       // eslint-disable-next-line no-unused-vars
-      const ControlledCheckboxDemo = () => {
-        const [isChecked, setIsChecked] = useState(undefined);
+      const CheckboxActionControlledDemo = () => {
+        const [checked, setChecked] = useState(undefined);
         const [result, setResult] = useState("");
 
         return (
@@ -307,13 +307,13 @@
                   <Input
                     type="checkbox"
                     name="notifications"
-                    checked={isChecked}
-                    onCheckedChange={setIsChecked}
+                    checked={checked}
                     action={async (notifications) => {
                       setResult("Processing...");
                       await delay(600);
                       const response = `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
                       setResult(response);
+                      setChecked(Boolean(notifications));
                       return response;
                     }}
                   />
@@ -324,21 +324,21 @@
             <div className="button-group">
               <button
                 onClick={() => {
-                  setIsChecked(true);
+                  setChecked(true);
                 }}
               >
                 Enable
               </button>
               <button
                 onClick={() => {
-                  setIsChecked(false);
+                  setChecked(false);
                 }}
               >
                 Disable
               </button>
               <button
                 onClick={() => {
-                  setIsChecked(undefined);
+                  setChecked(undefined);
                 }}
               >
                 Reset
@@ -348,9 +348,9 @@
               className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
             >
               Current state:{" "}
-              {isChecked === undefined
+              {checked === undefined
                 ? "undefined"
-                : isChecked
+                : checked
                   ? "checked"
                   : "unchecked"}
               <br />
