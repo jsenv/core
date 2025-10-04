@@ -130,7 +130,16 @@ export const setupBrowserIntegrationViaHistory = ({
       if (linkElement.hasAttribute("data-readonly")) {
         return;
       }
-      // TODO: ignore anchor navigation
+      // Ignore anchor navigation (same page, different hash)
+      const currentUrl = new URL(window.location.href);
+      const targetUrl = new URL(href);
+      if (
+        currentUrl.pathname === targetUrl.pathname &&
+        currentUrl.search === targetUrl.search &&
+        targetUrl.hash !== ""
+      ) {
+        return;
+      }
       e.preventDefault();
       const state = null;
       history.pushState(state, null, href);
