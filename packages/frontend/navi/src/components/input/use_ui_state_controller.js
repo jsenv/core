@@ -2,7 +2,7 @@ import { useContext, useRef, useState } from "preact/hooks";
 
 import {
   FieldGroupOnUIStateChangeContext,
-  FieldGroupUIStateContext,
+  FieldGroupUIStateControllerContext,
 } from "../field_group_context.js";
 import { useInitialValue } from "../use_initial_value.js";
 
@@ -17,9 +17,9 @@ export const useValueController = (props, navState) => {
     navState,
   );
 };
-export const useUncontrolledValueProps = (props, Component) => {
+export const useUncontrolledValueProps = (props, componentType) => {
   return useUncontrolledUIProps(props, {
-    Component,
+    componentType,
     statePropName: "value",
     defaultStatePropName: "defaultValue",
     fallbackState: "",
@@ -49,13 +49,22 @@ export const useUncontrolledCheckedProps = (props, Component) => {
 
 const useUIStateController = (
   props,
-  { statePropName, defaultStatePropName, fallbackState, mapStateValue },
+  {
+    statePropName,
+    defaultStatePropName,
+    groupState,
+    fallbackState,
+    mapStateValue,
+  },
   navState,
 ) => {
   const hasUIStateProp = Object.hasOwn(props, statePropName);
-  const state = props[statePropName];
+  const state = groupState || props[statePropName];
   const defaultState = props[defaultStatePropName];
   const externalStateInitial = useInitialValue(() => {
+    if (groupState) {
+      return groupState;
+    }
     if (hasUIStateProp) {
       // controlled by state prop ("value" or "checked")
       return mapStateValue ? mapStateValue(state) : state;
@@ -85,14 +94,19 @@ const useUIStateController = (
 };
 const useUncontrolledUIProps = (
   props,
-  { Component, statePropName, defaultStatePropName, fallbackState },
+  { componentType, statePropName, defaultStatePropName, fallbackState },
 ) => {
-  const groupUIState = useContext(FieldGroupUIStateContext);
+  const groupUIStateController = useContext(FieldGroupUIStateControllerContext);
+
   const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const { onUIStateChange, readOnly } = props;
   const [uiState, setUIState] = useUIStateController(props, {
     statePropName,
     defaultStatePropName,
+    groupState:
+      groupUIStateController && groupUIStateController.type === componentType
+        ? groupUIStateController.getUIState(props.value)
+        : undefined,
     fallbackState,
   });
 
@@ -118,7 +132,7 @@ const useUncontrolledUIProps = (
     innerReadOnly = true;
     if (import.meta.dev) {
       console.warn(
-        `<${Component.name} /> is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
+        `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
       );
     }
   }
