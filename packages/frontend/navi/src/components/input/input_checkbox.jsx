@@ -332,8 +332,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   const [checked, setChecked, initialChecked] = useCheckedController(props);
   const [boundAction, , setActionValue] = useActionBoundToOneParam(
     action,
-    checked,
-    initialChecked,
+    checked ? value : undefined,
   );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -392,7 +391,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const [checked, setChecked, initialChecked] = useCheckedController(props);
-  const [, setFormParam] = useOneFormParam(name, checked, initialChecked);
+  const [, setFormParam] = useOneFormParam(name, checked ? value : undefined);
 
   const innerOnCheckedChange = (uiChecked, e) => {
     setChecked(uiChecked);

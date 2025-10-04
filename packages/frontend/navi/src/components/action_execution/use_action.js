@@ -3,7 +3,6 @@ import { useCallback, useContext, useRef } from "preact/hooks";
 
 import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
-import { resolveInitialValue } from "../use_initial_value.js";
 import { FormContext } from "./form_context.js";
 
 let debug = false;
@@ -29,21 +28,10 @@ export const useFormActionBoundToFormParams = (action) => {
     updateFormParams,
   ];
 };
-export const useOneFormParam = (
-  name,
-  externalValue,
-  fallbackValue,
-  defaultValue,
-) => {
+export const useOneFormParam = (name, initialValue) => {
   if (!name) {
     throw new Error("useOneFormParam: name is required");
   }
-
-  const initialValue = resolveInitialValue(
-    externalValue,
-    fallbackValue,
-    defaultValue,
-  );
 
   const { formParamsSignal } = useContext(FormContext);
   const getValue = useCallback(() => formParamsSignal.value[name], []);
@@ -51,33 +39,34 @@ export const useOneFormParam = (
     (value) => updateParamsSignal(formParamsSignal, { [name]: value }),
     [],
   );
+  const mountedRef = useRef(false);
+  if (!mountedRef.current) {
+    // When the UI has a default state
+    // - defaultChecked/defaultValue
+    // - a valued restore from local storage, history, navigation, etc.
+    // - a value inlined into the js logic
+    // We want the form params to reflect that initial state right away
+    // This is not stricly required as form will collect values upon submission
+    // but this allow to see the form [data-action] in devtools being in sync
+    mountedRef.current = true;
+    setValue(initialValue);
+  }
 
-  return [getValue(), setValue, initialValue];
+  const value = getValue();
+  return [value, setValue];
 };
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
-export const useActionBoundToOneParam = (
-  action,
-  externalValue,
-  fallbackValue,
-  defaultValue,
-) => {
-  const initialValue = resolveInitialValue(
-    externalValue,
-    fallbackValue,
-    defaultValue,
-  );
+export const useActionBoundToOneParam = (action, initialValue) => {
   const actionFirstArgSignal = useSignal(initialValue);
   const boundAction = useBoundAction(action, actionFirstArgSignal);
   const getValue = useCallback(() => actionFirstArgSignal.value, []);
   const setValue = useCallback((value) => {
     actionFirstArgSignal.value = value;
   }, []);
-
   const value = getValue();
-
-  return [boundAction, value, setValue, initialValue];
+  return [boundAction, value, setValue];
 };
 
 export const useActionBoundToOneArrayParam = (
