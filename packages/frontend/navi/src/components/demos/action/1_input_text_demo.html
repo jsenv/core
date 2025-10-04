@@ -273,6 +273,7 @@
             <h2 id="input-forms">3. Input inside Form</h2>
             <div className="demo-grid">
               <FormInputDemo />
+              <FormInputErrorDemo />
             </div>
           </>
         );
@@ -539,6 +540,75 @@
               className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
             >
               {result || "Fill form and submit..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const FormInputErrorDemo = () => {
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        const formErrorAction = async ({ username, email }) => {
+          setIsLoading(true);
+          setResult("Submitting form...");
+          try {
+            await delay(1000);
+            // Simulate server-side validation errors
+            if (!username || username.length < 3) {
+              throw new Error("Username must be at least 3 characters long");
+            }
+            if (!email || !email.includes("@")) {
+              throw new Error("Please provide a valid email address");
+            }
+            if (username === "admin") {
+              throw new Error("Username 'admin' is reserved and cannot be used");
+            }
+            // This will never be reached due to the conditions above
+            const response = `✅ Form submitted!\nUsername: ${username}\nEmail: ${email}`;
+            setResult(response);
+            return response;
+          } catch (error) {
+            setResult(`❌ Form error: ${error.message}`);
+            throw error;
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Form with Validation Errors</h3>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+              This form demonstrates server-side validation errors. Try: empty fields, username &lt; 3 chars, invalid email, or "admin" username.
+            </p>
+            <Form action={formErrorAction}>
+              <div className="control-group">
+                <label htmlFor="error-form-username">Username:</label>
+                <Input 
+                  id="error-form-username"
+                  name="username" 
+                  placeholder="Enter username (try 'admin' or < 3 chars)" 
+                />
+              </div>
+              <div className="control-group">
+                <label htmlFor="error-form-email">Email:</label>
+                <Input 
+                  id="error-form-email"
+                  name="email" 
+                  placeholder="Enter email (try invalid format)" 
+                />
+              </div>
+              <div className="button-group">
+                <Button type="submit">Submit Form</Button>
+                <Button type="reset">Reset</Button>
+              </div>
+            </Form>
+            <div
+              className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              {result || "Fill form and submit to see validation errors..."}
             </div>
           </div>
         );
