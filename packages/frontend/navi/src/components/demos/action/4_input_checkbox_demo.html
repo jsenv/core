@@ -459,8 +459,14 @@
 
       // eslint-disable-next-line no-unused-vars
       const CheckboxActionErrorOnUncheckedDemo = () => {
+        // for this example the checkbox is going to be controlled because that's how you would
+        // implement it in a real world scenario:
+        // the fact checkbox is checked comes from a backend so when the operation succeeds
+        // the component is re-rendered as checked
+
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
+        const [checked, setChecked] = useState(false);
 
         return (
           <div className="demo-card">
@@ -473,11 +479,12 @@
                   <Input
                     type="checkbox"
                     name="protection"
+                    checked={checked}
                     action={async (protection) => {
                       setStatus("loading");
                       setResult("Processing...");
+                      await delay(1000);
                       try {
-                        await delay(1000);
                         if (!protection) {
                           throw new Error(
                             "Protection must be enabled for security",
@@ -486,6 +493,7 @@
                         const response = `✅ Protection ${protection ? "enabled" : "disabled"}`;
                         setResult(response);
                         setStatus("success");
+                        setChecked(true);
                         return response;
                       } catch (error) {
                         setResult(`❌ ${error.message}`);

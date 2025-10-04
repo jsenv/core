@@ -163,7 +163,7 @@ const useCheckedController = (props) => {
   const { id, defaultChecked, checked } = props;
   const hasCheckedProp = Object.hasOwn(props, "checked");
   const [navState, setNavState] = useNavState(id);
-  const uiCheckedInitialValue = useInitialValue(() => {
+  const externalStateInitial = useInitialValue(() => {
     if (hasCheckedProp) {
       // controlled by "checked" prop
       return Boolean(checked);
@@ -176,26 +176,28 @@ const useCheckedController = (props) => {
     }
     return false;
   });
-  // we are done deciding the initial value for uiChecked
-  // now we will use a local state to track if the UI is checked
-  const [uiChecked, setUIChecked] = useState(uiCheckedInitialValue);
+  const externalStateRef = useRef(externalStateInitial);
+  const [uiState, setUIState] = useState(externalStateInitial);
   const checkedRef = useRef(checked);
   if (hasCheckedProp && checked !== checkedRef.current) {
     checkedRef.current = checked;
-    setUIChecked(checked);
+    externalStateRef.current = checked;
+    setUIState(checked);
   }
+  const externalState = externalStateRef.current;
 
   const onCheckedChange = (checked) => {
-    if (uiCheckedInitialValue) {
+    if (externalState) {
       setNavState(checked ? undefined : false);
     } else {
       setNavState(checked ? true : undefined);
     }
-    setUIChecked(checked);
+    setUIState(checked);
   };
 
-  return [uiChecked, onCheckedChange, uiCheckedInitialValue];
+  return [uiState, onCheckedChange, externalState];
 };
+
 const InputCheckboxControlled = forwardRef((props, ref) => {
   const {
     name,
