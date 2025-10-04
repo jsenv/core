@@ -115,17 +115,199 @@
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
       // eslint-disable-next-line no-unused-vars
+      const BasicInputNoActionDemo = () => {
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Basic Input (No Action)</h3>
+            <div className="control-group">
+              <label htmlFor="basic-no-action-input">Enter some text:</label>
+              <Input
+                id="basic-no-action-input"
+                name="text"
+                placeholder="Type something..."
+                onValueChange={(text) => {
+                  setResult(text ? `Current value: "${text}"` : "");
+                }}
+              />
+            </div>
+            <div className="result-display">
+              {result || "Type in the input to see the value..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputWithDefaultValueDemo = () => {
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Input with Default Value</h3>
+            <div className="control-group">
+              <label htmlFor="default-value-input">Input with default value:</label>
+              <Input
+                id="default-value-input"
+                name="text"
+                defaultValue="Hello World!"
+                placeholder="Enter text..."
+                onValueChange={(text) => {
+                  setResult(text ? `Current value: "${text}"` : "");
+                }}
+              />
+            </div>
+            <div className="result-display">
+              {result || "Input starts with default value. Modify to see changes..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputControlledDemo = () => {
+        const [value, setValue] = useState("Controlled input");
+        const [result, setResult] = useState("");
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Controlled Input</h3>
+            <div className="control-group">
+              <label htmlFor="controlled-input">Controlled input:</label>
+              <Input
+                id="controlled-input"
+                name="text"
+                value={value}
+                onValueChange={(text) => {
+                  setValue(text);
+                  setResult(text ? `Value set to: "${text}"` : "Value cleared");
+                }}
+              />
+            </div>
+            <div className="button-group">
+              <button onClick={() => setValue("Preset Text 1")}>Set Text 1</button>
+              <button onClick={() => setValue("Preset Text 2")}>Set Text 2</button>
+              <button onClick={() => setValue("")}>Clear</button>
+            </div>
+            <div className="result-display">
+              {result || "Use buttons to control the input value..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
           <>
+            <h2>Basic Input Examples (No Actions)</h2>
+            <div className="demo-grid">
+              <BasicInputNoActionDemo />
+              <InputWithDefaultValueDemo />
+              <InputControlledDemo />
+            </div>
+            
+            <h2>Input Examples with Actions</h2>
             <div className="demo-grid">
               <BasicInputDemo />
               <InputWithInitialValueDemo />
               <InputWithExternalControlDemo />
+            </div>
+            
+            <h2>Input Examples with Error Handling</h2>
+            <div className="demo-grid">
+              <InputWithErrorDemo />
+              <InputWithValidationErrorDemo />
+            </div>
+            
+            <h2>Form Examples</h2>
+            <div className="demo-grid">
               <FormInputDemo />
               <FormWithExternalControlDemo />
             </div>
           </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputWithErrorDemo = () => {
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Input with Action (Always Fails)</h3>
+            <div className="control-group">
+              <label htmlFor="error-input">Enter text (will always fail):</label>
+              <Input
+                id="error-input"
+                name="text"
+                placeholder="Type something..."
+                action={async (text) => {
+                  setIsLoading(true);
+                  setResult("Processing...");
+                  try {
+                    await delay(1200);
+                    throw new Error(`Processing failed for input: "${text}"`);
+                  } catch (error) {
+                    setResult(`❌ ${error.message}`);
+                    throw error;
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              />
+            </div>
+            <div
+              className={`result-display ${isLoading ? "result-loading" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              {result || "This input action will always fail..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const InputWithValidationErrorDemo = () => {
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Input with Validation (Fails on Short Text)</h3>
+            <div className="control-group">
+              <label htmlFor="validation-input">Enter text (min 5 characters):</label>
+              <Input
+                id="validation-input"
+                name="text"
+                placeholder="Must be at least 5 characters..."
+                action={async (text) => {
+                  setIsLoading(true);
+                  setResult("Validating...");
+                  try {
+                    await delay(800);
+                    if (!text || text.length < 5) {
+                      throw new Error("Text must be at least 5 characters long");
+                    }
+                    const response = `✅ Valid input: "${text}" (${text.length} characters)`;
+                    setResult(response);
+                    return response;
+                  } catch (error) {
+                    setResult(`❌ Validation failed: ${error.message}`);
+                    throw error;
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              />
+            </div>
+            <div
+              className={`result-display ${isLoading ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+            >
+              {result || "Enter at least 5 characters to pass validation..."}
+            </div>
+          </div>
         );
       };
 

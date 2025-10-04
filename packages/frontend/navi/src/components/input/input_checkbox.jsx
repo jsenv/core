@@ -143,18 +143,37 @@ export const InputCheckbox = forwardRef((props, ref) => {
 });
 
 const InputCheckboxBasic = forwardRef((props, ref) => {
-  const { onCheckedChange } = props;
+  const { onUIStateChange } = props;
   const [uiChecked, setUiChecked] = useCheckedController(props);
+
+  /**
+   * This check is needed only for basic input because
+   * When using action/form we consider the action/form code
+   * will have a side effect that will re-render the component with the up-to-date state
+   *
+   * In pracice we set the checked from the backend state
+   * We use action to fetch the new state and update the local state
+   * The component re-renders so it's the action/form that is considered as responsible
+   * to update the state and as a result allowed to have "checked" prop without "onUIStateChange"
+   *
+   */
+  if (import.meta.dev) {
+    if (Object.hasOwn(props, "checked") && !onUIStateChange) {
+      console.warn(
+        `<input type="checkbox" /> is controlled by "checked" prop. Replace it by "defaultChecked" or combine it with "onUIStateChange" to make input interactive.`,
+      );
+    }
+  }
 
   return (
     <InputCheckboxControlled
       {...props}
       ref={ref}
       checked={uiChecked}
-      readOnly={!onCheckedChange}
-      onCheckedChange={(checkboxChecked, e) => {
+      readOnly={!onUIStateChange}
+      onUIStateChange={(checkboxChecked, e) => {
         setUiChecked(checkboxChecked);
-        onCheckedChange?.(checkboxChecked, e);
+        onUIStateChange?.(checkboxChecked, e);
       }}
     />
   );
@@ -200,7 +219,7 @@ const useCheckedController = (props) => {
 const InputCheckboxControlled = forwardRef((props, ref) => {
   const {
     name,
-    onCheckedChange,
+    onUIStateChange,
     value = "on",
     readOnly,
     disabled,
@@ -226,26 +245,18 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const innerName = name || groupName;
-  const innerOnCheckedChange = onCheckedChange || groupOnUIStateChange;
+  const innerOnUIStateChange = onUIStateChange || groupOnUIStateChange;
   const innerDisabled = disabled || groupDisabled;
   const innerRequired = required || groupRequired;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || innerLoading || !innerOnCheckedChange;
+    readOnly || groupReadOnly || innerLoading || !innerOnUIStateChange;
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
-
-  if (import.meta.dev) {
-    if (Object.hasOwn(props, "checked") && !innerOnCheckedChange) {
-      console.warn(
-        `<input type="checkbox" /> is controlled by "checked" prop. Replace it by "defaultChecked" or combine it with "onCheckedChange" to make input interactive.`,
-      );
-    }
-  }
 
   const inputCheckbox = (
     <input
@@ -267,7 +278,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
       onInput={(e) => {
         const checkbox = e.target;
         const checkboxIsChecked = checkbox.checked;
-        innerOnCheckedChange?.(checkboxIsChecked, e);
+        innerOnUIStateChange?.(checkboxIsChecked, e);
         onInput?.(e);
       }}
     />
@@ -313,7 +324,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   const {
     name,
     value = "on",
-    onCheckedChange,
+    onUIStateChange,
 
     action,
     onCancel,
@@ -338,28 +349,28 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     errorEffect: actionErrorEffect,
   });
 
-  const innerOnCheckedChange = (uiChecked, e) => {
+  const innerOnUIStateChange = (uiChecked, e) => {
     setChecked(uiChecked);
     setActionValue(uiChecked ? value : undefined);
-    onCheckedChange?.(uiChecked, e);
+    onUIStateChange?.(uiChecked, e);
   };
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
       if (reason === "blur_invalid") {
         return;
       }
-      innerOnCheckedChange(initialChecked, e);
+      innerOnUIStateChange(initialChecked, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
     onAbort: (e) => {
-      innerOnCheckedChange(initialChecked, e);
+      innerOnUIStateChange(initialChecked, e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      innerOnCheckedChange(initialChecked, e);
+      innerOnUIStateChange(initialChecked, e);
       onActionError?.(e);
     },
     onEnd: (e) => {
@@ -374,7 +385,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
         ref={innerRef}
         name={name}
         checked={checked}
-        onCheckedChange={innerOnCheckedChange}
+        onUIStateChange={innerOnUIStateChange}
         data-action={boundAction.name}
         value={value}
         onChange={(e) => {
@@ -392,17 +403,17 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   const [checked, setChecked, initialChecked] = useCheckedController(props);
   const [, setFormParam] = useOneFormParam(name, checked ? value : undefined);
 
-  const innerOnCheckedChange = (uiChecked, e) => {
+  const innerOnUIStateChange = (uiChecked, e) => {
     setChecked(uiChecked);
     setFormParam(uiChecked ? value : undefined);
     onCheckedChange?.(uiChecked, e);
   };
   useFormEvents(innerRef, {
     onFormActionAbort: (e) => {
-      innerOnCheckedChange(initialChecked, e);
+      innerOnUIStateChange(initialChecked, e);
     },
     onFormActionError: (e) => {
-      innerOnCheckedChange(initialChecked, e);
+      innerOnUIStateChange(initialChecked, e);
     },
   });
 
@@ -412,7 +423,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       checked={checked}
-      onCheckedChange={innerOnCheckedChange}
+      onUIStateChange={innerOnUIStateChange}
       value={value}
     />
   );

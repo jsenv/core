@@ -59,18 +59,27 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {
-  const { onValueChange } = props;
+  const { onUIStateChange } = props;
   const [uiValue, setUiValue] = useValueController(props);
+
+  if (import.meta.dev) {
+    if (Object.hasOwn(props, "value") && !onUIStateChange) {
+      const { type = "text" } = props;
+      console.warn(
+        `<input type="${type}" /> is controlled by "value" prop. Replace it by "defaultValue" or combine it with "onUIStateChange" to make input interactive.`,
+      );
+    }
+  }
 
   return (
     <InputTextualControlled
       {...props}
       ref={ref}
       value={uiValue}
-      readOnly={!onValueChange}
-      onValueChange={(inputValue, e) => {
+      readOnly={!onUIStateChange}
+      onUIStateChange={(inputValue, e) => {
         setUiValue(inputValue);
-        onValueChange?.(inputValue, e);
+        onUIStateChange?.(inputValue, e);
       }}
     />
   );
@@ -117,7 +126,7 @@ const InputTextualControlled = forwardRef((props, ref) => {
   const {
     type,
     value,
-    onValueChange,
+    onUIStateChange,
     onInput,
 
     readOnly,
@@ -144,11 +153,11 @@ const InputTextualControlled = forwardRef((props, ref) => {
   if (type === "datetime-local") {
     innerValue = convertToLocalTimezone(innerValue);
   }
-  const innerOnValueChange = onValueChange || groupOnUIStateChange;
+  const innerOnUIStateChange = onUIStateChange || groupOnUIStateChange;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || innerLoading || !innerOnValueChange;
+    readOnly || groupReadOnly || innerLoading || !innerOnUIStateChange;
   const innerDisabled = disabled || groupDisabled;
   // infom any <label> parent of our readOnly state
   if (setInputReadOnly) {
@@ -159,14 +168,6 @@ const InputTextualControlled = forwardRef((props, ref) => {
     autoSelect,
   });
   useConstraints(innerRef, constraints);
-
-  if (import.meta.dev) {
-    if (Object.hasOwn(props, "value") && !onValueChange) {
-      console.warn(
-        `<input type="${type}" /> is controlled by "value" prop. Replace it by "defaultValue" or combine it with "onValueChange" to make input interactive.`,
-      );
-    }
-  }
 
   const inputTextual = (
     <input
@@ -186,7 +187,7 @@ const InputTextualControlled = forwardRef((props, ref) => {
           type === "datetime-local"
             ? convertToUTCTimezone(inputValueRaw)
             : inputValueRaw;
-        innerOnValueChange?.(inputValue, e);
+        innerOnUIStateChange?.(inputValue, e);
         onInput?.(e);
       }}
       {...rest}
@@ -209,7 +210,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
     type,
 
     name,
-    onValueChange,
+    onUIStateChange,
     action,
 
     onCancel,
@@ -240,7 +241,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   const innerOnUIStateChange = (uiState, e) => {
     setValue(uiState);
     setActionValue(uiState);
-    onValueChange?.(uiState, e);
+    onUIStateChange?.(uiState, e);
   };
   useOnInputChange(innerRef, (e) => {
     if (
@@ -298,7 +299,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
         name={name}
         value={value}
         data-action={boundAction.name}
-        onValueChange={innerOnUIStateChange}
+        onUIStateChange={innerOnUIStateChange}
         onInput={(e) => {
           valueAtInteractionRef.current = null;
           onInput?.(e);
@@ -322,7 +323,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   );
 });
 const InputTextualInsideForm = forwardRef((props, ref) => {
-  const { formContext, id, name, onValueChange, onKeyDown, ...rest } = props;
+  const { formContext, id, name, onUIStateChange, onKeyDown, ...rest } = props;
   const { formAction } = formContext;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
@@ -332,7 +333,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   const innerOnUIStateChange = (uiState, e) => {
     setValue(uiState);
     setFormParam(uiState);
-    onValueChange?.(uiState, e);
+    onUIStateChange?.(uiState, e);
   };
   useFormEvents(innerRef, {
     onFormReset: (e) => {
@@ -347,7 +348,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       id={id}
       name={name}
       value={value}
-      onValueChange={innerOnUIStateChange}
+      onUIStateChange={innerOnUIStateChange}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           const inputElement = e.target;
