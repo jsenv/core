@@ -651,8 +651,15 @@
         return (
           <div className="demo-card">
             <h3 className="demo-title">
-              Form with Controlled Checkbox (Fails When Unchecked)
+              Form with Controlled Checkbox (Fails When Submit Without Check)
             </h3>
+            <p
+              style={{ fontSize: "14px", color: "#666", marginBottom: "15px" }}
+            >
+              This demonstrates backend validation when frontend forgets to add
+              "required" - the server throws an error during form submission if
+              terms aren't agreed.
+            </p>
             <Form
               action={async ({ terms }) => {
                 setStatus("loading");
@@ -712,7 +719,8 @@
             >
               Terms agreed: {agreed ? "Yes" : "No"}
               <br />
-              {result || "Fill out the form and agree to terms to submit..."}
+              {result ||
+                "Fill out the form - frontend will simulate backend submission rejected when terms not agreed..."}
             </div>
           </div>
         );
