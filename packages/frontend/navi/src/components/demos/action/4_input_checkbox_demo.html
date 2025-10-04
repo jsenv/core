@@ -238,9 +238,6 @@
         const [isChecked, setIsChecked] = useState(undefined);
         const [result, setResult] = useState("");
 
-        // Debug logging
-        console.log("ControlledCheckboxDemo render - isChecked:", isChecked);
-
         return (
           <div className="demo-card">
             <h3 className="demo-title">Controlled Checkbox</h3>
@@ -271,7 +268,6 @@
             <div className="button-group">
               <button
                 onClick={() => {
-                  console.log("Setting checkbox to checked");
                   setIsChecked(true);
                 }}
               >
@@ -279,7 +275,6 @@
               </button>
               <button
                 onClick={() => {
-                  console.log("Setting checkbox to unchecked");
                   setIsChecked(false);
                 }}
               >
@@ -287,10 +282,6 @@
               </button>
               <button
                 onClick={() => {
-                  console.log(
-                    "Resetting checkbox, current isChecked:",
-                    isChecked,
-                  );
                   setIsChecked(undefined);
                 }}
               >
