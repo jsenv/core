@@ -558,9 +558,6 @@
             if (!username || username.length < 3) {
               throw new Error("Username must be at least 3 characters long");
             }
-            if (!email || !email.includes("@")) {
-              throw new Error("Please provide a valid email address");
-            }
             if (username === "admin") {
               throw new Error(
                 "Username 'admin' is reserved and cannot be used",
@@ -594,15 +591,6 @@
                   <Input
                     name="username"
                     placeholder="Enter username (try 'admin' or < 3 chars)"
-                  />
-                </label>
-              </div>
-              <div className="control-group">
-                <label>
-                  Email:
-                  <Input
-                    name="email"
-                    placeholder="Enter email (try invalid format)"
                   />
                 </label>
               </div>
