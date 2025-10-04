@@ -376,8 +376,8 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
         name={name}
         checked={checked}
         onCheckedChange={innerOnCheckedChange}
+        data-action={boundAction.name}
         value={value}
-        data-action={boundAction}
         onChange={(e) => {
           requestAction(e.target, boundAction, { event: e });
           onChange?.(e);

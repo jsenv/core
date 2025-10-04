@@ -29,6 +29,7 @@
       const App = () => {
         return (
           <div style="display: flex; flex-direction: row; gap: 30px">
+            <ActionThrowAfter1s />
             <FormThrowAfter1s />
           </div>
         );
@@ -55,6 +56,29 @@
           </div>
         );
       };
+
+      // eslint-disable-next-line no-unused-vars
+      const ActionThrowAfter1s = () => {
+        const [value, setValue] = useState(["blue"]);
+
+        return (
+          <div>
+            <p>
+              <strong>Action + throw after 1s</strong>
+            </p>
+            <PickFavoriteColors
+              name="colors"
+              value={value}
+              onValueChange={setValue}
+              action={async (colors) => {
+                await new Promise((resolve) => setTimeout(resolve, 1_000));
+                throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
+              }}
+            />
+          </div>
+        );
+      };
+
       // eslint-disable-next-line no-unused-vars
       const FormAlertAfter1s = () => {
         const [value, setValue] = useState(["blue"]);
