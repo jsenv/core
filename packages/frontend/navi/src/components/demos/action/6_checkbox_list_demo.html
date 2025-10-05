@@ -37,20 +37,14 @@
 
       // eslint-disable-next-line no-unused-vars
       const DynamicCheckboxListDemo = () => {
-        // Available color choices
+        // Available color choices with their selection state
         const [colorChoices, setColorChoices] = useState([
-          { id: 1, color: "red" },
-          { id: 2, color: "blue" },
-          { id: 3, color: "green" },
+          { id: 1, color: "red", selected: true },
+          { id: 2, color: "blue", selected: true },
+          { id: 3, color: "green", selected: false },
         ]);
 
-        // BACKEND STATE - This represents the server/database state
-        const [backendSelectedColors, setBackendSelectedColors] = useState([
-          "red",
-          "blue",
-        ]);
-
-        // UI STATE - This represents the current form state (may differ from backend)
+        // UI FORM STATE - This represents the current form state (may differ from data state)
         const [uiSelectedColors, setUiSelectedColors] = useState([
           "red",
           "blue",
@@ -77,29 +71,63 @@
           "maroon",
         ];
 
-        // Action that simulates sending data to backend (takes 1s)
-        const submitToBackend = async ({ colors }) => {
-          console.log("Submitting to backend:", colors);
+        // Action that simulates submitting form data (takes 1s)
+        const submitForm = async ({ colors }) => {
+          console.log("Submitting form data:", colors);
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          // Simulate backend accepting the data and updating backend state
-          setBackendSelectedColors(colors || []);
-          console.log("Backend state updated:", colors);
+          // Update the data state to match the form submission
+          setColorChoices((prev) =>
+            prev.map((choice) => ({
+              ...choice,
+              selected: colors?.includes(choice.color) || false,
+            })),
+          );
+          console.log("Data state updated from form:", colors);
         };
 
-        // Simulate backend state changes (these would come from server events, websockets, etc.)
-        const simulateBackendChange = (newBackendState) => {
-          console.log("Backend state changed externally:", newBackendState);
-          setBackendSelectedColors(newBackendState);
-          // When backend changes, we typically sync the UI to match
-          setUiSelectedColors(newBackendState);
+        // Add a new color to the data state
+        const addColorToState = (color) => {
+          setColorChoices((prev) => [
+            ...prev,
+            { id: nextId, color, selected: false },
+          ]);
+          setNextId((prev) => prev + 1);
         };
 
-        // Sync UI state to backend state (like a refresh or reset)
-        const syncUiToBackend = () => {
-          setUiSelectedColors([...backendSelectedColors]);
+        // Remove a color from the data state
+        const removeColorFromState = (colorId) => {
+          setColorChoices((prev) =>
+            prev.filter((choice) => choice.id !== colorId),
+          );
+          // Also remove from UI form if it was selected
+          const colorToRemove = colorChoices.find(
+            (choice) => choice.id === colorId,
+          );
+          if (colorToRemove) {
+            setUiSelectedColors((prev) =>
+              prev.filter((color) => color !== colorToRemove.color),
+            );
+          }
         };
 
-        // Add a random color choice
+        // Toggle selection state in the data state
+        const toggleColorInState = (colorId) => {
+          setColorChoices((prev) =>
+            prev.map((choice) =>
+              choice.id === colorId
+                ? { ...choice, selected: !choice.selected }
+                : choice,
+            ),
+          );
+        };
+
+        // Sync UI form state to current data state
+        const syncFormToState = () => {
+          const selectedColors = colorChoices
+            .filter((choice) => choice.selected)
+            .map((choice) => choice.color);
+          setUiSelectedColors(selectedColors);
+        }; // Add a random color choice to the data state
         const addRandomColor = () => {
           const availableColors = randomColors.filter(
             (color) => !colorChoices.some((choice) => choice.color === color),
@@ -109,79 +137,101 @@
               availableColors[
                 Math.floor(Math.random() * availableColors.length)
               ];
-            setColorChoices((prev) => [
-              ...prev,
-              { id: nextId, color: randomColor },
-            ]);
-            setNextId((prev) => prev + 1);
+            addColorToState(randomColor);
           }
-        };
-
-        // Remove a color choice
-        const removeColor = (colorId) => {
-          const colorToRemove = colorChoices.find(
-            (choice) => choice.id === colorId,
-          );
-          if (colorToRemove) {
-            // Remove from choices
-            setColorChoices((prev) =>
-              prev.filter((choice) => choice.id !== colorId),
-            );
-            // Remove from UI selected if it was selected
-            setUiSelectedColors((prev) =>
-              prev.filter((color) => color !== colorToRemove.color),
-            );
-            // Also remove from backend state if it was there
-            setBackendSelectedColors((prev) =>
-              prev.filter((color) => color !== colorToRemove.color),
-            );
-          }
-        };
-
-        // Programmatically select a checkbox (modifies UI state)
-        const selectColor = (color) => {
-          setUiSelectedColors((prev) => {
-            if (!prev.includes(color)) {
-              return [...prev, color];
-            }
-            return prev;
-          });
-        };
-
-        // Programmatically uncheck a checkbox (modifies UI state)
-        const unselectColor = (color) => {
-          setUiSelectedColors((prev) => prev.filter((c) => c !== color));
         };
 
         return (
           <div style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9;">
-            <h2>Backend ↔ UI State Synchronization Demo</h2>
+            <h2>State ↔ UI Form Demo</h2>
 
-            <div style="display: flex; gap: 20px; margin: 20px 0; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
-              <div style="flex: 1;">
-                <h3 style="margin: 0 0 10px 0; color: #2196F3;">
-                  🗄️ Backend State
+            <div style="display: flex; gap: 20px; margin: 20px 0;">
+              {/* DATA STATE SECTION */}
+              <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
+                <h3 style="margin: 0 0 15px 0; color: #2196F3;">
+                  🗄️ Data State
                 </h3>
-                <p style="margin: 0; font-family: monospace; background: #e3f2fd; padding: 8px; border-radius: 4px;">
-                  {backendSelectedColors.length
-                    ? backendSelectedColors.join(", ")
-                    : "none"}
+                <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+                  Direct manipulation of the data source
                 </p>
-                <small style="color: #666;">
-                  This represents the server/database state
-                </small>
+
+                <div style="margin-bottom: 15px;">
+                  <button
+                    onClick={addRandomColor}
+                    style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;"
+                  >
+                    + Add Random Color
+                  </button>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  {colorChoices.map(({ id, color, selected }) => (
+                    <div
+                      key={id}
+                      style="display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid #eee; border-radius: 3px; background: #fafafa;"
+                    >
+                      <span style="flex: 1; font-size: 14px;">
+                        {color.charAt(0).toUpperCase() + color.slice(1)}
+                      </span>
+
+                      <button
+                        onClick={() => toggleColorInState(id)}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          background: selected ? "#4CAF50" : "#ccc",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                          minWidth: "60px",
+                        }}
+                      >
+                        {selected ? "Selected" : "Not Selected"}
+                      </button>
+
+                      <button
+                        onClick={() => removeColorFromState(id)}
+                        style="padding: 4px 6px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;"
+                        title="Remove this color"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div style="flex: 1;">
-                <h3 style="margin: 0 0 10px 0; color: #FF9800;">📝 UI State</h3>
-                <p style="margin: 0; font-family: monospace; background: #fff3e0; padding: 8px; border-radius: 4px;">
-                  {uiSelectedColors.length
-                    ? uiSelectedColors.join(", ")
-                    : "none"}
+              {/* UI FORM SECTION */}
+              <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
+                <h3 style="margin: 0 0 15px 0; color: #FF9800;">📝 UI Form</h3>
+                <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+                  Checkbox interface for user interaction
                 </p>
-                <small style="color: #666;">
-                  This represents the current form state
-                </small>
+
+                <Form action={submitForm}>
+                  <fieldset style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+                    <legend>Select Colors:</legend>
+                    <CheckboxList name="colors">
+                      {colorChoices.map(({ id, color }) => (
+                        <Label key={id} style="display: block; margin: 5px 0;">
+                          {color.charAt(0).toUpperCase() + color.slice(1)}
+                          <Checkbox
+                            value={color}
+                            checked={uiSelectedColors.includes(color)}
+                          />
+                        </Label>
+                      ))}
+                    </CheckboxList>
+                  </fieldset>
+
+                  <div style="margin-top: 15px; display: flex; gap: 8px;">
+                    <Button type="submit">📤 Submit Form</Button>
+                    <Button type="button" onClick={syncFormToState}>
+                      🔄 Reset to State
+                    </Button>
+                  </div>
+                </Form>
               </div>
             </div>
 
@@ -189,277 +239,23 @@
               <h4 style="margin: 0 0 10px 0;">How it works:</h4>
               <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
                 <li>
-                  The checkboxes show the <strong>UI state</strong> (what user
-                  is editing)
+                  <strong>Data State</strong>: The actual data with direct
+                  manipulation buttons
                 </li>
                 <li>
-                  Clicking checkboxes or programmatic buttons modifies{" "}
-                  <strong>UI state only</strong>
+                  <strong>UI Form</strong>: Checkbox interface that can differ
+                  from the data state
                 </li>
                 <li>
-                  "Submit" sends UI state to backend (1s delay) and updates{" "}
-                  <strong>backend state</strong>
+                  <strong>Submit</strong>: Updates data state to match the form
+                  selections
                 </li>
-                <li>"Reset" syncs UI state back to current backend state</li>
                 <li>
-                  "Simulate Backend Change" buttons simulate external backend
-                  updates
+                  <strong>Reset</strong>: Syncs form back to current data state
                 </li>
               </ul>
             </div>
-
-            <div style="margin: 20px 0;">
-              <h4>🛠️ Controls:</h4>
-              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
-                <button
-                  onClick={addRandomColor}
-                  style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;"
-                >
-                  Add Random Color
-                </button>
-
-                <button
-                  onClick={syncUiToBackend}
-                  style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;"
-                >
-                  Sync UI ← Backend
-                </button>
-              </div>
-
-              <div style="margin: 10px 0;">
-                <strong>Simulate Backend Changes:</strong>
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
-                  <button
-                    onClick={() => simulateBackendChange(["red"])}
-                    style="padding: 6px 12px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"
-                  >
-                    Backend → [red]
-                  </button>
-                  <button
-                    onClick={() => simulateBackendChange(["blue", "green"])}
-                    style="padding: 6px 12px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"
-                  >
-                    Backend → [blue, green]
-                  </button>
-                  <button
-                    onClick={() => simulateBackendChange([])}
-                    style="padding: 6px 12px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"
-                  >
-                    Backend → [none]
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <Form action={submitToBackend}>
-              <fieldset>
-                <legend>Dynamic Color Selection:</legend>
-                <CheckboxList name="colors">
-                  {colorChoices.map(({ id, color }) => (
-                    <div
-                      key={id}
-                      style="display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 8px; border: 1px solid #eee; border-radius: 4px;"
-                    >
-                      <Label style="flex: 1;">
-                        {color.charAt(0).toUpperCase() + color.slice(1)}
-                        <Checkbox
-                          value={color}
-                          checked={uiSelectedColors.includes(color)}
-                        />
-                      </Label>
-
-                      <div style="display: flex; gap: 5px;">
-                        <button
-                          type="button"
-                          onClick={() => selectColor(color)}
-                          disabled={uiSelectedColors.includes(color)}
-                          style={{
-                            padding: "4px 8px",
-                            fontSize: "12px",
-                            background: uiSelectedColors.includes(color)
-                              ? "#ccc"
-                              : "#2196F3",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "3px",
-                            cursor: uiSelectedColors.includes(color)
-                              ? "not-allowed"
-                              : "pointer",
-                          }}
-                          title="Select this checkbox programmatically"
-                        >
-                          ✓
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => unselectColor(color)}
-                          disabled={!uiSelectedColors.includes(color)}
-                          style={{
-                            padding: "4px 8px",
-                            fontSize: "12px",
-                            background: !uiSelectedColors.includes(color)
-                              ? "#ccc"
-                              : "#FF5722",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "3px",
-                            cursor: !uiSelectedColors.includes(color)
-                              ? "not-allowed"
-                              : "pointer",
-                          }}
-                          title="Uncheck this checkbox programmatically"
-                        >
-                          ⊟
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => removeColor(id)}
-                          style={{
-                            padding: "4px 8px",
-                            fontSize: "12px",
-                            background: "#f44336",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "3px",
-                            cursor: "pointer",
-                          }}
-                          title="Remove this color choice"
-                        >
-                          🗑
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </CheckboxList>
-              </fieldset>
-
-              <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <Button type="submit">Submit Selection</Button>
-                <Button type="reset">Reset Form</Button>
-              </div>
-            </Form>
           </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const ActionLogAfter1s = () => {
-        const [value, setValue] = useState(["red", "blue"]);
-
-        return (
-          <div>
-            <p>
-              <strong>Action + log after 1s</strong>
-            </p>
-            <PickFavoriteColors
-              name="colors"
-              value={value}
-              action={async (colors) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-                console.log(`Colors selected: ${JSON.stringify(colors)}`);
-                setValue(colors);
-              }}
-            />
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const ActionThrowAfter1s = () => {
-        const [value] = useState(["blue"]);
-
-        return (
-          <div>
-            <p>
-              <strong>Action + throw after 1s</strong>
-            </p>
-            <PickFavoriteColors
-              name="colors"
-              value={value}
-              action={async (colors) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-                throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
-                // setValue(colors);
-              }}
-            />
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const FormAlertAfter1s = () => {
-        const [value, setValue] = useState(["blue"]);
-
-        return (
-          <div>
-            <p>
-              <strong>Form + alert after 1s</strong>
-            </p>
-            <Form
-              action={async ({ colors }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-                // eslint-disable-next-line no-alert
-                window.alert(`Colors selected: ${JSON.stringify(colors)}`);
-                setValue(colors);
-              }}
-            >
-              <PickFavoriteColors
-                id="form_alert_1"
-                name="colors"
-                value={value}
-              />
-
-              <Button type="submit">Submit</Button>
-              <Button type="reset">Reset</Button>
-            </Form>
-          </div>
-        );
-      };
-      // eslint-disable-next-line no-unused-vars
-      const FormThrowAfter1s = () => {
-        const [value] = useState(["red", "blue"]);
-        return (
-          <div>
-            <p>
-              <strong>Form + throw after 1s</strong>
-            </p>
-            <Form
-              action={async ({ colors }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-                throw new Error(`Colors selected: ${JSON.stringify(colors)}`);
-                // setValue(colors);
-              }}
-            >
-              <PickFavoriteColors name="colors" value={value} />
-              <Button type="submit">Submit</Button>
-              <Button type="reset">Reset</Button>
-            </Form>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const PickFavoriteColors = ({ name, value = [], ...rest }) => {
-        return (
-          <fieldset>
-            <legend>Select your favorite colors:</legend>
-            <CheckboxList name={name} {...rest}>
-              <Label>
-                Red
-                <Checkbox value="red" checked={value?.includes("red")} />
-              </Label>
-              <Label>
-                Blue
-                <Checkbox value="blue" checked={value?.includes("blue")} />
-              </Label>
-              <Label>
-                Green
-                <Checkbox value="green" checked={value?.includes("green")} />
-              </Label>
-            </CheckboxList>
-          </fieldset>
         );
       };
 
