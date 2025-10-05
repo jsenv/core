@@ -156,18 +156,8 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const [checkboxBackgroundColor, setCheckboxBackgroundColor] = useState("default");
-
-        const getBackgroundColor = () => {
-          switch (checkboxBackgroundColor) {
-            case "red":
-              return "#ff6b6b";
-            case "green":
-              return "#51cf66";
-            default:
-              return undefined; // Use default styling
-          }
-        };
+        const [checkboxBackgroundColor, setCheckboxBackgroundColor] =
+          useState(undefined);
 
         return (
           <>
@@ -177,22 +167,44 @@
                 This demo showcases different ways to use the Input component
                 with checkboxes.
               </p>
-              
-              <div className="control-group" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+
+              <div
+                className="control-group"
+                style={{
+                  marginBottom: "20px",
+                  padding: "15px",
+                  backgroundColor: "#f8f9fa",
+                  borderRadius: "8px",
+                }}
+              >
                 <label>
                   <strong>Global Checkbox Background Color:</strong>
-                  <select 
-                    value={checkboxBackgroundColor} 
-                    onChange={(e) => setCheckboxBackgroundColor(e.target.value)}
-                    style={{ marginLeft: '10px', padding: '5px 10px', borderRadius: '4px', border: '1px solid #ccc' }}
+                  <select
+                    value={checkboxBackgroundColor || ""}
+                    onChange={(e) =>
+                      setCheckboxBackgroundColor(e.target.value || undefined)
+                    }
+                    style={{
+                      marginLeft: "10px",
+                      padding: "5px 10px",
+                      borderRadius: "4px",
+                      border: "1px solid #ccc",
+                    }}
                   >
-                    <option value="default">Default</option>
-                    <option value="red">Red</option>
-                    <option value="green">Green</option>
+                    <option value="">Default</option>
+                    <option value="#ff6b6b">Red</option>
+                    <option value="#51cf66">Green</option>
                   </select>
                 </label>
-                <p style={{ fontSize: '14px', color: '#666', margin: '8px 0 0 0' }}>
-                  This affects all checkboxes below and demonstrates that background color changes don't affect checked state.
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: "#666",
+                    margin: "8px 0 0 0",
+                  }}
+                >
+                  This affects all checkboxes below and demonstrates that
+                  background color changes don't affect checked state.
                 </p>
               </div>
 
@@ -220,25 +232,43 @@
 
             <h2 id="basic-checkboxes">1. Basic Checkbox (no action/no form)</h2>
             <div className="demo-grid">
-              <CheckboxDemo backgroundColor={getBackgroundColor()} />
-              <CheckboxDefaultCheckedDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxDemo backgroundColor={checkboxBackgroundColor} />
+              <CheckboxDefaultCheckedDemo
+                backgroundColor={checkboxBackgroundColor}
+              />
             </div>
 
             <h2 id="checkbox-actions">2. Checkbox with Actions</h2>
             <div className="demo-grid">
-              <CheckboxActionDemo backgroundColor={getBackgroundColor()} />
-              <CheckboxActionDefaultCheckedDemo backgroundColor={getBackgroundColor()} />
-              <CheckboxActionControlledDemo backgroundColor={getBackgroundColor()} />
-              <CheckboxActionErrorDemo backgroundColor={getBackgroundColor()} />
-              <CheckboxActionErrorDefaultCheckedDemo backgroundColor={getBackgroundColor()} />
-              <CheckboxActionErrorOnUncheckedDemo backgroundColor={getBackgroundColor()} />
-              <CheckboxActionControlledErrorDemo backgroundColor={getBackgroundColor()} />
-              <CheckboxActionObjectDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxActionDemo backgroundColor={checkboxBackgroundColor} />
+              <CheckboxActionDefaultCheckedDemo
+                backgroundColor={checkboxBackgroundColor}
+              />
+              <CheckboxActionControlledDemo
+                backgroundColor={checkboxBackgroundColor}
+              />
+              <CheckboxActionErrorDemo
+                backgroundColor={checkboxBackgroundColor}
+              />
+              <CheckboxActionErrorDefaultCheckedDemo
+                backgroundColor={checkboxBackgroundColor}
+              />
+              <CheckboxActionErrorOnUncheckedDemo
+                backgroundColor={checkboxBackgroundColor}
+              />
+              <CheckboxActionControlledErrorDemo
+                backgroundColor={checkboxBackgroundColor}
+              />
+              <CheckboxActionObjectDemo
+                backgroundColor={checkboxBackgroundColor}
+              />
             </div>
 
             <h2 id="checkbox-forms">3. Checkbox inside Form</h2>
             <div className="demo-grid">
-              <CheckboxFormControlledErrorDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxFormControlledErrorDemo
+                backgroundColor={checkboxBackgroundColor}
+              />
             </div>
           </>
         );
@@ -783,10 +813,10 @@
               <div className="control-group">
                 <div className="checkbox-group">
                   <label>
-                    <Input 
-                      type="checkbox" 
-                      name="terms" 
-                      checked={agreed} 
+                    <Input
+                      type="checkbox"
+                      name="terms"
+                      checked={agreed}
                       backgroundColor={backgroundColor}
                     />
                     <span
