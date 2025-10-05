@@ -99,37 +99,36 @@ const useUIStateController = (
 ) => {
   const groupUIStateController = useContext(FieldGroupUIStateControllerContext);
   let groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
-  const hasUIStateProp = Object.hasOwn(props, statePropName);
+  const hasStateProp = Object.hasOwn(props, statePropName);
   const state = props[statePropName];
   const defaultState = props[defaultStatePropName];
   let { onUIStateChange } = props;
   groupOnUIStateChange = useStableCallback(groupOnUIStateChange);
   onUIStateChange = useStableCallback(onUIStateChange);
+  const stateInitial = useInitialValue(() => {
+    if (hasStateProp) {
+      // controlled by state prop ("value" or "checked")
+      return mapStateValue ? mapStateValue(state) : state;
+    }
+    if (defaultState) {
+      // not controlled but want an initial state (a value or being checked)
+      return mapStateValue ? mapStateValue(defaultState) : defaultState;
+    }
+    if (navState) {
+      // not controlled but want to use value from nav state
+      // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
+      return mapStateValue ? mapStateValue(navState) : navState;
+    }
+    return mapStateValue ? mapStateValue(fallbackState) : fallbackState;
+  });
+  const stateInitialRef = useRef(stateInitial);
+  const [uiState, _setUIState] = useState(stateInitial);
+  const stateRef = useRef(state);
 
   return useMemo(() => {
-    const externalStateInitial = useInitialValue(() => {
-      if (hasUIStateProp) {
-        // controlled by state prop ("value" or "checked")
-        return mapStateValue ? mapStateValue(state) : state;
-      }
-      if (defaultState) {
-        // not controlled but want an initial state (a value or being checked)
-        return mapStateValue ? mapStateValue(defaultState) : defaultState;
-      }
-      if (navState) {
-        // not controlled but want to use value from nav state
-        // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
-        return mapStateValue ? mapStateValue(navState) : navState;
-      }
-      return mapStateValue ? mapStateValue(fallbackState) : fallbackState;
-    });
-
-    const externalStateRef = useRef(externalStateInitial);
-    const [uiState, _setUIState] = useState(externalStateInitial);
-
     const uiStateController = {
       componentType,
-      externalState: undefined,
+      state: undefined,
       uiState,
       onChange: () => {},
       setUIState: (newUIState, e) => {
@@ -139,7 +138,7 @@ const useUIStateController = (
         uiStateController.onChange(newUIState, e);
       },
       resetUIState: () => {
-        uiStateController.setUIState(uiStateController.externalState);
+        uiStateController.setUIState(uiStateController.state);
       },
     };
 
@@ -147,13 +146,12 @@ const useUIStateController = (
       groupUIStateController.registerChild(uiStateController);
     }
 
-    const stateRef = useRef(state);
-    if (hasUIStateProp && state !== stateRef.current) {
+    if (hasStateProp && state !== stateRef.current) {
       stateRef.current = state;
-      externalStateRef.current = state;
+      stateInitialRef.current = state;
       uiStateController.setUIState(state);
     }
-    uiStateController.externalState = externalStateRef.current;
+    uiStateController.state = stateInitialRef.current;
     return uiStateController;
-  }, [hasUIStateProp, state, groupUIStateController]);
+  }, [hasStateProp, state, groupUIStateController]);
 };
