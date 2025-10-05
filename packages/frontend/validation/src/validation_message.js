@@ -26,6 +26,9 @@ import.meta.css = /* css */ `
     position: absolute;
     z-index: 1;
     opacity: 0;
+    left: 0;
+    top: 0;
+    /* will be positioned with transform: translate */
     transition: opacity 0.2s ease-in-out;
   }
 
@@ -555,24 +558,31 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
     // Get viewport and element dimensions
     const viewportWidth = document.documentElement.clientWidth;
     const viewportHeight = document.documentElement.clientHeight;
-    const contentHeight = validationMessageContent.offsetHeight;
     const validationMessageRect =
       validationMessageBorder.getBoundingClientRect();
     const targetElementRect = targetElement.getBoundingClientRect();
+    const targetLeft =
+      targetElementRect.left + document.documentElement.scrollLeft;
+    const targetTop =
+      targetElementRect.top + document.documentElement.scrollTop;
+    const targetWidth = targetElementRect.width;
+    const targetHeight = targetElementRect.height;
+    const targetRight = targetLeft + targetWidth;
+    const targetBottom = targetTop + targetHeight;
 
     // Get element padding and border to properly position arrow
-    const elementBorderSizes = getBorderSizes(targetElement);
-    const elementLeft = targetElementRect.left;
-    const elementWidth = targetElementRect.width;
+    const targetBorderSizes = getBorderSizes(targetElement);
+
     const validationMessageWidth = validationMessageRect.width;
+    const validationMessageHeight = validationMessageRect.height;
 
     // Determine horizontal position based on element size and position
     let validationMessageLeftPos;
 
     // Handle extra-wide elements (wider than viewport)
-    if (elementWidth > viewportWidth) {
-      const elementRight = targetElementRect.right;
-      const elementLeft = targetElementRect.left;
+    if (targetWidth > viewportWidth) {
+      const elementRight = targetRight;
+      const elementLeft = targetLeft;
       if (elementRight < viewportWidth) {
         // Element extends beyond left edge but right side is visible
         const viewportCenter = viewportWidth / 2;
@@ -594,12 +604,12 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
       // Standard case: element within viewport width
       // Center the validation message relative to the element
       validationMessageLeftPos =
-        elementLeft + elementWidth / 2 - validationMessageWidth / 2;
+        targetLeft + targetWidth / 2 - validationMessageWidth / 2;
 
       // If validation message is wider than element, adjust position based on document boundaries
-      if (validationMessageWidth > elementWidth) {
+      if (validationMessageWidth > targetWidth) {
         // If element is near left edge, align validation message with document left
-        if (elementLeft < 20) {
+        if (targetLeft < 20) {
           validationMessageLeftPos = 0;
         }
       }
@@ -625,10 +635,10 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
 
     if (arrowPositionAttribute === "center") {
       // Target the center of the element
-      arrowTargetLeft = elementLeft + elementWidth / 2;
+      arrowTargetLeft = targetLeft + targetWidth / 2;
     } else {
       // Default behavior: target the left edge of the element (after borders)
-      arrowTargetLeft = elementLeft + elementBorderSizes.left;
+      arrowTargetLeft = targetLeft + targetBorderSizes.left;
     }
 
     // Calculate arrow position within the validation message
@@ -657,14 +667,12 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
     );
 
     // Calculate vertical space available
-    const spaceBelow = viewportHeight - targetElementRect.bottom;
-    const spaceAbove = targetElementRect.top;
-    const totalValidationMessageHeight =
-      contentHeight + ARROW_HEIGHT + BORDER_WIDTH * 2;
+    const spaceBelow = viewportHeight - targetBottom;
+    const spaceAbove = targetTop;
 
     // Determine if validation message fits above or below
-    const fitsBelow = spaceBelow >= totalValidationMessageHeight;
-    const fitsAbove = spaceAbove >= totalValidationMessageHeight;
+    const fitsBelow = spaceBelow >= validationMessageHeight;
+    const fitsAbove = spaceAbove >= validationMessageHeight;
     const showAbove = !fitsBelow && fitsAbove;
 
     let validationMessageTopPos;
@@ -674,38 +682,35 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
       validationMessage.setAttribute("data-position", "above");
       validationMessageTopPos = Math.max(
         0,
-        targetElementRect.top - totalValidationMessageHeight,
+        targetTop - validationMessageHeight,
       );
-      validationMessageBodyWrapper.style.marginTop = undefined;
+      validationMessageBodyWrapper.style.marginTop = "";
       validationMessageBodyWrapper.style.marginBottom = `${ARROW_HEIGHT}px`;
       validationMessageBorder.style.top = `-${BORDER_WIDTH}px`;
       validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
       validationMessageBorder.innerHTML = generateSvgWithBottomArrow(
-        validationMessageRect.width,
-        validationMessageRect.height,
+        validationMessageWidth,
+        validationMessageHeight,
         arrowLeftPosOnValidationMessage,
       );
     } else {
       // Position below target element
       validationMessage.setAttribute("data-position", "below");
-      validationMessageTopPos = Math.ceil(targetElementRect.bottom);
+      validationMessageTopPos = Math.ceil(targetBottom);
       validationMessageBodyWrapper.style.marginTop = `${ARROW_HEIGHT}px`;
-      validationMessageBodyWrapper.style.marginBottom = undefined;
+      validationMessageBodyWrapper.style.marginBottom = "";
       validationMessageBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
       validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
       validationMessageBorder.innerHTML = generateSvgWithTopArrow(
-        validationMessageRect.width,
-        validationMessageRect.height,
+        validationMessageWidth,
+        validationMessageHeight,
         arrowLeftPosOnValidationMessage,
       );
 
       // Handle overflow at bottom with scrolling if needed
       if (!fitsBelow && !fitsAbove) {
         const availableHeight =
-          viewportHeight -
-          targetElementRect.bottom -
-          ARROW_HEIGHT -
-          BORDER_WIDTH * 2;
+          viewportHeight - targetBottom - ARROW_HEIGHT - BORDER_WIDTH * 2;
 
         // Only apply scrolling if we have reasonable space
         if (availableHeight > 50) {
@@ -716,8 +721,7 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
     }
 
     // Apply calculated position
-    validationMessage.style.left = `${validationMessageLeftPos}px`;
-    validationMessage.style.top = `${validationMessageTopPos}px`;
+    validationMessage.style.transform = `translateX(${validationMessageLeftPos}px) translateY(${validationMessageTopPos}px)`;
   };
 
   // Initial position calculation
