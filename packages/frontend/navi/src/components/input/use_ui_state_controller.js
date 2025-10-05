@@ -1,13 +1,17 @@
 import { useContext, useMemo, useRef, useState } from "preact/hooks";
 
-import { FieldGroupOnUIStateChangeContext } from "../field_group_context.js";
+import {
+  FieldGroupOnUIStateChangeContext,
+  FieldGroupUIStateControllerContext,
+} from "../field_group_context.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
-export const useValueController = (props, navState) => {
+export const useValueController = (props, componentType, navState) => {
   return useUIStateController(
     props,
     {
+      componentType,
       statePropName: "value",
       defaultStatePropName: "defaultValue",
       fallbackState: "",
@@ -24,10 +28,11 @@ export const useUncontrolledValueProps = (props, componentType) => {
   });
 };
 
-export const useCheckedController = (props, navState) => {
+export const useCheckedController = (props, componentType, navState) => {
   return useUIStateController(
     props,
     {
+      componentType,
       statePropName: "checked",
       defaultStatePropName: "defaultChecked",
       fallbackState: false,
@@ -47,9 +52,16 @@ export const useUncontrolledCheckedProps = (props, componentType) => {
 
 const useUIStateController = (
   props,
-  { statePropName, defaultStatePropName, fallbackState, mapStateValue },
+  {
+    componentType,
+    statePropName,
+    defaultStatePropName,
+    fallbackState,
+    mapStateValue,
+  },
   navState,
 ) => {
+  const groupUIStateController = useContext(FieldGroupUIStateControllerContext);
   let groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const hasUIStateProp = Object.hasOwn(props, statePropName);
   const state = props[statePropName];
@@ -80,6 +92,7 @@ const useUIStateController = (
     const [uiState, _setUIState] = useState(externalStateInitial);
 
     const uiStateController = {
+      componentType,
       externalState: undefined,
       uiState,
       onChange: () => {},
@@ -94,6 +107,10 @@ const useUIStateController = (
       },
     };
 
+    if (groupUIStateController) {
+      groupUIStateController.registerChild(uiStateController);
+    }
+
     const stateRef = useRef(state);
     if (hasUIStateProp && state !== stateRef.current) {
       stateRef.current = state;
@@ -102,7 +119,7 @@ const useUIStateController = (
     }
     uiStateController.externalState = externalStateRef.current;
     return uiStateController;
-  });
+  }, [hasUIStateProp, state, groupUIStateController]);
 };
 const useUncontrolledUIProps = (
   props,
@@ -111,6 +128,7 @@ const useUncontrolledUIProps = (
   const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const { onUIStateChange } = props;
   const uiStateController = useUIStateController(props, {
+    componentType,
     statePropName,
     defaultStatePropName,
     fallbackState,
