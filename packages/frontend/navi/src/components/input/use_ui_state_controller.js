@@ -60,6 +60,7 @@ const useUncontrolledUIProps = (
     statePropName,
     defaultStatePropName,
     fallbackState,
+    uncontrolled: true,
   });
 
   /**
@@ -90,6 +91,7 @@ const useUIStateController = (
     fallbackState,
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,
+    uncontrolled,
   },
   navState,
 ) => {
@@ -123,7 +125,11 @@ const useUIStateController = (
     const uiStateController = {
       componentType,
       state: undefined,
-      readOnly: hasStateProp && !onUIStateChange && !groupUIStateController,
+      readOnly:
+        uncontrolled &&
+        hasStateProp &&
+        !onUIStateChange &&
+        !groupUIStateController,
       uiState,
       setUIState: (newUIState, e) => {
         newUIState = getStateFromProp(newUIState);
