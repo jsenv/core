@@ -1,4 +1,10 @@
-import { useContext, useMemo, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { FieldGroupUIStateControllerContext } from "../field_group_context.js";
 import { useInitialValue } from "../use_initial_value.js";
@@ -135,6 +141,16 @@ const useUIStateController = (
   const [uiState, _setUIState] = useState(stateInitial);
   const stateRef = useRef(state);
 
+  const uiStateControllerRef = useRef();
+  useLayoutEffect(() => {
+    return () => {
+      const uiStateController = uiStateControllerRef.current;
+      if (groupUIStateController) {
+        groupUIStateController.unregisterChild(uiStateController);
+      }
+    };
+  }, []);
+
   return useMemo(() => {
     const uiStateController = {
       componentType,
@@ -163,6 +179,7 @@ const useUIStateController = (
         uiStateController.setUIState(prop);
       },
     };
+    uiStateControllerRef.current = uiStateController;
     if (groupUIStateController) {
       groupUIStateController.registerChild(uiStateController);
     }

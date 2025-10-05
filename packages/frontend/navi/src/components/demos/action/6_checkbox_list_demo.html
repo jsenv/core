@@ -145,15 +145,21 @@
               </button>
             </div>
 
-            <DynamicCheckboxList
-              name="dynamic-colors"
-              value={selectedColors}
-              action={updateDisplayAction}
-              colorChoices={colorChoices}
-              onRemoveColor={removeColor}
-              onSelectColor={selectColor}
-              onUnselectColor={unselectColor}
-            />
+            <Form action={updateDisplayAction}>
+              <DynamicCheckboxList
+                name="dynamic-colors"
+                value={selectedColors}
+                colorChoices={colorChoices}
+                onRemoveColor={removeColor}
+                onSelectColor={selectColor}
+                onUnselectColor={unselectColor}
+              />
+
+              <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <Button type="submit">Submit Selection</Button>
+                <Button type="reset">Reset Form</Button>
+              </div>
+            </Form>
           </div>
         );
       };
@@ -162,7 +168,6 @@
       const DynamicCheckboxList = ({
         name,
         value = [],
-        action,
         colorChoices,
         onRemoveColor,
         onSelectColor,
@@ -172,7 +177,7 @@
         return (
           <fieldset>
             <legend>Dynamic Color Selection:</legend>
-            <CheckboxList name={name} action={action} {...rest}>
+            <CheckboxList name={name} {...rest}>
               {colorChoices.map(({ id, color }) => (
                 <div
                   key={id}
@@ -223,7 +228,7 @@
                       }}
                       title="Uncheck this checkbox programmatically"
                     >
-                      ✗
+                      ⊟
                     </button>
 
                     <button
