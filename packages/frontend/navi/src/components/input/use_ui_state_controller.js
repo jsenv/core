@@ -182,7 +182,7 @@ const useUIStateController = (
     return getStateFromProp(fallbackState);
   });
   const stateInitialRef = useRef(stateInitial);
-  const [uiState, _setUIState] = useState(stateInitial);
+  const uiStateRef = useRef(stateInitial);
   const stateRef = useRef(state);
 
   const uiStateControllerRef = useRef();
@@ -228,12 +228,11 @@ const useUIStateController = (
           !groupUIStateController
         );
       },
-      get uiState() {
-        return uiState;
-      },
+      uiState: uiStateRef.current,
       setUIState: (prop, e) => {
         const newUIState = getStateFromProp(prop);
-        _setUIState(newUIState);
+        uiStateRef.current = newUIState;
+        uiStateController.uiState = newUIState;
 
         // Notify subscribers
         subscribers.forEach((callback) => callback(newUIState));
@@ -264,6 +263,7 @@ const useUIStateController = (
     return uiStateController;
   }, [groupUIStateController, componentType]);
 };
+
 /**
  * UI Group State Controller Hook
  *
@@ -296,7 +296,7 @@ export const useUIGroupStateController = (
 ) => {
   let { onUIStateChange } = props;
   onUIStateChange = useStableCallback(onUIStateChange);
-  const [uiState, _setUIState] = useState(emptyState);
+  const uiStateRef = useRef(emptyState);
 
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
@@ -307,7 +307,7 @@ export const useUIGroupStateController = (
       childUIStateControllerArray,
       emptyState,
     );
-    if (newUIState === uiState) {
+    if (newUIState === uiStateRef.current) {
       return;
     }
     const uiGroupStateController = uiGroupStateControllerRef.current;
@@ -322,11 +322,10 @@ export const useUIGroupStateController = (
 
     const uiGroupStateController = {
       componentType,
-      get uiState() {
-        return uiState;
-      },
+      uiState: uiStateRef.current,
       setUIState: (newUIState, e) => {
-        _setUIState(newUIState);
+        uiGroupStateController.uiState = newUIState;
+        uiStateRef.current = newUIState;
 
         // Notify subscribers
         subscribers.forEach((callback) => callback(newUIState));
