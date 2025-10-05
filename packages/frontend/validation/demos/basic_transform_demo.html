@@ -255,15 +255,21 @@
         function updatePosition() {
           const targetRect = targetElement.getBoundingClientRect();
 
+          // Account for page scroll offset since we're positioned relative to document body
+          const scrollX =
+            window.pageXOffset || document.documentElement.scrollLeft;
+          const scrollY =
+            window.pageYOffset || document.documentElement.scrollTop;
+
           // Position below the target element with some offset
-          const x = targetRect.left;
-          const y = targetRect.bottom + 10;
+          const x = targetRect.left + scrollX;
+          const y = targetRect.bottom + scrollY + 10;
 
           // Use transform for positioning
           validationMessage.style.transform = `translateX(${x}px) translateY(${y}px)`;
 
           console.log(
-            `Basic positioning: translateX(${x}px) translateY(${y}px)`,
+            `Basic positioning: translateX(${x}px) translateY(${y}px) - target at viewport(${targetRect.left}, ${targetRect.bottom}), scroll(${scrollX}, ${scrollY})`,
           );
         }
 
