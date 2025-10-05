@@ -36,6 +36,7 @@
       const SingleCheckboxStateDemo = () => {
         // DATA STATE - This represents the actual data/server state
         const [isEnabledInState, setIsEnabledInState] = useState(true);
+        const [checkboxBgColor, setCheckboxBgColor] = useState("#2196F3");
 
         // UI FORM STATE - This represents the current form state (may differ from data state)
         const [uiIsEnabled, setUiIsEnabled] = useState(isEnabledInState);
@@ -120,6 +121,36 @@
                     </label>
                   </div>
 
+                  <div style="margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                      <span style="font-weight: 500;">UI Checkbox Color:</span>
+                      <select
+                        value={checkboxBgColor}
+                        onChange={(e) => setCheckboxBgColor(e.target.value)}
+                        style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px;"
+                      >
+                        <option value="#2196F3">Blue</option>
+                        <option value="#4CAF50">Green</option>
+                        <option value="#FF9800">Orange</option>
+                        <option value="#9C27B0">Purple</option>
+                        <option value="#F44336">Red</option>
+                        <option value="#607D8B">Blue Grey</option>
+                        <option value="#795548">Brown</option>
+                        <option value="#E91E63">Pink</option>
+                      </select>
+                      <div
+                        style={{
+                          width: "16px",
+                          height: "16px",
+                          backgroundColor: checkboxBgColor,
+                          borderRadius: "2px",
+                          border: "1px solid #ccc",
+                        }}
+                        title="Current color preview"
+                      ></div>
+                    </label>
+                  </div>
+
                   <div style="font-size: 12px; color: #666; margin-top: 8px;">
                     Click the checkbox above to toggle the data state directly
                   </div>
@@ -144,6 +175,7 @@
                         onUIStateChange={(uiState) =>
                           setUiIsEnabled(Boolean(uiState))
                         }
+                        accentColor={checkboxBgColor}
                       />
                       🔔 Enable push notifications
                     </Label>

@@ -164,7 +164,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
     autoFocus,
     constraints = [],
     appeareance = "custom", // "custom" or "default"
-    backgroundColor,
+    accentColor,
     onClick,
     onInput,
     ...rest
@@ -223,9 +223,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
 
   const inputCheckboxDisplayed =
     appeareance === "custom" ? (
-      <CustomCheckbox backgroundColor={backgroundColor}>
-        {inputCheckbox}
-      </CustomCheckbox>
+      <CustomCheckbox accentColor={accentColor}>{inputCheckbox}</CustomCheckbox>
     ) : (
       inputCheckbox
     );
@@ -242,13 +240,13 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
     </LoadableInlineElement>
   );
 });
-const CustomCheckbox = ({ backgroundColor, children }) => {
+const CustomCheckbox = ({ accentColor, children }) => {
   return (
     <div
       className="custom_checkbox_wrapper"
       data-field-wrapper=""
       style={{
-        ...(backgroundColor ? { "--checked-color": backgroundColor } : {}),
+        ...(accentColor ? { "--checked-color": accentColor } : {}),
       }}
     >
       {children}
