@@ -104,7 +104,7 @@ const useCheckboxListUIStateController = (props) => {
       },
     };
     return checkboxListUIStateController;
-  }, []);
+  }, [uiState]);
 
   useLayoutEffect(() => {
     updateUIState();

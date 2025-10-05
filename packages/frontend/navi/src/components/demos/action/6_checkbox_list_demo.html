@@ -28,9 +28,225 @@
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div style="display: flex; flex-direction: row; gap: 30px">
-            <ActionThrowAfter1s />
+          <div style="display: flex; flex-direction: column; gap: 40px">
+            <DynamicCheckboxListDemo />
+            <div style="display: flex; flex-direction: row; gap: 30px"></div>
           </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DynamicCheckboxListDemo = () => {
+        // Available color choices
+        const [colorChoices, setColorChoices] = useState([
+          { id: 1, color: "red" },
+          { id: 2, color: "blue" },
+          { id: 3, color: "green" },
+        ]);
+
+        // Selected colors state
+        const [selectedColors, setSelectedColors] = useState(["red", "blue"]);
+
+        // Display state for the action result
+        const [displayedSelections, setDisplayedSelections] =
+          useState("red, blue");
+
+        // Next ID for new colors
+        const [nextId, setNextId] = useState(4);
+
+        // Random colors pool
+        const randomColors = [
+          "purple",
+          "orange",
+          "yellow",
+          "pink",
+          "cyan",
+          "magenta",
+          "lime",
+          "indigo",
+          "coral",
+          "teal",
+          "gold",
+          "silver",
+          "navy",
+          "maroon",
+        ];
+
+        // Action that takes 1s to update display state
+        const updateDisplayAction = async (colors) => {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          setDisplayedSelections(colors.join(", ") || "none");
+        };
+
+        // Add a random color choice
+        const addRandomColor = () => {
+          const availableColors = randomColors.filter(
+            (color) => !colorChoices.some((choice) => choice.color === color),
+          );
+          if (availableColors.length > 0) {
+            const randomColor =
+              availableColors[
+                Math.floor(Math.random() * availableColors.length)
+              ];
+            setColorChoices((prev) => [
+              ...prev,
+              { id: nextId, color: randomColor },
+            ]);
+            setNextId((prev) => prev + 1);
+          }
+        };
+
+        // Remove a color choice
+        const removeColor = (colorId) => {
+          const colorToRemove = colorChoices.find(
+            (choice) => choice.id === colorId,
+          );
+          if (colorToRemove) {
+            // Remove from choices
+            setColorChoices((prev) =>
+              prev.filter((choice) => choice.id !== colorId),
+            );
+            // Remove from selected if it was selected
+            setSelectedColors((prev) =>
+              prev.filter((color) => color !== colorToRemove.color),
+            );
+          }
+        };
+
+        // Programmatically select a checkbox
+        const selectColor = (color) => {
+          setSelectedColors((prev) => {
+            if (!prev.includes(color)) {
+              return [...prev, color];
+            }
+            return prev;
+          });
+        };
+
+        // Programmatically uncheck a checkbox
+        const unselectColor = (color) => {
+          setSelectedColors((prev) => prev.filter((c) => c !== color));
+        };
+
+        return (
+          <div style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9;">
+            <h2>Dynamic Checkbox List Demo</h2>
+            <p>
+              <strong>Current displayed selections:</strong>{" "}
+              {displayedSelections}
+            </p>
+
+            <div style="margin: 20px 0;">
+              <button
+                onClick={addRandomColor}
+                style="padding: 8px 16px; margin-right: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;"
+              >
+                Add Random Color
+              </button>
+            </div>
+
+            <DynamicCheckboxList
+              name="dynamic-colors"
+              value={selectedColors}
+              action={updateDisplayAction}
+              colorChoices={colorChoices}
+              onRemoveColor={removeColor}
+              onSelectColor={selectColor}
+              onUnselectColor={unselectColor}
+            />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DynamicCheckboxList = ({
+        name,
+        value = [],
+        action,
+        colorChoices,
+        onRemoveColor,
+        onSelectColor,
+        onUnselectColor,
+        ...rest
+      }) => {
+        return (
+          <fieldset>
+            <legend>Dynamic Color Selection:</legend>
+            <CheckboxList name={name} action={action} {...rest}>
+              {colorChoices.map(({ id, color }) => (
+                <div
+                  key={id}
+                  style="display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 8px; border: 1px solid #eee; border-radius: 4px;"
+                >
+                  <Label style="flex: 1;">
+                    {color.charAt(0).toUpperCase() + color.slice(1)}
+                    <Checkbox value={color} checked={value?.includes(color)} />
+                  </Label>
+
+                  <div style="display: flex; gap: 5px;">
+                    <button
+                      type="button"
+                      onClick={() => onSelectColor(color)}
+                      disabled={value?.includes(color)}
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "12px",
+                        background: value?.includes(color) ? "#ccc" : "#2196F3",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "3px",
+                        cursor: value?.includes(color)
+                          ? "not-allowed"
+                          : "pointer",
+                      }}
+                      title="Select this checkbox programmatically"
+                    >
+                      ✓
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onUnselectColor(color)}
+                      disabled={!value?.includes(color)}
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "12px",
+                        background: !value?.includes(color)
+                          ? "#ccc"
+                          : "#FF5722",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "3px",
+                        cursor: !value?.includes(color)
+                          ? "not-allowed"
+                          : "pointer",
+                      }}
+                      title="Uncheck this checkbox programmatically"
+                    >
+                      ✗
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onRemoveColor(id)}
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "12px",
+                        background: "#f44336",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "3px",
+                        cursor: "pointer",
+                      }}
+                      title="Remove this color choice"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </CheckboxList>
+          </fieldset>
         );
       };
 
