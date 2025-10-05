@@ -91,6 +91,7 @@ export const getAncestorScrolls = (element) => {
   return ancestorScrolls;
 };
 
+// https://github.com/shipshapecode/tether/blob/d6817f8c49a7a26b04c45e55589279dd1b5dd2bf/src/js/utils/parents.js#L1
 export const getScrollableParentSet = (element) => {
   const scrollableParentSet = new Set();
   let elementOrScrollableParent = element;
