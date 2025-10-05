@@ -127,17 +127,17 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     </div>
   );
 });
-const collectCheckedValues = (checkboxList, name) => {
-  const checkedValues = [];
-  const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
-  const checkboxWithSameName = checkboxList.querySelectorAll(checkboxSelector);
-  for (const checkboxElement of checkboxWithSameName) {
-    if (checkboxElement.checked) {
-      checkedValues.push(checkboxElement.value);
-    }
-  }
-  return checkedValues.length === 0 ? undefined : checkedValues;
-};
+// const collectCheckedValues = (checkboxList, name) => {
+//   const checkedValues = [];
+//   const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
+//   const checkboxWithSameName = checkboxList.querySelectorAll(checkboxSelector);
+//   for (const checkboxElement of checkboxWithSameName) {
+//     if (checkboxElement.checked) {
+//       checkedValues.push(checkboxElement.value);
+//     }
+//   }
+//   return checkedValues.length === 0 ? undefined : checkedValues;
+// };
 
 const CheckboxListWithAction = forwardRef((props, ref) => {
   const {
