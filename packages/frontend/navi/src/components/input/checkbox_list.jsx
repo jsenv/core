@@ -74,6 +74,8 @@ const useCheckboxListUIStateController = (props) => {
     checkboxListUIStateController.setUIState(newUIState);
   };
 
+  const checkboxListUIStateControllerRef = useRef();
+
   const checkboxListUIStateController = useMemo(() => {
     checkboxUIStateControllerArray.length = 0;
 
@@ -81,6 +83,7 @@ const useCheckboxListUIStateController = (props) => {
       componentType: "checkbox_list",
       uiState,
       setUIState: (newUIState, e) => {
+        checkboxListUIStateController.uiState = newUIState;
         groupOnUIStateChange?.(newUIState, e);
         onUIStateChange?.(newUIState, e);
         _setUIState(newUIState);
@@ -116,6 +119,7 @@ const useCheckboxListUIStateController = (props) => {
         }
       },
     };
+    checkboxListUIStateControllerRef.current = checkboxListUIStateController;
     return checkboxListUIStateController;
   }, [uiState]);
 
@@ -277,9 +281,9 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
     props,
     navState,
   );
-  const formParamValue = checkboxListUIStateController.uiState;
-  useOneFormArrayParam(name, formParamValue);
-  setNavState(checkboxListUIStateController.uiState);
+  const checkboxListUIState = checkboxListUIStateController.uiState;
+  useOneFormArrayParam(name, checkboxListUIState);
+  setNavState(checkboxListUIState);
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
