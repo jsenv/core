@@ -92,25 +92,25 @@
       .simple-validation-message::before {
         content: "";
         position: absolute;
-        top: -8px;
+        bottom: -8px;
         left: 20px;
         width: 0;
         height: 0;
         border-left: 8px solid transparent;
         border-right: 8px solid transparent;
-        border-bottom: 8px solid #f44336;
+        border-top: 8px solid #f44336;
       }
 
       .simple-validation-message::after {
         content: "";
         position: absolute;
-        top: -6px;
+        bottom: -6px;
         left: 21px;
         width: 0;
         height: 0;
         border-left: 7px solid transparent;
         border-right: 7px solid transparent;
-        border-bottom: 7px solid #fff;
+        border-top: 7px solid #fff;
       }
 
       .comparison-note {
@@ -208,8 +208,8 @@
         const tether = new window.Tether({
           element: validationMessage,
           target: targetElement,
-          attachment: "bottom left",
-          targetAttachment: "top left",
+          attachment: "top left",
+          targetAttachment: "bottom left",
           offset: "10px 0",
           constraints: [
             {
