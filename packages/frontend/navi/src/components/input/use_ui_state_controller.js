@@ -265,6 +265,141 @@ const useUIStateController = (
   }, [groupUIStateController, componentType]);
 };
 /**
+ * UI Group State Controller Hook
+ *
+ * This hook manages a group of child UI state controllers and aggregates their states.
+ * It provides a unified interface for managing collections of form inputs that work together.
+ *
+ * Key Features:
+ * - Aggregates child UI states into a single group state
+ * - Filters children by component type (e.g., only "checkbox" components)
+ * - Provides reset functionality that cascades to all children
+ * - Maintains subscriber notifications for external state tracking
+ * - Handles child registration/unregistration automatically
+ *
+ * @param {Object} props - Component props containing onUIStateChange callback
+ * @param {Object} config - Configuration object
+ * @param {string} config.componentType - Type of this group controller (e.g., "checkbox_list")
+ * @param {string} [config.childComponentType] - Filter children by this type (e.g., "checkbox")
+ * @param {Function} [config.aggregateChildStates] - Custom aggregation function
+ * @param {any} [config.emptyState] - State to use when no children have values
+ * @returns {Object} UI group state controller
+ */
+export const useUIGroupStateController = (
+  props,
+  {
+    componentType,
+    childComponentType,
+    aggregateChildStates = defaultAggregateChildStates,
+    emptyState = undefined,
+  },
+) => {
+  let { onUIStateChange } = props;
+  onUIStateChange = useStableCallback(onUIStateChange);
+  const [uiState, _setUIState] = useState(emptyState);
+
+  const childUIStateControllerArrayRef = useRef([]);
+  const childUIStateControllerArray = childUIStateControllerArrayRef.current;
+  const uiGroupStateControllerRef = useRef();
+
+  const updateUIState = () => {
+    const newUIState = aggregateChildStates(
+      childUIStateControllerArray,
+      emptyState,
+    );
+    if (newUIState === uiState) {
+      return;
+    }
+    const uiGroupStateController = uiGroupStateControllerRef.current;
+    if (uiGroupStateController) {
+      uiGroupStateController.setUIState(newUIState);
+    }
+  };
+
+  return useMemo(() => {
+    const subscribers = new Set();
+    childUIStateControllerArray.length = 0;
+
+    const uiGroupStateController = {
+      componentType,
+      get uiState() {
+        return uiState;
+      },
+      setUIState: (newUIState, e) => {
+        _setUIState(newUIState);
+
+        // Notify subscribers
+        subscribers.forEach((callback) => callback(newUIState));
+
+        // Call original callback
+        onUIStateChange?.(newUIState, e);
+      },
+      onChildUIStateChange: (childUIStateController) => {
+        if (
+          childComponentType &&
+          childUIStateController.componentType !== childComponentType
+        ) {
+          return;
+        }
+        updateUIState();
+      },
+      registerChild: (childUIStateController) => {
+        if (
+          childComponentType &&
+          childUIStateController.componentType !== childComponentType
+        ) {
+          return;
+        }
+        childUIStateControllerArray.push(childUIStateController);
+        updateUIState();
+      },
+      unregisterChild: (childUIStateController) => {
+        if (
+          childComponentType &&
+          childUIStateController.componentType !== childComponentType
+        ) {
+          return;
+        }
+        const index = childUIStateControllerArray.indexOf(
+          childUIStateController,
+        );
+        if (index === -1) {
+          return;
+        }
+        childUIStateControllerArray.splice(index, 1);
+        updateUIState();
+      },
+      resetUIState: (e) => {
+        for (const childUIStateController of childUIStateControllerArray) {
+          childUIStateController.resetUIState(e);
+        }
+      },
+      subscribe: (callback) => {
+        subscribers.add(callback);
+        return () => subscribers.delete(callback);
+      },
+    };
+
+    uiGroupStateControllerRef.current = uiGroupStateController;
+    return uiGroupStateController;
+  }, [componentType, childComponentType, emptyState]);
+};
+
+/**
+ * Default aggregation function for child states
+ * Collects all truthy child UI states into an array
+ */
+const defaultAggregateChildStates = (childControllers, emptyState) => {
+  const values = [];
+  for (const childController of childControllers) {
+    if (childController.uiState) {
+      values.push(childController.uiState);
+    }
+  }
+  return values.length === 0 ? emptyState : values;
+};
+
+/**
  * Hook to track UI state from a UI state controller
  *
  * This hook allows external code to react to UI state changes without

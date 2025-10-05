@@ -3,8 +3,6 @@ import { forwardRef } from "preact/compat";
 import {
   useContext,
   useImperativeHandle,
-  useLayoutEffect,
-  useMemo,
   useRef,
   useState,
 } from "preact/hooks";
@@ -23,15 +21,14 @@ import {
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
   FieldGroupUIStateControllerContext,
 } from "../field_group_context.js";
 import { useActionEvents } from "../use_action_events.js";
-import { useStableCallback } from "../use_stable_callback.js";
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { useFormEvents } from "./use_form_events.js";
+import { useUIGroupStateController } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .navi_checkbox_list {
@@ -50,84 +47,11 @@ export const CheckboxList = forwardRef((props, ref) => {
 export const Checkbox = InputCheckbox;
 
 const useCheckboxListUIStateController = (props) => {
-  let groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
-  let { onUIStateChange } = props;
-  groupOnUIStateChange = useStableCallback(groupOnUIStateChange);
-  onUIStateChange = useStableCallback(onUIStateChange);
-  const [uiState, _setUIState] = useState(undefined);
-
-  const checkboxUIStateControllerArrayRef = useRef([]);
-  const checkboxUIStateControllerArray =
-    checkboxUIStateControllerArrayRef.current;
-
-  const updateUIState = () => {
-    const values = [];
-    for (const checkboxUIStateController of checkboxUIStateControllerArray) {
-      if (checkboxUIStateController.uiState) {
-        values.push(checkboxUIStateController.uiState);
-      }
-    }
-    const newUIState = values.length === 0 ? undefined : values;
-    if (newUIState === uiState) {
-      return;
-    }
-    checkboxListUIStateController.setUIState(newUIState);
-  };
-
-  const checkboxListUIStateControllerRef = useRef();
-
-  const checkboxListUIStateController = useMemo(() => {
-    checkboxUIStateControllerArray.length = 0;
-
-    const checkboxListUIStateController = {
-      componentType: "checkbox_list",
-      uiState,
-      setUIState: (newUIState, e) => {
-        checkboxListUIStateController.uiState = newUIState;
-        groupOnUIStateChange?.(newUIState, e);
-        onUIStateChange?.(newUIState, e);
-        _setUIState(newUIState);
-      },
-      onChildUIStateChange: (childUIStateController) => {
-        if (childUIStateController.componentType !== "checkbox") {
-          return;
-        }
-        updateUIState();
-      },
-      registerChild: (childUIStateController) => {
-        if (childUIStateController.componentType !== "checkbox") {
-          return;
-        }
-        checkboxUIStateControllerArray.push(childUIStateController);
-      },
-      unregisterChild: (childUIStateController) => {
-        if (childUIStateController.componentType !== "checkbox") {
-          return;
-        }
-        const index = checkboxUIStateControllerArray.indexOf(
-          childUIStateController,
-        );
-        if (index === -1) {
-          return;
-        }
-        checkboxUIStateControllerArray.splice(index, 1);
-        updateUIState();
-      },
-      resetUIState: (e) => {
-        for (const checkboxUIStateController of checkboxUIStateControllerArray) {
-          checkboxUIStateController.resetUIState(e);
-        }
-      },
-    };
-    checkboxListUIStateControllerRef.current = checkboxListUIStateController;
-    return checkboxListUIStateController;
-  }, [uiState]);
-
-  useLayoutEffect(() => {
-    updateUIState();
-  }, []);
-
-  return checkboxListUIStateController;
+  return useUIGroupStateController(props, {
+    componentType: "checkbox_list",
+    childComponentType: "checkbox",
+    emptyState: undefined,
+  });
 };
 
 const CheckboxListBasic = forwardRef((props, ref) => {
