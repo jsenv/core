@@ -301,18 +301,18 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       if (reason === "blur_invalid") {
         return;
       }
-      // innerOnUIStateChange(externalCheckedState, e);
+      checkedUIStateController.resetUIState(e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
     onAbort: (e) => {
-      // innerOnUIStateChange(externalCheckedState, e);
+      checkedUIStateController.resetUIState(e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      // innerOnUIStateChange(externalCheckedState, e);
+      checkedUIStateController.resetUIState(e);
       onActionError?.(e);
     },
     onEnd: (e) => {

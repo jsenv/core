@@ -444,10 +444,20 @@
       const CheckboxActionControlledDemo = ({ backgroundColor }) => {
         const [checked, setChecked] = useState(undefined);
         const [result, setResult] = useState("");
+        const ref = useRef();
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Checkbox with Action (Controlled)</h3>
+            <h3 className="demo-title">
+              Checkbox with Action (Controlled)
+              <button
+                onClick={() => {
+                  ref.current.dispatchEvent(new CustomEvent("resetuistate"));
+                }}
+              >
+                Reset
+              </button>
+            </h3>
             <p>
               Reset button won't override UI, use false to override. (This is
               because checked=undefined won't override the UI state)
@@ -456,6 +466,7 @@
               <div className="checkbox-group">
                 <label>
                   <Input
+                    ref={ref}
                     type="checkbox"
                     name="notifications"
                     checked={checked}
@@ -487,13 +498,6 @@
                 }}
               >
                 Disable
-              </button>
-              <button
-                onClick={() => {
-                  setChecked(undefined);
-                }}
-              >
-                Reset
               </button>
             </div>
             <div
