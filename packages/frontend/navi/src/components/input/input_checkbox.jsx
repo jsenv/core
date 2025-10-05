@@ -29,7 +29,7 @@ import {
 } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
-  .custom_checkbox_wrapper {
+  .custom_checkbox_wrapper[data-field-wrapper] {
     display: inline-flex;
     box-sizing: content-box;
 
@@ -37,6 +37,10 @@ import.meta.css = /* css */ `
     --checkmark-disabled-color: #eeeeee;
     --checked-color: #3b82f6;
     --checked-disabled-color: #d3d3d3;
+
+    /* TODO: find a better way maybe? */
+    --field-background-color: var(--checked-color);
+    --field-strong-color: var(--checked-color);
   }
 
   .custom_checkbox_wrapper input {
@@ -332,7 +336,13 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   );
 });
 const InputCheckboxInsideForm = forwardRef((props, ref) => {
-  const { id, name, ...rest } = props;
+  const {
+    // eslint-disable-next-line no-unused-vars
+    formContext,
+    id,
+    name,
+    ...rest
+  } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
