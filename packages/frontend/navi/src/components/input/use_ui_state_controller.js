@@ -1,9 +1,6 @@
 import { useContext, useMemo, useRef, useState } from "preact/hooks";
 
-import {
-  FieldGroupOnUIStateChangeContext,
-  FieldGroupUIStateControllerContext,
-} from "../field_group_context.js";
+import { FieldGroupUIStateControllerContext } from "../field_group_context.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
@@ -54,8 +51,6 @@ const useUncontrolledUIProps = (
   props,
   { componentType, statePropName, defaultStatePropName, fallbackState },
 ) => {
-  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
-  const { onUIStateChange } = props;
   const uiStateController = useUIStateController(props, {
     componentType,
     statePropName,
@@ -63,7 +58,6 @@ const useUncontrolledUIProps = (
     fallbackState,
   });
 
-  const innerOnUIStateChange = onUIStateChange || groupOnUIStateChange;
   /**
    * This check is needed only for basic field because
    * When using action/form we consider the action/form code
@@ -74,13 +68,10 @@ const useUncontrolledUIProps = (
    * The component re-renders so it's the action/form that is considered as responsible
    * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
    */
-  if (Object.hasOwn(props, statePropName) && !innerOnUIStateChange) {
-    if (import.meta.dev) {
-      console.warn(
-        `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
-      );
-    }
-    uiStateController.readOnly = true;
+  if (uiStateController.readOnly && import.meta.dev) {
+    console.warn(
+      `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
+    );
   }
   return {
     uiStateController,
@@ -98,12 +89,10 @@ const useUIStateController = (
   navState,
 ) => {
   const groupUIStateController = useContext(FieldGroupUIStateControllerContext);
-  let groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const hasStateProp = Object.hasOwn(props, statePropName);
   const state = props[statePropName];
   const defaultState = props[defaultStatePropName];
   let { onUIStateChange } = props;
-  groupOnUIStateChange = useStableCallback(groupOnUIStateChange);
   onUIStateChange = useStableCallback(onUIStateChange);
   const stateInitial = useInitialValue(() => {
     if (hasStateProp) {
@@ -129,13 +118,14 @@ const useUIStateController = (
     const uiStateController = {
       componentType,
       state: undefined,
+      readOnly:
+        hasStateProp &&
+        !onUIStateChange &&
+        (!groupUIStateController || groupUIStateController.readOnly),
       uiState,
-      onChange: () => {},
       setUIState: (newUIState, e) => {
-        groupOnUIStateChange?.(newUIState, e);
         onUIStateChange?.(newUIState, e);
         _setUIState(newUIState);
-        uiStateController.onChange(newUIState, e);
       },
       resetUIState: () => {
         uiStateController.setUIState(uiStateController.state);

@@ -3,6 +3,7 @@ import { forwardRef } from "preact/compat";
 import {
   useContext,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -48,14 +49,65 @@ export const CheckboxList = forwardRef((props, ref) => {
 });
 export const Checkbox = InputCheckbox;
 
+const useCheckboxListUIStateController = (props) => {
+  let groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
+  let { onUIStateChange } = props;
+  groupOnUIStateChange = useStableCallback(groupOnUIStateChange);
+  onUIStateChange = useStableCallback(onUIStateChange);
+  const [uiState, _setUIState] = useState(undefined);
+
+  const checkboxUIStateControllerArrayRef = useRef([]);
+  const checkboxUIStateControllerArray =
+    checkboxUIStateControllerArrayRef.current;
+
+  const checkboxListUIStateController = useMemo(() => {
+    checkboxUIStateControllerArray.length = 0;
+
+    const checkboxListUIStateController = {
+      componentType: "checkbox_list",
+      uiState,
+      setUIState: (newUIState, e) => {
+        groupOnUIStateChange?.(newUIState, e);
+        onUIStateChange?.(newUIState, e);
+        _setUIState(newUIState);
+      },
+      registerChild: (childUIStateController) => {
+        if (childUIStateController.componentType !== "checkbox") {
+          return;
+        }
+        // pour chaque enfant lorsqu'il change on apelle le onUIStateChange local
+        // normalement il faudrait regarder ce qu'on a deja et en déduire le truc global
+        // parce qu'on va recevoir la valeur de l'enfant
+        checkboxUIStateControllerArray.push(childUIStateController);
+      },
+    };
+    return checkboxListUIStateController;
+  }, []);
+
+  useLayoutEffect(() => {
+    const values = [];
+    for (const checkboxUIStateController of checkboxUIStateControllerArray) {
+      if (checkboxUIStateController.uiState) {
+        values.push(checkboxUIStateController.uiState);
+      }
+    }
+    const newUIState = values.length === 0 ? undefined : values;
+    if (newUIState === uiState) {
+      return;
+    }
+    checkboxListUIStateController.setUIState(newUIState);
+  }, []);
+
+  return checkboxListUIStateController;
+};
+
 const CheckboxListBasic = forwardRef((props, ref) => {
-  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
   const {
     name,
-    onUIStateChange,
+    uiStateController,
     readOnly,
     disabled,
     required,
@@ -70,28 +122,10 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   // (lorsque ce sont des checkbox)
   // afin de pouvoir les controler un peu (juste pour obtenir les valeurs et pour le reset en fait)
 
-  const innerOnUIStateChange = onUIStateChange || groupOnUIStateChange;
   const innerLoading = loading || groupLoading;
   const innerReadOnly =
-    readOnly || groupReadonly || innerLoading || !innerOnUIStateChange;
+    readOnly || groupReadonly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || groupDisabled;
-
-  const checkboxListUIStateController = useMemo(() => {
-    const checkboxUIStateControllerArray = [];
-
-    return {
-      componentType: "checkbox_list",
-      registerChild: (childUIStateController) => {
-        if (childUIStateController.componentType !== "checkbox") {
-          return;
-        }
-        // pour chaque enfant lorsqu'il change on apelle le onUIStateChange local
-        // normalement il faudrait regarder ce qu'on a deja et en déduire le truc global
-        // parce qu'on va recevoir la valeur de l'enfant
-        checkboxUIStateControllerArray.push(childUIStateController);
-      },
-    };
-  }, []);
 
   return (
     <div
@@ -102,26 +136,20 @@ const CheckboxListBasic = forwardRef((props, ref) => {
       data-checkbox-list
       // eslint-disable-next-line react/no-unknown-property
       onresetuistate={(e) => {
-        checkboxListUIStateController.resetUIState(e);
+        uiStateController.resetUIState(e);
       }}
     >
       <FieldGroupNameContext.Provider value={name}>
-        <FieldGroupUIStateControllerContext.Provider
-          value={checkboxListUIStateController}
-        >
-          <FieldGroupOnUIStateChangeContext.Provider
-            value={useStableCallback(innerOnUIStateChange)}
-          >
-            <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
-              <FieldGroupDisabledContext.Provider value={innerDisabled}>
-                <FieldGroupRequiredContext.Provider value={required}>
-                  <FieldGroupLoadingContext.Provider value={innerLoading}>
-                    {children}
-                  </FieldGroupLoadingContext.Provider>
-                </FieldGroupRequiredContext.Provider>
-              </FieldGroupDisabledContext.Provider>
-            </FieldGroupReadOnlyContext.Provider>
-          </FieldGroupOnUIStateChangeContext.Provider>
+        <FieldGroupUIStateControllerContext.Provider value={uiStateController}>
+          <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
+            <FieldGroupDisabledContext.Provider value={innerDisabled}>
+              <FieldGroupRequiredContext.Provider value={required}>
+                <FieldGroupLoadingContext.Provider value={innerLoading}>
+                  {children}
+                </FieldGroupLoadingContext.Provider>
+              </FieldGroupRequiredContext.Provider>
+            </FieldGroupDisabledContext.Provider>
+          </FieldGroupReadOnlyContext.Provider>
         </FieldGroupUIStateControllerContext.Provider>
       </FieldGroupNameContext.Provider>
     </div>
@@ -155,14 +183,12 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const checkboxListUIStateController = {};
-  const [boundAction, , setActionValue] = useActionBoundToOneArrayParam(
+  const checkboxListUIStateController = useCheckboxListUIStateController(props);
+  const checkboxListActionValue = checkboxListUIStateController.uiState;
+  const [boundAction] = useActionBoundToOneArrayParam(
     action,
-    checkboxListUIStateController.uiState,
+    checkboxListActionValue,
   );
-  checkboxListUIStateController.onChange = (uiState) => {
-    setActionValue(uiState);
-  };
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
