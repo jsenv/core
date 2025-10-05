@@ -44,11 +44,15 @@
           { id: 3, color: "green", selected: false },
         ]);
 
+        // Derived state: currently selected colors in data state
+
+        const selectedColors = colorChoices
+          .filter((choice) => choice.selected)
+          .map((choice) => choice.color);
+
         // UI FORM STATE - This represents the current form state (may differ from data state)
-        const [uiSelectedColors, setUiSelectedColors] = useState([
-          "red",
-          "blue",
-        ]);
+        const [uiSelectedColors, setUiSelectedColors] =
+          useState(selectedColors);
 
         // Next ID for new colors
         const [nextId, setNextId] = useState(4);
@@ -130,15 +134,6 @@
           setColorChoices((prev) =>
             prev.filter((choice) => choice.id !== colorId),
           );
-          // Also remove from UI form if it was selected
-          const colorToRemove = colorChoices.find(
-            (choice) => choice.id === colorId,
-          );
-          if (colorToRemove) {
-            setUiSelectedColors((prev) =>
-              prev.filter((color) => color !== colorToRemove.color),
-            );
-          }
         };
 
         // Toggle selection state in the data state
@@ -242,13 +237,18 @@
                 <Form action={submitForm}>
                   <fieldset style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
                     <legend>Select Colors:</legend>
-                    <CheckboxList name="colors">
+                    <CheckboxList
+                      name="colors"
+                      onUIStateChange={(colors) => {
+                        setUiSelectedColors(colors);
+                      }}
+                    >
                       {colorChoices.map(({ id, color }) => (
                         <Label key={id} style="display: block; margin: 5px 0;">
                           {color.charAt(0).toUpperCase() + color.slice(1)}
                           <Checkbox
                             value={color}
-                            checked={uiSelectedColors.includes(color)}
+                            checked={selectedColors.includes(color)}
                           />
                         </Label>
                       ))}
@@ -289,7 +289,7 @@
                     </div>
                   )}
 
-                  <div style="margin-top: 15px; display: flex; gap: 8px;">
+                  <div style="margin-top: 15px; display: flex; align-items: flex-start; flex-direction: column; gap: 8px;">
                     <Button type="submit" disabled={isSubmitting}>
                       {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
                       {!isSubmitting && uiSelectedColors.length > 0 && (
