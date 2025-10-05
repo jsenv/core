@@ -186,28 +186,48 @@ const useUIStateController = (
   const stateRef = useRef(state);
 
   const uiStateControllerRef = useRef();
+
+  // Handle cleanup
   useLayoutEffect(() => {
+    const uiStateController = uiStateControllerRef.current;
+    if (groupUIStateController) {
+      groupUIStateController.registerChild(uiStateController);
+    }
     return () => {
-      const uiStateController = uiStateControllerRef.current;
       if (groupUIStateController) {
         groupUIStateController.unregisterChild(uiStateController);
       }
     };
-  }, []);
+  }, [groupUIStateController]);
+
+  // Handle state prop changes
+  useLayoutEffect(() => {
+    if (hasStateProp && state !== stateRef.current) {
+      stateRef.current = state;
+      stateInitialRef.current = state;
+      const uiStateController = uiStateControllerRef.current;
+      if (uiStateController) {
+        uiStateController.setUIState(getPropFromState(state));
+      }
+    }
+  }, [hasStateProp, state, getPropFromState]);
 
   return useMemo(() => {
     const uiStateController = {
       componentType,
-      state: undefined,
-      readOnly:
-        uncontrolled &&
-        hasStateProp &&
-        !onUIStateChange &&
-        !groupUIStateController,
-      uiState,
+      get state() {
+        return hasStateProp ? state : undefined;
+      },
+      get readOnly() {
+        return (
+          uncontrolled &&
+          hasStateProp &&
+          !onUIStateChange &&
+          !groupUIStateController
+        );
+      },
       setUIState: (prop, e) => {
         const newUIState = getStateFromProp(prop);
-        uiStateController.uiState = newUIState;
         _setUIState(newUIState);
         onUIStateChange?.(newUIState, e);
         if (groupUIStateController) {
@@ -219,21 +239,47 @@ const useUIStateController = (
         }
       },
       resetUIState: () => {
-        const prop = getPropFromState(state);
+        const currentState = hasStateProp ? state : undefined;
+        const prop = getPropFromState(currentState);
         uiStateController.setUIState(prop);
       },
     };
     uiStateControllerRef.current = uiStateController;
-    if (groupUIStateController) {
-      groupUIStateController.registerChild(uiStateController);
-    }
-
-    if (hasStateProp && state !== stateRef.current) {
-      stateRef.current = state;
-      stateInitialRef.current = state;
-      uiStateController.setUIState(getPropFromState(state));
-    }
-    uiStateController.state = state;
     return uiStateController;
-  }, [hasStateProp, state, groupUIStateController]);
+  }, [groupUIStateController, componentType]);
+};
+/**
+ * Hook to track UI state from a UI state controller
+ *
+ * This hook allows external code to react to UI state changes without
+ * causing the controller itself to re-create. It returns the current UI state
+ * and will cause re-renders when the UI state changes.
+ *
+ * @param {Object} uiStateController - The UI state controller to track
+ * @returns {any} The current UI state
+ */
+export const useUIState = (uiStateController) => {
+  const [trackedUIState, setTrackedUIState] = useState(
+    uiStateController.uiState,
+  );
+
+  useLayoutEffect(() => {
+    // Sync with current state in case it changed before this hook mounted
+    setTrackedUIState(uiStateController.uiState);
+
+    // We need to patch the setUIState method to notify our tracker
+    const originalSetUIState = uiStateController.setUIState;
+
+    uiStateController.setUIState = (prop, e) => {
+      originalSetUIState(prop, e);
+      setTrackedUIState(uiStateController.uiState);
+    };
+
+    return () => {
+      // Restore original method on cleanup
+      uiStateController.setUIState = originalSetUIState;
+    };
+  }, [uiStateController]);
+
+  return trackedUIState;
 };
