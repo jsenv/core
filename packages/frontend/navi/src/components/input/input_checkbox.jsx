@@ -198,11 +198,12 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
       name={innerName}
       checked={checked}
       data-readonly={innerReadOnly ? "" : undefined}
+      readOnly={innerReadOnly}
       disabled={innerDisabled}
       required={innerRequired}
       data-validation-message-arrow-x="center"
       onClick={(e) => {
-        if (readOnly) {
+        if (innerReadOnly) {
           e.preventDefault();
         }
         onClick?.(e);

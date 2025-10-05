@@ -123,10 +123,7 @@ const useUIStateController = (
     const uiStateController = {
       componentType,
       state: undefined,
-      readOnly:
-        hasStateProp &&
-        !onUIStateChange &&
-        (!groupUIStateController || groupUIStateController.readOnly),
+      readOnly: hasStateProp && !onUIStateChange && !groupUIStateController,
       uiState,
       setUIState: (newUIState, e) => {
         newUIState = getStateFromProp(newUIState);
