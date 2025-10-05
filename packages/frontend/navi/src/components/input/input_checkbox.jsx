@@ -155,7 +155,6 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   const setInputReadOnly = useContext(ReadOnlyContext);
   const {
     name,
-    checked,
     uiStateController,
     value = "on",
     readOnly,
@@ -180,13 +179,14 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || innerLoading || !uiStateController;
+    readOnly || groupReadOnly || innerLoading || uiStateController.readOnly;
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
+  const checked = uiStateController.uiState;
   const inputCheckbox = (
     <input
       {...rest}

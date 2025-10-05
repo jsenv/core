@@ -139,7 +139,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useState, useRef } from "preact/hooks";
       import {
         createAction,
         // eslint-disable-next-line no-unused-vars
@@ -278,14 +278,25 @@
       const CheckboxDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status] = useState("idle");
+        const ref = useRef();
 
         return (
           <div className="demo-card">
-            <h3 className="demo-title">Basic Checkbox</h3>
+            <h3 className="demo-title">
+              Basic Checkbox
+              <button
+                onClick={() => {
+                  ref.current.dispatchEvent(new CustomEvent("resetuistate"));
+                }}
+              >
+                Reset
+              </button>
+            </h3>
             <div className="control-group">
               <div className="checkbox-group">
                 <label>
                   <Input
+                    ref={ref}
                     type="checkbox"
                     name="enabled"
                     backgroundColor={backgroundColor}

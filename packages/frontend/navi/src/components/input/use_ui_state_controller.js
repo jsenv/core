@@ -133,7 +133,7 @@ const useUncontrolledUIProps = (
         `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
       );
     }
-    return {};
+    uiStateController.readOnly = true;
   }
   return {
     uiStateController,
