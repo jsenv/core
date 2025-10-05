@@ -213,6 +213,8 @@ const useUIStateController = (
   }, [hasStateProp, state, getPropFromState]);
 
   return useMemo(() => {
+    const subscribers = new Set();
+
     const uiStateController = {
       componentType,
       get state() {
@@ -226,10 +228,20 @@ const useUIStateController = (
           !groupUIStateController
         );
       },
+      get uiState() {
+        return uiState;
+      },
       setUIState: (prop, e) => {
         const newUIState = getStateFromProp(prop);
         _setUIState(newUIState);
+
+        // Notify subscribers
+        subscribers.forEach((callback) => callback(newUIState));
+
+        // Call original callback
         onUIStateChange?.(newUIState, e);
+
+        // Notify group controller
         if (groupUIStateController) {
           groupUIStateController.onChildUIStateChange(
             uiStateController,
@@ -242,6 +254,10 @@ const useUIStateController = (
         const currentState = hasStateProp ? state : undefined;
         const prop = getPropFromState(currentState);
         uiStateController.setUIState(prop);
+      },
+      subscribe: (callback) => {
+        subscribers.add(callback);
+        return () => subscribers.delete(callback);
       },
     };
     uiStateControllerRef.current = uiStateController;
@@ -264,21 +280,13 @@ export const useUIState = (uiStateController) => {
   );
 
   useLayoutEffect(() => {
-    // Sync with current state in case it changed before this hook mounted
+    // Subscribe to UI state changes
+    const unsubscribe = uiStateController.subscribe(setTrackedUIState);
+
+    // Sync with current state in case it changed before subscription
     setTrackedUIState(uiStateController.uiState);
 
-    // We need to patch the setUIState method to notify our tracker
-    const originalSetUIState = uiStateController.setUIState;
-
-    uiStateController.setUIState = (prop, e) => {
-      originalSetUIState(prop, e);
-      setTrackedUIState(uiStateController.uiState);
-    };
-
-    return () => {
-      // Restore original method on cleanup
-      uiStateController.setUIState = originalSetUIState;
-    };
+    return unsubscribe;
   }, [uiStateController]);
 
   return trackedUIState;

@@ -25,6 +25,7 @@ import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
 import {
   useCheckedController,
+  useUIState,
   useUncontrolledCheckedProps,
 } from "./use_ui_state_controller.js";
 
@@ -189,7 +190,8 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  const checked = Boolean(uiStateController.uiState);
+  const uiState = useUIState(uiStateController);
+  const checked = Boolean(uiState);
   const actionName = rest["data-action"];
   if (actionName) {
     delete rest["data-action"];
@@ -215,7 +217,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
       onInput={(e) => {
         const checkbox = e.target;
         const checkboxIsChecked = checkbox.checked;
-        uiStateController.setUIState?.(checkboxIsChecked, e);
+        uiStateController.setUIState(checkboxIsChecked, e);
         onInput?.(e);
       }}
       // eslint-disable-next-line react/no-unknown-property
@@ -284,9 +286,9 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const checkedUIStateController = useCheckedController(props);
-  const actionValue = checkedUIStateController.uiState;
-  const [boundAction] = useActionBoundToOneParam(action, actionValue);
+  const uiStateController = useCheckedController(props);
+  const uiState = useUIState(uiStateController);
+  const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
@@ -300,18 +302,18 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       if (reason === "blur_invalid") {
         return;
       }
-      checkedUIStateController.resetUIState(e);
+      uiStateController.resetUIState(e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
     onAbort: (e) => {
-      checkedUIStateController.resetUIState(e);
+      uiStateController.resetUIState(e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      checkedUIStateController.resetUIState(e);
+      uiStateController.resetUIState(e);
       onActionError?.(e);
     },
     onEnd: (e) => {
@@ -325,7 +327,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
         {...rest}
         ref={innerRef}
         name={name}
-        uiStateController={checkedUIStateController}
+        uiStateController={uiStateController}
         data-action={boundAction.name}
         onChange={(e) => {
           requestAction(e.target, boundAction, { event: e });
@@ -346,19 +348,19 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
-  const checkedUIStateController = useCheckedController(props, navState);
-  const formParamValue = checkedUIStateController.uiState;
-  useOneFormParam(name, formParamValue);
-  if (checkedUIStateController.state) {
-    setNavState(checkedUIStateController.uiState ? undefined : false);
+  const uiStateController = useCheckedController(props, navState);
+  const uiState = useUIState(uiStateController);
+  useOneFormParam(name, uiState);
+  if (uiStateController.state) {
+    setNavState(uiState ? undefined : false);
   } else {
-    setNavState(checkedUIStateController.uiState ? true : undefined);
+    setNavState(uiState ? true : undefined);
   }
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
       e.preventDefault();
-      checkedUIStateController.resetUIState(e);
+      uiStateController.resetUIState(e);
     },
     onFormActionAbort: () => {
       // user might want to re-submit as is
@@ -384,7 +386,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       id={id}
       name={name}
-      uiStateController={checkedUIStateController}
+      uiStateController={uiStateController}
     />
   );
 });
