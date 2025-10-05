@@ -53,6 +53,12 @@
         // Next ID for new colors
         const [nextId, setNextId] = useState(4);
 
+        // Form submission feedback
+        const [isSubmitting, setIsSubmitting] = useState(false);
+        const [submitMessage, setSubmitMessage] = useState("");
+        const [submitError, setSubmitError] = useState("");
+        const [forceError, setForceError] = useState(false);
+
         // Random colors pool
         const randomColors = [
           "purple",
@@ -73,16 +79,41 @@
 
         // Action that simulates submitting form data (takes 1s)
         const submitForm = async ({ colors }) => {
-          console.log("Submitting form data:", colors);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          // Update the data state to match the form submission
-          setColorChoices((prev) =>
-            prev.map((choice) => ({
-              ...choice,
-              selected: colors?.includes(choice.color) || false,
-            })),
+          setIsSubmitting(true);
+          setSubmitError("");
+          setSubmitMessage(
+            `Syncing colors: ${colors?.length ? colors.join(", ") : "none"}...`,
           );
-          console.log("Data state updated from form:", colors);
+
+          try {
+            console.log("Submitting form data:", colors);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            // Simulate error if checkbox is checked
+            if (forceError) {
+              throw new Error(
+                "Simulated server error: Failed to update color preferences",
+              );
+            }
+
+            // Update the data state to match the form submission
+            setColorChoices((prev) =>
+              prev.map((choice) => ({
+                ...choice,
+                selected: colors?.includes(choice.color) || false,
+              })),
+            );
+
+            setSubmitMessage(
+              `✅ Successfully synced: ${colors?.length ? colors.join(", ") : "none"}`,
+            );
+            console.log("Data state updated from form:", colors);
+          } catch (error) {
+            setSubmitError(error.message);
+            setSubmitMessage("");
+          } finally {
+            setIsSubmitting(false);
+          }
         };
 
         // Add a new color to the data state
@@ -127,6 +158,16 @@
             .filter((choice) => choice.selected)
             .map((choice) => choice.color);
           setUiSelectedColors(selectedColors);
+          // Clear any previous messages
+          setSubmitMessage("");
+          setSubmitError("");
+        };
+
+        // Get the colors that reset would sync to
+        const getResetColors = () => {
+          return colorChoices
+            .filter((choice) => choice.selected)
+            .map((choice) => choice.color);
         }; // Add a random color choice to the data state
         const addRandomColor = () => {
           const availableColors = randomColors.filter(
@@ -225,10 +266,51 @@
                     </CheckboxList>
                   </fieldset>
 
+                  {/* Error simulation checkbox */}
+                  <div style="margin: 10px 0; padding: 8px; background: #ffebee; border-radius: 4px; border: 1px solid #ffcdd2;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #d32f2f;">
+                      <input
+                        type="checkbox"
+                        checked={forceError}
+                        onChange={(e) => setForceError(e.target.checked)}
+                        style="margin: 0;"
+                      />
+                      🔧 Force submission error (for testing)
+                    </label>
+                  </div>
+
+                  {/* Submission feedback messages */}
+                  {(isSubmitting || submitMessage || submitError) && (
+                    <div style="margin: 10px 0; padding: 10px; border-radius: 4px; font-size: 14px;">
+                      {isSubmitting && (
+                        <div style="color: #1976d2; background: #e3f2fd; padding: 8px; border-radius: 3px; border-left: 3px solid #1976d2;">
+                          🔄 {submitMessage}
+                        </div>
+                      )}
+                      {!isSubmitting && submitMessage && (
+                        <div style="color: #388e3c; background: #e8f5e8; padding: 8px; border-radius: 3px; border-left: 3px solid #388e3c;">
+                          {submitMessage}
+                        </div>
+                      )}
+                      {submitError && (
+                        <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 3px; border-left: 3px solid #d32f2f;">
+                          ❌ {submitError}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div style="margin-top: 15px; display: flex; gap: 8px;">
-                    <Button type="submit">📤 Submit Form</Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}
+                    </Button>
                     <Button type="button" onClick={syncFormToState}>
-                      🔄 Reset to State
+                      🔄 Reset to State{" "}
+                      {getResetColors().length > 0 && (
+                        <span style="font-size: 11px; opacity: 0.7;">
+                          ({getResetColors().join(", ")})
+                        </span>
+                      )}
                     </Button>
                   </div>
                 </Form>
