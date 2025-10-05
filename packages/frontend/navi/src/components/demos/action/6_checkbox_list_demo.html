@@ -47,10 +47,6 @@
         // Selected colors state
         const [selectedColors, setSelectedColors] = useState(["red", "blue"]);
 
-        // Display state for the action result
-        const [displayedSelections, setDisplayedSelections] =
-          useState("red, blue");
-
         // Next ID for new colors
         const [nextId, setNextId] = useState(4);
 
@@ -73,9 +69,9 @@
         ];
 
         // Action that takes 1s to update display state
-        const updateDisplayAction = async (colors) => {
+        const updateDisplayAction = async ({ colors }) => {
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          setDisplayedSelections(colors.join(", ") || "none");
+          setSelectedColors(colors || []);
         };
 
         // Add a random color choice
@@ -133,7 +129,7 @@
             <h2>Dynamic Checkbox List Demo</h2>
             <p>
               <strong>Current displayed selections:</strong>{" "}
-              {displayedSelections}
+              {selectedColors.length ? selectedColors.join(", ") : "none"}
             </p>
 
             <div style="margin: 20px 0;">
@@ -146,14 +142,88 @@
             </div>
 
             <Form action={updateDisplayAction}>
-              <DynamicCheckboxList
-                name="dynamic-colors"
-                value={selectedColors}
-                colorChoices={colorChoices}
-                onRemoveColor={removeColor}
-                onSelectColor={selectColor}
-                onUnselectColor={unselectColor}
-              />
+              <fieldset>
+                <legend>Dynamic Color Selection:</legend>
+                <CheckboxList name="colors">
+                  {colorChoices.map(({ id, color }) => (
+                    <div
+                      key={id}
+                      style="display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 8px; border: 1px solid #eee; border-radius: 4px;"
+                    >
+                      <Label style="flex: 1;">
+                        {color.charAt(0).toUpperCase() + color.slice(1)}
+                        <Checkbox
+                          value={color}
+                          checked={selectedColors.includes(color)}
+                        />
+                      </Label>
+
+                      <div style="display: flex; gap: 5px;">
+                        <button
+                          type="button"
+                          onClick={() => selectColor(color)}
+                          disabled={selectedColors.includes(color)}
+                          style={{
+                            padding: "4px 8px",
+                            fontSize: "12px",
+                            background: selectedColors.includes(color)
+                              ? "#ccc"
+                              : "#2196F3",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "3px",
+                            cursor: selectedColors.includes(color)
+                              ? "not-allowed"
+                              : "pointer",
+                          }}
+                          title="Select this checkbox programmatically"
+                        >
+                          ✓
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => unselectColor(color)}
+                          disabled={!selectedColors.includes(color)}
+                          style={{
+                            padding: "4px 8px",
+                            fontSize: "12px",
+                            background: !selectedColors.includes(color)
+                              ? "#ccc"
+                              : "#FF5722",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "3px",
+                            cursor: !selectedColors.includes(color)
+                              ? "not-allowed"
+                              : "pointer",
+                          }}
+                          title="Uncheck this checkbox programmatically"
+                        >
+                          ⊟
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => removeColor(id)}
+                          style={{
+                            padding: "4px 8px",
+                            fontSize: "12px",
+                            background: "#f44336",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "3px",
+                            cursor: "pointer",
+                          }}
+                          title="Remove this color choice"
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </CheckboxList>
+              </fieldset>
 
               <div style="margin-top: 20px; display: flex; gap: 10px;">
                 <Button type="submit">Submit Selection</Button>
@@ -161,97 +231,6 @@
               </div>
             </Form>
           </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const DynamicCheckboxList = ({
-        name,
-        value = [],
-        colorChoices,
-        onRemoveColor,
-        onSelectColor,
-        onUnselectColor,
-        ...rest
-      }) => {
-        return (
-          <fieldset>
-            <legend>Dynamic Color Selection:</legend>
-            <CheckboxList name={name} {...rest}>
-              {colorChoices.map(({ id, color }) => (
-                <div
-                  key={id}
-                  style="display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 8px; border: 1px solid #eee; border-radius: 4px;"
-                >
-                  <Label style="flex: 1;">
-                    {color.charAt(0).toUpperCase() + color.slice(1)}
-                    <Checkbox value={color} checked={value?.includes(color)} />
-                  </Label>
-
-                  <div style="display: flex; gap: 5px;">
-                    <button
-                      type="button"
-                      onClick={() => onSelectColor(color)}
-                      disabled={value?.includes(color)}
-                      style={{
-                        padding: "4px 8px",
-                        fontSize: "12px",
-                        background: value?.includes(color) ? "#ccc" : "#2196F3",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "3px",
-                        cursor: value?.includes(color)
-                          ? "not-allowed"
-                          : "pointer",
-                      }}
-                      title="Select this checkbox programmatically"
-                    >
-                      ✓
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onUnselectColor(color)}
-                      disabled={!value?.includes(color)}
-                      style={{
-                        padding: "4px 8px",
-                        fontSize: "12px",
-                        background: !value?.includes(color)
-                          ? "#ccc"
-                          : "#FF5722",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "3px",
-                        cursor: !value?.includes(color)
-                          ? "not-allowed"
-                          : "pointer",
-                      }}
-                      title="Uncheck this checkbox programmatically"
-                    >
-                      ⊟
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => onRemoveColor(id)}
-                      style={{
-                        padding: "4px 8px",
-                        fontSize: "12px",
-                        background: "#f44336",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "3px",
-                        cursor: "pointer",
-                      }}
-                      title="Remove this color choice"
-                    >
-                      🗑
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </CheckboxList>
-          </fieldset>
         );
       };
 

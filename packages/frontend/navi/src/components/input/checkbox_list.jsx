@@ -283,6 +283,7 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
+      e.preventDefault();
       checkboxListUIStateController.resetUIState(e);
     },
     onFormActionAbort: () => {},
