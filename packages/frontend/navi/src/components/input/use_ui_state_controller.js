@@ -77,30 +77,30 @@ const useUIStateController = (
     });
 
     const externalStateRef = useRef(externalStateInitial);
-    const [uiState, setUIState] = useState(externalStateInitial);
+    const [uiState, _setUIState] = useState(externalStateInitial);
+
+    const uiStateController = {
+      externalState: undefined,
+      uiState,
+      onChange: () => {},
+      setUIState: (newUIState, e) => {
+        groupOnUIStateChange?.(newUIState, e);
+        onUIStateChange?.(newUIState, e);
+        _setUIState(newUIState);
+        uiStateController.onChange(newUIState, e);
+      },
+      resetUIState: () => {
+        uiStateController.setUIState(uiStateController.externalState);
+      },
+    };
 
     const stateRef = useRef(state);
     if (hasUIStateProp && state !== stateRef.current) {
       stateRef.current = state;
       externalStateRef.current = state;
-      setUIState(state);
+      uiStateController.setUIState(state);
     }
-    const externalState = externalStateRef.current;
-
-    const uiStateController = {
-      externalState,
-      uiState,
-      setUIState: (newUIState, e) => {
-        groupOnUIStateChange?.(newUIState, e);
-        onUIStateChange?.(newUIState, e);
-        setUIState(newUIState);
-        uiStateController.onChange(newUIState, e);
-      },
-      resetUIState: () => {
-        setUIState(externalState);
-      },
-      onChange: () => {},
-    };
+    uiStateController.externalState = externalStateRef.current;
     return uiStateController;
   });
 };
