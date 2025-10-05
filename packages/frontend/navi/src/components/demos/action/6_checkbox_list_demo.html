@@ -302,7 +302,12 @@
 
                   <div style="margin-top: 15px; display: flex; gap: 8px;">
                     <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}
+                      {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
+                      {!isSubmitting && uiSelectedColors.length > 0 && (
+                        <span style="font-size: 11px; opacity: 0.7;">
+                          ({uiSelectedColors.join(", ")})
+                        </span>
+                      )}
                     </Button>
                     <Button type="button" onClick={syncFormToState}>
                       🔄 Reset to State{" "}
