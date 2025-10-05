@@ -50,6 +50,42 @@ export const useUncontrolledCheckedProps = (props, componentType) => {
   });
 };
 
+const useUncontrolledUIProps = (
+  props,
+  { componentType, statePropName, defaultStatePropName, fallbackState },
+) => {
+  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
+  const { onUIStateChange } = props;
+  const uiStateController = useUIStateController(props, {
+    componentType,
+    statePropName,
+    defaultStatePropName,
+    fallbackState,
+  });
+
+  const innerOnUIStateChange = onUIStateChange || groupOnUIStateChange;
+  /**
+   * This check is needed only for basic field because
+   * When using action/form we consider the action/form code
+   * will have a side effect that will re-render the component with the up-to-date state
+   *
+   * In practice we set the checked from the backend state
+   * We use action to fetch the new state and update the local state
+   * The component re-renders so it's the action/form that is considered as responsible
+   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
+   */
+  if (Object.hasOwn(props, statePropName) && !innerOnUIStateChange) {
+    if (import.meta.dev) {
+      console.warn(
+        `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
+      );
+    }
+    uiStateController.readOnly = true;
+  }
+  return {
+    uiStateController,
+  };
+};
 const useUIStateController = (
   props,
   {
@@ -120,40 +156,4 @@ const useUIStateController = (
     uiStateController.externalState = externalStateRef.current;
     return uiStateController;
   }, [hasUIStateProp, state, groupUIStateController]);
-};
-const useUncontrolledUIProps = (
-  props,
-  { componentType, statePropName, defaultStatePropName, fallbackState },
-) => {
-  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
-  const { onUIStateChange } = props;
-  const uiStateController = useUIStateController(props, {
-    componentType,
-    statePropName,
-    defaultStatePropName,
-    fallbackState,
-  });
-
-  const innerOnUIStateChange = onUIStateChange || groupOnUIStateChange;
-  /**
-   * This check is needed only for basic field because
-   * When using action/form we consider the action/form code
-   * will have a side effect that will re-render the component with the up-to-date state
-   *
-   * In practice we set the checked from the backend state
-   * We use action to fetch the new state and update the local state
-   * The component re-renders so it's the action/form that is considered as responsible
-   * to update the state and as a result allowed to have "checked"/"value" prop without "onUIStateChange"
-   */
-  if (Object.hasOwn(props, statePropName) && !innerOnUIStateChange) {
-    if (import.meta.dev) {
-      console.warn(
-        `"${componentType}" is controlled by "${statePropName}" prop. Replace it by "${defaultStatePropName}" or combine it with "onUIStateChange" to make field interactive.`,
-      );
-    }
-    uiStateController.readOnly = true;
-  }
-  return {
-    uiStateController,
-  };
 };
