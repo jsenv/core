@@ -43,23 +43,37 @@ export const useCheckedController = (props, componentType, navState) => {
   );
 };
 export const useUncontrolledCheckedProps = (props, componentType) => {
+  const { value = "on" } = props;
   return useUncontrolledUIProps(props, {
     componentType,
     statePropName: "checked",
     defaultStatePropName: "defaultChecked",
     fallbackState: false,
+    getStateFromProp: (checked) => {
+      return checked ? value : undefined;
+    },
+    getPropFromState: Boolean,
   });
 };
 
 const useUncontrolledUIProps = (
   props,
-  { componentType, statePropName, defaultStatePropName, fallbackState },
+  {
+    componentType,
+    statePropName,
+    defaultStatePropName,
+    fallbackState,
+    getStateFromProp,
+    getPropFromState,
+  },
 ) => {
   const uiStateController = useUIStateController(props, {
     componentType,
     statePropName,
     defaultStatePropName,
     fallbackState,
+    getStateFromProp,
+    getPropFromState,
     uncontrolled: true,
   });
 
@@ -131,9 +145,8 @@ const useUIStateController = (
         !onUIStateChange &&
         !groupUIStateController,
       uiState,
-      setUIState: (newUIState, e) => {
-        newUIState = getStateFromProp(newUIState);
-
+      setUIState: (prop, e) => {
+        const newUIState = getStateFromProp(prop);
         uiStateController.uiState = newUIState;
         _setUIState(newUIState);
         onUIStateChange?.(newUIState, e);
@@ -146,7 +159,8 @@ const useUIStateController = (
         }
       },
       resetUIState: () => {
-        uiStateController.setUIState(getPropFromState(uiStateController.state));
+        const prop = getPropFromState(state);
+        uiStateController.setUIState(prop);
       },
     };
     if (groupUIStateController) {
@@ -158,7 +172,7 @@ const useUIStateController = (
       stateInitialRef.current = state;
       uiStateController.setUIState(getPropFromState(state));
     }
-    uiStateController.state = stateInitialRef.current;
+    uiStateController.state = state;
     return uiStateController;
   }, [hasStateProp, state, groupUIStateController]);
 };
