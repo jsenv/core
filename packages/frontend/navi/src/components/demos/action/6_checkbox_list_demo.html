@@ -44,8 +44,17 @@
           { id: 3, color: "green" },
         ]);
 
-        // Selected colors state
-        const [selectedColors, setSelectedColors] = useState(["red", "blue"]);
+        // BACKEND STATE - This represents the server/database state
+        const [backendSelectedColors, setBackendSelectedColors] = useState([
+          "red",
+          "blue",
+        ]);
+
+        // UI STATE - This represents the current form state (may differ from backend)
+        const [uiSelectedColors, setUiSelectedColors] = useState([
+          "red",
+          "blue",
+        ]);
 
         // Next ID for new colors
         const [nextId, setNextId] = useState(4);
@@ -68,10 +77,26 @@
           "maroon",
         ];
 
-        // Action that takes 1s to update display state
-        const updateDisplayAction = async ({ colors }) => {
+        // Action that simulates sending data to backend (takes 1s)
+        const submitToBackend = async ({ colors }) => {
+          console.log("Submitting to backend:", colors);
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          setSelectedColors(colors || []);
+          // Simulate backend accepting the data and updating backend state
+          setBackendSelectedColors(colors || []);
+          console.log("Backend state updated:", colors);
+        };
+
+        // Simulate backend state changes (these would come from server events, websockets, etc.)
+        const simulateBackendChange = (newBackendState) => {
+          console.log("Backend state changed externally:", newBackendState);
+          setBackendSelectedColors(newBackendState);
+          // When backend changes, we typically sync the UI to match
+          setUiSelectedColors(newBackendState);
+        };
+
+        // Sync UI state to backend state (like a refresh or reset)
+        const syncUiToBackend = () => {
+          setUiSelectedColors([...backendSelectedColors]);
         };
 
         // Add a random color choice
@@ -102,16 +127,20 @@
             setColorChoices((prev) =>
               prev.filter((choice) => choice.id !== colorId),
             );
-            // Remove from selected if it was selected
-            setSelectedColors((prev) =>
+            // Remove from UI selected if it was selected
+            setUiSelectedColors((prev) =>
+              prev.filter((color) => color !== colorToRemove.color),
+            );
+            // Also remove from backend state if it was there
+            setBackendSelectedColors((prev) =>
               prev.filter((color) => color !== colorToRemove.color),
             );
           }
         };
 
-        // Programmatically select a checkbox
+        // Programmatically select a checkbox (modifies UI state)
         const selectColor = (color) => {
-          setSelectedColors((prev) => {
+          setUiSelectedColors((prev) => {
             if (!prev.includes(color)) {
               return [...prev, color];
             }
@@ -119,29 +148,110 @@
           });
         };
 
-        // Programmatically uncheck a checkbox
+        // Programmatically uncheck a checkbox (modifies UI state)
         const unselectColor = (color) => {
-          setSelectedColors((prev) => prev.filter((c) => c !== color));
+          setUiSelectedColors((prev) => prev.filter((c) => c !== color));
         };
 
         return (
           <div style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9;">
-            <h2>Dynamic Checkbox List Demo</h2>
-            <p>
-              <strong>Current displayed selections:</strong>{" "}
-              {selectedColors.length ? selectedColors.join(", ") : "none"}
-            </p>
+            <h2>Backend ↔ UI State Synchronization Demo</h2>
 
-            <div style="margin: 20px 0;">
-              <button
-                onClick={addRandomColor}
-                style="padding: 8px 16px; margin-right: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;"
-              >
-                Add Random Color
-              </button>
+            <div style="display: flex; gap: 20px; margin: 20px 0; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
+              <div style="flex: 1;">
+                <h3 style="margin: 0 0 10px 0; color: #2196F3;">
+                  🗄️ Backend State
+                </h3>
+                <p style="margin: 0; font-family: monospace; background: #e3f2fd; padding: 8px; border-radius: 4px;">
+                  {backendSelectedColors.length
+                    ? backendSelectedColors.join(", ")
+                    : "none"}
+                </p>
+                <small style="color: #666;">
+                  This represents the server/database state
+                </small>
+              </div>
+
+              <div style="flex: 1;">
+                <h3 style="margin: 0 0 10px 0; color: #FF9800;">📝 UI State</h3>
+                <p style="margin: 0; font-family: monospace; background: #fff3e0; padding: 8px; border-radius: 4px;">
+                  {uiSelectedColors.length
+                    ? uiSelectedColors.join(", ")
+                    : "none"}
+                </p>
+                <small style="color: #666;">
+                  This represents the current form state
+                </small>
+              </div>
             </div>
 
-            <Form action={updateDisplayAction}>
+            <div style="background: #f0f8ff; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2196F3;">
+              <h4 style="margin: 0 0 10px 0;">How it works:</h4>
+              <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                <li>
+                  The checkboxes show the <strong>UI state</strong> (what user
+                  is editing)
+                </li>
+                <li>
+                  Clicking checkboxes or programmatic buttons modifies{" "}
+                  <strong>UI state only</strong>
+                </li>
+                <li>
+                  "Submit" sends UI state to backend (1s delay) and updates{" "}
+                  <strong>backend state</strong>
+                </li>
+                <li>"Reset" syncs UI state back to current backend state</li>
+                <li>
+                  "Simulate Backend Change" buttons simulate external backend
+                  updates
+                </li>
+              </ul>
+            </div>
+
+            <div style="margin: 20px 0;">
+              <h4>🛠️ Controls:</h4>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+                <button
+                  onClick={addRandomColor}
+                  style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                >
+                  Add Random Color
+                </button>
+
+                <button
+                  onClick={syncUiToBackend}
+                  style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                >
+                  Sync UI ← Backend
+                </button>
+              </div>
+
+              <div style="margin: 10px 0;">
+                <strong>Simulate Backend Changes:</strong>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                  <button
+                    onClick={() => simulateBackendChange(["red"])}
+                    style="padding: 6px 12px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"
+                  >
+                    Backend → [red]
+                  </button>
+                  <button
+                    onClick={() => simulateBackendChange(["blue", "green"])}
+                    style="padding: 6px 12px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"
+                  >
+                    Backend → [blue, green]
+                  </button>
+                  <button
+                    onClick={() => simulateBackendChange([])}
+                    style="padding: 6px 12px; background: #9C27B0; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"
+                  >
+                    Backend → [none]
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <Form action={submitToBackend}>
               <fieldset>
                 <legend>Dynamic Color Selection:</legend>
                 <CheckboxList name="colors">
@@ -154,7 +264,7 @@
                         {color.charAt(0).toUpperCase() + color.slice(1)}
                         <Checkbox
                           value={color}
-                          checked={selectedColors.includes(color)}
+                          checked={uiSelectedColors.includes(color)}
                         />
                       </Label>
 
@@ -162,17 +272,17 @@
                         <button
                           type="button"
                           onClick={() => selectColor(color)}
-                          disabled={selectedColors.includes(color)}
+                          disabled={uiSelectedColors.includes(color)}
                           style={{
                             padding: "4px 8px",
                             fontSize: "12px",
-                            background: selectedColors.includes(color)
+                            background: uiSelectedColors.includes(color)
                               ? "#ccc"
                               : "#2196F3",
                             color: "white",
                             border: "none",
                             borderRadius: "3px",
-                            cursor: selectedColors.includes(color)
+                            cursor: uiSelectedColors.includes(color)
                               ? "not-allowed"
                               : "pointer",
                           }}
@@ -184,17 +294,17 @@
                         <button
                           type="button"
                           onClick={() => unselectColor(color)}
-                          disabled={!selectedColors.includes(color)}
+                          disabled={!uiSelectedColors.includes(color)}
                           style={{
                             padding: "4px 8px",
                             fontSize: "12px",
-                            background: !selectedColors.includes(color)
+                            background: !uiSelectedColors.includes(color)
                               ? "#ccc"
                               : "#FF5722",
                             color: "white",
                             border: "none",
                             borderRadius: "3px",
-                            cursor: !selectedColors.includes(color)
+                            cursor: !uiSelectedColors.includes(color)
                               ? "not-allowed"
                               : "pointer",
                           }}
