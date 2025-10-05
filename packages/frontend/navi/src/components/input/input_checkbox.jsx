@@ -186,6 +186,10 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   useConstraints(innerRef, constraints);
 
   const checked = Boolean(uiStateController.uiState);
+  const actionName = rest["data-action"];
+  if (actionName) {
+    delete rest["data-action"];
+  }
   const inputCheckbox = (
     <input
       {...rest}
@@ -227,6 +231,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
 
   return (
     <LoadableInlineElement
+      data-action={actionName}
       loading={innerLoading}
       inset={-1}
       targetSelector={appeareance === "custom" ? ".custom_checkbox" : ""}
