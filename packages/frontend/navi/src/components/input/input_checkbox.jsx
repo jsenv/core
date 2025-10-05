@@ -281,13 +281,8 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const checkedUIStateController = useCheckedController(props);
-  const [boundAction, , setActionValue] = useActionBoundToOneParam(
-    action,
-    checkedUIStateController.uiState ? value : undefined,
-  );
-  checkedUIStateController.onChange = (uiCheckedState) => {
-    setActionValue(uiCheckedState ? value : undefined);
-  };
+  const actionValue = checkedUIStateController.uiState ? value : undefined;
+  const [boundAction] = useActionBoundToOneParam(action, actionValue);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
@@ -343,18 +338,13 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
   const checkedUIStateController = useCheckedController(props, navState);
-  const [, setFormParam] = useOneFormParam(
-    name,
-    checkedUIStateController.uiState ? value : undefined,
-  );
-  checkedUIStateController.onChange = (uiCheckedState) => {
-    setFormParam(uiCheckedState ? value : undefined);
-    if (checkedUIStateController.externalState) {
-      setNavState(uiCheckedState ? undefined : false);
-    } else {
-      setNavState(uiCheckedState ? true : undefined);
-    }
-  };
+  const formParamValue = checkedUIStateController.uiState ? value : undefined;
+  useOneFormParam(name, formParamValue);
+  if (checkedUIStateController.state) {
+    setNavState(checkedUIStateController.uiState ? undefined : false);
+  } else {
+    setNavState(checkedUIStateController.uiState ? true : undefined);
+  }
 
   useFormEvents(innerRef, {
     onFormActionAbort: () => {
