@@ -87,14 +87,6 @@
           setIsEnabledInState((prev) => !prev);
         };
 
-        // Sync UI form state to current data state
-        const syncFormToState = () => {
-          setUiIsEnabled(isEnabledInState);
-          // Clear any previous messages
-          setSubmitMessage("");
-          setSubmitError("");
-        };
-
         // Get what the reset would sync to
         const getResetValue = () => {
           return isEnabledInState ? "checked" : "unchecked";
@@ -170,16 +162,11 @@
                     <Label style="display: flex; align-items: center; gap: 10px; font-size: 16px; cursor: pointer;">
                       <Checkbox
                         name="notifications"
-                        checked={uiIsEnabled}
-                        onChange={(e) => setUiIsEnabled(e.target.checked)}
+                        checked={isEnabledInState}
+                        onUIStateChange={(checked) => setUiIsEnabled(checked)}
                       />
                       🔔 Enable push notifications
                     </Label>
-
-                    <div style="margin-top: 10px; font-size: 12px; color: #666;">
-                      Current form state:{" "}
-                      <strong>{uiIsEnabled ? "Checked" : "Unchecked"}</strong>
-                    </div>
                   </fieldset>
 
                   {/* Error simulation checkbox */}
@@ -216,7 +203,7 @@
                     </div>
                   )}
 
-                  <div style="margin-top: 15px; display: flex; gap: 8px;">
+                  <div style="margin-top: 15px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;">
                     <Button type="submit" disabled={isSubmitting}>
                       {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
                       {!isSubmitting && (
@@ -225,8 +212,8 @@
                         </span>
                       )}
                     </Button>
-                    <Button type="button" onClick={syncFormToState}>
-                      🔄 Reset to State{" "}
+                    <Button type="reset">
+                      🔄 Reset to State
                       <span style="font-size: 11px; opacity: 0.7;">
                         ({getResetValue()})
                       </span>
