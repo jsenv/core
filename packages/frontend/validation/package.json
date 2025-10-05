@@ -5,6 +5,7 @@
   "main": "./src/main.js",
   "dependencies": {
     "@jsenv/dom": "0.0.1",
-    "preact": "10.26.6"
+    "preact": "10.26.6",
+    "tether": "2.0.0"
   }
 }

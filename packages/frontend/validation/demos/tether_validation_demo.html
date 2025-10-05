@@ -1,0 +1,252 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Tether Validation Message Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <script src="https://unpkg.com/tether@2.0.0/dist/js/tether.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(45deg, #ffe0e0, #fff0f0);
+        min-height: 300vh; /* Make page scrollable */
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .section {
+        margin: 40px 0;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .target-element {
+        display: inline-block;
+        padding: 12px 20px;
+        background: #ff5722;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 10px;
+        font-size: 16px;
+      }
+
+      .target-element:hover {
+        background: #e64a19;
+      }
+
+      .spacer {
+        height: 200px;
+        background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 20px,
+          rgba(255, 0, 0, 0.1) 20px,
+          rgba(255, 0, 0, 0.1) 40px
+        );
+        margin: 40px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-weight: bold;
+        font-size: 18px;
+      }
+
+      .scroll-instruction {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #ff5722;
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 14px;
+        z-index: 1000;
+      }
+
+      /* Simple validation message styles */
+      .simple-validation-message {
+        position: absolute;
+        background: #fff;
+        border: 2px solid #f44336;
+        border-radius: 4px;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-family: Arial, sans-serif;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        max-width: 300px;
+        z-index: 1000;
+        color: #333;
+      }
+
+      .simple-validation-message::before {
+        content: "";
+        position: absolute;
+        top: -8px;
+        left: 20px;
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid #f44336;
+      }
+
+      .simple-validation-message::after {
+        content: "";
+        position: absolute;
+        top: -6px;
+        left: 21px;
+        width: 0;
+        height: 0;
+        border-left: 7px solid transparent;
+        border-right: 7px solid transparent;
+        border-bottom: 7px solid #fff;
+      }
+
+      .comparison-note {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+        color: #856404;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scroll-instruction">Scroll to test Tether positioning</div>
+
+    <div class="container">
+      <h1>Tether Validation Message Demo</h1>
+      <p>
+        This demo shows a simple validation message positioned using Tether.js
+        for comparison.
+      </p>
+
+      <div class="comparison-note">
+        <strong>Note:</strong> This demo uses Tether.js to position a simple
+        rectangular div validation message. Compare the positioning behavior
+        with the jsenv validation message system.
+      </div>
+
+      <div class="section">
+        <h2>Auto-opened Tether Message</h2>
+        <p>
+          This simple validation message opens automatically and uses Tether for
+          positioning:
+        </p>
+        <button id="auto-target" class="target-element">
+          Target Element (Tether-positioned message)
+        </button>
+      </div>
+
+      <div class="spacer">
+        Scroll Area 1 - Keep scrolling to test Tether positioning
+      </div>
+
+      <div class="section">
+        <h2>Middle Section</h2>
+        <p>
+          The Tether-positioned message should follow the target element as you
+          scroll.
+        </p>
+      </div>
+
+      <div class="spacer">Scroll Area 2 - More scrolling space</div>
+
+      <div class="section">
+        <h2>Another Section</h2>
+        <p>
+          Continue scrolling to test the Tether message positioning at different
+          scroll positions.
+        </p>
+      </div>
+
+      <div class="spacer">Scroll Area 3 - Bottom section</div>
+
+      <div class="section">
+        <h2>Final Section</h2>
+        <p>Scroll back up to see how the Tether validation message behaves.</p>
+      </div>
+
+      <div
+        style="
+          height: 50vh;
+          background: #f0f0f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 40px;
+        "
+      >
+        <p>Bottom spacer - scroll back up to see Tether messages</p>
+      </div>
+    </div>
+
+    <script>
+      // Simple validation message using Tether
+      function createSimpleValidationMessage(targetElement, message) {
+        // Create the validation message element
+        const validationMessage = document.createElement("div");
+        validationMessage.className = "simple-validation-message";
+        validationMessage.innerHTML = message;
+
+        // Add to document
+        document.body.appendChild(validationMessage);
+
+        // Use Tether to position it
+        const tether = new window.Tether({
+          element: validationMessage,
+          target: targetElement,
+          attachment: "bottom left",
+          targetAttachment: "top left",
+          offset: "10px 0",
+          constraints: [
+            {
+              to: "scrollParent",
+              attachment: "together",
+            },
+          ],
+        });
+
+        // Return cleanup function
+        return () => {
+          tether.destroy();
+          if (document.body.contains(validationMessage)) {
+            document.body.removeChild(validationMessage);
+          }
+        };
+      }
+
+      // Auto-open validation message on page load
+      window.addEventListener("load", () => {
+        const autoTarget = document.getElementById("auto-target");
+        createSimpleValidationMessage(
+          autoTarget,
+          "This is a simple validation message positioned with <strong>Tether.js</strong>. Try scrolling to see how it follows the target element!",
+        );
+
+        console.log("Tether validation message demo loaded.");
+      });
+
+      // Log scroll events for debugging
+      let scrollTimeout;
+      window.addEventListener("scroll", () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          console.log("Scroll ended at position:", window.scrollY);
+        }, 100);
+      });
+    </script>
+  </body>
+</html>
