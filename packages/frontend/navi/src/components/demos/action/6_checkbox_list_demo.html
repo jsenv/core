@@ -131,21 +131,11 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const PickFavoriteColors = ({
-        name,
-        value = [],
-        action,
-        onUIStateChange,
-      }) => {
+      const PickFavoriteColors = ({ name, value = [], ...rest }) => {
         return (
           <fieldset>
             <legend>Select your favorite colors:</legend>
-            <CheckboxList
-              name={name}
-              value={value}
-              action={action}
-              onUIStateChange={onUIStateChange}
-            >
+            <CheckboxList name={name} {...rest}>
               <Label>
                 Red
                 <Checkbox value="red" checked={value?.includes("red")} />

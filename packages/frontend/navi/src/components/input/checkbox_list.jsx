@@ -3,6 +3,7 @@ import { forwardRef } from "preact/compat";
 import {
   useContext,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -18,6 +19,7 @@ import {
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import {
+  FieldGroupActionErrorContext,
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
@@ -31,10 +33,6 @@ import { useActionEvents } from "../use_action_events.js";
 import { useStableCallback } from "../use_stable_callback.js";
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { useFormEvents } from "./use_form_events.js";
-import {
-  useUncontrolledValueProps,
-  useValueController,
-} from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .navi_checkbox_list {
@@ -53,17 +51,12 @@ export const CheckboxList = forwardRef((props, ref) => {
 export const Checkbox = InputCheckbox;
 
 const CheckboxListBasic = forwardRef((props, ref) => {
-  const uncontrolledProps = useUncontrolledValueProps(props, "checkbox_list");
-  return <CheckboxListControlled {...props} ref={ref} {...uncontrolledProps} />;
-});
-const CheckboxListControlled = forwardRef((props, ref) => {
   const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
   const {
     name,
-    value,
     onUIStateChange,
     readOnly,
     disabled,
@@ -92,9 +85,9 @@ const CheckboxListControlled = forwardRef((props, ref) => {
   const checkboxController = useMemo(() => {
     return {
       type: "checkbox",
-      getUIState: (checkboxProps) => value?.includes(checkboxProps.value),
+      getUIState: (checkboxProps) => [].includes(checkboxProps.value),
     };
-  }, [value]);
+  }, []);
 
   return (
     <div
@@ -153,17 +146,18 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [valueState, setValueState, externalValueState] =
-    useValueController(props);
+  // ici j'ai pas la moindre idée de l'état mais c'est ok
+  const [valueState, setValueState] = useState(undefined);
   const [boundAction, , setActionValue] = useActionBoundToOneArrayParam(
     action,
-    externalValueState,
+    undefined,
   );
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const [actionRequester, setActionRequester] = useState(null);
+  const [actionError, setActionError] = useState();
 
   const innerOnUIStateChange = (uiState, e) => {
     setValueState(uiState);
@@ -172,27 +166,32 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   };
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
-      innerOnUIStateChange(externalValueState, e);
+      // innerOnUIStateChange(externalValueState, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
+      setActionError(null);
       setActionRequester(actionEvent.detail.requester);
       executeAction(actionEvent);
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      innerOnUIStateChange(externalValueState, e);
+      // innerOnUIStateChange(externalValueState, e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      innerOnUIStateChange(externalValueState, e);
+      setActionError(e);
+      // innerOnUIStateChange(externalValueState, e);
       onActionError?.(e);
     },
     onEnd: (e) => {
       onActionEnd?.(e);
     },
   });
+  useLayoutEffect(() => {
+    innerOnUIStateChange(collectCheckedValues(innerRef.current, name));
+  }, []);
 
   return (
     <CheckboxListBasic
@@ -201,7 +200,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       name={name}
       value={valueState}
       onUIStateChange={innerOnUIStateChange}
-      data-action={boundAction}
+      data-action={boundAction.name}
       onChange={(event) => {
         const checkboxList = innerRef.current;
         const checkbox = event.target;
@@ -211,11 +210,13 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
         });
       }}
     >
-      <FieldGroupLoadingContext.Provider value={actionLoading}>
-        <FieldGroupActionRequesterContext.Provider value={actionRequester}>
-          {children}
-        </FieldGroupActionRequesterContext.Provider>
-      </FieldGroupLoadingContext.Provider>
+      <FieldGroupActionErrorContext.Provider value={actionError}>
+        <FieldGroupLoadingContext.Provider value={actionLoading}>
+          <FieldGroupActionRequesterContext.Provider value={actionRequester}>
+            {children}
+          </FieldGroupActionRequesterContext.Provider>
+        </FieldGroupLoadingContext.Provider>
+      </FieldGroupActionErrorContext.Provider>
     </CheckboxListBasic>
   );
 });

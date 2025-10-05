@@ -15,7 +15,6 @@ import {
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "../field_group_context.js";
@@ -148,7 +147,6 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
 });
 const InputCheckboxControlled = forwardRef((props, ref) => {
   const groupName = useContext(FieldGroupNameContext);
-  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupRequired = useContext(FieldGroupRequiredContext);
@@ -157,7 +155,8 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   const setInputReadOnly = useContext(ReadOnlyContext);
   const {
     name,
-    onUIStateChange,
+    checked,
+    uiStateController,
     value = "on",
     readOnly,
     disabled,
@@ -176,13 +175,12 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const innerName = name || groupName;
-  const innerOnUIStateChange = onUIStateChange || groupOnUIStateChange;
   const innerDisabled = disabled || groupDisabled;
   const innerRequired = required || groupRequired;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || innerLoading || !innerOnUIStateChange;
+    readOnly || groupReadOnly || innerLoading || !uiStateController;
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
@@ -195,6 +193,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
       ref={innerRef}
       type="checkbox"
       name={innerName}
+      checked={checked}
       value={value}
       data-readonly={innerReadOnly ? "" : undefined}
       disabled={innerDisabled}
@@ -209,8 +208,12 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
       onInput={(e) => {
         const checkbox = e.target;
         const checkboxIsChecked = checkbox.checked;
-        innerOnUIStateChange?.(checkboxIsChecked, e);
+        uiStateController.setUIState?.(checkboxIsChecked, e);
         onInput?.(e);
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onresetuistate={(e) => {
+        uiStateController.resetUIState(e);
       }}
     />
   );
@@ -263,7 +266,6 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   const {
     name,
     value = "on",
-    onUIStateChange,
 
     action,
     onCancel,
@@ -278,22 +280,19 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const [checkedState, setCheckedState, externalCheckedState] =
-    useCheckedController(props);
+  const checkedUIStateController = useCheckedController(props);
   const [boundAction, , setActionValue] = useActionBoundToOneParam(
     action,
-    checkedState ? value : undefined,
+    checkedUIStateController.uiState ? value : undefined,
   );
+  checkedUIStateController.onChange = (uiCheckedState) => {
+    setActionValue(uiCheckedState ? value : undefined);
+  };
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
 
-  const innerOnUIStateChange = (uiCheckedState, e) => {
-    setCheckedState(uiCheckedState);
-    setActionValue(uiCheckedState ? value : undefined);
-    onUIStateChange?.(uiCheckedState, e);
-  };
   // In this situation updating the ui state === calling associated action
   // so cance/abort/error have to revert the ui state to the one before user interaction
   // to show back the real state of the checkbox (not the one user tried to set)
@@ -302,18 +301,18 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       if (reason === "blur_invalid") {
         return;
       }
-      innerOnUIStateChange(externalCheckedState, e);
+      // innerOnUIStateChange(externalCheckedState, e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
     onAction: executeAction,
     onStart: onActionStart,
     onAbort: (e) => {
-      innerOnUIStateChange(externalCheckedState, e);
+      // innerOnUIStateChange(externalCheckedState, e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      innerOnUIStateChange(externalCheckedState, e);
+      // innerOnUIStateChange(externalCheckedState, e);
       onActionError?.(e);
     },
     onEnd: (e) => {
@@ -327,8 +326,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
         {...rest}
         ref={innerRef}
         name={name}
-        checked={checkedState}
-        onUIStateChange={innerOnUIStateChange}
+        uiStateController={checkedUIStateController}
         data-action={boundAction.name}
         value={value}
         onChange={(e) => {
@@ -340,28 +338,24 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   );
 });
 const InputCheckboxInsideForm = forwardRef((props, ref) => {
-  const { id, name, value = "on", onCheckedChange, ...rest } = props;
+  const { id, name, value = "on", ...rest } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
-  const [checkedState, setCheckedState, externalCheckedState] =
-    useCheckedController(props, navState);
+  const checkedUIStateController = useCheckedController(props, navState);
   const [, setFormParam] = useOneFormParam(
     name,
-    checkedState ? value : undefined,
+    checkedUIStateController.uiState ? value : undefined,
   );
-
-  const innerOnUIStateChange = (uiCheckedState, e) => {
-    setCheckedState(uiCheckedState);
+  checkedUIStateController.onChange = (uiCheckedState) => {
     setFormParam(uiCheckedState ? value : undefined);
-    onCheckedChange?.(uiCheckedState, e);
-
-    if (externalCheckedState) {
+    if (checkedUIStateController.externalState) {
       setNavState(uiCheckedState ? undefined : false);
     } else {
       setNavState(uiCheckedState ? true : undefined);
     }
   };
+
   useFormEvents(innerRef, {
     onFormActionAbort: () => {
       // user might want to re-submit as is
@@ -387,8 +381,7 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       id={id}
       name={name}
-      checked={checkedState}
-      onUIStateChange={innerOnUIStateChange}
+      uiStateController={checkedUIStateController}
       value={value}
     />
   );
