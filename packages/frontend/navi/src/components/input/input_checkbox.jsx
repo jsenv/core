@@ -200,10 +200,6 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
       disabled={innerDisabled}
       required={innerRequired}
       data-validation-message-arrow-x="center"
-      style={{
-        ...rest.style,
-        ...(backgroundColor ? { "--checked-color": backgroundColor } : {}),
-      }}
       onClick={(e) => {
         if (readOnly) {
           e.preventDefault();
@@ -221,7 +217,9 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
 
   const inputCheckboxDisplayed =
     appeareance === "custom" ? (
-      <CustomCheckbox>{inputCheckbox}</CustomCheckbox>
+      <CustomCheckbox backgroundColor={backgroundColor}>
+        {inputCheckbox}
+      </CustomCheckbox>
     ) : (
       inputCheckbox
     );
@@ -237,9 +235,15 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
     </LoadableInlineElement>
   );
 });
-const CustomCheckbox = ({ children }) => {
+const CustomCheckbox = ({ backgroundColor, children }) => {
   return (
-    <div className="custom_checkbox_wrapper" data-field-wrapper="">
+    <div
+      className="custom_checkbox_wrapper"
+      data-field-wrapper=""
+      style={{
+        ...(backgroundColor ? { "--checked-color": backgroundColor } : {}),
+      }}
+    >
       {children}
       <div className="custom_checkbox">
         <svg viewBox="0 0 12 12" aria-hidden="true">
