@@ -23,7 +23,7 @@ import.meta.css = /* css */ `
     display: block;
     overflow: visible;
     height: auto;
-    position: fixed;
+    position: absolute;
     z-index: 1;
     opacity: 0;
     transition: opacity 0.2s ease-in-out;
