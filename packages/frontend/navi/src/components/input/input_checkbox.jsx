@@ -348,6 +348,10 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
   }
 
   useFormEvents(innerRef, {
+    onFormReset: (e) => {
+      e.preventDefault();
+      checkedUIStateController.resetUIState(e);
+    },
     onFormActionAbort: () => {
       // user might want to re-submit as is
       // or change the ui state before re-submitting
