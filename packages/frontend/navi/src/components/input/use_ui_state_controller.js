@@ -26,6 +26,7 @@ export const useUncontrolledValueProps = (props, componentType) => {
 };
 
 export const useCheckedController = (props, componentType, navState) => {
+  const { value = "on" } = props;
   return useUIStateController(
     props,
     {
@@ -33,7 +34,10 @@ export const useCheckedController = (props, componentType, navState) => {
       statePropName: "checked",
       defaultStatePropName: "defaultChecked",
       fallbackState: false,
-      mapStateValue: Boolean,
+      getStateFromProp: (checked) => {
+        return checked ? value : undefined;
+      },
+      getPropFromState: Boolean,
     },
     navState,
   );
@@ -84,7 +88,8 @@ const useUIStateController = (
     statePropName,
     defaultStatePropName,
     fallbackState,
-    mapStateValue,
+    getStateFromProp = (prop) => prop,
+    getPropFromState = (state) => state,
   },
   navState,
 ) => {
@@ -97,18 +102,18 @@ const useUIStateController = (
   const stateInitial = useInitialValue(() => {
     if (hasStateProp) {
       // controlled by state prop ("value" or "checked")
-      return mapStateValue ? mapStateValue(state) : state;
+      return getStateFromProp(state);
     }
     if (defaultState) {
       // not controlled but want an initial state (a value or being checked)
-      return mapStateValue ? mapStateValue(defaultState) : defaultState;
+      return getStateFromProp(defaultState);
     }
     if (navState) {
       // not controlled but want to use value from nav state
       // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
-      return mapStateValue ? mapStateValue(navState) : navState;
+      return getStateFromProp(navState);
     }
-    return mapStateValue ? mapStateValue(fallbackState) : fallbackState;
+    return getStateFromProp(fallbackState);
   });
   const stateInitialRef = useRef(stateInitial);
   const [uiState, _setUIState] = useState(stateInitial);
@@ -124,14 +129,23 @@ const useUIStateController = (
         (!groupUIStateController || groupUIStateController.readOnly),
       uiState,
       setUIState: (newUIState, e) => {
-        onUIStateChange?.(newUIState, e);
+        newUIState = getStateFromProp(newUIState);
+
+        uiStateController.uiState = newUIState;
         _setUIState(newUIState);
+        onUIStateChange?.(newUIState, e);
+        if (groupUIStateController) {
+          groupUIStateController.onChildUIStateChange(
+            uiStateController,
+            newUIState,
+            e,
+          );
+        }
       },
       resetUIState: () => {
-        uiStateController.setUIState(uiStateController.state);
+        uiStateController.setUIState(getPropFromState(uiStateController.state));
       },
     };
-
     if (groupUIStateController) {
       groupUIStateController.registerChild(uiStateController);
     }
@@ -139,7 +153,7 @@ const useUIStateController = (
     if (hasStateProp && state !== stateRef.current) {
       stateRef.current = state;
       stateInitialRef.current = state;
-      uiStateController.setUIState(state);
+      uiStateController.setUIState(getPropFromState(state));
     }
     uiStateController.state = stateInitialRef.current;
     return uiStateController;

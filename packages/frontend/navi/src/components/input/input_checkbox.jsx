@@ -156,7 +156,6 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   const {
     name,
     uiStateController,
-    value = "on",
     readOnly,
     disabled,
     required,
@@ -186,7 +185,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  const checked = uiStateController.uiState;
+  const checked = Boolean(uiStateController.uiState);
   const inputCheckbox = (
     <input
       {...rest}
@@ -194,7 +193,6 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
       type="checkbox"
       name={innerName}
       checked={checked}
-      value={value}
       data-readonly={innerReadOnly ? "" : undefined}
       disabled={innerDisabled}
       required={innerRequired}
@@ -265,8 +263,6 @@ const CustomCheckbox = ({ backgroundColor, children }) => {
 const InputCheckboxWithAction = forwardRef((props, ref) => {
   const {
     name,
-    value = "on",
-
     action,
     onCancel,
     onChange,
@@ -281,7 +277,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const checkedUIStateController = useCheckedController(props);
-  const actionValue = checkedUIStateController.uiState ? value : undefined;
+  const actionValue = checkedUIStateController.uiState;
   const [boundAction] = useActionBoundToOneParam(action, actionValue);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -323,7 +319,6 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
         name={name}
         uiStateController={checkedUIStateController}
         data-action={boundAction.name}
-        value={value}
         onChange={(e) => {
           requestAction(e.target, boundAction, { event: e });
           onChange?.(e);
@@ -333,12 +328,12 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   );
 });
 const InputCheckboxInsideForm = forwardRef((props, ref) => {
-  const { id, name, value = "on", ...rest } = props;
+  const { id, name, ...rest } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
   const checkedUIStateController = useCheckedController(props, navState);
-  const formParamValue = checkedUIStateController.uiState ? value : undefined;
+  const formParamValue = checkedUIStateController.uiState;
   useOneFormParam(name, formParamValue);
   if (checkedUIStateController.state) {
     setNavState(checkedUIStateController.uiState ? undefined : false);
@@ -372,7 +367,6 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
       id={id}
       name={name}
       uiStateController={checkedUIStateController}
-      value={value}
     />
   );
 });

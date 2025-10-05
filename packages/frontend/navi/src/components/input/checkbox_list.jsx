@@ -60,31 +60,7 @@ const useCheckboxListUIStateController = (props) => {
   const checkboxUIStateControllerArray =
     checkboxUIStateControllerArrayRef.current;
 
-  const checkboxListUIStateController = useMemo(() => {
-    checkboxUIStateControllerArray.length = 0;
-
-    const checkboxListUIStateController = {
-      componentType: "checkbox_list",
-      uiState,
-      setUIState: (newUIState, e) => {
-        groupOnUIStateChange?.(newUIState, e);
-        onUIStateChange?.(newUIState, e);
-        _setUIState(newUIState);
-      },
-      registerChild: (childUIStateController) => {
-        if (childUIStateController.componentType !== "checkbox") {
-          return;
-        }
-        // pour chaque enfant lorsqu'il change on apelle le onUIStateChange local
-        // normalement il faudrait regarder ce qu'on a deja et en déduire le truc global
-        // parce qu'on va recevoir la valeur de l'enfant
-        checkboxUIStateControllerArray.push(childUIStateController);
-      },
-    };
-    return checkboxListUIStateController;
-  }, []);
-
-  useLayoutEffect(() => {
+  const updateUIState = () => {
     const values = [];
     for (const checkboxUIStateController of checkboxUIStateControllerArray) {
       if (checkboxUIStateController.uiState) {
@@ -96,6 +72,42 @@ const useCheckboxListUIStateController = (props) => {
       return;
     }
     checkboxListUIStateController.setUIState(newUIState);
+  };
+
+  const checkboxListUIStateController = useMemo(() => {
+    checkboxUIStateControllerArray.length = 0;
+
+    const checkboxListUIStateController = {
+      componentType: "checkbox_list",
+      uiState,
+      setUIState: (newUIState, e) => {
+        groupOnUIStateChange?.(newUIState, e);
+        onUIStateChange?.(newUIState, e);
+        _setUIState(newUIState);
+      },
+      onChildUIStateChange: (childUIStateController) => {
+        if (childUIStateController.componentType !== "checkbox") {
+          return;
+        }
+        updateUIState();
+      },
+      registerChild: (childUIStateController) => {
+        if (childUIStateController.componentType !== "checkbox") {
+          return;
+        }
+        checkboxUIStateControllerArray.push(childUIStateController);
+      },
+      resetUIState: (e) => {
+        for (const checkboxUIStateController of checkboxUIStateControllerArray) {
+          checkboxUIStateController.resetUIState(e);
+        }
+      },
+    };
+    return checkboxListUIStateController;
+  }, []);
+
+  useLayoutEffect(() => {
+    updateUIState();
   }, []);
 
   return checkboxListUIStateController;
