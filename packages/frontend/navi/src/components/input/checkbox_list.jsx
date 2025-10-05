@@ -28,7 +28,10 @@ import {
 import { useActionEvents } from "../use_action_events.js";
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { useFormEvents } from "./use_form_events.js";
-import { useUIGroupStateController } from "./use_ui_state_controller.js";
+import {
+  useUIGroupStateController,
+  useUIState,
+} from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .navi_checkbox_list {
@@ -136,12 +139,9 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const checkboxListUIStateController = useCheckboxListUIStateController(props);
-  const checkboxListActionValue = checkboxListUIStateController.uiState;
-  const [boundAction] = useActionBoundToOneArrayParam(
-    action,
-    checkboxListActionValue,
-  );
+  const uiStateController = useCheckboxListUIStateController(props);
+  const uiState = useUIState(uiStateController);
+  const [boundAction] = useActionBoundToOneArrayParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
@@ -150,7 +150,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
 
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
-      checkboxListUIStateController.resetUIState(e);
+      uiStateController.resetUIState(e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -160,11 +160,11 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      checkboxListUIStateController.resetUIState(e);
+      uiStateController.resetUIState(e);
       onActionAbort?.(e);
     },
     onError: (e) => {
-      checkboxListUIStateController.resetUIState(e);
+      uiStateController.resetUIState(e);
       onActionError?.(e);
     },
     onEnd: (e) => {
@@ -177,7 +177,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       name={name}
-      uiStateController={checkboxListUIStateController}
+      uiStateController={uiStateController}
       data-action={boundAction.name}
       onChange={(event) => {
         const checkboxList = innerRef.current;
@@ -201,18 +201,15 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   const [navState, setNavState] = useNavState(id);
-  const checkboxListUIStateController = useCheckboxListUIStateController(
-    props,
-    navState,
-  );
-  const checkboxListUIState = checkboxListUIStateController.uiState;
-  useOneFormArrayParam(name, checkboxListUIState);
-  setNavState(checkboxListUIState);
+  const uiStateController = useCheckboxListUIStateController(props, navState);
+  const uiState = useUIState(uiStateController);
+  useOneFormArrayParam(name, uiState);
+  setNavState(uiState);
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
       e.preventDefault();
-      checkboxListUIStateController.resetUIState(e);
+      uiStateController.resetUIState(e);
     },
     onFormActionAbort: () => {},
     onFormActionError: () => {},
@@ -224,7 +221,7 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
       ref={innerRef}
       name={name}
       value={value}
-      uiStateController={checkboxListUIStateController}
+      uiStateController={uiStateController}
     >
       {/* <input type="checkbox" /> must not try to update the <form>
      The checkbox list is doing it with the array of checked values
