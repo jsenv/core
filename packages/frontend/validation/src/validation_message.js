@@ -519,6 +519,8 @@ const createValidationMessage = () => {
  * @param {HTMLElement} validationMessage - The validation message element
  * @param {HTMLElement} targetElement - The element the validation message should follow
  * @returns {Function} - Cleanup function to stop position tracking
+ *
+ * A bit like https://tetherjs.dev/ but different
  */
 const followPosition = (validationMessage, targetElement, { debug }) => {
   const cleanupCallbackSet = new Set();
@@ -893,6 +895,17 @@ const followPosition = (validationMessage, targetElement, { debug }) => {
     window.addEventListener("resize", handleResize);
     cleanupCallbackSet.add(() => {
       window.removeEventListener("resize", handleResize);
+    });
+  }
+
+  update_on_window_touchmove: {
+    const handleTouchmove = () => {
+      schedulePositionUpdate("window_touchmove");
+    };
+
+    window.addEventListener("touchmove", handleTouchmove);
+    cleanupCallbackSet.add(() => {
+      window.removeEventListener("touchmove", handleTouchmove);
     });
   }
 

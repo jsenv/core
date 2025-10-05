@@ -1,0 +1,514 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Validation Message Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(45deg, #f0f8ff, #e6f3ff);
+        min-height: 200vh; /* Make page scrollable */
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .section {
+        margin: 40px 0;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .target-element {
+        display: inline-block;
+        padding: 12px 20px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 10px;
+        font-size: 16px;
+      }
+
+      .target-element:hover {
+        background: #45a049;
+      }
+
+      .controls {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f5f5f5;
+        border-radius: 4px;
+      }
+
+      .controls button {
+        margin: 5px;
+        padding: 8px 16px;
+        background: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .controls button:hover {
+        background: #1976d2;
+      }
+
+      .wide-element {
+        width: 90%;
+        padding: 15px;
+        background: #ff9800;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+      }
+
+      .spacer {
+        height: 100px;
+        background: repeating-linear-gradient(
+          45deg,
+          transparent,
+          transparent 10px,
+          rgba(0, 0, 0, 0.1) 10px,
+          rgba(0, 0, 0, 0.1) 20px
+        );
+        margin: 20px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #666;
+        font-weight: bold;
+      }
+
+      .scroll-instruction {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #333;
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 14px;
+        z-index: 1000;
+      }
+
+      .edge-element {
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      .center-element {
+        display: block;
+        margin: 20px auto;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scroll-instruction">
+      Scroll to test validation message positioning
+    </div>
+
+    <div class="container">
+      <h1>Validation Message Demo</h1>
+      <p>
+        This demo shows how validation messages follow their target elements
+        during scrolling and resizing.
+      </p>
+
+      <div class="section">
+        <h2>Auto-opened Validation Message</h2>
+        <p>This validation message opens automatically when the page loads:</p>
+        <button id="auto-target" class="target-element">
+          Target Element (Auto-opened message)
+        </button>
+      </div>
+
+      <div class="controls">
+        <h3>Manual Controls</h3>
+        <button onclick="openErrorMessage()">Open Error Message</button>
+        <button onclick="openWarningMessage()">Open Warning Message</button>
+        <button onclick="openInfoMessage()">Open Info Message</button>
+        <button onclick="closeAllMessages()">Close All Messages</button>
+        <button onclick="updateMessage()">Update Message Content</button>
+      </div>
+
+      <div class="section">
+        <h2>Different Target Elements</h2>
+
+        <h3>Regular Button</h3>
+        <button id="regular-target" class="target-element">
+          Regular Target
+        </button>
+
+        <h3>Wide Element</h3>
+        <input
+          id="wide-target"
+          class="wide-element"
+          placeholder="This is a wide input element"
+        />
+
+        <h3>Edge Cases</h3>
+        <button
+          id="left-edge"
+          class="target-element edge-element"
+          style="margin-left: 0"
+        >
+          Left Edge Element
+        </button>
+        <button
+          id="right-edge"
+          class="target-element edge-element"
+          style="float: right; margin-right: 0"
+        >
+          Right Edge Element
+        </button>
+        <div style="clear: both"></div>
+
+        <h3>Centered Element</h3>
+        <button id="center-target" class="target-element center-element">
+          Centered Element
+        </button>
+      </div>
+
+      <div class="spacer">
+        Scroll Area 1 - Keep scrolling to test positioning
+      </div>
+
+      <div class="section">
+        <h2>Arrow Positioning Tests</h2>
+
+        <h3>Arrow at Center</h3>
+        <button
+          id="arrow-center"
+          class="target-element"
+          data-validation-message-arrow-x="center"
+        >
+          Arrow Points to Center
+        </button>
+
+        <h3>Arrow at Left (default)</h3>
+        <button id="arrow-left" class="target-element">
+          Arrow Points to Left Edge
+        </button>
+      </div>
+
+      <div class="spacer">Scroll Area 2 - More scrolling space</div>
+
+      <div class="section">
+        <h2>Message Levels</h2>
+        <button
+          id="error-target"
+          class="target-element"
+          style="background: #f44336"
+        >
+          Error Level Target
+        </button>
+        <button
+          id="warning-target"
+          class="target-element"
+          style="background: #ff9800"
+        >
+          Warning Level Target
+        </button>
+        <button
+          id="info-target"
+          class="target-element"
+          style="background: #2196f3"
+        >
+          Info Level Target
+        </button>
+      </div>
+
+      <div class="spacer">Scroll Area 3 - Bottom section</div>
+
+      <div class="section">
+        <h2>Dynamic Content Test</h2>
+        <button id="dynamic-target" class="target-element">
+          Dynamic Content Target
+        </button>
+        <div>
+          <button onclick="toggleElementSize()">Toggle Element Size</button>
+          <button onclick="addContentAbove()">Add Content Above</button>
+        </div>
+      </div>
+
+      <div
+        style="
+          height: 50vh;
+          background: #f0f0f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 40px;
+        "
+      >
+        <p>Bottom spacer - scroll back up to see validation messages</p>
+      </div>
+    </div>
+
+    <script type="module">
+      import { openValidationMessage } from "../src/validation_message.js";
+
+      let currentMessages = new Map();
+
+      // Auto-open validation message on page load
+      window.addEventListener("load", () => {
+        const autoTarget = document.getElementById("auto-target");
+        const message = openValidationMessage(
+          autoTarget,
+          "This validation message was opened automatically when the page loaded. <strong>Try scrolling</strong> to see how it follows the target element!",
+          {
+            level: "warning",
+            debug: true,
+            onClose: () => {
+              console.log("Auto-opened validation message was closed");
+              currentMessages.delete("auto");
+            },
+          },
+        );
+        currentMessages.set("auto", message);
+      });
+
+      // Manual control functions
+      window.openErrorMessage = () => {
+        const target = document.getElementById("regular-target");
+        closeMessage("error");
+        const message = openValidationMessage(
+          target,
+          "This is an <strong>error message</strong>. It requires explicit closing by the user and will not close on focus.",
+          {
+            level: "error",
+            debug: true,
+            onClose: () => {
+              console.log("Error message closed");
+              currentMessages.delete("error");
+            },
+          },
+        );
+        currentMessages.set("error", message);
+      };
+
+      window.openWarningMessage = () => {
+        const target = document.getElementById("warning-target");
+        closeMessage("warning");
+        const message = openValidationMessage(
+          target,
+          "This is a warning message with some longer content to test how the validation message handles text wrapping and positioning with multiple lines of content.",
+          {
+            level: "warning",
+            debug: true,
+            onClose: () => {
+              console.log("Warning message closed");
+              currentMessages.delete("warning");
+            },
+          },
+        );
+        currentMessages.set("warning", message);
+      };
+
+      window.openInfoMessage = () => {
+        const target = document.getElementById("info-target");
+        closeMessage("info");
+        const message = openValidationMessage(
+          target,
+          "This is an info message. It can be clicked through and closes automatically when clicking outside.",
+          {
+            level: "info",
+            debug: true,
+            onClose: () => {
+              console.log("Info message closed");
+              currentMessages.delete("info");
+            },
+          },
+        );
+        currentMessages.set("info", message);
+      };
+
+      window.closeAllMessages = () => {
+        for (const [, message] of currentMessages.entries()) {
+          message.close("manual_close_all");
+        }
+        currentMessages.clear();
+      };
+
+      window.updateMessage = () => {
+        const autoMessage = currentMessages.get("auto");
+        if (autoMessage) {
+          autoMessage.update(
+            "Updated message content! The message content has been changed dynamically. <em>Scroll to test the updated positioning.</em>",
+            { level: "info" },
+          );
+        } else {
+          console.log("No auto message is currently open to update");
+        }
+      };
+
+      const closeMessage = (key) => {
+        const message = currentMessages.get(key);
+        if (message) {
+          message.close("manual_close");
+          currentMessages.delete(key);
+        }
+      };
+
+      // Dynamic content functions
+      let elementSizeToggled = false;
+      window.toggleElementSize = () => {
+        const target = document.getElementById("dynamic-target");
+        if (elementSizeToggled) {
+          target.style.padding = "12px 20px";
+          target.style.fontSize = "16px";
+          target.textContent = "Dynamic Content Target";
+        } else {
+          target.style.padding = "20px 40px";
+          target.style.fontSize = "20px";
+          target.textContent = "Large Dynamic Content Target with More Text";
+        }
+        elementSizeToggled = !elementSizeToggled;
+
+        // Open a message on this element if none exists
+        if (!currentMessages.has("dynamic")) {
+          const message = openValidationMessage(
+            target,
+            "This message will follow the target element even when its size changes.",
+            {
+              level: "warning",
+              debug: true,
+              onClose: () => {
+                currentMessages.delete("dynamic");
+              },
+            },
+          );
+          currentMessages.set("dynamic", message);
+        }
+      };
+
+      let contentCounter = 0;
+      window.addContentAbove = () => {
+        contentCounter++;
+        const dynamicSection = document
+          .getElementById("dynamic-target")
+          .closest(".section");
+        const newContent = document.createElement("div");
+        newContent.style.cssText =
+          "padding: 20px; background: #e3f2fd; margin: 10px 0; border-radius: 4px;";
+        newContent.innerHTML = `<p>Dynamically added content #${contentCounter}. This pushes the target element down and the validation message should follow.</p>`;
+        dynamicSection.insertBefore(
+          newContent,
+          dynamicSection.firstElementChild.nextElementSibling,
+        );
+      };
+
+      // Test different arrow positions on click
+      document.getElementById("arrow-center").addEventListener("click", () => {
+        closeMessage("arrow-center");
+        const message = openValidationMessage(
+          document.getElementById("arrow-center"),
+          "Arrow points to the center of this element.",
+          {
+            level: "info",
+            debug: true,
+            onClose: () => currentMessages.delete("arrow-center"),
+          },
+        );
+        currentMessages.set("arrow-center", message);
+      });
+
+      document.getElementById("arrow-left").addEventListener("click", () => {
+        closeMessage("arrow-left");
+        const message = openValidationMessage(
+          document.getElementById("arrow-left"),
+          "Arrow points to the left edge of this element (default behavior).",
+          {
+            level: "info",
+            debug: true,
+            onClose: () => currentMessages.delete("arrow-left"),
+          },
+        );
+        currentMessages.set("arrow-left", message);
+      });
+
+      // Edge element tests
+      document.getElementById("left-edge").addEventListener("click", () => {
+        closeMessage("left-edge");
+        const message = openValidationMessage(
+          document.getElementById("left-edge"),
+          "This element is at the left edge. The validation message should position correctly.",
+          {
+            level: "warning",
+            debug: true,
+            onClose: () => currentMessages.delete("left-edge"),
+          },
+        );
+        currentMessages.set("left-edge", message);
+      });
+
+      document.getElementById("right-edge").addEventListener("click", () => {
+        closeMessage("right-edge");
+        const message = openValidationMessage(
+          document.getElementById("right-edge"),
+          "This element is at the right edge. The validation message should adjust its position.",
+          {
+            level: "warning",
+            debug: true,
+            onClose: () => currentMessages.delete("right-edge"),
+          },
+        );
+        currentMessages.set("right-edge", message);
+      });
+
+      document.getElementById("center-target").addEventListener("click", () => {
+        closeMessage("center");
+        const message = openValidationMessage(
+          document.getElementById("center-target"),
+          "This element is centered. The validation message should center itself relative to the element.",
+          {
+            level: "info",
+            debug: true,
+            onClose: () => currentMessages.delete("center"),
+          },
+        );
+        currentMessages.set("center", message);
+      });
+
+      document.getElementById("wide-target").addEventListener("focus", () => {
+        closeMessage("wide");
+        const message = openValidationMessage(
+          document.getElementById("wide-target"),
+          "This is a wide element. The validation message should handle wide target elements properly.",
+          {
+            level: "warning",
+            debug: true,
+            onClose: () => currentMessages.delete("wide"),
+          },
+        );
+        currentMessages.set("wide", message);
+      });
+
+      // Log scroll events for debugging
+      let scrollTimeout;
+      window.addEventListener("scroll", () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          console.log("Scroll ended at position:", window.scrollY);
+        }, 100);
+      });
+
+      console.log(
+        "Validation message demo loaded. Check console for debug output.",
+      );
+    </script>
+  </body>
+</html>
