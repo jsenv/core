@@ -121,6 +121,31 @@
         margin: 20px 0;
         color: #856404;
       }
+
+      .scrollable-container {
+        height: 300px;
+        width: 100%;
+        overflow: auto;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        background: #fff5f5;
+        padding: 20px;
+      }
+
+      .scrollable-content {
+        height: 600px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        align-items: center;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 30px,
+          rgba(255, 0, 0, 0.1) 30px,
+          rgba(255, 0, 0, 0.1) 60px
+        );
+      }
     </style>
   </head>
   <body>
@@ -145,9 +170,21 @@
           This simple validation message opens automatically and uses Tether for
           positioning:
         </p>
-        <button id="auto-target" class="target-element">
-          Target Element (Tether-positioned message)
-        </button>
+        <p>
+          <strong
+            >Scroll inside the container below to test Tether positioning within
+            a scrollable parent:</strong
+          >
+        </p>
+        <div class="scrollable-container">
+          <div class="scrollable-content">
+            <div>Top of scrollable area</div>
+            <button id="auto-target" class="target-element">
+              Target Element (Tether-positioned message)
+            </button>
+            <div>Bottom of scrollable area</div>
+          </div>
+        </div>
       </div>
 
       <div class="spacer">

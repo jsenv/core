@@ -72,6 +72,31 @@
         font-size: 14px;
         z-index: 1000;
       }
+
+      .scrollable-container {
+        height: 300px;
+        width: 100%;
+        overflow: auto;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        background: #f9f9f9;
+        padding: 20px;
+      }
+
+      .scrollable-content {
+        height: 600px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        align-items: center;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 30px,
+          rgba(0, 0, 255, 0.1) 30px,
+          rgba(0, 0, 255, 0.1) 60px
+        );
+      }
     </style>
   </head>
   <body>
@@ -89,9 +114,21 @@
       <div class="section">
         <h2>Auto-opened Validation Message</h2>
         <p>This validation message opens automatically when the page loads:</p>
-        <button id="auto-target" class="target-element">
-          Target Element (Auto-opened message)
-        </button>
+        <p>
+          <strong
+            >Scroll inside the container below to test positioning within a
+            scrollable parent:</strong
+          >
+        </p>
+        <div class="scrollable-container">
+          <div class="scrollable-content">
+            <div>Top of scrollable area</div>
+            <button id="auto-target" class="target-element">
+              Target Element (Auto-opened message)
+            </button>
+            <div>Bottom of scrollable area</div>
+          </div>
+        </div>
       </div>
 
       <div class="spacer">
