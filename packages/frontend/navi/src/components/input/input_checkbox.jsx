@@ -167,6 +167,7 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
     autoFocus,
     constraints = [],
     appeareance = "custom", // "custom" or "default"
+    backgroundColor,
     onClick,
     onInput,
     ...rest
@@ -199,6 +200,10 @@ const InputCheckboxControlled = forwardRef((props, ref) => {
       disabled={innerDisabled}
       required={innerRequired}
       data-validation-message-arrow-x="center"
+      style={{
+        ...rest.style,
+        ...(backgroundColor ? { "--checked-color": backgroundColor } : {}),
+      }}
       onClick={(e) => {
         if (readOnly) {
           e.preventDefault();

@@ -156,6 +156,19 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        const [checkboxBackgroundColor, setCheckboxBackgroundColor] = useState("default");
+
+        const getBackgroundColor = () => {
+          switch (checkboxBackgroundColor) {
+            case "red":
+              return "#ff6b6b";
+            case "green":
+              return "#51cf66";
+            default:
+              return undefined; // Use default styling
+          }
+        };
+
         return (
           <>
             <div className="demo-card" style={{ marginBottom: "30px" }}>
@@ -164,6 +177,25 @@
                 This demo showcases different ways to use the Input component
                 with checkboxes.
               </p>
+              
+              <div className="control-group" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                <label>
+                  <strong>Global Checkbox Background Color:</strong>
+                  <select 
+                    value={checkboxBackgroundColor} 
+                    onChange={(e) => setCheckboxBackgroundColor(e.target.value)}
+                    style={{ marginLeft: '10px', padding: '5px 10px', borderRadius: '4px', border: '1px solid #ccc' }}
+                  >
+                    <option value="default">Default</option>
+                    <option value="red">Red</option>
+                    <option value="green">Green</option>
+                  </select>
+                </label>
+                <p style={{ fontSize: '14px', color: '#666', margin: '8px 0 0 0' }}>
+                  This affects all checkboxes below and demonstrates that background color changes don't affect checked state.
+                </p>
+              </div>
+
               <nav>
                 <h3>Sections:</h3>
                 <ul style={{ marginLeft: "20px" }}>
@@ -188,32 +220,32 @@
 
             <h2 id="basic-checkboxes">1. Basic Checkbox (no action/no form)</h2>
             <div className="demo-grid">
-              <CheckboxDemo />
-              <CheckboxDefaultCheckedDemo />
+              <CheckboxDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxDefaultCheckedDemo backgroundColor={getBackgroundColor()} />
             </div>
 
             <h2 id="checkbox-actions">2. Checkbox with Actions</h2>
             <div className="demo-grid">
-              <CheckboxActionDemo />
-              <CheckboxActionDefaultCheckedDemo />
-              <CheckboxActionControlledDemo />
-              <CheckboxActionErrorDemo />
-              <CheckboxActionErrorDefaultCheckedDemo />
-              <CheckboxActionErrorOnUncheckedDemo />
-              <CheckboxActionControlledErrorDemo />
-              <CheckboxActionObjectDemo />
+              <CheckboxActionDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxActionDefaultCheckedDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxActionControlledDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxActionErrorDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxActionErrorDefaultCheckedDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxActionErrorOnUncheckedDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxActionControlledErrorDemo backgroundColor={getBackgroundColor()} />
+              <CheckboxActionObjectDemo backgroundColor={getBackgroundColor()} />
             </div>
 
             <h2 id="checkbox-forms">3. Checkbox inside Form</h2>
             <div className="demo-grid">
-              <CheckboxFormControlledErrorDemo />
+              <CheckboxFormControlledErrorDemo backgroundColor={getBackgroundColor()} />
             </div>
           </>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
-      const CheckboxDemo = () => {
+      const CheckboxDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status] = useState("idle");
 
@@ -226,6 +258,7 @@
                   <Input
                     type="checkbox"
                     name="enabled"
+                    backgroundColor={backgroundColor}
                     onUIStateChange={(checked) => {
                       setResult(checked ? "checked" : "unchecked");
                     }}
@@ -243,7 +276,7 @@
         );
       };
       // eslint-disable-next-line no-unused-vars
-      const CheckboxDefaultCheckedDemo = () => {
+      const CheckboxDefaultCheckedDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status] = useState("idle");
 
@@ -257,6 +290,7 @@
                     type="checkbox"
                     name="enabled"
                     defaultChecked
+                    backgroundColor={backgroundColor}
                     onUIStateChange={(checked) => {
                       setResult(checked ? "checked" : "unchecked");
                     }}
@@ -274,7 +308,7 @@
         );
       };
       // eslint-disable-next-line no-unused-vars
-      const CheckboxActionDemo = () => {
+      const CheckboxActionDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
 
@@ -287,6 +321,7 @@
                   <Input
                     type="checkbox"
                     name="enabled"
+                    backgroundColor={backgroundColor}
                     action={async (enabled) => {
                       setStatus("loading");
                       setResult("Processing...");
@@ -317,7 +352,7 @@
         );
       };
       // eslint-disable-next-line no-unused-vars
-      const CheckboxActionDefaultCheckedDemo = () => {
+      const CheckboxActionDefaultCheckedDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
 
         return (
@@ -332,6 +367,7 @@
                     type="checkbox"
                     name="agreed"
                     defaultChecked
+                    backgroundColor={backgroundColor}
                     action={async (agreed) => {
                       setResult("Processing...");
                       await delay(800);
@@ -353,7 +389,7 @@
         );
       };
       // eslint-disable-next-line no-unused-vars
-      const CheckboxActionControlledDemo = () => {
+      const CheckboxActionControlledDemo = ({ backgroundColor }) => {
         const [checked, setChecked] = useState(undefined);
         const [result, setResult] = useState("");
 
@@ -371,6 +407,7 @@
                     type="checkbox"
                     name="notifications"
                     checked={checked}
+                    backgroundColor={backgroundColor}
                     action={async (notifications) => {
                       setResult("Processing...");
                       await delay(600);
@@ -424,7 +461,7 @@
         );
       };
       // eslint-disable-next-line no-unused-vars
-      const CheckboxActionErrorDemo = () => {
+      const CheckboxActionErrorDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
 
@@ -437,6 +474,7 @@
                   <Input
                     type="checkbox"
                     name="dangerous"
+                    backgroundColor={backgroundColor}
                     action={async (dangerous) => {
                       setStatus("loading");
                       setResult("Processing...");
@@ -466,7 +504,7 @@
         );
       };
       // eslint-disable-next-line no-unused-vars
-      const CheckboxActionErrorDefaultCheckedDemo = () => {
+      const CheckboxActionErrorDefaultCheckedDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
 
@@ -482,6 +520,7 @@
                   type="checkbox"
                   name="risky"
                   defaultChecked
+                  backgroundColor={backgroundColor}
                   action={async (risky) => {
                     setStatus("loading");
                     setResult("Processing...");
@@ -514,7 +553,7 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const CheckboxActionErrorOnUncheckedDemo = () => {
+      const CheckboxActionErrorOnUncheckedDemo = ({ backgroundColor }) => {
         // for this example the checkbox is going to be controlled because that's how you would
         // implement it in a real world scenario:
         // the fact checkbox is checked comes from a backend so when the operation succeeds
@@ -536,6 +575,7 @@
                     type="checkbox"
                     name="protection"
                     checked={checked}
+                    backgroundColor={backgroundColor}
                     action={async (protection) => {
                       setStatus("loading");
                       setResult("Processing...");
@@ -574,7 +614,7 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const CheckboxActionControlledErrorDemo = () => {
+      const CheckboxActionControlledErrorDemo = ({ backgroundColor }) => {
         const [checked, setChecked] = useState(false);
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
@@ -591,6 +631,7 @@
                     type="checkbox"
                     name="experimental"
                     checked={checked}
+                    backgroundColor={backgroundColor}
                     action={async (experimental) => {
                       setStatus("loading");
                       setResult("Processing...");
@@ -662,7 +703,7 @@
         return `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
       });
       // eslint-disable-next-line no-unused-vars
-      const CheckboxActionObjectDemo = () => {
+      const CheckboxActionObjectDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
 
         return (
@@ -674,6 +715,7 @@
                   <Input
                     type="checkbox"
                     name="notifications"
+                    backgroundColor={backgroundColor}
                     action={(notifications) => {
                       return toggleAction({ notifications });
                     }}
@@ -698,7 +740,7 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const CheckboxFormControlledErrorDemo = () => {
+      const CheckboxFormControlledErrorDemo = ({ backgroundColor }) => {
         const [agreed, setAgreed] = useState(true);
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
@@ -741,7 +783,12 @@
               <div className="control-group">
                 <div className="checkbox-group">
                   <label>
-                    <Input type="checkbox" name="terms" checked={agreed} />
+                    <Input 
+                      type="checkbox" 
+                      name="terms" 
+                      checked={agreed} 
+                      backgroundColor={backgroundColor}
+                    />
                     <span
                       className={`status-indicator status-${status}`}
                     ></span>
