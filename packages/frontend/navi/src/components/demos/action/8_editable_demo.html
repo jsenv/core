@@ -158,7 +158,7 @@
       import { signal } from "@preact/signals";
       import { SINGLE_SPACE_CONSTRAINT } from "@jsenv/validation";
       import {
-        useEditableController,
+        useEditionController,
         // eslint-disable-next-line no-unused-vars
         Editable,
         createAction,
@@ -179,7 +179,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const BasicDemo = () => {
-        const { editable, startEditing, stopEditing } = useEditableController();
+        const { editing, startEditing, stopEditing } = useEditionController();
         const [value, setValue] = useState("Click edit to change this text");
         const [result, setResult] = useState("");
 
@@ -190,7 +190,7 @@
               <label>Editable Content:</label>
               <div className="editable-container">
                 <Editable
-                  editable={editable}
+                  editing={editing}
                   onEditEnd={() => {
                     stopEditing();
                     setResult(``);
@@ -206,8 +206,8 @@
               </div>
             </div>
             <div className="button-group">
-              <button onClick={() => startEditing()} disabled={editable}>
-                {editable ? "Editing..." : "Start Editing"}
+              <button onClick={() => startEditing()} disabled={editing}>
+                {editing ? "Editing..." : "Start Editing"}
               </button>
             </div>
             <div
@@ -223,7 +223,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const LoadingDemo = () => {
-        const { editable, startEditing, stopEditing } = useEditableController();
+        const { editing, startEditing, stopEditing } = useEditionController();
         const [value, setValue] = useState("This will take 2 seconds to save");
         const [result, setResult] = useState("");
         const [isLoading, setIsLoading] = useState(false);
@@ -235,7 +235,7 @@
               <label>Editable Content (2s delay):</label>
               <div className="editable-container">
                 <Editable
-                  editable={editable}
+                  editing={editing}
                   onEditEnd={() => {
                     stopEditing();
                     setIsLoading(false);
@@ -257,11 +257,11 @@
             <div className="button-group">
               <button
                 onClick={() => startEditing()}
-                disabled={editable || isLoading}
+                disabled={editing || isLoading}
               >
                 {isLoading
                   ? "Saving..."
-                  : editable
+                  : editing
                     ? "Editing..."
                     : "Start Editing"}
               </button>
@@ -279,7 +279,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const ErrorDemo = () => {
-        const { editable, startEditing, stopEditing } = useEditableController();
+        const { editing, startEditing, stopEditing } = useEditionController();
         const [value] = useState("This edit will always fail");
         const [result, setResult] = useState("");
 
@@ -290,7 +290,7 @@
               <label>Editable Content (always fails):</label>
               <div className="editable-container">
                 <Editable
-                  editable={editable}
+                  editing={editing}
                   onEditEnd={() => {
                     stopEditing();
                     setResult("");
@@ -307,8 +307,8 @@
               </div>
             </div>
             <div className="button-group">
-              <button onClick={() => startEditing()} disabled={editable}>
-                {editable ? "Editing..." : "Start Editing (Will Fail)"}
+              <button onClick={() => startEditing()} disabled={editing}>
+                {editing ? "Editing..." : "Start Editing (Will Fail)"}
               </button>
             </div>
             <div
@@ -324,7 +324,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const CustomStyleDemo = () => {
-        const { editable, startEditing, stopEditing } = useEditableController();
+        const { editing, startEditing, stopEditing } = useEditionController();
         const [value, setValue] = useState("Bold styled text");
         const [result, setResult] = useState("");
 
@@ -335,7 +335,7 @@
               <label>Styled Editable Content:</label>
               <div className="editable-container">
                 <Editable
-                  editable={editable}
+                  editing={editing}
                   onEditEnd={() => {
                     stopEditing();
                     setResult("");
@@ -355,8 +355,8 @@
               </div>
             </div>
             <div className="button-group">
-              <button onClick={() => startEditing()} disabled={editable}>
-                {editable ? "Editing..." : "Start Editing"}
+              <button onClick={() => startEditing()} disabled={editing}>
+                {editing ? "Editing..." : "Start Editing"}
               </button>
             </div>
             <div
@@ -381,7 +381,7 @@
       // eslint-disable-next-line no-unused-vars
       const SignalControlDemo = () => {
         const [result, setResult] = useState("");
-        const { editable, startEditing, stopEditing } = useEditableController();
+        const { editing, startEditing, stopEditing } = useEditionController();
 
         return (
           <div className="demo-card">
@@ -390,7 +390,7 @@
               <label>Signal-Controlled Content:</label>
               <div className="editable-container">
                 <Editable
-                  editable={editable}
+                  editing={editing}
                   onEditEnd={() => {
                     stopEditing();
                     setResult("");
