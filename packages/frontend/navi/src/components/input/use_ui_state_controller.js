@@ -11,8 +11,8 @@ import { useStableCallback } from "../use_stable_callback.js";
 export const UIStateControllerContext = createContext();
 export const UIStateContext = createContext();
 
-const DEBUG_UI_STATE_CONTROLLER = true;
-const DEBUG_UI_GROUP_STATE_CONTROLLER = true;
+const DEBUG_UI_STATE_CONTROLLER = false;
+const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
 const debugUIState = (...args) => {
   if (DEBUG_UI_STATE_CONTROLLER) {
     console.debug(...args);
@@ -169,9 +169,6 @@ export const useUIStateController = (
       }
       const currentUIState = uiStateRef.current;
       if (newUIState === currentUIState) {
-        debugUIState(
-          `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> ignored (state is the same)`,
-        );
         return;
       }
       debugUIState(
@@ -331,9 +328,6 @@ export const useUIGroupStateController = (
     setUIState: (newUIState, e) => {
       const currentUIState = uiStateRef.current;
       if (newUIState === currentUIState) {
-        debugUIGroup(
-          `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> ignored (state is the same)`,
-        );
         return;
       }
       uiGroupStateController.uiState = newUIState;

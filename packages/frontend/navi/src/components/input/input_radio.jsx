@@ -1,6 +1,11 @@
 import { useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+import {
+  useContext,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
 
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
@@ -257,6 +262,31 @@ const InputRadioBasic = forwardRef((props, ref) => {
     delete rest["data-action"];
   }
 
+  // we must first dispatch an event to inform all other radios they where unchecked
+  // this way each other radio uiStateController knows thery are unchecked
+  // we do this on "input"
+  // but also when we are becoming checked from outside (hence the useLayoutEffect)
+  const updateOtherRadiosInGroup = () => {
+    const thisRadio = innerRef.current;
+    const radioList = thisRadio.closest("[data-radio-list]");
+    const radioInputs = radioList.querySelectorAll(
+      `input[type="radio"][name="${thisRadio.name}"]`,
+    );
+    for (const radioInput of radioInputs) {
+      if (radioInput === thisRadio) {
+        continue;
+      }
+      radioInput.dispatchEvent(
+        new CustomEvent("setuistate", { detail: false }),
+      );
+    }
+  };
+  useLayoutEffect(() => {
+    if (checked) {
+      updateOtherRadiosInGroup();
+    }
+  }, [checked]);
+
   const inputRadio = (
     <input
       {...rest}
@@ -277,6 +307,9 @@ const InputRadioBasic = forwardRef((props, ref) => {
       onInput={(e) => {
         const radio = e.target;
         const radioIsChecked = radio.checked;
+        if (radioIsChecked) {
+          updateOtherRadiosInGroup();
+        }
         uiStateController.setUIState(radioIsChecked, e);
         onInput?.(e);
       }}

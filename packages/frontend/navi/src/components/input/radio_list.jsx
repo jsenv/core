@@ -92,6 +92,7 @@ const RadioListBasic = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       className="navi_radio_list"
+      data-radio-list
       // eslint-disable-next-line react/no-unknown-property
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
