@@ -4,11 +4,11 @@ The UI State Controller solves a fundamental problem in web applications: managi
 
 ## The Problem
 
-Traditional form handling creates challenges:
+Traditional approaches have limitations:
 
-1. **Slow feedback** - waiting for server responses makes UI feel sluggish
-2. **Error handling** - what happens when an action fails after the user sees the change?
-3. **Form coordination** - how do multiple inputs work together?
+1. **React limitations** - No built-in way to revert UI state back to external state when needed
+2. **Form limitations** - Regular forms can't do immediate server calls (like PATCH) for instant feedback
+3. **UX trade-offs** - You're forced to choose between immediate feedback OR traditional form workflow
 
 ## The Solution
 
@@ -56,11 +56,11 @@ const [savedValue, setSavedValue] = useState(false);
 For traditional form workflows where users control submission:
 
 ```jsx
-const submitForm = async (formData) => {
-  const response = await fetch("/api/user/settings", {
-    method: "POST",
+const submitForm = async ({ consent }) => {
+  const response = await fetch("/api/user/consent", {
+    method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(formData),
+    body: JSON.stringify(consent),
   });
 
   if (!response.ok) {
@@ -69,15 +69,15 @@ const submitForm = async (formData) => {
 
   // Update your app state here
   const result = await response.json();
-  updateUserSettings(result);
+  updateUserConsent(result);
 };
 
-<form action={submitForm}>
-  <InputCheckbox name="notifications" value="email" />
-  <InputCheckbox name="notifications" value="sms" />
+<Form action={submitForm}>
+  <InputCheckbox name="consent" />
+
   <button type="submit">Save Settings</button>
   <button type="reset">Reset Form</button>
-</form>;
+</Form>;
 ```
 
 **Key differences:**
@@ -89,9 +89,27 @@ const submitForm = async (formData) => {
 
 **Use when:** You want traditional form behavior with user control over submission.
 
-## Practical Example: Tracking State Changes
+## When to Use Each Pattern
 
-Here's how you might use `onUIStateChange` to show what would be submitted/reset (like in our demo):
+### Use Action Pattern When:
+
+- Building interactive dashboards or real-time interfaces
+- Each change should be immediately persisted
+- You want automatic error recovery
+- User expects instant feedback
+
+### Use Form Pattern When:
+
+- Building traditional forms with submit/reset workflow
+- Users need to make multiple changes before saving
+- You want standard form validation behavior
+- Users should control when changes are persisted
+
+## Advanced APIs
+
+### Tracking State Changes
+
+Use `onUIStateChange` to track what the user has selected (like in our demo). This can be useful for showing what would be submitted/reset, though it's not always needed:
 
 ```jsx
 const [colorChoices, setColorChoices] = useState([
@@ -112,9 +130,9 @@ const [uiSelectedColors, setUiSelectedColors] = useState(selectedColors);
   <CheckboxList
     name="colors"
     onUIStateChange={(colors) => {
-      // Track what user has selected for internal logic
+      // Track what user has selected
       setUiSelectedColors(colors);
-      // Don't usually show this in UI - it's for developer use
+      // Can be used for UI feedback or internal logic
     }}
   >
     {colorChoices.map(({ id, color }) => (
@@ -129,24 +147,6 @@ const [uiSelectedColors, setUiSelectedColors] = useState(selectedColors);
   <button type="reset">Reset to saved ({selectedColors.join(", ")})</button>
 </form>;
 ```
-
-## When to Use Each Pattern
-
-### Use Action Pattern When:
-
-- Building interactive dashboards or real-time interfaces
-- Each change should be immediately persisted
-- You want automatic error recovery
-- User expects instant feedback
-
-### Use Form Pattern When:
-
-- Building traditional forms with submit/reset workflow
-- Users need to make multiple changes before saving
-- You want standard form validation behavior
-- Users should control when changes are persisted
-
-## Advanced APIs
 
 ### External Control via Custom Events
 
