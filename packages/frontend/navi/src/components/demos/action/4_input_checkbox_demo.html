@@ -630,9 +630,10 @@
 
       // eslint-disable-next-line no-unused-vars
       const CheckboxFormControlledErrorDemo = ({ backgroundColor }) => {
-        const [agreed, setAgreed] = useState(true);
+        const [checked, setChecked] = useState(true);
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
+        const ref = useRef();
 
         return (
           <div className="demo-card">
@@ -657,7 +658,7 @@
                       "You must agree to the terms and conditions to proceed",
                     );
                   }
-                  setAgreed(Boolean(terms));
+                  setChecked(Boolean(terms));
                   const response = "✅ Form submitted successfully!";
                   setResult(response);
                   setStatus("success");
@@ -673,9 +674,10 @@
                 <div className="checkbox-group">
                   <label>
                     <Input
+                      ref={ref}
                       type="checkbox"
                       name="terms"
-                      checked={agreed}
+                      checked={checked}
                       accentColor={backgroundColor}
                     />
                     <span
@@ -690,7 +692,11 @@
                 <button
                   type="button"
                   onClick={() => {
-                    setAgreed(true);
+                    ref.current.dispatchEvent(
+                      new CustomEvent("setuistate", {
+                        detail: { value: true },
+                      }),
+                    );
                   }}
                 >
                   Accept Terms
@@ -698,7 +704,11 @@
                 <button
                   type="button"
                   onClick={() => {
-                    setAgreed(false);
+                    ref.current.dispatchEvent(
+                      new CustomEvent("setuistate", {
+                        detail: { value: false },
+                      }),
+                    );
                   }}
                 >
                   Decline Terms
@@ -708,7 +718,7 @@
             <div
               className={`result-display ${status === "loading" ? "result-loading" : status === "success" ? "result-success" : status === "error" ? "result-error" : ""}`}
             >
-              Terms agreed: {agreed ? "Yes" : "No"}
+              Terms agreed: {checked ? "Yes" : "No"}
               <br />
               {result ||
                 "Fill out the form - frontend will simulate backend submission rejected when terms not agreed..."}

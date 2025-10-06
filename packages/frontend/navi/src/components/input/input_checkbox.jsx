@@ -222,6 +222,10 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
       }}
+      // eslint-disable-next-line react/no-unknown-property
+      onsetuistate={(e) => {
+        uiStateController.setUIState(e.detail.value, e);
+      }}
     />
   );
 
