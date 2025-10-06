@@ -48,7 +48,17 @@ import { useFormEvents } from "./use_form_events.js";
 import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
 
 export const InputTextual = forwardRef((props, ref) => {
-  const uiStateController = useUIStateController(props, "input");
+  const { type } = props;
+  const uiStateController = useUIStateController(props, "input", {
+    getStateFromProp:
+      type === "datetime-local"
+        ? (prop) => convertToLocalTimezone(prop)
+        : undefined,
+    getPropFromState:
+      type === "datetime-local"
+        ? (state) => convertToUTCTimezone(state)
+        : undefined,
+  });
 
   return renderActionableComponent({ uiStateController, ...props }, ref, {
     Basic: InputTextualBasic,
@@ -61,7 +71,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const {
     uiStateController,
     type,
-    value,
     onInput,
 
     readOnly,
@@ -84,10 +93,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const uiState = uiStateController.useUIState(uiStateController);
-  let innerValue = uiState;
-  if (type === "datetime-local") {
-    innerValue = convertToLocalTimezone(innerValue);
-  }
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
@@ -107,20 +112,15 @@ const InputTextualBasic = forwardRef((props, ref) => {
     <input
       ref={innerRef}
       type={type}
-      value={innerValue}
-      data-value={value}
+      value={uiState}
       data-field=""
       data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
       readOnly={innerReadOnly}
       disabled={innerDisabled}
       onInput={(e) => {
-        const inputValueRaw =
-          type === "number" ? e.target.valueAsNumber : e.target.value;
         const inputValue =
-          type === "datetime-local"
-            ? convertToUTCTimezone(inputValueRaw)
-            : inputValueRaw;
+          type === "number" ? e.target.valueAsNumber : e.target.value;
         uiStateController.setUIState(inputValue, e);
         onInput?.(e);
       }}
@@ -141,10 +141,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
 const InputTextualWithAction = forwardRef((props, ref) => {
   const {
     uiStateController,
-    id,
-    type,
-
-    name,
     action,
 
     onCancel,
@@ -223,9 +219,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       <InputTextualBasic
         {...rest}
         ref={innerRef}
-        type={type}
-        id={id}
-        name={name}
+        uiStateController={uiStateController}
         data-action={boundAction.name}
         onInput={(e) => {
           valueAtInteractionRef.current = null;
@@ -250,8 +244,7 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   );
 });
 const InputTextualInsideForm = forwardRef((props, ref) => {
-  const { formContext, uiStateController, id, name, onKeyDown, ...rest } =
-    props;
+  const { formContext, uiStateController, name, onKeyDown, ...rest } = props;
   const { formAction } = formContext;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
@@ -282,7 +275,6 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       uiStateController={uiStateController}
-      id={id}
       name={name}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
