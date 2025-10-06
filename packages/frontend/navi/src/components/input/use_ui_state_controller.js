@@ -243,9 +243,7 @@ export const useUIGroupStateController = (
     }
   };
 
-  useLayoutEffect(() => {
-    childUIStateControllerArray.length = 0;
-  });
+  childUIStateControllerArray.length = 0;
 
   return useMemo(() => {
     const [publishUIState, subscribeUIState] = createPubSub();
