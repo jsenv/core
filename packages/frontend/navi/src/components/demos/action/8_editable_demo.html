@@ -371,15 +371,16 @@
       };
 
       // Create signal outside component to persist across renders
-      const valueSignal = signal("Signal-controlled editable text");
-      const action = createAction(async ({ test }) => {
+      const action = createAction(async (test) => {
         await new Promise((resolve) => setTimeout(resolve, 800));
         return `Signal update: "${test}"`;
       });
-      const boundAction = action.bindParams({ test: valueSignal });
 
       // eslint-disable-next-line no-unused-vars
       const SignalControlDemo = () => {
+        const [value, setValue] = useState(
+          "Click button to change signal value",
+        );
         const [result, setResult] = useState("");
         const { editing, startEditing, stopEditing } = useEditionController();
 
@@ -395,9 +396,11 @@
                     stopEditing();
                     setResult("");
                   }}
-                  valueSignal={valueSignal}
+                  value={value}
                   name="coucou"
-                  action={boundAction}
+                  action={(value) => {
+                    action(value);
+                  }}
                   onActionStart={() => {
                     setResult("Saving via signal...");
                   }}
@@ -408,7 +411,7 @@
                       startEditing();
                     }}
                   >
-                    {valueSignal.value}
+                    {value}
                   </span>
                 </Editable>
               </div>
@@ -416,19 +419,18 @@
             <div className="button-group">
               <button
                 onClick={() => {
-                  console.log("Setting editable signal to true");
-                  valueSignal.value = "toto";
+                  setValue("toto");
                 }}
               >
                 Set signal value to "toto"
               </button>
             </div>
             <div
-              className={`result-display ${result === "Saving via signal..." ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
+              className={`result-display ${result === "Saving..." ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
             >
-              Signal value: {valueSignal.value}
+              value: {value}
               <br />
-              {result || "Use buttons to control edit mode via signal..."}
+              {result || "Use buttons to control edit mode..."}
             </div>
           </div>
         );
