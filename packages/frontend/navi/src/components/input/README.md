@@ -1,143 +1,163 @@
 # UI State Controller
 
-The UI State Controller is a powerful pattern that solves a fundamental problem in modern web applications: managing the complex relationship between what the user sees (UI state) and what the application knows (external state).
+The UI State Controller solves a fundamental problem in web applications: managing the relationship between what the user sees (UI state) and what the application knows (external state).
 
 ## The Problem
 
-In traditional form handling, there's often a mismatch between:
-
-- **What the user interacts with** - checkboxes they click, text they type
-- **What the backend knows** - the actual saved state of the data
-- **What the UI should show** - which might be somewhere in between
-
-This creates several challenges:
+Traditional form handling creates challenges:
 
 1. **Slow feedback** - waiting for server responses makes UI feel sluggish
-2. **Error handling** - what happens when an action fails after the user already sees the change?
-3. **Form resets** - how do you restore the original state when needed?
-4. **Complex coordination** - how do multiple inputs work together (like checkbox lists)?
+2. **Error handling** - what happens when an action fails after the user sees the change?
+3. **Form coordination** - how do multiple inputs work together?
 
 ## The Solution
 
-The UI State Controller introduces a clear separation:
+UI State Controller introduces clear separation:
 
-- **External State**: The "source of truth" - what the backend/parent component knows
+- **External State**: The "source of truth" (props, backend data)
 - **UI State**: What the user currently sees and interacts with
-- **Controller**: The bridge that manages the relationship between them
+- **Controller**: Manages the relationship between them
 
-## How It Works
+## Basic Usage - Checkbox with Action
 
-### 1. Responsive UI Updates
-
-When a user clicks a checkbox, the UI updates immediately:
-
-```
-User clicks → UI state changes → Checkbox appears checked instantly
-```
-
-No waiting for server responses or external state updates.
-
-### 2. Smart State Synchronization
-
-The controller tracks both states and knows when they diverge:
-
-```
-External State: false (unchecked)
-UI State: true (user just clicked, appears checked)
-```
-
-### 3. Error Recovery
-
-If an action fails, the controller can revert the UI back to match reality:
-
-```
-Action fails → resetUIState() called → Checkbox reverts to unchecked
-```
-
-### 4. Form Integration
-
-Controllers work seamlessly with form operations:
-
-- **Reset buttons** restore original state
-- **External control** via custom events when needed
-- **Group coordination** for related inputs
-
-## Real-World Examples
-
-### Checkbox with Action
+For interactive components where actions can fail and need optimistic updates:
 
 ```jsx
-const [checked, setChecked] = useState(false);
+const [savedValue, setSavedValue] = useState(false);
 
-// Optimistic updates with error recovery
 <InputCheckbox
-  checked={checkedSignal.value}
-  action={async (value) => {
-    const result = await window.fetch("/api/checked", {
-      method: "PATCH",
-      body: value,
+  checked={savedValue} // External state
+  action={async (newValue) => {
+    // This might fail
+    const result = await fetch("/api/update", {
+      method: "POST",
+      body: JSON.stringify({ checked: newValue }),
     });
-    // if an error occurs during the fetch setChecked won't be called and checkbox state is reverted
-    // otherwise we're good and our ui state and external state are synced
-    // this example use preact signal but any state manegement library works
-    setChecked(result);
+    // Only update external state if successful
+    setSavedValue(result.checked);
   }}
 />;
 ```
 
-### Checkbox List
+**How it works:**
+
+1. User clicks checkbox → UI updates immediately (responsive)
+2. Action executes in background
+3. **Success**: External state updates, UI stays in sync
+4. **Error**: UI automatically reverts to match external state
+
+## Form Usage - Checkbox inside `<form>`
+
+When using checkboxes inside forms, the behavior is different:
 
 ```jsx
-const [checkedOptions, setCheckedOptions] = useState()
+<form action="/api/submit" method="post">
+  <InputCheckbox name="notifications" value="email" />
+  <InputCheckbox name="notifications" value="sms" />
+  <button type="submit">Save Settings</button>
+  <button type="reset">Reset Form</button>
+</form>
+```
 
-// Multiple checkboxes coordinate through group controller
-<CheckboxList action={(checkedValues) => {
-    const result = await window.fetch("/api/checked", {
-      method: "PATCH",
-      body: checkedValues,
-    });
-    setCheckedOptions(result);
-}}>
-  <InputCheckbox value="option1" checked={checkedOptions.includes('option1')} />
-  <InputCheckbox value="option2" checked={checkedOptions.includes('option2')} />
-  <InputCheckbox value="option3" checked={checkedOptions.includes('option3')} />
-</CheckboxList>
+**Key differences:**
+
+- **Form submission errors**: UI state is NOT reverted
+- **Reasoning**: User might want to fix the issue and re-submit as-is
+- **Form reset**: UI state is properly restored to original values
+- **Navigation**: Form state persists during page navigation
+
+## Advanced APIs
+
+### Tracking UI State Changes
+
+Track what the user is doing in real-time:
+
+```jsx
+<InputCheckbox
+  checked={savedValue}
+  onUIStateChange={(uiState, event) => {
+    console.log("User interaction:", uiState);
+    // Track analytics, enable save buttons, etc.
+  }}
+  action={updateServer}
+/>
+```
+
+### External Control via Custom Events
+
+Programmatically control UI state from outside the component:
+
+```jsx
+// Set UI state externally
+const checkbox = document.querySelector("#my-checkbox");
+checkbox.dispatchEvent(
+  new CustomEvent("setuistate", {
+    detail: { value: true },
+  }),
+);
+
+// Reset UI state to match external state
+checkbox.dispatchEvent(new CustomEvent("resetuistate"));
+```
+
+### Group Controllers (Checkbox Lists)
+
+Coordinate multiple related inputs:
+
+```jsx
+const [selectedOptions, setSelectedOptions] = useState([]);
+
+<CheckboxList
+  values={selectedOptions} // External state
+  onUIStateChange={(uiState) => {
+    // Track what user has selected
+    console.log("Currently selected:", uiState);
+  }}
+  action={async (newValues) => {
+    const result = await updateServerOptions(newValues);
+    setSelectedOptions(result.options);
+  }}
+>
+  <InputCheckbox value="option1" />
+  <InputCheckbox value="option2" />
+  <InputCheckbox value="option3" />
+</CheckboxList>;
+```
+
+**Group features:**
+
+- Aggregates individual checkbox states into arrays
+- Coordinate reset operations across all children
+- Single action handles all checkbox changes
+
+### Error Recovery Patterns
+
+```jsx
+<InputCheckbox
+  checked={savedValue}
+  action={updateServer}
+  onActionError={(error) => {
+    // UI already reverted automatically
+    showErrorMessage("Failed to save: " + error.message);
+  }}
+  onActionAbort={() => {
+    // UI reverted when action was cancelled
+    console.log("Action was cancelled");
+  }}
+/>
 ```
 
 ## Key Benefits
 
-### For Users
-
-- **Instant feedback** - no laggy interfaces
-- **Predictable behavior** - forms work as expected
-- **Reliable state** - what you see matches what gets saved
-
-### For Developers
-
-- **Simple integration** - works with controlled/uncontrolled patterns
-- **Error handling** - built-in recovery mechanisms
-- **Reusable** - same pattern works across different input types
-- **Testable** - clear separation of concerns
-
-### For Complex Forms
-
-- **Coordination** - multiple inputs work together seamlessly
-- **Validation** - track user intent vs saved state
-- **Submission** - aggregate user changes for form submission
+- **Instant feedback**: UI updates immediately, no lag
+- **Reliable error handling**: Automatic recovery when actions fail
+- **Form compatibility**: Works seamlessly with native form behavior
+- **External control**: Programmatic state control when needed
+- **Group coordination**: Multiple inputs work together naturally
 
 ## When to Use
 
-UI State Controllers are particularly valuable for:
-
-- **Interactive forms** where immediate feedback matters
-- **Actions that can fail** and need optimistic updates with rollback
-- **Complex forms** with multiple related inputs
-- **Real-time interfaces** where UI and data state might diverge
-
-The pattern shines when you need the UI to be responsive while maintaining data integrity and providing clear error recovery paths.
-
-## The Bottom Line
-
-UI State Controllers solve the age-old problem of keeping UI responsive while maintaining data consistency. They provide a clean, predictable way to handle the inevitable complexity of modern interactive applications.
-
-Instead of choosing between responsive UI or reliable data consistency, you get both.
+- Interactive forms where immediate feedback matters
+- Actions that can fail and need optimistic updates
+- Complex forms with multiple related inputs
+- Any scenario where UI responsiveness and data consistency both matter

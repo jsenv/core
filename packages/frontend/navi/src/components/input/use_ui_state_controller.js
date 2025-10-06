@@ -23,64 +23,18 @@ const debugUIGroup = (...args) => {
 /**
  * UI State Controller Hook
  *
- * This hook manages the complex relationship between external state and UI state in form components.
- * It provides a unified interface for handling both controlled and uncontrolled components while
- * allowing the UI state to diverge from the external state when needed.
+ * Manages the relationship between external state (props) and UI state (what user sees).
+ * Allows UI state to diverge temporarily for responsive interactions, with mechanisms
+ * to sync back to external state when needed.
  *
- * Core Concepts:
+ * Key features:
+ * - Immediate UI updates for responsive interactions
+ * - State divergence with sync capabilities (resetUIState)
+ * - Group integration for coordinated form inputs
+ * - External control via custom events (onsetuistate/onresetuistate)
+ * - Error recovery and form reset support
  *
- * 1. **External State Tracking**:
- *    - Tracks changes to control props (like "checked" or "value")
- *    - When these props are present, they are considered the "source of truth" (external state)
- *    - This external state controls the component's behavior
- *
- * 2. **UI State Divergence**:
- *    - The UI state can temporarily diverge from the external state
- *    - This allows for immediate UI feedback while waiting for external state updates
- *    - Useful for form interactions where the UI needs to be responsive
- *
- * 3. **UI State Change Notifications**:
- *    - Provides `onUIStateChange` callback to notify about UI state changes
- *    - Most of the time this is irrelevant for the consuming code
- *    - But when needed, it allows external code to track what the user is doing in the UI
- *
- * 4. **State Synchronization**:
- *    - `resetUIState()` method allows syncing UI state back to external state
- *    - Useful for "reset" or "cancel" operations in forms
- *    - Ensures UI can be brought back to match the external state
- *
- * 5. **Component Integration**:
- *    - Returns a state controller object that UI components use to render correctly
- *    - Components use this to determine what state to display and how to handle interactions
- *    - Provides consistent interface for both controlled and uncontrolled scenarios
- *
- * 6. **External Code Integration**:
- *    - External code can use the controller to sync with UI state when needed
- *    - Allows for complex state management patterns where UI and data state can differ
- *    - Supports scenarios like optimistic updates, form validation, etc.
- *
- * 7. **Group Integration**:
- *    - Automatically integrates with parent group controllers when present
- *    - Enables building complex forms with nested state management
- *    - Supports scenarios like checkbox lists, radio groups, etc.
- *
- * 8. **External Control via Custom Events**:
- *    - Components can listen to "setuistate" custom events for external UI control
- *    - Fills the gap when state controls UI but external code needs to override UI
- *    - Rarely needed but essential for advanced scenarios like programmatic state control
- *    - Components typically implement: `onsetuistate={(e) => controller.setUIState(e.detail.value, e)}`
- *
- * Real-world Usage (from InputCheckbox):
- * - User interactions call `setUIState()` immediately for responsive UI
- * - Action errors/cancellations call `resetUIState()` to revert optimistic changes
- * - Form resets use custom "resetuistate" events to restore original state
- * - External systems can programmatically control UI via "setuistate" events
- * - Group controllers aggregate individual UI states for coordinated behavior
- *
- * Usage Patterns:
- * - **Controlled**: Component receives `checked`/`value` + `onUIStateChange`
- * - **Uncontrolled**: Component receives `defaultChecked`/`defaultValue`
- * - **Mixed**: UI state can diverge from external state until explicit sync
+ * See README.md for detailed usage examples and patterns.
  */
 export const useUIStateController = (
   props,
