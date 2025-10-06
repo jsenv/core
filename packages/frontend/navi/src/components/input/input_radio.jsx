@@ -14,7 +14,12 @@ import {
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { ReadOnlyContext } from "./label.jsx";
-import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
+import {
+  UIStateContext,
+  UIStateControllerContext,
+  useUIState,
+  useUIStateController,
+} from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .custom_radio_wrapper {
@@ -191,19 +196,32 @@ export const InputRadio = forwardRef((props, ref) => {
     getStateFromProp: (checked) => (checked ? value : undefined),
     getPropFromState: Boolean,
   });
+  const uiState = useUIState(uiStateController);
 
-  return renderActionableComponent({ uiStateController, ...props }, ref, {
+  const radio = renderActionableComponent(props, ref, {
     Basic: InputRadioBasic,
     WithAction: InputRadioWithAction,
     InsideForm: InputRadioInsideForm,
   });
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>{radio}</UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
+  );
 });
 
 const InputRadioBasic = forwardRef((props, ref) => {
+  const groupName = useContext(FieldGroupNameContext);
+  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
+  const groupDisabled = useContext(FieldGroupDisabledContext);
+  const groupRequired = useContext(FieldGroupRequiredContext);
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+  const setInputReadOnly = useContext(ReadOnlyContext);
   const {
-    uiStateController,
     name,
-
     readOnly,
     disabled,
     required,
@@ -218,13 +236,6 @@ const InputRadioBasic = forwardRef((props, ref) => {
     onInput,
     ...rest
   } = props;
-  const groupName = useContext(FieldGroupNameContext);
-  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupRequired = useContext(FieldGroupRequiredContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
-  const setInputReadOnly = useContext(ReadOnlyContext);
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
@@ -240,8 +251,6 @@ const InputRadioBasic = forwardRef((props, ref) => {
   }
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
-
-  const uiState = useUIState(uiStateController);
   const checked = Boolean(uiState);
   const actionName = rest["data-action"];
   if (actionName) {
