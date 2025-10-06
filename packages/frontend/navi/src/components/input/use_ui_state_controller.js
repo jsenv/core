@@ -8,7 +8,7 @@ import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
 const DEBUG_UI_STATE_CONTROLLER = false;
-const DEBUG_UI_GROUP_STATE_CONTROLLER = true;
+const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
 const debugUIState = (...args) => {
   if (DEBUG_UI_STATE_CONTROLLER) {
     console.debug(...args);
@@ -332,6 +332,7 @@ export const useUIGroupStateController = (
 
   const onChange = () => {
     if (groupIsRenderingRef.current) {
+      pendingChangeRef.current = true;
       return;
     }
     const newUIState = aggregateChildStates(
