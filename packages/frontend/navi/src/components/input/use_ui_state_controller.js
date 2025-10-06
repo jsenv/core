@@ -67,6 +67,11 @@ const debugUIGroup = (...args) => {
  *    - Allows for complex state management patterns where UI and data state can differ
  *    - Supports scenarios like optimistic updates, form validation, etc.
  *
+ * 7. **Group Integration**:
+ *    - Automatically integrates with parent group controllers when present
+ *    - Enables building complex forms with nested state management
+ *    - Supports scenarios like checkbox lists, radio groups, etc.
+ *
  * Usage Patterns:
  * - **Controlled**: Component receives `checked`/`value` + `onUIStateChange`
  * - **Uncontrolled**: Component receives `defaultChecked`/`defaultValue`
@@ -249,23 +254,57 @@ export const useUIStateController = (
 /**
  * UI Group State Controller Hook
  *
- * This hook manages a group of child UI state controllers and aggregates their states.
- * It provides a unified interface for managing collections of form inputs that work together.
+ * This hook manages a collection of child UI state controllers and aggregates their states
+ * into a unified group state. It provides a way to coordinate multiple form inputs that
+ * work together as a logical unit.
  *
- * Key Features:
- * - Aggregates child UI states into a single group state
- * - Filters children by component type (e.g., only "checkbox" components)
- * - Provides reset functionality that cascades to all children
- * - Maintains subscriber notifications for external state tracking
- * - Handles child registration/unregistration automatically
+ * What it provides:
+ *
+ * 1. **Child State Aggregation**:
+ *    - Collects state from multiple child UI controllers
+ *    - Combines them into a single meaningful group state
+ *    - Updates group state automatically when any child changes
+ *
+ * 2. **Child Filtering**:
+ *    - Can filter which child controllers to include based on component type
+ *    - Useful for mixed content where only specific inputs matter
+ *    - Enables type-safe aggregation patterns
+ *
+ * 3. **Group Operations**:
+ *    - Provides `resetUIState()` that cascades to all children
+ *    - Enables group-level operations like "clear all" or "reset form section"
+ *    - Maintains consistency across related inputs
+ *
+ * 4. **External State Management**:
+ *    - Notifies external code of group state changes via `onUIStateChange`
+ *    - Allows external systems to react to group-level state changes
+ *    - Supports complex form validation and submission logic
+ *
+ * Why use it:
+ * - When you have multiple related inputs that should be treated as one logical unit
+ * - For implementing checkbox lists, radio groups, or form sections
+ * - When you need to perform operations on multiple inputs simultaneously
+ * - To aggregate input states for validation or submission
+ *
+ * How it works:
+ * - Child controllers automatically register themselves when mounted
+ * - Group controller listens for child state changes and re-aggregates
+ * - Custom aggregation function determines how child states combine
+ * - Group state updates trigger notifications to external code
  *
  * @param {Object} props - Component props containing onUIStateChange callback
+ * @param {string} componentType - Type identifier for this group controller
  * @param {Object} config - Configuration object
- * @param {string} config.componentType - Type of this group controller (e.g., "checkbox_list")
  * @param {string} [config.childComponentType] - Filter children by this type (e.g., "checkbox")
- * @param {Function} [config.aggregateChildStates] - Custom aggregation function
+ * @param {Function} config.aggregateChildStates - Function to aggregate child states
  * @param {any} [config.emptyState] - State to use when no children have values
  * @returns {Object} UI group state controller
+ *
+ * Usage Examples:
+ * - **Checkbox List**: Aggregates multiple checkboxes into array of checked values
+ * - **Radio Group**: Manages radio buttons to ensure single selection
+ * - **Form Section**: Groups related inputs for validation and reset operations
+ * - **Dynamic Lists**: Handles variable number of repeated input groups
  */
 export const useUIGroupStateController = (
   props,
