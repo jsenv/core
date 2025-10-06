@@ -134,18 +134,23 @@ export const useUIStateController = (
   // Handle state prop changes
   useLayoutEffect(() => {
     const uiStateController = uiStateControllerRef.current;
-    if (hasStateProp && state !== stateRef.current) {
-      debugUIState(
-        `"${componentType}" state prop changed from:`,
-        stateRef.current,
-        "to:",
-        state,
-      );
-      stateInitialRef.current = state;
-      stateRef.current = state;
-      uiStateController.state = state;
-      uiStateController.setUIState(getPropFromState(state));
+    if (!hasStateProp) {
+      return;
     }
+    const prevState = stateRef.current;
+    if (state === prevState) {
+      return;
+    }
+    debugUIState(
+      `"${componentType}" state prop changed from:`,
+      JSON.stringify(prevState),
+      "to:",
+      JSON.stringify(state),
+    );
+    stateInitialRef.current = state;
+    stateRef.current = state;
+    uiStateController.state = state;
+    uiStateController.setUIState(getPropFromState(state));
   }, [hasStateProp, state, getPropFromState]);
 
   let { onUIStateChange } = props;
@@ -175,7 +180,7 @@ export const useUIStateController = (
 
   debugUIState(
     `Creating "${componentType}" ui state controller - initial state:`,
-    stateInitial,
+    JSON.stringify(stateInitial),
   );
   const [publishUIState, subscribeUIState] = createPubSub();
   const uiStateController = {
@@ -188,16 +193,16 @@ export const useUIStateController = (
         setNavState(prop);
       }
       const newUIState = getStateFromProp(prop);
-      const oldUIState = uiStateRef.current;
-      if (newUIState === oldUIState) {
+      const currentUIState = uiStateRef.current;
+      if (newUIState === currentUIState) {
         debugUIState(`"${componentType}" setUIState: no change`, newUIState);
         return;
       }
       debugUIState(
         `"${componentType}" UI state changed from:`,
-        oldUIState,
+        JSON.stringify(currentUIState),
         "to:",
-        newUIState,
+        JSON.stringify(newUIState),
       );
       uiStateRef.current = newUIState;
       uiStateController.uiState = newUIState;
