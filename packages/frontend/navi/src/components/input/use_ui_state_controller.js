@@ -14,9 +14,9 @@ import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
 const DEBUG = true;
-const debug = (message, ...args) => {
+const debug = (...args) => {
   if (DEBUG) {
-    console.debug(`[UIStateController] ${message}`, ...args);
+    console.debug(...args);
   }
 };
 
