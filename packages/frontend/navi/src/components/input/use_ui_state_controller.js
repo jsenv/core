@@ -189,11 +189,7 @@ export const useUIStateController = (
         debugUIState(
           `"${componentType}" notifying "${groupUIStateController.componentType}" of ui state change`,
         );
-        groupUIStateController.onChildUIStateChange(
-          uiStateController,
-          newUIState,
-          e,
-        );
+        groupUIStateController.onChildUIStateChange(uiStateController, e);
       }
     },
     resetUIState: (e) => {
@@ -352,39 +348,47 @@ export const useUIGroupStateController = (
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
+      const childComponentType = childUIStateController.componentType;
       childUIStateControllerArray.push(childUIStateController);
       debugUIGroup(
-        `${componentType}.registerChild("${childUIStateController.componentType}") - total: ${childUIStateControllerArray.length}`,
+        `${componentType}.registerChild("${componentType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
-      onChange(childUIStateController, "mount");
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childComponentType}_mount`),
+      );
     },
-    onChildUIStateChange: (childUIStateController) => {
+    onChildUIStateChange: (childUIStateController, e) => {
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
       debugUIGroup(
-        `${componentType}.onChildUIStateChange("${componentType}") to ${JSON.stringify(
+        `${componentType}.onChildUIStateChange("${childUIStateController.componentType}") to ${JSON.stringify(
           childUIStateController.uiState,
         )}`,
       );
-      onChange(childUIStateController, "change");
+      onChange(childUIStateController, e);
     },
     unregisterChild: (childUIStateController) => {
       if (!isMonitoringChild(childUIStateController)) {
         return;
       }
+      const childComponentType = childUIStateController.componentType;
       const index = childUIStateControllerArray.indexOf(childUIStateController);
       if (index === -1) {
         debugUIGroup(
-          `"${componentType}" cannot unregister "${childUIStateController.componentType}" - not found`,
+          `${componentType}.unregisterChild("${componentType}") -> not found`,
         );
         return;
       }
       childUIStateControllerArray.splice(index, 1);
       debugUIGroup(
-        `${componentType}.unregisterChild("${childUIStateController.componentType}") - remaining: ${childUIStateControllerArray.length}`,
+        `${componentType}.unregisterChild("${componentType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
       );
-      onChange(childUIStateController, "unmount");
+      onChange(
+        childUIStateController,
+        new CustomEvent(`${childComponentType}_unmount`),
+      );
     },
     resetUIState: (e) => {
       for (const childUIStateController of childUIStateControllerArray) {
