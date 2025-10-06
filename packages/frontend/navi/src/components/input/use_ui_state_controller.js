@@ -107,8 +107,7 @@ export const useUIStateController = (
     return getStateFromProp(fallbackState);
   });
   const uiStateControllerRef = useRef();
-  const stateInitialRef = useRef(stateInitial);
-  const stateRef = useRef(state);
+  const stateRef = useRef(stateInitial);
   const uiStateRef = useRef(stateInitial);
 
   // Handle cleanup
@@ -147,7 +146,6 @@ export const useUIStateController = (
       "to:",
       JSON.stringify(state),
     );
-    stateInitialRef.current = state;
     stateRef.current = state;
     uiStateController.state = state;
     uiStateController.setUIState(getPropFromState(state));
@@ -232,9 +230,7 @@ export const useUIStateController = (
       }
     },
     resetUIState: () => {
-      const currentState = hasStatePropRef.current
-        ? stateRef.current
-        : undefined;
+      const currentState = stateRef.current;
       const prop = getPropFromStateRef.current(currentState);
       debugUIState(
         `"${componentType}" resetUIState called - resetting to:`,
