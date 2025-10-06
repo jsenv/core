@@ -1,3 +1,4 @@
+import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
@@ -6,6 +7,9 @@ import { FieldGroupUIStateControllerContext } from "../field_group_context.js";
 import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
+
+export const UIStateControllerContext = createContext();
+export const UIStateContext = createContext();
 
 const DEBUG_UI_STATE_CONTROLLER = false;
 const DEBUG_UI_GROUP_STATE_CONTROLLER = false;

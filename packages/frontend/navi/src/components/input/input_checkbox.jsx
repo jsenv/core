@@ -22,7 +22,12 @@ import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
-import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
+import {
+  UIStateContext,
+  UIStateControllerContext,
+  useUIState,
+  useUIStateController,
+} from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .custom_checkbox_wrapper[data-field-wrapper] {
@@ -142,7 +147,7 @@ export const InputCheckbox = forwardRef((props, ref) => {
   });
   const uiState = useUIState(uiStateController);
 
-  return renderActionableComponent(
+  const checkbox = renderActionableComponent(
     { uiStateController, uiState, ...props },
     ref,
     {
@@ -150,6 +155,13 @@ export const InputCheckbox = forwardRef((props, ref) => {
       WithAction: InputCheckboxWithAction,
       InsideForm: InputCheckboxInsideForm,
     },
+  );
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>
+        {checkbox}
+      </UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
   );
 });
 
@@ -160,10 +172,10 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const groupRequired = useContext(FieldGroupRequiredContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
   const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const setInputReadOnly = useContext(ReadOnlyContext);
   const {
-    uiStateController,
-    uiState,
     name,
     readOnly,
     disabled,
@@ -278,10 +290,9 @@ const CustomCheckbox = ({ accentColor, children }) => {
 };
 
 const InputCheckboxWithAction = forwardRef((props, ref) => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const {
-    uiStateController,
-    uiState,
-    name,
     action,
     onCancel,
     onChange,
@@ -333,8 +344,6 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
       <InputCheckboxBasic
         {...rest}
         ref={innerRef}
-        uiStateController={uiStateController}
-        name={name}
         data-action={boundAction.name}
         onChange={(e) => {
           requestAction(e.target, boundAction, { event: e });
@@ -345,12 +354,11 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   );
 });
 const InputCheckboxInsideForm = forwardRef((props, ref) => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const {
     // eslint-disable-next-line no-unused-vars
     formContext,
-    uiStateController,
-    uiState,
-    id,
     name,
     ...rest
   } = props;
@@ -381,13 +389,5 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
     },
   });
 
-  return (
-    <InputCheckboxBasic
-      {...rest}
-      ref={innerRef}
-      uiStateController={uiStateController}
-      id={id}
-      name={name}
-    />
-  );
+  return <InputCheckboxBasic {...rest} ref={innerRef} name={name} />;
 });

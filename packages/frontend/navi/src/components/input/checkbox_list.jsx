@@ -30,6 +30,8 @@ import { useActionEvents } from "../use_action_events.js";
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { useFormEvents } from "./use_form_events.js";
 import {
+  UIStateContext,
+  UIStateControllerContext,
   useUIGroupStateController,
   useUIState,
 } from "./use_ui_state_controller.js";
@@ -56,7 +58,7 @@ export const CheckboxList = forwardRef((props, ref) => {
   });
   const uiState = useUIState(uiStateController);
 
-  return renderActionableComponent(
+  const checkboxList = renderActionableComponent(
     { uiStateController, uiState, ...props },
     ref,
     {
@@ -65,6 +67,13 @@ export const CheckboxList = forwardRef((props, ref) => {
       InsideForm: CheckboxListInsideForm,
     },
   );
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>
+        {checkboxList}
+      </UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
+  );
 });
 export const Checkbox = InputCheckbox;
 
@@ -72,22 +81,11 @@ const CheckboxListBasic = forwardRef((props, ref) => {
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
-  const {
-    uiStateController,
-    name,
-    readOnly,
-    disabled,
-    required,
-    loading,
-    children,
-    ...rest
-  } = props;
+  const uiStateController = useContext(UIStateControllerContext);
+  const { name, readOnly, disabled, required, loading, children, ...rest } =
+    props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-
-  // idéalement on voudrait que le checkbox list puisse écouter tous les autre uiStateController qui le compose
-  // (lorsque ce sont des checkbox)
-  // afin de pouvoir les controler un peu (juste pour obtenir les valeurs et pour le reset en fait)
 
   const innerLoading = loading || groupLoading;
   const innerReadOnly =
@@ -106,8 +104,8 @@ const CheckboxListBasic = forwardRef((props, ref) => {
         uiStateController.resetUIState(e);
       }}
     >
-      <FieldGroupNameContext.Provider value={name}>
-        <FieldGroupUIStateControllerContext.Provider value={uiStateController}>
+      <FieldGroupUIStateControllerContext.Provider value={uiStateController}>
+        <FieldGroupNameContext.Provider value={name}>
           <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
             <FieldGroupDisabledContext.Provider value={innerDisabled}>
               <FieldGroupRequiredContext.Provider value={required}>
@@ -117,8 +115,8 @@ const CheckboxListBasic = forwardRef((props, ref) => {
               </FieldGroupRequiredContext.Provider>
             </FieldGroupDisabledContext.Provider>
           </FieldGroupReadOnlyContext.Provider>
-        </FieldGroupUIStateControllerContext.Provider>
-      </FieldGroupNameContext.Provider>
+        </FieldGroupNameContext.Provider>
+      </FieldGroupUIStateControllerContext.Provider>
     </div>
   );
 });
@@ -135,10 +133,9 @@ const CheckboxListBasic = forwardRef((props, ref) => {
 // };
 
 const CheckboxListWithAction = forwardRef((props, ref) => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const {
-    uiStateController,
-    uiState,
-    name,
     action,
     actionErrorEffect,
     onCancel,
@@ -187,8 +184,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     <CheckboxListBasic
       {...rest}
       ref={innerRef}
-      uiStateController={uiStateController}
-      name={name}
       data-action={boundAction.name}
       onChange={(event) => {
         const checkboxList = innerRef.current;
@@ -208,7 +203,9 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   );
 });
 const CheckboxListInsideForm = forwardRef((props, ref) => {
-  const { uiStateController, uiState, name, value, children, ...rest } = props;
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+  const { name, children, ...rest } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   useOneFormArrayParam(name, uiState);
@@ -223,13 +220,7 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
   });
 
   return (
-    <CheckboxListBasic
-      {...rest}
-      ref={innerRef}
-      uiStateController={uiStateController}
-      name={name}
-      value={value}
-    >
+    <CheckboxListBasic {...rest} ref={innerRef} name={name}>
       {/* <input type="checkbox" /> must not try to update the <form>
      The checkbox list is doing it with the array of checked values
      Without this we would likely have form complaining the input has no name

@@ -7,7 +7,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
@@ -22,10 +21,17 @@ import {
   FieldGroupNameContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
+  FieldGroupUIStateControllerContext,
 } from "../field_group_context.js";
 import { useActionEvents } from "../use_action_events.js";
 import { InputRadio } from "./input_radio.jsx";
 import { useFormEvents } from "./use_form_events.js";
+import {
+  UIStateContext,
+  UIStateControllerContext,
+  useUIGroupStateController,
+  useUIState,
+} from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .navi_radio_list {
@@ -35,17 +41,43 @@ import.meta.css = /* css */ `
 `;
 
 export const RadioList = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
-    Basic: RadioListBasic,
-    WithAction: RadioListWithAction,
-    InsideForm: RadioListInsideForm,
+  const uiStateController = useUIGroupStateController(props, "radio_list", {
+    childComponentType: "radio",
+    aggregateChildStates: (childUIStateControllers) => {
+      const values = [];
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          values.push(childUIStateController.uiState);
+        }
+      }
+      return values.length === 0 ? undefined : values;
+    },
   });
+  const uiState = useUIState(uiStateController);
+
+  return renderActionableComponent(
+    { uiStateController, uiState, ...props },
+    ref,
+    {
+      Basic: RadioListBasic,
+      WithAction: RadioListWithAction,
+      InsideForm: RadioListInsideForm,
+    },
+  );
 });
 export const Radio = InputRadio;
 
 const RadioListBasic = forwardRef((props, ref) => {
-  const { name, loading, disabled, readOnly, children, required, ...rest } =
-    props;
+  const {
+    uiStateController,
+    name,
+    loading,
+    disabled,
+    readOnly,
+    children,
+    required,
+    ...rest
+  } = props;
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
@@ -57,28 +89,36 @@ const RadioListBasic = forwardRef((props, ref) => {
   const innerDisabled = disabled || groupDisabled;
 
   return (
-    <div ref={innerRef} className="navi_radio_list" {...rest}>
-      <FieldGroupNameContext.Provider value={name}>
-        <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
-          <FieldGroupDisabledContext.Provider value={innerDisabled}>
-            <FieldGroupRequiredContext.Provider value={required}>
-              <FieldGroupLoadingContext.Provider value={innerLoading}>
-                {children}
-              </FieldGroupLoadingContext.Provider>
-            </FieldGroupRequiredContext.Provider>
-          </FieldGroupDisabledContext.Provider>
-        </FieldGroupReadOnlyContext.Provider>
-      </FieldGroupNameContext.Provider>
+    <div
+      {...rest}
+      ref={innerRef}
+      className="navi_radio_list"
+      // eslint-disable-next-line react/no-unknown-property
+      onresetuistate={(e) => {
+        uiStateController.resetUIState(e);
+      }}
+    >
+      <FieldGroupUIStateControllerContext.Provider value={uiStateController}>
+        <FieldGroupNameContext.Provider value={name}>
+          <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
+            <FieldGroupDisabledContext.Provider value={innerDisabled}>
+              <FieldGroupRequiredContext.Provider value={required}>
+                <FieldGroupLoadingContext.Provider value={innerLoading}>
+                  {children}
+                </FieldGroupLoadingContext.Provider>
+              </FieldGroupRequiredContext.Provider>
+            </FieldGroupDisabledContext.Provider>
+          </FieldGroupReadOnlyContext.Provider>
+        </FieldGroupNameContext.Provider>
+      </FieldGroupUIStateControllerContext.Provider>
     </div>
   );
 });
 const RadioListWithAction = forwardRef((props, ref) => {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const {
-    id,
-    name,
-    value,
     action,
-    onValueChange,
 
     onCancel,
     onActionPrevented,
@@ -92,24 +132,16 @@ const RadioListWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState, resetNavState] = useNavState(id);
-  const [boundAction, , setActionValue, initialValue] =
-    useActionBoundToOneParam(action, name, value, navState);
+  const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const [actionRequester, setActionRequester] = useState(null);
 
-  const innerOnValueChange = (uiValue, e) => {
-    setNavState(uiValue);
-    setActionValue(uiValue);
-    onValueChange?.(uiValue, e);
-  };
   useActionEvents(innerRef, {
     onCancel: (e, reason) => {
-      resetNavState();
-      innerOnValueChange(initialValue, e);
+      uiStateController.resetUIState(e);
       onCancel?.(e, reason);
     },
     onPrevented: onActionPrevented,
@@ -119,15 +151,14 @@ const RadioListWithAction = forwardRef((props, ref) => {
     },
     onStart: onActionStart,
     onAbort: (e) => {
-      innerOnValueChange(initialValue, e);
+      uiStateController.resetUIState(e);
       onActionAbort?.(e);
     },
-    onError: (error) => {
-      innerOnValueChange(initialValue, error);
-      onActionError?.(error);
+    onError: (e) => {
+      uiStateController.resetUIState(e);
+      onActionError?.(e);
     },
     onEnd: (e) => {
-      resetNavState();
       onActionEnd?.(e);
     },
   });
@@ -136,9 +167,6 @@ const RadioListWithAction = forwardRef((props, ref) => {
     <RadioListBasic
       {...rest}
       ref={innerRef}
-      name={name}
-      value={value}
-      onValueChange={innerOnValueChange}
       data-action={boundAction}
       onChange={(e) => {
         const radio = e.target;
@@ -158,37 +186,24 @@ const RadioListWithAction = forwardRef((props, ref) => {
   );
 });
 const RadioListInsideForm = forwardRef((props, ref) => {
-  const { id, name, value, onValueChange, children, ...rest } = props;
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+  const { name, children, ...rest } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState(id);
-  const [, setFormValue, initialValue] = useOneFormParam(name, value, navState);
+  useOneFormParam(name, uiState);
 
-  const innerOnValueChange = (uiValue, e) => {
-    setNavState(uiValue);
-    setFormValue(uiValue);
-    onValueChange?.(uiValue, e);
-  };
   useFormEvents(innerRef, {
     onFormReset: (e) => {
-      innerOnValueChange(undefined, e);
+      e.preventDefault();
+      uiStateController.resetUIState(e);
     },
-    onFormActionAbort: (e) => {
-      innerOnValueChange(initialValue, e);
-    },
-    onFormActionError: (e) => {
-      innerOnValueChange(initialValue, e);
-    },
+    onFormActionAbort: () => {},
+    onFormActionError: () => {},
   });
 
   return (
-    <RadioListBasic
-      {...rest}
-      ref={innerRef}
-      name={name}
-      value={value}
-      onValueChange={innerOnValueChange}
-    >
+    <RadioListBasic {...rest} ref={innerRef} name={name}>
       {children}
     </RadioListBasic>
   );
