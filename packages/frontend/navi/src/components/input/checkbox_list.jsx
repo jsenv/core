@@ -1,3 +1,5 @@
+// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
+
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import {
