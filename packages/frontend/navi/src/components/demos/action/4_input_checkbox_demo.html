@@ -244,9 +244,6 @@
               <CheckboxActionDefaultCheckedDemo
                 backgroundColor={checkboxBackgroundColor}
               />
-              <CheckboxActionControlledDemo
-                backgroundColor={checkboxBackgroundColor}
-              />
               <CheckboxActionErrorDemo
                 backgroundColor={checkboxBackgroundColor}
               />
@@ -254,9 +251,6 @@
                 backgroundColor={checkboxBackgroundColor}
               />
               <CheckboxActionErrorOnUncheckedDemo
-                backgroundColor={checkboxBackgroundColor}
-              />
-              <CheckboxActionControlledErrorDemo
                 backgroundColor={checkboxBackgroundColor}
               />
               <CheckboxActionObjectDemo
@@ -441,82 +435,6 @@
         );
       };
       // eslint-disable-next-line no-unused-vars
-      const CheckboxActionControlledDemo = ({ backgroundColor }) => {
-        const [checked, setChecked] = useState(undefined);
-        const [result, setResult] = useState("");
-        const ref = useRef();
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">
-              Checkbox with Action (Controlled)
-              <button
-                onClick={() => {
-                  ref.current.dispatchEvent(new CustomEvent("resetuistate"));
-                }}
-              >
-                Reset
-              </button>
-            </h3>
-            <p>
-              Reset button won't override UI, use false to override. (This is
-              because checked=undefined won't override the UI state)
-            </p>
-            <div className="control-group">
-              <div className="checkbox-group">
-                <label>
-                  <Input
-                    ref={ref}
-                    type="checkbox"
-                    name="notifications"
-                    checked={checked}
-                    accentColor={backgroundColor}
-                    action={async (notifications) => {
-                      setResult("Processing...");
-                      await delay(600);
-                      const response = `${notifications ? "✅" : "☐"} Notifications ${notifications ? "enabled" : "disabled"}`;
-                      setResult(response);
-                      setChecked(Boolean(notifications));
-                      return response;
-                    }}
-                  />
-                  Enable notifications
-                </label>
-              </div>
-            </div>
-            <div className="button-group">
-              <button
-                onClick={() => {
-                  setChecked(true);
-                }}
-              >
-                Enable
-              </button>
-              <button
-                onClick={() => {
-                  setChecked(false);
-                }}
-              >
-                Disable
-              </button>
-            </div>
-            <div
-              className={`result-display ${result.startsWith("✅") || result.startsWith("☐") ? "result-success" : ""}`}
-            >
-              Current state:{" "}
-              {checked === undefined
-                ? "undefined"
-                : checked
-                  ? "checked"
-                  : "unchecked"}
-              <br />
-              {result ||
-                "Use buttons to control checkbox, then it will trigger action..."}
-            </div>
-          </div>
-        );
-      };
-      // eslint-disable-next-line no-unused-vars
       const CheckboxActionErrorDemo = ({ backgroundColor }) => {
         const [result, setResult] = useState("");
         const [status, setStatus] = useState("idle");
@@ -664,91 +582,6 @@
             >
               {result ||
                 "Toggle checkbox - succeeds when checked, fails when unchecked..."}
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const CheckboxActionControlledErrorDemo = ({ backgroundColor }) => {
-        const [checked, setChecked] = useState(false);
-        const [result, setResult] = useState("");
-        const [status, setStatus] = useState("idle");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">
-              Checkbox with Action (Controlled, Fails When Checked)
-            </h3>
-            <div className="control-group">
-              <div className="checkbox-group">
-                <label>
-                  <Input
-                    type="checkbox"
-                    name="experimental"
-                    checked={checked}
-                    accentColor={backgroundColor}
-                    action={async (experimental) => {
-                      setStatus("loading");
-                      setResult("Processing...");
-                      try {
-                        await delay(1200);
-                        if (experimental) {
-                          throw new Error(
-                            "Experimental features are currently disabled",
-                          );
-                        }
-                        const response = `✅ Experimental features ${experimental ? "enabled" : "disabled"}`;
-                        setResult(response);
-                        setStatus("success");
-                        setChecked(Boolean(experimental));
-                        return response;
-                      } catch (error) {
-                        setResult(`❌ ${error.message}`);
-                        setStatus("error");
-                        throw error;
-                      }
-                    }}
-                  />
-                  <span className={`status-indicator status-${status}`}></span>
-                  Enable experimental features
-                </label>
-              </div>
-            </div>
-            <div className="button-group">
-              <button
-                onClick={() => {
-                  setChecked(true);
-                }}
-              >
-                Enable
-              </button>
-              <button
-                onClick={() => {
-                  setChecked(false);
-                }}
-              >
-                Disable
-              </button>
-              <button
-                onClick={() => {
-                  setChecked(undefined);
-                }}
-              >
-                Reset
-              </button>
-            </div>
-            <div
-              className={`result-display ${status === "loading" ? "result-loading" : status === "success" ? "result-success" : status === "error" ? "result-error" : ""}`}
-            >
-              Current state:{" "}
-              {checked === undefined
-                ? "undefined"
-                : checked
-                  ? "checked"
-                  : "unchecked"}
-              <br />
-              {result || "Controlled checkbox that fails when checked..."}
             </div>
           </div>
         );

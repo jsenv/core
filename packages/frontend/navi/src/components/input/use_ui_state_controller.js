@@ -140,15 +140,12 @@ export const useUIStateController = (
     if (state === prevState) {
       return;
     }
-    debugUIState(
-      `"${componentType}" state prop changed from:`,
-      JSON.stringify(prevState),
-      "to:",
-      JSON.stringify(state),
-    );
     stateRef.current = state;
     uiStateController.state = state;
-    uiStateController.setUIState(getPropFromState(state));
+    uiStateController.setUIState(
+      getPropFromState(state),
+      new CustomEvent("state_prop"),
+    );
   }, [hasStateProp, state]);
 
   const { onUIStateChange } = props;
@@ -201,14 +198,13 @@ export const useUIStateController = (
       const newUIState = getStateFromPropRef.current(prop);
       const currentUIState = uiStateRef.current;
       if (newUIState === currentUIState) {
-        debugUIState(`"${componentType}" setUIState: no change`, newUIState);
+        debugUIState(
+          `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state is the same`,
+        );
         return;
       }
       debugUIState(
-        `"${componentType}" UI state changed from:`,
-        JSON.stringify(currentUIState),
-        "to:",
-        JSON.stringify(newUIState),
+        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state updated to ${JSON.stringify(newUIState)}`,
       );
       uiStateRef.current = newUIState;
       uiStateController.uiState = newUIState;
@@ -229,14 +225,10 @@ export const useUIStateController = (
         );
       }
     },
-    resetUIState: () => {
+    resetUIState: (e) => {
       const currentState = stateRef.current;
       const prop = getPropFromStateRef.current(currentState);
-      debugUIState(
-        `"${componentType}" resetUIState called - resetting to:`,
-        prop,
-      );
-      uiStateController.setUIState(prop);
+      uiStateController.setUIState(prop, e);
     },
     actionEnd: () => {
       debugUIState(`"${componentType}" actionEnd called`);
