@@ -6,53 +6,44 @@ import {
   useState,
 } from "preact/hooks";
 
+import { useNavState } from "../../browser_integration/browser_integration.js";
+import { FormContext } from "../action_execution/form_context.js";
 import { FieldGroupUIStateControllerContext } from "../field_group_context.js";
 import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
-export const useValueController = (props, componentType, navState) => {
-  return useUIStateController(
-    props,
-    {
-      componentType,
-      statePropName: "value",
-      defaultStatePropName: "defaultValue",
-      fallbackState: "",
-    },
-    navState,
-  );
+export const useValueController = (props, componentType) => {
+  return useUIStateController(props, componentType, {
+    statePropName: "value",
+    defaultStatePropName: "defaultValue",
+    fallbackState: "",
+  });
 };
 export const useUncontrolledValueProps = (props, componentType) => {
-  return useUncontrolledUIProps(props, {
-    componentType,
+  return useUncontrolledUIProps(props, componentType, {
     statePropName: "value",
     defaultStatePropName: "defaultValue",
     fallbackState: "",
   });
 };
 
-export const useCheckedController = (props, componentType, navState) => {
+export const useCheckedController = (props, componentType) => {
   const { value = "on" } = props;
-  return useUIStateController(
-    props,
-    {
-      componentType,
-      statePropName: "checked",
-      defaultStatePropName: "defaultChecked",
-      fallbackState: false,
-      getStateFromProp: (checked) => {
-        return checked ? value : undefined;
-      },
-      getPropFromState: Boolean,
+  return useUIStateController(props, componentType, {
+    componentType,
+    statePropName: "checked",
+    defaultStatePropName: "defaultChecked",
+    fallbackState: false,
+    getStateFromProp: (checked) => {
+      return checked ? value : undefined;
     },
-    navState,
-  );
+    getPropFromState: Boolean,
+  });
 };
 export const useUncontrolledCheckedProps = (props, componentType) => {
   const { value = "on" } = props;
-  return useUncontrolledUIProps(props, {
-    componentType,
+  return useUncontrolledUIProps(props, componentType, {
     statePropName: "checked",
     defaultStatePropName: "defaultChecked",
     fallbackState: false,
@@ -147,10 +138,10 @@ const useUncontrolledUIProps = (
  * - **Uncontrolled**: Component receives `defaultChecked`/`defaultValue`
  * - **Mixed**: UI state can diverge from external state until explicit sync
  */
-const useUIStateController = (
+export const useUIStateController = (
   props,
+  componentType,
   {
-    componentType,
     statePropName,
     defaultStatePropName,
     fallbackState,
@@ -158,8 +149,11 @@ const useUIStateController = (
     getPropFromState = (state) => state,
     uncontrolled,
   },
-  navState,
 ) => {
+  const id = props.id;
+  const formContext = useContext(FormContext);
+  const [navState, setNavState] = useNavState(id);
+
   const groupUIStateController = useContext(FieldGroupUIStateControllerContext);
   const hasStateProp = Object.hasOwn(props, statePropName);
   const state = props[statePropName];
@@ -175,7 +169,7 @@ const useUIStateController = (
       // not controlled but want an initial state (a value or being checked)
       return getStateFromProp(defaultState);
     }
-    if (navState) {
+    if (formContext && navState) {
       // not controlled but want to use value from nav state
       // (I think this should likely move earlier to win over the hasUIStateProp when it's undefined)
       return getStateFromProp(navState);
@@ -231,6 +225,9 @@ const useUIStateController = (
       },
       uiState: uiStateRef.current,
       setUIState: (prop, e) => {
+        if (formContext) {
+          setNavState(prop);
+        }
         const newUIState = getStateFromProp(prop);
         uiStateRef.current = newUIState;
         uiStateController.uiState = newUIState;
@@ -252,6 +249,11 @@ const useUIStateController = (
         const currentState = hasStateProp ? state : undefined;
         const prop = getPropFromState(currentState);
         uiStateController.setUIState(prop);
+      },
+      actionEnd: () => {
+        if (formContext) {
+          setNavState(undefined);
+        }
       },
       subscribe: subscribeUIState,
     };
