@@ -184,7 +184,13 @@ import.meta.css = /* css */ `
 `;
 
 export const InputRadio = forwardRef((props, ref) => {
-  const uiStateController = useUIStateController(props, "input");
+  const { value = "on" } = props;
+  const uiStateController = useUIStateController(props, "radio", {
+    statePropName: "checked",
+    fallbackState: false,
+    getStateFromProp: (checked) => (checked ? value : undefined),
+    getPropFromState: Boolean,
+  });
 
   return renderActionableComponent({ uiStateController, ...props }, ref, {
     Basic: InputRadioBasic,

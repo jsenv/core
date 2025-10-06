@@ -28,252 +28,325 @@
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         return (
-          <div>
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <NoStateNoAction />
-              <ActionLogAfter1s />
-              <ActionThrowAfter1s />
-            </div>
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <FormLogAfter1s />
-              <FormThrowAfter1s />
-              <FormPreCheckedThrowAfter1s />
-            </div>
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <FormRequired />
-            </div>
+          <div style="display: flex; flex-direction: column; gap: 40px">
+            <DynamicRadioListDemo />
           </div>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
-      const PickFavoriteColor = ({
-        id,
-        name = "color",
-        value,
-        action,
-        required,
-        ...rest
-      }) => {
-        return (
-          <fieldset data-required-message={rest["data-required-message"]}>
-            <legend>Select your favorite color:</legend>
-            <RadioList
-              id={id}
-              name={name}
-              value={value}
-              action={action}
-              required={required}
-              {...rest}
-            >
-              <Label>
-                Red
-                <Radio value="red" checked={value === "red"} />
-              </Label>
-              <Label>
-                Blue
-                <Radio value="blue" checked={value === "blue"} />
-              </Label>
-              <Label>
-                Green
-                <Radio value="green" checked={value === "green"} />
-              </Label>
-            </RadioList>
-          </fieldset>
-        );
-      };
+      const DynamicRadioListDemo = () => {
+        // Available color choices with their selection state
+        const [colorChoices, setColorChoices] = useState([
+          { id: 1, color: "red", selected: true },
+          { id: 2, color: "blue", selected: false },
+          { id: 3, color: "green", selected: false },
+        ]);
 
-      // eslint-disable-next-line no-unused-vars
-      const NoStateNoAction = () => {
-        return (
-          <div>
-            <p>
-              <strong>No state, no action</strong>
-            </p>
+        // Derived state: currently selected color in data state
+        const selectedColor =
+          colorChoices.find((choice) => choice.selected)?.color || null;
 
-            <PickFavoriteColor name="color" />
-          </div>
-        );
-      };
+        // UI FORM STATE - This represents the current form state (may differ from data state)
+        const [uiSelectedColor, setUiSelectedColor] = useState(selectedColor);
 
-      // eslint-disable-next-line no-unused-vars
-      const ActionLogAfter1s = () => {
-        const [value, setValue] = useState();
-        const onValueChange = (v, e) => {
-          console.log("value changed to", v, e);
-          setValue(v);
+        // Next ID for new colors
+        const [nextId, setNextId] = useState(4);
+
+        // Form submission feedback
+        const [isSubmitting, setIsSubmitting] = useState(false);
+        const [submitMessage, setSubmitMessage] = useState("");
+        const [submitError, setSubmitError] = useState("");
+        const [forceError, setForceError] = useState(false);
+
+        // Random colors pool
+        const randomColors = [
+          "purple",
+          "orange",
+          "yellow",
+          "pink",
+          "cyan",
+          "magenta",
+          "lime",
+          "indigo",
+          "coral",
+          "teal",
+          "gold",
+          "silver",
+          "navy",
+          "maroon",
+        ];
+
+        // Action that simulates submitting form data (takes 1s)
+        const submitForm = async ({ color }) => {
+          setIsSubmitting(true);
+          setSubmitError("");
+          setSubmitMessage(`Syncing color: ${color || "none"}...`);
+
+          try {
+            console.log("Submitting form data:", color);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+
+            // Simulate error if checkbox is checked
+            if (forceError) {
+              throw new Error(
+                "Simulated server error: Failed to update color preference",
+              );
+            }
+
+            // Update the data state to match the form submission
+            setColorChoices((prev) =>
+              prev.map((choice) => ({
+                ...choice,
+                selected: choice.color === color,
+              })),
+            );
+
+            setSubmitMessage(`✅ Successfully synced: ${color || "none"}`);
+            console.log("Data state updated from form:", color);
+          } catch (error) {
+            setSubmitError(error.message);
+            setSubmitMessage("");
+          } finally {
+            setIsSubmitting(false);
+          }
+        };
+
+        // Add a new color to the data state
+        const addColorToState = (color) => {
+          setColorChoices((prev) => [
+            ...prev,
+            { id: nextId, color, selected: false },
+          ]);
+          setNextId((prev) => prev + 1);
+        };
+
+        // Remove a color from the data state
+        const removeColorFromState = (colorId) => {
+          setColorChoices((prev) =>
+            prev.filter((choice) => choice.id !== colorId),
+          );
+        };
+
+        // Select a color in the data state (radio behavior - only one selected)
+        const selectColorInState = (colorId) => {
+          setColorChoices((prev) =>
+            prev.map((choice) => ({
+              ...choice,
+              selected: choice.id === colorId,
+            })),
+          );
+        };
+
+        // Clear selection in the data state
+        const clearSelectionInState = () => {
+          setColorChoices((prev) =>
+            prev.map((choice) => ({
+              ...choice,
+              selected: false,
+            })),
+          );
+        };
+
+        // Get the color that reset would sync to
+        const getResetColor = () => {
+          return colorChoices.find((choice) => choice.selected)?.color || null;
+        };
+
+        // Add a random color choice to the data state
+        const addRandomColor = () => {
+          const availableColors = randomColors.filter(
+            (color) => !colorChoices.some((choice) => choice.color === color),
+          );
+          if (availableColors.length > 0) {
+            const randomColor =
+              availableColors[
+                Math.floor(Math.random() * availableColors.length)
+              ];
+            addColorToState(randomColor);
+          }
         };
 
         return (
-          <div>
-            <p>
-              <strong>action log after 1s</strong>
-            </p>
+          <div style="border: 2px solid #ddd; padding: 20px; border-radius: 8px; background: #f9f9f9;">
+            <h2>State ↔ UI Form Demo (Radio Selection)</h2>
 
-            <PickFavoriteColor
-              name="color_alert"
-              value={value}
-              onValueChange={onValueChange}
-              action={async ({ color_alert }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-                console.log(`Color selected: ${JSON.stringify(color_alert)}`);
-              }}
-            />
-          </div>
-        );
-      };
+            <div style="display: flex; gap: 20px; margin: 20px 0;">
+              {/* DATA STATE SECTION */}
+              <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
+                <h3 style="margin: 0 0 15px 0; color: #2196F3;">
+                  🗄️ Data State
+                </h3>
+                <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+                  Direct manipulation of the data source (single selection)
+                </p>
 
-      // eslint-disable-next-line no-unused-vars
-      const ActionThrowAfter1s = () => {
-        const [value, setValue] = useState();
+                <div style="margin-bottom: 15px;">
+                  <button
+                    onClick={addRandomColor}
+                    style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;"
+                  >
+                    + Add Random Color
+                  </button>
+                  <button
+                    onClick={clearSelectionInState}
+                    style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
 
-        return (
-          <div>
-            <p>
-              <strong>Action + throw after 1s</strong>
-            </p>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  {colorChoices.map(({ id, color, selected }) => (
+                    <div
+                      key={id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "6px",
+                        border: "1px solid #eee",
+                        borderRadius: "3px",
+                        background: selected ? "#e8f5e8" : "#fafafa",
+                        borderColor: selected ? "#4CAF50" : "#eee",
+                      }}
+                    >
+                      <span style="flex: 1; font-size: 14px;">
+                        {color.charAt(0).toUpperCase() + color.slice(1)}
+                      </span>
 
-            <PickFavoriteColor
-              name="color_action_throw"
-              action={async ({ color_action_throw }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-                throw new Error(
-                  `Color selected: ${JSON.stringify(color_action_throw)}`,
-                );
-              }}
-              value={value}
-              onValueChange={setValue}
-            />
-          </div>
-        );
-      };
+                      <button
+                        onClick={() => selectColorInState(id)}
+                        style={{
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          background: selected ? "#4CAF50" : "#2196F3",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "3px",
+                          cursor: "pointer",
+                          minWidth: "60px",
+                        }}
+                      >
+                        {selected ? "Selected" : "Select"}
+                      </button>
 
-      // eslint-disable-next-line no-unused-vars
-      const FormLogAfter1s = () => {
-        const [value, setValue] = useState();
-        const onValueChange = (v, e) => {
-          console.log("value changed to", v, e);
-          setValue(v);
-        };
+                      <button
+                        onClick={() => removeColorFromState(id)}
+                        style="padding: 4px 6px; background: #f44336; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;"
+                        title="Remove this color"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-        const [, setRenderKey] = useState(null);
+              {/* UI FORM SECTION */}
+              <div style="flex: 1; padding: 15px; background: #fff; border-radius: 6px; border: 1px solid #ccc;">
+                <h3 style="margin: 0 0 15px 0; color: #FF9800;">📝 UI Form</h3>
+                <p style="margin: 0 0 15px 0; font-size: 14px; color: #666;">
+                  Radio button interface for user interaction
+                </p>
 
-        return (
-          <div>
-            <p>
-              <strong>Form + log after 1s</strong>
-            </p>
-            <Form
-              action={async ({ color }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-                console.log(`Color selected: ${JSON.stringify(color)}`);
-              }}
-            >
-              <PickFavoriteColor
-                name="color"
-                value={value}
-                onValueChange={onValueChange}
-              />
-              <Button type="submit">Submit</Button>
-              <Button type="reset">Reset</Button>
-            </Form>
-            <button
-              onClick={() => {
-                setRenderKey({});
-              }}
-            >
-              Rerender
-            </button>
-            <button onClick={() => setValue("red")}>Set value to red</button>
-            <button onClick={() => setValue("blue")}>Set value to blue</button>
-            <button onClick={() => setValue(undefined)}>Reset value</button>
-          </div>
-        );
-      };
+                <Form action={submitForm}>
+                  <fieldset style="border: 1px solid #ddd; padding: 10px; border-radius: 4px;">
+                    <legend>Select Favorite Color:</legend>
+                    <RadioList
+                      name="color"
+                      onUIStateChange={(color) => {
+                        setUiSelectedColor(color);
+                      }}
+                    >
+                      {colorChoices.map(({ id, color }) => (
+                        <Label key={id} style="display: block; margin: 5px 0;">
+                          {color.charAt(0).toUpperCase() + color.slice(1)}
+                          <Radio
+                            value={color}
+                            checked={selectedColor === color}
+                          />
+                        </Label>
+                      ))}
+                    </RadioList>
+                  </fieldset>
 
-      // eslint-disable-next-line no-unused-vars
-      const FormThrowAfter1s = () => {
-        const [value, setValue] = useState();
-        return (
-          <div>
-            <p>
-              <strong>Form + throw after 1s</strong>
-            </p>
-            <Form
-              action={async ({ color_form_throw }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-                throw new Error(
-                  `Color selected: ${JSON.stringify(color_form_throw)}`,
-                );
-              }}
-            >
-              <PickFavoriteColor
-                id="color_form_throw"
-                name="color_form_throw"
-                value={value}
-                onValueChange={setValue}
-              />
-              <Button type="submit">Submit</Button>
-              <Button type="reset">Reset</Button>
-            </Form>
-          </div>
-        );
-      };
+                  {/* Error simulation checkbox */}
+                  <div style="margin: 10px 0; padding: 8px; background: #ffebee; border-radius: 4px; border: 1px solid #ffcdd2;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #d32f2f;">
+                      <input
+                        type="checkbox"
+                        checked={forceError}
+                        onChange={(e) => setForceError(e.target.checked)}
+                        style="margin: 0;"
+                      />
+                      🔧 Force submission error (for testing)
+                    </label>
+                  </div>
 
-      // eslint-disable-next-line no-unused-vars
-      const FormPreCheckedThrowAfter1s = () => {
-        const [value, setValue] = useState("red");
+                  {/* Submission feedback messages */}
+                  {(isSubmitting || submitMessage || submitError) && (
+                    <div style="margin: 10px 0; padding: 10px; border-radius: 4px; font-size: 14px;">
+                      {isSubmitting && (
+                        <div style="color: #1976d2; background: #e3f2fd; padding: 8px; border-radius: 3px; border-left: 3px solid #1976d2;">
+                          🔄 {submitMessage}
+                        </div>
+                      )}
+                      {!isSubmitting && submitMessage && (
+                        <div style="color: #388e3c; background: #e8f5e8; padding: 8px; border-radius: 3px; border-left: 3px solid #388e3c;">
+                          {submitMessage}
+                        </div>
+                      )}
+                      {submitError && (
+                        <div style="color: #d32f2f; background: #ffebee; padding: 8px; border-radius: 3px; border-left: 3px solid #d32f2f;">
+                          ❌ {submitError}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-        return (
-          <div>
-            <p>
-              <strong>Form + pre-checked throw after 1s</strong>
-            </p>
-            <Form
-              action={async ({ color_form_checked_throw }) => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-                throw new Error(
-                  `Color selected: ${JSON.stringify(color_form_checked_throw)}`,
-                );
-              }}
-            >
-              <PickFavoriteColor
-                id="color_form_checked_throw"
-                name="color_form_checked_throw"
-                value={value}
-                onValueChange={setValue}
-              />
+                  <div style="margin-top: 15px; display: flex; align-items: flex-start; flex-direction: column; gap: 8px;">
+                    <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting ? "⏳ Submitting..." : "📤 Submit Form"}{" "}
+                      {!isSubmitting && uiSelectedColor && (
+                        <span style="font-size: 11px; opacity: 0.7;">
+                          ({uiSelectedColor})
+                        </span>
+                      )}
+                    </Button>
+                    <Button type="reset">
+                      🔄 Reset to State{" "}
+                      {getResetColor() && (
+                        <span style="font-size: 11px; opacity: 0.7;">
+                          ({getResetColor()})
+                        </span>
+                      )}
+                    </Button>
+                  </div>
+                </Form>
+              </div>
+            </div>
 
-              <Button type="submit">Submit</Button>
-              <Button type="reset">Reset</Button>
-            </Form>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const FormRequired = () => {
-        const [value, setValue] = useState();
-
-        return (
-          <div>
-            <p>
-              <strong>Form + required</strong>
-            </p>
-            <Form
-              action={async () => {
-                await new Promise((resolve) => setTimeout(resolve, 1_000));
-              }}
-            >
-              <PickFavoriteColor
-                required
-                data-required-message="Veuillez sélectionner une couleur"
-                value={value}
-                onValueChange={setValue}
-              />
-              <Button type="submit">Submit</Button>
-              <Button type="reset">Reset</Button>
-            </Form>
+            <div style="background: #f0f8ff; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2196F3;">
+              <h4 style="margin: 0 0 10px 0;">How it works:</h4>
+              <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+                <li>
+                  <strong>Data State</strong>: The actual data with direct
+                  manipulation buttons (single selection only)
+                </li>
+                <li>
+                  <strong>UI Form</strong>: Radio button interface that can
+                  differ from the data state
+                </li>
+                <li>
+                  <strong>Submit</strong>: Updates data state to match the form
+                  selection
+                </li>
+                <li>
+                  <strong>Reset</strong>: Syncs form back to current data state
+                </li>
+              </ul>
+            </div>
           </div>
         );
       };

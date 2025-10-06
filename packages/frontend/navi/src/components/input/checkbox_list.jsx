@@ -116,17 +116,6 @@ const CheckboxListBasic = forwardRef((props, ref) => {
     </div>
   );
 });
-// const collectCheckedValues = (checkboxList, name) => {
-//   const checkedValues = [];
-//   const checkboxSelector = `input[type="checkbox"][name="${CSS.escape(name)}"]`;
-//   const checkboxWithSameName = checkboxList.querySelectorAll(checkboxSelector);
-//   for (const checkboxElement of checkboxWithSameName) {
-//     if (checkboxElement.checked) {
-//       checkedValues.push(checkboxElement.value);
-//     }
-//   }
-//   return checkedValues.length === 0 ? undefined : checkedValues;
-// };
 
 const CheckboxListWithAction = forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
@@ -217,10 +206,9 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
 
   return (
     <CheckboxListBasic {...rest} ref={innerRef} name={name}>
-      {/* <input type="checkbox" /> must not try to update the <form>
-     The checkbox list is doing it with the array of checked values
-     Without this we would likely have form complaining the input has no name
-     or the input overriding the checkbox list */}
+      {/* <input type="checkbox" /> must be ignorant of the <form>
+      otherwise they would try to update the <form>.
+      This responsability belongs to the checkbox list which manages the list of checkboxes */}
       <FormContext.Provider value={null}>{children}</FormContext.Provider>
     </CheckboxListBasic>
   );

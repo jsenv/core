@@ -8,6 +8,7 @@ import {
 } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
+import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
   useActionBoundToOneParam,
@@ -201,7 +202,10 @@ const RadioListInsideForm = forwardRef((props, ref) => {
 
   return (
     <RadioListBasic {...rest} ref={innerRef} name={name}>
-      {children}
+      {/* <input type="radio" /> must be ignorant of the <form>
+      otherwise they would try to update the <form>.
+      This responsability belongs to the radio list which manages the list of radios */}
+      <FormContext.Provider value={null}> {children}</FormContext.Provider>
     </RadioListBasic>
   );
 });
