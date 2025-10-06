@@ -13,6 +13,13 @@ import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
+const DEBUG = true;
+const debug = (message, ...args) => {
+  if (DEBUG) {
+    console.debug(`[UIStateController] ${message}`, ...args);
+  }
+};
+
 /**
  * UI State Controller Hook
  *
@@ -218,6 +225,12 @@ export const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
 
+  debug(
+    childComponentType === "*"
+      ? `Creating "${componentType}" ui state controller (monitoring all descendants ui state(s))"`
+      : `Creating "${componentType}" ui state controller (monitoring "${childComponentType}" ui state(s))`,
+  );
+
   let { onUIStateChange } = props;
   onUIStateChange = useStableCallback(onUIStateChange);
   const uiStateRef = useRef(emptyState);
@@ -234,13 +247,8 @@ export const useUIGroupStateController = (
       childUIStateControllerArray,
       emptyState,
     );
-    if (newUIState === uiStateRef.current) {
-      return;
-    }
     const uiGroupStateController = uiGroupStateControllerRef.current;
-    if (uiGroupStateController) {
-      uiGroupStateController.setUIState(newUIState);
-    }
+    uiGroupStateController.setUIState(newUIState);
   };
 
   childUIStateControllerArray.length = 0;
@@ -252,6 +260,17 @@ export const useUIGroupStateController = (
       componentType,
       uiState: uiStateRef.current,
       setUIState: (newUIState, e) => {
+        const currentUIState = uiStateRef.current;
+        if (newUIState === currentUIState) {
+          debug(`"${componentType}" ui state unchanged:`, newUIState);
+          return;
+        }
+        debug(
+          `"${componentType}" ui state changed from:`,
+          currentUIState,
+          "to:",
+          newUIState,
+        );
         uiGroupStateController.uiState = newUIState;
         uiStateRef.current = newUIState;
         publishUIState(newUIState);
@@ -265,6 +284,9 @@ export const useUIGroupStateController = (
           return;
         }
         childUIStateControllerArray.push(childUIStateController);
+        debug(
+          `"${componentType}" registered a "${childUIStateController.componentType}" - total: ${childUIStateControllerArray.length}`,
+        );
         onChange(childUIStateController, "mount");
       },
       onChildUIStateChange: (childUIStateController) => {
@@ -274,6 +296,10 @@ export const useUIGroupStateController = (
         ) {
           return;
         }
+        debug(
+          `"${componentType}" notified by "${childUIStateController.componentType}" of ui state change to`,
+          childUIStateController.uiState,
+        );
         onChange(childUIStateController, "change");
       },
       unregisterChild: (childUIStateController) => {
@@ -287,9 +313,15 @@ export const useUIGroupStateController = (
           childUIStateController,
         );
         if (index === -1) {
+          debug(
+            `"${componentType}" cannot unregister "${childUIStateController.componentType}" - not found`,
+          );
           return;
         }
         childUIStateControllerArray.splice(index, 1);
+        debug(
+          `"${componentType}" unregistered "${childUIStateController.componentType}" - remaining: ${childUIStateControllerArray.length}`,
+        );
         onChange(childUIStateController, "unmount");
       },
       resetUIState: (e) => {
