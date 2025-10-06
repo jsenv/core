@@ -12,7 +12,7 @@ export const UIStateControllerContext = createContext();
 export const UIStateContext = createContext();
 
 const DEBUG_UI_STATE_CONTROLLER = true;
-const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
+const DEBUG_UI_GROUP_STATE_CONTROLLER = true;
 const debugUIState = (...args) => {
   if (DEBUG_UI_STATE_CONTROLLER) {
     console.debug(...args);
@@ -170,7 +170,7 @@ export const useUIStateController = (
       const currentUIState = uiStateRef.current;
       if (newUIState === currentUIState) {
         debugUIState(
-          `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state is the same`,
+          `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> ignored (state is the same)`,
         );
         return;
       }
@@ -335,17 +335,16 @@ export const useUIGroupStateController = (
     setUIState: (newUIState, e) => {
       const currentUIState = uiStateRef.current;
       if (newUIState === currentUIState) {
-        debugUIGroup(`"${componentType}" ui state unchanged:`, newUIState);
+        debugUIGroup(
+          `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> ignored (state is the same)`,
+        );
         return;
       }
-      debugUIGroup(
-        `"${componentType}" ui state changed from:`,
-        currentUIState,
-        "to:",
-        newUIState,
-      );
       uiGroupStateController.uiState = newUIState;
       uiStateRef.current = newUIState;
+      debugUIGroup(
+        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
+      );
       publishUIState(newUIState);
       onUIStateChange?.(newUIState, e);
     },
@@ -355,7 +354,7 @@ export const useUIGroupStateController = (
       }
       childUIStateControllerArray.push(childUIStateController);
       debugUIGroup(
-        `"${componentType}" registered a "${childUIStateController.componentType}" - total: ${childUIStateControllerArray.length}`,
+        `${componentType}.registerChild("${childUIStateController.componentType}") - total: ${childUIStateControllerArray.length}`,
       );
       onChange(childUIStateController, "mount");
     },
@@ -364,8 +363,9 @@ export const useUIGroupStateController = (
         return;
       }
       debugUIGroup(
-        `"${componentType}" notified by "${childUIStateController.componentType}" of ui state change to`,
-        childUIStateController.uiState,
+        `${componentType}.onChildUIStateChange("${componentType}") to ${JSON.stringify(
+          childUIStateController.uiState,
+        )}`,
       );
       onChange(childUIStateController, "change");
     },
@@ -382,7 +382,7 @@ export const useUIGroupStateController = (
       }
       childUIStateControllerArray.splice(index, 1);
       debugUIGroup(
-        `"${componentType}" unregistered "${childUIStateController.componentType}" - remaining: ${childUIStateControllerArray.length}`,
+        `${componentType}.unregisterChild("${childUIStateController.componentType}") - remaining: ${childUIStateControllerArray.length}`,
       );
       onChange(childUIStateController, "unmount");
     },
