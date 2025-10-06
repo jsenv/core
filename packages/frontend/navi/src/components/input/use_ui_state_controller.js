@@ -214,7 +214,7 @@ const useUIStateController = (
   }, [hasStateProp, state, getPropFromState]);
 
   return useMemo(() => {
-    const subscribers = new Set();
+    const [publishUIState, subscribeUIState] = createPubSub();
 
     const uiStateController = {
       componentType,
@@ -236,11 +236,9 @@ const useUIStateController = (
         uiStateController.uiState = newUIState;
 
         // Notify subscribers
-        subscribers.forEach((callback) => callback(newUIState));
-
+        publishUIState(newUIState);
         // Call original callback
         onUIStateChange?.(newUIState, e);
-
         // Notify group controller
         if (groupUIStateController) {
           groupUIStateController.onChildUIStateChange(
@@ -255,10 +253,7 @@ const useUIStateController = (
         const prop = getPropFromState(currentState);
         uiStateController.setUIState(prop);
       },
-      subscribe: (callback) => {
-        subscribers.add(callback);
-        return () => subscribers.delete(callback);
-      },
+      subscribe: subscribeUIState,
     };
     uiStateControllerRef.current = uiStateController;
     return uiStateController;
