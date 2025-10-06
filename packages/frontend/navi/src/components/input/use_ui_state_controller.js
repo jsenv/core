@@ -226,7 +226,10 @@ export const useUIGroupStateController = (
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiGroupStateControllerRef = useRef();
 
-  const updateUIState = () => {
+  const onChange = () => {
+    // TODO: should track if we are rendering ourselves to batch update
+    // when parent rendering is done
+
     const newUIState = aggregateChildStates(
       childUIStateControllerArray,
       emptyState,
@@ -240,10 +243,12 @@ export const useUIGroupStateController = (
     }
   };
 
+  useLayoutEffect(() => {
+    childUIStateControllerArray.length = 0;
+  });
+
   return useMemo(() => {
     const [publishUIState, subscribeUIState] = createPubSub();
-
-    childUIStateControllerArray.length = 0;
 
     const uiGroupStateController = {
       componentType,
@@ -251,19 +256,8 @@ export const useUIGroupStateController = (
       setUIState: (newUIState, e) => {
         uiGroupStateController.uiState = newUIState;
         uiStateRef.current = newUIState;
-
         publishUIState(newUIState);
-        // Call original callback
         onUIStateChange?.(newUIState, e);
-      },
-      onChildUIStateChange: (childUIStateController) => {
-        if (
-          childComponentType &&
-          childUIStateController.componentType !== childComponentType
-        ) {
-          return;
-        }
-        updateUIState();
       },
       registerChild: (childUIStateController) => {
         if (
@@ -273,7 +267,16 @@ export const useUIGroupStateController = (
           return;
         }
         childUIStateControllerArray.push(childUIStateController);
-        updateUIState();
+        onChange(childUIStateController, "mount");
+      },
+      onChildUIStateChange: (childUIStateController) => {
+        if (
+          childComponentType &&
+          childUIStateController.componentType !== childComponentType
+        ) {
+          return;
+        }
+        onChange(childUIStateController, "change");
       },
       unregisterChild: (childUIStateController) => {
         if (
@@ -289,7 +292,7 @@ export const useUIGroupStateController = (
           return;
         }
         childUIStateControllerArray.splice(index, 1);
-        updateUIState();
+        onChange(childUIStateController, "unmount");
       },
       resetUIState: (e) => {
         for (const childUIStateController of childUIStateControllerArray) {
