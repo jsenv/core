@@ -64,6 +64,19 @@ const debugUIGroup = (...args) => {
  *    - Enables building complex forms with nested state management
  *    - Supports scenarios like checkbox lists, radio groups, etc.
  *
+ * 8. **External Control via Custom Events**:
+ *    - Components can listen to "setuistate" custom events for external UI control
+ *    - Fills the gap when state controls UI but external code needs to override UI
+ *    - Rarely needed but essential for advanced scenarios like programmatic state control
+ *    - Components typically implement: `onsetuistate={(e) => controller.setUIState(e.detail.value, e)}`
+ *
+ * Real-world Usage (from InputCheckbox):
+ * - User interactions call `setUIState()` immediately for responsive UI
+ * - Action errors/cancellations call `resetUIState()` to revert optimistic changes
+ * - Form resets use custom "resetuistate" events to restore original state
+ * - External systems can programmatically control UI via "setuistate" events
+ * - Group controllers aggregate individual UI states for coordinated behavior
+ *
  * Usage Patterns:
  * - **Controlled**: Component receives `checked`/`value` + `onUIStateChange`
  * - **Uncontrolled**: Component receives `defaultChecked`/`defaultValue`
