@@ -29,7 +29,11 @@ const [savedValue, setSavedValue] = useState(false);
 
 <InputCheckbox
   checked={savedValue} // External state
-  action={async (newValue) => {
+  action={async (
+    // newValue is undefined when unchecked, "on" when checked (default HTML behavior)
+    // Customize checked value: <InputCheckbox value="yes" /> sends "yes" instead of "on"
+    newValue,
+  ) => {
     // PATCH to update existing resource
     const response = await fetch("/api/user/preferences", {
       method: "PATCH",
@@ -57,10 +61,7 @@ For traditional form workflows where users control submission:
 
 ```jsx
 <Form
-  action={async ({
-    email,
-    consent, // will be either undefined or "on", "on" can be customized by passing value="toto" to the checkbox
-  }) => {
+  action={async ({ email, consent }) => {
     const response = await fetch("/api/user/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
