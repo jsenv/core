@@ -64,36 +64,43 @@ Controllers work seamlessly with form operations:
 
 ## Real-World Examples
 
-### Simple Checkbox
-
-```jsx
-// User sees immediate feedback
-<InputCheckbox
-  checked={savedState} // External state
-  onUIStateChange={handleChange} // Track what user is doing
-/>
-```
-
 ### Checkbox with Action
 
 ```jsx
+const [checked, setChecked] = useState(false);
+
 // Optimistic updates with error recovery
 <InputCheckbox
-  action={updateServerState}
-  onActionError={() => {
-    // Controller automatically reverts UI to match reality
+  checked={checkedSignal.value}
+  action={async (value) => {
+    const result = await window.fetch("/api/checked", {
+      method: "PATCH",
+      body: value,
+    });
+    // if an error occurs during the fetch setChecked won't be called and checkbox state is reverted
+    // otherwise we're good and our ui state and external state are synced
+    // this example use preact signal but any state manegement library works
+    setChecked(result);
   }}
-/>
+/>;
 ```
 
 ### Checkbox List
 
 ```jsx
+const [checkedOptions, setCheckedOptions] = useState()
+
 // Multiple checkboxes coordinate through group controller
-<CheckboxList values={savedValues}>
-  <InputCheckbox value="option1" />
-  <InputCheckbox value="option2" />
-  <InputCheckbox value="option3" />
+<CheckboxList action={(checkedValues) => {
+    const result = await window.fetch("/api/checked", {
+      method: "PATCH",
+      body: checkedValues,
+    });
+    setCheckedOptions(result);
+}}>
+  <InputCheckbox value="option1" checked={checkedOptions.includes('option1')} />
+  <InputCheckbox value="option2" checked={checkedOptions.includes('option2')} />
+  <InputCheckbox value="option3" checked={checkedOptions.includes('option3')} />
 </CheckboxList>
 ```
 
