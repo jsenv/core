@@ -45,13 +45,14 @@ export const RadioList = forwardRef((props, ref) => {
   const uiStateController = useUIGroupStateController(props, "radio_list", {
     childComponentType: "radio",
     aggregateChildStates: (childUIStateControllers) => {
-      const values = [];
+      let activeValue;
       for (const childUIStateController of childUIStateControllers) {
         if (childUIStateController.uiState) {
-          values.push(childUIStateController.uiState);
+          activeValue = childUIStateController.uiState;
+          break;
         }
       }
-      return values.length === 0 ? undefined : values;
+      return activeValue;
     },
   });
   const uiState = useUIState(uiStateController);
