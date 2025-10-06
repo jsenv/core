@@ -82,6 +82,9 @@ export const Button = forwardRef((props, ref) => {
 });
 
 const ButtonBasic = forwardRef((props, ref) => {
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const {
     readOnly,
     loading,
@@ -93,9 +96,6 @@ const ButtonBasic = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
-  const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
@@ -116,8 +116,10 @@ const ButtonBasic = forwardRef((props, ref) => {
 
   return (
     <button
-      ref={innerRef}
+      // put data-action first to help find it in devtools
+      data-action={rest["data-action"]}
       {...rest}
+      ref={innerRef}
       data-custom={appearance === "custom" ? "" : undefined}
       data-readonly-silent={innerReadOnly ? "" : undefined}
       data-readonly={innerReadOnly ? "" : undefined}
@@ -168,10 +170,8 @@ const ButtonWithAction = forwardRef((props, ref) => {
     children,
     ...rest
   } = props;
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-
   const boundAction = useAction(action);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -185,7 +185,6 @@ const ButtonWithAction = forwardRef((props, ref) => {
     onError: onActionError,
     onEnd: onActionEnd,
   });
-
   const handleClick = (event) => {
     event.preventDefault();
     const button = innerRef.current;
@@ -195,9 +194,9 @@ const ButtonWithAction = forwardRef((props, ref) => {
 
   return (
     <ButtonBasic
+      {...rest}
       data-action={boundAction.name}
       ref={innerRef}
-      {...rest}
       loading={innerLoading}
       onClick={(event) => {
         handleClick(event);
@@ -247,8 +246,8 @@ const ButtonInsideForm = forwardRef((props, ref) => {
 
   return (
     <ButtonBasic
-      ref={innerRef}
       {...rest}
+      ref={innerRef}
       type={type}
       loading={innerLoading}
       onClick={(event) => {
@@ -280,7 +279,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
     type === "submit" || type === "reset" || type === "image";
   if (import.meta.dev && hasEffectOnForm) {
     throw new Error(
-      "Button with type submit/reset/image should not have their own action",
+      `<Button type="${type}" /> should not have their own action`,
     );
   }
   const { formParamsSignal } = formContext;
@@ -320,9 +319,9 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 
   return (
     <ButtonBasic
+      {...rest}
       data-action={actionBoundToFormParams.name}
       ref={innerRef}
-      {...rest}
       type={type}
       loading={innerLoading}
       onClick={(event) => {

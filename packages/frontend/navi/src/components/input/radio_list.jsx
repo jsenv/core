@@ -89,6 +89,7 @@ const RadioListBasic = forwardRef((props, ref) => {
 
   return (
     <div
+      data-action={rest["data-action"]}
       {...rest}
       ref={innerRef}
       className="navi_radio_list"
