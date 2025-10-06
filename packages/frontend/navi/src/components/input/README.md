@@ -56,28 +56,39 @@ const [savedValue, setSavedValue] = useState(false);
 For traditional form workflows where users control submission:
 
 ```jsx
-const submitForm = async ({ consent }) => {
-  const response = await fetch("/api/user/consent", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(consent),
-  });
+<Form
+  action={async ({
+    email,
+    consent, // will be either undefined or "on", "on" can be customized by passing value="toto" to the checkbox
+  }) => {
+    const response = await fetch("/api/user/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        consent,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to save settings");
+    }
+    // Update your app state here
+    const result = await response.json();
+    updateUserSettings(result);
+  }}
+>
+  <label>
+    Email Address:
+    <Input type="email" name="email" defaultValue="user@example.com" required />
+  </label>
 
-  if (!response.ok) {
-    throw new Error("Failed to save settings");
-  }
-
-  // Update your app state here
-  const result = await response.json();
-  updateUserConsent(result);
-};
-
-<Form action={submitForm}>
-  <InputCheckbox name="consent" defaultChecked />
+  <label>
+    <InputCheckbox name="consent" />I agree to receive marketing emails
+  </label>
 
   <button type="submit">Save Settings</button>
   <button type="reset">Reset Form</button>
-</Form>;
+</Form>
 ```
 
 **Key differences:**
