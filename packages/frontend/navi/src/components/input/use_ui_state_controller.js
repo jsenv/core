@@ -7,15 +7,13 @@ import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
-const DEBUG_UI_STATE_CONTROLLER = true;
-const DEBUG_UI_GROUP_STATE_CONTROLLER = true;
-
+const DEBUG_UI_STATE_CONTROLLER = false;
+const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
 const debugUIState = (...args) => {
   if (DEBUG_UI_STATE_CONTROLLER) {
     console.debug(...args);
   }
 };
-
 const debugUIGroup = (...args) => {
   if (DEBUG_UI_GROUP_STATE_CONTROLLER) {
     console.debug(...args);
@@ -91,6 +89,7 @@ export const useUIStateController = (
   const hasStateProp = Object.hasOwn(props, statePropName);
   const state = props[statePropName];
   const defaultState = props[defaultStatePropName];
+
   const stateInitial = useInitialValue(() => {
     if (hasStateProp) {
       // controlled by state prop ("value" or "checked")
@@ -129,9 +128,10 @@ export const useUIStateController = (
         groupUIStateController.unregisterChild(uiStateController);
       }
     };
-  }, [groupUIStateController]);
+  }, []);
 
   // Handle state prop changes
+  getPropFromState = useStableCallback(getPropFromState);
   useLayoutEffect(() => {
     const uiStateController = uiStateControllerRef.current;
     if (!hasStateProp) {
@@ -151,10 +151,9 @@ export const useUIStateController = (
     stateRef.current = state;
     uiStateController.state = state;
     uiStateController.setUIState(getPropFromState(state));
-  }, [hasStateProp, state, getPropFromState]);
+  }, [hasStateProp, state]);
 
-  let { onUIStateChange } = props;
-  onUIStateChange = useStableCallback(onUIStateChange);
+  const { onUIStateChange } = props;
   /**
    * This check is needed only for basic field because
    * When using action/form we consider the action/form code
@@ -173,11 +172,20 @@ export const useUIStateController = (
     );
   }
 
+  const hasStatePropRef = useRef();
+  hasStatePropRef.current = hasStateProp;
+
+  const onUIStateChangeRef = useRef();
+  onUIStateChangeRef.current = onUIStateChange;
+  const getStateFromPropRef = useRef();
+  getStateFromPropRef.current = getStateFromProp;
+  const getPropFromStateRef = useRef();
+  getPropFromStateRef.current = getPropFromState;
+
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
     return existingUIStateController;
   }
-
   debugUIState(
     `Creating "${componentType}" ui state controller - initial state:`,
     JSON.stringify(stateInitial),
@@ -192,7 +200,7 @@ export const useUIStateController = (
       if (formContext) {
         setNavState(prop);
       }
-      const newUIState = getStateFromProp(prop);
+      const newUIState = getStateFromPropRef.current(prop);
       const currentUIState = uiStateRef.current;
       if (newUIState === currentUIState) {
         debugUIState(`"${componentType}" setUIState: no change`, newUIState);
@@ -210,7 +218,7 @@ export const useUIStateController = (
       // Notify subscribers
       publishUIState(newUIState);
       // Call original callback
-      onUIStateChange?.(newUIState, e);
+      onUIStateChangeRef.current?.(newUIState, e);
       // Notify group controller
       if (groupUIStateController) {
         debugUIState(
@@ -224,8 +232,10 @@ export const useUIStateController = (
       }
     },
     resetUIState: () => {
-      const currentState = hasStateProp ? state : undefined;
-      const prop = getPropFromState(currentState);
+      const currentState = hasStatePropRef.current
+        ? stateRef.current
+        : undefined;
+      const prop = getPropFromStateRef.current(currentState);
       debugUIState(
         `"${componentType}" resetUIState called - resetting to:`,
         prop,
