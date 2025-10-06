@@ -99,7 +99,6 @@
         margin-bottom: 15px;
       }
       label {
-        display: block;
         margin-bottom: 15px;
         font-weight: 500;
         color: #555;
@@ -133,6 +132,62 @@
       } from "@jsenv/navi";
 
       const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        return (
+          <>
+            <div className="demo-card" style={{ marginBottom: "30px" }}>
+              <h2>Input Text Demo - Overview</h2>
+              <p>
+                This demo showcases different ways to use the Input component
+                with text inputs.
+              </p>
+              <nav>
+                <h3>Sections:</h3>
+                <ul style={{ marginLeft: "20px" }}>
+                  <li>
+                    <a href="#basic-inputs">
+                      1. Basic Input (no action/no form)
+                    </a>{" "}
+                    - Simple inputs with value handling
+                  </li>
+                  <li>
+                    <a href="#input-actions">2. Input with Actions</a> - Inputs
+                    that trigger actions on value change, including error
+                    handling
+                  </li>
+                  <li>
+                    <a href="#input-forms">3. Input inside Form</a> - Form
+                    integration patterns
+                  </li>
+                </ul>
+              </nav>
+            </div>
+
+            <h2 id="basic-inputs">1. Basic Input (no action/no form)</h2>
+            <div className="demo-grid">
+              <BasicInputNoActionDemo />
+              <InputWithDefaultValueDemo />
+            </div>
+
+            <h2 id="input-actions">2. Input with Actions</h2>
+            <div className="demo-grid">
+              <BasicInputDemo />
+              <InputWithInitialValueDemo />
+              <InputWithExternalControlDemo />
+              <InputWithErrorDemo />
+              <InputWithValidationErrorDemo />
+            </div>
+
+            <h2 id="input-forms">3. Input inside Form</h2>
+            <div className="demo-grid">
+              <FormInputDemo />
+              <FormInputErrorDemo />
+            </div>
+          </>
+        );
+      };
 
       // eslint-disable-next-line no-unused-vars
       const BasicInputNoActionDemo = () => {
@@ -179,102 +234,6 @@
               Input starts with default value.
             </div>
           </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const InputControlledDemo = () => {
-        const [value, setValue] = useState("Controlled input");
-        const [result, setResult] = useState("");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Controlled Input</h3>
-            <div className="control-group">
-              <label>
-                Controlled input:
-                <Input
-                  name="text"
-                  value={value}
-                  onUIStateChange={(text) => {
-                    setValue(text);
-                    setResult(
-                      text ? `Value set to: "${text}"` : "Value cleared",
-                    );
-                  }}
-                />
-              </label>
-            </div>
-            <div className="button-group">
-              <button onClick={() => setValue("Preset Text 1")}>
-                Set Text 1
-              </button>
-              <button onClick={() => setValue("Preset Text 2")}>
-                Set Text 2
-              </button>
-              <button onClick={() => setValue("")}>Clear</button>
-            </div>
-            <div className="result-display">
-              {result || "Use buttons to control the input value..."}
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const App = () => {
-        return (
-          <>
-            <div className="demo-card" style={{ marginBottom: "30px" }}>
-              <h2>Input Text Demo - Overview</h2>
-              <p>
-                This demo showcases different ways to use the Input component
-                with text inputs.
-              </p>
-              <nav>
-                <h3>Sections:</h3>
-                <ul style={{ marginLeft: "20px" }}>
-                  <li>
-                    <a href="#basic-inputs">
-                      1. Basic Input (no action/no form)
-                    </a>{" "}
-                    - Simple inputs with value handling
-                  </li>
-                  <li>
-                    <a href="#input-actions">2. Input with Actions</a> - Inputs
-                    that trigger actions on value change, including error
-                    handling
-                  </li>
-                  <li>
-                    <a href="#input-forms">3. Input inside Form</a> - Form
-                    integration patterns
-                  </li>
-                </ul>
-              </nav>
-            </div>
-
-            <h2 id="basic-inputs">1. Basic Input (no action/no form)</h2>
-            <div className="demo-grid">
-              <BasicInputNoActionDemo />
-              <InputWithDefaultValueDemo />
-              <InputControlledDemo />
-            </div>
-
-            <h2 id="input-actions">2. Input with Actions</h2>
-            <div className="demo-grid">
-              <BasicInputDemo />
-              <InputWithInitialValueDemo />
-              <InputWithExternalControlDemo />
-              <InputWithErrorDemo />
-              <InputWithValidationErrorDemo />
-            </div>
-
-            <h2 id="input-forms">3. Input inside Form</h2>
-            <div className="demo-grid">
-              <FormInputDemo />
-              <FormInputErrorDemo />
-            </div>
-          </>
         );
       };
 
@@ -460,6 +419,7 @@
                     await delay(600);
                     const response = `✅ Action executed with: "${text}"`;
                     setResult(response);
+                    setValue(text);
                     return response;
                   }}
                 />

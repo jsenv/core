@@ -92,7 +92,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const uiState = uiStateController.useUIState(uiStateController);
+  const uiState = useUIState(uiStateController);
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
