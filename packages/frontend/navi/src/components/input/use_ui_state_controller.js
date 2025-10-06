@@ -45,7 +45,7 @@ export const useUIStateController = (
     fallbackState,
     getStateFromProp = (prop) => prop,
     getPropFromState = (state) => state,
-  },
+  } = {},
 ) => {
   const id = props.id;
   const formContext = useContext(FormContext);
@@ -158,11 +158,7 @@ export const useUIStateController = (
     readOnly,
     state: stateRef.current,
     uiState: uiStateRef.current,
-    setUIState: (prop, e) => {
-      if (formContext) {
-        setNavState(prop);
-      }
-      const newUIState = getStateFromPropRef.current(prop);
+    _setUIState: (newUIState, e) => {
       const currentUIState = uiStateRef.current;
       if (newUIState === currentUIState) {
         debugUIState(
@@ -192,10 +188,16 @@ export const useUIStateController = (
         );
       }
     },
+    setUIState: (prop, e) => {
+      const newUIState = getStateFromPropRef.current(prop);
+      if (formContext) {
+        setNavState(prop);
+      }
+      return uiStateController._setUIState(newUIState, e);
+    },
     resetUIState: (e) => {
       const currentState = stateRef.current;
-      const prop = getPropFromStateRef.current(currentState);
-      uiStateController.setUIState(prop, e);
+      uiStateController._setUIState(currentState, e);
     },
     actionEnd: () => {
       debugUIState(`"${componentType}" actionEnd called`);
@@ -285,7 +287,7 @@ export const useUIGroupStateController = (
   groupIsRenderingRef.current = true;
   pendingChangeRef.current = false;
 
-  const onChange = () => {
+  const onChange = (_, e) => {
     if (groupIsRenderingRef.current) {
       pendingChangeRef.current = true;
       return;
@@ -295,14 +297,17 @@ export const useUIGroupStateController = (
       emptyState,
     );
     const uiGroupStateController = uiGroupStateControllerRef.current;
-    uiGroupStateController.setUIState(newUIState);
+    uiGroupStateController.setUIState(newUIState, e);
   };
 
   useLayoutEffect(() => {
     groupIsRenderingRef.current = false;
     if (pendingChangeRef.current) {
       pendingChangeRef.current = false;
-      onChange();
+      onChange(
+        null,
+        new CustomEvent(`${componentType}_batched_ui_state_update`),
+      );
     }
   });
 

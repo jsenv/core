@@ -382,26 +382,58 @@
           <div className="demo-card">
             <h3 className="demo-title">Datetime-Local in Form</h3>
 
-            {/* External State Display */}
+            {/* External State Control */}
             <div
               style={{
-                marginBottom: "15px",
-                padding: "10px",
-                background: "#f0f8ff",
+                marginBottom: "20px",
+                padding: "12px",
+                background: "#e3f2fd",
                 borderRadius: "4px",
               }}
             >
-              <div
+              <h4
                 style={{
-                  fontSize: "12px",
+                  margin: "0 0 10px 0",
+                  fontSize: "14px",
                   color: "#1976d2",
-                  marginBottom: "5px",
                 }}
               >
-                <strong>📅 Saved Appointment:</strong>
+                📊 External State Control (UTC)
+              </h4>
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "12px",
+                  marginBottom: "10px",
+                }}
+              >
+                Current: {externalDateTime || "(not set)"}
               </div>
-              <div style={{ fontFamily: "monospace", fontSize: "12px" }}>
-                {externalDateTime || "(no appointment scheduled)"}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setExternalDateTime("2024-03-15T09:00:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set Mar 15, 9:00 AM UTC
+                </button>
+                <button
+                  onClick={() => setExternalDateTime("2024-08-20T16:30:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set Aug 20, 4:30 PM UTC
+                </button>
+                <button
+                  onClick={() => setExternalDateTime("2024-12-31T23:59:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set New Year's Eve
+                </button>
+                <button
+                  onClick={() => setExternalDateTime(null)}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Clear
+                </button>
               </div>
             </div>
 

@@ -48,17 +48,7 @@ import { useFormEvents } from "./use_form_events.js";
 import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
 
 export const InputTextual = forwardRef((props, ref) => {
-  const { type } = props;
-  const uiStateController = useUIStateController(props, "input", {
-    getStateFromProp:
-      type === "datetime-local"
-        ? (prop) => convertToLocalTimezone(prop)
-        : undefined,
-    getPropFromState:
-      type === "datetime-local"
-        ? (state) => convertToUTCTimezone(state)
-        : undefined,
-  });
+  const uiStateController = useUIStateController(props, "input");
 
   return renderActionableComponent({ uiStateController, ...props }, ref, {
     Basic: InputTextualBasic,
@@ -93,6 +83,8 @@ const InputTextualBasic = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const uiState = useUIState(uiStateController);
+  const value =
+    type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
@@ -113,15 +105,21 @@ const InputTextualBasic = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       type={type}
-      value={uiState}
+      value={value}
       data-field=""
       data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
       readOnly={innerReadOnly}
       disabled={innerDisabled}
       onInput={(e) => {
-        const inputValue =
-          type === "number" ? e.target.valueAsNumber : e.target.value;
+        let inputValue;
+        if (type === "number") {
+          inputValue = e.target.valueAsNumber;
+        } else if (type === "datetime-local") {
+          inputValue = convertToUTCTimezone(e.target.value);
+        } else {
+          inputValue = e.target.value;
+        }
         uiStateController.setUIState(inputValue, e);
         onInput?.(e);
       }}
