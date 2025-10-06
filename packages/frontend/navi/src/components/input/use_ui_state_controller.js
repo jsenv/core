@@ -228,11 +228,20 @@ export const useUIGroupStateController = (
   let { onUIStateChange } = props;
   onUIStateChange = useStableCallback(onUIStateChange);
   const uiStateRef = useRef(emptyState);
-
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiGroupStateControllerRef = useRef();
 
+  const existingUIGroupStateController = uiGroupStateControllerRef.current;
+  if (existingUIGroupStateController) {
+    return existingUIGroupStateController;
+  }
+  debug(
+    childComponentType === "*"
+      ? `Creating "${componentType}" ui state controller (monitoring all descendants ui state(s))"`
+      : `Creating "${componentType}" ui state controller (monitoring "${childComponentType}" ui state(s))`,
+  );
+  const [publishUIState, subscribeUIState] = createPubSub();
   const onChange = () => {
     // TODO: should track if we are rendering ourselves to batch update
     // when parent rendering is done
@@ -246,95 +255,81 @@ export const useUIGroupStateController = (
   };
 
   childUIStateControllerArray.length = 0;
-
-  return useMemo(() => {
-    debug(
-      childComponentType === "*"
-        ? `Creating "${componentType}" ui state controller (monitoring all descendants ui state(s))"`
-        : `Creating "${componentType}" ui state controller (monitoring "${childComponentType}" ui state(s))`,
-    );
-
-    const [publishUIState, subscribeUIState] = createPubSub();
-
-    const uiGroupStateController = {
-      componentType,
-      uiState: uiStateRef.current,
-      setUIState: (newUIState, e) => {
-        const currentUIState = uiStateRef.current;
-        if (newUIState === currentUIState) {
-          debug(`"${componentType}" ui state unchanged:`, newUIState);
-          return;
-        }
+  const uiGroupStateController = {
+    componentType,
+    uiState: uiStateRef.current,
+    setUIState: (newUIState, e) => {
+      const currentUIState = uiStateRef.current;
+      if (newUIState === currentUIState) {
+        debug(`"${componentType}" ui state unchanged:`, newUIState);
+        return;
+      }
+      debug(
+        `"${componentType}" ui state changed from:`,
+        currentUIState,
+        "to:",
+        newUIState,
+      );
+      uiGroupStateController.uiState = newUIState;
+      uiStateRef.current = newUIState;
+      publishUIState(newUIState);
+      onUIStateChange?.(newUIState, e);
+    },
+    registerChild: (childUIStateController) => {
+      if (
+        childComponentType &&
+        childUIStateController.componentType !== childComponentType
+      ) {
+        return;
+      }
+      childUIStateControllerArray.push(childUIStateController);
+      debug(
+        `"${componentType}" registered a "${childUIStateController.componentType}" - total: ${childUIStateControllerArray.length}`,
+      );
+      onChange(childUIStateController, "mount");
+    },
+    onChildUIStateChange: (childUIStateController) => {
+      if (
+        childComponentType &&
+        childUIStateController.componentType !== childComponentType
+      ) {
+        return;
+      }
+      debug(
+        `"${componentType}" notified by "${childUIStateController.componentType}" of ui state change to`,
+        childUIStateController.uiState,
+      );
+      onChange(childUIStateController, "change");
+    },
+    unregisterChild: (childUIStateController) => {
+      if (
+        childComponentType &&
+        childUIStateController.componentType !== childComponentType
+      ) {
+        return;
+      }
+      const index = childUIStateControllerArray.indexOf(childUIStateController);
+      if (index === -1) {
         debug(
-          `"${componentType}" ui state changed from:`,
-          currentUIState,
-          "to:",
-          newUIState,
+          `"${componentType}" cannot unregister "${childUIStateController.componentType}" - not found`,
         );
-        uiGroupStateController.uiState = newUIState;
-        uiStateRef.current = newUIState;
-        publishUIState(newUIState);
-        onUIStateChange?.(newUIState, e);
-      },
-      registerChild: (childUIStateController) => {
-        if (
-          childComponentType &&
-          childUIStateController.componentType !== childComponentType
-        ) {
-          return;
-        }
-        childUIStateControllerArray.push(childUIStateController);
-        debug(
-          `"${componentType}" registered a "${childUIStateController.componentType}" - total: ${childUIStateControllerArray.length}`,
-        );
-        onChange(childUIStateController, "mount");
-      },
-      onChildUIStateChange: (childUIStateController) => {
-        if (
-          childComponentType &&
-          childUIStateController.componentType !== childComponentType
-        ) {
-          return;
-        }
-        debug(
-          `"${componentType}" notified by "${childUIStateController.componentType}" of ui state change to`,
-          childUIStateController.uiState,
-        );
-        onChange(childUIStateController, "change");
-      },
-      unregisterChild: (childUIStateController) => {
-        if (
-          childComponentType &&
-          childUIStateController.componentType !== childComponentType
-        ) {
-          return;
-        }
-        const index = childUIStateControllerArray.indexOf(
-          childUIStateController,
-        );
-        if (index === -1) {
-          debug(
-            `"${componentType}" cannot unregister "${childUIStateController.componentType}" - not found`,
-          );
-          return;
-        }
-        childUIStateControllerArray.splice(index, 1);
-        debug(
-          `"${componentType}" unregistered "${childUIStateController.componentType}" - remaining: ${childUIStateControllerArray.length}`,
-        );
-        onChange(childUIStateController, "unmount");
-      },
-      resetUIState: (e) => {
-        for (const childUIStateController of childUIStateControllerArray) {
-          childUIStateController.resetUIState(e);
-        }
-      },
-      subscribe: subscribeUIState,
-    };
-
-    uiGroupStateControllerRef.current = uiGroupStateController;
-    return uiGroupStateController;
-  }, [componentType, childComponentType, emptyState]);
+        return;
+      }
+      childUIStateControllerArray.splice(index, 1);
+      debug(
+        `"${componentType}" unregistered "${childUIStateController.componentType}" - remaining: ${childUIStateControllerArray.length}`,
+      );
+      onChange(childUIStateController, "unmount");
+    },
+    resetUIState: (e) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        childUIStateController.resetUIState(e);
+      }
+    },
+    subscribe: subscribeUIState,
+  };
+  uiGroupStateControllerRef.current = uiGroupStateController;
+  return uiGroupStateController;
 };
 
 /**
