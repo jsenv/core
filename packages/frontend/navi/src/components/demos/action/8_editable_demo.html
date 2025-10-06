@@ -197,9 +197,9 @@
                     setResult(``);
                   }}
                   value={value}
-                  action={(test) => {
-                    setValue(test);
-                    return `Updated to: "${test}"`;
+                  action={(newText) => {
+                    setValue(newText);
+                    return `Updated to: "${newText}"`;
                   }}
                   constraints={[SINGLE_SPACE_CONSTRAINT]}
                 />
@@ -242,12 +242,12 @@
                     setResult();
                   }}
                   value={value}
-                  action={async (test) => {
+                  action={async (newText) => {
                     setIsLoading(true);
                     setResult("Saving...");
                     await new Promise((resolve) => setTimeout(resolve, 2000));
-                    setValue(test);
-                    return `Saved: "${test}"`;
+                    setValue(newText);
+                    return `Saved: "${newText}"`;
                   }}
                   constraints={[SINGLE_SPACE_CONSTRAINT]}
                 />
@@ -295,11 +295,13 @@
                     setResult("");
                   }}
                   value={value}
-                  name="test"
-                  action={async (test) => {
+                  name="errorText"
+                  action={async (newText) => {
                     setResult("Processing...");
                     await new Promise((resolve) => setTimeout(resolve, 500));
-                    throw new Error(`Cannot save "${test}" - simulated error`);
+                    throw new Error(
+                      `Cannot save "${newText}" - simulated error`,
+                    );
                   }}
                   constraints={[SINGLE_SPACE_CONSTRAINT]}
                 />
@@ -340,9 +342,9 @@
                     setResult("");
                   }}
                   value={value}
-                  action={(test) => {
-                    setValue(test);
-                    return `Updated styled text: "${test}"`;
+                  action={(newText) => {
+                    setValue(newText);
+                    return `Updated styled text: "${newText}"`;
                   }}
                   constraints={[SINGLE_SPACE_CONSTRAINT]}
                 >
@@ -369,11 +371,11 @@
       };
 
       // Create signal outside component to persist across renders
-      const valueSignal = signal("Click me to edit");
-      const action = createAction(async (text) => {
+      const editableTextSignal = signal("Click me to edit");
+      const updateTextAction = createAction(async (newText) => {
         await new Promise((resolve) => setTimeout(resolve, 800));
-        valueSignal.value = text;
-        return `Signal update: "${text}"`;
+        editableTextSignal.value = newText;
+        return `Signal update: "${newText}"`;
       });
       // eslint-disable-next-line no-unused-vars
       const ActionObjectDemo = () => {
@@ -392,10 +394,10 @@
                     stopEditing();
                     setResult("");
                   }}
-                  value={valueSignal.value}
-                  name="coucou"
-                  action={(value) => {
-                    action(value);
+                  value={editableTextSignal.value}
+                  name="signalText"
+                  action={(newText) => {
+                    updateTextAction(newText);
                   }}
                   onActionStart={() => {
                     setResult("Saving...");
@@ -407,7 +409,7 @@
                       startEditing();
                     }}
                   >
-                    {valueSignal.value}
+                    {editableTextSignal.value}
                   </span>
                 </Editable>
               </div>
@@ -415,7 +417,7 @@
             <div
               className={`result-display ${result === "Saving..." ? "result-loading" : result.startsWith("✅") ? "result-success" : result.startsWith("❌") ? "result-error" : ""}`}
             >
-              value: {valueSignal.value}
+              Current value: {editableTextSignal.value}
               <br />
               {result || "Use buttons to control edit mode..."}
             </div>
