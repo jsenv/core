@@ -27,14 +27,20 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const LoadableInlineElement = ({ children, ...props }) => {
+export const LoadableInlineElement = ({ children, height, ...props }) => {
   const actionName = props["data-action"];
   if (actionName) {
     delete props["data-action"];
   }
 
   return (
-    <span className="navi_inline_wrapper" data-action={actionName}>
+    <span
+      className="navi_inline_wrapper"
+      style={{
+        ...(height ? { height } : {}),
+      }}
+      data-action={actionName}
+    >
       <LoaderBackground {...props} />
       {children}
     </span>

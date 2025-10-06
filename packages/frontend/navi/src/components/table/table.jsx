@@ -568,6 +568,7 @@ export const TableCell = forwardRef((props, ref) => {
           action={action}
           name={name}
           valueSignal={valueSignal}
+          height="100%"
         >
           {children}
         </Editable>

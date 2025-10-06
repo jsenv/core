@@ -64,6 +64,7 @@ export const Editable = forwardRef((props, ref) => {
     pattern,
     wrapperProps,
     autoSelect = true,
+    height,
     ...rest
   } = props;
   if (import.meta.dev && !action) {
@@ -131,6 +132,7 @@ export const Editable = forwardRef((props, ref) => {
       minLength={minLength}
       maxLength={maxLength}
       pattern={pattern}
+      height={height}
       onCancel={(e) => {
         if (valueSignal) {
           valueSignal.value = valueWhenEditStartRef.current;

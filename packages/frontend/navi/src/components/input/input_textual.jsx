@@ -77,6 +77,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
     autoFocusVisible,
     autoSelect,
     appearance = "custom",
+    height,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -139,6 +140,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
     <LoadableInlineElement
       loading={innerLoading}
       color="light-dark(#355fcc, #3b82f6)"
+      height={height}
     >
       {inputTextual}
     </LoadableInlineElement>
