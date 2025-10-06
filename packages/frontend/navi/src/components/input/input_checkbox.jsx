@@ -22,7 +22,7 @@ import { useActionEvents } from "../use_action_events.js";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
-import { useCheckedController, useUIState } from "./use_ui_state_controller.js";
+import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .custom_checkbox_wrapper[data-field-wrapper] {
@@ -132,7 +132,14 @@ import.meta.css = /* css */ `
 `;
 
 export const InputCheckbox = forwardRef((props, ref) => {
-  const uiStateController = useCheckedController(props);
+  const { value = "on" } = props;
+  const uiStateController = useUIStateController(props, "checkbox", {
+    statePropName: "checked",
+    defaultStatePropName: "defaultChecked",
+    fallbackState: false,
+    getStateFromProp: (checked) => (checked ? value : undefined),
+    getPropFromState: Boolean,
+  });
 
   return renderActionableComponent({ uiStateController, ...props }, ref, {
     Basic: InputCheckboxBasic,

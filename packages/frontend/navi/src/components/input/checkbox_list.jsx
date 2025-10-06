@@ -52,8 +52,7 @@ export const CheckboxList = forwardRef((props, ref) => {
 export const Checkbox = InputCheckbox;
 
 const useCheckboxListUIStateController = (props) => {
-  return useUIGroupStateController(props, {
-    componentType: "checkbox_list",
+  return useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
     emptyState: undefined,
   });

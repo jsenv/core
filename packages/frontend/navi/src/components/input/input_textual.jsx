@@ -26,7 +26,6 @@ import {
   useRef,
 } from "preact/hooks";
 
-import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
@@ -38,7 +37,6 @@ import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
-  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
 } from "../field_group_context.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
@@ -47,13 +45,12 @@ import { useAutoFocus } from "../use_auto_focus.js";
 import "./field_css.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useFormEvents } from "./use_form_events.js";
-import {
-  useUncontrolledValueProps,
-  useValueController,
-} from "./use_ui_state_controller.js";
+import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
 
 export const InputTextual = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
+  const uiStateController = useUIStateController(props, "input");
+
+  return renderActionableComponent({ uiStateController, ...props }, ref, {
     Basic: InputTextualBasic,
     WithAction: InputTextualWithAction,
     InsideForm: InputTextualInsideForm,
@@ -61,15 +58,10 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {
-  const uncontrolledProps = useUncontrolledValueProps(props, "input");
-  return <InputTextualControlled {...props} ref={ref} {...uncontrolledProps} />;
-});
-
-const InputTextualControlled = forwardRef((props, ref) => {
   const {
+    uiStateController,
     type,
     value,
-    onUIStateChange,
     onInput,
 
     readOnly,
@@ -83,7 +75,6 @@ const InputTextualControlled = forwardRef((props, ref) => {
     appearance = "custom",
     ...rest
   } = props;
-  const groupOnUIStateChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupActionRequester = useContext(FieldGroupActionRequesterContext);
@@ -92,15 +83,15 @@ const InputTextualControlled = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  let innerValue = value;
+  const uiState = uiStateController.useUIState(uiStateController);
+  let innerValue = uiState;
   if (type === "datetime-local") {
     innerValue = convertToLocalTimezone(innerValue);
   }
-  const innerOnUIStateChange = onUIStateChange || groupOnUIStateChange;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || innerLoading || !innerOnUIStateChange;
+    readOnly || groupReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || groupDisabled;
   // infom any <label> parent of our readOnly state
   if (setInputReadOnly) {
@@ -130,7 +121,7 @@ const InputTextualControlled = forwardRef((props, ref) => {
           type === "datetime-local"
             ? convertToUTCTimezone(inputValueRaw)
             : inputValueRaw;
-        innerOnUIStateChange?.(inputValue, e);
+        uiStateController.setUIState(inputValue, e);
         onInput?.(e);
       }}
       {...rest}
@@ -149,11 +140,11 @@ const InputTextualControlled = forwardRef((props, ref) => {
 
 const InputTextualWithAction = forwardRef((props, ref) => {
   const {
+    uiStateController,
     id,
     type,
 
     name,
-    onUIStateChange,
     action,
 
     onCancel,
@@ -170,23 +161,14 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const [valueState, setValueState, externalValueState] =
-    useValueController(props);
-  const [boundAction, , setActionValue] = useActionBoundToOneParam(
-    action,
-    externalValueState,
-  );
+  const uiState = useUIState(uiStateController);
+  const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
   const valueAtInteractionRef = useRef(null);
 
-  const innerOnUIStateChange = (uiState, e) => {
-    setValueState(uiState);
-    setActionValue(uiState);
-    onUIStateChange?.(uiState, e);
-  };
   useOnInputChange(innerRef, (e) => {
     if (
       valueAtInteractionRef.current !== null &&
@@ -238,15 +220,13 @@ const InputTextualWithAction = forwardRef((props, ref) => {
 
   return (
     <FieldGroupLoadingContext.Provider value={actionLoading}>
-      <InputTextualControlled
+      <InputTextualBasic
         {...rest}
         ref={innerRef}
         type={type}
         id={id}
         name={name}
-        value={valueState}
         data-action={boundAction.name}
-        onUIStateChange={innerOnUIStateChange}
         onInput={(e) => {
           valueAtInteractionRef.current = null;
           onInput?.(e);
@@ -270,23 +250,14 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   );
 });
 const InputTextualInsideForm = forwardRef((props, ref) => {
-  const { formContext, id, name, onUIStateChange, onKeyDown, ...rest } = props;
+  const { formContext, uiStateController, id, name, onKeyDown, ...rest } =
+    props;
   const { formAction } = formContext;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState(id);
-  const [valueState, setValueState, externalValueState] = useValueController(
-    props,
-    navState,
-  );
-  const [, setFormParam] = useOneFormParam(name, externalValueState);
+  const uiState = useUIState(uiStateController);
+  useOneFormParam(name, uiState);
 
-  const innerOnUIStateChange = (uiState, e) => {
-    setValueState(uiState);
-    setFormParam(uiState);
-    setNavState(uiState);
-    onUIStateChange?.(uiState, e);
-  };
   useFormEvents(innerRef, {
     onFormActionAbort: () => {
       // user might want to re-submit as is
@@ -298,11 +269,11 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
       // or change the ui state before re-submitting
       // we can't decide for him
     },
-    onFormActionEnd: () => {
+    onFormActionEnd: (e) => {
       // form action is a success
       // we can get rid of the nav state
       // that was keeping the ui state in case user navigates aways without submission
-      setNavState(undefined);
+      uiStateController.actionEnd(e);
     },
   });
 
@@ -310,10 +281,9 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
     <InputTextualBasic
       {...rest}
       ref={innerRef}
+      uiStateController={uiStateController}
       id={id}
       name={name}
-      value={valueState}
-      onUIStateChange={innerOnUIStateChange}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           const inputElement = e.target;
