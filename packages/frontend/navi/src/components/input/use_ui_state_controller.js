@@ -11,7 +11,7 @@ import { useStableCallback } from "../use_stable_callback.js";
 export const UIStateControllerContext = createContext();
 export const UIStateContext = createContext();
 
-const DEBUG_UI_STATE_CONTROLLER = false;
+const DEBUG_UI_STATE_CONTROLLER = true;
 const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
 const debugUIState = (...args) => {
   if (DEBUG_UI_STATE_CONTROLLER) {
@@ -162,7 +162,11 @@ export const useUIStateController = (
     readOnly,
     state: stateRef.current,
     uiState: uiStateRef.current,
-    _setUIState: (newUIState, e) => {
+    setUIState: (prop, e) => {
+      const newUIState = getStateFromPropRef.current(prop);
+      if (formContext) {
+        setNavState(prop);
+      }
       const currentUIState = uiStateRef.current;
       if (newUIState === currentUIState) {
         debugUIState(
@@ -192,16 +196,9 @@ export const useUIStateController = (
         );
       }
     },
-    setUIState: (prop, e) => {
-      const newUIState = getStateFromPropRef.current(prop);
-      if (formContext) {
-        setNavState(prop);
-      }
-      return uiStateController._setUIState(newUIState, e);
-    },
     resetUIState: (e) => {
       const currentState = stateRef.current;
-      uiStateController._setUIState(currentState, e);
+      uiStateController.setUIState(currentState, e);
     },
     actionEnd: () => {
       debugUIState(`"${componentType}" actionEnd called`);
