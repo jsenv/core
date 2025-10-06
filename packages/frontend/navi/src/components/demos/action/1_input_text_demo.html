@@ -161,6 +161,11 @@
                     <a href="#input-forms">3. Input inside Form</a> - Form
                     integration patterns
                   </li>
+                  <li>
+                    <a href="#datetime-local">4. Datetime-Local Inputs</a> -
+                    Special handling for datetime inputs with timezone
+                    conversion
+                  </li>
                 </ul>
               </nav>
             </div>
@@ -185,7 +190,278 @@
               <FormInputDemo />
               <FormInputErrorDemo />
             </div>
+
+            <h2 id="datetime-local">4. Datetime-Local Inputs</h2>
+            <div className="demo-grid">
+              <DateTimeLocalDemo />
+              <DateTimeLocalFormDemo />
+            </div>
           </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DateTimeLocalDemo = () => {
+        // External state (what the server/app knows) - stored as UTC ISO string
+        const [externalDateTime, setExternalDateTime] = useState(
+          "2024-01-15T14:30:00Z", // UTC time
+        );
+
+        // UI state tracking
+        const [uiDateTime, setUiDateTime] = useState(externalDateTime);
+        const [actionValue, setActionValue] = useState("");
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        const saveDateTime = async (dateTimeValue) => {
+          setIsLoading(true);
+          setActionValue(dateTimeValue || "(empty)");
+          setResult("Saving datetime...");
+          try {
+            await delay(1000);
+
+            // Simulate server response
+            const response = {
+              saved: dateTimeValue,
+              message: `Datetime saved successfully`,
+            };
+
+            // Update external state to match what was saved
+            setExternalDateTime(dateTimeValue);
+            setResult(`✅ ${response.message}\\nSaved: ${dateTimeValue}`);
+            return response;
+          } catch (error) {
+            setResult(`❌ Save failed: ${error.message}`);
+            throw error;
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Datetime-Local State Demo</h3>
+
+            {/* External State Control */}
+            <div
+              style={{
+                marginBottom: "20px",
+                padding: "12px",
+                background: "#e3f2fd",
+                borderRadius: "4px",
+              }}
+            >
+              <h4
+                style={{
+                  margin: "0 0 10px 0",
+                  fontSize: "14px",
+                  color: "#1976d2",
+                }}
+              >
+                📊 External State (UTC)
+              </h4>
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "12px",
+                  marginBottom: "10px",
+                }}
+              >
+                Current: {externalDateTime || "(not set)"}
+              </div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  onClick={() => setExternalDateTime("2024-01-15T14:30:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set Jan 15, 2:30 PM UTC
+                </button>
+                <button
+                  onClick={() => setExternalDateTime("2024-12-25T09:00:00Z")}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Set Dec 25, 9:00 AM UTC
+                </button>
+                <button
+                  onClick={() => setExternalDateTime(null)}
+                  style={{ padding: "4px 8px", fontSize: "12px" }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            {/* UI Input */}
+            <div className="control-group">
+              <label>
+                Datetime Input (Local Time):
+                <Input
+                  type="datetime-local"
+                  name="datetime"
+                  value={externalDateTime} // External state controls the input
+                  onUIStateChange={(datetime) => {
+                    setUiDateTime(datetime);
+                  }}
+                  action={saveDateTime}
+                />
+              </label>
+            </div>
+
+            {/* State Display */}
+            <div style={{ marginBottom: "15px" }}>
+              <div
+                style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}
+              >
+                <strong>UI State:</strong> {uiDateTime || "(empty)"}
+              </div>
+              <div
+                style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}
+              >
+                <strong>Action receives:</strong>{" "}
+                {actionValue || "(waiting for action...)"}
+              </div>
+            </div>
+
+            <div
+              className={`result-display ${
+                isLoading
+                  ? "result-loading"
+                  : result.startsWith("✅")
+                    ? "result-success"
+                    : result.startsWith("❌")
+                      ? "result-error"
+                      : ""
+              }`}
+            >
+              {result ||
+                "Change the datetime and blur/enter to trigger action..."}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DateTimeLocalFormDemo = () => {
+        const [externalDateTime, setExternalDateTime] = useState(
+          "2024-06-01T10:00:00Z",
+        );
+        const [uiDateTime, setUiDateTime] = useState(externalDateTime);
+        const [result, setResult] = useState("");
+        const [isLoading, setIsLoading] = useState(false);
+
+        const submitForm = async (formData) => {
+          setIsLoading(true);
+          setResult("Submitting form...");
+          try {
+            await delay(1200);
+
+            const response = {
+              datetime: formData.appointmentTime,
+              message: "Appointment scheduled successfully",
+            };
+
+            // Update external state
+            setExternalDateTime(formData.appointmentTime);
+            setResult(
+              `✅ ${response.message}\\nScheduled for: ${formData.appointmentTime}`,
+            );
+            return response;
+          } catch (error) {
+            setResult(`❌ Form error: ${error.message}`);
+            throw error;
+          } finally {
+            setIsLoading(false);
+          }
+        };
+
+        const getResetValue = () => {
+          return externalDateTime || "(not set)";
+        };
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Datetime-Local in Form</h3>
+
+            {/* External State Display */}
+            <div
+              style={{
+                marginBottom: "15px",
+                padding: "10px",
+                background: "#f0f8ff",
+                borderRadius: "4px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#1976d2",
+                  marginBottom: "5px",
+                }}
+              >
+                <strong>📅 Saved Appointment:</strong>
+              </div>
+              <div style={{ fontFamily: "monospace", fontSize: "12px" }}>
+                {externalDateTime || "(no appointment scheduled)"}
+              </div>
+            </div>
+
+            <Form action={submitForm}>
+              <div className="control-group">
+                <label>
+                  Appointment Time:
+                  <Input
+                    type="datetime-local"
+                    name="appointmentTime"
+                    value={externalDateTime}
+                    onUIStateChange={setUiDateTime}
+                  />
+                </label>
+              </div>
+
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#666",
+                  marginBottom: "10px",
+                }}
+              >
+                <strong>UI State:</strong> {uiDateTime || "(empty)"}
+              </div>
+
+              <div className="button-group">
+                <Button type="submit">
+                  Schedule Appointment
+                  {uiDateTime && (
+                    <span style={{ fontSize: "11px", opacity: "0.7" }}>
+                      {" "}
+                      ({new Date(uiDateTime).toLocaleString()})
+                    </span>
+                  )}
+                </Button>
+                <Button type="reset">
+                  Reset to Saved
+                  <span style={{ fontSize: "11px", opacity: "0.7" }}>
+                    {" "}
+                    ({getResetValue()})
+                  </span>
+                </Button>
+              </div>
+            </Form>
+
+            <div
+              className={`result-display ${
+                isLoading
+                  ? "result-loading"
+                  : result.startsWith("✅")
+                    ? "result-success"
+                    : result.startsWith("❌")
+                      ? "result-error"
+                      : ""
+              }`}
+            >
+              {result || "Select a datetime and submit..."}
+            </div>
+          </div>
         );
       };
 
