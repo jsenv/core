@@ -95,6 +95,7 @@
         min-height: 40px;
         font-size: 16px;
         line-height: 1.4;
+        position: relative;
       }
 
       .result-display {
@@ -155,7 +156,6 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { signal } from "@preact/signals";
       import { SINGLE_SPACE_CONSTRAINT } from "@jsenv/validation";
       import {
         useEditionController,
@@ -196,8 +196,7 @@
                     setResult(``);
                   }}
                   value={value}
-                  name="test"
-                  action={({ test }) => {
+                  action={(test) => {
                     setValue(test);
                     return `Updated to: "${test}"`;
                   }}
@@ -242,8 +241,7 @@
                     setResult();
                   }}
                   value={value}
-                  name="test"
-                  action={async ({ test }) => {
+                  action={async (test) => {
                     setIsLoading(true);
                     setResult("Saving...");
                     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -297,7 +295,7 @@
                   }}
                   value={value}
                   name="test"
-                  action={async ({ test }) => {
+                  action={async (test) => {
                     setResult("Processing...");
                     await new Promise((resolve) => setTimeout(resolve, 500));
                     throw new Error(`Cannot save "${test}" - simulated error`);
