@@ -225,12 +225,6 @@ export const useUIGroupStateController = (
     throw new TypeError("aggregateChildStates must be a function");
   }
 
-  debug(
-    childComponentType === "*"
-      ? `Creating "${componentType}" ui state controller (monitoring all descendants ui state(s))"`
-      : `Creating "${componentType}" ui state controller (monitoring "${childComponentType}" ui state(s))`,
-  );
-
   let { onUIStateChange } = props;
   onUIStateChange = useStableCallback(onUIStateChange);
   const uiStateRef = useRef(emptyState);
@@ -254,6 +248,12 @@ export const useUIGroupStateController = (
   childUIStateControllerArray.length = 0;
 
   return useMemo(() => {
+    debug(
+      childComponentType === "*"
+        ? `Creating "${componentType}" ui state controller (monitoring all descendants ui state(s))"`
+        : `Creating "${componentType}" ui state controller (monitoring "${childComponentType}" ui state(s))`,
+    );
+
     const [publishUIState, subscribeUIState] = createPubSub();
 
     const uiGroupStateController = {
