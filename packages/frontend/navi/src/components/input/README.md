@@ -18,9 +18,11 @@ UI State Controller introduces clear separation:
 - **UI State**: What the user currently sees and interacts with
 - **Controller**: Manages the relationship between them
 
-## Basic Usage - Checkbox with Action
+There are **two distinct usage patterns** depending on your needs:
 
-For interactive components where actions can fail and need optimistic updates:
+## Pattern 1: UI with Action (Auto-revert on Error)
+
+For interactive components that need immediate feedback with server synchronization:
 
 ```jsx
 const [savedValue, setSavedValue] = useState(false);
@@ -28,13 +30,14 @@ const [savedValue, setSavedValue] = useState(false);
 <InputCheckbox
   checked={savedValue} // External state
   action={async (newValue) => {
-    // This might fail
-    const result = await fetch("/api/update", {
-      method: "POST",
-      body: JSON.stringify({ checked: newValue }),
+    // PATCH to update existing resource
+    const response = await fetch("/api/user/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emailNotifications: newValue }),
     });
-    // Only update external state if successful
-    setSavedValue(result.checked);
+    const result = await response.json();
+    setSavedValue(result.emailNotifications);
   }}
 />;
 ```
@@ -44,19 +47,37 @@ const [savedValue, setSavedValue] = useState(false);
 1. User clicks checkbox → UI updates immediately (responsive)
 2. Action executes in background
 3. **Success**: External state updates, UI stays in sync
-4. **Error**: UI automatically reverts to match external state
+4. **Error**: UI automatically reverts to match external state (auto-revert)
 
-## Form Usage - Checkbox inside `<form>`
+**Use when:** You want immediate feedback with automatic error recovery.
 
-When using checkboxes inside forms, the behavior is different:
+## Pattern 2: UI within `<form>` (User Choice on Error)
+
+For traditional form workflows where users control submission:
 
 ```jsx
-<form action="/api/submit" method="post">
+const submitForm = async (formData) => {
+  const response = await fetch("/api/user/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(formData),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to save settings");
+  }
+
+  // Update your app state here
+  const result = await response.json();
+  updateUserSettings(result);
+};
+
+<form action={submitForm}>
   <InputCheckbox name="notifications" value="email" />
   <InputCheckbox name="notifications" value="sms" />
   <button type="submit">Save Settings</button>
   <button type="reset">Reset Form</button>
-</form>
+</form>;
 ```
 
 **Key differences:**
@@ -66,22 +87,66 @@ When using checkboxes inside forms, the behavior is different:
 - **Form reset**: UI state is properly restored to original values
 - **Navigation**: Form state persists during page navigation
 
-## Advanced APIs
+**Use when:** You want traditional form behavior with user control over submission.
 
-### Tracking UI State Changes
+## Practical Example: Tracking State Changes
 
-Track what the user is doing in real-time:
+Here's how you might use `onUIStateChange` to show what would be submitted/reset (like in our demo):
 
 ```jsx
-<InputCheckbox
-  checked={savedValue}
-  onUIStateChange={(uiState, event) => {
-    console.log("User interaction:", uiState);
-    // Track analytics, enable save buttons, etc.
-  }}
-  action={updateServer}
-/>
+const [colorChoices, setColorChoices] = useState([
+  { id: 1, color: "red", selected: true },
+  { id: 2, color: "blue", selected: false },
+  { id: 3, color: "green", selected: true },
+]);
+
+// What's currently saved
+const selectedColors = colorChoices
+  .filter((choice) => choice.selected)
+  .map((choice) => choice.color);
+
+// What user has selected in UI (may differ)
+const [uiSelectedColors, setUiSelectedColors] = useState(selectedColors);
+
+<form action={submitColorPreferences}>
+  <CheckboxList
+    name="colors"
+    onUIStateChange={(colors) => {
+      // Track what user has selected for internal logic
+      setUiSelectedColors(colors);
+      // Don't usually show this in UI - it's for developer use
+    }}
+  >
+    {colorChoices.map(({ id, color }) => (
+      <Label key={id}>
+        {color}
+        <Checkbox value={color} checked={selectedColors.includes(color)} />
+      </Label>
+    ))}
+  </CheckboxList>
+
+  <button type="submit">Submit ({uiSelectedColors.join(", ")})</button>
+  <button type="reset">Reset to saved ({selectedColors.join(", ")})</button>
+</form>;
 ```
+
+## When to Use Each Pattern
+
+### Use Action Pattern When:
+
+- Building interactive dashboards or real-time interfaces
+- Each change should be immediately persisted
+- You want automatic error recovery
+- User expects instant feedback
+
+### Use Form Pattern When:
+
+- Building traditional forms with submit/reset workflow
+- Users need to make multiple changes before saving
+- You want standard form validation behavior
+- Users should control when changes are persisted
+
+## Advanced APIs
 
 ### External Control via Custom Events
 
@@ -100,36 +165,6 @@ checkbox.dispatchEvent(
 checkbox.dispatchEvent(new CustomEvent("resetuistate"));
 ```
 
-### Group Controllers (Checkbox Lists)
-
-Coordinate multiple related inputs:
-
-```jsx
-const [selectedOptions, setSelectedOptions] = useState([]);
-
-<CheckboxList
-  values={selectedOptions} // External state
-  onUIStateChange={(uiState) => {
-    // Track what user has selected
-    console.log("Currently selected:", uiState);
-  }}
-  action={async (newValues) => {
-    const result = await updateServerOptions(newValues);
-    setSelectedOptions(result.options);
-  }}
->
-  <InputCheckbox value="option1" />
-  <InputCheckbox value="option2" />
-  <InputCheckbox value="option3" />
-</CheckboxList>;
-```
-
-**Group features:**
-
-- Aggregates individual checkbox states into arrays
-- Coordinate reset operations across all children
-- Single action handles all checkbox changes
-
 ### Error Recovery Patterns
 
 ```jsx
@@ -147,17 +182,54 @@ const [selectedOptions, setSelectedOptions] = useState([]);
 />
 ```
 
+### Group Controllers (Checkbox Lists)
+
+Coordinate multiple related inputs:
+
+```jsx
+const [selectedOptions, setSelectedOptions] = useState([]);
+
+<CheckboxList
+  values={selectedOptions} // External state
+  onUIStateChange={(uiState) => {
+    // Track what user has selected (internal use)
+    console.log("Currently selected:", uiState);
+  }}
+  action={async (newValues) => {
+    const response = await fetch("/api/options", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ selectedOptions: newValues }),
+    });
+    const result = await response.json();
+    setSelectedOptions(result.selectedOptions);
+  }}
+>
+  <InputCheckbox value="option1" />
+  <InputCheckbox value="option2" />
+  <InputCheckbox value="option3" />
+</CheckboxList>;
+```
+
+**Group features:**
+
+- Aggregates individual checkbox states into arrays
+- Coordinate reset operations across all children
+- Single action handles all checkbox changes
+
 ## Key Benefits
 
 - **Instant feedback**: UI updates immediately, no lag
-- **Reliable error handling**: Automatic recovery when actions fail
+- **Flexible error handling**: Auto-revert for actions, user choice for forms
 - **Form compatibility**: Works seamlessly with native form behavior
 - **External control**: Programmatic state control when needed
 - **Group coordination**: Multiple inputs work together naturally
 
-## When to Use
+## Summary
 
-- Interactive forms where immediate feedback matters
-- Actions that can fail and need optimistic updates
-- Complex forms with multiple related inputs
-- Any scenario where UI responsiveness and data consistency both matter
+Choose the pattern that fits your use case:
+
+- **Action pattern**: For immediate persistence with auto-revert
+- **Form pattern**: For traditional submit/reset workflows with user control
+
+Both patterns provide responsive UI while maintaining data consistency.
