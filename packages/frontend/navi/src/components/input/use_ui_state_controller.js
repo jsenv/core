@@ -1,10 +1,4 @@
-import {
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { FormContext } from "../action_execution/form_context.js";
@@ -123,14 +117,14 @@ export const useUIStateController = (
     const uiStateController = uiStateControllerRef.current;
     if (groupUIStateController) {
       debugUIState(
-        `UI controller [${componentType}] registering with group [${groupUIStateController.componentType}]`,
+        `"${componentType}" registering into "${groupUIStateController.componentType}"`,
       );
       groupUIStateController.registerChild(uiStateController);
     }
     return () => {
       if (groupUIStateController) {
         debugUIState(
-          `UI controller [${componentType}] unregistering from group [${groupUIStateController.componentType}]`,
+          `"${componentType}" unregistering from "${groupUIStateController.componentType}"`,
         );
         groupUIStateController.unregisterChild(uiStateController);
       }
@@ -142,7 +136,7 @@ export const useUIStateController = (
     const uiStateController = uiStateControllerRef.current;
     if (hasStateProp && state !== stateRef.current) {
       debugUIState(
-        `UI controller [${componentType}] state prop changed from:`,
+        `"${componentType}" state prop changed from:`,
         stateRef.current,
         "to:",
         state,
@@ -174,81 +168,75 @@ export const useUIStateController = (
     );
   }
 
+  const existingUIStateController = uiStateControllerRef.current;
+  if (existingUIStateController) {
+    return existingUIStateController;
+  }
+
   debugUIState(
-    `Creating UI state controller [${componentType}] - controlled: ${hasStateProp}, readonly: ${readOnly}, initial state:`,
+    `Creating "${componentType}" ui state controller - initial state:`,
     stateInitial,
   );
+  const [publishUIState, subscribeUIState] = createPubSub();
+  const uiStateController = {
+    componentType,
+    readOnly,
+    state: stateRef.current,
+    uiState: uiStateRef.current,
+    setUIState: (prop, e) => {
+      if (formContext) {
+        setNavState(prop);
+      }
+      const newUIState = getStateFromProp(prop);
+      const oldUIState = uiStateRef.current;
+      if (newUIState === oldUIState) {
+        debugUIState(`"${componentType}" setUIState: no change`, newUIState);
+        return;
+      }
+      debugUIState(
+        `"${componentType}" UI state changed from:`,
+        oldUIState,
+        "to:",
+        newUIState,
+      );
+      uiStateRef.current = newUIState;
+      uiStateController.uiState = newUIState;
 
-  return useMemo(() => {
-    const [publishUIState, subscribeUIState] = createPubSub();
-
-    const uiStateController = {
-      componentType,
-      readOnly,
-      state: stateRef.current,
-      uiState: uiStateRef.current,
-      setUIState: (prop, e) => {
+      // Notify subscribers
+      publishUIState(newUIState);
+      // Call original callback
+      onUIStateChange?.(newUIState, e);
+      // Notify group controller
+      if (groupUIStateController) {
         debugUIState(
-          `UI controller [${componentType}] setUIState called with:`,
-          prop,
+          `"${componentType}" notifying "${groupUIStateController.componentType}" of ui state change`,
         );
-        if (formContext) {
-          setNavState(prop);
-        }
-        const newUIState = getStateFromProp(prop);
-        const oldUIState = uiStateRef.current;
-        if (newUIState === oldUIState) {
-          debugUIState(
-            `UI controller [${componentType}] UI state unchanged:`,
-            newUIState,
-          );
-          return;
-        }
-        debugUIState(
-          `UI controller [${componentType}] UI state changed from:`,
-          oldUIState,
-          "to:",
+        groupUIStateController.onChildUIStateChange(
+          uiStateController,
           newUIState,
+          e,
         );
-        uiStateRef.current = newUIState;
-        uiStateController.uiState = newUIState;
-
-        // Notify subscribers
-        publishUIState(newUIState);
-        // Call original callback
-        onUIStateChange?.(newUIState, e);
-        // Notify group controller
-        if (groupUIStateController) {
-          debugUIState(
-            `UI controller [${componentType}] notifying group [${groupUIStateController.componentType}] of state change`,
-          );
-          groupUIStateController.onChildUIStateChange(
-            uiStateController,
-            newUIState,
-            e,
-          );
-        }
-      },
-      resetUIState: () => {
-        const currentState = hasStateProp ? state : undefined;
-        const prop = getPropFromState(currentState);
-        debugUIState(
-          `UI controller [${componentType}] resetUIState called - resetting to:`,
-          prop,
-        );
-        uiStateController.setUIState(prop);
-      },
-      actionEnd: () => {
-        debugUIState(`UI controller [${componentType}] actionEnd called`);
-        if (formContext) {
-          setNavState(undefined);
-        }
-      },
-      subscribe: subscribeUIState,
-    };
-    uiStateControllerRef.current = uiStateController;
-    return uiStateController;
-  }, [groupUIStateController, componentType]);
+      }
+    },
+    resetUIState: () => {
+      const currentState = hasStateProp ? state : undefined;
+      const prop = getPropFromState(currentState);
+      debugUIState(
+        `"${componentType}" resetUIState called - resetting to:`,
+        prop,
+      );
+      uiStateController.setUIState(prop);
+    },
+    actionEnd: () => {
+      debugUIState(`"${componentType}" actionEnd called`);
+      if (formContext) {
+        setNavState(undefined);
+      }
+    },
+    subscribe: subscribeUIState,
+  };
+  uiStateControllerRef.current = uiStateController;
+  return uiStateController;
 };
 
 /**
