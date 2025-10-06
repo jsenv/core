@@ -54,7 +54,15 @@ export const Checkbox = InputCheckbox;
 const useCheckboxListUIStateController = (props) => {
   return useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
-    emptyState: undefined,
+    aggregateChildStates: (childUIStateControllers) => {
+      const values = [];
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          values.push(childUIStateController.uiState);
+        }
+      }
+      return values.length === 0 ? undefined : values;
+    },
   });
 };
 

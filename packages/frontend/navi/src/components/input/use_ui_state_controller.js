@@ -212,12 +212,12 @@ export const useUIStateController = (
 export const useUIGroupStateController = (
   props,
   componentType,
-  {
-    childComponentType,
-    aggregateChildStates = defaultAggregateChildStates,
-    emptyState = undefined,
-  },
+  { childComponentType, aggregateChildStates, emptyState = undefined },
 ) => {
+  if (typeof aggregateChildStates !== "function") {
+    throw new TypeError("aggregateChildStates must be a function");
+  }
+
   let { onUIStateChange } = props;
   onUIStateChange = useStableCallback(onUIStateChange);
   const uiStateRef = useRef(emptyState);
@@ -302,20 +302,6 @@ export const useUIGroupStateController = (
     uiGroupStateControllerRef.current = uiGroupStateController;
     return uiGroupStateController;
   }, [componentType, childComponentType, emptyState]);
-};
-
-/**
- * Default aggregation function for child states
- * Collects all truthy child UI states into an array
- */
-const defaultAggregateChildStates = (childControllers, emptyState) => {
-  const values = [];
-  for (const childController of childControllers) {
-    if (childController.uiState) {
-      values.push(childController.uiState);
-    }
-  }
-  return values.length === 0 ? emptyState : values;
 };
 
 /**
