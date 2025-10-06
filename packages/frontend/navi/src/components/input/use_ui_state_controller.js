@@ -8,7 +8,7 @@ import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
 const DEBUG_UI_STATE_CONTROLLER = false;
-const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
+const DEBUG_UI_GROUP_STATE_CONTROLLER = true;
 const debugUIState = (...args) => {
   if (DEBUG_UI_STATE_CONTROLLER) {
     console.debug(...args);
@@ -325,6 +325,31 @@ export const useUIGroupStateController = (
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiGroupStateControllerRef = useRef();
 
+  const groupIsRenderingRef = useRef(false);
+  const pendingChangeRef = useRef(false);
+  groupIsRenderingRef.current = true;
+  pendingChangeRef.current = false;
+
+  const onChange = () => {
+    if (groupIsRenderingRef.current) {
+      return;
+    }
+    const newUIState = aggregateChildStates(
+      childUIStateControllerArray,
+      emptyState,
+    );
+    const uiGroupStateController = uiGroupStateControllerRef.current;
+    uiGroupStateController.setUIState(newUIState);
+  };
+
+  useLayoutEffect(() => {
+    groupIsRenderingRef.current = false;
+    if (pendingChangeRef.current) {
+      pendingChangeRef.current = false;
+      onChange();
+    }
+  });
+
   const existingUIGroupStateController = uiGroupStateControllerRef.current;
   if (existingUIGroupStateController) {
     return existingUIGroupStateController;
@@ -334,20 +359,14 @@ export const useUIGroupStateController = (
       ? `Creating "${componentType}" ui state controller (monitoring all descendants ui state(s))"`
       : `Creating "${componentType}" ui state controller (monitoring "${childComponentType}" ui state(s))`,
   );
+
   const [publishUIState, subscribeUIState] = createPubSub();
-  const onChange = () => {
-    // TODO: should track if we are rendering ourselves to batch update
-    // when parent rendering is done
-
-    const newUIState = aggregateChildStates(
-      childUIStateControllerArray,
-      emptyState,
-    );
-    const uiGroupStateController = uiGroupStateControllerRef.current;
-    uiGroupStateController.setUIState(newUIState);
+  const isMonitoringChild = (childUIStateController) => {
+    if (childComponentType === "*") {
+      return true;
+    }
+    return childUIStateController.componentType === childComponentType;
   };
-
-  childUIStateControllerArray.length = 0;
   const uiGroupStateController = {
     componentType,
     uiState: uiStateRef.current,
@@ -369,10 +388,7 @@ export const useUIGroupStateController = (
       onUIStateChange?.(newUIState, e);
     },
     registerChild: (childUIStateController) => {
-      if (
-        childComponentType &&
-        childUIStateController.componentType !== childComponentType
-      ) {
+      if (!isMonitoringChild(childUIStateController)) {
         return;
       }
       childUIStateControllerArray.push(childUIStateController);
@@ -382,10 +398,7 @@ export const useUIGroupStateController = (
       onChange(childUIStateController, "mount");
     },
     onChildUIStateChange: (childUIStateController) => {
-      if (
-        childComponentType &&
-        childUIStateController.componentType !== childComponentType
-      ) {
+      if (!isMonitoringChild(childUIStateController)) {
         return;
       }
       debugUIGroup(
@@ -395,10 +408,7 @@ export const useUIGroupStateController = (
       onChange(childUIStateController, "change");
     },
     unregisterChild: (childUIStateController) => {
-      if (
-        childComponentType &&
-        childUIStateController.componentType !== childComponentType
-      ) {
+      if (!isMonitoringChild(childUIStateController)) {
         return;
       }
       const index = childUIStateControllerArray.indexOf(childUIStateController);
