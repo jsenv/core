@@ -8,7 +8,7 @@ import {
 } from "preact/hooks";
 
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
-import { createCallbackController } from "../callback_controller.js";
+import { createPubSub } from "../pub_sub.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
 const DEBUG = {
@@ -111,7 +111,7 @@ const createBaseSelection = ({
     getElementAbove,
   },
 }) => {
-  const [change, triggerChange] = createCallbackController();
+  const [publishChange, subscribeChange] = createPubSub();
 
   const getElementByValue = (valueToFind) => {
     for (const element of registry) {
@@ -180,7 +180,7 @@ const createBaseSelection = ({
       finalValue,
     );
     onChange(finalValue, event);
-    triggerChange(finalValue, event);
+    publishChange(finalValue, event);
   };
   let anchorElement = null;
   let activeElement = null;
@@ -358,7 +358,9 @@ const createBaseSelection = ({
       return activeElement;
     },
     channels: {
-      change,
+      change: {
+        add: subscribeChange,
+      },
     },
     update,
 
