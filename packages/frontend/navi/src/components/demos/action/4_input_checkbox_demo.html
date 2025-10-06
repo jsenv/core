@@ -299,7 +299,7 @@
                     ref={ref}
                     type="checkbox"
                     name="enabled"
-                    backgroundColor={backgroundColor}
+                    accentColor={backgroundColor}
                     onUIStateChange={(checked) => {
                       setResult(checked ? "checked" : "unchecked");
                     }}
@@ -342,7 +342,7 @@
                     type="checkbox"
                     name="enabled"
                     defaultChecked
-                    backgroundColor={backgroundColor}
+                    accentColor={backgroundColor}
                     onUIStateChange={(checked) => {
                       setResult(checked ? "checked" : "unchecked");
                     }}
@@ -373,7 +373,7 @@
                   <Input
                     type="checkbox"
                     name="enabled"
-                    backgroundColor={backgroundColor}
+                    accentColor={backgroundColor}
                     action={async (enabled) => {
                       setStatus("loading");
                       setResult("Processing...");
@@ -419,7 +419,7 @@
                     type="checkbox"
                     name="agreed"
                     defaultChecked
-                    backgroundColor={backgroundColor}
+                    accentColor={backgroundColor}
                     action={async (agreed) => {
                       setResult("Processing...");
                       await delay(800);
@@ -470,7 +470,7 @@
                     type="checkbox"
                     name="notifications"
                     checked={checked}
-                    backgroundColor={backgroundColor}
+                    accentColor={backgroundColor}
                     action={async (notifications) => {
                       setResult("Processing...");
                       await delay(600);
@@ -530,7 +530,7 @@
                   <Input
                     type="checkbox"
                     name="dangerous"
-                    backgroundColor={backgroundColor}
+                    accentColor={backgroundColor}
                     action={async (dangerous) => {
                       setStatus("loading");
                       setResult("Processing...");
@@ -576,7 +576,7 @@
                   type="checkbox"
                   name="risky"
                   defaultChecked
-                  backgroundColor={backgroundColor}
+                  accentColor={backgroundColor}
                   action={async (risky) => {
                     setStatus("loading");
                     setResult("Processing...");
@@ -631,7 +631,7 @@
                     type="checkbox"
                     name="protection"
                     checked={checked}
-                    backgroundColor={backgroundColor}
+                    accentColor={backgroundColor}
                     action={async (protection) => {
                       setStatus("loading");
                       setResult("Processing...");
@@ -687,7 +687,7 @@
                     type="checkbox"
                     name="experimental"
                     checked={checked}
-                    backgroundColor={backgroundColor}
+                    accentColor={backgroundColor}
                     action={async (experimental) => {
                       setStatus("loading");
                       setResult("Processing...");
@@ -771,7 +771,7 @@
                   <Input
                     type="checkbox"
                     name="notifications"
-                    backgroundColor={backgroundColor}
+                    accentColor={backgroundColor}
                     action={(notifications) => {
                       return toggleAction({ notifications });
                     }}
@@ -843,7 +843,7 @@
                       type="checkbox"
                       name="terms"
                       checked={agreed}
-                      backgroundColor={backgroundColor}
+                      accentColor={backgroundColor}
                     />
                     <span
                       className={`status-indicator status-${status}`}
