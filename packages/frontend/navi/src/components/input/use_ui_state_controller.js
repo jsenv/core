@@ -13,9 +13,17 @@ import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
-const DEBUG = true;
-const debug = (...args) => {
-  if (DEBUG) {
+const DEBUG_UI_STATE_CONTROLLER = true;
+const DEBUG_UI_GROUP_STATE_CONTROLLER = true;
+
+const debugUIState = (...args) => {
+  if (DEBUG_UI_STATE_CONTROLLER) {
+    console.debug(...args);
+  }
+};
+
+const debugUIGroup = (...args) => {
+  if (DEBUG_UI_GROUP_STATE_CONTROLLER) {
     console.debug(...args);
   }
 };
@@ -109,10 +117,12 @@ export const useUIStateController = (
   useLayoutEffect(() => {
     const uiStateController = uiStateControllerRef.current;
     if (groupUIStateController) {
+      debugUIState(`UI controller [${componentType}] registering with group [${groupUIStateController.componentType}]`);
       groupUIStateController.registerChild(uiStateController);
     }
     return () => {
       if (groupUIStateController) {
+        debugUIState(`UI controller [${componentType}] unregistering from group [${groupUIStateController.componentType}]`);
         groupUIStateController.unregisterChild(uiStateController);
       }
     };
@@ -122,6 +132,7 @@ export const useUIStateController = (
   useLayoutEffect(() => {
     const uiStateController = uiStateControllerRef.current;
     if (hasStateProp && state !== stateRef.current) {
+      debugUIState(`UI controller [${componentType}] state prop changed from:`, stateRef.current, 'to:', state);
       stateInitialRef.current = state;
       stateRef.current = state;
       uiStateController.state = state;
@@ -149,6 +160,8 @@ export const useUIStateController = (
     );
   }
 
+  debugUIState(`Creating UI state controller [${componentType}] - controlled: ${hasStateProp}, readonly: ${readOnly}, initial state:`, stateInitial);
+
   return useMemo(() => {
     const [publishUIState, subscribeUIState] = createPubSub();
 
@@ -158,10 +171,17 @@ export const useUIStateController = (
       state: stateRef.current,
       uiState: uiStateRef.current,
       setUIState: (prop, e) => {
+        debugUIState(`UI controller [${componentType}] setUIState called with:`, prop);
         if (formContext) {
           setNavState(prop);
         }
         const newUIState = getStateFromProp(prop);
+        const oldUIState = uiStateRef.current;
+        if (newUIState === oldUIState) {
+          debugUIState(`UI controller [${componentType}] UI state unchanged:`, newUIState);
+          return;
+        }
+        debugUIState(`UI controller [${componentType}] UI state changed from:`, oldUIState, 'to:', newUIState);
         uiStateRef.current = newUIState;
         uiStateController.uiState = newUIState;
 
@@ -171,6 +191,7 @@ export const useUIStateController = (
         onUIStateChange?.(newUIState, e);
         // Notify group controller
         if (groupUIStateController) {
+          debugUIState(`UI controller [${componentType}] notifying group [${groupUIStateController.componentType}] of state change`);
           groupUIStateController.onChildUIStateChange(
             uiStateController,
             newUIState,
@@ -181,9 +202,11 @@ export const useUIStateController = (
       resetUIState: () => {
         const currentState = hasStateProp ? state : undefined;
         const prop = getPropFromState(currentState);
+        debugUIState(`UI controller [${componentType}] resetUIState called - resetting to:`, prop);
         uiStateController.setUIState(prop);
       },
       actionEnd: () => {
+        debugUIState(`UI controller [${componentType}] actionEnd called`);
         if (formContext) {
           setNavState(undefined);
         }
@@ -236,7 +259,7 @@ export const useUIGroupStateController = (
   if (existingUIGroupStateController) {
     return existingUIGroupStateController;
   }
-  debug(
+  debugUIGroup(
     childComponentType === "*"
       ? `Creating "${componentType}" ui state controller (monitoring all descendants ui state(s))"`
       : `Creating "${componentType}" ui state controller (monitoring "${childComponentType}" ui state(s))`,
@@ -261,10 +284,10 @@ export const useUIGroupStateController = (
     setUIState: (newUIState, e) => {
       const currentUIState = uiStateRef.current;
       if (newUIState === currentUIState) {
-        debug(`"${componentType}" ui state unchanged:`, newUIState);
+        debugUIGroup(`"${componentType}" ui state unchanged:`, newUIState);
         return;
       }
-      debug(
+      debugUIGroup(
         `"${componentType}" ui state changed from:`,
         currentUIState,
         "to:",
@@ -283,7 +306,7 @@ export const useUIGroupStateController = (
         return;
       }
       childUIStateControllerArray.push(childUIStateController);
-      debug(
+      debugUIGroup(
         `"${componentType}" registered a "${childUIStateController.componentType}" - total: ${childUIStateControllerArray.length}`,
       );
       onChange(childUIStateController, "mount");
@@ -295,7 +318,7 @@ export const useUIGroupStateController = (
       ) {
         return;
       }
-      debug(
+      debugUIGroup(
         `"${componentType}" notified by "${childUIStateController.componentType}" of ui state change to`,
         childUIStateController.uiState,
       );
@@ -310,13 +333,13 @@ export const useUIGroupStateController = (
       }
       const index = childUIStateControllerArray.indexOf(childUIStateController);
       if (index === -1) {
-        debug(
+        debugUIGroup(
           `"${componentType}" cannot unregister "${childUIStateController.componentType}" - not found`,
         );
         return;
       }
       childUIStateControllerArray.splice(index, 1);
-      debug(
+      debugUIGroup(
         `"${componentType}" unregistered "${childUIStateController.componentType}" - remaining: ${childUIStateControllerArray.length}`,
       );
       onChange(childUIStateController, "unmount");
