@@ -68,6 +68,11 @@ export const InputTextual = forwardRef((props, ref) => {
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {
+  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
+  const groupDisabled = useContext(FieldGroupDisabledContext);
+  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const groupLoading = useContext(FieldGroupLoadingContext);
+  const setInputReadOnly = useContext(ReadOnlyContext);
   const {
     uiStateController,
     type,
@@ -84,11 +89,6 @@ const InputTextualBasic = forwardRef((props, ref) => {
     appearance = "custom",
     ...rest
   } = props;
-  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const setInputReadOnly = useContext(ReadOnlyContext);
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
