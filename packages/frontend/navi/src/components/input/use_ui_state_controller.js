@@ -117,12 +117,16 @@ export const useUIStateController = (
   useLayoutEffect(() => {
     const uiStateController = uiStateControllerRef.current;
     if (groupUIStateController) {
-      debugUIState(`UI controller [${componentType}] registering with group [${groupUIStateController.componentType}]`);
+      debugUIState(
+        `UI controller [${componentType}] registering with group [${groupUIStateController.componentType}]`,
+      );
       groupUIStateController.registerChild(uiStateController);
     }
     return () => {
       if (groupUIStateController) {
-        debugUIState(`UI controller [${componentType}] unregistering from group [${groupUIStateController.componentType}]`);
+        debugUIState(
+          `UI controller [${componentType}] unregistering from group [${groupUIStateController.componentType}]`,
+        );
         groupUIStateController.unregisterChild(uiStateController);
       }
     };
@@ -132,7 +136,12 @@ export const useUIStateController = (
   useLayoutEffect(() => {
     const uiStateController = uiStateControllerRef.current;
     if (hasStateProp && state !== stateRef.current) {
-      debugUIState(`UI controller [${componentType}] state prop changed from:`, stateRef.current, 'to:', state);
+      debugUIState(
+        `UI controller [${componentType}] state prop changed from:`,
+        stateRef.current,
+        "to:",
+        state,
+      );
       stateInitialRef.current = state;
       stateRef.current = state;
       uiStateController.state = state;
@@ -160,7 +169,10 @@ export const useUIStateController = (
     );
   }
 
-  debugUIState(`Creating UI state controller [${componentType}] - controlled: ${hasStateProp}, readonly: ${readOnly}, initial state:`, stateInitial);
+  debugUIState(
+    `Creating UI state controller [${componentType}] - controlled: ${hasStateProp}, readonly: ${readOnly}, initial state:`,
+    stateInitial,
+  );
 
   return useMemo(() => {
     const [publishUIState, subscribeUIState] = createPubSub();
@@ -171,17 +183,28 @@ export const useUIStateController = (
       state: stateRef.current,
       uiState: uiStateRef.current,
       setUIState: (prop, e) => {
-        debugUIState(`UI controller [${componentType}] setUIState called with:`, prop);
+        debugUIState(
+          `UI controller [${componentType}] setUIState called with:`,
+          prop,
+        );
         if (formContext) {
           setNavState(prop);
         }
         const newUIState = getStateFromProp(prop);
         const oldUIState = uiStateRef.current;
         if (newUIState === oldUIState) {
-          debugUIState(`UI controller [${componentType}] UI state unchanged:`, newUIState);
+          debugUIState(
+            `UI controller [${componentType}] UI state unchanged:`,
+            newUIState,
+          );
           return;
         }
-        debugUIState(`UI controller [${componentType}] UI state changed from:`, oldUIState, 'to:', newUIState);
+        debugUIState(
+          `UI controller [${componentType}] UI state changed from:`,
+          oldUIState,
+          "to:",
+          newUIState,
+        );
         uiStateRef.current = newUIState;
         uiStateController.uiState = newUIState;
 
@@ -191,7 +214,9 @@ export const useUIStateController = (
         onUIStateChange?.(newUIState, e);
         // Notify group controller
         if (groupUIStateController) {
-          debugUIState(`UI controller [${componentType}] notifying group [${groupUIStateController.componentType}] of state change`);
+          debugUIState(
+            `UI controller [${componentType}] notifying group [${groupUIStateController.componentType}] of state change`,
+          );
           groupUIStateController.onChildUIStateChange(
             uiStateController,
             newUIState,
@@ -202,7 +227,10 @@ export const useUIStateController = (
       resetUIState: () => {
         const currentState = hasStateProp ? state : undefined;
         const prop = getPropFromState(currentState);
-        debugUIState(`UI controller [${componentType}] resetUIState called - resetting to:`, prop);
+        debugUIState(
+          `UI controller [${componentType}] resetUIState called - resetting to:`,
+          prop,
+        );
         uiStateController.setUIState(prop);
       },
       actionEnd: () => {
