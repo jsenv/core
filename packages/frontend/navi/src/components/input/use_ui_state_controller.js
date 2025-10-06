@@ -7,6 +7,7 @@ import {
 } from "preact/hooks";
 
 import { FieldGroupUIStateControllerContext } from "../field_group_context.js";
+import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
 import { useStableCallback } from "../use_stable_callback.js";
 
@@ -317,7 +318,8 @@ export const useUIGroupStateController = (
   };
 
   return useMemo(() => {
-    const subscribers = new Set();
+    const [publishUIState, subscribeUIState] = createPubSub();
+
     childUIStateControllerArray.length = 0;
 
     const uiGroupStateController = {
@@ -327,9 +329,7 @@ export const useUIGroupStateController = (
         uiGroupStateController.uiState = newUIState;
         uiStateRef.current = newUIState;
 
-        // Notify subscribers
-        subscribers.forEach((callback) => callback(newUIState));
-
+        publishUIState(newUIState);
         // Call original callback
         onUIStateChange?.(newUIState, e);
       },
@@ -373,10 +373,7 @@ export const useUIGroupStateController = (
           childUIStateController.resetUIState(e);
         }
       },
-      subscribe: (callback) => {
-        subscribers.add(callback);
-        return () => subscribers.delete(callback);
-      },
+      subscribe: subscribeUIState,
     };
 
     uiGroupStateControllerRef.current = uiGroupStateController;
