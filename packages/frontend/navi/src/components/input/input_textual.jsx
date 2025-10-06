@@ -258,6 +258,10 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
   useOneFormParam(name, uiState);
 
   useFormEvents(innerRef, {
+    onFormReset: (e) => {
+      e.preventDefault();
+      uiStateController.resetUIState(e);
+    },
     onFormActionAbort: () => {
       // user might want to re-submit as is
       // or change the ui state before re-submitting
