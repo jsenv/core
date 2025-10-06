@@ -20,12 +20,10 @@ import {
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "../field_group_context.js";
 import { useActionEvents } from "../use_action_events.js";
-import { useStableCallback } from "../use_stable_callback.js";
 import { InputRadio } from "./input_radio.jsx";
 import { useFormEvents } from "./use_form_events.js";
 
@@ -46,56 +44,34 @@ export const RadioList = forwardRef((props, ref) => {
 export const Radio = InputRadio;
 
 const RadioListBasic = forwardRef((props, ref) => {
-  const {
-    name,
-    loading,
-    disabled,
-    readOnly,
-    children,
-    required,
-    onValueChange,
-    ...rest
-  } = props;
-  const groupOnFieldChange = useContext(FieldGroupOnUIStateChangeContext);
+  const { name, loading, disabled, readOnly, children, required, ...rest } =
+    props;
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const innerOnValueChange =
-    onValueChange || groupOnFieldChange
-      ? (value, e) => {
-          onValueChange?.(value, e);
-          groupOnFieldChange?.(value, e);
-        }
-      : undefined;
   const innerLoading = loading || groupLoading;
-  const innerReadOnly =
-    readOnly || groupReadonly || innerLoading || !innerOnValueChange;
+  const innerReadOnly = readOnly || groupReadonly || innerLoading;
   const innerDisabled = disabled || groupDisabled;
 
   return (
     <div ref={innerRef} className="navi_radio_list" {...rest}>
       <FieldGroupNameContext.Provider value={name}>
-        <FieldGroupOnUIStateChangeContext.Provider
-          value={useStableCallback(innerOnValueChange)}
-        >
-          <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
-            <FieldGroupDisabledContext.Provider value={innerDisabled}>
-              <FieldGroupRequiredContext.Provider value={required}>
-                <FieldGroupLoadingContext.Provider value={innerLoading}>
-                  {children}
-                </FieldGroupLoadingContext.Provider>
-              </FieldGroupRequiredContext.Provider>
-            </FieldGroupDisabledContext.Provider>
-          </FieldGroupReadOnlyContext.Provider>
-        </FieldGroupOnUIStateChangeContext.Provider>
+        <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
+          <FieldGroupDisabledContext.Provider value={innerDisabled}>
+            <FieldGroupRequiredContext.Provider value={required}>
+              <FieldGroupLoadingContext.Provider value={innerLoading}>
+                {children}
+              </FieldGroupLoadingContext.Provider>
+            </FieldGroupRequiredContext.Provider>
+          </FieldGroupDisabledContext.Provider>
+        </FieldGroupReadOnlyContext.Provider>
       </FieldGroupNameContext.Provider>
     </div>
   );
 });
-
 const RadioListWithAction = forwardRef((props, ref) => {
   const {
     id,

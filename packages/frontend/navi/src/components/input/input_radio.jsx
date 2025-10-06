@@ -8,13 +8,13 @@ import {
   FieldGroupDisabledContext,
   FieldGroupLoadingContext,
   FieldGroupNameContext,
-  FieldGroupOnUIStateChangeContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "../field_group_context.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import { ReadOnlyContext } from "./label.jsx";
+import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
   .custom_radio_wrapper {
@@ -184,7 +184,9 @@ import.meta.css = /* css */ `
 `;
 
 export const InputRadio = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
+  const uiStateController = useUIStateController(props, "input");
+
+  return renderActionableComponent({ uiStateController, ...props }, ref, {
     Basic: InputRadioBasic,
     WithAction: InputRadioWithAction,
     InsideForm: InputRadioInsideForm,
@@ -193,9 +195,8 @@ export const InputRadio = forwardRef((props, ref) => {
 
 const InputRadioBasic = forwardRef((props, ref) => {
   const {
+    uiStateController,
     name,
-    onCheckedChange,
-    value,
 
     readOnly,
     disabled,
@@ -206,19 +207,12 @@ const InputRadioBasic = forwardRef((props, ref) => {
     constraints = [],
 
     appeareance = "custom", // "custom" or "default"
+    accentColor,
     onClick,
     onInput,
     ...rest
   } = props;
-  if (import.meta.dev) {
-    if (Object.hasOwn(props, "checked") && !onCheckedChange) {
-      console.warn(
-        `<input type="radio" /> is controlled by "checked" prop. Use "onCheckedChange" prop too to make it interactive.`,
-      );
-    }
-  }
   const groupName = useContext(FieldGroupNameContext);
-  const groupOnFieldChange = useContext(FieldGroupOnUIStateChangeContext);
   const groupReadOnly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupRequired = useContext(FieldGroupRequiredContext);
@@ -228,20 +222,25 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
-  const innerValue = value;
   const innerName = name || groupName;
-  const innerOnCheckedChange = onCheckedChange || groupOnFieldChange;
   const innerDisabled = disabled || groupDisabled;
   const innerRequired = required || groupRequired;
   const innerLoading =
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || innerLoading || !innerOnCheckedChange;
+    readOnly || groupReadOnly || innerLoading || uiStateController.readOnly;
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
+
+  const uiState = useUIState(uiStateController);
+  const checked = Boolean(uiState);
+  const actionName = rest["data-action"];
+  if (actionName) {
+    delete rest["data-action"];
+  }
 
   const inputRadio = (
     <input
@@ -249,8 +248,8 @@ const InputRadioBasic = forwardRef((props, ref) => {
       ref={innerRef}
       type="radio"
       name={innerName}
-      value={innerValue}
-      data-readonly={innerReadOnly && !disabled ? "" : undefined}
+      checked={checked}
+      data-readonly={innerReadOnly ? "" : undefined}
       disabled={innerDisabled}
       required={innerRequired}
       data-validation-message-arrow-x="center"
@@ -261,24 +260,31 @@ const InputRadioBasic = forwardRef((props, ref) => {
         onClick?.(e);
       }}
       onInput={(e) => {
-        if (innerOnCheckedChange) {
-          const radio = innerRef.current;
-          const radioIsChecked = radio.checked;
-          innerOnCheckedChange(radioIsChecked, e);
-        }
+        const radio = e.target;
+        const radioIsChecked = radio.checked;
+        uiStateController.setUIState(radioIsChecked, e);
         onInput?.(e);
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onresetuistate={(e) => {
+        uiStateController.resetUIState(e);
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onsetuistate={(e) => {
+        uiStateController.setUIState(e.detail.value, e);
       }}
     />
   );
   const inputRadioDisplayed =
     appeareance === "custom" ? (
-      <CustomRadio>{inputRadio}</CustomRadio>
+      <CustomRadio accentColor={accentColor}>{inputRadio}</CustomRadio>
     ) : (
       inputRadio
     );
 
   return (
     <LoadableInlineElement
+      data-action={actionName}
       loading={innerLoading}
       targetSelector={appeareance === "custom" ? ".custom_radio" : ""}
       inset={-1}
@@ -334,4 +340,8 @@ const InputRadioWithAction = () => {
   );
 };
 
-const InputRadioInsideForm = InputRadioBasic;
+const InputRadioInsideForm = () => {
+  throw new Error(
+    `<Input type="radio" /> must be used wrapped by <RadioList /> when inside a <Form />`,
+  );
+};

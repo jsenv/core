@@ -140,12 +140,17 @@ export const InputCheckbox = forwardRef((props, ref) => {
     getStateFromProp: (checked) => (checked ? value : undefined),
     getPropFromState: Boolean,
   });
+  const uiState = useUIState(uiStateController);
 
-  return renderActionableComponent({ uiStateController, ...props }, ref, {
-    Basic: InputCheckboxBasic,
-    WithAction: InputCheckboxWithAction,
-    InsideForm: InputCheckboxInsideForm,
-  });
+  return renderActionableComponent(
+    { uiStateController, uiState, ...props },
+    ref,
+    {
+      Basic: InputCheckboxBasic,
+      WithAction: InputCheckboxWithAction,
+      InsideForm: InputCheckboxInsideForm,
+    },
+  );
 });
 
 const InputCheckboxBasic = forwardRef((props, ref) => {
@@ -158,6 +163,7 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const setInputReadOnly = useContext(ReadOnlyContext);
   const {
     uiStateController,
+    uiState,
     name,
     readOnly,
     disabled,
@@ -188,7 +194,6 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
-  const uiState = useUIState(uiStateController);
   const checked = Boolean(uiState);
   const actionName = rest["data-action"];
   if (actionName) {
@@ -275,6 +280,7 @@ const CustomCheckbox = ({ accentColor, children }) => {
 const InputCheckboxWithAction = forwardRef((props, ref) => {
   const {
     uiStateController,
+    uiState,
     name,
     action,
     onCancel,
@@ -289,7 +295,6 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const uiState = useUIState(uiStateController);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -344,13 +349,13 @@ const InputCheckboxInsideForm = forwardRef((props, ref) => {
     // eslint-disable-next-line no-unused-vars
     formContext,
     uiStateController,
+    uiState,
     id,
     name,
     ...rest
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const uiState = useUIState(uiStateController);
   useOneFormParam(name, uiState);
 
   useFormEvents(innerRef, {

@@ -9,7 +9,6 @@ import {
   useState,
 } from "preact/hooks";
 
-import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -43,16 +42,7 @@ import.meta.css = /* css */ `
 `;
 
 export const CheckboxList = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
-    Basic: CheckboxListBasic,
-    WithAction: CheckboxListWithAction,
-    InsideForm: CheckboxListInsideForm,
-  });
-});
-export const Checkbox = InputCheckbox;
-
-const useCheckboxListUIStateController = (props) => {
-  return useUIGroupStateController(props, "checkbox_list", {
+  const uiStateController = useUIGroupStateController(props, "checkbox_list", {
     childComponentType: "checkbox",
     aggregateChildStates: (childUIStateControllers) => {
       const values = [];
@@ -64,15 +54,27 @@ const useCheckboxListUIStateController = (props) => {
       return values.length === 0 ? undefined : values;
     },
   });
-};
+  const uiState = useUIState(uiStateController);
+
+  return renderActionableComponent(
+    { uiStateController, uiState, ...props },
+    ref,
+    {
+      Basic: CheckboxListBasic,
+      WithAction: CheckboxListWithAction,
+      InsideForm: CheckboxListInsideForm,
+    },
+  );
+});
+export const Checkbox = InputCheckbox;
 
 const CheckboxListBasic = forwardRef((props, ref) => {
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
   const {
-    name,
     uiStateController,
+    name,
     readOnly,
     disabled,
     required,
@@ -134,6 +136,8 @@ const CheckboxListBasic = forwardRef((props, ref) => {
 
 const CheckboxListWithAction = forwardRef((props, ref) => {
   const {
+    uiStateController,
+    uiState,
     name,
     action,
     actionErrorEffect,
@@ -148,8 +152,6 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const uiStateController = useCheckboxListUIStateController(props);
-  const uiState = useUIState(uiStateController);
   const [boundAction] = useActionBoundToOneArrayParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -185,8 +187,8 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     <CheckboxListBasic
       {...rest}
       ref={innerRef}
-      name={name}
       uiStateController={uiStateController}
+      name={name}
       data-action={boundAction.name}
       onChange={(event) => {
         const checkboxList = innerRef.current;
@@ -206,14 +208,10 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
   );
 });
 const CheckboxListInsideForm = forwardRef((props, ref) => {
-  const { id, name, value, children, ...rest } = props;
+  const { uiStateController, uiState, name, value, children, ...rest } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [navState, setNavState] = useNavState(id);
-  const uiStateController = useCheckboxListUIStateController(props, navState);
-  const uiState = useUIState(uiStateController);
   useOneFormArrayParam(name, uiState);
-  setNavState(uiState);
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
@@ -228,9 +226,9 @@ const CheckboxListInsideForm = forwardRef((props, ref) => {
     <CheckboxListBasic
       {...rest}
       ref={innerRef}
+      uiStateController={uiStateController}
       name={name}
       value={value}
-      uiStateController={uiStateController}
     >
       {/* <input type="checkbox" /> must not try to update the <form>
      The checkbox list is doing it with the array of checked values
