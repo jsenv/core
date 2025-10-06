@@ -105,6 +105,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
       {...rest}
       ref={innerRef}
       type={type}
+      data-value={uiState}
       value={value}
       data-field=""
       data-field-with-border=""
