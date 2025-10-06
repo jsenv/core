@@ -147,15 +147,11 @@ export const InputCheckbox = forwardRef((props, ref) => {
   });
   const uiState = useUIState(uiStateController);
 
-  const checkbox = renderActionableComponent(
-    { uiStateController, uiState, ...props },
-    ref,
-    {
-      Basic: InputCheckboxBasic,
-      WithAction: InputCheckboxWithAction,
-      InsideForm: InputCheckboxInsideForm,
-    },
-  );
+  const checkbox = renderActionableComponent(props, ref, {
+    Basic: InputCheckboxBasic,
+    WithAction: InputCheckboxWithAction,
+    InsideForm: InputCheckboxInsideForm,
+  });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>

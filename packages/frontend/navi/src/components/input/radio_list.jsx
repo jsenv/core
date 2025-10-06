@@ -55,37 +55,34 @@ export const RadioList = forwardRef((props, ref) => {
   });
   const uiState = useUIState(uiStateController);
 
-  return renderActionableComponent(
-    { uiStateController, uiState, ...props },
-    ref,
-    {
-      Basic: RadioListBasic,
-      WithAction: RadioListWithAction,
-      InsideForm: RadioListInsideForm,
-    },
+  const radioList = renderActionableComponent(props, ref, {
+    Basic: RadioListBasic,
+    WithAction: RadioListWithAction,
+    InsideForm: RadioListInsideForm,
+  });
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>
+        {radioList}
+      </UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
   );
 });
 export const Radio = InputRadio;
 
 const RadioListBasic = forwardRef((props, ref) => {
-  const {
-    uiStateController,
-    name,
-    loading,
-    disabled,
-    readOnly,
-    children,
-    required,
-    ...rest
-  } = props;
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const { name, loading, disabled, readOnly, children, required, ...rest } =
+    props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
   const innerLoading = loading || groupLoading;
-  const innerReadOnly = readOnly || groupReadonly || innerLoading;
+  const innerReadOnly =
+    readOnly || groupReadonly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || groupDisabled;
 
   return (
