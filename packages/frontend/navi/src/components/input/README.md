@@ -58,7 +58,7 @@ For traditional form workflows where users control submission:
 ```jsx
 const submitForm = async ({ consent }) => {
   const response = await fetch("/api/user/consent", {
-    method: "PATCH",
+    method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(consent),
   });
@@ -73,7 +73,7 @@ const submitForm = async ({ consent }) => {
 };
 
 <Form action={submitForm}>
-  <InputCheckbox name="consent" />
+  <InputCheckbox name="consent" defaultChecked />
 
   <button type="submit">Save Settings</button>
   <button type="reset">Reset Form</button>
@@ -126,7 +126,7 @@ const selectedColors = colorChoices
 // What user has selected in UI (may differ)
 const [uiSelectedColors, setUiSelectedColors] = useState(selectedColors);
 
-<form action={submitColorPreferences}>
+<Form action={submitColorPreferences}>
   <CheckboxList
     name="colors"
     onUIStateChange={(colors) => {
@@ -145,7 +145,7 @@ const [uiSelectedColors, setUiSelectedColors] = useState(selectedColors);
 
   <button type="submit">Submit ({uiSelectedColors.join(", ")})</button>
   <button type="reset">Reset to saved ({selectedColors.join(", ")})</button>
-</form>;
+</Form>;
 ```
 
 ### External Control via Custom Events
