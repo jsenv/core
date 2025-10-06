@@ -110,6 +110,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
 
   const inputTextual = (
     <input
+      {...rest}
       ref={innerRef}
       type={type}
       value={uiState}
@@ -124,7 +125,14 @@ const InputTextualBasic = forwardRef((props, ref) => {
         uiStateController.setUIState(inputValue, e);
         onInput?.(e);
       }}
-      {...rest}
+      // eslint-disable-next-line react/no-unknown-property
+      onresetuistate={(e) => {
+        uiStateController.resetUIState(e);
+      }}
+      // eslint-disable-next-line react/no-unknown-property
+      onsetuistate={(e) => {
+        uiStateController.setUIState(e.detail.value, e);
+      }}
     />
   );
 
