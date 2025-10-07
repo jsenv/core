@@ -1,3 +1,5 @@
+// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
+
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import {
@@ -11,8 +13,8 @@ import { useActionStatus } from "../../use_action_status.js";
 import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import {
-  useActionBoundToOneParam,
-  useOneFormParam,
+  useActionBoundToOneArrayParam,
+  useOneFormArrayParam,
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import {
@@ -23,9 +25,9 @@ import {
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
   FieldGroupUIStateControllerContext,
-} from "../field_group_context.js";
-import { useActionEvents } from "../use_action_events.js";
-import { InputRadio } from "./input_radio.jsx";
+} from "./field_group_context.js";
+import { InputCheckbox } from "./input_checkbox.jsx";
+import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
   UIStateContext,
@@ -35,49 +37,48 @@ import {
 } from "./use_ui_state_controller.js";
 
 import.meta.css = /* css */ `
-  .navi_radio_list {
+  .navi_checkbox_list {
     display: flex;
     flex-direction: column;
   }
 `;
 
-export const RadioList = forwardRef((props, ref) => {
-  const uiStateController = useUIGroupStateController(props, "radio_list", {
-    childComponentType: "radio",
+export const CheckboxList = forwardRef((props, ref) => {
+  const uiStateController = useUIGroupStateController(props, "checkbox_list", {
+    childComponentType: "checkbox",
     aggregateChildStates: (childUIStateControllers) => {
-      let activeValue;
+      const values = [];
       for (const childUIStateController of childUIStateControllers) {
         if (childUIStateController.uiState) {
-          activeValue = childUIStateController.uiState;
-          break;
+          values.push(childUIStateController.uiState);
         }
       }
-      return activeValue;
+      return values.length === 0 ? undefined : values;
     },
   });
   const uiState = useUIState(uiStateController);
 
-  const radioList = renderActionableComponent(props, ref, {
-    Basic: RadioListBasic,
-    WithAction: RadioListWithAction,
-    InsideForm: RadioListInsideForm,
+  const checkboxList = renderActionableComponent(props, ref, {
+    Basic: CheckboxListBasic,
+    WithAction: CheckboxListWithAction,
+    InsideForm: CheckboxListInsideForm,
   });
   return (
     <UIStateControllerContext.Provider value={uiStateController}>
       <UIStateContext.Provider value={uiState}>
-        {radioList}
+        {checkboxList}
       </UIStateContext.Provider>
     </UIStateControllerContext.Provider>
   );
 });
-export const Radio = InputRadio;
+export const Checkbox = InputCheckbox;
 
-const RadioListBasic = forwardRef((props, ref) => {
+const CheckboxListBasic = forwardRef((props, ref) => {
   const groupReadonly = useContext(FieldGroupReadOnlyContext);
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
   const uiStateController = useContext(UIStateControllerContext);
-  const { name, loading, disabled, readOnly, children, required, ...rest } =
+  const { name, readOnly, disabled, required, loading, children, ...rest } =
     props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -89,11 +90,11 @@ const RadioListBasic = forwardRef((props, ref) => {
 
   return (
     <div
-      data-action={rest["data-action"]}
       {...rest}
       ref={innerRef}
-      className="navi_radio_list"
-      data-radio-list
+      name={name}
+      className="navi_checkbox_list"
+      data-checkbox-list
       // eslint-disable-next-line react/no-unknown-property
       onresetuistate={(e) => {
         uiStateController.resetUIState(e);
@@ -115,25 +116,25 @@ const RadioListBasic = forwardRef((props, ref) => {
     </div>
   );
 });
-const RadioListWithAction = forwardRef((props, ref) => {
+
+const CheckboxListWithAction = forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const {
     action,
-
+    actionErrorEffect,
     onCancel,
     onActionPrevented,
     onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
-    actionErrorEffect,
     children,
     ...rest
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
+  const [boundAction] = useActionBoundToOneArrayParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
@@ -165,16 +166,16 @@ const RadioListWithAction = forwardRef((props, ref) => {
   });
 
   return (
-    <RadioListBasic
+    <CheckboxListBasic
       {...rest}
       ref={innerRef}
-      data-action={boundAction}
-      onChange={(e) => {
-        const radio = e.target;
-        const radioListContainer = innerRef.current;
-        requestAction(radioListContainer, boundAction, {
-          event: e,
-          requester: radio,
+      data-action={boundAction.name}
+      onChange={(event) => {
+        const checkboxList = innerRef.current;
+        const checkbox = event.target;
+        requestAction(checkboxList, boundAction, {
+          event,
+          requester: checkbox,
         });
       }}
     >
@@ -183,16 +184,16 @@ const RadioListWithAction = forwardRef((props, ref) => {
           {children}
         </FieldGroupActionRequesterContext.Provider>
       </FieldGroupLoadingContext.Provider>
-    </RadioListBasic>
+    </CheckboxListBasic>
   );
 });
-const RadioListInsideForm = forwardRef((props, ref) => {
+const CheckboxListInsideForm = forwardRef((props, ref) => {
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const { name, children, ...rest } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  useOneFormParam(name, uiState);
+  useOneFormArrayParam(name, uiState);
 
   useFormEvents(innerRef, {
     onFormReset: (e) => {
@@ -204,11 +205,11 @@ const RadioListInsideForm = forwardRef((props, ref) => {
   });
 
   return (
-    <RadioListBasic {...rest} ref={innerRef} name={name}>
-      {/* <input type="radio" /> must be ignorant of the <form>
+    <CheckboxListBasic {...rest} ref={innerRef} name={name}>
+      {/* <input type="checkbox" /> must be ignorant of the <form>
       otherwise they would try to update the <form>.
-      This responsability belongs to the radio list which manages the list of radios */}
-      <FormContext.Provider value={null}> {children}</FormContext.Provider>
-    </RadioListBasic>
+      This responsability belongs to the checkbox list which manages the list of checkboxes */}
+      <FormContext.Provider value={null}>{children}</FormContext.Provider>
+    </CheckboxListBasic>
   );
 });

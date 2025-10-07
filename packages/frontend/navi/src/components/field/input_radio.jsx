@@ -8,6 +8,8 @@ import {
 } from "preact/hooks";
 
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
+import { LoadableInlineElement } from "../loader/loader_background.jsx";
+import { useAutoFocus } from "../use_auto_focus.js";
 import {
   FieldGroupActionRequesterContext,
   FieldGroupDisabledContext,
@@ -15,9 +17,7 @@ import {
   FieldGroupNameContext,
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
-} from "../field_group_context.js";
-import { LoadableInlineElement } from "../loader/loader_background.jsx";
-import { useAutoFocus } from "../use_auto_focus.js";
+} from "./field_group_context.js";
 import { ReadOnlyContext } from "./label.jsx";
 import {
   UIStateContext,

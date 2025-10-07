@@ -1,4 +1,5 @@
 import { forwardRef } from "preact/compat";
+
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { InputRadio } from "./input_radio.jsx";
 import { InputTextual } from "./input_textual.jsx";

@@ -1,6 +1,7 @@
 import { requestAction } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
+
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -10,8 +11,8 @@ import {
 } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useActionEvents } from "../use_action_events.js";
 import { useRefArray } from "../use_ref_array.js";
+import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 
 import.meta.css = /* css */ `
