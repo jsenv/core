@@ -486,15 +486,15 @@
 
       // eslint-disable-next-line no-unused-vars
       const PropControlDemo = () => {
-        const [accentColor, setAccentColor] = useState("#ff8c00"); // Default orange
+        const [accentColor, setAccentColor] = useState(undefined);
         const [isChecked, setIsChecked] = useState(true);
         const [isDisabled, setIsDisabled] = useState(false);
         const [isReadOnly, setIsReadOnly] = useState(false);
         const [isLoading, setIsLoading] = useState(false);
 
         const colorOptions = [
-          { name: "Orange (Default)", value: "#ff8c00" },
-          { name: "Blue", value: "#007bff" },
+          { name: "Default (blue)", value: undefined },
+          { name: "Orange", value: "#ff8c00" },
           { name: "Green", value: "#28a745" },
           { name: "Purple", value: "#6f42c1" },
           { name: "Red", value: "#dc3545" },
