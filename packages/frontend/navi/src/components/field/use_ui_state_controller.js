@@ -12,19 +12,8 @@ import { FormContext } from "../action_execution/form_context.js";
 import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
 
-export const UIStateControllerContext = createContext();
-export const UIStateContext = createContext();
-export const ParentUIStateControllerContext = createContext();
-
-export const ParentFieldNameContext = createContext();
-export const ParentFieldReadOnlyContext = createContext();
-export const ParentFieldDisabledContext = createContext();
-export const ParentFieldRequiredContext = createContext();
-export const ParentFieldLoadingContext = createContext();
-export const ParentFieldActionRequesterContext = createContext();
-
-const DEBUG_UI_STATE_CONTROLLER = false;
-const DEBUG_UI_GROUP_STATE_CONTROLLER = true;
+const DEBUG_UI_STATE_CONTROLLER = true;
+const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
 const debugUIState = (...args) => {
   if (DEBUG_UI_STATE_CONTROLLER) {
     console.debug(...args);
@@ -35,6 +24,17 @@ const debugUIGroup = (...args) => {
     console.debug(...args);
   }
 };
+
+export const UIStateControllerContext = createContext();
+export const UIStateContext = createContext();
+export const ParentUIStateControllerContext = createContext();
+
+export const ParentFieldNameContext = createContext();
+export const ParentFieldReadOnlyContext = createContext();
+export const ParentFieldDisabledContext = createContext();
+export const ParentFieldRequiredContext = createContext();
+export const ParentFieldLoadingContext = createContext();
+export const ParentFieldActionRequesterContext = createContext();
 
 /**
  * UI State Controller Hook
@@ -410,7 +410,7 @@ export const useUIGroupStateController = (
       const childComponentType = childUIStateController.componentType;
       childUIStateControllerArray.push(childUIStateController);
       debugUIGroup(
-        `${componentType}.registerChild("${componentType}") -> registered (total: ${childUIStateControllerArray.length})`,
+        `${componentType}.registerChild("${childComponentType}") -> registered (total: ${childUIStateControllerArray.length})`,
       );
       onChange(
         childUIStateController,
@@ -422,7 +422,7 @@ export const useUIGroupStateController = (
         return;
       }
       debugUIGroup(
-        `${componentType}.onChildUIStateChange("${childUIStateController.componentType}") to ${JSON.stringify(
+        `${componentType}.onChildUIStateChange("${childComponentType}") to ${JSON.stringify(
           childUIStateController.uiState,
         )}`,
       );
@@ -436,13 +436,13 @@ export const useUIGroupStateController = (
       const index = childUIStateControllerArray.indexOf(childUIStateController);
       if (index === -1) {
         debugUIGroup(
-          `${componentType}.unregisterChild("${componentType}") -> not found`,
+          `${componentType}.unregisterChild("${childComponentType}") -> not found`,
         );
         return;
       }
       childUIStateControllerArray.splice(index, 1);
       debugUIGroup(
-        `${componentType}.unregisterChild("${componentType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
+        `${componentType}.unregisterChild("${childComponentType}") -> unregisteed (remaining: ${childUIStateControllerArray.length})`,
       );
       onChange(
         childUIStateController,

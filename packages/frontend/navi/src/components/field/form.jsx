@@ -23,15 +23,14 @@ import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import {
-  FieldGroupActionRequesterContext,
-  FieldGroupLoadingContext,
-  FieldGroupReadOnlyContext,
-} from "./field_group_context.js";
-import {
   useActionEvents,
   useRequestedActionStatus,
 } from "./use_action_events.js";
 import {
+  ParentFieldActionRequesterContext,
+  ParentFieldLoadingContext,
+  ParentFieldReadOnlyContext,
+  ParentUIStateControllerContext,
   UIStateContext,
   UIStateControllerContext,
   useUIGroupStateController,
@@ -94,11 +93,13 @@ const FormBasic = forwardRef((props, ref) => {
         uiStateController.resetUIState(e);
       }}
     >
-      <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
-        <FieldGroupLoadingContext.Provider value={loading}>
-          <FormContext.Provider value={true}>{children}</FormContext.Provider>
-        </FieldGroupLoadingContext.Provider>
-      </FieldGroupReadOnlyContext.Provider>
+      <ParentUIStateControllerContext.Provider value={uiStateController}>
+        <ParentFieldReadOnlyContext.Provider value={innerReadOnly}>
+          <ParentFieldLoadingContext.Provider value={loading}>
+            <FormContext.Provider value={true}>{children}</FormContext.Provider>
+          </ParentFieldLoadingContext.Provider>
+        </ParentFieldReadOnlyContext.Provider>
+      </ParentUIStateControllerContext.Provider>
     </form>
   );
 });
@@ -173,9 +174,9 @@ const FormWithAction = forwardRef((props, ref) => {
         requestAction(e.target, actionBoundToUIState, { event: e });
       }}
     >
-      <FieldGroupActionRequesterContext.Provider value={formActionRequester}>
+      <ParentFieldActionRequesterContext.Provider value={formActionRequester}>
         {children}
-      </FieldGroupActionRequesterContext.Provider>
+      </ParentFieldActionRequesterContext.Provider>
     </FormBasic>
   );
 });
