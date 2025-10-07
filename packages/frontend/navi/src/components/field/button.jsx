@@ -191,7 +191,10 @@ const ButtonWithAction = forwardRef((props, ref) => {
   const handleClick = (event) => {
     event.preventDefault();
     const button = innerRef.current;
-    requestAction(button, boundAction, { event });
+    requestAction(button, boundAction, {
+      event,
+      actionOrigin: "action_prop",
+    });
   };
   const innerLoading = loading || actionLoading;
 
@@ -246,6 +249,7 @@ const ButtonInsideForm = forwardRef((props, ref) => {
           requester: buttonElement,
           event,
           meta: { isSubmit: true },
+          actionOrigin: "action_prop",
         },
       }),
     );
@@ -338,6 +342,7 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
         requestAction(form, actionBoundToFormParams, {
           event,
           requester: button,
+          actionOrigin: "action_prop",
         });
         onClick?.(event);
       }}

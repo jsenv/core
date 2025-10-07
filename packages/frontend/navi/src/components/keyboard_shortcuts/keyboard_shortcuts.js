@@ -84,6 +84,7 @@ export const useKeyboardShortcuts = (
   const executeAction = useExecuteAction(elementRef);
   const shortcutActionIsBusyRef = useRef(false);
   useActionEvents(elementRef, {
+    actionOrigin: "keyboard_shortcut",
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
       const { shortcut } = actionEvent.detail.meta || {};
@@ -167,6 +168,7 @@ export const useKeyboardShortcuts = (
             event: keyboardEvent,
             requester: document.activeElement,
             confirmMessage: shortcutCandidate.confirmMessage,
+            actionOrigin: "keyboard_shortcut",
             meta: {
               shortcut: shortcutCandidate,
             },

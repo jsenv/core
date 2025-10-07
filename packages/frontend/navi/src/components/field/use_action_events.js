@@ -6,6 +6,7 @@ import { useStableCallback } from "../use_stable_callback.js";
 export const useActionEvents = (
   elementRef,
   {
+    actionOrigin = "action_prop",
     /**
      * @param {Event} e - L'événement original
      * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
@@ -37,19 +38,51 @@ export const useActionEvents = (
 
     return addManyEventListeners(element, {
       cancel: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
         onCancel?.(e, e.detail.reason);
       },
-      actionrequested: onRequested,
-      actionprevented: onPrevented,
-      action: onAction,
-      actionstart: onStart,
-      actionabort: onAbort,
+      actionrequested: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onRequested?.(e);
+      },
+      actionprevented: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onPrevented?.(e);
+      },
+      action: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onAction?.(e);
+      },
+      actionstart: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onStart?.(e);
+      },
+      actionabort: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
+        onAbort?.(e);
+      },
       actionerror: (e) => {
+        if (e.detail.actionOrigin !== actionOrigin) {
+          return;
+        }
         onError?.(e.detail.error, e);
       },
       actionend: onEnd,
     });
   }, [
+    actionOrigin,
     onCancel,
     onRequested,
     onPrevented,

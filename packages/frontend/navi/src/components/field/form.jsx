@@ -143,6 +143,7 @@ const FormWithAction = forwardRef((props, ref) => {
         requester: e.detail?.requester,
         event: e.detail?.event || e,
         meta: e.detail?.meta,
+        actionOrigin: e.detail?.actionOrigin,
       });
     },
     onAction: (e) => {
@@ -185,7 +186,10 @@ const FormWithAction = forwardRef((props, ref) => {
         // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
         // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
         e.preventDefault();
-        requestAction(e.target, actionBoundToUIState, { event: e });
+        requestAction(e.target, actionBoundToUIState, {
+          event: e,
+          actionOrigin: "action_prop",
+        });
       }}
     >
       <LoadingElementContext.Provider value={formActionRequester}>

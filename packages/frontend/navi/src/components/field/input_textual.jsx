@@ -184,7 +184,10 @@ const InputTextualWithAction = forwardRef((props, ref) => {
       valueAtInteractionRef.current = null;
       return;
     }
-    requestAction(e.target, boundAction, { event: e });
+    requestAction(e.target, boundAction, {
+      event: e,
+      actionOrigin: "action_prop",
+    });
   });
   // here updating the input won't call the associated action
   // (user have to blur or press enter for this to happen)
@@ -246,7 +249,10 @@ const InputTextualWithAction = forwardRef((props, ref) => {
          * We need to prevent the next change event otherwise we would request action twice
          */
         valueAtInteractionRef.current = e.target.value;
-        requestAction(e.target, boundAction, { event: e });
+        requestAction(e.target, boundAction, {
+          event: e,
+          actionOrigin: "action_prop",
+        });
         onKeyDown?.(e);
       }}
     />
@@ -273,6 +279,7 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
                 requester: formSubmitButton ? formSubmitButton : inputElement,
                 event: e,
                 meta: { isSubmit: true },
+                actionOrigin: "action_prop",
               },
             }),
           );

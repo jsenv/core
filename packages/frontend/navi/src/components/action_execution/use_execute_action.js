@@ -61,7 +61,15 @@ export const useExecuteAction = (
   // errorEffectRef.current = errorEffect;
   const executeAction = useCallback(
     (actionEvent) => {
-      const { action, requester, event, method } = actionEvent.detail;
+      const { action, actionOrigin, requester, event, method } =
+        actionEvent.detail;
+      const sharedActionEventDetail = {
+        action,
+        actionOrigin,
+        requester,
+        event,
+        method,
+      };
 
       if (debug) {
         console.debug(
@@ -86,12 +94,7 @@ export const useExecuteAction = (
       validationMessageTargetRef.current = validationMessageTarget;
 
       dispatchCustomEvent("actionstart", {
-        detail: {
-          action,
-          requester,
-          event,
-          method,
-        },
+        detail: sharedActionEventDetail,
       });
 
       return action[method]({
@@ -119,12 +122,8 @@ export const useExecuteAction = (
           ) {
             dispatchCustomEvent("actionabort", {
               detail: {
+                ...sharedActionEventDetail,
                 reason,
-
-                action,
-                requester,
-                event,
-                method,
               },
             });
           }
@@ -138,12 +137,8 @@ export const useExecuteAction = (
           ) {
             dispatchCustomEvent("actionerror", {
               detail: {
+                ...sharedActionEventDetail,
                 error,
-
-                action,
-                requester,
-                event,
-                method,
               },
             });
           }
@@ -162,12 +157,8 @@ export const useExecuteAction = (
           ) {
             dispatchCustomEvent("actionend", {
               detail: {
+                ...sharedActionEventDetail,
                 data,
-
-                action,
-                requester,
-                event,
-                method,
               },
             });
           }

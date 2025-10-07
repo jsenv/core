@@ -168,6 +168,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
         requestAction(radioListContainer, boundAction, {
           event: e,
           requester: radio,
+          actionOrigin: "action_prop",
         });
       }}
       loading={loading || actionLoading}

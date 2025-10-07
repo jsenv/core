@@ -51,11 +51,15 @@ export const requestAction = (
   {
     event,
     requester = target,
+    actionOrigin,
     method = "rerun",
     meta = {},
     confirmMessage,
   } = {},
 ) => {
+  if (!actionOrigin) {
+    console.warn("requestAction: actionOrigin is required");
+  }
   let elementToValidate = requester;
 
   let validationInterface = elementToValidate.__validationInterface__;
@@ -65,6 +69,7 @@ export const requestAction = (
 
   const customEventDetail = {
     action,
+    actionOrigin,
     method,
     event,
     requester,
