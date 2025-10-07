@@ -81,20 +81,12 @@ export const Link = forwardRef((props, ref) => {
 });
 
 const LinkBasic = forwardRef((props, ref) => {
-  const { selectionController } = props;
-
-  if (selectionController) {
-    return (
-      <LinkWithSelection
-        ref={ref}
-        selectionController={selectionController}
-        {...props}
-      />
-    );
+  const selectionContext = useContext(SelectionContext);
+  if (selectionContext) {
+    return <LinkWithSelection ref={ref} {...props} />;
   }
   return <LinkPlain ref={ref} {...props} />;
 });
-
 const LinkPlain = forwardRef((props, ref) => {
   const {
     className = "",
@@ -157,17 +149,23 @@ const LinkPlain = forwardRef((props, ref) => {
     </LoaderBackground>
   );
 });
-
 const LinkWithSelection = forwardRef((props, ref) => {
   const { selection, selectionController } = useContext(SelectionContext);
   const { value = props.href, children, ...rest } = props;
-  const { selected } = useSelectableElement(ref, {
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+  const { selected } = useSelectableElement(innerRef, {
     selection,
     selectionController,
   });
 
   return (
-    <LinkPlain {...rest} ref={ref} data-value={value} aria-selected={selected}>
+    <LinkPlain
+      {...rest}
+      ref={innerRef}
+      data-value={value}
+      aria-selected={selected}
+    >
       {children}
     </LinkPlain>
   );
