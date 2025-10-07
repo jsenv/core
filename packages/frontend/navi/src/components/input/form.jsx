@@ -17,10 +17,10 @@ import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
 import { useImperativeHandle, useRef } from "preact/hooks";
 
-import { FormContext } from "./action_execution/form_context.js";
-import { renderActionableComponent } from "./action_execution/render_actionable_component.jsx";
-import { useFormActionBoundToFormParams } from "./action_execution/use_action.js";
-import { useExecuteAction } from "./action_execution/use_execute_action.js";
+import { FormContext } from "../action_execution/form_context.js";
+import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
+import { useFormActionBoundToFormParams } from "../action_execution/use_action.js";
+import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import {
   FieldGroupActionRequesterContext,
@@ -31,16 +31,68 @@ import {
   useActionEvents,
   useRequestedActionStatus,
 } from "./use_action_events.js";
+import {
+  UIStateContext,
+  UIStateControllerContext,
+  useUIGroupStateController,
+  useUIState,
+} from "./use_ui_state_controller.js";
 
 export const Form = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
+  const uiStateController = useUIGroupStateController(props, "checkbox_list", {
+    childComponentType: "checkbox",
+    aggregateChildStates: (childUIStateControllers) => {
+      const values = [];
+      for (const childUIStateController of childUIStateControllers) {
+        if (childUIStateController.uiState) {
+          values.push(childUIStateController.uiState);
+        }
+      }
+      return values.length === 0 ? undefined : values;
+    },
+  });
+  const uiState = useUIState(uiStateController);
+
+  const form = renderActionableComponent(props, ref, {
     Basic: FormBasic,
     WithAction: FormWithAction,
   });
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>{form}</UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
+  );
 });
 
 const FormBasic = forwardRef((props, ref) => {
-  return <form ref={ref} {...props} />;
+  const { children, ...rest } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
+
+  // instantiation validation to:
+  // - receive "requestsubmit" custom event ensure submit is prevented
+  // (and also execute action without validation if form.submit() is ever called)
+  useConstraints(innerRef, []);
+
+  return (
+    <form {...rest} ref={ref}>
+      <FieldGroupReadOnlyContext.Provider value={formIsReadOnly}>
+        <FieldGroupLoadingContext.Provider value={formIsBusy}>
+          <FormContext.Provider
+            value={{
+              formAllowConcurrentActions,
+              formAction: formActionBoundToFormParams,
+              formParamsSignal,
+              formActionAborted,
+              formActionError,
+            }}
+          >
+            {children}
+          </FormContext.Provider>
+        </FieldGroupLoadingContext.Provider>
+      </FieldGroupReadOnlyContext.Provider>
+    </form>
+  );
 });
 
 const FormWithAction = forwardRef((props, ref) => {
@@ -60,10 +112,7 @@ const FormWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-  // instantiation validation to:
-  // - receive "requestsubmit" custom event ensure submit is prevented
-  // (and also execute action without validation if form.submit() is ever called)
-  useConstraints(innerRef, []);
+
   const [formActionBoundToFormParams, formParamsSignal, setFormParams] =
     useFormActionBoundToFormParams(action);
   const executeAction = useExecuteAction(innerRef, {
@@ -94,9 +143,9 @@ const FormWithAction = forwardRef((props, ref) => {
 
   return (
     <form
-      {...rest}
       data-action={formActionBoundToFormParams.name}
       data-method={action.meta?.httpVerb || method || "GET"}
+      {...rest}
       ref={innerRef}
       // eslint-disable-next-line react/no-unknown-property
       onrequestsubmit={(e) => {

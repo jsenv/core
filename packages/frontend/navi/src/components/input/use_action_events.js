@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from "preact/hooks";
-import { addManyEventListeners } from "../utils/add_many_event_listeners.js";
+
+import { addManyEventListeners } from "../../utils/add_many_event_listeners.js";
 
 export const useActionEvents = (
   elementRef,
