@@ -111,16 +111,6 @@ export const useUIStateController = (
     );
   }
 
-  // Handle state prop changes
-  useLayoutEffect(() => {
-    const uiStateController = uiStateControllerRef.current;
-    if (!hasStateProp) {
-      uiStateController.onStatePropRemoved();
-    } else {
-      uiStateController.onStatePropChange(state);
-    }
-  }, [hasStateProp, state]);
-
   const [
     notifyParentAboutChildMount,
     notifyParentAboutChildUIStateChange,
@@ -137,13 +127,16 @@ export const useUIStateController = (
 
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
-    existingUIStateController.readOnly = readOnly;
-    existingUIStateController.name = name;
-    existingUIStateController.stateInitial = stateInitial;
-    existingUIStateController.state = state;
-    existingUIStateController.onUIStateChange = onUIStateChange;
-    existingUIStateController.getPropFromState = getPropFromState;
-    existingUIStateController.getStateFromProp = getStateFromProp;
+    existingUIStateController._checkForUpdates({
+      readOnly,
+      name,
+      onUIStateChange,
+      getPropFromState,
+      getStateFromProp,
+      hasStateProp,
+      stateInitial,
+      state,
+    });
     return existingUIStateController;
   }
   debugUIState(
@@ -152,6 +145,39 @@ export const useUIStateController = (
   );
   const [publishUIState, subscribeUIState] = createPubSub();
   const uiStateController = {
+    _checkForUpdates: ({
+      readOnly,
+      name,
+      onUIStateChange,
+      getPropFromState,
+      getStateFromProp,
+      hasStateProp,
+      stateInitial,
+      state,
+    }) => {
+      uiStateController.readOnly = readOnly;
+      uiStateController.name = name;
+      uiStateController.onUIStateChange = onUIStateChange;
+      uiStateController.getPropFromState = getPropFromState;
+      uiStateController.getStateFromProp = getStateFromProp;
+      uiStateController.stateInitial = stateInitial;
+
+      if (hasStateProp) {
+        uiStateController.hasStateProp = true;
+        const currentState = uiStateController.state;
+        if (state !== currentState) {
+          uiStateController.state = state;
+          uiStateController.setUIState(
+            uiStateController.getPropFromState(state),
+            new CustomEvent("state_prop"),
+          );
+        }
+      } else if (existingUIStateController.hasStateProp) {
+        uiStateController.hasStateProp = false;
+        uiStateController.state = uiStateController.stateInitial;
+      }
+    },
+
     componentType,
     readOnly,
     name,
@@ -160,22 +186,6 @@ export const useUIStateController = (
     onUIStateChange,
     getPropFromState,
     getStateFromProp,
-    onStatePropRemoved: () => {
-      uiStateController.hasStateProp = false;
-      uiStateController.state = uiStateController.stateInitial;
-    },
-    onStatePropChange: (newState) => {
-      uiStateController.hasStateProp = true;
-      const currentState = uiStateController.state;
-      if (newState === currentState) {
-        return;
-      }
-      uiStateController.state = newState;
-      uiStateController.setUIState(
-        uiStateController.getPropFromState(newState),
-        new CustomEvent("state_prop"),
-      );
-    },
     setUIState: (prop, e) => {
       const newUIState = uiStateController.getStateFromProp(prop);
       if (formContext) {
