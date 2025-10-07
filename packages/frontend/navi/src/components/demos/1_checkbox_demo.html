@@ -144,19 +144,19 @@
         color: #495057;
       }
 
-      .accent-color-demo {
+      .prop-control-demo {
         grid-column: 1 / -1;
         background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
         color: white;
       }
 
-      .accent-color-demo .demo-title {
+      .prop-control-demo .demo-title {
         color: white;
         border-bottom-color: #ffffff;
       }
 
-      .accent-color-demo .demo-title::before {
-        content: "🎨";
+      .prop-control-demo .demo-title::before {
+        content: "�️";
       }
 
       .color-controls {
@@ -215,16 +215,44 @@
 
       .control-group {
         display: flex;
+        flex-direction: column;
         align-items: center;
         gap: 8px;
         background: rgba(255, 255, 255, 0.05);
-        padding: 8px 12px;
-        border-radius: 6px;
+        padding: 12px;
+        border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        min-width: 100px;
       }
 
-      .control-checkbox {
-        margin: 0;
+      .control-toggle {
+        padding: 8px 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        min-width: 80px;
+        text-align: center;
+      }
+
+      .control-toggle.active {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        border-color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .control-toggle:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+
+      .control-toggle.active:hover {
+        background: white;
       }
 
       .control-label {
@@ -289,10 +317,9 @@
         return (
           <div className="demo-grid">
             <LoadingDemo />
-            <LoadingWithActionDemo />
             <ReadOnlyDemo />
             <DisabledDemo />
-            <AccentColorDemo />
+            <PropControlDemo />
           </div>
         );
       };
@@ -326,40 +353,6 @@
                   Standard Checkbox
                 </label>
               </div>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const LoadingWithActionDemo = () => {
-        const [loading, setLoading] = useState(false);
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">Loading with Action</h3>
-
-            <div className="checkbox-row">
-              <Label className="checkbox-label">
-                <Input
-                  type="checkbox"
-                  name="action-demo"
-                  action={() => {}}
-                  loading={loading}
-                />
-                Action-enabled Checkbox
-              </Label>
-              <button
-                className="toggle-button"
-                onClick={() => setLoading(!loading)}
-              >
-                {loading ? "Stop Loading" : "Start Loading"}
-              </button>
-            </div>
-
-            <div className="comparison">
-              <span className="comparison-label">Behavior:</span>
-              <span>Checkbox with action handler and loading state</span>
             </div>
           </div>
         );
@@ -492,7 +485,7 @@
       };
 
       // eslint-disable-next-line no-unused-vars
-      const AccentColorDemo = () => {
+      const PropControlDemo = () => {
         const [accentColor, setAccentColor] = useState("#ff8c00"); // Default orange
         const [isChecked, setIsChecked] = useState(true);
         const [isDisabled, setIsDisabled] = useState(false);
@@ -510,14 +503,12 @@
         ];
 
         return (
-          <div className="demo-card accent-color-demo">
-            <h3 className="demo-title">Accent Color & State Control</h3>
+          <div className="demo-card prop-control-demo">
+            <h3 className="demo-title">Interactive Prop Controller</h3>
 
             <div className="color-controls">
               <div className="color-select-group">
-                <label className="color-select-label">
-                  Choose accent color:
-                </label>
+                <label className="color-select-label">Accent Color:</label>
                 <select
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
@@ -533,58 +524,46 @@
             </div>
 
             <div className="state-controls">
-              <h4>Manual State Controls:</h4>
+              <h4>Checkbox Properties:</h4>
               <div className="control-row">
                 <div className="control-group">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={(e) => setIsChecked(e.target.checked)}
-                    className="control-checkbox"
-                    id="control-checked"
-                  />
-                  <label htmlFor="control-checked" className="control-label">
-                    Checked
-                  </label>
+                  <button
+                    className={`control-toggle ${isChecked ? "active" : ""}`}
+                    onClick={() => setIsChecked(!isChecked)}
+                  >
+                    {isChecked ? "Checked" : "Unchecked"}
+                  </button>
+                  <span className="control-label">checked</span>
                 </div>
 
                 <div className="control-group">
-                  <input
-                    type="checkbox"
-                    checked={isDisabled}
-                    onChange={(e) => setIsDisabled(e.target.checked)}
-                    className="control-checkbox"
-                    id="control-disabled"
-                  />
-                  <label htmlFor="control-disabled" className="control-label">
-                    Disabled
-                  </label>
+                  <button
+                    className={`control-toggle ${isDisabled ? "active" : ""}`}
+                    onClick={() => setIsDisabled(!isDisabled)}
+                  >
+                    {isDisabled ? "ON" : "OFF"}
+                  </button>
+                  <span className="control-label">disabled</span>
                 </div>
 
                 <div className="control-group">
-                  <input
-                    type="checkbox"
-                    checked={isReadOnly}
-                    onChange={(e) => setIsReadOnly(e.target.checked)}
-                    className="control-checkbox"
-                    id="control-readonly"
-                  />
-                  <label htmlFor="control-readonly" className="control-label">
-                    Read-only
-                  </label>
+                  <button
+                    className={`control-toggle ${isReadOnly ? "active" : ""}`}
+                    onClick={() => setIsReadOnly(!isReadOnly)}
+                  >
+                    {isReadOnly ? "ON" : "OFF"}
+                  </button>
+                  <span className="control-label">readOnly</span>
                 </div>
 
                 <div className="control-group">
-                  <input
-                    type="checkbox"
-                    checked={isLoading}
-                    onChange={(e) => setIsLoading(e.target.checked)}
-                    className="control-checkbox"
-                    id="control-loading"
-                  />
-                  <label htmlFor="control-loading" className="control-label">
-                    Loading
-                  </label>
+                  <button
+                    className={`control-toggle ${isLoading ? "active" : ""}`}
+                    onClick={() => setIsLoading(!isLoading)}
+                  >
+                    {isLoading ? "ON" : "OFF"}
+                  </button>
+                  <span className="control-label">loading</span>
                 </div>
               </div>
             </div>
@@ -629,20 +608,20 @@
                 borderRadius: "8px",
               }}
             >
-              <strong>Current settings:</strong>
+              <strong>Current Configuration:</strong>
               <br />
               <small>
-                Color: {accentColor} | Checked: {isChecked ? "Yes" : "No"} |
-                Disabled: {isDisabled ? "Yes" : "No"} | Read-only:{" "}
-                {isReadOnly ? "Yes" : "No"} | Loading:{" "}
-                {isLoading ? "Yes" : "No"}
+                checked: {isChecked ? "true" : "false"} | disabled:{" "}
+                {isDisabled ? "true" : "false"} | readOnly:{" "}
+                {isReadOnly ? "true" : "false"} | loading:{" "}
+                {isLoading ? "true" : "false"} | accentColor: {accentColor}
               </small>
               <br />
               <br />
               <small>
-                Use the controls above to test different combinations of states
-                with various accent colors. Compare the custom Input component
-                with the native checkbox behavior.
+                Use the toggle buttons above to test different property
+                combinations. Compare how the custom Input component behaves
+                versus a native checkbox.
               </small>
             </div>
           </div>
