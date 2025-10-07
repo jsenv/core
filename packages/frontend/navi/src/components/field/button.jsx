@@ -239,13 +239,15 @@ const ButtonInsideForm = forwardRef((props, ref) => {
     // prevent default behavior that would submit the form
     // we want to go through the action execution process (with validation and all)
     event.preventDefault();
-    form.dispatchEvent("actionrequested", {
-      detail: {
-        requester: buttonElement,
-        event,
-        meta: { isSubmit: true },
-      },
-    });
+    form.dispatchEvent(
+      new CustomEvent("actionrequested", {
+        detail: {
+          requester: buttonElement,
+          event,
+          meta: { isSubmit: true },
+        },
+      }),
+    );
   };
 
   return (
