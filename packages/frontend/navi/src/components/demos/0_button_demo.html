@@ -4,10 +4,305 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Button loading demo</title>
+    <title>Button Demo</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+
+      h1 {
+        text-align: center;
+        color: white;
+        margin-bottom: 30px;
+        font-size: 2.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .demo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      .demo-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .demo-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+      }
+
+      .demo-title {
+        color: #2c3e50;
+        margin: 0 0 20px 0;
+        font-size: 1.3rem;
+        font-weight: 600;
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .demo-title::before {
+        content: "🔘";
+        font-size: 1.2rem;
+      }
+
+      .button-row {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 15px 0;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        transition: background 0.2s ease;
+      }
+
+      .button-row:hover {
+        background: #e8f4f8;
+      }
+
+      .button-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .toggle-button {
+        padding: 8px 16px;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+        white-space: nowrap;
+      }
+
+      .toggle-button:hover {
+        background: linear-gradient(45deg, #5a6fd8, #6b3fa0);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .comparison {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 15px;
+        padding: 12px;
+        background: #fff3cd;
+        border-radius: 6px;
+        border-left: 4px solid #ffc107;
+      }
+
+      .comparison-label {
+        font-size: 0.85rem;
+        color: #856404;
+        font-weight: 500;
+        margin-bottom: 5px;
+      }
+
+      .native-examples {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .native-examples button {
+        align-self: flex-start;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+      }
+
+      .prop-control-demo {
+        grid-column: 1 / -1;
+        background: linear-gradient(45deg, #ff6b6b 0%, #feca57 100%);
+        color: white;
+      }
+
+      .prop-control-demo .demo-title {
+        color: white;
+        border-bottom-color: #ffffff;
+      }
+
+      .prop-control-demo .demo-title::before {
+        content: "🎛️";
+      }
+
+      .prop-controls {
+        margin-bottom: 25px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+      }
+
+      .prop-select-group {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .prop-select-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+
+      .prop-select {
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        background: white;
+        color: #333;
+        font-size: 0.9rem;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .state-controls {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 20px;
+      }
+
+      .state-controls h4 {
+        margin: 0 0 15px 0;
+        font-size: 1rem;
+        color: white;
+      }
+
+      .control-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+      }
+
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        min-width: 100px;
+      }
+
+      .control-toggle {
+        padding: 8px 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        min-width: 80px;
+        text-align: center;
+      }
+
+      .control-toggle.active {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+        border-color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .control-toggle:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+
+      .control-toggle.active:hover {
+        background: white;
+      }
+
+      .control-label {
+        font-size: 0.9rem;
+        color: white;
+        margin: 0;
+      }
+
+      .button-test-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .button-test-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .button-label {
+        font-size: 0.9rem;
+        color: white;
+        margin-bottom: 8px;
+      }
+
+      @media (max-width: 768px) {
+        .demo-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        .button-row {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 10px;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root" style="position: relative"></div>
+    <h1>🔘 Interactive Button Demo</h1>
+    <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
@@ -15,140 +310,311 @@
       import {
         // eslint-disable-next-line no-unused-vars
         Button,
-        // eslint-disable-next-line no-unused-vars
-        Field,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        return (
+          <div className="demo-grid">
+            <LoadingDemo />
+            <ReadOnlyDemo />
+            <DisabledDemo />
+            <SizeVariationsDemo />
+            <PropControlDemo />
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const LoadingDemo = () => {
         const [loading, setLoading] = useState(false);
-        const [loadingB, setLoadingB] = useState(false);
-        const [loadingC, setLoadingC] = useState(false);
-        const [loadingD, setLoadingD] = useState(false);
 
         return (
-          <div>
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <div>
-                <p>
-                  <strong>Loading</strong>
-                </p>
-                <Button loading={loading}>Toggle</Button>
-                <br />
-                <button
-                  onClick={() => {
-                    setLoading(!loading);
-                  }}
-                >
-                  Toggle
-                </button>
-              </div>
+          <div className="demo-card">
+            <h3 className="demo-title">Loading States</h3>
 
-              <div>
-                <p>
-                  <strong>Loading (action)</strong>
-                </p>
-                <Button loading={loadingB} action={() => {}}>
-                  B
-                </Button>
-                <br /> <br />
-                <button
-                  onClick={() => {
-                    setLoadingB(!loadingB);
-                  }}
-                >
-                  Toggle
-                </button>
+            <div className="button-row">
+              <div className="button-container">
+                <Button loading={loading}>Loading Button</Button>
               </div>
+              <button
+                className="toggle-button"
+                onClick={() => setLoading(!loading)}
+              >
+                {loading ? "Stop Loading" : "Start Loading"}
+              </button>
+            </div>
 
-              <div>
-                <p>
-                  <strong>Readonly</strong>
-                </p>
-                <Button loading={loadingC} readOnly>
-                  C
-                </Button>
-                <br />
-                <button data-readonly>C</button>
-                <br />
-                <br />
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingC(!loadingC);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Disabled</strong>
-                </p>
-                <Button loading={loadingD} disabled>
-                  D
-                </Button>
-                <br />
-                <button disabled>D</button>
-                <br /> <br />
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingD(!loadingD);
-                    }}
-                  >
-                    Toggle
-                  </span>
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <button disabled={loading}>
+                  {loading ? "Loading..." : "Standard Button"}
                 </button>
               </div>
             </div>
+          </div>
+        );
+      };
 
-            <div style="display: flex; flex-direction: row; gap: 30px">
-              <div>
-                <p>
-                  <strong>Large button (anim speed shoud be consistent)</strong>
-                </p>
+      // eslint-disable-next-line no-unused-vars
+      const ReadOnlyDemo = () => {
+        const [loading, setLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Read-Only State</h3>
+
+            <div className="button-row">
+              <div className="button-container">
+                <Button loading={loading} readOnly>
+                  Read-Only Button
+                </Button>
+              </div>
+              <button
+                className="toggle-button"
+                onClick={() => setLoading(!loading)}
+              >
+                Toggle Loading
+              </button>
+            </div>
+
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <button data-readonly>Native Read-Only</button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DisabledDemo = () => {
+        const [loading, setLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Disabled State</h3>
+
+            <div className="button-row">
+              <div className="button-container">
+                <Button loading={loading} disabled>
+                  Disabled Button
+                </Button>
+              </div>
+              <button
+                className="toggle-button"
+                onClick={() => setLoading(!loading)}
+              >
+                Toggle Loading
+              </button>
+            </div>
+
+            <div className="comparison">
+              <span className="comparison-label">Native comparison:</span>
+              <div className="native-examples">
+                <button disabled>Native Disabled</button>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const SizeVariationsDemo = () => {
+        const [loading, setLoading] = useState(false);
+
+        return (
+          <div className="demo-card">
+            <h3 className="demo-title">Size Variations</h3>
+
+            <div className="button-row">
+              <div className="button-container">
+                <Button loading={loading}>Short</Button>
+              </div>
+            </div>
+
+            <div className="button-row">
+              <div className="button-container">
                 <Button loading={loading}>
-                  This button is quite large but loader speed should be same as
-                  small buttons
+                  This button is quite large but loader speed should be
+                  consistent
                 </Button>
-                <br />
-                <button
-                  onClick={() => {
-                    setLoading(!loading);
-                  }}
+              </div>
+            </div>
+
+            <div className="button-row">
+              <div className="button-container">
+                <Button
+                  loading={loading}
+                  style={{ borderWidth: 8, padding: "12px 24px" }}
                 >
-                  Toggle
+                  Thick Border Button
+                </Button>
+              </div>
+              <button
+                className="toggle-button"
+                onClick={() => setLoading(!loading)}
+              >
+                {loading ? "Stop Loading" : "Start Loading"}
+              </button>
+            </div>
+
+            <div className="comparison">
+              <span className="comparison-label">Note:</span>
+              <div className="native-examples">
+                <small style={{ color: "#666" }}>
+                  Loading animation speed should be consistent regardless of
+                  button size
+                </small>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PropControlDemo = () => {
+        const [loading, setLoading] = useState(false);
+        const [disabled, setDisabled] = useState(false);
+        const [readOnly, setReadOnly] = useState(false);
+        const [buttonText, setButtonText] = useState("Custom Button");
+        const [buttonType, setButtonType] = useState("button");
+
+        const textOptions = [
+          "Custom Button",
+          "Click Me!",
+          "Submit Form",
+          "Save Changes",
+          "Long Button Text Example",
+          "🚀 With Emoji",
+        ];
+
+        const typeOptions = [
+          { name: "button", value: "button" },
+          { name: "submit", value: "submit" },
+          { name: "reset", value: "reset" },
+        ];
+
+        return (
+          <div className="demo-card prop-control-demo">
+            <h3 className="demo-title">Interactive Prop Controller</h3>
+
+            <div className="prop-controls">
+              <div className="prop-select-group">
+                <label className="prop-select-label">Button Text:</label>
+                <select
+                  value={buttonText}
+                  onChange={(e) => setButtonText(e.target.value)}
+                  className="prop-select"
+                >
+                  {textOptions.map((text) => (
+                    <option key={text} value={text}>
+                      {text}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="prop-select-group">
+                <label className="prop-select-label">Button Type:</label>
+                <select
+                  value={buttonType}
+                  onChange={(e) => setButtonType(e.target.value)}
+                  className="prop-select"
+                >
+                  {typeOptions.map(({ name, value }) => (
+                    <option key={value} value={value}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="state-controls">
+              <h4>Button Properties:</h4>
+              <div className="control-row">
+                <div className="control-group">
+                  <button
+                    className={`control-toggle ${loading ? "active" : ""}`}
+                    onClick={() => setLoading(!loading)}
+                  >
+                    {loading ? "true" : "false"}
+                  </button>
+                  <span className="control-label">loading</span>
+                </div>
+
+                <div className="control-group">
+                  <button
+                    className={`control-toggle ${disabled ? "active" : ""}`}
+                    onClick={() => setDisabled(!disabled)}
+                  >
+                    {disabled ? "true" : "false"}
+                  </button>
+                  <span className="control-label">disabled</span>
+                </div>
+
+                <div className="control-group">
+                  <button
+                    className={`control-toggle ${readOnly ? "active" : ""}`}
+                    onClick={() => setReadOnly(!readOnly)}
+                  >
+                    {readOnly ? "true" : "false"}
+                  </button>
+                  <span className="control-label">readOnly</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="button-test-grid">
+              <div className="button-test-item">
+                <span className="button-label">Custom Button Component</span>
+                <Button
+                  type={buttonType}
+                  loading={loading}
+                  disabled={disabled}
+                  readOnly={readOnly}
+                >
+                  {buttonText}
+                </Button>
+              </div>
+
+              <div className="button-test-item">
+                <span className="button-label">Native Button</span>
+                <button
+                  type={buttonType}
+                  disabled={disabled || loading}
+                  data-readonly={readOnly}
+                >
+                  {loading ? "Loading..." : buttonText}
                 </button>
               </div>
             </div>
 
-            <div>
-              <div>
-                <p>
-                  <strong>Big borders</strong>
-                </p>
-                <Button
-                  loading={loadingC}
-                  style={{
-                    borderWidth: 10,
-                  }}
-                >
-                  C
-                </Button>
-                <br /> <br />
-                <button>
-                  <span
-                    onClick={() => {
-                      setLoadingC(!loadingC);
-                    }}
-                  >
-                    Toggle
-                  </span>
-                </button>
-              </div>
+            <div
+              style={{
+                marginTop: "20px",
+                padding: "15px",
+                background: "rgba(255,255,255,0.1)",
+                borderRadius: "8px",
+              }}
+            >
+              <strong>Current Configuration:</strong>
+              <br />
+              <small>
+                type: "{buttonType}" | loading: {loading ? "true" : "false"} |
+                disabled: {disabled ? "true" : "false"} | readOnly:{" "}
+                {readOnly ? "true" : "false"}
+              </small>
+              <br />
+              <br />
+              <small>
+                Use the controls above to test different property combinations.
+                Compare how the custom Button component behaves versus a native
+                button.
+              </small>
             </div>
           </div>
         );
