@@ -10,26 +10,19 @@ import {
 } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
-import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import {
-  useActionBoundToOneArrayParam,
-  useOneFormArrayParam,
-} from "../action_execution/use_action.js";
+import { useActionBoundToOneArrayParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import {
-  FieldGroupActionRequesterContext,
-  FieldGroupDisabledContext,
-  FieldGroupLoadingContext,
-  FieldGroupNameContext,
-  FieldGroupReadOnlyContext,
-  FieldGroupRequiredContext,
-  FieldGroupUIStateControllerContext,
-} from "./field_group_context.js";
 import { InputCheckbox } from "./input_checkbox.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useFormEvents } from "./use_form_events.js";
 import {
+  DisabledContext,
+  FieldNameContext,
+  LoadingContext,
+  LoadingElementContext,
+  ParentUIStateControllerContext,
+  ReadOnlyContext,
+  RequiredContext,
   UIStateContext,
   UIStateControllerContext,
   useUIGroupStateController,
@@ -74,19 +67,19 @@ export const CheckboxList = forwardRef((props, ref) => {
 export const Checkbox = InputCheckbox;
 
 const CheckboxListBasic = forwardRef((props, ref) => {
-  const groupReadonly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
   const uiStateController = useContext(UIStateControllerContext);
   const { name, readOnly, disabled, required, loading, children, ...rest } =
     props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const innerLoading = loading || groupLoading;
+  const innerLoading = loading || contextLoading;
   const innerReadOnly =
-    readOnly || groupReadonly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || groupDisabled;
+    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  const innerDisabled = disabled || contextDisabled;
 
   return (
     <div
@@ -100,19 +93,19 @@ const CheckboxListBasic = forwardRef((props, ref) => {
         uiStateController.resetUIState(e);
       }}
     >
-      <FieldGroupUIStateControllerContext.Provider value={uiStateController}>
-        <FieldGroupNameContext.Provider value={name}>
-          <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
-            <FieldGroupDisabledContext.Provider value={innerDisabled}>
-              <FieldGroupRequiredContext.Provider value={required}>
-                <FieldGroupLoadingContext.Provider value={innerLoading}>
+      <ParentUIStateControllerContext.Provider value={uiStateController}>
+        <FieldNameContext.Provider value={name}>
+          <ReadOnlyContext.Provider value={innerReadOnly}>
+            <DisabledContext.Provider value={innerDisabled}>
+              <RequiredContext.Provider value={required}>
+                <LoadingContext.Provider value={innerLoading}>
                   {children}
-                </FieldGroupLoadingContext.Provider>
-              </FieldGroupRequiredContext.Provider>
-            </FieldGroupDisabledContext.Provider>
-          </FieldGroupReadOnlyContext.Provider>
-        </FieldGroupNameContext.Provider>
-      </FieldGroupUIStateControllerContext.Provider>
+                </LoadingContext.Provider>
+              </RequiredContext.Provider>
+            </DisabledContext.Provider>
+          </ReadOnlyContext.Provider>
+        </FieldNameContext.Provider>
+      </ParentUIStateControllerContext.Provider>
     </div>
   );
 });
@@ -129,6 +122,7 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
     onActionAbort,
     onActionError,
     onActionEnd,
+    loading,
     children,
     ...rest
   } = props;
@@ -167,9 +161,9 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
 
   return (
     <CheckboxListBasic
+      data-action={boundAction.name}
       {...rest}
       ref={innerRef}
-      data-action={boundAction.name}
       onChange={(event) => {
         const checkboxList = innerRef.current;
         const checkbox = event.target;
@@ -178,38 +172,12 @@ const CheckboxListWithAction = forwardRef((props, ref) => {
           requester: checkbox,
         });
       }}
+      loading={loading || actionLoading}
     >
-      <FieldGroupLoadingContext.Provider value={actionLoading}>
-        <FieldGroupActionRequesterContext.Provider value={actionRequester}>
-          {children}
-        </FieldGroupActionRequesterContext.Provider>
-      </FieldGroupLoadingContext.Provider>
+      <LoadingElementContext.Provider value={actionRequester}>
+        {children}
+      </LoadingElementContext.Provider>
     </CheckboxListBasic>
   );
 });
-const CheckboxListInsideForm = forwardRef((props, ref) => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-  const { name, children, ...rest } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  useOneFormArrayParam(name, uiState);
-
-  useFormEvents(innerRef, {
-    onFormReset: (e) => {
-      e.preventDefault();
-      uiStateController.resetUIState(e);
-    },
-    onFormActionAbort: () => {},
-    onFormActionError: () => {},
-  });
-
-  return (
-    <CheckboxListBasic {...rest} ref={innerRef} name={name}>
-      {/* <input type="checkbox" /> must be ignorant of the <form>
-      otherwise they would try to update the <form>.
-      This responsability belongs to the checkbox list which manages the list of checkboxes */}
-      <FormContext.Provider value={null}>{children}</FormContext.Provider>
-    </CheckboxListBasic>
-  );
-});
+const CheckboxListInsideForm = CheckboxListBasic;

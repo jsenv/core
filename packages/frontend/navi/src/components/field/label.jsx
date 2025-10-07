@@ -8,7 +8,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const ReadOnlyContext = createContext();
+export const ReportReadOnlyOnLabelContext = createContext();
 
 export const Label = forwardRef((props, ref) => {
   const { readOnly, children, ...rest } = props;
@@ -24,9 +24,9 @@ export const Label = forwardRef((props, ref) => {
       data-readonly={innerReadOnly ? "" : undefined}
       {...rest}
     >
-      <ReadOnlyContext.Provider value={setInputReadOnly}>
+      <ReportReadOnlyOnLabelContext.Provider value={setInputReadOnly}>
         {children}
-      </ReadOnlyContext.Provider>
+      </ReportReadOnlyOnLabelContext.Provider>
     </label>
   );
 });

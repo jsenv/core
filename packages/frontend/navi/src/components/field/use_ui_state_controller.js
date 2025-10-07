@@ -29,12 +29,12 @@ export const UIStateControllerContext = createContext();
 export const UIStateContext = createContext();
 export const ParentUIStateControllerContext = createContext();
 
-export const ParentFieldNameContext = createContext();
-export const ParentFieldReadOnlyContext = createContext();
-export const ParentFieldDisabledContext = createContext();
-export const ParentFieldRequiredContext = createContext();
-export const ParentFieldLoadingContext = createContext();
-export const ParentFieldActionRequesterContext = createContext();
+export const FieldNameContext = createContext();
+export const ReadOnlyContext = createContext();
+export const DisabledContext = createContext();
+export const RequiredContext = createContext();
+export const LoadingContext = createContext();
+export const LoadingElementContext = createContext();
 
 /**
  * UI State Controller Hook

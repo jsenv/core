@@ -8,15 +8,15 @@ import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import { ReadOnlyContext } from "./label.jsx";
+import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
-  ParentFieldActionRequesterContext,
-  ParentFieldDisabledContext,
-  ParentFieldLoadingContext,
-  ParentFieldNameContext,
-  ParentFieldReadOnlyContext,
-  ParentFieldRequiredContext,
+  DisabledContext,
+  FieldNameContext,
+  LoadingContext,
+  LoadingElementContext,
+  ReadOnlyContext,
+  RequiredContext,
   UIStateContext,
   UIStateControllerContext,
   useUIState,
@@ -156,15 +156,15 @@ export const InputCheckbox = forwardRef((props, ref) => {
 });
 
 const InputCheckboxBasic = forwardRef((props, ref) => {
-  const parentFieldName = useContext(ParentFieldNameContext);
-  const parentFieldReadOnly = useContext(ParentFieldReadOnlyContext);
-  const parentFieldDisabled = useContext(ParentFieldDisabledContext);
-  const parentFieldRequired = useContext(ParentFieldRequiredContext);
-  const parentFieldLoading = useContext(ParentFieldLoadingContext);
-  const parentActionRequester = useContext(ParentFieldActionRequesterContext);
+  const contextFieldName = useContext(FieldNameContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextRequired = useContext(RequiredContext);
+  const contextLoading = useContext(LoadingContext);
+  const loadingElement = useContext(LoadingElementContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
-  const setInputReadOnly = useContext(ReadOnlyContext);
+  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const {
     name,
     readOnly,
@@ -183,20 +183,14 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
-  const innerName = name || parentFieldName;
-  const innerDisabled = disabled || parentFieldDisabled;
-  const innerRequired = required || parentFieldRequired;
+  const innerName = name || contextFieldName;
+  const innerDisabled = disabled || contextDisabled;
+  const innerRequired = required || contextRequired;
   const innerLoading =
-    loading ||
-    (parentFieldLoading && parentActionRequester === innerRef.current);
+    loading || (contextLoading && loadingElement === innerRef.current);
   const innerReadOnly =
-    readOnly ||
-    parentFieldReadOnly ||
-    innerLoading ||
-    uiStateController.readOnly;
-  if (setInputReadOnly) {
-    setInputReadOnly(innerReadOnly);
-  }
+    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  reportReadOnlyOnLabel?.(innerReadOnly);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
 
