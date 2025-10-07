@@ -172,7 +172,7 @@ export const useUIStateController = (
             new CustomEvent("state_prop"),
           );
         }
-      } else if (existingUIStateController.hasStateProp) {
+      } else if (uiStateController.hasStateProp) {
         uiStateController.hasStateProp = false;
         uiStateController.state = uiStateController.stateInitial;
       }
@@ -181,6 +181,7 @@ export const useUIStateController = (
     componentType,
     readOnly,
     name,
+    hasStateProp,
     state: stateInitial,
     uiState: stateInitial,
     onUIStateChange,

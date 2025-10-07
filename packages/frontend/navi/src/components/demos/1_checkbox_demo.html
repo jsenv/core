@@ -161,6 +161,9 @@
 
       .color-controls {
         margin-bottom: 25px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
       }
 
       .color-select-group {
@@ -168,7 +171,6 @@
         padding: 15px;
         border-radius: 8px;
         border: 1px solid rgba(255, 255, 255, 0.2);
-        max-width: 300px;
       }
 
       .color-select-label {
@@ -188,6 +190,47 @@
         font-size: 0.9rem;
         cursor: pointer;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .state-controls {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 20px;
+      }
+
+      .state-controls h4 {
+        margin: 0 0 15px 0;
+        font-size: 1rem;
+        color: white;
+      }
+
+      .control-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+      }
+
+      .control-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .control-checkbox {
+        margin: 0;
+      }
+
+      .control-label {
+        font-size: 0.9rem;
+        color: white;
+        margin: 0;
       }
 
       .accent-checkbox-grid {
@@ -451,10 +494,10 @@
       // eslint-disable-next-line no-unused-vars
       const AccentColorDemo = () => {
         const [accentColor, setAccentColor] = useState("#ff8c00"); // Default orange
-        const [checked1, setChecked1] = useState(true);
-        const [checked2, setChecked2] = useState(false);
-        const [checked3, setChecked3] = useState(true);
-        const [checked4, setChecked4] = useState(false);
+        const [isChecked, setIsChecked] = useState(true);
+        const [isDisabled, setIsDisabled] = useState(false);
+        const [isReadOnly, setIsReadOnly] = useState(false);
+        const [isLoading, setIsLoading] = useState(false);
 
         const colorOptions = [
           { name: "Orange (Default)", value: "#ff8c00" },
@@ -468,7 +511,7 @@
 
         return (
           <div className="demo-card accent-color-demo">
-            <h3 className="demo-title">Accent Color Control</h3>
+            <h3 className="demo-title">Accent Color & State Control</h3>
 
             <div className="color-controls">
               <div className="color-select-group">
@@ -489,58 +532,91 @@
               </div>
             </div>
 
+            <div className="state-controls">
+              <h4>Manual State Controls:</h4>
+              <div className="control-row">
+                <div className="control-group">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={(e) => setIsChecked(e.target.checked)}
+                    className="control-checkbox"
+                    id="control-checked"
+                  />
+                  <label htmlFor="control-checked" className="control-label">
+                    Checked
+                  </label>
+                </div>
+
+                <div className="control-group">
+                  <input
+                    type="checkbox"
+                    checked={isDisabled}
+                    onChange={(e) => setIsDisabled(e.target.checked)}
+                    className="control-checkbox"
+                    id="control-disabled"
+                  />
+                  <label htmlFor="control-disabled" className="control-label">
+                    Disabled
+                  </label>
+                </div>
+
+                <div className="control-group">
+                  <input
+                    type="checkbox"
+                    checked={isReadOnly}
+                    onChange={(e) => setIsReadOnly(e.target.checked)}
+                    className="control-checkbox"
+                    id="control-readonly"
+                  />
+                  <label htmlFor="control-readonly" className="control-label">
+                    Read-only
+                  </label>
+                </div>
+
+                <div className="control-group">
+                  <input
+                    type="checkbox"
+                    checked={isLoading}
+                    onChange={(e) => setIsLoading(e.target.checked)}
+                    className="control-checkbox"
+                    id="control-loading"
+                  />
+                  <label htmlFor="control-loading" className="control-label">
+                    Loading
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div className="accent-checkbox-grid">
               <div className="accent-checkbox-item">
                 <Label className="checkbox-label">
                   <Input
                     type="checkbox"
-                    name="accent-demo-1"
-                    checked={checked1}
-                    onChange={(e) => setChecked1(e.target.checked)}
+                    name="accent-test-checkbox"
+                    checked={isChecked}
+                    onChange={(e) => setIsChecked(e.target.checked)}
+                    disabled={isDisabled}
+                    readOnly={isReadOnly}
+                    loading={isLoading}
                     style={{ accentColor }}
                   />
-                  Checkbox A
+                  Test Checkbox
                 </Label>
               </div>
 
               <div className="accent-checkbox-item">
                 <Label className="checkbox-label">
-                  <Input
+                  <input
                     type="checkbox"
-                    name="accent-demo-2"
-                    checked={checked2}
-                    onChange={(e) => setChecked2(e.target.checked)}
+                    checked={isChecked}
+                    onChange={(e) => setIsChecked(e.target.checked)}
+                    disabled={isDisabled}
+                    readOnly={isReadOnly}
                     style={{ accentColor }}
                   />
-                  Checkbox B
-                </Label>
-              </div>
-
-              <div className="accent-checkbox-item">
-                <Label className="checkbox-label">
-                  <Input
-                    type="checkbox"
-                    name="accent-demo-3"
-                    checked={checked3}
-                    onChange={(e) => setChecked3(e.target.checked)}
-                    style={{ accentColor }}
-                    readOnly
-                  />
-                  Read-only Checkbox
-                </Label>
-              </div>
-
-              <div className="accent-checkbox-item">
-                <Label className="checkbox-label">
-                  <Input
-                    type="checkbox"
-                    name="accent-demo-4"
-                    checked={checked4}
-                    onChange={(e) => setChecked4(e.target.checked)}
-                    style={{ accentColor }}
-                    disabled
-                  />
-                  Disabled Checkbox
+                  Native Comparison
                 </Label>
               </div>
             </div>
@@ -553,11 +629,20 @@
                 borderRadius: "8px",
               }}
             >
-              <strong>Current accent color: {accentColor}</strong>
+              <strong>Current settings:</strong>
               <br />
               <small>
-                The accent-color CSS property controls the color of form
-                controls like checkboxes when checked.
+                Color: {accentColor} | Checked: {isChecked ? "Yes" : "No"} |
+                Disabled: {isDisabled ? "Yes" : "No"} | Read-only:{" "}
+                {isReadOnly ? "Yes" : "No"} | Loading:{" "}
+                {isLoading ? "Yes" : "No"}
+              </small>
+              <br />
+              <br />
+              <small>
+                Use the controls above to test different combinations of states
+                with various accent colors. Compare the custom Input component
+                with the native checkbox behavior.
               </small>
             </div>
           </div>
