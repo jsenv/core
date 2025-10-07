@@ -11,7 +11,7 @@ import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useRequestedActionStatus } from "../field/use_action_events.js";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
-import { LoaderBackground } from "../loader/loader_background.jsx";
+import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import {
   SelectionContext,
   useSelectableElement,
@@ -114,7 +114,10 @@ const LinkPlain = forwardRef((props, ref) => {
   useDimColorWhen(innerRef, shouldDimColor);
 
   return (
-    <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
+    <LoadableInlineElement
+      loading={loading}
+      color="light-dark(#355fcc, #3b82f6)"
+    >
       <a
         {...rest}
         ref={innerRef}
@@ -146,7 +149,7 @@ const LinkPlain = forwardRef((props, ref) => {
       >
         {children}
       </a>
-    </LoaderBackground>
+    </LoadableInlineElement>
   );
 });
 const LinkWithSelection = forwardRef((props, ref) => {
