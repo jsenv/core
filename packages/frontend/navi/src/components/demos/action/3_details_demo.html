@@ -55,24 +55,7 @@
                   {(content) => content}
                 </Details>
               </div>
-
-              <div>
-                <p>
-                  <strong>Throw sync</strong>
-                </p>
-                <Details
-                  id="test_3"
-                  action={() => {
-                    throw new Error("error");
-                  }}
-                  label={
-                    <>
-                      <span>A</span>
-                      <span style="font-weight: bold">mixed summary</span>
-                    </>
-                  }
-                ></Details>
-              </div>
+              <DetailsThrowSyncDemo />
             </div>
 
             <div>
@@ -133,21 +116,31 @@
                 }}
               </Details>
             </div>
-
-            <div>
-              <p>
-                <strong>Action preloaded</strong>
-              </p>
-
-              <Details
-                id="bound"
-                action={rootAction}
-                label="Action using bind params"
-              >
-                {(content) => content}
-              </Details>
-            </div>
+            <DetailsWithActionPreloadedDemo />
           </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DetailsThrowSyncDemo = () => {
+        return (
+          <div>
+            <p>
+              <strong>Throw sync</strong>
+            </p>
+            <Details
+              // id="test_3"
+              action={() => {
+                throw new Error("error");
+              }}
+              label={
+                <>
+                  <span>A</span>
+                  <span style="font-weight: bold">mixed summary</span>
+                </>
+              }
+            ></Details>
+          </div>
         );
       };
 
@@ -165,6 +158,24 @@
       //   name: "dam",
       // });
       rootAction.prerun();
+      // eslint-disable-next-line no-unused-vars
+      const DetailsWithActionPreloadedDemo = () => {
+        return (
+          <div>
+            <p>
+              <strong>Action preloaded</strong>
+            </p>
+
+            <Details
+              id="bound"
+              action={rootAction}
+              label="Action using bind params"
+            >
+              {(content) => content}
+            </Details>
+          </div>
+        );
+      };
 
       render(<App />, document.querySelector("#root"));
     </script>
