@@ -42,7 +42,7 @@ import {
   FieldGroupLoadingContext,
   FieldGroupReadOnlyContext,
 } from "./field_group_context.js";
-import { ReadOnlyContext } from "./label.jsx";
+import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
@@ -62,7 +62,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const groupDisabled = useContext(FieldGroupDisabledContext);
   const groupActionRequester = useContext(FieldGroupActionRequesterContext);
   const groupLoading = useContext(FieldGroupLoadingContext);
-  const setInputReadOnly = useContext(ReadOnlyContext);
+  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const {
     uiStateController,
     type,
@@ -92,9 +92,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
     readOnly || groupReadOnly || innerLoading || uiStateController.readOnly;
   const innerDisabled = disabled || groupDisabled;
   // infom any <label> parent of our readOnly state
-  if (setInputReadOnly) {
-    setInputReadOnly(readOnly);
-  }
+  reportReadOnlyOnLabel?.(innerReadOnly);
   useAutoFocus(innerRef, autoFocus, {
     autoFocusVisible,
     autoSelect,

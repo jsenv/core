@@ -18,7 +18,7 @@ import {
   FieldGroupReadOnlyContext,
   FieldGroupRequiredContext,
 } from "./field_group_context.js";
-import { ReadOnlyContext } from "./label.jsx";
+import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import {
   UIStateContext,
   UIStateControllerContext,
@@ -224,7 +224,7 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const groupActionRequester = useContext(FieldGroupActionRequesterContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
-  const setInputReadOnly = useContext(ReadOnlyContext);
+  const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
   const {
     name,
     readOnly,
@@ -251,9 +251,8 @@ const InputRadioBasic = forwardRef((props, ref) => {
     loading || (groupLoading && groupActionRequester === innerRef.current);
   const innerReadOnly =
     readOnly || groupReadOnly || innerLoading || uiStateController.readOnly;
-  if (setInputReadOnly) {
-    setInputReadOnly(innerReadOnly);
-  }
+
+  reportReadOnlyOnLabel?.(innerReadOnly);
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
   const checked = Boolean(uiState);

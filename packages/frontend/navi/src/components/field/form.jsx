@@ -27,10 +27,10 @@ import {
   useRequestedActionStatus,
 } from "./use_action_events.js";
 import {
-  ParentFieldActionRequesterContext,
-  ParentFieldLoadingContext,
-  ParentFieldReadOnlyContext,
+  LoadingContext,
+  LoadingElementContext,
   ParentUIStateControllerContext,
+  ReadOnlyContext,
   UIStateContext,
   UIStateControllerContext,
   useUIGroupStateController,
@@ -94,11 +94,11 @@ const FormBasic = forwardRef((props, ref) => {
       }}
     >
       <ParentUIStateControllerContext.Provider value={uiStateController}>
-        <ParentFieldReadOnlyContext.Provider value={innerReadOnly}>
-          <ParentFieldLoadingContext.Provider value={loading}>
+        <ReadOnlyContext.Provider value={innerReadOnly}>
+          <LoadingContext.Provider value={loading}>
             <FormContext.Provider value={true}>{children}</FormContext.Provider>
-          </ParentFieldLoadingContext.Provider>
-        </ParentFieldReadOnlyContext.Provider>
+          </LoadingContext.Provider>
+        </ReadOnlyContext.Provider>
       </ParentUIStateControllerContext.Provider>
     </form>
   );
@@ -182,9 +182,9 @@ const FormWithAction = forwardRef((props, ref) => {
         requestAction(e.target, actionBoundToUIState, { event: e });
       }}
     >
-      <ParentFieldActionRequesterContext.Provider value={formActionRequester}>
+      <LoadingElementContext.Provider value={formActionRequester}>
         {children}
-      </ParentFieldActionRequesterContext.Provider>
+      </LoadingElementContext.Provider>
     </FormBasic>
   );
 });
