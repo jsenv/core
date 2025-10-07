@@ -11,10 +11,17 @@ import { useNavState } from "../../browser_integration/browser_integration.js";
 import { FormContext } from "../action_execution/form_context.js";
 import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
-import { FieldGroupUIStateControllerContext } from "./field_group_context.js";
 
 export const UIStateControllerContext = createContext();
 export const UIStateContext = createContext();
+export const ParentUIStateControllerContext = createContext();
+
+export const ParentFieldNameContext = createContext();
+export const ParentFieldReadOnlyContext = createContext();
+export const ParentFieldDisabledContext = createContext();
+export const ParentFieldRequiredContext = createContext();
+export const ParentFieldLoadingContext = createContext();
+export const ParentFieldActionRequesterContext = createContext();
 
 const DEBUG_UI_STATE_CONTROLLER = false;
 const DEBUG_UI_GROUP_STATE_CONTROLLER = true;
@@ -56,9 +63,7 @@ export const useUIStateController = (
     getPropFromState = (state) => state,
   } = {},
 ) => {
-  const parentUIStateController = useContext(
-    FieldGroupUIStateControllerContext,
-  );
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
   const formContext = useContext(FormContext);
   const { id, name, onUIStateChange, action } = props;
   const uncontrolled = !formContext && !action;
@@ -312,9 +317,7 @@ export const useUIGroupStateController = (
   if (typeof aggregateChildStates !== "function") {
     throw new TypeError("aggregateChildStates must be a function");
   }
-  const parentUIStateController = useContext(
-    FieldGroupUIStateControllerContext,
-  );
+  const parentUIStateController = useContext(ParentUIStateControllerContext);
   const { onUIStateChange, name } = props;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;

@@ -8,17 +8,15 @@ import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import {
-  FieldGroupActionRequesterContext,
-  FieldGroupDisabledContext,
-  FieldGroupLoadingContext,
-  FieldGroupNameContext,
-  FieldGroupReadOnlyContext,
-  FieldGroupRequiredContext,
-} from "./field_group_context.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
 import {
+  ParentFieldActionRequesterContext,
+  ParentFieldDisabledContext,
+  ParentFieldLoadingContext,
+  ParentFieldNameContext,
+  ParentFieldReadOnlyContext,
+  ParentFieldRequiredContext,
   UIStateContext,
   UIStateControllerContext,
   useUIState,
@@ -158,12 +156,12 @@ export const InputCheckbox = forwardRef((props, ref) => {
 });
 
 const InputCheckboxBasic = forwardRef((props, ref) => {
-  const groupName = useContext(FieldGroupNameContext);
-  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupRequired = useContext(FieldGroupRequiredContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const parentFieldName = useContext(ParentFieldNameContext);
+  const parentFieldReadOnly = useContext(ParentFieldReadOnlyContext);
+  const parentFieldDisabled = useContext(ParentFieldDisabledContext);
+  const parentFieldRequired = useContext(ParentFieldRequiredContext);
+  const parentFieldLoading = useContext(ParentFieldLoadingContext);
+  const parentActionRequester = useContext(ParentFieldActionRequesterContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const setInputReadOnly = useContext(ReadOnlyContext);
@@ -185,13 +183,17 @@ const InputCheckboxBasic = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
-  const innerName = name || groupName;
-  const innerDisabled = disabled || groupDisabled;
-  const innerRequired = required || groupRequired;
+  const innerName = name || parentFieldName;
+  const innerDisabled = disabled || parentFieldDisabled;
+  const innerRequired = required || parentFieldRequired;
   const innerLoading =
-    loading || (groupLoading && groupActionRequester === innerRef.current);
+    loading ||
+    (parentFieldLoading && parentActionRequester === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || innerLoading || uiStateController.readOnly;
+    readOnly ||
+    parentFieldReadOnly ||
+    innerLoading ||
+    uiStateController.readOnly;
   if (setInputReadOnly) {
     setInputReadOnly(innerReadOnly);
   }
@@ -294,6 +296,7 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
     onActionAbort,
     onActionError,
     onActionEnd,
+    loading,
     ...rest
   } = props;
   const innerRef = useRef(null);
@@ -332,17 +335,16 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   });
 
   return (
-    <FieldGroupLoadingContext.Provider value={actionLoading}>
-      <InputCheckboxBasic
-        data-action={actionBoundToUIState.name}
-        {...rest}
-        ref={innerRef}
-        onChange={(e) => {
-          requestAction(e.target, actionBoundToUIState, { event: e });
-          onChange?.(e);
-        }}
-      />
-    </FieldGroupLoadingContext.Provider>
+    <InputCheckboxBasic
+      data-action={actionBoundToUIState.name}
+      {...rest}
+      ref={innerRef}
+      loading={loading || actionLoading}
+      onChange={(e) => {
+        requestAction(e.target, actionBoundToUIState, { event: e });
+        onChange?.(e);
+      }}
+    />
   );
 });
 const InputCheckboxInsideForm = InputCheckboxBasic;
