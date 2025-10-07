@@ -16,7 +16,7 @@
         // eslint-disable-next-line no-unused-vars
         Input,
         // eslint-disable-next-line no-unused-vars
-        Field,
+        Label,
       } from "@jsenv/navi";
 
       // eslint-disable-next-line no-unused-vars
@@ -36,17 +36,15 @@
                   <strong>Loading</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      type="checkbox"
-                      name="colors"
-                      loading={loading}
-                    />
-                  }
-                  label="Coucou"
-                ></Field>
+                <Label>
+                  <Input
+                    id="test"
+                    type="checkbox"
+                    name="colors"
+                    loading={loading}
+                  />
+                  Coucou
+                </Label>
 
                 <button>
                   <span
@@ -73,18 +71,16 @@
                   <strong>Loading with action</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      action={() => {}}
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingB}
-                    />
-                  }
-                  label="Coucou"
-                ></Field>
+                <Label>
+                  <Input
+                    id="test"
+                    action={() => {}}
+                    type="checkbox"
+                    name="colors"
+                    loading={loadingB}
+                  />
+                  Coucou
+                </Label>
 
                 <button>
                   <span
@@ -104,18 +100,16 @@
                   <strong>Read Only</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      readOnly
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingC}
-                    />
-                  }
-                  label="C"
-                />
+                <Label>
+                  <Input
+                    id="test"
+                    readOnly
+                    type="checkbox"
+                    name="colors"
+                    loading={loadingC}
+                  />
+                  C
+                </Label>
 
                 <button>
                   <span
@@ -141,19 +135,17 @@
                   <strong>Read Only + checked</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      readOnly
-                      checked
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingD}
-                    />
-                  }
-                  label="D"
-                />
+                <Label>
+                  <Input
+                    id="test"
+                    readOnly
+                    checked
+                    type="checkbox"
+                    name="colors"
+                    loading={loadingD}
+                  />
+                  D
+                </Label>
 
                 <button>
                   <span
@@ -179,18 +171,16 @@
                   <strong>Disabled</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      disabled
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingE}
-                    />
-                  }
-                  label="E"
-                />
+                <Label>
+                  <Input
+                    id="test"
+                    disabled
+                    type="checkbox"
+                    name="colors"
+                    loading={loadingE}
+                  />
+                  E
+                </Label>
 
                 <button>
                   <span
@@ -216,19 +206,17 @@
                   <strong>Disabled + checked</strong>
                 </p>
 
-                <Field
-                  input={
-                    <Input
-                      id="test"
-                      disabled
-                      checked
-                      type="checkbox"
-                      name="colors"
-                      loading={loadingF}
-                    />
-                  }
-                  label="Coucou"
-                />
+                <Label>
+                  <Input
+                    id="test"
+                    disabled
+                    checked
+                    type="checkbox"
+                    name="colors"
+                    loading={loadingF}
+                  />
+                  Coucou
+                </Label>
 
                 <button>
                   <span
