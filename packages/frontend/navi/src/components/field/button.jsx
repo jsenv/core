@@ -13,9 +13,9 @@ import "./field_css.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
-  ParentFieldActionRequesterContext,
-  ParentFieldLoadingContext,
-  ParentFieldReadOnlyContext,
+  LoadingContext,
+  LoadingElementContext,
+  ReadOnlyContext,
 } from "./use_ui_state_controller.js";
 
 /**
@@ -82,11 +82,9 @@ export const Button = forwardRef((props, ref) => {
 });
 
 const ButtonBasic = forwardRef((props, ref) => {
-  const parentFieldLoading = useContext(ParentFieldLoadingContext);
-  const parentFieldActionRequester = useContext(
-    ParentFieldActionRequesterContext,
-  );
-  const parentFieldReadOnly = useContext(ParentFieldReadOnlyContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
   const {
     readOnly,
     loading,
@@ -104,9 +102,8 @@ const ButtonBasic = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
   const innerLoading =
-    loading ||
-    (parentFieldLoading && parentFieldActionRequester === innerRef.current);
-  const innerReadOnly = readOnly || parentFieldReadOnly || innerLoading;
+    loading || (contextLoading && contextLoadingElement === innerRef.current);
+  const innerReadOnly = readOnly || contextReadOnly || innerLoading;
   let {
     border,
     borderWidth = border === "none" || discrete ? 0 : 1,
