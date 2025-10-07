@@ -13,6 +13,7 @@ import "./field_css.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
 import {
+  DisabledContext,
   LoadingContext,
   LoadingElementContext,
   ReadOnlyContext,
@@ -85,8 +86,10 @@ const ButtonBasic = forwardRef((props, ref) => {
   const contextLoading = useContext(LoadingContext);
   const contextLoadingElement = useContext(LoadingElementContext);
   const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
   const {
     readOnly,
+    disabled,
     loading,
     constraints = [],
     autoFocus,
@@ -104,6 +107,7 @@ const ButtonBasic = forwardRef((props, ref) => {
   const innerLoading =
     loading || (contextLoading && contextLoadingElement === innerRef.current);
   const innerReadOnly = readOnly || contextReadOnly || innerLoading;
+  const innerDisabled = disabled || contextDisabled;
   let {
     border,
     borderWidth = border === "none" || discrete ? 0 : 1,
@@ -141,6 +145,7 @@ const ButtonBasic = forwardRef((props, ref) => {
           data-field-with-background-hover={discrete ? "" : undefined}
           data-validation-message-arrow-x="center"
           data-readonly={innerReadOnly ? "" : undefined}
+          data-disabled={innerDisabled ? "" : undefined}
           style={{
             "--field-border-width": `${borderWidth}px`,
             "--field-outline-width": `${outlineWidth}px`,
@@ -209,13 +214,12 @@ const ButtonWithAction = forwardRef((props, ref) => {
 
 const ButtonInsideForm = forwardRef((props, ref) => {
   const { formContext, type, onClick, children, loading, ...rest } = props;
-  const { formAction } = formContext;
-  const { loading: formActionLoading } = useActionStatus(formAction);
+  const formLoading = formContext.loading;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
   const wouldSubmitFormByType = type === "submit" || type === "image";
-  const innerLoading = loading || (formActionLoading && wouldSubmitFormByType);
+  const innerLoading = loading || (formLoading && wouldSubmitFormByType);
   const handleClick = (event) => {
     const buttonElement = innerRef.current;
     const { form } = buttonElement;

@@ -15,7 +15,7 @@
 
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+import { useContext, useImperativeHandle, useMemo, useRef } from "preact/hooks";
 
 import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
@@ -82,6 +82,10 @@ const FormBasic = forwardRef((props, ref) => {
 
   const innerReadOnly = readOnly || loading;
 
+  const formContextValue = useMemo(() => {
+    return { loading };
+  }, [loading]);
+
   return (
     <form
       {...rest}
@@ -96,7 +100,9 @@ const FormBasic = forwardRef((props, ref) => {
       <ParentUIStateControllerContext.Provider value={uiStateController}>
         <ReadOnlyContext.Provider value={innerReadOnly}>
           <LoadingContext.Provider value={loading}>
-            <FormContext.Provider value={true}>{children}</FormContext.Provider>
+            <FormContext.Provider value={formContextValue}>
+              {children}
+            </FormContext.Provider>
           </LoadingContext.Provider>
         </ReadOnlyContext.Provider>
       </ParentUIStateControllerContext.Provider>
