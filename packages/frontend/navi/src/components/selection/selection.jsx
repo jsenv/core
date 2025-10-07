@@ -1,4 +1,5 @@
 import { findAfter, findBefore } from "@jsenv/dom";
+import { createContext } from "preact";
 import {
   useEffect,
   useLayoutEffect,
@@ -24,6 +25,8 @@ const debug = (category, ...args) => {
     console.debug(`[selection:${category}]`, ...args);
   }
 };
+
+export const SelectionContext = createContext();
 
 export const useSelectionController = ({
   elementRef,

@@ -1,13 +1,21 @@
 import { closeValidationMessage, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
+import {
+  useContext,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
 
 import { useIsVisited } from "../../browser_integration/use_is_visited.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { useRequestedActionStatus } from "../field/use_action_events.js";
 import { useKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcuts.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
-import { useSelectableElement } from "../selection/selection.jsx";
+import {
+  SelectionContext,
+  useSelectableElement,
+} from "../selection/selection.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 
 /*
@@ -104,24 +112,21 @@ const LinkPlain = forwardRef((props, ref) => {
     href,
     ...rest
   } = props;
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
+  const isVisited = useIsVisited(href);
 
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
-
   const shouldDimColor = readOnly || disabled;
   useDimColorWhen(innerRef, shouldDimColor);
-
-  const isVisited = useIsVisited(href);
 
   return (
     <LoaderBackground loading={loading} color="light-dark(#355fcc, #3b82f6)">
       <a
         {...rest}
-        href={href}
         ref={innerRef}
+        href={href}
         className={["navi_link", ...className.split(" ")].join(" ")}
         aria-busy={loading}
         inert={disabled}
@@ -154,27 +159,15 @@ const LinkPlain = forwardRef((props, ref) => {
 });
 
 const LinkWithSelection = forwardRef((props, ref) => {
-  const {
-    name,
-    value = props.href,
-    children,
+  const { selection, selectionController } = useContext(SelectionContext);
+  const { value = props.href, children, ...rest } = props;
+  const { selected } = useSelectableElement(ref, {
+    selection,
     selectionController,
-    ...rest
-  } = props;
-  const { selected } = useSelectableElement(ref, { selectionController });
+  });
 
   return (
-    <LinkPlain ref={ref} {...rest} data-value={value} aria-selected={selected}>
-      <input
-        className="navi_link_checkbox"
-        type="checkbox"
-        name={name}
-        value={value}
-        checked={selected}
-        // Prevent direct checkbox interaction - only via link clicks or keyboard nav (arrows)
-        disabled
-        tabIndex={-1} // Don't interfere with link tab order (might be overkill because there is already [disabled])
-      />
+    <LinkPlain {...rest} ref={ref} data-value={value} aria-selected={selected}>
       {children}
     </LinkPlain>
   );
@@ -230,10 +223,8 @@ const LinkWithAction = forwardRef((props, ref) => {
     loading,
     ...rest
   } = props;
-
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-
   const { actionPending } = useRequestedActionStatus(innerRef);
   const innerLoading = Boolean(loading || actionPending);
 
@@ -247,8 +238,8 @@ const LinkWithAction = forwardRef((props, ref) => {
 
   return (
     <LinkBasic
-      ref={innerRef}
       {...rest}
+      ref={innerRef}
       loading={innerLoading}
       readOnly={readOnly || actionPending}
       data-readonly-silent={actionPending && !readOnly ? "" : undefined}
