@@ -103,10 +103,10 @@ export const useKeyboardShortcuts = (
       e.detail.meta?.shortcut?.onAbort?.(e);
       onActionAbort?.(e);
     },
-    onError: (e) => {
+    onError: (error, e) => {
       shortcutActionIsBusyRef.current = false;
-      e.detail.meta?.shortcut?.onError?.(e);
-      onActionError?.(e);
+      e.detail.meta?.shortcut?.onError?.(error, e);
+      onActionError?.(error, e);
     },
     onEnd: (e) => {
       shortcutActionIsBusyRef.current = false;

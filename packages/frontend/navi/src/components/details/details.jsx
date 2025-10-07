@@ -61,7 +61,6 @@ const DetailsBasic = forwardRef((props, ref) => {
   const {
     id,
     label = "Summary",
-    children,
     open,
     loading,
     className,
@@ -71,6 +70,7 @@ const DetailsBasic = forwardRef((props, ref) => {
     openKeyShortcut = "ArrowRight",
     closeKeyShortcut = "ArrowLeft",
     onToggle,
+    children,
     ...rest
   } = props;
   const innerRef = useRef();
@@ -158,12 +158,12 @@ const DetailsBasic = forwardRef((props, ref) => {
   return (
     <details
       {...rest}
+      ref={innerRef}
       id={id}
       className={[
         "navi_details",
         ...(className ? className.split(" ") : []),
       ].join(" ")}
-      ref={innerRef}
       onToggle={(e) => {
         const isOpen = e.newState === "open";
         if (mountedRef.current) {
@@ -223,6 +223,7 @@ const DetailsWithAction = forwardRef((props, ref) => {
     <DetailsBasic
       {...rest}
       ref={innerRef}
+      loading={loading || actionLoading}
       onToggle={(toggleEvent) => {
         const isOpen = toggleEvent.newState === "open";
         if (isOpen) {
@@ -235,7 +236,6 @@ const DetailsWithAction = forwardRef((props, ref) => {
         }
         onToggle?.(toggleEvent);
       }}
-      loading={loading || actionLoading}
     >
       <ActionRenderer action={effectiveAction}>{children}</ActionRenderer>
     </DetailsBasic>

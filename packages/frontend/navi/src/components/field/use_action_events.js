@@ -35,7 +35,7 @@ export const useActionEvents = (
       actionstart: onStart,
       actionabort: onAbort,
       actionerror: (e) => {
-        onError?.(e.detail.error);
+        onError?.(e.detail.error, e);
       },
       actionend: onEnd,
     });
