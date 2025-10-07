@@ -4,10 +4,7 @@ import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import {
-  useActionBoundToOneParam,
-  useOneFormParam,
-} from "../action_execution/use_action.js";
+import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
@@ -21,7 +18,6 @@ import {
 } from "./field_group_context.js";
 import { ReadOnlyContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useFormEvents } from "./use_form_events.js";
 import {
   UIStateContext,
   UIStateControllerContext,
@@ -302,8 +298,8 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const [boundAction] = useActionBoundToOneParam(action, uiState);
-  const { loading: actionLoading } = useActionStatus(boundAction);
+  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
+  const { loading: actionLoading } = useActionStatus(actionBoundToUIState);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
@@ -338,52 +334,15 @@ const InputCheckboxWithAction = forwardRef((props, ref) => {
   return (
     <FieldGroupLoadingContext.Provider value={actionLoading}>
       <InputCheckboxBasic
+        data-action={actionBoundToUIState.name}
         {...rest}
         ref={innerRef}
-        data-action={boundAction.name}
         onChange={(e) => {
-          requestAction(e.target, boundAction, { event: e });
+          requestAction(e.target, actionBoundToUIState, { event: e });
           onChange?.(e);
         }}
       />
     </FieldGroupLoadingContext.Provider>
   );
 });
-const InputCheckboxInsideForm = forwardRef((props, ref) => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-  const {
-    // eslint-disable-next-line no-unused-vars
-    formContext,
-    name,
-    ...rest
-  } = props;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
-  useOneFormParam(name, uiState);
-
-  useFormEvents(innerRef, {
-    onFormReset: (e) => {
-      e.preventDefault();
-      uiStateController.resetUIState(e);
-    },
-    onFormActionAbort: () => {
-      // user might want to re-submit as is
-      // or change the ui state before re-submitting
-      // we can't decide for him
-    },
-    onFormActionError: () => {
-      // user might want to re-submit as is
-      // or change the ui state before re-submitting
-      // we can't decide for him
-    },
-    onFormActionEnd: (e) => {
-      // form side effect is a success
-      // we can get rid of the nav state
-      // that was keeping the ui state in case user navigates away without submission
-      uiStateController.actionEnd(e);
-    },
-  });
-
-  return <InputCheckboxBasic {...rest} ref={innerRef} name={name} />;
-});
+const InputCheckboxInsideForm = InputCheckboxBasic;

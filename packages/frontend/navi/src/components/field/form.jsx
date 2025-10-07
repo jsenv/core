@@ -15,11 +15,11 @@
 
 import { requestAction, useConstraints } from "@jsenv/validation";
 import { forwardRef } from "preact/compat";
-import { useImperativeHandle, useRef } from "preact/hooks";
+import { useContext, useImperativeHandle, useRef } from "preact/hooks";
 
 import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import { useFormActionBoundToFormParams } from "../action_execution/use_action.js";
+import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { collectFormElementValues } from "./collect_form_element_values.js";
 import {
@@ -39,16 +39,14 @@ import {
 } from "./use_ui_state_controller.js";
 
 export const Form = forwardRef((props, ref) => {
-  const uiStateController = useUIGroupStateController(props, "checkbox_list", {
-    childComponentType: "checkbox",
+  const uiStateController = useUIGroupStateController(props, "form", {
+    childComponentType: "*",
     aggregateChildStates: (childUIStateControllers) => {
-      const values = [];
+      const formValues = {};
       for (const childUIStateController of childUIStateControllers) {
-        if (childUIStateController.uiState) {
-          values.push(childUIStateController.uiState);
-        }
+        formValues[childUIStateController.name] = childUIStateController.value;
       }
-      return values.length === 0 ? undefined : values;
+      return formValues;
     },
   });
   const uiState = useUIState(uiStateController);
@@ -65,7 +63,7 @@ export const Form = forwardRef((props, ref) => {
 });
 
 const FormBasic = forwardRef((props, ref) => {
-  const { children, ...rest } = props;
+  const { readOnly, loading, children, ...rest } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
@@ -74,21 +72,13 @@ const FormBasic = forwardRef((props, ref) => {
   // (and also execute action without validation if form.submit() is ever called)
   useConstraints(innerRef, []);
 
+  const innerReadOnly = readOnly || loading;
+
   return (
     <form {...rest} ref={ref}>
-      <FieldGroupReadOnlyContext.Provider value={formIsReadOnly}>
-        <FieldGroupLoadingContext.Provider value={formIsBusy}>
-          <FormContext.Provider
-            value={{
-              formAllowConcurrentActions,
-              formAction: formActionBoundToFormParams,
-              formParamsSignal,
-              formActionAborted,
-              formActionError,
-            }}
-          >
-            {children}
-          </FormContext.Provider>
+      <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
+        <FieldGroupLoadingContext.Provider value={loading}>
+          <FormContext.Provider value={true}>{children}</FormContext.Provider>
         </FieldGroupLoadingContext.Provider>
       </FieldGroupReadOnlyContext.Provider>
     </form>
@@ -96,85 +86,63 @@ const FormBasic = forwardRef((props, ref) => {
 });
 
 const FormWithAction = forwardRef((props, ref) => {
-  let {
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
+  const {
     action,
     method,
-    readOnly = false,
-    allowConcurrentActions: formAllowConcurrentActions = false,
     actionErrorEffect = "show_validation_message", // "show_validation_message" or "throw"
     onActionPrevented,
     onActionStart,
     onActionAbort,
     onActionError,
     onActionEnd,
+    loading,
     children,
     ...rest
   } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
-
-  const [formActionBoundToFormParams, formParamsSignal, setFormParams] =
-    useFormActionBoundToFormParams(action);
+  const [actionBoundToUIState] = useActionBoundToOneParam(action, uiState);
   const executeAction = useExecuteAction(innerRef, {
     errorEffect: actionErrorEffect,
   });
-  const {
-    actionPending: formIsBusy,
-    actionRequester: formActionRequester,
-    actionAborted: formActionAborted,
-    actionError: formActionError,
-  } = useRequestedActionStatus(innerRef);
+  const { actionPending, actionRequester: formActionRequester } =
+    useRequestedActionStatus(innerRef);
 
-  const formIsReadOnly =
-    readOnly || (formIsBusy && !formAllowConcurrentActions);
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
-    onAction: (actionEvent) => {
+    onAction: (e) => {
       const form = innerRef.current;
       const formElementValues = collectFormElementValues(form);
-      setFormParams(formElementValues);
-      executeAction(actionEvent);
+      uiStateController.setUIState(formElementValues, e);
+      executeAction(e);
     },
     onStart: onActionStart,
     onAbort: onActionAbort,
     onError: onActionError,
     onEnd: onActionEnd,
   });
+  const innerLoading = loading || actionPending;
 
   return (
-    <form
-      data-action={formActionBoundToFormParams.name}
+    <FormBasic
+      data-action={actionBoundToUIState.name}
       data-method={action.meta?.httpVerb || method || "GET"}
       {...rest}
       ref={innerRef}
-      // eslint-disable-next-line react/no-unknown-property
+      loading={innerLoading}
       onrequestsubmit={(e) => {
         // prevent "submit" event that would be dispatched by the browser after form.requestSubmit()
         // (not super important because our <form> listen the "action" and do does preventDefault on "submit")
         e.preventDefault();
-        requestAction(e.target, formActionBoundToFormParams, { event: e });
+        requestAction(e.target, actionBoundToUIState, { event: e });
       }}
     >
-      <FieldGroupReadOnlyContext.Provider value={formIsReadOnly}>
-        <FieldGroupLoadingContext.Provider value={formIsBusy}>
-          <FieldGroupActionRequesterContext.Provider
-            value={formActionRequester}
-          >
-            <FormContext.Provider
-              value={{
-                formAllowConcurrentActions,
-                formAction: formActionBoundToFormParams,
-                formParamsSignal,
-                formActionAborted,
-                formActionError,
-              }}
-            >
-              {children}
-            </FormContext.Provider>
-          </FieldGroupActionRequesterContext.Provider>
-        </FieldGroupLoadingContext.Provider>
-      </FieldGroupReadOnlyContext.Provider>
-    </form>
+      <FieldGroupActionRequesterContext.Provider value={formActionRequester}>
+        {children}
+      </FieldGroupActionRequesterContext.Provider>
+    </FormBasic>
   );
 });
 
