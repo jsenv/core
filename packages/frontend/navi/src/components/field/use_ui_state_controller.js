@@ -52,6 +52,7 @@ export const useUIStateController = (
   } = {},
 ) => {
   const id = props.id;
+  const name = props.name;
   const formContext = useContext(FormContext);
   const uncontrolled = !formContext && !props.action;
   const [navState, setNavState] = useNavState(id);
@@ -148,8 +149,12 @@ export const useUIStateController = (
   const getPropFromStateRef = useRef();
   getPropFromStateRef.current = getPropFromState;
 
+  const nameRef = useRef();
+  nameRef.current = name;
+
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
+    existingUIStateController.name = name;
     return existingUIStateController;
   }
   debugUIState(
@@ -160,6 +165,7 @@ export const useUIStateController = (
   const uiStateController = {
     componentType,
     readOnly,
+    name: nameRef.current,
     state: stateRef.current,
     uiState: uiStateRef.current,
     setUIState: (prop, e) => {

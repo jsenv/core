@@ -44,7 +44,15 @@ export const Form = forwardRef((props, ref) => {
     aggregateChildStates: (childUIStateControllers) => {
       const formValues = {};
       for (const childUIStateController of childUIStateControllers) {
-        formValues[childUIStateController.name] = childUIStateController.value;
+        const { name, uiState } = childUIStateController;
+        if (!name) {
+          console.warn(
+            "A form child component is missing a name property, its state won't be included in the form state",
+            childUIStateController,
+          );
+          continue;
+        }
+        formValues[name] = uiState;
       }
       return formValues;
     },
@@ -78,7 +86,7 @@ const FormBasic = forwardRef((props, ref) => {
   return (
     <form
       {...rest}
-      ref={ref}
+      ref={innerRef}
       onReset={(e) => {
         // browser would empty all fields to their default values (likely empty/unchecked)
         // we want to reset to the last known external state instead
