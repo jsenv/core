@@ -13,6 +13,8 @@ export const useStickyGroup = (elementRef, { elementSelector } = {}) => {
 
 const LEFT_CSS_VAR = "--sticky-group-left";
 const TOP_CSS_VAR = "--sticky-group-top";
+const CONTAINER_LEFT_FRONTIER_CSS_VAR = "--sticky-group-left-frontier";
+const CONTAINER_TOP_FRONTIER_CSS_VAR = "--sticky-group-top-frontier";
 
 /**
  * Creates a sticky group that manages positioning for multiple sticky elements
@@ -120,6 +122,10 @@ const initStickyGroup = (
         element.style.setProperty(LEFT_CSS_VAR, `${cumulativeWidth}px`);
       }
     }
+    container.style.setProperty(
+      CONTAINER_LEFT_FRONTIER_CSS_VAR,
+      `${cumulativeWidth}px`,
+    );
   };
   const updateTableRows = () => {
     // Handle sticky rows by finding cells with data-sticky-top and grouping by row
@@ -175,6 +181,10 @@ const initStickyGroup = (
         element.style.setProperty(TOP_CSS_VAR, `${cumulativeHeight}px`);
       }
     }
+    container.style.setProperty(
+      CONTAINER_TOP_FRONTIER_CSS_VAR,
+      `${cumulativeHeight}px`,
+    );
   };
 
   const updateLinearPositions = () => {
@@ -190,7 +200,6 @@ const initStickyGroup = (
     const cssVariableName = isHorizontal ? LEFT_CSS_VAR : TOP_CSS_VAR;
 
     let cumulativeSize = 0;
-
     stickyElements.forEach((element, index) => {
       if (index === 0) {
         // First element stays at position 0
@@ -203,6 +212,13 @@ const initStickyGroup = (
         cumulativeSize += element.getBoundingClientRect()[dimensionProperty];
       }
     });
+    const containerCssVariableName = isHorizontal
+      ? CONTAINER_LEFT_FRONTIER_CSS_VAR
+      : CONTAINER_TOP_FRONTIER_CSS_VAR;
+    container.style.setProperty(
+      containerCssVariableName,
+      `${cumulativeSize}px`,
+    );
   };
 
   // Initial positioning
