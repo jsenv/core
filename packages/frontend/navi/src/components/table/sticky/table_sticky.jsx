@@ -3,6 +3,7 @@ import {
   getDropTargetInfo,
   getScrollableParent,
 } from "@jsenv/dom";
+import { useContext } from "preact/hooks";
 
 import {
   Z_INDEX_STICKY_COLUMN,
@@ -13,6 +14,7 @@ import {
   Z_INDEX_STICKY_FRONTIER_PREVIEW,
   Z_INDEX_STICKY_ROW,
 } from "../z_indexes.js";
+import { TableStickyContext } from "./table_sticky.js";
 
 import.meta.css = /* css */ `
   .navi_table_container {
@@ -299,61 +301,35 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
-`;
 
-export const TableCellStickyFrontier = ({
-  columnIndex,
-  rowIndex,
-  stickyLeftFrontierColumnIndex,
-  stickyTopFrontierRowIndex,
-  onStickyLeftFrontierChange,
-  onStickyTopFrontierChange,
-}) => {
-  const isAfterStickyLeftFrontier = columnIndex > stickyLeftFrontierColumnIndex;
-  const isOnStickyLeftFrontier = columnIndex === stickyLeftFrontierColumnIndex;
-  const isAfterStickyTopFrontier = rowIndex > stickyTopFrontierRowIndex;
-  const isOnStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
-
-  const isCorner = isOnStickyLeftFrontier && isOnStickyTopFrontier;
-  if (isCorner) {
-    return (
-      <div
-        className="navi_table_cell_sticky_frontier"
-        data-left=""
-        data-top=""
-      ></div>
-    );
+  .navi_table_sticky_frontier {
+    position: absolute;
   }
 
-  const shouldDisplayStickyLeftFrontier =
-    (isOnStickyLeftFrontier && isAfterStickyTopFrontier) ||
-    // First column is responsible to display the sticky frontier on its left side
-    (stickyLeftFrontierColumnIndex === -1 && columnIndex === 0);
-  const shouldDisplayStickyTopFrontier =
-    (isOnStickyTopFrontier && isAfterStickyLeftFrontier) ||
-    // First row is responsible to display the sticky frontier on its top side
-    (stickyTopFrontierRowIndex === -1 && rowIndex === 0);
+  .navi_table_sticky_frontier[data-left] {
+    top: 0;
+    bottom: 0;
+    left: calc(
+      var(--sticky-group-left-frontier, 0px) - var(--sticky-left-frontier-width)
+    );
+    width: var(--sticky-left-frontier-width);
+  }
 
-  return (
-    <>
-      {shouldDisplayStickyLeftFrontier && (
-        <TableCellStickyLeftFrontier
-          stickyLeftFrontierColumnIndex={stickyLeftFrontierColumnIndex}
-          onStickyLeftFrontierChange={onStickyLeftFrontierChange}
-        />
-      )}
-      {shouldDisplayStickyTopFrontier && (
-        <TableCellStickyTopFrontier
-          stickyTopFrontierRowIndex={stickyTopFrontierRowIndex}
-          onStickyTopFrontierChange={onStickyTopFrontierChange}
-        />
-      )}
-    </>
-  );
-};
+  .navi_table_sticky_frontier[data-top] {
+    left: 0;
+    right: 0;
+    top: calc(
+      var(--sticky-group-top-frontier, 0px) - var(--sticky-top-frontier-height)
+    );
+    height: var(--sticky-top-frontier-height);
+  }
+`;
+
 export const TableStickyFrontier = () => {
   return (
     <>
+      <TableStickyLeftFrontier />
+      <TableStickyTopFrontier />
       <TableStickyLeftFrontierGhost />
       <TableStickyLeftFrontierPreview />
       <TableStickyTopFrontierGhost />
@@ -362,28 +338,18 @@ export const TableStickyFrontier = () => {
   );
 };
 
-/**
- * We "need" to inject this into every <td>,<th> so it follows correctly the position of the cell
- * And cells are in position sticky
- * And we can't have an absolute element per <td> because they are in position: relative
- * so we can't know the table dimension within a table cell (and that would be very nasty and easy to break as soon
- * as a table cell uses a position relative)
- */
-const TableCellStickyLeftFrontier = ({
-  stickyLeftFrontierColumnIndex,
-  onStickyLeftFrontierChange,
-}) => {
+const TableStickyLeftFrontier = () => {
+  const { stickyLeftFrontierColumnIndex, onStickyLeftFrontierChange } =
+    useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyLeftFrontierChange);
 
-  if (stickyLeftFrontierColumnIndex === -1 && !canMoveFrontier) {
-    // no need to display sticky frontier when non movable and nothing is sticky
+  if (stickyLeftFrontierColumnIndex === -1) {
     return null;
   }
   return (
     <div
-      className="navi_table_cell_sticky_frontier"
+      className="navi_table_sticky_frontier"
       data-left=""
-      data-opposite={stickyLeftFrontierColumnIndex === -1 ? "" : undefined}
       inert={!canMoveFrontier}
       onMouseDown={(e) => {
         if (e.button !== 0) {
@@ -403,36 +369,25 @@ const TableCellStickyLeftFrontier = ({
     ></div>
   );
 };
-const TableStickyLeftFrontierGhost = () => {
-  return <div className="navi_table_sticky_left_frontier_ghost"></div>;
-};
-const TableStickyLeftFrontierPreview = () => {
-  return <div className="navi_table_sticky_left_frontier_preview"></div>;
-};
-
-const TableCellStickyTopFrontier = ({
-  stickyTopFrontierRowIndex,
-  onStickyTopFrontierChange,
-}) => {
+const TableStickyTopFrontier = () => {
+  const { stickyTopFrontierRowIndex, onStickyTopFrontierChange } =
+    useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyTopFrontierChange);
 
-  if (stickyTopFrontierRowIndex === -1 && !canMoveFrontier) {
-    // no need to display sticky frontier when non movable and nothing is sticky
+  if (stickyTopFrontierRowIndex === -1) {
     return null;
   }
-
   return (
     <div
-      className="navi_table_cell_sticky_frontier"
+      className="navi_table_sticky_frontier"
       data-top=""
-      data-opposite={stickyTopFrontierRowIndex === -1 ? "" : undefined}
       inert={!canMoveFrontier}
       onMouseDown={(e) => {
         if (e.button !== 0) {
           return;
         }
         e.preventDefault(); // prevent text selection
-        e.stopPropagation(); // prevent drag row
+        e.stopPropagation(); // prevent drag column
         initMoveStickyTopFrontierByMousedown(e, {
           stickyTopFrontierRowIndex,
           onRelease: (_, index) => {
@@ -445,6 +400,14 @@ const TableCellStickyTopFrontier = ({
     ></div>
   );
 };
+
+const TableStickyLeftFrontierGhost = () => {
+  return <div className="navi_table_sticky_left_frontier_ghost"></div>;
+};
+const TableStickyLeftFrontierPreview = () => {
+  return <div className="navi_table_sticky_left_frontier_preview"></div>;
+};
+
 const TableStickyTopFrontierGhost = () => {
   return <div className="navi_table_sticky_top_frontier_ghost"></div>;
 };
