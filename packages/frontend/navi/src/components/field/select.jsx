@@ -5,10 +5,7 @@ import { useEffect, useImperativeHandle, useRef, useState } from "preact/hooks";
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import {
-  useActionBoundToOneParam,
-  useOneFormParam,
-} from "../action_execution/use_action.js";
+import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoaderBackground } from "../loader/loader_background.jsx";
 import { useRefArray } from "../use_ref_array.js";
@@ -22,11 +19,12 @@ import.meta.css = /* css */ `
 `;
 
 export const Select = forwardRef((props, ref) => {
-  return renderActionableComponent(props, ref, {
+  const select = renderActionableComponent(props, ref, {
     Basic: SelectBasic,
     WithAction: SelectWithAction,
     InsideForm: SelectInsideForm,
   });
+  return select;
 });
 
 const SelectControlled = forwardRef((props, ref) => {
@@ -224,11 +222,7 @@ const SelectInsideForm = forwardRef((props, ref) => {
   useImperativeHandle(ref, () => innerRef.current);
 
   const [navState, setNavState] = useNavState(id);
-  const [value, setValue, initialValue] = useOneFormParam(
-    name,
-    externalValue,
-    navState,
-  );
+  const [value, setValue, initialValue] = [name, externalValue, navState];
   useEffect(() => {
     setNavState(value);
   }, [value]);
