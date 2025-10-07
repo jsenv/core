@@ -2,9 +2,10 @@ import { activeElementSignal, canInterceptKeys } from "@jsenv/dom";
 import { requestAction } from "@jsenv/validation";
 import { effect, signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
+
 import { useAction } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import { useActionEvents } from "../use_action_events.js";
+import { useActionEvents } from "../field/use_action_events.js";
 import { keyMapping } from "./keyboard_key_meta.js";
 import { isMac } from "./os.js";
 
