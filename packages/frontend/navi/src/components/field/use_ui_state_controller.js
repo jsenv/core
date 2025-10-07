@@ -11,7 +11,6 @@ import { useNavState } from "../../browser_integration/browser_integration.js";
 import { FormContext } from "../action_execution/form_context.js";
 import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
-import { useStableCallback } from "../use_stable_callback.js";
 import { FieldGroupUIStateControllerContext } from "./field_group_context.js";
 
 export const UIStateControllerContext = createContext();
@@ -61,15 +60,14 @@ export const useUIStateController = (
     FieldGroupUIStateControllerContext,
   );
   const formContext = useContext(FormContext);
-  const id = props.id;
-  const name = props.name;
-  const uncontrolled = !formContext && !props.action;
+  const { id, name, onUIStateChange, action } = props;
+  const uncontrolled = !formContext && !action;
   const [navState, setNavState] = useNavState(id);
 
+  const uiStateControllerRef = useRef();
   const hasStateProp = Object.hasOwn(props, statePropName);
   const state = props[statePropName];
   const defaultState = props[defaultStatePropName];
-
   const stateInitial = useInitialValue(() => {
     if (hasStateProp) {
       // controlled by state prop ("value" or "checked")
@@ -86,43 +84,7 @@ export const useUIStateController = (
     }
     return getStateFromProp(fallbackState);
   });
-  const uiStateControllerRef = useRef();
-  const stateRef = useRef(stateInitial);
-  const uiStateRef = useRef(stateInitial);
 
-  const [
-    notifyParentAboutChildMount,
-    notifyParentAboutChildUIStateChange,
-    notifyParentAboutChildUnmount,
-  ] = useParentControllerNotifiers(
-    parentUIStateController,
-    uiStateControllerRef,
-    componentType,
-  );
-  useLayoutEffect(() => {
-    notifyParentAboutChildMount();
-    return notifyParentAboutChildUnmount;
-  }, []);
-
-  // Handle state prop changes
-  getPropFromState = useStableCallback(getPropFromState);
-  useLayoutEffect(() => {
-    const uiStateController = uiStateControllerRef.current;
-    if (!hasStateProp) {
-      return;
-    }
-    const prevState = stateRef.current;
-    if (state === prevState) {
-      return;
-    }
-    stateRef.current = state;
-    uiStateController.state = state;
-    uiStateController.setUIState(
-      getPropFromState(state),
-      new CustomEvent("state_prop"),
-    );
-  }, [hasStateProp, state]);
-  const { onUIStateChange } = props;
   /**
    * This check is needed only for basic field because
    * When using action/form we consider the action/form code
@@ -144,22 +106,39 @@ export const useUIStateController = (
     );
   }
 
-  const hasStatePropRef = useRef();
-  hasStatePropRef.current = hasStateProp;
+  // Handle state prop changes
+  useLayoutEffect(() => {
+    const uiStateController = uiStateControllerRef.current;
+    if (!hasStateProp) {
+      uiStateController.onStatePropRemoved();
+    } else {
+      uiStateController.onStatePropChange(state);
+    }
+  }, [hasStateProp, state]);
 
-  const onUIStateChangeRef = useRef();
-  onUIStateChangeRef.current = onUIStateChange;
-  const getStateFromPropRef = useRef();
-  getStateFromPropRef.current = getStateFromProp;
-  const getPropFromStateRef = useRef();
-  getPropFromStateRef.current = getPropFromState;
-
-  const nameRef = useRef();
-  nameRef.current = name;
+  const [
+    notifyParentAboutChildMount,
+    notifyParentAboutChildUIStateChange,
+    notifyParentAboutChildUnmount,
+  ] = useParentControllerNotifiers(
+    parentUIStateController,
+    uiStateControllerRef,
+    componentType,
+  );
+  useLayoutEffect(() => {
+    notifyParentAboutChildMount();
+    return notifyParentAboutChildUnmount;
+  }, []);
 
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
+    existingUIStateController.readOnly = readOnly;
     existingUIStateController.name = name;
+    existingUIStateController.stateInitial = stateInitial;
+    existingUIStateController.state = state;
+    existingUIStateController.onUIStateChange = onUIStateChange;
+    existingUIStateController.getPropFromState = getPropFromState;
+    existingUIStateController.getStateFromProp = getStateFromProp;
     return existingUIStateController;
   }
   debugUIState(
@@ -170,30 +149,47 @@ export const useUIStateController = (
   const uiStateController = {
     componentType,
     readOnly,
-    name: nameRef.current,
-    state: stateRef.current,
-    uiState: uiStateRef.current,
+    name,
+    state: stateInitial,
+    uiState: stateInitial,
+    onUIStateChange,
+    getPropFromState,
+    getStateFromProp,
+    onStatePropRemoved: () => {
+      uiStateController.hasStateProp = false;
+      uiStateController.state = uiStateController.stateInitial;
+    },
+    onStatePropChange: (newState) => {
+      uiStateController.hasStateProp = true;
+      const currentState = uiStateController.state;
+      if (newState === currentState) {
+        return;
+      }
+      uiStateController.state = newState;
+      uiStateController.setUIState(
+        uiStateController.getPropFromState(newState),
+        new CustomEvent("state_prop"),
+      );
+    },
     setUIState: (prop, e) => {
-      const newUIState = getStateFromPropRef.current(prop);
+      const newUIState = uiStateController.getStateFromProp(prop);
       if (formContext) {
         setNavState(prop);
       }
-      const currentUIState = uiStateRef.current;
+      const currentUIState = uiStateController.uiState;
       if (newUIState === currentUIState) {
         return;
       }
       debugUIState(
-        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> state updated to ${JSON.stringify(newUIState)}`,
+        `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updating to ${JSON.stringify(newUIState)}`,
       );
-      uiStateRef.current = newUIState;
       uiStateController.uiState = newUIState;
-
       publishUIState(newUIState);
-      onUIStateChangeRef.current?.(newUIState, e);
+      uiStateController.onUIStateChange?.(newUIState, e);
       notifyParentAboutChildUIStateChange(e);
     },
     resetUIState: (e) => {
-      const currentState = stateRef.current;
+      const currentState = uiStateController.state;
       uiStateController.setUIState(currentState, e);
     },
     actionEnd: () => {
@@ -319,8 +315,7 @@ export const useUIGroupStateController = (
   const parentUIStateController = useContext(
     FieldGroupUIStateControllerContext,
   );
-  let { onUIStateChange, name } = props;
-  onUIStateChange = useStableCallback(onUIStateChange);
+  const { onUIStateChange, name } = props;
   const childUIStateControllerArrayRef = useRef([]);
   const childUIStateControllerArray = childUIStateControllerArrayRef.current;
   const uiStateControllerRef = useRef();
@@ -371,6 +366,7 @@ export const useUIGroupStateController = (
   const existingUIStateController = uiStateControllerRef.current;
   if (existingUIStateController) {
     existingUIStateController.name = name;
+    existingUIStateController.onUIStateChange = onUIStateChange;
     return existingUIStateController;
   }
   debugUIGroup(
@@ -389,6 +385,7 @@ export const useUIGroupStateController = (
   const uiStateController = {
     componentType,
     name,
+    onUIStateChange,
     uiState: emptyState,
     setUIState: (newUIState, e) => {
       const currentUIState = uiStateController.uiState;
@@ -400,7 +397,7 @@ export const useUIGroupStateController = (
         `${componentType}.setUIState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
       );
       publishUIState(newUIState);
-      onUIStateChange?.(newUIState, e);
+      uiStateController.onUIStateChange?.(newUIState, e);
       notifyParentAboutChildUIStateChange(e);
     },
     registerChild: (childUIStateController) => {
