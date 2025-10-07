@@ -63,6 +63,7 @@ export const Form = forwardRef((props, ref) => {
 });
 
 const FormBasic = forwardRef((props, ref) => {
+  const uiStateController = useContext(UIStateControllerContext);
   const { readOnly, loading, children, ...rest } = props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -75,7 +76,16 @@ const FormBasic = forwardRef((props, ref) => {
   const innerReadOnly = readOnly || loading;
 
   return (
-    <form {...rest} ref={ref}>
+    <form
+      {...rest}
+      ref={ref}
+      onReset={(e) => {
+        // browser would empty all fields to their default values (likely empty/unchecked)
+        // we want to reset to the last known external state instead
+        e.preventDefault();
+        uiStateController.resetUIState(e);
+      }}
+    >
       <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
         <FieldGroupLoadingContext.Provider value={loading}>
           <FormContext.Provider value={true}>{children}</FormContext.Provider>
@@ -119,9 +129,25 @@ const FormWithAction = forwardRef((props, ref) => {
       executeAction(e);
     },
     onStart: onActionStart,
-    onAbort: onActionAbort,
-    onError: onActionError,
-    onEnd: onActionEnd,
+    onAbort: (e) => {
+      // user might want to re-submit as is
+      // or change the ui state before re-submitting
+      // we can't decide for him
+      onActionAbort?.(e);
+    },
+    onError: (e) => {
+      // user might want to re-submit as is
+      // or change the ui state before re-submitting
+      // we can't decide for him
+      onActionError?.(e);
+    },
+    onEnd: (e) => {
+      // form side effect is a success
+      // we can get rid of the nav state
+      // that was keeping the ui state in case user navigates away without submission
+      uiStateController.actionEnd(e);
+      onActionEnd?.(e);
+    },
   });
   const innerLoading = loading || actionPending;
 
