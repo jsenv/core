@@ -10,6 +10,7 @@ export const useActionEvents = (
      * @param {"form_reset" | "blur_invalid" | "escape_key"} reason - Raison du cancel
      */
     onCancel,
+    onRequested,
     onPrevented,
     onAction,
     onStart,
@@ -28,6 +29,7 @@ export const useActionEvents = (
       cancel: (e) => {
         onCancel?.(e, e.detail.reason);
       },
+      actionrequested: onRequested,
       actionprevented: onPrevented,
       action: onAction,
       actionstart: onStart,

@@ -10,13 +10,13 @@ import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import "./field_css.js";
-import {
-  FieldGroupActionRequesterContext,
-  FieldGroupLoadingContext,
-  FieldGroupReadOnlyContext,
-} from "./field_group_context.js";
 import { useActionEvents } from "./use_action_events.js";
 import { useFormEvents } from "./use_form_events.js";
+import {
+  ParentFieldActionRequesterContext,
+  ParentFieldLoadingContext,
+  ParentFieldReadOnlyContext,
+} from "./use_ui_state_controller.js";
 
 /**
  * We need a content the visually shrink (scale down) but the button interactive are must remain intact
@@ -82,9 +82,11 @@ export const Button = forwardRef((props, ref) => {
 });
 
 const ButtonBasic = forwardRef((props, ref) => {
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
-  const groupReadonly = useContext(FieldGroupReadOnlyContext);
+  const parentFieldLoading = useContext(ParentFieldLoadingContext);
+  const parentFieldActionRequester = useContext(
+    ParentFieldActionRequesterContext,
+  );
+  const parentFieldReadOnly = useContext(ParentFieldReadOnlyContext);
   const {
     readOnly,
     loading,
@@ -102,8 +104,9 @@ const ButtonBasic = forwardRef((props, ref) => {
   useAutoFocus(innerRef, autoFocus);
   useConstraints(innerRef, constraints);
   const innerLoading =
-    loading || (groupLoading && groupActionRequester === innerRef.current);
-  const innerReadOnly = readOnly || groupReadonly || innerLoading;
+    loading ||
+    (parentFieldLoading && parentFieldActionRequester === innerRef.current);
+  const innerReadOnly = readOnly || parentFieldReadOnly || innerLoading;
   let {
     border,
     borderWidth = border === "none" || discrete ? 0 : 1,
@@ -116,8 +119,6 @@ const ButtonBasic = forwardRef((props, ref) => {
 
   return (
     <button
-      // put data-action first to help find it in devtools
-      data-action={rest["data-action"]}
       {...rest}
       ref={innerRef}
       data-custom={appearance === "custom" ? "" : undefined}
@@ -194,8 +195,9 @@ const ButtonWithAction = forwardRef((props, ref) => {
 
   return (
     <ButtonBasic
-      {...rest}
+      // put data-action first to help find it in devtools
       data-action={boundAction.name}
+      {...rest}
       ref={innerRef}
       loading={innerLoading}
       onClick={(event) => {
@@ -237,10 +239,12 @@ const ButtonInsideForm = forwardRef((props, ref) => {
     // prevent default behavior that would submit the form
     // we want to go through the action execution process (with validation and all)
     event.preventDefault();
-    requestAction(form, formAction, {
-      event,
-      requester: buttonElement,
-      meta: { isSubmit: true },
+    form.dispatchEvent("actionrequested", {
+      detail: {
+        requester: buttonElement,
+        event,
+        meta: { isSubmit: true },
+      },
     });
   };
 
@@ -319,8 +323,8 @@ const ButtonWithActionInsideForm = forwardRef((props, ref) => {
 
   return (
     <ButtonBasic
-      {...rest}
       data-action={actionBoundToFormParams.name}
+      {...rest}
       ref={innerRef}
       type={type}
       loading={innerLoading}

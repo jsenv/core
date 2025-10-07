@@ -131,6 +131,14 @@ const FormWithAction = forwardRef((props, ref) => {
 
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
+    onRequested: (e) => {
+      const form = innerRef.current;
+      requestAction(form, actionBoundToUIState, {
+        requester: e.detail?.requester,
+        event: e.detail?.event || e,
+        meta: e.detail?.meta,
+      });
+    },
     onAction: (e) => {
       const form = innerRef.current;
       const formElementValues = collectFormElementValues(form);
