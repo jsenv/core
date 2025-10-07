@@ -386,8 +386,14 @@ export const useUIGroupStateController = (
       );
     },
     resetUIState: (e) => {
+      // we should likely batch the changes that will be reported for performances
       for (const childUIStateController of childUIStateControllerArray) {
         childUIStateController.resetUIState(e);
+      }
+    },
+    actionEnd: (e) => {
+      for (const childUIStateController of childUIStateControllerArray) {
+        childUIStateController.actionEnd(e);
       }
     },
     subscribe: subscribeUIState,
