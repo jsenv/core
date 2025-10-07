@@ -3,7 +3,7 @@ import { getScrollableParentSet } from "../scroll.js";
 export const followPosition = (
   element,
   targetElement,
-  { elementSizeToObserve = element, onPositionChange, debug } = {},
+  { elementSizeToObserve = element, onChange, debug } = {},
 ) => {
   const cleanupCallbackSet = new Set();
   const stop = () => {
@@ -95,9 +95,22 @@ export const followPosition = (
     }
     // Apply calculated position
     element.style.transform = `translateX(${elementLeftPos}px) translateY(${elementTopPos}px)`;
-    onPositionChange?.(elementLeftPos, elementTopPos, {
+    onChange?.({
+      left: elementLeftPos,
+      top: elementTopPos,
+      right: elementLeftPos + elementWidth,
+      bottom: elementTopPos + elementHeight,
+      width: elementWidth,
+      height: elementHeight,
+      position: showAbove ? "above" : "below",
       fitsBelow,
       fitsAbove,
+      targetLeft,
+      targetTop,
+      targetRight,
+      targetBottom,
+      targetWidth,
+      targetHeight,
     });
   };
 
