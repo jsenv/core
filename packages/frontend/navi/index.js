@@ -33,17 +33,17 @@ export {
   useEditionController,
 } from "./src/components/edition/editable.jsx";
 export { ErrorBoundaryContext } from "./src/components/error_boundary_context.js";
-export { Form } from "./src/components/form.jsx";
-export { Button } from "./src/components/input/button.jsx";
+export { Button } from "./src/components/field/button.jsx";
 export {
   Checkbox,
   CheckboxList,
-} from "./src/components/input/checkbox_list.jsx";
-export { Field } from "./src/components/input/field.jsx";
-export { Input } from "./src/components/input/input.jsx";
-export { Label } from "./src/components/input/label.jsx";
-export { Radio, RadioList } from "./src/components/input/radio_list.jsx";
-export { Select } from "./src/components/input/select.jsx";
+} from "./src/components/field/checkbox_list.jsx";
+export { Field } from "./src/components/field/field.jsx";
+export { Form } from "./src/components/field/form.jsx";
+export { Input } from "./src/components/field/input.jsx";
+export { Label } from "./src/components/field/label.jsx";
+export { Radio, RadioList } from "./src/components/field/radio_list.jsx";
+export { Select } from "./src/components/field/select.jsx";
 export { ActiveKeyboardShortcuts } from "./src/components/keyboard_shortcuts/active_keyboard_shortcuts.jsx";
 export { Link } from "./src/components/link/link.jsx";
 export { Route } from "./src/components/route.jsx";
