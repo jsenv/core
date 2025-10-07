@@ -24,100 +24,56 @@
         return (
           <>
             <div style="display: flex; flex-direction: row; gap: 30px">
-              <div>
-                <p>
-                  <strong>Loaded sync</strong>
-                </p>
-                <Details
-                  id="test"
-                  action={() => {
-                    return "Hello";
-                  }}
-                >
-                  {(message) => <span>{message}</span>}
-                </Details>
-              </div>
-
-              <div>
-                <p>
-                  <strong>Loaded after 1s</strong>
-                </p>
-                <Details
-                  id="test_2"
-                  action={async () => {
-                    await new Promise((resolve) => {
-                      setTimeout(resolve, 1000);
-                    });
-                    return "Hello";
-                  }}
-                  label="Custom summary"
-                >
-                  {(content) => content}
-                </Details>
-              </div>
+              <DetailsLoadSyncDemo />
+              <DetailsLoadAfter1sDemo />
               <DetailsThrowSyncDemo />
             </div>
 
-            <div>
-              <p>
-                <strong>Full control (abort, reload)</strong>
-              </p>
-              <Details
-                id="test_4"
-                action={async (_, { signal }) => {
-                  await new Promise((resolve) => {
-                    const timeout = setTimeout(resolve, 1000);
-                    signal.addEventListener("abort", () => {
-                      clearTimeout(timeout);
-                    });
-                  });
-                  return "Hello";
-                }}
-              >
-                {{
-                  loading: (action) => {
-                    return (
-                      <span>
-                        Loading...
-                        <button
-                          onClick={() => {
-                            action.abort();
-                          }}
-                        >
-                          Abort
-                        </button>
-                      </span>
-                    );
-                  },
-                  aborted: (action) => (
-                    <>
-                      <span style="color: red">Aborted</span>
-                      <button
-                        onClick={() => {
-                          action.rerun();
-                        }}
-                      >
-                        Reload
-                      </button>
-                    </>
-                  ),
-                  completed: (message, action) => (
-                    <>
-                      <span>{message}</span>
-                      <button
-                        onClick={() => {
-                          action.rerun();
-                        }}
-                      >
-                        Reload
-                      </button>
-                    </>
-                  ),
-                }}
-              </Details>
-            </div>
+            <DetailsFullControlDemo />
             <DetailsWithActionPreloadedDemo />
           </>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DetailsLoadSyncDemo = () => {
+        return (
+          <div>
+            <p>
+              <strong>Loaded sync</strong>
+            </p>
+            <Details
+              id="test"
+              action={() => {
+                return "Hello";
+              }}
+            >
+              {(message) => <span>{message}</span>}
+            </Details>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DetailsLoadAfter1sDemo = () => {
+        return (
+          <div>
+            <p>
+              <strong>Loaded after 1s</strong>
+            </p>
+            <Details
+              id="test_2"
+              action={async () => {
+                await new Promise((resolve) => {
+                  setTimeout(resolve, 1000);
+                });
+                return "Hello";
+              }}
+              label="Custom summary"
+            >
+              {(content) => content}
+            </Details>
+          </div>
         );
       };
 
@@ -140,6 +96,70 @@
                 </>
               }
             ></Details>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const DetailsFullControlDemo = () => {
+        return (
+          <div>
+            <p>
+              <strong>Full control (abort, reload)</strong>
+            </p>
+            <Details
+              id="test_4"
+              action={async (_, { signal }) => {
+                await new Promise((resolve) => {
+                  const timeout = setTimeout(resolve, 1000);
+                  signal.addEventListener("abort", () => {
+                    clearTimeout(timeout);
+                  });
+                });
+                return "Hello";
+              }}
+            >
+              {{
+                loading: (action) => {
+                  return (
+                    <span>
+                      Loading...
+                      <button
+                        onClick={() => {
+                          action.abort();
+                        }}
+                      >
+                        Abort
+                      </button>
+                    </span>
+                  );
+                },
+                aborted: (action) => (
+                  <>
+                    <span style="color: red">Aborted</span>
+                    <button
+                      onClick={() => {
+                        action.rerun();
+                      }}
+                    >
+                      Reload
+                    </button>
+                  </>
+                ),
+                completed: (message, action) => (
+                  <>
+                    <span>{message}</span>
+                    <button
+                      onClick={() => {
+                        action.rerun();
+                      }}
+                    >
+                      Reload
+                    </button>
+                  </>
+                ),
+              }}
+            </Details>
           </div>
         );
       };
