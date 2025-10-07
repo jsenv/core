@@ -86,31 +86,54 @@ export const useKeyboardShortcuts = (
   useActionEvents(elementRef, {
     onPrevented: onActionPrevented,
     onAction: (actionEvent) => {
+      const { shortcut } = actionEvent.detail.meta || {};
+      if (!shortcut) {
+        // not a shortcut (an other interaction triggered the action, don't request it again)
+        return;
+      }
       // action can be a function or an action object, whem a function we must "wrap" it in a function returning that function
       // otherwise setState would call that action immediately
       // setAction(() => actionEvent.detail.action);
-      executeAction(actionEvent, { requester: document.activeElement });
+      executeAction(actionEvent, {
+        requester: document.activeElement,
+      });
     },
     onStart: (e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
       if (!allowConcurrentActions) {
         shortcutActionIsBusyRef.current = true;
       }
-      e.detail.meta?.shortcut?.onStart?.(e);
+      shortcut.onStart?.(e);
       onActionStart?.(e);
     },
     onAbort: (e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
       shortcutActionIsBusyRef.current = false;
-      e.detail.meta?.shortcut?.onAbort?.(e);
+      shortcut.onAbort?.(e);
       onActionAbort?.(e);
     },
     onError: (error, e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
       shortcutActionIsBusyRef.current = false;
-      e.detail.meta?.shortcut?.onError?.(error, e);
+      shortcut.onError?.(error, e);
       onActionError?.(error, e);
     },
     onEnd: (e) => {
+      const { shortcut } = e.detail.meta || {};
+      if (!shortcut) {
+        return;
+      }
       shortcutActionIsBusyRef.current = false;
-      e.detail.meta?.shortcut?.onEnd?.(e);
+      shortcut.onEnd?.(e);
       onActionEnd?.(e);
     },
   });
