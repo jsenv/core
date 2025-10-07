@@ -98,13 +98,8 @@ const DetailsBasic = forwardRef((props, ref) => {
    * - https://stackoverflow.com/questions/58942600/react-html-details-toggles-uncontrollably-when-starts-open
    *
    */
-  const mountedRef = useRef(false);
-  useEffect(() => {
-    mountedRef.current = true;
-  }, []);
 
   const summaryRef = useRef(null);
-
   useKeyboardShortcuts(innerRef, [
     {
       key: openKeyShortcut,
@@ -154,6 +149,11 @@ const DetailsBasic = forwardRef((props, ref) => {
       },
     },
   ]);
+
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+  }, []);
 
   return (
     <details
@@ -213,7 +213,9 @@ const DetailsWithAction = forwardRef((props, ref) => {
   });
   useActionEvents(innerRef, {
     onPrevented: onActionPrevented,
-    onAction: executeAction,
+    onAction: (e) => {
+      executeAction(e);
+    },
     onStart: onActionStart,
     onError: onActionError,
     onEnd: onActionEnd,

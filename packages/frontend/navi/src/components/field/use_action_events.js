@@ -1,6 +1,7 @@
 import { useLayoutEffect, useState } from "preact/hooks";
 
 import { addManyEventListeners } from "../../utils/add_many_event_listeners.js";
+import { useStableCallback } from "../use_stable_callback.js";
 
 export const useActionEvents = (
   elementRef,
@@ -19,6 +20,15 @@ export const useActionEvents = (
     onEnd,
   },
 ) => {
+  onCancel = useStableCallback(onCancel);
+  onRequested = useStableCallback(onRequested);
+  onPrevented = useStableCallback(onPrevented);
+  onAction = useStableCallback(onAction);
+  onStart = useStableCallback(onStart);
+  onAbort = useStableCallback(onAbort);
+  onError = useStableCallback(onError);
+  onEnd = useStableCallback(onEnd);
+
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
@@ -39,7 +49,16 @@ export const useActionEvents = (
       },
       actionend: onEnd,
     });
-  }, [onCancel, onPrevented, onAction, onStart, onError, onEnd]);
+  }, [
+    onCancel,
+    onRequested,
+    onPrevented,
+    onAction,
+    onStart,
+    onAbort,
+    onError,
+    onEnd,
+  ]);
 };
 
 export const useRequestedActionStatus = (elementRef) => {
