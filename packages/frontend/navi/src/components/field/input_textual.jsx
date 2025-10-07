@@ -28,43 +28,49 @@ import {
 
 import { useActionStatus } from "../../use_action_status.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import {
-  useActionBoundToOneParam,
-  useOneFormParam,
-} from "../action_execution/use_action.js";
+import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
 import "./field_css.js";
-import {
-  FieldGroupActionRequesterContext,
-  FieldGroupDisabledContext,
-  FieldGroupLoadingContext,
-  FieldGroupReadOnlyContext,
-} from "./field_group_context.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useFormEvents } from "./use_form_events.js";
-import { useUIState, useUIStateController } from "./use_ui_state_controller.js";
+import {
+  DisabledContext,
+  LoadingContext,
+  LoadingElementContext,
+  ReadOnlyContext,
+  UIStateContext,
+  UIStateControllerContext,
+  useUIState,
+  useUIStateController,
+} from "./use_ui_state_controller.js";
 
 export const InputTextual = forwardRef((props, ref) => {
   const uiStateController = useUIStateController(props, "input");
+  const uiState = useUIState(uiStateController);
 
-  return renderActionableComponent({ uiStateController, ...props }, ref, {
+  const input = renderActionableComponent(props, ref, {
     Basic: InputTextualBasic,
     WithAction: InputTextualWithAction,
     InsideForm: InputTextualInsideForm,
   });
+  return (
+    <UIStateControllerContext.Provider value={uiStateController}>
+      <UIStateContext.Provider value={uiState}>{input}</UIStateContext.Provider>
+    </UIStateControllerContext.Provider>
+  );
 });
 
 const InputTextualBasic = forwardRef((props, ref) => {
-  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
+  const uiStateController = useContext(UIStateControllerContext);
+  const uiState = useContext(UIStateContext);
   const {
-    uiStateController,
     type,
     onInput,
 
@@ -83,14 +89,13 @@ const InputTextualBasic = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const uiState = useUIState(uiStateController);
-  const value =
+  const innerValue =
     type === "datetime-local" ? convertToLocalTimezone(uiState) : uiState;
   const innerLoading =
-    loading || (groupLoading && groupActionRequester === innerRef.current);
+    loading || (contextLoading && contextLoadingElement === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || groupDisabled;
+    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  const innerDisabled = disabled || contextDisabled;
   // infom any <label> parent of our readOnly state
   reportReadOnlyOnLabel?.(innerReadOnly);
   useAutoFocus(innerRef, autoFocus, {
@@ -105,7 +110,7 @@ const InputTextualBasic = forwardRef((props, ref) => {
       ref={innerRef}
       type={type}
       data-value={uiState}
-      value={value}
+      value={innerValue}
       data-field=""
       data-field-with-border=""
       data-custom={appearance === "custom" ? "" : undefined}
@@ -146,10 +151,10 @@ const InputTextualBasic = forwardRef((props, ref) => {
 });
 
 const InputTextualWithAction = forwardRef((props, ref) => {
+  const uiState = useContext(UIStateContext);
   const {
-    uiStateController,
     action,
-
+    loading,
     onCancel,
     onActionPrevented,
     onActionStart,
@@ -164,7 +169,6 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   } = props;
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
-  const uiState = useUIState(uiStateController);
   const [boundAction] = useActionBoundToOneParam(action, uiState);
   const { loading: actionLoading } = useActionStatus(boundAction);
   const executeAction = useExecuteAction(innerRef, {
@@ -222,71 +226,39 @@ const InputTextualWithAction = forwardRef((props, ref) => {
   });
 
   return (
-    <FieldGroupLoadingContext.Provider value={actionLoading}>
-      <InputTextualBasic
-        {...rest}
-        ref={innerRef}
-        uiStateController={uiStateController}
-        data-action={boundAction.name}
-        onInput={(e) => {
-          valueAtInteractionRef.current = null;
-          onInput?.(e);
-        }}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter") {
-            return;
-          }
-          e.preventDefault();
-          /**
-           * Browser trigger a "change" event right after the enter is pressed
-           * if the input value has changed.
-           * We need to prevent the next change event otherwise we would request action twice
-           */
-          valueAtInteractionRef.current = e.target.value;
-          requestAction(e.target, boundAction, { event: e });
-          onKeyDown?.(e);
-        }}
-      />
-    </FieldGroupLoadingContext.Provider>
+    <InputTextualBasic
+      data-action={boundAction.name}
+      {...rest}
+      ref={innerRef}
+      loading={loading || actionLoading}
+      onInput={(e) => {
+        valueAtInteractionRef.current = null;
+        onInput?.(e);
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter") {
+          return;
+        }
+        e.preventDefault();
+        /**
+         * Browser trigger a "change" event right after the enter is pressed
+         * if the input value has changed.
+         * We need to prevent the next change event otherwise we would request action twice
+         */
+        valueAtInteractionRef.current = e.target.value;
+        requestAction(e.target, boundAction, { event: e });
+        onKeyDown?.(e);
+      }}
+    />
   );
 });
 const InputTextualInsideForm = forwardRef((props, ref) => {
-  const { formContext, uiStateController, name, onKeyDown, ...rest } = props;
-  const { formAction } = formContext;
-  const innerRef = useRef(null);
-  useImperativeHandle(ref, () => innerRef.current);
-  const uiState = useUIState(uiStateController);
-  useOneFormParam(name, uiState);
-
-  useFormEvents(innerRef, {
-    onFormReset: (e) => {
-      e.preventDefault();
-      uiStateController.resetUIState(e);
-    },
-    onFormActionAbort: () => {
-      // user might want to re-submit as is
-      // or change the ui state before re-submitting
-      // we can't decide for him
-    },
-    onFormActionError: () => {
-      // user might want to re-submit as is
-      // or change the ui state before re-submitting
-      // we can't decide for him
-    },
-    onFormActionEnd: (e) => {
-      // form action is a success
-      // we can get rid of the nav state
-      // that was keeping the ui state in case user navigates aways without submission
-      uiStateController.actionEnd(e);
-    },
-  });
+  const { onKeyDown, ...rest } = props;
 
   return (
     <InputTextualBasic
       {...rest}
-      ref={innerRef}
-      uiStateController={uiStateController}
-      name={name}
+      ref={ref}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           const inputElement = e.target;
@@ -295,10 +267,15 @@ const InputTextualInsideForm = forwardRef((props, ref) => {
             "button[type='submit'], input[type='submit'], input[type='image']",
           );
           e.preventDefault();
-          requestAction(form, formAction, {
-            event: e,
-            requester: formSubmitButton ? formSubmitButton : inputElement,
-          });
+          form.dispatchEvent(
+            new CustomEvent("actionrequested", {
+              detail: {
+                requester: formSubmitButton ? formSubmitButton : inputElement,
+                event: e,
+                meta: { isSubmit: true },
+              },
+            }),
+          );
         }
         onKeyDown?.(e);
       }}

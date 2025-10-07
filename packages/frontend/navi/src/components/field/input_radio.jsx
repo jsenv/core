@@ -10,16 +10,14 @@ import {
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
 import { LoadableInlineElement } from "../loader/loader_background.jsx";
 import { useAutoFocus } from "../use_auto_focus.js";
-import {
-  FieldGroupActionRequesterContext,
-  FieldGroupDisabledContext,
-  FieldGroupLoadingContext,
-  FieldGroupNameContext,
-  FieldGroupReadOnlyContext,
-  FieldGroupRequiredContext,
-} from "./field_group_context.js";
 import { ReportReadOnlyOnLabelContext } from "./label.jsx";
 import {
+  DisabledContext,
+  FieldNameContext,
+  LoadingContext,
+  LoadingElementContext,
+  ReadOnlyContext,
+  RequiredContext,
   UIStateContext,
   UIStateControllerContext,
   useUIState,
@@ -216,12 +214,12 @@ export const InputRadio = forwardRef((props, ref) => {
 });
 
 const InputRadioBasic = forwardRef((props, ref) => {
-  const groupName = useContext(FieldGroupNameContext);
-  const groupReadOnly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupRequired = useContext(FieldGroupRequiredContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
-  const groupActionRequester = useContext(FieldGroupActionRequesterContext);
+  const contextName = useContext(FieldNameContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextRequired = useContext(RequiredContext);
+  const contextLoading = useContext(LoadingContext);
+  const contextLoadingElement = useContext(LoadingElementContext);
   const uiStateController = useContext(UIStateControllerContext);
   const uiState = useContext(UIStateContext);
   const reportReadOnlyOnLabel = useContext(ReportReadOnlyOnLabelContext);
@@ -244,13 +242,13 @@ const InputRadioBasic = forwardRef((props, ref) => {
   const innerRef = useRef(null);
   useImperativeHandle(ref, () => innerRef.current);
 
-  const innerName = name || groupName;
-  const innerDisabled = disabled || groupDisabled;
-  const innerRequired = required || groupRequired;
+  const innerName = name || contextName;
+  const innerDisabled = disabled || contextDisabled;
+  const innerRequired = required || contextRequired;
   const innerLoading =
-    loading || (groupLoading && groupActionRequester === innerRef.current);
+    loading || (contextLoading && contextLoadingElement === innerRef.current);
   const innerReadOnly =
-    readOnly || groupReadOnly || innerLoading || uiStateController.readOnly;
+    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
 
   reportReadOnlyOnLabel?.(innerReadOnly);
   useAutoFocus(innerRef, autoFocus);
@@ -387,8 +385,4 @@ const InputRadioWithAction = () => {
   );
 };
 
-const InputRadioInsideForm = () => {
-  throw new Error(
-    `<Input type="radio" /> must be used wrapped by <RadioList /> when inside a <Form />`,
-  );
-};
+const InputRadioInsideForm = InputRadio;

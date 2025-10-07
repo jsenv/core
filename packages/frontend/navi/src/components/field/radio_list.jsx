@@ -8,26 +8,19 @@ import {
 } from "preact/hooks";
 
 import { useActionStatus } from "../../use_action_status.js";
-import { FormContext } from "../action_execution/form_context.js";
 import { renderActionableComponent } from "../action_execution/render_actionable_component.jsx";
-import {
-  useActionBoundToOneParam,
-  useOneFormParam,
-} from "../action_execution/use_action.js";
+import { useActionBoundToOneParam } from "../action_execution/use_action.js";
 import { useExecuteAction } from "../action_execution/use_execute_action.js";
-import {
-  FieldGroupActionRequesterContext,
-  FieldGroupDisabledContext,
-  FieldGroupLoadingContext,
-  FieldGroupNameContext,
-  FieldGroupReadOnlyContext,
-  FieldGroupRequiredContext,
-  FieldGroupUIStateControllerContext,
-} from "./field_group_context.js";
 import { InputRadio } from "./input_radio.jsx";
 import { useActionEvents } from "./use_action_events.js";
-import { useFormEvents } from "./use_form_events.js";
 import {
+  DisabledContext,
+  FieldNameContext,
+  LoadingContext,
+  LoadingElementContext,
+  ParentUIStateControllerContext,
+  ReadOnlyContext,
+  RequiredContext,
   UIStateContext,
   UIStateControllerContext,
   useUIGroupStateController,
@@ -56,7 +49,6 @@ export const RadioList = forwardRef((props, ref) => {
     },
   });
   const uiState = useUIState(uiStateController);
-
   const radioList = renderActionableComponent(props, ref, {
     Basic: RadioListBasic,
     WithAction: RadioListWithAction,
@@ -73,19 +65,19 @@ export const RadioList = forwardRef((props, ref) => {
 export const Radio = InputRadio;
 
 const RadioListBasic = forwardRef((props, ref) => {
-  const groupReadonly = useContext(FieldGroupReadOnlyContext);
-  const groupDisabled = useContext(FieldGroupDisabledContext);
-  const groupLoading = useContext(FieldGroupLoadingContext);
+  const contextReadOnly = useContext(ReadOnlyContext);
+  const contextDisabled = useContext(DisabledContext);
+  const contextLoading = useContext(LoadingContext);
   const uiStateController = useContext(UIStateControllerContext);
   const { name, loading, disabled, readOnly, children, required, ...rest } =
     props;
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
 
-  const innerLoading = loading || groupLoading;
+  const innerLoading = loading || contextLoading;
   const innerReadOnly =
-    readOnly || groupReadonly || innerLoading || uiStateController.readOnly;
-  const innerDisabled = disabled || groupDisabled;
+    readOnly || contextReadOnly || innerLoading || uiStateController.readOnly;
+  const innerDisabled = disabled || contextDisabled;
 
   return (
     <div
@@ -99,19 +91,19 @@ const RadioListBasic = forwardRef((props, ref) => {
         uiStateController.resetUIState(e);
       }}
     >
-      <FieldGroupUIStateControllerContext.Provider value={uiStateController}>
-        <FieldGroupNameContext.Provider value={name}>
-          <FieldGroupReadOnlyContext.Provider value={innerReadOnly}>
-            <FieldGroupDisabledContext.Provider value={innerDisabled}>
-              <FieldGroupRequiredContext.Provider value={required}>
-                <FieldGroupLoadingContext.Provider value={innerLoading}>
+      <ParentUIStateControllerContext.Provider value={uiStateController}>
+        <FieldNameContext.Provider value={name}>
+          <ReadOnlyContext.Provider value={innerReadOnly}>
+            <DisabledContext.Provider value={innerDisabled}>
+              <RequiredContext.Provider value={required}>
+                <LoadingContext.Provider value={innerLoading}>
                   {children}
-                </FieldGroupLoadingContext.Provider>
-              </FieldGroupRequiredContext.Provider>
-            </FieldGroupDisabledContext.Provider>
-          </FieldGroupReadOnlyContext.Provider>
-        </FieldGroupNameContext.Provider>
-      </FieldGroupUIStateControllerContext.Provider>
+                </LoadingContext.Provider>
+              </RequiredContext.Provider>
+            </DisabledContext.Provider>
+          </ReadOnlyContext.Provider>
+        </FieldNameContext.Provider>
+      </ParentUIStateControllerContext.Provider>
     </div>
   );
 });
@@ -128,6 +120,7 @@ const RadioListWithAction = forwardRef((props, ref) => {
     onActionError,
     onActionEnd,
     actionErrorEffect,
+    loading,
     children,
     ...rest
   } = props;
@@ -166,9 +159,9 @@ const RadioListWithAction = forwardRef((props, ref) => {
 
   return (
     <RadioListBasic
+      data-action={boundAction}
       {...rest}
       ref={innerRef}
-      data-action={boundAction}
       onChange={(e) => {
         const radio = e.target;
         const radioListContainer = innerRef.current;
@@ -177,38 +170,12 @@ const RadioListWithAction = forwardRef((props, ref) => {
           requester: radio,
         });
       }}
+      loading={loading || actionLoading}
     >
-      <FieldGroupLoadingContext.Provider value={actionLoading}>
-        <FieldGroupActionRequesterContext.Provider value={actionRequester}>
-          {children}
-        </FieldGroupActionRequesterContext.Provider>
-      </FieldGroupLoadingContext.Provider>
+      <LoadingElementContext.Provider value={actionRequester}>
+        {children}
+      </LoadingElementContext.Provider>
     </RadioListBasic>
   );
 });
-const RadioListInsideForm = forwardRef((props, ref) => {
-  const uiStateController = useContext(UIStateControllerContext);
-  const uiState = useContext(UIStateContext);
-  const { name, children, ...rest } = props;
-  const innerRef = useRef();
-  useImperativeHandle(ref, () => innerRef.current);
-  useOneFormParam(name, uiState);
-
-  useFormEvents(innerRef, {
-    onFormReset: (e) => {
-      e.preventDefault();
-      uiStateController.resetUIState(e);
-    },
-    onFormActionAbort: () => {},
-    onFormActionError: () => {},
-  });
-
-  return (
-    <RadioListBasic {...rest} ref={innerRef} name={name}>
-      {/* <input type="radio" /> must be ignorant of the <form>
-      otherwise they would try to update the <form>.
-      This responsability belongs to the radio list which manages the list of radios */}
-      <FormContext.Provider value={null}> {children}</FormContext.Provider>
-    </RadioListBasic>
-  );
-});
+const RadioListInsideForm = RadioListBasic;

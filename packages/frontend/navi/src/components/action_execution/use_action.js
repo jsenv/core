@@ -1,65 +1,8 @@
 import { useSignal } from "@preact/signals";
-import { useCallback, useContext, useRef } from "preact/hooks";
+import { useCallback, useRef } from "preact/hooks";
 
 import { createAction } from "../../actions.js";
 import { addIntoArray, removeFromArray } from "../../utils/array_add_remove.js";
-import { FormContext } from "./form_context.js";
-
-let debug = false;
-
-// used by <form> to have their own action bound to many parameters
-// any form element within the <form> will update these params
-// these params are also assigned just before executing the action to ensure they are in sync
-// (could also be used by <fieldset> but I think fieldset are not going to be used this way and
-// we will reserve this behavior to <form>)
-export const useFormActionBoundToFormParams = (action) => {
-  const formParamsSignal = useSignal({});
-  const formActionBoundActionToFormParams = useBoundAction(
-    action,
-    formParamsSignal,
-  );
-  const updateFormParams = useCallback((value) => {
-    formParamsSignal.value = value;
-  }, []);
-
-  return [
-    formActionBoundActionToFormParams,
-    formParamsSignal,
-    updateFormParams,
-  ];
-};
-export const useOneFormParam = (name, externalValue) => {
-  if (!name) {
-    throw new Error("useOneFormParam: name is required");
-  }
-
-  const { formParamsSignal } = useContext(FormContext);
-  const getValue = useCallback(() => formParamsSignal.value[name], []);
-  const setValue = useCallback(
-    (value) => updateParamsSignal(formParamsSignal, { [name]: value }),
-    [],
-  );
-  const mountedRef = useRef(false);
-  if (!mountedRef.current) {
-    // When the UI has a default state
-    // - defaultChecked/defaultValue
-    // - a valued restore from local storage, history, navigation, etc.
-    // - a value inlined into the js logic
-    // We want the form params to reflect that initial state right away
-    // This is not stricly required as form will collect values upon submission
-    // but this allow to see the form [data-action] in devtools being in sync
-    mountedRef.current = true;
-    setValue(externalValue);
-  }
-  const externalValueRef = useRef(externalValue);
-  if (externalValue !== externalValueRef.current) {
-    externalValueRef.current = externalValue;
-    setValue(externalValue);
-  }
-
-  const value = getValue();
-  return [value, setValue];
-};
 
 // used by form elements such as <input>, <select>, <textarea> to have their own action bound to a single parameter
 // when inside a <form> the form params are updated when the form element single param is updated
@@ -79,7 +22,6 @@ export const useActionBoundToOneParam = (action, externalValue) => {
   const value = getValue();
   return [boundAction, value, setValue];
 };
-
 export const useActionBoundToOneArrayParam = (
   action,
   name,
@@ -108,71 +50,9 @@ export const useActionBoundToOneArrayParam = (
   result.remove = remove;
   return result;
 };
-export const useOneFormArrayParam = (
-  name,
-  externalValue,
-  fallbackValue,
-  defaultValue,
-) => {
-  const [getValue, setValue, initialValue] = useOneFormParam(
-    name,
-    externalValue,
-    fallbackValue,
-    defaultValue,
-  );
-  const add = (valueToAdd, valueArray = getValue()) => {
-    setValue(addIntoArray(valueArray, valueToAdd));
-  };
-  const remove = (valueToRemove, valueArray = getValue()) => {
-    setValue(removeFromArray(valueArray, valueToRemove));
-  };
-  const result = [getValue, setValue, initialValue];
-  result.add = add;
-  result.remove = remove;
-  return result;
-};
-
 // used by <details> to just call their action
 export const useAction = (action, paramsSignal) => {
   return useBoundAction(action, paramsSignal);
-};
-
-export const updateParamsSignal = (paramsSignal, object) => {
-  const currentParams = paramsSignal.peek();
-  const paramsCopy = { ...currentParams };
-  let modified = false;
-  for (const key of Object.keys(object)) {
-    const value = object[key];
-    const currentValue = currentParams[key];
-    if (Object.hasOwn(currentParams, key)) {
-      if (value !== currentValue) {
-        modified = true;
-        paramsCopy[key] = value;
-      }
-    } else {
-      modified = true;
-      paramsCopy[key] = value;
-    }
-  }
-  if (modified) {
-    if (debug) {
-      console.debug(
-        `Updating params with new params:`,
-        object,
-        `result:`,
-        paramsCopy,
-      );
-    }
-    paramsSignal.value = paramsCopy;
-  } else if (debug) {
-    console.debug(
-      `No change in params, not updating.`,
-      `current params:`,
-      currentParams,
-      `new params:`,
-      object,
-    );
-  }
 };
 
 const useBoundAction = (action, actionParamsSignal) => {

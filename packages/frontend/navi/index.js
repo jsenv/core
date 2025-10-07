@@ -38,7 +38,6 @@ export {
   Checkbox,
   CheckboxList,
 } from "./src/components/field/checkbox_list.jsx";
-export { Field } from "./src/components/field/field.jsx";
 export { Form } from "./src/components/field/form.jsx";
 export { Input } from "./src/components/field/input.jsx";
 export { Label } from "./src/components/field/label.jsx";
