@@ -34,7 +34,6 @@ import.meta.css = /* css */ `
     --checked-disabled-color: #d3d3d3;
 
     /* TODO: find a better way maybe? */
-    --field-background-color: var(--checked-color);
     --field-strong-color: var(--checked-color);
   }
 
@@ -85,16 +84,16 @@ import.meta.css = /* css */ `
   }
 
   .custom_checkbox_wrapper input[data-readonly] + .custom_checkbox {
-    background-color: var(--field-disabled-background-color);
-    border-color: var(--field-disabled-border-color);
+    background-color: var(--field-readonly-background-color);
+    border-color: var(--field-readonly-border-color);
   }
   .custom_checkbox_wrapper input[data-readonly]:checked + .custom_checkbox {
     background: var(--checked-disabled-color);
     border-color: var(--checked-disabled-color);
   }
   .custom_checkbox_wrapper:hover input[data-readonly] + .custom_checkbox {
-    background-color: var(--field-disabled-background-color);
-    border-color: var(--field-disabled-border-color);
+    background-color: var(--field-readonly-background-color);
+    border-color: var(--field-readonly-border-color);
   }
   .custom_checkbox_wrapper:hover
     input[data-readonly]:checked

@@ -112,7 +112,10 @@ import.meta.css = /* css */ `
   [data-field-with-hover]:disabled:hover,
   [data-field-with-hover][data-disabled]:hover {
     outline-color: var(--field-disabled-border-color);
-    background-color: var(--field-disabled-background-color);
     color: var(--field-disabled-text-color);
+  }
+  [data-field-with-background]:disabled,
+  [data-field-with-background][disabled] {
+    background-color: var(--field-disabled-background-color);
   }
 `;
