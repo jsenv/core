@@ -202,10 +202,8 @@
         return (
           <div className="demo-grid">
             <LoadingDemo />
-            <ActionDemo />
             <ReadOnlyDemo />
             <DisabledDemo />
-            <InitialValueDemo />
           </div>
         );
       };
@@ -223,45 +221,13 @@
               <Input
                 loading={loading}
                 value={value}
-                onValueChange={setValue}
+                onUIStateChange={setValue}
                 placeholder="Enter some text..."
               />
             </div>
             <div className="control-group">
               <h4>Native HTML Input</h4>
               <input placeholder="Enter some text..." />
-            </div>
-            <div className="button-group">
-              <button onClick={() => setLoading(!loading)}>
-                {loading ? "Stop Loading" : "Start Loading"}
-              </button>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const ActionDemo = () => {
-        const [value, setValue] = useState();
-        const [loading, setLoading] = useState(false);
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">⚡ Action Input</h3>
-            <div className="control-group">
-              <h4>@jsenv/navi Input with Action</h4>
-              <Input
-                name="action-input"
-                value={value}
-                onValueChange={setValue}
-                action={() => {}}
-                loading={loading}
-                placeholder="placeholder..."
-              />
-            </div>
-            <div className="control-group">
-              <h4>Native HTML Input</h4>
-              <input placeholder="placeholder..." />
             </div>
             <div className="button-group">
               <button onClick={() => setLoading(!loading)}>
@@ -320,46 +286,6 @@
               <button onClick={() => setLoading(!loading)}>
                 {loading ? "Stop Loading" : "Start Loading"}
               </button>
-            </div>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const InitialValueDemo = () => {
-        const [value, setValue] = useState("hello world");
-
-        return (
-          <div className="demo-card">
-            <h3 className="demo-title">📝 Initial Value (no action)</h3>
-            <div className="control-group">
-              <h4>@jsenv/navi Input</h4>
-              <Input
-                value={value}
-                onValueChange={setValue}
-                placeholder="Type here..."
-              />
-            </div>
-            <div className="control-group">
-              <h4>Native HTML Input</h4>
-              <input
-                value={value}
-                onInput={(e) => setValue(e.currentTarget.value)}
-                placeholder="Type here..."
-              />
-            </div>
-            <div className="button-group">
-              <button onClick={() => setValue("Updated from outside")}>
-                Set from outside
-              </button>
-              <button
-                onClick={() =>
-                  setValue(`Value @ ${new Date().toLocaleTimeString()}`)
-                }
-              >
-                Set timestamp
-              </button>
-              <button onClick={() => setValue("")}>Clear</button>
             </div>
           </div>
         );
