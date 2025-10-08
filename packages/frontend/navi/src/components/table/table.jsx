@@ -67,9 +67,12 @@ import {
   useTableDrag,
   useTableDragContextValue,
 } from "./drag/table_drag.js";
+import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
 import {
   TableCellColumnResizeHandles,
   TableCellRowResizeHandles,
+  TableColumnResizer,
+  TableRowResizer,
 } from "./resize/table_resize.jsx";
 import {
   TableSizeProvider,
@@ -88,8 +91,10 @@ import {
   TableStickyContext,
   useTableStickyContextValue,
 } from "./sticky/table_sticky.js";
+import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
+import { TableUIViewport } from "./table_ui_viewport.jsx";
 
 const [useColumnTrackerProviders, useRegisterColumn, useColumnByIndex] =
   createIsolatedItemTracker();
@@ -256,9 +261,16 @@ export const Table = forwardRef((props, ref) => {
             </TableSelectionProvider>
           </TableSizeProvider>
         </table>
-        <TableStickyContext.Provider value={stickyContextValue}>
-          <TableUI />
-        </TableStickyContext.Provider>
+        <TableUI>
+          <TableDragCloneContainer />
+          <TableColumnResizer />
+          <TableRowResizer />
+        </TableUI>
+        <TableUIViewport tableRef={innerRef}>
+          <TableStickyContext.Provider value={stickyContextValue}>
+            <TableStickyFrontier />
+          </TableStickyContext.Provider>
+        </TableUIViewport>
       </div>
     </div>
   );

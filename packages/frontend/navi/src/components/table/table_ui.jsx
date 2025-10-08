@@ -1,8 +1,5 @@
 import { useLayoutEffect, useRef } from "preact/hooks";
 
-import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
-import { TableColumnResizer, TableRowResizer } from "./resize/table_resize.jsx";
-import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
 import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
 
 /**
@@ -42,7 +39,7 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableUI = () => {
+export const TableUI = ({ children }) => {
   const ref = useRef();
 
   useLayoutEffect(() => {
@@ -69,10 +66,7 @@ export const TableUI = () => {
 
   return (
     <div ref={ref} className="navi_table_ui">
-      <TableDragCloneContainer />
-      <TableColumnResizer />
-      <TableRowResizer />
-      <TableStickyFrontier />
+      {children}
     </div>
   );
 };
