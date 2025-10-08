@@ -14,6 +14,8 @@ const KEEP_MARKERS_ON_RELEASE = true;
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 
+const MARKER_SIZE = 12;
+
 export const setupVisualMarkers = ({ direction, positionedParent }) => {
   if (!DRAG_DEBUG_MARKERS) {
     return {
@@ -197,14 +199,11 @@ const createDebugMarker = ({ name, x, y, color = "255 0 0", side }) => {
   const marker = document.createElement("div");
   marker.className = `navi_debug_marker`;
   marker.setAttribute(`data-${side}`, "");
-
   // Set the color as a CSS custom property
   marker.style.setProperty("--marker-color", `rgb(${color})`);
-
   // Position markers exactly at the boundary coordinates
-  marker.style.left = `${x}px`;
-  marker.style.top = `${y}px`;
-
+  marker.style.left = side === "right" ? `${x - MARKER_SIZE}px` : `${x}px`;
+  marker.style.top = side === "bottom" ? `${y - MARKER_SIZE}px` : `${y}px`;
   marker.title = name;
 
   // Add label
@@ -245,29 +244,31 @@ import.meta.css = /* css */ `
     position: fixed;
     z-index: 999999;
     pointer-events: none;
+
+    --marker-size: ${MARKER_SIZE}px;
   }
 
   .navi_debug_marker--vertical {
-    width: 12px;
+    width: var(--marker-size);
     height: 100vh;
   }
 
   .navi_debug_marker--horizontal {
-    width: 12px;
+    width: var(--marker-size);
     height: 100vh;
   }
 
   /* Markers based on side rather than orientation */
   .navi_debug_marker[data-left],
   .navi_debug_marker[data-right] {
-    width: 12px;
+    width: var(--marker-size);
     height: 100vh;
   }
 
   .navi_debug_marker[data-top],
   .navi_debug_marker[data-bottom] {
     width: 100vw;
-    height: 12px;
+    height: var(--marker-size);
   }
 
   /* Gradient directions based on side, using CSS custom properties for color */
@@ -333,7 +334,7 @@ import.meta.css = /* css */ `
 
   /* Left side markers - vertical with 90° rotation */
   .navi_debug_marker[data-left] .navi_debug_marker_label {
-    left: 0px; /* Exactly on the line */
+    left: 10px; /* Exactly on the line */
     top: 20px; /* Small offset from top */
     transform: rotate(90deg);
     transform-origin: left center;
