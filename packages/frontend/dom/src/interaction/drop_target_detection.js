@@ -21,7 +21,6 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
 
   // Get all elements under the mouse cursor (respects stacking order)
   const elementsUnderMouse = document.elementsFromPoint(mouseX, mouseY);
-  console.log({ mouseX }, elementsUnderMouse);
 
   // Find the first target element in the stack (topmost visible target)
   let targetElement = null;

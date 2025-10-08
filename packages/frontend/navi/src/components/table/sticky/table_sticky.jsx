@@ -421,6 +421,8 @@ const initMoveStickyFrontierByMousedown = (
   mousedownEvent,
   {
     table,
+    frontierGhost,
+    frontierPreview,
     frontierIndex,
     onGrab,
     onDrag,
@@ -434,14 +436,6 @@ const initMoveStickyFrontierByMousedown = (
   const gestureName =
     axis === "x" ? "move-sticky-left-frontier" : "move-sticky-top-frontier";
   const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
-  const ghostSelector =
-    axis === "x"
-      ? ".navi_table_sticky_frontier_ghost[data-left]"
-      : ".navi_table_sticky_frontier_ghost[data-top]";
-  const previewSelector =
-    axis === "x"
-      ? ".navi_table_sticky_frontier_preview[data-left]"
-      : ".navi_table_sticky_frontier_preview[data-top]";
   const ghostVariableName =
     axis === "x"
       ? "--sticky-left-frontier-ghost-left"
@@ -452,8 +446,8 @@ const initMoveStickyFrontierByMousedown = (
       : "--sticky-top-frontier-preview-top";
 
   const tableContainer = table.closest(".navi_table_container");
-  const ghostElement = tableContainer.querySelector(ghostSelector);
-  const previewElement = tableContainer.querySelector(previewSelector);
+  const ghostElement = frontierGhost;
+  const previewElement = frontierPreview;
 
   const scrollableParent = getScrollableParent(table);
   // Reset scroll to prevent starting drag in obstacle position
