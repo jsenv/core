@@ -378,25 +378,21 @@ export const Tr = ({ id, height, children }) => {
 };
 
 const TableRowCells = ({ children, rowIndex, row }) => {
-  return (
-    <>
-      {children.map((child, columnIndex) => {
-        const column = useColumnByIndex(columnIndex);
-        const tableCellKey = column.id;
-        return (
-          <RowContext.Provider key={tableCellKey} value={row}>
-            <RowIndexContext.Provider value={rowIndex}>
-              <ColumnIndexContext.Provider value={columnIndex}>
-                <ColumnContext.Provider value={column}>
-                  {child}
-                </ColumnContext.Provider>
-              </ColumnIndexContext.Provider>
-            </RowIndexContext.Provider>
-          </RowContext.Provider>
-        );
-      })}
-    </>
-  );
+  return children.map((child, columnIndex) => {
+    const column = useColumnByIndex(columnIndex);
+    const tableCellKey = column.id;
+    return (
+      <RowContext.Provider key={tableCellKey} value={row}>
+        <RowIndexContext.Provider value={rowIndex}>
+          <ColumnIndexContext.Provider value={columnIndex}>
+            <ColumnContext.Provider value={column}>
+              {child}
+            </ColumnContext.Provider>
+          </ColumnIndexContext.Provider>
+        </RowIndexContext.Provider>
+      </RowContext.Provider>
+    );
+  });
 };
 
 export const TableCell = forwardRef((props, ref) => {

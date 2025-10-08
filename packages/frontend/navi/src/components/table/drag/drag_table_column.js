@@ -191,19 +191,8 @@ export const initDragTableColumnByMousedown = (
         // thuse preact needed to re-create a DOM node
         return;
       }
-      if (dropColumnIndex === columnIndex) {
-        cellThatWouldBeFocusedByMousedown.focus();
-      } else {
-        // the element to focus has changed it's an other <th>/<td> that
-        // will be at the correct position.
-        // We need to wait preact re-render to know?
-        // not really we know the cell is at the next columnIndex
-        const cellRow = cellThatWouldBeFocusedByMousedown.parentNode;
-        const cellAtNewPosition = cellRow.children[dropColumnIndex];
-        if (cellAtNewPosition) {
-          cellAtNewPosition.focus();
-        }
-      }
+
+      cellThatWouldBeFocusedByMousedown.focus();
     });
   }
 
