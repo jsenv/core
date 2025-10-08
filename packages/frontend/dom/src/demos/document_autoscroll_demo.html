@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document Auto-Scroll Demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+        min-height: 300vh; /* Make page tall enough to scroll */
+      }
+
+      .demo-header {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-title {
+        margin: 0 0 10px 0;
+        font-size: 24px;
+        color: #333;
+      }
+
+      .demo-description {
+        margin: 0;
+        color: #666;
+        line-height: 1.5;
+      }
+
+      .draggable-element {
+        width: 120px;
+        height: 80px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 3px solid #333;
+        border-radius: 12px;
+        position: fixed;
+        top: 200px;
+        left: 50%;
+        transform: translateX(-50%);
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        transition: box-shadow 0.2s ease;
+        z-index: 1000;
+        user-select: none;
+      }
+
+      .draggable-element:hover {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+      }
+
+      .draggable-element[data-dragging] {
+        cursor: grabbing;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      }
+
+      .content-section {
+        background: white;
+        margin: 40px 0;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+
+      .content-section:nth-child(even) {
+        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+        color: #1976d2;
+      }
+
+      .content-section:nth-child(odd) {
+        background: linear-gradient(135deg, #f3e5f5, #ce93d8);
+        color: #7b1fa2;
+      }
+
+      .scroll-indicator {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        z-index: 2000;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-header">
+      <h1 class="demo-title">Document Auto-Scroll Demo</h1>
+      <p class="demo-description">
+        This demo tests document auto-scrolling behavior when dragging an
+        element.
+        <br /><strong>Instructions:</strong> Drag the purple element near the
+        top or bottom edges of the viewport to trigger auto-scrolling. <br />The
+        document itself is the scrollable parent, so scrolling should work
+        throughout the entire page.
+      </p>
+    </div>
+
+    <div class="draggable-element" id="dragElement">Drag Me</div>
+
+    <div class="scroll-indicator" id="scrollIndicator">Scroll: 0px</div>
+
+    <div class="content-section">
+      <h2>Section 1</h2>
+      <p>
+        Drag the element above towards the top edge of your viewport to test
+        upward auto-scrolling.
+      </p>
+    </div>
+
+    <div class="content-section">
+      <h2>Section 2</h2>
+      <p>
+        This is some content to make the page scrollable. Keep dragging down to
+        test auto-scroll behavior.
+      </p>
+    </div>
+
+    <div class="content-section">
+      <h2>Section 3</h2>
+      <p>
+        More content for testing. Drag the element near the bottom edge to
+        trigger downward scrolling.
+      </p>
+    </div>
+
+    <div class="content-section">
+      <h2>Section 4</h2>
+      <p>
+        Continue testing the auto-scroll behavior as you drag near viewport
+        edges.
+      </p>
+    </div>
+
+    <div class="content-section">
+      <h2>Section 5</h2>
+      <p>
+        Final section. The auto-scroll should work smoothly in both directions.
+      </p>
+    </div>
+
+    <script type="module">
+      import { createDragToMoveGesture } from "../interaction/drag_gesture.js";
+
+      const dragElement = document.getElementById("dragElement");
+      const scrollIndicator = document.getElementById("scrollIndicator");
+
+      // Update scroll indicator
+      const updateScrollIndicator = () => {
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        scrollIndicator.textContent = `Scroll: ${Math.round(scrollY)}px`;
+      };
+
+      // Initialize scroll indicator
+      updateScrollIndicator();
+      window.addEventListener("scroll", updateScrollIndicator);
+
+      // Create drag gesture with document as scroll container
+      const dragGesture = createDragToMoveGesture({
+        scrollContainer: document.documentElement,
+      });
+
+      // Set up the drag behavior
+      dragGesture.grab(dragElement, {
+        onStart: () => {
+          dragElement.setAttribute("data-dragging", "");
+          console.log("Drag started - document auto-scroll enabled");
+        },
+        onEnd: () => {
+          dragElement.removeAttribute("data-dragging");
+          console.log("Drag ended");
+        },
+      });
+
+      console.log("Document auto-scroll demo initialized");
+    </script>
+  </body>
+</html>
