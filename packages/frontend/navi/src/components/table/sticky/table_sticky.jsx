@@ -23,8 +23,8 @@ import { TableStickyContext } from "./table_sticky.js";
 import.meta.css = /* css */ `
   body {
     --sticky-frontier-color: #c0c0c0;
-    --sticky-left-frontier-width: 20px;
-    --sticky-top-frontier-height: 20px;
+    --sticky-frontier-size: 20px;
+    --sticky-frontier-ghost-size: 8px;
   }
 
   .navi_table th[data-sticky-top],
@@ -65,7 +65,7 @@ import.meta.css = /* css */ `
     top: var(--sticky-group-top-frontier, 0px);
     height: calc(var(--table-height) - var(--sticky-group-top-frontier));
     left: var(--sticky-group-left-frontier, 0px);
-    width: var(--sticky-left-frontier-width);
+    width: var(--sticky-frontier-size);
     background: linear-gradient(
       to right,
       rgba(0, 0, 0, 0.1) 0%,
@@ -77,7 +77,7 @@ import.meta.css = /* css */ `
     left: var(--sticky-group-left-frontier, 0px);
     width: calc(var(--table-width) - var(--sticky-group-left-frontier));
     top: var(--sticky-group-top-frontier, 0px);
-    height: var(--sticky-top-frontier-height);
+    height: var(--sticky-frontier-size);
     background: linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0.1) 0%,
@@ -97,7 +97,7 @@ import.meta.css = /* css */ `
   }
   .navi_table_sticky_frontier_preview {
     z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
-    background: red;
+    background: rgba(56, 121, 200, 0.5);
   }
   .navi_table_sticky_frontier_ghost[data-visible],
   .navi_table_sticky_frontier_preview[data-visible] {
@@ -106,7 +106,7 @@ import.meta.css = /* css */ `
   .navi_table_sticky_frontier_ghost[data-left],
   .navi_table_sticky_frontier_preview[data-left] {
     top: 0;
-    width: var(--sticky-left-frontier-width);
+    width: var(--sticky-frontier-ghost-size);
     height: var(--table-height, 100%);
   }
   .navi_table_sticky_frontier_ghost[data-left] {
@@ -120,7 +120,7 @@ import.meta.css = /* css */ `
   .navi_table_sticky_frontier_preview[data-top] {
     left: 0;
     width: var(--table-width, 100%);
-    height: var(--sticky-top-frontier-height);
+    height: var(--sticky-frontier-ghost-size);
   }
 
   .navi_table_sticky_frontier_ghost[data-top] {
