@@ -385,12 +385,14 @@ export const TableCell = forwardRef((props, ref) => {
     canResizeWidth,
     canResizeHeight,
     selectionImpact,
-    style,
-    cursor,
     onClick,
     action,
     name,
     valueSignal,
+    // appeareance
+    style,
+    cursor,
+    bold,
     children,
   } = props;
   const column = useColumn();
@@ -431,8 +433,12 @@ export const TableCell = forwardRef((props, ref) => {
     rowId,
     columnId,
   });
-  const { selection, selectionController, columnIdWithSomeSelectedCellSet } =
-    useContext(TableSelectionContext);
+  const {
+    selection,
+    selectionController,
+    columnIdWithSomeSelectedCellSet,
+    rowIdWithSomeSelectedCellSet,
+  } = useContext(TableSelectionContext);
   if (selectionImpact === undefined) {
     if (rowIndex === 0 && columnIndex === 0 && canSelectAll) {
       selectionImpact = (allValues) => {
@@ -516,8 +522,13 @@ export const TableCell = forwardRef((props, ref) => {
   const isFirstRow = rowIndex === 0;
   const columnContainsSelectedCell =
     columnIdWithSomeSelectedCellSet.has(columnId);
-  const bold = isFirstRow && columnContainsSelectedCell;
-  if (bold) {
+  const isFirstColumn = columnIndex === 0;
+  const rowContainsSelectedCell = rowIdWithSomeSelectedCellSet.has(rowId);
+  const innerBold =
+    bold ||
+    (isFirstRow && columnContainsSelectedCell) ||
+    (isFirstColumn && rowContainsSelectedCell);
+  if (innerBold) {
     innerStyle.fontWeight = "bold";
   }
 
