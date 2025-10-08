@@ -28,8 +28,10 @@ export const TableUIViewport = forwardRef((props, ref) => {
       return null;
     }
 
+    const tableRoot = tableElement.closest(".navi_table_root");
+
     const updateTablePosition = () => {
-      const { left, top } = tableElement.getBoundingClientRect();
+      const { left, top } = tableRoot.getBoundingClientRect();
       const tableLeft = left + document.documentElement.scrollLeft;
       const tableTop = top + document.documentElement.scrollTop;
       element.style.setProperty("--table-left", `${tableLeft}px`);
@@ -41,7 +43,8 @@ export const TableUIViewport = forwardRef((props, ref) => {
     window.addEventListener("touchmove", updateTablePosition);
 
     const updateTableDimensions = () => {
-      const { width, height } = tableElement.getBoundingClientRect();
+      const width = tableRoot.clientWidth;
+      const height = tableRoot.clientHeight;
       element.style.setProperty("--table-width", `${width}px`);
       element.style.setProperty("--table-height", `${height}px`);
     };

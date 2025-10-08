@@ -21,7 +21,7 @@ import {
 import { TableStickyContext } from "./table_sticky.js";
 
 import.meta.css = /* css */ `
-  .navi_table_container {
+  body {
     --sticky-frontier-color: #c0c0c0;
     --sticky-left-frontier-width: 5px;
     --sticky-top-frontier-height: 5px;
@@ -62,19 +62,27 @@ import.meta.css = /* css */ `
   .navi_table_sticky_frontier[data-left] {
     top: 0;
     bottom: 0;
-    left: calc(
-      var(--sticky-group-left-frontier, 0px) - var(--sticky-left-frontier-width)
-    );
+    left: var(--sticky-group-left-frontier, 0px);
     width: var(--sticky-left-frontier-width);
+    background: linear-gradient(
+      to right,
+      rgba(0, 0, 0, 0.3) 0%,
+      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0) 100%
+    );
   }
 
   .navi_table_sticky_frontier[data-top] {
     left: 0;
     right: 0;
-    top: calc(
-      var(--sticky-group-top-frontier, 0px) - var(--sticky-top-frontier-height)
-    );
+    top: var(--sticky-group-top-frontier, 0px);
     height: var(--sticky-top-frontier-height);
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.3) 0%,
+      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0) 100%
+    );
   }
 
   .navi_table_sticky_frontier_ghost,
