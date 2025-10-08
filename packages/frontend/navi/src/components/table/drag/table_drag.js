@@ -5,8 +5,12 @@ import { useStableCallback } from "../../use_stable_callback.js";
 
 export const TableDragContext = createContext();
 
-export const useTableDragContextValue = ({ onColumnOrderChange, columns }) => {
-  onColumnOrderChange = useStableCallback(onColumnOrderChange);
+export const useTableDragContextValue = ({
+  columns,
+  setColumnOrder,
+  canChangeColumnOrder,
+}) => {
+  setColumnOrder = useStableCallback(setColumnOrder);
 
   const [grabTarget, setGrabTarget] = useState(null);
   const grabColumn = (columnIndex) => {
@@ -35,7 +39,7 @@ export const useTableDragContextValue = ({ onColumnOrderChange, columns }) => {
       // Everything else stays the same
       columnIdsWithNewOrder.push(columnIds[i]);
     }
-    onColumnOrderChange(columnIdsWithNewOrder);
+    setColumnOrder(columnIdsWithNewOrder);
   };
 
   return useMemo(() => {
@@ -43,7 +47,8 @@ export const useTableDragContextValue = ({ onColumnOrderChange, columns }) => {
       grabTarget,
       grabColumn,
       releaseColumn,
-      onColumnOrderChange,
+      setColumnOrder,
+      canChangeColumnOrder,
     };
-  }, [grabTarget]);
+  }, [grabTarget, canChangeColumnOrder]);
 };

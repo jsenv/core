@@ -223,10 +223,19 @@ export const Table = forwardRef((props, ref) => {
     rows,
   });
 
+  const setColumnOrder = (columnIdsNewOrder) => {
+    // the code below ensures we re-render the selection when column are re-ordered
+    // forcing each previously selected <td> to unselect and newly selected <td> to be selected
+    // (because the corresponding DOM node is now different)
+    onSelectionChange([...selection]);
+    onColumnOrderChange?.(columnIdsNewOrder);
+  };
+
   // drag columns
   const dragContextValue = useTableDragContextValue({
-    onColumnOrderChange,
+    setColumnOrder,
     columns,
+    canChangeColumnOrder: Boolean(onColumnOrderChange),
   });
 
   return (
@@ -484,12 +493,12 @@ export const TableCell = forwardRef((props, ref) => {
   });
 
   // moving column
-  const { grabTarget, grabColumn, releaseColumn, onColumnOrderChange } =
+  const { grabTarget, grabColumn, releaseColumn, canChangeColumnOrder } =
     useContext(TableDragContext);
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
   if (canDragColumn === undefined) {
     canDragColumn =
-      rowIndex === 0 && !column.immovable && Boolean(onColumnOrderChange);
+      rowIndex === 0 && !column.immovable && Boolean(canChangeColumnOrder);
   }
 
   // resizing
