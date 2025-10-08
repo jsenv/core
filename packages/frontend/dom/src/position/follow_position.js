@@ -1,5 +1,13 @@
 import { getScrollableParentSet } from "../scroll.js";
 
+/**
+ * Sets up position tracking between an element and a target element
+ * @param {HTMLElement} element - An element
+ * @param {HTMLElement} targetElement - The target that element should follow
+ * @returns { updatePosition, stop }
+ *
+ * A bit like https://tetherjs.dev/ but different
+ */
 export const followPosition = (
   element,
   targetElement,

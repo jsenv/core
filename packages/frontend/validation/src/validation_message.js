@@ -519,14 +519,6 @@ const createValidationMessage = () => {
   return validationMessage;
 };
 
-/**
- * Sets up position tracking between a validation message and its target element
- * @param {HTMLElement} validationMessage - The validation message element
- * @param {HTMLElement} targetElement - The element the validation message should follow
- * @returns {Function} - Cleanup function to stop position tracking
- *
- * A bit like https://tetherjs.dev/ but different
- */
 const stickValidationMessageToTarget = (
   validationMessage,
   targetElement,

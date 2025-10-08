@@ -1,3 +1,8 @@
+// TODO: sticky left/top frontier should likely use "followPosition"
+// to be properly position in absolute in the document body
+// because otherwise they can't properly follow table as it scrolls
+// (they can't be sticky, they can't react to scroll, so they have to be absolute in the document body)
+
 import {
   createDragToMoveGesture,
   getDropTargetInfo,
