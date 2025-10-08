@@ -12,12 +12,13 @@
  * @returns {Object|null} Drop target info with elementSide or null if no valid target found
  */
 export const getDropTargetInfo = (gestureInfo, targetElements) => {
-  const { positionedParent, scrollableParent } = gestureInfo;
+  const { positionedParent } = gestureInfo;
 
   // Convert relative coordinates back to viewport coordinates for elementsFromPoint
   const parentRect = positionedParent.getBoundingClientRect();
-  const mouseX = gestureInfo.x + parentRect.left - scrollableParent.scrollLeft;
-  const mouseY = gestureInfo.y + parentRect.top - scrollableParent.scrollTop;
+  const mouseX =
+    gestureInfo.x + parentRect.left - gestureInfo.scrollLeftAtStart;
+  const mouseY = gestureInfo.y + parentRect.top - gestureInfo.scrollTopAtStart;
 
   // Get all elements under the mouse cursor (respects stacking order)
   const elementsUnderMouse = document.elementsFromPoint(mouseX, mouseY);
