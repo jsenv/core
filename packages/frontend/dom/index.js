@@ -15,6 +15,7 @@ export {
   findDescendant,
 } from "./src/traversal.js";
 
+export { captureScrollState } from "./src/capture_scroll.js";
 export { elementIsVisible } from "./src/element_is_visible.js";
 export {
   activeElementSignal,
