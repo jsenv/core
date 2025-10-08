@@ -99,8 +99,14 @@ export const initDragTableColumnByMousedown = (
     // because position would not work as the clone is not in a scrollable container
     // but an absolutely positioned element
     const scrollableParent = getScrollableParent(table);
-    const scrollLeft = scrollableParent.scrollLeft;
-    const scrollTop = scrollableParent.scrollTop;
+    const scrollLeft =
+      scrollableParent === document.documentElement
+        ? 0
+        : scrollableParent.scrollLeft;
+    const scrollTop =
+      scrollableParent === document.documentElement
+        ? 0
+        : scrollableParent.scrollTop;
 
     // important: only on cells, not on <col> nor <tr>
     const stickyCells = tableClone.querySelectorAll(

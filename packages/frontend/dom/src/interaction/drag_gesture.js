@@ -364,41 +364,54 @@ export const createDragGesture = (options) => {
       }) => {
         const visibleConstraintElement =
           areaConstraintElement || scrollableParent;
-        let { left, top } = getVisualRect(visibleConstraintElement);
-        const visibleConstraintParentRect = areaConstraintElement
-          ? areaConstraintElement.getBoundingClientRect()
-          : positionedParentRect;
-        left -=
-          visibleConstraintParentRect.left +
-          document.documentElement.scrollLeft;
-        top -=
-          visibleConstraintParentRect.top + document.documentElement.scrollTop;
-
-        const getVisibleRightBound = (elementWidth) => {
-          const availableWidth = visibleConstraintElement.clientWidth;
-          if (elementWidth >= availableWidth) {
-            return availableWidth;
+        let bounds;
+        if (visibleConstraintElement === document.documentElement) {
+          bounds = {
+            left: 0,
+            top: 0,
+            right: document.documentElement.clientWidth,
+            bottom: document.documentElement.clientHeight,
+          };
+        } else {
+          let { left, top } = getVisualRect(visibleConstraintElement);
+          const visibleConstraintParentRect = areaConstraintElement
+            ? areaConstraintElement.getBoundingClientRect()
+            : positionedParentRect;
+          left -= visibleConstraintParentRect.left;
+          top -= visibleConstraintParentRect.top;
+          if (scrollableParent !== document.documentElement) {
+            left += document.documentElement.scrollLeft;
+            top += document.documentElement.scrollTop;
           }
-          return availableWidth - elementWidth;
-        };
-        const getVisibleBottomBound = (elementHeight) => {
-          const availableHeight = visibleConstraintElement.clientHeight;
-          if (elementHeight >= availableHeight) {
-            return availableHeight;
-          }
-          return availableHeight - elementHeight;
-        };
-        const right = left + getVisibleRightBound(elementWidth);
-        const bottom = top + getVisibleBottomBound(elementHeight);
-        return createBoundConstraint(
-          { left, top, right, bottom },
-          {
-            leftAtStart,
-            topAtStart,
-            element: visibleConstraintElement,
-            name: "visible area",
-          },
-        );
+          const getVisibleRightBound = (elementWidth) => {
+            const availableWidth = visibleConstraintElement.clientWidth;
+            if (elementWidth >= availableWidth) {
+              return availableWidth;
+            }
+            return availableWidth - elementWidth;
+          };
+          const getVisibleBottomBound = (elementHeight) => {
+            const availableHeight = visibleConstraintElement.clientHeight;
+            if (elementHeight >= availableHeight) {
+              return availableHeight;
+            }
+            return availableHeight - elementHeight;
+          };
+          const right = left + getVisibleRightBound(elementWidth);
+          const bottom = top + getVisibleBottomBound(elementHeight);
+          bounds = {
+            left,
+            top,
+            right,
+            bottom,
+          };
+        }
+        return createBoundConstraint(bounds, {
+          leftAtStart,
+          topAtStart,
+          element: visibleConstraintElement,
+          name: "visible area",
+        });
       };
       constraintFunctions.push(visibleAreaConstraintFunction);
     }

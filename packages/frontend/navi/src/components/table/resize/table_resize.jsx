@@ -299,7 +299,11 @@ const updateTableColumnResizerPosition = (tableCell) => {
   );
 
   const table = tableCell.closest("table");
-  const scrollTop = getScrollableParent(table).scrollTop;
+  const scrollableParent = getScrollableParent(table);
+  const scrollTop =
+    scrollableParent === document.documentElement
+      ? 0
+      : scrollableParent.scrollTop;
   tableColumnResizer.style.setProperty("--table-scroll-top", `${scrollTop}px`);
 
   tableColumnResizer.setAttribute("data-hover", "");
@@ -613,7 +617,11 @@ const updateTableRowResizerPosition = (rowCell) => {
   );
 
   const table = rowCell.closest("table");
-  const scrollLeft = getScrollableParent(table).scrollLeft;
+  const scrollableParent = getScrollableParent(table);
+  const scrollLeft =
+    scrollableParent === document.documentElement
+      ? 0
+      : scrollableParent.scrollLeft;
   tableRowResizer.style.setProperty("--table-scroll-left", `${scrollLeft}px`);
 
   tableRowResizer.setAttribute("data-hover", "");
