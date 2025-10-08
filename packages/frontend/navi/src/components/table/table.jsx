@@ -48,6 +48,7 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
+import { useActiveElement } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
 import { useContext, useImperativeHandle, useRef } from "preact/hooks";
@@ -551,11 +552,16 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.fontWeight = "bold";
   }
 
+  const activeElement = useActiveElement();
+
   return (
     <TagName
       ref={cellRef}
       className={className}
       style={innerStyle}
+      // we use [data-focus] so that the attribute can be copied
+      // to the dragged cell copies
+      data-focus={activeElement === cellRef.current ? "" : undefined}
       data-sticky-left={stickyLeft ? "" : undefined}
       data-sticky-top={stickyTop ? "" : undefined}
       data-sticky-left-frontier={

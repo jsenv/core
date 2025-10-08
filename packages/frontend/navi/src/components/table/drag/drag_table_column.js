@@ -156,46 +156,6 @@ export const initDragTableColumnByMousedown = (
     });
   }
 
-  sync_focus: {
-    const cellThatWouldBeFocusedByMousedown = tableCell;
-
-    let focusedElementInClone = null;
-    // Build a path from table to activeElement
-    const pathToElement = [];
-    let current = cellThatWouldBeFocusedByMousedown;
-    while (current && current !== table) {
-      const parent = current.parentNode;
-      if (parent) {
-        const siblings = Array.from(parent.children);
-        pathToElement.unshift(siblings.indexOf(current));
-      }
-      current = parent;
-    }
-    // Follow the same path in the clone to find the corresponding element
-    focusedElementInClone = tableClone;
-    for (const index of pathToElement) {
-      if (focusedElementInClone.children[index]) {
-        focusedElementInClone = focusedElementInClone.children[index];
-      } else {
-        focusedElementInClone = null;
-        break;
-      }
-    }
-    focusedElementInClone.focus();
-    mousedownEvent.preventDefault(); // let the column clone get the focus (without this browser would naturally focus the <th> received mousedown)
-    addTeardown(() => {
-      // Restore focus to the original element
-      if (!document.body.contains(cellThatWouldBeFocusedByMousedown)) {
-        // somehow the element is gone (not supposed to happen)
-        // can happen if table cell keys or parent keys are not stable
-        // thuse preact needed to re-create a DOM node
-        return;
-      }
-
-      cellThatWouldBeFocusedByMousedown.focus();
-    });
-  }
-
   sync_attributes: {
     // Sync attribute changes from original table to clone
     // This is used to:

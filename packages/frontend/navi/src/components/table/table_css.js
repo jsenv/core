@@ -168,13 +168,13 @@ import.meta.css = /* css */ `
   }
 
   /* Focus styles */
-  .navi_table td:focus,
-  .navi_table th:focus {
+  .navi_table td[data-focus],
+  .navi_table th[data-focus] {
     outline: none; /* Remove default outline */
   }
 
-  .navi_table th:focus::after,
-  .navi_table td:focus::after {
+  .navi_table th[data-focus]::after,
+  .navi_table td[data-focus]::after {
     box-shadow:
       inset 0 2px 0 0 var(--focus-border-color),
       inset -2px 0 0 0 var(--focus-border-color),
