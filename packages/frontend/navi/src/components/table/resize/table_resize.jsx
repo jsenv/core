@@ -13,8 +13,8 @@ const COLUMN_MAX_WIDTH = 500;
 
 import.meta.css = /* css */ `
   .navi_table_container {
-    --resizer-handle-color: #444746;
-    --resizer-color: #c0c0c0;
+    --resizer-handle-color: #063b7c;
+    --resizer-color: #387ec9;
   }
 
   .navi_table th,
