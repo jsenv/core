@@ -278,45 +278,74 @@ import.meta.css = /* css */ `
     height: 12px;
   }
 
-  /* Visible area markers with more visible gradients */
-  .navi_debug_marker--blue {
+  /* Gradient directions based on side, using CSS custom properties for color */
+  .navi_debug_marker[data-left] {
     background: linear-gradient(
       to right,
-      rgba(0, 0, 255, 0.9) 0%,
-      rgba(0, 0, 255, 0.7) 30%,
-      rgba(0, 0, 255, 0.3) 70%,
-      rgba(0, 0, 255, 0) 100%
+      var(--marker-color-0.9) 0%,
+      var(--marker-color-0.7) 30%,
+      var(--marker-color-0.3) 70%,
+      var(--marker-color-0) 100%
     );
+  }
+
+  .navi_debug_marker[data-right] {
+    background: linear-gradient(
+      to left,
+      var(--marker-color-0.9) 0%,
+      var(--marker-color-0.7) 30%,
+      var(--marker-color-0.3) 70%,
+      var(--marker-color-0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-top] {
+    background: linear-gradient(
+      to bottom,
+      var(--marker-color-0.9) 0%,
+      var(--marker-color-0.7) 30%,
+      var(--marker-color-0.3) 70%,
+      var(--marker-color-0) 100%
+    );
+  }
+
+  .navi_debug_marker[data-bottom] {
+    background: linear-gradient(
+      to top,
+      var(--marker-color-0.9) 0%,
+      var(--marker-color-0.7) 30%,
+      var(--marker-color-0.3) 70%,
+      var(--marker-color-0) 100%
+    );
+  }
+
+  /* Color definitions - applied via CSS custom properties */
+  .navi_debug_marker--blue {
+    --marker-color-0.9: rgba(0, 0, 255, 0.9);
+    --marker-color-0.7: rgba(0, 0, 255, 0.7);
+    --marker-color-0.3: rgba(0, 0, 255, 0.3);
+    --marker-color-0: rgba(0, 0, 255, 0);
   }
 
   .navi_debug_marker--green {
-    background: linear-gradient(
-      to left,
-      rgba(0, 128, 0, 0.9) 0%,
-      rgba(0, 128, 0, 0.7) 30%,
-      rgba(0, 128, 0, 0.3) 70%,
-      rgba(0, 128, 0, 0) 100%
-    );
+    --marker-color-0.9: rgba(0, 128, 0, 0.9);
+    --marker-color-0.7: rgba(0, 128, 0, 0.7);
+    --marker-color-0.3: rgba(0, 128, 0, 0.3);
+    --marker-color-0: rgba(0, 128, 0, 0);
   }
 
   .navi_debug_marker--red {
-    background: linear-gradient(
-      to bottom,
-      rgba(255, 0, 0, 0.9) 0%,
-      rgba(255, 0, 0, 0.7) 30%,
-      rgba(255, 0, 0, 0.3) 70%,
-      rgba(255, 0, 0, 0) 100%
-    );
+    --marker-color-0.9: rgba(255, 0, 0, 0.9);
+    --marker-color-0.7: rgba(255, 0, 0, 0.7);
+    --marker-color-0.3: rgba(255, 0, 0, 0.3);
+    --marker-color-0: rgba(255, 0, 0, 0);
   }
 
   .navi_debug_marker--orange {
-    background: linear-gradient(
-      to top,
-      rgba(255, 165, 0, 0.9) 0%,
-      rgba(255, 165, 0, 0.7) 30%,
-      rgba(255, 165, 0, 0.3) 70%,
-      rgba(255, 165, 0, 0) 100%
-    );
+    --marker-color-0.9: rgba(255, 165, 0, 0.9);
+    --marker-color-0.7: rgba(255, 165, 0, 0.7);
+    --marker-color-0.3: rgba(255, 165, 0, 0.3);
+    --marker-color-0: rgba(255, 165, 0, 0);
   }
 
   /* Bounds markers - solid color for constraints */
