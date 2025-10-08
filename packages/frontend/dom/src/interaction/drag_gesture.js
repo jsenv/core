@@ -68,6 +68,7 @@
  */
 
 import { getPositionedParent } from "../position/offset_parent.js";
+import { getVisualRect } from "../position/visual_rect.js";
 import { getScrollableParent } from "../scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
@@ -110,6 +111,7 @@ export const createDragGesture = (options) => {
 
     stickyFrontiers = true,
     areaConstraint = "scrollable",
+    areaConstraintElement,
     customAreaConstraint,
     obstacleAttributeName = "data-drag-obstacle",
     dragViaScroll = true,
@@ -323,20 +325,6 @@ export const createDragGesture = (options) => {
       // Normal case: element can move within available space
       return scrollHeight - elementHeight;
     };
-    const getVisibleRightBound = (elementWidth) => {
-      const availableWidth = scrollableParent.clientWidth;
-      if (elementWidth >= availableWidth) {
-        return availableWidth;
-      }
-      return availableWidth - elementWidth;
-    };
-    const getVisibleBottomBound = (elementHeight) => {
-      const availableHeight = scrollableParent.clientHeight;
-      if (elementHeight >= availableHeight) {
-        return availableHeight;
-      }
-      return availableHeight - elementHeight;
-    };
 
     if (areaConstraint === "visible") {
       stickyFrontiers = false;
@@ -374,8 +362,32 @@ export const createDragGesture = (options) => {
         elementWidth,
         elementHeight,
       }) => {
-        const left = scrollLeftAtStart;
-        const top = scrollTopAtStart;
+        const visibleConstraintElement =
+          areaConstraintElement || scrollableParent;
+        let { left, top } = getVisualRect(visibleConstraintElement);
+        const visibleConstraintParentRect = areaConstraintElement
+          ? areaConstraintElement.getBoundingClientRect()
+          : positionedParentRect;
+        left -=
+          visibleConstraintParentRect.left +
+          document.documentElement.scrollLeft;
+        top -=
+          visibleConstraintParentRect.top + document.documentElement.scrollTop;
+
+        const getVisibleRightBound = (elementWidth) => {
+          const availableWidth = visibleConstraintElement.clientWidth;
+          if (elementWidth >= availableWidth) {
+            return availableWidth;
+          }
+          return availableWidth - elementWidth;
+        };
+        const getVisibleBottomBound = (elementHeight) => {
+          const availableHeight = visibleConstraintElement.clientHeight;
+          if (elementHeight >= availableHeight) {
+            return availableHeight;
+          }
+          return availableHeight - elementHeight;
+        };
         const right = left + getVisibleRightBound(elementWidth);
         const bottom = top + getVisibleBottomBound(elementHeight);
         return createBoundConstraint(
@@ -383,7 +395,7 @@ export const createDragGesture = (options) => {
           {
             leftAtStart,
             topAtStart,
-            element: scrollableParent,
+            element: visibleConstraintElement,
             name: "visible area",
           },
         );
@@ -404,12 +416,15 @@ export const createDragGesture = (options) => {
 
     if (obstacleAttributeName) {
       const obstacleConstraintFunctions =
-        createObstacleConstraintsFromQuerySelector(scrollableParent, {
-          name,
-          positionedParent,
-          obstacleAttributeName,
-          gestureInfo,
-        });
+        createObstacleConstraintsFromQuerySelector(
+          areaConstraintElement || scrollableParent,
+          {
+            name,
+            positionedParent,
+            obstacleAttributeName,
+            gestureInfo,
+          },
+        );
       constraintFunctions.push(...obstacleConstraintFunctions);
     }
 

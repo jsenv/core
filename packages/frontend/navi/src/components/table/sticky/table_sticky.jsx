@@ -500,6 +500,7 @@ const initMoveStickyFrontierByMousedown = (
     direction: { [axis]: true },
     backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
     areaConstraint: "visible",
+    areaConstraintElement: table.closest(".navi_table_root"),
 
     onGrab,
     onDrag: (gestureInfo) => {
