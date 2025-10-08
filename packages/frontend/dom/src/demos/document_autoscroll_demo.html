@@ -175,17 +175,20 @@
         scrollContainer: document.documentElement,
       });
 
-      // Set up the drag behavior
-      dragGesture.grab(dragElement, {
-        onStart: () => {
-          dragElement.setAttribute("data-dragging", "");
-          console.log("Drag started - document auto-scroll enabled");
-        },
-        onEnd: () => {
-          dragElement.removeAttribute("data-dragging");
-          console.log("Drag ended");
-        },
-      });
+      dragElement.onmousedown = (e) => {
+        // Set up the drag behavior
+        dragGesture.grabViaMousedown(e, {
+          element: dragElement,
+          onStart: () => {
+            dragElement.setAttribute("data-dragging", "");
+            console.log("Drag started - document auto-scroll enabled");
+          },
+          onEnd: () => {
+            dragElement.removeAttribute("data-dragging");
+            console.log("Drag ended");
+          },
+        });
+      };
 
       console.log("Document auto-scroll demo initialized");
     </script>
