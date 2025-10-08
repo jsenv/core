@@ -58,7 +58,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
               x: visibleArea.left,
               y: 0,
               color: "blue",
-              orientation: "vertical",
+              side: "left",
             }),
           );
           currentDebugMarkers.push(
@@ -67,7 +67,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
               x: visibleArea.right,
               y: 0,
               color: "green",
-              orientation: "vertical",
+              side: "right",
             }),
           );
         }
@@ -78,7 +78,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
               x: 0,
               y: visibleArea.top,
               color: "red",
-              orientation: "horizontal",
+              side: "top",
             }),
           );
           currentDebugMarkers.push(
@@ -87,7 +87,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
               x: 0,
               y: visibleArea.bottom,
               color: "orange",
-              orientation: "horizontal",
+              side: "bottom",
             }),
           );
         }
@@ -125,7 +125,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
                 x: leftBoundViewport,
                 y: 0,
                 color: "red",
-                orientation: "vertical",
+                side: "left",
               }),
             );
           }
@@ -140,7 +140,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
                 x: rightBoundViewport,
                 y: 0,
                 color: "red",
-                orientation: "vertical",
+                side: "right",
               }),
             );
           }
@@ -154,7 +154,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
                 x: 0,
                 y: topBoundViewport,
                 color: "red",
-                orientation: "horizontal",
+                side: "top",
               }),
             );
           }
@@ -169,7 +169,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
                 x: 0,
                 y: bottomBoundViewport,
                 color: "red",
-                orientation: "horizontal",
+                side: "bottom",
               }),
             );
           }
@@ -193,20 +193,21 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
   };
 };
 
-const createDebugMarker = ({
-  name,
-  x,
-  y,
-  color = "red",
-  orientation = "vertical",
-}) => {
+const createDebugMarker = ({ name, x, y, color = "red", side }) => {
   const marker = document.createElement("div");
-  marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
+  marker.className = `navi_debug_marker navi_debug_marker--${color}`;
+  marker.setAttribute(`data-${side}`, "");
 
   // Position markers exactly at the boundary coordinates
-  if (orientation === "vertical") {
+  if (side === "top") {
     marker.style.left = `${x}px`; // Exact x position for vertical markers
     marker.style.top = `${y}px`;
+  } else if (side === "bottom") {
+    marker.style.left = `${x}px`; // Exact x position for vertical markers
+    marker.style.top = `${y}px`;
+  } else if (side === "left") {
+    marker.style.left = `${x}px`;
+    marker.style.top = `${y}px`; // Exact y position for horizontal markers
   } else {
     marker.style.left = `${x}px`;
     marker.style.top = `${y}px`; // Exact y position for horizontal markers
@@ -254,12 +255,14 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  .navi_debug_marker--vertical {
+  .navi_debug_marker[data-top],
+  .navi_debug_marker[data-bottom] {
     width: 12px;
     height: 100vh;
   }
 
-  .navi_debug_marker--horizontal {
+  .navi_debug_marker[data-left],
+  .navi_debug_marker[data-right] {
     width: 100vw;
     height: 12px;
   }
@@ -326,13 +329,15 @@ import.meta.css = /* css */ `
   /* Label positioning - exactly on the lines with slight offsets */
 
   /* Vertical markers base positioning */
-  .navi_debug_marker--vertical .navi_debug_marker_label {
+  .navi_debug_marker[data-top] .navi_debug_marker_label,
+  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
     top: 20px; /* Small offset from top */
     transform-origin: left center;
   }
 
   /* Horizontal markers base positioning */
-  .navi_debug_marker--horizontal .navi_debug_marker_label {
+  .navi_debug_marker[data-left] .navi_debug_marker_label,
+  .navi_debug_marker[data-right] .navi_debug_marker_label {
     left: 20px; /* Small offset from left edge */
   }
 
