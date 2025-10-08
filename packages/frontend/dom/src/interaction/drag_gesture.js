@@ -392,7 +392,6 @@ export const createDragGesture = (options) => {
             right: left + clientWidth,
             bottom: top + clientHeight,
           };
-          console.log(bounds);
         } else {
           let { left, top } = getVisualRect(visibleConstraintElement);
           const visibleConstraintParentRect = areaConstraintElement
