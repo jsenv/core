@@ -202,8 +202,16 @@ const createDebugMarker = ({
 }) => {
   const marker = document.createElement("div");
   marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
-  marker.style.left = `${x}px`;
-  marker.style.top = `${y}px`;
+
+  // Adjust positioning to account for marker dimensions
+  if (orientation === "vertical") {
+    marker.style.left = `${x - 4}px`; // Center the 8px wide marker on the x position
+    marker.style.top = `${y}px`;
+  } else {
+    marker.style.left = `${x}px`;
+    marker.style.top = `${y - 4}px`; // Center the 8px tall marker on the y position
+  }
+
   marker.title = name;
 
   // Add label
@@ -307,10 +315,12 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  /* Vertical markers - labels positioned to the right */
+  /* Vertical markers - labels positioned to the right with rotation */
   .navi_debug_marker--vertical .navi_debug_marker_label {
     left: 12px;
-    top: 10px;
+    top: 50px; /* Move down to avoid overlap with horizontal bounds */
+    transform: rotate(90deg);
+    transform-origin: left center;
   }
 
   /* Horizontal markers - labels positioned based on type */
@@ -327,6 +337,23 @@ import.meta.css = /* css */ `
   .navi_debug_marker--orange .navi_debug_marker_label {
     bottom: 12px;
     top: auto;
+  }
+
+  /* Left vertical markers - specific positioning */
+  .navi_debug_marker--blue .navi_debug_marker_label {
+    left: 12px;
+    top: 50px;
+    transform: rotate(90deg);
+    transform-origin: left center;
+  }
+
+  /* Right vertical markers - position to the left of the marker */
+  .navi_debug_marker--green .navi_debug_marker_label {
+    right: 12px;
+    left: auto;
+    top: 50px;
+    transform: rotate(-90deg);
+    transform-origin: right center;
   }
 
   .navi_debug_marker_label--red {
