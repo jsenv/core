@@ -85,13 +85,13 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 const BASIC_MODE_OPTIONS = {
   backdrop: false,
   stickyFrontiers: false,
-  areaConstraint: "none",
+  areaConstraint: "visible",
   obstacleAttributeName: null,
   showConstraintFeedbackLine: false,
   dragViaScroll: false,
 };
 // To help dbugging this flag can be used to reduce number of features to the bare minimum
-const ENFORCE_BASIC_MODE = false;
+const ENFORCE_BASIC_MODE = true;
 
 export const createDragGesture = (options) => {
   if (ENFORCE_BASIC_MODE) {
@@ -155,12 +155,27 @@ export const createDragGesture = (options) => {
     const scrollTopAtStart = scrollableParent.scrollTop;
 
     const computedStyle = getComputedStyle(elementVisuallyImpacted);
+    const usePositionFixed = computedStyle.position === "fixed";
     const usePositionSticky = computedStyle.position === "sticky";
     let isStickyLeft = usePositionSticky && computedStyle.left !== "auto";
     let isStickyTop = usePositionSticky && computedStyle.top !== "auto";
     let leftAtStart;
     let topAtStart;
-    if (isStickyLeft || isStickyTop) {
+    if (usePositionFixed) {
+      isStickyLeft = false;
+      isStickyTop = false;
+      const { left, top } = elementVisuallyImpacted.getBoundingClientRect();
+      const stylesToSet = {
+        position: "absolute",
+        left: `${left + document.documentElement.scrollLeft}px`,
+        top: `${top + document.documentElement.scrollTop}px`,
+        transform: "none",
+      };
+      const restoreStyles = setStyles(element, stylesToSet);
+      addTeardown(() => {
+        restoreStyles();
+      });
+    } else if (isStickyLeft || isStickyTop) {
       const stylesToSet = {
         position: "relative",
       };
