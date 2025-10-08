@@ -403,22 +403,15 @@ export const createDragGesture = (options) => {
             left += documentElement.scrollLeft;
             top += documentElement.scrollTop;
           }
-          const getVisibleRightBound = (elementWidth) => {
-            const availableWidth = visibleConstraintElement.clientWidth;
-            if (elementWidth >= availableWidth) {
-              return availableWidth;
-            }
-            return availableWidth - elementWidth;
-          };
-          const getVisibleBottomBound = (elementHeight) => {
-            const availableHeight = visibleConstraintElement.clientHeight;
-            if (elementHeight >= availableHeight) {
-              return availableHeight;
-            }
-            return availableHeight - elementHeight;
-          };
-          const right = left + getVisibleRightBound(elementWidth);
-          const bottom = top + getVisibleBottomBound(elementHeight);
+          const right =
+            left +
+            getRightBound(elementWidth, visibleConstraintElement.clientWidth);
+          const bottom =
+            top +
+            getBottomBound(
+              elementHeight,
+              visibleConstraintElement.clientHeight,
+            );
           bounds = {
             left,
             top,
