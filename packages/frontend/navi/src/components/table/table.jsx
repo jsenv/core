@@ -522,8 +522,22 @@ export const TableCell = forwardRef((props, ref) => {
   const innerStyle = {
     ...style,
   };
-  if (backgroundColor) {
-    innerStyle["--background-color"] = backgroundColor;
+
+  const columnContainsSelectedCell =
+    columnIdWithSomeSelectedCellSet.has(columnId);
+  const rowContainsSelectedCell = rowIdWithSomeSelectedCellSet.has(rowId);
+  const containSelectedCell =
+    (isFirstRow && columnContainsSelectedCell) ||
+    (isFirstColumn && rowContainsSelectedCell);
+
+  const innerBackgroundColor =
+    backgroundColor || containSelectedCell
+      ? "var(--selection-background-color)"
+      : isFirstColumn
+        ? "#F8F8F8"
+        : undefined;
+  if (innerBackgroundColor) {
+    innerStyle["--background-color"] = innerBackgroundColor;
   }
   if (cursor) {
     innerStyle.cursor = cursor;
@@ -540,14 +554,8 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.textAlign = textAlign;
   }
 
-  const columnContainsSelectedCell =
-    columnIdWithSomeSelectedCellSet.has(columnId);
+  const innerBold = bold || containSelectedCell;
 
-  const rowContainsSelectedCell = rowIdWithSomeSelectedCellSet.has(rowId);
-  const innerBold =
-    bold ||
-    (isFirstRow && columnContainsSelectedCell) ||
-    (isFirstColumn && rowContainsSelectedCell);
   if (innerBold) {
     innerStyle.fontWeight = "bold";
   }

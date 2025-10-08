@@ -74,7 +74,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_table th {
-    background-color: var(--background-color, lightgrey);
+    background-color: var(--background-color, #d3e7ff);
     font-weight: normal;
     padding: 0;
   }
