@@ -110,6 +110,137 @@
       </p>
     </div>
 
+    <!-- Programmatic Controls -->
+    <div
+      style="
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        max-width: 300px;
+      "
+    >
+      <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #333">
+        Programmatic Controls
+      </h3>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <button
+          id="grabBtn"
+          style="
+            padding: 10px 15px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+          "
+        >
+          Grab Element
+        </button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+          <button
+            id="dragLeftBtn"
+            disabled
+            style="
+              padding: 8px 12px;
+              background: #9c27b0;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 12px;
+              opacity: 0.5;
+            "
+          >
+            ← Left
+          </button>
+          <button
+            id="dragRightBtn"
+            disabled
+            style="
+              padding: 8px 12px;
+              background: #2196f3;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 12px;
+              opacity: 0.5;
+            "
+          >
+            Right →
+          </button>
+          <button
+            id="dragUpBtn"
+            disabled
+            style="
+              padding: 8px 12px;
+              background: #607d8b;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 12px;
+              opacity: 0.5;
+            "
+          >
+            ↑ Up
+          </button>
+          <button
+            id="dragDownBtn"
+            disabled
+            style="
+              padding: 8px 12px;
+              background: #ff9800;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: 12px;
+              opacity: 0.5;
+            "
+          >
+            ↓ Down
+          </button>
+        </div>
+        <button
+          id="releaseBtn"
+          disabled
+          style="
+            padding: 10px 15px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0.5;
+          "
+        >
+          Release Element
+        </button>
+      </div>
+      <div
+        id="status"
+        style="
+          margin-top: 15px;
+          padding: 10px;
+          background: #f9f9f9;
+          border-radius: 4px;
+          font-family: monospace;
+          font-size: 12px;
+          color: #666;
+          border-left: 4px solid #2196f3;
+        "
+      >
+        Ready - Click "Grab Element" to start programmatic control
+      </div>
+    </div>
+
     <div class="draggable-element" id="dragElement">Drag Me</div>
 
     <div class="scroll-indicator" id="scrollIndicator">Scroll: 0px</div>
@@ -169,27 +300,158 @@
       updateScrollIndicator();
       window.addEventListener("scroll", updateScrollIndicator);
 
-      // Create drag gesture with document as scroll container
-      const dragGesture = createDragToMoveGesture({
+      // Manual drag gesture (mouse-based)
+      const manualDragGesture = createDragToMoveGesture({
         scrollContainer: document.documentElement,
       });
 
       dragElement.onmousedown = (e) => {
-        // Set up the drag behavior
-        dragGesture.grabViaMousedown(e, {
+        // Set up the manual drag behavior
+        manualDragGesture.grabViaMousedown(e, {
           element: dragElement,
           onStart: () => {
             dragElement.setAttribute("data-dragging", "");
-            console.log("Drag started - document auto-scroll enabled");
+            updateStatus("Manual drag started - document auto-scroll enabled");
           },
           onEnd: () => {
             dragElement.removeAttribute("data-dragging");
-            console.log("Drag ended");
+            updateStatus("Manual drag ended");
           },
         });
       };
 
-      console.log("Document auto-scroll demo initialized");
+      // Programmatic Controls
+      const controls = {
+        grabBtn: document.getElementById("grabBtn"),
+        dragLeftBtn: document.getElementById("dragLeftBtn"),
+        dragRightBtn: document.getElementById("dragRightBtn"),
+        dragUpBtn: document.getElementById("dragUpBtn"),
+        dragDownBtn: document.getElementById("dragDownBtn"),
+        releaseBtn: document.getElementById("releaseBtn"),
+        statusDiv: document.getElementById("status"),
+        dragGesture: null,
+        dragInstance: null,
+      };
+
+      function updateStatus(message) {
+        controls.statusDiv.textContent = message;
+        console.log("Document Auto-Scroll Demo:", message);
+      }
+
+      function updateButtonStates(grabbed = false) {
+        controls.grabBtn.disabled = grabbed;
+        controls.dragLeftBtn.disabled = !grabbed;
+        controls.dragRightBtn.disabled = !grabbed;
+        controls.dragUpBtn.disabled = !grabbed;
+        controls.dragDownBtn.disabled = !grabbed;
+        controls.releaseBtn.disabled = !grabbed;
+
+        // Update visual disabled state
+        const dragButtons = [
+          controls.dragLeftBtn,
+          controls.dragRightBtn,
+          controls.dragUpBtn,
+          controls.dragDownBtn,
+          controls.releaseBtn,
+        ];
+        dragButtons.forEach((btn) => {
+          btn.style.opacity = grabbed ? "1" : "0.5";
+          btn.style.cursor = grabbed ? "pointer" : "not-allowed";
+        });
+
+        controls.grabBtn.style.opacity = grabbed ? "0.5" : "1";
+        controls.grabBtn.style.cursor = grabbed ? "not-allowed" : "pointer";
+      }
+
+      // Grab button
+      controls.grabBtn.addEventListener("click", () => {
+        if (controls.dragInstance) return;
+
+        const rect = dragElement.getBoundingClientRect();
+        const xAtStart = rect.left;
+        const yAtStart = rect.top;
+
+        const dragOptions = {
+          scrollContainer: document.documentElement,
+          onGrab: (gestureInfo) => {
+            updateStatus("Element grabbed programmatically - ready to drag");
+            console.log("Programmatic grab:", gestureInfo);
+          },
+          onDragStart: (gestureInfo) => {
+            updateStatus("Programmatic drag started with document auto-scroll");
+            dragElement.setAttribute("data-dragging", "");
+            console.log("Programmatic drag start:", gestureInfo);
+          },
+          onDrag: (gestureInfo, phase) => {
+            updateStatus(
+              `Dragging programmatically (${phase}) - auto-scroll active`,
+            );
+            console.log("Programmatic drag:", gestureInfo, phase);
+          },
+          onRelease: (gestureInfo) => {
+            updateStatus("Programmatic drag released");
+            dragElement.removeAttribute("data-dragging");
+            console.log("Programmatic release:", gestureInfo);
+            controls.dragGesture = null;
+            controls.dragInstance = null;
+            updateButtonStates(false);
+          },
+        };
+
+        controls.dragGesture = createDragToMoveGesture(dragOptions);
+        controls.dragInstance = controls.dragGesture.grab(dragElement, {
+          xAtStart,
+          yAtStart,
+        });
+
+        updateButtonStates(true);
+      });
+
+      // Drag direction buttons
+      controls.dragLeftBtn.addEventListener("click", () => {
+        if (!controls.dragInstance) return;
+        const currentGestureInfo = controls.dragInstance.gestureInfo;
+        const newX = currentGestureInfo.x - 100;
+        updateStatus("Dragging left by 100px - testing document auto-scroll");
+        controls.dragInstance.drag(newX, currentGestureInfo.y);
+      });
+
+      controls.dragRightBtn.addEventListener("click", () => {
+        if (!controls.dragInstance) return;
+        const currentGestureInfo = controls.dragInstance.gestureInfo;
+        const newX = currentGestureInfo.x + 100;
+        updateStatus("Dragging right by 100px - testing document auto-scroll");
+        controls.dragInstance.drag(newX, currentGestureInfo.y);
+      });
+
+      controls.dragUpBtn.addEventListener("click", () => {
+        if (!controls.dragInstance) return;
+        const currentGestureInfo = controls.dragInstance.gestureInfo;
+        const newY = currentGestureInfo.y - 100;
+        updateStatus("Dragging up by 100px - testing upward auto-scroll");
+        controls.dragInstance.drag(currentGestureInfo.x, newY);
+      });
+
+      controls.dragDownBtn.addEventListener("click", () => {
+        if (!controls.dragInstance) return;
+        const currentGestureInfo = controls.dragInstance.gestureInfo;
+        const newY = currentGestureInfo.y + 100;
+        updateStatus("Dragging down by 100px - testing downward auto-scroll");
+        controls.dragInstance.drag(currentGestureInfo.x, newY);
+      });
+
+      // Release button
+      controls.releaseBtn.addEventListener("click", () => {
+        if (!controls.dragInstance) return;
+        updateStatus("Releasing programmatic drag");
+        controls.dragInstance.release();
+      });
+
+      // Initialize
+      updateButtonStates(false);
+      console.log(
+        "Document auto-scroll demo with programmatic controls initialized",
+      );
     </script>
   </body>
 </html>
