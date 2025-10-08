@@ -62,7 +62,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-left] {
-    top: 0;
+    top: var(--sticky-group-top-frontier, 0px);
     bottom: 0;
     left: var(--sticky-group-left-frontier, 0px);
     width: var(--sticky-left-frontier-width);
@@ -75,7 +75,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-top] {
-    left: 0;
+    left: var(--sticky-group-left-frontier, 0px);
     right: 0;
     top: var(--sticky-group-top-frontier, 0px);
     height: var(--sticky-top-frontier-height);
