@@ -67,7 +67,7 @@
  * ```
  */
 
-import { getPositionedParent } from "../offset_parent.js";
+import { getPositionedParent } from "../position/offset_parent.js";
 import { getScrollableParent } from "../scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";

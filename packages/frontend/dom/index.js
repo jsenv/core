@@ -32,9 +32,14 @@ export {
   getScrollableParentSet,
   trapScrollInside,
 } from "./src/scroll.js";
-export { getVisualRect } from "./src/visual_rect.js";
 
 export { addAttributeEffect } from "./src/add_attribute_effect.js";
+
+// position
+export { followPosition } from "./src/position/follow_position.js";
+export { getPositionedParent } from "./src/position/offset_parent.js";
+export { initPositionSticky } from "./src/position/position_sticky.js";
+export { getVisualRect } from "./src/position/visual_rect.js";
 
 // size
 export { initFlexDetailsSet } from "./src/size/flex_details_set.js";
@@ -58,11 +63,6 @@ export { useAvailableWidth } from "./src/size/hooks/use_available_width.js";
 export { useMaxHeight } from "./src/size/hooks/use_max_height.js";
 export { useMaxWidth } from "./src/size/hooks/use_max_width.js";
 export { useResizeStatus } from "./src/size/hooks/use_resize_status.js";
-
-// sticky helper
-export { initPositionSticky } from "./src/position_sticky.js";
-
-export { followPosition } from "./src/position/follow_position.js";
 
 // transition
 export {
