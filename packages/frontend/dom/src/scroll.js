@@ -137,12 +137,13 @@ export const getScrollableParent = (arg, { includeHidden } = {}) => {
 };
 
 const getScrollingElement = (document) => {
-  if ("scrollingElement" in document) {
-    return document;
+  const { scrollingElement } = document;
+  if (scrollingElement) {
+    return scrollingElement;
   }
 
   if (isCompliant(document)) {
-    return document;
+    return document.documentElement;
   }
 
   const body = document.body;
