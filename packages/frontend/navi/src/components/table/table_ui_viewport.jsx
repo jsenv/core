@@ -50,7 +50,7 @@ export const TableUIViewport = forwardRef((props, ref) => {
     };
     updateTableDimensions();
     const resizeObserver = new ResizeObserver(updateTableDimensions);
-    resizeObserver.observe(tableElement);
+    resizeObserver.observe(tableRoot);
 
     return () => {
       window.removeEventListener("scroll", updateTablePosition, {

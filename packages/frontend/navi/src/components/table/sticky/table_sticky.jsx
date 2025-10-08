@@ -23,8 +23,8 @@ import { TableStickyContext } from "./table_sticky.js";
 import.meta.css = /* css */ `
   body {
     --sticky-frontier-color: #c0c0c0;
-    --sticky-left-frontier-width: 5px;
-    --sticky-top-frontier-height: 5px;
+    --sticky-left-frontier-width: 20px;
+    --sticky-top-frontier-height: 20px;
   }
 
   .navi_table th[data-sticky-top],
@@ -63,26 +63,24 @@ import.meta.css = /* css */ `
 
   .navi_table_sticky_frontier[data-left] {
     top: var(--sticky-group-top-frontier, 0px);
-    bottom: 0;
+    height: calc(var(--table-height) - var(--sticky-group-top-frontier));
     left: var(--sticky-group-left-frontier, 0px);
     width: var(--sticky-left-frontier-width);
     background: linear-gradient(
       to right,
-      rgba(0, 0, 0, 0.3) 0%,
-      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0.1) 0%,
       rgba(0, 0, 0, 0) 100%
     );
   }
 
   .navi_table_sticky_frontier[data-top] {
     left: var(--sticky-group-left-frontier, 0px);
-    right: 0;
+    width: calc(var(--table-width) - var(--sticky-group-left-frontier));
     top: var(--sticky-group-top-frontier, 0px);
     height: var(--sticky-top-frontier-height);
     background: linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.3) 0%,
-      rgba(0, 0, 0, 0.1) 50%,
+      rgba(0, 0, 0, 0.1) 0%,
       rgba(0, 0, 0, 0) 100%
     );
   }
