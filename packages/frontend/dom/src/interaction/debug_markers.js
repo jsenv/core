@@ -255,14 +255,25 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  .navi_debug_marker[data-top],
-  .navi_debug_marker[data-bottom] {
+  .navi_debug_marker--vertical {
     width: 12px;
     height: 100vh;
   }
 
+  .navi_debug_marker--horizontal {
+    width: 12px;
+    height: 100vh;
+  }
+
+  /* Markers based on side rather than orientation */
   .navi_debug_marker[data-left],
   .navi_debug_marker[data-right] {
+    width: 12px;
+    height: 100vh;
+  }
+
+  .navi_debug_marker[data-top],
+  .navi_debug_marker[data-bottom] {
     width: 100vw;
     height: 12px;
   }
@@ -326,49 +337,36 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  /* Label positioning - exactly on the lines with slight offsets */
+  /* Label positioning based on side data attributes */
 
-  /* Vertical markers base positioning */
-  .navi_debug_marker[data-top] .navi_debug_marker_label,
-  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
+  /* Left side markers - vertical with 90° rotation */
+  .navi_debug_marker[data-left] .navi_debug_marker_label {
+    left: 0px; /* Exactly on the line */
     top: 20px; /* Small offset from top */
-    transform-origin: left center;
-  }
-
-  /* Horizontal markers base positioning */
-  .navi_debug_marker[data-left] .navi_debug_marker_label,
-  .navi_debug_marker[data-right] .navi_debug_marker_label {
-    left: 20px; /* Small offset from left edge */
-  }
-
-  /* Left vertical bounds (blue) - positioned exactly on the line */
-  .navi_debug_marker--blue .navi_debug_marker_label {
-    left: 10px; /* Exactly on the line */
-    top: 20px;
     transform: rotate(90deg);
     transform-origin: left center;
   }
 
-  /* Right vertical bounds (green) - positioned exactly on the line */
-  .navi_debug_marker--green .navi_debug_marker_label {
+  /* Right side markers - vertical with -90° rotation */
+  .navi_debug_marker[data-right] .navi_debug_marker_label {
     right: 0px; /* Exactly on the line */
     left: auto;
-    top: 20px;
+    top: 20px; /* Small offset from top */
     transform: rotate(-90deg);
     transform-origin: right center;
   }
 
-  /* Top horizontal bounds (red) - positioned exactly on the line */
-  .navi_debug_marker--red .navi_debug_marker_label {
+  /* Top side markers - horizontal, label on the line */
+  .navi_debug_marker[data-top] .navi_debug_marker_label {
     top: 0px; /* Exactly on the line */
-    left: 20px;
+    left: 20px; /* Small offset from left edge */
   }
 
-  /* Bottom horizontal bounds (orange) - positioned exactly on the line */
-  .navi_debug_marker--orange .navi_debug_marker_label {
+  /* Bottom side markers - horizontal, label on the line */
+  .navi_debug_marker[data-bottom] .navi_debug_marker_label {
     bottom: 0px; /* Exactly on the line */
     top: auto;
-    left: 20px;
+    left: 20px; /* Small offset from left edge */
   }
 
   .navi_debug_marker_label--red {
