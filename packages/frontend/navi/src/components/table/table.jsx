@@ -354,6 +354,9 @@ export const Tr = ({ id, height, children }) => {
 
   children = toChildArray(children);
 
+  /* We use <TableRowCells> to be able to provide <ColumnConsumerProvider />  
+  that is needed by useColumnByIndex */
+
   return (
     <tr
       data-row-id={id ? id : undefined}
@@ -366,7 +369,6 @@ export const Tr = ({ id, height, children }) => {
       }}
     >
       <ColumnConsumerProvider>
-        {/* We use <TableRowCells /> component to be able to provide it the <ColumnConsumerProvider />  */}
         <TableRowCells rowIndex={rowIndex} row={row}>
           {children}
         </TableRowCells>
@@ -374,22 +376,29 @@ export const Tr = ({ id, height, children }) => {
     </tr>
   );
 };
-const TableRowCells = ({ rowIndex, row, children }) => {
-  return children.map((child, columnIndex) => {
-    const column = useColumnByIndex(columnIndex);
-    return (
-      <RowContext.Provider key={columnIndex} value={row}>
-        <RowIndexContext.Provider value={rowIndex}>
-          <ColumnIndexContext.Provider value={columnIndex}>
-            <ColumnContext.Provider value={column}>
-              {child}
-            </ColumnContext.Provider>
-          </ColumnIndexContext.Provider>
-        </RowIndexContext.Provider>
-      </RowContext.Provider>
-    );
-  });
+
+const TableRowCells = ({ children, rowIndex, row }) => {
+  return (
+    <>
+      {children.map((child, columnIndex) => {
+        const column = useColumnByIndex(columnIndex);
+        const tableCellKey = column.id;
+        return (
+          <RowContext.Provider key={tableCellKey} value={row}>
+            <RowIndexContext.Provider value={rowIndex}>
+              <ColumnIndexContext.Provider value={columnIndex}>
+                <ColumnContext.Provider value={column}>
+                  {child}
+                </ColumnContext.Provider>
+              </ColumnIndexContext.Provider>
+            </RowIndexContext.Provider>
+          </RowContext.Provider>
+        );
+      })}
+    </>
+  );
 };
+
 export const TableCell = forwardRef((props, ref) => {
   let {
     className,
