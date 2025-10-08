@@ -146,6 +146,7 @@ export const Table = forwardRef((props, ref) => {
     return innerRef.current;
   });
   const tableContainerRef = useRef();
+  const tableUIViewportRef = useRef();
 
   const [ColumnProducerProvider, ColumnConsumerProvider, columns] =
     useColumnTrackerProviders();
@@ -167,7 +168,10 @@ export const Table = forwardRef((props, ref) => {
   useFocusGroup(innerRef);
 
   // sticky
-  useStickyGroup(tableContainerRef, { elementSelector: "table" });
+  useStickyGroup(tableContainerRef, {
+    elementSelector: "table",
+    elementReceivingCumulativeStickyPositionRef: tableUIViewportRef,
+  });
   const stickyContextValue = useTableStickyContextValue({
     stickyLeftFrontierColumnIndex,
     stickyTopFrontierRowIndex,
@@ -266,7 +270,7 @@ export const Table = forwardRef((props, ref) => {
           <TableColumnResizer />
           <TableRowResizer />
         </TableUI>
-        <TableUIViewport tableRef={innerRef}>
+        <TableUIViewport ref={tableUIViewportRef} tableRef={innerRef}>
           <TableStickyContext.Provider value={stickyContextValue}>
             <TableStickyFrontier />
           </TableStickyContext.Provider>

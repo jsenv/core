@@ -1,13 +1,20 @@
 import { useLayoutEffect } from "preact/hooks";
 
 // React hook version for easy integration
-export const useStickyGroup = (elementRef, { elementSelector } = {}) => {
+export const useStickyGroup = (
+  elementRef,
+  { elementReceivingCumulativeStickyPositionRef, elementSelector } = {},
+) => {
   useLayoutEffect(() => {
     const element = elementRef.current;
     if (!element) {
       return undefined;
     }
-    return initStickyGroup(element, { elementSelector });
+    return initStickyGroup(element, {
+      elementSelector,
+      elementReceivingCumulativeStickyPosition:
+        elementReceivingCumulativeStickyPositionRef.current,
+    });
   }, [elementSelector]);
 };
 
@@ -26,11 +33,7 @@ const CONTAINER_TOP_FRONTIER_CSS_VAR = "--sticky-group-top-frontier";
  */
 const initStickyGroup = (
   container,
-  {
-    elementSelector,
-    targetReceivingCumulativeStickyColumnPosition = ".navi_table_sticky_left_frontier",
-    targetReceivingCumulativeStickyRowPosition = ".navi_table_sticky_top_frontier",
-  } = {},
+  { elementSelector, elementReceivingCumulativeStickyPosition } = {},
 ) => {
   if (!container) {
     throw new Error("initStickyGroup: container is required");
@@ -113,19 +116,16 @@ const initStickyGroup = (
         cumulativeWidth += referenceCell.getBoundingClientRect().width;
       }
     });
-
-    if (targetReceivingCumulativeStickyColumnPosition) {
-      const element = container.querySelector(
-        targetReceivingCumulativeStickyColumnPosition,
-      );
-      if (element) {
-        element.style.setProperty(LEFT_CSS_VAR, `${cumulativeWidth}px`);
-      }
-    }
     container.style.setProperty(
       CONTAINER_LEFT_FRONTIER_CSS_VAR,
       `${cumulativeWidth}px`,
     );
+    if (elementReceivingCumulativeStickyPosition) {
+      elementReceivingCumulativeStickyPosition.style.setProperty(
+        CONTAINER_LEFT_FRONTIER_CSS_VAR,
+        `${cumulativeWidth}px`,
+      );
+    }
   };
   const updateTableRows = () => {
     // Handle sticky rows by finding cells with data-sticky-top and grouping by row
@@ -173,18 +173,16 @@ const initStickyGroup = (
         cumulativeHeight += row.getBoundingClientRect().height;
       }
     });
-    if (targetReceivingCumulativeStickyRowPosition) {
-      const element = container.querySelector(
-        targetReceivingCumulativeStickyRowPosition,
-      );
-      if (element) {
-        element.style.setProperty(TOP_CSS_VAR, `${cumulativeHeight}px`);
-      }
-    }
     container.style.setProperty(
       CONTAINER_TOP_FRONTIER_CSS_VAR,
       `${cumulativeHeight}px`,
     );
+    if (elementReceivingCumulativeStickyPosition) {
+      elementReceivingCumulativeStickyPosition.style.setProperty(
+        CONTAINER_TOP_FRONTIER_CSS_VAR,
+        `${cumulativeHeight}px`,
+      );
+    }
   };
 
   const updateLinearPositions = () => {
@@ -219,6 +217,12 @@ const initStickyGroup = (
       containerCssVariableName,
       `${cumulativeSize}px`,
     );
+    if (elementReceivingCumulativeStickyPosition) {
+      elementReceivingCumulativeStickyPosition.style.setProperty(
+        containerCssVariableName,
+        `${cumulativeSize}px`,
+      );
+    }
   };
 
   // Initial positioning

@@ -1,5 +1,5 @@
-import { createPortal } from "preact/compat";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { createPortal, forwardRef } from "preact/compat";
+import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
 
@@ -16,11 +16,13 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableUIViewport = ({ tableRef, children }) => {
-  const ref = useRef();
+export const TableUIViewport = forwardRef((props, ref) => {
+  const { tableRef, children } = props;
+  const innerRef = useRef();
+  useImperativeHandle(ref, () => innerRef.current);
 
   useLayoutEffect(() => {
-    const element = ref.current;
+    const element = innerRef.current;
     const tableElement = tableRef.current;
     if (!element || !tableElement) {
       return null;
@@ -59,9 +61,9 @@ export const TableUIViewport = ({ tableRef, children }) => {
   }, []);
 
   return createPortal(
-    <div ref={ref} className="navi_table_ui_viewport">
+    <div ref={innerRef} className="navi_table_ui_viewport">
       {children}
     </div>,
     document.body,
   );
-};
+});
