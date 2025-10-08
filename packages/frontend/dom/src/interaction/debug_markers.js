@@ -52,46 +52,41 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
       currentDebugMarkers.length = 0;
       currentConstraintMarkers.length = 0;
 
+      // Collect all markers to be created, then merge duplicates
+      const markersToCreate = [];
+
       visible_area_markers: {
         if (direction.x) {
-          currentDebugMarkers.push(
-            createDebugMarker({
-              name: "visibleAreaLeft",
-              x: visibleArea.left,
-              y: 0,
-              color: "0 0 255", // blue
-              side: "left",
-            }),
-          );
-          currentDebugMarkers.push(
-            createDebugMarker({
-              name: "visibleAreaRight",
-              x: visibleArea.right,
-              y: 0,
-              color: "0 128 0", // green
-              side: "right",
-            }),
-          );
+          markersToCreate.push({
+            name: "visibleAreaLeft",
+            x: visibleArea.left,
+            y: 0,
+            color: "0 0 255", // blue
+            side: "left",
+          });
+          markersToCreate.push({
+            name: "visibleAreaRight",
+            x: visibleArea.right,
+            y: 0,
+            color: "0 128 0", // green
+            side: "right",
+          });
         }
         if (direction.y) {
-          currentDebugMarkers.push(
-            createDebugMarker({
-              name: "visibleAreaTop",
-              x: 0,
-              y: visibleArea.top,
-              color: "255 0 0", // red
-              side: "top",
-            }),
-          );
-          currentDebugMarkers.push(
-            createDebugMarker({
-              name: "visibleAreaBottom",
-              x: 0,
-              y: visibleArea.bottom,
-              color: "255 165 0", // orange
-              side: "bottom",
-            }),
-          );
+          markersToCreate.push({
+            name: "visibleAreaTop",
+            x: 0,
+            y: visibleArea.top,
+            color: "255 0 0", // red
+            side: "top",
+          });
+          markersToCreate.push({
+            name: "visibleAreaBottom",
+            x: 0,
+            y: visibleArea.bottom,
+            color: "255 165 0", // orange
+            side: "bottom",
+          });
         }
       }
 
@@ -121,62 +116,63 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
         if (direction.x) {
           if (leftBound > 0) {
             const leftBoundViewport = parentRect.left + leftBound;
-            currentConstraintMarkers.push(
-              createDebugMarker({
-                name: "leftBound",
-                x: leftBoundViewport,
-                y: 0,
-                color: "128 0 128", // purple
-                side: "left",
-              }),
-            );
+            markersToCreate.push({
+              name: "leftBound",
+              x: leftBoundViewport,
+              y: 0,
+              color: "128 0 128", // purple
+              side: "left",
+            });
           }
           if (rightBound !== Infinity) {
             // For visual clarity, show rightBound at the right edge of the element
             // when element is positioned at rightBound (not the left edge position)
             const rightBoundViewport =
               parentRect.left + rightBound + elementWidth;
-            currentConstraintMarkers.push(
-              createDebugMarker({
-                name: "rightBound",
-                x: rightBoundViewport,
-                y: 0,
-                color: "128 0 128", // purple
-                side: "right",
-              }),
-            );
+            markersToCreate.push({
+              name: "rightBound",
+              x: rightBoundViewport,
+              y: 0,
+              color: "128 0 128", // purple
+              side: "right",
+            });
           }
         }
         if (direction.y) {
           if (topBound > 0) {
             const topBoundViewport = parentRect.top + topBound;
-            currentConstraintMarkers.push(
-              createDebugMarker({
-                name: "topBound",
-                x: 0,
-                y: topBoundViewport,
-                color: "128 0 128", // purple
-                side: "top",
-              }),
-            );
+            markersToCreate.push({
+              name: "topBound",
+              x: 0,
+              y: topBoundViewport,
+              color: "128 0 128", // purple
+              side: "top",
+            });
           }
           if (bottomBound !== Infinity) {
             // For visual clarity, show bottomBound at the bottom edge of the element
-            // when element is positioned at bottomBound (not the top edge position)
+            // when element is positioned at bottomBound (not the left edge position)
             const bottomBoundViewport =
               parentRect.top + bottomBound + elementHeight;
-            currentConstraintMarkers.push(
-              createDebugMarker({
-                name: "bottomBound",
-                x: 0,
-                y: bottomBoundViewport,
-                color: "128 0 128", // purple
-                side: "bottom",
-              }),
-            );
+            markersToCreate.push({
+              name: "bottomBound",
+              x: 0,
+              y: bottomBoundViewport,
+              color: "128 0 128", // purple
+              side: "bottom",
+            });
           }
         }
       }
+
+      // Create markers with merging for overlapping positions
+      const createdMarkers = createMergedMarkers(markersToCreate);
+      currentDebugMarkers.push(
+        ...createdMarkers.filter((m) => m.type !== "constraint"),
+      );
+      currentConstraintMarkers.push(
+        ...createdMarkers.filter((m) => m.type === "constraint"),
+      );
     },
     onRelease: () => {
       if (KEEP_MARKERS_ON_RELEASE) {
@@ -193,6 +189,48 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
       currentConstraintMarkers = [];
     },
   };
+};
+
+const createMergedMarkers = (markersToCreate) => {
+  const mergedMarkers = [];
+  const positionMap = new Map();
+
+  // Group markers by position and side
+  for (const marker of markersToCreate) {
+    const key = `${marker.x},${marker.y},${marker.side}`;
+
+    if (!positionMap.has(key)) {
+      positionMap.set(key, []);
+    }
+    positionMap.get(key).push(marker);
+  }
+
+  // Create markers with merged labels for overlapping positions
+  for (const [, markers] of positionMap) {
+    if (markers.length === 1) {
+      // Single marker - create as normal
+      const marker = markers[0];
+      const domMarker = createDebugMarker(marker);
+      domMarker.type = marker.name.includes("Bound") ? "constraint" : "visible";
+      mergedMarkers.push(domMarker);
+    } else {
+      // Multiple markers at same position - merge labels
+      const firstMarker = markers[0];
+      const combinedName = markers.map((m) => m.name).join(" + ");
+
+      // Use the first marker's color, or mix colors if needed
+      const domMarker = createDebugMarker({
+        ...firstMarker,
+        name: combinedName,
+      });
+      domMarker.type = markers.some((m) => m.name.includes("Bound"))
+        ? "constraint"
+        : "visible";
+      mergedMarkers.push(domMarker);
+    }
+  }
+
+  return mergedMarkers;
 };
 
 const createDebugMarker = ({ name, x, y, color = "255 0 0", side }) => {
@@ -342,7 +380,7 @@ import.meta.css = /* css */ `
 
   /* Right side markers - vertical with -90° rotation */
   .navi_debug_marker[data-right] .navi_debug_marker_label {
-    right: 0px; /* Exactly on the line */
+    right: 10px; /* Exactly on the line */
     left: auto;
     top: 20px; /* Small offset from top */
     transform: rotate(-90deg);
