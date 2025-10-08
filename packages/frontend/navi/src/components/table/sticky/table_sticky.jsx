@@ -15,7 +15,6 @@ import {
   Z_INDEX_STICKY_CORNER,
   Z_INDEX_STICKY_FRONTIER_BACKDROP,
   Z_INDEX_STICKY_FRONTIER_GHOST,
-  Z_INDEX_STICKY_FRONTIER_HANDLE,
   Z_INDEX_STICKY_FRONTIER_PREVIEW,
   Z_INDEX_STICKY_ROW,
 } from "../z_indexes.js";
@@ -56,66 +55,59 @@ import.meta.css = /* css */ `
     top: var(--sticky-group-top, 0);
   }
 
-  .navi_table_cell_sticky_frontier {
+  .navi_table_sticky_frontier {
     position: absolute;
-    background: var(--sticky-frontier-color);
-    /* opacity: 0.5; */
-    cursor: grab;
-    z-index: ${Z_INDEX_STICKY_FRONTIER_HANDLE};
   }
 
-  .navi_table_cell_sticky_frontier[data-left] {
-    right: 0;
+  .navi_table_sticky_frontier[data-left] {
     top: 0;
     bottom: 0;
+    left: calc(
+      var(--sticky-group-left-frontier, 0px) - var(--sticky-left-frontier-width)
+    );
     width: var(--sticky-left-frontier-width);
   }
-  .navi_table_cell_sticky_frontier[data-left][data-opposite] {
-    left: 0;
-    right: auto;
-  }
-  .navi_table_cell_sticky_frontier[data-top] {
-    bottom: 0;
+
+  .navi_table_sticky_frontier[data-top] {
     left: 0;
     right: 0;
+    top: calc(
+      var(--sticky-group-top-frontier, 0px) - var(--sticky-top-frontier-height)
+    );
     height: var(--sticky-top-frontier-height);
   }
-  .navi_table_cell_sticky_frontier[data-top][data-opposite] {
-    top: 0;
-    bottom: auto;
-  }
-  .navi_table_cell_sticky_frontier[data-left][data-top] {
-    bottom: 0;
-    right: 0;
-    left: auto;
-    top: auto;
-  }
 
-  .navi_table_sticky_left_frontier_ghost,
-  .navi_table_sticky_left_frontier_preview {
+  .navi_table_sticky_frontier_ghost,
+  .navi_table_sticky_frontier_preview {
     position: absolute;
-    top: 0;
-    width: var(--sticky-left-frontier-width);
-    height: var(--table-height, 100%);
     pointer-events: none;
     opacity: 0;
   }
-  .navi_table_sticky_left_frontier_ghost[data-visible],
-  .navi_table_sticky_left_frontier_preview[data-visible] {
-    opacity: 1;
-  }
-  .navi_table_sticky_left_frontier_ghost {
+  .navi_table_sticky_frontier_ghost {
     z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
     background: rgba(68, 71, 70, 0.5);
+  }
+  .navi_table_sticky_frontier_preview {
+    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
+    background: red;
+  }
+  .navi_table_sticky_frontier_preview[data-visible] {
+    opacity: 1;
+  }
+  .navi_table_sticky_frontier_ghost[data-left],
+  .navi_table_sticky_frontier_preview[data-left] {
+    top: 0;
+    width: var(--sticky-left-frontier-width);
+    height: var(--table-height, 100%);
+  }
+  .navi_table_sticky_frontier_ghost[data-left] {
     left: calc(
       var(--sticky-left-frontier-ghost-left, 0px) - var(
           --sticky-left-frontier-width
         )
     );
   }
-  .navi_table_sticky_left_frontier_preview {
-    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
-    background: red;
+  .navi_table_sticky_frontier_preview[data-left] {
     left: calc(
       var(--sticky-left-frontier-preview-left, 0px) - var(
           --sticky-left-frontier-width
@@ -123,31 +115,21 @@ import.meta.css = /* css */ `
     );
   }
 
-  .navi_table_sticky_top_frontier_ghost,
-  .navi_table_sticky_top_frontier_preview {
-    position: absolute;
+  .navi_table_sticky_frontier_ghost[data-top],
+  .navi_table_sticky_frontier_preview[data-top] {
     left: 0;
     width: var(--table-width, 100%);
     height: var(--sticky-top-frontier-height);
-    pointer-events: none;
-    opacity: 0;
   }
-  .navi_table_sticky_top_frontier_ghost[data-visible],
-  .navi_table_sticky_top_frontier_preview[data-visible] {
-    opacity: 1;
-  }
-  .navi_table_sticky_top_frontier_ghost {
-    z-index: ${Z_INDEX_STICKY_FRONTIER_GHOST};
-    background: rgba(68, 71, 70, 0.5);
+
+  .navi_table_sticky_frontier_ghost[data-top] {
     top: calc(
       var(--sticky-top-frontier-ghost-top, 0px) - var(
           --sticky-top-frontier-height
         )
     );
   }
-  .navi_table_sticky_top_frontier_preview {
-    z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
-    background: red;
+  .navi_table_sticky_frontier_preview[data-top] {
     top: calc(
       var(--sticky-top-frontier-preview-top, 0px) - var(
           --sticky-top-frontier-height
@@ -306,28 +288,6 @@ import.meta.css = /* css */ `
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
-
-  .navi_table_sticky_frontier {
-    position: absolute;
-  }
-
-  .navi_table_sticky_frontier[data-left] {
-    top: 0;
-    bottom: 0;
-    left: calc(
-      var(--sticky-group-left-frontier, 0px) - var(--sticky-left-frontier-width)
-    );
-    width: var(--sticky-left-frontier-width);
-  }
-
-  .navi_table_sticky_frontier[data-top] {
-    left: 0;
-    right: 0;
-    top: calc(
-      var(--sticky-group-top-frontier, 0px) - var(--sticky-top-frontier-height)
-    );
-    height: var(--sticky-top-frontier-height);
-  }
 `;
 
 export const TableStickyFrontier = () => {
@@ -407,17 +367,17 @@ const TableStickyTopFrontier = () => {
 };
 
 const TableStickyLeftFrontierGhost = () => {
-  return <div className="navi_table_sticky_left_frontier_ghost"></div>;
+  return <div className="navi_table_sticky_frontier_ghost" data-left=""></div>;
 };
 const TableStickyLeftFrontierPreview = () => {
-  return <div className="navi_table_sticky_left_frontier_preview"></div>;
+  return <div className="navi_table_sticky_frontier_preview" data-top=""></div>;
 };
 
 const TableStickyTopFrontierGhost = () => {
-  return <div className="navi_table_sticky_top_frontier_ghost"></div>;
+  return <div className="navi_table_sticky_frontier_ghost" data-top=""></div>;
 };
 const TableStickyTopFrontierPreview = () => {
-  return <div className="navi_table_sticky_top_frontier_preview"></div>;
+  return <div className="navi_table_sticky_frontier_preview" data-top=""></div>;
 };
 
 // Generic function to handle sticky frontier movement for both axes
@@ -443,12 +403,12 @@ const initMoveStickyFrontierByMousedown = (
   const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
   const ghostSelector =
     axis === "x"
-      ? ".navi_table_sticky_left_frontier_ghost"
-      : ".navi_table_sticky_top_frontier_ghost";
+      ? ".navi_table_sticky_frontier_ghost[data-left]"
+      : ".navi_table_sticky_frontier_ghost[data-top]";
   const previewSelector =
     axis === "x"
-      ? ".navi_table_sticky_left_frontier_preview"
-      : ".navi_table_sticky_top_frontier_preview";
+      ? ".navi_table_sticky_frontier_preview[data-left]"
+      : ".navi_table_sticky_frontier_preview[data-top]";
   const ghostVariableName =
     axis === "x"
       ? "--sticky-left-frontier-ghost-left"
