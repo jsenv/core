@@ -205,11 +205,11 @@ const createDebugMarker = ({
 
   // Adjust positioning to account for marker dimensions
   if (orientation === "vertical") {
-    marker.style.left = `${x - 4}px`; // Center the 8px wide marker on the x position
+    marker.style.left = `${x - 6}px`; // Center the 12px wide marker on the x position
     marker.style.top = `${y}px`;
   } else {
     marker.style.left = `${x}px`;
-    marker.style.top = `${y - 4}px`; // Center the 8px tall marker on the y position
+    marker.style.top = `${y - 6}px`; // Center the 12px tall marker on the y position
   }
 
   marker.title = name;
@@ -255,45 +255,53 @@ import.meta.css = /* css */ `
   }
 
   .navi_debug_marker--vertical {
-    width: 8px;
+    width: 12px;
     height: 100vh;
   }
 
   .navi_debug_marker--horizontal {
     width: 100vw;
-    height: 8px;
+    height: 12px;
   }
 
-  /* Visible area markers with gradients to show direction */
+  /* Visible area markers with more visible gradients */
   .navi_debug_marker--blue {
     background: linear-gradient(
       to right,
-      rgba(0, 0, 255, 1),
-      rgba(0, 0, 255, 0)
+      rgba(0, 0, 255, 0.9) 0%,
+      rgba(0, 0, 255, 0.7) 30%,
+      rgba(0, 0, 255, 0.3) 70%,
+      rgba(0, 0, 255, 0) 100%
     );
   }
 
   .navi_debug_marker--green {
     background: linear-gradient(
       to left,
-      rgba(0, 128, 0, 1),
-      rgba(0, 128, 0, 0)
+      rgba(0, 128, 0, 0.9) 0%,
+      rgba(0, 128, 0, 0.7) 30%,
+      rgba(0, 128, 0, 0.3) 70%,
+      rgba(0, 128, 0, 0) 100%
     );
   }
 
   .navi_debug_marker--red {
     background: linear-gradient(
       to bottom,
-      rgba(255, 0, 0, 1),
-      rgba(255, 0, 0, 0)
+      rgba(255, 0, 0, 0.9) 0%,
+      rgba(255, 0, 0, 0.7) 30%,
+      rgba(255, 0, 0, 0.3) 70%,
+      rgba(255, 0, 0, 0) 100%
     );
   }
 
   .navi_debug_marker--orange {
     background: linear-gradient(
       to top,
-      rgba(255, 165, 0, 1),
-      rgba(255, 165, 0, 0)
+      rgba(255, 165, 0, 0.9) 0%,
+      rgba(255, 165, 0, 0.7) 30%,
+      rgba(255, 165, 0, 0.3) 70%,
+      rgba(255, 165, 0, 0) 100%
     );
   }
 
@@ -315,45 +323,47 @@ import.meta.css = /* css */ `
     pointer-events: none;
   }
 
-  /* Vertical markers - labels positioned to the right with rotation */
+  /* Label positioning - exactly on the lines with slight offsets */
+
+  /* Vertical markers base positioning */
   .navi_debug_marker--vertical .navi_debug_marker_label {
-    left: 12px;
-    top: 50px; /* Move down to avoid overlap with horizontal bounds */
-    transform: rotate(90deg);
+    top: 20px; /* Small offset from top */
     transform-origin: left center;
   }
 
-  /* Horizontal markers - labels positioned based on type */
+  /* Horizontal markers base positioning */
   .navi_debug_marker--horizontal .navi_debug_marker_label {
-    left: 10px;
+    left: 20px; /* Small offset from left edge */
   }
 
-  /* Top markers - label below the line */
-  .navi_debug_marker--red .navi_debug_marker_label {
-    top: 12px;
-  }
-
-  /* Bottom markers - label above the line */
-  .navi_debug_marker--orange .navi_debug_marker_label {
-    bottom: 12px;
-    top: auto;
-  }
-
-  /* Left vertical markers - specific positioning */
+  /* Left vertical bounds (blue) - positioned exactly on the line */
   .navi_debug_marker--blue .navi_debug_marker_label {
-    left: 12px;
-    top: 50px;
+    left: 0px; /* Exactly on the line */
+    top: 20px;
     transform: rotate(90deg);
     transform-origin: left center;
   }
 
-  /* Right vertical markers - position to the left of the marker */
+  /* Right vertical bounds (green) - positioned exactly on the line */
   .navi_debug_marker--green .navi_debug_marker_label {
-    right: 12px;
+    right: 0px; /* Exactly on the line */
     left: auto;
-    top: 50px;
+    top: 20px;
     transform: rotate(-90deg);
     transform-origin: right center;
+  }
+
+  /* Top horizontal bounds (red) - positioned exactly on the line */
+  .navi_debug_marker--red .navi_debug_marker_label {
+    top: 0px; /* Exactly on the line */
+    left: 20px;
+  }
+
+  /* Bottom horizontal bounds (orange) - positioned exactly on the line */
+  .navi_debug_marker--orange .navi_debug_marker_label {
+    bottom: 0px; /* Exactly on the line */
+    top: auto;
+    left: 20px;
   }
 
   .navi_debug_marker_label--red {
