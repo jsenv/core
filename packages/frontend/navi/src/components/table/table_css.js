@@ -13,7 +13,6 @@ import { Z_INDEX_EDITING } from "./z_indexes.js";
 import.meta.css = /* css */ `
   .navi_table_root {
     position: relative;
-    overflow: auto;
     max-width: var(--table-max-width, none);
     max-height: var(--table-max-height, none);
   }

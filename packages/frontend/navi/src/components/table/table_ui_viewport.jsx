@@ -1,3 +1,4 @@
+import { getVisualRect } from "@jsenv/dom";
 import { createPortal, forwardRef } from "preact/compat";
 import { useImperativeHandle, useLayoutEffect, useRef } from "preact/hooks";
 
@@ -31,11 +32,9 @@ export const TableUIViewport = forwardRef((props, ref) => {
     const tableRoot = tableElement.closest(".navi_table_root");
 
     const updateTablePosition = () => {
-      const { left, top } = tableRoot.getBoundingClientRect();
-      const tableLeft = left + document.documentElement.scrollLeft;
-      const tableTop = top + document.documentElement.scrollTop;
-      element.style.setProperty("--table-left", `${tableLeft}px`);
-      element.style.setProperty("--table-top", `${tableTop}px`);
+      const { left, top } = getVisualRect(tableRoot);
+      element.style.setProperty("--table-left", `${left}px`);
+      element.style.setProperty("--table-top", `${top}px`);
     };
     updateTablePosition();
     window.addEventListener("scroll", updateTablePosition, { passive: true });

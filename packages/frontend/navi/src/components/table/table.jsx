@@ -137,6 +137,7 @@ export const Table = forwardRef((props, ref) => {
     onColumnOrderChange,
     maxWidth,
     maxHeight,
+    overflow,
     children,
   } = props;
 
@@ -243,6 +244,7 @@ export const Table = forwardRef((props, ref) => {
       ref={tableRootRef}
       className="navi_table_root"
       style={{
+        overflow,
         "--table-max-width": maxWidth ? `${maxWidth}px` : undefined,
         "--table-max-height": maxHeight ? `${maxHeight}px` : undefined,
       }}
