@@ -80,8 +80,7 @@ import {
 import {
   parseTableSelectionValue,
   stringifyTableSelectionValue,
-  TableSelectionProvider,
-  useTableSelection,
+  TableSelectionContext,
   useTableSelectionContextValue,
 } from "./selection/table_selection.js";
 import { useTableSelectionController } from "./selection/table_selection.jsx";
@@ -247,7 +246,7 @@ export const Table = forwardRef((props, ref) => {
           data-border-collapse={borderCollapse ? "" : undefined}
         >
           <TableSizeProvider value={tableSizeContextValue}>
-            <TableSelectionProvider value={selectionContextValue}>
+            <TableSelectionContext.Provider value={selectionContextValue}>
               <TableDragContext.Provider value={dragContextValue}>
                 <TableStickyContext.Provider value={stickyContextValue}>
                   <ColumnProducerProviderContext.Provider
@@ -261,7 +260,7 @@ export const Table = forwardRef((props, ref) => {
                   </ColumnProducerProviderContext.Provider>
                 </TableStickyContext.Provider>
               </TableDragContext.Provider>
-            </TableSelectionProvider>
+            </TableSelectionContext.Provider>
           </TableSizeProvider>
         </table>
         <TableUI>
@@ -327,6 +326,10 @@ export const Tbody = ({ children }) => {
   );
 };
 export const Tr = ({ id, height, children }) => {
+  if (!id) {
+    console.warn("<Tr /> must have an id prop to enable selection");
+  }
+  const { selectedRowIds } = useContext(TableSelectionContext);
   const { stickyTopFrontierRowIndex } = useContext(TableStickyContext);
   const rowIndex = useRegisterRow({ id, height });
   const row = useRowByIndex(rowIndex);
@@ -334,9 +337,7 @@ export const Tr = ({ id, height, children }) => {
 
   const isStickyTop = rowIndex <= stickyTopFrontierRowIndex;
   const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
-
-  const { selectedRowIndexes } = useTableSelection();
-  const isRowSelected = selectedRowIndexes.includes(rowIndex);
+  const isRowSelected = selectedRowIds.includes(id);
 
   children = toChildArray(children);
 
@@ -424,12 +425,14 @@ export const TableCell = forwardRef((props, ref) => {
   const isAfterStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex + 1;
 
   // selection
+  const rowId = row.id;
+  const columnId = column.id;
   const selectionValue = stringifyTableSelectionValue("cell", {
-    rowIndex,
-    columnIndex,
+    rowId,
+    columnId,
   });
   const { selection, selectionController, columnContainsSelectedCell } =
-    useTableSelection();
+    useContext(TableSelectionContext);
   if (selectionImpact === undefined) {
     if (rowIndex === 0 && columnIndex === 0 && canSelectAll) {
       selectionImpact = (allValues) => {
@@ -444,7 +447,7 @@ export const TableCell = forwardRef((props, ref) => {
           const selectionValueInfo = parseTableSelectionValue(v);
           return (
             selectionValueInfo.type === "cell" &&
-            selectionValueInfo.columnIndex === columnIndex
+            selectionValueInfo.columnId === columnId
           );
         });
         return columnCells;
@@ -455,7 +458,7 @@ export const TableCell = forwardRef((props, ref) => {
           const selectionValueInfo = parseTableSelectionValue(v);
           return (
             selectionValueInfo.type === "cell" &&
-            selectionValueInfo.rowIndex === rowIndex
+            selectionValueInfo.rowId === rowId
           );
         });
         return rowCells;

@@ -1,78 +1,67 @@
 import { createContext } from "preact";
-import { useContext, useMemo } from "preact/hooks";
+import { useMemo } from "preact/hooks";
 
-const TableSelectionContext = createContext();
-export const TableSelectionProvider = TableSelectionContext.Provider;
+export const TableSelectionContext = createContext();
 export const useTableSelectionContextValue = (
   selection,
   selectionController,
 ) => {
   const selectionContextValue = useMemo(() => {
-    const columnWithSomeSelectedCell = [];
-    const rowWithSomeSelectedCell = [];
-    const selectedColumnIndexes = [];
-    const selectedRowIndexes = [];
-
+    const selectedColumnIds = [];
+    const selectedRowIds = [];
+    const selectedCellIds = [];
+    const columnIdWithSomeSelectedCellSet = new Set();
+    const rowIdWithSomeSelectedCellSet = new Set();
     for (const item of selection) {
       const selectionValueInfo = parseTableSelectionValue(item);
       if (selectionValueInfo.type === "row") {
-        const { rowIndex } = selectionValueInfo;
-        selectedRowIndexes.push(rowIndex);
+        const { rowId } = selectionValueInfo;
+        selectedRowIds.push(rowId);
         continue;
       }
       if (selectionValueInfo.type === "column") {
-        const { columnIndex } = selectionValueInfo;
-        selectedColumnIndexes.push(columnIndex);
+        const { columnId } = selectionValueInfo;
+        selectedColumnIds.push(columnId);
         continue;
       }
       if (selectionValueInfo.type === "cell") {
-        const { columnIndex, rowIndex } = selectionValueInfo;
-        // Add to some-selected tracking
-        if (!columnWithSomeSelectedCell.includes(columnIndex)) {
-          columnWithSomeSelectedCell.push(columnIndex);
-        }
-        if (!rowWithSomeSelectedCell.includes(rowIndex)) {
-          rowWithSomeSelectedCell.push(rowIndex);
-        }
+        const { cellId, columnId, rowId } = selectionValueInfo;
+        selectedCellIds.push(cellId);
+        columnIdWithSomeSelectedCellSet.add(columnId);
+        rowIdWithSomeSelectedCellSet.add(rowId);
+        continue;
       }
     }
-
     return {
       selection,
       selectionController,
-      columnWithSomeSelectedCell,
-      rowWithSomeSelectedCell,
-      selectedColumnIndexes,
-      selectedRowIndexes,
+      selectedColumnIds,
+      selectedRowIds,
+      columnIdWithSomeSelectedCellSet,
+      rowIdWithSomeSelectedCellSet,
     };
   }, [selection]);
 
   return selectionContextValue;
 };
-export const useTableSelection = () => {
-  return useContext(TableSelectionContext);
-};
 
 export const parseTableSelectionValue = (selectionValue) => {
   if (selectionValue.startsWith("row:")) {
-    const rowIndex = selectionValue.slice("row:".length);
-    return { type: "row", rowIndex: Number(rowIndex) };
+    const rowId = selectionValue.slice("row:".length);
+    return { type: "row", rowId };
   }
   if (selectionValue.startsWith("column:")) {
-    const columnIndex = selectionValue.slice("column:".length);
-    return { type: "column", columnIndex: Number(columnIndex) };
+    const columnId = selectionValue.slice("column:".length);
+    return { type: "column", columnId };
   }
-  const [cellRowIndex, cellColumnIndex] = selectionValue.split("-");
-  return {
-    type: "cell",
-    rowIndex: Number(cellRowIndex),
-    columnIndex: Number(cellColumnIndex),
-  };
+  const cellId = selectionValue.slice("cell:".length);
+  const [columnId, rowId] = cellId.split("-");
+  return { type: "cell", cellId, columnId, rowId };
 };
 export const stringifyTableSelectionValue = (type, value) => {
   if (type === "cell") {
-    const { rowIndex, columnIndex } = value;
-    return `${rowIndex}-${columnIndex}`;
+    const { columnId, rowId } = value;
+    return `cell:${columnId}-${rowId}`;
   }
   if (type === "row") {
     return `row:${value}`;
@@ -89,12 +78,8 @@ export const stringifyTableSelectionValue = (type, value) => {
  * @param {{rowIndex: number, columnIndex: number}} cellPosition - Cell coordinates
  * @returns {boolean} True if the cell is selected
  */
-export const isCellSelected = (selection, { rowIndex, columnIndex }) => {
-  const cellSelectionValue = stringifyTableSelectionValue("cell", {
-    rowIndex,
-    columnIndex,
-  });
-
+export const isCellSelected = (selection, cellId) => {
+  const cellSelectionValue = stringifyTableSelectionValue("cell", cellId);
   return selection.includes(cellSelectionValue);
 };
 
@@ -104,8 +89,8 @@ export const isCellSelected = (selection, { rowIndex, columnIndex }) => {
  * @param {number} rowIndex - Row index
  * @returns {boolean} True if the row is selected
  */
-export const isRowSelected = (selection, rowIndex) => {
-  const rowSelectionValue = stringifyTableSelectionValue("row", rowIndex);
+export const isRowSelected = (selection, rowId) => {
+  const rowSelectionValue = stringifyTableSelectionValue("row", rowId);
   return selection.includes(rowSelectionValue);
 };
 
@@ -115,10 +100,7 @@ export const isRowSelected = (selection, rowIndex) => {
  * @param {number} columnIndex - Column index
  * @returns {boolean} True if the column is selected
  */
-export const isColumnSelected = (selection, columnIndex) => {
-  const columnSelectionValue = stringifyTableSelectionValue(
-    "column",
-    columnIndex,
-  );
+export const isColumnSelected = (selection, columnId) => {
+  const columnSelectionValue = stringifyTableSelectionValue("column", columnId);
   return selection.has(columnSelectionValue);
 };

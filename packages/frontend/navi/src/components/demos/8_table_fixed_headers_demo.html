@@ -112,6 +112,7 @@
         const data = [];
         for (let i = 1; i <= rows; i++) {
           const rowCells = [];
+          rowCells.id = i;
           for (let j = 1; j <= cols; j++) {
             rowCells.push(`Cell ${i}-${j}`);
           }
@@ -211,7 +212,7 @@
                   ))}
                 </Colgroup>
                 <Thead>
-                  <Tr height={rowHeights[0]}>
+                  <Tr id="head" height={rowHeights[0]}>
                     <RowNumberTableCell />
                     {columns.map((col) => (
                       <TableCell key={col.id}>{col.header}</TableCell>
@@ -223,7 +224,11 @@
                     const rowIndex = dataRowIndex + 1;
                     const rowData = data[dataRowIndex];
                     return (
-                      <Tr key={rowData.id} height={rowHeights[rowIndex]}>
+                      <Tr
+                        id={rowData.id}
+                        key={rowData.id}
+                        height={rowHeights[rowIndex]}
+                      >
                         <RowNumberTableCell />
                         {rowCells.map((cellValue, columnIndex) => {
                           return (
