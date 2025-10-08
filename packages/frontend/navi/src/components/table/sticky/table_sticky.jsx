@@ -101,6 +101,7 @@ import.meta.css = /* css */ `
     z-index: ${Z_INDEX_STICKY_FRONTIER_PREVIEW};
     background: red;
   }
+  .navi_table_sticky_frontier_ghost[data-visible],
   .navi_table_sticky_frontier_preview[data-visible] {
     opacity: 1;
   }
@@ -445,23 +446,22 @@ const initMoveStickyFrontierByMousedown = (
       ? "--sticky-left-frontier-preview-left"
       : "--sticky-top-frontier-preview-top";
 
-  const tableContainer = table.closest(".navi_table_container");
   const ghostElement = frontierGhost;
   const previewElement = frontierPreview;
-
   const scrollableParent = getScrollableParent(table);
   // Reset scroll to prevent starting drag in obstacle position
   scrollableParent[scrollProperty] = 0;
 
   // Setup table dimensions for ghost/preview
-  const tableContainerRect = tableContainer.getBoundingClientRect();
+  const ghostOffsetParent = ghostElement.offsetParent;
+  const ghostOffsetParentRect = ghostOffsetParent.getBoundingClientRect();
 
   const getPosition = (elementRect) => {
     if (axis === "x") {
-      const elementLeftRelative = elementRect.left - tableContainerRect.left;
+      const elementLeftRelative = elementRect.left - ghostOffsetParentRect.left;
       return elementLeftRelative + elementRect.width;
     }
-    const elementTopRelative = elementRect.top - tableContainerRect.top;
+    const elementTopRelative = elementRect.top - ghostOffsetParentRect.top;
     return elementTopRelative + elementRect.height;
   };
 
