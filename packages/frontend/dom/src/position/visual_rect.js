@@ -33,12 +33,15 @@ export const getVisualRect = (
 
   let left = domElement.offsetLeft;
   let top = domElement.offsetTop;
-  let domElementAncestor = domElement.parentElement;
+  let domElementAncestor = domElement.offsetParent;
   // Accumulate layout positions from offsetParent chain
-  while (domElementAncestor !== secondDomElement) {
+  while (domElementAncestor && domElementAncestor !== secondDomElement) {
     left += domElementAncestor.offsetLeft;
     top += domElementAncestor.offsetTop;
-    domElementAncestor = domElementAncestor.parentElement;
+    if (domElementAncestor.contains(secondDomElement)) {
+      break;
+    }
+    domElementAncestor = domElementAncestor.offsetParent;
   }
 
   // Accumulate scroll offsets from all scrollable ancestors up to and including secondDomElement
@@ -69,6 +72,7 @@ export const getVisualRect = (
       }
       scrollableAncestor = scrollableAncestor.parentElement;
     }
+    console.log(domElement, top, scrollTop);
     if (!isStickyLeft) {
       left -= scrollLeft;
     }
