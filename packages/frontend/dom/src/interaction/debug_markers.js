@@ -242,71 +242,116 @@ const createObstacleMarker = (obstacleObj, parentRect) => {
 import.meta.css = /* css */ `
   .navi_debug_marker {
     position: fixed;
-    width: 2px;
-    height: 100vh;
     z-index: 999999;
     pointer-events: none;
-    opacity: 0.5;
   }
 
   .navi_debug_marker--vertical {
-    width: 2px;
+    width: 8px;
     height: 100vh;
   }
 
   .navi_debug_marker--horizontal {
     width: 100vw;
-    height: 2px;
+    height: 8px;
   }
 
-  .navi_debug_marker--red {
-    background-color: red;
-  }
-
+  /* Visible area markers with gradients to show direction */
   .navi_debug_marker--blue {
-    background-color: blue;
+    background: linear-gradient(
+      to right,
+      rgba(0, 0, 255, 1),
+      rgba(0, 0, 255, 0)
+    );
   }
 
   .navi_debug_marker--green {
-    background-color: green;
+    background: linear-gradient(
+      to left,
+      rgba(0, 128, 0, 1),
+      rgba(0, 128, 0, 0)
+    );
+  }
+
+  .navi_debug_marker--red {
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 0, 0, 1),
+      rgba(255, 0, 0, 0)
+    );
   }
 
   .navi_debug_marker--orange {
-    background-color: orange;
+    background: linear-gradient(
+      to top,
+      rgba(255, 165, 0, 1),
+      rgba(255, 165, 0, 0)
+    );
   }
 
+  /* Bounds markers - solid color for constraints */
   .navi_debug_marker--purple {
     background-color: purple;
+    opacity: 0.8;
   }
 
   .navi_debug_marker_label {
     position: absolute;
-    top: 10px;
-    left: 5px;
     font-size: 12px;
     font-weight: bold;
-    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid;
+    white-space: nowrap;
     pointer-events: none;
+  }
+
+  /* Vertical markers - labels positioned to the right */
+  .navi_debug_marker--vertical .navi_debug_marker_label {
+    left: 12px;
+    top: 10px;
+  }
+
+  /* Horizontal markers - labels positioned based on type */
+  .navi_debug_marker--horizontal .navi_debug_marker_label {
+    left: 10px;
+  }
+
+  /* Top markers - label below the line */
+  .navi_debug_marker--red .navi_debug_marker_label {
+    top: 12px;
+  }
+
+  /* Bottom markers - label above the line */
+  .navi_debug_marker--orange .navi_debug_marker_label {
+    bottom: 12px;
+    top: auto;
   }
 
   .navi_debug_marker_label--red {
     color: red;
+    border-color: red;
   }
 
   .navi_debug_marker_label--blue {
     color: blue;
+    border-color: blue;
   }
 
   .navi_debug_marker_label--green {
     color: green;
+    border-color: green;
   }
 
   .navi_debug_marker_label--orange {
     color: orange;
+    border-color: orange;
   }
 
   .navi_debug_marker_label--purple {
     color: purple;
+    border-color: purple;
   }
 
   .navi_obstacle_marker {
