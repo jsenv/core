@@ -167,15 +167,18 @@ export const createDragGesture = (options) => {
       isStickyLeft = false;
       isStickyTop = false;
       const { left, top } = elementVisuallyImpacted.getBoundingClientRect();
+      const { scrollLeft, scrollTop } = documentElement;
+      leftAtStart = left + scrollLeft;
+      topAtStart = top + scrollTop;
       const stylesToSet = {
         position: "absolute",
-        left: `${left + documentElement.scrollLeft}px`,
-        top: `${top + documentElement.scrollTop}px`,
+        left: `${leftAtStart}px`,
+        top: `${topAtStart}px`,
         transform: "none",
       };
       const restoreStyles = setStyles(element, stylesToSet);
       addTeardown(() => {
-        const { left, top } = getVisualRect(element, undefined, {
+        const { left, top } = getVisualRect(element, document.documentElement, {
           isFixed: true,
         });
         restoreStyles();
@@ -778,6 +781,7 @@ export const createDragGesture = (options) => {
       for (const teardownCallback of teardownCallbackSet) {
         teardownCallback();
       }
+      teardownCallbackSet.clear();
       onRelease?.(gestureInfo);
     };
 
