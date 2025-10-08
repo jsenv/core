@@ -1,10 +1,9 @@
 import { createContext } from "preact";
-import { useContext, useMemo, useState } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 
 import { useStableCallback } from "../../use_stable_callback.js";
 
-const TableDragContext = createContext();
-export const TableDragProvider = TableDragContext.Provider;
+export const TableDragContext = createContext();
 
 export const useTableDragContextValue = ({ onColumnOrderChange, columns }) => {
   onColumnOrderChange = useStableCallback(onColumnOrderChange);
@@ -47,8 +46,4 @@ export const useTableDragContextValue = ({ onColumnOrderChange, columns }) => {
       onColumnOrderChange,
     };
   }, [grabTarget]);
-};
-
-export const useTableDrag = () => {
-  return useContext(TableDragContext);
 };

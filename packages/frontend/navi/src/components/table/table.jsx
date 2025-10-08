@@ -63,8 +63,7 @@ import {
 import { useFocusGroup } from "../use_focus_group.js";
 import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import {
-  TableDragProvider,
-  useTableDrag,
+  TableDragContext,
   useTableDragContextValue,
 } from "./drag/table_drag.js";
 import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
@@ -249,7 +248,7 @@ export const Table = forwardRef((props, ref) => {
         >
           <TableSizeProvider value={tableSizeContextValue}>
             <TableSelectionProvider value={selectionContextValue}>
-              <TableDragProvider value={dragContextValue}>
+              <TableDragContext.Provider value={dragContextValue}>
                 <TableStickyContext.Provider value={stickyContextValue}>
                   <ColumnProducerProviderContext.Provider
                     value={ColumnProducerProvider}
@@ -261,7 +260,7 @@ export const Table = forwardRef((props, ref) => {
                     </ColumnConsumerProviderContext.Provider>
                   </ColumnProducerProviderContext.Provider>
                 </TableStickyContext.Provider>
-              </TableDragProvider>
+              </TableDragContext.Provider>
             </TableSelectionProvider>
           </TableSizeProvider>
         </table>
@@ -472,7 +471,7 @@ export const TableCell = forwardRef((props, ref) => {
 
   // moving column
   const { grabTarget, grabColumn, releaseColumn, onColumnOrderChange } =
-    useTableDrag();
+    useContext(TableDragContext);
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
   if (canDragColumn === undefined) {
     canDragColumn =
