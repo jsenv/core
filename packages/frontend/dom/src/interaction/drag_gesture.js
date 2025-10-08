@@ -381,12 +381,10 @@ export const createDragGesture = (options) => {
         const visibleConstraintElement =
           areaConstraintElement || scrollableParent;
         let bounds;
-
         if (visibleConstraintElement === documentElement) {
-          const { scrollLeft, scrollTop, clientWidth, clientHeight } =
-            documentElement;
-          const left = scrollLeft;
-          const top = scrollTop;
+          const { clientWidth, clientHeight } = documentElement;
+          const left = 0;
+          const top = 0;
           bounds = {
             left,
             top,
