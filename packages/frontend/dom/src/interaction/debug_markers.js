@@ -57,7 +57,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
               name: "visibleAreaLeft",
               x: visibleArea.left,
               y: 0,
-              color: "blue",
+              color: "0 0 255", // blue
               side: "left",
             }),
           );
@@ -66,7 +66,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
               name: "visibleAreaRight",
               x: visibleArea.right,
               y: 0,
-              color: "green",
+              color: "0 128 0", // green
               side: "right",
             }),
           );
@@ -77,7 +77,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
               name: "visibleAreaTop",
               x: 0,
               y: visibleArea.top,
-              color: "red",
+              color: "255 0 0", // red
               side: "top",
             }),
           );
@@ -86,7 +86,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
               name: "visibleAreaBottom",
               x: 0,
               y: visibleArea.bottom,
-              color: "orange",
+              color: "255 165 0", // orange
               side: "bottom",
             }),
           );
@@ -124,7 +124,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
                 name: "leftBound",
                 x: leftBoundViewport,
                 y: 0,
-                color: "red",
+                color: "128 0 128", // purple
                 side: "left",
               }),
             );
@@ -139,7 +139,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
                 name: "rightBound",
                 x: rightBoundViewport,
                 y: 0,
-                color: "red",
+                color: "128 0 128", // purple
                 side: "right",
               }),
             );
@@ -153,7 +153,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
                 name: "topBound",
                 x: 0,
                 y: topBoundViewport,
-                color: "red",
+                color: "128 0 128", // purple
                 side: "top",
               }),
             );
@@ -168,7 +168,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
                 name: "bottomBound",
                 x: 0,
                 y: bottomBoundViewport,
-                color: "red",
+                color: "128 0 128", // purple
                 side: "bottom",
               }),
             );
@@ -193,31 +193,23 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
   };
 };
 
-const createDebugMarker = ({ name, x, y, color = "red", side }) => {
+const createDebugMarker = ({ name, x, y, color = "255 0 0", side }) => {
   const marker = document.createElement("div");
-  marker.className = `navi_debug_marker navi_debug_marker--${color}`;
+  marker.className = `navi_debug_marker`;
   marker.setAttribute(`data-${side}`, "");
 
+  // Set the color as a CSS custom property
+  marker.style.setProperty("--marker-color", `rgb(${color})`);
+
   // Position markers exactly at the boundary coordinates
-  if (side === "top") {
-    marker.style.left = `${x}px`; // Exact x position for vertical markers
-    marker.style.top = `${y}px`;
-  } else if (side === "bottom") {
-    marker.style.left = `${x}px`; // Exact x position for vertical markers
-    marker.style.top = `${y}px`;
-  } else if (side === "left") {
-    marker.style.left = `${x}px`;
-    marker.style.top = `${y}px`; // Exact y position for horizontal markers
-  } else {
-    marker.style.left = `${x}px`;
-    marker.style.top = `${y}px`; // Exact y position for horizontal markers
-  }
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
 
   marker.title = name;
 
   // Add label
   const label = document.createElement("div");
-  label.className = `navi_debug_marker_label navi_debug_marker_label--${color}`;
+  label.className = `navi_debug_marker_label`;
   label.textContent = name;
   marker.appendChild(label);
 
@@ -282,70 +274,41 @@ import.meta.css = /* css */ `
   .navi_debug_marker[data-left] {
     background: linear-gradient(
       to right,
-      var(--marker-color-0.9) 0%,
-      var(--marker-color-0.7) 30%,
-      var(--marker-color-0.3) 70%,
-      var(--marker-color-0) 100%
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
     );
   }
 
   .navi_debug_marker[data-right] {
     background: linear-gradient(
       to left,
-      var(--marker-color-0.9) 0%,
-      var(--marker-color-0.7) 30%,
-      var(--marker-color-0.3) 70%,
-      var(--marker-color-0) 100%
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
     );
   }
 
   .navi_debug_marker[data-top] {
     background: linear-gradient(
       to bottom,
-      var(--marker-color-0.9) 0%,
-      var(--marker-color-0.7) 30%,
-      var(--marker-color-0.3) 70%,
-      var(--marker-color-0) 100%
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
     );
   }
 
   .navi_debug_marker[data-bottom] {
     background: linear-gradient(
       to top,
-      var(--marker-color-0.9) 0%,
-      var(--marker-color-0.7) 30%,
-      var(--marker-color-0.3) 70%,
-      var(--marker-color-0) 100%
+      rgba(from var(--marker-color) r g b / 0.9) 0%,
+      rgba(from var(--marker-color) r g b / 0.7) 30%,
+      rgba(from var(--marker-color) r g b / 0.3) 70%,
+      rgba(from var(--marker-color) r g b / 0) 100%
     );
-  }
-
-  /* Color definitions - applied via CSS custom properties */
-  .navi_debug_marker--blue {
-    --marker-color-0.9: rgba(0, 0, 255, 0.9);
-    --marker-color-0.7: rgba(0, 0, 255, 0.7);
-    --marker-color-0.3: rgba(0, 0, 255, 0.3);
-    --marker-color-0: rgba(0, 0, 255, 0);
-  }
-
-  .navi_debug_marker--green {
-    --marker-color-0.9: rgba(0, 128, 0, 0.9);
-    --marker-color-0.7: rgba(0, 128, 0, 0.7);
-    --marker-color-0.3: rgba(0, 128, 0, 0.3);
-    --marker-color-0: rgba(0, 128, 0, 0);
-  }
-
-  .navi_debug_marker--red {
-    --marker-color-0.9: rgba(255, 0, 0, 0.9);
-    --marker-color-0.7: rgba(255, 0, 0, 0.7);
-    --marker-color-0.3: rgba(255, 0, 0, 0.3);
-    --marker-color-0: rgba(255, 0, 0, 0);
-  }
-
-  .navi_debug_marker--orange {
-    --marker-color-0.9: rgba(255, 165, 0, 0.9);
-    --marker-color-0.7: rgba(255, 165, 0, 0.7);
-    --marker-color-0.3: rgba(255, 165, 0, 0.3);
-    --marker-color-0: rgba(255, 165, 0, 0);
   }
 
   /* Bounds markers - solid color for constraints */
@@ -398,29 +361,9 @@ import.meta.css = /* css */ `
     left: 20px; /* Small offset from left edge */
   }
 
-  .navi_debug_marker_label--red {
-    color: red;
-    border-color: red;
-  }
-
-  .navi_debug_marker_label--blue {
-    color: blue;
-    border-color: blue;
-  }
-
-  .navi_debug_marker_label--green {
-    color: green;
-    border-color: green;
-  }
-
-  .navi_debug_marker_label--orange {
-    color: orange;
-    border-color: orange;
-  }
-
-  .navi_debug_marker_label--purple {
-    color: purple;
-    border-color: purple;
+  .navi_debug_marker_label {
+    color: rgb(from var(--marker-color) r g b / 1);
+    border-color: rgb(from var(--marker-color) r g b / 1);
   }
 
   .navi_obstacle_marker {
