@@ -140,9 +140,7 @@ export const Table = forwardRef((props, ref) => {
   } = props;
 
   const innerRef = useRef();
-  useImperativeHandle(ref, () => {
-    return innerRef.current;
-  });
+  useImperativeHandle(ref, () => innerRef.current);
   const tableContainerRef = useRef();
   const tableUIViewportRef = useRef();
 
@@ -223,6 +221,7 @@ export const Table = forwardRef((props, ref) => {
     rows,
   });
 
+  const tableRootRef = useRef();
   const setColumnOrder = (columnIdsNewOrder) => {
     // the code below ensures we re-render the selection when column are re-ordered
     // forcing each previously selected <td> to unselect and newly selected <td> to be selected
@@ -240,6 +239,7 @@ export const Table = forwardRef((props, ref) => {
 
   return (
     <div
+      ref={tableRootRef}
       className="navi_table_root"
       style={{
         "--table-max-width": maxWidth ? `${maxWidth}px` : undefined,
