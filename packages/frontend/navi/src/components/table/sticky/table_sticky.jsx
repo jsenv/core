@@ -23,7 +23,7 @@ import { TableStickyContext } from "./table_sticky.js";
 import.meta.css = /* css */ `
   body {
     --sticky-frontier-color: #c0c0c0;
-    --sticky-frontier-size: 20px;
+    --sticky-frontier-size: 12px;
     --sticky-frontier-ghost-size: 8px;
   }
 

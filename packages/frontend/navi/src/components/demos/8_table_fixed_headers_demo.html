@@ -234,11 +234,10 @@
                           return (
                             <TableCell
                               key={columns[columnIndex].id}
-                              name="cell"
-                              action={({ cell }) => {
+                              action={(value) => {
                                 setCellValue(
                                   { rowIndex: dataRowIndex, columnIndex },
-                                  cell,
+                                  value,
                                 );
                               }}
                             >
