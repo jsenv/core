@@ -14,6 +14,18 @@ const KEEP_MARKERS_ON_RELEASE = true;
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 
+// Ensure markers container exists and return it
+const getMarkersContainer = () => {
+  let container = document.getElementById("navi_debug_markers_container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "navi_debug_markers_container";
+    container.className = "navi_debug_markers_container";
+    document.body.appendChild(container);
+  }
+  return container;
+};
+
 const MARKER_SIZE = 12;
 
 export const setupVisualMarkers = ({ direction, positionedParent }) => {
@@ -27,9 +39,10 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
   // Clean up any existing persistent markers from previous drag gestures
   if (KEEP_MARKERS_ON_RELEASE) {
     // Remove any existing markers from previous gestures
-    document
-      .querySelectorAll(".navi_debug_marker, .navi_obstacle_marker")
-      .forEach((marker) => marker.remove());
+    const container = document.getElementById("navi_debug_markers_container");
+    if (container) {
+      container.innerHTML = ""; // Clear all markers efficiently
+    }
   }
 
   return {
@@ -250,7 +263,8 @@ const createDebugMarker = ({ name, x, y, color = "255 0 0", side }) => {
   label.textContent = name;
   marker.appendChild(label);
 
-  document.body.appendChild(marker);
+  const container = getMarkersContainer();
+  container.appendChild(marker);
   return marker;
 };
 const createObstacleMarker = (obstacleObj, parentRect) => {
@@ -273,27 +287,27 @@ const createObstacleMarker = (obstacleObj, parentRect) => {
   label.textContent = obstacleObj.name;
   marker.appendChild(label);
 
-  document.body.appendChild(marker);
+  const container = getMarkersContainer();
+  container.appendChild(marker);
   return marker;
 };
 
 import.meta.css = /* css */ `
-  .navi_debug_marker {
+  .navi_debug_markers_container {
     position: fixed;
-    z-index: 999999;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
     pointer-events: none;
-
+    z-index: 999998;
     --marker-size: ${MARKER_SIZE}px;
   }
 
-  .navi_debug_marker--vertical {
-    width: var(--marker-size);
-    height: 100vh;
-  }
-
-  .navi_debug_marker--horizontal {
-    width: var(--marker-size);
-    height: 100vh;
+  .navi_debug_marker {
+    position: absolute;
+    pointer-events: none;
   }
 
   /* Markers based on side rather than orientation */
@@ -350,12 +364,6 @@ import.meta.css = /* css */ `
     );
   }
 
-  /* Bounds markers - solid color for constraints */
-  .navi_debug_marker--purple {
-    background-color: purple;
-    opacity: 0.8;
-  }
-
   .navi_debug_marker_label {
     position: absolute;
     font-size: 12px;
@@ -366,47 +374,44 @@ import.meta.css = /* css */ `
     border: 1px solid;
     white-space: nowrap;
     pointer-events: none;
+    color: rgb(from var(--marker-color) r g b / 1);
+    border-color: rgb(from var(--marker-color) r g b / 1);
   }
 
   /* Label positioning based on side data attributes */
 
   /* Left side markers - vertical with 90° rotation */
   .navi_debug_marker[data-left] .navi_debug_marker_label {
-    left: 10px; /* Exactly on the line */
-    top: 20px; /* Small offset from top */
+    left: 10px;
+    top: 20px;
     transform: rotate(90deg);
     transform-origin: left center;
   }
 
   /* Right side markers - vertical with -90° rotation */
   .navi_debug_marker[data-right] .navi_debug_marker_label {
-    right: 10px; /* Exactly on the line */
+    right: 10px;
     left: auto;
-    top: 20px; /* Small offset from top */
+    top: 20px;
     transform: rotate(-90deg);
     transform-origin: right center;
   }
 
   /* Top side markers - horizontal, label on the line */
   .navi_debug_marker[data-top] .navi_debug_marker_label {
-    top: 0px; /* Exactly on the line */
-    left: 20px; /* Small offset from left edge */
+    top: 0px;
+    left: 20px;
   }
 
   /* Bottom side markers - horizontal, label on the line */
   .navi_debug_marker[data-bottom] .navi_debug_marker_label {
-    bottom: 0px; /* Exactly on the line */
+    bottom: 0px;
     top: auto;
-    left: 20px; /* Small offset from left edge */
-  }
-
-  .navi_debug_marker_label {
-    color: rgb(from var(--marker-color) r g b / 1);
-    border-color: rgb(from var(--marker-color) r g b / 1);
+    left: 20px;
   }
 
   .navi_obstacle_marker {
-    position: fixed;
+    position: absolute;
     background-color: orange;
     opacity: 0.6;
     z-index: 9999;
