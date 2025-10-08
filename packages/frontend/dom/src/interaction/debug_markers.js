@@ -203,13 +203,13 @@ const createDebugMarker = ({
   const marker = document.createElement("div");
   marker.className = `navi_debug_marker navi_debug_marker--${orientation} navi_debug_marker--${color}`;
 
-  // Adjust positioning to account for marker dimensions
+  // Position markers exactly at the boundary coordinates
   if (orientation === "vertical") {
-    marker.style.left = `${x - 6}px`; // Center the 12px wide marker on the x position
+    marker.style.left = `${x}px`; // Exact x position for vertical markers
     marker.style.top = `${y}px`;
   } else {
     marker.style.left = `${x}px`;
-    marker.style.top = `${y - 6}px`; // Center the 12px tall marker on the y position
+    marker.style.top = `${y}px`; // Exact y position for horizontal markers
   }
 
   marker.title = name;
@@ -338,7 +338,7 @@ import.meta.css = /* css */ `
 
   /* Left vertical bounds (blue) - positioned exactly on the line */
   .navi_debug_marker--blue .navi_debug_marker_label {
-    left: 0px; /* Exactly on the line */
+    left: 10px; /* Exactly on the line */
     top: 20px;
     transform: rotate(90deg);
     transform-origin: left center;
