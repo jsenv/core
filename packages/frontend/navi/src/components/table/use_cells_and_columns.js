@@ -56,7 +56,7 @@ export const useCellsAndColumns = (cells, columns) => {
     return reorderedCells;
   }, [baseCells, columnOrderedIndexMap, orderedColumnIds.length]);
 
-  const setCellValue = ({ rowIndex, columnIndex }, value) => {
+  const setCellValue = ({ columnIndex, rowIndex }, value) => {
     const originalColumnIndex = columnOrderedIndexMap.get(columnIndex);
     if (originalColumnIndex === undefined) {
       console.warn(`Invalid column index: ${columnIndex}`);

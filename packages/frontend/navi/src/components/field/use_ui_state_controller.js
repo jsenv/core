@@ -12,7 +12,7 @@ import { FormContext } from "../action_execution/form_context.js";
 import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
 
-const DEBUG_UI_STATE_CONTROLLER = true;
+const DEBUG_UI_STATE_CONTROLLER = false;
 const DEBUG_UI_GROUP_STATE_CONTROLLER = false;
 const debugUIState = (...args) => {
   if (DEBUG_UI_STATE_CONTROLLER) {

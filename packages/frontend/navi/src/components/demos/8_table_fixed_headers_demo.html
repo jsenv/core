@@ -236,7 +236,10 @@
                               key={columns[columnIndex].id}
                               name="cell"
                               action={({ cell }) => {
-                                setCellValue(dataRowIndex, columnIndex, cell);
+                                setCellValue(
+                                  { rowIndex: dataRowIndex, columnIndex },
+                                  cell,
+                                );
                               }}
                             >
                               {cellValue}
