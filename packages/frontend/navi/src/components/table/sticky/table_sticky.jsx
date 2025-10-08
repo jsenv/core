@@ -112,10 +112,10 @@ import.meta.css = /* css */ `
     height: var(--table-height, 100%);
   }
   .navi_table_sticky_frontier_ghost[data-left] {
-    left: var(--sticky-left-frontier-ghost-left, 0px);
+    left: var(--sticky-frontier-ghost-position, 0px);
   }
   .navi_table_sticky_frontier_preview[data-left] {
-    left: var(--sticky-left-frontier-preview-left, 0px);
+    left: var(--sticky-frontier-preview-position, 0px);
   }
 
   .navi_table_sticky_frontier_ghost[data-top],
@@ -126,10 +126,10 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier_ghost[data-top] {
-    top: var(--sticky-top-frontier-ghost-top, 0px);
+    top: var(--sticky-frontier-ghost-position, 0px);
   }
   .navi_table_sticky_frontier_preview[data-top] {
-    top: var(--sticky-top-frontier-preview-top, 0px);
+    top: var(--sticky-frontier-preview-position, 0px);
   }
 
   /* Avoid overlaping between sticky frontiers and resize handles */
@@ -437,15 +437,8 @@ const initMoveStickyFrontierByMousedown = (
   const gestureName =
     axis === "x" ? "move-sticky-left-frontier" : "move-sticky-top-frontier";
   const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
-  const ghostVariableName =
-    axis === "x"
-      ? "--sticky-left-frontier-ghost-left"
-      : "--sticky-top-frontier-ghost-top";
-  const previewVariableName =
-    axis === "x"
-      ? "--sticky-left-frontier-preview-left"
-      : "--sticky-top-frontier-preview-top";
-
+  const ghostVariableName = "--sticky-frontier-ghost-position";
+  const previewVariableName = "--sticky-frontier-preview-position";
   const ghostElement = frontierGhost;
   const previewElement = frontierPreview;
   const scrollableParent = getScrollableParent(table);
@@ -489,8 +482,7 @@ const initMoveStickyFrontierByMousedown = (
     }
     let previewPosition;
     if (index === -1) {
-      const ghostRect = ghostElement.getBoundingClientRect();
-      previewPosition = getPosition(ghostRect);
+      previewPosition = 0;
     } else {
       const element = elements[index];
       const elementRect = element.getBoundingClientRect();
