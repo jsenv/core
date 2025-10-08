@@ -306,6 +306,7 @@ export const Col = ({ id, width, immovable, backgroundColor }) => {
 
   return (
     <col
+      id={id}
       data-sticky-left={isStickyLeft ? "" : undefined}
       data-drag-sticky-left-frontier={isStickyLeft ? "" : undefined}
       data-drag-obstacle={immovable ? "move-column" : undefined}
