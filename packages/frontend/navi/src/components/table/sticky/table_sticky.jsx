@@ -8,7 +8,7 @@ import {
   getDropTargetInfo,
   getScrollableParent,
 } from "@jsenv/dom";
-import { useContext } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import {
   Z_INDEX_STICKY_COLUMN,
@@ -57,6 +57,8 @@ import.meta.css = /* css */ `
 
   .navi_table_sticky_frontier {
     position: absolute;
+    cursor: grab;
+    pointer-events: auto;
   }
 
   .navi_table_sticky_frontier[data-left] {
@@ -109,18 +111,10 @@ import.meta.css = /* css */ `
     height: var(--table-height, 100%);
   }
   .navi_table_sticky_frontier_ghost[data-left] {
-    left: calc(
-      var(--sticky-left-frontier-ghost-left, 0px) - var(
-          --sticky-left-frontier-width
-        )
-    );
+    left: var(--sticky-left-frontier-ghost-left, 0px);
   }
   .navi_table_sticky_frontier_preview[data-left] {
-    left: calc(
-      var(--sticky-left-frontier-preview-left, 0px) - var(
-          --sticky-left-frontier-width
-        )
-    );
+    left: var(--sticky-left-frontier-preview-left, 0px);
   }
 
   .navi_table_sticky_frontier_ghost[data-top],
@@ -131,18 +125,10 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier_ghost[data-top] {
-    top: calc(
-      var(--sticky-top-frontier-ghost-top, 0px) - var(
-          --sticky-top-frontier-height
-        )
-    );
+    top: var(--sticky-top-frontier-ghost-top, 0px);
   }
   .navi_table_sticky_frontier_preview[data-top] {
-    top: calc(
-      var(--sticky-top-frontier-preview-top, 0px) - var(
-          --sticky-top-frontier-height
-        )
-    );
+    top: var(--sticky-top-frontier-preview-top, 0px);
   }
 
   /* Avoid overlaping between sticky frontiers and resize handles */
@@ -298,20 +284,53 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableStickyFrontier = () => {
+export const TableStickyFrontier = ({ tableRef }) => {
+  const stickyLeftFrontierGhostRef = useRef();
+  const stickyLeftFrontierPreviewRef = useRef();
+  const stickyTopFrontierGhostRef = useRef();
+  const stickyTopFrontierPreviewRef = useRef();
+
   return (
     <>
-      <TableStickyLeftFrontier />
-      <TableStickyTopFrontier />
-      <TableStickyLeftFrontierGhost />
-      <TableStickyLeftFrontierPreview />
-      <TableStickyTopFrontierGhost />
-      <TableStickyTopFrontierPreview />
+      <TableStickyLeftFrontier
+        tableRef={tableRef}
+        stickyLeftFrontierGhostRef={stickyLeftFrontierGhostRef}
+        stickyLeftFrontierPreviewRef={stickyLeftFrontierPreviewRef}
+      />
+      <TableStickyTopFrontier
+        tableRef={tableRef}
+        stickyTopFrontierGhostRef={stickyTopFrontierGhostRef}
+        stickyTopFrontierPreviewRef={stickyTopFrontierPreviewRef}
+      />
+      <div
+        ref={stickyLeftFrontierGhostRef}
+        className="navi_table_sticky_frontier_ghost"
+        data-left=""
+      ></div>
+      <div
+        ref={stickyLeftFrontierPreviewRef}
+        className="navi_table_sticky_frontier_preview"
+        data-left=""
+      ></div>
+      <div
+        ref={stickyTopFrontierGhostRef}
+        className="navi_table_sticky_frontier_ghost"
+        data-top=""
+      ></div>
+      <div
+        ref={stickyTopFrontierPreviewRef}
+        className="navi_table_sticky_frontier_preview"
+        data-top=""
+      ></div>
     </>
   );
 };
 
-const TableStickyLeftFrontier = () => {
+const TableStickyLeftFrontier = ({
+  tableRef,
+  stickyLeftFrontierGhostRef,
+  stickyLeftFrontierPreviewRef,
+}) => {
   const { stickyLeftFrontierColumnIndex, onStickyLeftFrontierChange } =
     useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyLeftFrontierChange);
@@ -330,8 +349,19 @@ const TableStickyLeftFrontier = () => {
         }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag column
-        initMoveStickyLeftFrontierByMousedown(e, {
-          stickyLeftFrontierColumnIndex,
+
+        const table = tableRef.current;
+        const stickyLeftFrontierGhost = stickyLeftFrontierGhostRef.current;
+        const stickyLeftFrontierPreview = stickyLeftFrontierPreviewRef.current;
+        const colgroup = table.querySelector("colgroup");
+        const colElements = Array.from(colgroup.children);
+        initMoveStickyFrontierByMousedown(e, {
+          table,
+          frontierGhost: stickyLeftFrontierGhost,
+          frontierPreview: stickyLeftFrontierPreview,
+          elements: colElements,
+          frontierIndex: stickyLeftFrontierColumnIndex,
+          axis: "x",
           onRelease: (_, index) => {
             if (index !== stickyLeftFrontierColumnIndex) {
               onStickyLeftFrontierChange(index);
@@ -342,7 +372,11 @@ const TableStickyLeftFrontier = () => {
     ></div>
   );
 };
-const TableStickyTopFrontier = () => {
+const TableStickyTopFrontier = ({
+  tableRef,
+  stickyTopFrontierGhostRef,
+  stickyTopFrontierPreviewRef,
+}) => {
   const { stickyTopFrontierRowIndex, onStickyTopFrontierChange } =
     useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyTopFrontierChange);
@@ -361,8 +395,16 @@ const TableStickyTopFrontier = () => {
         }
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag column
-        initMoveStickyTopFrontierByMousedown(e, {
-          stickyTopFrontierRowIndex,
+
+        const table = tableRef.current;
+        const rowElements = Array.from(table.querySelectorAll("tr"));
+        initMoveStickyFrontierByMousedown(e, {
+          table,
+          frontierGhost: stickyTopFrontierGhostRef.current,
+          frontierPreview: stickyTopFrontierPreviewRef.current,
+          elements: rowElements,
+          frontierIndex: stickyTopFrontierRowIndex,
+          axis: "y",
           onRelease: (_, index) => {
             if (index !== stickyTopFrontierRowIndex) {
               onStickyTopFrontierChange(index);
@@ -374,24 +416,11 @@ const TableStickyTopFrontier = () => {
   );
 };
 
-const TableStickyLeftFrontierGhost = () => {
-  return <div className="navi_table_sticky_frontier_ghost" data-left=""></div>;
-};
-const TableStickyLeftFrontierPreview = () => {
-  return <div className="navi_table_sticky_frontier_preview" data-top=""></div>;
-};
-
-const TableStickyTopFrontierGhost = () => {
-  return <div className="navi_table_sticky_frontier_ghost" data-top=""></div>;
-};
-const TableStickyTopFrontierPreview = () => {
-  return <div className="navi_table_sticky_frontier_preview" data-top=""></div>;
-};
-
 // Generic function to handle sticky frontier movement for both axes
 const initMoveStickyFrontierByMousedown = (
   mousedownEvent,
   {
+    table,
     frontierIndex,
     onGrab,
     onDrag,
@@ -401,10 +430,6 @@ const initMoveStickyFrontierByMousedown = (
     elements, // array of colElements or rowElements
   },
 ) => {
-  const tableCell = mousedownEvent.target.closest("th,td");
-  const table = tableCell.closest("table");
-  const tableContainer = table.closest(".navi_table_container");
-
   // Get elements based on axis
   const gestureName =
     axis === "x" ? "move-sticky-left-frontier" : "move-sticky-top-frontier";
@@ -426,6 +451,7 @@ const initMoveStickyFrontierByMousedown = (
       ? "--sticky-left-frontier-preview-left"
       : "--sticky-top-frontier-preview-top";
 
+  const tableContainer = table.closest(".navi_table_container");
   const ghostElement = tableContainer.querySelector(ghostSelector);
   const previewElement = tableContainer.querySelector(previewSelector);
 
@@ -434,15 +460,16 @@ const initMoveStickyFrontierByMousedown = (
   scrollableParent[scrollProperty] = 0;
 
   // Setup table dimensions for ghost/preview
-  const tableRect = table.getBoundingClientRect();
   const tableContainerRect = tableContainer.getBoundingClientRect();
-  if (axis === "x") {
-    ghostElement.style.setProperty("--table-height", `${tableRect.height}px`);
-    previewElement.style.setProperty("--table-height", `${tableRect.height}px`);
-  } else {
-    ghostElement.style.setProperty("--table-width", `${tableRect.width}px`);
-    previewElement.style.setProperty("--table-width", `${tableRect.width}px`);
-  }
+
+  const getPosition = (elementRect) => {
+    if (axis === "x") {
+      const elementLeftRelative = elementRect.left - tableContainerRect.left;
+      return elementLeftRelative + elementRect.width;
+    }
+    const elementTopRelative = elementRect.top - tableContainerRect.top;
+    return elementTopRelative + elementRect.height;
+  };
 
   // Setup initial ghost position
   if (frontierIndex === -1) {
@@ -450,16 +477,7 @@ const initMoveStickyFrontierByMousedown = (
   } else {
     const element = elements[frontierIndex];
     const elementRect = element.getBoundingClientRect();
-    let position;
-
-    if (axis === "x") {
-      const elementLeftRelative = elementRect.left - tableContainerRect.left;
-      position = elementLeftRelative + elementRect.width;
-    } else {
-      const elementTopRelative = elementRect.top - tableContainerRect.top;
-      position = elementTopRelative + elementRect.height;
-    }
-
+    const position = getPosition(elementRect);
     ghostElement.style.setProperty(ghostVariableName, `${position}px`);
   }
   ghostElement.setAttribute("data-visible", "");
@@ -478,16 +496,11 @@ const initMoveStickyFrontierByMousedown = (
     let previewPosition;
     if (index === -1) {
       const ghostRect = ghostElement.getBoundingClientRect();
-      previewPosition = axis === "x" ? ghostRect.width : ghostRect.height;
+      previewPosition = getPosition(ghostRect);
     } else {
       const element = elements[index];
       const elementRect = element.getBoundingClientRect();
-      const tableContainerRect = tableContainer.getBoundingClientRect();
-      if (axis === "x") {
-        previewPosition = elementRect.right - tableContainerRect.left;
-      } else {
-        previewPosition = elementRect.bottom - tableContainerRect.top;
-      }
+      previewPosition = getPosition(elementRect);
     }
     previewElement.style.setProperty(
       previewVariableName,
@@ -532,42 +545,5 @@ const initMoveStickyFrontierByMousedown = (
 
   moveFrontierGesture.grabViaMousedown(mousedownEvent, {
     element: ghostElement,
-  });
-};
-
-const initMoveStickyLeftFrontierByMousedown = (
-  mousedownEvent,
-  { stickyLeftFrontierColumnIndex, onGrab, onDrag, onRelease },
-) => {
-  const tableContainer = mousedownEvent.target.closest(".navi_table_container");
-  const table = tableContainer.querySelector("table");
-  const colgroup = table.querySelector("colgroup");
-  const colElements = Array.from(colgroup.children);
-
-  return initMoveStickyFrontierByMousedown(mousedownEvent, {
-    frontierIndex: stickyLeftFrontierColumnIndex,
-    onGrab,
-    onDrag,
-    onRelease,
-    axis: "x",
-    elements: colElements,
-  });
-};
-
-const initMoveStickyTopFrontierByMousedown = (
-  mousedownEvent,
-  { stickyTopFrontierRowIndex, onGrab, onDrag, onRelease },
-) => {
-  const tableContainer = mousedownEvent.target.closest(".navi_table_container");
-  const table = tableContainer.querySelector("table");
-  const rowElements = Array.from(table.querySelectorAll("tr"));
-
-  return initMoveStickyFrontierByMousedown(mousedownEvent, {
-    frontierIndex: stickyTopFrontierRowIndex,
-    onGrab,
-    onDrag,
-    onRelease,
-    axis: "y",
-    elements: rowElements,
   });
 };

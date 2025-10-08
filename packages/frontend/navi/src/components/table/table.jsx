@@ -272,7 +272,7 @@ export const Table = forwardRef((props, ref) => {
         </TableUI>
         <TableUIViewport ref={tableUIViewportRef} tableRef={innerRef}>
           <TableStickyContext.Provider value={stickyContextValue}>
-            <TableStickyFrontier />
+            <TableStickyFrontier tableRef={innerRef} />
           </TableStickyContext.Provider>
         </TableUIViewport>
       </div>
