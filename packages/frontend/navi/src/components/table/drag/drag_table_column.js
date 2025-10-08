@@ -186,11 +186,19 @@ export const initDragTableColumnByMousedown = (
     addTeardown(() => {
       // Restore focus to the original element
       if (!document.body.contains(cellThatWouldBeFocusedByMousedown)) {
-        // will happen is re-rendered by preact after drag ends
-        // note: we'll fix once we reproduce with real word use case where columns are re-ordered
+        // somehow the element is gone (not supposed to happen)
+        // can happen if table cell keys or parent keys are not stable
+        // thuse preact needed to re-create a DOM node
         return;
       }
-      cellThatWouldBeFocusedByMousedown.focus();
+      if (dropColumnIndex === columnIndex) {
+        cellThatWouldBeFocusedByMousedown.focus();
+      } else {
+        // the element to focus has changed it's an other <th>/<td> that
+        // will be at the correct position.
+        // We need to wait preact re-render to know?
+        // not really we know the cell is at the next columnIndex
+      }
     });
   }
 
