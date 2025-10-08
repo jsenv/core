@@ -405,6 +405,8 @@ export const TableCell = forwardRef((props, ref) => {
   const cellRef = useRef();
   const columnIndex = useColumnIndex();
   const rowIndex = useRowIndex();
+  const isFirstRow = rowIndex === 0;
+  const isFirstColumn = columnIndex === 0;
 
   // editing
   const editable = Boolean(action);
@@ -440,14 +442,14 @@ export const TableCell = forwardRef((props, ref) => {
     rowIdWithSomeSelectedCellSet,
   } = useContext(TableSelectionContext);
   if (selectionImpact === undefined) {
-    if (rowIndex === 0 && columnIndex === 0 && canSelectAll) {
+    if (isFirstRow && isFirstColumn && canSelectAll) {
       selectionImpact = (allValues) => {
         const cells = allValues.filter(
           (v) => parseTableSelectionValue(v).type === "cell",
         );
         return cells;
       };
-    } else if (rowIndex === 0) {
+    } else if (isFirstRow) {
       selectionImpact = (allValues) => {
         const columnCells = allValues.filter((v) => {
           const selectionValueInfo = parseTableSelectionValue(v);
@@ -458,7 +460,7 @@ export const TableCell = forwardRef((props, ref) => {
         });
         return columnCells;
       };
-    } else if (columnIndex === 0) {
+    } else if (isFirstColumn) {
       selectionImpact = (allValues) => {
         const rowCells = allValues.filter((v) => {
           const selectionValueInfo = parseTableSelectionValue(v);
@@ -519,10 +521,9 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.textAlign = textAlign;
   }
 
-  const isFirstRow = rowIndex === 0;
   const columnContainsSelectedCell =
     columnIdWithSomeSelectedCellSet.has(columnId);
-  const isFirstColumn = columnIndex === 0;
+
   const rowContainsSelectedCell = rowIdWithSomeSelectedCellSet.has(rowId);
   const innerBold =
     bold ||
