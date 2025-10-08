@@ -226,7 +226,7 @@ export const Table = forwardRef((props, ref) => {
     // the code below ensures we re-render the selection when column are re-ordered
     // forcing each previously selected <td> to unselect and newly selected <td> to be selected
     // (because the corresponding DOM node is now different)
-    onSelectionChange([...selection]);
+    onSelectionChange?.([...selection]);
     onColumnOrderChange?.(columnIdsNewOrder);
   };
 

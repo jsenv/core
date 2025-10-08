@@ -198,6 +198,12 @@ export const initDragTableColumnByMousedown = (
         // will be at the correct position.
         // We need to wait preact re-render to know?
         // not really we know the cell is at the next columnIndex
+        const cellRow = cellThatWouldBeFocusedByMousedown.parentNode;
+        const cellAtNewPosition = cellRow.children[columnIndex];
+        console.log(cellRow, cellAtNewPosition);
+        if (cellAtNewPosition) {
+          cellAtNewPosition.focus();
+        }
       }
     });
   }

@@ -221,8 +221,11 @@
                   <RowNumberTableCell />
                   {columns.map((col) => {
                     log(`🏗️ Rendering Header: id=${col.id}, name=${col?.name}`);
+                    const rowId = "header";
+                    const columnId = col.id;
+                    const tableCellKey = `${columnId}-${rowId}`;
                     return (
-                      <TableCell key={col.id}>
+                      <TableCell key={tableCellKey}>
                         {col?.name} (id: {col.id})
                       </TableCell>
                     );
@@ -238,9 +241,13 @@
                       log(
                         `🏗️ Rendering Cell: rowIndex=${rowIndex}, columnIndex=${columnIndex},  value="${cellValue}"`,
                       );
+                      const rowId = rowIndex;
+                      const columnId = columns[columnIndex].id;
+                      // const tableCellKey = columnId;
+                      const tableCellKey = `${columnId}-${rowId}`;
                       return (
                         <TableCell
-                          key={columnIndex}
+                          key={tableCellKey}
                           action={(value) =>
                             handleCellEdit({ rowIndex, columnIndex }, value)
                           }

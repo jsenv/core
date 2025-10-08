@@ -233,7 +233,7 @@
                         {rowCells.map((cellValue, columnIndex) => {
                           return (
                             <TableCell
-                              key={columnIndex}
+                              key={columns[columnIndex].id}
                               name="cell"
                               action={({ cell }) => {
                                 setCellValue(dataRowIndex, columnIndex, cell);
