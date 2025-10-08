@@ -152,10 +152,12 @@ import.meta.css = /* css */ `
     top: -3px;
     background: var(--resizer-color);
     opacity: 0;
+    transition: opacity 0.1s ease;
   }
   .navi_table_row_resizer[data-hover],
   .navi_table_row_resizer[data-resizing] {
     opacity: 1;
+    transition-delay: 150ms; /* Delay before showing hover effect */
   }
   .navi_table_row_resizer[data-resizing] .navi_table_row_resizer_line {
     opacity: 1;
