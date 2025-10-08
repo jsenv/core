@@ -380,13 +380,19 @@ export const createDragGesture = (options) => {
         const visibleConstraintElement =
           areaConstraintElement || scrollableParent;
         let bounds;
-        if (visibleConstraintElement === document.documentElement) {
+        const { documentElement } = document;
+        if (visibleConstraintElement === documentElement) {
+          const { scrollLeft, scrollTop, clientWidth, clientHeight } =
+            documentElement;
+          const left = scrollLeft;
+          const top = scrollTop;
           bounds = {
-            left: 0,
-            top: 0,
-            right: document.documentElement.clientWidth,
-            bottom: document.documentElement.clientHeight,
+            left,
+            top,
+            right: left + clientWidth,
+            bottom: top + clientHeight,
           };
+          console.log(bounds);
         } else {
           let { left, top } = getVisualRect(visibleConstraintElement);
           const visibleConstraintParentRect = areaConstraintElement
