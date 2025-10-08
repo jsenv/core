@@ -41,6 +41,8 @@
  *
  * Next steps:
  *
+ * - Mettre le sticky again dans les tables cells (mais les suivantes pour avoir l'effet d'ombre)
+ *
  * - Can add a column (+ button at the end of table headers)
  * - Can add a row (+ button at the end of the row number column )
  * - Delete a row (how?)
