@@ -327,26 +327,25 @@ export const createDragGesture = (options) => {
     if (areaConstraint === "visible") {
       stickyFrontiers = false;
     }
-    if (areaConstraint === "scrollable") {
-      const getScrollRightBound = (elementWidth) => {
-        const scrollWidth = scrollableParent.scrollWidth;
-        if (elementWidth >= scrollWidth) {
-          // Element fills or exceeds container width - constraint to left edge only
-          return scrollWidth;
-        }
-        // Normal case: element can move within available space
-        return scrollWidth - elementWidth;
-      };
-      const getScrollBottomBound = (elementHeight) => {
-        const scrollHeight = scrollableParent.scrollHeight;
-        if (elementHeight >= scrollHeight) {
-          // Element fills or exceeds container height - constraint to top edge only
-          return scrollHeight;
-        }
-        // Normal case: element can move within available space
-        return scrollHeight - elementHeight;
-      };
 
+    const getRightBound = (elementWidth, availableWidth) => {
+      if (elementWidth >= availableWidth) {
+        // Element fills or exceeds container width - constraint to left edge only
+        return availableWidth;
+      }
+      // Normal case: element can move within available space
+      return availableWidth - elementWidth;
+    };
+    const getBottomBound = (elementHeight, availableHeight) => {
+      if (elementHeight >= availableHeight) {
+        // Element fills or exceeds container height - constraint to top edge only
+        return availableHeight;
+      }
+      // Normal case: element can move within available space
+      return availableHeight - elementHeight;
+    };
+
+    if (areaConstraint === "scrollable") {
       const scrollableAreaConstraintFunction = ({
         elementWidth,
         elementHeight,
@@ -359,9 +358,11 @@ export const createDragGesture = (options) => {
         // we cap the constraint bounds to prevent negative positioning that would push elements
         // outside their intended scrollable area.
         const left = 0;
-        const right = left + getScrollRightBound(elementWidth);
+        const right =
+          left + getRightBound(elementWidth, scrollableParent.scrollWidth);
         const top = 0;
-        const bottom = top + getScrollBottomBound(elementHeight);
+        const bottom =
+          top + getBottomBound(elementHeight, scrollableParent.scrollHeight);
         return createBoundConstraint(
           { left, top, right, bottom },
           {
@@ -388,8 +389,8 @@ export const createDragGesture = (options) => {
           bounds = {
             left,
             top,
-            right: left + clientWidth,
-            bottom: top + clientHeight,
+            right: left + getRightBound(elementWidth, clientWidth),
+            bottom: top + getBottomBound(elementHeight, clientHeight),
           };
         } else {
           let { left, top } = getVisualRect(visibleConstraintElement);
@@ -460,7 +461,12 @@ export const createDragGesture = (options) => {
       constraintFunctions.push(...obstacleConstraintFunctions);
     }
 
-    const visualMarkers = setupVisualMarkers({ direction, positionedParent });
+    const visualMarkers = setupVisualMarkers({
+      direction,
+      element,
+      positionedParent,
+      scrollableParent,
+    });
     addTeardown(() => {
       visualMarkers.onRelease();
     });
