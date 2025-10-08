@@ -93,6 +93,8 @@ const BASIC_MODE_OPTIONS = {
 // To help dbugging this flag can be used to reduce number of features to the bare minimum
 const ENFORCE_BASIC_MODE = true;
 
+const { documentElement } = document;
+
 export const createDragGesture = (options) => {
   if (ENFORCE_BASIC_MODE) {
     Object.assign(options, BASIC_MODE_OPTIONS);
@@ -167,8 +169,8 @@ export const createDragGesture = (options) => {
       const { left, top } = elementVisuallyImpacted.getBoundingClientRect();
       const stylesToSet = {
         position: "absolute",
-        left: `${left + document.documentElement.scrollLeft}px`,
-        top: `${top + document.documentElement.scrollTop}px`,
+        left: `${left + documentElement.scrollLeft}px`,
+        top: `${top + documentElement.scrollTop}px`,
         transform: "none",
       };
       const restoreStyles = setStyles(element, stylesToSet);
@@ -322,30 +324,29 @@ export const createDragGesture = (options) => {
 
     // Collect all constraint functions
     const constraintFunctions = [];
-    const getScrollRightBound = (elementWidth) => {
-      const scrollWidth = scrollableParent.scrollWidth;
-      if (elementWidth >= scrollWidth) {
-        // Element fills or exceeds container width - constraint to left edge only
-        return scrollWidth;
-      }
-      // Normal case: element can move within available space
-      return scrollWidth - elementWidth;
-    };
-    const getScrollBottomBound = (elementHeight) => {
-      const scrollHeight = scrollableParent.scrollHeight;
-      if (elementHeight >= scrollHeight) {
-        // Element fills or exceeds container height - constraint to top edge only
-        return scrollHeight;
-      }
-      // Normal case: element can move within available space
-      return scrollHeight - elementHeight;
-    };
-
     if (areaConstraint === "visible") {
       stickyFrontiers = false;
     }
-
     if (areaConstraint === "scrollable") {
+      const getScrollRightBound = (elementWidth) => {
+        const scrollWidth = scrollableParent.scrollWidth;
+        if (elementWidth >= scrollWidth) {
+          // Element fills or exceeds container width - constraint to left edge only
+          return scrollWidth;
+        }
+        // Normal case: element can move within available space
+        return scrollWidth - elementWidth;
+      };
+      const getScrollBottomBound = (elementHeight) => {
+        const scrollHeight = scrollableParent.scrollHeight;
+        if (elementHeight >= scrollHeight) {
+          // Element fills or exceeds container height - constraint to top edge only
+          return scrollHeight;
+        }
+        // Normal case: element can move within available space
+        return scrollHeight - elementHeight;
+      };
+
       const scrollableAreaConstraintFunction = ({
         elementWidth,
         elementHeight,
@@ -380,7 +381,7 @@ export const createDragGesture = (options) => {
         const visibleConstraintElement =
           areaConstraintElement || scrollableParent;
         let bounds;
-        const { documentElement } = document;
+
         if (visibleConstraintElement === documentElement) {
           const { scrollLeft, scrollTop, clientWidth, clientHeight } =
             documentElement;
@@ -399,9 +400,9 @@ export const createDragGesture = (options) => {
             : positionedParentRect;
           left -= visibleConstraintParentRect.left;
           top -= visibleConstraintParentRect.top;
-          if (scrollableParent !== document.documentElement) {
-            left += document.documentElement.scrollLeft;
-            top += document.documentElement.scrollTop;
+          if (scrollableParent !== documentElement) {
+            left += documentElement.scrollLeft;
+            top += documentElement.scrollTop;
           }
           const getVisibleRightBound = (elementWidth) => {
             const availableWidth = visibleConstraintElement.clientWidth;
@@ -568,20 +569,38 @@ export const createDragGesture = (options) => {
         elementVisuallyImpacted.getBoundingClientRect();
       const currentElementWidth = currentElementRect.width;
       const currentElementHeight = currentElementRect.height;
-      const scrollableRect = scrollableParent.getBoundingClientRect();
+
       const availableWidth = scrollableParent.clientWidth;
       const availableHeight = scrollableParent.clientHeight;
 
       // Calculate base visible area accounting for borders
       const borderSizes = getBorderSizes(scrollableParent);
       const visibleAreaBase = {
-        left: scrollableRect.left + borderSizes.left,
-        top: scrollableRect.top + borderSizes.top,
+        left: null,
+        top: null,
         right: null,
         bottom: null,
       };
-      visibleAreaBase.right = visibleAreaBase.left + availableWidth;
-      visibleAreaBase.bottom = visibleAreaBase.top + availableHeight;
+      if (scrollableParent === documentElement) {
+        const left = 0;
+        const top = 0;
+        const right = left + availableWidth;
+        const bottom = top + availableHeight;
+        visibleAreaBase.left = left;
+        visibleAreaBase.top = top;
+        visibleAreaBase.right = right;
+        visibleAreaBase.bottom = bottom;
+      } else {
+        const scrollableRect = scrollableParent.getBoundingClientRect();
+        const left = scrollableRect.left + borderSizes.left;
+        const top = scrollableRect.top + borderSizes.top;
+        const right = left + availableWidth;
+        const bottom = top + availableHeight;
+        visibleAreaBase.left = left;
+        visibleAreaBase.top = top;
+        visibleAreaBase.right = right;
+        visibleAreaBase.bottom = bottom;
+      }
       let visibleArea;
       if (stickyFrontiers) {
         visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
