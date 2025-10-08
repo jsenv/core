@@ -17,7 +17,11 @@
  * @param {Element} [secondDomElement] - The reference element (defaults to domElement's offsetParent)
  * @returns {Object} Rectangle with visual coordinates relative to the reference element
  */
-export const getVisualRect = (domElement, secondDomElement) => {
+export const getVisualRect = (
+  domElement,
+  secondDomElement,
+  { isFixed } = {},
+) => {
   if (domElement === document) {
     return domElement.getBoundingClientRect();
   }
@@ -39,6 +43,9 @@ export const getVisualRect = (domElement, secondDomElement) => {
 
   // Accumulate scroll offsets from all scrollable ancestors up to and including secondDomElement
   const computedStyle = getComputedStyle(domElement);
+  if (isFixed === undefined) {
+    isFixed = computedStyle.position === "fixed";
+  }
   const isStickyLeft =
     domElement.hasAttribute("data-sticky-left") ||
     (computedStyle.position === "sticky" && computedStyle.left !== "auto");
@@ -50,6 +57,11 @@ export const getVisualRect = (domElement, secondDomElement) => {
     let scrollTop = 0;
     let scrollableAncestor = domElement.parentElement;
     while (scrollableAncestor) {
+      if (scrollableAncestor === document.body) {
+        scrollLeft += document.documentElement.scrollLeft;
+        scrollTop += document.documentElement.scrollTop;
+        break;
+      }
       scrollLeft += scrollableAncestor.scrollLeft;
       scrollTop += scrollableAncestor.scrollTop;
       if (scrollableAncestor === secondDomElement) {
@@ -57,6 +69,7 @@ export const getVisualRect = (domElement, secondDomElement) => {
       }
       scrollableAncestor = scrollableAncestor.parentElement;
     }
+
     if (!isStickyLeft) {
       left -= scrollLeft;
     }

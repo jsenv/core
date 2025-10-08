@@ -85,13 +85,13 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 const BASIC_MODE_OPTIONS = {
   backdrop: false,
   stickyFrontiers: false,
-  areaConstraint: "visible",
+  areaConstraint: "none",
   obstacleAttributeName: null,
   showConstraintFeedbackLine: false,
   dragViaScroll: false,
 };
 // To help dbugging this flag can be used to reduce number of features to the bare minimum
-const ENFORCE_BASIC_MODE = true;
+const ENFORCE_BASIC_MODE = false;
 
 const { documentElement } = document;
 
@@ -175,7 +175,14 @@ export const createDragGesture = (options) => {
       };
       const restoreStyles = setStyles(element, stylesToSet);
       addTeardown(() => {
+        const { left, top } = getVisualRect(element, undefined, {
+          isFixed: true,
+        });
         restoreStyles();
+        setStyles(element, {
+          left: `${left}px`,
+          top: `${top}px`,
+        });
       });
     } else if (isStickyLeft || isStickyTop) {
       const stylesToSet = {
