@@ -431,7 +431,7 @@ export const TableCell = forwardRef((props, ref) => {
     rowId,
     columnId,
   });
-  const { selection, selectionController, columnContainsSelectedCell } =
+  const { selection, selectionController, columnIdWithSomeSelectedCellSet } =
     useContext(TableSelectionContext);
   if (selectionImpact === undefined) {
     if (rowIndex === 0 && columnIndex === 0 && canSelectAll) {
@@ -513,6 +513,14 @@ export const TableCell = forwardRef((props, ref) => {
     innerStyle.textAlign = textAlign;
   }
 
+  const isFirstRow = rowIndex === 0;
+  const columnContainsSelectedCell =
+    columnIdWithSomeSelectedCellSet.has(columnId);
+  const bold = isFirstRow && columnContainsSelectedCell;
+  if (bold) {
+    innerStyle.fontWeight = "bold";
+  }
+
   return (
     <TagName
       ref={cellRef}
@@ -543,9 +551,6 @@ export const TableCell = forwardRef((props, ref) => {
       data-value={selectionValue}
       data-editing={editing ? "" : undefined}
       data-grabbed={columnGrabbed ? "" : undefined}
-      data-column-contains-selected-cell={
-        columnContainsSelectedCell ? "" : undefined
-      }
       onClick={onClick}
       onMouseDown={(e) => {
         if (!canDragColumn) {

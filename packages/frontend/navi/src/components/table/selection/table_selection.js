@@ -46,13 +46,13 @@ export const useTableSelectionContextValue = (
 };
 
 export const parseTableSelectionValue = (selectionValue) => {
-  if (selectionValue.startsWith("row:")) {
-    const rowId = selectionValue.slice("row:".length);
-    return { type: "row", rowId };
-  }
   if (selectionValue.startsWith("column:")) {
     const columnId = selectionValue.slice("column:".length);
     return { type: "column", columnId };
+  }
+  if (selectionValue.startsWith("row:")) {
+    const rowId = selectionValue.slice("row:".length);
+    return { type: "row", rowId };
   }
   const cellId = selectionValue.slice("cell:".length);
   const [columnId, rowId] = cellId.split("-");
@@ -63,11 +63,11 @@ export const stringifyTableSelectionValue = (type, value) => {
     const { columnId, rowId } = value;
     return `cell:${columnId}-${rowId}`;
   }
-  if (type === "row") {
-    return `row:${value}`;
-  }
   if (type === "column") {
     return `column:${value}`;
+  }
+  if (type === "row") {
+    return `row:${value}`;
   }
   return "";
 };
