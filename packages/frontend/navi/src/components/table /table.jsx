@@ -537,7 +537,10 @@ export const TableCell = forwardRef((props, ref) => {
       ? "var(--selection-background-color)"
       : isFirstColumn
         ? "#F8F8F8"
-        : undefined;
+        : isFirstRow
+          ? "#d3e7ff"
+          : "white";
+
   if (innerBackgroundColor) {
     innerStyle["--background-color"] = innerBackgroundColor;
   }
@@ -552,12 +555,12 @@ export const TableCell = forwardRef((props, ref) => {
   if (rowHeight !== undefined) {
     innerStyle.maxHeight = `${rowHeight}px`;
   }
-  if (textAlign) {
-    innerStyle.textAlign = textAlign;
+  const innerTextAlign = textAlign || isFirstRow ? "center" : "left";
+  if (innerTextAlign) {
+    innerStyle.textAlign = innerTextAlign;
   }
 
   const innerBold = bold || containSelectedCell;
-
   if (innerBold) {
     innerStyle.fontWeight = "bold";
   }
@@ -572,6 +575,8 @@ export const TableCell = forwardRef((props, ref) => {
       // we use [data-focus] so that the attribute can be copied
       // to the dragged cell copies
       data-focus={activeElement === cellRef.current ? "" : undefined}
+      data-first-row={isFirstRow ? "" : undefined}
+      data-first-column={isFirstColumn ? "" : undefined}
       data-sticky-left={stickyLeft ? "" : undefined}
       data-sticky-top={stickyTop ? "" : undefined}
       data-sticky-left-frontier={
