@@ -55,3 +55,27 @@ export const getElementScrollableRect = (element, scrollableParent) => {
     height: rect.height,
   };
 };
+
+/**
+ * Convert coordinates from scrollable-parent-relative space to viewport coordinates
+ * @param {number} x - X coordinate in scrollable-parent-relative space
+ * @param {number} y - Y coordinate in scrollable-parent-relative space
+ * @param {Element} scrollableParent - The scrollable container
+ * @returns {[number, number]} - [x, y] in viewport coordinates
+ */
+export const scrollableCoordsToViewport = (x, y, scrollableParent) => {
+  const scrollableParentIsDocument = scrollableParent === documentElement;
+  const { scrollLeft, scrollTop } = scrollableParent;
+
+  if (scrollableParentIsDocument) {
+    // For document scrolling: convert from document coordinates to viewport
+    return [x - scrollLeft, y - scrollTop];
+  }
+
+  // For container scrolling: convert from container-relative coordinates to viewport
+  const scrollableRect = scrollableParent.getBoundingClientRect();
+  return [
+    scrollableRect.left + x - scrollLeft,
+    scrollableRect.top + y - scrollTop,
+  ];
+};

@@ -1,3 +1,5 @@
+import { scrollableCoordsToViewport } from "../scroll/scrollable_rect.js";
+
 /**
  * Detects the drop target based on what element is actually under the mouse cursor.
  * Uses document.elementsFromPoint() to respect visual stacking order naturally.
@@ -16,21 +18,11 @@ export const getDropTargetInfo = (gestureInfo, targetElements) => {
 
   // Convert gesture coordinates to viewport coordinates for elementsFromPoint
   // gestureInfo.x/y are in scrollable-parent-relative coordinates
-  let mouseX;
-  let mouseY;
-
-  if (scrollableParent === document.documentElement) {
-    // For document scrolling: convert from document coordinates to viewport
-    const { scrollLeft, scrollTop } = scrollableParent;
-    mouseX = gestureInfo.x - scrollLeft;
-    mouseY = gestureInfo.y - scrollTop;
-  } else {
-    // For container scrolling: convert from container coordinates to viewport
-    const containerRect = scrollableParent.getBoundingClientRect();
-    const { scrollLeft, scrollTop } = scrollableParent;
-    mouseX = containerRect.left + gestureInfo.x - scrollLeft;
-    mouseY = containerRect.top + gestureInfo.y - scrollTop;
-  }
+  const [mouseX, mouseY] = scrollableCoordsToViewport(
+    gestureInfo.x,
+    gestureInfo.y,
+    scrollableParent,
+  );
 
   // Get all elements under the mouse cursor (respects stacking order)
   const elementsUnderMouse = document.elementsFromPoint(mouseX, mouseY);
