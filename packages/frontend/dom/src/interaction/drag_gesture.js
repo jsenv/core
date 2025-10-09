@@ -440,13 +440,14 @@ export const createDragGesture = (options) => {
     }
 
     if (customAreaConstraint) {
-      const customAreaConstraintFunction = () =>
-        createBoundConstraint(customAreaConstraint, {
+      const customAreaConstraintFunction = () => {
+        return createBoundConstraint(customAreaConstraint, {
           leftAtStart,
           topAtStart,
           element: scrollableParent,
           name: "custom area",
         });
+      };
       constraintFunctions.push(customAreaConstraintFunction);
     }
 

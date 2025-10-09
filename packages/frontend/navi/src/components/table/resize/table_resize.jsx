@@ -372,13 +372,16 @@ const initResizeByMousedown = (
 
   // Calculate size and position based on axis
   const currentSize = axis === "x" ? tableCellRect.width : tableCellRect.height;
-  const cellStartRelative = isSticky
-    ? axis === "x"
-      ? tableCellRect.left - scrollableParentRect.left
-      : tableCellRect.top - scrollableParentRect.top
-    : axis === "x"
-      ? tableCellRect.left - tableContainerRect.left
-      : tableCellRect.top - tableContainerRect.top;
+  const scrollableParentIsDocument =
+    scrollableParent === document.documentElement;
+  let cellStartRelative = axis === "x" ? tableCellRect.left : tableCellRect.top;
+  if (isSticky && !scrollableParentIsDocument) {
+    cellStartRelative -=
+      axis === "x" ? scrollableParentRect.left : scrollableParentRect.top;
+  } else {
+    cellStartRelative -=
+      axis === "x" ? tableContainerRect.left : tableContainerRect.top;
+  }
 
   // Calculate bounds based on axis
   const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
@@ -397,7 +400,7 @@ const initResizeByMousedown = (
   const maxExpandAmount = maxCellSize - currentSize;
   let customEndBound = cellStartRelative + currentSize + maxExpandAmount;
 
-  if (isSticky) {
+  if (isSticky && !scrollableParentIsDocument) {
     const scrollOffset =
       axis === "x" ? scrollableParent.scrollLeft : scrollableParent.scrollTop;
     customStartBound += scrollOffset;
