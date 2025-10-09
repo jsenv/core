@@ -409,12 +409,10 @@ export const TableCell = forwardRef((props, ref) => {
     style,
     cursor,
     bold,
-    children,
-  } = props;
-  const {
     alignX = column.alignX,
     alignY = column.alignY,
     backgroundColor = column.backgroundColor || row.backgroundColor,
+    children,
   } = props;
   const cellRef = useRef();
   const isFirstRow = rowIndex === 0;
