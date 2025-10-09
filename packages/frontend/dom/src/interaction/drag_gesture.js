@@ -69,6 +69,10 @@
 
 import { getVisualRect } from "../position/visual_rect.js";
 import { getScrollableParent } from "../scroll/parent_scroll.js";
+import {
+  getElementScrollableRect,
+  mouseEventToScrollableCoords,
+} from "../scroll/scrollable_rect.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
 import {
@@ -177,11 +181,11 @@ export const createDragGestureController = (options = {}) => {
     const scrollTopAtStart = scrollableParent.scrollTop;
 
     // Convert all element coordinates to scrollable-parent-relative coordinates
-    const elementToImpactRect = elementToScrollableRect(
+    const elementToImpactRect = getElementScrollableRect(
       elementToImpact,
       scrollableParent,
     );
-    const elementVisuallyImpactedRect = elementToScrollableRect(
+    const elementVisuallyImpactedRect = getElementScrollableRect(
       elementVisuallyImpacted,
       scrollableParent,
     );
@@ -452,7 +456,7 @@ export const createDragGestureController = (options = {}) => {
           };
         } else {
           // Use helper function to get element coordinates in scrollable space
-          const elementRect = elementToScrollableRect(
+          const elementRect = getElementScrollableRect(
             visibleConstraintElement,
             scrollableParent,
           );
@@ -640,7 +644,7 @@ export const createDragGestureController = (options = {}) => {
       } else {
         // For container scrollable parent, visible area should be in same coordinate space
         // The visible area represents where elements can be seen within the container
-        const scrollableRect = elementToScrollableRect(
+        const scrollableRect = getElementScrollableRect(
           scrollableParent,
           scrollableParent,
         );
