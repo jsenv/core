@@ -122,10 +122,12 @@ export const initDragTableColumnByMousedown = async (
           const isStuckLeft = cellRect.left <= stickyLeftValue;
 
           if (isStuckLeft) {
-            // When stuck, we only need to offset by the sticky value itself
-            // because the clone is positioned over the original table
-            // The sticky displacement is just how much it has moved from its natural table position
-            needsLeftPositioning = stickyLeftValue;
+            // Calculate how much the cell is offset from its natural position within the table
+            // Natural position in viewport = cellRect.left
+            // Sticky position in viewport = stickyLeftValue
+            // Offset = sticky position - natural position = stickyLeftValue - cellRect.left
+            const offsetFromNatural = stickyLeftValue - cellRect.left;
+            needsLeftPositioning = offsetFromNatural;
           }
         }
         if (hasYSticky) {
@@ -134,8 +136,10 @@ export const initDragTableColumnByMousedown = async (
           const isStuckTop = cellRect.top <= stickyTopValue;
 
           if (isStuckTop) {
-            // When stuck, offset by the sticky value to match the displacement
-            needsTopPositioning = stickyTopValue;
+            // Calculate how much the cell is offset from its natural position within the table
+            // Offset = sticky position - natural position = stickyTopValue - cellRect.top
+            const offsetFromNatural = stickyTopValue - cellRect.top;
+            needsTopPositioning = offsetFromNatural;
           }
         }
       } else {
