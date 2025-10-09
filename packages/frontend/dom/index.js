@@ -1,4 +1,5 @@
-// style and attributes getters/setters
+// style and attributes
+export { addAttributeEffect } from "./src/add_attribute_effect.js";
 export {
   addWillChange,
   getStyle,
@@ -15,20 +16,21 @@ export {
   findDescendant,
 } from "./src/traversal.js";
 
-export { captureScrollState } from "./src/capture_scroll.js";
-export { elementIsVisible } from "./src/element_is_visible.js";
+// focus
 export {
   activeElementSignal,
   addActiveElementEffect,
   useActiveElement,
 } from "./src/focus/active_element.js";
 export { elementIsFocusable } from "./src/focus/element_is_focusable.js";
+export { elementIsVisible } from "./src/focus/element_is_visible.js";
 export { initFocusGroup } from "./src/focus/focus_group.js";
 export { preventFocusNav } from "./src/focus/focus_nav_event_marker.js";
 export { trapFocusInside } from "./src/focus/focus_trap.js";
 export { canInterceptKeys } from "./src/keyboard.js";
 
 // scroll
+export { captureScrollState } from "./src/scroll/capture_scroll.js";
 export { isScrollable } from "./src/scroll/is_scrollable.js";
 export {
   getAncestorScrolls,
@@ -40,8 +42,6 @@ export {
   getElementScrollableRect,
   mouseEventToScrollableCoords,
 } from "./src/scroll/scrollable_rect.js";
-
-export { addAttributeEffect } from "./src/add_attribute_effect.js";
 
 // position
 export { followPosition } from "./src/position/follow_position.js";
