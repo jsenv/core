@@ -38,9 +38,9 @@ const scrollableToViewportCoords = (
 ) => {
   const { documentElement } = document;
   const {
-    isStickyLeft = false,
-    isStickyTop = false,
-    isFixed = false,
+    fromStickyLeft = false,
+    fromStickyTop = false,
+    fromFixed = false,
   } = stickyOptions;
 
   if (scrollableParent === documentElement) {
@@ -56,15 +56,9 @@ const scrollableToViewportCoords = (
     if (side === "obstacle") {
       // All obstacles now use scrollable-parent-relative coordinates
       // Convert them to viewport coordinates based on positioning
-      if (isFixed) {
-        // For document: add scroll offset back to get viewport position
-        const scrollLeft = documentElement.scrollLeft;
-        const scrollTop = documentElement.scrollTop;
-        return [x + scrollLeft, y + scrollTop];
-      }
       // Regular/sticky obstacles: handle per-axis sticky behavior
-      const adjustedX = isStickyLeft ? x : x - documentElement.scrollLeft;
-      const adjustedY = isStickyTop ? y : y - documentElement.scrollTop;
+      const adjustedX = fromStickyLeft ? x : x - documentElement.scrollLeft;
+      const adjustedY = fromStickyTop ? y : y - documentElement.scrollTop;
       return [adjustedX, adjustedY];
     }
     if (side === "sticky-obstacle") {
@@ -80,14 +74,14 @@ const scrollableToViewportCoords = (
 
   if (side === "obstacle") {
     // All obstacles now use scrollable-parent-relative coordinates
-    if (isFixed) {
+    if (fromFixed) {
       // Fixed elements: convert from scrollable-relative back to viewport
       const scrollableRect = scrollableParent.getBoundingClientRect();
       return [x + scrollableRect.left, y + scrollableRect.top];
     }
     // Regular/sticky obstacles in containers: handle per-axis sticky behavior
-    const scrollAdjustX = isStickyLeft ? 0 : scrollableParent.scrollLeft;
-    const scrollAdjustY = isStickyTop ? 0 : scrollableParent.scrollTop;
+    const scrollAdjustX = fromStickyLeft ? 0 : scrollableParent.scrollLeft;
+    const scrollAdjustY = fromStickyTop ? 0 : scrollableParent.scrollTop;
     return [
       x + scrollableRect.left + scrollAdjustX,
       y + scrollableRect.top + scrollAdjustY,
@@ -358,9 +352,9 @@ const createObstacleMarker = (obstacleObj, scrollableParent) => {
     scrollableParent,
     "obstacle",
     {
-      isStickyLeft: obstacleObj.bounds.isStickyLeft,
-      isStickyTop: obstacleObj.bounds.isStickyTop,
-      isFixed: obstacleObj.bounds.isFixed,
+      fromStickyLeft: obstacleObj.bounds.fromStickyLeft,
+      fromStickyTop: obstacleObj.bounds.fromStickyTop,
+      fromFixed: obstacleObj.bounds.fromFixed,
     },
   );
 
