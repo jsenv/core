@@ -912,6 +912,8 @@ export const createDragToMoveGestureController = (options) => {
           isGoingRight,
           elementToImpact,
           elementVisuallyImpacted,
+          elementVisuallyImpactedWidth,
+          elementVisuallyImpactedHeight,
           visibleArea,
           hasCrossedVisibleAreaLeftOnce,
           hasCrossedVisibleAreaTopOnce,
@@ -920,10 +922,6 @@ export const createDragToMoveGestureController = (options) => {
         // Calculate initial position for elementToImpact (initialLeft/initialTop are now visual coordinates)
         const initialLeftToImpact = leftAtStart - visualOffsetX;
         const initialTopToImpact = topAtStart - visualOffsetY;
-        const elementVisuallyImpactedRect =
-          elementVisuallyImpacted.getBoundingClientRect();
-        const elementWidth = elementVisuallyImpactedRect.width;
-        const elementHeight = elementVisuallyImpactedRect.height;
         // Calculate where element bounds would be in viewport coordinates
         const parentRect = positionedParent.getBoundingClientRect();
 
@@ -980,7 +978,8 @@ export const createDragToMoveGestureController = (options) => {
           const desiredElementLeftRelative = leftAtStart + gestureInfo.xMove;
           const desiredElementLeft =
             desiredElementLeftRelative + parentRect.left;
-          const desiredElementRight = desiredElementLeft + elementWidth;
+          const desiredElementRight =
+            desiredElementLeft + elementVisuallyImpactedWidth;
 
           // Determine if auto-scroll is allowed for sticky elements when going left
           const canAutoScrollLeft =
@@ -1008,7 +1007,8 @@ export const createDragToMoveGestureController = (options) => {
         if (direction.y) {
           const desiredElementTopRelative = topAtStart + gestureInfo.yMove;
           const desiredElementTop = desiredElementTopRelative + parentRect.top;
-          const desiredElementBottom = desiredElementTop + elementHeight;
+          const desiredElementBottom =
+            desiredElementTop + elementVisuallyImpactedHeight;
 
           // Determine if auto-scroll is allowed for sticky elements when going up
           const canAutoScrollUp =
