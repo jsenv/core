@@ -4,6 +4,7 @@ import {
   getDropTargetInfo,
   getScrollableParent,
   getVisualRect,
+  stickyAsRelative,
 } from "@jsenv/dom";
 
 import { createPubSub } from "../../pub_sub.js";
@@ -93,7 +94,6 @@ export const initDragTableColumnByMousedown = async (
     // In the table clone we need to convert sticky elements to position: relative
     // with calculated offsets that match their appearance in the original context
     const scrollableParent = getScrollableParent(table);
-    const isDocumentScrolling = scrollableParent === document.documentElement;
 
     // important: only on cells, not on <col> nor <tr>
     const originalStickyCells = table.querySelectorAll(
@@ -105,61 +105,23 @@ export const initDragTableColumnByMousedown = async (
 
     originalStickyCells.forEach((originalCell, index) => {
       const cloneCell = cloneStickyCells[index];
-      const hasXSticky = originalCell.hasAttribute("data-sticky-left");
-      const hasYSticky = originalCell.hasAttribute("data-sticky-top");
-      const computedStyle = getComputedStyle(originalCell);
-
-      let leftPosition;
-      let topPosition;
-      if (isDocumentScrolling) {
-        // For document scrolling: check if element is currently stuck and calculate offset
-        const tableRect = table.getBoundingClientRect();
-
-        if (hasXSticky) {
-          const stickyLeftValue = parseFloat(computedStyle.left) || 0;
-          const cellRect = originalCell.getBoundingClientRect();
-          const isStuckLeft = cellRect.left <= stickyLeftValue;
-
-          if (isStuckLeft) {
-            // Compare cell position with table position to get the offset within the table
-            const cellOffsetFromTable = cellRect.left - tableRect.left;
-            leftPosition = cellOffsetFromTable - stickyLeftValue;
-          } else {
-            leftPosition = 0;
-          }
-        }
-        if (hasYSticky) {
-          const stickyTopValue = parseFloat(computedStyle.top) || 0;
-          const cellRect = originalCell.getBoundingClientRect();
-          const isStuckTop = cellRect.top <= stickyTopValue;
-
-          if (isStuckTop) {
-            // Compare cell position with table position to get the offset within the table
-            const cellOffsetFromTable = cellRect.top - tableRect.top;
-            topPosition = cellOffsetFromTable - stickyTopValue;
-          } else {
-            topPosition = 0;
-          }
-        }
-      } else {
-        // For container scrolling: use the CSS sticky values directly
-        if (hasXSticky) {
-          const stickyLeft = parseFloat(computedStyle.left) || 0;
-          leftPosition = stickyLeft;
-        }
-        if (hasYSticky) {
-          const stickyTop = parseFloat(computedStyle.top) || 0;
-          topPosition = stickyTop;
-        }
-      }
-
-      if (leftPosition !== undefined || topPosition !== undefined) {
+      const relativePosition = stickyAsRelative(
+        originalCell,
+        // Our clone is absolutely positioned on top of <table />
+        // So we need the sticky position relative to <table />
+        table,
+        {
+          scrollableParent,
+        },
+      );
+      if (relativePosition) {
+        const [relativeLeft, relativeTop] = relativePosition;
         cloneCell.style.position = "relative";
-        if (leftPosition !== undefined) {
-          cloneCell.style.left = `${leftPosition}px`;
+        if (relativeLeft !== undefined) {
+          cloneCell.style.left = `${relativeLeft}px`;
         }
-        if (topPosition !== undefined) {
-          cloneCell.style.top = `${topPosition}px`;
+        if (relativeTop !== undefined) {
+          cloneCell.style.top = `${relativeTop}px`;
         }
       }
     });
