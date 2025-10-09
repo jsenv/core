@@ -221,16 +221,20 @@ export const createDragGestureController = (options) => {
             position: "relative",
           };
           if (isStickyLeft) {
-            const left = parseFloat(computedStyle.left) || 0;
-            const leftWithScroll = left + scrollLeftAtStart;
-            leftAtStart = leftWithScroll;
-            stylesToSet.left = `${leftWithScroll}px`;
+            let left = parseFloat(computedStyle.left) || 0;
+            if (!scrollableParentIsDocument) {
+              left += scrollLeftAtStart;
+            }
+            leftAtStart = left;
+            stylesToSet.left = `${left}px`;
           }
           if (isStickyTop) {
-            const top = parseFloat(computedStyle.top) || 0;
-            const topWithScroll = top + scrollTopAtStart;
-            topAtStart = topWithScroll;
-            stylesToSet.top = `${topWithScroll}px`;
+            let top = parseFloat(computedStyle.top) || 0;
+            if (!scrollableParentIsDocument) {
+              top += scrollTopAtStart;
+            }
+            topAtStart = top;
+            stylesToSet.top = `${top}px`;
           }
           const restoreStyles = setStyles(element, stylesToSet);
           addTeardown(() => {
@@ -271,7 +275,7 @@ export const createDragGestureController = (options) => {
       // work with their apparent visual position rather than their DOM position.
       const hasStickyLeftAttribute =
         elementVisuallyImpacted.hasAttribute(`data-sticky-left`);
-      if (hasStickyLeftAttribute) {
+      if (hasStickyLeftAttribute && !scrollableParentIsDocument) {
         leftAtStart += scrollLeftAtStart;
         visualOffsetX += scrollLeftAtStart;
       }
@@ -280,7 +284,7 @@ export const createDragGestureController = (options) => {
       topAtStart = elementVisuallyImpactedRect.top - parentRect.top;
       const hasStickyTopAttribute =
         elementVisuallyImpacted.hasAttribute(`data-sticky-top`);
-      if (hasStickyTopAttribute) {
+      if (hasStickyTopAttribute && !scrollableParentIsDocument) {
         topAtStart += scrollTopAtStart;
         visualOffsetY += scrollTopAtStart;
       }
@@ -841,14 +845,18 @@ export const createDragGestureController = (options) => {
     }
 
     const scrollableParent = getScrollableParent(element);
+    // const scrollableParentIsDocument = scrollableParent === documentElement;
     const positionedParent = getPositionedParent(element);
     const parentRect = positionedParent.getBoundingClientRect();
     const mouseEventRelativeCoords = (mouseEvent) => {
       const xViewport = mouseEvent.clientX;
       const yViewport = mouseEvent.clientY;
-      const xRelative =
-        xViewport - parentRect.left + scrollableParent.scrollLeft;
-      const yRelative = yViewport - parentRect.top + scrollableParent.scrollTop;
+      let xRelative = xViewport - parentRect.left;
+      let yRelative = yViewport - parentRect.top;
+      // if (!scrollableParentIsDocument) {
+      xRelative += scrollableParent.scrollLeft;
+      yRelative += scrollableParent.scrollTop;
+      // }
       return [xRelative, yRelative];
     };
 
