@@ -123,7 +123,7 @@ export const initDragTableColumnByMousedown = async (
           if (isStuckLeft) {
             // Compare cell position with table position to get the offset within the table
             const cellOffsetFromTable = cellRect.left - tableRect.left;
-            leftPosition = cellOffsetFromTable;
+            leftPosition = cellOffsetFromTable - stickyLeftValue;
           } else {
             leftPosition = 0;
           }
@@ -136,7 +136,7 @@ export const initDragTableColumnByMousedown = async (
           if (isStuckTop) {
             // Compare cell position with table position to get the offset within the table
             const cellOffsetFromTable = cellRect.top - tableRect.top;
-            topPosition = cellOffsetFromTable;
+            topPosition = cellOffsetFromTable - stickyTopValue;
           } else {
             topPosition = 0;
           }
