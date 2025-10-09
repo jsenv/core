@@ -79,3 +79,28 @@ export const scrollableCoordsToViewport = (x, y, scrollableParent) => {
     scrollableRect.top + y - scrollTop,
   ];
 };
+
+/**
+ * Convert element getBoundingClientRect coordinates to scrollable-parent-relative coordinates
+ * This is useful when you need to pass element coordinates to drag gesture functions that expect
+ * coordinates in the scrollable parent's coordinate space.
+ * @param {DOMRect|{left: number, top: number}} rect - Result from getBoundingClientRect()
+ * @param {Element} scrollableParent - The scrollable container
+ * @returns {[number, number]} - [x, y] in scrollable-parent-relative space
+ */
+export const elementRectToScrollableCoords = (rect, scrollableParent) => {
+  const scrollableParentIsDocument = scrollableParent === documentElement;
+  const { scrollLeft, scrollTop } = scrollableParent;
+
+  if (scrollableParentIsDocument) {
+    // For document scrolling: convert viewport coordinates to document coordinates
+    return [rect.left + scrollLeft, rect.top + scrollTop];
+  }
+
+  // For container scrolling: convert viewport coordinates to container-relative coordinates
+  const scrollableRect = scrollableParent.getBoundingClientRect();
+  return [
+    rect.left - scrollableRect.left + scrollLeft,
+    rect.top - scrollableRect.top + scrollTop,
+  ];
+};

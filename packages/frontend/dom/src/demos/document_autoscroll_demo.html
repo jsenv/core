@@ -328,6 +328,8 @@
 
     <script type="module">
       import { createDragToMoveGestureController } from "../interaction/drag_gesture.js";
+      import { elementRectToScrollableCoords } from "../scroll/scrollable_rect.js";
+      import { getScrollableParent } from "../scroll/parent_scroll.js";
 
       const dragElement = document.getElementById("dragElement");
       const scrollIndicator = document.getElementById("scrollIndicator");
@@ -407,8 +409,9 @@
         if (controls.dragGesture) return;
 
         const rect = dragElement.getBoundingClientRect();
-        const xAtStart = rect.left;
-        const yAtStart = rect.top;
+        // Convert viewport coordinates to scrollable-parent-relative coordinates
+        const scrollableParent = getScrollableParent(dragElement);
+        const [xAtStart, yAtStart] = elementRectToScrollableCoords(rect, scrollableParent);
 
         const dragOptions = {
           onGrab: (gestureInfo) => {
