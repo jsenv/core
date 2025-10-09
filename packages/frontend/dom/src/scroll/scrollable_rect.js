@@ -104,3 +104,52 @@ export const elementRectToScrollableCoords = (rect, scrollableParent) => {
     rect.top - scrollableRect.top + scrollTop,
   ];
 };
+
+/**
+ * Convert fixed position coordinates to scrollable-parent-relative coordinates
+ * Fixed elements are always positioned relative to the viewport, so we always convert to document coordinates.
+ * @param {number} x - X coordinate in fixed positioning space (viewport-relative)
+ * @param {number} y - Y coordinate in fixed positioning space (viewport-relative)
+ * @returns {[number, number]} - [x, y] in document coordinates
+ */
+export const fixedCoordsToScrollableCoords = (x, y) => {
+  // Fixed elements are always relative to viewport, so convert to document coordinates
+  const { scrollLeft, scrollTop } = documentElement;
+  return [x + scrollLeft, y + scrollTop];
+};
+
+/**
+ * Convert sticky left CSS value to scrollable-parent-relative coordinate
+ * @param {number} leftValue - CSS left value for sticky positioning
+ * @param {Element} scrollableParent - The scrollable container
+ * @returns {number} - Left coordinate in scrollable-parent-relative space
+ */
+export const stickyLeftToScrollableLeft = (leftValue, scrollableParent) => {
+  const scrollableParentIsDocument = scrollableParent === documentElement;
+
+  if (scrollableParentIsDocument) {
+    // For document scrolling: use sticky value directly
+    return leftValue;
+  }
+
+  // For container scrolling: adjust sticky value with current scroll position
+  return leftValue + scrollableParent.scrollLeft;
+};
+
+/**
+ * Convert sticky top CSS value to scrollable-parent-relative coordinate
+ * @param {number} topValue - CSS top value for sticky positioning
+ * @param {Element} scrollableParent - The scrollable container
+ * @returns {number} - Top coordinate in scrollable-parent-relative space
+ */
+export const stickyTopToScrollableTop = (topValue, scrollableParent) => {
+  const scrollableParentIsDocument = scrollableParent === documentElement;
+
+  if (scrollableParentIsDocument) {
+    // For document scrolling: use sticky value directly
+    return topValue;
+  }
+
+  // For container scrolling: adjust sticky value with current scroll position
+  return topValue + scrollableParent.scrollTop;
+};

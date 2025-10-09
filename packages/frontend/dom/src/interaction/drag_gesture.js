@@ -70,8 +70,11 @@
 import { getVisualRect } from "../position/visual_rect.js";
 import { getScrollableParent } from "../scroll/parent_scroll.js";
 import {
+  fixedCoordsToScrollableCoords,
   getElementScrollableRect,
   mouseEventToScrollableCoords,
+  stickyLeftToScrollableLeft,
+  stickyTopToScrollableTop,
 } from "../scroll/scrollable_rect.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
@@ -228,10 +231,13 @@ export const createDragGestureController = (options = {}) => {
       if (fromFixed) {
         isStickyLeft = false;
         isStickyTop = false;
-        // For fixed elements, convert to document coordinates
-        const { scrollLeft, scrollTop } = documentElement;
-        leftAtStart = left + scrollLeft;
-        topAtStart = top + scrollTop;
+        // For fixed elements, convert to scrollable coordinates
+        const [leftScrollable, topScrollable] = fixedCoordsToScrollableCoords(
+          left,
+          top,
+        );
+        leftAtStart = leftScrollable;
+        topAtStart = topScrollable;
 
         const stylesToSet = {
           position: "absolute",
@@ -262,20 +268,20 @@ export const createDragGestureController = (options = {}) => {
         };
 
         if (isStickyLeft) {
-          let leftValue = fromStickyLeft.value;
-          if (!scrollableParentIsDocument) {
-            leftValue += scrollLeftAtStart;
-          }
-          leftAtStart = leftValue;
-          stylesToSet.left = `${leftValue}px`;
+          const leftScrollable = stickyLeftToScrollableLeft(
+            fromStickyLeft.value,
+            scrollableParent,
+          );
+          leftAtStart = leftScrollable;
+          stylesToSet.left = `${leftScrollable}px`;
         }
         if (isStickyTop) {
-          let topValue = fromStickyTop.value;
-          if (!scrollableParentIsDocument) {
-            topValue += scrollTopAtStart;
-          }
-          topAtStart = topValue;
-          stylesToSet.top = `${topValue}px`;
+          const topScrollable = stickyTopToScrollableTop(
+            fromStickyTop.value,
+            scrollableParent,
+          );
+          topAtStart = topScrollable;
+          stylesToSet.top = `${topScrollable}px`;
         }
         const restoreStyles = setStyles(element, stylesToSet);
         addTeardown(() => {
