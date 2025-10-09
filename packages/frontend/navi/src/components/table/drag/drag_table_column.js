@@ -65,10 +65,7 @@ export const initDragTableColumnByMousedown = (
   { onGrab, onDrag, onRelease },
 ) => {
   const [teardown, addTeardown] = createPubSub();
-  const dragEffectCallbackSet = new Set();
-  const addDragEffect = (callback) => {
-    dragEffectCallbackSet.add(callback);
-  };
+  const [triggerDrag, addDragEffect] = createPubSub();
 
   const tableCell = mousedownEvent.target.closest(".navi_table_cell");
   const table = tableCell.closest(".navi_table");
@@ -243,10 +240,9 @@ export const initDragTableColumnByMousedown = (
       name: "move-column",
       direction: { x: true },
       onGrab,
+      onDragStart: () => {},
       onDrag: (gestureInfo) => {
-        for (const dragEffect of dragEffectCallbackSet) {
-          dragEffect(gestureInfo);
-        }
+        triggerDrag(gestureInfo);
         onDrag?.(gestureInfo, dropColumnIndex);
       },
       onRelease: (gestureInfo) => {
