@@ -43,8 +43,8 @@ const scrollableToViewportCoords = (x, y, scrollableParent, side = null) => {
       return [x, y - documentElement.scrollTop];
     }
     if (side === "obstacle") {
-      // Obstacles: keep their document position, no scroll adjustment
-      return [x, y];
+      // Obstacles: convert from document coordinates to viewport coordinates
+      return [x - documentElement.scrollLeft, y - documentElement.scrollTop];
     }
     // For other cases: adjust both coordinates for scroll
     return [x - documentElement.scrollLeft, y - documentElement.scrollTop];
