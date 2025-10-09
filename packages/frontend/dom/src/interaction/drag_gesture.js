@@ -446,12 +446,12 @@ export const createDragGestureController = (options = {}) => {
         let bounds;
         if (visibleConstraintElement === documentElement) {
           const { clientWidth, clientHeight } = documentElement;
-          // For document scrolling, visible area is the viewport in scrollable-relative coordinates
-          // The coordinate system already handles scroll position, so visible area is simply:
-          // - top: 0 (top of current viewport)
-          // - bottom: clientHeight (bottom of current viewport)
-          const left = 0;
-          const top = 0;
+          // For document scrolling, visible area is the current viewport in scrollable coordinates
+          // This accounts for the current scroll position to allow dragging in the visible area
+          const scrollLeft = documentElement.scrollLeft;
+          const scrollTop = documentElement.scrollTop;
+          const left = scrollLeft;
+          const top = scrollTop;
           bounds = {
             left,
             top,
@@ -637,8 +637,12 @@ export const createDragGestureController = (options = {}) => {
         bottom: null,
       };
       if (scrollableParentIsDocument) {
-        const left = 0;
-        const top = 0;
+        // For document scrolling, visible area is the current viewport in scrollable coordinates
+        // Since we're using scrollable-relative coordinates, the visible area moves with scroll
+        const scrollLeft = documentElement.scrollLeft;
+        const scrollTop = documentElement.scrollTop;
+        const left = scrollLeft;
+        const top = scrollTop;
         const right = left + availableWidth;
         const bottom = top + availableHeight;
         visibleAreaBase.left = left;
