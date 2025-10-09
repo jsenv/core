@@ -73,7 +73,7 @@ import.meta.css = /* css */ `
   .navi_table_sticky_frontier[data-top] {
     left: var(--sticky-frontier-left, 0px);
     width: calc(var(--table-width) - var(--sticky-frontier-left));
-    top: calc(var(--table-top) + var(--sticky-group-top-frontier));
+    top: var(--sticky-group-top);
     height: var(--sticky-frontier-size);
     background: linear-gradient(
       to bottom,

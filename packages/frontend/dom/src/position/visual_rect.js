@@ -20,7 +20,7 @@
 export const getVisualRect = (
   domElement,
   secondDomElement,
-  { isFixed } = {},
+  { isStickyLeft, isStickyTop, isFixed } = {},
 ) => {
   if (domElement === document) {
     return domElement.getBoundingClientRect();
@@ -49,12 +49,16 @@ export const getVisualRect = (
   if (isFixed === undefined) {
     isFixed = computedStyle.position === "fixed";
   }
-  const isStickyLeft =
-    domElement.hasAttribute("data-sticky-left") ||
-    (computedStyle.position === "sticky" && computedStyle.left !== "auto");
-  const isStickyTop =
-    domElement.hasAttribute("data-sticky-top") ||
-    (computedStyle.position === "sticky" && computedStyle.top !== "auto");
+  if (isStickyLeft === undefined) {
+    isStickyLeft =
+      domElement.hasAttribute("data-sticky-left") ||
+      (computedStyle.position === "sticky" && computedStyle.left !== "auto");
+  }
+  if (isStickyTop === undefined) {
+    isStickyTop =
+      domElement.hasAttribute("data-sticky-top") ||
+      (computedStyle.position === "sticky" && computedStyle.top !== "auto");
+  }
   if (!isStickyLeft && !isStickyTop) {
     let scrollLeft = 0;
     let scrollTop = 0;
@@ -72,7 +76,6 @@ export const getVisualRect = (
       }
       scrollableAncestor = scrollableAncestor.parentElement;
     }
-    console.log(domElement, top, scrollTop);
     if (!isStickyLeft) {
       left -= scrollLeft;
     }

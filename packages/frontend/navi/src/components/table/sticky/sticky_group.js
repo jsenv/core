@@ -25,8 +25,8 @@ const ITEM_LEFT_VAR = "--sticky-group-item-left";
 const ITEM_TOP_VAR = "--sticky-group-item-top";
 const FRONTIER_LEFT_VAR = "--sticky-group-left";
 const FRONTIER_TOP_VAR = "--sticky-group-top";
-const FRONTIER_LEFT_VIEWPORT_VAR = "--sticky-group-left-viewport";
-const FRONTIER_TOP_VIEWPORT_VAR = "--sticky-group-top-viewport";
+// const FRONTIER_LEFT_VIEWPORT_VAR = "--sticky-group-left-viewport";
+// const FRONTIER_TOP_VIEWPORT_VAR = "--sticky-group-top-viewport";
 
 /**
  * Creates a sticky group that manages positioning for multiple sticky elements
@@ -195,7 +195,10 @@ const initStickyGroup = (
     }
 
     cleanupTableRowEffect = visualPositionEffect(lastStickyRow, ({ top }) => {
-      container.style.setProperty("", `${top + cumulativeHeight}px`);
+      container.style.setProperty(
+        FRONTIER_TOP_VAR,
+        `${top + cumulativeHeight}px`,
+      );
     });
   };
 
@@ -291,7 +294,10 @@ const initStickyGroup = (
 
 const visualPositionEffect = (element, callback) => {
   const updatePosition = () => {
-    const { left, top } = getVisualRect(element);
+    const { left, top } = getVisualRect(element, document.body, {
+      isStickyLeft: false,
+      isStickyTop: false,
+    });
     callback({ left, top });
   };
   updatePosition();
