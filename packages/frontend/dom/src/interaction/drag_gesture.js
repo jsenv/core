@@ -748,8 +748,6 @@ export const createDragGestureController = (options) => {
       currentYRelative,
       {
         isRelease = false,
-        mouseX = null,
-        mouseY = null,
         interactionType = "programmatic", // "mousemove", "scroll", "programmatic"
         mousemoveEvent = null,
       } = {},
@@ -761,10 +759,7 @@ export const createDragGestureController = (options) => {
 
       if (!dragData) {
         if (constraintFeedbackLine) {
-          constraintFeedbackLine.onDrag(gestureInfo, {
-            mouseX,
-            mouseY,
-          });
+          constraintFeedbackLine.onDrag(gestureInfo, mousemoveEvent);
         }
         return;
       }
@@ -792,11 +787,7 @@ export const createDragGestureController = (options) => {
         });
       }
       if (constraintFeedbackLine) {
-        constraintFeedbackLine.onDrag(gestureInfo, {
-          mouseX,
-          mouseY,
-          positionedParent,
-        });
+        constraintFeedbackLine.onDrag(gestureInfo, mousemoveEvent);
       }
       if (isRelease) {
         onDrag?.(gestureInfo, "end");
@@ -871,8 +862,6 @@ export const createDragGestureController = (options) => {
     const dragViaMouse = (mousemoveEvent) => {
       const [x, y] = mouseEventRelativeCoords(mousemoveEvent);
       dragGesture.drag(x, y, {
-        mouseX: mousemoveEvent.clientX,
-        mouseY: mousemoveEvent.clientY,
         interactionType: "mousemove",
         mousemoveEvent,
       });

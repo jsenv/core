@@ -9,12 +9,9 @@ export const setupConstraintFeedbackLine = ({
   let lastMouseX = null;
   let lastMouseY = null;
   // Internal function to update constraint feedback line
-  const onDrag = (gestureInfo, { mouseX, mouseY }) => {
-    // Update last known mouse position if provided
-    if (mouseX !== null && mouseY !== null) {
-      lastMouseX = mouseX;
-      lastMouseY = mouseY;
-    }
+  const onDrag = (gestureInfo, mousemoveEvent) => {
+    const mouseX = mousemoveEvent.clientX;
+    const mouseY = mousemoveEvent.clientY;
     // Use last known position if current position not available (e.g., during scroll)
     const effectiveMouseX = mouseX !== null ? mouseX : lastMouseX;
     const effectiveMouseY = mouseY !== null ? mouseY : lastMouseY;
