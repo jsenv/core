@@ -58,6 +58,7 @@ import {
   useImperativeHandle,
   useLayoutEffect,
   useRef,
+  useState,
 } from "preact/hooks";
 
 import { Editable, useEditionController } from "../edition/editable.jsx";
@@ -68,6 +69,7 @@ import {
   createSelectionKeyboardShortcuts,
   useSelectableElement,
 } from "../selection/selection.jsx";
+import { useBatchDuringRender } from "../use_batch_during_render.js";
 import { useFocusGroup } from "../use_focus_group.js";
 import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import {
@@ -110,9 +112,11 @@ const ColumnProducerProviderContext = createContext();
 const ColumnConsumerProviderContext = createContext();
 const ColumnContext = createContext();
 const RowContext = createContext();
-
 const ColumnIndexContext = createContext();
 const RowIndexContext = createContext();
+const ColumnNaturalSizeMapContext = createContext();
+const ColumnNaturalSizeContext = createContext();
+const ReportCellNaturalWithContext = createContext();
 
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
@@ -135,6 +139,19 @@ export const Table = forwardRef((props, ref) => {
     overflow,
     children,
   } = props;
+
+  const [columnNaturalSizeMap, setColumnNaturalSizeMap] = useState();
+  const reportCellNaturalWidth = useBatchDuringRender((calls) => {
+    for (const [columnId, cellWidth] of calls) {
+      const columnWidth = columnNaturalSizeMap[columnId];
+      if (columnWidth === undefined) {
+        setColumnNaturalSizeMap({
+          ...columnNaturalSizeMap,
+          [columnId]: cellWidth,
+        });
+      }
+    }
+  });
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -256,15 +273,23 @@ export const Table = forwardRef((props, ref) => {
             <TableSelectionContext.Provider value={selectionContextValue}>
               <TableDragContext.Provider value={dragContextValue}>
                 <TableStickyContext.Provider value={stickyContextValue}>
-                  <ColumnProducerProviderContext.Provider
-                    value={ColumnProducerProvider}
+                  <ReportCellNaturalWithContext.Provider
+                    value={reportCellNaturalWidth}
                   >
-                    <ColumnConsumerProviderContext.Provider
-                      value={ColumnConsumerProvider}
+                    <ColumnNaturalSizeMapContext.Provider
+                      value={columnNaturalSizeMap}
                     >
-                      <RowTrackerProvider>{children}</RowTrackerProvider>
-                    </ColumnConsumerProviderContext.Provider>
-                  </ColumnProducerProviderContext.Provider>
+                      <ColumnProducerProviderContext.Provider
+                        value={ColumnProducerProvider}
+                      >
+                        <ColumnConsumerProviderContext.Provider
+                          value={ColumnConsumerProvider}
+                        >
+                          <RowTrackerProvider>{children}</RowTrackerProvider>
+                        </ColumnConsumerProviderContext.Provider>
+                      </ColumnProducerProviderContext.Provider>
+                    </ColumnNaturalSizeMapContext.Provider>
+                  </ReportCellNaturalWithContext.Provider>
                 </TableStickyContext.Provider>
               </TableDragContext.Provider>
             </TableSelectionContext.Provider>
@@ -372,16 +397,21 @@ export const Tr = ({ id, height, children }) => {
 };
 
 const TableRowCells = ({ children, rowIndex, row }) => {
+  const columnNaturalSizeMap = useContext(ColumnNaturalSizeMapContext);
+
   return children.map((child, columnIndex) => {
     const column = useColumnByIndex(columnIndex);
-    const tableCellKey = column.id;
+    const columnId = column.id;
+    const columnNaturalSize = columnNaturalSizeMap[columnId];
     return (
-      <RowContext.Provider key={tableCellKey} value={row}>
+      <RowContext.Provider key={columnId} value={row}>
         <RowIndexContext.Provider value={rowIndex}>
           <ColumnIndexContext.Provider value={columnIndex}>
-            <ColumnContext.Provider value={column}>
-              {child}
-            </ColumnContext.Provider>
+            <ColumnNaturalSizeContext.Provider value={columnNaturalSize}>
+              <ColumnContext.Provider value={column}>
+                {child}
+              </ColumnContext.Provider>
+            </ColumnNaturalSizeContext.Provider>
           </ColumnIndexContext.Provider>
         </RowIndexContext.Provider>
       </RowContext.Provider>
@@ -394,6 +424,7 @@ export const TableCell = forwardRef((props, ref) => {
   const row = useContext(RowContext);
   const columnIndex = useContext(ColumnIndexContext);
   const rowIndex = useContext(RowIndexContext);
+  const reportCellNaturalWidth = useContext(ReportCellNaturalWithContext);
   const {
     className = "",
     canSelectAll,
@@ -556,7 +587,8 @@ export const TableCell = forwardRef((props, ref) => {
 
   useLayoutEffect(() => {
     const cell = cellRef.current;
-    //  const { width } = cell.getBoundingClientRect();
+    const { width } = cell.getBoundingClientRect();
+    reportCellNaturalWidth(columnId, width);
   });
 
   return (
