@@ -39,15 +39,12 @@ export {
 } from "./src/scroll/parent_scroll.js";
 export { trapScrollInside } from "./src/scroll/scroll_trap.js";
 export {
-  elementRectToScrollableCoords,
   elementToFixedCoords,
+  elementToScrollableCoords,
   fixedCoordsToScrollableCoords,
   getElementScrollableRect,
   mouseEventToScrollableCoords,
-  scrollableCoordsToFixedCoords,
-  scrollableCoordsToStickyCoords,
   scrollableCoordsToViewport,
-  scrollableLeftToStickyLeft,
   scrollableTopToStickyTop,
   stickyLeftToScrollableLeft,
   stickyTopToScrollableTop,

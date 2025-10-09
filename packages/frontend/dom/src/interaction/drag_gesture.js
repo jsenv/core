@@ -69,11 +69,11 @@
 
 import { getScrollableParent } from "../scroll/parent_scroll.js";
 import {
+  elementToFixedCoords,
+  elementToStickyCoords,
   fixedCoordsToScrollableCoords,
   getElementScrollableRect,
   mouseEventToScrollableCoords,
-  scrollableCoordsToFixedCoords,
-  scrollableCoordsToStickyCoords,
   stickyLeftToScrollableLeft,
   stickyTopToScrollableTop,
 } from "../scroll/scrollable_rect.js";
@@ -248,7 +248,7 @@ export const createDragGestureController = (options = {}) => {
         };
         const restoreStyles = setStyles(element, stylesToSet);
         addTeardown(() => {
-          const [leftFixed, topFixed] = scrollableCoordsToFixedCoords(element);
+          const [leftFixed, topFixed] = elementToFixedCoords(element);
           restoreStyles();
           setStyles(element, {
             left: `${leftFixed}px`,
@@ -268,6 +268,8 @@ export const createDragGestureController = (options = {}) => {
           );
           leftAtStart = leftScrollable;
           stylesToSet.left = `${leftScrollable}px`;
+        } else {
+          leftAtStart = left;
         }
         if (isStickyTop) {
           const topScrollable = stickyTopToScrollableTop(
@@ -276,10 +278,12 @@ export const createDragGestureController = (options = {}) => {
           );
           topAtStart = topScrollable;
           stylesToSet.top = `${topScrollable}px`;
+        } else {
+          topAtStart = top;
         }
         const restoreStyles = setStyles(element, stylesToSet);
         addTeardown(() => {
-          const stickyCoords = scrollableCoordsToStickyCoords(
+          const [leftSticky, topSticky] = elementToStickyCoords(
             element,
             scrollableParent,
             { isStickyLeft, isStickyTop },
@@ -287,10 +291,10 @@ export const createDragGestureController = (options = {}) => {
           const stylesToSetOnTeardown = {};
           restoreStyles();
           if (isStickyLeft) {
-            stylesToSetOnTeardown.left = `${stickyCoords.left}px`;
+            stylesToSetOnTeardown.left = `${leftSticky}px`;
           }
           if (isStickyTop) {
-            stylesToSetOnTeardown.top = `${stickyCoords.top}px`;
+            stylesToSetOnTeardown.top = `${topSticky}px`;
           }
           setStyles(element, stylesToSetOnTeardown);
         });
