@@ -14,25 +14,49 @@ export const getElementBounds = (
     useNonStickyTopEvenIfStickyTop = false,
   } = {},
 ) => {
-  const isHorizontallySticky = element.hasAttribute("data-sticky-left");
-  const isVerticallySticky = element.hasAttribute("data-sticky-top");
-  const useStickyAttribute = isHorizontallySticky || isVerticallySticky;
-
-  if (!useStickyAttribute) {
-    // For normal elements, use scrollable-relative coordinates
-    const elementRect = getElementScrollableRect(element, scrollableParent);
-    const { left, top, right, bottom } = elementRect;
-    return { left, top, right, bottom };
-  }
-
   const computedStyle = getComputedStyle(element);
-  const hasPositionSticky = computedStyle.position === "sticky";
-  if (hasPositionSticky) {
+  const usePositionSticky = computedStyle.position === "sticky";
+  if (usePositionSticky) {
+    const isStickyLeft = computedStyle.left !== "auto";
+    const isStickyTop = computedStyle.top !== "auto";
     // For CSS position:sticky elements, use scrollable-relative coordinates
     const elementRect = getElementScrollableRect(element, scrollableParent);
     const { left, top, right, bottom } = elementRect;
     return {
-      sticky: true,
+      isFixed: false,
+      isStickyLeft,
+      isStickyTop,
+      left,
+      top,
+      right,
+      bottom,
+    };
+  }
+  const usePositionFixed = computedStyle.position === "fixed";
+  if (usePositionFixed) {
+    // For position:fixed elements, use viewport-relative coordinates adjusted for scroll
+    const elementRect = getElementScrollableRect(element, scrollableParent);
+    const { left, top, right, bottom } = elementRect;
+    return {
+      isFixed: true,
+      left,
+      top,
+      right,
+      bottom,
+    };
+  }
+
+  const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
+  const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
+  const useStickyAttribute = hasStickyLeftAttribute || hasStickyTopAttribute;
+  if (!useStickyAttribute) {
+    // For normal elements, use scrollable-relative coordinates
+    const elementRect = getElementScrollableRect(element, scrollableParent);
+    const { left, top, right, bottom } = elementRect;
+    return {
+      isFixed: false,
+      isStickyLeft: false,
+      isStickyTop: false,
       left,
       top,
       right,
@@ -44,11 +68,9 @@ export const getElementBounds = (
   // but not CSS position:sticky. Calculate their position based on scroll and sticky behavior
   const elementRect = getElementScrollableRect(element, scrollableParent);
   const { left: baseLeft, top: baseTop, width, height } = elementRect;
-
   let left = baseLeft;
   let top = baseTop;
-
-  if (isHorizontallySticky) {
+  if (hasStickyLeftAttribute) {
     const stickyLeft = parseFloat(computedStyle.left) || 0;
     // For sticky behavior, element should be positioned at its CSS left value relative to scrollable parent
     const scrollableRect = getElementScrollableRect(
@@ -63,8 +85,7 @@ export const getElementBounds = (
       left += scrollLeft;
     }
   }
-
-  if (isVerticallySticky) {
+  if (hasStickyTopAttribute) {
     const stickyTop = parseFloat(computedStyle.top) || 0;
     // For sticky behavior, element should be positioned at its CSS top value relative to scrollable parent
     const scrollableRect = getElementScrollableRect(
@@ -81,7 +102,9 @@ export const getElementBounds = (
   }
 
   return {
-    sticky: true,
+    isFixed: false,
+    isStickyLeft: hasStickyLeftAttribute,
+    isStickyTop: hasStickyTopAttribute,
     left,
     top,
     right: left + width,
