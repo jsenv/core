@@ -8,31 +8,30 @@ const { documentElement } = document;
  */
 export const mouseEventToScrollableCoords = (mouseEvent, scrollableParent) => {
   const scrollableParentIsDocument = scrollableParent === documentElement;
+  const { scrollLeft, scrollTop } = scrollableParent;
 
   if (scrollableParentIsDocument) {
     // For document scrolling: convert to document coordinates
-    return [
-      mouseEvent.clientX + scrollableParent.scrollLeft,
-      mouseEvent.clientY + scrollableParent.scrollTop,
-    ];
+    return [mouseEvent.clientX + scrollLeft, mouseEvent.clientY + scrollTop];
   }
 
   // For container scrolling: convert to container-relative coordinates
   const scrollableRect = scrollableParent.getBoundingClientRect();
   return [
-    mouseEvent.clientX - scrollableRect.left + scrollableParent.scrollLeft,
-    mouseEvent.clientY - scrollableRect.top + scrollableParent.scrollTop,
+    mouseEvent.clientX - scrollableRect.left + scrollLeft,
+    mouseEvent.clientY - scrollableRect.top + scrollTop,
   ];
 };
 
 export const getElementScrollableRect = (element, scrollableParent) => {
   const rect = element.getBoundingClientRect();
   const scrollableParentIsDocument = scrollableParent === documentElement;
+  const { scrollLeft, scrollTop } = scrollableParent;
 
   if (scrollableParentIsDocument) {
     // For document scrolling: convert to document coordinates
-    const left = rect.left + scrollableParent.scrollLeft;
-    const top = rect.top + scrollableParent.scrollTop;
+    const left = rect.left + scrollLeft;
+    const top = rect.top + scrollTop;
     return {
       left,
       top,
@@ -45,8 +44,8 @@ export const getElementScrollableRect = (element, scrollableParent) => {
 
   // For container scrolling: convert to container-relative coordinates
   const scrollableRect = scrollableParent.getBoundingClientRect();
-  const left = rect.left - scrollableRect.left + scrollableParent.scrollLeft;
-  const top = rect.top - scrollableRect.top + scrollableParent.scrollTop;
+  const left = rect.left - scrollableRect.left + scrollLeft;
+  const top = rect.top - scrollableRect.top + scrollTop;
   return {
     left,
     top,
