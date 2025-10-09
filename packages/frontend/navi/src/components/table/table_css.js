@@ -20,53 +20,37 @@ import.meta.css = /* css */ `
   .navi_table_container {
     --border-color: #e1e1e1;
     --focus-border-color: #0078d4;
-
     position: relative;
   }
 
   .navi_table {
     border-radius: 2px;
-    display: flex;
-    flex-direction: column;
-    width: max-content;
+    border-spacing: 0; /* Required for manual border collapse */
   }
-
-  .navi_colgroup {
-    display: none;
-  }
-  .navi_tr {
-    display: flex;
-  }
-  .navi_table_cell {
-    display: flex;
-    flex-direction: column; /* The bold_clone should go below */
-    flex: 0 0 auto;
-  }
-
-  .navi_table_cell[data-align-x="start"] {
-    align-items: flex-start;
-  }
-  .navi_table_cell[data-align-x="center"] {
-    align-items: center;
-  }
-  .navi_table_cell[data-align-y="end"] {
-    align-items: flex-end;
-  }
-  .navi_table_cell[data-align-x="start"] {
-    justify-content: flex-start;
-  }
-  .navi_table_cell[data-align-y="center"] {
-    justify-content: center;
-  }
-  .navi_table_cell[data-align-y="end"] {
-    justify-content: flex-end;
-  }
-
   .navi_table_cell {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     background-color: var(--background-color, transparent);
+  }
+
+  .navi_table_cell[data-align-x="start"] {
+    text-align: left;
+  }
+  .navi_table_cell[data-align-x="center"] {
+    text-align: center;
+  }
+  .navi_table_cell[data-align-y="end"] {
+    text-align: right;
+  }
+  .navi_table_cell[data-align-x="start"] {
+    vertical-align: top;
+  }
+  .navi_table_cell[data-align-y="center"] {
+    vertical-align: center;
+  }
+  .navi_table_cell[data-align-y="end"] {
+    vertical-align: bottom;
   }
 
   /* Table borders using ::before pseudo-elements */
