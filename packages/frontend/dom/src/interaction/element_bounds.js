@@ -19,14 +19,19 @@ export const getElementBounds = (
   const isVerticallySticky = element.hasAttribute("data-sticky-top");
   const useStickyAttribute = isHorizontallySticky || isVerticallySticky;
   if (!useStickyAttribute) {
-    return { ...rect };
+    const { left, top, right, bottom } = rect;
+    return { left, top, right, bottom };
   }
   const computedStyle = getComputedStyle(element);
   const hasPositionSticky = computedStyle.position === "sticky";
   if (hasPositionSticky) {
+    const { left, top, right, bottom } = rect;
     return {
       sticky: true,
-      ...rect,
+      left,
+      top,
+      right,
+      bottom,
     };
   }
 
