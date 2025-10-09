@@ -737,7 +737,7 @@
     <script type="module">
       // Import the drag gesture functionality
       // Note: You'll need to adjust the import path based on your setup
-      import { createDragToMoveGesture } from "../interaction/drag_gesture.js";
+      import { createDragToMoveGestureController } from "../interaction/drag_gesture.js";
       import {
         DRAG_DEBUG_MARKERS,
         enableDebugMarkers,
@@ -870,7 +870,7 @@
             },
           };
 
-          controls.dragGesture = createDragToMoveGesture(dragOptions);
+          controls.dragGesture = createDragToMoveGestureController(dragOptions);
 
           controls.dragInstance = controls.dragGesture.grab(rectangle, {
             xAtStart,
@@ -951,7 +951,7 @@
       // Function to set up drag gesture for any rectangle
       function setupDragGesture(rectangle, caseLabel) {
         rectangle.addEventListener("mousedown", (event) => {
-          createDragToMoveGesture({
+          createDragToMoveGestureController({
             backdrop: false,
             onGrab: (gestureInfo) => {
               console.log(`${caseLabel} - Grab started`, gestureInfo);

@@ -369,7 +369,6 @@
         const yAtStart = rect.top;
 
         const dragOptions = {
-          scrollContainer: document.documentElement,
           onGrab: (gestureInfo) => {
             updateStatus("Element grabbed programmatically - ready to drag");
             console.log("Programmatic grab:", gestureInfo);

@@ -469,7 +469,7 @@
     </div>
 
     <script type="module">
-      import { createDragToMoveGesture } from "../interaction/drag_gesture.js";
+      import { createDragToMoveGestureController } from "../interaction/drag_gesture.js";
       import {
         DRAG_DEBUG_MARKERS,
         enableDebugMarkers,
@@ -534,7 +534,7 @@
           stickyTestContainer.scrollLeft,
         );
 
-        createDragToMoveGesture({
+        createDragToMoveGestureController({
           backdrop: false,
           // No custom bounds - should respect scrollable area bounds
           onGrab: (gestureInfo) => {
@@ -573,7 +573,7 @@
         const customLeftBound = 100; // Cannot drag left of 100px from content start
         const customRightBound = 500; // Cannot drag right of 500px from content start
 
-        createDragToMoveGesture({
+        createDragToMoveGestureController({
           direction: { x: true },
           backdrop: false,
           customAreaConstraint: {
@@ -610,7 +610,7 @@
         const customTopBound = 100; // Cannot drag above 100px from content start
         const customBottomBound = 400; // Cannot drag below 400px from content start
 
-        createDragToMoveGesture({
+        createDragToMoveGestureController({
           backdrop: false,
           customAreaConstraint: {
             top: customTopBound,
