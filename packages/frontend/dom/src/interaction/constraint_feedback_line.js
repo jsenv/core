@@ -10,6 +10,10 @@ export const setupConstraintFeedbackLine = ({
   let lastMouseY = null;
   // Internal function to update constraint feedback line
   const onDrag = (gestureInfo, mousemoveEvent) => {
+    if (!mousemoveEvent) {
+      // programmatic drag
+      return;
+    }
     const mouseX = mousemoveEvent.clientX;
     const mouseY = mousemoveEvent.clientY;
     // Use last known position if current position not available (e.g., during scroll)

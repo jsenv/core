@@ -91,7 +91,7 @@ const BASIC_MODE_OPTIONS = {
   dragViaScroll: false,
 };
 // To help dbugging this flag can be used to reduce number of features to the bare minimum
-const ENFORCE_BASIC_MODE = false;
+const ENFORCE_BASIC_MODE = true;
 
 const { documentElement } = document;
 
@@ -836,7 +836,7 @@ export const createDragGestureController = (options) => {
     }
 
     const scrollableParent = getScrollableParent(element);
-    // const scrollableParentIsDocument = scrollableParent === documentElement;
+    const scrollableParentIsDocument = scrollableParent === documentElement;
     const positionedParent = getPositionedParent(element);
     const parentRect = positionedParent.getBoundingClientRect();
     const mouseEventRelativeCoords = (mouseEvent) => {
@@ -844,10 +844,10 @@ export const createDragGestureController = (options) => {
       const yViewport = mouseEvent.clientY;
       let xRelative = xViewport - parentRect.left;
       let yRelative = yViewport - parentRect.top;
-      // if (!scrollableParentIsDocument) {
-      xRelative += scrollableParent.scrollLeft;
-      yRelative += scrollableParent.scrollTop;
-      // }
+      if (!scrollableParentIsDocument) {
+        xRelative += scrollableParent.scrollLeft;
+        yRelative += scrollableParent.scrollTop;
+      }
       return [xRelative, yRelative];
     };
 
