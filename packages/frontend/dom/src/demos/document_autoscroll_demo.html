@@ -301,9 +301,7 @@
       window.addEventListener("scroll", updateScrollIndicator);
 
       // Manual drag gesture (mouse-based)
-      const manualDragGestureController = createDragToMoveGestureController({
-        scrollContainer: document.documentElement,
-      });
+      const manualDragGestureController = createDragToMoveGestureController();
 
       dragElement.onmousedown = (e) => {
         // Set up the manual drag behavior

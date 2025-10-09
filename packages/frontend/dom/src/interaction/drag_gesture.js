@@ -91,7 +91,7 @@ const BASIC_MODE_OPTIONS = {
   dragViaScroll: false,
 };
 // To help dbugging this flag can be used to reduce number of features to the bare minimum
-const ENFORCE_BASIC_MODE = true;
+const ENFORCE_BASIC_MODE = false;
 
 const { documentElement } = document;
 
@@ -117,7 +117,7 @@ export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
   return promise;
 };
 
-export const createDragGestureController = (options) => {
+export const createDragGestureController = (options = {}) => {
   if (ENFORCE_BASIC_MODE) {
     Object.assign(options, BASIC_MODE_OPTIONS);
   }
