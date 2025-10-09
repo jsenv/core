@@ -1,4 +1,4 @@
-import { elementIsVisible } from "../element_is_visible.js";
+import { elementIsVisible } from "./element_is_visible.js";
 
 export const elementIsFocusable = (node) => {
   // only element node can be focused, document, textNodes etc cannot
