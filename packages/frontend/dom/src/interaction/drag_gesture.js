@@ -68,7 +68,7 @@
  */
 
 import { getVisualRect } from "../position/visual_rect.js";
-import { getScrollableParent } from "../scroll.js";
+import { getScrollableParent } from "../scroll/parent_scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
 import {
@@ -83,48 +83,6 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 // Coordinate conversion helpers
 const { documentElement } = document;
-
-/**
- * Convert viewport coordinates to absolute document coordinates
- * @param {number} viewportX - X coordinate relative to viewport
- * @param {number} viewportY - Y coordinate relative to viewport
- * @param {Element} scrollableParent - The scrollable container
- * @returns {[number, number]} - [documentX, documentY] in absolute document coordinates
- */
-const viewportToDocumentCoords = (viewportX, viewportY, scrollableParent) => {
-  const scrollableParentIsDocument = scrollableParent === documentElement;
-
-  if (scrollableParentIsDocument) {
-    // For document scrolling: add document scroll to convert viewport → document coordinates
-    return [
-      viewportX + scrollableParent.scrollLeft,
-      viewportY + scrollableParent.scrollTop,
-    ];
-  }
-  // For container scrolling: add container position + scroll to convert viewport → document coordinates
-  const scrollableRect = scrollableParent.getBoundingClientRect();
-  return [
-    viewportX + scrollableRect.left + scrollableParent.scrollLeft,
-    viewportY + scrollableRect.top + scrollableParent.scrollTop,
-  ];
-};
-
-const elementToDocumentRect = (element, scrollableParent) => {
-  const rect = element.getBoundingClientRect();
-  const [left, top] = viewportToDocumentCoords(
-    rect.left,
-    rect.top,
-    scrollableParent,
-  );
-  return {
-    left,
-    top,
-    right: left + rect.width,
-    bottom: top + rect.height,
-    width: rect.width,
-    height: rect.height,
-  };
-};
 
 const BASIC_MODE_OPTIONS = {
   backdrop: false,
@@ -218,24 +176,24 @@ export const createDragGestureController = (options = {}) => {
     const scrollLeftAtStart = scrollableParent.scrollLeft;
     const scrollTopAtStart = scrollableParent.scrollTop;
 
-    // Convert all element coordinates to absolute document coordinates
-    const elementToImpactDocumentRect = elementToDocumentRect(
+    // Convert all element coordinates to scrollable-parent-relative coordinates
+    const elementToImpactRect = elementToScrollableRect(
       elementToImpact,
       scrollableParent,
     );
-    const elementVisuallyImpactedDocumentRect = elementToDocumentRect(
+    const elementVisuallyImpactedRect = elementToScrollableRect(
       elementVisuallyImpacted,
       scrollableParent,
     );
 
     const { left: elementToImpactLeft, top: elementToImpactTop } =
-      elementToImpactDocumentRect;
+      elementToImpactRect;
     const {
       left: elementVisuallyImpactedLeft,
       top: elementVisuallyImpactedTop,
       width: elementVisuallyImpactedWidth,
       height: elementVisuallyImpactedHeight,
-    } = elementVisuallyImpactedDocumentRect;
+    } = elementVisuallyImpactedRect;
 
     let isStickyLeft;
     let isStickyTop;
@@ -493,13 +451,13 @@ export const createDragGestureController = (options = {}) => {
             bottom: top + getBottomBound(elementHeight, clientHeight),
           };
         } else {
-          // Use helper function to get element coordinates in document space
-          const elementDocumentRect = elementToDocumentRect(
+          // Use helper function to get element coordinates in scrollable space
+          const elementRect = elementToScrollableRect(
             visibleConstraintElement,
             scrollableParent,
           );
-          const left = elementDocumentRect.left;
-          const top = elementDocumentRect.top;
+          const left = elementRect.left;
+          const top = elementRect.top;
           const right =
             left +
             getRightBound(elementWidth, visibleConstraintElement.clientWidth);
@@ -680,14 +638,14 @@ export const createDragGestureController = (options = {}) => {
         visibleAreaBase.right = right;
         visibleAreaBase.bottom = bottom;
       } else {
-        // For container scrollable parent, visible area should be in document coordinates
+        // For container scrollable parent, visible area should be in same coordinate space
         // The visible area represents where elements can be seen within the container
-        const scrollableDocumentRect = elementToDocumentRect(
+        const scrollableRect = elementToScrollableRect(
           scrollableParent,
           scrollableParent,
         );
-        const left = scrollableDocumentRect.left + borderSizes.left;
-        const top = scrollableDocumentRect.top + borderSizes.top;
+        const left = scrollableRect.left + borderSizes.left;
+        const top = scrollableRect.top + borderSizes.top;
         const right = left + availableWidth;
         const bottom = top + availableHeight;
         visibleAreaBase.left = left;
@@ -887,11 +845,8 @@ export const createDragGestureController = (options = {}) => {
 
     const scrollableParent = getScrollableParent(element);
     const mouseEventCoords = (mouseEvent) => {
-      return viewportToDocumentCoords(
-        mouseEvent.clientX,
-        mouseEvent.clientY,
-        scrollableParent,
-      );
+      // Always use scrollable-container-relative coordinates for mouse events
+      return mouseEventToScrollableCoords(mouseEvent, scrollableParent);
     };
 
     const [xAtStart, yAtStart] = mouseEventCoords(mousedownEvent);

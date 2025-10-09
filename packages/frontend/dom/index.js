@@ -27,12 +27,19 @@ export { initFocusGroup } from "./src/focus/focus_group.js";
 export { preventFocusNav } from "./src/focus/focus_nav_event_marker.js";
 export { trapFocusInside } from "./src/focus/focus_trap.js";
 export { canInterceptKeys } from "./src/keyboard.js";
+
+// scroll
+export { isScrollable } from "./src/scroll/is_scrollable.js";
 export {
   getAncestorScrolls,
   getScrollableParent,
   getScrollableParentSet,
-  trapScrollInside,
-} from "./src/scroll.js";
+} from "./src/scroll/parent_scroll.js";
+export { trapScrollInside } from "./src/scroll/scroll_trap.js";
+export {
+  getElementScrollableRect,
+  mouseEventToScrollableCoords,
+} from "./src/scroll/scrollable_rect.js";
 
 export { addAttributeEffect } from "./src/add_attribute_effect.js";
 
