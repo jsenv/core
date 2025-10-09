@@ -57,10 +57,6 @@ const scrollableToViewportCoords = (
       const adjustedY = fromStickyTop ? y : y - documentElement.scrollTop;
       return [adjustedX, adjustedY];
     }
-    if (side === "sticky-obstacle") {
-      // Sticky obstacles: stay fixed in viewport position, no scroll adjustment
-      return [x, y];
-    }
     // For other cases: adjust both coordinates for scroll
     return [x - documentElement.scrollLeft, y - documentElement.scrollTop];
   }
@@ -69,20 +65,16 @@ const scrollableToViewportCoords = (
   const scrollableRect = scrollableParent.getBoundingClientRect();
 
   if (side === "obstacle") {
-    // All obstacles now use scrollable-parent-relative coordinates
-    // Convert to viewport coordinates: container position + scroll adjustments per axis
-    const scrollAdjustX = fromStickyLeft ? 0 : scrollableParent.scrollLeft;
-    const scrollAdjustY = fromStickyTop ? 0 : scrollableParent.scrollTop;
+    // All obstacles use scrollable-parent-relative coordinates
+    // Convert to viewport coordinates for fixed-positioned markers
+    // Regular obstacles: subtract scroll to keep marker position stable as container scrolls
+    // Sticky obstacles: no scroll adjustment needed (they follow container movement)
+    const scrollAdjustX = fromStickyLeft ? 0 : -scrollableParent.scrollLeft;
+    const scrollAdjustY = fromStickyTop ? 0 : -scrollableParent.scrollTop;
     return [
       x + scrollableRect.left + scrollAdjustX,
       y + scrollableRect.top + scrollAdjustY,
     ];
-  }
-
-  if (side === "sticky-obstacle") {
-    // Sticky obstacles in containers: stay fixed in viewport relative to container
-    // Don't account for container scroll since they're sticky
-    return [x + scrollableRect.left, y + scrollableRect.top];
   }
 
   // For boundary markers: convert from container-relative to viewport
