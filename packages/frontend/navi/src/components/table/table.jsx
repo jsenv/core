@@ -416,7 +416,8 @@ export const TableCell = forwardRef((props, ref) => {
   const column = useColumn();
   const row = useRow();
   const {
-    textAlign = column.textAlign,
+    alignX = column.alignX,
+    alignY = column.alignY,
     backgroundColor = column.backgroundColor || row.backgroundColor,
   } = props;
 
@@ -553,11 +554,8 @@ export const TableCell = forwardRef((props, ref) => {
   if (rowHeight !== undefined) {
     innerStyle.maxHeight = `${rowHeight}px`;
   }
-  const innerTextAlign = textAlign || isFirstRow ? "center" : "left";
-  if (innerTextAlign) {
-    innerStyle.textAlign = innerTextAlign;
-  }
-
+  const innerAlignX = alignX || isFirstRow ? "center" : "start";
+  const innerAlignY = alignY || isFirstColumn ? "center" : "start";
   const innerBold = bold || containSelectedCell;
   if (innerBold) {
     innerStyle.fontWeight = "bold";
@@ -570,6 +568,8 @@ export const TableCell = forwardRef((props, ref) => {
       className={["navi_table_cell", ...className.split(" ")].join(" ")}
       ref={cellRef}
       style={innerStyle}
+      data-align-x={innerAlignX}
+      data-align-y={innerAlignY}
       // we use [data-focus] so that the attribute can be copied
       // to the dragged cell copies
       data-focus={activeElement === cellRef.current ? "" : undefined}
@@ -692,7 +692,7 @@ export const RowNumberTableCell = (props) => {
   const isTopLeftCell = columnIndex === 0 && rowIndex === 0;
 
   return (
-    <TableCell canSelectAll={isTopLeftCell} textAlign="center" {...props}>
+    <TableCell canSelectAll={isTopLeftCell} alignX="left" {...props}>
       {isTopLeftCell ? "" : rowIndex}
     </TableCell>
   );

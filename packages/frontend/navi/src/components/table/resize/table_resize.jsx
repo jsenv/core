@@ -627,10 +627,12 @@ const updateTableRowResizerPosition = (rowCell) => {
   tableRowResizer.setAttribute("data-hover", "");
 };
 const onMouseEnterTopResizeHandle = (e) => {
-  const currentRow = e.target.closest("tr");
+  const currentRow = e.target.closest(".navi_tr");
   const previousRow = findPreviousTableRow(currentRow);
   if (previousRow) {
-    updateTableRowResizerPosition(previousRow.querySelector("th,td"));
+    updateTableRowResizerPosition(
+      previousRow.querySelector(".navi_table_cell"),
+    );
   }
 };
 const onMouseEnterBottomResizeHandle = (e) => {

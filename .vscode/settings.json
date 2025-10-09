@@ -1,6 +1,7 @@
 {
   "search.exclude": {
     "**/.jsenv/**": true,
+    "**/old/**": true,
     "**/dist/**": true,
     "**/experiments/**": true,
     "**/tests/**/snapshots/**": true,

@@ -38,9 +38,30 @@ import.meta.css = /* css */ `
     display: flex;
   }
   .navi_table_cell {
+    display: flex;
+    flex-direction: column; /* The bold_clone should go below */
     flex: 1;
     min-width: 0;
     flex-shrink: 0;
+  }
+
+  .navi_table_cell[data-align-x="start"] {
+    align-items: flex-start;
+  }
+  .navi_table_cell[data-align-x="center"] {
+    align-items: center;
+  }
+  .navi_table_cell[data-align-y="end"] {
+    align-items: flex-end;
+  }
+  .navi_table_cell[data-align-x="start"] {
+    justify-content: flex-start;
+  }
+  .navi_table_cell[data-align-y="center"] {
+    justify-content: center;
+  }
+  .navi_table_cell[data-align-y="end"] {
+    justify-content: flex-end;
   }
 
   .navi_table_cell {
