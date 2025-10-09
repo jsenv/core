@@ -28,7 +28,7 @@ const getMarkersContainer = () => {
 
 const MARKER_SIZE = 12;
 
-export const setupVisualMarkers = ({ direction, positionedParent }) => {
+export const setupVisualMarkers = ({ direction, scrollableParent }) => {
   if (!DRAG_DEBUG_MARKERS) {
     return {
       onDrag: () => {},
@@ -104,7 +104,7 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
       }
 
       // Create dynamic constraint markers based on current element size
-      const parentRect = positionedParent.getBoundingClientRect();
+      const parentRect = scrollableParent.getBoundingClientRect();
 
       // Process each constraint individually to preserve names
       for (const constraint of constraints) {

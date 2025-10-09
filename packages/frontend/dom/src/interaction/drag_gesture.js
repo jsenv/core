@@ -67,7 +67,6 @@
  * ```
  */
 
-import { getPositionedParent } from "../position/offset_parent.js";
 import { getVisualRect } from "../position/visual_rect.js";
 import { getScrollableParent } from "../scroll.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
@@ -91,7 +90,7 @@ const BASIC_MODE_OPTIONS = {
   dragViaScroll: false,
 };
 // To help dbugging this flag can be used to reduce number of features to the bare minimum
-const ENFORCE_BASIC_MODE = false;
+const KEEP_IT_STUPID_SIMPLE = true;
 
 const { documentElement } = document;
 
@@ -118,7 +117,7 @@ export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
 };
 
 export const createDragGestureController = (options = {}) => {
-  if (ENFORCE_BASIC_MODE) {
+  if (KEEP_IT_STUPID_SIMPLE) {
     Object.assign(options, BASIC_MODE_OPTIONS);
   }
   let {
@@ -173,10 +172,7 @@ export const createDragGestureController = (options = {}) => {
 
     const scrollableParent = getScrollableParent(element);
     const scrollableParentIsDocument = scrollableParent === documentElement;
-    const positionedParent = getPositionedParent(element);
     const scrollableRect = scrollableParent.getBoundingClientRect();
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    const parentRect = positionedParentRect;
     const scrollLeftAtStart = scrollableParent.scrollLeft;
     const scrollTopAtStart = scrollableParent.scrollTop;
     const { left: elementToImpactLeft, top: elementToImpactTop } =
@@ -269,7 +265,7 @@ export const createDragGestureController = (options = {}) => {
     let visualOffsetY = elementVisuallyImpactedTop - elementToImpactTop;
 
     if (!isStickyLeft) {
-      leftAtStart = elementVisuallyImpactedLeft - parentRect.left;
+      leftAtStart = elementVisuallyImpactedLeft;
       // Adjust coordinates for conceptually sticky elements
       // Elements with data-sticky-left appear visually pinned to the left edge regardless of scroll,
       // but their DOM position doesn't reflect this visual behavior. We need to adjust both their
@@ -283,7 +279,7 @@ export const createDragGestureController = (options = {}) => {
       }
     }
     if (!isStickyTop) {
-      topAtStart = elementVisuallyImpactedTop - parentRect.top;
+      topAtStart = elementVisuallyImpactedTop;
       const hasStickyTopAttribute =
         elementVisuallyImpacted.hasAttribute(`data-sticky-top`);
       if (hasStickyTopAttribute && !scrollableParentIsDocument) {
@@ -292,12 +288,14 @@ export const createDragGestureController = (options = {}) => {
       }
     }
 
+    leftAtStart += scrollLeftAtStart;
+    topAtStart += scrollTopAtStart;
+
     const gestureInfo = {
       direction,
       element,
       elementToImpact,
       elementVisuallyImpacted,
-      positionedParent,
       scrollableParent,
 
       xAtStart,
@@ -363,7 +361,6 @@ export const createDragGestureController = (options = {}) => {
     if (showConstraintFeedbackLine) {
       constraintFeedbackLine = setupConstraintFeedbackLine({
         scrollableParent,
-        positionedParent,
         scrollLeftAtStart,
         scrollTopAtStart,
       });
@@ -436,8 +433,6 @@ export const createDragGestureController = (options = {}) => {
           const { clientWidth, clientHeight } = documentElement;
           let left = 0;
           let top = 0;
-          left -= positionedParentRect.left;
-          top -= positionedParentRect.top;
           bounds = {
             left,
             top,
@@ -446,11 +441,6 @@ export const createDragGestureController = (options = {}) => {
           };
         } else {
           let { left, top } = getVisualRect(visibleConstraintElement);
-          const visibleConstraintParentRect = areaConstraintElement
-            ? areaConstraintElement.getBoundingClientRect()
-            : positionedParentRect;
-          left -= visibleConstraintParentRect.left;
-          top -= visibleConstraintParentRect.top;
           if (!scrollableParentIsDocument) {
             const { scrollLeft, scrollTop } = documentElement;
             left += scrollLeft;
@@ -500,7 +490,6 @@ export const createDragGestureController = (options = {}) => {
           areaConstraintElement || scrollableParent,
           {
             name,
-            positionedParent,
             obstacleAttributeName,
             gestureInfo,
           },
@@ -511,7 +500,6 @@ export const createDragGestureController = (options = {}) => {
     const visualMarkers = setupVisualMarkers({
       direction,
       element,
-      positionedParent,
       scrollableParent,
     });
     addTeardown(() => {
@@ -660,9 +648,9 @@ export const createDragGestureController = (options = {}) => {
       }
 
       const elementLeftRelative = leftAtStart + gestureInfo.xMove;
-      const elementLeft = elementLeftRelative + parentRect.left;
+      const elementLeft = elementLeftRelative;
       const elementTopRelative = topAtStart + gestureInfo.yMove;
-      const elementTop = elementTopRelative + parentRect.top;
+      const elementTop = elementTopRelative;
       if (
         !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
         elementLeft >= visibleArea.left
@@ -786,7 +774,6 @@ export const createDragGestureController = (options = {}) => {
       if (someChange) {
         lifecycle?.drag?.(gestureInfo, {
           scrollableParent,
-          positionedParent,
           direction,
         });
       }
@@ -840,18 +827,13 @@ export const createDragGestureController = (options = {}) => {
     }
 
     const scrollableParent = getScrollableParent(element);
-    const scrollableParentIsDocument = scrollableParent === documentElement;
-    const positionedParent = getPositionedParent(element);
-    const parentRect = positionedParent.getBoundingClientRect();
     const mouseEventRelativeCoords = (mouseEvent) => {
       const xViewport = mouseEvent.clientX;
       const yViewport = mouseEvent.clientY;
-      let xRelative = xViewport - parentRect.left;
-      let yRelative = yViewport - parentRect.top;
-      if (!scrollableParentIsDocument) {
-        xRelative += scrollableParent.scrollLeft;
-        yRelative += scrollableParent.scrollTop;
-      }
+      let xRelative = xViewport;
+      let yRelative = yViewport;
+      xRelative += scrollableParent.scrollLeft;
+      yRelative += scrollableParent.scrollTop;
       return [xRelative, yRelative];
     };
 
@@ -901,10 +883,7 @@ export const createDragToMoveGestureController = (options) => {
   const dragToMoveGestureController = createDragGestureController({
     ...options,
     lifecycle: {
-      drag: (
-        gestureInfo,
-        { direction, positionedParent, scrollableParent },
-      ) => {
+      drag: (gestureInfo, { direction, scrollableParent }) => {
         const {
           leftAtStart,
           topAtStart,
@@ -926,8 +905,6 @@ export const createDragToMoveGestureController = (options) => {
         // Calculate initial position for elementToImpact (initialLeft/initialTop are now visual coordinates)
         const initialLeftToImpact = leftAtStart - visualOffsetX;
         const initialTopToImpact = topAtStart - visualOffsetY;
-        // Calculate where element bounds would be in viewport coordinates
-        const parentRect = positionedParent.getBoundingClientRect();
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
@@ -980,8 +957,7 @@ export const createDragToMoveGestureController = (options) => {
         // Horizontal auto-scroll
         if (direction.x) {
           const desiredElementLeftRelative = leftAtStart + gestureInfo.xMove;
-          const desiredElementLeft =
-            desiredElementLeftRelative + parentRect.left;
+          const desiredElementLeft = desiredElementLeftRelative;
           const desiredElementRight =
             desiredElementLeft + elementVisuallyImpactedWidth;
 
@@ -1010,7 +986,7 @@ export const createDragToMoveGestureController = (options) => {
         // Vertical auto-scroll
         if (direction.y) {
           const desiredElementTopRelative = topAtStart + gestureInfo.yMove;
-          const desiredElementTop = desiredElementTopRelative + parentRect.top;
+          const desiredElementTop = desiredElementTopRelative;
           const desiredElementBottom =
             desiredElementTop + elementVisuallyImpactedHeight;
 

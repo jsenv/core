@@ -1,6 +1,5 @@
 export const setupConstraintFeedbackLine = ({
   scrollableParent,
-  positionedParent,
   scrollLeftAtStart,
   scrollTopAtStart,
 }) => {
@@ -29,7 +28,7 @@ export const setupConstraintFeedbackLine = ({
     let currentGrabPointX;
     let currentGrabPointY;
     // For normal elements, use standard calculation
-    const parentRect = positionedParent.getBoundingClientRect();
+    const parentRect = scrollableParent.getBoundingClientRect();
     currentGrabPointX = parentRect.left + xAtStart + gestureInfo.xMove;
     if (scrollableParent !== document.documentElement) {
       currentGrabPointX -= scrollLeftAtStart;

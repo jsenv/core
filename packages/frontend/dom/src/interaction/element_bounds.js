@@ -8,7 +8,6 @@ import { getBorderSizes } from "../size/get_border_sizes.js";
 export const getElementBounds = (
   element,
   {
-    positionedParent,
     scrollableParent,
     useNonStickyLeftEvenIfStickyLeft = false,
     useNonStickyTopEvenIfStickyTop = false,
@@ -40,8 +39,8 @@ export const getElementBounds = (
   // For sticky elements, calculate current position based on scroll and sticky behavior
   // The sticky element "sticks" at its CSS left position relative to the scrollable parent
   let left;
-  const parentRect = positionedParent.getBoundingClientRect();
-  const borderSizes = getBorderSizes(positionedParent);
+  const parentRect = scrollableParent.getBoundingClientRect();
+  const borderSizes = getBorderSizes(scrollableParent);
   if (isHorizontallySticky) {
     const stickyLeft = parseFloat(computedStyle.left) || 0;
     const stickyPositionInViewport =
