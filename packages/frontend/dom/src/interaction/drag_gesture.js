@@ -179,6 +179,14 @@ export const createDragGestureController = (options) => {
     const parentRect = positionedParentRect;
     const scrollLeftAtStart = scrollableParent.scrollLeft;
     const scrollTopAtStart = scrollableParent.scrollTop;
+    const { left: elementToImpactLeft, top: elementToImpactTop } =
+      elementToImpact.getBoundingClientRect();
+    const {
+      left: elementVisuallyImpactedLeft,
+      top: elementVisuallyImpactedTop,
+      width: elementVisuallyImpactedWidth,
+      height: elementVisuallyImpactedHeight,
+    } = elementVisuallyImpacted.getBoundingClientRect();
 
     let isStickyLeft;
     let isStickyTop;
@@ -191,10 +199,9 @@ export const createDragGestureController = (options) => {
       if (usePositionFixed) {
         isStickyLeft = false;
         isStickyTop = false;
-        const { left, top } = elementVisuallyImpacted.getBoundingClientRect();
         const { scrollLeft, scrollTop } = documentElement;
-        leftAtStart = left + scrollLeft;
-        topAtStart = top + scrollTop;
+        leftAtStart = elementVisuallyImpactedLeft + scrollLeft;
+        topAtStart = elementVisuallyImpactedTop + scrollTop;
         const stylesToSet = {
           position: "absolute",
           left: `${leftAtStart}px`,
@@ -255,19 +262,14 @@ export const createDragGestureController = (options) => {
       }
     }
 
-    const elementToImpactRect = elementToImpact.getBoundingClientRect();
-    const elementVisuallyImpactedRect =
-      elementVisuallyImpacted.getBoundingClientRect();
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
     // All constraint calculations use visual coordinates (xMove, yMove)
-    let visualOffsetX =
-      elementVisuallyImpactedRect.left - elementToImpactRect.left;
-    let visualOffsetY =
-      elementVisuallyImpactedRect.top - elementToImpactRect.top;
+    let visualOffsetX = elementVisuallyImpactedLeft - elementToImpactLeft;
+    let visualOffsetY = elementVisuallyImpactedTop - elementToImpactTop;
 
     if (!isStickyLeft) {
-      leftAtStart = elementVisuallyImpactedRect.left - parentRect.left;
+      leftAtStart = elementVisuallyImpactedLeft - parentRect.left;
       // Adjust coordinates for conceptually sticky elements
       // Elements with data-sticky-left appear visually pinned to the left edge regardless of scroll,
       // but their DOM position doesn't reflect this visual behavior. We need to adjust both their
@@ -281,7 +283,7 @@ export const createDragGestureController = (options) => {
       }
     }
     if (!isStickyTop) {
-      topAtStart = elementVisuallyImpactedRect.top - parentRect.top;
+      topAtStart = elementVisuallyImpactedTop - parentRect.top;
       const hasStickyTopAttribute =
         elementVisuallyImpacted.hasAttribute(`data-sticky-top`);
       if (hasStickyTopAttribute && !scrollableParentIsDocument) {
@@ -322,6 +324,8 @@ export const createDragGestureController = (options) => {
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
+      elementVisuallyImpactedWidth,
+      elementVisuallyImpactedHeight,
 
       // Track whether elements have entered visible area once
       // Elements may start outside the visible area (mostly when sticky + sticky frontiers)
@@ -611,11 +615,7 @@ export const createDragGestureController = (options) => {
       const isGoingDown = yMove > previousYMove;
 
       // Get current element dimensions for dynamic constraint calculation
-      const currentElementRect =
-        elementVisuallyImpacted.getBoundingClientRect();
-      const currentElementWidth = currentElementRect.width;
-      const currentElementHeight = currentElementRect.height;
-
+      const currentRect = elementVisuallyImpacted.getBoundingClientRect();
       const availableWidth = scrollableParent.clientWidth;
       const availableHeight = scrollableParent.clientHeight;
 
@@ -677,24 +677,24 @@ export const createDragGestureController = (options) => {
 
       const constraints = prepareConstraints(constraintFunctions, {
         name,
-        elementWidth: currentElementWidth,
-        elementHeight: currentElementHeight,
+        elementWidth: currentRect.width,
+        elementHeight: currentRect.height,
         visibleArea,
       });
 
       visualMarkers.onDrag({
         constraints,
         visibleArea,
-        elementWidth: currentElementWidth,
-        elementHeight: currentElementHeight,
+        elementWidth: currentRect.width,
+        elementHeight: currentRect.height,
       });
 
       const [finalXMove, finalYMove] = applyConstraints(constraints, {
         gestureInfo,
         xMove,
         yMove,
-        elementWidth: currentElementWidth,
-        elementHeight: currentElementHeight,
+        elementWidth: currentRect.width,
+        elementHeight: currentRect.height,
         direction,
         interactionType,
       });
@@ -714,6 +714,9 @@ export const createDragGestureController = (options) => {
         isGoingDown,
         visibleArea,
         interactionType,
+
+        elementVisuallyImpactedWidth: currentRect.width,
+        elementVisuallyImpactedHeight: currentRect.height,
       };
 
       if (isRelease) {
