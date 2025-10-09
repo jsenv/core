@@ -53,7 +53,12 @@
 import { useActiveElement } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+import {
+  useContext,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "preact/hooks";
 
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { createIsolatedItemTracker } from "../item_tracker/use_isolated_item_tracker.jsx";
@@ -102,23 +107,12 @@ const [useRowTrackerProvider, useRegisterRow, useRowByIndex] =
   createItemTracker();
 
 const ColumnProducerProviderContext = createContext();
-const useColumnProducerProvider = () =>
-  useContext(ColumnProducerProviderContext);
-
 const ColumnConsumerProviderContext = createContext();
-const useColumnConsumerProvider = () =>
-  useContext(ColumnConsumerProviderContext);
-
 const ColumnContext = createContext();
-const useColumn = () => useContext(ColumnContext);
-
 const RowContext = createContext();
-const useRow = () => useContext(RowContext);
 
 const ColumnIndexContext = createContext();
-const useColumnIndex = () => useContext(ColumnIndexContext);
 const RowIndexContext = createContext();
-const useRowIndex = () => useContext(RowIndexContext);
 
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
@@ -289,7 +283,7 @@ export const Table = forwardRef((props, ref) => {
   );
 });
 export const Colgroup = ({ children }) => {
-  const ColumnProducerProvider = useColumnProducerProvider();
+  const ColumnProducerProvider = useContext(ColumnProducerProviderContext);
   return (
     <div className="navi_colgroup">
       <ColumnProducerProvider>{children}</ColumnProducerProvider>
@@ -345,7 +339,7 @@ export const Tr = ({ id, height, children }) => {
   const { stickyTopFrontierRowIndex } = useContext(TableStickyContext);
   const rowIndex = useRegisterRow({ id, height });
   const row = useRowByIndex(rowIndex);
-  const ColumnConsumerProvider = useColumnConsumerProvider();
+  const ColumnConsumerProvider = useContext(ColumnConsumerProviderContext);
 
   const isStickyTop = rowIndex <= stickyTopFrontierRowIndex;
   const isStickyTopFrontier = rowIndex === stickyTopFrontierRowIndex;
@@ -396,6 +390,10 @@ const TableRowCells = ({ children, rowIndex, row }) => {
 };
 
 export const TableCell = forwardRef((props, ref) => {
+  const column = useContext(ColumnContext);
+  const row = useContext(RowContext);
+  const columnIndex = useContext(ColumnIndexContext);
+  const rowIndex = useContext(RowIndexContext);
   const {
     className = "",
     canSelectAll,
@@ -413,17 +411,12 @@ export const TableCell = forwardRef((props, ref) => {
     bold,
     children,
   } = props;
-  const column = useColumn();
-  const row = useRow();
   const {
     alignX = column.alignX,
     alignY = column.alignY,
     backgroundColor = column.backgroundColor || row.backgroundColor,
   } = props;
-
   const cellRef = useRef();
-  const columnIndex = useColumnIndex();
-  const rowIndex = useRowIndex();
   const isFirstRow = rowIndex === 0;
   const isFirstColumn = columnIndex === 0;
 
@@ -563,6 +556,11 @@ export const TableCell = forwardRef((props, ref) => {
 
   const activeElement = useActiveElement();
 
+  useLayoutEffect(() => {
+    const cell = cellRef.current;
+    //  const { width } = cell.getBoundingClientRect();
+  });
+
   return (
     <div
       className={["navi_table_cell", ...className.split(" ")].join(" ")}
@@ -687,8 +685,8 @@ export const RowNumberCol = ({
   );
 };
 export const RowNumberTableCell = (props) => {
-  const columnIndex = useColumnIndex();
-  const rowIndex = useRowIndex();
+  const columnIndex = useContext(ColumnIndexContext);
+  const rowIndex = useContext(RowIndexContext);
   const isTopLeftCell = columnIndex === 0 && rowIndex === 0;
 
   return (

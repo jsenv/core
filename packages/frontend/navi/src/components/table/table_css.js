@@ -40,9 +40,7 @@ import.meta.css = /* css */ `
   .navi_table_cell {
     display: flex;
     flex-direction: column; /* The bold_clone should go below */
-    flex: 1;
-    min-width: 0;
-    flex-shrink: 0;
+    flex: 0 0 auto;
   }
 
   .navi_table_cell[data-align-x="start"] {
@@ -112,9 +110,6 @@ import.meta.css = /* css */ `
   .navi_table_cell[data-height-xxs] {
     padding-top: 0;
     padding-bottom: 0;
-  }
-  .navi_table_cell[data-editing] {
-    padding: 0;
   }
   .navi_table_cell[data-editing] input {
     padding: 0;
