@@ -28,7 +28,28 @@ const getMarkersContainer = () => {
 
 const MARKER_SIZE = 12;
 
-export const setupVisualMarkers = ({ direction }) => {
+// Convert scrollable-relative coordinates to viewport coordinates for marker positioning
+const scrollableToViewportCoords = (x, y, scrollableParent) => {
+  const { documentElement } = document;
+
+  if (scrollableParent === documentElement) {
+    // For document scrollable parent, coordinates are already document-relative
+    // Add scroll offset to get viewport position
+    return {
+      x: x + documentElement.scrollLeft,
+      y: y + documentElement.scrollTop,
+    };
+  }
+
+  // For container scrollable parent, convert from container-relative to viewport
+  const scrollableRect = scrollableParent.getBoundingClientRect();
+  return {
+    x: x + scrollableRect.left,
+    y: y + scrollableRect.top,
+  };
+};
+
+export const setupVisualMarkers = ({ direction, scrollableParent }) => {
   if (!DRAG_DEBUG_MARKERS) {
     return {
       onDrag: () => {},
@@ -70,33 +91,53 @@ export const setupVisualMarkers = ({ direction }) => {
 
       visible_area_markers: {
         if (direction.x) {
+          const leftCoords = scrollableToViewportCoords(
+            visibleArea.left,
+            0,
+            scrollableParent,
+          );
+          const rightCoords = scrollableToViewportCoords(
+            visibleArea.right,
+            0,
+            scrollableParent,
+          );
           markersToCreate.push({
             name: "visibleAreaLeft",
-            x: visibleArea.left,
-            y: 0,
+            x: leftCoords.x,
+            y: leftCoords.y,
             color: "0 0 255", // blue
             side: "left",
           });
           markersToCreate.push({
             name: "visibleAreaRight",
-            x: visibleArea.right,
-            y: 0,
+            x: rightCoords.x,
+            y: rightCoords.y,
             color: "0 128 0", // green
             side: "right",
           });
         }
         if (direction.y) {
+          const topCoords = scrollableToViewportCoords(
+            0,
+            visibleArea.top,
+            scrollableParent,
+          );
+          const bottomCoords = scrollableToViewportCoords(
+            0,
+            visibleArea.bottom,
+            scrollableParent,
+          );
           markersToCreate.push({
             name: "visibleAreaTop",
-            x: 0,
-            y: visibleArea.top,
+            x: topCoords.x,
+            y: topCoords.y,
             color: "255 0 0", // red
             side: "top",
           });
           markersToCreate.push({
             name: "visibleAreaBottom",
-            x: 0,
-            y: visibleArea.bottom,
+            x: bottomCoords.x,
+            y: bottomCoords.y,
             color: "255 165 0", // orange
             side: "bottom",
           });
@@ -111,11 +152,15 @@ export const setupVisualMarkers = ({ direction }) => {
           // Create individual markers for each bound with constraint name
           if (direction.x) {
             if (bounds.left !== undefined) {
-              const leftBoundViewport = bounds.left;
+              const leftCoords = scrollableToViewportCoords(
+                bounds.left,
+                0,
+                scrollableParent,
+              );
               markersToCreate.push({
                 name: `${constraint.name}.left`,
-                x: leftBoundViewport,
-                y: 0,
+                x: leftCoords.x,
+                y: leftCoords.y,
                 color: "128 0 128", // purple
                 side: "left",
               });
@@ -123,11 +168,15 @@ export const setupVisualMarkers = ({ direction }) => {
             if (bounds.right !== undefined) {
               // For visual clarity, show rightBound at the right edge of the element
               // when element is positioned at rightBound (not the left edge position)
-              const rightBoundViewport = bounds.right + elementWidth;
+              const rightCoords = scrollableToViewportCoords(
+                bounds.right + elementWidth,
+                0,
+                scrollableParent,
+              );
               markersToCreate.push({
                 name: `${constraint.name}.right`,
-                x: rightBoundViewport,
-                y: 0,
+                x: rightCoords.x,
+                y: rightCoords.y,
                 color: "128 0 128", // purple
                 side: "right",
               });
@@ -135,11 +184,15 @@ export const setupVisualMarkers = ({ direction }) => {
           }
           if (direction.y) {
             if (bounds.top !== undefined) {
-              const topBoundViewport = bounds.top;
+              const topCoords = scrollableToViewportCoords(
+                0,
+                bounds.top,
+                scrollableParent,
+              );
               markersToCreate.push({
                 name: `${constraint.name}.top`,
-                x: 0,
-                y: topBoundViewport,
+                x: topCoords.x,
+                y: topCoords.y,
                 color: "128 0 128", // purple
                 side: "top",
               });
@@ -147,18 +200,25 @@ export const setupVisualMarkers = ({ direction }) => {
             if (bounds.bottom !== undefined) {
               // For visual clarity, show bottomBound at the bottom edge of the element
               // when element is positioned at bottomBound (not the left edge position)
-              const bottomBoundViewport = bounds.bottom + elementHeight;
+              const bottomCoords = scrollableToViewportCoords(
+                0,
+                bounds.bottom + elementHeight,
+                scrollableParent,
+              );
               markersToCreate.push({
                 name: `${constraint.name}.bottom`,
-                x: 0,
-                y: bottomBoundViewport,
+                x: bottomCoords.x,
+                y: bottomCoords.y,
                 color: "128 0 128", // purple
                 side: "bottom",
               });
             }
           }
         } else if (constraint.type === "obstacle") {
-          const obstacleMarker = createObstacleMarker(constraint);
+          const obstacleMarker = createObstacleMarker(
+            constraint,
+            scrollableParent,
+          );
           currentConstraintMarkers.push(obstacleMarker);
         }
       }
@@ -252,16 +312,21 @@ const createDebugMarker = ({ name, x, y, color = "255 0 0", side }) => {
   container.appendChild(marker);
   return marker;
 };
-const createObstacleMarker = (obstacleObj) => {
+const createObstacleMarker = (obstacleObj, scrollableParent) => {
   const width = obstacleObj.bounds.right - obstacleObj.bounds.left;
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
-  const left = obstacleObj.bounds.left;
-  const top = obstacleObj.bounds.top;
+
+  // Convert scrollable-relative coordinates to viewport coordinates
+  const topLeftCoords = scrollableToViewportCoords(
+    obstacleObj.bounds.left,
+    obstacleObj.bounds.top,
+    scrollableParent,
+  );
 
   const marker = document.createElement("div");
   marker.className = "navi_obstacle_marker";
-  marker.style.left = `${left}px`;
-  marker.style.top = `${top}px`;
+  marker.style.left = `${topLeftCoords.x}px`;
+  marker.style.top = `${topLeftCoords.y}px`;
   marker.style.width = `${width}px`;
   marker.style.height = `${height}px`;
   marker.title = obstacleObj.name;

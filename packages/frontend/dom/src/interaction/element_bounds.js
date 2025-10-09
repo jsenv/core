@@ -1,9 +1,10 @@
-import { getBorderSizes } from "../size/get_border_sizes.js";
+import { getElementScrollableRect } from "../scroll/scrollable_rect.js";
 
 /**
- * Get element bounds, handling both normal positioning and data-sticky-left|top
+ * Get element bounds in scrollable-parent-relative coordinates, handling both normal positioning and data-sticky-left|top
  * @param {HTMLElement} element - The element to get bounds for
- * @returns {Object} Bounds object with left, top, right, bottom properties
+ * @param {HTMLElement} scrollableParent - The scrollable parent element
+ * @returns {Object} Bounds object with left, top, right, bottom properties in scrollable-relative coordinates
  */
 export const getElementBounds = (
   element,
@@ -13,18 +14,23 @@ export const getElementBounds = (
     useNonStickyTopEvenIfStickyTop = false,
   } = {},
 ) => {
-  const rect = element.getBoundingClientRect();
   const isHorizontallySticky = element.hasAttribute("data-sticky-left");
   const isVerticallySticky = element.hasAttribute("data-sticky-top");
   const useStickyAttribute = isHorizontallySticky || isVerticallySticky;
+
   if (!useStickyAttribute) {
-    const { left, top, right, bottom } = rect;
+    // For normal elements, use scrollable-relative coordinates
+    const elementRect = getElementScrollableRect(element, scrollableParent);
+    const { left, top, right, bottom } = elementRect;
     return { left, top, right, bottom };
   }
+
   const computedStyle = getComputedStyle(element);
   const hasPositionSticky = computedStyle.position === "sticky";
   if (hasPositionSticky) {
-    const { left, top, right, bottom } = rect;
+    // For CSS position:sticky elements, use scrollable-relative coordinates
+    const elementRect = getElementScrollableRect(element, scrollableParent);
+    const { left, top, right, bottom } = elementRect;
     return {
       sticky: true,
       left,
@@ -34,43 +40,51 @@ export const getElementBounds = (
     };
   }
 
-  // handle virtually sticky obstacles (<col> or <tr>)
-  // are not really sticky but should be handled as such
-  // For sticky elements, calculate current position based on scroll and sticky behavior
-  // The sticky element "sticks" at its CSS left position relative to the scrollable parent
-  let left;
-  const parentRect = scrollableParent.getBoundingClientRect();
-  const borderSizes = getBorderSizes(scrollableParent);
+  // Handle virtually sticky obstacles (<col> or <tr>) - elements with data-sticky attributes
+  // but not CSS position:sticky. Calculate their position based on scroll and sticky behavior
+  const elementRect = getElementScrollableRect(element, scrollableParent);
+  const { left: baseLeft, top: baseTop, width, height } = elementRect;
+
+  let left = baseLeft;
+  let top = baseTop;
+
   if (isHorizontallySticky) {
     const stickyLeft = parseFloat(computedStyle.left) || 0;
-    const stickyPositionInViewport =
-      parentRect.left + borderSizes.left + stickyLeft;
-    left = stickyPositionInViewport;
+    // For sticky behavior, element should be positioned at its CSS left value relative to scrollable parent
+    const scrollableRect = getElementScrollableRect(
+      scrollableParent,
+      scrollableParent,
+    );
+    left = scrollableRect.left + stickyLeft;
+
     if (useNonStickyLeftEvenIfStickyLeft) {
+      // When element hasn't crossed visible area, use its actual scroll-adjusted position
       const scrollLeft = scrollableParent.scrollLeft;
       left += scrollLeft;
     }
-  } else {
-    left = rect.left;
   }
-  let top;
+
   if (isVerticallySticky) {
     const stickyTop = parseFloat(computedStyle.top) || 0;
-    const stickyPositionInViewport =
-      parentRect.top + borderSizes.top + stickyTop;
-    top = stickyPositionInViewport;
+    // For sticky behavior, element should be positioned at its CSS top value relative to scrollable parent
+    const scrollableRect = getElementScrollableRect(
+      scrollableParent,
+      scrollableParent,
+    );
+    top = scrollableRect.top + stickyTop;
+
     if (useNonStickyTopEvenIfStickyTop) {
+      // When element hasn't crossed visible area, use its actual scroll-adjusted position
       const scrollTop = scrollableParent.scrollTop;
       top += scrollTop;
     }
-  } else {
-    top = rect.top;
   }
+
   return {
     sticky: true,
     left,
     top,
-    right: left + rect.width,
-    bottom: top + rect.height,
+    right: left + width,
+    bottom: top + height,
   };
 };
