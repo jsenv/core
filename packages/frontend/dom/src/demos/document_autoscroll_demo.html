@@ -285,7 +285,7 @@
     </div>
 
     <script type="module">
-      import { createDragToMoveGesture } from "../interaction/drag_gesture.js";
+      import { createDragToMoveGestureController } from "../interaction/drag_gesture.js";
 
       const dragElement = document.getElementById("dragElement");
       const scrollIndicator = document.getElementById("scrollIndicator");
@@ -301,13 +301,13 @@
       window.addEventListener("scroll", updateScrollIndicator);
 
       // Manual drag gesture (mouse-based)
-      const manualDragGesture = createDragToMoveGesture({
+      const manualDragGestureController = createDragToMoveGestureController({
         scrollContainer: document.documentElement,
       });
 
       dragElement.onmousedown = (e) => {
         // Set up the manual drag behavior
-        manualDragGesture.grabViaMousedown(e, {
+        manualDragGestureController.grabViaMousedown(e, {
           element: dragElement,
           onStart: () => {
             dragElement.setAttribute("data-dragging", "");
@@ -330,7 +330,6 @@
         releaseBtn: document.getElementById("releaseBtn"),
         statusDiv: document.getElementById("status"),
         dragGesture: null,
-        dragInstance: null,
       };
 
       function updateStatus(message) {
@@ -365,7 +364,7 @@
 
       // Grab button
       controls.grabBtn.addEventListener("click", () => {
-        if (controls.dragInstance) return;
+        if (controls.dragGesture) return;
 
         const rect = dragElement.getBoundingClientRect();
         const xAtStart = rect.left;
@@ -392,59 +391,63 @@
             updateStatus("Programmatic drag released");
             dragElement.removeAttribute("data-dragging");
             console.log("Programmatic release:", gestureInfo);
-            controls.dragGesture = null;
+            controls.dragGestureController = null;
             controls.dragInstance = null;
             updateButtonStates(false);
           },
         };
 
-        controls.dragGesture = createDragToMoveGesture(dragOptions);
-        controls.dragInstance = controls.dragGesture.grab(dragElement, {
-          xAtStart,
-          yAtStart,
-        });
+        controls.dragGestureController =
+          createDragToMoveGestureController(dragOptions);
+        controls.dragGesture = controls.dragGestureController.grab(
+          dragElement,
+          {
+            xAtStart,
+            yAtStart,
+          },
+        );
 
         updateButtonStates(true);
       });
 
       // Drag direction buttons
       controls.dragLeftBtn.addEventListener("click", () => {
-        if (!controls.dragInstance) return;
-        const currentGestureInfo = controls.dragInstance.gestureInfo;
+        if (!controls.dragGesture) return;
+        const currentGestureInfo = controls.dragGesture.gestureInfo;
         const newX = currentGestureInfo.x - 100;
         updateStatus("Dragging left by 100px - testing document auto-scroll");
-        controls.dragInstance.drag(newX, currentGestureInfo.y);
+        controls.dragGesture.drag(newX, currentGestureInfo.y);
       });
 
       controls.dragRightBtn.addEventListener("click", () => {
-        if (!controls.dragInstance) return;
-        const currentGestureInfo = controls.dragInstance.gestureInfo;
+        if (!controls.dragGesture) return;
+        const currentGestureInfo = controls.dragGesture.gestureInfo;
         const newX = currentGestureInfo.x + 100;
         updateStatus("Dragging right by 100px - testing document auto-scroll");
-        controls.dragInstance.drag(newX, currentGestureInfo.y);
+        controls.dragGesture.drag(newX, currentGestureInfo.y);
       });
 
       controls.dragUpBtn.addEventListener("click", () => {
-        if (!controls.dragInstance) return;
-        const currentGestureInfo = controls.dragInstance.gestureInfo;
+        if (!controls.dragGesture) return;
+        const currentGestureInfo = controls.dragGesture.gestureInfo;
         const newY = currentGestureInfo.y - 100;
         updateStatus("Dragging up by 100px - testing upward auto-scroll");
-        controls.dragInstance.drag(currentGestureInfo.x, newY);
+        controls.dragGesture.drag(currentGestureInfo.x, newY);
       });
 
       controls.dragDownBtn.addEventListener("click", () => {
-        if (!controls.dragInstance) return;
-        const currentGestureInfo = controls.dragInstance.gestureInfo;
+        if (!controls.dragGesture) return;
+        const currentGestureInfo = controls.dragGesture.gestureInfo;
         const newY = currentGestureInfo.y + 100;
         updateStatus("Dragging down by 100px - testing downward auto-scroll");
-        controls.dragInstance.drag(currentGestureInfo.x, newY);
+        controls.dragGesture.drag(currentGestureInfo.x, newY);
       });
 
       // Release button
       controls.releaseBtn.addEventListener("click", () => {
-        if (!controls.dragInstance) return;
+        if (!controls.dragGesture) return;
         updateStatus("Releasing programmatic drag");
-        controls.dragInstance.release();
+        controls.dragGesture.release();
       });
 
       // Initialize
