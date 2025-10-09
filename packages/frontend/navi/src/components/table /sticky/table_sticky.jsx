@@ -27,20 +27,17 @@ import.meta.css = /* css */ `
     --sticky-frontier-ghost-size: 8px;
   }
 
-  .navi_table th[data-sticky-top],
-  .navi_table td[data-sticky-top] {
+  .navi_table_cell[data-sticky-top] {
     position: sticky;
     top: var(--sticky-group-top, 0);
     z-index: ${Z_INDEX_STICKY_ROW};
   }
-  .navi_table th[data-sticky-left],
-  .navi_table td[data-sticky-left] {
+  .navi_table_cell[data-sticky-left] {
     position: sticky;
     left: var(--sticky-group-left, 0);
     z-index: ${Z_INDEX_STICKY_COLUMN};
   }
-  .navi_table th[data-sticky-left][data-sticky-top],
-  .navi_table td[data-sticky-left][data-sticky-top] {
+  .navi_table_cell[data-sticky-left][data-sticky-top] {
     position: sticky;
     top: var(--sticky-group-top, 0);
     left: var(--sticky-group-left, 0);
@@ -48,10 +45,10 @@ import.meta.css = /* css */ `
   }
 
   /* Useful because drag gesture will read this value to detect <col>, <tr> virtual position */
-  .navi_table col {
+  .navi_col {
     left: var(--sticky-group-left, 0);
   }
-  .navi_table tr {
+  .navi_tr {
     top: var(--sticky-group-top, 0);
   }
 
@@ -132,40 +129,40 @@ import.meta.css = /* css */ `
 
   /* Positioning adjustments for ::after pseudo-elements on cells adjacent to sticky frontiers */
   /* These ensure selection and focus borders align with the ::before borders */
-  .navi_table[data-border-collapse] th[data-after-sticky-left-frontier]::after,
-  .navi_table[data-border-collapse] td[data-after-sticky-left-frontier]::after {
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-after-sticky-left-frontier]::after {
     left: 0;
   }
 
-  .navi_table[data-border-collapse] th[data-after-sticky-top-frontier]::after,
-  .navi_table[data-border-collapse] td[data-after-sticky-top-frontier]::after {
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-after-sticky-top-frontier]::after {
     top: 0;
   }
 
   /* Base borders for sticky cells (will be overridden by frontier rules) */
-  .navi_table[data-border-collapse] th[data-sticky-left]::before,
-  .navi_table[data-border-collapse] td[data-sticky-left]::before {
+  .navi_table[data-border-collapse] .navi_table_cell[data-sticky-left]::before {
     box-shadow:
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  .navi_table[data-border-collapse] th[data-sticky-top]::before,
-  .navi_table[data-border-collapse] td[data-sticky-top]::before {
+  .navi_table[data-border-collapse] .navi_table_cell[data-sticky-top]::before {
     box-shadow:
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
 
   /* Header row sticky cells need top border */
-  .navi_table[data-border-collapse] th[data-sticky-left]::before {
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-sticky-left]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  .navi_table[data-border-collapse] th[data-sticky-top]::before {
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-sticky-top]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
@@ -173,16 +170,16 @@ import.meta.css = /* css */ `
   }
 
   /* First column sticky cells need left border */
-  .navi_table[data-border-collapse] th:first-child[data-sticky-left]::before,
-  .navi_table[data-border-collapse] td:first-child[data-sticky-left]::before {
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-column][data-sticky-left]::before {
     box-shadow:
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
       inset 0 -1px 0 0 var(--border-color);
   }
 
-  .navi_table[data-border-collapse] th:first-child[data-sticky-top]::before,
-  .navi_table[data-border-collapse] td:first-child[data-sticky-top]::before {
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-column][data-sticky-top]::before {
     box-shadow:
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
@@ -190,8 +187,10 @@ import.meta.css = /* css */ `
   }
 
   /* Header first column sticky cells get all four regular borders */
-  .navi_table[data-border-collapse] th:first-child[data-sticky-left]::before,
-  .navi_table[data-border-collapse] th:first-child[data-sticky-top]::before {
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-first-column][data-sticky-left]::before,
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-first-column][data-sticky-top]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
@@ -202,9 +201,8 @@ import.meta.css = /* css */ `
   /* Borders for cells immediately after sticky frontiers */
 
   /* Left border for the column after sticky-x-frontier */
-  .navi_table[data-border-collapse] th[data-after-sticky-left-frontier]::before,
   .navi_table[data-border-collapse]
-    td[data-after-sticky-left-frontier]::before {
+    .navi_table_cell[data-after-sticky-left-frontier]::before {
     box-shadow:
       inset 1px 0 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
@@ -213,7 +211,7 @@ import.meta.css = /* css */ `
 
   /* Header cells after sticky-x-frontier also need top border (for border-collapse) */
   .navi_table[data-border-collapse]
-    th[data-after-sticky-left-frontier]::before {
+    .navi_table_cell[data-first-row][data-after-sticky-left-frontier]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
@@ -222,8 +220,8 @@ import.meta.css = /* css */ `
   }
 
   /* Top border for the row after sticky-y-frontier */
-  .navi_table[data-border-collapse] th[data-after-sticky-top-frontier]::before,
-  .navi_table[data-border-collapse] td[data-after-sticky-top-frontier]::before {
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-after-sticky-top-frontier]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset -1px 0 0 0 var(--border-color),
@@ -231,7 +229,8 @@ import.meta.css = /* css */ `
   }
 
   /* Header cells after sticky-y-frontier also need left border (for border-collapse) */
-  .navi_table[data-border-collapse] th[data-after-sticky-top-frontier]::before {
+  .navi_table[data-border-collapse]
+    .navi_table_cell[data-first-row][data-after-sticky-top-frontier]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
@@ -241,9 +240,7 @@ import.meta.css = /* css */ `
 
   /* First column cells after sticky-y-frontier need all four borders (for border-collapse) */
   .navi_table[data-border-collapse]
-    th:first-child[data-after-sticky-top-frontier]::before,
-  .navi_table[data-border-collapse]
-    td:first-child[data-after-sticky-top-frontier]::before {
+    .navi_table_cell[data-first-column][data-after-sticky-top-frontier]::before {
     box-shadow:
       inset 0 1px 0 0 var(--border-color),
       inset 1px 0 0 0 var(--border-color),
@@ -253,9 +250,7 @@ import.meta.css = /* css */ `
 
   /* Corner case: cell after both sticky frontiers */
   .navi_table[data-border-collapse]
-    th[data-after-sticky-left-frontier][data-after-sticky-top-frontier]::before,
-  .navi_table[data-border-collapse]
-    td[data-after-sticky-left-frontier][data-after-sticky-top-frontier]::before {
+    .navi_table_cell[data-after-sticky-left-frontier][data-after-sticky-top-frontier]::before {
     box-shadow:
       inset 1px 0 0 0 var(--border-color),
       inset 0 1px 0 0 var(--border-color),

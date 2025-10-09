@@ -8,71 +8,59 @@ import.meta.css = /* css */ `
     --selection-background-color: #eaf1fd;
   }
 
-  .navi_table th[aria-selected="true"],
-  .navi_table td[aria-selected="true"] {
+  .navi_table_cell[aria-selected="true"] {
     background-color: var(--selection-background-color);
   }
-  td[data-row-contains-selected] {
-    position: relative;
-    font-weight: 500;
-    color: #444;
-  }
 
-  th[data-column-contains-selected] {
-    position: relative;
-    font-weight: bold;
-    color: #444;
-  }
-
-  .navi_table [data-selection-border-top]::after {
+  .navi_table_cell[data-selection-border-top]::after {
     box-shadow: inset 0 1px 0 0 var(--selection-border-color);
   }
 
-  .navi_table [data-selection-border-right]::after {
+  .navi_table_cell[data-selection-border-right]::after {
     box-shadow: inset -1px 0 0 0 var(--selection-border-color);
   }
 
-  .navi_table [data-selection-border-bottom]::after {
+  .navi_table_cell[data-selection-border-bottom]::after {
     box-shadow: inset 0 -1px 0 0 var(--selection-border-color);
   }
 
-  .navi_table [data-selection-border-left]::after {
+  .navi_table_cell[data-selection-border-left]::after {
     box-shadow: inset 1px 0 0 0 var(--selection-border-color);
   }
 
   /* Two border combinations */
-  .navi_table [data-selection-border-top][data-selection-border-right]::after {
+  .navi_table_cell[data-selection-border-top][data-selection-border-right]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
       inset -1px 0 0 0 var(--selection-border-color);
   }
 
-  .navi_table [data-selection-border-top][data-selection-border-bottom]::after {
+  .navi_table_cell[data-selection-border-top][data-selection-border-bottom]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color);
   }
 
-  .navi_table [data-selection-border-top][data-selection-border-left]::after {
+  .navi_table_cell[data-selection-border-top][data-selection-border-left]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
 
-  .navi_table
+  .navi_table_cell
     [data-selection-border-right][data-selection-border-bottom]::after {
     box-shadow:
       inset -1px 0 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color);
   }
 
-  .navi_table [data-selection-border-right][data-selection-border-left]::after {
+  .navi_table_cell[data-selection-border-right][data-selection-border-left]::after {
     box-shadow:
       inset -1px 0 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
 
-  .navi_table
+  .navi_table_cell
     [data-selection-border-bottom][data-selection-border-left]::after {
     box-shadow:
       inset 0 -1px 0 0 var(--selection-border-color),
@@ -80,7 +68,7 @@ import.meta.css = /* css */ `
   }
 
   /* Three border combinations */
-  .navi_table
+  .navi_table_cell
     [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -88,7 +76,7 @@ import.meta.css = /* css */ `
       inset 0 -1px 0 0 var(--selection-border-color);
   }
 
-  .navi_table
+  .navi_table_cell
     [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -96,7 +84,7 @@ import.meta.css = /* css */ `
       inset 1px 0 0 0 var(--selection-border-color);
   }
 
-  .navi_table
+  .navi_table_cell
     [data-selection-border-top][data-selection-border-right][data-selection-border-left]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -104,7 +92,7 @@ import.meta.css = /* css */ `
       inset 1px 0 0 0 var(--selection-border-color);
   }
 
-  .navi_table
+  .navi_table_cell
     [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
     box-shadow:
       inset -1px 0 0 0 var(--selection-border-color),
@@ -113,7 +101,7 @@ import.meta.css = /* css */ `
   }
 
   /* Four border combinations (full selection) */
-  .navi_table
+  .navi_table_cell
     [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
@@ -162,7 +150,7 @@ export const useTableSelectionController = ({
 
 const updateSelectionBorders = (tableElement, selectionController) => {
   // Find all selected cells
-  const cells = Array.from(tableElement.querySelectorAll("th, td"));
+  const cells = Array.from(tableElement.querySelectorAll(".navi_table_cell"));
   const selectedCells = [];
   for (const cell of cells) {
     if (selectionController.isElementSelected(cell)) {
@@ -190,7 +178,7 @@ const updateSelectionBorders = (tableElement, selectionController) => {
 
   const cellPositions = selectedCells.map((cell) => {
     const row = cell.parentElement;
-    const allRows = Array.from(tableElement.querySelectorAll("tr"));
+    const allRows = Array.from(tableElement.querySelectorAll(".navi_tr"));
     return {
       element: cell,
       rowIndex: allRows.indexOf(row),

@@ -17,8 +17,7 @@ import.meta.css = /* css */ `
     --resizer-color: #387ec9;
   }
 
-  .navi_table th,
-  .navi_table td {
+  .navi_table_cell {
     /* ensure table cell padding does not count when we say column = 50px we want a column of 50px, not 50px + paddings */
     box-sizing: border-box;
   }
