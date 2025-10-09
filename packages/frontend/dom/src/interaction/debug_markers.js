@@ -29,15 +29,8 @@ const getMarkersContainer = () => {
 const MARKER_SIZE = 12;
 
 // Convert scrollable-relative coordinates to viewport coordinates for marker positioning
-const scrollableToViewportCoords = (
-  x,
-  y,
-  scrollableParent,
-  side = null,
-  stickyOptions = {},
-) => {
+const scrollableToViewportCoords = (x, y, scrollableParent, side = null) => {
   const { documentElement } = document;
-  const { fromStickyLeft = false, fromStickyTop = false } = stickyOptions;
 
   if (scrollableParent === documentElement) {
     // For document scrolling, adjust coordinates based on marker side:
@@ -53,8 +46,8 @@ const scrollableToViewportCoords = (
       // All obstacles now use scrollable-parent-relative coordinates
       // Convert them to viewport coordinates based on positioning
       // Regular/sticky obstacles: handle per-axis sticky behavior
-      const adjustedX = fromStickyLeft ? x : x - documentElement.scrollLeft;
-      const adjustedY = fromStickyTop ? y : y - documentElement.scrollTop;
+      const adjustedX = x - documentElement.scrollLeft;
+      const adjustedY = y - documentElement.scrollTop;
       return [adjustedX, adjustedY];
     }
     // For other cases: adjust both coordinates for scroll
@@ -69,8 +62,8 @@ const scrollableToViewportCoords = (
     // Convert to viewport coordinates for fixed-positioned markers
     // Regular obstacles: subtract scroll to keep marker position stable as container scrolls
     // Sticky obstacles: no scroll adjustment needed (they follow container movement)
-    const scrollAdjustX = fromStickyLeft ? 0 : -scrollableParent.scrollLeft;
-    const scrollAdjustY = fromStickyTop ? 0 : -scrollableParent.scrollTop;
+    const scrollAdjustX = -scrollableParent.scrollLeft;
+    const scrollAdjustY = -scrollableParent.scrollTop;
     return [
       x + scrollableRect.left + scrollAdjustX,
       y + scrollableRect.top + scrollAdjustY,
@@ -334,11 +327,6 @@ const createObstacleMarker = (obstacleObj, scrollableParent) => {
     obstacleObj.bounds.top,
     scrollableParent,
     "obstacle",
-    {
-      fromStickyLeft: obstacleObj.bounds.fromStickyLeft,
-      fromStickyTop: obstacleObj.bounds.fromStickyTop,
-      fromFixed: obstacleObj.bounds.fromFixed,
-    },
   );
 
   const marker = document.createElement("div");
