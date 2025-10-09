@@ -376,8 +376,6 @@ export const createDragGestureController = (options = {}) => {
     if (showConstraintFeedbackLine) {
       constraintFeedbackLine = setupConstraintFeedbackLine({
         scrollableParent,
-        scrollLeftAtStart,
-        scrollTopAtStart,
       });
       addTeardown(() => {
         constraintFeedbackLine.onRelease();
