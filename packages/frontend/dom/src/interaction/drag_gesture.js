@@ -97,7 +97,7 @@ const BASIC_MODE_OPTIONS = {
   dragViaScroll: false,
 };
 // To help dbugging this flag can be used to reduce number of features to the bare minimum
-const KEEP_IT_STUPID_SIMPLE = true;
+const KEEP_IT_STUPID_SIMPLE = false;
 
 export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
   let _resolve;

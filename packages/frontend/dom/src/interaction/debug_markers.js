@@ -42,12 +42,27 @@ const scrollableToViewportCoords = (x, y, scrollableParent, side = null) => {
       // Horizontal markers: x should stay fixed in viewport, y adjusts for scroll
       return [x, y - documentElement.scrollTop];
     }
-    // For obstacles or other cases: adjust both coordinates for scroll
+    if (side === "obstacle") {
+      // Obstacles: keep their document position, no scroll adjustment
+      return [x, y];
+    }
+    // For other cases: adjust both coordinates for scroll
     return [x - documentElement.scrollLeft, y - documentElement.scrollTop];
   }
 
-  // For container scrollable parent, convert from container-relative to viewport
+  // For container scrollable parent
   const scrollableRect = scrollableParent.getBoundingClientRect();
+
+  if (side === "obstacle") {
+    // Obstacles in containers: stay fixed relative to container content
+    // Account for container's scroll position to keep obstacles in their content position
+    return [
+      x + scrollableRect.left + scrollableParent.scrollLeft,
+      y + scrollableRect.top + scrollableParent.scrollTop,
+    ];
+  }
+
+  // For boundary markers: convert from container-relative to viewport
   return [x + scrollableRect.left, y + scrollableRect.top];
 };
 
@@ -298,11 +313,12 @@ const createObstacleMarker = (obstacleObj, scrollableParent) => {
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
   // Convert scrollable-relative coordinates to viewport coordinates
-  // Obstacle markers are rectangles, so don't pass a side to get full scroll adjustment
+  // Obstacles should stay fixed in their document position
   const [x, y] = scrollableToViewportCoords(
     obstacleObj.bounds.left,
     obstacleObj.bounds.top,
     scrollableParent,
+    "obstacle",
   );
 
   const marker = document.createElement("div");
