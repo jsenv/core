@@ -105,14 +105,12 @@ export const initDragTableColumnByMousedown = async (
 
     originalStickyCells.forEach((originalCell, index) => {
       const cloneCell = cloneStickyCells[index];
-      if (!cloneCell) return;
-
       const hasXSticky = originalCell.hasAttribute("data-sticky-left");
       const hasYSticky = originalCell.hasAttribute("data-sticky-top");
       const computedStyle = getComputedStyle(originalCell);
 
-      let needsLeftPositioning;
-      let needsTopPositioning;
+      let leftPosition;
+      let topPosition;
       if (isDocumentScrolling) {
         // For document scrolling: check if element is currently stuck and calculate offset
         const tableRect = table.getBoundingClientRect();
@@ -125,7 +123,9 @@ export const initDragTableColumnByMousedown = async (
           if (isStuckLeft) {
             // Compare cell position with table position to get the offset within the table
             const cellOffsetFromTable = cellRect.left - tableRect.left;
-            needsLeftPositioning = cellOffsetFromTable;
+            leftPosition = cellOffsetFromTable;
+          } else {
+            leftPosition = 0;
           }
         }
         if (hasYSticky) {
@@ -136,30 +136,30 @@ export const initDragTableColumnByMousedown = async (
           if (isStuckTop) {
             // Compare cell position with table position to get the offset within the table
             const cellOffsetFromTable = cellRect.top - tableRect.top;
-            needsTopPositioning = cellOffsetFromTable;
+            topPosition = cellOffsetFromTable;
+          } else {
+            topPosition = 0;
           }
         }
       } else {
         // For container scrolling: use the CSS sticky values directly
-
         if (hasXSticky) {
           const stickyLeft = parseFloat(computedStyle.left) || 0;
-          needsLeftPositioning = stickyLeft;
+          leftPosition = stickyLeft;
         }
-
         if (hasYSticky) {
           const stickyTop = parseFloat(computedStyle.top) || 0;
-          needsTopPositioning = stickyTop;
+          topPosition = stickyTop;
         }
       }
 
-      if (needsLeftPositioning || needsTopPositioning) {
+      if (leftPosition !== undefined || topPosition !== undefined) {
         cloneCell.style.position = "relative";
-        if (needsLeftPositioning) {
-          cloneCell.style.left = `${needsLeftPositioning}px`;
+        if (leftPosition !== undefined) {
+          cloneCell.style.left = `${leftPosition}px`;
         }
-        if (needsTopPositioning) {
-          cloneCell.style.top = `${needsTopPositioning}px`;
+        if (topPosition !== undefined) {
+          cloneCell.style.top = `${topPosition}px`;
         }
       }
     });
