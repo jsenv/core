@@ -310,7 +310,8 @@ const TableStickyLeftFrontier = ({
     useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyLeftFrontierChange);
 
-  if (stickyLeftFrontierColumnIndex === -1) {
+  // eslint-disable-next-line no-constant-condition
+  if (true) {
     return null;
   }
   return (
@@ -356,7 +357,8 @@ const TableStickyTopFrontier = ({
     useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyTopFrontierChange);
 
-  if (stickyTopFrontierRowIndex === -1) {
+  // eslint-disable-next-line no-constant-condition
+  if (true) {
     return null;
   }
   return (

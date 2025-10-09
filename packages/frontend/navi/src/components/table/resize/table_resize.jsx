@@ -66,7 +66,7 @@ import.meta.css = /* css */ `
     left: var(--table-cell-right, 0);
     opacity: 0;
   }
-  .navi_table_column_resizer .navi_table_column_resize_handle {
+  .navi_table_column_resize_handle {
     position: absolute;
     height: 100%;
     top: 50%;
@@ -78,10 +78,10 @@ import.meta.css = /* css */ `
     height: 26px;
     max-height: 80%;
   }
-  .navi_table_column_resizer .navi_table_column_resize_handle[data-left] {
+  .navi_table_column_resize_handle[data-left] {
     left: 2px;
   }
-  .navi_table_column_resizer .navi_table_column_resize_handle[data-right] {
+  .navi_table_column_resize_handle[data-right] {
     right: 3px;
   }
   .navi_table_column_resize_handle_container {
@@ -118,7 +118,7 @@ import.meta.css = /* css */ `
     top: var(--table-cell-bottom, 0);
     opacity: 0;
   }
-  .navi_table_row_resizer .navi_table_row_resize_handle {
+  .navi_table_row_resize_handle {
     position: absolute;
     width: 100%;
     left: 50%;
@@ -130,10 +130,10 @@ import.meta.css = /* css */ `
     height: 5px;
     max-width: 80%;
   }
-  .navi_table_row_resizer .navi_table_row_resize_handle[data-top] {
+  .navi_table_row_resize_handle[data-top] {
     top: 2px;
   }
-  .navi_table_row_resizer .navi_table_row_resize_handle[data-bottom] {
+  .navi_table_row_resize_handle[data-bottom] {
     bottom: 3px;
   }
   .navi_table_row_resize_handle_container {
