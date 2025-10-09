@@ -27,20 +27,17 @@ import.meta.css = /* css */ `
     --sticky-frontier-ghost-size: 8px;
   }
 
-  .navi_table th[data-sticky-top],
-  .navi_table td[data-sticky-top] {
+  .navi_table_cell[data-sticky-top] {
     position: sticky;
     top: var(--sticky-group-top, 0);
     z-index: ${Z_INDEX_STICKY_ROW};
   }
-  .navi_table th[data-sticky-left],
-  .navi_table td[data-sticky-left] {
+  .navi_table_cell[data-sticky-left] {
     position: sticky;
     left: var(--sticky-group-left, 0);
     z-index: ${Z_INDEX_STICKY_COLUMN};
   }
-  .navi_table th[data-sticky-left][data-sticky-top],
-  .navi_table td[data-sticky-left][data-sticky-top] {
+  .navi_table_cell[data-sticky-left][data-sticky-top] {
     position: sticky;
     top: var(--sticky-group-top, 0);
     left: var(--sticky-group-left, 0);
