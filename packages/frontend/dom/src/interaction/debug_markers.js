@@ -33,12 +33,9 @@ const scrollableToViewportCoords = (x, y, scrollableParent) => {
   const { documentElement } = document;
 
   if (scrollableParent === documentElement) {
-    // For document scrollable parent, coordinates are already document-relative
-    // Add scroll offset to get viewport position
-    return {
-      x: x + documentElement.scrollLeft,
-      y: y + documentElement.scrollTop,
-    };
+    // For document scrollable parent, scrollable-relative coordinates are already
+    // in the correct space for viewport positioning (position: fixed)
+    return { x, y };
   }
 
   // For container scrollable parent, convert from container-relative to viewport
