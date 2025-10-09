@@ -88,38 +88,38 @@ export const initDragTableColumnByMousedown = async (
   tableClone.setAttribute("data-drag-ignore", "");
 
   update_sticky_elements: {
-    // In the table clone we set sticky elements to position: relative
-    // because position would not work as the clone is not in a scrollable container
-    // but an absolutely positioned element
+    // In the table clone we need to convert sticky elements to position: relative
+    // with calculated offsets that match their appearance in the original context
     const scrollableParent = getScrollableParent(table);
-    const scrollLeft =
-      scrollableParent === document.documentElement
-        ? 0
-        : scrollableParent.scrollLeft;
-    const scrollTop =
-      scrollableParent === document.documentElement
-        ? 0
-        : scrollableParent.scrollTop;
+    const { scrollLeft, scrollTop } = scrollableParent;
 
     // important: only on cells, not on <col> nor <tr>
-    const stickyCells = tableClone.querySelectorAll(
+    const originalStickyCells = table.querySelectorAll(
       ".navi_table_cell[data-sticky-left], .navi_table_cell[data-sticky-top]",
     );
-    stickyCells.forEach((stickyCell) => {
-      const hasXSticky = stickyCell.hasAttribute("data-sticky-left");
-      const hasYSticky = stickyCell.hasAttribute("data-sticky-top");
+    const cloneStickyCells = tableClone.querySelectorAll(
+      ".navi_table_cell[data-sticky-left], .navi_table_cell[data-sticky-top]",
+    );
 
-      // Use position: relative and calculate offsets to simulate sticky behavior
-      stickyCell.style.position = "relative";
+    originalStickyCells.forEach((originalCell, index) => {
+      const cloneCell = cloneStickyCells[index];
+      if (!cloneCell) return;
+
+      const hasXSticky = originalCell.hasAttribute("data-sticky-left");
+      const hasYSticky = originalCell.hasAttribute("data-sticky-top");
+      const computedStyle = getComputedStyle(originalCell);
+
+      // Convert from position: sticky to position: relative with explicit offsets
+      cloneCell.style.position = "relative";
       if (hasXSticky) {
-        // For horizontal sticky elements, offset left to simulate sticky behavior
-        // The element should appear to stick at its original position relative to the scroll
-        stickyCell.style.left = `${scrollLeft}px`;
+        // Use the CSS left value that defines the sticky position
+        const stickyLeft = parseFloat(computedStyle.left) || 0;
+        cloneCell.style.left = `${stickyLeft}px`;
       }
       if (hasYSticky) {
-        // For vertical sticky elements, offset top to simulate sticky behavior
-        // The element should appear to stick at its original position relative to the scroll
-        stickyCell.style.top = `${scrollTop}px`;
+        // Use the CSS top value that defines the sticky position
+        const stickyTop = parseFloat(computedStyle.top) || 0;
+        cloneCell.style.top = `${scrollTop}px`;
       }
     });
   }
