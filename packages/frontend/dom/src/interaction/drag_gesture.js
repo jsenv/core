@@ -115,7 +115,7 @@ export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
       // won't happen, what do we do?
     },
   });
-  const dragGesture = dragGestureController.grabViaMousedown(mousedownEvent, {
+  const dragGesture = dragGestureController.grabViaMouse(mousedownEvent, {
     element: mousedownEvent.target,
   });
   return promise;
@@ -844,11 +844,11 @@ export const createDragGestureController = (options = {}) => {
     return dragGesture;
   };
 
-  const grabViaMousedown = (mousedownEvent, { element, ...options } = {}) => {
-    if (mousedownEvent.button !== 0) {
+  const grabViaMouse = (mouseEvent, { element, ...options } = {}) => {
+    if (mouseEvent.type === "mousedown" && mouseEvent.button !== 0) {
       return null;
     }
-    const target = mousedownEvent.target;
+    const target = mouseEvent.target;
     if (!target.closest) {
       return null;
     }
@@ -859,18 +859,18 @@ export const createDragGestureController = (options = {}) => {
       return mouseEventToScrollableCoords(mouseEvent, scrollableParent);
     };
 
-    const [xAtStart, yAtStart] = mouseEventCoords(mousedownEvent);
+    const [xAtStart, yAtStart] = mouseEventCoords(mouseEvent);
     const dragGesture = grab(element, {
       xAtStart,
       yAtStart,
-      interactionType: "mousedown",
+      interactionType: mouseEvent.type,
       ...options,
     });
 
     const dragViaMouse = (mousemoveEvent) => {
       const [x, y] = mouseEventCoords(mousemoveEvent);
       dragGesture.drag(x, y, {
-        interactionType: "mousemove",
+        interactionType: mouseEvent.type,
         mousemoveEvent,
       });
     };
@@ -880,7 +880,7 @@ export const createDragGestureController = (options = {}) => {
       dragGesture.release({
         x,
         y,
-        interactionType: "mouseup",
+        interactionType: mouseEvent.type,
       });
     };
     document.addEventListener("mousemove", dragViaMouse);
@@ -891,12 +891,13 @@ export const createDragGestureController = (options = {}) => {
     });
 
     dragGesture.dragViaMouse = dragViaMouse;
+    dragGesture.releaseViaMouse = releaseViaMouse;
     return dragGesture;
   };
 
   return {
     grab,
-    grabViaMousedown,
+    grabViaMouse,
     addTeardown,
   };
 };

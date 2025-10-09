@@ -347,7 +347,7 @@
 
       dragElement.onmousedown = (e) => {
         // Set up the manual drag behavior
-        manualDragGestureController.grabViaMousedown(e, {
+        manualDragGestureController.grabViaMouse(e, {
           element: dragElement,
           onStart: () => {
             dragElement.setAttribute("data-dragging", "");

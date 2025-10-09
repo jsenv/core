@@ -562,7 +562,7 @@
             console.log("Sticky - Drag released", gestureInfo);
             stickyRectangle.removeAttribute("data-dragging");
           },
-        }).grabViaMousedown(event, {
+        }).grabViaMouse(event, {
           element: stickyRectangle,
         });
       });
@@ -599,7 +599,7 @@
             updateHorizontalInfo(gestureInfo, "Released");
             updateBoundsInfo("Hover to see limits");
           },
-        }).grabViaMousedown(event, {
+        }).grabViaMouse(event, {
           element: horizontalRectangle,
         });
       });
@@ -635,7 +635,7 @@
             updateVerticalInfo(gestureInfo, "Released");
             updateBoundsInfo("Hover to see limits");
           },
-        }).grabViaMousedown(event, {
+        }).grabViaMouse(event, {
           element: verticalRectangle,
         });
       });

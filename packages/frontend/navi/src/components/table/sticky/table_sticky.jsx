@@ -504,7 +504,7 @@ const initMoveStickyFrontierByMousedown = (
     ghostElement.style.removeProperty(ghostVariableName);
     ghostElement.style[axis === "x" ? "left" : "top"] = ""; // reset position set by drag
   });
-  moveFrontierGestureController.grabViaMousedown(mousedownEvent, {
+  moveFrontierGestureController.grabViaMouse(mousedownEvent, {
     element: ghostElement,
   });
 };

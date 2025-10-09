@@ -43,7 +43,7 @@ export const startDragToResizeGesture = (
     elementWithDataResizeHandle.removeAttribute("data-active");
   });
 
-  dragToResizeGesture.grabViaMousedown(mousedownEvent, {
+  dragToResizeGesture.grabViaMouse(mousedownEvent, {
     element: elementToResize,
     direction: resizeDirection,
     cursor:

@@ -441,7 +441,7 @@ const initResizeByMousedown = (
     resizer.removeAttribute("data-resizing");
   });
   resizer.setAttribute("data-resizing", "");
-  dragToMoveGestureController.grabViaMousedown(mousedownEvent, {
+  dragToMoveGestureController.grabViaMouse(mousedownEvent, {
     element: resizer,
   });
 };

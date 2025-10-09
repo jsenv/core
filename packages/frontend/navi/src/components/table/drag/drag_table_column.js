@@ -304,8 +304,8 @@ export const initDragTableColumnByMousedown = async (
         teardown();
       }
     });
-    const dragToMoveGesture = dragToMoveGestureController.grabViaMousedown(
-      mousedownEvent,
+    const dragToMoveGesture = dragToMoveGestureController.grabViaMouse(
+      mousemoveEvent,
       {
         element: table,
         elementToImpact: cloneParent,
