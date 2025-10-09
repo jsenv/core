@@ -29,6 +29,16 @@ import.meta.css = /* css */ `
     border-spacing: 0; /* Required for manual border collapse */
   }
 
+  .navi_colgroup {
+    display: none;
+  }
+  .navi_tr {
+    display: block;
+  }
+  .navi_table_cell {
+    display: inline-flex;
+  }
+
   .navi_table_cell {
     white-space: nowrap;
     overflow: hidden;

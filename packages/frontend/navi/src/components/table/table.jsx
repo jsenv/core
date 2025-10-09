@@ -168,7 +168,7 @@ export const Table = forwardRef((props, ref) => {
 
   // sticky
   useStickyGroup(tableContainerRef, {
-    elementSelector: "table",
+    elementSelector: ".navi_table",
     elementReceivingCumulativeStickyPositionRef: tableUIViewportRef,
   });
   const stickyContextValue = useTableStickyContextValue({

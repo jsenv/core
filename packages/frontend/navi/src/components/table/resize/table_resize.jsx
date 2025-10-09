@@ -308,11 +308,12 @@ const updateTableColumnResizerPosition = (tableCell) => {
   tableColumnResizer.setAttribute("data-hover", "");
 };
 const onMouseEnterLeftResizeHandle = (e) => {
-  const previousCell = e.target.closest("th,td").previousElementSibling;
+  const previousCell =
+    e.target.closest(".navi_table_cell").previousElementSibling;
   updateTableColumnResizerPosition(previousCell);
 };
 const onMouseEnterRightResizeHandle = (e) => {
-  const cell = e.target.closest("th,td");
+  const cell = e.target.closest(".navi_table_cell");
   updateTableColumnResizerPosition(cell);
 };
 const onMouseLeaveLeftResizeHandle = (e) => {
@@ -343,7 +344,7 @@ const initResizeByMousedown = (
     axis, // 'x' or 'y'
   },
 ) => {
-  const table = tableCell.closest("table");
+  const table = tableCell.closest(".navi_table");
   const tableContainer = table.closest(".navi_table_container");
   const resizerSelector =
     axis === "x" ? ".navi_table_column_resizer" : ".navi_table_row_resizer";
@@ -439,7 +440,7 @@ const initResizeTableColumnByMousedown = (
   mousedownEvent,
   { columnMinWidth, columnMaxWidth, onGrab, onDrag, onRelease, isLeft },
 ) => {
-  let tableCell = mousedownEvent.target.closest("th,td");
+  let tableCell = mousedownEvent.target.closest(".navi_table_cell");
   if (isLeft) {
     tableCell = tableCell.previousElementSibling;
   }
@@ -458,9 +459,9 @@ const initResizeTableRowByMousedown = (
   mousedownEvent,
   { rowMinHeight, rowMaxHeight, onGrab, onDrag, onRelease, isTop },
 ) => {
-  let tableCell = mousedownEvent.target.closest("th,td");
+  let tableCell = mousedownEvent.target.closest(".navi_table_cell");
   if (isTop) {
-    const tableRow = tableCell.closest("tr");
+    const tableRow = tableCell.closest(".navi_tr");
     const previousTr = findPreviousTableRow(tableRow);
     if (!previousTr) {
       return;
@@ -615,7 +616,7 @@ const updateTableRowResizerPosition = (rowCell) => {
     `${tableRowCellWidth}px`,
   );
 
-  const table = rowCell.closest("table");
+  const table = rowCell.closest(".navi_table");
   const scrollableParent = getScrollableParent(table);
   const scrollLeft =
     scrollableParent === document.documentElement
@@ -633,7 +634,7 @@ const onMouseEnterTopResizeHandle = (e) => {
   }
 };
 const onMouseEnterBottomResizeHandle = (e) => {
-  const rowCell = e.target.closest("th,td");
+  const rowCell = e.target.closest(".navi_table_cell");
   updateTableRowResizerPosition(rowCell);
 };
 const onMouseLeaveTopResizeHandle = (e) => {
@@ -659,8 +660,8 @@ const findPreviousTableRow = (currentRow) => {
   }
 
   // Otherwise, get all rows in the table and find the previous one
-  const table = currentRow.closest("table");
-  const allRows = Array.from(table.querySelectorAll("tr"));
+  const table = currentRow.closest(".navi_table");
+  const allRows = Array.from(table.querySelectorAll(".mavi_tr"));
   const currentIndex = allRows.indexOf(currentRow);
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };

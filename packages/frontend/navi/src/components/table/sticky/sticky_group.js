@@ -42,7 +42,8 @@ const initStickyGroup = (
   const element = elementSelector
     ? container.querySelector(elementSelector)
     : container;
-  const isGrid = element.tagName === "TABLE";
+  const isGrid =
+    element.tagName === "TABLE" || element.classList.contains("navi_table");
   const updatePositions = () => {
     if (isGrid) {
       updateGridPositions();
