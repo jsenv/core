@@ -95,7 +95,29 @@ const ENFORCE_BASIC_MODE = false;
 
 const { documentElement } = document;
 
-export const createDragGesture = (options) => {
+export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
+  let _resolve;
+  const promise = new Promise((resolve) => {
+    _resolve = resolve;
+  });
+  const dragGestureController = createDragGestureController({
+    threshold,
+    isThresholdOnly: true,
+    onDragStart: (_, mousemoveEvent) => {
+      dragGesture.release(); // kill that gesture
+      _resolve(mousemoveEvent);
+    },
+    onRelease: () => {
+      // won't happen, what do we do?
+    },
+  });
+  const dragGesture = dragGestureController.grabViaMousedown(mousedownEvent, {
+    element: mousedownEvent.target,
+  });
+  return promise;
+};
+
+export const createDragGestureController = (options) => {
   if (ENFORCE_BASIC_MODE) {
     Object.assign(options, BASIC_MODE_OPTIONS);
   }
@@ -110,6 +132,7 @@ export const createDragGesture = (options) => {
     direction: defaultDirection = { x: true, y: true },
     backdrop = true,
     backdropZIndex = 1,
+    isThresholdOnly,
 
     stickyFrontiers = true,
     areaConstraint = "scrollable",
@@ -163,7 +186,8 @@ export const createDragGesture = (options) => {
     let isStickyTop = usePositionSticky && computedStyle.top !== "auto";
     let leftAtStart;
     let topAtStart;
-    if (usePositionFixed) {
+    if (isThresholdOnly) {
+    } else if (usePositionFixed) {
       isStickyLeft = false;
       isStickyTop = false;
       const { left, top } = elementVisuallyImpacted.getBoundingClientRect();
@@ -715,6 +739,7 @@ export const createDragGesture = (options) => {
         mouseX = null,
         mouseY = null,
         interactionType = "programmatic", // "mousemove", "scroll", "programmatic"
+        mousemoveEvent = null,
       } = {},
     ) => {
       const dragData = determineDragData(currentXRelative, currentYRelative, {
@@ -765,7 +790,7 @@ export const createDragGesture = (options) => {
         onDrag?.(gestureInfo, "end");
       } else if (!started) {
         started = true;
-        onDragStart?.(gestureInfo);
+        onDragStart?.(gestureInfo, mousemoveEvent);
         onDrag?.(gestureInfo, "start");
       } else {
         onDrag?.(gestureInfo, "middle");
@@ -790,11 +815,12 @@ export const createDragGesture = (options) => {
 
     onGrab?.(gestureInfo);
 
-    return {
+    const dragGesture = {
       drag,
       release,
       gestureInfo,
     };
+    return dragGesture;
   };
 
   const grabViaMousedown = (mousedownEvent, { element, ...options } = {}) => {
@@ -826,16 +852,17 @@ export const createDragGesture = (options) => {
       ...options,
     });
 
-    const handleMouseMove = (mousemoveEvent) => {
+    const dragViaMouse = (mousemoveEvent) => {
       const [x, y] = mouseEventRelativeCoords(mousemoveEvent);
       dragGesture.drag(x, y, {
         mouseX: mousemoveEvent.clientX,
         mouseY: mousemoveEvent.clientY,
         interactionType: "mousemove",
+        mousemoveEvent,
       });
     };
 
-    const handleMouseUp = (mouseupEvent) => {
+    const releaseViaMouse = (mouseupEvent) => {
       const [x, y] = mouseEventRelativeCoords(mouseupEvent);
       dragGesture.release({
         x,
@@ -843,12 +870,14 @@ export const createDragGesture = (options) => {
         interactionType: "mouseup",
       });
     };
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mousemove", dragViaMouse);
+    document.addEventListener("mouseup", releaseViaMouse);
     addTeardown(() => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousemove", dragViaMouse);
+      document.removeEventListener("mouseup", releaseViaMouse);
     });
+
+    dragGesture.dragViaMouse = dragViaMouse;
     return dragGesture;
   };
 
@@ -859,8 +888,8 @@ export const createDragGesture = (options) => {
   };
 };
 
-export const createDragToMoveGesture = (options) => {
-  const dragToMoveGesture = createDragGesture({
+export const createDragToMoveGestureController = (options) => {
+  const dragToMoveGestureController = createDragGestureController({
     ...options,
     lifecycle: {
       drag: (
@@ -1000,7 +1029,7 @@ export const createDragToMoveGesture = (options) => {
       },
     },
   });
-  return dragToMoveGesture;
+  return dragToMoveGestureController;
 };
 
 const definePropertyAsReadOnly = (object, propertyName) => {

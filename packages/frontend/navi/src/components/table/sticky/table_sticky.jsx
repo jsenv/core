@@ -4,7 +4,7 @@
 // (they can't be sticky, they can't react to scroll, so they have to be absolute in the document body)
 
 import {
-  createDragToMoveGesture,
+  createDragToMoveGestureController,
   getDropTargetInfo,
   getScrollableParent,
 } from "@jsenv/dom";
@@ -471,7 +471,7 @@ const initMoveStickyFrontierByMousedown = (
     previewElement.setAttribute("data-visible", "");
   };
 
-  const moveFrontierGesture = createDragToMoveGesture({
+  const moveFrontierGestureController = createDragToMoveGestureController({
     name: gestureName,
     direction: { [axis]: true },
     backdropZIndex: Z_INDEX_STICKY_FRONTIER_BACKDROP,
@@ -497,16 +497,14 @@ const initMoveStickyFrontierByMousedown = (
       onRelease?.(gesture, futureFrontierIndex);
     },
   });
-
-  moveFrontierGesture.addTeardown(() => {
+  moveFrontierGestureController.addTeardown(() => {
     previewElement.removeAttribute("data-visible");
     previewElement.style.removeProperty(previewVariableName);
     ghostElement.removeAttribute("data-visible");
     ghostElement.style.removeProperty(ghostVariableName);
     ghostElement.style[axis === "x" ? "left" : "top"] = ""; // reset position set by drag
   });
-
-  moveFrontierGesture.grabViaMousedown(mousedownEvent, {
+  moveFrontierGestureController.grabViaMousedown(mousedownEvent, {
     element: ghostElement,
   });
 };

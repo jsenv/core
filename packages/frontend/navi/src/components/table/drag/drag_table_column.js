@@ -1,5 +1,6 @@
 import {
-  createDragToMoveGesture,
+  createDragToMoveGestureController,
+  createMouseDragThresholdPromise,
   getDropTargetInfo,
   getScrollableParent,
   getVisualRect,
@@ -60,10 +61,12 @@ const createDropPreview = () => {
   return dropPreview.firstElementChild;
 };
 
-export const initDragTableColumnByMousedown = (
+export const initDragTableColumnByMousedown = async (
   mousedownEvent,
   { onGrab, onDrag, onRelease },
 ) => {
+  const mousemoveEvent = await createMouseDragThresholdPromise(mousedownEvent);
+
   const [teardown, addTeardown] = createPubSub();
   const [triggerDrag, addDragEffect] = createPubSub();
 
@@ -236,9 +239,10 @@ export const initDragTableColumnByMousedown = (
   }
 
   init_drag_gesture: {
-    const dragToMoveGesture = createDragToMoveGesture({
+    const dragToMoveGestureController = createDragToMoveGestureController({
       name: "move-column",
       direction: { x: true },
+      threshold: 0,
       onGrab,
       onDragStart: () => {},
       onDrag: (gestureInfo) => {
@@ -249,15 +253,18 @@ export const initDragTableColumnByMousedown = (
         onRelease?.(gestureInfo, dropColumnIndex);
       },
     });
-
-    dragToMoveGesture.grabViaMousedown(mousedownEvent, {
-      element: table,
-      elementToImpact: cloneParent,
-      elementVisuallyImpacted: colClone,
-    });
-    dragToMoveGesture.addTeardown(() => {
+    dragToMoveGestureController.addTeardown(() => {
       teardown();
     });
+    const dragToMoveGesture = dragToMoveGestureController.grabViaMousedown(
+      mousedownEvent,
+      {
+        element: table,
+        elementToImpact: cloneParent,
+        elementVisuallyImpacted: colClone,
+      },
+    );
+    dragToMoveGesture.dragViaMouse(mousemoveEvent);
   }
 };
 

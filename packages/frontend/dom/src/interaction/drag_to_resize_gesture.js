@@ -1,4 +1,4 @@
-import { createDragGesture } from "./drag_gesture.js";
+import { createDragGestureController } from "./drag_gesture.js";
 
 export const startDragToResizeGesture = (
   mousedownEvent,
@@ -31,7 +31,7 @@ export const startDragToResizeGesture = (
     return null;
   }
 
-  const dragToResizeGesture = createDragGesture({
+  const dragToResizeGesture = createDragGestureController({
     gestureAttribute: "data-resizing",
     onDragStart,
     onDrag,

@@ -1,4 +1,7 @@
-import { createDragToMoveGesture, getScrollableParent } from "@jsenv/dom";
+import {
+  createDragToMoveGestureController,
+  getScrollableParent,
+} from "@jsenv/dom";
 
 import {
   Z_INDEX_RESIZER_BACKDROP,
@@ -415,7 +418,7 @@ const initResizeByMousedown = (
       ? { left: customStartBound, right: customEndBound }
       : { top: customStartBound, bottom: customEndBound };
 
-  const dragToMoveGesture = createDragToMoveGesture({
+  const dragToMoveGestureController = createDragToMoveGestureController({
     name: gestureName,
     direction,
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
@@ -432,15 +435,13 @@ const initResizeByMousedown = (
       onRelease(newSize, currentSize);
     },
   });
-
-  dragToMoveGesture.addTeardown(() => {
+  dragToMoveGestureController.addTeardown(() => {
     const styleProperty = axis === "x" ? "left" : "top";
     resizer.style[styleProperty] = "";
     resizer.removeAttribute("data-resizing");
   });
-
   resizer.setAttribute("data-resizing", "");
-  dragToMoveGesture.grabViaMousedown(mousedownEvent, {
+  dragToMoveGestureController.grabViaMousedown(mousedownEvent, {
     element: resizer,
   });
 };

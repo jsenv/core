@@ -81,8 +81,9 @@ export { initUITransition } from "./src/ui_transition/ui_transition.js";
 
 // interaction
 export {
-  createDragGesture,
-  createDragToMoveGesture,
+  createDragGestureController,
+  createDragToMoveGestureController,
+  createMouseDragThresholdPromise,
 } from "./src/interaction/drag_gesture.js";
 export { startDragToResizeGesture } from "./src/interaction/drag_to_resize_gesture.js";
 export { getDropTargetInfo } from "./src/interaction/drop_target_detection.js";
