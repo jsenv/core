@@ -53,7 +53,7 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier {
-    position: absolute;
+    position: fixed;
     cursor: grab;
     pointer-events: auto;
   }

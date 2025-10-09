@@ -1,3 +1,4 @@
+import { getVisualRect } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
@@ -39,26 +40,36 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const TableUI = ({ children }) => {
+export const TableUI = ({ tableRef, children }) => {
   const ref = useRef();
 
   useLayoutEffect(() => {
     const element = ref.current;
-    if (!element) {
+    const tableElement = tableRef.current;
+    if (!element || !tableElement) {
       return null;
     }
-    const table = element
-      .closest(".navi_table_container")
-      .querySelector(".navi_table");
+
+    const tableRoot = tableElement.closest(".navi_table_root");
+    const updateTablePosition = () => {
+      const { left, top } = getVisualRect(tableRoot);
+      element.style.setProperty("--table-left", `${left}px`);
+      element.style.setProperty("--table-top", `${top}px`);
+    };
+    updateTablePosition();
+    window.addEventListener("scroll", updateTablePosition, { passive: true });
+    window.addEventListener("resize", updateTablePosition);
+    window.addEventListener("touchmove", updateTablePosition);
+
     const updateScrollDimensions = () => {
-      const { width, height } = table.getBoundingClientRect();
+      const { width, height } = tableElement.getBoundingClientRect();
       element.style.setProperty("--table-width", `${width}px`);
       element.style.setProperty("--table-height", `${height}px`);
     };
 
     updateScrollDimensions();
     const resizeObserver = new ResizeObserver(updateScrollDimensions);
-    resizeObserver.observe(table);
+    resizeObserver.observe(tableElement);
     return () => {
       resizeObserver.disconnect();
     };
