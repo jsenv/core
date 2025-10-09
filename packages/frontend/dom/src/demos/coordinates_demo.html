@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coordinates Systems Demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+        /* Make document 10,000px wide */
+        width: 10000px;
+        height: 100vh;
+        position: relative;
+      }
+
+      .info-panel {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.4;
+        z-index: 1000;
+        max-width: 400px;
+        border-left: 4px solid #2196f3;
+      }
+
+      .info-section {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .info-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+      }
+
+      .info-title {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+        font-size: 13px;
+      }
+
+      .info-value {
+        color: #666;
+        margin-left: 10px;
+      }
+
+      .red-square {
+        width: 100px;
+        height: 100px;
+        background: #f44336;
+        position: absolute;
+        /* Center horizontally in the 10,000px wide document */
+        left: calc(5000px - 50px); /* 5000px (middle) - 50px (half width) */
+        top: 200px;
+        border: 2px solid #d32f2f;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .scrollable-container {
+        width: 200px;
+        height: 200px;
+        /* Make the scrollable content 4000px wide */
+        overflow-x: scroll;
+        overflow-y: hidden;
+        position: absolute;
+        /* Center horizontally in the 10,000px wide document */
+        left: calc(5000px - 100px); /* 5000px (middle) - 100px (half width) */
+        top: 400px;
+        background: white;
+        border: 3px solid #333;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
+
+      .scrollable-content {
+        width: 1000px;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          #e3f2fd,
+          #bbdefb,
+          #90caf9,
+          #64b5f6,
+          #42a5f5
+        );
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+
+      .blue-square {
+        width: 100px;
+        height: 100px;
+        background: #2196f3;
+        position: absolute;
+        /* Center horizontally in the 4000px wide scrollable content */
+        left: 550px; /* 2000px (middle) - 50px (half width) */
+        border: 2px solid #1976d2;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .scroll-indicators {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 11px;
+        z-index: 1000;
+        line-height: 1.4;
+      }
+
+      .coordinate-info {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.4;
+        z-index: 1000;
+        max-width: 350px;
+        border-left: 4px solid #ff9800;
+      }
+
+      .setup-instructions {
+        position: fixed;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(76, 175, 80, 0.9);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 12px;
+        z-index: 1000;
+        max-width: 250px;
+        text-align: center;
+      }
+
+      .auto-setup-btn {
+        background: #fff;
+        color: #4caf50;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 10px;
+        font-size: 11px;
+      }
+
+      .auto-setup-btn:hover {
+        background: #f0f0f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="info-panel" id="infoPanel">
+      <div class="info-section">
+        <div class="info-title">🔴 Red Square Coordinates</div>
+        <div class="info-value">
+          getBoundingClientRect().left: <span id="redLeft">-</span>px
+        </div>
+        <div class="info-value">
+          getBoundingClientRect().right: <span id="redRight">-</span>px
+        </div>
+        <div class="info-value">
+          getBoundingClientRect().width: <span id="redWidth">-</span>px
+        </div>
+        <div class="info-value">
+          offsetLeft: <span id="redOffsetLeft">-</span>px
+        </div>
+        <div class="info-value">
+          Absolute position: <span id="redAbsolute">-</span>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-title">🔵 Blue Square Coordinates</div>
+        <div class="info-value">
+          getBoundingClientRect().left: <span id="blueLeft">-</span>px
+        </div>
+        <div class="info-value">
+          getBoundingClientRect().right: <span id="blueRight">-</span>px
+        </div>
+        <div class="info-value">
+          getBoundingClientRect().width: <span id="blueWidth">-</span>px
+        </div>
+        <div class="info-value">
+          offsetLeft: <span id="blueOffsetLeft">-</span>px
+        </div>
+        <div class="info-value">
+          Relative to container: <span id="blueRelative">-</span>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-title">📦 Scrollable Container</div>
+        <div class="info-value">
+          getBoundingClientRect().left: <span id="containerLeft">-</span>px
+        </div>
+        <div class="info-value">
+          scrollLeft: <span id="containerScrollLeft">-</span>px
+        </div>
+        <div class="info-value">
+          scrollWidth: <span id="containerScrollWidth">-</span>px
+        </div>
+        <div class="info-value">
+          clientWidth: <span id="containerClientWidth">-</span>px
+        </div>
+      </div>
+    </div>
+
+    <div class="coordinate-info" id="coordinateInfo">
+      <div class="info-section">
+        <div class="info-title">🌍 Document Coordinates</div>
+        <div class="info-value">
+          scrollLeft: <span id="docScrollLeft">-</span>px
+        </div>
+        <div class="info-value">
+          scrollWidth: <span id="docScrollWidth">-</span>px
+        </div>
+        <div class="info-value">
+          clientWidth: <span id="docClientWidth">-</span>px
+        </div>
+        <div class="info-value">
+          body.offsetWidth: <span id="bodyWidth">-</span>px
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-title">🖼️ Viewport Info</div>
+        <div class="info-value">
+          window.innerWidth: <span id="windowWidth">-</span>px
+        </div>
+        <div class="info-value">
+          window.pageXOffset: <span id="pageXOffset">-</span>px
+        </div>
+        <div class="info-value">
+          visualViewport.offsetLeft: <span id="visualOffsetLeft">-</span>px
+        </div>
+      </div>
+
+      <div class="info-section">
+        <div class="info-title">🎯 Mouse Position</div>
+        <div class="info-value">
+          clientX: <span id="mouseClientX">-</span>px
+        </div>
+        <div class="info-value">pageX: <span id="mousePageX">-</span>px</div>
+        <div class="info-value">
+          screenX: <span id="mouseScreenX">-</span>px
+        </div>
+      </div>
+    </div>
+
+    <div class="scroll-indicators" id="scrollIndicators">
+      <div><strong>Scroll Status:</strong></div>
+      <div>Document: <span id="docScrollStatus">Not centered</span></div>
+      <div>Container: <span id="containerScrollStatus">Not centered</span></div>
+      <div><strong>Target Positions:</strong></div>
+      <div>
+        Doc center: 5000px - 50vw = <span id="docTargetScroll">-</span>px
+      </div>
+      <div>
+        Container center: 2000px - 100px =
+        <span id="containerTargetScroll">1900</span>px
+      </div>
+    </div>
+
+    <div class="setup-instructions">
+      <div><strong>Setup Instructions:</strong></div>
+      <div>1. Scroll document to middle</div>
+      <div>2. Scroll blue container to middle</div>
+      <div>3. Observe coordinate changes</div>
+      <button class="auto-setup-btn" onclick="autoSetup()">Auto Setup</button>
+    </div>
+
+    <div class="red-square" id="redSquare">RED</div>
+
+    <div class="scrollable-container" id="scrollableContainer">
+      <div class="scrollable-content">
+        <div class="blue-square" id="blueSquare">BLUE</div>
+      </div>
+    </div>
+
+    <script>
+      const elements = {
+        redSquare: document.getElementById("redSquare"),
+        blueSquare: document.getElementById("blueSquare"),
+        scrollableContainer: document.getElementById("scrollableContainer"),
+
+        // Red square info
+        redLeft: document.getElementById("redLeft"),
+        redRight: document.getElementById("redRight"),
+        redWidth: document.getElementById("redWidth"),
+        redOffsetLeft: document.getElementById("redOffsetLeft"),
+        redAbsolute: document.getElementById("redAbsolute"),
+
+        // Blue square info
+        blueLeft: document.getElementById("blueLeft"),
+        blueRight: document.getElementById("blueRight"),
+        blueWidth: document.getElementById("blueWidth"),
+        blueOffsetLeft: document.getElementById("blueOffsetLeft"),
+        blueRelative: document.getElementById("blueRelative"),
+
+        // Container info
+        containerLeft: document.getElementById("containerLeft"),
+        containerScrollLeft: document.getElementById("containerScrollLeft"),
+        containerScrollWidth: document.getElementById("containerScrollWidth"),
+        containerClientWidth: document.getElementById("containerClientWidth"),
+
+        // Document info
+        docScrollLeft: document.getElementById("docScrollLeft"),
+        docScrollWidth: document.getElementById("docScrollWidth"),
+        docClientWidth: document.getElementById("docClientWidth"),
+        bodyWidth: document.getElementById("bodyWidth"),
+
+        // Viewport info
+        windowWidth: document.getElementById("windowWidth"),
+        pageXOffset: document.getElementById("pageXOffset"),
+        visualOffsetLeft: document.getElementById("visualOffsetLeft"),
+
+        // Mouse info
+        mouseClientX: document.getElementById("mouseClientX"),
+        mousePageX: document.getElementById("mousePageX"),
+        mouseScreenX: document.getElementById("mouseScreenX"),
+
+        // Status indicators
+        docScrollStatus: document.getElementById("docScrollStatus"),
+        containerScrollStatus: document.getElementById("containerScrollStatus"),
+        docTargetScroll: document.getElementById("docTargetScroll"),
+      };
+
+      function updateCoordinateInfo() {
+        // Red square coordinates
+        const redRect = elements.redSquare.getBoundingClientRect();
+        elements.redLeft.textContent = Math.round(redRect.left);
+        elements.redRight.textContent = Math.round(redRect.right);
+        elements.redWidth.textContent = Math.round(redRect.width);
+        elements.redOffsetLeft.textContent = elements.redSquare.offsetLeft;
+        elements.redAbsolute.textContent = `left: ${elements.redSquare.style.left}`;
+
+        // Blue square coordinates
+        const blueRect = elements.blueSquare.getBoundingClientRect();
+        elements.blueLeft.textContent = Math.round(blueRect.left);
+        elements.blueRight.textContent = Math.round(blueRect.right);
+        elements.blueWidth.textContent = Math.round(blueRect.width);
+        elements.blueOffsetLeft.textContent = elements.blueSquare.offsetLeft;
+        elements.blueRelative.textContent = `left: ${elements.blueSquare.style.left}`;
+
+        // Container coordinates
+        const containerRect =
+          elements.scrollableContainer.getBoundingClientRect();
+        elements.containerLeft.textContent = Math.round(containerRect.left);
+        elements.containerScrollLeft.textContent =
+          elements.scrollableContainer.scrollLeft;
+        elements.containerScrollWidth.textContent =
+          elements.scrollableContainer.scrollWidth;
+        elements.containerClientWidth.textContent =
+          elements.scrollableContainer.clientWidth;
+
+        // Document coordinates
+        const docScrollLeft =
+          window.scrollX || document.documentElement.scrollLeft;
+        elements.docScrollLeft.textContent = Math.round(docScrollLeft);
+        elements.docScrollWidth.textContent =
+          document.documentElement.scrollWidth;
+        elements.docClientWidth.textContent =
+          document.documentElement.clientWidth;
+        elements.bodyWidth.textContent = document.body.offsetWidth;
+
+        // Viewport info
+        elements.windowWidth.textContent = window.innerWidth;
+        elements.pageXOffset.textContent = Math.round(window.pageXOffset);
+        elements.visualOffsetLeft.textContent = window.visualViewport
+          ? Math.round(window.visualViewport.offsetLeft)
+          : "N/A";
+
+        // Calculate target scroll positions
+        const docTargetScroll = 5000 - window.innerWidth / 2;
+        elements.docTargetScroll.textContent = Math.round(docTargetScroll);
+
+        // Update scroll status
+        const docScrollDiff = Math.abs(docScrollLeft - docTargetScroll);
+        elements.docScrollStatus.textContent =
+          docScrollDiff < 10
+            ? "✅ Centered"
+            : `❌ Off by ${Math.round(docScrollDiff)}px`;
+
+        const containerScrollDiff = Math.abs(
+          elements.scrollableContainer.scrollLeft - 1900,
+        );
+        elements.containerScrollStatus.textContent =
+          containerScrollDiff < 10
+            ? "✅ Centered"
+            : `❌ Off by ${Math.round(containerScrollDiff)}px`;
+      }
+
+      window.autoSetup = function () {
+        // Calculate the exact center positions
+        const docCenterScroll = 5000 - window.innerWidth / 2;
+        const containerCenterScroll = 1900; // 2000 - 100 (half container width)
+
+        // Scroll document to center
+        window.scrollTo({
+          left: docCenterScroll,
+          behavior: "smooth",
+        });
+
+        // Wait a bit for document scroll to start, then scroll container
+        setTimeout(() => {
+          elements.scrollableContainer.scrollTo({
+            left: containerCenterScroll,
+            behavior: "smooth",
+          });
+        }, 100);
+      };
+
+      // Track mouse movement
+      document.addEventListener("mousemove", (e) => {
+        elements.mouseClientX.textContent = e.clientX;
+        elements.mousePageX.textContent = e.pageX;
+        elements.mouseScreenX.textContent = e.screenX;
+      });
+
+      // Update info on scroll
+      window.addEventListener("scroll", updateCoordinateInfo);
+      elements.scrollableContainer.addEventListener(
+        "scroll",
+        updateCoordinateInfo,
+      );
+
+      // Update info on resize
+      window.addEventListener("resize", updateCoordinateInfo);
+
+      // Initial update
+      updateCoordinateInfo();
+
+      // Auto-update every 100ms to catch any changes
+      setInterval(updateCoordinateInfo, 100);
+
+      console.log("Coordinates Demo initialized");
+      console.log("Document width:", document.body.offsetWidth, "px");
+      console.log("Red square at:", elements.redSquare.style.left);
+      console.log(
+        "Blue square at:",
+        elements.blueSquare.style.left,
+        "(relative to scrollable content)",
+      );
+    </script>
+  </body>
+</html>
