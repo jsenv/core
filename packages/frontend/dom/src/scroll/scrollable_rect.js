@@ -142,30 +142,12 @@ export const stickyTopToScrollableTop = (topValue, scrollableParent) => {
 };
 
 /**
- * Convert scrollable-parent-relative coordinate back to sticky top CSS value
- * This is the reverse of stickyTopToScrollableTop.
- * @param {number} topScrollable - Top coordinate in scrollable-parent-relative space
- * @param {Element} scrollableParent - The scrollable container
- * @returns {number} - CSS top value for sticky positioning
- */
-export const scrollableTopToStickyTop = (topScrollable, scrollableParent) => {
-  const scrollableParentIsDocument = scrollableParent === documentElement;
-
-  if (scrollableParentIsDocument) {
-    // For document scrolling: use scrollable value directly
-    return topScrollable;
-  }
-
-  // For container scrolling: subtract current scroll position to get CSS value
-  return topScrollable - scrollableParent.scrollTop;
-};
-
-/**
  * Compute sticky coordinates for an element's current position
  * Takes an element and computes both left and top sticky values based on its current position
  * @param {Element} element - The element to compute sticky coordinates for
  * @param {Element} scrollableParent - The scrollable container
- * @returns {{left: number, top: number}} - CSS values for sticky positioning
+ * @param {{isStickyLeft: boolean, isStickyTop: boolean}} options - Sticky behavior flags
+ * @returns {[number, number]} - [left, top] CSS values for sticky positioning
  */
 export const elementToStickyCoords = (
   element,
