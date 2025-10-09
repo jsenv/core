@@ -50,10 +50,16 @@
  * - Update table column info (I guess a down arrow icon which opens a meny when clicked for instance)
  */
 
-import { useActiveElement } from "@jsenv/dom";
+import { setStyles, useActiveElement } from "@jsenv/dom";
 import { createContext, toChildArray } from "preact";
 import { forwardRef } from "preact/compat";
-import { useContext, useImperativeHandle, useRef } from "preact/hooks";
+import {
+  useContext,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { Editable, useEditionController } from "../edition/editable.jsx";
 import { createIsolatedItemTracker } from "../item_tracker/use_isolated_item_tracker.jsx";
@@ -63,6 +69,7 @@ import {
   createSelectionKeyboardShortcuts,
   useSelectableElement,
 } from "../selection/selection.jsx";
+import { useBatchDuringRender } from "../use_batch_during_render.js";
 import { useFocusGroup } from "../use_focus_group.js";
 import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import {
@@ -107,6 +114,9 @@ const ColumnContext = createContext();
 const RowContext = createContext();
 const ColumnIndexContext = createContext();
 const RowIndexContext = createContext();
+const ColumnNaturalSizeMapContext = createContext();
+const ColumnNaturalSizeContext = createContext();
+const ReportCellNaturalWithContext = createContext();
 
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
@@ -129,6 +139,25 @@ export const Table = forwardRef((props, ref) => {
     overflow,
     children,
   } = props;
+
+  const [columnNaturalSizeMap, setColumnNaturalSizeMap] = useState({});
+  const reportCellNaturalWidth = useBatchDuringRender((calls) => {
+    const newColumnNaturalSizeMap = {};
+    let someChange = false;
+    for (const [columnId, cellNaturalWidth] of calls) {
+      const columnWidth = columnNaturalSizeMap[columnId];
+      if (columnWidth === undefined || cellNaturalWidth > columnWidth) {
+        newColumnNaturalSizeMap[columnId] = cellNaturalWidth;
+        someChange = true;
+      }
+    }
+    if (someChange) {
+      setColumnNaturalSizeMap({
+        ...columnNaturalSizeMap,
+        ...newColumnNaturalSizeMap,
+      });
+    }
+  });
 
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
@@ -250,15 +279,23 @@ export const Table = forwardRef((props, ref) => {
             <TableSelectionContext.Provider value={selectionContextValue}>
               <TableDragContext.Provider value={dragContextValue}>
                 <TableStickyContext.Provider value={stickyContextValue}>
-                  <ColumnProducerProviderContext.Provider
-                    value={ColumnProducerProvider}
+                  <ReportCellNaturalWithContext.Provider
+                    value={reportCellNaturalWidth}
                   >
-                    <ColumnConsumerProviderContext.Provider
-                      value={ColumnConsumerProvider}
+                    <ColumnNaturalSizeMapContext.Provider
+                      value={columnNaturalSizeMap}
                     >
-                      <RowTrackerProvider>{children}</RowTrackerProvider>
-                    </ColumnConsumerProviderContext.Provider>
-                  </ColumnProducerProviderContext.Provider>
+                      <ColumnProducerProviderContext.Provider
+                        value={ColumnProducerProvider}
+                      >
+                        <ColumnConsumerProviderContext.Provider
+                          value={ColumnConsumerProvider}
+                        >
+                          <RowTrackerProvider>{children}</RowTrackerProvider>
+                        </ColumnConsumerProviderContext.Provider>
+                      </ColumnProducerProviderContext.Provider>
+                    </ColumnNaturalSizeMapContext.Provider>
+                  </ReportCellNaturalWithContext.Provider>
                 </TableStickyContext.Provider>
               </TableDragContext.Provider>
             </TableSelectionContext.Provider>
@@ -366,17 +403,21 @@ export const Tr = ({ id, height, children }) => {
 };
 
 const TableRowCells = ({ children, rowIndex, row }) => {
+  const columnNaturalSizeMap = useContext(ColumnNaturalSizeMapContext);
+
   return children.map((child, columnIndex) => {
     const column = useColumnByIndex(columnIndex);
     const columnId = column.id;
-
+    const columnNaturalSize = columnNaturalSizeMap[columnId];
     return (
       <RowContext.Provider key={columnId} value={row}>
         <RowIndexContext.Provider value={rowIndex}>
           <ColumnIndexContext.Provider value={columnIndex}>
-            <ColumnContext.Provider value={column}>
-              {child}
-            </ColumnContext.Provider>
+            <ColumnNaturalSizeContext.Provider value={columnNaturalSize}>
+              <ColumnContext.Provider value={column}>
+                {child}
+              </ColumnContext.Provider>
+            </ColumnNaturalSizeContext.Provider>
           </ColumnIndexContext.Provider>
         </RowIndexContext.Provider>
       </RowContext.Provider>
@@ -389,6 +430,8 @@ export const TableCell = forwardRef((props, ref) => {
   const row = useContext(RowContext);
   const columnIndex = useContext(ColumnIndexContext);
   const rowIndex = useContext(RowIndexContext);
+  const reportCellNaturalWidth = useContext(ReportCellNaturalWithContext);
+  const columnNaturalWidth = useContext(ColumnNaturalSizeContext);
   const {
     className = "",
     canSelectAll,
@@ -530,7 +573,8 @@ export const TableCell = forwardRef((props, ref) => {
   if (cursor) {
     innerStyle.cursor = cursor;
   }
-  const columnWidth = column.width;
+  const columnWidth =
+    column.width === undefined ? columnNaturalWidth : column.width;
   if (columnWidth !== undefined) {
     innerStyle.minWidth = `${columnWidth}px`;
     innerStyle.width = `${columnWidth}px`;
@@ -548,6 +592,18 @@ export const TableCell = forwardRef((props, ref) => {
   }
 
   const activeElement = useActiveElement();
+
+  useLayoutEffect(() => {
+    const cell = cellRef.current;
+    const restoreStyles = setStyles(cell, {
+      width: "auto",
+      minWidth: "0",
+      maxWidth: "none",
+    });
+    const { width } = cell.getBoundingClientRect();
+    restoreStyles();
+    reportCellNaturalWidth(columnId, width);
+  });
 
   return (
     <div
