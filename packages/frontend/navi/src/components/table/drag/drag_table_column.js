@@ -92,6 +92,7 @@ export const initDragTableColumnByMousedown = async (
     // with calculated offsets that match their appearance in the original context
     const scrollableParent = getScrollableParent(table);
     const { scrollLeft, scrollTop } = scrollableParent;
+    const isDocumentScrolling = scrollableParent === document.documentElement;
 
     // important: only on cells, not on <col> nor <tr>
     const originalStickyCells = table.querySelectorAll(
@@ -109,17 +110,50 @@ export const initDragTableColumnByMousedown = async (
       const hasYSticky = originalCell.hasAttribute("data-sticky-top");
       const computedStyle = getComputedStyle(originalCell);
 
-      // Convert from position: sticky to position: relative with explicit offsets
-      cloneCell.style.position = "relative";
-      if (hasXSticky) {
-        // Use the CSS left value that defines the sticky position
-        const stickyLeft = parseFloat(computedStyle.left) || 0;
-        cloneCell.style.left = `${stickyLeft}px`;
+      let needsLeftPositioning;
+      let needsTopPositioning;
+      if (isDocumentScrolling) {
+        // For document scrolling: check if element is currently stuck
+
+        if (hasXSticky) {
+          const stickyLeftValue = parseFloat(computedStyle.left) || 0;
+          const cellRect = originalCell.getBoundingClientRect();
+          const isStuckLeft = cellRect.left <= stickyLeftValue;
+
+          if (isStuckLeft) {
+            needsLeftPositioning = scrollLeft;
+          }
+        }
+        if (hasYSticky) {
+          const stickyTopValue = parseFloat(computedStyle.top) || 0;
+          const cellRect = originalCell.getBoundingClientRect();
+          const isStuckTop = cellRect.top <= stickyTopValue;
+          if (isStuckTop) {
+            needsTopPositioning = scrollTop;
+          }
+        }
+      } else {
+        // For container scrolling: use the CSS sticky values directly
+
+        if (hasXSticky) {
+          const stickyLeft = parseFloat(computedStyle.left) || 0;
+          needsLeftPositioning = stickyLeft;
+        }
+
+        if (hasYSticky) {
+          const stickyTop = parseFloat(computedStyle.top) || 0;
+          needsTopPositioning = stickyTop;
+        }
       }
-      if (hasYSticky) {
-        // Use the CSS top value that defines the sticky position
-        const stickyTop = parseFloat(computedStyle.top) || 0;
-        cloneCell.style.top = `${scrollTop}px`;
+
+      if (needsLeftPositioning || needsTopPositioning) {
+        cloneCell.style.position = "relative";
+        if (needsLeftPositioning) {
+          cloneCell.style.left = `${needsLeftPositioning}px`;
+        }
+        if (needsTopPositioning) {
+          cloneCell.style.top = `${needsTopPositioning}px`;
+        }
       }
     });
   }
