@@ -37,7 +37,11 @@ const scrollableToViewportCoords = (
   stickyOptions = {},
 ) => {
   const { documentElement } = document;
-  const { isStickyLeft = false, isStickyTop = false } = stickyOptions;
+  const {
+    isStickyLeft = false,
+    isStickyTop = false,
+    isFixed = false,
+  } = stickyOptions;
 
   if (scrollableParent === documentElement) {
     // For document scrolling, adjust coordinates based on marker side:
@@ -50,6 +54,10 @@ const scrollableToViewportCoords = (
       return [x, y - documentElement.scrollTop];
     }
     if (side === "obstacle") {
+      // Fixed elements: coordinates are already viewport-relative, no scroll adjustment
+      if (isFixed) {
+        return [x, y];
+      }
       // Obstacles: handle per-axis sticky behavior
       const adjustedX = isStickyLeft ? x : x - documentElement.scrollLeft;
       const adjustedY = isStickyTop ? y : y - documentElement.scrollTop;
@@ -67,6 +75,10 @@ const scrollableToViewportCoords = (
   const scrollableRect = scrollableParent.getBoundingClientRect();
 
   if (side === "obstacle") {
+    // Fixed elements: coordinates are already viewport-relative for both document and container cases
+    if (isFixed) {
+      return [x, y];
+    }
     // Obstacles in containers: handle per-axis sticky behavior
     const scrollAdjustX = isStickyLeft ? 0 : scrollableParent.scrollLeft;
     const scrollAdjustY = isStickyTop ? 0 : scrollableParent.scrollTop;
@@ -333,7 +345,7 @@ const createObstacleMarker = (obstacleObj, scrollableParent) => {
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
   // Convert scrollable-relative coordinates to viewport coordinates
-  // Handle per-axis sticky behavior
+  // Handle per-axis sticky behavior and fixed positioning
   const [x, y] = scrollableToViewportCoords(
     obstacleObj.bounds.left,
     obstacleObj.bounds.top,
@@ -342,6 +354,7 @@ const createObstacleMarker = (obstacleObj, scrollableParent) => {
     {
       isStickyLeft: obstacleObj.bounds.isStickyLeft,
       isStickyTop: obstacleObj.bounds.isStickyTop,
+      isFixed: obstacleObj.bounds.isFixed,
     },
   );
 
