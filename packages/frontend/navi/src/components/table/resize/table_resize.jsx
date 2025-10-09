@@ -99,10 +99,14 @@ import.meta.css = /* css */ `
     left: -3px;
     background: var(--resizer-color);
     opacity: 0;
+    transition: opacity 0.1s ease;
   }
   .navi_table_column_resizer[data-hover],
   .navi_table_column_resizer[data-resizing] {
     opacity: 1;
+  }
+  .navi_table_column_resizer[data-hover] {
+    transition-delay: 150ms; /* Delay before showing hover effect */
   }
   .navi_table_column_resizer[data-resizing] .navi_table_column_resizer_line {
     opacity: 1;
@@ -156,6 +160,8 @@ import.meta.css = /* css */ `
   .navi_table_row_resizer[data-hover],
   .navi_table_row_resizer[data-resizing] {
     opacity: 1;
+  }
+  .navi_table_row_resizer[data-hover] {
     transition-delay: 150ms; /* Delay before showing hover effect */
   }
   .navi_table_row_resizer[data-resizing] .navi_table_row_resizer_line {
