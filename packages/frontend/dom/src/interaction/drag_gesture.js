@@ -109,26 +109,6 @@ const viewportToDocumentCoords = (viewportX, viewportY, scrollableParent) => {
   ];
 };
 
-/**
- * Convert mouse event coordinates to absolute document coordinates
- * @param {MouseEvent} mouseEvent - Mouse event
- * @param {Element} scrollableParent - The scrollable container
- * @returns {[number, number]} - [documentX, documentY] in absolute document coordinates
- */
-const mouseEventToDocumentCoords = (mouseEvent, scrollableParent) => {
-  return viewportToDocumentCoords(
-    mouseEvent.clientX,
-    mouseEvent.clientY,
-    scrollableParent,
-  );
-};
-
-/**
- * Convert element's getBoundingClientRect coordinates to absolute document coordinates
- * @param {Element} element - The element
- * @param {Element} scrollableParent - The scrollable container
- * @returns {{left: number, top: number, right: number, bottom: number}} - Absolute document coordinates
- */
 const elementToDocumentRect = (element, scrollableParent) => {
   const rect = element.getBoundingClientRect();
   const [left, top] = viewportToDocumentCoords(
@@ -907,7 +887,11 @@ export const createDragGestureController = (options = {}) => {
 
     const scrollableParent = getScrollableParent(element);
     const mouseEventCoords = (mouseEvent) => {
-      return mouseEventToDocumentCoords(mouseEvent, scrollableParent);
+      return viewportToDocumentCoords(
+        mouseEvent.clientX,
+        mouseEvent.clientY,
+        scrollableParent,
+      );
     };
 
     const [xAtStart, yAtStart] = mouseEventCoords(mousedownEvent);
