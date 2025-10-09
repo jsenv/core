@@ -83,6 +83,7 @@ import {
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupVisualMarkers } from "./debug_markers.js";
 import { createObstacleConstraintsFromQuerySelector } from "./drag_obstacles.js";
+import { getElementBounds } from "./element_bounds.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 // Coordinate conversion helpers
@@ -198,6 +199,11 @@ export const createDragGestureController = (options = {}) => {
       width: elementVisuallyImpactedWidth,
       height: elementVisuallyImpactedHeight,
     } = elementVisuallyImpactedRect;
+    // Calculate offset to translate visual movement to elementToImpact movement
+    // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
+    // All constraint calculations use visual coordinates (xMove, yMove)
+    let visualOffsetX = elementVisuallyImpactedLeft - elementToImpactLeft;
+    let visualOffsetY = elementVisuallyImpactedTop - elementToImpactTop;
 
     let isStickyLeft;
     let isStickyTop;
@@ -205,14 +211,28 @@ export const createDragGestureController = (options = {}) => {
     let topAtStart;
     if (isThresholdOnly) {
     } else {
-      const computedStyle = getComputedStyle(elementVisuallyImpacted);
-      const usePositionFixed = computedStyle.position === "fixed";
-      if (usePositionFixed) {
+      const elementBounds = getElementBounds(elementVisuallyImpacted, {
+        scrollableParent,
+      });
+
+      const {
+        left,
+        top,
+        fromFixed,
+        fromStickyLeft,
+        fromStickyTop,
+        fromStickyLeftAttr,
+        fromStickyTopAttr,
+      } = elementBounds;
+
+      if (fromFixed) {
         isStickyLeft = false;
         isStickyTop = false;
+        // For fixed elements, convert to document coordinates
         const { scrollLeft, scrollTop } = documentElement;
-        leftAtStart = elementVisuallyImpactedLeft + scrollLeft;
-        topAtStart = elementVisuallyImpactedTop + scrollTop;
+        leftAtStart = left + scrollLeft;
+        topAtStart = top + scrollTop;
+
         const stylesToSet = {
           position: "absolute",
           left: `${leftAtStart}px`,
@@ -221,90 +241,74 @@ export const createDragGestureController = (options = {}) => {
         };
         const restoreStyles = setStyles(element, stylesToSet);
         addTeardown(() => {
-          const { left, top } = getVisualRect(element, documentElement, {
-            isFixed: true,
-          });
+          const { left: finalLeft, top: finalTop } = getVisualRect(
+            element,
+            documentElement,
+            {
+              isFixed: true,
+            },
+          );
           restoreStyles();
           setStyles(element, {
-            left: `${left}px`,
-            top: `${top}px`,
+            left: `${finalLeft}px`,
+            top: `${finalTop}px`,
           });
         });
-      } else {
-        const usePositionSticky = computedStyle.position === "sticky";
-        isStickyLeft = usePositionSticky && computedStyle.left !== "auto";
-        isStickyTop = usePositionSticky && computedStyle.top !== "auto";
-        if (isStickyLeft || isStickyTop) {
-          const stylesToSet = {
-            position: "relative",
-          };
+      } else if (fromStickyLeft || fromStickyTop) {
+        isStickyLeft = Boolean(fromStickyLeft);
+        isStickyTop = Boolean(fromStickyTop);
+        const stylesToSet = {
+          position: "relative",
+        };
+
+        if (isStickyLeft) {
+          let leftValue = fromStickyLeft.value;
+          if (!scrollableParentIsDocument) {
+            leftValue += scrollLeftAtStart;
+          }
+          leftAtStart = leftValue;
+          stylesToSet.left = `${leftValue}px`;
+        }
+        if (isStickyTop) {
+          let topValue = fromStickyTop.value;
+          if (!scrollableParentIsDocument) {
+            topValue += scrollTopAtStart;
+          }
+          topAtStart = topValue;
+          stylesToSet.top = `${topValue}px`;
+        }
+        const restoreStyles = setStyles(element, stylesToSet);
+        addTeardown(() => {
+          const stylesToSetOnTeardown = {};
+          const elementRect = element.getBoundingClientRect();
+          const scrollableRect = scrollableParent.getBoundingClientRect();
+          restoreStyles();
           if (isStickyLeft) {
-            let left = parseFloat(computedStyle.left) || 0;
-            if (!scrollableParentIsDocument) {
-              left += scrollLeftAtStart;
-            }
-            leftAtStart = left;
-            stylesToSet.left = `${left}px`;
+            const leftRelative = elementRect.left - scrollableRect.left;
+            stylesToSetOnTeardown.left = `${leftRelative}px`;
           }
           if (isStickyTop) {
-            let top = parseFloat(computedStyle.top) || 0;
-            if (!scrollableParentIsDocument) {
-              top += scrollTopAtStart;
-            }
-            topAtStart = top;
-            stylesToSet.top = `${top}px`;
+            const topRelative = elementRect.top - scrollableRect.top;
+            stylesToSetOnTeardown.top = `${topRelative}px`;
           }
-          const restoreStyles = setStyles(element, stylesToSet);
-          addTeardown(() => {
-            const stylesToSetOnTeardown = {};
-            const elementRect = element.getBoundingClientRect();
-            const scrollableRect = scrollableParent.getBoundingClientRect();
-            restoreStyles();
-            if (isStickyLeft) {
-              const leftRelative = elementRect.left - scrollableRect.left;
-              stylesToSetOnTeardown.left = `${leftRelative}px`;
-            }
-            if (isStickyTop) {
-              const topRelative = elementRect.top - scrollableRect.top;
-              stylesToSetOnTeardown.top = `${topRelative}px`;
-            }
-            setStyles(element, stylesToSetOnTeardown);
-          });
+          setStyles(element, stylesToSetOnTeardown);
+        });
+      } else {
+        // Normal positioning - use coordinates from getElementBounds
+        isStickyLeft = false;
+        isStickyTop = false;
+        leftAtStart = left;
+        topAtStart = top;
+
+        // Handle data-sticky attributes for visual offset adjustment
+        if (fromStickyLeftAttr && !scrollableParentIsDocument) {
+          visualOffsetX += scrollLeftAtStart;
+        }
+        if (fromStickyTopAttr && !scrollableParentIsDocument) {
+          visualOffsetY += scrollTopAtStart;
         }
       }
     }
-
-    // Calculate offset to translate visual movement to elementToImpact movement
-    // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
-    // All constraint calculations use visual coordinates (xMove, yMove)
-    let visualOffsetX = elementVisuallyImpactedLeft - elementToImpactLeft;
-    let visualOffsetY = elementVisuallyImpactedTop - elementToImpactTop;
-
-    if (!isStickyLeft) {
-      leftAtStart = elementVisuallyImpactedLeft; // Already in scrollable coordinates
-      // Adjust coordinates for conceptually sticky elements
-      // Elements with data-sticky-left appear visually pinned to the left edge regardless of scroll,
-      // but their DOM position doesn't reflect this visual behavior. We need to adjust both their
-      // starting position and visual offset to account for scroll, ensuring drag calculations
-      // work with their apparent visual position rather than their DOM position.
-      const hasStickyLeftAttribute =
-        elementVisuallyImpacted.hasAttribute(`data-sticky-left`);
-      if (hasStickyLeftAttribute && !scrollableParentIsDocument) {
-        leftAtStart += scrollLeftAtStart;
-        visualOffsetX += scrollLeftAtStart;
-      }
-    }
-    if (!isStickyTop) {
-      topAtStart = elementVisuallyImpactedTop; // Already in scrollable coordinates
-      const hasStickyTopAttribute =
-        elementVisuallyImpacted.hasAttribute(`data-sticky-top`);
-      if (hasStickyTopAttribute && !scrollableParentIsDocument) {
-        topAtStart += scrollTopAtStart;
-        visualOffsetY += scrollTopAtStart;
-      }
-    }
-
-    // leftAtStart and topAtStart are now in scrollable-parent coordinate space
 
     const gestureInfo = {
       direction,

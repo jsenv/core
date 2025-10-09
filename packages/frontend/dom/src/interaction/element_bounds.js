@@ -24,13 +24,17 @@ export const getElementBounds = (
     const elementRect = getElementScrollableRect(element, scrollableParent);
     const { left, top, right, bottom } = elementRect;
     return {
-      fromFixed: false,
-      fromStickyLeft: isStickyLeft,
-      fromStickyTop: isStickyTop,
       left,
       top,
       right,
       bottom,
+      fromFixed: false,
+      fromStickyLeft: isStickyLeft
+        ? { value: parseFloat(computedStyle.left) || 0 }
+        : undefined,
+      fromStickyTop: isStickyTop
+        ? { value: parseFloat(computedStyle.top) || 0 }
+        : undefined,
     };
   }
   const usePositionFixed = computedStyle.position === "fixed";
@@ -59,13 +63,13 @@ export const getElementBounds = (
     const bottom = elementRect.bottom - scrollableParentRect.top;
 
     return {
-      fromFixed: true,
-      fromStickyLeft: false,
-      fromStickyTop: false,
       left,
       top,
       right,
       bottom,
+      fromFixed: true,
+      fromStickyLeft: undefined,
+      fromStickyTop: undefined,
     };
   }
 
@@ -77,13 +81,13 @@ export const getElementBounds = (
     const elementRect = getElementScrollableRect(element, scrollableParent);
     const { left, top, right, bottom } = elementRect;
     return {
-      fromFixed: false,
-      fromStickyLeft: false,
-      fromStickyTop: false,
       left,
       top,
       right,
       bottom,
+      fromFixed: false,
+      fromStickyLeft: undefined,
+      fromStickyTop: undefined,
     };
   }
 
@@ -125,12 +129,16 @@ export const getElementBounds = (
   }
 
   return {
-    fromFixed: false,
-    fromStickyLeft: hasStickyLeftAttribute,
-    fromStickyTop: hasStickyTopAttribute,
     left,
     top,
     right: left + width,
     bottom: top + height,
+    fromFixed: false,
+    fromStickyLeftAttr: hasStickyLeftAttribute
+      ? { value: parseFloat(computedStyle.left) || 0 }
+      : undefined,
+    fromStickyTopAttr: hasStickyTopAttribute
+      ? { value: parseFloat(computedStyle.top) || 0 }
+      : undefined,
   };
 };
