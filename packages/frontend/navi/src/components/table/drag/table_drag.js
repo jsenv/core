@@ -21,24 +21,11 @@ export const useTableDragContextValue = ({
     if (columnIndex === newColumnIndex) {
       return;
     }
-    const columnIds = columns.map((col) => col.id);
-    const columnIdsWithNewOrder = [];
-    const columnIdAtCurrentPosition = columnIds[columnIndex];
-    const columnIdAtNewPosition = columnIds[newColumnIndex];
-    for (let i = 0; i < columnIds.length; i++) {
-      if (i === newColumnIndex) {
-        // At the new position, put the dragged column
-        columnIdsWithNewOrder.push(columnIdAtCurrentPosition);
-        continue;
-      }
-      if (i === columnIndex) {
-        // At the old position, put what was at the new position
-        columnIdsWithNewOrder.push(columnIdAtNewPosition);
-        continue;
-      }
-      // Everything else stays the same
-      columnIdsWithNewOrder.push(columnIds[i]);
-    }
+    const columnIdsWithNewOrder = swapColumns(
+      columns,
+      columnIndex,
+      newColumnIndex,
+    );
     setColumnOrder(columnIdsWithNewOrder);
   };
 
@@ -51,4 +38,26 @@ export const useTableDragContextValue = ({
       canChangeColumnOrder,
     };
   }, [grabTarget, canChangeColumnOrder]);
+};
+
+export const swapColumns = (columns, columnIndexA, columnIndexB) => {
+  const columnIds = columns.map((col) => col.id);
+  const columnIdsWithNewOrder = [];
+  const columnIdAtPositionA = columnIds[columnIndexA];
+  const columnIdAtPositionB = columnIds[columnIndexB];
+  for (let i = 0; i < columnIds.length; i++) {
+    if (i === columnIndexB) {
+      // At the new position, put the dragged column
+      columnIdsWithNewOrder.push(columnIdAtPositionA);
+      continue;
+    }
+    if (i === columnIndexA) {
+      // At the old position, put what was at the new position
+      columnIdsWithNewOrder.push(columnIdAtPositionB);
+      continue;
+    }
+    // Everything else stays the same
+    columnIdsWithNewOrder.push(columnIds[i]);
+  }
+  return columnIdsWithNewOrder;
 };
