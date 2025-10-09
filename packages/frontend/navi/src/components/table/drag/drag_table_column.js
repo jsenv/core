@@ -4,7 +4,7 @@ import {
   getDropTargetInfo,
   getScrollableParent,
   getVisualRect,
-  stickyAsRelative,
+  stickyAsRelativeCoords,
 } from "@jsenv/dom";
 
 import { createPubSub } from "../../pub_sub.js";
@@ -105,7 +105,7 @@ export const initDragTableColumnByMousedown = async (
 
     originalStickyCells.forEach((originalCell, index) => {
       const cloneCell = cloneStickyCells[index];
-      const relativePosition = stickyAsRelative(
+      const relativePosition = stickyAsRelativeCoords(
         originalCell,
         // Our clone is absolutely positioned on top of <table />
         // So we need the sticky position relative to <table />

@@ -49,7 +49,7 @@ export {
 export { followPosition } from "./src/position/follow_position.js";
 export { getPositionedParent } from "./src/position/offset_parent.js";
 export { initPositionSticky } from "./src/position/position_sticky.js";
-export { stickyAsRelative } from "./src/position/sticky_as_relative.js";
+export { stickyAsRelativeCoords } from "./src/position/sticky_rect.js";
 export { getVisualRect } from "./src/position/visual_rect.js";
 
 // size

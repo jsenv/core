@@ -1,6 +1,6 @@
 import { getScrollableParent } from "../scroll/parent_scroll.js";
 
-export const stickyAsRelative = (
+export const stickyAsRelativeCoords = (
   element,
   referenceElement,
   { scrollableParent = getScrollableParent(element) } = {},
