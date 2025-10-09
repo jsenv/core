@@ -1,4 +1,7 @@
+import { getVisualRect } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
+
+import { createPubSub } from "../../pub_sub.js";
 
 // React hook version for easy integration
 export const useStickyGroup = (
@@ -38,6 +41,8 @@ const initStickyGroup = (
   if (!container) {
     throw new Error("initStickyGroup: container is required");
   }
+
+  const [teardown, addTeardown] = createPubSub();
 
   const element = elementSelector
     ? container.querySelector(elementSelector)
@@ -261,16 +266,41 @@ const initStickyGroup = (
 
   // Start observing
   resizeObserver.observe(element);
+  addTeardown(() => {
+    resizeObserver.disconnect();
+  });
+
   mutationObserver.observe(element, {
     attributes: true,
     childList: true,
     subtree: true,
     attributeFilter: ["data-sticky-left", "data-sticky-top"],
   });
+  addTeardown(() => {
+    mutationObserver.disconnect();
+  });
 
   // Return cleanup function
   return () => {
-    resizeObserver.disconnect();
-    mutationObserver.disconnect();
+    teardown();
+  };
+};
+
+const observeVisualPosition = (element, callback) => {
+  const updatePosition = () => {
+    const { left, top } = getVisualRect(element);
+    callback({ left, top });
+  };
+
+  window.addEventListener("scroll", updatePosition, { passive: true });
+  window.addEventListener("resize", updatePosition);
+  window.addEventListener("touchmove", updatePosition);
+
+  return () => {
+    window.removeEventListener("scroll", updatePosition, {
+      passive: true,
+    });
+    window.removeEventListener("resize", updatePosition);
+    window.removeEventListener("touchmove", updatePosition);
   };
 };

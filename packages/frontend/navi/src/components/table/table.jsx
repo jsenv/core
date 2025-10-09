@@ -264,7 +264,7 @@ export const Table = forwardRef((props, ref) => {
             </TableSelectionContext.Provider>
           </TableSizeProvider>
         </table>
-        <TableUI>
+        <TableUI tableRef={innerRef}>
           <TableDragCloneContainer />
           <TableColumnResizer />
           <TableRowResizer />
