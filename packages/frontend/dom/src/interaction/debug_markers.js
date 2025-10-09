@@ -37,11 +37,7 @@ const scrollableToViewportCoords = (
   stickyOptions = {},
 ) => {
   const { documentElement } = document;
-  const {
-    fromStickyLeft = false,
-    fromStickyTop = false,
-    fromFixed = false,
-  } = stickyOptions;
+  const { fromStickyLeft = false, fromStickyTop = false } = stickyOptions;
 
   if (scrollableParent === documentElement) {
     // For document scrolling, adjust coordinates based on marker side:
@@ -74,12 +70,7 @@ const scrollableToViewportCoords = (
 
   if (side === "obstacle") {
     // All obstacles now use scrollable-parent-relative coordinates
-    if (fromFixed) {
-      // Fixed elements: convert from scrollable-relative back to viewport
-      const scrollableRect = scrollableParent.getBoundingClientRect();
-      return [x + scrollableRect.left, y + scrollableRect.top];
-    }
-    // Regular/sticky obstacles in containers: handle per-axis sticky behavior
+    // Convert to viewport coordinates: container position + scroll adjustments per axis
     const scrollAdjustX = fromStickyLeft ? 0 : scrollableParent.scrollLeft;
     const scrollAdjustY = fromStickyTop ? 0 : scrollableParent.scrollTop;
     return [
