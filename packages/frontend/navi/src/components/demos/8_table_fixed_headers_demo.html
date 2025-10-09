@@ -138,6 +138,9 @@
         const [selection, setSelection] = useState([]);
         const [columnWidths, setColumnWidths] = useState([]);
         const [rowHeights, setRowHeights] = useState([]);
+        const setColumnValue = (columnId, value) => {
+          console.log(`Set column ${columnId} value to "${value}"`);
+        };
         const { cells, setCellValue, columns, setColumnOrder } =
           useCellsAndColumns(data, columnsConfig);
         const [
@@ -220,7 +223,14 @@
                   <Tr id="head" height={rowHeights[0]}>
                     <RowNumberTableCell />
                     {columns.map((col) => (
-                      <TableCell key={col.id}>{col.header}</TableCell>
+                      <TableCell
+                        key={col.id}
+                        action={(value) => {
+                          setColumnValue(col.id, value);
+                        }}
+                      >
+                        {col.header}
+                      </TableCell>
                     ))}
                   </Tr>
                 </Thead>
