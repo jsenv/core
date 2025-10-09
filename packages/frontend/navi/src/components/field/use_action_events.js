@@ -38,9 +38,6 @@ export const useActionEvents = (
 
     return addManyEventListeners(element, {
       cancel: (e) => {
-        if (e.detail.actionOrigin !== actionOrigin) {
-          return;
-        }
         onCancel?.(e, e.detail.reason);
       },
       actionrequested: (e) => {
