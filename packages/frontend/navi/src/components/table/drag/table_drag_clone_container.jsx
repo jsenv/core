@@ -1,5 +1,7 @@
 import { Z_INDEX_DRAGGING_CELL_PLACEHOLDER } from "../z_indexes.js";
 
+const DEBUG_VISUAL = true;
+
 import.meta.css = /* css */ `
   .navi_table_cell[data-grabbed]::before,
   .navi_table_cell[data-grabbed]::after {
@@ -14,7 +16,7 @@ import.meta.css = /* css */ `
 
   /* We preprend ".navi_table_container" to ensure it propertly overrides */
   .navi_table_container .navi_table_drag_clone_container .navi_table_cell {
-    opacity: 0;
+    opacity: ${DEBUG_VISUAL ? 0.5 : 0};
   }
   .navi_table_container
     .navi_table_drag_clone_container

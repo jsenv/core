@@ -8,6 +8,8 @@ import {
 
 import { createPubSub } from "../../pub_sub.js";
 
+const DEBUG_VISUAL = true;
+
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
     position: absolute;
@@ -91,7 +93,6 @@ export const initDragTableColumnByMousedown = async (
     // In the table clone we need to convert sticky elements to position: relative
     // with calculated offsets that match their appearance in the original context
     const scrollableParent = getScrollableParent(table);
-    const { scrollLeft, scrollTop } = scrollableParent;
     const isDocumentScrolling = scrollableParent === document.documentElement;
 
     // important: only on cells, not on <col> nor <tr>
@@ -113,7 +114,7 @@ export const initDragTableColumnByMousedown = async (
       let needsLeftPositioning;
       let needsTopPositioning;
       if (isDocumentScrolling) {
-        // For document scrolling: check if element is currently stuck
+        // For document scrolling: check if element is currently stuck and calculate offset
 
         if (hasXSticky) {
           const stickyLeftValue = parseFloat(computedStyle.left) || 0;
@@ -121,15 +122,20 @@ export const initDragTableColumnByMousedown = async (
           const isStuckLeft = cellRect.left <= stickyLeftValue;
 
           if (isStuckLeft) {
-            needsLeftPositioning = scrollLeft;
+            // When stuck, we only need to offset by the sticky value itself
+            // because the clone is positioned over the original table
+            // The sticky displacement is just how much it has moved from its natural table position
+            needsLeftPositioning = stickyLeftValue;
           }
         }
         if (hasYSticky) {
           const stickyTopValue = parseFloat(computedStyle.top) || 0;
           const cellRect = originalCell.getBoundingClientRect();
           const isStuckTop = cellRect.top <= stickyTopValue;
+
           if (isStuckTop) {
-            needsTopPositioning = scrollTop;
+            // When stuck, offset by the sticky value to match the displacement
+            needsTopPositioning = stickyTopValue;
           }
         }
       } else {
@@ -293,7 +299,9 @@ export const initDragTableColumnByMousedown = async (
       },
     });
     dragToMoveGestureController.addTeardown(() => {
-      teardown();
+      if (!DEBUG_VISUAL) {
+        teardown();
+      }
     });
     const dragToMoveGesture = dragToMoveGestureController.grabViaMousedown(
       mousedownEvent,
