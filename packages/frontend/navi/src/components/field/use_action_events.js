@@ -38,6 +38,10 @@ export const useActionEvents = (
 
     return addManyEventListeners(element, {
       cancel: (e) => {
+        // cancel don't need to check for actionOrigin because
+        // it's actually unrelated to a specific actions
+        // in that sense it should likely be moved elsewhere as it's related to
+        // interaction and constraint validation, not to a specific action
         onCancel?.(e, e.detail.reason);
       },
       actionrequested: (e) => {
