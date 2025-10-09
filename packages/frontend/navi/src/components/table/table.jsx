@@ -239,7 +239,7 @@ export const Table = forwardRef((props, ref) => {
       }}
     >
       <div ref={tableContainerRef} className="navi_table_container">
-        <div
+        <table
           ref={innerRef}
           className="navi_table"
           aria-multiselectable="true"
@@ -263,15 +263,15 @@ export const Table = forwardRef((props, ref) => {
               </TableDragContext.Provider>
             </TableSelectionContext.Provider>
           </TableSizeProvider>
-          <TableUI>
-            <TableDragCloneContainer />
-            <TableColumnResizer />
-            <TableRowResizer />
-            <TableStickyContext.Provider value={stickyContextValue}>
-              <TableStickyFrontier tableRef={innerRef} />
-            </TableStickyContext.Provider>
-          </TableUI>
-        </div>
+        </table>
+        <TableUI>
+          <TableDragCloneContainer />
+          <TableColumnResizer />
+          <TableRowResizer />
+          <TableStickyContext.Provider value={stickyContextValue}>
+            <TableStickyFrontier tableRef={innerRef} />
+          </TableStickyContext.Provider>
+        </TableUI>
       </div>
     </div>
   );
@@ -279,9 +279,9 @@ export const Table = forwardRef((props, ref) => {
 export const Colgroup = ({ children }) => {
   const ColumnProducerProvider = useContext(ColumnProducerProviderContext);
   return (
-    <div className="navi_colgroup">
+    <colgroup className="navi_colgroup">
       <ColumnProducerProvider>{children}</ColumnProducerProvider>
-    </div>
+    </colgroup>
   );
 };
 export const Col = ({ id, width, immovable, backgroundColor }) => {
@@ -295,7 +295,7 @@ export const Col = ({ id, width, immovable, backgroundColor }) => {
   const isStickyLeft = columnIndex <= stickyLeftFrontierColumnIndex;
 
   return (
-    <div
+    <col
       className="navi_col"
       id={id}
       data-sticky-left={isStickyLeft ? "" : undefined}
@@ -310,16 +310,20 @@ export const Col = ({ id, width, immovable, backgroundColor }) => {
 };
 export const Thead = ({ children }) => {
   return (
-    <TableSectionContext.Provider value="head">
-      {children}
-    </TableSectionContext.Provider>
+    <thead>
+      <TableSectionContext.Provider value="head">
+        {children}
+      </TableSectionContext.Provider>
+    </thead>
   );
 };
 export const Tbody = ({ children }) => {
   return (
-    <TableSectionContext.Provider value="body">
-      {children}
-    </TableSectionContext.Provider>
+    <tbody>
+      <TableSectionContext.Provider value="body">
+        {children}
+      </TableSectionContext.Provider>
+    </tbody>
   );
 };
 export const Tr = ({ id, height, children }) => {
@@ -345,7 +349,7 @@ export const Tr = ({ id, height, children }) => {
   that is needed by useColumnByIndex */
 
   return (
-    <div
+    <tr
       className="navi_tr"
       data-row-id={id ? id : undefined}
       aria-selected={isRowSelected}
@@ -361,7 +365,7 @@ export const Tr = ({ id, height, children }) => {
           {children}
         </TableRowCells>
       </ColumnConsumerProvider>
-    </div>
+    </tr>
   );
 };
 
@@ -548,9 +552,10 @@ export const TableCell = forwardRef((props, ref) => {
   }
 
   const activeElement = useActiveElement();
+  const TagName = isInTableHead ? "th" : "td";
 
   return (
-    <div
+    <TagName
       className={["navi_table_cell", ...className.split(" ")].join(" ")}
       ref={cellRef}
       style={innerStyle}
@@ -651,7 +656,7 @@ export const TableCell = forwardRef((props, ref) => {
         </span>
       )}
       {columnGrabbed && <div className="navi_table_cell_placeholder"></div>}
-    </div>
+    </TagName>
   );
 });
 
