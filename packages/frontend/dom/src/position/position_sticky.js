@@ -21,7 +21,7 @@
  * The element should have a CSS "top" value specified (e.g., top: 10px).
  */
 
-import { getScrollableParentSet } from "../scroll.js";
+import { getScrollableParentSet } from "../scroll/parent_scroll.js";
 import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
 import { forceStyles, setStyles } from "../style_and_attributes.js";

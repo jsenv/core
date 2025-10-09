@@ -1,4 +1,4 @@
-import { getScrollableParentSet } from "../scroll.js";
+import { getScrollableParentSet } from "../scroll/parent_scroll.js";
 
 /**
  * Sets up position tracking between an element and a target element
