@@ -1,4 +1,3 @@
-import { getVisualRect } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
 import { createPubSub } from "../../pub_sub.js";
@@ -59,10 +58,7 @@ const initStickyGroup = (
     }
   };
 
-  let cleanupTableRowEffect;
   const updateGridPositions = () => {
-    cleanupTableRowEffect?.();
-
     // Handle table grid - update both horizontal and vertical sticky elements
     updateTableColumns();
     updateTableRows();
@@ -165,7 +161,6 @@ const initStickyGroup = (
     });
 
     let cumulativeHeight = 0;
-    let lastStickyRow;
     stickyRows.forEach((row, index) => {
       const rowCells = rowsWithStickyCells.get(row);
       const topPosition = index === 0 ? 0 : cumulativeHeight;
@@ -184,7 +179,6 @@ const initStickyGroup = (
       } else {
         cumulativeHeight += row.getBoundingClientRect().height;
       }
-      lastStickyRow = row;
     });
     container.style.setProperty(FRONTIER_TOP_VAR, `${cumulativeHeight}px`);
     if (elementReceivingCumulativeStickyPosition) {
@@ -193,13 +187,6 @@ const initStickyGroup = (
         `${cumulativeHeight}px`,
       );
     }
-
-    cleanupTableRowEffect = visualPositionEffect(lastStickyRow, ({ top }) => {
-      container.style.setProperty(
-        FRONTIER_TOP_VAR,
-        `${top + cumulativeHeight}px`,
-      );
-    });
   };
 
   const updateLinearPositions = () => {
@@ -292,25 +279,25 @@ const initStickyGroup = (
   };
 };
 
-const visualPositionEffect = (element, callback) => {
-  const updatePosition = () => {
-    const { left, top } = getVisualRect(element, document.body, {
-      isStickyLeft: false,
-      isStickyTop: false,
-    });
-    callback({ left, top });
-  };
-  updatePosition();
+// const visualPositionEffect = (element, callback) => {
+//   const updatePosition = () => {
+//     const { left, top } = getVisualRect(element, document.body, {
+//       isStickyLeft: false,
+//       isStickyTop: false,
+//     });
+//     callback({ left, top });
+//   };
+//   updatePosition();
 
-  window.addEventListener("scroll", updatePosition, { passive: true });
-  window.addEventListener("resize", updatePosition);
-  window.addEventListener("touchmove", updatePosition);
+//   window.addEventListener("scroll", updatePosition, { passive: true });
+//   window.addEventListener("resize", updatePosition);
+//   window.addEventListener("touchmove", updatePosition);
 
-  return () => {
-    window.removeEventListener("scroll", updatePosition, {
-      passive: true,
-    });
-    window.removeEventListener("resize", updatePosition);
-    window.removeEventListener("touchmove", updatePosition);
-  };
-};
+//   return () => {
+//     window.removeEventListener("scroll", updatePosition, {
+//       passive: true,
+//     });
+//     window.removeEventListener("resize", updatePosition);
+//     window.removeEventListener("touchmove", updatePosition);
+//   };
+// };

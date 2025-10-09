@@ -59,9 +59,9 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-left] {
-    top: var(--sticky-group-top-frontier, 0px);
-    height: calc(var(--table-height) - var(--sticky-group-top-frontier));
-    left: var(--sticky-frontier-left, 0px);
+    top: var(--sticky-group-top);
+    height: calc(var(--table-height) - var(--sticky-group-top));
+    left: var(--sticky-group-left);
     width: var(--sticky-frontier-size);
     background: linear-gradient(
       to right,
@@ -71,8 +71,8 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-top] {
-    left: var(--sticky-frontier-left, 0px);
-    width: calc(var(--table-width) - var(--sticky-frontier-left));
+    left: var(--sticky-group-left, 0px);
+    width: calc(var(--table-width) - var(--sticky-group-left));
     top: var(--sticky-group-top);
     height: var(--sticky-frontier-size);
     background: linear-gradient(

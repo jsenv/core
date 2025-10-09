@@ -612,7 +612,6 @@ export const TableCell = forwardRef((props, ref) => {
         }
         startEditing(e);
       }}
-      // eslint-disable-next-line react/no-unknown-property
       oneditrequested={(e) => {
         if (!editable) {
           return;
