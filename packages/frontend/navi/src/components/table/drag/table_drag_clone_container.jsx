@@ -1,6 +1,6 @@
 import { Z_INDEX_DRAGGING_CELL_PLACEHOLDER } from "../z_indexes.js";
 
-const DEBUG_VISUAL = true;
+const DEBUG_VISUAL = false;
 
 import.meta.css = /* css */ `
   .navi_table_cell[data-grabbed]::before,

@@ -8,7 +8,7 @@ import {
 
 import { createPubSub } from "../../pub_sub.js";
 
-const DEBUG_VISUAL = true;
+const DEBUG_VISUAL = false;
 
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
@@ -115,6 +115,7 @@ export const initDragTableColumnByMousedown = async (
       let needsTopPositioning;
       if (isDocumentScrolling) {
         // For document scrolling: check if element is currently stuck and calculate offset
+        const tableRect = table.getBoundingClientRect();
 
         if (hasXSticky) {
           const stickyLeftValue = parseFloat(computedStyle.left) || 0;
@@ -122,12 +123,9 @@ export const initDragTableColumnByMousedown = async (
           const isStuckLeft = cellRect.left <= stickyLeftValue;
 
           if (isStuckLeft) {
-            // Calculate how much the cell is offset from its natural position within the table
-            // Natural position in viewport = cellRect.left
-            // Sticky position in viewport = stickyLeftValue
-            // Offset = sticky position - natural position = stickyLeftValue - cellRect.left
-            const offsetFromNatural = stickyLeftValue - cellRect.left;
-            needsLeftPositioning = offsetFromNatural;
+            // Compare cell position with table position to get the offset within the table
+            const cellOffsetFromTable = cellRect.left - tableRect.left;
+            needsLeftPositioning = cellOffsetFromTable;
           }
         }
         if (hasYSticky) {
@@ -136,10 +134,9 @@ export const initDragTableColumnByMousedown = async (
           const isStuckTop = cellRect.top <= stickyTopValue;
 
           if (isStuckTop) {
-            // Calculate how much the cell is offset from its natural position within the table
-            // Offset = sticky position - natural position = stickyTopValue - cellRect.top
-            const offsetFromNatural = stickyTopValue - cellRect.top;
-            needsTopPositioning = offsetFromNatural;
+            // Compare cell position with table position to get the offset within the table
+            const cellOffsetFromTable = cellRect.top - tableRect.top;
+            needsTopPositioning = cellOffsetFromTable;
           }
         }
       } else {
