@@ -232,31 +232,19 @@
 
     <div class="coordinate-info" id="coordinateInfo">
       <div class="info-section">
-        <div class="info-title">🌍 Document Coordinates</div>
-        <div class="info-value">
-          scrollLeft: <span id="docScrollLeft">-</span>px
-        </div>
+        <div class="info-title">🖼️ Viewport Info</div>
         <div class="info-value">
           scrollWidth: <span id="docScrollWidth">-</span>px
         </div>
         <div class="info-value">
-          clientWidth: <span id="docClientWidth">-</span>px
+          scrollLeft: <span id="docScrollLeft">-</span>px
         </div>
         <div class="info-value">
-          body.offsetWidth: <span id="bodyWidth">-</span>px
-        </div>
-      </div>
-
-      <div class="info-section">
-        <div class="info-title">🖼️ Viewport Info</div>
-        <div class="info-value">
-          window.innerWidth: <span id="windowWidth">-</span>px
+          Width: <span id="docOffsetWidth">-</span>px
         </div>
         <div class="info-value">
-          window.pageXOffset: <span id="pageXOffset">-</span>px
-        </div>
-        <div class="info-value">
-          visualViewport.offsetLeft: <span id="visualOffsetLeft">-</span>px
+          Available width:
+          <span id="docClientWidth">-</span>px
         </div>
       </div>
 
@@ -272,7 +260,7 @@
       </div>
     </div>
 
-    <div class="scroll-indicators" id="scrollIndicators">
+    <div class="scroll-indicators" id="scrollIndicators" style="opacity: 0">
       <div><strong>Scroll Status:</strong></div>
       <div>Document: <span id="docScrollStatus">Not centered</span></div>
       <div>Container: <span id="containerScrollStatus">Not centered</span></div>
@@ -331,9 +319,7 @@
         bodyWidth: document.getElementById("bodyWidth"),
 
         // Viewport info
-        windowWidth: document.getElementById("windowWidth"),
-        pageXOffset: document.getElementById("pageXOffset"),
-        visualOffsetLeft: document.getElementById("visualOffsetLeft"),
+        offsetWidth: document.getElementById("docOffsetWidth"),
 
         // Mouse info
         mouseClientX: document.getElementById("mouseClientX"),
@@ -371,21 +357,15 @@
           elements.scrollableContainer.clientWidth;
 
         // Document coordinates
-        const docScrollLeft =
-          window.scrollX || document.documentElement.scrollLeft;
+        const docScrollLeft = document.documentElement.scrollLeft;
         elements.docScrollLeft.textContent = Math.round(docScrollLeft);
         elements.docScrollWidth.textContent =
           document.documentElement.scrollWidth;
         elements.docClientWidth.textContent =
           document.documentElement.clientWidth;
-        elements.bodyWidth.textContent = document.body.offsetWidth;
 
         // Viewport info
-        elements.windowWidth.textContent = window.innerWidth;
-        elements.pageXOffset.textContent = Math.round(window.pageXOffset);
-        elements.visualOffsetLeft.textContent = window.visualViewport
-          ? Math.round(window.visualViewport.offsetLeft)
-          : "N/A";
+        elements.offsetWidth.textContent = window.innerWidth;
 
         // Calculate target scroll positions
         const docTargetScroll = 5000 - window.innerWidth / 2;
