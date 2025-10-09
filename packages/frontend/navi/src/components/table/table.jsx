@@ -519,15 +519,17 @@ export const TableCell = forwardRef((props, ref) => {
     (isFirstRow && columnContainsSelectedCell) ||
     (isFirstColumn && rowContainsSelectedCell);
 
+  // appeareance
   const innerBackgroundColor =
-    backgroundColor || containSelectedCell
-      ? "var(--selection-background-color)"
-      : isFirstColumn
-        ? "#F8F8F8"
-        : isFirstRow
-          ? "#d3e7ff"
-          : "white";
-
+    stickyLeft || stickyTop
+      ? "violet"
+      : backgroundColor || containSelectedCell
+        ? "var(--selection-background-color)"
+        : isFirstColumn
+          ? "#F8F8F8"
+          : isFirstRow
+            ? "#d3e7ff"
+            : "white";
   if (innerBackgroundColor) {
     innerStyle["--background-color"] = innerBackgroundColor;
   }
