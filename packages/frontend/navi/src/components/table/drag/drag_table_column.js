@@ -177,9 +177,14 @@ export const initDragTableColumnByMousedown = async (
   );
 
   drop_preview: {
-    const tableRootRect = getVisualRect(tableRoot, document.body);
-    dropPreview.style.setProperty("--table-left", `${tableRootRect.left}px`);
-    dropPreview.style.setProperty("--table-top", `${tableRootRect.top}px`);
+    const tableRootRect = tableRoot.getBoundingClientRect();
+    let left = tableRootRect.left;
+    let top = tableRootRect.top;
+    const { scrollLeft, scrollTop } = document.documentElement;
+    left += scrollLeft;
+    top += scrollTop;
+    dropPreview.style.setProperty("--table-left", `${left}px`);
+    dropPreview.style.setProperty("--table-top", `${top}px`);
     dropPreview.style.setProperty("--table-width", `${tableRootRect.width}px`);
     dropPreview.style.setProperty(
       "--table-height",
