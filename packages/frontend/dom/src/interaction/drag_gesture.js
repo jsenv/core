@@ -172,6 +172,7 @@ export const createDragGestureController = (options) => {
     }
 
     const scrollableParent = getScrollableParent(element);
+    const scrollableParentIsDocument = scrollableParent === documentElement;
     const positionedParent = getPositionedParent(element);
     const scrollableRect = scrollableParent.getBoundingClientRect();
     const positionedParentRect = positionedParent.getBoundingClientRect();
@@ -202,13 +203,9 @@ export const createDragGestureController = (options) => {
         };
         const restoreStyles = setStyles(element, stylesToSet);
         addTeardown(() => {
-          const { left, top } = getVisualRect(
-            element,
-            document.documentElement,
-            {
-              isFixed: true,
-            },
-          );
+          const { left, top } = getVisualRect(element, documentElement, {
+            isFixed: true,
+          });
           restoreStyles();
           setStyles(element, {
             left: `${left}px`,
@@ -445,9 +442,10 @@ export const createDragGestureController = (options) => {
             : positionedParentRect;
           left -= visibleConstraintParentRect.left;
           top -= visibleConstraintParentRect.top;
-          if (scrollableParent !== documentElement) {
-            left += documentElement.scrollLeft;
-            top += documentElement.scrollTop;
+          if (!scrollableParentIsDocument) {
+            const { scrollLeft, scrollTop } = documentElement;
+            left += scrollLeft;
+            top += scrollTop;
           }
           const right =
             left +
@@ -625,7 +623,7 @@ export const createDragGestureController = (options) => {
         right: null,
         bottom: null,
       };
-      if (scrollableParent === documentElement) {
+      if (scrollableParentIsDocument) {
         const left = 0;
         const top = 0;
         const right = left + availableWidth;
