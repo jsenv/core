@@ -28,7 +28,7 @@ const getMarkersContainer = () => {
 
 const MARKER_SIZE = 12;
 
-export const setupVisualMarkers = ({ direction, scrollableParent }) => {
+export const setupVisualMarkers = ({ direction }) => {
   if (!DRAG_DEBUG_MARKERS) {
     return {
       onDrag: () => {},
@@ -103,9 +103,6 @@ export const setupVisualMarkers = ({ direction, scrollableParent }) => {
         }
       }
 
-      // Create dynamic constraint markers based on current element size
-      const parentRect = scrollableParent.getBoundingClientRect();
-
       // Process each constraint individually to preserve names
       for (const constraint of constraints) {
         if (constraint.type === "bounds") {
@@ -114,7 +111,7 @@ export const setupVisualMarkers = ({ direction, scrollableParent }) => {
           // Create individual markers for each bound with constraint name
           if (direction.x) {
             if (bounds.left !== undefined) {
-              const leftBoundViewport = parentRect.left + bounds.left;
+              const leftBoundViewport = bounds.left;
               markersToCreate.push({
                 name: `${constraint.name}.left`,
                 x: leftBoundViewport,
@@ -126,8 +123,7 @@ export const setupVisualMarkers = ({ direction, scrollableParent }) => {
             if (bounds.right !== undefined) {
               // For visual clarity, show rightBound at the right edge of the element
               // when element is positioned at rightBound (not the left edge position)
-              const rightBoundViewport =
-                parentRect.left + bounds.right + elementWidth;
+              const rightBoundViewport = bounds.right + elementWidth;
               markersToCreate.push({
                 name: `${constraint.name}.right`,
                 x: rightBoundViewport,
@@ -139,7 +135,7 @@ export const setupVisualMarkers = ({ direction, scrollableParent }) => {
           }
           if (direction.y) {
             if (bounds.top !== undefined) {
-              const topBoundViewport = parentRect.top + bounds.top;
+              const topBoundViewport = bounds.top;
               markersToCreate.push({
                 name: `${constraint.name}.top`,
                 x: 0,
@@ -151,8 +147,7 @@ export const setupVisualMarkers = ({ direction, scrollableParent }) => {
             if (bounds.bottom !== undefined) {
               // For visual clarity, show bottomBound at the bottom edge of the element
               // when element is positioned at bottomBound (not the left edge position)
-              const bottomBoundViewport =
-                parentRect.top + bounds.bottom + elementHeight;
+              const bottomBoundViewport = bounds.bottom + elementHeight;
               markersToCreate.push({
                 name: `${constraint.name}.bottom`,
                 x: 0,
@@ -163,7 +158,7 @@ export const setupVisualMarkers = ({ direction, scrollableParent }) => {
             }
           }
         } else if (constraint.type === "obstacle") {
-          const obstacleMarker = createObstacleMarker(constraint, parentRect);
+          const obstacleMarker = createObstacleMarker(constraint);
           currentConstraintMarkers.push(obstacleMarker);
         }
       }
@@ -257,11 +252,11 @@ const createDebugMarker = ({ name, x, y, color = "255 0 0", side }) => {
   container.appendChild(marker);
   return marker;
 };
-const createObstacleMarker = (obstacleObj, parentRect) => {
+const createObstacleMarker = (obstacleObj) => {
   const width = obstacleObj.bounds.right - obstacleObj.bounds.left;
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
-  const left = parentRect.left + obstacleObj.bounds.left;
-  const top = parentRect.top + obstacleObj.bounds.top;
+  const left = obstacleObj.bounds.left;
+  const top = obstacleObj.bounds.top;
 
   const marker = document.createElement("div");
   marker.className = "navi_obstacle_marker";
