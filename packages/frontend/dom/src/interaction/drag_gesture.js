@@ -67,12 +67,13 @@
  * ```
  */
 
-import { getVisualRect } from "../position/visual_rect.js";
 import { getScrollableParent } from "../scroll/parent_scroll.js";
 import {
   fixedCoordsToScrollableCoords,
   getElementScrollableRect,
   mouseEventToScrollableCoords,
+  scrollableCoordsToFixedCoords,
+  scrollableCoordsToStickyCoords,
   stickyLeftToScrollableLeft,
   stickyTopToScrollableTop,
 } from "../scroll/scrollable_rect.js";
@@ -247,17 +248,11 @@ export const createDragGestureController = (options = {}) => {
         };
         const restoreStyles = setStyles(element, stylesToSet);
         addTeardown(() => {
-          const { left: finalLeft, top: finalTop } = getVisualRect(
-            element,
-            documentElement,
-            {
-              isFixed: true,
-            },
-          );
+          const [leftFixed, topFixed] = scrollableCoordsToFixedCoords(element);
           restoreStyles();
           setStyles(element, {
-            left: `${finalLeft}px`,
-            top: `${finalTop}px`,
+            left: `${leftFixed}px`,
+            top: `${topFixed}px`,
           });
         });
       } else if (fromStickyLeft || fromStickyTop) {
@@ -266,7 +261,6 @@ export const createDragGestureController = (options = {}) => {
         const stylesToSet = {
           position: "relative",
         };
-
         if (isStickyLeft) {
           const leftScrollable = stickyLeftToScrollableLeft(
             fromStickyLeft.value,
@@ -285,17 +279,18 @@ export const createDragGestureController = (options = {}) => {
         }
         const restoreStyles = setStyles(element, stylesToSet);
         addTeardown(() => {
+          const stickyCoords = scrollableCoordsToStickyCoords(
+            element,
+            scrollableParent,
+            { isStickyLeft, isStickyTop },
+          );
           const stylesToSetOnTeardown = {};
-          const elementRect = element.getBoundingClientRect();
-          const scrollableRect = scrollableParent.getBoundingClientRect();
           restoreStyles();
           if (isStickyLeft) {
-            const leftRelative = elementRect.left - scrollableRect.left;
-            stylesToSetOnTeardown.left = `${leftRelative}px`;
+            stylesToSetOnTeardown.left = `${stickyCoords.left}px`;
           }
           if (isStickyTop) {
-            const topRelative = elementRect.top - scrollableRect.top;
-            stylesToSetOnTeardown.top = `${topRelative}px`;
+            stylesToSetOnTeardown.top = `${stickyCoords.top}px`;
           }
           setStyles(element, stylesToSetOnTeardown);
         });
