@@ -281,7 +281,7 @@ export const createDragGestureController = (options = {}) => {
     let visualOffsetY = elementVisuallyImpactedTop - elementToImpactTop;
 
     if (!isStickyLeft) {
-      leftAtStart = elementVisuallyImpactedLeft; // Already in document coordinates
+      leftAtStart = elementVisuallyImpactedLeft; // Already in scrollable coordinates
       // Adjust coordinates for conceptually sticky elements
       // Elements with data-sticky-left appear visually pinned to the left edge regardless of scroll,
       // but their DOM position doesn't reflect this visual behavior. We need to adjust both their
@@ -295,7 +295,7 @@ export const createDragGestureController = (options = {}) => {
       }
     }
     if (!isStickyTop) {
-      topAtStart = elementVisuallyImpactedTop; // Already in document coordinates
+      topAtStart = elementVisuallyImpactedTop; // Already in scrollable coordinates
       const hasStickyTopAttribute =
         elementVisuallyImpacted.hasAttribute(`data-sticky-top`);
       if (hasStickyTopAttribute && !scrollableParentIsDocument) {
@@ -304,7 +304,7 @@ export const createDragGestureController = (options = {}) => {
       }
     }
 
-    // leftAtStart and topAtStart are now in absolute document coordinates
+    // leftAtStart and topAtStart are now in scrollable-parent coordinate space
 
     const gestureInfo = {
       direction,
@@ -925,9 +925,37 @@ export const createDragToMoveGestureController = (options) => {
           hasCrossedVisibleAreaTopOnce,
         } = gestureInfo;
 
-        // Calculate initial position for elementToImpact (initialLeft/initialTop are now visual coordinates)
-        const initialLeftToImpact = leftAtStart - visualOffsetX;
-        const initialTopToImpact = topAtStart - visualOffsetY;
+        const scrollableParentIsDocument = scrollableParent === documentElement;
+
+        // Calculate initial position for elementToImpact
+        // For document scrolling: convert from document coordinates to positioned-parent-relative coordinates
+        // For container scrolling: coordinates are already in the right space
+        let initialLeftToImpact;
+        let initialTopToImpact;
+
+        if (scrollableParentIsDocument) {
+          // For document-level dragging, we need to convert from document coordinates to positioned-parent coordinates
+          const positionedParent =
+            elementToImpact.offsetParent || document.body;
+          const positionedParentRect = positionedParent.getBoundingClientRect();
+          const { scrollLeft: docScrollLeft, scrollTop: docScrollTop } =
+            documentElement;
+
+          // Convert document coordinates to positioned-parent-relative coordinates
+          const positionedParentLeftInDocument =
+            positionedParentRect.left + docScrollLeft;
+          const positionedParentTopInDocument =
+            positionedParentRect.top + docScrollTop;
+
+          initialLeftToImpact =
+            leftAtStart - visualOffsetX - positionedParentLeftInDocument;
+          initialTopToImpact =
+            topAtStart - visualOffsetY - positionedParentTopInDocument;
+        } else {
+          // For container scrolling, coordinates are already in the right space
+          initialLeftToImpact = leftAtStart - visualOffsetX;
+          initialTopToImpact = topAtStart - visualOffsetY;
+        }
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
