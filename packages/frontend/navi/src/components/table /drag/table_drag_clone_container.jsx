@@ -1,10 +1,8 @@
 import { Z_INDEX_DRAGGING_CELL_PLACEHOLDER } from "../z_indexes.js";
 
 import.meta.css = /* css */ `
-  .navi_table th[data-grabbed]::before,
-  .navi_table td[data-grabbed]::before,
-  .navi_table th[data-grabbed]::after,
-  .navi_table td[data-grabbed]::after {
+  .navi_table_cell[data-grabbed]::before,
+  .navi_table_cell[data-grabbed]::after {
     box-shadow: none !important;
   }
 
@@ -15,12 +13,12 @@ import.meta.css = /* css */ `
   }
 
   /* We preprend ".navi_table_container" to ensure it propertly overrides */
-  .navi_table_container .navi_table_drag_clone_container th,
-  .navi_table_container .navi_table_drag_clone_container td {
+  .navi_table_container .navi_table_drag_clone_container .navi_table_cell {
     opacity: 0;
   }
-  .navi_table_container .navi_table_drag_clone_container th[data-grabbed],
-  .navi_table_container .navi_table_drag_clone_container td[data-grabbed] {
+  .navi_table_container
+    .navi_table_drag_clone_container
+    .navi_table_cell[data-grabbed] {
     opacity: 1;
   }
 
@@ -28,20 +26,12 @@ import.meta.css = /* css */ `
     opacity: 0;
   }
 
-  .navi_table_container .navi_table_drag_clone_container th[data-sticky-top],
-  .navi_table_container .navi_table_drag_clone_container td[data-sticky-top] {
-    position: relative;
-  }
-  .navi_table_container .navi_table_drag_clone_container th[data-sticky-left],
-  .navi_table_container .navi_table_drag_clone_container td[data-sticky-left] {
-    position: relative;
-  }
   .navi_table_container
     .navi_table_drag_clone_container
-    th[data-sticky-left][data-sticky-top],
+    .navi_table_cell[data-sticky-left],
   .navi_table_container
     .navi_table_drag_clone_container
-    td[data-sticky-left][data-sticky-top] {
+    .navi_table_cell[data-sticky-top] {
     position: relative;
   }
 

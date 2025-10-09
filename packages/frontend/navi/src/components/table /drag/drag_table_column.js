@@ -77,8 +77,8 @@ export const initDragTableColumnByMousedown = (
     dragEffectCallbackSet.add(callback);
   };
 
-  const tableCell = mousedownEvent.target.closest("th, td");
-  const table = tableCell.closest("table");
+  const tableCell = mousedownEvent.target.closest(".navi_table_cell");
+  const table = tableCell.closest(".navi_table");
   const columnIndex = Array.from(tableCell.parentNode.children).indexOf(
     tableCell,
   );
@@ -110,7 +110,7 @@ export const initDragTableColumnByMousedown = (
 
     // important: only on cells, not on <col> nor <tr>
     const stickyCells = tableClone.querySelectorAll(
-      "th[data-sticky-left], td[data-sticky-left], th[data-sticky-top], td[data-sticky-top]",
+      ".navi_table_cell[data-sticky-left], .navi_table_cell[data-sticky-top]",
     );
     stickyCells.forEach((stickyCell) => {
       const hasXSticky = stickyCell.hasAttribute("data-sticky-left");
@@ -138,7 +138,7 @@ export const initDragTableColumnByMousedown = (
     // as [data-grabbed] are not set
     // Would not be a problem but this ensure we see exactly the table clone right away preventing any possibility
     // of visual glitches
-    const tableCloneCells = tableClone.querySelectorAll("td, th");
+    const tableCloneCells = tableClone.querySelectorAll(".navi_table_cell");
     tableCloneCells.forEach((cellClone) => {
       const cellColumnIndex = Array.from(cellClone.parentNode.children).indexOf(
         cellClone,
@@ -174,9 +174,9 @@ export const initDragTableColumnByMousedown = (
   }
 
   const tableRoot = table.closest(".navi_table_root");
-  const colgroup = table.querySelector("colgroup");
+  const colgroup = table.querySelector(".navi_colgroup");
   const colElements = Array.from(colgroup.children);
-  const colgroupClone = tableClone.querySelector("colgroup");
+  const colgroupClone = tableClone.querySelector(".navi_colgroup");
   const colClone = colgroupClone.children[columnIndex];
   const dropPreview = createDropPreview();
   const dropPreviewUI = dropPreview.querySelector(
@@ -282,8 +282,8 @@ const createTableAttributeSync = (table, tableClone) => {
   // Create a map to quickly find corresponding elements in the clone
   const createElementMap = () => {
     const map = new Map();
-    const cells = table.querySelectorAll("th, td");
-    const cellClones = tableClone.querySelectorAll("th, td");
+    const cells = table.querySelectorAll(".navi_table_cell");
+    const cellClones = tableClone.querySelectorAll(".navi_table_cell");
     for (let i = 0; i < cells.length; i++) {
       if (cellClones[i]) {
         map.set(cells[i], cellClones[i]);
@@ -318,7 +318,7 @@ const createTableAttributeSync = (table, tableClone) => {
   });
 
   // Observe attribute changes on all table cells
-  const cellsToObserve = table.querySelectorAll("th, td");
+  const cellsToObserve = table.querySelectorAll(".navi_table_cell");
   cellsToObserve.forEach((cell) => {
     observer.observe(cell, {
       attributes: true,

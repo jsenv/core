@@ -59,14 +59,14 @@ const initStickyGroup = (
   const updateTableColumns = () => {
     // Find all sticky columns by checking all rows to identify which columns have sticky cells
     const allStickyColumnCells = element.querySelectorAll(
-      "th[data-sticky-left], td[data-sticky-left]",
+      ".navi_table_cell[data-sticky-left]",
     );
     if (allStickyColumnCells.length === 0) {
       return;
     }
 
     // Get the first row to determine column indices (use any row that exists)
-    const firstRow = element.querySelector("tr");
+    const firstRow = element.querySelector(".navi_tr");
     if (!firstRow) {
       return;
     }
@@ -74,7 +74,7 @@ const initStickyGroup = (
     // Group sticky cells by column index
     const stickyColumnsByIndex = new Map();
     allStickyColumnCells.forEach((cell) => {
-      const row = cell.closest("tr");
+      const row = cell.closest(".navi_tr");
       const columnIndex = Array.from(row.children).indexOf(cell);
       if (!stickyColumnsByIndex.has(columnIndex)) {
         stickyColumnsByIndex.set(columnIndex, []);
@@ -98,11 +98,10 @@ const initStickyGroup = (
       });
 
       // Also set CSS variable on corresponding <col> element if it exists
-      const colgroup = element.querySelector("colgroup");
+      const colgroup = element.querySelector(".navi_colgroup");
       if (colgroup) {
-        const correspondingCol = colgroup.querySelector(
-          `col:nth-child(${columnIndex + 1})`,
-        );
+        const colElements = Array.from(colgroup.querySelectorAll(".navi_col"));
+        const correspondingCol = colElements[columnIndex + 1];
         if (correspondingCol) {
           correspondingCol.style.setProperty(LEFT_CSS_VAR, `${leftPosition}px`);
         }
@@ -130,7 +129,7 @@ const initStickyGroup = (
   const updateTableRows = () => {
     // Handle sticky rows by finding cells with data-sticky-top and grouping by row
     const stickyCells = element.querySelectorAll(
-      "th[data-sticky-top], td[data-sticky-top]",
+      ".navi_table_cell[data-sticky-top]",
     );
     if (stickyCells.length === 0) {
       return;
@@ -147,9 +146,10 @@ const initStickyGroup = (
     });
 
     // Convert to array and sort by row position in DOM
+    const allRows = Array.from(element.querySelectorAll(".navi_tr"));
     const stickyRows = Array.from(rowsWithStickyCells.keys()).sort((a, b) => {
-      const aIndex = Array.from(element.querySelectorAll("tr")).indexOf(a);
-      const bIndex = Array.from(element.querySelectorAll("tr")).indexOf(b);
+      const aIndex = allRows.indexOf(a);
+      const bIndex = allRows.indexOf(b);
       return aIndex - bIndex;
     });
 
