@@ -26,23 +26,28 @@ import.meta.css = /* css */ `
 
   .navi_table {
     border-radius: 2px;
-    border-spacing: 0; /* Required for manual border collapse */
+    display: flex;
+    flex-direction: column;
+    width: max-content;
   }
 
   .navi_colgroup {
     display: none;
   }
   .navi_tr {
-    display: block;
+    display: flex;
   }
   .navi_table_cell {
-    display: inline-flex;
+    flex: 1;
+    min-width: 0;
+    flex-shrink: 0;
   }
 
   .navi_table_cell {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    background-color: var(--background-color, transparent);
   }
 
   /* Table borders using ::before pseudo-elements */

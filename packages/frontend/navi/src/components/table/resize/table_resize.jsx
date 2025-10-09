@@ -297,7 +297,7 @@ const updateTableColumnResizerPosition = (tableCell) => {
     `${tableCellHeight}px`,
   );
 
-  const table = tableCell.closest("table");
+  const table = tableCell.closest(".navi_table");
   const scrollableParent = getScrollableParent(table);
   const scrollTop =
     scrollableParent === document.documentElement

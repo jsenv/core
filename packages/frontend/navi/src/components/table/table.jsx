@@ -322,20 +322,16 @@ export const Col = ({ id, width, immovable, backgroundColor }) => {
 };
 export const Thead = ({ children }) => {
   return (
-    <div className="navi_thead">
-      <TableSectionContext.Provider value="head">
-        {children}
-      </TableSectionContext.Provider>
-    </div>
+    <TableSectionContext.Provider value="head">
+      {children}
+    </TableSectionContext.Provider>
   );
 };
 export const Tbody = ({ children }) => {
   return (
-    <div className="navi_tbody">
-      <TableSectionContext.Provider value="body">
-        {children}
-      </TableSectionContext.Provider>
-    </div>
+    <TableSectionContext.Provider value="body">
+      {children}
+    </TableSectionContext.Provider>
   );
 };
 export const Tr = ({ id, height, children }) => {

@@ -27,21 +27,10 @@ import.meta.css = /* css */ `
     --sticky-frontier-ghost-size: 8px;
   }
 
-  .navi_table_cell[data-sticky-top] {
-    position: sticky;
-    top: var(--sticky-group-top, 0);
-    z-index: ${Z_INDEX_STICKY_ROW};
-  }
   .navi_table_cell[data-sticky-left] {
     position: sticky;
     left: var(--sticky-group-left, 0);
     z-index: ${Z_INDEX_STICKY_COLUMN};
-  }
-  .navi_table_cell[data-sticky-left][data-sticky-top] {
-    position: sticky;
-    top: var(--sticky-group-top, 0);
-    left: var(--sticky-group-left, 0);
-    z-index: ${Z_INDEX_STICKY_CORNER};
   }
 
   /* Useful because drag gesture will read this value to detect <col>, <tr> virtual position */
@@ -50,6 +39,10 @@ import.meta.css = /* css */ `
   }
   .navi_tr {
     top: var(--sticky-group-top, 0);
+  }
+  .navi_tr[data-sticky-top] {
+    position: sticky;
+    z-index: ${Z_INDEX_STICKY_ROW};
   }
 
   .navi_table_sticky_frontier {
