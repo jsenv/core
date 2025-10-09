@@ -54,11 +54,15 @@ const scrollableToViewportCoords = (
       return [x, y - documentElement.scrollTop];
     }
     if (side === "obstacle") {
-      // Fixed elements: coordinates are already viewport-relative, no scroll adjustment
+      // All obstacles now use scrollable-parent-relative coordinates
+      // Convert them to viewport coordinates based on positioning
       if (isFixed) {
-        return [x, y];
+        // For document: add scroll offset back to get viewport position
+        const scrollLeft = documentElement.scrollLeft;
+        const scrollTop = documentElement.scrollTop;
+        return [x + scrollLeft, y + scrollTop];
       }
-      // Obstacles: handle per-axis sticky behavior
+      // Regular/sticky obstacles: handle per-axis sticky behavior
       const adjustedX = isStickyLeft ? x : x - documentElement.scrollLeft;
       const adjustedY = isStickyTop ? y : y - documentElement.scrollTop;
       return [adjustedX, adjustedY];
@@ -75,11 +79,13 @@ const scrollableToViewportCoords = (
   const scrollableRect = scrollableParent.getBoundingClientRect();
 
   if (side === "obstacle") {
-    // Fixed elements: coordinates are already viewport-relative for both document and container cases
+    // All obstacles now use scrollable-parent-relative coordinates
     if (isFixed) {
-      return [x, y];
+      // Fixed elements: convert from scrollable-relative back to viewport
+      const scrollableRect = scrollableParent.getBoundingClientRect();
+      return [x + scrollableRect.left, y + scrollableRect.top];
     }
-    // Obstacles in containers: handle per-axis sticky behavior
+    // Regular/sticky obstacles in containers: handle per-axis sticky behavior
     const scrollAdjustX = isStickyLeft ? 0 : scrollableParent.scrollLeft;
     const scrollAdjustY = isStickyTop ? 0 : scrollableParent.scrollTop;
     return [

@@ -1,10 +1,11 @@
 import { getElementScrollableRect } from "../scroll/scrollable_rect.js";
 
 /**
- * Get element bounds in scrollable-parent-relative coordinates, handling both normal positioning and data-sticky-left|top
+ * Get element bounds in scrollable-parent-relative coordinates
  * @param {HTMLElement} element - The element to get bounds for
  * @param {HTMLElement} scrollableParent - The scrollable parent element
- * @returns {Object} Bounds object with left, top, right, bottom properties in scrollable-relative coordinates
+ * @returns {Object} Bounds object with left, top, right, bottom properties.
+ *   All coordinates are in scrollable-parent-relative space for consistency.
  */
 export const getElementBounds = (
   element,
@@ -23,9 +24,9 @@ export const getElementBounds = (
     const elementRect = getElementScrollableRect(element, scrollableParent);
     const { left, top, right, bottom } = elementRect;
     return {
-      isFixed: false,
-      isStickyLeft,
-      isStickyTop,
+      fromFixed: false,
+      fromStickyLeft: isStickyLeft,
+      fromStickyTop: isStickyTop,
       left,
       top,
       right,
@@ -34,11 +35,33 @@ export const getElementBounds = (
   }
   const usePositionFixed = computedStyle.position === "fixed";
   if (usePositionFixed) {
-    // For position:fixed elements, use viewport-relative coordinates adjusted for scroll
-    const elementRect = getElementScrollableRect(element, scrollableParent);
-    const { left, top, right, bottom } = elementRect;
+    // For position:fixed elements, get viewport coordinates and convert to scrollable-relative
+    const elementRect = element.getBoundingClientRect();
+
+    // Convert from viewport coordinates to scrollable-parent-relative coordinates
+    // Fixed elements are positioned relative to viewport, but we need coordinates
+    // relative to the scrollable parent for constraint calculations
+    let scrollableParentRect;
+    if (scrollableParent === document.documentElement) {
+      // For document scrolling, add document scroll offset
+      const { scrollLeft, scrollTop } = document.documentElement;
+      scrollableParentRect = { left: -scrollLeft, top: -scrollTop };
+    } else {
+      // For container scrolling, get the container's position
+      scrollableParentRect = getElementScrollableRect(
+        scrollableParent,
+        scrollableParent,
+      );
+    }
+    const left = elementRect.left - scrollableParentRect.left;
+    const top = elementRect.top - scrollableParentRect.top;
+    const right = elementRect.right - scrollableParentRect.left;
+    const bottom = elementRect.bottom - scrollableParentRect.top;
+
     return {
-      isFixed: true,
+      fromFixed: true,
+      fromStickyLeft: false,
+      fromStickyTop: false,
       left,
       top,
       right,
@@ -54,9 +77,9 @@ export const getElementBounds = (
     const elementRect = getElementScrollableRect(element, scrollableParent);
     const { left, top, right, bottom } = elementRect;
     return {
-      isFixed: false,
-      isStickyLeft: false,
-      isStickyTop: false,
+      fromFixed: false,
+      fromStickyLeft: false,
+      fromStickyTop: false,
       left,
       top,
       right,
@@ -102,9 +125,9 @@ export const getElementBounds = (
   }
 
   return {
-    isFixed: false,
-    isStickyLeft: hasStickyLeftAttribute,
-    isStickyTop: hasStickyTopAttribute,
+    fromFixed: false,
+    fromStickyLeft: hasStickyLeftAttribute,
+    fromStickyTop: hasStickyTopAttribute,
     left,
     top,
     right: left + width,
