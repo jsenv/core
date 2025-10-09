@@ -1,3 +1,5 @@
+import { scrollableCoordsToViewport } from "../scroll/scrollable_rect.js";
+
 export let DRAG_DEBUG_MARKERS = true;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_MARKERS = true;
@@ -44,11 +46,8 @@ const scrollableToViewportCoords = (x, y, scrollableParent, side = null) => {
     }
     if (side === "obstacle") {
       // All obstacles now use scrollable-parent-relative coordinates
-      // Convert them to viewport coordinates based on positioning
-      // Regular/sticky obstacles: handle per-axis sticky behavior
-      const adjustedX = x - documentElement.scrollLeft;
-      const adjustedY = y - documentElement.scrollTop;
-      return [adjustedX, adjustedY];
+      // Use the standard coordinate conversion helper
+      return scrollableCoordsToViewport(x, y, scrollableParent);
     }
     // For other cases: adjust both coordinates for scroll
     return [x - documentElement.scrollLeft, y - documentElement.scrollTop];
@@ -59,15 +58,8 @@ const scrollableToViewportCoords = (x, y, scrollableParent, side = null) => {
 
   if (side === "obstacle") {
     // All obstacles use scrollable-parent-relative coordinates
-    // Convert to viewport coordinates for fixed-positioned markers
-    // Regular obstacles: subtract scroll to keep marker position stable as container scrolls
-    // Sticky obstacles: no scroll adjustment needed (they follow container movement)
-    const scrollAdjustX = -scrollableParent.scrollLeft;
-    const scrollAdjustY = -scrollableParent.scrollTop;
-    return [
-      x + scrollableRect.left + scrollAdjustX,
-      y + scrollableRect.top + scrollAdjustY,
-    ];
+    // Use the standard coordinate conversion helper
+    return scrollableCoordsToViewport(x, y, scrollableParent);
   }
 
   // For boundary markers: convert from container-relative to viewport

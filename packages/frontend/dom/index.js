@@ -41,6 +41,7 @@ export { trapScrollInside } from "./src/scroll/scroll_trap.js";
 export {
   getElementScrollableRect,
   mouseEventToScrollableCoords,
+  scrollableCoordsToViewport,
 } from "./src/scroll/scrollable_rect.js";
 
 // position
