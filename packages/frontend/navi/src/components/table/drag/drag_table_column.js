@@ -5,6 +5,8 @@ import {
   getVisualRect,
 } from "@jsenv/dom";
 
+import { createPubSub } from "../../pub_sub.js";
+
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
     position: absolute;
@@ -62,16 +64,7 @@ export const initDragTableColumnByMousedown = (
   mousedownEvent,
   { onGrab, onDrag, onRelease },
 ) => {
-  const teardownCallbackSet = new Set();
-  const addTeardown = (callback) => {
-    teardownCallbackSet.add(callback);
-  };
-  const teardown = () => {
-    for (const callback of teardownCallbackSet) {
-      callback();
-    }
-    teardownCallbackSet.clear();
-  };
+  const [teardown, addTeardown] = createPubSub();
   const dragEffectCallbackSet = new Set();
   const addDragEffect = (callback) => {
     dragEffectCallbackSet.add(callback);
