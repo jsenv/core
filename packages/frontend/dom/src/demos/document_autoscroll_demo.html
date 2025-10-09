@@ -411,7 +411,10 @@
         const rect = dragElement.getBoundingClientRect();
         // Convert viewport coordinates to scrollable-parent-relative coordinates
         const scrollableParent = getScrollableParent(dragElement);
-        const [xAtStart, yAtStart] = elementRectToScrollableCoords(rect, scrollableParent);
+        const [xAtStart, yAtStart] = elementRectToScrollableCoords(
+          rect,
+          scrollableParent,
+        );
 
         const dragOptions = {
           onGrab: (gestureInfo) => {
