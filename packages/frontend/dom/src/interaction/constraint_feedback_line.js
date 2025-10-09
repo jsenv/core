@@ -4,7 +4,7 @@ export const setupConstraintFeedbackLine = ({ scrollableParent }) => {
   // Track last known mouse position for constraint feedback line during scroll
   let lastMouseX = null;
   let lastMouseY = null;
-  
+
   // Internal function to update constraint feedback line
   const onDrag = (gestureInfo, mousemoveEvent) => {
     if (!mousemoveEvent) {
@@ -25,25 +25,27 @@ export const setupConstraintFeedbackLine = ({ scrollableParent }) => {
     lastMouseY = mouseY;
 
     const { xAtStart, yAtStart } = gestureInfo;
-    
+
     // Calculate current grab point position in viewport coordinates
     // The grab point is where the element was initially grabbed, adjusted for movement
     let currentGrabPointX;
     let currentGrabPointY;
-    
+
     if (scrollableParent === document.documentElement) {
       // For document scrolling: convert from document coordinates to viewport
       const scrollLeft = document.documentElement.scrollLeft;
       const scrollTop = document.documentElement.scrollTop;
-      currentGrabPointX = (xAtStart + gestureInfo.xMove) - scrollLeft;
-      currentGrabPointY = (yAtStart + gestureInfo.yMove) - scrollTop;
+      currentGrabPointX = xAtStart + gestureInfo.xMove - scrollLeft;
+      currentGrabPointY = yAtStart + gestureInfo.yMove - scrollTop;
     } else {
       // For container scrolling: convert from container coordinates to viewport
       const containerRect = scrollableParent.getBoundingClientRect();
       const scrollLeft = scrollableParent.scrollLeft;
       const scrollTop = scrollableParent.scrollTop;
-      currentGrabPointX = containerRect.left + (xAtStart + gestureInfo.xMove) - scrollLeft;
-      currentGrabPointY = containerRect.top + (yAtStart + gestureInfo.yMove) - scrollTop;
+      currentGrabPointX =
+        containerRect.left + (xAtStart + gestureInfo.xMove) - scrollLeft;
+      currentGrabPointY =
+        containerRect.top + (yAtStart + gestureInfo.yMove) - scrollTop;
     }
 
     // Calculate distance between mouse and current grab point
