@@ -193,12 +193,6 @@
           getBoundingClientRect().left: <span id="redLeft">-</span>px
         </div>
         <div class="info-value">
-          getBoundingClientRect().right: <span id="redRight">-</span>px
-        </div>
-        <div class="info-value">
-          getBoundingClientRect().width: <span id="redWidth">-</span>px
-        </div>
-        <div class="info-value">
           offsetLeft: <span id="redOffsetLeft">-</span>px
         </div>
         <div class="info-value">
@@ -210,12 +204,6 @@
         <div class="info-title">🔵 Blue Square Coordinates</div>
         <div class="info-value">
           getBoundingClientRect().left: <span id="blueLeft">-</span>px
-        </div>
-        <div class="info-value">
-          getBoundingClientRect().right: <span id="blueRight">-</span>px
-        </div>
-        <div class="info-value">
-          getBoundingClientRect().width: <span id="blueWidth">-</span>px
         </div>
         <div class="info-value">
           offsetLeft: <span id="blueOffsetLeft">-</span>px
@@ -322,15 +310,11 @@
 
         // Red square info
         redLeft: document.getElementById("redLeft"),
-        redRight: document.getElementById("redRight"),
-        redWidth: document.getElementById("redWidth"),
         redOffsetLeft: document.getElementById("redOffsetLeft"),
         redAbsolute: document.getElementById("redAbsolute"),
 
         // Blue square info
         blueLeft: document.getElementById("blueLeft"),
-        blueRight: document.getElementById("blueRight"),
-        blueWidth: document.getElementById("blueWidth"),
         blueOffsetLeft: document.getElementById("blueOffsetLeft"),
         blueRelative: document.getElementById("blueRelative"),
 
@@ -366,16 +350,12 @@
         // Red square coordinates
         const redRect = elements.redSquare.getBoundingClientRect();
         elements.redLeft.textContent = Math.round(redRect.left);
-        elements.redRight.textContent = Math.round(redRect.right);
-        elements.redWidth.textContent = Math.round(redRect.width);
         elements.redOffsetLeft.textContent = elements.redSquare.offsetLeft;
         elements.redAbsolute.textContent = `left: ${elements.redSquare.style.left}`;
 
         // Blue square coordinates
         const blueRect = elements.blueSquare.getBoundingClientRect();
         elements.blueLeft.textContent = Math.round(blueRect.left);
-        elements.blueRight.textContent = Math.round(blueRect.right);
-        elements.blueWidth.textContent = Math.round(blueRect.width);
         elements.blueOffsetLeft.textContent = elements.blueSquare.offsetLeft;
         elements.blueRelative.textContent = `left: ${elements.blueSquare.style.left}`;
 
@@ -429,8 +409,10 @@
 
       window.autoSetup = function () {
         // Calculate the exact center positions
-        const docCenterScroll = 5000 - window.innerWidth / 2;
-        const containerCenterScroll = 1900; // 2000 - 100 (half container width)
+        const docCenterScroll =
+          document.documentElement.scrollWidth / 2 - window.innerWidth / 2;
+        const containerCenterScroll =
+          elements.scrollableContainer.scrollWidth / 2;
 
         // Scroll document to center
         window.scrollTo({
@@ -469,6 +451,11 @@
 
       // Auto-update every 100ms to catch any changes
       setInterval(updateCoordinateInfo, 100);
+
+      // Automatically run the setup after page loads
+      setTimeout(() => {
+        window.autoSetup();
+      }, 500);
 
       console.log("Coordinates Demo initialized");
       console.log("Document width:", document.body.offsetWidth, "px");
