@@ -40,6 +40,7 @@ export const useTableDragContextValue = ({
   }, [grabTarget, canChangeColumnOrder]);
 };
 
+// TODO: this is not exactly as we want, look like the column should be insert at + 1
 export const insertColumn = (columns, columnIndexA, columnIndexB) => {
   const columnIds = columns.map((col) => col.id);
   const columnIdsWithNewOrder = [];
