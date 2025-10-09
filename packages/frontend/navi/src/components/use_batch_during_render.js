@@ -10,7 +10,7 @@ export const useBatchDuringRender = (callback) => {
   const callbackWithBatching = useMemo(() => {
     return (...args) => {
       if (isRenderingRef.current) {
-        pendingCallArray.push(...args);
+        pendingCallArray.push(args);
         return;
       }
       callback(...args);
