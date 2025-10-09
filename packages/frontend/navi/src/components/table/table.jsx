@@ -545,6 +545,8 @@ export const TableCell = forwardRef((props, ref) => {
   }
   const columnWidth = column.width;
   if (columnWidth !== undefined) {
+    innerStyle.minWidth = `${columnWidth}px`;
+    innerStyle.width = `${columnWidth}px`;
     innerStyle.maxWidth = `${columnWidth}px`;
   }
   const rowHeight = row.height;

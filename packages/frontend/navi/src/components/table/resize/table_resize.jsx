@@ -661,7 +661,7 @@ const findPreviousTableRow = (currentRow) => {
 
   // Otherwise, get all rows in the table and find the previous one
   const table = currentRow.closest(".navi_table");
-  const allRows = Array.from(table.querySelectorAll(".mavi_tr"));
+  const allRows = Array.from(table.querySelectorAll(".navi_tr"));
   const currentIndex = allRows.indexOf(currentRow);
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
