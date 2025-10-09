@@ -379,7 +379,7 @@ export const createDragGesture = (options) => {
             leftAtStart,
             topAtStart,
             element: scrollableParent,
-            name: "scrollable area",
+            name: "scrollable_area",
           },
         );
       };
@@ -433,7 +433,7 @@ export const createDragGesture = (options) => {
           leftAtStart,
           topAtStart,
           element: visibleConstraintElement,
-          name: "visible area",
+          name: "visible_area",
         });
       };
       constraintFunctions.push(visibleAreaConstraintFunction);
@@ -445,7 +445,7 @@ export const createDragGesture = (options) => {
           leftAtStart,
           topAtStart,
           element: scrollableParent,
-          name: "custom area",
+          name: "custom_area",
         });
       };
       constraintFunctions.push(customAreaConstraintFunction);

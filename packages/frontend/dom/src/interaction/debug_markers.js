@@ -106,75 +106,65 @@ export const setupVisualMarkers = ({ direction, positionedParent }) => {
       // Create dynamic constraint markers based on current element size
       const parentRect = positionedParent.getBoundingClientRect();
 
-      // For debug markers, we'll show bounds constraints and obstacle zones
-      let leftBound = 0;
-      let topBound = 0;
-      let rightBound = Infinity;
-      let bottomBound = Infinity;
-      // Extract bounds from bounds constraints and collect obstacle data
+      // Process each constraint individually to preserve names
       for (const constraint of constraints) {
         if (constraint.type === "bounds") {
           const { bounds } = constraint;
-          leftBound = Math.max(leftBound, bounds.left);
-          topBound = Math.max(topBound, bounds.top);
-          rightBound = Math.min(rightBound, bounds.right);
-          bottomBound = Math.min(bottomBound, bounds.bottom);
+
+          // Create individual markers for each bound with constraint name
+          if (direction.x) {
+            if (bounds.left !== undefined) {
+              const leftBoundViewport = parentRect.left + bounds.left;
+              markersToCreate.push({
+                name: `${constraint.name}.left`,
+                x: leftBoundViewport,
+                y: 0,
+                color: "128 0 128", // purple
+                side: "left",
+              });
+            }
+            if (bounds.right !== undefined) {
+              // For visual clarity, show rightBound at the right edge of the element
+              // when element is positioned at rightBound (not the left edge position)
+              const rightBoundViewport =
+                parentRect.left + bounds.right + elementWidth;
+              markersToCreate.push({
+                name: `${constraint.name}.right`,
+                x: rightBoundViewport,
+                y: 0,
+                color: "128 0 128", // purple
+                side: "right",
+              });
+            }
+          }
+          if (direction.y) {
+            if (bounds.top !== undefined) {
+              const topBoundViewport = parentRect.top + bounds.top;
+              markersToCreate.push({
+                name: `${constraint.name}.top`,
+                x: 0,
+                y: topBoundViewport,
+                color: "128 0 128", // purple
+                side: "top",
+              });
+            }
+            if (bounds.bottom !== undefined) {
+              // For visual clarity, show bottomBound at the bottom edge of the element
+              // when element is positioned at bottomBound (not the left edge position)
+              const bottomBoundViewport =
+                parentRect.top + bounds.bottom + elementHeight;
+              markersToCreate.push({
+                name: `${constraint.name}.bottom`,
+                x: 0,
+                y: bottomBoundViewport,
+                color: "128 0 128", // purple
+                side: "bottom",
+              });
+            }
+          }
         } else if (constraint.type === "obstacle") {
           const obstacleMarker = createObstacleMarker(constraint, parentRect);
           currentConstraintMarkers.push(obstacleMarker);
-        }
-      }
-
-      bound_markers: {
-        if (direction.x) {
-          if (leftBound > 0) {
-            const leftBoundViewport = parentRect.left + leftBound;
-            markersToCreate.push({
-              name: "leftBound",
-              x: leftBoundViewport,
-              y: 0,
-              color: "128 0 128", // purple
-              side: "left",
-            });
-          }
-          if (rightBound !== Infinity) {
-            // For visual clarity, show rightBound at the right edge of the element
-            // when element is positioned at rightBound (not the left edge position)
-            const rightBoundViewport =
-              parentRect.left + rightBound + elementWidth;
-            markersToCreate.push({
-              name: "rightBound",
-              x: rightBoundViewport,
-              y: 0,
-              color: "128 0 128", // purple
-              side: "right",
-            });
-          }
-        }
-        if (direction.y) {
-          if (topBound > 0) {
-            const topBoundViewport = parentRect.top + topBound;
-            markersToCreate.push({
-              name: "topBound",
-              x: 0,
-              y: topBoundViewport,
-              color: "128 0 128", // purple
-              side: "top",
-            });
-          }
-          if (bottomBound !== Infinity) {
-            // For visual clarity, show bottomBound at the bottom edge of the element
-            // when element is positioned at bottomBound (not the left edge position)
-            const bottomBoundViewport =
-              parentRect.top + bottomBound + elementHeight;
-            markersToCreate.push({
-              name: "bottomBound",
-              x: 0,
-              y: bottomBoundViewport,
-              color: "128 0 128", // purple
-              side: "bottom",
-            });
-          }
         }
       }
 
