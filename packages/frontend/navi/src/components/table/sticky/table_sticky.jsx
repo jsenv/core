@@ -29,27 +29,27 @@ import.meta.css = /* css */ `
 
   .navi_table_cell[data-sticky-top] {
     position: sticky;
-    top: var(--sticky-group-top, 0);
+    top: var(--sticky-group-item-top, 0);
     z-index: ${Z_INDEX_STICKY_ROW};
   }
   .navi_table_cell[data-sticky-left] {
     position: sticky;
-    left: var(--sticky-group-left, 0);
+    left: var(--sticky-group-item-left, 0);
     z-index: ${Z_INDEX_STICKY_COLUMN};
   }
   .navi_table_cell[data-sticky-left][data-sticky-top] {
     position: sticky;
-    top: var(--sticky-group-top, 0);
-    left: var(--sticky-group-left, 0);
+    top: var(--sticky-group-item-top, 0);
+    left: var(--sticky-group-item-left, 0);
     z-index: ${Z_INDEX_STICKY_CORNER};
   }
 
   /* Useful because drag gesture will read this value to detect <col>, <tr> virtual position */
   .navi_col {
-    left: var(--sticky-group-left, 0);
+    left: var(--sticky-group-item-left, 0);
   }
   .navi_tr {
-    top: var(--sticky-group-top, 0);
+    top: var(--sticky-group-item-top, 0);
   }
 
   .navi_table_sticky_frontier {
@@ -61,7 +61,7 @@ import.meta.css = /* css */ `
   .navi_table_sticky_frontier[data-left] {
     top: var(--sticky-group-top-frontier, 0px);
     height: calc(var(--table-height) - var(--sticky-group-top-frontier));
-    left: var(--sticky-group-left-frontier, 0px);
+    left: var(--sticky-frontier-left, 0px);
     width: var(--sticky-frontier-size);
     background: linear-gradient(
       to right,
@@ -71,8 +71,8 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-top] {
-    left: var(--sticky-group-left-frontier, 0px);
-    width: calc(var(--table-width) - var(--sticky-group-left-frontier));
+    left: var(--sticky-frontier-left, 0px);
+    width: calc(var(--table-width) - var(--sticky-frontier-left));
     top: calc(var(--table-top) + var(--sticky-group-top-frontier));
     height: var(--sticky-frontier-size);
     background: linear-gradient(

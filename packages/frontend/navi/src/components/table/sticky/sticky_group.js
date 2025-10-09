@@ -21,10 +21,12 @@ export const useStickyGroup = (
   }, [elementSelector]);
 };
 
-const LEFT_CSS_VAR = "--sticky-group-left";
-const TOP_CSS_VAR = "--sticky-group-top";
-const CONTAINER_LEFT_FRONTIER_CSS_VAR = "--sticky-group-left-frontier";
-const CONTAINER_TOP_FRONTIER_CSS_VAR = "--sticky-group-top-frontier";
+const ITEM_LEFT_VAR = "--sticky-group-item-left";
+const ITEM_TOP_VAR = "--sticky-group-item-top";
+const FRONTIER_LEFT_VAR = "--sticky-group-left";
+const FRONTIER_TOP_VAR = "--sticky-group-top";
+const FRONTIER_LEFT_VIEWPORT_VAR = "--sticky-group-left-viewport";
+const FRONTIER_TOP_VIEWPORT_VAR = "--sticky-group-top-viewport";
 
 /**
  * Creates a sticky group that manages positioning for multiple sticky elements
@@ -56,12 +58,15 @@ const initStickyGroup = (
       updateLinearPositions();
     }
   };
+
+  let cleanupTableRowEffect;
   const updateGridPositions = () => {
+    cleanupTableRowEffect?.();
+
     // Handle table grid - update both horizontal and vertical sticky elements
     updateTableColumns();
     updateTableRows();
   };
-
   const updateTableColumns = () => {
     // Find all sticky columns by checking all rows to identify which columns have sticky cells
     const allStickyColumnCells = element.querySelectorAll(
@@ -100,7 +105,7 @@ const initStickyGroup = (
 
       // Set CSS variable on all sticky cells in this column
       cellsInColumn.forEach((cell) => {
-        cell.style.setProperty(LEFT_CSS_VAR, `${leftPosition}px`);
+        cell.style.setProperty(ITEM_LEFT_VAR, `${leftPosition}px`);
       });
 
       // Also set CSS variable on corresponding <col> element if it exists
@@ -109,7 +114,10 @@ const initStickyGroup = (
         const colElements = Array.from(colgroup.querySelectorAll(".navi_col"));
         const correspondingCol = colElements[columnIndex + 1];
         if (correspondingCol) {
-          correspondingCol.style.setProperty(LEFT_CSS_VAR, `${leftPosition}px`);
+          correspondingCol.style.setProperty(
+            ITEM_LEFT_VAR,
+            `${leftPosition}px`,
+          );
         }
       }
 
@@ -121,13 +129,10 @@ const initStickyGroup = (
         cumulativeWidth += referenceCell.getBoundingClientRect().width;
       }
     });
-    container.style.setProperty(
-      CONTAINER_LEFT_FRONTIER_CSS_VAR,
-      `${cumulativeWidth}px`,
-    );
+    container.style.setProperty(FRONTIER_LEFT_VAR, `${cumulativeWidth}px`);
     if (elementReceivingCumulativeStickyPosition) {
       elementReceivingCumulativeStickyPosition.style.setProperty(
-        CONTAINER_LEFT_FRONTIER_CSS_VAR,
+        FRONTIER_LEFT_VAR,
         `${cumulativeWidth}px`,
       );
     }
@@ -160,17 +165,18 @@ const initStickyGroup = (
     });
 
     let cumulativeHeight = 0;
+    let lastStickyRow;
     stickyRows.forEach((row, index) => {
       const rowCells = rowsWithStickyCells.get(row);
       const topPosition = index === 0 ? 0 : cumulativeHeight;
 
       // Set CSS variable on all sticky cells in this row
       rowCells.forEach((cell) => {
-        cell.style.setProperty(TOP_CSS_VAR, `${topPosition}px`);
+        cell.style.setProperty(ITEM_TOP_VAR, `${topPosition}px`);
       });
 
       // Also set CSS variable on the <tr> element itself
-      row.style.setProperty(TOP_CSS_VAR, `${topPosition}px`);
+      row.style.setProperty(ITEM_TOP_VAR, `${topPosition}px`);
 
       // Update cumulative height for next row
       if (index === 0) {
@@ -178,17 +184,19 @@ const initStickyGroup = (
       } else {
         cumulativeHeight += row.getBoundingClientRect().height;
       }
+      lastStickyRow = row;
     });
-    container.style.setProperty(
-      CONTAINER_TOP_FRONTIER_CSS_VAR,
-      `${cumulativeHeight}px`,
-    );
+    container.style.setProperty(FRONTIER_TOP_VAR, `${cumulativeHeight}px`);
     if (elementReceivingCumulativeStickyPosition) {
       elementReceivingCumulativeStickyPosition.style.setProperty(
-        CONTAINER_TOP_FRONTIER_CSS_VAR,
+        FRONTIER_TOP_VAR,
         `${cumulativeHeight}px`,
       );
     }
+
+    cleanupTableRowEffect = visualPositionEffect(lastStickyRow, ({ top }) => {
+      container.style.setProperty("", `${top + cumulativeHeight}px`);
+    });
   };
 
   const updateLinearPositions = () => {
@@ -201,7 +209,7 @@ const initStickyGroup = (
     const firstElement = stickyElements[0];
     const isHorizontal = firstElement.hasAttribute("data-sticky-left");
     const dimensionProperty = isHorizontal ? "width" : "height";
-    const cssVariableName = isHorizontal ? LEFT_CSS_VAR : TOP_CSS_VAR;
+    const cssVariableName = isHorizontal ? ITEM_LEFT_VAR : ITEM_TOP_VAR;
 
     let cumulativeSize = 0;
     stickyElements.forEach((element, index) => {
@@ -216,16 +224,11 @@ const initStickyGroup = (
         cumulativeSize += element.getBoundingClientRect()[dimensionProperty];
       }
     });
-    const containerCssVariableName = isHorizontal
-      ? CONTAINER_LEFT_FRONTIER_CSS_VAR
-      : CONTAINER_TOP_FRONTIER_CSS_VAR;
-    container.style.setProperty(
-      containerCssVariableName,
-      `${cumulativeSize}px`,
-    );
+    const frontierVar = isHorizontal ? FRONTIER_LEFT_VAR : FRONTIER_TOP_VAR;
+    container.style.setProperty(frontierVar, `${cumulativeSize}px`);
     if (elementReceivingCumulativeStickyPosition) {
       elementReceivingCumulativeStickyPosition.style.setProperty(
-        containerCssVariableName,
+        frontierVar,
         `${cumulativeSize}px`,
       );
     }
@@ -286,11 +289,12 @@ const initStickyGroup = (
   };
 };
 
-const observeVisualPosition = (element, callback) => {
+const visualPositionEffect = (element, callback) => {
   const updatePosition = () => {
     const { left, top } = getVisualRect(element);
     callback({ left, top });
   };
+  updatePosition();
 
   window.addEventListener("scroll", updatePosition, { passive: true });
   window.addEventListener("resize", updatePosition);
