@@ -394,8 +394,10 @@ export const createDragGesture = (options) => {
         let bounds;
         if (visibleConstraintElement === documentElement) {
           const { clientWidth, clientHeight } = documentElement;
-          const left = 0;
-          const top = 0;
+          let left = 0;
+          let top = 0;
+          left -= positionedParentRect.left;
+          top -= positionedParentRect.top;
           bounds = {
             left,
             top,
