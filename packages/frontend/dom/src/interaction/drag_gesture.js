@@ -362,6 +362,7 @@ export const createDragGestureController = (options = {}) => {
     let constraintFeedbackLine;
     if (showConstraintFeedbackLine) {
       constraintFeedbackLine = setupConstraintFeedbackLine({
+        scrollableParent,
         positionedParent,
         scrollLeftAtStart,
         scrollTopAtStart,
