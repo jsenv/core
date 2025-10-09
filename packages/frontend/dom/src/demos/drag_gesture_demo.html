@@ -951,6 +951,7 @@
       // Function to set up drag gesture for any rectangle
       function setupDragGesture(rectangle, caseLabel) {
         rectangle.addEventListener("mousedown", (event) => {
+          event.preventDefault(); // prevent drag to select which would allow to scroll
           createDragToMoveGestureController({
             backdrop: false,
             onGrab: (gestureInfo) => {
