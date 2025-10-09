@@ -12,18 +12,16 @@ import.meta.css = /* css */ `
     background-color: var(--selection-background-color);
   }
 
+  /* One border */
   .navi_table_cell[data-selection-border-top]::after {
     box-shadow: inset 0 1px 0 0 var(--selection-border-color);
   }
-
   .navi_table_cell[data-selection-border-right]::after {
     box-shadow: inset -1px 0 0 0 var(--selection-border-color);
   }
-
   .navi_table_cell[data-selection-border-bottom]::after {
     box-shadow: inset 0 -1px 0 0 var(--selection-border-color);
   }
-
   .navi_table_cell[data-selection-border-left]::after {
     box-shadow: inset 1px 0 0 0 var(--selection-border-color);
   }
@@ -34,66 +32,52 @@ import.meta.css = /* css */ `
       inset 0 1px 0 0 var(--selection-border-color),
       inset -1px 0 0 0 var(--selection-border-color);
   }
-
   .navi_table_cell[data-selection-border-top][data-selection-border-bottom]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color);
   }
-
   .navi_table_cell[data-selection-border-top][data-selection-border-left]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
-
-  .navi_table_cell
-    [data-selection-border-right][data-selection-border-bottom]::after {
+  .navi_table_cell[data-selection-border-right][data-selection-border-bottom]::after {
     box-shadow:
       inset -1px 0 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color);
   }
-
   .navi_table_cell[data-selection-border-right][data-selection-border-left]::after {
     box-shadow:
       inset -1px 0 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
-
-  .navi_table_cell
-    [data-selection-border-bottom][data-selection-border-left]::after {
+  .navi_table_cell[data-selection-border-bottom][data-selection-border-left]::after {
     box-shadow:
       inset 0 -1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
 
   /* Three border combinations */
-  .navi_table_cell
-    [data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after {
+  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
       inset -1px 0 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color);
   }
-
-  .navi_table_cell
-    [data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after {
+  .navi_table_cell[data-selection-border-top][data-selection-border-bottom][data-selection-border-left]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
-
-  .navi_table_cell
-    [data-selection-border-top][data-selection-border-right][data-selection-border-left]::after {
+  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-left]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
       inset -1px 0 0 0 var(--selection-border-color),
       inset 1px 0 0 0 var(--selection-border-color);
   }
-
-  .navi_table_cell
-    [data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
+  .navi_table_cell[data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
     box-shadow:
       inset -1px 0 0 0 var(--selection-border-color),
       inset 0 -1px 0 0 var(--selection-border-color),
@@ -101,8 +85,7 @@ import.meta.css = /* css */ `
   }
 
   /* Four border combinations (full selection) */
-  .navi_table_cell
-    [data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
+  .navi_table_cell[data-selection-border-top][data-selection-border-right][data-selection-border-bottom][data-selection-border-left]::after {
     box-shadow:
       inset 0 1px 0 0 var(--selection-border-color),
       inset -1px 0 0 0 var(--selection-border-color),
