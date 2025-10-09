@@ -27,7 +27,12 @@ import.meta.css = /* css */ `
   }
 `;
 
-export const LoadableInlineElement = ({ children, height, ...props }) => {
+export const LoadableInlineElement = ({
+  children,
+  width,
+  height,
+  ...props
+}) => {
   const actionName = props["data-action"];
   if (actionName) {
     delete props["data-action"];
@@ -37,6 +42,7 @@ export const LoadableInlineElement = ({ children, height, ...props }) => {
     <span
       className="navi_inline_wrapper"
       style={{
+        ...(width ? { width } : {}),
         ...(height ? { height } : {}),
       }}
       data-action={actionName}

@@ -65,6 +65,7 @@ export const Editable = forwardRef((props, ref) => {
     pattern,
     wrapperProps,
     autoSelect = true,
+    width,
     height,
     ...rest
   } = props;
@@ -133,6 +134,7 @@ export const Editable = forwardRef((props, ref) => {
       minLength={minLength}
       maxLength={maxLength}
       pattern={pattern}
+      width={width}
       height={height}
       onCancel={(e) => {
         if (valueSignal) {
