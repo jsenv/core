@@ -204,5 +204,6 @@ This guide should help AI coding agents understand the architecture, patterns, a
 - Prefer named things (named params, named export over default export for example).
 - Put helpers functions at the bottom of the file by default
 - Put constants simple variables (everything except functions) above the function using them. For the exported function is means top of the file after imports. For helper function it means above them.
-- Don't write tests on your initiative.
-- Don't write documentation on your initiative.
+- Never write tests on your initiative.
+- Never rite documentation on your initiative.
+- Never use Math.max/Math.min. Code becomes hard to follow. Prefer explicit branching.
