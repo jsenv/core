@@ -4,7 +4,7 @@ import { getElementSelector } from "./element_log.js";
 
 export const createObstacleConstraintsFromQuerySelector = (
   scrollableElement,
-  { name, obstacleAttributeName, gestureInfo },
+  { name, obstacleAttributeName, gestureInfo, isDraggedElementSticky = false },
 ) => {
   const obstacles = scrollableElement.querySelectorAll(
     `[${obstacleAttributeName}]`,
@@ -31,9 +31,13 @@ export const createObstacleConstraintsFromQuerySelector = (
     }
 
     obstacleConstraintFunctions.push(() => {
-      const forceOriginalPositionEvenIfSticky =
-        !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
-        !gestureInfo.hasCrossedVisibleAreaTopOnce;
+      // Only apply the "before crossing visible area" logic when dragging sticky elements
+      // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
+      const forceOriginalPositionEvenIfSticky = isDraggedElementSticky
+        ? !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
+          !gestureInfo.hasCrossedVisibleAreaTopOnce
+        : true;
+
       const obstacleBounds = getElementScrollableRect(
         obstacle,
         gestureInfo.scrollableParent,
