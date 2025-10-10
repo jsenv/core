@@ -152,7 +152,7 @@ const createStickyFrontierOnAxis = (
       element: frontier,
       side: hasPrimary ? primarySide : oppositeSide,
       bounds: frontierBounds,
-      name: `Sticky Frontier (${getElementSelector(frontier)}) - side: ${hasPrimary ? primarySide : oppositeSide}`,
+      name: `sticky_frontier_${hasPrimary ? primarySide : oppositeSide} (${getElementSelector(frontier)})`,
     };
     matchingStickyFrontiers.push(stickyFrontierObject);
   }
