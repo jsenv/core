@@ -590,8 +590,8 @@
         // Since viewport moves with scroll, we need to subtract scroll to get the correct relative position
         dragCloneContainer.style.width = `${tableRect.width}px`;
         dragCloneContainer.style.height = `${tableRect.height}px`;
-        dragCloneContainer.style.left = `${tableRect.left - window.scrollX}px`;
-        dragCloneContainer.style.top = `${tableRect.top - window.scrollY}px`;
+        dragCloneContainer.style.left = `${tableRect.left + window.scrollX}px`;
+        dragCloneContainer.style.top = `${tableRect.top + window.scrollY}px`;
 
         // Clone the entire table content structure
         const tableContent = document.getElementById("tableContent");
