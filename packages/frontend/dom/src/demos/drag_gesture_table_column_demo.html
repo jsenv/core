@@ -159,7 +159,6 @@
         height: 100%;
         overflow: hidden;
         z-index: 10000;
-        pointer-events: none;
       }
 
       /* Drag clone container */
@@ -503,16 +502,31 @@
         const scrollLeft = window.scrollX;
         const stickyActivated = scrollLeft > 100; // Sticky activates when first column starts disappearing
         scrollInfo.textContent = `Scroll: ${scrollLeft}px (sticky ${stickyActivated ? "ACTIVATED" : "not activated"})`;
+
+        // Update viewport position to follow scroll during drag
+        updateViewportPosition();
       });
 
       // Create drag clone container (will be populated during drag)
       let dragCloneViewport = null;
       let dragCloneContainer = null;
 
+      function updateViewportPosition() {
+        if (dragCloneViewport) {
+          // Update viewport position to follow scroll
+          dragCloneViewport.style.left = `${window.scrollX}px`;
+          dragCloneViewport.style.top = `${window.scrollY}px`;
+        }
+      }
+
       function createDragClone() {
         // Create the viewport container that prevents scrollbar influence
         dragCloneViewport = document.createElement("div");
         dragCloneViewport.className = "drag-clone-viewport";
+
+        // Position viewport at current scroll position
+        dragCloneViewport.style.left = `${window.scrollX}px`;
+        dragCloneViewport.style.top = `${window.scrollY}px`;
 
         // Create the clone container
         dragCloneContainer = document.createElement("div");
@@ -523,11 +537,11 @@
         const tableRect = tableContainer.getBoundingClientRect();
 
         // Position the clone exactly above the original table
-        // Using absolute positioning, so we need to account for scroll offsets
+        // Since viewport moves with scroll, use viewport-relative positioning
         dragCloneContainer.style.width = `${tableRect.width}px`;
         dragCloneContainer.style.height = `${tableRect.height}px`;
-        dragCloneContainer.style.left = `${tableRect.left + window.scrollX}px`;
-        dragCloneContainer.style.top = `${tableRect.top + window.scrollY}px`;
+        dragCloneContainer.style.left = `${tableRect.left}px`;
+        dragCloneContainer.style.top = `${tableRect.top}px`;
 
         // Clone the entire table content structure
         const tableContent = document.getElementById("tableContent");
