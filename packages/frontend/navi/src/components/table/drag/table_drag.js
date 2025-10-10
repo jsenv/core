@@ -2,8 +2,9 @@ import {
   createDragToMoveGestureController,
   createMouseDragThresholdPromise,
   getDropTargetInfo,
+  getElementScrollableRect,
   getScrollableParent,
-  getVisualRect,
+  scrollableCoordsToViewport,
   stickyAsRelativeCoords,
 } from "@jsenv/dom";
 import { createContext } from "preact";
@@ -13,7 +14,7 @@ import { createPubSub } from "../../pub_sub.js";
 import { useStableCallback } from "../../use_stable_callback.js";
 import { Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
-const DEBUG_VISUAL = false;
+const DEBUG_VISUAL = true;
 
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
@@ -290,7 +291,7 @@ export const initDragTableColumnByMousedown = async (
     });
   }
 
-  const tableRoot = table.closest(".navi_table_root");
+  // const tableRoot = table.closest(".navi_table_root");
   const colgroup = table.querySelector(".navi_colgroup");
   const colElements = Array.from(colgroup.children);
   const colgroupClone = tableClone.querySelector(".navi_colgroup");
@@ -298,19 +299,19 @@ export const initDragTableColumnByMousedown = async (
   const dropPreview = createDropPreview();
 
   drop_preview: {
-    const tableRootRect = tableRoot.getBoundingClientRect();
-    let left = tableRootRect.left;
-    let top = tableRootRect.top;
-    const { scrollLeft, scrollTop } = document.documentElement;
-    left += scrollLeft;
-    top += scrollTop;
-    dropPreview.style.setProperty("--table-left", `${left}px`);
-    dropPreview.style.setProperty("--table-top", `${top}px`);
-    dropPreview.style.setProperty("--table-width", `${tableRootRect.width}px`);
-    dropPreview.style.setProperty(
-      "--table-height",
-      `${tableRootRect.height}px`,
-    );
+    const updateDropPreview = () => {
+      const tableRect = table.getBoundingClientRect();
+      let left = tableRect.left;
+      let top = tableRect.top;
+      const { scrollLeft, scrollTop } = document.documentElement;
+      left += scrollLeft;
+      top += scrollTop;
+      dropPreview.style.setProperty("--table-left", `${left}px`);
+      dropPreview.style.setProperty("--table-top", `${top}px`);
+      dropPreview.style.setProperty("--table-width", `${tableRect.width}px`);
+      dropPreview.style.setProperty("--table-height", `${tableRect.height}px`);
+    };
+
     const dropCandidateElements = colElements.filter(
       (col) =>
         !(col.getAttribute("data-drag-obstacle") || "").includes("move-column"),
@@ -327,23 +328,38 @@ export const initDragTableColumnByMousedown = async (
         return;
       }
 
-      const targetColumnVisualRect = getVisualRect(targetColumn, tableRoot);
-      let targetColumnVisualLeft = targetColumnVisualRect.left;
+      const scrollableParent = getScrollableParent(table);
+      const targetColumnVisualRect = getElementScrollableRect(
+        targetColumn,
+        scrollableParent,
+      );
+
+      // Convert from scrollable coordinates to viewport coordinates for positioning
+      let targetColumnScrollableLeft = targetColumnVisualRect.left;
       if (dropColumnIndex > columnIndex) {
-        targetColumnVisualLeft += targetColumnVisualRect.width;
+        targetColumnScrollableLeft += targetColumnVisualRect.width;
         dropPreview.setAttribute("data-after", "");
       } else {
         dropPreview.removeAttribute("data-after");
       }
+
+      const [targetColumnViewportLeft] = scrollableCoordsToViewport(
+        targetColumnScrollableLeft,
+        0, // y coordinate not needed for horizontal positioning
+        scrollableParent,
+      );
+
       dropPreview.style.setProperty(
         "--table-column-drop-target-left",
-        `${targetColumnVisualLeft}px`,
+        `${targetColumnViewportLeft}px`,
       );
       dropPreview.setAttribute("data-drop-column-index", dropColumnIndex);
       dropPreview.setAttribute("data-visible", "");
     };
 
+    updateDropPreview();
     addDragEffect((gestureInfo) => {
+      updateDropPreview();
       const dropTargetInfo = getDropTargetInfo(
         gestureInfo,
         dropCandidateElements,
