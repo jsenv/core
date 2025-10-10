@@ -2,7 +2,6 @@ import {
   createDragToMoveGestureController,
   getElementScrollableRect,
   getScrollableParent,
-  scrollableCoordsToPositionedParentCoords,
 } from "@jsenv/dom";
 
 import {
@@ -378,15 +377,10 @@ const initResizeByMousedown = (
       tableCell,
       scrollableParent,
     );
-    const tableContainerScrollableRect = getElementScrollableRect(
-      tableContainer,
-      scrollableParent,
-    );
 
-    const cellStartRelative =
-      axis === "x"
-        ? tableCellScrollableRect.left - tableContainerScrollableRect.left
-        : tableCellScrollableRect.top - tableContainerScrollableRect.top;
+    // Calculate size and position based on axis
+    const cellStartScrollable =
+      axis === "x" ? tableCellScrollableRect.left : tableCellScrollableRect.top;
 
     // Calculate bounds based on axis
     const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
@@ -401,51 +395,27 @@ const initResizeByMousedown = (
         ? maxSize
         : defaultMaxSize;
 
-    let customStartBound = cellStartRelative + minCellSize;
+    // Constraint bounds in scrollable coordinates
+    const customStartBound = cellStartScrollable + minCellSize;
     const maxExpandAmount = maxCellSize - currentSize;
-    let customEndBound = cellStartRelative + currentSize + maxExpandAmount;
+    const customEndBound = cellStartScrollable + currentSize + maxExpandAmount;
 
     if (axis === "x") {
-      const [leftPositioned] = scrollableCoordsToPositionedParentCoords(
-        customStartBound,
-        0,
-        resizer,
-        scrollableParent,
-      );
-      const [rightPositioned] = scrollableCoordsToPositionedParentCoords(
-        customEndBound,
-        0,
-        resizer,
-        scrollableParent,
-      );
-
       return {
         // Detect sticky positioning for advanced constraint handling
         areaConstraint: tableCellScrollableRect.fromStickyLeft
           ? "visible"
           : "none",
-        customAreaConstraint: { left: leftPositioned, right: rightPositioned },
+        customAreaConstraint: { left: customStartBound, right: customEndBound },
       };
     }
 
-    const [, topPositioned] = scrollableCoordsToPositionedParentCoords(
-      0,
-      customStartBound,
-      resizer,
-      scrollableParent,
-    );
-    const [, bottomPositioned] = scrollableCoordsToPositionedParentCoords(
-      0,
-      customEndBound,
-      resizer,
-      scrollableParent,
-    );
     return {
       // Detect sticky positioning for advanced constraint handling
       areaConstraint: tableCellScrollableRect.fromStickyTop
         ? "visible"
         : "none",
-      customAreaConstraint: { top: topPositioned, bottom: bottomPositioned },
+      customAreaConstraint: { top: customStartBound, bottom: customEndBound },
     };
   })();
 
