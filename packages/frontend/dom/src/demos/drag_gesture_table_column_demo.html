@@ -53,7 +53,6 @@
       }
 
       .table-container {
-        width: 1100px;
         height: 300px; /* Reduced from 600px */
         position: relative;
         margin: 0 auto;
@@ -110,6 +109,10 @@
         background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
         border-color: #a93226;
         z-index: 3;
+      }
+
+      #column2.sticky-column {
+        left: 100px; /* Position second sticky column next to first */
       }
 
       .table-column[data-being-dragged] {
@@ -651,8 +654,9 @@
 
       // Generic function to handle column dragging
       function setupColumnDrag(columnConfig) {
-        const { header, column, representation, name, displayName } = columnConfig;
-        
+        const { header, column, representation, name, displayName } =
+          columnConfig;
+
         header.addEventListener("mousedown", (event) => {
           console.log(`${displayName} drag started`, {
             header,
@@ -698,7 +702,8 @@
 
               removeDragClone();
               updateDragInfo(gestureInfo, "Released");
-              elementInfo.textContent = "Click and drag either sticky column header";
+              elementInfo.textContent =
+                "Click and drag either sticky column header";
             },
           }).grabViaMouse(event, {
             element: header, // Clicked element (header)
@@ -714,15 +719,15 @@
         column: column2,
         representation: columnRep2,
         name: "2",
-        displayName: "Sticky Column"
+        displayName: "Sticky Column",
       });
 
       setupColumnDrag({
         header: column1Header,
         column: column1,
         representation: columnRep1,
-        name: "1", 
-        displayName: "Column 1"
+        name: "1",
+        displayName: "Column 1",
       });
 
       function updateDragInfo(gestureInfo, status) {
