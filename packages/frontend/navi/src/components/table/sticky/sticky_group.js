@@ -108,7 +108,7 @@ const initStickyGroup = (
       const colgroup = element.querySelector(".navi_colgroup");
       if (colgroup) {
         const colElements = Array.from(colgroup.querySelectorAll(".navi_col"));
-        const correspondingCol = colElements[columnIndex + 1];
+        const correspondingCol = colElements[columnIndex];
         if (correspondingCol) {
           correspondingCol.style.setProperty(
             ITEM_LEFT_VAR,
