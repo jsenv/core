@@ -312,50 +312,36 @@
     <div class="info">
       <h1>Drag Gesture Demo - Visual Impact (elementVisuallyImpacted)</h1>
       <p>
-        This demo demonstrates the advanced
-        <code>elementVisuallyImpacted</code> feature where:
+        This demo demonstrates the advanced <code>elementVisuallyImpacted</code> feature where:
       </p>
       <ul>
         <li>
           <strong>Blue handle:</strong> The element you grab and drag from
         </li>
         <li>
-          <strong>Red container:</strong> The element that physically moves
-          (elementToImpact)
+          <strong>Red container:</strong> The element that physically moves (elementToImpact)
         </li>
         <li>
-          <strong>Orange inner element:</strong> The element used for visual
-          calculations (elementVisuallyImpacted)
+          <strong>Orange inner element:</strong> The element used for visual calculations (elementVisuallyImpacted)
         </li>
         <li>
-          <strong>Key concept:</strong> Constraints and auto-scroll are
-          calculated based on the inner element's position, not the container
+          <strong>Key concept:</strong> Constraints and auto-scroll are calculated based on the inner element's position, not the container
         </li>
         <li>
-          <strong>Real-world use case:</strong> Moving a table column where you
-          grab the header handle, move the entire column container, but track a
-          specific cell for collision detection
+          <strong>Real-world use case:</strong> Moving a table column where you grab the header handle, move the entire column container, but track a specific cell for collision detection
         </li>
       </ul>
     </div>
 
     <div class="flow-diagram">
       <h4>Drag Flow</h4>
-      <span class="flow-step" style="border-color: #4a90e2; color: #4a90e2"
-        >Grab Handle</span
-      >
+      <span class="flow-step" style="border-color: #4a90e2; color: #4a90e2;">Grab Handle</span>
       <span class="flow-arrow">→</span>
-      <span class="flow-step" style="border-color: #e74c3c; color: #e74c3c"
-        >Move Container</span
-      >
+      <span class="flow-step" style="border-color: #e74c3c; color: #e74c3c;">Move Container</span>
       <span class="flow-arrow">→</span>
-      <span class="flow-step" style="border-color: #f39c12; color: #f39c12"
-        >Track Inner Element</span
-      >
+      <span class="flow-step" style="border-color: #f39c12; color: #f39c12;">Track Inner Element</span>
       <span class="flow-arrow">→</span>
-      <span class="flow-step" style="border-color: #95a5a6; color: #95a5a6"
-        >Check Obstacles</span
-      >
+      <span class="flow-step" style="border-color: #95a5a6; color: #95a5a6;">Check Obstacles</span>
     </div>
 
     <div class="debug-toggle">
@@ -385,18 +371,22 @@
       </div>
     </div>
 
-    <!-- Demo 1: Basic Handle → Container → Inner -->
+    <!-- Demo: Basic Handle → Container → Inner -->
     <div class="demo-section">
       <h2 class="demo-title">
-        Demo 1: Grab Handle → Move Container → Track Inner Element
+        Demo: Grab Handle → Move Container → Track Inner Element
       </h2>
-      <div class="container" id="demo1Container">
+      <div class="container" id="demoContainer">
         <div class="content">
           <!-- Drag handle positioned at top of container -->
-          <div class="drag-handle" id="handle1" style="left: 200px; top: 80px">
+          <div
+            class="drag-handle"
+            id="handle1"
+            style="left: 200px; top: 80px"
+          >
             GRAB
           </div>
-
+          
           <!-- Container element that physically moves -->
           <div
             class="container-element"
@@ -417,15 +407,15 @@
           <!-- Obstacles that interact with the inner element -->
           <div
             class="obstacle"
-            data-drag-obstacle="demo1"
+            data-drag-obstacle="demo"
             style="left: 400px; top: 150px; width: 80px; height: 60px"
           >
             OBSTACLE 1
           </div>
-
+          
           <div
             class="obstacle"
-            data-drag-obstacle="demo1"
+            data-drag-obstacle="demo"
             style="left: 250px; top: 280px; width: 100px; height: 80px"
           >
             OBSTACLE 2
@@ -433,7 +423,7 @@
 
           <div
             class="obstacle"
-            data-drag-obstacle="demo1"
+            data-drag-obstacle="demo"
             style="left: 520px; top: 320px; width: 120px; height: 60px"
           >
             OBSTACLE 3
@@ -442,180 +432,10 @@
       </div>
     </div>
 
-    <!-- Demo 2: Complex Offset Scenario -->
-    <div class="demo-section">
-      <h2 class="demo-title">
-        Demo 2: Complex Offset (inner element positioned differently in
-        container)
-      </h2>
-      <div class="container" id="demo2Container">
-        <div class="content">
-          <!-- Handle positioned separately -->
-          <div class="drag-handle" id="handle2" style="left: 100px; top: 200px">
-            GRAB
-          </div>
-
-          <!-- Large container that moves -->
-          <div
-            class="container-element"
-            id="container2"
-            style="left: 300px; top: 150px; width: 200px; height: 150px"
-          >
-            BIG CONTAINER
-            <!-- Inner element with significant offset within container -->
-            <div
-              class="inner-element"
-              id="inner2"
-              style="
-                margin-left: 80px;
-                margin-top: 60px;
-                width: 80px;
-                height: 50px;
-                background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-              "
-            >
-              OFFSET TRACKED
-            </div>
-          </div>
-
-          <!-- More obstacles -->
-          <div
-            class="obstacle"
-            data-drag-obstacle="demo2"
-            style="left: 450px; top: 100px; width: 90px; height: 70px"
-          >
-            BARRIER A
-          </div>
-
-          <div
-            class="obstacle"
-            data-drag-obstacle="demo2"
-            style="left: 350px; top: 350px; width: 120px; height: 60px"
-          >
-            BARRIER B
-          </div>
-
-          <div
-            class="obstacle"
-            data-drag-obstacle="demo2"
-            style="left: 600px; top: 200px; width: 80px; height: 100px"
-          >
-            WALL
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Demo 3: Multiple Systems -->
-    <div class="demo-section">
-      <h2 class="demo-title">Demo 3: Multiple Independent Systems</h2>
-      <div class="container" id="demo3Container">
-        <div class="content">
-          <!-- First system -->
-          <div
-            class="drag-handle"
-            id="handle3a"
-            style="
-              left: 50px;
-              top: 300px;
-              background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
-            "
-          >
-            H1
-          </div>
-
-          <div
-            class="container-element"
-            id="container3a"
-            style="
-              left: 150px;
-              top: 280px;
-              width: 120px;
-              height: 80px;
-              background: linear-gradient(135deg, #27ae60 0%, #1e8449 100%);
-            "
-          >
-            SYS A
-            <div
-              class="inner-element"
-              id="inner3a"
-              style="
-                margin-left: 40px;
-                margin-top: 20px;
-                width: 50px;
-                height: 30px;
-              "
-            >
-              A-IN
-            </div>
-          </div>
-
-          <!-- Second system -->
-          <div
-            class="drag-handle"
-            id="handle3b"
-            style="
-              left: 500px;
-              top: 400px;
-              background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%);
-            "
-          >
-            H2
-          </div>
-
-          <div
-            class="container-element"
-            id="container3b"
-            style="
-              left: 400px;
-              top: 450px;
-              width: 160px;
-              height: 100px;
-              background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%);
-            "
-          >
-            SYSTEM B
-            <div
-              class="inner-element"
-              id="inner3b"
-              style="
-                margin-left: 60px;
-                margin-top: 40px;
-                width: 70px;
-                height: 35px;
-                background: linear-gradient(135deg, #ff6b35 0%, #e55039 100%);
-              "
-            >
-              B-INNER
-            </div>
-          </div>
-
-          <!-- Shared obstacles -->
-          <div
-            class="obstacle"
-            data-drag-obstacle="demo3"
-            style="left: 300px; top: 350px; width: 80px; height: 120px"
-          >
-            SHARED WALL
-          </div>
-
-          <div
-            class="obstacle"
-            data-drag-obstacle="demo3"
-            style="left: 200px; top: 450px; width: 150px; height: 60px"
-          >
-            LONG BARRIER
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Position Display -->
     <div class="position-display" id="positionDisplay">
       <div class="label">Drag Position Info</div>
-      <div id="demo1Info">Demo 1: Not dragging</div>
-      <div id="demo2Info">Demo 2: Not dragging</div>
-      <div id="demo3Info">Demo 3: Not dragging</div>
+      <div id="demo1Info">Demo: Not dragging</div>
       <div id="elementInfo">Elements: Hover to see relationships</div>
     </div>
 
@@ -629,8 +449,6 @@
 
       const debugCheckbox = document.getElementById("debugMarkersCheckbox");
       const demo1Info = document.getElementById("demo1Info");
-      const demo2Info = document.getElementById("demo2Info");
-      const demo3Info = document.getElementById("demo3Info");
       const elementInfo = document.getElementById("elementInfo");
 
       // Handle debug markers toggle
@@ -643,167 +461,47 @@
         }
       });
 
-      // Demo 1: Basic Handle → Container → Inner
+      // Demo: Basic Handle → Container → Inner
       const handle1 = document.getElementById("handle1");
       const container1 = document.getElementById("container1");
       const inner1 = document.getElementById("inner1");
 
       handle1.addEventListener("mousedown", (event) => {
-        console.log("Demo 1 - Complex drag started", {
+        console.log("Demo - Complex drag started", {
           handle: handle1,
           container: container1,
           inner: inner1,
         });
 
         createDragToMoveGestureController({
-          name: "demo1",
+          name: "demo",
           backdrop: false,
           obstacleAttributeName: "data-drag-obstacle",
           onGrab: (gestureInfo) => {
-            console.log("Demo 1 - Grab started", gestureInfo);
+            console.log("Demo - Grab started", gestureInfo);
             handle1.setAttribute("data-dragging", "");
             container1.setAttribute("data-being-moved", "");
             inner1.setAttribute("data-being-tracked", "");
             updateDemo1Info(gestureInfo, "Grabbed");
           },
           onDragStart: (gestureInfo) => {
-            console.log("Demo 1 - Drag started", gestureInfo);
+            console.log("Demo - Drag started", gestureInfo);
             updateDemo1Info(gestureInfo, "Drag Start");
           },
           onDrag: (gestureInfo, phase) => {
             updateDemo1Info(gestureInfo, `Dragging (${phase})`);
           },
           onRelease: (gestureInfo) => {
-            console.log("Demo 1 - Drag released", gestureInfo);
+            console.log("Demo - Drag released", gestureInfo);
             handle1.removeAttribute("data-dragging");
             container1.removeAttribute("data-being-moved");
             inner1.removeAttribute("data-being-tracked");
             updateDemo1Info(gestureInfo, "Released");
           },
         }).grabViaMouse(event, {
-          element: handle1, // Grab from the handle
-          elementToImpact: container1, // Move the container
-          elementVisuallyImpacted: inner1, // But track the inner element for constraints
-        });
-      });
-
-      // Demo 2: Complex Offset Scenario
-      const handle2 = document.getElementById("handle2");
-      const container2 = document.getElementById("container2");
-      const inner2 = document.getElementById("inner2");
-
-      handle2.addEventListener("mousedown", (event) => {
-        console.log("Demo 2 - Complex offset drag started");
-
-        createDragToMoveGestureController({
-          name: "demo2",
-          backdrop: false,
-          obstacleAttributeName: "data-drag-obstacle",
-          onGrab: (gestureInfo) => {
-            console.log("Demo 2 - Grab started", gestureInfo);
-            handle2.setAttribute("data-dragging", "");
-            container2.setAttribute("data-being-moved", "");
-            inner2.setAttribute("data-being-tracked", "");
-            updateDemo2Info(gestureInfo, "Grabbed");
-          },
-          onDragStart: (gestureInfo) => {
-            console.log("Demo 2 - Drag started", gestureInfo);
-            updateDemo2Info(gestureInfo, "Drag Start");
-          },
-          onDrag: (gestureInfo, phase) => {
-            updateDemo2Info(gestureInfo, `Dragging (${phase})`);
-          },
-          onRelease: (gestureInfo) => {
-            console.log("Demo 2 - Drag released", gestureInfo);
-            handle2.removeAttribute("data-dragging");
-            container2.removeAttribute("data-being-moved");
-            inner2.removeAttribute("data-being-tracked");
-            updateDemo2Info(gestureInfo, "Released");
-          },
-        }).grabViaMouse(event, {
-          element: handle2,
-          elementToImpact: container2,
-          elementVisuallyImpacted: inner2,
-        });
-      });
-
-      // Demo 3: Multiple Independent Systems
-      const handle3a = document.getElementById("handle3a");
-      const container3a = document.getElementById("container3a");
-      const inner3a = document.getElementById("inner3a");
-      const handle3b = document.getElementById("handle3b");
-      const container3b = document.getElementById("container3b");
-      const inner3b = document.getElementById("inner3b");
-
-      // System A
-      handle3a.addEventListener("mousedown", (event) => {
-        console.log("Demo 3A - System A drag started");
-
-        createDragToMoveGestureController({
-          name: "demo3",
-          backdrop: false,
-          obstacleAttributeName: "data-drag-obstacle",
-          onGrab: (gestureInfo) => {
-            console.log("Demo 3A - Grab started", gestureInfo);
-            handle3a.setAttribute("data-dragging", "");
-            container3a.setAttribute("data-being-moved", "");
-            inner3a.setAttribute("data-being-tracked", "");
-            updateDemo3Info("A", gestureInfo, "Grabbed");
-          },
-          onDragStart: (gestureInfo) => {
-            console.log("Demo 3A - Drag started", gestureInfo);
-            updateDemo3Info("A", gestureInfo, "Drag Start");
-          },
-          onDrag: (gestureInfo, phase) => {
-            updateDemo3Info("A", gestureInfo, `Dragging (${phase})`);
-          },
-          onRelease: (gestureInfo) => {
-            console.log("Demo 3A - Drag released", gestureInfo);
-            handle3a.removeAttribute("data-dragging");
-            container3a.removeAttribute("data-being-moved");
-            inner3a.removeAttribute("data-being-tracked");
-            updateDemo3Info("A", gestureInfo, "Released");
-          },
-        }).grabViaMouse(event, {
-          element: handle3a,
-          elementToImpact: container3a,
-          elementVisuallyImpacted: inner3a,
-        });
-      });
-
-      // System B
-      handle3b.addEventListener("mousedown", (event) => {
-        console.log("Demo 3B - System B drag started");
-
-        createDragToMoveGestureController({
-          name: "demo3",
-          backdrop: false,
-          obstacleAttributeName: "data-drag-obstacle",
-          onGrab: (gestureInfo) => {
-            console.log("Demo 3B - Grab started", gestureInfo);
-            handle3b.setAttribute("data-dragging", "");
-            container3b.setAttribute("data-being-moved", "");
-            inner3b.setAttribute("data-being-tracked", "");
-            updateDemo3Info("B", gestureInfo, "Grabbed");
-          },
-          onDragStart: (gestureInfo) => {
-            console.log("Demo 3B - Drag started", gestureInfo);
-            updateDemo3Info("B", gestureInfo, "Drag Start");
-          },
-          onDrag: (gestureInfo, phase) => {
-            updateDemo3Info("B", gestureInfo, `Dragging (${phase})`);
-          },
-          onRelease: (gestureInfo) => {
-            console.log("Demo 3B - Drag released", gestureInfo);
-            handle3b.removeAttribute("data-dragging");
-            container3b.removeAttribute("data-being-moved");
-            inner3b.removeAttribute("data-being-tracked");
-            updateDemo3Info("B", gestureInfo, "Released");
-          },
-        }).grabViaMouse(event, {
-          element: handle3b,
-          elementToImpact: container3b,
-          elementVisuallyImpacted: inner3b,
+          element: handle1,                    // Grab from the handle
+          elementToImpact: container1,         // Move the container
+          elementVisuallyImpacted: inner1,     // But track the inner element for constraints
         });
       });
 
@@ -816,80 +514,28 @@
         const innerX = innerRect.left + window.scrollX;
         const innerY = innerRect.top + window.scrollY;
 
-        demo1Info.innerHTML = `Demo 1: ${status} | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
-      }
-
-      function updateDemo2Info(gestureInfo, status) {
-        const containerRect = container2.getBoundingClientRect();
-        const innerRect = inner2.getBoundingClientRect();
-
-        const containerX = containerRect.left + window.scrollX;
-        const containerY = containerRect.top + window.scrollY;
-        const innerX = innerRect.left + window.scrollX;
-        const innerY = innerRect.top + window.scrollY;
-
-        demo2Info.innerHTML = `Demo 2: ${status} | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
-      }
-
-      function updateDemo3Info(system, gestureInfo, status) {
-        const currentInfo = demo3Info.textContent;
-        const otherSystemInfo = currentInfo.includes(
-          `${system === "A" ? "B" : "A"}:`,
-        )
-          ? currentInfo
-              .split(" | ")
-              .find((part) => part.includes(`${system === "A" ? "B" : "A"}:`))
-          : `${system === "A" ? "B" : "A"}: Ready`;
-
-        const thisInfo = `${system}: ${status}`;
-        demo3Info.innerHTML =
-          system === "A"
-            ? `Demo 3: ${thisInfo} | ${otherSystemInfo}`
-            : `Demo 3: ${otherSystemInfo} | ${thisInfo}`;
+        demo1Info.innerHTML = `Demo: ${status} | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
       }
 
       // Add hover effects to show element relationships
       const elementPairs = [
-        {
-          handle: handle1,
-          container: container1,
-          inner: inner1,
-          name: "Demo 1",
-        },
-        {
-          handle: handle2,
-          container: container2,
-          inner: inner2,
-          name: "Demo 2",
-        },
-        {
-          handle: handle3a,
-          container: container3a,
-          inner: inner3a,
-          name: "Demo 3A",
-        },
-        {
-          handle: handle3b,
-          container: container3b,
-          inner: inner3b,
-          name: "Demo 3B",
-        },
+        { handle: handle1, container: container1, inner: inner1, name: "Demo" },
       ];
 
       elementPairs.forEach(({ handle, container, inner, name }) => {
         handle.addEventListener("mouseenter", () => {
           elementInfo.textContent = `${name}: Handle → Container → Inner Element`;
         });
-
+        
         container.addEventListener("mouseenter", () => {
           elementInfo.textContent = `${name}: Container (moves physically, contains inner)`;
         });
-
+        
         inner.addEventListener("mouseenter", () => {
           elementInfo.textContent = `${name}: Inner Element (tracked for constraints)`;
         });
 
-        [handle, container, inner].forEach((el) => {
+        [handle, container, inner].forEach(el => {
           el.addEventListener("mouseleave", () => {
             elementInfo.textContent = "Elements: Hover to see relationships";
           });
@@ -901,32 +547,13 @@
         if (!handle1.hasAttribute("data-dragging")) {
           const containerRect = container1.getBoundingClientRect();
           const innerRect = inner1.getBoundingClientRect();
-
+          
           const containerX = containerRect.left + window.scrollX;
           const containerY = containerRect.top + window.scrollY;
           const innerX = innerRect.left + window.scrollX;
           const innerY = innerRect.top + window.scrollY;
 
-          demo1Info.innerHTML = `Demo 1: Ready | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
-        }
-
-        if (!handle2.hasAttribute("data-dragging")) {
-          const containerRect = container2.getBoundingClientRect();
-          const innerRect = inner2.getBoundingClientRect();
-
-          const containerX = containerRect.left + window.scrollX;
-          const containerY = containerRect.top + window.scrollY;
-          const innerX = innerRect.left + window.scrollX;
-          const innerY = innerRect.top + window.scrollY;
-
-          demo2Info.innerHTML = `Demo 2: Ready | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
-        }
-
-        if (
-          !handle3a.hasAttribute("data-dragging") &&
-          !handle3b.hasAttribute("data-dragging")
-        ) {
-          demo3Info.innerHTML = "Demo 3: A: Ready | B: Ready";
+          demo1Info.innerHTML = `Demo: Ready | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
         }
       }
 
