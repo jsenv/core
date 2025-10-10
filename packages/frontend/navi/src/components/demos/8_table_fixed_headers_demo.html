@@ -174,26 +174,30 @@
           <div className="demo-container">
             <h1>Table Fixed Headers Demo - Large Dataset</h1>
 
-            <div className="info">
-              <h3>Testing Fixed Row/Column Headers with Cell Editing</h3>
-              <p>
-                This demo contains a large dataset (50 rows × 10 columns = 500
-                cells) in a constrained container to force scrolling. The goal
-                is to test and implement fixed first row (header) and first
-                column behavior, plus cell editing functionality.
-              </p>
-            </div>
+            <details>
+              <summary>Instructions for Testing</summary>
 
-            <p>
-              <strong>Current behavior:</strong> The table will scroll normally
-              with editable cells.
-              <br />
-              <strong>Cell editing:</strong> Double-click any data cell to edit
-              its value. Press Enter to save or Escape to cancel.
-              <br />
-              <strong>Desired behavior:</strong> First row and first column
-              should remain fixed while scrolling.
-            </p>
+              <div className="info">
+                <h3>Testing Fixed Row/Column Headers with Cell Editing</h3>
+                <p>
+                  This demo contains a large dataset (50 rows × 10 columns = 500
+                  cells) in a constrained container to force scrolling. The goal
+                  is to test and implement fixed first row (header) and first
+                  column behavior, plus cell editing functionality.
+                </p>
+              </div>
+
+              <p>
+                <strong>Current behavior:</strong> The table will scroll
+                normally with editable cells.
+                <br />
+                <strong>Cell editing:</strong> Double-click any data cell to
+                edit its value. Press Enter to save or Escape to cancel.
+                <br />
+                <strong>Desired behavior:</strong> First row and first column
+                should remain fixed while scrolling.
+              </p>
+            </details>
 
             <div>
               <button
