@@ -31,29 +31,32 @@ export const startDragToResizeGesture = (
     return null;
   }
 
-  const dragToResizeGesture = createDragGestureController({
+  const dragToResizeGestureController = createDragGestureController({
     gestureAttribute: "data-resizing",
-    onDragStart,
+    onDragStart: (...args) => {
+      onDragStart?.(...args);
+    },
     onDrag,
-    onRelease,
+    onRelease: (...args) => {
+      elementWithDataResizeHandle.removeAttribute("data-active");
+      onRelease?.(...args);
+    },
   });
-
   elementWithDataResizeHandle.setAttribute("data-active", "");
-  dragToResizeGesture.addTeardown(() => {
-    elementWithDataResizeHandle.removeAttribute("data-active");
-  });
-
-  dragToResizeGesture.grabViaMouse(mousedownEvent, {
-    element: elementToResize,
-    direction: resizeDirection,
-    cursor:
-      resizeDirection.x && resizeDirection.y
-        ? "nwse-resize"
-        : resizeDirection.x
-          ? "ew-resize"
-          : "ns-resize",
-    ...options,
-  });
+  const dragToResizeGesture = dragToResizeGestureController.grabViaMouse(
+    mousedownEvent,
+    {
+      element: elementToResize,
+      direction: resizeDirection,
+      cursor:
+        resizeDirection.x && resizeDirection.y
+          ? "nwse-resize"
+          : resizeDirection.x
+            ? "ew-resize"
+            : "ns-resize",
+      ...options,
+    },
+  );
   return dragToResizeGesture;
 };
 

@@ -434,18 +434,20 @@ const initResizeByMousedown = (
       onGrab?.();
     },
     onDrag,
+    onDragStart: () => {
+      resizer.setAttribute("data-resizing", "");
+      // onDragStart?.(...args);
+    },
     onRelease: (gesture) => {
+      const styleProperty = axis === "x" ? "left" : "top";
+      resizer.style[styleProperty] = "";
+      resizer.removeAttribute("data-resizing");
+
       const sizeChange = axis === "x" ? gesture.xMove : gesture.yMove;
       const newSize = currentSize + sizeChange;
       onRelease(newSize, currentSize);
     },
   });
-  dragToMoveGestureController.addTeardown(() => {
-    const styleProperty = axis === "x" ? "left" : "top";
-    resizer.style[styleProperty] = "";
-    resizer.removeAttribute("data-resizing");
-  });
-  resizer.setAttribute("data-resizing", "");
   dragToMoveGestureController.grabViaMouse(mousedownEvent, {
     element: resizer,
   });

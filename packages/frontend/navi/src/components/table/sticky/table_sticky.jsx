@@ -502,15 +502,14 @@ const initMoveStickyFrontierByMousedown = (
       onDrag?.(gestureInfo, futureFrontierIndex);
     },
     onRelease: (gesture) => {
+      previewElement.removeAttribute("data-visible");
+      previewElement.style.removeProperty(previewVariableName);
+      ghostElement.removeAttribute("data-visible");
+      ghostElement.style.removeProperty(ghostVariableName);
+      ghostElement.style[axis === "x" ? "left" : "top"] = ""; // reset position set by drag
+
       onRelease?.(gesture, futureFrontierIndex);
     },
-  });
-  moveFrontierGestureController.addTeardown(() => {
-    previewElement.removeAttribute("data-visible");
-    previewElement.style.removeProperty(previewVariableName);
-    ghostElement.removeAttribute("data-visible");
-    ghostElement.style.removeProperty(ghostVariableName);
-    ghostElement.style[axis === "x" ? "left" : "top"] = ""; // reset position set by drag
   });
   moveFrontierGestureController.grabViaMouse(mousedownEvent, {
     element: ghostElement,

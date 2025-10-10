@@ -1,6 +1,7 @@
 import {
   createDragToMoveGestureController,
   createMouseDragThresholdPromise,
+  createPubSub,
   getDropTargetInfo,
   getElementScrollableRect,
   getScrollableParent,
@@ -10,7 +11,6 @@ import {
 import { createContext } from "preact";
 import { useMemo, useState } from "preact/hooks";
 
-import { createPubSub } from "../../pub_sub.js";
 import { useStableCallback } from "../../use_stable_callback.js";
 import { Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
@@ -399,13 +399,11 @@ export const initDragTableColumnByMousedown = async (
         onDrag?.(gestureInfo, dropColumnIndex);
       },
       onRelease: (gestureInfo) => {
+        if (!DEBUG_VISUAL) {
+          teardown();
+        }
         onRelease?.(gestureInfo, dropColumnIndex);
       },
-    });
-    dragToMoveGestureController.addTeardown(() => {
-      if (!DEBUG_VISUAL) {
-        teardown();
-      }
     });
     const dragToMoveGesture = dragToMoveGestureController.grabViaMouse(
       mousedownEvent,

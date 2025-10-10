@@ -1,6 +1,7 @@
-import { useLayoutEffect } from "preact/hooks";
+// TODO: move this to @jsenv/dom (the initStickyGroup part, not the useLayoutEffect)
 
-import { createPubSub } from "../../pub_sub.js";
+import { createPubSub } from "@jsenv/dom";
+import { useLayoutEffect } from "preact/hooks";
 
 // React hook version for easy integration
 export const useStickyGroup = (

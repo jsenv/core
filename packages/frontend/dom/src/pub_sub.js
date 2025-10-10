@@ -1,10 +1,12 @@
 export const createPubSub = () => {
   const callbackSet = new Set();
+
   const publish = (...args) => {
     for (const callback of callbackSet) {
       callback(...args);
     }
   };
+
   const subscribe = (callback) => {
     if (typeof callback !== "function") {
       throw new TypeError("callback must be a function");
@@ -14,5 +16,10 @@ export const createPubSub = () => {
       callbackSet.delete(callback);
     };
   };
-  return [publish, subscribe];
+
+  const clear = () => {
+    callbackSet.clear();
+  };
+
+  return [publish, subscribe, clear];
 };

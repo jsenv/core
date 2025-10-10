@@ -1,3 +1,4 @@
+import { createPubSub } from "@jsenv/dom";
 import { createContext } from "preact";
 import {
   useContext,
@@ -9,7 +10,6 @@ import {
 
 import { useNavState } from "../../browser_integration/browser_integration.js";
 import { FormContext } from "../action_execution/form_context.js";
-import { createPubSub } from "../pub_sub.js";
 import { useInitialValue } from "../use_initial_value.js";
 
 const DEBUG_UI_STATE_CONTROLLER = false;

@@ -67,6 +67,7 @@
  * ```
  */
 
+import { createPubSub } from "../pub_sub.js";
 import { getScrollableParent } from "../scroll/parent_scroll.js";
 import {
   elementToFixedCoords,
@@ -156,11 +157,6 @@ export const createDragGestureController = (options = {}) => {
     lifecycle,
   } = options;
 
-  const teardownCallbackSet = new Set();
-  const addTeardown = (callback) => {
-    teardownCallbackSet.add(callback);
-  };
-
   const grab = (
     element,
     {
@@ -177,6 +173,7 @@ export const createDragGestureController = (options = {}) => {
       return null;
     }
 
+    const [teardown, addTeardown] = createPubSub();
     const scrollableParent = getScrollableParent(element);
     const scrollableParentIsDocument = scrollableParent === documentElement;
     const scrollLeftAtStart = scrollableParent.scrollLeft;
@@ -272,7 +269,17 @@ export const createDragGestureController = (options = {}) => {
           // The current 'left' is the scrollable coordinate, which includes scroll offset
           // The position at zero scroll would be: left + scrollLeftAtStart
           const positionAtZeroScroll = left + scrollLeftAtStart;
+          const originalVisualOffsetX = left - elementToImpactLeft;
           visualOffsetX = positionAtZeroScroll - elementToImpactLeft;
+          console.log("[VISUAL OFFSET DEBUG]", {
+            element: elementVisuallyImpacted,
+            left,
+            scrollLeftAtStart,
+            elementToImpactLeft,
+            positionAtZeroScroll,
+            originalVisualOffsetX,
+            adjustedVisualOffsetX: visualOffsetX,
+          });
         }
       }
       if (fromStickyTopAttr) {
@@ -809,10 +816,7 @@ export const createDragGestureController = (options = {}) => {
         isRelease: true,
         interactionType,
       });
-      for (const teardownCallback of teardownCallbackSet) {
-        teardownCallback();
-      }
-      teardownCallbackSet.clear();
+      teardown();
       onRelease?.(gestureInfo);
     };
 
@@ -822,6 +826,7 @@ export const createDragGestureController = (options = {}) => {
       drag,
       release,
       gestureInfo,
+      addTeardown,
     };
     return dragGesture;
   };
@@ -867,7 +872,7 @@ export const createDragGestureController = (options = {}) => {
     };
     document.addEventListener("mousemove", dragViaMouse);
     document.addEventListener("mouseup", releaseViaMouse);
-    addTeardown(() => {
+    dragGesture.addTeardown(() => {
       document.removeEventListener("mousemove", dragViaMouse);
       document.removeEventListener("mouseup", releaseViaMouse);
     });
@@ -880,7 +885,6 @@ export const createDragGestureController = (options = {}) => {
   return {
     grab,
     grabViaMouse,
-    addTeardown,
   };
 };
 
@@ -911,6 +915,19 @@ export const createDragToMoveGestureController = (options) => {
           hasCrossedVisibleAreaTopOnce,
         } = gestureInfo;
 
+        // Debug logging for document scrolling + left case
+        if (scrollableParent === document.documentElement && direction.x) {
+          console.log("[LIFECYCLE DEBUG]", {
+            element: elementVisuallyImpacted,
+            elementToImpact,
+            leftAtStart,
+            scrollLeftAtStart,
+            visualOffsetX,
+            isStickyLeftOrHasStickyLeftAttr,
+            xMove: gestureInfo.xMove,
+          });
+        }
+
         // Calculate initial position for elementToImpact
         // For sticky elements, adjust the positioning calculation based on scrollable parent type
         let leftForPositioning = leftAtStart;
@@ -919,6 +936,12 @@ export const createDragToMoveGestureController = (options) => {
           if (scrollableParent === document.documentElement) {
             // For document scrolling, calculate position at zero scroll
             leftForPositioning = leftAtStart + scrollLeftAtStart;
+            console.log("[POSITIONING DEBUG]", {
+              element: elementVisuallyImpacted,
+              leftAtStart,
+              scrollLeftAtStart,
+              leftForPositioning,
+            });
           } else {
             // For container scrolling, use leftAtStart directly
             leftForPositioning = leftAtStart;
@@ -940,6 +963,17 @@ export const createDragToMoveGestureController = (options) => {
             elementToImpact,
             scrollableParent,
           );
+
+        // Debug the coordinate transformation for document scrolling + left case
+        if (scrollableParent === document.documentElement && direction.x) {
+          console.log("[COORDINATE TRANSFORM DEBUG]", {
+            element: elementVisuallyImpacted,
+            leftForPositioning,
+            visualOffsetX,
+            inputToTransform: leftForPositioning - visualOffsetX,
+            initialLeftToImpact,
+          });
+        }
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
@@ -985,6 +1019,19 @@ export const createDragToMoveGestureController = (options) => {
             const elementPosition = initialPosition + moveAmount;
             if (elementToImpact) {
               elementToImpact.style[styleProperty] = `${elementPosition}px`;
+              // Debug final positioning for document scrolling + left case
+              if (
+                scrollableParent === document.documentElement &&
+                styleProperty === "left"
+              ) {
+                console.log("[FINAL POSITIONING DEBUG]", {
+                  element: elementToImpact,
+                  styleProperty,
+                  initialPosition,
+                  moveAmount,
+                  elementPosition,
+                });
+              }
             }
           }
         };
