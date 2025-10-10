@@ -66,6 +66,7 @@ const dropPreviewTemplate = /* html */ `
     class="navi_table_column_drop_preview"
   >
     <div class="arrow_positioner" data-top="">
+      <!-- this is an arrow pointing down -->
       <svg fill="currentColor" viewBox="0 0 30.727 30.727" xml:space="preserve">
         <path
           d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0
@@ -75,10 +76,11 @@ const dropPreviewTemplate = /* html */ `
     </div>
     <div class="navi_table_column_drop_preview_line"></div>
     <div class="arrow_positioner" data-bottom="">
+      <!-- this is an arrow pointing up -->
       <svg fill="currentColor" viewBox="0 0 30.727 30.727" xml:space="preserve">
         <path
-          d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0
-		l11.095,11.093L26.461,6.647c0.977-0.976,2.559-0.976,3.535,0C30.971,7.624,30.971,9.206,29.994,10.183z"
+          d="M29.994,20.544L15.363,5.915L0.733,20.543c-0.977,0.978-0.977,2.561,0,3.536c0.977,0.977,2.559,0.976,3.536,0
+		l11.095-11.093L26.461,24.08c0.977,0.976,2.559,0.976,3.535,0C30.971,23.103,30.971,21.521,29.994,20.544z"
         />
       </svg>
     </div>
