@@ -55,19 +55,16 @@
       .table-container {
         width: 1100px;
         height: 300px; /* Reduced from 600px */
-        background: white;
         position: relative;
         margin: 0 auto;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         border-radius: 4px;
-        border: 20px solid #ddd;
+        /* border: 20px solid #ddd; */
         /* No overflow: auto - let document handle scrolling */
       }
 
       .table-content {
         width: 1500px; /* Wider than container to enable document scrolling */
         height: 100%;
-        background: #fafafa;
         position: relative;
         display: flex; /* Use flexbox for natural column layout */
       }
@@ -81,6 +78,7 @@
         border: 1px dashed rgba(255, 0, 0, 0.3);
         z-index: 1;
         pointer-events: none;
+        opacity: 0;
       }
 
       .column-representation[data-sticky-left] {
@@ -93,7 +91,6 @@
         /* Remove position: absolute, let flex handle positioning */
         height: 100%;
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-        border: 2px solid #2471a3;
         border-radius: 4px;
         display: flex;
         flex-direction: column;
@@ -102,7 +99,6 @@
         color: white;
         font-weight: bold;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         z-index: 2;
         padding: 10px;
         user-select: none;
@@ -117,7 +113,7 @@
       }
 
       .table-column[data-being-dragged] {
-        opacity: 0.7;
+        opacity: 0.2;
         z-index: 1000;
       }
 
@@ -157,29 +153,25 @@
 
       /* Drag clone container */
       .drag-clone-container {
-        position: fixed;
+        position: absolute;
         z-index: 10000;
-        pointer-events: none;
-        opacity: 0.9;
+        opacity: 1;
         /* transform: rotate(2deg); */
       }
 
       .drag-clone-container .table-content {
-        background: rgba(255, 255, 255, 0.95);
         border-radius: 8px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-        border: 2px solid #333;
       }
 
       .drag-clone-container .column-representation {
         background: rgba(0, 255, 255, 0.2);
-        border: 2px solid rgba(0, 255, 255, 0.6);
       }
 
       .drag-clone-container .table-column {
         background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
         border-color: #d35400;
-        transform: scale(1.05);
+        /* Remove transform: scale(1.05) to keep original column sizes */
+        opacity: 0;
       }
 
       .position-display {
@@ -221,7 +213,6 @@
         background: white;
         padding: 10px 15px;
         border-radius: 4px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: all 0.2s ease;
       }
 
@@ -239,7 +230,6 @@
         background: white;
         padding: 15px;
         border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         margin: 20px auto;
         max-width: 900px;
         text-align: center;
@@ -517,6 +507,7 @@
         const tableRect = tableContainer.getBoundingClientRect();
 
         // Position the clone exactly above the original table
+        // Since we're using absolute positioning, we only need the scroll offset
         dragCloneContainer.style.width = `${tableRect.width}px`;
         dragCloneContainer.style.height = `${tableRect.height}px`;
         dragCloneContainer.style.left = `${tableRect.left + window.scrollX}px`;
@@ -540,7 +531,7 @@
           if (col.classList.contains("sticky-column")) {
             col.style.opacity = "1"; // Dragged column full opacity
           } else {
-            col.style.opacity = "0.5"; // Other columns faded
+            col.style.opacity = "0"; // Other columns faded
           }
         });
 
