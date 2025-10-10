@@ -151,12 +151,18 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
       }
 
+      .drag-clone-wrapper {
+        position: absolute;
+        overflow: hidden;
+        z-index: 10000;
+      }
+
       /* Drag clone container */
       .drag-clone-container {
         position: absolute;
-        z-index: 10000;
         opacity: 1;
         /* transform: rotate(2deg); */
+        overflow: hidden;
       }
 
       .drag-clone-container .table-content {
@@ -171,7 +177,7 @@
         background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
         border-color: #d35400;
         /* Remove transform: scale(1.05) to keep original column sizes */
-        opacity: 0;
+        opacity: 0.5;
       }
 
       .position-display {
@@ -531,7 +537,7 @@
           if (col.classList.contains("sticky-column")) {
             col.style.opacity = "1"; // Dragged column full opacity
           } else {
-            col.style.opacity = "0"; // Other columns faded
+            col.style.opacity = "0.3"; // Other columns faded
           }
         });
 
