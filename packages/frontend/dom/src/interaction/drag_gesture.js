@@ -267,11 +267,21 @@ export const createDragGestureController = (options = {}) => {
       // Handle data-sticky attributes for visual offset adjustment
       if (fromStickyLeftAttr) {
         isStickyLeftOrHasStickyLeftAttr = true;
-        visualOffsetX -= scrollLeftAtStart;
+        if (scrollableParentIsDocument) {
+          // For document scrolling with sticky elements, calculate the position as it would be at zero scroll
+          // The current 'left' is the scrollable coordinate, which includes scroll offset
+          // The position at zero scroll would be: left + scrollLeftAtStart
+          const positionAtZeroScroll = left + scrollLeftAtStart;
+          visualOffsetX = positionAtZeroScroll - elementToImpactLeft;
+        }
       }
       if (fromStickyTopAttr) {
         isStickyTopOrHasStickyTopAttr = true;
         visualOffsetY -= scrollTopAtStart;
+        if (scrollableParentIsDocument) {
+          const positionAtZeroScroll = top + scrollTopAtStart;
+          visualOffsetY = positionAtZeroScroll - elementToImpactTop;
+        }
       }
     }
 
@@ -291,6 +301,8 @@ export const createDragGestureController = (options = {}) => {
       interactionTypeAtStart: interactionType,
       visualOffsetX,
       visualOffsetY,
+      isStickyLeftOrHasStickyLeftAttr,
+      isStickyTopOrHasStickyTopAttr,
 
       x: xAtStart,
       y: yAtStart,
@@ -881,8 +893,12 @@ export const createDragToMoveGestureController = (options) => {
         const {
           leftAtStart,
           topAtStart,
+          scrollLeftAtStart,
+          scrollTopAtStart,
           visualOffsetX,
           visualOffsetY,
+          isStickyLeftOrHasStickyLeftAttr,
+          isStickyTopOrHasStickyTopAttr,
           isGoingDown,
           isGoingUp,
           isGoingLeft,
@@ -897,10 +913,31 @@ export const createDragToMoveGestureController = (options) => {
         } = gestureInfo;
 
         // Calculate initial position for elementToImpact
+        // For sticky elements, adjust the positioning calculation based on scrollable parent type
+        let leftForPositioning = leftAtStart;
+        let topForPositioning = topAtStart;
+        if (isStickyLeftOrHasStickyLeftAttr) {
+          if (scrollableParent === document.documentElement) {
+            // For document scrolling, calculate position at zero scroll
+            leftForPositioning = leftAtStart + scrollLeftAtStart;
+          } else {
+            // For container scrolling, use leftAtStart directly
+            leftForPositioning = leftAtStart;
+          }
+        }
+        if (isStickyTopOrHasStickyTopAttr) {
+          if (scrollableParent === document.documentElement) {
+            // For document scrolling, calculate position at zero scroll
+            topForPositioning = topAtStart + scrollTopAtStart;
+          } else {
+            // For container scrolling, use topAtStart directly
+            topForPositioning = topAtStart;
+          }
+        }
         const [initialLeftToImpact, initialTopToImpact] =
           scrollableCoordsToPositionedParentCoords(
-            leftAtStart - visualOffsetX,
-            topAtStart - visualOffsetY,
+            leftForPositioning - visualOffsetX,
+            topForPositioning - visualOffsetY,
             elementToImpact,
             scrollableParent,
           );
