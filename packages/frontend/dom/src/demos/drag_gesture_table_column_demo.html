@@ -14,8 +14,8 @@
         padding: 20px;
         font-family: Arial, sans-serif;
         background: #f0f0f0;
-        min-height: 200vh;
-        min-width: 200vw; /* Wide enough to show sticky behavior */
+        /* Remove forced vertical scroll - let content determine height naturally */
+        /* Remove forced horizontal scroll - let columns determine width naturally */
       }
 
       .demo-section {
@@ -63,7 +63,7 @@
       }
 
       .table-content {
-        width: 1500px; /* Wider than container to enable document scrolling */
+        /* Width determined by column content - no fixed width */
         height: 100%;
         position: relative;
         display: flex; /* Use flexbox for natural column layout */
@@ -458,6 +458,41 @@
             <div class="column-cell">Value X</div>
             <div class="column-cell">Value Y</div>
             <div class="column-cell">Value Z</div>
+          </div>
+
+          <div class="table-column" style="width: 160px">
+            <div class="column-header">Column 6</div>
+            <div class="column-cell">Report A</div>
+            <div class="column-cell">Report B</div>
+            <div class="column-cell">Report C</div>
+          </div>
+
+          <div class="table-column" style="width: 140px">
+            <div class="column-header">Column 7</div>
+            <div class="column-cell">Status 1</div>
+            <div class="column-cell">Status 2</div>
+            <div class="column-cell">Status 3</div>
+          </div>
+
+          <div class="table-column" style="width: 180px">
+            <div class="column-header">Column 8</div>
+            <div class="column-cell">Analysis X</div>
+            <div class="column-cell">Analysis Y</div>
+            <div class="column-cell">Analysis Z</div>
+          </div>
+
+          <div class="table-column" style="width: 170px">
+            <div class="column-header">Column 9</div>
+            <div class="column-cell">Result A</div>
+            <div class="column-cell">Result B</div>
+            <div class="column-cell">Result C</div>
+          </div>
+
+          <div class="table-column" style="width: 160px">
+            <div class="column-header">Column 10</div>
+            <div class="column-cell">Final 1</div>
+            <div class="column-cell">Final 2</div>
+            <div class="column-cell">Final 3</div>
           </div>
         </div>
       </div>
