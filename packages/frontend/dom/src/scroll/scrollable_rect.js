@@ -86,9 +86,9 @@ export const getElementScrollableRect = (
     if (hasStickyLeftAttribute) {
       const leftCssValue = parseFloat(computedStyle.left) || 0;
       fromStickyLeftAttr = { value: leftCssValue };
-      // For sticky behavior, element should be positioned at its CSS left value relative to scrollable parent
-      const parentLeft = scrollableParentIsDocument ? 0 : leftScrollable;
-      leftScrollable = parentLeft + leftCssValue;
+      // For sticky behavior, combine element's real position with its CSS left offset
+      // leftScrollable already contains the element's real position in scrollable coordinates
+      leftScrollable = leftScrollable + leftCssValue;
 
       if (useNonStickyLeftEvenIfStickyLeft) {
         // When element hasn't crossed visible area, use its actual scroll-adjusted position
@@ -99,9 +99,9 @@ export const getElementScrollableRect = (
     if (hasStickyTopAttribute) {
       const topCssValue = parseFloat(computedStyle.top) || 0;
       fromStickyTopAttr = { value: topCssValue };
-      // For sticky behavior, element should be positioned at its CSS top value relative to scrollable parent
-      const parentTop = scrollableParentIsDocument ? 0 : topScrollable;
-      topScrollable = parentTop + topCssValue;
+      // For sticky behavior, combine element's real position with its CSS top offset
+      // topScrollable already contains the element's real position in scrollable coordinates
+      topScrollable = topScrollable + topCssValue;
 
       if (useNonStickyTopEvenIfStickyTop) {
         // When element hasn't crossed visible area, use its actual scroll-adjusted position
