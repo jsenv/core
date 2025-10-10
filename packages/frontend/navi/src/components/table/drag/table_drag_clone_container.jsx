@@ -40,6 +40,9 @@ import.meta.css = /* css */ `
     opacity: 0;
     z-index: ${Z_INDEX_CELL_FOREGROUND};
   }
+  .navi_table_cell[data-first-row] .navi_table_cell_foreground {
+    background-color: grey;
+  }
   .navi_table_cell_foreground[data-visible] {
     opacity: 1;
   }
