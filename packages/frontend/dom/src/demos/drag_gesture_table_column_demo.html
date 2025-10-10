@@ -305,7 +305,7 @@
     </style>
   </head>
   <body>
-    <details>
+    <details style="max-width: 1200px; margin: 0 auto 20px auto">
       <summary
         style="
           cursor: pointer;
@@ -363,31 +363,31 @@
         header to move the column representation. Only the sticky column is
         draggable.
       </div>
-    </details>
-    <div class="element-legend">
-      <h4>Element Types</h4>
-      <div class="legend-item">
-        <div class="legend-color legend-regular"></div>
-        <span>Regular Column</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color legend-sticky"></div>
-        <span>Sticky Column</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color legend-representation"></div>
-        <span>Column Representation</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color legend-sticky-representation"></div>
-        <span>Sticky Column Representation</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-color legend-clone"></div>
-        <span>Drag Clone</span>
-      </div>
-    </div>
 
+      <div class="element-legend">
+        <h4>Element Types</h4>
+        <div class="legend-item">
+          <div class="legend-color legend-regular"></div>
+          <span>Regular Column</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color legend-sticky"></div>
+          <span>Sticky Column</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color legend-representation"></div>
+          <span>Column Representation</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color legend-sticky-representation"></div>
+          <span>Sticky Column Representation</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color legend-clone"></div>
+          <span>Drag Clone</span>
+        </div>
+      </div>
+    </details>
     <div class="debug-toggle">
       <label>
         <input type="checkbox" id="debugMarkersCheckbox" checked />
@@ -627,7 +627,7 @@
 
       // Auto-scroll to show sticky behavior
       setTimeout(() => {
-        window.scrollTo(120, 0); // Scroll past first column to activate sticky
+        window.scrollTo(200, 0); // Scroll further to ensure sticky behavior is clearly visible
       }, 1000);
     </script>
   </body>
