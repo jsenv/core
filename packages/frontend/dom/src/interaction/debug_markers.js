@@ -1,6 +1,6 @@
 import { scrollableCoordsToViewport } from "../scroll/scrollable_rect.js";
 
-export let DRAG_DEBUG_MARKERS = true;
+export let DRAG_DEBUG_MARKERS = false;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_MARKERS = true;
 };

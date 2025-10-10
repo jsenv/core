@@ -64,8 +64,8 @@ import {
   useSelectableElement,
 } from "../selection/selection.jsx";
 import { useFocusGroup } from "../use_focus_group.js";
-import { initDragTableColumnByMousedown } from "./drag/drag_table_column.js";
 import {
+  initDragTableColumnByMousedown,
   TableDragContext,
   useTableDragContextValue,
 } from "./drag/table_drag.js";
