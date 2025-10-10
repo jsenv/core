@@ -8,6 +8,7 @@ import {
 } from "@jsenv/dom";
 
 import { createPubSub } from "../../pub_sub.js";
+import { Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
 const DEBUG_VISUAL = false;
 
@@ -19,9 +20,24 @@ import.meta.css = /* css */ `
     width: var(--table-width);
     height: var(--table-height);
     pointer-events: none;
+    z-index: ${Z_INDEX_DROP_PREVIEW};
   }
 
-  .navi_table_column_drop_preview_ui {
+  .navi_table_column_drop_preview_line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: rgba(0, 0, 255, 0.5);
+    opacity: 0;
+    left: var(--table-column-drop-target-left);
+  }
+  .navi_table_column_drop_preview[data-visible]
+    .navi_table_column_drop_preview_line {
+    opacity: 1;
+  }
+
+  .navi_table_column_drop_preview_arrow {
     position: absolute;
     top: -10px;
     left: var(--table-column-drop-target-left);
@@ -29,17 +45,16 @@ import.meta.css = /* css */ `
     display: flex;
     opacity: 0;
   }
-
-  .navi_table_column_drop_preview_ui[data-visible] {
-    opacity: 1;
-  }
-
-  .navi_table_column_drop_preview_ui svg {
+  .navi_table_column_drop_preview_arrow svg {
     width: 10px;
     height: 10px;
   }
-
-  .navi_table_column_drop_preview_ui[data-after] {
+  .navi_table_column_drop_preview[data-visible]
+    .navi_table_column_drop_preview_arrow {
+    opacity: 1;
+  }
+  .navi_table_column_drop_preview[data-after]
+    .navi_table_column_drop_preview_arrow {
     transform: translateX(-100%);
   }
 `;
@@ -48,7 +63,7 @@ const dropPreviewTemplate = /* html */ `
   <div
     class="navi_table_column_drop_preview"
   >
-    <div class="navi_table_column_drop_preview_ui">
+    <div class="navi_table_column_drop_preview_arrow">
       <svg fill="currentColor" viewBox="0 0 30.727 30.727" xml:space="preserve">
         <path
           d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0
@@ -56,6 +71,7 @@ const dropPreviewTemplate = /* html */ `
         />
       </svg>
     </div>
+    <div class="navi_table_column_drop_preview_line"></div>
   </div>
 `;
 const createDropPreview = () => {
@@ -182,9 +198,6 @@ export const initDragTableColumnByMousedown = async (
   const colgroupClone = tableClone.querySelector(".navi_colgroup");
   const colClone = colgroupClone.children[columnIndex];
   const dropPreview = createDropPreview();
-  const dropPreviewUI = dropPreview.querySelector(
-    ".navi_table_column_drop_preview_ui",
-  );
 
   drop_preview: {
     const tableRootRect = tableRoot.getBoundingClientRect();
@@ -212,7 +225,7 @@ export const initDragTableColumnByMousedown = async (
 
       dropColumnIndex = targetColumnIndex;
       if (dropColumnIndex === columnIndex) {
-        dropPreviewUI.removeAttribute("data-visible");
+        dropPreview.removeAttribute("data-visible");
         return;
       }
 
@@ -220,16 +233,16 @@ export const initDragTableColumnByMousedown = async (
       let targetColumnVisualLeft = targetColumnVisualRect.left;
       if (dropColumnIndex > columnIndex) {
         targetColumnVisualLeft += targetColumnVisualRect.width;
-        dropPreviewUI.setAttribute("data-after", "");
+        dropPreview.setAttribute("data-after", "");
       } else {
-        dropPreviewUI.removeAttribute("data-after");
+        dropPreview.removeAttribute("data-after");
       }
-      dropPreviewUI.style.setProperty(
+      dropPreview.style.setProperty(
         "--table-column-drop-target-left",
         `${targetColumnVisualLeft}px`,
       );
-      dropPreviewUI.setAttribute("data-drop-column-index", dropColumnIndex);
-      dropPreviewUI.setAttribute("data-visible", "");
+      dropPreview.setAttribute("data-drop-column-index", dropColumnIndex);
+      dropPreview.setAttribute("data-visible", "");
     };
 
     addDragEffect((gestureInfo) => {
