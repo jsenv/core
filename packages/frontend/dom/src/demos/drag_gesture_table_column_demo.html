@@ -511,8 +511,16 @@
         // Create the clone container
         dragCloneContainer = document.createElement("div");
         dragCloneContainer.className = "drag-clone-container";
-        dragCloneContainer.style.width = "250px";
-        dragCloneContainer.style.height = "200px";
+
+        // Get the position of the original table container to position clone exactly above it
+        const tableContainer = document.getElementById("tableContainer");
+        const tableRect = tableContainer.getBoundingClientRect();
+
+        // Position the clone exactly above the original table
+        dragCloneContainer.style.width = `${tableRect.width}px`;
+        dragCloneContainer.style.height = `${tableRect.height}px`;
+        dragCloneContainer.style.left = `${tableRect.left + window.scrollX}px`;
+        dragCloneContainer.style.top = `${tableRect.top + window.scrollY}px`;
 
         // Clone the entire table content structure
         const tableContent = document.getElementById("tableContent");
@@ -547,8 +555,26 @@
       }
 
       function removeDragClone() {
+        // Keep clone for debugging - don't remove it
         if (dragCloneContainer) {
-          document.body.removeChild(dragCloneContainer);
+          // Add a debug label to the clone
+          const debugLabel = document.createElement("div");
+          debugLabel.textContent = "DEBUG: Drag Clone (kept for debugging)";
+          debugLabel.style.position = "absolute";
+          debugLabel.style.top = "-25px";
+          debugLabel.style.left = "0";
+          debugLabel.style.background = "rgba(255, 0, 0, 0.8)";
+          debugLabel.style.color = "white";
+          debugLabel.style.padding = "5px 10px";
+          debugLabel.style.fontSize = "12px";
+          debugLabel.style.borderRadius = "4px";
+          debugLabel.style.zIndex = "10001";
+          dragCloneContainer.appendChild(debugLabel);
+
+          // Make clone semi-transparent to show it's in debug mode
+          dragCloneContainer.style.opacity = "0.7";
+
+          // Reset dragCloneContainer variable so we can create a new one next time
           dragCloneContainer = null;
         }
       }
