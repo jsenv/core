@@ -115,7 +115,7 @@
           rowCells.id = i;
           for (let j = 1; j <= cols; j++) {
             if (i === 1 && j === 1) {
-              rowCells.push(`A text that is longer than the others`);
+              rowCells.push(`A text that is longer`);
             } else {
               rowCells.push(`Cell ${i}-${j}`);
             }
@@ -129,7 +129,7 @@
       const data = generateLargeDataset(50, 10);
       const columnsConfig = Array.from({ length: 10 }, (_, i) => ({
         id: `col${i + 1}`,
-        header: i === 0 ? "A larger header content" : `Column ${i + 1}`,
+        header: i === 0 ? "A larger header" : `Column ${i + 1}`,
       }));
 
       // eslint-disable-next-line no-unused-vars
