@@ -407,6 +407,7 @@
           <div
             class="column-representation"
             id="columnRep1"
+            data-sticky-left=""
             style="left: 0; width: 100px"
           ></div>
 
@@ -418,8 +419,8 @@
           ></div>
 
           <!-- Actual table columns -->
-          <div class="table-column" id="column1" style="width: 100px">
-            <div class="column-header">Column 1</div>
+          <div class="table-column sticky-column" id="column1" style="width: 100px">
+            <div class="column-header" id="column1Header">Column 1 (Sticky Draggable)</div>
             <div class="column-cell">Row 1</div>
             <div class="column-cell">Row 2</div>
             <div class="column-cell">Row 3</div>
@@ -501,9 +502,9 @@
     <!-- Position Display -->
     <div class="position-display" id="positionDisplay">
       <div class="label">Column Drag Info</div>
-      <div id="dragInfo">Ready to drag sticky column header</div>
+      <div id="dragInfo">Ready to drag sticky column headers</div>
       <div id="scrollInfo">Scroll: 0px (sticky not activated)</div>
-      <div id="elementInfo">Click and drag the sticky column header</div>
+      <div id="elementInfo">Click and drag either sticky column header (Column 1 or Sticky Column)</div>
     </div>
 
     <script type="module">
@@ -518,6 +519,9 @@
       const dragInfo = document.getElementById("dragInfo");
       const scrollInfo = document.getElementById("scrollInfo");
       const elementInfo = document.getElementById("elementInfo");
+      const column1Header = document.getElementById("column1Header");
+      const column1 = document.getElementById("column1");
+      const columnRep1 = document.getElementById("columnRep1");
       const column2Header = document.getElementById("column2Header");
       const column2 = document.getElementById("column2");
       const columnRep2 = document.getElementById("columnRep2");
@@ -572,11 +576,11 @@
         const tableRect = tableContainer.getBoundingClientRect();
 
         // Position the clone exactly above the original table
-        // Since viewport moves with scroll, use viewport-relative positioning
+        // Since viewport moves with scroll, we need to subtract scroll to get the correct relative position
         dragCloneContainer.style.width = `${tableRect.width}px`;
         dragCloneContainer.style.height = `${tableRect.height}px`;
-        dragCloneContainer.style.left = `${tableRect.left}px`;
-        dragCloneContainer.style.top = `${tableRect.top}px`;
+        dragCloneContainer.style.left = `${tableRect.left - window.scrollX}px`;
+        dragCloneContainer.style.top = `${tableRect.top - window.scrollY}px`;
 
         // Clone the entire table content structure
         const tableContent = document.getElementById("tableContent");
@@ -684,10 +688,66 @@
 
             removeDragClone();
             updateDragInfo(gestureInfo, "Released");
-            elementInfo.textContent = "Click and drag the sticky column header";
+            elementInfo.textContent = "Click and drag either sticky column header (Column 1 or Sticky Column)";
           },
         }).grabViaMouse(event, {
           element: column2Header, // Clicked element (header)
+          elementToImpact: dragClone.container, // Move the clone container
+          elementVisuallyImpacted: dragClone.representation, // Track the representation clone
+        });
+      });
+
+      // Column 1 header drag handling
+      column1Header.addEventListener("mousedown", (event) => {
+        console.log("Column 1 drag started", {
+          header: column1Header,
+          column: column1,
+          representation: columnRep1,
+        });
+
+        const dragClone = createDragClone();
+
+        createDragToMoveGestureController({
+          name: "table-column-1",
+          backdrop: false,
+          direction: { x: true },
+          onGrab: (gestureInfo) => {
+            console.log("Column 1 grab started", gestureInfo);
+            column1Header.setAttribute("data-dragging", "");
+            column1.setAttribute("data-being-dragged", "");
+
+            // Set opacity for original table and dragged column
+            const tableContent = document.getElementById("tableContent");
+            tableContent.style.opacity = "0.1"; // Make original table very faded
+            column1.style.opacity = "0"; // Make original dragged column invisible
+
+            updateDragInfo(gestureInfo, "Grabbed");
+            elementInfo.textContent =
+              "Dragging: Column 1 representation will move";
+          },
+          onDragStart: (gestureInfo) => {
+            console.log("Column 1 drag started", gestureInfo);
+            updateDragInfo(gestureInfo, "Drag Start");
+          },
+          onDrag: (gestureInfo, phase) => {
+            updateDragInfo(gestureInfo, `Dragging (${phase})`);
+          },
+          onRelease: (gestureInfo) => {
+            console.log("Column 1 drag released", gestureInfo);
+            column1Header.removeAttribute("data-dragging");
+            column1.removeAttribute("data-being-dragged");
+
+            // Restore opacity for original table and dragged column
+            const tableContent = document.getElementById("tableContent");
+            tableContent.style.opacity = ""; // Restore original table opacity
+            column1.style.opacity = ""; // Restore original dragged column opacity
+
+            removeDragClone();
+            updateDragInfo(gestureInfo, "Released");
+            elementInfo.textContent = "Click and drag either sticky column header";
+          },
+        }).grabViaMouse(event, {
+          element: column1Header, // Clicked element (header)
           elementToImpact: dragClone.container, // Move the clone container
           elementVisuallyImpacted: dragClone.representation, // Track the representation clone
         });
