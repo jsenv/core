@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drag Gesture Demo - Table Column Dragging</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+        min-height: 200vh;
+        min-width: 200vw; /* Wide enough to show sticky behavior */
+      }
+
+      .demo-section {
+        margin: 40px auto;
+        max-width: 1200px;
+      }
+
+      .demo-title {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 8px 8px 0 0;
+        border-bottom: 2px solid #333;
+        margin: 0;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .info {
+        max-width: 1200px;
+        margin: 0 auto 20px auto;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .info h1 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .info ul {
+        line-height: 1.6;
+      }
+
+      .table-container {
+        width: 1100px;
+        height: 600px;
+        background: white;
+        position: relative;
+        margin: 0 auto;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        border: 20px solid #ddd;
+        overflow: auto;
+      }
+
+      .table-content {
+        width: 1500px; /* Wider than container to enable scrolling */
+        height: 100%;
+        background: #fafafa;
+        position: relative;
+      }
+
+      /* Column representations (invisible/semi-transparent) */
+      .column-representation {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        background: rgba(255, 0, 0, 0.1);
+        border: 1px dashed rgba(255, 0, 0, 0.3);
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      .column-representation[data-sticky-left] {
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px dashed rgba(0, 255, 0, 0.3);
+      }
+
+      /* Actual table columns */
+      .table-column {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        border: 2px solid #2471a3;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        color: white;
+        font-weight: bold;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        z-index: 2;
+        padding: 10px;
+        user-select: none;
+      }
+
+      .table-column.sticky-column {
+        position: sticky;
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        border-color: #a93226;
+        z-index: 3;
+      }
+
+      .table-column[data-being-dragged] {
+        opacity: 0.7;
+        z-index: 1000;
+      }
+
+      .column-header {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        width: 100%;
+        text-align: center;
+        font-size: 12px;
+        cursor: grab;
+      }
+
+      .column-header:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .column-header[data-dragging] {
+        cursor: grabbing;
+        background: rgba(255, 255, 255, 0.4);
+      }
+
+      .column-cell {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 6px 8px;
+        border-radius: 3px;
+        margin: 3px 0;
+        width: 100%;
+        text-align: center;
+        font-size: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      /* Drag clone container */
+      .drag-clone-container {
+        position: fixed;
+        z-index: 10000;
+        pointer-events: none;
+        opacity: 0.9;
+        transform: rotate(2deg);
+      }
+
+      .drag-clone-container .table-content {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        border: 2px solid #333;
+      }
+
+      .drag-clone-container .column-representation {
+        background: rgba(0, 255, 255, 0.2);
+        border: 2px solid rgba(0, 255, 255, 0.6);
+      }
+
+      .drag-clone-container .table-column {
+        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        border-color: #d35400;
+        transform: scale(1.05);
+      }
+
+      .position-display {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 11px;
+        z-index: 10000;
+        line-height: 1.4;
+        min-width: 350px;
+      }
+
+      .position-display div {
+        margin: 2px 0;
+      }
+
+      .position-display .label {
+        font-weight: bold;
+        color: #ffeb3b;
+      }
+
+      .debug-toggle {
+        margin: 20px auto;
+        text-align: center;
+      }
+
+      .debug-toggle label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #333;
+        cursor: pointer;
+        background: white;
+        padding: 10px 15px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+      }
+
+      .debug-toggle label:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .debug-toggle input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+      }
+
+      .element-legend {
+        background: white;
+        padding: 15px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin: 20px auto;
+        max-width: 900px;
+        text-align: center;
+      }
+
+      .element-legend h4 {
+        margin: 0 0 15px 0;
+        font-size: 14px;
+        color: #333;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 15px 10px 0;
+        font-size: 12px;
+      }
+
+      .legend-color {
+        width: 30px;
+        height: 20px;
+        border-radius: 4px;
+        border: 2px solid #333;
+      }
+
+      .legend-regular {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+      }
+
+      .legend-sticky {
+        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      }
+
+      .legend-representation {
+        background: rgba(255, 0, 0, 0.2);
+        border: 1px dashed rgba(255, 0, 0, 0.6);
+      }
+
+      .legend-sticky-representation {
+        background: rgba(0, 255, 0, 0.2);
+        border: 1px dashed rgba(0, 255, 0, 0.6);
+      }
+
+      .legend-clone {
+        background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+      }
+
+      .scroll-instructions {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px auto;
+        max-width: 900px;
+        text-align: center;
+        color: #856404;
+      }
+
+      .scroll-instructions strong {
+        color: #533f03;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="info">
+      <h1>Drag Gesture Demo - Table Column Dragging with Sticky Positioning</h1>
+      <p>
+        This demo demonstrates a complex real-world scenario: dragging table
+        columns with sticky positioning behavior.
+      </p>
+      <ul>
+        <li>
+          <strong>Table Structure:</strong> Two columns - regular (100px) and
+          sticky (left: 100px)
+        </li>
+        <li>
+          <strong>Column Representations:</strong> Semi-transparent elements
+          mimicking <code>&lt;col&gt;</code> behavior
+        </li>
+        <li>
+          <strong>Sticky Behavior:</strong> Second column becomes sticky when
+          scrolled horizontally
+        </li>
+        <li>
+          <strong>Drag Mechanics:</strong> Click column header to drag the
+          invisible column representation
+        </li>
+        <li>
+          <strong>Clone System:</strong> Creates a cloned structure during drag
+          with visual feedback
+        </li>
+        <li>
+          <strong>Real Use Case:</strong> Table column reordering in data grids
+          with sticky columns
+        </li>
+      </ul>
+    </div>
+
+    <div class="scroll-instructions">
+      <strong>Instructions:</strong> Scroll the table horizontally to see the
+      red column become sticky, then try dragging its header to move the column
+      representation.
+    </div>
+
+    <div class="element-legend">
+      <h4>Element Types</h4>
+      <div class="legend-item">
+        <div class="legend-color legend-regular"></div>
+        <span>Regular Column</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color legend-sticky"></div>
+        <span>Sticky Column</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color legend-representation"></div>
+        <span>Column Representation</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color legend-sticky-representation"></div>
+        <span>Sticky Column Representation</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color legend-clone"></div>
+        <span>Drag Clone</span>
+      </div>
+    </div>
+
+    <div class="debug-toggle">
+      <label>
+        <input type="checkbox" id="debugMarkersCheckbox" checked />
+        Show Debug Markers
+      </label>
+    </div>
+
+    <!-- Demo: Table Column Dragging -->
+    <div class="demo-section">
+      <h2 class="demo-title">
+        Demo: Table Column Dragging with Sticky Positioning
+      </h2>
+      <div class="table-container" id="tableContainer">
+        <div class="table-content" id="tableContent">
+          <!-- Column representations (before actual columns in DOM) -->
+          <div
+            class="column-representation"
+            id="columnRep1"
+            style="left: 0; width: 100px"
+          ></div>
+
+          <div
+            class="column-representation"
+            id="columnRep2"
+            data-sticky-left=""
+            style="left: 100px; width: 120px"
+          ></div>
+
+          <!-- Actual table columns -->
+          <div class="table-column" id="column1" style="left: 0; width: 100px">
+            <div class="column-header">Column 1</div>
+            <div class="column-cell">Row 1</div>
+            <div class="column-cell">Row 2</div>
+            <div class="column-cell">Row 3</div>
+            <div class="column-cell">Row 4</div>
+            <div class="column-cell">Row 5</div>
+          </div>
+
+          <div
+            class="table-column sticky-column"
+            id="column2"
+            style="left: 100px; width: 120px"
+          >
+            <div class="column-header" id="column2Header">Sticky Column</div>
+            <div class="column-cell">Sticky 1</div>
+            <div class="column-cell">Sticky 2</div>
+            <div class="column-cell">Sticky 3</div>
+            <div class="column-cell">Sticky 4</div>
+            <div class="column-cell">Sticky 5</div>
+          </div>
+
+          <!-- More columns to show scrolling -->
+          <div class="table-column" style="left: 220px; width: 150px">
+            <div class="column-header">Column 3</div>
+            <div class="column-cell">Data A</div>
+            <div class="column-cell">Data B</div>
+            <div class="column-cell">Data C</div>
+            <div class="column-cell">Data D</div>
+            <div class="column-cell">Data E</div>
+          </div>
+
+          <div class="table-column" style="left: 370px; width: 150px">
+            <div class="column-header">Column 4</div>
+            <div class="column-cell">Info 1</div>
+            <div class="column-cell">Info 2</div>
+            <div class="column-cell">Info 3</div>
+            <div class="column-cell">Info 4</div>
+            <div class="column-cell">Info 5</div>
+          </div>
+
+          <div class="table-column" style="left: 520px; width: 150px">
+            <div class="column-header">Column 5</div>
+            <div class="column-cell">Value X</div>
+            <div class="column-cell">Value Y</div>
+            <div class="column-cell">Value Z</div>
+            <div class="column-cell">Value W</div>
+            <div class="column-cell">Value V</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Position Display -->
+    <div class="position-display" id="positionDisplay">
+      <div class="label">Column Drag Info</div>
+      <div id="dragInfo">Ready to drag sticky column header</div>
+      <div id="scrollInfo">Scroll: 0px (sticky not activated)</div>
+      <div id="elementInfo">Click and drag the sticky column header</div>
+    </div>
+
+    <script type="module">
+      import { createDragToMoveGestureController } from "../interaction/drag_gesture.js";
+      import {
+        DRAG_DEBUG_MARKERS,
+        enableDebugMarkers,
+        disableDebugMarkers,
+      } from "../interaction/debug_markers.js";
+
+      const debugCheckbox = document.getElementById("debugMarkersCheckbox");
+      const dragInfo = document.getElementById("dragInfo");
+      const scrollInfo = document.getElementById("scrollInfo");
+      const elementInfo = document.getElementById("elementInfo");
+      const tableContainer = document.getElementById("tableContainer");
+      const column2Header = document.getElementById("column2Header");
+      const column2 = document.getElementById("column2");
+      const columnRep2 = document.getElementById("columnRep2");
+
+      // Handle debug markers toggle
+      debugCheckbox.checked = DRAG_DEBUG_MARKERS;
+      debugCheckbox.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          enableDebugMarkers();
+        } else {
+          disableDebugMarkers();
+        }
+      });
+
+      // Track scroll position for sticky behavior info
+      tableContainer.addEventListener("scroll", () => {
+        const scrollLeft = tableContainer.scrollLeft;
+        const stickyActivated = scrollLeft > 0;
+        scrollInfo.textContent = `Scroll: ${scrollLeft}px (sticky ${stickyActivated ? "ACTIVATED" : "not activated"})`;
+      });
+
+      // Create drag clone container (will be populated during drag)
+      let dragCloneContainer = null;
+
+      function createDragClone() {
+        // Create the clone container
+        dragCloneContainer = document.createElement("div");
+        dragCloneContainer.className = "drag-clone-container";
+        dragCloneContainer.style.width = "250px";
+        dragCloneContainer.style.height = "200px";
+
+        // Clone the table structure
+        const clonedContent = document.createElement("div");
+        clonedContent.className = "table-content";
+        clonedContent.style.width = "100%";
+        clonedContent.style.height = "100%";
+        clonedContent.style.position = "relative";
+
+        // Clone the column representation
+        const clonedRep = columnRep2.cloneNode(true);
+        clonedRep.style.left = "0";
+        clonedRep.style.width = "120px";
+        clonedContent.appendChild(clonedRep);
+
+        // Clone the actual column
+        const clonedColumn = column2.cloneNode(true);
+        clonedColumn.style.left = "0";
+        clonedColumn.style.width = "120px";
+        clonedColumn.style.position = "absolute";
+        clonedContent.appendChild(clonedColumn);
+
+        dragCloneContainer.appendChild(clonedContent);
+        document.body.appendChild(dragCloneContainer);
+
+        return {
+          container: dragCloneContainer,
+          representation: clonedRep,
+          column: clonedColumn,
+        };
+      }
+
+      function removeDragClone() {
+        if (dragCloneContainer) {
+          document.body.removeChild(dragCloneContainer);
+          dragCloneContainer = null;
+        }
+      }
+
+      // Column header drag handling
+      column2Header.addEventListener("mousedown", (event) => {
+        console.log("Table column drag started", {
+          header: column2Header,
+          column: column2,
+          representation: columnRep2,
+        });
+
+        const dragClone = createDragClone();
+
+        createDragToMoveGestureController({
+          name: "table-column",
+          backdrop: false,
+          onGrab: (gestureInfo) => {
+            console.log("Column grab started", gestureInfo);
+            column2Header.setAttribute("data-dragging", "");
+            column2.setAttribute("data-being-dragged", "");
+            updateDragInfo(gestureInfo, "Grabbed");
+            elementInfo.textContent =
+              "Dragging: Column representation will move";
+          },
+          onDragStart: (gestureInfo) => {
+            console.log("Column drag started", gestureInfo);
+            updateDragInfo(gestureInfo, "Drag Start");
+          },
+          onDrag: (gestureInfo, phase) => {
+            updateDragInfo(gestureInfo, `Dragging (${phase})`);
+          },
+          onRelease: (gestureInfo) => {
+            console.log("Column drag released", gestureInfo);
+            column2Header.removeAttribute("data-dragging");
+            column2.removeAttribute("data-being-dragged");
+            removeDragClone();
+            updateDragInfo(gestureInfo, "Released");
+            elementInfo.textContent = "Click and drag the sticky column header";
+          },
+        }).grabViaMouse(event, {
+          element: column2Header, // Clicked element (header)
+          elementToImpact: dragClone.container, // Move the clone container
+          elementVisuallyImpacted: dragClone.representation, // Track the representation clone
+        });
+      });
+
+      function updateDragInfo(gestureInfo, status) {
+        const columnRect = column2.getBoundingClientRect();
+        const repRect = columnRep2.getBoundingClientRect();
+
+        const columnX = columnRect.left + window.scrollX;
+        const columnY = columnRect.top + window.scrollY;
+        const repX = repRect.left + window.scrollX;
+        const repY = repRect.top + window.scrollY;
+
+        dragInfo.innerHTML = `${status} | Column: ${Math.round(columnX)}, ${Math.round(columnY)} | Rep: ${Math.round(repX)}, ${Math.round(repY)}`;
+      }
+
+      // Initial position updates
+      function updatePositions() {
+        if (!column2Header.hasAttribute("data-dragging")) {
+          const columnRect = column2.getBoundingClientRect();
+          const repRect = columnRep2.getBoundingClientRect();
+
+          const columnX = columnRect.left + window.scrollX;
+          const columnY = columnRect.top + window.scrollY;
+          const repX = repRect.left + window.scrollX;
+          const repY = repRect.top + window.scrollY;
+
+          dragInfo.innerHTML = `Ready | Column: ${Math.round(columnX)}, ${Math.round(columnY)} | Rep: ${Math.round(repX)}, ${Math.round(repY)}`;
+        }
+      }
+
+      // Update positions on scroll
+      document.addEventListener("scroll", updatePositions);
+      tableContainer.addEventListener("scroll", updatePositions);
+      updatePositions();
+
+      // Auto-scroll to show sticky behavior
+      setTimeout(() => {
+        tableContainer.scrollLeft = 50; // Activate sticky behavior
+      }, 1000);
+    </script>
+  </body>
+</html>

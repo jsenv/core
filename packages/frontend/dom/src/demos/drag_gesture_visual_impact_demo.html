@@ -312,36 +312,50 @@
     <div class="info">
       <h1>Drag Gesture Demo - Visual Impact (elementVisuallyImpacted)</h1>
       <p>
-        This demo demonstrates the advanced <code>elementVisuallyImpacted</code> feature where:
+        This demo demonstrates the advanced
+        <code>elementVisuallyImpacted</code> feature where:
       </p>
       <ul>
         <li>
           <strong>Blue handle:</strong> The element you grab and drag from
         </li>
         <li>
-          <strong>Red container:</strong> The element that physically moves (elementToImpact)
+          <strong>Red container:</strong> The element that physically moves
+          (elementToImpact)
         </li>
         <li>
-          <strong>Orange inner element:</strong> The element used for visual calculations (elementVisuallyImpacted)
+          <strong>Orange inner element:</strong> The element used for visual
+          calculations (elementVisuallyImpacted)
         </li>
         <li>
-          <strong>Key concept:</strong> Constraints and auto-scroll are calculated based on the inner element's position, not the container
+          <strong>Key concept:</strong> Constraints and auto-scroll are
+          calculated based on the inner element's position, not the container
         </li>
         <li>
-          <strong>Real-world use case:</strong> Moving a table column where you grab the header handle, move the entire column container, but track a specific cell for collision detection
+          <strong>Real-world use case:</strong> Moving a table column where you
+          grab the header handle, move the entire column container, but track a
+          specific cell for collision detection
         </li>
       </ul>
     </div>
 
     <div class="flow-diagram">
       <h4>Drag Flow</h4>
-      <span class="flow-step" style="border-color: #4a90e2; color: #4a90e2;">Grab Handle</span>
+      <span class="flow-step" style="border-color: #4a90e2; color: #4a90e2"
+        >Grab Handle</span
+      >
       <span class="flow-arrow">→</span>
-      <span class="flow-step" style="border-color: #e74c3c; color: #e74c3c;">Move Container</span>
+      <span class="flow-step" style="border-color: #e74c3c; color: #e74c3c"
+        >Move Container</span
+      >
       <span class="flow-arrow">→</span>
-      <span class="flow-step" style="border-color: #f39c12; color: #f39c12;">Track Inner Element</span>
+      <span class="flow-step" style="border-color: #f39c12; color: #f39c12"
+        >Track Inner Element</span
+      >
       <span class="flow-arrow">→</span>
-      <span class="flow-step" style="border-color: #95a5a6; color: #95a5a6;">Check Obstacles</span>
+      <span class="flow-step" style="border-color: #95a5a6; color: #95a5a6"
+        >Check Obstacles</span
+      >
     </div>
 
     <div class="debug-toggle">
@@ -379,14 +393,10 @@
       <div class="container" id="demoContainer">
         <div class="content">
           <!-- Drag handle positioned at top of container -->
-          <div
-            class="drag-handle"
-            id="handle1"
-            style="left: 200px; top: 80px"
-          >
+          <div class="drag-handle" id="handle1" style="left: 200px; top: 80px">
             GRAB
           </div>
-          
+
           <!-- Container element that physically moves -->
           <div
             class="container-element"
@@ -412,7 +422,7 @@
           >
             OBSTACLE 1
           </div>
-          
+
           <div
             class="obstacle"
             data-drag-obstacle="demo"
@@ -499,9 +509,9 @@
             updateDemo1Info(gestureInfo, "Released");
           },
         }).grabViaMouse(event, {
-          element: handle1,                    // Grab from the handle
-          elementToImpact: container1,         // Move the container
-          elementVisuallyImpacted: inner1,     // But track the inner element for constraints
+          element: handle1, // Grab from the handle
+          elementToImpact: container1, // Move the container
+          elementVisuallyImpacted: inner1, // But track the inner element for constraints
         });
       });
 
@@ -526,16 +536,16 @@
         handle.addEventListener("mouseenter", () => {
           elementInfo.textContent = `${name}: Handle → Container → Inner Element`;
         });
-        
+
         container.addEventListener("mouseenter", () => {
           elementInfo.textContent = `${name}: Container (moves physically, contains inner)`;
         });
-        
+
         inner.addEventListener("mouseenter", () => {
           elementInfo.textContent = `${name}: Inner Element (tracked for constraints)`;
         });
 
-        [handle, container, inner].forEach(el => {
+        [handle, container, inner].forEach((el) => {
           el.addEventListener("mouseleave", () => {
             elementInfo.textContent = "Elements: Hover to see relationships";
           });
@@ -547,7 +557,7 @@
         if (!handle1.hasAttribute("data-dragging")) {
           const containerRect = container1.getBoundingClientRect();
           const innerRect = inner1.getBoundingClientRect();
-          
+
           const containerX = containerRect.left + window.scrollX;
           const containerY = containerRect.top + window.scrollY;
           const innerX = innerRect.left + window.scrollX;
