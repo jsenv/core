@@ -151,10 +151,15 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
       }
 
-      .drag-clone-wrapper {
-        position: absolute;
+      .drag-clone-viewport {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
         overflow: hidden;
         z-index: 10000;
+        pointer-events: none;
       }
 
       /* Drag clone container */
@@ -501,9 +506,14 @@
       });
 
       // Create drag clone container (will be populated during drag)
+      let dragCloneViewport = null;
       let dragCloneContainer = null;
 
       function createDragClone() {
+        // Create the viewport container that prevents scrollbar influence
+        dragCloneViewport = document.createElement("div");
+        dragCloneViewport.className = "drag-clone-viewport";
+
         // Create the clone container
         dragCloneContainer = document.createElement("div");
         dragCloneContainer.className = "drag-clone-container";
@@ -513,11 +523,11 @@
         const tableRect = tableContainer.getBoundingClientRect();
 
         // Position the clone exactly above the original table
-        // Since we're using absolute positioning, we only need the scroll offset
+        // Using fixed positioning relative to viewport since viewport is fixed
         dragCloneContainer.style.width = `${tableRect.width}px`;
         dragCloneContainer.style.height = `${tableRect.height}px`;
-        dragCloneContainer.style.left = `${tableRect.left + window.scrollX}px`;
-        dragCloneContainer.style.top = `${tableRect.top + window.scrollY}px`;
+        dragCloneContainer.style.left = `${tableRect.left}px`;
+        dragCloneContainer.style.top = `${tableRect.top}px`;
 
         // Clone the entire table content structure
         const tableContent = document.getElementById("tableContent");
@@ -542,7 +552,8 @@
         });
 
         dragCloneContainer.appendChild(clonedContent);
-        document.body.appendChild(dragCloneContainer);
+        dragCloneViewport.appendChild(dragCloneContainer);
+        document.body.appendChild(dragCloneViewport);
 
         return {
           container: dragCloneContainer,
@@ -553,7 +564,7 @@
 
       function removeDragClone() {
         // Keep clone for debugging - don't remove it
-        if (dragCloneContainer) {
+        if (dragCloneContainer && dragCloneViewport) {
           // Add a debug label to the clone
           const debugLabel = document.createElement("div");
           debugLabel.textContent = "DEBUG: Drag Clone (kept for debugging)";
@@ -571,8 +582,9 @@
           // Make clone semi-transparent to show it's in debug mode
           dragCloneContainer.style.opacity = "0.7";
 
-          // Reset dragCloneContainer variable so we can create a new one next time
+          // Reset variables so we can create new ones next time
           dragCloneContainer = null;
+          dragCloneViewport = null;
         }
       }
 
