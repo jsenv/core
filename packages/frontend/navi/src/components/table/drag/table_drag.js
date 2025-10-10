@@ -22,7 +22,7 @@ export const useTableDragContextValue = ({
       return;
     }
     const columnIds = columns.map((col) => col.id);
-    const columnIdsWithNewOrder = insertItem(
+    const columnIdsWithNewOrder = moveItem(
       columnIds,
       columnIndex,
       newColumnIndex,
@@ -41,17 +41,28 @@ export const useTableDragContextValue = ({
   }, [grabTarget, canChangeColumnOrder]);
 };
 
-const insertItem = (array, indexA, indexB) => {
+const moveItem = (array, indexA, indexB) => {
   const newArray = [];
   const movedItem = array[indexA];
+  const movingRight = indexA < indexB;
+
   for (let i = 0; i < array.length; i++) {
-    if (i === indexB) {
-      // Insert the moved column at target position
-      newArray.push(movedItem);
-    }
-    if (i !== indexA) {
-      // Add all columns except the one being moved
-      newArray.push(array[i]);
+    if (movingRight) {
+      // Moving right: add target first, then moved item after
+      if (i !== indexA) {
+        newArray.push(array[i]);
+      }
+      if (i === indexB) {
+        newArray.push(movedItem);
+      }
+    } else {
+      // Moving left: add moved item first, then target after
+      if (i === indexB) {
+        newArray.push(movedItem);
+      }
+      if (i !== indexA) {
+        newArray.push(array[i]);
+      }
     }
   }
   return newArray;
