@@ -1,6 +1,6 @@
 // TODO: move this to @jsenv/dom (the initStickyGroup part, not the useLayoutEffect)
 
-import { createPubSub } from "@jsenv/dom";
+import { createPubSub, setStyles } from "@jsenv/dom";
 import { useLayoutEffect } from "preact/hooks";
 
 // React hook version for easy integration
@@ -45,6 +45,8 @@ const initStickyGroup = (
   }
 
   const [teardown, addTeardown] = createPubSub();
+  const [cleanup, addCleanup, clearCleanup] = createPubSub();
+  addTeardown(cleanup);
 
   const element = elementSelector
     ? container.querySelector(elementSelector)
@@ -52,6 +54,10 @@ const initStickyGroup = (
   const isGrid =
     element.tagName === "TABLE" || element.classList.contains("navi_table");
   const updatePositions = () => {
+    // Clear all previous CSS variable cleanups before setting new ones
+    cleanup();
+    clearCleanup();
+
     if (isGrid) {
       updateGridPositions();
     } else {
@@ -100,9 +106,12 @@ const initStickyGroup = (
       const cellsInColumn = stickyColumnsByIndex.get(columnIndex);
       const leftPosition = stickyIndex === 0 ? 0 : cumulativeWidth;
 
-      // Set CSS variable on all sticky cells in this column
+      // Set CSS variable on all sticky cells in this column using setStyles for proper cleanup
       cellsInColumn.forEach((cell) => {
-        cell.style.setProperty(ITEM_LEFT_VAR, `${leftPosition}px`);
+        const restoreStyles = setStyles(cell, {
+          [ITEM_LEFT_VAR]: `${leftPosition}px`,
+        });
+        addCleanup(restoreStyles);
       });
 
       // Also set CSS variable on corresponding <col> element if it exists
@@ -111,10 +120,10 @@ const initStickyGroup = (
         const colElements = Array.from(colgroup.querySelectorAll(".navi_col"));
         const correspondingCol = colElements[columnIndex];
         if (correspondingCol) {
-          correspondingCol.style.setProperty(
-            ITEM_LEFT_VAR,
-            `${leftPosition}px`,
-          );
+          const restoreStyles = setStyles(correspondingCol, {
+            [ITEM_LEFT_VAR]: `${leftPosition}px`,
+          });
+          addCleanup(restoreStyles);
         }
       }
 
@@ -126,12 +135,21 @@ const initStickyGroup = (
         cumulativeWidth += referenceCell.getBoundingClientRect().width;
       }
     });
-    container.style.setProperty(FRONTIER_LEFT_VAR, `${cumulativeWidth}px`);
+
+    // Set frontier variables with proper cleanup tracking
+    const restoreContainerStyles = setStyles(container, {
+      [FRONTIER_LEFT_VAR]: `${cumulativeWidth}px`,
+    });
+    addCleanup(restoreContainerStyles);
+
     if (elementReceivingCumulativeStickyPosition) {
-      elementReceivingCumulativeStickyPosition.style.setProperty(
-        FRONTIER_LEFT_VAR,
-        `${cumulativeWidth}px`,
+      const restoreCumulativeStyles = setStyles(
+        elementReceivingCumulativeStickyPosition,
+        {
+          [FRONTIER_LEFT_VAR]: `${cumulativeWidth}px`,
+        },
       );
+      addCleanup(restoreCumulativeStyles);
     }
   };
   const updateTableRows = () => {
@@ -166,13 +184,19 @@ const initStickyGroup = (
       const rowCells = rowsWithStickyCells.get(row);
       const topPosition = index === 0 ? 0 : cumulativeHeight;
 
-      // Set CSS variable on all sticky cells in this row
+      // Set CSS variable on all sticky cells in this row using setStyles for proper cleanup
       rowCells.forEach((cell) => {
-        cell.style.setProperty(ITEM_TOP_VAR, `${topPosition}px`);
+        const restoreStyles = setStyles(cell, {
+          [ITEM_TOP_VAR]: `${topPosition}px`,
+        });
+        addCleanup(restoreStyles);
       });
 
       // Also set CSS variable on the <tr> element itself
-      row.style.setProperty(ITEM_TOP_VAR, `${topPosition}px`);
+      const restoreRowStyles = setStyles(row, {
+        [ITEM_TOP_VAR]: `${topPosition}px`,
+      });
+      addCleanup(restoreRowStyles);
 
       // Update cumulative height for next row
       if (index === 0) {
@@ -181,12 +205,21 @@ const initStickyGroup = (
         cumulativeHeight += row.getBoundingClientRect().height;
       }
     });
-    container.style.setProperty(FRONTIER_TOP_VAR, `${cumulativeHeight}px`);
+
+    // Set frontier variables with proper cleanup tracking
+    const restoreContainerStyles = setStyles(container, {
+      [FRONTIER_TOP_VAR]: `${cumulativeHeight}px`,
+    });
+    addCleanup(restoreContainerStyles);
+
     if (elementReceivingCumulativeStickyPosition) {
-      elementReceivingCumulativeStickyPosition.style.setProperty(
-        FRONTIER_TOP_VAR,
-        `${cumulativeHeight}px`,
+      const restoreCumulativeStyles = setStyles(
+        elementReceivingCumulativeStickyPosition,
+        {
+          [FRONTIER_TOP_VAR]: `${cumulativeHeight}px`,
+        },
       );
+      addCleanup(restoreCumulativeStyles);
     }
   };
 
@@ -206,22 +239,37 @@ const initStickyGroup = (
     stickyElements.forEach((element, index) => {
       if (index === 0) {
         // First element stays at position 0
-        element.style.setProperty(cssVariableName, "0px");
+        const restoreStyles = setStyles(element, {
+          [cssVariableName]: "0px",
+        });
+        addCleanup(restoreStyles);
         cumulativeSize = element.getBoundingClientRect()[dimensionProperty];
       } else {
         // Subsequent elements use cumulative positioning
         const position = cumulativeSize;
-        element.style.setProperty(cssVariableName, `${position}px`);
+        const restoreStyles = setStyles(element, {
+          [cssVariableName]: `${position}px`,
+        });
+        addCleanup(restoreStyles);
         cumulativeSize += element.getBoundingClientRect()[dimensionProperty];
       }
     });
+
+    // Set frontier variables with proper cleanup tracking
     const frontierVar = isHorizontal ? FRONTIER_LEFT_VAR : FRONTIER_TOP_VAR;
-    container.style.setProperty(frontierVar, `${cumulativeSize}px`);
+    const restoreContainerStyles = setStyles(container, {
+      [frontierVar]: `${cumulativeSize}px`,
+    });
+    addCleanup(restoreContainerStyles);
+
     if (elementReceivingCumulativeStickyPosition) {
-      elementReceivingCumulativeStickyPosition.style.setProperty(
-        frontierVar,
-        `${cumulativeSize}px`,
+      const restoreCumulativeStyles = setStyles(
+        elementReceivingCumulativeStickyPosition,
+        {
+          [frontierVar]: `${cumulativeSize}px`,
+        },
       );
+      addCleanup(restoreCumulativeStyles);
     }
   };
 
