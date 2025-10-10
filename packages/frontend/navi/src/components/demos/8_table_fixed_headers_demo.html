@@ -114,7 +114,8 @@
           const rowCells = [];
           rowCells.id = i;
           for (let j = 1; j <= cols; j++) {
-            if (i === 1 && j === 8) {
+            if (i === 1 && j === 1) {
+              // rowCells.push(`Cell ${i}-${j}`);
               rowCells.push(`A text that is longer`);
             } else {
               rowCells.push(`Cell ${i}-${j}`);
