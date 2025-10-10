@@ -87,7 +87,6 @@ import {
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupVisualMarkers } from "./debug_markers.js";
 import { createObstacleConstraintsFromQuerySelector } from "./drag_obstacles.js";
-import { getElementBounds } from "./element_bounds.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 // Coordinate conversion helpers
@@ -215,9 +214,11 @@ export const createDragGestureController = (options = {}) => {
     let topAtStart;
     if (isThresholdOnly) {
     } else {
-      const elementBounds = getElementBounds(elementVisuallyImpacted, {
+      const elementBounds = getElementScrollableRect(
+        elementVisuallyImpacted,
         scrollableParent,
-      });
+        {},
+      );
 
       const {
         left,

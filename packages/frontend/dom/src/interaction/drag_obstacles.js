@@ -1,5 +1,5 @@
+import { getElementScrollableRect } from "../scroll/scrollable_rect.js";
 import { createObstacleContraint } from "./constraint.js";
-import { getElementBounds } from "./element_bounds.js";
 import { getElementSelector } from "./element_log.js";
 
 export const createObstacleConstraintsFromQuerySelector = (
@@ -31,13 +31,16 @@ export const createObstacleConstraintsFromQuerySelector = (
     }
 
     obstacleConstraintFunctions.push(() => {
-      const obstacleBounds = getElementBounds(obstacle, {
-        scrollableParent: gestureInfo.scrollableParent,
-        useNonStickyLeftEvenIfStickyLeft:
-          !gestureInfo.hasCrossedVisibleAreaLeftOnce,
-        useNonStickyTopEvenIfStickyTop:
-          !gestureInfo.hasCrossedVisibleAreaTopOnce,
-      });
+      const obstacleBounds = getElementScrollableRect(
+        obstacle,
+        gestureInfo.scrollableParent,
+        {
+          useNonStickyLeftEvenIfStickyLeft:
+            !gestureInfo.hasCrossedVisibleAreaLeftOnce,
+          useNonStickyTopEvenIfStickyTop:
+            !gestureInfo.hasCrossedVisibleAreaTopOnce,
+        },
+      );
 
       // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
       const obstacleObject = createObstacleContraint(obstacleBounds, {

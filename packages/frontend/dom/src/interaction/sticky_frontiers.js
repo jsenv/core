@@ -1,4 +1,4 @@
-import { getElementBounds } from "./element_bounds.js";
+import { getElementScrollableRect } from "../scroll/scrollable_rect.js";
 import { getElementSelector } from "./element_log.js";
 
 export const applyStickyFrontiersToVisibleArea = (
@@ -146,9 +146,7 @@ const createStickyFrontierOnAxis = (
         continue;
       }
     }
-    const frontierBounds = getElementBounds(frontier, {
-      scrollableParent,
-    });
+    const frontierBounds = getElementScrollableRect(frontier, scrollableParent);
     const stickyFrontierObject = {
       type: "sticky-frontier",
       element: frontier,
