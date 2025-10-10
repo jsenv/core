@@ -495,7 +495,7 @@ export const createDragGestureController = (options = {}) => {
           leftAtStart,
           topAtStart,
           element: visibleConstraintElement,
-          name: "visible_area",
+          name: "visible_area_constraint",
         });
       };
       constraintFunctions.push(visibleAreaConstraintFunction);
