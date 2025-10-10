@@ -21,8 +21,9 @@ export const useTableDragContextValue = ({
     if (columnIndex === newColumnIndex) {
       return;
     }
-    const columnIdsWithNewOrder = insertColumn(
-      columns,
+    const columnIds = columns.map((col) => col.id);
+    const columnIdsWithNewOrder = insertItem(
+      columnIds,
       columnIndex,
       newColumnIndex,
     );
@@ -40,48 +41,39 @@ export const useTableDragContextValue = ({
   }, [grabTarget, canChangeColumnOrder]);
 };
 
-// TODO: this is not exactly as we want, look like the column should be insert at + 1
-export const insertColumn = (columns, columnIndexA, columnIndexB) => {
-  const columnIds = columns.map((col) => col.id);
-  const columnIdsWithNewOrder = [];
-  const columnIdAtPositionA = columnIds[columnIndexA];
-
-  for (let i = 0; i < columnIds.length; i++) {
-    if (i === columnIndexA) {
-      // Skip the original position - we're moving this column
-      continue;
+const insertItem = (array, indexA, indexB) => {
+  const newArray = [];
+  const movedItem = array[indexA];
+  for (let i = 0; i < array.length; i++) {
+    if (i === indexB) {
+      // Insert the moved column at target position
+      newArray.push(movedItem);
     }
-    if (i === columnIndexB) {
-      // At the target position, insert the dragged column
-      columnIdsWithNewOrder.push(columnIdAtPositionA);
-      // Then add the original column that was at this position
-      columnIdsWithNewOrder.push(columnIds[i]);
-      continue;
+    if (i !== indexA) {
+      // Add all columns except the one being moved
+      newArray.push(array[i]);
     }
-    // Everything else stays in the same order
-    columnIdsWithNewOrder.push(columnIds[i]);
   }
-  return columnIdsWithNewOrder;
+  return newArray;
 };
 
-export const swapColumns = (columns, columnIndexA, columnIndexB) => {
-  const columnIds = columns.map((col) => col.id);
-  const columnIdsWithNewOrder = [];
-  const columnIdAtPositionA = columnIds[columnIndexA];
-  const columnIdAtPositionB = columnIds[columnIndexB];
-  for (let i = 0; i < columnIds.length; i++) {
-    if (i === columnIndexB) {
+export const swapItem = (array, indexA, indexB) => {
+  const newArray = [];
+  const itemAtPositionA = array[indexA];
+  const itemAtPositionB = array[indexB];
+  for (let i = 0; i < array.length; i++) {
+    if (i === indexB) {
       // At the new position, put the dragged column
-      columnIdsWithNewOrder.push(columnIdAtPositionA);
+      newArray.push(itemAtPositionA);
       continue;
     }
-    if (i === columnIndexA) {
+    if (i === indexA) {
       // At the old position, put what was at the new position
-      columnIdsWithNewOrder.push(columnIdAtPositionB);
+      newArray.push(itemAtPositionB);
       continue;
     }
     // Everything else stays the same
-    columnIdsWithNewOrder.push(columnIds[i]);
+    newArray.push(array[i]);
   }
-  return columnIdsWithNewOrder;
+  return newArray;
 };

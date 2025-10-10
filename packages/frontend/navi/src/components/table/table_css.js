@@ -47,7 +47,7 @@ import.meta.css = /* css */ `
     vertical-align: top;
   }
   .navi_table_cell[data-align-y="center"] {
-    vertical-align: center;
+    vertical-align: middle;
   }
   .navi_table_cell[data-align-y="end"] {
     vertical-align: bottom;

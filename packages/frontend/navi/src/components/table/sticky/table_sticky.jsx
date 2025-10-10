@@ -30,6 +30,10 @@ import.meta.css = /* css */ `
   .navi_table_cell {
     box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.06);
   }
+  .navi_table_cell[data-sticky-left],
+  .navi_table_cell[data-sticky-top] {
+    box-shadow: none;
+  }
 
   .navi_table_cell[data-sticky-top] {
     position: sticky;
