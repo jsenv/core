@@ -491,7 +491,7 @@
             <div class="column-cell">Analysis Z</div>
           </div>
 
-          <div class="table-column" style="width: 170px">
+          <div class="table-column" style="width: 170px" data-drag-obstacle>
             <div class="column-header">Column 9</div>
             <div class="column-cell">Result A</div>
             <div class="column-cell">Result B</div>
@@ -586,12 +586,26 @@
         const tableContainer = document.getElementById("tableContainer");
         const tableRect = tableContainer.getBoundingClientRect();
 
-        // Position the clone exactly above the original table
-        // Since viewport moves with scroll, we need to subtract scroll to get the correct relative position
+        // Get table's natural offset position (without scroll influence)
+        let tableOffsetLeft = 0;
+        let element = tableContainer;
+        while (element && element !== document.body) {
+          tableOffsetLeft += element.offsetLeft;
+          element = element.offsetParent;
+        }
+
+        // Calculate clone position based on scroll vs table offset
+        const currentScrollX = window.scrollX;
+        const cloneLeft =
+          currentScrollX < tableOffsetLeft
+            ? tableOffsetLeft - currentScrollX
+            : 0;
+        const cloneTop = tableRect.top; // Top position relative to viewport
+
         dragCloneContainer.style.width = `${tableRect.width}px`;
         dragCloneContainer.style.height = `${tableRect.height}px`;
-        dragCloneContainer.style.left = `${tableRect.left + window.scrollX}px`;
-        dragCloneContainer.style.top = `${tableRect.top + window.scrollY}px`;
+        dragCloneContainer.style.left = `${cloneLeft}px`;
+        dragCloneContainer.style.top = `${cloneTop}px`;
 
         // Clone the entire table content structure
         const tableContent = document.getElementById("tableContent");
@@ -762,9 +776,8 @@
       updatePositions();
 
       // Auto-scroll to show sticky behavior
-      setTimeout(() => {
-        window.scrollTo(200, 0); // Scroll further to ensure sticky behavior is clearly visible
-      }, 1000);
+
+      window.scrollTo(300, 0); // Scroll further to ensure sticky behavior is clearly visible
     </script>
   </body>
 </html>
