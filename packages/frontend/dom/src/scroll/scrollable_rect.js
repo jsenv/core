@@ -98,12 +98,15 @@ export const getElementScrollableRect = (
         } else {
           leftScrollable = originalPosition; // Element in natural position
         }
-      } else if (leftCssValue > originalPosition) {
-        // For frontiers with container scrolling: element is stuck
-        leftScrollable = leftCssValue;
       } else {
-        // For frontiers with container scrolling: element in natural position
-        leftScrollable = originalPosition;
+        // For frontiers with container scrolling: element sticks relative to container scroll
+        const scrollLeft = scrollableParent.scrollLeft;
+        const stickyPosition = scrollLeft + leftCssValue;
+        if (stickyPosition > originalPosition) {
+          leftScrollable = stickyPosition; // Element is stuck
+        } else {
+          leftScrollable = originalPosition; // Element in natural position
+        }
       }
     }
     if (hasStickyTopAttribute) {
@@ -124,12 +127,15 @@ export const getElementScrollableRect = (
         } else {
           topScrollable = originalPosition; // Element in natural position
         }
-      } else if (topCssValue > originalPosition) {
-        // For frontiers with container scrolling: element is stuck
-        topScrollable = topCssValue;
       } else {
-        // For frontiers with container scrolling: element in natural position
-        topScrollable = originalPosition;
+        // For frontiers with container scrolling: element sticks relative to container scroll
+        const scrollTop = scrollableParent.scrollTop;
+        const stickyPosition = scrollTop + topCssValue;
+        if (stickyPosition > originalPosition) {
+          topScrollable = stickyPosition; // Element is stuck
+        } else {
+          topScrollable = originalPosition; // Element in natural position
+        }
       }
     }
     return createScrollableRectResult(leftScrollable, topScrollable);
