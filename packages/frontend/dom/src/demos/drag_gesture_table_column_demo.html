@@ -15,7 +15,7 @@
         font-family: Arial, sans-serif;
         background: #f0f0f0;
         min-height: 200vh;
-        min-width: 200vw; /* Wide enough to show sticky behavior */
+        min-width: 250vw; /* Much wider to show sticky behavior with document scroll */
       }
 
       .demo-section {
@@ -52,8 +52,8 @@
         line-height: 1.6;
       }
 
-      .table-container {
-        width: 1100px;
+      .table-content {
+        width: 1800px; /* Wide enough to trigger document scrolling */
         height: 600px;
         background: white;
         position: relative;
@@ -61,21 +61,13 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         border-radius: 4px;
         border: 20px solid #ddd;
-        overflow: auto;
-      }
-
-      .table-content {
-        width: 1500px; /* Wider than container to enable scrolling */
-        height: 100%;
-        background: #fafafa;
-        position: relative;
       }
 
       /* Column representations (invisible/semi-transparent) */
       .column-representation {
         position: absolute;
-        top: 0;
-        height: 100%;
+        top: 20px; /* Account for border */
+        height: calc(100% - 40px); /* Account for top and bottom borders */
         background: rgba(255, 0, 0, 0.1);
         border: 1px dashed rgba(255, 0, 0, 0.3);
         z-index: 1;
@@ -90,8 +82,8 @@
       /* Actual table columns */
       .table-column {
         position: absolute;
-        top: 0;
-        height: 100%;
+        top: 20px; /* Account for border */
+        height: calc(100% - 40px); /* Account for top and bottom borders */
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
         border: 2px solid #2471a3;
         border-radius: 4px;
@@ -110,6 +102,7 @@
 
       .table-column.sticky-column {
         position: sticky;
+        left: 120px; /* Stick at 120px from document left */
         background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
         border-color: #a93226;
         z-index: 3;
@@ -336,7 +329,7 @@
     </div>
 
     <div class="scroll-instructions">
-      <strong>Instructions:</strong> Scroll the table horizontally to see the
+      <strong>Instructions:</strong> Scroll the document horizontally to see the
       red column become sticky, then try dragging its header to move the column
       representation.
     </div>
@@ -377,27 +370,26 @@
       <h2 class="demo-title">
         Demo: Table Column Dragging with Sticky Positioning
       </h2>
-      <div class="table-container" id="tableContainer">
-        <div class="table-content" id="tableContent">
-          <!-- Column representations (before actual columns in DOM) -->
-          <div
-            class="column-representation"
-            id="columnRep1"
-            style="left: 0; width: 100px"
-          ></div>
+      <div class="table-content" id="tableContent">
+        <!-- Column representations (before actual columns in DOM) -->
+        <div
+          class="column-representation"
+          id="columnRep1"
+          style="left: 20px; width: 100px"
+        ></div>
 
-          <div
-            class="column-representation"
-            id="columnRep2"
-            data-sticky-left=""
-            style="left: 100px; width: 120px"
-          ></div>
+        <div
+          class="column-representation"
+          id="columnRep2"
+          data-sticky-left=""
+          style="left: 120px; width: 120px"
+        ></div>
 
-          <!-- Actual table columns -->
-          <div class="table-column" id="column1" style="left: 0; width: 100px">
-            <div class="column-header">Column 1</div>
-            <div class="column-cell">Row 1</div>
-            <div class="column-cell">Row 2</div>
+        <!-- Actual table columns -->
+        <div class="table-column" id="column1" style="left: 20px; width: 100px">
+          <div class="column-header">Column 1</div>
+          <div class="column-cell">Row 1</div>
+          <div class="column-cell">Row 2</div>
             <div class="column-cell">Row 3</div>
             <div class="column-cell">Row 4</div>
             <div class="column-cell">Row 5</div>
@@ -406,7 +398,7 @@
           <div
             class="table-column sticky-column"
             id="column2"
-            style="left: 100px; width: 120px"
+            style="left: 120px; width: 120px"
           >
             <div class="column-header" id="column2Header">Sticky Column</div>
             <div class="column-cell">Sticky 1</div>
@@ -417,6 +409,67 @@
           </div>
 
           <!-- More columns to show scrolling -->
+          <div
+            class="table-column"
+            style="left: 240px; width: 150px"
+          >
+            <div class="column-header">Column 3</div>
+            <div class="column-cell">Data A</div>
+            <div class="column-cell">Data B</div>
+            <div class="column-cell">Data C</div>
+            <div class="column-cell">Data D</div>
+            <div class="column-cell">Data E</div>
+          </div>
+
+          <div
+            class="table-column"
+            style="left: 390px; width: 150px"
+          >
+            <div class="column-header">Column 4</div>
+            <div class="column-cell">Info 1</div>
+            <div class="column-cell">Info 2</div>
+            <div class="column-cell">Info 3</div>
+            <div class="column-cell">Info 4</div>
+            <div class="column-cell">Info 5</div>
+          </div>
+
+          <div
+            class="table-column"
+            style="left: 540px; width: 150px"
+          >
+            <div class="column-header">Column 5</div>
+            <div class="column-cell">Value X</div>
+            <div class="column-cell">Value Y</div>
+            <div class="column-cell">Value Z</div>
+            <div class="column-cell">Value W</div>
+            <div class="column-cell">Value V</div>
+          </div>
+
+          <div
+            class="table-column"
+            style="left: 690px; width: 150px"
+          >
+            <div class="column-header">Column 6</div>
+            <div class="column-cell">Extra 1</div>
+            <div class="column-cell">Extra 2</div>
+            <div class="column-cell">Extra 3</div>
+            <div class="column-cell">Extra 4</div>
+            <div class="column-cell">Extra 5</div>
+          </div>
+
+          <div
+            class="table-column"
+            style="left: 840px; width: 150px"
+          >
+            <div class="column-header">Column 7</div>
+            <div class="column-cell">More 1</div>
+            <div class="column-cell">More 2</div>
+            <div class="column-cell">More 3</div>
+            <div class="column-cell">More 4</div>
+            <div class="column-cell">More 5</div>
+          </div>
+        </div>
+      </div>          <!-- More columns to show scrolling -->
           <div class="table-column" style="left: 220px; width: 150px">
             <div class="column-header">Column 3</div>
             <div class="column-cell">Data A</div>
@@ -467,7 +520,6 @@
       const dragInfo = document.getElementById("dragInfo");
       const scrollInfo = document.getElementById("scrollInfo");
       const elementInfo = document.getElementById("elementInfo");
-      const tableContainer = document.getElementById("tableContainer");
       const column2Header = document.getElementById("column2Header");
       const column2 = document.getElementById("column2");
       const columnRep2 = document.getElementById("columnRep2");
@@ -483,9 +535,9 @@
       });
 
       // Track scroll position for sticky behavior info
-      tableContainer.addEventListener("scroll", () => {
-        const scrollLeft = tableContainer.scrollLeft;
-        const stickyActivated = scrollLeft > 0;
+      document.addEventListener("scroll", () => {
+        const scrollLeft = window.scrollX;
+        const stickyActivated = scrollLeft > 100; // Sticky activates when scrolled past first column
         scrollInfo.textContent = `Scroll: ${scrollLeft}px (sticky ${stickyActivated ? "ACTIVATED" : "not activated"})`;
       });
 
@@ -608,12 +660,11 @@
 
       // Update positions on scroll
       document.addEventListener("scroll", updatePositions);
-      tableContainer.addEventListener("scroll", updatePositions);
       updatePositions();
 
       // Auto-scroll to show sticky behavior
       setTimeout(() => {
-        tableContainer.scrollLeft = 50; // Activate sticky behavior
+        window.scrollTo(150, 0); // Activate sticky behavior
       }, 1000);
     </script>
   </body>
