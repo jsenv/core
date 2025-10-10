@@ -1,3 +1,5 @@
+import { getScrollableParent } from "./parent_scroll.js";
+
 const { documentElement } = document;
 
 export const getElementScrollableRect = (
@@ -275,4 +277,43 @@ export const elementToFixedCoords = (element) => {
   const rect = element.getBoundingClientRect();
   // getBoundingClientRect already gives viewport coordinates, which is what fixed positioning uses
   return [rect.left, rect.top];
+};
+
+/**
+ * Convert scrollable-parent-relative coordinates to positioned-parent-relative coordinates
+ * This is useful for drag operations where you need to position an element using CSS left/top
+ * relative to its positioned parent (offsetParent), but you have coordinates in scrollable space.
+ *
+ * @param {number} leftScrollable - Left coordinate in scrollable-parent-relative space
+ * @param {number} topScrollable - Top coordinate in scrollable-parent-relative space
+ * @param {Element} elementToPosition - The element that will be positioned (used to find its offsetParent)
+ * @param {Element} scrollableParent - The scrollable container
+ * @returns {[number, number]} - [left, top] coordinates for CSS positioning relative to offsetParent
+ */
+export const scrollableCoordsToPositionedParentCoords = (
+  leftScrollable,
+  topScrollable,
+  element,
+  scrollableParent = getScrollableParent(element),
+) => {
+  const scrollableParentIsDocument = scrollableParent === documentElement;
+
+  if (scrollableParentIsDocument) {
+    // For document-level positioning, convert from document coordinates to positioned-parent coordinates
+    const positionedParent = element.offsetParent || document.body;
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+    const { scrollLeft, scrollTop } = documentElement;
+    // Convert document coordinates to positioned-parent-relative coordinates
+    const positionedParentLeftInDocument =
+      positionedParentRect.left + scrollLeft;
+    const positionedParentTopInDocument = positionedParentRect.top + scrollTop;
+    const leftPositioned = leftScrollable - positionedParentLeftInDocument;
+    const topPositioned = topScrollable - positionedParentTopInDocument;
+
+    return [leftPositioned, topPositioned];
+  }
+
+  // For container scrolling, coordinates are already in the right space
+  // (scrollable-parent coordinates can be used directly as positioned coordinates)
+  return [leftScrollable, topScrollable];
 };

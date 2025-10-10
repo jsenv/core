@@ -74,6 +74,7 @@ import {
   fixedCoordsToScrollableCoords,
   getElementScrollableRect,
   mouseEventToScrollableCoords,
+  scrollableCoordsToPositionedParentCoords,
   stickyLeftToScrollableLeft,
   stickyTopToScrollableTop,
 } from "../scroll/scrollable_rect.js";
@@ -935,37 +936,14 @@ export const createDragToMoveGestureController = (options) => {
           hasCrossedVisibleAreaTopOnce,
         } = gestureInfo;
 
-        const scrollableParentIsDocument = scrollableParent === documentElement;
-
         // Calculate initial position for elementToImpact
-        // For document scrolling: convert from document coordinates to positioned-parent-relative coordinates
-        // For container scrolling: coordinates are already in the right space
-        let initialLeftToImpact;
-        let initialTopToImpact;
-
-        if (scrollableParentIsDocument) {
-          // For document-level dragging, we need to convert from document coordinates to positioned-parent coordinates
-          const positionedParent =
-            elementToImpact.offsetParent || document.body;
-          const positionedParentRect = positionedParent.getBoundingClientRect();
-          const { scrollLeft: docScrollLeft, scrollTop: docScrollTop } =
-            documentElement;
-
-          // Convert document coordinates to positioned-parent-relative coordinates
-          const positionedParentLeftInDocument =
-            positionedParentRect.left + docScrollLeft;
-          const positionedParentTopInDocument =
-            positionedParentRect.top + docScrollTop;
-
-          initialLeftToImpact =
-            leftAtStart - visualOffsetX - positionedParentLeftInDocument;
-          initialTopToImpact =
-            topAtStart - visualOffsetY - positionedParentTopInDocument;
-        } else {
-          // For container scrolling, coordinates are already in the right space
-          initialLeftToImpact = leftAtStart - visualOffsetX;
-          initialTopToImpact = topAtStart - visualOffsetY;
-        }
+        const [initialLeftToImpact, initialTopToImpact] =
+          scrollableCoordsToPositionedParentCoords(
+            leftAtStart - visualOffsetX,
+            topAtStart - visualOffsetY,
+            elementToImpact,
+            scrollableParent,
+          );
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
