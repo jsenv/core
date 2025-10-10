@@ -19,13 +19,15 @@ const DEBUG_VISUAL = true;
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
     position: absolute;
-    left: var(--table-left);
-    top: var(--table-top);
-    width: var(--table-width);
-    height: var(--table-height);
+    left: var(--column-left);
+    top: var(--column-top);
+    width: var(--column-width);
+    height: var(--column-height);
     pointer-events: none;
     z-index: ${Z_INDEX_DROP_PREVIEW};
-    color: rgba(0, 0, 255, 0.5);
+    /* Invisible container - just for positioning */
+    background: transparent;
+    border: none;
   }
 
   .navi_table_column_drop_preview_line {
@@ -35,8 +37,12 @@ import.meta.css = /* css */ `
     width: 4px;
     background: rgba(0, 0, 255, 0.5);
     opacity: 0;
-    left: var(--table-column-drop-target-left);
+    left: 0; /* Default: left edge for dropping before */
     transform: translateX(-50%);
+  }
+  .navi_table_column_drop_preview[data-after]
+    .navi_table_column_drop_preview_line {
+    left: 100%; /* Right edge for dropping after */
   }
   .navi_table_column_drop_preview[data-visible]
     .navi_table_column_drop_preview_line {
@@ -45,10 +51,14 @@ import.meta.css = /* css */ `
 
   .navi_table_column_drop_preview .arrow_positioner {
     position: absolute;
-    left: var(--table-column-drop-target-left);
+    left: 0; /* Default: left edge for dropping before */
     display: flex;
     opacity: 0;
     transform: translateX(-50%);
+    color: rgba(0, 0, 255, 0.5);
+  }
+  .navi_table_column_drop_preview[data-after] .arrow_positioner {
+    left: 100%; /* Right edge for dropping after */
   }
   .navi_table_column_drop_preview[data-visible] .arrow_positioner {
     opacity: 1;
@@ -299,19 +309,6 @@ export const initDragTableColumnByMousedown = async (
   const dropPreview = createDropPreview();
 
   drop_preview: {
-    const updateDropPreview = () => {
-      const tableRect = table.getBoundingClientRect();
-      let left = tableRect.left;
-      let top = tableRect.top;
-      const { scrollLeft, scrollTop } = document.documentElement;
-      left += scrollLeft;
-      top += scrollTop;
-      dropPreview.style.setProperty("--table-left", `${left}px`);
-      dropPreview.style.setProperty("--table-top", `${top}px`);
-      dropPreview.style.setProperty("--table-width", `${tableRect.width}px`);
-      dropPreview.style.setProperty("--table-height", `${tableRect.height}px`);
-    };
-
     const dropCandidateElements = colElements.filter(
       (col) =>
         !(col.getAttribute("data-drag-obstacle") || "").includes("move-column"),
@@ -329,48 +326,53 @@ export const initDragTableColumnByMousedown = async (
       }
 
       const scrollableParent = getScrollableParent(table);
-      const targetColumnVisualRect = getElementScrollableRect(
+      const targetColumnRect = getElementScrollableRect(
         targetColumn,
         scrollableParent,
       );
 
-      // Convert from scrollable coordinates to viewport coordinates for positioning
-      let targetColumnScrollableLeft = targetColumnVisualRect.left;
+      // Convert column position to viewport coordinates
+      const [columnViewportLeft, columnViewportTop] =
+        scrollableCoordsToViewport(
+          targetColumnRect.left,
+          targetColumnRect.top,
+          scrollableParent,
+        );
+
+      // Position the invisible container to match the target column
+      dropPreview.style.setProperty("--column-left", `${columnViewportLeft}px`);
+      dropPreview.style.setProperty("--column-top", `${columnViewportTop}px`);
+      dropPreview.style.setProperty(
+        "--column-width",
+        `${targetColumnRect.width}px`,
+      );
+      dropPreview.style.setProperty(
+        "--column-height",
+        `${targetColumnRect.height}px`,
+      );
+
+      // Set data-after attribute to control line position via CSS
       if (dropColumnIndex > columnIndex) {
-        targetColumnScrollableLeft += targetColumnVisualRect.width;
+        // Dropping after: CSS will position line at right edge (100%)
         dropPreview.setAttribute("data-after", "");
       } else {
+        // Dropping before: CSS will position line at left edge (0%)
         dropPreview.removeAttribute("data-after");
       }
 
-      const [targetColumnViewportLeft] = scrollableCoordsToViewport(
-        targetColumnScrollableLeft,
-        0, // y coordinate not needed for horizontal positioning
-        scrollableParent,
-      );
-
-      dropPreview.style.setProperty(
-        "--table-column-drop-target-left",
-        `${targetColumnViewportLeft}px`,
-      );
       dropPreview.setAttribute("data-drop-column-index", dropColumnIndex);
       dropPreview.setAttribute("data-visible", "");
     };
 
-    updateDropPreview();
     addDragEffect((gestureInfo) => {
-      updateDropPreview();
       const dropTargetInfo = getDropTargetInfo(
         gestureInfo,
         dropCandidateElements,
       );
       if (!dropTargetInfo) {
+        dropPreview.removeAttribute("data-visible");
         return;
       }
-      // we need to update target position even when
-      // index do not changed to take scroll into account
-      // (because arrwo is positioned into document to be able to overflow
-      // but outside the scrollable container to avoid having impact on scrollbars)
       updateDropTarget(dropTargetInfo);
     });
 
