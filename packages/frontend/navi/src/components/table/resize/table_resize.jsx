@@ -1,5 +1,6 @@
 import {
   createDragToMoveGestureController,
+  getElementScrollableRect,
   getScrollableParent,
 } from "@jsenv/dom";
 
@@ -364,27 +365,27 @@ const initResizeByMousedown = (
       : updateTableRowResizerPosition;
 
   // Detect sticky positioning for advanced constraint handling
-  const isSticky =
-    axis === "x"
-      ? tableCell.hasAttribute("data-sticky-left")
-      : tableCell.hasAttribute("data-sticky-top");
+
   const scrollableParent = getScrollableParent(table);
-  const scrollableParentRect = scrollableParent.getBoundingClientRect();
-  const tableCellRect = tableCell.getBoundingClientRect();
-  const tableContainerRect = tableContainer.getBoundingClientRect();
+  // Use scrollable rect helper for proper coordinate conversion
+  const tableCellScrollableRect = getElementScrollableRect(
+    tableCell,
+    scrollableParent,
+  );
+  const tableContainerScrollableRect = getElementScrollableRect(
+    tableContainer,
+    scrollableParent,
+  );
 
   // Calculate size and position based on axis
-  const currentSize = axis === "x" ? tableCellRect.width : tableCellRect.height;
-  const scrollableParentIsDocument =
-    scrollableParent === document.documentElement;
-  let cellStartRelative = axis === "x" ? tableCellRect.left : tableCellRect.top;
-  if (isSticky && !scrollableParentIsDocument) {
-    cellStartRelative -=
-      axis === "x" ? scrollableParentRect.left : scrollableParentRect.top;
-  } else {
-    cellStartRelative -=
-      axis === "x" ? tableContainerRect.left : tableContainerRect.top;
-  }
+  const currentSize =
+    axis === "x"
+      ? tableCellScrollableRect.width
+      : tableCellScrollableRect.height;
+  const cellStartRelative =
+    axis === "x"
+      ? tableCellScrollableRect.left - tableContainerScrollableRect.left
+      : tableCellScrollableRect.top - tableContainerScrollableRect.top;
 
   // Calculate bounds based on axis
   const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
@@ -403,13 +404,6 @@ const initResizeByMousedown = (
   const maxExpandAmount = maxCellSize - currentSize;
   let customEndBound = cellStartRelative + currentSize + maxExpandAmount;
 
-  if (isSticky && !scrollableParentIsDocument) {
-    const scrollOffset =
-      axis === "x" ? scrollableParent.scrollLeft : scrollableParent.scrollTop;
-    customStartBound += scrollOffset;
-    customEndBound += scrollOffset;
-  }
-
   // Build drag gesture configuration based on axis
   const gestureName = axis === "x" ? "resize-column" : "resize-row";
   const direction = axis === "x" ? { x: true } : { y: true };
@@ -418,6 +412,10 @@ const initResizeByMousedown = (
       ? { left: customStartBound, right: customEndBound }
       : { top: customStartBound, bottom: customEndBound };
 
+  const isSticky =
+    axis === "x"
+      ? tableCellScrollableRect.fromStickyLeft
+      : tableCellScrollableRect.fromStickyTop;
   const dragToMoveGestureController = createDragToMoveGestureController({
     name: gestureName,
     direction,
