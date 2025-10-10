@@ -304,19 +304,14 @@ export const createDragGestureController = (options = {}) => {
         // Normal positioning - use coordinates from getElementBounds
         leftAtStart = left;
         topAtStart = top;
-
         // Handle data-sticky attributes for visual offset adjustment
         if (fromStickyLeftAttr) {
           isStickyLeftOrHasStickyLeftAttr = true;
-          if (!scrollableParentIsDocument) {
-            visualOffsetX += scrollLeftAtStart;
-          }
+          visualOffsetX -= scrollLeftAtStart;
         }
         if (fromStickyTopAttr) {
           isStickyTopOrHasStickyTopAttr = true;
-          if (!scrollableParentIsDocument) {
-            visualOffsetY += scrollTopAtStart;
-          }
+          visualOffsetY -= scrollTopAtStart;
         }
       }
     }
