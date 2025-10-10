@@ -1,4 +1,4 @@
-import { getVisualRect } from "@jsenv/dom";
+import { getElementVisualCoords } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Z_INDEX_TABLE_UI_CONTAINER } from "./z_indexes.js";
@@ -52,7 +52,7 @@ export const TableUI = ({ tableRef, children }) => {
 
     const tableRoot = tableElement.closest(".navi_table_root");
     const updateTablePosition = () => {
-      const { left, top } = getVisualRect(tableRoot);
+      const [left, top] = getElementVisualCoords(tableRoot);
       element.style.setProperty("--table-left", `${left}px`);
       element.style.setProperty("--table-top", `${top}px`);
     };

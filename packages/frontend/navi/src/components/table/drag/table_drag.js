@@ -4,8 +4,8 @@ import {
   createPubSub,
   getDropTargetInfo,
   getElementScrollableRect,
+  getElementVisualCoords,
   getScrollableParent,
-  getVisualRect,
   scrollableCoordsToViewport,
   stickyAsRelativeCoords,
 } from "@jsenv/dom";
@@ -399,7 +399,7 @@ export const initDragTableColumnByMousedown = async (
       const [
         tableVisualLeftRelativeToScrollableParent,
         tableVisualTopRelativeToScrollableParent,
-      ] = getVisualRect(table, scrollableParent);
+      ] = getElementVisualCoords(table, scrollableParent);
       const cloneViewportLeft =
         scrollLeft < tableVisualLeftRelativeToScrollableParent
           ? tableVisualLeftRelativeToScrollableParent - scrollLeft

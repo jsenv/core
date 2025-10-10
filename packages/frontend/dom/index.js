@@ -57,7 +57,7 @@ export { followPosition } from "./src/position/follow_position.js";
 export { getPositionedParent } from "./src/position/offset_parent.js";
 export { initPositionSticky } from "./src/position/position_sticky.js";
 export { stickyAsRelativeCoords } from "./src/position/sticky_rect.js";
-export { getVisualRect } from "./src/position/visual_rect.js";
+export { getElementVisualCoords } from "./src/position/visual_rect.js";
 
 // size
 export { initFlexDetailsSet } from "./src/size/flex_details_set.js";

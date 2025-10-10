@@ -17,13 +17,14 @@
  * @param {Element} [secondDomElement] - The reference element (defaults to domElement's offsetParent)
  * @returns {Object} Rectangle with visual coordinates relative to the reference element
  */
-export const getVisualRect = (
+export const getElementVisualCoords = (
   domElement,
   secondDomElement,
   { isStickyLeft, isStickyTop, isFixed } = {},
 ) => {
   if (domElement === document) {
-    return domElement.getBoundingClientRect();
+    const { left, top } = domElement.getBoundingClientRect();
+    return [left, top];
   }
   if (secondDomElement === undefined) {
     secondDomElement = domElement.offsetParent;
@@ -84,14 +85,5 @@ export const getVisualRect = (
     }
   }
 
-  const clientRect = domElement.getBoundingClientRect();
-  const { width, height } = clientRect;
-  return {
-    left,
-    top,
-    right: left + width,
-    bottom: top + height,
-    width,
-    height,
-  };
+  return [left, top];
 };
