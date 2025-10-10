@@ -129,10 +129,11 @@ const initStickyGroup = (
 
       // Update cumulative width for next column using the first cell in this column as reference
       const referenceCell = cellsInColumn[0];
+      const columnWidth = referenceCell.getBoundingClientRect().width;
       if (stickyIndex === 0) {
-        cumulativeWidth = referenceCell.getBoundingClientRect().width;
+        cumulativeWidth = columnWidth;
       } else {
-        cumulativeWidth += referenceCell.getBoundingClientRect().width;
+        cumulativeWidth += columnWidth;
       }
     });
 
@@ -199,10 +200,11 @@ const initStickyGroup = (
       addCleanup(restoreRowStyles);
 
       // Update cumulative height for next row
+      const rowHeight = row.getBoundingClientRect().height;
       if (index === 0) {
-        cumulativeHeight = row.getBoundingClientRect().height;
+        cumulativeHeight = rowHeight;
       } else {
-        cumulativeHeight += row.getBoundingClientRect().height;
+        cumulativeHeight += rowHeight;
       }
     });
 
