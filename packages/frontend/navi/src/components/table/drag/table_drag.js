@@ -5,6 +5,7 @@ import {
   getDropTargetInfo,
   getElementScrollableRect,
   getScrollableParent,
+  getVisualRect,
   scrollableCoordsToViewport,
   stickyAsRelativeCoords,
 } from "@jsenv/dom";
@@ -19,14 +20,21 @@ const DEBUG_VISUAL = false;
 import.meta.css = /* css */ `
   .navi_table_drag_clone_viewport {
     position: absolute;
-    inset: 0;
     overflow: hidden;
+    left: var(--scroll-left);
+    top: var(--scroll-top);
+    width: 100%;
+    height: 100%;
   }
 
   .navi_table_drag_clone_container {
     position: absolute;
     pointer-events: auto; /* Allow wheel events */
     /* background: rgba(0, 0, 0, 0.5); */
+    left: var(--table-left);
+    top: var(--table-top);
+    width: var(--table-width);
+    height: var(--table-height);
   }
 
   .navi_table_cell[data-grabbed]::before,
@@ -276,6 +284,8 @@ export const initDragTableColumnByMousedown = async (
   // ensure [data-drag-obstacle] inside the table clone are ignored
   tableClone.setAttribute("data-drag-ignore", "");
 
+  const scrollableParent = getScrollableParent(table);
+
   // We'll create our own clone container in append_in_dom section
   let cloneParent; // Will be set when we create the drag clone container
 
@@ -342,14 +352,18 @@ export const initDragTableColumnByMousedown = async (
   }
 
   append_in_dom: {
-    const dragCloneHtml = /* html */ `<div
+    // Position the container exactly on the <table>
+    // but within document to allow overflow
+    // but within a viewport preventing any impact on the scrollable parent
+
+    const dragCloneHtml = /* html */ `
+      <div
         class="navi_table_drag_clone_viewport"
       >
         <div class="navi_table_drag_clone_container"></div>
       </div>`;
     const div = document.createElement("div");
     div.innerHTML = dragCloneHtml;
-
     const dragCloneViewport = div.querySelector(
       ".navi_table_drag_clone_viewport",
     );
@@ -357,27 +371,62 @@ export const initDragTableColumnByMousedown = async (
       ".navi_table_drag_clone_container",
     );
 
-    // Position the container exactly on top of the original table
-    const tableRect = table.getBoundingClientRect();
-    const { scrollLeft, scrollTop } = document.documentElement;
-    const tableDocumentLeft = tableRect.left + scrollLeft;
-    const tableDocumentTop = tableRect.top + scrollTop;
+    viewport_positioning: {
+      // position the viewport
+      const updateViewportPosition = () => {
+        const { scrollLeft, scrollTop } = scrollableParent;
+        dragCloneViewport.style.setProperty("--scroll-left", `${scrollLeft}px`);
+        dragCloneViewport.style.setProperty("--scroll-top", `${scrollTop}px`);
+      };
+      addDragEffect(() => {
+        updateViewportPosition();
+      });
+      // ensure we catch eventual "scroll" events cause by something else than drag gesture
+      const onScroll = () => {
+        updateViewportPosition();
+      };
+      scrollableParent.addEventListener("scroll", onScroll, { passive: true });
+      addTeardown(() => {
+        scrollableParent.removeEventListener("scroll", onScroll, {
+          passive: true,
+        });
+      });
+    }
 
-    dragCloneContainer.style.left = `${tableDocumentLeft}px`;
-    dragCloneContainer.style.top = `${tableDocumentTop}px`;
-    dragCloneContainer.style.width = `${tableRect.width}px`;
-    dragCloneContainer.style.height = `${tableRect.height}px`;
+    container_position_and_dimension: {
+      // position the container on top of <table> inside this viewport
+      const { scrollLeft, scrollTop } = scrollableParent;
+      const [
+        tableVisualLeftRelativeToScrollableParent,
+        tableVisualTopRelativeToScrollableParent,
+      ] = getVisualRect(table, scrollableParent);
+      const cloneViewportLeft =
+        scrollLeft < tableVisualLeftRelativeToScrollableParent
+          ? tableVisualLeftRelativeToScrollableParent - scrollLeft
+          : 0;
+      const cloneViewportTop =
+        scrollTop < tableVisualTopRelativeToScrollableParent
+          ? tableVisualTopRelativeToScrollableParent - scrollTop
+          : 0;
+      dragCloneContainer.style.setProperty(
+        "--table-left",
+        `${cloneViewportLeft}px`,
+      );
+      dragCloneContainer.style.setProperty(
+        "--table-top",
+        `${cloneViewportTop}px`,
+      );
 
-    // Append the table clone to our container
+      const { width, height } = table.getBoundingClientRect();
+      dragCloneContainer.style.setProperty("--table-width", `${width}px`);
+      dragCloneContainer.style.setProperty("--table-height", `${height}px`);
+    }
+
     dragCloneContainer.appendChild(tableClone);
-    dragCloneOverlay.appendChild(dragCloneContainer);
-    document.body.appendChild(dragCloneOverlay);
-
-    // Update cloneParent reference to use our new container
+    document.body.appendChild(dragCloneViewport);
     cloneParent = dragCloneContainer;
-
     addTeardown(() => {
-      dragCloneOverlay.remove();
+      dragCloneViewport.remove();
     });
   }
 
@@ -395,6 +444,7 @@ export const initDragTableColumnByMousedown = async (
   // const tableRoot = table.closest(".navi_table_root");
   const colgroup = table.querySelector(".navi_colgroup");
   const colElements = Array.from(colgroup.children);
+  const col = colElements[columnIndex];
   const colgroupClone = tableClone.querySelector(".navi_colgroup");
   const colClone = colgroupClone.children[columnIndex];
   const dropPreview = createDropPreview();
@@ -416,7 +466,6 @@ export const initDragTableColumnByMousedown = async (
         return;
       }
 
-      const scrollableParent = getScrollableParent(table);
       const targetColumnRect = getElementScrollableRect(
         targetColumn,
         scrollableParent,
@@ -499,7 +548,7 @@ export const initDragTableColumnByMousedown = async (
     const dragToMoveGesture = dragToMoveGestureController.grabViaMouse(
       mousedownEvent,
       {
-        element: table,
+        element: col,
         elementToImpact: cloneParent,
         elementVisuallyImpacted: colClone,
       },
