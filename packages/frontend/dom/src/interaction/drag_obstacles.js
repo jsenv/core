@@ -35,10 +35,9 @@ export const createObstacleConstraintsFromQuerySelector = (
         obstacle,
         gestureInfo.scrollableParent,
         {
-          useNonStickyLeftEvenIfStickyLeft:
-            !gestureInfo.hasCrossedVisibleAreaLeftOnce,
-          useNonStickyTopEvenIfStickyTop:
-            !gestureInfo.hasCrossedVisibleAreaTopOnce,
+          forceOriginalPositionEvenIfSticky:
+            gestureInfo.hasCrossedVisibleAreaLeftOnce ||
+            gestureInfo.hasCrossedVisibleAreaTopOnce,
         },
       );
 

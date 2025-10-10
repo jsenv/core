@@ -5,10 +5,7 @@ const { documentElement } = document;
 export const getElementScrollableRect = (
   element,
   scrollableParent,
-  {
-    useNonStickyLeftEvenIfStickyLeft = false,
-    useNonStickyTopEvenIfStickyTop = false,
-  } = {},
+  { forceOriginalPositionEvenIfSticky = false } = {},
 ) => {
   const { left, top, width, height } = element.getBoundingClientRect();
   let fromFixed = false;
@@ -86,27 +83,53 @@ export const getElementScrollableRect = (
     if (hasStickyLeftAttribute) {
       const leftCssValue = parseFloat(computedStyle.left) || 0;
       fromStickyLeftAttr = { value: leftCssValue };
-      // For sticky behavior, combine element's real position with its CSS left offset
-      // leftScrollable already contains the element's real position in scrollable coordinates
-      leftScrollable = leftScrollable + leftCssValue;
 
-      if (useNonStickyLeftEvenIfStickyLeft) {
-        // When element hasn't crossed visible area, use its actual scroll-adjusted position
+      const originalPosition = leftScrollable; // Natural position in scrollable coordinates
+
+      if (forceOriginalPositionEvenIfSticky) {
+        // For obstacles: use original position only (ignore sticky behavior)
+        leftScrollable = originalPosition;
+      } else if (scrollableParentIsDocument) {
+        // For frontiers with document scrolling: element sticks when scroll passes its natural position
         const scrollLeft = scrollableParent.scrollLeft;
-        leftScrollable += scrollLeft;
+        const stickyPosition = scrollLeft + leftCssValue;
+        if (stickyPosition > originalPosition) {
+          leftScrollable = stickyPosition; // Element is stuck
+        } else {
+          leftScrollable = originalPosition; // Element in natural position
+        }
+      } else if (leftCssValue > originalPosition) {
+        // For frontiers with container scrolling: element is stuck
+        leftScrollable = leftCssValue;
+      } else {
+        // For frontiers with container scrolling: element in natural position
+        leftScrollable = originalPosition;
       }
     }
     if (hasStickyTopAttribute) {
       const topCssValue = parseFloat(computedStyle.top) || 0;
       fromStickyTopAttr = { value: topCssValue };
-      // For sticky behavior, combine element's real position with its CSS top offset
-      // topScrollable already contains the element's real position in scrollable coordinates
-      topScrollable = topScrollable + topCssValue;
 
-      if (useNonStickyTopEvenIfStickyTop) {
-        // When element hasn't crossed visible area, use its actual scroll-adjusted position
+      const originalPosition = topScrollable; // Natural position in scrollable coordinates
+
+      if (forceOriginalPositionEvenIfSticky) {
+        // For obstacles: use original position only (ignore sticky behavior)
+        topScrollable = originalPosition;
+      } else if (scrollableParentIsDocument) {
+        // For frontiers with document scrolling: element sticks when scroll passes its natural position
         const scrollTop = scrollableParent.scrollTop;
-        topScrollable += scrollTop;
+        const stickyPosition = scrollTop + topCssValue;
+        if (stickyPosition > originalPosition) {
+          topScrollable = stickyPosition; // Element is stuck
+        } else {
+          topScrollable = originalPosition; // Element in natural position
+        }
+      } else if (topCssValue > originalPosition) {
+        // For frontiers with container scrolling: element is stuck
+        topScrollable = topCssValue;
+      } else {
+        // For frontiers with container scrolling: element in natural position
+        topScrollable = originalPosition;
       }
     }
     return createScrollableRectResult(leftScrollable, topScrollable);
