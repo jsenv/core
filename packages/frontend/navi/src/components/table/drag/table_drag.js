@@ -12,11 +12,76 @@ import { createContext } from "preact";
 import { useMemo, useState } from "preact/hooks";
 
 import { useStableCallback } from "../../use_stable_callback.js";
-import { Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
+import { Z_INDEX_CELL_FOREGROUND, Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
 const DEBUG_VISUAL = false;
 
 import.meta.css = /* css */ `
+  .navi_table_drag_clone_overlay {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .navi_table_drag_clone_container {
+    position: absolute;
+    pointer-events: auto; /* Allow wheel events */
+    /* background: rgba(0, 0, 0, 0.5); */
+  }
+
+  .navi_table_cell[data-grabbed]::before,
+  .navi_table_cell[data-grabbed]::after {
+    box-shadow: none !important;
+  }
+
+  /* We preprend ".navi_table_container" to ensure it propertly overrides */
+  .navi_table_drag_clone_container .navi_table_cell {
+    opacity: ${DEBUG_VISUAL ? 0.5 : 0};
+  }
+
+  .navi_table_drag_clone_container .navi_table_cell[data-grabbed] {
+    opacity: 0.7;
+  }
+
+  .navi_table_drag_clone_container .navi_table_cell_sticky_frontier {
+    opacity: 0;
+  }
+
+  .navi_table_drag_clone_container .navi_table_cell[data-sticky-left],
+  .navi_table_drag_clone_container .navi_table_cell[data-sticky-top] {
+    position: relative;
+  }
+
+  .navi_table_cell_foreground {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: lightgrey;
+    opacity: 0;
+    z-index: ${Z_INDEX_CELL_FOREGROUND};
+  }
+  .navi_table_cell[data-first-row] .navi_table_cell_foreground {
+    background-color: grey;
+  }
+  .navi_table_cell_foreground[data-visible] {
+    opacity: 1;
+  }
+
+  .navi_table_drag_clone_container .navi_table_cell_foreground {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+  }
+  .navi_table_drag_clone_container
+    .navi_table_cell[data-first-row][data-grabbed] {
+    opacity: 1;
+  }
+  .navi_table_drag_clone_container
+    .navi_table_cell[data-first-row]
+    .navi_table_cell_foreground {
+    opacity: 0;
+  }
+
   .navi_table_column_drop_preview {
     position: absolute;
     left: var(--column-left);
@@ -207,13 +272,12 @@ export const initDragTableColumnByMousedown = async (
   // Track the drop target column index (starts as current column)
   let dropColumnIndex = columnIndex;
 
-  const tableContainer = table.closest(".navi_table_container");
-  const cloneParent = tableContainer.querySelector(
-    ".navi_table_drag_clone_container",
-  );
   const tableClone = table.cloneNode(true);
   // ensure [data-drag-obstacle] inside the table clone are ignored
   tableClone.setAttribute("data-drag-ignore", "");
+
+  // We'll create our own clone container in append_in_dom section
+  let cloneParent; // Will be set when we create the drag clone container
 
   // Scale down the table clone and set transform origin to mouse grab point
   // const tableRect = table.getBoundingClientRect();
@@ -278,15 +342,36 @@ export const initDragTableColumnByMousedown = async (
   }
 
   append_in_dom: {
-    cloneParent.insertBefore(tableClone, cloneParent.firstChild);
-    const cloneContainer = cloneParent.closest(
-      ".navi_table_drag_clone_container",
-    );
-    cloneContainer.style.display = "block";
+    // Create our own fixed container for the drag clone
+    const dragCloneOverlay = document.createElement("div");
+    dragCloneOverlay.className = "navi_table_drag_clone_overlay";
+
+    // Create the drag clone container positioned exactly on top of the original table
+    const dragCloneContainer = document.createElement("div");
+    dragCloneContainer.className = "navi_table_drag_clone_container";
+    dragCloneContainer.style.position = "absolute";
+
+    // Position the container exactly on top of the original table
+    const tableRect = table.getBoundingClientRect();
+    const { scrollLeft, scrollTop } = document.documentElement;
+    const tableDocumentLeft = tableRect.left + scrollLeft;
+    const tableDocumentTop = tableRect.top + scrollTop;
+
+    dragCloneContainer.style.left = `${tableDocumentLeft}px`;
+    dragCloneContainer.style.top = `${tableDocumentTop}px`;
+    dragCloneContainer.style.width = `${tableRect.width}px`;
+    dragCloneContainer.style.height = `${tableRect.height}px`;
+
+    // Append the table clone to our container
+    dragCloneContainer.appendChild(tableClone);
+    dragCloneOverlay.appendChild(dragCloneContainer);
+    document.body.appendChild(dragCloneOverlay);
+
+    // Update cloneParent reference to use our new container
+    cloneParent = dragCloneContainer;
+
     addTeardown(() => {
-      cloneContainer.style.display = "none";
-      tableClone.remove();
-      cloneParent.style.left = 0;
+      dragCloneOverlay.remove();
     });
   }
 

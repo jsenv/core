@@ -69,7 +69,6 @@ import {
   TableDragContext,
   useTableDragContextValue,
 } from "./drag/table_drag.js";
-import { TableDragCloneContainer } from "./drag/table_drag_clone_container.jsx";
 import {
   TableCellColumnResizeHandles,
   TableCellRowResizeHandles,
@@ -265,7 +264,6 @@ export const Table = forwardRef((props, ref) => {
           </TableSizeProvider>
         </table>
         <TableUI tableRef={innerRef}>
-          <TableDragCloneContainer />
           <TableColumnResizer />
           <TableRowResizer />
           <TableStickyContext.Provider value={stickyContextValue}>
