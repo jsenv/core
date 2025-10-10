@@ -152,11 +152,11 @@
       }
 
       .drag-clone-viewport {
-        position: fixed;
+        position: absolute;
         top: 0;
         left: 0;
-        width: 100vw;
-        height: 100vh;
+        width: 100%;
+        height: 100%;
         overflow: hidden;
         z-index: 10000;
         pointer-events: none;
@@ -523,11 +523,11 @@
         const tableRect = tableContainer.getBoundingClientRect();
 
         // Position the clone exactly above the original table
-        // Using fixed positioning relative to viewport since viewport is fixed
+        // Using absolute positioning, so we need to account for scroll offsets
         dragCloneContainer.style.width = `${tableRect.width}px`;
         dragCloneContainer.style.height = `${tableRect.height}px`;
-        dragCloneContainer.style.left = `${tableRect.left}px`;
-        dragCloneContainer.style.top = `${tableRect.top}px`;
+        dragCloneContainer.style.left = `${tableRect.left + window.scrollX}px`;
+        dragCloneContainer.style.top = `${tableRect.top + window.scrollY}px`;
 
         // Clone the entire table content structure
         const tableContent = document.getElementById("tableContent");
