@@ -54,7 +54,7 @@
 
       .table-container {
         width: 1100px;
-        height: 600px;
+        height: 300px; /* Reduced from 600px */
         background: white;
         position: relative;
         margin: 0 auto;
@@ -305,46 +305,65 @@
     </style>
   </head>
   <body>
-    <div class="info">
-      <h1>Drag Gesture Demo - Table Column Dragging with Sticky Positioning</h1>
-      <p>
-        This demo demonstrates a complex real-world scenario: dragging table
-        columns with sticky positioning behavior.
-      </p>
-      <ul>
-        <li>
-          <strong>Table Structure:</strong> Two columns - regular (100px) and
-          sticky (left: 100px)
-        </li>
-        <li>
-          <strong>Column Representations:</strong> Semi-transparent elements
-          mimicking <code>&lt;col&gt;</code> behavior
-        </li>
-        <li>
-          <strong>Sticky Behavior:</strong> Second column becomes sticky when
-          scrolled horizontally
-        </li>
-        <li>
-          <strong>Drag Mechanics:</strong> Click column header to drag the
-          invisible column representation
-        </li>
-        <li>
-          <strong>Clone System:</strong> Creates a cloned structure during drag
-          with visual feedback
-        </li>
-        <li>
-          <strong>Real Use Case:</strong> Table column reordering in data grids
-          with sticky columns
-        </li>
-      </ul>
-    </div>
+    <details>
+      <summary
+        style="
+          cursor: pointer;
+          font-size: 18px;
+          font-weight: bold;
+          margin-bottom: 20px;
+          padding: 10px;
+          background: white;
+          border-radius: 4px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        "
+      >
+        Demo Information & Instructions
+      </summary>
 
-    <div class="scroll-instructions">
-      <strong>Instructions:</strong> Scroll the document horizontally to see the
-      red sticky column behavior, then try dragging the sticky column header to move the column
-      representation. Only the sticky column is draggable.
-    </div>
+      <div class="info">
+        <h1>
+          Drag Gesture Demo - Table Column Dragging with Sticky Positioning
+        </h1>
+        <p>
+          This demo demonstrates a complex real-world scenario: dragging table
+          columns with sticky positioning behavior.
+        </p>
+        <ul>
+          <li>
+            <strong>Table Structure:</strong> Two columns - regular (100px) and
+            sticky (left: 100px)
+          </li>
+          <li>
+            <strong>Column Representations:</strong> Semi-transparent elements
+            mimicking <code>&lt;col&gt;</code> behavior
+          </li>
+          <li>
+            <strong>Sticky Behavior:</strong> Second column becomes sticky when
+            scrolled horizontally
+          </li>
+          <li>
+            <strong>Drag Mechanics:</strong> Click column header to drag the
+            invisible column representation
+          </li>
+          <li>
+            <strong>Clone System:</strong> Creates a cloned structure during
+            drag with visual feedback
+          </li>
+          <li>
+            <strong>Real Use Case:</strong> Table column reordering in data
+            grids with sticky columns
+          </li>
+        </ul>
+      </div>
 
+      <div class="scroll-instructions">
+        <strong>Instructions:</strong> Scroll the document horizontally to see
+        the red sticky column behavior, then try dragging the sticky column
+        header to move the column representation. Only the sticky column is
+        draggable.
+      </div>
+    </details>
     <div class="element-legend">
       <h4>Element Types</h4>
       <div class="legend-item">
@@ -404,8 +423,6 @@
             <div class="column-cell">Row 1</div>
             <div class="column-cell">Row 2</div>
             <div class="column-cell">Row 3</div>
-            <div class="column-cell">Row 4</div>
-            <div class="column-cell">Row 5</div>
           </div>
 
           <div
@@ -413,12 +430,12 @@
             id="column2"
             style="width: 120px"
           >
-            <div class="column-header" id="column2Header">Sticky Column (Draggable)</div>
+            <div class="column-header" id="column2Header">
+              Sticky Column (Draggable)
+            </div>
             <div class="column-cell">Sticky 1</div>
             <div class="column-cell">Sticky 2</div>
             <div class="column-cell">Sticky 3</div>
-            <div class="column-cell">Sticky 4</div>
-            <div class="column-cell">Sticky 5</div>
           </div>
 
           <!-- More columns to show scrolling -->
@@ -427,8 +444,6 @@
             <div class="column-cell">Data A</div>
             <div class="column-cell">Data B</div>
             <div class="column-cell">Data C</div>
-            <div class="column-cell">Data D</div>
-            <div class="column-cell">Data E</div>
           </div>
 
           <div class="table-column" style="width: 150px">
@@ -436,8 +451,6 @@
             <div class="column-cell">Info 1</div>
             <div class="column-cell">Info 2</div>
             <div class="column-cell">Info 3</div>
-            <div class="column-cell">Info 4</div>
-            <div class="column-cell">Info 5</div>
           </div>
 
           <div class="table-column" style="width: 150px">
@@ -445,8 +458,6 @@
             <div class="column-cell">Value X</div>
             <div class="column-cell">Value Y</div>
             <div class="column-cell">Value Z</div>
-            <div class="column-cell">Value W</div>
-            <div class="column-cell">Value V</div>
           </div>
         </div>
       </div>
