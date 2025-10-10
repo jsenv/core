@@ -17,7 +17,7 @@ import { Z_INDEX_CELL_FOREGROUND, Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 const DEBUG_VISUAL = false;
 
 import.meta.css = /* css */ `
-  .navi_table_drag_clone_overlay {
+  .navi_table_drag_clone_viewport {
     position: absolute;
     inset: 0;
     overflow: hidden;
@@ -342,14 +342,20 @@ export const initDragTableColumnByMousedown = async (
   }
 
   append_in_dom: {
-    // Create our own fixed container for the drag clone
-    const dragCloneOverlay = document.createElement("div");
-    dragCloneOverlay.className = "navi_table_drag_clone_overlay";
+    const dragCloneHtml = /* html */ `<div
+        class="navi_table_drag_clone_viewport"
+      >
+        <div class="navi_table_drag_clone_container"></div>
+      </div>`;
+    const div = document.createElement("div");
+    div.innerHTML = dragCloneHtml;
 
-    // Create the drag clone container positioned exactly on top of the original table
-    const dragCloneContainer = document.createElement("div");
-    dragCloneContainer.className = "navi_table_drag_clone_container";
-    dragCloneContainer.style.position = "absolute";
+    const dragCloneViewport = div.querySelector(
+      ".navi_table_drag_clone_viewport",
+    );
+    const dragCloneContainer = dragCloneViewport.querySelector(
+      ".navi_table_drag_clone_container",
+    );
 
     // Position the container exactly on top of the original table
     const tableRect = table.getBoundingClientRect();

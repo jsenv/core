@@ -569,7 +569,7 @@
         }
       }
 
-      function createDragClone() {
+      function createDragClone(draggedRepresentationId) {
         // Create the viewport container that prevents scrollbar influence
         dragCloneViewport = document.createElement("div");
         dragCloneViewport.className = "drag-clone-viewport";
@@ -614,8 +614,10 @@
         clonedContent.style.height = "100%";
         clonedContent.style.position = "relative";
 
-        // Find the cloned elements we need to reference
-        const clonedRep = clonedContent.querySelector("[data-sticky-left]");
+        // Find the specific cloned elements based on the dragged representation ID
+        const clonedRep = clonedContent.querySelector(
+          `#${draggedRepresentationId}`,
+        );
         const clonedColumn = clonedContent.querySelector(".sticky-column");
 
         // Set opacity for clone columns: dragged column full opacity, others faded
@@ -678,7 +680,7 @@
             representation,
           });
 
-          const dragClone = createDragClone();
+          const dragClone = createDragClone(representation.id);
 
           createDragToMoveGestureController({
             name: `table-column-${name}`,
@@ -722,7 +724,7 @@
           }).grabViaMouse(event, {
             element: header, // Clicked element (header)
             elementToImpact: dragClone.container, // Move the clone container
-            elementVisuallyImpacted: dragClone.representation, // Track the representation clone
+            elementVisuallyImpacted: dragClone.representation, // Track the CORRECT representation clone
           });
         });
       }
