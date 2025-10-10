@@ -277,7 +277,6 @@ export const createDragGestureController = (options = {}) => {
       }
       if (fromStickyTopAttr) {
         isStickyTopOrHasStickyTopAttr = true;
-        visualOffsetY -= scrollTopAtStart;
         if (scrollableParentIsDocument) {
           const positionAtZeroScroll = top + scrollTopAtStart;
           visualOffsetY = positionAtZeroScroll - elementToImpactTop;
