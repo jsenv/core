@@ -209,8 +209,8 @@ export const createDragGestureController = (options = {}) => {
     let visualOffsetX = elementVisuallyImpactedLeft - elementToImpactLeft;
     let visualOffsetY = elementVisuallyImpactedTop - elementToImpactTop;
 
-    let isStickyLeft;
-    let isStickyTop;
+    let isStickyLeftOrHasStickyLeftAttr;
+    let isStickyTopOrHasStickyTopAttr;
     let leftAtStart;
     let topAtStart;
     if (isThresholdOnly) {
@@ -232,8 +232,6 @@ export const createDragGestureController = (options = {}) => {
       } = elementBounds;
 
       if (fromFixed) {
-        isStickyLeft = false;
-        isStickyTop = false;
         // For fixed elements, convert to scrollable coordinates
         const [leftScrollable, topScrollable] = fixedCoordsToScrollableCoords(
           left,
@@ -258,12 +256,13 @@ export const createDragGestureController = (options = {}) => {
           });
         });
       } else if (fromStickyLeft || fromStickyTop) {
-        isStickyLeft = Boolean(fromStickyLeft);
-        isStickyTop = Boolean(fromStickyTop);
+        const isStickyLeft = Boolean(fromStickyLeft);
+        const isStickyTop = Boolean(fromStickyTop);
         const stylesToSet = {
           position: "relative",
         };
         if (isStickyLeft) {
+          isStickyLeftOrHasStickyLeftAttr = true;
           const leftScrollable = stickyLeftToScrollableLeft(
             fromStickyLeft.value,
             scrollableParent,
@@ -274,6 +273,7 @@ export const createDragGestureController = (options = {}) => {
           leftAtStart = left;
         }
         if (isStickyTop) {
+          isStickyTopOrHasStickyTopAttr = true;
           const topScrollable = stickyTopToScrollableTop(
             fromStickyTop.value,
             scrollableParent,
@@ -302,17 +302,21 @@ export const createDragGestureController = (options = {}) => {
         });
       } else {
         // Normal positioning - use coordinates from getElementBounds
-        isStickyLeft = false;
-        isStickyTop = false;
         leftAtStart = left;
         topAtStart = top;
 
         // Handle data-sticky attributes for visual offset adjustment
-        if (fromStickyLeftAttr && !scrollableParentIsDocument) {
-          visualOffsetX += scrollLeftAtStart;
+        if (fromStickyLeftAttr) {
+          isStickyLeftOrHasStickyLeftAttr = true;
+          if (!scrollableParentIsDocument) {
+            visualOffsetX += scrollLeftAtStart;
+          }
         }
-        if (fromStickyTopAttr && !scrollableParentIsDocument) {
-          visualOffsetY += scrollTopAtStart;
+        if (fromStickyTopAttr) {
+          isStickyTopOrHasStickyTopAttr = true;
+          if (!scrollableParentIsDocument) {
+            visualOffsetY += scrollTopAtStart;
+          }
         }
       }
     }
@@ -521,6 +525,8 @@ export const createDragGestureController = (options = {}) => {
             name,
             obstacleAttributeName,
             gestureInfo,
+            isDraggedElementSticky:
+              isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
           },
         );
       constraintFunctions.push(...obstacleConstraintFunctions);
