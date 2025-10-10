@@ -649,13 +649,15 @@ export const TableCell = forwardRef((props, ref) => {
           rowMaxHeight={row.maxHeight}
         />
       )}
-
       {isInTableHead && (
         <span className="navi_table_cell_content_bold_clone" aria-hidden="true">
           {children}
         </span>
       )}
-      {columnGrabbed && <div className="navi_table_cell_placeholder"></div>}
+      <div
+        className="navi_table_cell_foreground"
+        data-visible={columnGrabbed ? "" : undefined}
+      ></div>
     </TagName>
   );
 });

@@ -90,6 +90,13 @@ export const initDragTableColumnByMousedown = async (
   // ensure [data-drag-obstacle] inside the table clone are ignored
   tableClone.setAttribute("data-drag-ignore", "");
 
+  // Scale down the table clone and set transform origin to mouse grab point
+  // const tableRect = table.getBoundingClientRect();
+  // const mouseX = mousedownEvent.clientX - tableRect.left;
+  // const mouseY = mousedownEvent.clientY - tableRect.top;
+  // tableClone.style.transform = "scale(1.2)";
+  // tableClone.style.transformOrigin = `${mouseX}px ${mouseY}px`;
+
   update_sticky_elements: {
     // In the table clone we need to convert sticky elements to position: relative
     // with calculated offsets that match their appearance in the original context

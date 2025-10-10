@@ -15,6 +15,6 @@ export const Z_INDEX_TABLE_UI_CONTAINER = Z_INDEX_STICKY_CORNER + 1;
 export const Z_INDEX_DRAGGING_CLONE = Z_INDEX_STICKY_CORNER + 1; // above sticky cells
 export const Z_INDEX_RESIZER_BACKDROP = Z_INDEX_STICKY_CORNER + 1; // above sticky cells
 
-export const Z_INDEX_DRAGGING_CELL_PLACEHOLDER = 1;
+export const Z_INDEX_CELL_FOREGROUND = 1;
 export const Z_INDEX_STICKY_FRONTIER_HANDLE = 2; // above the cell placeholder to keep the sticky frontier visible
 export const Z_INDEX_RESIZER_HANDLE = Z_INDEX_STICKY_FRONTIER_HANDLE + 1;

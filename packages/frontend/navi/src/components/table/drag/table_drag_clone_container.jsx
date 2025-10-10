@@ -1,4 +1,4 @@
-import { Z_INDEX_DRAGGING_CELL_PLACEHOLDER } from "../z_indexes.js";
+import { Z_INDEX_CELL_FOREGROUND } from "../z_indexes.js";
 
 const DEBUG_VISUAL = false;
 
@@ -15,33 +15,48 @@ import.meta.css = /* css */ `
   }
 
   /* We preprend ".navi_table_container" to ensure it propertly overrides */
-  .navi_table_container .navi_table_drag_clone_container .navi_table_cell {
+  .navi_table_drag_clone_container .navi_table_cell {
     opacity: ${DEBUG_VISUAL ? 0.5 : 0};
   }
-  .navi_table_container
-    .navi_table_drag_clone_container
-    .navi_table_cell[data-grabbed] {
-    opacity: 1;
+
+  .navi_table_drag_clone_container .navi_table_cell[data-grabbed] {
+    opacity: 0.7;
   }
 
   .navi_table_drag_clone_container .navi_table_cell_sticky_frontier {
     opacity: 0;
   }
 
-  .navi_table_container
-    .navi_table_drag_clone_container
-    .navi_table_cell[data-sticky-left],
-  .navi_table_container
-    .navi_table_drag_clone_container
-    .navi_table_cell[data-sticky-top] {
+  .navi_table_drag_clone_container .navi_table_cell[data-sticky-left],
+  .navi_table_drag_clone_container .navi_table_cell[data-sticky-top] {
     position: relative;
   }
 
-  .navi_table_cell_placeholder {
+  .navi_table_cell_foreground {
+    pointer-events: none;
     position: absolute;
     inset: 0;
     background: lightgrey;
-    z-index: ${Z_INDEX_DRAGGING_CELL_PLACEHOLDER};
+    opacity: 0;
+    z-index: ${Z_INDEX_CELL_FOREGROUND};
+  }
+  .navi_table_cell_foreground[data-visible] {
+    opacity: 1;
+  }
+
+  .navi_table_drag_clone_container .navi_table_cell_foreground {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+  }
+  .navi_table_drag_clone_container
+    .navi_table_cell[data-first-row][data-grabbed] {
+    opacity: 1;
+  }
+  .navi_table_drag_clone_container
+    .navi_table_cell[data-first-row]
+    .navi_table_cell_foreground {
+    opacity: 0;
   }
 `;
 
