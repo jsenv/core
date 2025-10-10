@@ -149,8 +149,15 @@
         ] = useState(2);
         const [stickyTopFrontierRowIndex, setStickyTopFrontierRowIndex] =
           useState(2);
-        const [useContainerScrolling, setUseContainerScrolling] =
-          useState(false);
+        const [useContainerScrolling, setUseContainerScrolling] = useState(
+          () => {
+            // Load from localStorage, default to false if not found
+            const saved = localStorage.getItem(
+              "table-demo-useContainerScrolling",
+            );
+            return saved === "true";
+          },
+        );
 
         return (
           <div className="demo-container">
@@ -180,7 +187,13 @@
             <div>
               <button
                 onClick={() => {
-                  setUseContainerScrolling(!useContainerScrolling);
+                  const newValue = !useContainerScrolling;
+                  setUseContainerScrolling(newValue);
+                  // Save to localStorage for persistence
+                  localStorage.setItem(
+                    "table-demo-useContainerScrolling",
+                    newValue.toString(),
+                  );
                 }}
                 style={{
                   background: useContainerScrolling ? "#28a745" : "#6c757d",
