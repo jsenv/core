@@ -31,13 +31,14 @@ export const createObstacleConstraintsFromQuerySelector = (
     }
 
     obstacleConstraintFunctions.push(() => {
+      const forceOriginalPositionEvenIfSticky =
+        !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
+        !gestureInfo.hasCrossedVisibleAreaTopOnce;
       const obstacleBounds = getElementScrollableRect(
         obstacle,
         gestureInfo.scrollableParent,
         {
-          forceOriginalPositionEvenIfSticky:
-            !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
-            !gestureInfo.hasCrossedVisibleAreaTopOnce,
+          forceOriginalPositionEvenIfSticky,
         },
       );
 
