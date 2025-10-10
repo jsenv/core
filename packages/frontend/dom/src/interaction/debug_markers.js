@@ -54,16 +54,9 @@ const scrollableToViewportCoords = (x, y, scrollableParent, side = null) => {
   }
 
   // For container scrollable parent
-  const scrollableRect = scrollableParent.getBoundingClientRect();
-
-  if (side === "obstacle") {
-    // All obstacles use scrollable-parent-relative coordinates
-    // Use the standard coordinate conversion helper
-    return scrollableCoordsToViewport(x, y, scrollableParent);
-  }
-
-  // For boundary markers: convert from container-relative to viewport
-  return [x + scrollableRect.left, y + scrollableRect.top];
+  // For boundary markers in container scrolling: also use the standard helper
+  // All coordinates are in scrollable-parent-relative space, so we need proper conversion
+  return scrollableCoordsToViewport(x, y, scrollableParent);
 };
 
 export const setupVisualMarkers = ({ direction, scrollableParent }) => {
