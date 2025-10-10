@@ -13,6 +13,7 @@ export const setupConstraintFeedbackLine = ({ scrollableParent }) => {
       // programmatic drag
       return;
     }
+
     const mouseX = mousemoveEvent.clientX;
     const mouseY = mousemoveEvent.clientY;
     // Use last known position if current position not available (e.g., during scroll)
@@ -43,6 +44,7 @@ export const setupConstraintFeedbackLine = ({ scrollableParent }) => {
     // Show line only when distance is significant (> 20px threshold)
     const threshold = 20;
     if (distance <= threshold) {
+      constraintFeedbackLine.style.opacity = "0";
       constraintFeedbackLine.removeAttribute("data-visible");
       return;
     }

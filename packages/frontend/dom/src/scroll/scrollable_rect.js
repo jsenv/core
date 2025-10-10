@@ -126,18 +126,15 @@ const viewportCoordsToScrollableCoords = (left, top, scrollableParent) => {
 
   if (scrollableParentIsDocument) {
     // For document scrolling: convert to document coordinates
-    return {
-      left: left + scrollLeft,
-      top: top + scrollTop,
-    };
+    return [left + scrollLeft, top + scrollTop];
   }
 
   // For container scrolling: convert to container-relative coordinates
   const scrollableRect = scrollableParent.getBoundingClientRect();
-  return {
-    left: left - scrollableRect.left + scrollLeft,
-    top: top - scrollableRect.top + scrollTop,
-  };
+  return [
+    left - scrollableRect.left + scrollLeft,
+    top - scrollableRect.top + scrollTop,
+  ];
 };
 
 /**

@@ -27,6 +27,10 @@ import.meta.css = /* css */ `
     --sticky-frontier-ghost-size: 8px;
   }
 
+  .navi_table_cell {
+    box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.06);
+  }
+
   .navi_table_cell[data-sticky-top] {
     position: sticky;
     top: var(--sticky-group-item-top, 0);
