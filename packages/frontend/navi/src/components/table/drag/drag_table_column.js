@@ -10,7 +10,7 @@ import {
 import { createPubSub } from "../../pub_sub.js";
 import { Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
-const DEBUG_VISUAL = true;
+const DEBUG_VISUAL = false;
 
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
