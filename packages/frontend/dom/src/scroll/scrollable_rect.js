@@ -5,7 +5,7 @@ const { documentElement } = document;
 export const getElementScrollableRect = (
   element,
   scrollableParent,
-  { forceOriginalPositionEvenIfSticky = false } = {},
+  { useOriginalPositionEvenIfSticky = false } = {},
 ) => {
   const { left, top, width, height } = element.getBoundingClientRect();
   let fromFixed = false;
@@ -86,7 +86,7 @@ export const getElementScrollableRect = (
 
       const originalPosition = leftScrollable; // Natural position in scrollable coordinates
 
-      if (forceOriginalPositionEvenIfSticky) {
+      if (useOriginalPositionEvenIfSticky) {
         // For obstacles: use original position only (ignore sticky behavior)
         leftScrollable = originalPosition;
       } else if (scrollableParentIsDocument) {
@@ -115,7 +115,7 @@ export const getElementScrollableRect = (
 
       const originalPosition = topScrollable; // Natural position in scrollable coordinates
 
-      if (forceOriginalPositionEvenIfSticky) {
+      if (useOriginalPositionEvenIfSticky) {
         // For obstacles: use original position only (ignore sticky behavior)
         topScrollable = originalPosition;
       } else if (scrollableParentIsDocument) {

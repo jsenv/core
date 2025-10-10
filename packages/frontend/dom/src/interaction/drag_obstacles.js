@@ -33,7 +33,7 @@ export const createObstacleConstraintsFromQuerySelector = (
     obstacleConstraintFunctions.push(() => {
       // Only apply the "before crossing visible area" logic when dragging sticky elements
       // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
-      const forceOriginalPositionEvenIfSticky = isDraggedElementSticky
+      const useOriginalPositionEvenIfSticky = isDraggedElementSticky
         ? !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
           !gestureInfo.hasCrossedVisibleAreaTopOnce
         : true;
@@ -42,7 +42,7 @@ export const createObstacleConstraintsFromQuerySelector = (
         obstacle,
         gestureInfo.scrollableParent,
         {
-          forceOriginalPositionEvenIfSticky,
+          useOriginalPositionEvenIfSticky,
         },
       );
 

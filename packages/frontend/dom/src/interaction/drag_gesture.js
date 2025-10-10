@@ -186,23 +186,23 @@ export const createDragGestureController = (options = {}) => {
     const scrollTopAtStart = scrollableParent.scrollTop;
 
     // Convert all element coordinates to scrollable-parent-relative coordinates
-    const elementToImpactRect = getElementScrollableRect(
+    const elementToImpactScrollableRect = getElementScrollableRect(
       elementToImpact,
       scrollableParent,
     );
-    const elementVisuallyImpactedRect = getElementScrollableRect(
+    const elementVisuallyImpactedScrollableRect = getElementScrollableRect(
       elementVisuallyImpacted,
       scrollableParent,
     );
 
     const { left: elementToImpactLeft, top: elementToImpactTop } =
-      elementToImpactRect;
+      elementToImpactScrollableRect;
     const {
       left: elementVisuallyImpactedLeft,
       top: elementVisuallyImpactedTop,
       width: elementVisuallyImpactedWidth,
       height: elementVisuallyImpactedHeight,
-    } = elementVisuallyImpactedRect;
+    } = elementVisuallyImpactedScrollableRect;
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
     // All constraint calculations use visual coordinates (xMove, yMove)
