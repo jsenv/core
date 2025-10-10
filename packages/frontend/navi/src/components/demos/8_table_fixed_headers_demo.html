@@ -146,9 +146,19 @@
         const [
           stickyLeftFrontierColumnIndex,
           setStickyLeftFrontierColumnIndex,
-        ] = useState(2);
+        ] = useState(() => {
+          const saved = localStorage.getItem(
+            "table-demo-stickyLeftFrontierColumnIndex",
+          );
+          return saved ? parseInt(saved, 10) : 2;
+        });
         const [stickyTopFrontierRowIndex, setStickyTopFrontierRowIndex] =
-          useState(2);
+          useState(() => {
+            const saved = localStorage.getItem(
+              "table-demo-stickyTopFrontierRowIndex",
+            );
+            return saved ? parseInt(saved, 10) : 2;
+          });
         const [useContainerScrolling, setUseContainerScrolling] = useState(
           () => {
             // Load from localStorage, default to false if not found
@@ -203,7 +213,59 @@
                 Scrolling:{" "}
                 {useContainerScrolling ? "Container (400×600px)" : "Document"}
               </button>
-              <br />
+
+              <div style={{ marginTop: "15px" }}>
+                <label style={{ marginRight: "15px" }}>
+                  Sticky Left Frontier (Column Index):{" "}
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={stickyLeftFrontierColumnIndex}
+                    onChange={(e) => {
+                      const newValue = parseInt(e.target.value, 10);
+                      setStickyLeftFrontierColumnIndex(newValue);
+                      localStorage.setItem(
+                        "table-demo-stickyLeftFrontierColumnIndex",
+                        newValue.toString(),
+                      );
+                    }}
+                    style={{
+                      width: "60px",
+                      marginLeft: "5px",
+                      padding: "2px 6px",
+                      border: "1px solid #ccc",
+                      borderRadius: "3px",
+                    }}
+                  />
+                </label>
+
+                <label>
+                  Sticky Top Frontier (Row Index):{" "}
+                  <input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={stickyTopFrontierRowIndex}
+                    onChange={(e) => {
+                      const newValue = parseInt(e.target.value, 10);
+                      setStickyTopFrontierRowIndex(newValue);
+                      localStorage.setItem(
+                        "table-demo-stickyTopFrontierRowIndex",
+                        newValue.toString(),
+                      );
+                    }}
+                    style={{
+                      width: "60px",
+                      marginLeft: "5px",
+                      padding: "2px 6px",
+                      border: "1px solid #ccc",
+                      borderRadius: "3px",
+                    }}
+                  />
+                </label>
+              </div>
+
               <br />
             </div>
 

@@ -26,7 +26,7 @@ import.meta.css = /* css */ `
     pointer-events: none;
     z-index: ${Z_INDEX_DROP_PREVIEW};
     /* Invisible container - just for positioning */
-    background: transparent;
+    background: violet;
     border: none;
   }
 
