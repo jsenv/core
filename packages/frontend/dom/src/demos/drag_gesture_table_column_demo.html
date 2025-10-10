@@ -161,7 +161,7 @@
         z-index: 10000;
         pointer-events: none;
         opacity: 0.9;
-        transform: rotate(2deg);
+        /* transform: rotate(2deg); */
       }
 
       .drag-clone-container .table-content {
@@ -525,6 +525,17 @@
         const clonedRep = clonedContent.querySelector("[data-sticky-left]");
         const clonedColumn = clonedContent.querySelector(".sticky-column");
 
+        // Set opacity for clone columns: dragged column full opacity, others faded
+        const allClonedColumns =
+          clonedContent.querySelectorAll(".table-column");
+        allClonedColumns.forEach((col) => {
+          if (col.classList.contains("sticky-column")) {
+            col.style.opacity = "1"; // Dragged column full opacity
+          } else {
+            col.style.opacity = "0.5"; // Other columns faded
+          }
+        });
+
         dragCloneContainer.appendChild(clonedContent);
         document.body.appendChild(dragCloneContainer);
 
@@ -555,10 +566,17 @@
         createDragToMoveGestureController({
           name: "table-column",
           backdrop: false,
+          direction: { x: true },
           onGrab: (gestureInfo) => {
             console.log("Column grab started", gestureInfo);
             column2Header.setAttribute("data-dragging", "");
             column2.setAttribute("data-being-dragged", "");
+
+            // Set opacity for original table and dragged column
+            const tableContent = document.getElementById("tableContent");
+            tableContent.style.opacity = "0.1"; // Make original table very faded
+            column2.style.opacity = "0"; // Make original dragged column invisible
+
             updateDragInfo(gestureInfo, "Grabbed");
             elementInfo.textContent =
               "Dragging: Column representation will move";
@@ -574,6 +592,12 @@
             console.log("Column drag released", gestureInfo);
             column2Header.removeAttribute("data-dragging");
             column2.removeAttribute("data-being-dragged");
+
+            // Restore opacity for original table and dragged column
+            const tableContent = document.getElementById("tableContent");
+            tableContent.style.opacity = ""; // Restore original table opacity
+            column2.style.opacity = ""; // Restore original dragged column opacity
+
             removeDragClone();
             updateDragInfo(gestureInfo, "Released");
             elementInfo.textContent = "Click and drag the sticky column header";
