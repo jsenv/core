@@ -514,25 +514,16 @@
         dragCloneContainer.style.width = "250px";
         dragCloneContainer.style.height = "200px";
 
-        // Clone the table structure
-        const clonedContent = document.createElement("div");
-        clonedContent.className = "table-content";
+        // Clone the entire table content structure
+        const tableContent = document.getElementById("tableContent");
+        const clonedContent = tableContent.cloneNode(true);
         clonedContent.style.width = "100%";
         clonedContent.style.height = "100%";
         clonedContent.style.position = "relative";
 
-        // Clone the column representation
-        const clonedRep = columnRep2.cloneNode(true);
-        clonedRep.style.left = "0";
-        clonedRep.style.width = "120px";
-        clonedContent.appendChild(clonedRep);
-
-        // Clone the actual column
-        const clonedColumn = column2.cloneNode(true);
-        clonedColumn.style.left = "0";
-        clonedColumn.style.width = "120px";
-        clonedColumn.style.position = "absolute";
-        clonedContent.appendChild(clonedColumn);
+        // Find the cloned elements we need to reference
+        const clonedRep = clonedContent.querySelector("[data-sticky-left]");
+        const clonedColumn = clonedContent.querySelector(".sticky-column");
 
         dragCloneContainer.appendChild(clonedContent);
         document.body.appendChild(dragCloneContainer);
