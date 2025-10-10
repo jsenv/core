@@ -299,12 +299,12 @@
       </div>
     </div>
 
-    <!-- Demo 1: Basic Handle -> Target -->
+    <!-- Demo: Basic Handle → Target -->
     <div class="demo-section">
       <h2 class="demo-title">
-        Demo 1: Basic Handle → Target (drag blue handle to move red target)
+        Demo: Basic Handle → Target (drag blue handle to move red target)
       </h2>
-      <div class="container" id="demo1Container">
+      <div class="container" id="demoContainer">
         <div class="content">
           <!-- Drag handle positioned separately from target -->
           <div class="drag-handle" id="handle1" style="left: 50px; top: 50px">
@@ -323,7 +323,7 @@
           <!-- Obstacles for collision detection -->
           <div
             class="obstacle"
-            data-drag-obstacle="demo1"
+            data-drag-obstacle="demo"
             style="left: 350px; top: 120px; width: 80px; height: 60px"
           >
             OBSTACLE 1
@@ -331,7 +331,7 @@
 
           <div
             class="obstacle"
-            data-drag-obstacle="demo1"
+            data-drag-obstacle="demo"
             style="left: 500px; top: 200px; width: 100px; height: 80px"
           >
             OBSTACLE 2
@@ -339,7 +339,7 @@
 
           <div
             class="obstacle"
-            data-drag-obstacle="demo1"
+            data-drag-obstacle="demo"
             style="left: 150px; top: 300px; width: 120px; height: 60px"
           >
             OBSTACLE 3
@@ -348,96 +348,10 @@
       </div>
     </div>
 
-    <!-- Demo 2: Multiple Handle-Target Pairs -->
-    <div class="demo-section">
-      <h2 class="demo-title">
-        Demo 2: Multiple Handle → Target Pairs (independent dragging)
-      </h2>
-      <div class="container" id="demo2Container">
-        <div class="content">
-          <!-- First handle-target pair -->
-          <div
-            class="drag-handle"
-            id="handle2a"
-            style="
-              left: 80px;
-              top: 150px;
-              background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
-            "
-          >
-            H1
-          </div>
-
-          <div
-            class="target-element"
-            id="target2a"
-            style="
-              left: 300px;
-              top: 80px;
-              background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-            "
-          >
-            TARGET A
-          </div>
-
-          <!-- Second handle-target pair -->
-          <div
-            class="drag-handle"
-            id="handle2b"
-            style="
-              left: 120px;
-              top: 300px;
-              background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
-            "
-          >
-            H2
-          </div>
-
-          <div
-            class="target-element"
-            id="target2b"
-            style="
-              left: 450px;
-              top: 250px;
-              background: linear-gradient(135deg, #e91e63 0%, #ad1457 100%);
-            "
-          >
-            TARGET B
-          </div>
-
-          <!-- Shared obstacles -->
-          <div
-            class="obstacle"
-            data-drag-obstacle="demo2"
-            style="left: 250px; top: 200px; width: 90px; height: 90px"
-          >
-            SHARED OBSTACLE
-          </div>
-
-          <div
-            class="obstacle"
-            data-drag-obstacle="demo2"
-            style="left: 400px; top: 150px; width: 60px; height: 120px"
-          >
-            BARRIER
-          </div>
-
-          <div
-            class="obstacle"
-            data-drag-obstacle="demo2"
-            style="left: 550px; top: 350px; width: 100px; height: 50px"
-          >
-            WALL
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Position Display -->
     <div class="position-display" id="positionDisplay">
       <div class="label">Drag Position Info</div>
-      <div id="demo1Info">Demo 1: Not dragging</div>
-      <div id="demo2Info">Demo 2: Not dragging</div>
+      <div id="demo1Info">Demo: Not dragging</div>
       <div id="elementInfo">Elements: Hover to see info</div>
     </div>
 
@@ -451,7 +365,6 @@
 
       const debugCheckbox = document.getElementById("debugMarkersCheckbox");
       const demo1Info = document.getElementById("demo1Info");
-      const demo2Info = document.getElementById("demo2Info");
       const elementInfo = document.getElementById("elementInfo");
 
       // Handle debug markers toggle
@@ -472,7 +385,7 @@
         console.log("Demo 1 - Handle drag started");
 
         createDragToMoveGestureController({
-          name: "demo1",
+          name: "demo",
           backdrop: false,
           obstacleAttributeName: "data-drag-obstacle",
           onGrab: (gestureInfo) => {
@@ -500,78 +413,6 @@
         });
       });
 
-      // Demo 2: Multiple Handle-Target Pairs
-      const handle2a = document.getElementById("handle2a");
-      const target2a = document.getElementById("target2a");
-      const handle2b = document.getElementById("handle2b");
-      const target2b = document.getElementById("target2b");
-
-      // Setup first handle-target pair
-      handle2a.addEventListener("mousedown", (event) => {
-        console.log("Demo 2A - Handle drag started");
-
-        createDragToMoveGestureController({
-          name: "demo2",
-          backdrop: false,
-          obstacleAttributeName: "data-drag-obstacle",
-          onGrab: (gestureInfo) => {
-            console.log("Demo 2A - Grab started", gestureInfo);
-            handle2a.setAttribute("data-dragging", "");
-            target2a.setAttribute("data-being-moved", "");
-            updateDemo2Info("A", gestureInfo, "Grabbed");
-          },
-          onDragStart: (gestureInfo) => {
-            console.log("Demo 2A - Drag started", gestureInfo);
-            updateDemo2Info("A", gestureInfo, "Drag Start");
-          },
-          onDrag: (gestureInfo, phase) => {
-            updateDemo2Info("A", gestureInfo, `Dragging (${phase})`);
-          },
-          onRelease: (gestureInfo) => {
-            console.log("Demo 2A - Drag released", gestureInfo);
-            handle2a.removeAttribute("data-dragging");
-            target2a.removeAttribute("data-being-moved");
-            updateDemo2Info("A", gestureInfo, "Released");
-          },
-        }).grabViaMouse(event, {
-          element: handle2a,
-          elementToImpact: target2a,
-        });
-      });
-
-      // Setup second handle-target pair
-      handle2b.addEventListener("mousedown", (event) => {
-        console.log("Demo 2B - Handle drag started");
-
-        createDragToMoveGestureController({
-          name: "demo2",
-          backdrop: false,
-          obstacleAttributeName: "data-drag-obstacle",
-          onGrab: (gestureInfo) => {
-            console.log("Demo 2B - Grab started", gestureInfo);
-            handle2b.setAttribute("data-dragging", "");
-            target2b.setAttribute("data-being-moved", "");
-            updateDemo2Info("B", gestureInfo, "Grabbed");
-          },
-          onDragStart: (gestureInfo) => {
-            console.log("Demo 2B - Drag started", gestureInfo);
-            updateDemo2Info("B", gestureInfo, "Drag Start");
-          },
-          onDrag: (gestureInfo, phase) => {
-            updateDemo2Info("B", gestureInfo, `Dragging (${phase})`);
-          },
-          onRelease: (gestureInfo) => {
-            console.log("Demo 2B - Drag released", gestureInfo);
-            handle2b.removeAttribute("data-dragging");
-            target2b.removeAttribute("data-being-moved");
-            updateDemo2Info("B", gestureInfo, "Released");
-          },
-        }).grabViaMouse(event, {
-          element: handle2b,
-          elementToImpact: target2b,
-        });
-      });
-
       function updateDemo1Info(gestureInfo, status) {
         const handleRect = handle1.getBoundingClientRect();
         const targetRect = target1.getBoundingClientRect();
@@ -580,42 +421,23 @@
         const targetX = targetRect.left + window.scrollX;
         const targetY = targetRect.top + window.scrollY;
 
-        demo1Info.innerHTML = `Demo 1: ${status} | Handle: ${Math.round(handleX)}px | Target: ${Math.round(targetX)}, ${Math.round(targetY)}px`;
-      }
-
-      function updateDemo2Info(pair, gestureInfo, status) {
-        const currentInfo = demo2Info.textContent;
-        const otherPairInfo = currentInfo.includes(
-          `${pair === "A" ? "B" : "A"}:`,
-        )
-          ? currentInfo
-              .split(" | ")
-              .find((part) => part.includes(`${pair === "A" ? "B" : "A"}:`))
-          : `${pair === "A" ? "B" : "A"}: Ready`;
-
-        const thisInfo = `${pair}: ${status}`;
-        demo2Info.innerHTML =
-          pair === "A"
-            ? `Demo 2: ${thisInfo} | ${otherPairInfo}`
-            : `Demo 2: ${otherPairInfo} | ${thisInfo}`;
+        demo1Info.innerHTML = `Demo: ${status} | Handle: ${Math.round(handleX)}px | Target: ${Math.round(targetX)}, ${Math.round(targetY)}px`;
       }
 
       // Add hover effects to show element information
-      [handle1, target1, handle2a, target2a, handle2b, target2b].forEach(
-        (element) => {
-          element.addEventListener("mouseenter", () => {
-            const type = element.classList.contains("drag-handle")
-              ? "Handle"
-              : "Target";
-            const id = element.id;
-            elementInfo.textContent = `${type}: ${id} (${element.textContent})`;
-          });
+      [handle1, target1].forEach((element) => {
+        element.addEventListener("mouseenter", () => {
+          const type = element.classList.contains("drag-handle")
+            ? "Handle"
+            : "Target";
+          const id = element.id;
+          elementInfo.textContent = `${type}: ${id} (${element.textContent})`;
+        });
 
-          element.addEventListener("mouseleave", () => {
-            elementInfo.textContent = "Elements: Hover to see info";
-          });
-        },
-      );
+        element.addEventListener("mouseleave", () => {
+          elementInfo.textContent = "Elements: Hover to see info";
+        });
+      });
 
       // Initial position updates
       function updatePositions() {
@@ -627,14 +449,7 @@
           const targetX = targetRect.left + window.scrollX;
           const targetY = targetRect.top + window.scrollY;
 
-          demo1Info.innerHTML = `Demo 1: Ready | Handle: ${Math.round(handleX)}px | Target: ${Math.round(targetX)}, ${Math.round(targetY)}px`;
-        }
-
-        if (
-          !handle2a.hasAttribute("data-dragging") &&
-          !handle2b.hasAttribute("data-dragging")
-        ) {
-          demo2Info.innerHTML = "Demo 2: A: Ready | B: Ready";
+          demo1Info.innerHTML = `Demo: Ready | Handle: ${Math.round(handleX)}px | Target: ${Math.round(targetX)}, ${Math.round(targetY)}px`;
         }
       }
 

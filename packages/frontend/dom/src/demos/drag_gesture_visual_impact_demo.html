@@ -14,6 +14,8 @@
         padding: 20px;
         font-family: Arial, sans-serif;
         background: #f0f0f0;
+        min-height: 200vh; /* Make document scrollable */
+        min-width: 150vw; /* Make document scrollable horizontally too */
       }
 
       .demo-section {
@@ -33,21 +35,20 @@
       }
 
       .container {
-        width: 700px;
-        height: 500px;
+        width: 900px;
+        height: 700px;
         background: white;
-        overflow: auto;
-        overscroll-behavior: contain;
         position: relative;
         margin: 0 auto;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         border-radius: 4px;
         border: 20px solid #ddd;
+        /* Remove overflow and overscroll-behavior */
       }
 
       .content {
-        width: 1200px;
-        height: 800px;
+        width: 100%;
+        height: 100%;
         background: linear-gradient(
           45deg,
           #f8f8f8 0%,
@@ -646,7 +647,6 @@
       const handle1 = document.getElementById("handle1");
       const container1 = document.getElementById("container1");
       const inner1 = document.getElementById("inner1");
-      const demo1Container = document.getElementById("demo1Container");
 
       handle1.addEventListener("mousedown", (event) => {
         console.log("Demo 1 - Complex drag started", {
@@ -691,7 +691,6 @@
       const handle2 = document.getElementById("handle2");
       const container2 = document.getElementById("container2");
       const inner2 = document.getElementById("inner2");
-      const demo2Container = document.getElementById("demo2Container");
 
       handle2.addEventListener("mousedown", (event) => {
         console.log("Demo 2 - Complex offset drag started");
@@ -735,7 +734,6 @@
       const handle3b = document.getElementById("handle3b");
       const container3b = document.getElementById("container3b");
       const inner3b = document.getElementById("inner3b");
-      const demo3Container = document.getElementById("demo3Container");
 
       // System A
       handle3a.addEventListener("mousedown", (event) => {
@@ -812,15 +810,11 @@
       function updateDemo1Info(gestureInfo, status) {
         const containerRect = container1.getBoundingClientRect();
         const innerRect = inner1.getBoundingClientRect();
-        const demoRect = demo1Container.getBoundingClientRect();
 
-        const containerX =
-          containerRect.left - demoRect.left + demo1Container.scrollLeft;
-        const containerY =
-          containerRect.top - demoRect.top + demo1Container.scrollTop;
-        const innerX =
-          innerRect.left - demoRect.left + demo1Container.scrollLeft;
-        const innerY = innerRect.top - demoRect.top + demo1Container.scrollTop;
+        const containerX = containerRect.left + window.scrollX;
+        const containerY = containerRect.top + window.scrollY;
+        const innerX = innerRect.left + window.scrollX;
+        const innerY = innerRect.top + window.scrollY;
 
         demo1Info.innerHTML = `Demo 1: ${status} | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
       }
@@ -828,15 +822,11 @@
       function updateDemo2Info(gestureInfo, status) {
         const containerRect = container2.getBoundingClientRect();
         const innerRect = inner2.getBoundingClientRect();
-        const demoRect = demo2Container.getBoundingClientRect();
 
-        const containerX =
-          containerRect.left - demoRect.left + demo2Container.scrollLeft;
-        const containerY =
-          containerRect.top - demoRect.top + demo2Container.scrollTop;
-        const innerX =
-          innerRect.left - demoRect.left + demo2Container.scrollLeft;
-        const innerY = innerRect.top - demoRect.top + demo2Container.scrollTop;
+        const containerX = containerRect.left + window.scrollX;
+        const containerY = containerRect.top + window.scrollY;
+        const innerX = innerRect.left + window.scrollX;
+        const innerY = innerRect.top + window.scrollY;
 
         demo2Info.innerHTML = `Demo 2: ${status} | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
       }
@@ -911,16 +901,11 @@
         if (!handle1.hasAttribute("data-dragging")) {
           const containerRect = container1.getBoundingClientRect();
           const innerRect = inner1.getBoundingClientRect();
-          const demoRect = demo1Container.getBoundingClientRect();
 
-          const containerX =
-            containerRect.left - demoRect.left + demo1Container.scrollLeft;
-          const containerY =
-            containerRect.top - demoRect.top + demo1Container.scrollTop;
-          const innerX =
-            innerRect.left - demoRect.left + demo1Container.scrollLeft;
-          const innerY =
-            innerRect.top - demoRect.top + demo1Container.scrollTop;
+          const containerX = containerRect.left + window.scrollX;
+          const containerY = containerRect.top + window.scrollY;
+          const innerX = innerRect.left + window.scrollX;
+          const innerY = innerRect.top + window.scrollY;
 
           demo1Info.innerHTML = `Demo 1: Ready | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
         }
@@ -928,16 +913,11 @@
         if (!handle2.hasAttribute("data-dragging")) {
           const containerRect = container2.getBoundingClientRect();
           const innerRect = inner2.getBoundingClientRect();
-          const demoRect = demo2Container.getBoundingClientRect();
 
-          const containerX =
-            containerRect.left - demoRect.left + demo2Container.scrollLeft;
-          const containerY =
-            containerRect.top - demoRect.top + demo2Container.scrollTop;
-          const innerX =
-            innerRect.left - demoRect.left + demo2Container.scrollLeft;
-          const innerY =
-            innerRect.top - demoRect.top + demo2Container.scrollTop;
+          const containerX = containerRect.left + window.scrollX;
+          const containerY = containerRect.top + window.scrollY;
+          const innerX = innerRect.left + window.scrollX;
+          const innerY = innerRect.top + window.scrollY;
 
           demo2Info.innerHTML = `Demo 2: Ready | Container: ${Math.round(containerX)}, ${Math.round(containerY)} | Inner: ${Math.round(innerX)}, ${Math.round(innerY)}`;
         }
@@ -951,9 +931,7 @@
       }
 
       // Update positions on scroll
-      demo1Container.addEventListener("scroll", updatePositions);
-      demo2Container.addEventListener("scroll", updatePositions);
-      demo3Container.addEventListener("scroll", updatePositions);
+      document.addEventListener("scroll", updatePositions);
       updatePositions();
     </script>
   </body>
