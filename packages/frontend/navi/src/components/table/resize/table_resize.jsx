@@ -2,6 +2,7 @@ import {
   createDragToMoveGestureController,
   getElementScrollableRect,
   getScrollableParent,
+  scrollableCoordsToPositionedParentCoords,
 } from "@jsenv/dom";
 
 import {
@@ -364,63 +365,99 @@ const initResizeByMousedown = (
       ? updateTableColumnResizerPosition
       : updateTableRowResizerPosition;
 
-  // Detect sticky positioning for advanced constraint handling
-
-  const scrollableParent = getScrollableParent(table);
-  // Use scrollable rect helper for proper coordinate conversion
-  const tableCellScrollableRect = getElementScrollableRect(
-    tableCell,
-    scrollableParent,
-  );
-  const tableContainerScrollableRect = getElementScrollableRect(
-    tableContainer,
-    scrollableParent,
-  );
-
+  const tableCellRect = tableCell.getBoundingClientRect();
   // Calculate size and position based on axis
-  const currentSize =
-    axis === "x"
-      ? tableCellScrollableRect.width
-      : tableCellScrollableRect.height;
-  const cellStartRelative =
-    axis === "x"
-      ? tableCellScrollableRect.left - tableContainerScrollableRect.left
-      : tableCellScrollableRect.top - tableContainerScrollableRect.top;
+  const currentSize = axis === "x" ? tableCellRect.width : tableCellRect.height;
 
-  // Calculate bounds based on axis
-  const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
-  const defaultMaxSize = axis === "x" ? COLUMN_MAX_WIDTH : ROW_MAX_HEIGHT;
+  // Convert constraint bounds from scrollable-parent coordinates to positioned-parent coordinates
+  // This is needed because the drag gesture system positions elements relative to their offsetParent
+  const { customAreaConstraint, areaConstraint } = (() => {
+    // Use scrollable rect helper for proper coordinate conversion
+    const scrollableParent = getScrollableParent(table);
+    const tableCellScrollableRect = getElementScrollableRect(
+      tableCell,
+      scrollableParent,
+    );
+    const tableContainerScrollableRect = getElementScrollableRect(
+      tableContainer,
+      scrollableParent,
+    );
 
-  const minCellSize =
-    typeof minSize === "number" && minSize > defaultMinSize
-      ? minSize
-      : defaultMinSize;
-  const maxCellSize =
-    typeof maxSize === "number" && maxSize < defaultMaxSize
-      ? maxSize
-      : defaultMaxSize;
+    const cellStartRelative =
+      axis === "x"
+        ? tableCellScrollableRect.left - tableContainerScrollableRect.left
+        : tableCellScrollableRect.top - tableContainerScrollableRect.top;
 
-  let customStartBound = cellStartRelative + minCellSize;
-  const maxExpandAmount = maxCellSize - currentSize;
-  let customEndBound = cellStartRelative + currentSize + maxExpandAmount;
+    // Calculate bounds based on axis
+    const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
+    const defaultMaxSize = axis === "x" ? COLUMN_MAX_WIDTH : ROW_MAX_HEIGHT;
+
+    const minCellSize =
+      typeof minSize === "number" && minSize > defaultMinSize
+        ? minSize
+        : defaultMinSize;
+    const maxCellSize =
+      typeof maxSize === "number" && maxSize < defaultMaxSize
+        ? maxSize
+        : defaultMaxSize;
+
+    let customStartBound = cellStartRelative + minCellSize;
+    const maxExpandAmount = maxCellSize - currentSize;
+    let customEndBound = cellStartRelative + currentSize + maxExpandAmount;
+
+    if (axis === "x") {
+      const [leftPositioned] = scrollableCoordsToPositionedParentCoords(
+        customStartBound,
+        0,
+        resizer,
+        scrollableParent,
+      );
+      const [rightPositioned] = scrollableCoordsToPositionedParentCoords(
+        customEndBound,
+        0,
+        resizer,
+        scrollableParent,
+      );
+
+      return {
+        // Detect sticky positioning for advanced constraint handling
+        areaConstraint: tableCellScrollableRect.fromStickyLeft
+          ? "visible"
+          : "none",
+        customAreaConstraint: { left: leftPositioned, right: rightPositioned },
+      };
+    }
+
+    const [, topPositioned] = scrollableCoordsToPositionedParentCoords(
+      0,
+      customStartBound,
+      resizer,
+      scrollableParent,
+    );
+    const [, bottomPositioned] = scrollableCoordsToPositionedParentCoords(
+      0,
+      customEndBound,
+      resizer,
+      scrollableParent,
+    );
+    return {
+      // Detect sticky positioning for advanced constraint handling
+      areaConstraint: tableCellScrollableRect.fromStickyTop
+        ? "visible"
+        : "none",
+      customAreaConstraint: { top: topPositioned, bottom: bottomPositioned },
+    };
+  })();
 
   // Build drag gesture configuration based on axis
   const gestureName = axis === "x" ? "resize-column" : "resize-row";
   const direction = axis === "x" ? { x: true } : { y: true };
-  const customAreaConstraint =
-    axis === "x"
-      ? { left: customStartBound, right: customEndBound }
-      : { top: customStartBound, bottom: customEndBound };
 
-  const isSticky =
-    axis === "x"
-      ? tableCellScrollableRect.fromStickyLeft
-      : tableCellScrollableRect.fromStickyTop;
   const dragToMoveGestureController = createDragToMoveGestureController({
     name: gestureName,
     direction,
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
-    areaConstraint: isSticky ? "visible" : "none",
+    areaConstraint,
     customAreaConstraint,
     onGrab: () => {
       updateResizerPosition(tableCell);

@@ -44,6 +44,7 @@ export {
   fixedCoordsToScrollableCoords,
   getElementScrollableRect,
   mouseEventToScrollableCoords,
+  scrollableCoordsToPositionedParentCoords,
   scrollableCoordsToViewport,
   stickyLeftToScrollableLeft,
   stickyTopToScrollableTop,
