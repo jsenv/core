@@ -14,7 +14,7 @@ import { createPubSub } from "../../pub_sub.js";
 import { useStableCallback } from "../../use_stable_callback.js";
 import { Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
-const DEBUG_VISUAL = true;
+const DEBUG_VISUAL = false;
 
 import.meta.css = /* css */ `
   .navi_table_column_drop_preview {
@@ -26,7 +26,7 @@ import.meta.css = /* css */ `
     pointer-events: none;
     z-index: ${Z_INDEX_DROP_PREVIEW};
     /* Invisible container - just for positioning */
-    background: violet;
+    background: transparent;
     border: none;
   }
 
@@ -331,7 +331,7 @@ export const initDragTableColumnByMousedown = async (
         scrollableParent,
       );
 
-      // Convert column position to viewport coordinates
+      // Convert column position to viewport coordinates, then to document coordinates
       const [columnViewportLeft, columnViewportTop] =
         scrollableCoordsToViewport(
           targetColumnRect.left,
@@ -339,9 +339,14 @@ export const initDragTableColumnByMousedown = async (
           scrollableParent,
         );
 
+      // Convert viewport coordinates to document coordinates for absolute positioning
+      const { scrollLeft, scrollTop } = document.documentElement;
+      const columnDocumentLeft = columnViewportLeft + scrollLeft;
+      const columnDocumentTop = columnViewportTop + scrollTop;
+
       // Position the invisible container to match the target column
-      dropPreview.style.setProperty("--column-left", `${columnViewportLeft}px`);
-      dropPreview.style.setProperty("--column-top", `${columnViewportTop}px`);
+      dropPreview.style.setProperty("--column-left", `${columnDocumentLeft}px`);
+      dropPreview.style.setProperty("--column-top", `${columnDocumentTop}px`);
       dropPreview.style.setProperty(
         "--column-width",
         `${targetColumnRect.width}px`,
