@@ -149,6 +149,8 @@
         ] = useState(0);
         const [stickyTopFrontierRowIndex, setStickyTopFrontierRowIndex] =
           useState(0);
+        const [useContainerScrolling, setUseContainerScrolling] =
+          useState(false);
 
         return (
           <div className="demo-container">
@@ -174,6 +176,23 @@
               <strong>Desired behavior:</strong> First row and first column
               should remain fixed while scrolling.
             </p>
+
+            <div>
+              <button
+                onClick={() => {
+                  setUseContainerScrolling(!useContainerScrolling);
+                }}
+                style={{
+                  background: useContainerScrolling ? "#28a745" : "#6c757d",
+                  fontWeight: "bold",
+                }}
+              >
+                Scrolling:{" "}
+                {useContainerScrolling ? "Container (400×600px)" : "Document"}
+              </button>
+              <br />
+              <br />
+            </div>
 
             <div className="table-container">
               <Table
@@ -205,9 +224,9 @@
                   setColumnOrder(newColumnOrder);
                 }}
                 borderCollapse
-                // overflow="auto"
-                // maxHeight={400}
-                // maxWidth={600}
+                overflow={useContainerScrolling ? "auto" : undefined}
+                maxHeight={useContainerScrolling ? 400 : undefined}
+                maxWidth={useContainerScrolling ? 600 : undefined}
               >
                 <Colgroup>
                   <RowNumberCol width={columnWidths[0]} />
