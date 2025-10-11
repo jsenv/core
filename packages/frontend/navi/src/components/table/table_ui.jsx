@@ -21,8 +21,8 @@ import.meta.css = /* css */ `
     position: absolute;
     left: var(--table-visual-left);
     top: var(--table-visual-top);
-    right: var(--table-visual-right);
-    bottom: var(--table-visual-bottom);
+    width: var(--table-visual-width);
+    height: var(--table-visual-height);
     background: rgba(0, 0, 0, 0.7);
   }
 `;
@@ -56,16 +56,26 @@ export const TableUI = forwardRef((props, ref) => {
       );
       const visualLeft =
         scrollLeft < tableVisualLeft ? tableVisualLeft - scrollLeft : 0;
-      const visualRight = 0;
+      const visualAvailableWidth = scrollableParent.clientWidth;
+      const visualRemainingWidth = visualAvailableWidth - visualLeft;
+      const { width, height } = table.getBoundingClientRect();
+      const visibleWidth =
+        width > visualRemainingWidth ? visualRemainingWidth : width;
       const visualTop =
         scrollTop < tableVisualTop ? tableVisualTop - scrollTop : 0;
-      const visualBottom = 0;
+      const visualAvailableHeight = scrollableParent.clientHeight;
+      const visualRemainingHeight = visualAvailableHeight - tableVisualTop;
+      const visibleHeight =
+        height > visualRemainingHeight ? visualRemainingHeight : height;
       uiContainer.style.setProperty("--table-visual-left", `${visualLeft}px`);
-      uiContainer.style.setProperty("--table-visual-right", `${visualRight}px`);
+      uiContainer.style.setProperty(
+        "--table-visual-width",
+        `${visibleWidth}px`,
+      );
       uiContainer.style.setProperty("--table-visual-top", `${visualTop}px`);
       uiContainer.style.setProperty(
-        "--table-visual-bottom",
-        `${visualBottom}px`,
+        "--table-visual-height",
+        `${visibleHeight}px`,
       );
     };
     const updateUIContainerDimension = () => {
