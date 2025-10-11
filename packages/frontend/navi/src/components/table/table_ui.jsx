@@ -1,4 +1,8 @@
-import { getElementVisualCoords, getScrollableParent } from "@jsenv/dom";
+import {
+  createPubSub,
+  getElementVisualCoords,
+  getScrollableParent,
+} from "@jsenv/dom";
 import { createPortal, forwardRef } from "preact/compat";
 import { useLayoutEffect } from "preact/hooks";
 
@@ -36,7 +40,8 @@ export const TableUI = forwardRef((props, ref) => {
     }
 
     const uiContainer = ui.querySelector(".navi_table_ui_container");
-    return initOverlay(table, (visibleRect) => {
+    // TODO: external code should be able to call overlay.update();
+    const overlay = initOverlay(table, (visibleRect) => {
       uiContainer.style.setProperty(
         "--table-visual-left",
         `${visibleRect.left}px`,
@@ -54,6 +59,7 @@ export const TableUI = forwardRef((props, ref) => {
         `${visibleRect.height}px`,
       );
     });
+    return overlay.destroy;
   });
 
   return createPortal(
@@ -65,6 +71,7 @@ export const TableUI = forwardRef((props, ref) => {
 });
 
 const initOverlay = (element, update) => {
+  const [teardown, addTeardown] = createPubSub();
   const scrollableParent = getScrollableParent(element);
   const scrollableParentIsDocument =
     scrollableParent === document.documentElement;
@@ -157,36 +164,37 @@ const initOverlay = (element, update) => {
 
   updateOverlayRect();
 
-  // TODO: external code should be able to call updateUIPosition
-  const onScroll = () => {
-    updateOverlayRect();
-  };
+  update_on_scroll: {
+    const onScroll = () => {
+      updateOverlayRect();
+    };
+    scrollableParent.addEventListener("scroll", onScroll, { passive: true });
+    addTeardown(() => {
+      scrollableParent.removeEventListener("scroll", onScroll, {
+        passive: true,
+      });
+    });
+  }
 
-  // Listen to scroll events on the scrollable parent
-  scrollableParent.addEventListener("scroll", onScroll, { passive: true });
-
-  // If scrollable parent is not document, also listen to document scroll
-  // to update UI position when the scrollable parent moves in viewport
-  let documentScrollCleanup = null;
-  if (scrollableParent !== document.documentElement) {
+  if (!scrollableParentIsDocument) {
+    // If scrollable parent is not document, also listen to document scroll
+    // to update UI position when the scrollable parent moves in viewport
     const onDocumentScroll = () => {
       updateOverlayRect(); // Update container position in viewport
     };
     document.addEventListener("scroll", onDocumentScroll, { passive: true });
-    documentScrollCleanup = () => {
+    addTeardown(() => {
       document.removeEventListener("scroll", onDocumentScroll, {
         passive: true,
       });
-    };
+    });
   }
 
-  return () => {
-    scrollableParent.removeEventListener("scroll", onScroll, {
-      passive: true,
-    });
-    if (documentScrollCleanup) {
-      documentScrollCleanup();
-    }
+  return {
+    update: updateOverlayRect,
+    destroy: () => {
+      teardown();
+    },
   };
 };
 
