@@ -19,10 +19,10 @@ import.meta.css = /* css */ `
 
   .navi_table_ui_container {
     position: absolute;
-    left: var(--table-left);
-    top: var(--table-top);
-    width: var(--table-width);
-    height: var(--table-height);
+    left: var(--table-visual-left);
+    top: var(--table-visual-top);
+    right: var(--table-visual-right);
+    bottom: var(--table-visual-bottom);
     background: rgba(0, 0, 0, 0.7);
   }
 `;
@@ -54,12 +54,19 @@ export const TableUI = forwardRef((props, ref) => {
         scrollableParent,
         { isStickyTop: true, isStickyLeft: true },
       );
-      const viewportLeft =
+      const visualLeft =
         scrollLeft < tableVisualLeft ? tableVisualLeft - scrollLeft : 0;
-      const viewportTop =
+      const visualRight = 0;
+      const visualTop =
         scrollTop < tableVisualTop ? tableVisualTop - scrollTop : 0;
-      uiContainer.style.setProperty("--table-left", `${viewportLeft}px`);
-      uiContainer.style.setProperty("--table-top", `${viewportTop}px`);
+      const visualBottom = 0;
+      uiContainer.style.setProperty("--table-visual-left", `${visualLeft}px`);
+      uiContainer.style.setProperty("--table-visual-right", `${visualRight}px`);
+      uiContainer.style.setProperty("--table-visual-top", `${visualTop}px`);
+      uiContainer.style.setProperty(
+        "--table-visual-bottom",
+        `${visualBottom}px`,
+      );
     };
     const updateUIContainerDimension = () => {
       const { width, height } = table.getBoundingClientRect();
