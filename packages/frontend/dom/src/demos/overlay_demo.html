@@ -38,7 +38,7 @@
         width: 1000px; /* Wide element to test horizontal scrolling */
         height: 200px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: 3px solid #333;
+        border: 15px solid #333;
         border-radius: 12px;
         margin: 100px auto;
         display: flex;
@@ -91,6 +91,7 @@
         position: absolute;
         background: rgba(255, 0, 0, 0.5);
         border: 2px dashed white;
+        box-sizing: border-box; /* Ensure border is included in size */
         pointer-events: auto;
         display: flex;
         align-items: center;
