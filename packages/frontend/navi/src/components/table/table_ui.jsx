@@ -78,14 +78,10 @@ const initOverlay = (element, update) => {
     scrollableParent === document.documentElement;
 
   const updateOverlayRect = () => {
-    // Calculate element position within its scrollable container
+    // 1. Calculate element visible left/top
     const { scrollLeft, scrollTop } = scrollableParent;
-    const visibleAreaWidth = scrollableParent.clientWidth;
-    const visibleAreaHeight = scrollableParent.clientHeight;
     const visibleAreaLeft = scrollLeft;
     const visibleAreaTop = scrollTop;
-    const visibleAreaRight = scrollLeft + visibleAreaWidth;
-    const visibleAreaBottom = scrollTop + visibleAreaHeight;
     const [elementAbsoluteLeft, elementAbsoluteTop] = getElementVisualCoords(
       element,
       scrollableParent,
@@ -100,6 +96,21 @@ const initOverlay = (element, update) => {
       visibleAreaTop < elementAbsoluteTop
         ? elementAbsoluteTop - visibleAreaTop
         : 0;
+    // Convert to overlay coordinates (adjust for custom scrollable container)
+    let overlayLeft = elementLeftRelativeToVisibleArea;
+    let overlayTop = elementTopRelativeToVisibleArea;
+    if (!scrollableParentIsDocument) {
+      const { left: scrollableLeft, top: scrollableTop } =
+        scrollableParent.getBoundingClientRect();
+      overlayLeft += scrollableLeft;
+      overlayTop += scrollableTop;
+    }
+
+    // 1. Calculate element visible width/height
+    const visibleAreaWidth = scrollableParent.clientWidth;
+    const visibleAreaHeight = scrollableParent.clientHeight;
+    const visibleAreaRight = scrollLeft + visibleAreaWidth;
+    const visibleAreaBottom = scrollTop + visibleAreaHeight;
     const spaceRemainingRight =
       visibleAreaWidth - elementLeftRelativeToVisibleArea;
     const spaceRemainingBottom =
@@ -166,16 +177,6 @@ const initOverlay = (element, update) => {
       elementVisibleHeight = heightWhenVisibleAreaExceedsElement;
     } else {
       elementVisibleHeight = height;
-    }
-
-    // Convert to overlay coordinates (adjust for custom scrollable container)
-    let overlayLeft = elementLeftRelativeToVisibleArea;
-    let overlayTop = elementTopRelativeToVisibleArea;
-    if (!scrollableParentIsDocument) {
-      const { left: scrollableLeft, top: scrollableTop } =
-        scrollableParent.getBoundingClientRect();
-      overlayLeft += scrollableLeft;
-      overlayTop += scrollableTop;
     }
 
     update(
