@@ -56,15 +56,15 @@ export const TableUI = forwardRef((props, ref) => {
       );
       const visualLeft =
         scrollLeft < tableVisualLeft ? tableVisualLeft - scrollLeft : 0;
+      const visualTop =
+        scrollTop < tableVisualTop ? tableVisualTop - scrollTop : 0;
       const visualAvailableWidth = scrollableParent.clientWidth;
-      const visualRemainingWidth = visualAvailableWidth - visualLeft;
+      const visualAvailableHeight = scrollableParent.clientHeight;
+      const visualRemainingWidth = visualAvailableWidth - tableVisualLeft;
+      const visualRemainingHeight = visualAvailableHeight - tableVisualTop;
       const { width, height } = table.getBoundingClientRect();
       const visibleWidth =
         width > visualRemainingWidth ? visualRemainingWidth : width;
-      const visualTop =
-        scrollTop < tableVisualTop ? tableVisualTop - scrollTop : 0;
-      const visualAvailableHeight = scrollableParent.clientHeight;
-      const visualRemainingHeight = visualAvailableHeight - tableVisualTop;
       const visibleHeight =
         height > visualRemainingHeight ? visualRemainingHeight : height;
       uiContainer.style.setProperty("--table-visual-left", `${visualLeft}px`);
