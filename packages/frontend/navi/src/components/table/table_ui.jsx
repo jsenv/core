@@ -70,6 +70,8 @@ export const TableUI = forwardRef((props, ref) => {
   );
 });
 
+// Creates an overlay system that positions one element on top of another,
+// handling visibility constraints within scrollable containers
 const initOverlay = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollableParent = getScrollableParent(element);
@@ -77,116 +79,115 @@ const initOverlay = (element, update) => {
     scrollableParent === document.documentElement;
 
   const updateOverlayRect = () => {
-    // position the container on top of <table> inside this visible area
+    // Calculate element position within its scrollable container
     const { scrollLeft, scrollTop } = scrollableParent;
     const [elementAbsoluteLeft, elementAbsoluteTop] = getElementVisualCoords(
       element,
       scrollableParent,
       { isStickyTop: true, isStickyLeft: true },
     );
-    let elementRelativeLeft =
+    let elementLeftRelativeToVisibleArea =
       scrollLeft < elementAbsoluteLeft ? elementAbsoluteLeft - scrollLeft : 0;
-    let elementRelativeTop =
+    let elementTopRelativeToVisibleArea =
       scrollTop < elementAbsoluteTop ? elementAbsoluteTop - scrollTop : 0;
+
     const visibleAreaWidth = scrollableParent.clientWidth;
     const visibleAreaHeight = scrollableParent.clientHeight;
-    const spaceRemainingFromTableLeft = visibleAreaWidth - elementRelativeLeft;
-    const spaceRemainingFromTableTop = visibleAreaHeight - elementRelativeTop;
-    const { width: elementWidth, height: elementHeight } =
+    const spaceRemainingRight =
+      visibleAreaWidth - elementLeftRelativeToVisibleArea;
+    const spaceRemainingBottom =
+      visibleAreaHeight - elementTopRelativeToVisibleArea;
+    const { width: elementFullWidth, height: elementFullHeight } =
       element.getBoundingClientRect();
 
-    // Calculate visible width - need to check if visible area extends beyond table right edge
-    const elementRightEdge = elementAbsoluteLeft + elementWidth;
+    // Calculate visible width
+    const elementRightEdge = elementAbsoluteLeft + elementFullWidth;
     const visibleAreaLeft = scrollLeft;
     const visibleAreaRight = scrollLeft + visibleAreaWidth;
 
-    // Determine the constraints
-    const widthConstrainedByRemainingSpace = spaceRemainingFromTableLeft;
-    let widthConstrainedByTableRightEdge;
+    const elementExceedsVisibleAreaRight =
+      elementFullWidth > spaceRemainingRight;
+    let visibleAreaExceedsElementRight;
     if (visibleAreaRight > elementRightEdge) {
-      const elementVisibleFromLeft = elementRightEdge - visibleAreaLeft;
-      widthConstrainedByTableRightEdge =
-        elementVisibleFromLeft > 0 ? elementVisibleFromLeft : 0;
+      const elementVisibleFromAreaLeft = elementRightEdge - visibleAreaLeft;
+      visibleAreaExceedsElementRight =
+        elementVisibleFromAreaLeft > 0 ? elementVisibleFromAreaLeft : 0;
     } else {
-      widthConstrainedByTableRightEdge = elementWidth;
+      visibleAreaExceedsElementRight = elementFullWidth;
     }
 
-    // Determine the final visible width by applying the most restrictive constraint
+    const bothWidthLimitsApply =
+      elementExceedsVisibleAreaRight &&
+      elementFullWidth > visibleAreaExceedsElementRight;
     let elementVisibleWidth;
-    if (
-      elementWidth > widthConstrainedByRemainingSpace &&
-      elementWidth > widthConstrainedByTableRightEdge
-    ) {
-      // Both constraints apply - use the most restrictive one
-      if (widthConstrainedByRemainingSpace < widthConstrainedByTableRightEdge) {
-        elementVisibleWidth = widthConstrainedByRemainingSpace;
-      } else {
-        elementVisibleWidth = widthConstrainedByTableRightEdge;
-      }
-    } else if (elementWidth > widthConstrainedByRemainingSpace) {
-      elementVisibleWidth = widthConstrainedByRemainingSpace;
-    } else if (elementWidth > widthConstrainedByTableRightEdge) {
-      elementVisibleWidth = widthConstrainedByTableRightEdge;
+    if (bothWidthLimitsApply) {
+      elementVisibleWidth =
+        spaceRemainingRight < visibleAreaExceedsElementRight
+          ? spaceRemainingRight
+          : visibleAreaExceedsElementRight;
+    } else if (elementExceedsVisibleAreaRight) {
+      elementVisibleWidth = spaceRemainingRight;
+    } else if (elementFullWidth > visibleAreaExceedsElementRight) {
+      elementVisibleWidth = visibleAreaExceedsElementRight;
     } else {
-      elementVisibleWidth = elementWidth;
+      elementVisibleWidth = elementFullWidth;
     }
 
-    // Calculate visible height - need to check if visible area extends beyond table bottom
-    const elementBottomEdge = elementAbsoluteTop + elementHeight;
+    // Calculate visible height
+    const elementBottomEdge = elementAbsoluteTop + elementFullHeight;
     const visibleAreaTop = scrollTop;
     const visibleAreaBottom = scrollTop + visibleAreaHeight;
 
-    // Determine the constraints
-    const heightConstrainedByRemainingSpace = spaceRemainingFromTableTop;
-    let heightConstrainedByTableBottomEdge;
+    const elementExceedsVisibleAreaBottom =
+      elementFullHeight > spaceRemainingBottom;
+    let visibleAreaExceedsElementBottom;
     if (visibleAreaBottom > elementBottomEdge) {
-      const elementVisibleFromTop = elementBottomEdge - visibleAreaTop;
-      heightConstrainedByTableBottomEdge =
-        elementVisibleFromTop > 0 ? elementVisibleFromTop : 0;
+      const elementVisibleFromAreaTop = elementBottomEdge - visibleAreaTop;
+      visibleAreaExceedsElementBottom =
+        elementVisibleFromAreaTop > 0 ? elementVisibleFromAreaTop : 0;
     } else {
-      heightConstrainedByTableBottomEdge = elementHeight;
+      visibleAreaExceedsElementBottom = elementFullHeight;
     }
 
-    // Determine the final visible height by applying the most restrictive constraint
+    const bothHeightLimitsApply =
+      elementExceedsVisibleAreaBottom &&
+      elementFullHeight > visibleAreaExceedsElementBottom;
     let elementVisibleHeight;
-    if (
-      elementHeight > heightConstrainedByRemainingSpace &&
-      elementHeight > heightConstrainedByTableBottomEdge
-    ) {
-      // Both constraints apply - use the most restrictive one
-      if (
-        heightConstrainedByRemainingSpace < heightConstrainedByTableBottomEdge
-      ) {
-        elementVisibleHeight = heightConstrainedByRemainingSpace;
-      } else {
-        elementVisibleHeight = heightConstrainedByTableBottomEdge;
-      }
-    } else if (elementHeight > heightConstrainedByRemainingSpace) {
-      elementVisibleHeight = heightConstrainedByRemainingSpace;
-    } else if (elementHeight > heightConstrainedByTableBottomEdge) {
-      elementVisibleHeight = heightConstrainedByTableBottomEdge;
+    if (bothHeightLimitsApply) {
+      elementVisibleHeight =
+        spaceRemainingBottom < visibleAreaExceedsElementBottom
+          ? spaceRemainingBottom
+          : visibleAreaExceedsElementBottom;
+    } else if (elementExceedsVisibleAreaBottom) {
+      elementVisibleHeight = spaceRemainingBottom;
+    } else if (elementFullHeight > visibleAreaExceedsElementBottom) {
+      elementVisibleHeight = visibleAreaExceedsElementBottom;
     } else {
-      elementVisibleHeight = elementHeight;
+      elementVisibleHeight = elementFullHeight;
     }
 
+    // Convert to overlay coordinates (adjust for custom scrollable container)
+    let overlayLeft = elementLeftRelativeToVisibleArea;
+    let overlayTop = elementTopRelativeToVisibleArea;
     if (!scrollableParentIsDocument) {
       const { left: scrollableLeft, top: scrollableTop } =
         scrollableParent.getBoundingClientRect();
-      elementRelativeLeft += scrollableLeft;
-      elementRelativeTop += scrollableTop;
+      overlayLeft += scrollableLeft;
+      overlayTop += scrollableTop;
     }
+
     update(
       {
-        left: elementRelativeLeft,
-        top: elementRelativeTop,
-        right: elementRelativeLeft + elementVisibleWidth,
-        bottom: elementRelativeTop + elementVisibleHeight,
+        left: overlayLeft,
+        top: overlayTop,
+        right: overlayLeft + elementVisibleWidth,
+        bottom: overlayTop + elementVisibleHeight,
         width: elementVisibleWidth,
         height: elementVisibleHeight,
       },
       {
-        width: elementWidth,
-        height: elementHeight,
+        width: elementFullWidth,
+        height: elementFullHeight,
       },
     );
   };
