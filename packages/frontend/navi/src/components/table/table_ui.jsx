@@ -45,36 +45,8 @@ export const TableUI = forwardRef((props, ref) => {
       ui.style.setProperty("--scroll-left", `${scrollLeft}px`);
       ui.style.setProperty("--scroll-top", `${scrollTop}px`);
     };
-    updateUIPosition();
-    // ensure we catch eventual "scroll" events cause by something else than drag gesture
-    // TODO: external code should be able to call updateUIPosition
-    // TODO: this code should re-exec when table scrollable parent changes
-    const onScroll = () => {
-      updateUIPosition();
-    };
-    const scrollDispatcher =
-      scrollableParent === document.documentElement
-        ? document
-        : scrollableParent;
-    scrollDispatcher.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      scrollDispatcher.removeEventListener("scroll", onScroll, {
-        passive: true,
-      });
-    };
-  }, []);
-
-  // ui container positioning and dimensioning
-  useLayoutEffect(() => {
-    const ui = ref.current;
-    const table = tableRef.current;
-    if (!ui || !table) {
-      return;
-    }
-
     const uiContainer = ui.querySelector(".navi_table_ui_container");
     const updateUIContainerPosition = () => {
-      const scrollableParent = getScrollableParent(table);
       // position the container on top of <table> inside this viewport
       const { scrollLeft, scrollTop } = scrollableParent;
       const [
@@ -92,15 +64,33 @@ export const TableUI = forwardRef((props, ref) => {
       uiContainer.style.setProperty("--table-left", `${cloneViewportLeft}px`);
       uiContainer.style.setProperty("--table-top", `${cloneViewportTop}px`);
     };
-
     const updateUIContainerDimension = () => {
       const { width, height } = table.getBoundingClientRect();
       uiContainer.style.setProperty("--table-width", `${width}px`);
       uiContainer.style.setProperty("--table-height", `${height}px`);
     };
 
+    updateUIPosition();
     updateUIContainerPosition();
     updateUIContainerDimension();
+
+    // ensure we catch eventual "scroll" events cause by something else than drag gesture
+    // TODO: external code should be able to call updateUIPosition
+    // TODO: this code should re-exec when table scrollable parent changes
+    const onScroll = () => {
+      updateUIPosition();
+      updateUIContainerPosition();
+    };
+    const scrollDispatcher =
+      scrollableParent === document.documentElement
+        ? document
+        : scrollableParent;
+    scrollDispatcher.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      scrollDispatcher.removeEventListener("scroll", onScroll, {
+        passive: true,
+      });
+    };
   }, []);
 
   return createPortal(

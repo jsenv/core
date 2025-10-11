@@ -334,6 +334,9 @@ const onMouseLeaveLeftResizeHandle = (e) => {
   const tableColumnResizer = tableContainer.querySelector(
     ".navi_table_column_resizer",
   );
+  if (!tableColumnResizer) {
+    return;
+  }
   tableColumnResizer.removeAttribute("data-hover");
 };
 const onMouseLeaveRightResizeHandle = (e) => {
@@ -341,6 +344,9 @@ const onMouseLeaveRightResizeHandle = (e) => {
   const tableColumnResizer = tableContainer.querySelector(
     ".navi_table_column_resizer",
   );
+  if (!tableColumnResizer) {
+    return;
+  }
   tableColumnResizer.removeAttribute("data-hover");
 };
 // Generic function to handle table cell resize for both axes
