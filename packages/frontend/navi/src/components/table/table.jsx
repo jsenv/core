@@ -89,6 +89,7 @@ import {
   TableStickyContext,
   useTableStickyContextValue,
 } from "./sticky/table_sticky.js";
+import "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
 

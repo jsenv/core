@@ -11,7 +11,7 @@ import.meta.css = /* css */ `
     overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
     inset: 0;
     pointer-events: none; /* UI elements must use pointer-events: auto if they need to be interactive */
-    background: rgba(0, 255, 0, 0.2);
+    /* background: rgba(0, 255, 0, 0.2); */
   }
 
   .navi_table_ui_container {
@@ -20,7 +20,7 @@ import.meta.css = /* css */ `
     top: var(--table-visual-top);
     width: var(--table-visual-width);
     height: var(--table-visual-height);
-    background: rgba(0, 0, 0, 0.7);
+    /* background: rgba(0, 0, 0, 0.7); */
   }
 `;
 
