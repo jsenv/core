@@ -47,35 +47,85 @@ export const TableUI = forwardRef((props, ref) => {
     };
     const uiContainer = ui.querySelector(".navi_table_ui_container");
     const updateUIContainerPosition = () => {
-      // position the container on top of <table> inside this viewport
+      // position the container on top of <table> inside this visible area
       const { scrollLeft, scrollTop } = scrollableParent;
-      const [tableVisualLeft, tableVisualTop] = getElementVisualCoords(
+      const [tableAbsoluteLeft, tableAbsoluteTop] = getElementVisualCoords(
         table,
         scrollableParent,
         { isStickyTop: true, isStickyLeft: true },
       );
-      const visualLeft =
-        scrollLeft < tableVisualLeft ? tableVisualLeft - scrollLeft : 0;
-      const visualTop =
-        scrollTop < tableVisualTop ? tableVisualTop - scrollTop : 0;
-      const visualAvailableWidth = scrollableParent.clientWidth;
-      const visualAvailableHeight = scrollableParent.clientHeight;
-      const visualRemainingWidth = visualAvailableWidth - visualLeft;
-      const visualRemainingHeight = visualAvailableHeight - visualTop;
-      const { width, height } = table.getBoundingClientRect();
-      const visibleWidth =
-        width > visualRemainingWidth ? visualRemainingWidth : width;
-      const visibleHeight =
-        height > visualRemainingHeight ? visualRemainingHeight : height;
-      uiContainer.style.setProperty("--table-visual-left", `${visualLeft}px`);
+      const tableRelativeLeft =
+        scrollLeft < tableAbsoluteLeft ? tableAbsoluteLeft - scrollLeft : 0;
+      const tableRelativeTop =
+        scrollTop < tableAbsoluteTop ? tableAbsoluteTop - scrollTop : 0;
+      const visibleAreaWidth = scrollableParent.clientWidth;
+      const visibleAreaHeight = scrollableParent.clientHeight;
+      const spaceRemainingFromTableLeft = visibleAreaWidth - tableRelativeLeft;
+      const spaceRemainingFromTableTop = visibleAreaHeight - tableRelativeTop;
+      const { width: tableFullWidth, height: tableFullHeight } =
+        table.getBoundingClientRect();
+
+      // Calculate visible width - need to check if visible area extends beyond table right edge
+      let tableVisibleWidth = tableFullWidth;
+
+      // First limit by remaining space from table left to visible area right
+      if (tableVisibleWidth > spaceRemainingFromTableLeft) {
+        tableVisibleWidth = spaceRemainingFromTableLeft;
+      }
+
+      // Check if visible area extends beyond table right edge
+      const tableRightEdge = tableAbsoluteLeft + tableFullWidth;
+      const visibleAreaLeft = scrollLeft;
+      const visibleAreaRight = scrollLeft + visibleAreaWidth;
+
+      if (visibleAreaRight > tableRightEdge) {
+        // Visible area extends beyond table right edge
+        // Calculate how much of the table is still visible from visible area left
+        const tableVisibleFromLeft = tableRightEdge - visibleAreaLeft;
+        if (tableVisibleFromLeft < tableVisibleWidth) {
+          tableVisibleWidth =
+            tableVisibleFromLeft > 0 ? tableVisibleFromLeft : 0;
+        }
+      }
+
+      // Calculate visible height - need to check if visible area extends beyond table bottom
+      let tableVisibleHeight = tableFullHeight;
+
+      // First limit by remaining space from table top to visible area bottom
+      if (tableVisibleHeight > spaceRemainingFromTableTop) {
+        tableVisibleHeight = spaceRemainingFromTableTop;
+      }
+
+      // Check if visible area extends beyond table bottom
+      const tableBottomEdge = tableAbsoluteTop + tableFullHeight;
+      const visibleAreaTop = scrollTop;
+      const visibleAreaBottom = scrollTop + visibleAreaHeight;
+
+      if (visibleAreaBottom > tableBottomEdge) {
+        // Visible area extends beyond table bottom
+        // Calculate how much of the table is still visible from visible area top
+        const tableVisibleFromTop = tableBottomEdge - visibleAreaTop;
+        if (tableVisibleFromTop < tableVisibleHeight) {
+          tableVisibleHeight =
+            tableVisibleFromTop > 0 ? tableVisibleFromTop : 0;
+        }
+      }
+
+      uiContainer.style.setProperty(
+        "--table-visual-left",
+        `${tableRelativeLeft}px`,
+      );
       uiContainer.style.setProperty(
         "--table-visual-width",
-        `${visibleWidth}px`,
+        `${tableVisibleWidth}px`,
       );
-      uiContainer.style.setProperty("--table-visual-top", `${visualTop}px`);
+      uiContainer.style.setProperty(
+        "--table-visual-top",
+        `${tableRelativeTop}px`,
+      );
       uiContainer.style.setProperty(
         "--table-visual-height",
-        `${visibleHeight}px`,
+        `${tableVisibleHeight}px`,
       );
     };
     const updateUIContainerDimension = () => {
