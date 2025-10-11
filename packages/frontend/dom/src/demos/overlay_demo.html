@@ -35,19 +35,52 @@
       }
 
       .scrollable-container {
-        width: 600px;
-        height: 400px;
         padding: 20px;
-        /* overflow will be toggled via JavaScript */
+        /* width/height will be set dynamically when overflow: auto */
+      }
+
+      .scrollable-container.custom-mode {
+        max-width: 600px;
+        max-height: 400px;
       }
 
       .scrollable-content {
         position: relative;
       }
 
+      .target-row {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        margin: 50px 0;
+      }
+
+      .side-content {
+        flex: 0 0 200px;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        min-height: 150px;
+      }
+
+      .side-content h4 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #333;
+      }
+
+      .side-content p {
+        margin: 0;
+        font-size: 13px;
+        color: #666;
+        line-height: 1.4;
+      }
+
       .target-element {
-        width: 800px; /* Wide element to test horizontal scrolling */
-        height: 200px;
+        flex: 1;
+        width: 400px;
+        min-width: 400px;
+        height: 600px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: 15px solid #333;
         display: flex;
@@ -154,6 +187,16 @@
       .controls button.active {
         background: #2196f3;
       }
+
+      .mode-status {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #666;
+        font-style: italic;
+      }
     </style>
   </head>
   <body>
@@ -172,6 +215,7 @@
       <h3>Scrollable Container</h3>
       <button id="documentBtn" class="active">Document</button>
       <button id="customBtn">Custom Container</button>
+      <div class="mode-status" id="modeStatus">Current: Document scrolling</div>
     </div>
 
     <div class="scroll-indicator" id="scrollIndicator">Scroll: 0px</div>
@@ -180,57 +224,39 @@
     <div class="scrollable-container" id="scrollableContainer">
       <div class="scrollable-content">
         <h3>Scrollable Content Area</h3>
-        <p>
-          This content area can be scrolled either by the document or by its
-          container.
-        </p>
-        <div class="target-element" id="targetElement">Target Element</div>
+        <p>Content above the target element</p>
+
+        <div class="target-row">
+          <div class="side-content">
+            <h4>Left Content</h4>
+            <p>
+              This is some content on the left side of the target element. It
+              helps demonstrate how the overlay system works when the target is
+              part of a more complex layout.
+            </p>
+            <p>Additional content to make this section taller.</p>
+          </div>
+
+          <div class="target-element" id="targetElement">Target Element</div>
+
+          <div class="side-content">
+            <h4>Right Content</h4>
+            <p>
+              This is content on the right side of the target element. The
+              flexbox layout ensures proper alignment while maintaining the
+              overlay functionality.
+            </p>
+            <p>More content to balance the layout.</p>
+          </div>
+        </div>
+
+        <p>Content below target element</p>
       </div>
     </div>
 
     <!-- Overlay UI (initially hidden) -->
     <div class="overlay-ui" id="overlayUI" style="display: none">
       <div class="overlay-container" id="overlayContainer">OVERLAY</div>
-    </div>
-
-    <div class="content-section">
-      <h2>Section 1</h2>
-      <p>
-        Scroll down to see how the overlay follows the target element. The
-        overlay only covers the visible portion of the target.
-      </p>
-    </div>
-
-    <div class="content-section">
-      <h2>Section 2</h2>
-      <p>
-        Continue scrolling. When the target element is partially visible, the
-        overlay will adjust its size accordingly.
-      </p>
-    </div>
-
-    <div class="content-section">
-      <h2>Section 3</h2>
-      <p>
-        When you scroll past the target element completely, the overlay will
-        disappear as the target is no longer visible.
-      </p>
-    </div>
-
-    <div class="content-section">
-      <h2>Section 4</h2>
-      <p>
-        Scroll back up to see the overlay reappear when the target becomes
-        visible again.
-      </p>
-    </div>
-
-    <div class="content-section">
-      <h2>Section 5</h2>
-      <p>
-        The overlay system handles all the complex positioning logic
-        automatically, including different scrollable containers.
-      </p>
     </div>
 
     <script type="module">
@@ -245,8 +271,22 @@
       const scrollIndicator = document.getElementById("scrollIndicator");
       const documentBtn = document.getElementById("documentBtn");
       const customBtn = document.getElementById("customBtn");
+      const modeStatus = document.getElementById("modeStatus");
 
       let currentOverlay = null;
+      const STORAGE_KEY = "overlay-demo-mode";
+
+      // Load saved mode from localStorage
+      const savedMode = localStorage.getItem(STORAGE_KEY) || "document";
+
+      // Update mode status display
+      function updateModeStatus(mode) {
+        if (mode === "document") {
+          modeStatus.textContent = "Current: Document scrolling";
+        } else {
+          modeStatus.textContent = "Current: Custom container scrolling";
+        }
+      }
 
       // Update scroll indicator
       const updateScrollIndicator = () => {
@@ -290,6 +330,9 @@
       // Set document scrolling mode
       function setDocumentScrolling() {
         scrollableContainer.style.overflow = "visible";
+        scrollableContainer.classList.remove("custom-mode");
+        localStorage.setItem(STORAGE_KEY, "document");
+        updateModeStatus("document");
         initializeOverlay();
         console.log("Document scrolling mode activated");
       }
@@ -297,6 +340,9 @@
       // Set custom container scrolling mode
       function setCustomContainerScrolling() {
         scrollableContainer.style.overflow = "auto";
+        scrollableContainer.classList.add("custom-mode");
+        localStorage.setItem(STORAGE_KEY, "custom");
+        updateModeStatus("custom");
         initializeOverlay();
         console.log("Custom container scrolling mode activated");
       }
@@ -314,8 +360,16 @@
         setCustomContainerScrolling();
       });
 
-      // Initialize with document scrolling
-      setDocumentScrolling();
+      // Initialize with saved mode
+      if (savedMode === "custom") {
+        customBtn.classList.add("active");
+        documentBtn.classList.remove("active");
+        setCustomContainerScrolling();
+      } else {
+        documentBtn.classList.add("active");
+        customBtn.classList.remove("active");
+        setDocumentScrolling();
+      }
 
       console.log("Overlay demo initialized");
     </script>
