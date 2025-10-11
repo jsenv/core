@@ -154,10 +154,11 @@ export const TableUI = forwardRef((props, ref) => {
 document.addEventListener(
   "scroll",
   (scrollEvent) => {
-    const scrollEventCopy = new scrollEvent.constructor(
-      scrollEvent.type,
-      scrollEvent,
-    );
+    const scrollEventCopy = new scrollEvent.constructor(scrollEvent.type, {
+      bubbles: false,
+      cancelable: scrollEvent.cancelable,
+      composed: scrollEvent.composed,
+    });
     document.documentElement.dispatchEvent(scrollEventCopy);
   },
   { passive: true },
