@@ -72,8 +72,6 @@ import {
 import {
   TableCellColumnResizeHandles,
   TableCellRowResizeHandles,
-  TableColumnResizer,
-  TableRowResizer,
 } from "./resize/table_resize.jsx";
 import {
   TableSizeProvider,
@@ -91,7 +89,6 @@ import {
   TableStickyContext,
   useTableStickyContextValue,
 } from "./sticky/table_sticky.js";
-import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
 
@@ -132,7 +129,7 @@ export const Table = forwardRef((props, ref) => {
   const innerRef = useRef();
   useImperativeHandle(ref, () => innerRef.current);
   const tableContainerRef = useRef();
-  const tableUIViewportRef = useRef();
+  const tableUIRef = useRef();
 
   const [ColumnProducerProvider, ColumnConsumerProvider, columns] =
     useColumnTrackerProviders();
@@ -156,7 +153,7 @@ export const Table = forwardRef((props, ref) => {
   // sticky
   useStickyGroup(tableContainerRef, {
     elementSelector: ".navi_table",
-    elementReceivingCumulativeStickyPositionRef: tableUIViewportRef,
+    elementReceivingCumulativeStickyPositionRef: tableUIRef,
   });
   const stickyContextValue = useTableStickyContextValue({
     stickyLeftFrontierColumnIndex,
@@ -263,13 +260,7 @@ export const Table = forwardRef((props, ref) => {
             </TableSelectionContext.Provider>
           </TableSizeProvider>
         </table>
-        <TableUI tableRef={innerRef}>
-          <TableColumnResizer />
-          <TableRowResizer />
-          <TableStickyContext.Provider value={stickyContextValue}>
-            <TableStickyFrontier tableRef={innerRef} />
-          </TableStickyContext.Provider>
-        </TableUI>
+        <TableUI ref={tableUIRef} tableRef={innerRef}></TableUI>
       </div>
     </div>
   );
