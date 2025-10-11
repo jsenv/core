@@ -14,6 +14,7 @@ import.meta.css = /* css */ `
     width: 100%;
     height: 100%;
     pointer-events: none; /* UI elements must use pointer-events: auto if they need to be interactive */
+    background: rgba(0, 255, 0, 0.2);
   }
 
   .navi_table_ui_container {
@@ -22,7 +23,7 @@ import.meta.css = /* css */ `
     top: var(--table-top);
     width: var(--table-width);
     height: var(--table-height);
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.7);
   }
 `;
 

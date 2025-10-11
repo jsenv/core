@@ -667,6 +667,9 @@ const onMouseLeaveTopResizeHandle = (e) => {
   const tableRowResizer = tableContainer.querySelector(
     ".navi_table_row_resizer",
   );
+  if (!tableRowResizer) {
+    return;
+  }
   tableRowResizer.removeAttribute("data-hover");
 };
 const onMouseLeaveBottomResizeHandle = (e) => {
@@ -674,6 +677,9 @@ const onMouseLeaveBottomResizeHandle = (e) => {
   const tableRowResizer = tableContainer.querySelector(
     ".navi_table_row_resizer",
   );
+  if (!tableRowResizer) {
+    return;
+  }
   tableRowResizer.removeAttribute("data-hover");
 };
 
