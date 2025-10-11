@@ -96,13 +96,13 @@ const initOverlay = (element, update) => {
       element.getBoundingClientRect();
 
     // Calculate visible width - need to check if visible area extends beyond table right edge
-    let elementVisibleWidth;
+    let elementVisibleWidth = elementWidth;
+
     // First limit by remaining space from table left to visible area right
     if (elementVisibleWidth > spaceRemainingFromTableLeft) {
       elementVisibleWidth = spaceRemainingFromTableLeft;
-    } else {
-      elementVisibleWidth = elementWidth;
     }
+
     // Check if visible area extends beyond table right edge
     const elementRightEdge = elementAbsoluteLeft + elementWidth;
     const visibleAreaLeft = scrollLeft;
@@ -118,13 +118,13 @@ const initOverlay = (element, update) => {
     }
 
     // Calculate visible height - need to check if visible area extends beyond table bottom
-    let elementVisibleHeight;
+    let elementVisibleHeight = elementHeight;
+
     // First limit by remaining space from table top to visible area bottom
-    if (elementHeight > spaceRemainingFromTableTop) {
+    if (elementVisibleHeight > spaceRemainingFromTableTop) {
       elementVisibleHeight = spaceRemainingFromTableTop;
-    } else {
-      elementVisibleHeight = elementHeight;
     }
+
     // Check if visible area extends beyond table bottom
     const elementBottomEdge = elementAbsoluteTop + elementHeight;
     const visibleAreaTop = scrollTop;
