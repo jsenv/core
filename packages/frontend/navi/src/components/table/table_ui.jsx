@@ -88,17 +88,17 @@ const initOverlay = (element, update) => {
       { isStickyTop: true, isStickyLeft: true },
     );
     const { width, height } = element.getBoundingClientRect();
-    const elementLeftRelativeToVisibleArea =
+    const leftVisible =
       visibleAreaLeft < elementAbsoluteLeft
         ? elementAbsoluteLeft - visibleAreaLeft
         : 0;
-    const elementTopRelativeToVisibleArea =
+    const topVisible =
       visibleAreaTop < elementAbsoluteTop
         ? elementAbsoluteTop - visibleAreaTop
         : 0;
     // Convert to overlay coordinates (adjust for custom scrollable container)
-    let overlayLeft = elementLeftRelativeToVisibleArea;
-    let overlayTop = elementTopRelativeToVisibleArea;
+    let overlayLeft = leftVisible;
+    let overlayTop = topVisible;
     if (!scrollableParentIsDocument) {
       const { left: scrollableLeft, top: scrollableTop } =
         scrollableParent.getBoundingClientRect();
@@ -109,12 +109,10 @@ const initOverlay = (element, update) => {
     // 1. Calculate element visible width/height
     const visibleAreaWidth = scrollableParent.clientWidth;
     const visibleAreaHeight = scrollableParent.clientHeight;
-    const visibleAreaRight = scrollLeft + visibleAreaWidth;
-    const visibleAreaBottom = scrollTop + visibleAreaHeight;
-    const spaceRemainingRight =
-      visibleAreaWidth - elementLeftRelativeToVisibleArea;
-    const spaceRemainingBottom =
-      visibleAreaHeight - elementTopRelativeToVisibleArea;
+    const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
+    const visibleAreaBottom = visibleAreaTop + visibleAreaHeight;
+    const spaceRemainingRight = visibleAreaWidth - leftVisible;
+    const spaceRemainingBottom = visibleAreaHeight - topVisible;
 
     // Calculate visible width
     const elementRightEdge = elementAbsoluteLeft + width;
@@ -134,18 +132,18 @@ const initOverlay = (element, update) => {
     const bothWidthLimitsApply =
       elementExceedsVisibleAreaRight &&
       elementExceedsWidthWhenVisibleAreaExceedsElement;
-    let elementVisibleWidth;
+    let widthVisible;
     if (bothWidthLimitsApply) {
-      elementVisibleWidth =
+      widthVisible =
         spaceRemainingRight < widthWhenVisibleAreaExceedsElement
           ? spaceRemainingRight
           : widthWhenVisibleAreaExceedsElement;
     } else if (elementExceedsVisibleAreaRight) {
-      elementVisibleWidth = spaceRemainingRight;
+      widthVisible = spaceRemainingRight;
     } else if (elementExceedsWidthWhenVisibleAreaExceedsElement) {
-      elementVisibleWidth = widthWhenVisibleAreaExceedsElement;
+      widthVisible = widthWhenVisibleAreaExceedsElement;
     } else {
-      elementVisibleWidth = width;
+      widthVisible = width;
     }
 
     // Calculate visible height
@@ -165,28 +163,28 @@ const initOverlay = (element, update) => {
     const bothHeightLimitsApply =
       elementExceedsVisibleAreaBottom &&
       elementExceedsHeightWhenVisibleAreaExceedsElement;
-    let elementVisibleHeight;
+    let heightVisible;
     if (bothHeightLimitsApply) {
-      elementVisibleHeight =
+      heightVisible =
         spaceRemainingBottom < heightWhenVisibleAreaExceedsElement
           ? spaceRemainingBottom
           : heightWhenVisibleAreaExceedsElement;
     } else if (elementExceedsVisibleAreaBottom) {
-      elementVisibleHeight = spaceRemainingBottom;
+      heightVisible = spaceRemainingBottom;
     } else if (elementExceedsHeightWhenVisibleAreaExceedsElement) {
-      elementVisibleHeight = heightWhenVisibleAreaExceedsElement;
+      heightVisible = heightWhenVisibleAreaExceedsElement;
     } else {
-      elementVisibleHeight = height;
+      heightVisible = height;
     }
 
     update(
       {
         left: overlayLeft,
         top: overlayTop,
-        right: overlayLeft + elementVisibleWidth,
-        bottom: overlayTop + elementVisibleHeight,
-        width: elementVisibleWidth,
-        height: elementVisibleHeight,
+        right: overlayLeft + widthVisible,
+        bottom: overlayTop + heightVisible,
+        width: widthVisible,
+        height: heightVisible,
       },
       {
         width,
