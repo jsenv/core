@@ -87,7 +87,6 @@ const initOverlay = (element, update) => {
       scrollableParent,
       { isStickyTop: true, isStickyLeft: true },
     );
-    const { width, height } = element.getBoundingClientRect();
     const leftVisible =
       visibleAreaLeft < elementAbsoluteLeft
         ? elementAbsoluteLeft - visibleAreaLeft
@@ -106,7 +105,8 @@ const initOverlay = (element, update) => {
       overlayTop += scrollableTop;
     }
 
-    // 1. Calculate element visible width/height
+    // 2. Calculate element visible width/height
+    const { width, height } = element.getBoundingClientRect();
     const visibleAreaWidth = scrollableParent.clientWidth;
     const visibleAreaHeight = scrollableParent.clientHeight;
     const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
@@ -114,7 +114,7 @@ const initOverlay = (element, update) => {
     const spaceRemainingRight = visibleAreaWidth - leftVisible;
     const spaceRemainingBottom = visibleAreaHeight - topVisible;
 
-    // Calculate visible width
+    // 2.1 Calculate visible width
     const elementRightEdge = elementAbsoluteLeft + width;
     const elementBottomEdge = elementAbsoluteTop + height;
     const elementExceedsVisibleAreaRight = width > spaceRemainingRight;
@@ -146,7 +146,7 @@ const initOverlay = (element, update) => {
       widthVisible = width;
     }
 
-    // Calculate visible height
+    // 2.2 alculate visible height
     const elementExceedsVisibleAreaBottom = height > spaceRemainingBottom;
     const visibleAreaExceedsElementBottom =
       visibleAreaBottom > elementBottomEdge;
