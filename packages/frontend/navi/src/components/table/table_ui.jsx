@@ -16,8 +16,8 @@ import.meta.css = /* css */ `
 
   .navi_table_ui_container {
     position: absolute;
-    left: calc(var(--scrollable-parent-left) + var(--table-visual-left));
-    top: calc(var(--scrollable-parent-top) + var(--table-visual-top));
+    left: var(--table-visual-left);
+    top: var(--table-visual-top);
     width: var(--table-visual-width);
     height: var(--table-visual-height);
     background: rgba(0, 0, 0, 0.7);
@@ -35,132 +35,25 @@ export const TableUI = forwardRef((props, ref) => {
       return null;
     }
 
-    const scrollableParent = getScrollableParent(table);
-
-    // Position the UI container relative to its scrollable parent
-    const updateUIPosition = () => {
-      if (scrollableParent === document.documentElement) {
-        // Document scrolling - container positions are relative to viewport
-        ui.style.setProperty("--scrollable-parent-left", "0px");
-        ui.style.setProperty("--scrollable-parent-top", "0px");
-      } else {
-        // Custom container scrolling - need to account for container's position in viewport
-        const containerRect = scrollableParent.getBoundingClientRect();
-        ui.style.setProperty(
-          "--scrollable-parent-left",
-          `${containerRect.left}px`,
-        );
-        ui.style.setProperty(
-          "--scrollable-parent-top",
-          `${containerRect.top}px`,
-        );
-      }
-    };
-
     const uiContainer = ui.querySelector(".navi_table_ui_container");
-    const updateUIContainerPosition = () => {
-      // position the container on top of <table> inside this visible area
-      const { scrollLeft, scrollTop } = scrollableParent;
-      const [tableAbsoluteLeft, tableAbsoluteTop] = getElementVisualCoords(
-        table,
-        scrollableParent,
-        { isStickyTop: true, isStickyLeft: true },
-      );
-      const tableRelativeLeft =
-        scrollLeft < tableAbsoluteLeft ? tableAbsoluteLeft - scrollLeft : 0;
-      const tableRelativeTop =
-        scrollTop < tableAbsoluteTop ? tableAbsoluteTop - scrollTop : 0;
-      const visibleAreaWidth = scrollableParent.clientWidth;
-      const visibleAreaHeight = scrollableParent.clientHeight;
-      const spaceRemainingFromTableLeft = visibleAreaWidth - tableRelativeLeft;
-      const spaceRemainingFromTableTop = visibleAreaHeight - tableRelativeTop;
-      const { width: tableFullWidth, height: tableFullHeight } =
-        table.getBoundingClientRect();
-
-      // Calculate visible width - need to check if visible area extends beyond table right edge
-      let tableVisibleWidth = tableFullWidth;
-
-      // First limit by remaining space from table left to visible area right
-      if (tableVisibleWidth > spaceRemainingFromTableLeft) {
-        tableVisibleWidth = spaceRemainingFromTableLeft;
-      }
-
-      // Check if visible area extends beyond table right edge
-      const tableRightEdge = tableAbsoluteLeft + tableFullWidth;
-      const visibleAreaLeft = scrollLeft;
-      const visibleAreaRight = scrollLeft + visibleAreaWidth;
-
-      if (visibleAreaRight > tableRightEdge) {
-        // Visible area extends beyond table right edge
-        // Calculate how much of the table is still visible from visible area left
-        const tableVisibleFromLeft = tableRightEdge - visibleAreaLeft;
-        if (tableVisibleFromLeft < tableVisibleWidth) {
-          tableVisibleWidth =
-            tableVisibleFromLeft > 0 ? tableVisibleFromLeft : 0;
-        }
-      }
-
-      // Calculate visible height - need to check if visible area extends beyond table bottom
-      let tableVisibleHeight = tableFullHeight;
-
-      // First limit by remaining space from table top to visible area bottom
-      if (tableVisibleHeight > spaceRemainingFromTableTop) {
-        tableVisibleHeight = spaceRemainingFromTableTop;
-      }
-
-      // Check if visible area extends beyond table bottom
-      const tableBottomEdge = tableAbsoluteTop + tableFullHeight;
-      const visibleAreaTop = scrollTop;
-      const visibleAreaBottom = scrollTop + visibleAreaHeight;
-
-      if (visibleAreaBottom > tableBottomEdge) {
-        // Visible area extends beyond table bottom
-        // Calculate how much of the table is still visible from visible area top
-        const tableVisibleFromTop = tableBottomEdge - visibleAreaTop;
-        if (tableVisibleFromTop < tableVisibleHeight) {
-          tableVisibleHeight =
-            tableVisibleFromTop > 0 ? tableVisibleFromTop : 0;
-        }
-      }
-
+    return initOverlay(table, (visibleRect) => {
       uiContainer.style.setProperty(
         "--table-visual-left",
-        `${tableRelativeLeft}px`,
+        `${visibleRect.left}px`,
       );
       uiContainer.style.setProperty(
         "--table-visual-width",
-        `${tableVisibleWidth}px`,
+        `${visibleRect.width}px`,
       );
       uiContainer.style.setProperty(
         "--table-visual-top",
-        `${tableRelativeTop}px`,
+        `${visibleRect.top}px`,
       );
       uiContainer.style.setProperty(
         "--table-visual-height",
-        `${tableVisibleHeight}px`,
+        `${visibleRect.height}px`,
       );
-    };
-    const updateUIContainerDimension = () => {
-      const { width, height } = table.getBoundingClientRect();
-      uiContainer.style.setProperty("--table-width", `${width}px`);
-      uiContainer.style.setProperty("--table-height", `${height}px`);
-    };
-
-    updateUIPosition();
-    updateUIContainerPosition();
-    updateUIContainerDimension();
-
-    // TODO: external code should be able to call updateUIPosition
-    const onScroll = () => {
-      updateUIPosition();
-      updateUIContainerPosition();
-    };
-    scrollableParent.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      scrollableParent.removeEventListener("scroll", onScroll, {
-        passive: true,
-      });
-    };
+    });
   });
 
   return createPortal(
@@ -170,6 +63,132 @@ export const TableUI = forwardRef((props, ref) => {
     document.body,
   );
 });
+
+const initOverlay = (element, update) => {
+  const scrollableParent = getScrollableParent(element);
+  const scrollableParentIsDocument =
+    scrollableParent === document.documentElement;
+
+  const updateOverlayRect = () => {
+    // position the container on top of <table> inside this visible area
+    const { scrollLeft, scrollTop } = scrollableParent;
+    const [elementAbsoluteLeft, elementAbsoluteTop] = getElementVisualCoords(
+      element,
+      scrollableParent,
+      { isStickyTop: true, isStickyLeft: true },
+    );
+    let elementRelativeLeft =
+      scrollLeft < elementAbsoluteLeft ? elementAbsoluteLeft - scrollLeft : 0;
+    let elementRelativeTop =
+      scrollTop < elementAbsoluteTop ? elementAbsoluteTop - scrollTop : 0;
+    const visibleAreaWidth = scrollableParent.clientWidth;
+    const visibleAreaHeight = scrollableParent.clientHeight;
+    const spaceRemainingFromTableLeft = visibleAreaWidth - elementRelativeLeft;
+    const spaceRemainingFromTableTop = visibleAreaHeight - elementRelativeTop;
+    const { width: elementWidth, height: elementHeight } =
+      element.getBoundingClientRect();
+
+    // Calculate visible width - need to check if visible area extends beyond table right edge
+    let elementVisibleWidth;
+    // First limit by remaining space from table left to visible area right
+    if (elementVisibleWidth > spaceRemainingFromTableLeft) {
+      elementVisibleWidth = spaceRemainingFromTableLeft;
+    } else {
+      elementVisibleWidth = elementWidth;
+    }
+    // Check if visible area extends beyond table right edge
+    const elementRightEdge = elementAbsoluteLeft + elementWidth;
+    const visibleAreaLeft = scrollLeft;
+    const visibleAreaRight = scrollLeft + visibleAreaWidth;
+    if (visibleAreaRight > elementRightEdge) {
+      // Visible area extends beyond table right edge
+      // Calculate how much of the table is still visible from visible area left
+      const elementVisibleFromLeft = elementRightEdge - visibleAreaLeft;
+      if (elementVisibleFromLeft < elementVisibleWidth) {
+        elementVisibleWidth =
+          elementVisibleFromLeft > 0 ? elementVisibleFromLeft : 0;
+      }
+    }
+
+    // Calculate visible height - need to check if visible area extends beyond table bottom
+    let elementVisibleHeight;
+    // First limit by remaining space from table top to visible area bottom
+    if (elementHeight > spaceRemainingFromTableTop) {
+      elementVisibleHeight = spaceRemainingFromTableTop;
+    } else {
+      elementVisibleHeight = elementHeight;
+    }
+    // Check if visible area extends beyond table bottom
+    const elementBottomEdge = elementAbsoluteTop + elementHeight;
+    const visibleAreaTop = scrollTop;
+    const visibleAreaBottom = scrollTop + visibleAreaHeight;
+
+    if (visibleAreaBottom > elementBottomEdge) {
+      // Visible area extends beyond table bottom
+      // Calculate how much of the table is still visible from visible area top
+      const elementVisibleFromTop = elementBottomEdge - visibleAreaTop;
+      if (elementVisibleFromTop < elementVisibleHeight) {
+        elementVisibleHeight =
+          elementVisibleFromTop > 0 ? elementVisibleFromTop : 0;
+      }
+    }
+
+    if (!scrollableParentIsDocument) {
+      const { left: scrollableLeft, top: scrollableTop } =
+        scrollableParent.getBoundingClientRect();
+      elementRelativeLeft += scrollableLeft;
+      elementRelativeTop += scrollableTop;
+    }
+    update(
+      {
+        left: elementRelativeLeft,
+        top: elementRelativeTop,
+        right: elementRelativeLeft + elementVisibleWidth,
+        bottom: elementRelativeTop + elementVisibleHeight,
+        width: elementVisibleWidth,
+        height: elementVisibleHeight,
+      },
+      {
+        width: elementWidth,
+        height: elementHeight,
+      },
+    );
+  };
+
+  updateOverlayRect();
+
+  // TODO: external code should be able to call updateUIPosition
+  const onScroll = () => {
+    updateOverlayRect();
+  };
+
+  // Listen to scroll events on the scrollable parent
+  scrollableParent.addEventListener("scroll", onScroll, { passive: true });
+
+  // If scrollable parent is not document, also listen to document scroll
+  // to update UI position when the scrollable parent moves in viewport
+  let documentScrollCleanup = null;
+  if (scrollableParent !== document.documentElement) {
+    const onDocumentScroll = () => {
+      updateOverlayRect(); // Update container position in viewport
+    };
+    document.addEventListener("scroll", onDocumentScroll, { passive: true });
+    documentScrollCleanup = () => {
+      document.removeEventListener("scroll", onDocumentScroll, {
+        passive: true,
+      });
+    };
+  }
+
+  return () => {
+    scrollableParent.removeEventListener("scroll", onScroll, {
+      passive: true,
+    });
+    if (documentScrollCleanup) {
+      documentScrollCleanup();
+    }
+  };
+};
 
 // redispatch "scroll" events from document to documentElement
 // This way getScrollableParent(el).addEventListener("scroll")
