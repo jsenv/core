@@ -22,6 +22,7 @@ import.meta.css = /* css */ `
     top: var(--table-top);
     width: var(--table-width);
     height: var(--table-height);
+    background: rgba(0, 0, 0, 0.5);
   }
 `;
 
@@ -43,15 +44,20 @@ export const TableUI = forwardRef((props, ref) => {
       ui.style.setProperty("--scroll-left", `${scrollLeft}px`);
       ui.style.setProperty("--scroll-top", `${scrollTop}px`);
     };
+    updateUIPosition();
     // ensure we catch eventual "scroll" events cause by something else than drag gesture
     // TODO: external code should be able to call updateUIPosition
     // TODO: this code should re-exec when table scrollable parent changes
     const onScroll = () => {
       updateUIPosition();
     };
-    scrollableParent.addEventListener("scroll", onScroll, { passive: true });
+    const scrollDispatcher =
+      scrollableParent === document.documentElement
+        ? document
+        : scrollableParent;
+    scrollDispatcher.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      scrollableParent.removeEventListener("scroll", onScroll, {
+      scrollDispatcher.removeEventListener("scroll", onScroll, {
         passive: true,
       });
     };

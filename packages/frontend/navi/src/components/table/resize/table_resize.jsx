@@ -288,6 +288,9 @@ const updateTableColumnResizerPosition = (tableCell) => {
   const tableColumnResizer = tableContainer.querySelector(
     ".navi_table_column_resizer",
   );
+  if (!tableColumnResizer) {
+    return;
+  }
   if (tableColumnResizer.hasAttribute("data-resizing")) {
     // ensure mouseenter/mouseleave while resizing cannot interfere
     // while resizing (would move the resizer on other columns)
@@ -614,6 +617,9 @@ const updateTableRowResizerPosition = (rowCell) => {
   const tableRowResizer = tableContainer.querySelector(
     ".navi_table_row_resizer",
   );
+  if (!tableRowResizer) {
+    return;
+  }
   if (tableRowResizer.hasAttribute("data-resizing")) {
     // ensure mouseenter/mouseleave while resizing cannot interfere
     // while resizing (would move the resizer on other rows)
