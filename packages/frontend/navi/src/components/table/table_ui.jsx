@@ -111,47 +111,47 @@ const initOverlay = (element, update) => {
     const visibleAreaHeight = scrollableParent.clientHeight;
     const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
     const visibleAreaBottom = visibleAreaTop + visibleAreaHeight;
-
     // 2.1 Calculate visible width
-    const spaceRemainingRight = visibleAreaWidth - leftVisible;
-    const elementAbsoluteRight = elementAbsoluteLeft + width;
-    const elementAbsoluteBottom = elementAbsoluteTop + height;
-
-    const elementLeftIsVisible = elementAbsoluteLeft >= visibleAreaLeft;
-    const elementRightIsVisible = elementAbsoluteRight <= visibleAreaRight;
-    const elementTopIsVisible = elementAbsoluteTop >= visibleAreaTop;
-    const elementBottomIsVisible = elementAbsoluteBottom <= visibleAreaBottom;
-
     let widthVisible;
-    if (elementLeftIsVisible && elementRightIsVisible) {
-      // Element fully visible horizontally
-      widthVisible = width;
-    } else if (elementLeftIsVisible && !elementRightIsVisible) {
-      // Element left is visible, right is cut off
-      widthVisible = visibleAreaRight - elementAbsoluteLeft;
-    } else if (!elementLeftIsVisible && elementRightIsVisible) {
-      // Element left is cut off, right is visible
-      widthVisible = elementAbsoluteRight - visibleAreaLeft;
-    } else {
-      // Element spans beyond both sides, show only visible area portion
-      widthVisible = spaceRemainingRight;
+    {
+      const spaceRemainingRight = visibleAreaWidth - leftVisible;
+      const elementAbsoluteRight = elementAbsoluteLeft + width;
+      const elementLeftIsVisible = elementAbsoluteLeft >= visibleAreaLeft;
+      const elementRightIsVisible = elementAbsoluteRight <= visibleAreaRight;
+      if (elementLeftIsVisible && elementRightIsVisible) {
+        // Element fully visible horizontally
+        widthVisible = width;
+      } else if (elementLeftIsVisible && !elementRightIsVisible) {
+        // Element left is visible, right is cut off
+        widthVisible = visibleAreaRight - elementAbsoluteLeft;
+      } else if (!elementLeftIsVisible && elementRightIsVisible) {
+        // Element left is cut off, right is visible
+        widthVisible = elementAbsoluteRight - visibleAreaLeft;
+      } else {
+        // Element spans beyond both sides, show only visible area portion
+        widthVisible = spaceRemainingRight;
+      }
     }
-
     // 2.2 Calculate visible height
-    const spaceRemainingBottom = visibleAreaHeight - topVisible;
     let heightVisible;
-    if (elementTopIsVisible && elementBottomIsVisible) {
-      // Element fully visible vertically
-      heightVisible = height;
-    } else if (elementTopIsVisible && !elementBottomIsVisible) {
-      // Element top is visible, bottom is cut off
-      heightVisible = visibleAreaBottom - elementAbsoluteTop;
-    } else if (!elementTopIsVisible && elementBottomIsVisible) {
-      // Element top is cut off, bottom is visible
-      heightVisible = elementAbsoluteBottom - visibleAreaTop;
-    } else {
-      // Element spans beyond both sides, show only visible area portion
-      heightVisible = spaceRemainingBottom;
+    {
+      const spaceRemainingBottom = visibleAreaHeight - topVisible;
+      const elementAbsoluteBottom = elementAbsoluteTop + height;
+      const elementTopIsVisible = elementAbsoluteTop >= visibleAreaTop;
+      const elementBottomIsVisible = elementAbsoluteBottom <= visibleAreaBottom;
+      if (elementTopIsVisible && elementBottomIsVisible) {
+        // Element fully visible vertically
+        heightVisible = height;
+      } else if (elementTopIsVisible && !elementBottomIsVisible) {
+        // Element top is visible, bottom is cut off
+        heightVisible = visibleAreaBottom - elementAbsoluteTop;
+      } else if (!elementTopIsVisible && elementBottomIsVisible) {
+        // Element top is cut off, bottom is visible
+        heightVisible = elementAbsoluteBottom - visibleAreaTop;
+      } else {
+        // Element spans beyond both sides, show only visible area portion
+        heightVisible = spaceRemainingBottom;
+      }
     }
 
     update(
