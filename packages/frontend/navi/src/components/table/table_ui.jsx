@@ -96,48 +96,55 @@ const initOverlay = (element, update) => {
       element.getBoundingClientRect();
 
     // Calculate visible width - need to check if visible area extends beyond table right edge
-    let elementVisibleWidth = elementWidth;
-
-    // First limit by remaining space from table left to visible area right
-    if (elementVisibleWidth > spaceRemainingFromTableLeft) {
-      elementVisibleWidth = spaceRemainingFromTableLeft;
-    }
-
-    // Check if visible area extends beyond table right edge
     const elementRightEdge = elementAbsoluteLeft + elementWidth;
     const visibleAreaLeft = scrollLeft;
     const visibleAreaRight = scrollLeft + visibleAreaWidth;
+
+    // Determine the constraints
+    const widthConstrainedByRemainingSpace = spaceRemainingFromTableLeft;
+    let widthConstrainedByTableRightEdge;
     if (visibleAreaRight > elementRightEdge) {
-      // Visible area extends beyond table right edge
-      // Calculate how much of the table is still visible from visible area left
       const elementVisibleFromLeft = elementRightEdge - visibleAreaLeft;
-      if (elementVisibleFromLeft < elementVisibleWidth) {
-        elementVisibleWidth =
-          elementVisibleFromLeft > 0 ? elementVisibleFromLeft : 0;
-      }
+      widthConstrainedByTableRightEdge =
+        elementVisibleFromLeft > 0 ? elementVisibleFromLeft : 0;
+    } else {
+      widthConstrainedByTableRightEdge = elementWidth;
+    }
+
+    // Determine the final visible width by applying the most restrictive constraint
+    let elementVisibleWidth;
+    if (elementWidth > widthConstrainedByRemainingSpace) {
+      elementVisibleWidth = widthConstrainedByRemainingSpace;
+    } else if (elementWidth > widthConstrainedByTableRightEdge) {
+      elementVisibleWidth = widthConstrainedByTableRightEdge;
+    } else {
+      elementVisibleWidth = elementWidth;
     }
 
     // Calculate visible height - need to check if visible area extends beyond table bottom
-    let elementVisibleHeight = elementHeight;
-
-    // First limit by remaining space from table top to visible area bottom
-    if (elementVisibleHeight > spaceRemainingFromTableTop) {
-      elementVisibleHeight = spaceRemainingFromTableTop;
-    }
-
-    // Check if visible area extends beyond table bottom
     const elementBottomEdge = elementAbsoluteTop + elementHeight;
     const visibleAreaTop = scrollTop;
     const visibleAreaBottom = scrollTop + visibleAreaHeight;
 
+    // Determine the constraints
+    const heightConstrainedByRemainingSpace = spaceRemainingFromTableTop;
+    let heightConstrainedByTableBottomEdge;
     if (visibleAreaBottom > elementBottomEdge) {
-      // Visible area extends beyond table bottom
-      // Calculate how much of the table is still visible from visible area top
       const elementVisibleFromTop = elementBottomEdge - visibleAreaTop;
-      if (elementVisibleFromTop < elementVisibleHeight) {
-        elementVisibleHeight =
-          elementVisibleFromTop > 0 ? elementVisibleFromTop : 0;
-      }
+      heightConstrainedByTableBottomEdge =
+        elementVisibleFromTop > 0 ? elementVisibleFromTop : 0;
+    } else {
+      heightConstrainedByTableBottomEdge = elementHeight;
+    }
+
+    // Determine the final visible height by applying the most restrictive constraint
+    let elementVisibleHeight;
+    if (elementHeight > heightConstrainedByRemainingSpace) {
+      elementVisibleHeight = heightConstrainedByRemainingSpace;
+    } else if (elementHeight > heightConstrainedByTableBottomEdge) {
+      elementVisibleHeight = heightConstrainedByTableBottomEdge;
+    } else {
+      elementVisibleHeight = elementHeight;
     }
 
     if (!scrollableParentIsDocument) {
