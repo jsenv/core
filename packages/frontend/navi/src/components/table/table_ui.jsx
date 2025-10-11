@@ -70,8 +70,7 @@ export const TableUI = forwardRef((props, ref) => {
   );
 });
 
-// Creates an overlay system that positions one element on top of another,
-// handling visibility constraints within scrollable containers
+// Creates an overlay, the update function is meant to positions one element on top of another
 const initOverlay = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollableParent = getScrollableParent(element);
@@ -81,89 +80,92 @@ const initOverlay = (element, update) => {
   const updateOverlayRect = () => {
     // Calculate element position within its scrollable container
     const { scrollLeft, scrollTop } = scrollableParent;
+    const visibleAreaWidth = scrollableParent.clientWidth;
+    const visibleAreaHeight = scrollableParent.clientHeight;
+    const visibleAreaLeft = scrollLeft;
+    const visibleAreaTop = scrollTop;
+    const visibleAreaRight = scrollLeft + visibleAreaWidth;
+    const visibleAreaBottom = scrollTop + visibleAreaHeight;
     const [elementAbsoluteLeft, elementAbsoluteTop] = getElementVisualCoords(
       element,
       scrollableParent,
       { isStickyTop: true, isStickyLeft: true },
     );
-    let elementLeftRelativeToVisibleArea =
-      scrollLeft < elementAbsoluteLeft ? elementAbsoluteLeft - scrollLeft : 0;
-    let elementTopRelativeToVisibleArea =
-      scrollTop < elementAbsoluteTop ? elementAbsoluteTop - scrollTop : 0;
-
-    const visibleAreaWidth = scrollableParent.clientWidth;
-    const visibleAreaHeight = scrollableParent.clientHeight;
+    const { width, height } = element.getBoundingClientRect();
+    const elementLeftRelativeToVisibleArea =
+      visibleAreaLeft < elementAbsoluteLeft
+        ? elementAbsoluteLeft - visibleAreaLeft
+        : 0;
+    const elementTopRelativeToVisibleArea =
+      visibleAreaTop < elementAbsoluteTop
+        ? elementAbsoluteTop - visibleAreaTop
+        : 0;
     const spaceRemainingRight =
       visibleAreaWidth - elementLeftRelativeToVisibleArea;
     const spaceRemainingBottom =
       visibleAreaHeight - elementTopRelativeToVisibleArea;
-    const { width: elementFullWidth, height: elementFullHeight } =
-      element.getBoundingClientRect();
 
     // Calculate visible width
-    const elementRightEdge = elementAbsoluteLeft + elementFullWidth;
-    const visibleAreaLeft = scrollLeft;
-    const visibleAreaRight = scrollLeft + visibleAreaWidth;
-
-    const elementExceedsVisibleAreaRight =
-      elementFullWidth > spaceRemainingRight;
-    let visibleAreaExceedsElementRight;
-    if (visibleAreaRight > elementRightEdge) {
+    const elementRightEdge = elementAbsoluteLeft + width;
+    const elementBottomEdge = elementAbsoluteTop + height;
+    const elementExceedsVisibleAreaRight = width > spaceRemainingRight;
+    const visibleAreaExceedsElementRight = visibleAreaRight > elementRightEdge;
+    let widthWhenVisibleAreaExceedsElement;
+    if (visibleAreaExceedsElementRight) {
       const elementVisibleFromAreaLeft = elementRightEdge - visibleAreaLeft;
-      visibleAreaExceedsElementRight =
+      widthWhenVisibleAreaExceedsElement =
         elementVisibleFromAreaLeft > 0 ? elementVisibleFromAreaLeft : 0;
     } else {
-      visibleAreaExceedsElementRight = elementFullWidth;
+      widthWhenVisibleAreaExceedsElement = width;
     }
-
+    const elementExceedsWidthWhenVisibleAreaExceedsElement =
+      width > widthWhenVisibleAreaExceedsElement;
     const bothWidthLimitsApply =
       elementExceedsVisibleAreaRight &&
-      elementFullWidth > visibleAreaExceedsElementRight;
+      elementExceedsWidthWhenVisibleAreaExceedsElement;
     let elementVisibleWidth;
     if (bothWidthLimitsApply) {
       elementVisibleWidth =
-        spaceRemainingRight < visibleAreaExceedsElementRight
+        spaceRemainingRight < widthWhenVisibleAreaExceedsElement
           ? spaceRemainingRight
-          : visibleAreaExceedsElementRight;
+          : widthWhenVisibleAreaExceedsElement;
     } else if (elementExceedsVisibleAreaRight) {
       elementVisibleWidth = spaceRemainingRight;
-    } else if (elementFullWidth > visibleAreaExceedsElementRight) {
-      elementVisibleWidth = visibleAreaExceedsElementRight;
+    } else if (elementExceedsWidthWhenVisibleAreaExceedsElement) {
+      elementVisibleWidth = widthWhenVisibleAreaExceedsElement;
     } else {
-      elementVisibleWidth = elementFullWidth;
+      elementVisibleWidth = width;
     }
 
     // Calculate visible height
-    const elementBottomEdge = elementAbsoluteTop + elementFullHeight;
-    const visibleAreaTop = scrollTop;
-    const visibleAreaBottom = scrollTop + visibleAreaHeight;
-
-    const elementExceedsVisibleAreaBottom =
-      elementFullHeight > spaceRemainingBottom;
-    let visibleAreaExceedsElementBottom;
-    if (visibleAreaBottom > elementBottomEdge) {
+    const elementExceedsVisibleAreaBottom = height > spaceRemainingBottom;
+    const visibleAreaExceedsElementBottom =
+      visibleAreaBottom > elementBottomEdge;
+    let heightWhenVisibleAreaExceedsElement;
+    if (visibleAreaExceedsElementBottom) {
       const elementVisibleFromAreaTop = elementBottomEdge - visibleAreaTop;
-      visibleAreaExceedsElementBottom =
+      heightWhenVisibleAreaExceedsElement =
         elementVisibleFromAreaTop > 0 ? elementVisibleFromAreaTop : 0;
     } else {
-      visibleAreaExceedsElementBottom = elementFullHeight;
+      heightWhenVisibleAreaExceedsElement = height;
     }
-
+    const elementExceedsHeightWhenVisibleAreaExceedsElement =
+      height > heightWhenVisibleAreaExceedsElement;
     const bothHeightLimitsApply =
       elementExceedsVisibleAreaBottom &&
-      elementFullHeight > visibleAreaExceedsElementBottom;
+      elementExceedsHeightWhenVisibleAreaExceedsElement;
     let elementVisibleHeight;
     if (bothHeightLimitsApply) {
       elementVisibleHeight =
-        spaceRemainingBottom < visibleAreaExceedsElementBottom
+        spaceRemainingBottom < heightWhenVisibleAreaExceedsElement
           ? spaceRemainingBottom
-          : visibleAreaExceedsElementBottom;
+          : heightWhenVisibleAreaExceedsElement;
     } else if (elementExceedsVisibleAreaBottom) {
       elementVisibleHeight = spaceRemainingBottom;
-    } else if (elementFullHeight > visibleAreaExceedsElementBottom) {
-      elementVisibleHeight = visibleAreaExceedsElementBottom;
+    } else if (elementExceedsHeightWhenVisibleAreaExceedsElement) {
+      elementVisibleHeight = heightWhenVisibleAreaExceedsElement;
     } else {
-      elementVisibleHeight = elementFullHeight;
+      elementVisibleHeight = height;
     }
 
     // Convert to overlay coordinates (adjust for custom scrollable container)
@@ -186,8 +188,8 @@ const initOverlay = (element, update) => {
         height: elementVisibleHeight,
       },
       {
-        width: elementFullWidth,
-        height: elementFullHeight,
+        width,
+        height,
       },
     );
   };
