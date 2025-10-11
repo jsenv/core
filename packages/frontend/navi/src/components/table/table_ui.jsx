@@ -49,18 +49,15 @@ export const TableUI = forwardRef((props, ref) => {
     const updateUIContainerPosition = () => {
       // position the container on top of <table> inside this viewport
       const { scrollLeft, scrollTop } = scrollableParent;
-      const [
-        tableVisualLeftRelativeToScrollableParent,
-        tableVisualTopRelativeToScrollableParent,
-      ] = getElementVisualCoords(table, scrollableParent);
+      const [tableVisualLeft, tableVisualTop] = getElementVisualCoords(
+        table,
+        scrollableParent,
+        { isStickyTop: true, isStickyLeft: true },
+      );
       const viewportLeft =
-        scrollLeft < tableVisualLeftRelativeToScrollableParent
-          ? tableVisualLeftRelativeToScrollableParent - scrollLeft
-          : 0;
+        scrollLeft < tableVisualLeft ? tableVisualLeft - scrollLeft : 0;
       const viewportTop =
-        scrollTop < tableVisualTopRelativeToScrollableParent
-          ? tableVisualTopRelativeToScrollableParent - scrollTop
-          : 0;
+        scrollTop < tableVisualTop ? tableVisualTop - scrollTop : 0;
       uiContainer.style.setProperty("--table-left", `${viewportLeft}px`);
       uiContainer.style.setProperty("--table-top", `${viewportTop}px`);
     };
