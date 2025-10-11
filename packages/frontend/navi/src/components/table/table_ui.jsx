@@ -16,8 +16,8 @@ import.meta.css = /* css */ `
 
   .navi_table_ui_container {
     position: absolute;
-    left: var(--table-visual-left);
-    top: var(--table-visual-top);
+    left: calc(var(--scrollable-parent-left) + var(--table-visual-left));
+    top: calc(var(--scrollable-parent-top) + var(--table-visual-top));
     width: var(--table-visual-width);
     height: var(--table-visual-height);
     background: rgba(0, 0, 0, 0.7);
@@ -36,6 +36,27 @@ export const TableUI = forwardRef((props, ref) => {
     }
 
     const scrollableParent = getScrollableParent(table);
+
+    // Position the UI container relative to its scrollable parent
+    const updateUIPosition = () => {
+      if (scrollableParent === document.documentElement) {
+        // Document scrolling - container positions are relative to viewport
+        ui.style.setProperty("--scrollable-parent-left", "0px");
+        ui.style.setProperty("--scrollable-parent-top", "0px");
+      } else {
+        // Custom container scrolling - need to account for container's position in viewport
+        const containerRect = scrollableParent.getBoundingClientRect();
+        ui.style.setProperty(
+          "--scrollable-parent-left",
+          `${containerRect.left}px`,
+        );
+        ui.style.setProperty(
+          "--scrollable-parent-top",
+          `${containerRect.top}px`,
+        );
+      }
+    };
+
     const uiContainer = ui.querySelector(".navi_table_ui_container");
     const updateUIContainerPosition = () => {
       // position the container on top of <table> inside this visible area
@@ -125,11 +146,13 @@ export const TableUI = forwardRef((props, ref) => {
       uiContainer.style.setProperty("--table-height", `${height}px`);
     };
 
+    updateUIPosition();
     updateUIContainerPosition();
     updateUIContainerDimension();
 
     // TODO: external code should be able to call updateUIPosition
     const onScroll = () => {
+      updateUIPosition();
       updateUIContainerPosition();
     };
     scrollableParent.addEventListener("scroll", onScroll, { passive: true });
