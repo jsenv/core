@@ -60,8 +60,8 @@ export const TableUI = forwardRef((props, ref) => {
         scrollTop < tableVisualTop ? tableVisualTop - scrollTop : 0;
       const visualAvailableWidth = scrollableParent.clientWidth;
       const visualAvailableHeight = scrollableParent.clientHeight;
-      const visualRemainingWidth = visualAvailableWidth - tableVisualLeft;
-      const visualRemainingHeight = visualAvailableHeight - tableVisualTop;
+      const visualRemainingWidth = visualAvailableWidth - visualLeft;
+      const visualRemainingHeight = visualAvailableHeight - visualTop;
       const { width, height } = table.getBoundingClientRect();
       const visibleWidth =
         width > visualRemainingWidth ? visualRemainingWidth : width;
