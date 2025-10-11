@@ -113,7 +113,17 @@ const initOverlay = (element, update) => {
 
     // Determine the final visible width by applying the most restrictive constraint
     let elementVisibleWidth;
-    if (elementWidth > widthConstrainedByRemainingSpace) {
+    if (
+      elementWidth > widthConstrainedByRemainingSpace &&
+      elementWidth > widthConstrainedByTableRightEdge
+    ) {
+      // Both constraints apply - use the most restrictive one
+      if (widthConstrainedByRemainingSpace < widthConstrainedByTableRightEdge) {
+        elementVisibleWidth = widthConstrainedByRemainingSpace;
+      } else {
+        elementVisibleWidth = widthConstrainedByTableRightEdge;
+      }
+    } else if (elementWidth > widthConstrainedByRemainingSpace) {
       elementVisibleWidth = widthConstrainedByRemainingSpace;
     } else if (elementWidth > widthConstrainedByTableRightEdge) {
       elementVisibleWidth = widthConstrainedByTableRightEdge;
@@ -139,7 +149,19 @@ const initOverlay = (element, update) => {
 
     // Determine the final visible height by applying the most restrictive constraint
     let elementVisibleHeight;
-    if (elementHeight > heightConstrainedByRemainingSpace) {
+    if (
+      elementHeight > heightConstrainedByRemainingSpace &&
+      elementHeight > heightConstrainedByTableBottomEdge
+    ) {
+      // Both constraints apply - use the most restrictive one
+      if (
+        heightConstrainedByRemainingSpace < heightConstrainedByTableBottomEdge
+      ) {
+        elementVisibleHeight = heightConstrainedByRemainingSpace;
+      } else {
+        elementVisibleHeight = heightConstrainedByTableBottomEdge;
+      }
+    } else if (elementHeight > heightConstrainedByRemainingSpace) {
       elementVisibleHeight = heightConstrainedByRemainingSpace;
     } else if (elementHeight > heightConstrainedByTableBottomEdge) {
       elementVisibleHeight = heightConstrainedByTableBottomEdge;
