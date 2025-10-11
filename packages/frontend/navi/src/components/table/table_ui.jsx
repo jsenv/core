@@ -6,13 +6,10 @@ import { Z_INDEX_TABLE_UI } from "./z_indexes.js";
 
 import.meta.css = /* css */ `
   .navi_table_ui {
-    position: absolute;
+    position: fixed;
     z-index: ${Z_INDEX_TABLE_UI};
     overflow: hidden; /* Ensure UI elements cannot impact scrollbars of the document  */
-    left: var(--scroll-left);
-    top: var(--scroll-top);
-    width: 100%;
-    height: 100%;
+    inset: 0;
     pointer-events: none; /* UI elements must use pointer-events: auto if they need to be interactive */
     background: rgba(0, 255, 0, 0.2);
   }
@@ -39,12 +36,6 @@ export const TableUI = forwardRef((props, ref) => {
     }
 
     const scrollableParent = getScrollableParent(table);
-    // position the viewport
-    const updateUIPosition = () => {
-      const { scrollLeft, scrollTop } = scrollableParent;
-      ui.style.setProperty("--scroll-left", `${scrollLeft}px`);
-      ui.style.setProperty("--scroll-top", `${scrollTop}px`);
-    };
     const uiContainer = ui.querySelector(".navi_table_ui_container");
     const updateUIContainerPosition = () => {
       // position the container on top of <table> inside this visible area
@@ -134,28 +125,20 @@ export const TableUI = forwardRef((props, ref) => {
       uiContainer.style.setProperty("--table-height", `${height}px`);
     };
 
-    updateUIPosition();
     updateUIContainerPosition();
     updateUIContainerDimension();
 
-    // ensure we catch eventual "scroll" events cause by something else than drag gesture
     // TODO: external code should be able to call updateUIPosition
-    // TODO: this code should re-exec when table scrollable parent changes
     const onScroll = () => {
-      updateUIPosition();
       updateUIContainerPosition();
     };
-    const scrollDispatcher =
-      scrollableParent === document.documentElement
-        ? document
-        : scrollableParent;
-    scrollDispatcher.addEventListener("scroll", onScroll, { passive: true });
+    scrollableParent.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      scrollDispatcher.removeEventListener("scroll", onScroll, {
+      scrollableParent.removeEventListener("scroll", onScroll, {
         passive: true,
       });
     };
-  }, []);
+  });
 
   return createPortal(
     <div ref={ref} className="navi_table_ui">
@@ -164,3 +147,18 @@ export const TableUI = forwardRef((props, ref) => {
     document.body,
   );
 });
+
+// redispatch "scroll" events from document to documentElement
+// This way getScrollableParent(el).addEventListener("scroll")
+// can be used even if scrollable parent is documentElement
+document.addEventListener(
+  "scroll",
+  (scrollEvent) => {
+    const scrollEventCopy = new scrollEvent.constructor(
+      scrollEvent.type,
+      scrollEvent,
+    );
+    document.documentElement.dispatchEvent(scrollEventCopy);
+  },
+  { passive: true },
+);
