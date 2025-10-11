@@ -53,16 +53,16 @@ export const TableUI = forwardRef((props, ref) => {
         tableVisualLeftRelativeToScrollableParent,
         tableVisualTopRelativeToScrollableParent,
       ] = getElementVisualCoords(table, scrollableParent);
-      const cloneViewportLeft =
+      const viewportLeft =
         scrollLeft < tableVisualLeftRelativeToScrollableParent
           ? tableVisualLeftRelativeToScrollableParent - scrollLeft
           : 0;
-      const cloneViewportTop =
+      const viewportTop =
         scrollTop < tableVisualTopRelativeToScrollableParent
           ? tableVisualTopRelativeToScrollableParent - scrollTop
           : 0;
-      uiContainer.style.setProperty("--table-left", `${cloneViewportLeft}px`);
-      uiContainer.style.setProperty("--table-top", `${cloneViewportTop}px`);
+      uiContainer.style.setProperty("--table-left", `${viewportLeft}px`);
+      uiContainer.style.setProperty("--table-top", `${viewportTop}px`);
     };
     const updateUIContainerDimension = () => {
       const { width, height } = table.getBoundingClientRect();
