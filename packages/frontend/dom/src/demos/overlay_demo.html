@@ -11,6 +11,7 @@
         font-family: Arial, sans-serif;
         background: #f5f5f5;
         min-height: 300vh; /* Make page tall enough to scroll */
+        min-width: 1200px; /* Force horizontal scrolling */
       }
 
       .demo-header {
@@ -34,7 +35,7 @@
       }
 
       .target-element {
-        width: 300px;
+        width: 1000px; /* Wide element to test horizontal scrolling */
         height: 200px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: 3px solid #333;
@@ -50,13 +51,40 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       }
 
+      .custom-scroll-container {
+        width: 400px;
+        height: 300px;
+        overflow: auto;
+        border: 2px solid #333;
+        border-radius: 8px;
+        margin: 100px auto;
+        background: white;
+        display: none; /* Hidden by default */
+      }
+
+      .custom-scroll-content {
+        width: 1200px; /* Wider than container */
+        height: 500px; /* Taller than container */
+        padding: 20px;
+        background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
+      }
+
+      .custom-scroll-content .target-element {
+        margin: 50px 50px; /* Position within scrollable content */
+      }
+
       .overlay-ui {
         position: fixed;
         z-index: 1000;
         overflow: hidden;
         inset: 0;
         pointer-events: none;
-        background: rgba(0, 255, 0, 0.1);
+        background: rgba(
+          0,
+          0,
+          255,
+          0.05
+        ); /* Discrete blue background to make it visible */
       }
 
       .overlay-container {
@@ -79,6 +107,7 @@
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         text-align: center;
+        min-width: 1000px; /* Force horizontal scrolling */
       }
 
       .content-section:nth-child(even) {
@@ -160,8 +189,35 @@
 
     <div class="scroll-indicator" id="scrollIndicator">Scroll: 0px</div>
 
-    <!-- Target element that will be overlaid -->
-    <div class="target-element" id="targetElement">Target Element</div>
+    <!-- Target element for document scrolling -->
+    <div class="target-element" id="documentTargetElement">
+      Target Element (Document Scrolling)
+    </div>
+
+    <!-- Custom scrollable container -->
+    <div class="custom-scroll-container" id="customScrollContainer">
+      <div class="custom-scroll-content">
+        <h3>Custom Scrollable Container</h3>
+        <p>
+          This container has its own scrollbars. The target element is inside
+          this scrollable area.
+        </p>
+        <div class="target-element" id="customTargetElement">
+          Target Element (Custom Container)
+        </div>
+        <p>More content to make this container scrollable...</p>
+        <div
+          style="
+            height: 200px;
+            background: #f0f0f0;
+            margin: 20px 0;
+            border-radius: 4px;
+          "
+        >
+          Extra content for scrolling
+        </div>
+      </div>
+    </div>
 
     <!-- Overlay UI (initially hidden) -->
     <div class="overlay-ui" id="overlayUI" style="display: none">
@@ -211,7 +267,15 @@
     <script type="module">
       import { initOverlay } from "../position/overlay.js";
 
-      const targetElement = document.getElementById("targetElement");
+      const documentTargetElement = document.getElementById(
+        "documentTargetElement",
+      );
+      const customTargetElement = document.getElementById(
+        "customTargetElement",
+      );
+      const customScrollContainer = document.getElementById(
+        "customScrollContainer",
+      );
       const overlayUI = document.getElementById("overlayUI");
       const overlayContainer = document.getElementById("overlayContainer");
       const scrollIndicator = document.getElementById("scrollIndicator");
@@ -223,7 +287,8 @@
       // Update scroll indicator
       const updateScrollIndicator = () => {
         const scrollY = window.scrollY || document.documentElement.scrollTop;
-        scrollIndicator.textContent = `Scroll: ${Math.round(scrollY)}px`;
+        const scrollX = window.scrollX || document.documentElement.scrollLeft;
+        scrollIndicator.textContent = `Scroll: ${Math.round(scrollX)}px, ${Math.round(scrollY)}px`;
       };
 
       // Initialize scroll indicator
@@ -236,34 +301,64 @@
           currentOverlay.destroy();
         }
 
+        // Show document target, hide custom container
+        documentTargetElement.style.display = "flex";
+        customScrollContainer.style.display = "none";
         overlayUI.style.display = "block";
 
-        currentOverlay = initOverlay(targetElement, (visibleRect, fullRect) => {
-          // Update overlay container position and size
-          overlayContainer.style.left = `${visibleRect.left}px`;
-          overlayContainer.style.top = `${visibleRect.top}px`;
-          overlayContainer.style.width = `${visibleRect.width}px`;
-          overlayContainer.style.height = `${visibleRect.height}px`;
+        currentOverlay = initOverlay(
+          documentTargetElement,
+          (visibleRect, fullRect) => {
+            // Update overlay container position and size
+            overlayContainer.style.left = `${visibleRect.left}px`;
+            overlayContainer.style.top = `${visibleRect.top}px`;
+            overlayContainer.style.width = `${visibleRect.width}px`;
+            overlayContainer.style.height = `${visibleRect.height}px`;
 
-          // Hide overlay if element is not visible
-          if (visibleRect.width <= 0 || visibleRect.height <= 0) {
-            overlayContainer.style.display = "none";
-          } else {
-            overlayContainer.style.display = "flex";
-          }
+            // Hide overlay if element is not visible
+            if (visibleRect.width <= 0 || visibleRect.height <= 0) {
+              overlayContainer.style.display = "none";
+            } else {
+              overlayContainer.style.display = "flex";
+            }
 
-          console.log("Overlay updated:", { visibleRect, fullRect });
-        });
+            console.log("Document overlay updated:", { visibleRect, fullRect });
+          },
+        );
 
         console.log("Document overlay initialized");
       }
 
-      // Initialize overlay with custom container (for future expansion)
+      // Initialize overlay with custom container
       function initCustomOverlay() {
-        // For now, just use document overlay
-        // This could be expanded to demonstrate custom scrollable containers
-        initDocumentOverlay();
-        console.log("Custom overlay initialized (using document for now)");
+        if (currentOverlay) {
+          currentOverlay.destroy();
+        }
+
+        // Show custom container, hide document target
+        documentTargetElement.style.display = "none";
+        customScrollContainer.style.display = "block";
+        overlayUI.style.display = "block";
+
+        currentOverlay = initOverlay(
+          customTargetElement,
+          (visibleRect, fullRect) => {
+            // Update overlay container position and size
+            overlayContainer.style.left = `${visibleRect.left}px`;
+            overlayContainer.style.top = `${visibleRect.top}px`;
+            overlayContainer.style.width = `${visibleRect.width}px`;
+            overlayContainer.style.height = `${visibleRect.height}px`;
+
+            // Hide overlay if element is not visible
+            if (visibleRect.width <= 0 || visibleRect.height <= 0) {
+              overlayContainer.style.display = "none";
+            } else {
+              overlayContainer.style.display = "flex";
+            }
+
+            console.log("Custom overlay updated:", { visibleRect, fullRect });
+          },
+        );
       }
 
       // Button handlers
