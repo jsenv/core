@@ -111,70 +111,47 @@ const initOverlay = (element, update) => {
     const visibleAreaHeight = scrollableParent.clientHeight;
     const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
     const visibleAreaBottom = visibleAreaTop + visibleAreaHeight;
-    const spaceRemainingRight = visibleAreaWidth - leftVisible;
-    const spaceRemainingBottom = visibleAreaHeight - topVisible;
 
     // 2.1 Calculate visible width
-    const elementRightEdge = elementAbsoluteLeft + width;
-    const elementBottomEdge = elementAbsoluteTop + height;
-    const elementExceedsVisibleAreaRight = width > spaceRemainingRight;
-    const visibleAreaExceedsElementRight = visibleAreaRight > elementRightEdge;
-    let widthWhenVisibleAreaExceedsElement;
-    if (visibleAreaExceedsElementRight) {
-      const elementVisibleFromAreaLeft = elementRightEdge - visibleAreaLeft;
-      widthWhenVisibleAreaExceedsElement =
-        elementVisibleFromAreaLeft > 0 ? elementVisibleFromAreaLeft : 0;
-    } else {
-      widthWhenVisibleAreaExceedsElement = width;
-    }
-    const elementExceedsWidthWhenVisibleAreaExceedsElement =
-      width > widthWhenVisibleAreaExceedsElement;
-    const bothWidthLimitsApply =
-      elementExceedsVisibleAreaRight &&
-      elementExceedsWidthWhenVisibleAreaExceedsElement;
+    const spaceRemainingRight = visibleAreaWidth - leftVisible;
+    const elementAbsoluteRight = elementAbsoluteLeft + width;
+    const elementAbsoluteBottom = elementAbsoluteTop + height;
+
+    const elementLeftIsVisible = elementAbsoluteLeft >= visibleAreaLeft;
+    const elementRightIsVisible = elementAbsoluteRight <= visibleAreaRight;
+    const elementTopIsVisible = elementAbsoluteTop >= visibleAreaTop;
+    const elementBottomIsVisible = elementAbsoluteBottom <= visibleAreaBottom;
+
     let widthVisible;
-    if (bothWidthLimitsApply) {
-      widthVisible =
-        spaceRemainingRight < widthWhenVisibleAreaExceedsElement
-          ? spaceRemainingRight
-          : widthWhenVisibleAreaExceedsElement;
-    } else if (elementExceedsVisibleAreaRight) {
-      widthVisible = spaceRemainingRight;
-    } else if (elementExceedsWidthWhenVisibleAreaExceedsElement) {
-      widthVisible = widthWhenVisibleAreaExceedsElement;
-    } else {
+    if (elementLeftIsVisible && elementRightIsVisible) {
+      // Element fully visible horizontally
       widthVisible = width;
+    } else if (elementLeftIsVisible && !elementRightIsVisible) {
+      // Element left is visible, right is cut off
+      widthVisible = visibleAreaRight - elementAbsoluteLeft;
+    } else if (!elementLeftIsVisible && elementRightIsVisible) {
+      // Element left is cut off, right is visible
+      widthVisible = elementAbsoluteRight - visibleAreaLeft;
+    } else {
+      // Element spans beyond both sides, show only visible area portion
+      widthVisible = spaceRemainingRight;
     }
 
-    // 2.2 alculate visible height
-    const elementExceedsVisibleAreaBottom = height > spaceRemainingBottom;
-    const visibleAreaExceedsElementBottom =
-      visibleAreaBottom > elementBottomEdge;
-    let heightWhenVisibleAreaExceedsElement;
-    if (visibleAreaExceedsElementBottom) {
-      const elementVisibleFromAreaTop = elementBottomEdge - visibleAreaTop;
-      heightWhenVisibleAreaExceedsElement =
-        elementVisibleFromAreaTop > 0 ? elementVisibleFromAreaTop : 0;
-    } else {
-      heightWhenVisibleAreaExceedsElement = height;
-    }
-    const elementExceedsHeightWhenVisibleAreaExceedsElement =
-      height > heightWhenVisibleAreaExceedsElement;
-    const bothHeightLimitsApply =
-      elementExceedsVisibleAreaBottom &&
-      elementExceedsHeightWhenVisibleAreaExceedsElement;
+    // 2.2 Calculate visible height
+    const spaceRemainingBottom = visibleAreaHeight - topVisible;
     let heightVisible;
-    if (bothHeightLimitsApply) {
-      heightVisible =
-        spaceRemainingBottom < heightWhenVisibleAreaExceedsElement
-          ? spaceRemainingBottom
-          : heightWhenVisibleAreaExceedsElement;
-    } else if (elementExceedsVisibleAreaBottom) {
-      heightVisible = spaceRemainingBottom;
-    } else if (elementExceedsHeightWhenVisibleAreaExceedsElement) {
-      heightVisible = heightWhenVisibleAreaExceedsElement;
-    } else {
+    if (elementTopIsVisible && elementBottomIsVisible) {
+      // Element fully visible vertically
       heightVisible = height;
+    } else if (elementTopIsVisible && !elementBottomIsVisible) {
+      // Element top is visible, bottom is cut off
+      heightVisible = visibleAreaBottom - elementAbsoluteTop;
+    } else if (!elementTopIsVisible && elementBottomIsVisible) {
+      // Element top is cut off, bottom is visible
+      heightVisible = elementAbsoluteBottom - visibleAreaTop;
+    } else {
+      // Element spans beyond both sides, show only visible area portion
+      heightVisible = spaceRemainingBottom;
     }
 
     update(
