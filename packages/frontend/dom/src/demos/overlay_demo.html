@@ -34,13 +34,22 @@
         line-height: 1.5;
       }
 
+      .scrollable-container {
+        width: 600px;
+        height: 400px;
+        padding: 20px;
+        /* overflow will be toggled via JavaScript */
+      }
+
+      .scrollable-content {
+        position: relative;
+      }
+
       .target-element {
-        width: 1000px; /* Wide element to test horizontal scrolling */
+        width: 800px; /* Wide element to test horizontal scrolling */
         height: 200px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: 15px solid #333;
-        border-radius: 12px;
-        margin: 100px auto;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -49,28 +58,6 @@
         font-size: 18px;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      }
-
-      .custom-scroll-container {
-        width: 400px;
-        height: 300px;
-        overflow: auto;
-        border: 2px solid #333;
-        border-radius: 8px;
-        margin: 100px auto;
-        background: white;
-        display: none; /* Hidden by default */
-      }
-
-      .custom-scroll-content {
-        width: 1200px; /* Wider than container */
-        height: 500px; /* Taller than container */
-        padding: 20px;
-        background: linear-gradient(45deg, #f0f0f0, #e0e0e0);
-      }
-
-      .custom-scroll-content .target-element {
-        margin: 50px 50px; /* Position within scrollable content */
       }
 
       .overlay-ui {
@@ -92,7 +79,6 @@
         background: rgba(255, 0, 0, 0.5);
         border: 2px dashed white;
         box-sizing: border-box; /* Ensure border is included in size */
-        pointer-events: auto;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -190,33 +176,15 @@
 
     <div class="scroll-indicator" id="scrollIndicator">Scroll: 0px</div>
 
-    <!-- Target element for document scrolling -->
-    <div class="target-element" id="documentTargetElement">
-      Target Element (Document Scrolling)
-    </div>
-
-    <!-- Custom scrollable container -->
-    <div class="custom-scroll-container" id="customScrollContainer">
-      <div class="custom-scroll-content">
-        <h3>Custom Scrollable Container</h3>
+    <!-- Single container that can switch between document and custom scrolling -->
+    <div class="scrollable-container" id="scrollableContainer">
+      <div class="scrollable-content">
+        <h3>Scrollable Content Area</h3>
         <p>
-          This container has its own scrollbars. The target element is inside
-          this scrollable area.
+          This content area can be scrolled either by the document or by its
+          container.
         </p>
-        <div class="target-element" id="customTargetElement">
-          Target Element (Custom Container)
-        </div>
-        <p>More content to make this container scrollable...</p>
-        <div
-          style="
-            height: 200px;
-            background: #f0f0f0;
-            margin: 20px 0;
-            border-radius: 4px;
-          "
-        >
-          Extra content for scrolling
-        </div>
+        <div class="target-element" id="targetElement">Target Element</div>
       </div>
     </div>
 
@@ -268,14 +236,9 @@
     <script type="module">
       import { initOverlay } from "../position/overlay.js";
 
-      const documentTargetElement = document.getElementById(
-        "documentTargetElement",
-      );
-      const customTargetElement = document.getElementById(
-        "customTargetElement",
-      );
-      const customScrollContainer = document.getElementById(
-        "customScrollContainer",
+      const targetElement = document.getElementById("targetElement");
+      const scrollableContainer = document.getElementById(
+        "scrollableContainer",
       );
       const overlayUI = document.getElementById("overlayUI");
       const overlayContainer = document.getElementById("overlayContainer");
@@ -296,87 +259,63 @@
       updateScrollIndicator();
       window.addEventListener("scroll", updateScrollIndicator);
 
-      // Initialize overlay with document scrolling
-      function initDocumentOverlay() {
+      // Initialize overlay
+      function initializeOverlay() {
         if (currentOverlay) {
           currentOverlay.destroy();
         }
 
-        // Show document target, hide custom container
-        documentTargetElement.style.display = "flex";
-        customScrollContainer.style.display = "none";
         overlayUI.style.display = "block";
 
-        currentOverlay = initOverlay(
-          documentTargetElement,
-          (visibleRect, fullRect) => {
-            // Update overlay container position and size
-            overlayContainer.style.left = `${visibleRect.left}px`;
-            overlayContainer.style.top = `${visibleRect.top}px`;
-            overlayContainer.style.width = `${visibleRect.width}px`;
-            overlayContainer.style.height = `${visibleRect.height}px`;
+        currentOverlay = initOverlay(targetElement, (visibleRect, fullRect) => {
+          // Update overlay container position and size
+          overlayContainer.style.left = `${visibleRect.left}px`;
+          overlayContainer.style.top = `${visibleRect.top}px`;
+          overlayContainer.style.width = `${visibleRect.width}px`;
+          overlayContainer.style.height = `${visibleRect.height}px`;
 
-            // Hide overlay if element is not visible
-            if (visibleRect.width <= 0 || visibleRect.height <= 0) {
-              overlayContainer.style.display = "none";
-            } else {
-              overlayContainer.style.display = "flex";
-            }
+          // Hide overlay if element is not visible
+          if (visibleRect.width <= 0 || visibleRect.height <= 0) {
+            overlayContainer.style.display = "none";
+          } else {
+            overlayContainer.style.display = "flex";
+          }
 
-            console.log("Document overlay updated:", { visibleRect, fullRect });
-          },
-        );
+          console.log("Overlay updated:", { visibleRect, fullRect });
+        });
 
-        console.log("Document overlay initialized");
+        console.log("Overlay initialized");
       }
 
-      // Initialize overlay with custom container
-      function initCustomOverlay() {
-        if (currentOverlay) {
-          currentOverlay.destroy();
-        }
+      // Set document scrolling mode
+      function setDocumentScrolling() {
+        scrollableContainer.style.overflow = "visible";
+        initializeOverlay();
+        console.log("Document scrolling mode activated");
+      }
 
-        // Show custom container, hide document target
-        documentTargetElement.style.display = "none";
-        customScrollContainer.style.display = "block";
-        overlayUI.style.display = "block";
-
-        currentOverlay = initOverlay(
-          customTargetElement,
-          (visibleRect, fullRect) => {
-            // Update overlay container position and size
-            overlayContainer.style.left = `${visibleRect.left}px`;
-            overlayContainer.style.top = `${visibleRect.top}px`;
-            overlayContainer.style.width = `${visibleRect.width}px`;
-            overlayContainer.style.height = `${visibleRect.height}px`;
-
-            // Hide overlay if element is not visible
-            if (visibleRect.width <= 0 || visibleRect.height <= 0) {
-              overlayContainer.style.display = "none";
-            } else {
-              overlayContainer.style.display = "flex";
-            }
-
-            console.log("Custom overlay updated:", { visibleRect, fullRect });
-          },
-        );
+      // Set custom container scrolling mode
+      function setCustomContainerScrolling() {
+        scrollableContainer.style.overflow = "auto";
+        initializeOverlay();
+        console.log("Custom container scrolling mode activated");
       }
 
       // Button handlers
       documentBtn.addEventListener("click", () => {
         documentBtn.classList.add("active");
         customBtn.classList.remove("active");
-        initDocumentOverlay();
+        setDocumentScrolling();
       });
 
       customBtn.addEventListener("click", () => {
         customBtn.classList.add("active");
         documentBtn.classList.remove("active");
-        initCustomOverlay();
+        setCustomContainerScrolling();
       });
 
-      // Initialize with document overlay
-      initDocumentOverlay();
+      // Initialize with document scrolling
+      setDocumentScrolling();
 
       console.log("Overlay demo initialized");
     </script>

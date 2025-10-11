@@ -1,6 +1,5 @@
 import { createPubSub } from "../pub_sub.js";
 import { getScrollableParent } from "../scroll/parent_scroll.js";
-import { getElementVisualCoords } from "./visual_rect.js";
 
 // Creates an overlay, the update function is meant to positions one element on top of another
 export const initOverlay = (element, update) => {
@@ -10,15 +9,27 @@ export const initOverlay = (element, update) => {
     scrollableParent === document.documentElement;
 
   const updateOverlayRect = () => {
-    // 1. Calculate element visible left/top
+    // 1. Calculate element position relative to scrollable parent
     const { scrollLeft, scrollTop } = scrollableParent;
     const visibleAreaLeft = scrollLeft;
     const visibleAreaTop = scrollTop;
-    const [elementAbsoluteLeft, elementAbsoluteTop] = getElementVisualCoords(
-      element,
-      scrollableParent,
-      { isStickyTop: true, isStickyLeft: true },
-    );
+
+    // Get element position relative to its scrollable parent
+    let elementAbsoluteLeft;
+    let elementAbsoluteTop;
+    if (scrollableParentIsDocument) {
+      // For document scrolling, use offsetLeft/offsetTop relative to document
+      const rect = element.getBoundingClientRect();
+      elementAbsoluteLeft = rect.left + scrollLeft;
+      elementAbsoluteTop = rect.top + scrollTop;
+    } else {
+      // For custom container, get position relative to the container
+      const elementRect = element.getBoundingClientRect();
+      const containerRect = scrollableParent.getBoundingClientRect();
+      elementAbsoluteLeft = elementRect.left - containerRect.left + scrollLeft;
+      elementAbsoluteTop = elementRect.top - containerRect.top + scrollTop;
+    }
+
     const leftVisible =
       visibleAreaLeft < elementAbsoluteLeft
         ? elementAbsoluteLeft - visibleAreaLeft
@@ -113,6 +124,16 @@ export const initOverlay = (element, update) => {
       scrollableParent.removeEventListener("scroll", onScroll, {
         passive: true,
       });
+    });
+  }
+
+  update_on_window_resize: {
+    const onWindowResize = () => {
+      updateOverlayRect();
+    };
+    window.addEventListener("resize", onWindowResize);
+    addTeardown(() => {
+      window.removeEventListener("resize", onWindowResize);
     });
   }
 
