@@ -114,7 +114,7 @@ const initOverlay = (element, update) => {
     // 2.1 Calculate visible width
     let widthVisible;
     {
-      const spaceRemainingRight = visibleAreaWidth - leftVisible;
+      const maxVisibleWidth = visibleAreaWidth - leftVisible;
       const elementAbsoluteRight = elementAbsoluteLeft + width;
       const elementLeftIsVisible = elementAbsoluteLeft >= visibleAreaLeft;
       const elementRightIsVisible = elementAbsoluteRight <= visibleAreaRight;
@@ -129,13 +129,13 @@ const initOverlay = (element, update) => {
         widthVisible = elementAbsoluteRight - visibleAreaLeft;
       } else {
         // Element spans beyond both sides, show only visible area portion
-        widthVisible = spaceRemainingRight;
+        widthVisible = maxVisibleWidth;
       }
     }
     // 2.2 Calculate visible height
     let heightVisible;
     {
-      const spaceRemainingBottom = visibleAreaHeight - topVisible;
+      const maxVisibleHeight = visibleAreaHeight - topVisible;
       const elementAbsoluteBottom = elementAbsoluteTop + height;
       const elementTopIsVisible = elementAbsoluteTop >= visibleAreaTop;
       const elementBottomIsVisible = elementAbsoluteBottom <= visibleAreaBottom;
@@ -150,7 +150,7 @@ const initOverlay = (element, update) => {
         heightVisible = elementAbsoluteBottom - visibleAreaTop;
       } else {
         // Element spans beyond both sides, show only visible area portion
-        heightVisible = spaceRemainingBottom;
+        heightVisible = maxVisibleHeight;
       }
     }
 
