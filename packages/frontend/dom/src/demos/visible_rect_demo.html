@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Overlay Demo</title>
+    <title>Visible Rect Demo</title>
     <style>
       body {
         margin: 0;
@@ -118,6 +118,39 @@
         color: white;
         font-weight: bold;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+        font-size: 12px;
+      }
+
+      .debug-info {
+        position: fixed;
+        top: 100px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 11px;
+        z-index: 2000;
+        max-width: 300px;
+        line-height: 1.4;
+      }
+
+      .debug-info h4 {
+        margin: 0 0 10px 0;
+        font-size: 12px;
+        color: #4caf50;
+      }
+
+      .debug-info .section {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #333;
+      }
+
+      .debug-info .section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
       }
 
       .content-section {
@@ -201,13 +234,13 @@
   </head>
   <body>
     <div class="demo-header">
-      <h1 class="demo-title">Overlay Demo</h1>
+      <h1 class="demo-title">Visible Rect Demo</h1>
       <p class="demo-description">
-        This demo shows how the overlay system positions an element on top of
-        another element.
-        <br /><strong>Instructions:</strong> Scroll the page and watch how the
-        red overlay follows the blue target element, only showing the visible
-        portion.
+        This demo shows how the <code>visibleRectEffect</code> API tracks the
+        visible portion of an element. <br /><strong>Instructions:</strong>
+        Scroll the page and watch how the red overlay shows only the visible
+        portion of the blue target element. The API provides precise coordinates
+        for the visible rectangle.
       </p>
     </div>
 
@@ -219,6 +252,23 @@
     </div>
 
     <div class="scroll-indicator" id="scrollIndicator">Scroll: 0px</div>
+
+    <!-- Debug info panel -->
+    <div class="debug-info" id="debugInfo">
+      <h4>Visible Rect API Data</h4>
+      <div class="section">
+        <strong>Visible Rect:</strong><br />
+        <span id="visibleRect">No data</span>
+      </div>
+      <div class="section">
+        <strong>Element Full Size:</strong><br />
+        <span id="fullSize">No data</span>
+      </div>
+      <div class="section">
+        <strong>Visibility:</strong><br />
+        <span id="visibility">No data</span>
+      </div>
+    </div>
 
     <!-- Single container that can switch between document and custom scrolling -->
     <div class="scrollable-container" id="scrollableContainer">
@@ -254,9 +304,9 @@
       </div>
     </div>
 
-    <!-- Overlay UI (initially hidden) -->
+    <!-- Overlay UI showing the visible rect -->
     <div class="overlay-ui" id="overlayUI" style="display: none">
-      <div class="overlay-container" id="overlayContainer">OVERLAY</div>
+      <div class="overlay-container" id="overlayContainer">VISIBLE RECT</div>
     </div>
 
     <script type="module">
@@ -272,8 +322,11 @@
       const documentBtn = document.getElementById("documentBtn");
       const customBtn = document.getElementById("customBtn");
       const modeStatus = document.getElementById("modeStatus");
+      const visibleRectSpan = document.getElementById("visibleRect");
+      const fullSizeSpan = document.getElementById("fullSize");
+      const visibilitySpan = document.getElementById("visibility");
 
-      let currentOverlay = null;
+      let currentVisibleRectEffect = null;
       const STORAGE_KEY = "overlay-demo-mode";
 
       // Load saved mode from localStorage
@@ -301,13 +354,13 @@
 
       // Initialize overlay
       function initializeOverlay() {
-        if (currentOverlay) {
-          currentOverlay.disconnect();
+        if (currentVisibleRectEffect) {
+          currentVisibleRectEffect.disconnect();
         }
 
         overlayUI.style.display = "block";
 
-        currentOverlay = visibleRectEffect(
+        currentVisibleRectEffect = visibleRectEffect(
           targetElement,
           (visibleRect, fullRect) => {
             // Update overlay container position and size
@@ -323,11 +376,38 @@
               overlayContainer.style.display = "flex";
             }
 
-            console.log("Overlay updated:", { visibleRect, fullRect });
+            // Update debug information
+            visibleRectSpan.innerHTML = `
+              left: ${Math.round(visibleRect.left)}px<br>
+              top: ${Math.round(visibleRect.top)}px<br>
+              width: ${Math.round(visibleRect.width)}px<br>
+              height: ${Math.round(visibleRect.height)}px
+            `;
+
+            fullSizeSpan.innerHTML = `
+              width: ${Math.round(fullRect.width)}px<br>
+              height: ${Math.round(fullRect.height)}px
+            `;
+
+            const isVisible = visibleRect.width > 0 && visibleRect.height > 0;
+            const visibilityPercentage = isVisible
+              ? Math.round(
+                  ((visibleRect.width * visibleRect.height) /
+                    (fullRect.width * fullRect.height)) *
+                    100,
+                )
+              : 0;
+
+            visibilitySpan.innerHTML = `
+              ${isVisible ? "Visible" : "Hidden"}<br>
+              ${visibilityPercentage}% of element visible
+            `;
+
+            console.log("Visible rect updated:", { visibleRect, fullRect });
           },
         );
 
-        console.log("Overlay initialized");
+        console.log("Visible rect effect initialized");
       }
 
       // Set document scrolling mode
@@ -374,7 +454,7 @@
         setDocumentScrolling();
       }
 
-      console.log("Overlay demo initialized");
+      console.log("Visible rect demo initialized");
     </script>
   </body>
 </html>

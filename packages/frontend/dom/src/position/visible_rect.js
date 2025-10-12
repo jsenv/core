@@ -120,8 +120,7 @@ export const visibleRectEffect = (element, update) => {
   };
 
   checkVisibleRect();
-
-  auto_update: {
+  auto_check: {
     const [beforeCheck, onBeforeCheck] = createPubSub();
     let rafId = null;
     const scheduleCheck = (reason) => {
@@ -140,7 +139,7 @@ export const visibleRectEffect = (element, update) => {
       cancelAnimationFrame(rafId);
     });
 
-    update_on_scroll: {
+    on_scroll: {
       const onScroll = () => {
         checkVisibleRect();
       };
@@ -151,7 +150,7 @@ export const visibleRectEffect = (element, update) => {
         });
       });
     }
-    update_on_window_resize: {
+    on_window_resize: {
       const onWindowResize = () => {
         checkVisibleRect();
       };
@@ -174,14 +173,14 @@ export const visibleRectEffect = (element, update) => {
       });
     }
 
-    update_on_element_size_change: {
+    on_element_size_change: {
       const resizeObserver = new ResizeObserver(() => {
         scheduleCheck("size_change");
       });
       resizeObserver.observe(element);
       // Temporarily disconnect ResizeObserver to prevent feedback loops
       onBeforeCheck(() => {
-        resizeObserver.unobserve();
+        resizeObserver.unobserve(element);
         return () => {
           resizeObserver.observe(element);
         };
