@@ -260,7 +260,7 @@
     </div>
 
     <script type="module">
-      import { initOverlay } from "../position/overlay.js";
+      import { visibleRectEffect } from "../position/visible_rect.js";
 
       const targetElement = document.getElementById("targetElement");
       const scrollableContainer = document.getElementById(
@@ -302,27 +302,30 @@
       // Initialize overlay
       function initializeOverlay() {
         if (currentOverlay) {
-          currentOverlay.destroy();
+          currentOverlay.disconnect();
         }
 
         overlayUI.style.display = "block";
 
-        currentOverlay = initOverlay(targetElement, (visibleRect, fullRect) => {
-          // Update overlay container position and size
-          overlayContainer.style.left = `${visibleRect.left}px`;
-          overlayContainer.style.top = `${visibleRect.top}px`;
-          overlayContainer.style.width = `${visibleRect.width}px`;
-          overlayContainer.style.height = `${visibleRect.height}px`;
+        currentOverlay = visibleRectEffect(
+          targetElement,
+          (visibleRect, fullRect) => {
+            // Update overlay container position and size
+            overlayContainer.style.left = `${visibleRect.left}px`;
+            overlayContainer.style.top = `${visibleRect.top}px`;
+            overlayContainer.style.width = `${visibleRect.width}px`;
+            overlayContainer.style.height = `${visibleRect.height}px`;
 
-          // Hide overlay if element is not visible
-          if (visibleRect.width <= 0 || visibleRect.height <= 0) {
-            overlayContainer.style.display = "none";
-          } else {
-            overlayContainer.style.display = "flex";
-          }
+            // Hide overlay if element is not visible
+            if (visibleRect.width <= 0 || visibleRect.height <= 0) {
+              overlayContainer.style.display = "none";
+            } else {
+              overlayContainer.style.display = "flex";
+            }
 
-          console.log("Overlay updated:", { visibleRect, fullRect });
-        });
+            console.log("Overlay updated:", { visibleRect, fullRect });
+          },
+        );
 
         console.log("Overlay initialized");
       }

@@ -120,7 +120,6 @@ export const visibleRectEffect = (element, update) => {
   };
 
   checkVisibleRect();
-
   update_on_scroll: {
     const onScroll = () => {
       checkVisibleRect();
@@ -132,7 +131,6 @@ export const visibleRectEffect = (element, update) => {
       });
     });
   }
-
   update_on_window_resize: {
     const onWindowResize = () => {
       checkVisibleRect();
@@ -142,7 +140,6 @@ export const visibleRectEffect = (element, update) => {
       window.removeEventListener("resize", onWindowResize);
     });
   }
-
   if (!scrollableParentIsDocument) {
     // If scrollable parent is not document, also listen to document scroll
     // to update UI position when the scrollable parent moves in viewport
