@@ -120,38 +120,76 @@ export const visibleRectEffect = (element, update) => {
   };
 
   checkVisibleRect();
-  update_on_scroll: {
-    const onScroll = () => {
-      checkVisibleRect();
-    };
-    scrollableParent.addEventListener("scroll", onScroll, { passive: true });
-    addTeardown(() => {
-      scrollableParent.removeEventListener("scroll", onScroll, {
-        passive: true,
+
+  auto_update: {
+    const [beforeCheck, onBeforeCheck] = createPubSub();
+    let rafId = null;
+    const scheduleCheck = (reason) => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const beforeCheckResults = beforeCheck(reason);
+        checkVisibleRect();
+        for (const beforeCheckResult of beforeCheckResults) {
+          if (typeof beforeCheckResult === "function") {
+            beforeCheckResult();
+          }
+        }
       });
-    });
-  }
-  update_on_window_resize: {
-    const onWindowResize = () => {
-      checkVisibleRect();
     };
-    window.addEventListener("resize", onWindowResize);
     addTeardown(() => {
-      window.removeEventListener("resize", onWindowResize);
+      cancelAnimationFrame(rafId);
     });
-  }
-  if (!scrollableParentIsDocument) {
-    // If scrollable parent is not document, also listen to document scroll
-    // to update UI position when the scrollable parent moves in viewport
-    const onDocumentScroll = () => {
-      checkVisibleRect(); // Update container position in viewport
-    };
-    document.addEventListener("scroll", onDocumentScroll, { passive: true });
-    addTeardown(() => {
-      document.removeEventListener("scroll", onDocumentScroll, {
-        passive: true,
+
+    update_on_scroll: {
+      const onScroll = () => {
+        checkVisibleRect();
+      };
+      scrollableParent.addEventListener("scroll", onScroll, { passive: true });
+      addTeardown(() => {
+        scrollableParent.removeEventListener("scroll", onScroll, {
+          passive: true,
+        });
       });
-    });
+    }
+    update_on_window_resize: {
+      const onWindowResize = () => {
+        checkVisibleRect();
+      };
+      window.addEventListener("resize", onWindowResize);
+      addTeardown(() => {
+        window.removeEventListener("resize", onWindowResize);
+      });
+    }
+    if (!scrollableParentIsDocument) {
+      // If scrollable parent is not document, also listen to document scroll
+      // to update UI position when the scrollable parent moves in viewport
+      const onDocumentScroll = () => {
+        checkVisibleRect(); // Update container position in viewport
+      };
+      document.addEventListener("scroll", onDocumentScroll, { passive: true });
+      addTeardown(() => {
+        document.removeEventListener("scroll", onDocumentScroll, {
+          passive: true,
+        });
+      });
+    }
+
+    update_on_element_size_change: {
+      const resizeObserver = new ResizeObserver(() => {
+        scheduleCheck("size_change");
+      });
+      resizeObserver.observe(element);
+      // Temporarily disconnect ResizeObserver to prevent feedback loops
+      onBeforeCheck(() => {
+        resizeObserver.unobserve();
+        return () => {
+          resizeObserver.observe(element);
+        };
+      });
+      addTeardown(() => {
+        resizeObserver.disconnect();
+      });
+    }
   }
 
   return {

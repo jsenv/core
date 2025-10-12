@@ -2,9 +2,12 @@ export const createPubSub = () => {
   const callbackSet = new Set();
 
   const publish = (...args) => {
+    const results = [];
     for (const callback of callbackSet) {
-      callback(...args);
+      const result = callback(...args);
+      results.push(result);
     }
+    return results;
   };
 
   const subscribe = (callback) => {
