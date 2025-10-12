@@ -556,7 +556,9 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         height: validationMessageHeight,
         elementFitsAbove,
         elementFitsBelow,
-      } = pickPositionRelativeTo(validationMessage, targetElement);
+      } = pickPositionRelativeTo(validationMessage, targetElement, {
+        alignToViewportEdgeWhenTargetNearEdge: 20,
+      });
 
       // Get element padding and border to properly position arrow
       const targetBorderSizes = getBorderSizes(targetElement);

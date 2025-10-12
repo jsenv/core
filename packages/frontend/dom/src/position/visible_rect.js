@@ -300,7 +300,11 @@ export const visibleRectEffect = (element, update) => {
   };
 };
 
-export const pickPositionRelativeTo = (element, target) => {
+export const pickPositionRelativeTo = (
+  element,
+  target,
+  { alignToViewportEdgeWhenTargetNearEdge = 0 } = {},
+) => {
   if (
     import.meta.dev &&
     getScrollableParent(element) !== document.documentElement
@@ -341,75 +345,78 @@ export const pickPositionRelativeTo = (element, target) => {
 
   // Calculate horizontal position (viewport-relative)
   let elementPositionLeft;
-  // Check if target element is wider than viewport
-  const targetIsWiderThanViewport = targetWidth > viewportWidth;
-  if (targetIsWiderThanViewport) {
-    const targetLeftIsVisible = targetLeft >= 0;
-    const targetRightIsVisible = targetRight <= viewportWidth;
+  {
+    // Check if target element is wider than viewport
+    const targetIsWiderThanViewport = targetWidth > viewportWidth;
+    if (targetIsWiderThanViewport) {
+      const targetLeftIsVisible = targetLeft >= 0;
+      const targetRightIsVisible = targetRight <= viewportWidth;
 
-    if (!targetLeftIsVisible && targetRightIsVisible) {
-      // Target extends beyond left edge but right side is visible
-      const viewportCenter = viewportWidth / 2;
-      const distanceFromRightEdge = viewportWidth - targetRight;
-      elementPositionLeft =
-        viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
-    } else if (targetLeftIsVisible && !targetRightIsVisible) {
-      // Target extends beyond right edge but left side is visible
-      const viewportCenter = viewportWidth / 2;
-      const distanceFromLeftEdge = -targetLeft;
-      elementPositionLeft =
-        viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+      if (!targetLeftIsVisible && targetRightIsVisible) {
+        // Target extends beyond left edge but right side is visible
+        const viewportCenter = viewportWidth / 2;
+        const distanceFromRightEdge = viewportWidth - targetRight;
+        elementPositionLeft =
+          viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+      } else if (targetLeftIsVisible && !targetRightIsVisible) {
+        // Target extends beyond right edge but left side is visible
+        const viewportCenter = viewportWidth / 2;
+        const distanceFromLeftEdge = -targetLeft;
+        elementPositionLeft =
+          viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+      } else {
+        // Target extends beyond both edges or is fully visible (center in viewport)
+        elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
+      }
     } else {
-      // Target extends beyond both edges or is fully visible (center in viewport)
-      elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
-    }
-  } else {
-    // Target fits within viewport width - center element relative to target
-    elementPositionLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
-
-    // Special handling when element is wider than target
-    const elementIsWiderThanTarget = elementWidth > targetWidth;
-    if (elementIsWiderThanTarget) {
-      const targetIsNearLeftEdge = targetLeft < 20;
-      if (targetIsNearLeftEdge) {
-        elementPositionLeft = 0; // Left edge of viewport
+      // Target fits within viewport width - center element relative to target
+      elementPositionLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
+      // Special handling when element is wider than target
+      if (alignToViewportEdgeWhenTargetNearEdge) {
+        const elementIsWiderThanTarget = elementWidth > targetWidth;
+        const targetIsNearLeftEdge =
+          targetLeft < alignToViewportEdgeWhenTargetNearEdge;
+        if (elementIsWiderThanTarget && targetIsNearLeftEdge) {
+          elementPositionLeft = 0; // Left edge of viewport
+        }
       }
     }
-  }
-  // Constrain horizontal position to viewport boundaries
-  if (elementPositionLeft < 0) {
-    elementPositionLeft = 0;
-  } else if (elementPositionLeft + elementWidth > viewportWidth) {
-    elementPositionLeft = viewportWidth - elementWidth;
+    // Constrain horizontal position to viewport boundaries
+    if (elementPositionLeft < 0) {
+      elementPositionLeft = 0;
+    } else if (elementPositionLeft + elementWidth > viewportWidth) {
+      elementPositionLeft = viewportWidth - elementWidth;
+    }
   }
 
   // Calculate vertical position (viewport-relative)
+  let elementPositionTop;
+  let position;
   const spaceAboveTarget = targetTop;
   const spaceBelowTarget = viewportHeight - targetBottom;
   const elementFitsAbove = spaceAboveTarget >= elementHeight;
   const elementFitsBelow = spaceBelowTarget >= elementHeight;
-
-  // Prefer below, but use above if it doesn't fit below and does fit above
-  const shouldPlaceAbove = !elementFitsBelow && elementFitsAbove;
-  let elementPositionTop;
-  let position;
-  if (shouldPlaceAbove) {
-    position = "above";
-    // Calculate top position when placing above target
-    const idealTopWhenAbove = targetTop - elementHeight;
-    const minimumTopInViewport = 0;
-    elementPositionTop =
-      idealTopWhenAbove < minimumTopInViewport
-        ? minimumTopInViewport
-        : idealTopWhenAbove;
-  } else {
-    position = "below";
-    // Calculate top position when placing below target (ensure whole pixels)
-    const idealTopWhenBelow = targetBottom;
-    elementPositionTop =
-      idealTopWhenBelow % 1 === 0
-        ? idealTopWhenBelow
-        : Math.floor(idealTopWhenBelow) + 1;
+  {
+    // Prefer below, but use above if it doesn't fit below and does fit above
+    const shouldPlaceAbove = !elementFitsBelow && elementFitsAbove;
+    if (shouldPlaceAbove) {
+      position = "above";
+      // Calculate top position when placing above target
+      const idealTopWhenAbove = targetTop - elementHeight;
+      const minimumTopInViewport = 0;
+      elementPositionTop =
+        idealTopWhenAbove < minimumTopInViewport
+          ? minimumTopInViewport
+          : idealTopWhenAbove;
+    } else {
+      position = "below";
+      // Calculate top position when placing below target (ensure whole pixels)
+      const idealTopWhenBelow = targetBottom;
+      elementPositionTop =
+        idealTopWhenBelow % 1 === 0
+          ? idealTopWhenBelow
+          : Math.floor(idealTopWhenBelow) + 1;
+    }
   }
 
   // Get document scroll for final coordinate conversion
