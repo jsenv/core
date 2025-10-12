@@ -13,10 +13,9 @@ export const visibleRectEffect = (element, update) => {
   const scrollableParent = getScrollableParent(element);
   const scrollableParentIsDocument =
     scrollableParent === document.documentElement;
-
   let lastMeasuredWidth;
   let lastMeasuredHeight;
-  const checkVisibleRect = (reason) => {
+  const check = (reason) => {
     console.group(`visibleRect.check("${reason}")`);
 
     // 1. Calculate element position relative to scrollable parent
@@ -126,7 +125,7 @@ export const visibleRectEffect = (element, update) => {
     });
   };
 
-  checkVisibleRect("initialization");
+  check("initialization");
   auto_check: {
     const [beforeCheck, onBeforeCheck] = createPubSub();
     let rafId = null;
@@ -134,7 +133,7 @@ export const visibleRectEffect = (element, update) => {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const beforeCheckResults = beforeCheck(reason);
-        checkVisibleRect(reason);
+        check(reason);
         for (const beforeCheckResult of beforeCheckResults) {
           if (typeof beforeCheckResult === "function") {
             beforeCheckResult();
@@ -150,7 +149,7 @@ export const visibleRectEffect = (element, update) => {
       // If scrollable parent is not document, also listen to document scroll
       // to update UI position when the scrollable parent moves in viewport
       const onDocumentScroll = () => {
-        checkVisibleRect("document_scroll");
+        check("document_scroll");
       };
       document.addEventListener("scroll", onDocumentScroll, {
         passive: true,
@@ -162,7 +161,7 @@ export const visibleRectEffect = (element, update) => {
       });
       if (!scrollableParentIsDocument) {
         const onScroll = () => {
-          checkVisibleRect("scrollable_parent_scroll");
+          check("scrollable_parent_scroll");
         };
         scrollableParent.addEventListener("scroll", onScroll, {
           passive: true,
@@ -176,7 +175,7 @@ export const visibleRectEffect = (element, update) => {
     }
     on_window_resize: {
       const onWindowResize = () => {
-        checkVisibleRect("window_size_change");
+        check("window_size_change");
       };
       window.addEventListener("resize", onWindowResize);
       addTeardown(() => {
@@ -215,7 +214,7 @@ export const visibleRectEffect = (element, update) => {
   }
 
   return {
-    check: checkVisibleRect,
+    check,
     disconnect: () => {
       teardown();
     },
