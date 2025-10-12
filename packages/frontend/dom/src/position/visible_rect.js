@@ -1,12 +1,6 @@
 import { createPubSub } from "../pub_sub.js";
 import { getScrollableParent } from "../scroll/parent_scroll.js";
 
-// Est ce que c'est pas juste exactement intersection observer tout ca?
-// en tous cas on va reprendre le code de follow_position le renommer et reprendre lintercae avec juste element, update
-// éviter le nom overlay, c'est juste un cas d'usage du "intersectionEffect"
-// sachant que pour le follow position on a pas de scrollable parent concept
-// surement une option un moment donné
-
 // Creates an overlay, the update function is meant to positions one element on top of another
 export const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
@@ -214,25 +208,6 @@ export const visibleRectEffect = (element, update) => {
       });
       addTeardown(() => {
         resizeObserver.disconnect();
-      });
-    }
-
-    on_intersection_change: {
-      const options = {
-        root: null,
-        rootMargin: "0px",
-        threshold: [0, 1],
-      };
-      const intersectionObserver = new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting) {
-          autoCheck("element_intersecting");
-        } else {
-          autoCheck("element_not__intersecting");
-        }
-      }, options);
-      intersectionObserver.observe(element);
-      addTeardown(() => {
-        intersectionObserver.disconnect();
       });
     }
   }
