@@ -287,74 +287,100 @@ export const visibleRectEffect = (element, update) => {
 };
 
 export const pickPositionRelativeTo = (
-  { left, right, top, bottom },
-  { targetLeft, targetTop, targetBottom, targetRight },
+  elementRect,
+  targetRect,
   {
     visibleWidth = document.documentElement.clientWidth,
     visibleHeight = document.documentElement.clientHeight,
-  } = [],
+  } = {},
 ) => {
-  const width = right - left;
-  const height = bottom - top;
+  const {
+    left: elementLeft,
+    right: elementRight,
+    top: elementTop,
+    bottom: elementBottom,
+  } = elementRect;
+  const {
+    left: targetLeft,
+    right: targetRight,
+    top: targetTop,
+    bottom: targetBottom,
+  } = targetRect;
+
+  const elementWidth = elementRight - elementLeft;
+  const elementHeight = elementBottom - elementTop;
   const targetWidth = targetRight - targetLeft;
 
-  let elementLeftPos;
-  // Handle extra-wide elements (wider than viewport)
-  if (targetWidth > visibleWidth) {
-    if (targetRight < visibleWidth) {
-      // Element extends beyond left edge but right side is visible
+  // Calculate horizontal position
+  let elementAbsoluteLeft;
+
+  // Check if target element is wider than viewport
+  const targetIsWiderThanViewport = targetWidth > visibleWidth;
+  if (targetIsWiderThanViewport) {
+    const targetLeftIsVisible = targetLeft >= 0;
+    const targetRightIsVisible = targetRight <= visibleWidth;
+
+    if (!targetLeftIsVisible && targetRightIsVisible) {
+      // Target extends beyond left edge but right side is visible
       const viewportCenter = visibleWidth / 2;
-      const diff = visibleWidth - targetRight;
-      elementLeftPos = viewportCenter - diff / 2 - width / 2;
-    } else if (targetLeft > 0) {
-      // Element extends beyond right edge but left side is visible
+      const distanceFromRightEdge = visibleWidth - targetRight;
+      elementAbsoluteLeft =
+        viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+    } else if (targetLeftIsVisible && !targetRightIsVisible) {
+      // Target extends beyond right edge but left side is visible
       const viewportCenter = visibleWidth / 2;
-      const diff = -targetLeft;
-      elementLeftPos = viewportCenter - diff / 2 - width / 2;
+      const distanceFromLeftEdge = -targetLeft;
+      elementAbsoluteLeft =
+        viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
     } else {
-      // Element extends beyond both edges
-      elementLeftPos = visibleWidth / 2 - width / 2;
+      // Target extends beyond both edges or is fully visible (center in viewport)
+      elementAbsoluteLeft = visibleWidth / 2 - elementWidth / 2;
     }
   } else {
-    // Standard case: element within viewport width
-    // Center the validation message relative to the element
-    elementLeftPos = targetLeft + targetWidth / 2 - width / 2;
+    // Target fits within viewport width - center element relative to target
+    elementAbsoluteLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
 
-    // If validation message is wider than element, adjust position based on document boundaries
-    if (width > targetWidth) {
-      // If element is near left edge, align validation message with document left
-      if (targetLeft < 20) {
-        elementLeftPos = 0;
+    // Special handling when element is wider than target
+    const elementIsWiderThanTarget = elementWidth > targetWidth;
+    if (elementIsWiderThanTarget) {
+      const targetIsNearLeftEdge = targetLeft < 20;
+      if (targetIsNearLeftEdge) {
+        elementAbsoluteLeft = 0;
       }
     }
   }
 
-  // Constrain to document boundaries
-  if (elementLeftPos < 0) {
-    elementLeftPos = 0;
-  } else if (elementLeftPos + width > visibleWidth) {
-    elementLeftPos = visibleWidth - width;
+  // Constrain horizontal position to viewport boundaries
+  if (elementAbsoluteLeft < 0) {
+    elementAbsoluteLeft = 0;
+  } else if (elementAbsoluteLeft + elementWidth > visibleWidth) {
+    elementAbsoluteLeft = visibleWidth - elementWidth;
   }
 
-  // Calculate vertical space available
-  const spaceBelow = visibleHeight - targetBottom;
-  const spaceAbove = targetTop;
+  // Calculate vertical position
+  const spaceAboveTarget = targetTop;
+  const spaceBelowTarget = visibleHeight - targetBottom;
 
-  // Determine if validation message fits above or below
-  const fitsBelow = spaceBelow >= height;
-  const fitsAbove = spaceAbove >= height;
-  const showAbove = !fitsBelow && fitsAbove;
+  const elementFitsAbove = spaceAboveTarget >= elementHeight;
+  const elementFitsBelow = spaceBelowTarget >= elementHeight;
 
-  if (showAbove) {
-    return {
-      position: "above",
-      left: elementLeftPos,
-      top: Math.max(0, targetTop - height),
-    };
+  // Prefer below, but use above if it doesn't fit below and does fit above
+  const shouldPlaceAbove = !elementFitsBelow && elementFitsAbove;
+
+  let elementAbsoluteTop;
+  let position;
+
+  if (shouldPlaceAbove) {
+    position = "above";
+    elementAbsoluteTop = Math.max(0, targetTop - elementHeight);
+  } else {
+    position = "below";
+    elementAbsoluteTop = Math.ceil(targetBottom);
   }
+
   return {
-    position: "below",
-    left: elementLeftPos,
-    top: Math.ceil(targetBottom),
+    position,
+    left: elementAbsoluteLeft,
+    top: elementAbsoluteTop,
   };
 };
