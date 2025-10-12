@@ -285,3 +285,76 @@ export const visibleRectEffect = (element, update) => {
     },
   };
 };
+
+export const pickPositionRelativeTo = (
+  { left, right, top, bottom },
+  { targetLeft, targetTop, targetBottom, targetRight },
+  {
+    visibleWidth = document.documentElement.clientWidth,
+    visibleHeight = document.documentElement.clientHeight,
+  } = [],
+) => {
+  const width = right - left;
+  const height = bottom - top;
+  const targetWidth = targetRight - targetLeft;
+
+  let elementLeftPos;
+  // Handle extra-wide elements (wider than viewport)
+  if (targetWidth > visibleWidth) {
+    if (targetRight < visibleWidth) {
+      // Element extends beyond left edge but right side is visible
+      const viewportCenter = visibleWidth / 2;
+      const diff = visibleWidth - targetRight;
+      elementLeftPos = viewportCenter - diff / 2 - width / 2;
+    } else if (targetLeft > 0) {
+      // Element extends beyond right edge but left side is visible
+      const viewportCenter = visibleWidth / 2;
+      const diff = -targetLeft;
+      elementLeftPos = viewportCenter - diff / 2 - width / 2;
+    } else {
+      // Element extends beyond both edges
+      elementLeftPos = visibleWidth / 2 - width / 2;
+    }
+  } else {
+    // Standard case: element within viewport width
+    // Center the validation message relative to the element
+    elementLeftPos = targetLeft + targetWidth / 2 - width / 2;
+
+    // If validation message is wider than element, adjust position based on document boundaries
+    if (width > targetWidth) {
+      // If element is near left edge, align validation message with document left
+      if (targetLeft < 20) {
+        elementLeftPos = 0;
+      }
+    }
+  }
+
+  // Constrain to document boundaries
+  if (elementLeftPos < 0) {
+    elementLeftPos = 0;
+  } else if (elementLeftPos + width > visibleWidth) {
+    elementLeftPos = visibleWidth - width;
+  }
+
+  // Calculate vertical space available
+  const spaceBelow = visibleHeight - targetBottom;
+  const spaceAbove = targetTop;
+
+  // Determine if validation message fits above or below
+  const fitsBelow = spaceBelow >= height;
+  const fitsAbove = spaceAbove >= height;
+  const showAbove = !fitsBelow && fitsAbove;
+
+  if (showAbove) {
+    return {
+      position: "above",
+      left: elementLeftPos,
+      top: Math.max(0, targetTop - height),
+    };
+  }
+  return {
+    position: "below",
+    left: elementLeftPos,
+    top: Math.ceil(targetBottom),
+  };
+};
