@@ -53,11 +53,13 @@ export {
 } from "./src/scroll/scrollable_rect.js";
 
 // position
-export { followPosition } from "./src/position/follow_position.js";
 export { getPositionedParent } from "./src/position/offset_parent.js";
 export { initPositionSticky } from "./src/position/position_sticky.js";
 export { stickyAsRelativeCoords } from "./src/position/sticky_rect.js";
-export { visibleRectEffect } from "./src/position/visible_rect.js";
+export {
+  pickPositionRelativeTo,
+  visibleRectEffect,
+} from "./src/position/visible_rect.js";
 export { getElementVisualCoords } from "./src/position/visual_rect.js";
 
 // size

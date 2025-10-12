@@ -1,4 +1,8 @@
-import { followPosition, getBorderSizes } from "@jsenv/dom";
+import {
+  getBorderSizes,
+  pickPositionRelativeTo,
+  visibleRectEffect,
+} from "@jsenv/dom";
 
 /**
  * A validation message component that mimics native browser validation messages.
@@ -519,11 +523,7 @@ const createValidationMessage = () => {
   return validationMessage;
 };
 
-const stickValidationMessageToTarget = (
-  validationMessage,
-  targetElement,
-  { debug },
-) => {
+const stickValidationMessageToTarget = (validationMessage, targetElement) => {
   // Get references to validation message parts
   const validationMessageBodyWrapper = validationMessage.querySelector(
     ".validation_message_body_wrapper",
@@ -540,20 +540,24 @@ const stickValidationMessageToTarget = (
   validationMessageBorder.style.left = `-${BORDER_WIDTH}px`;
   validationMessageBorder.style.right = `-${BORDER_WIDTH}px`;
 
-  const positionFollower = followPosition(validationMessage, targetElement, {
-    elementSizeToObserve: validationMessageContent,
-    onChange: ({
-      left,
-      // top,
-      width,
-      height,
-      position,
-      fitsBelow,
-      fitsAbove,
-      targetLeft,
-      targetRight,
-      targetBottom,
+  const targetVisibleRectEffect = visibleRectEffect(
+    targetElement,
+    ({
+      left: targetLeft,
+      right: targetRight,
+      bottom: targetBottom,
+      visibilityRatio,
     }) => {
+      const {
+        position,
+        left: elementLeftPos,
+        top: elementTopPos,
+        width: validationMessageWidth,
+        height: validationMessageHeight,
+        elementFitsAbove,
+        elementFitsBelow,
+      } = pickPositionRelativeTo(validationMessage, targetElement);
+
       // Get element padding and border to properly position arrow
       const targetBorderSizes = getBorderSizes(targetElement);
 
@@ -573,21 +577,21 @@ const stickValidationMessageToTarget = (
       }
 
       // Calculate arrow position within the validation message
-      if (left < arrowTargetLeft) {
+      if (elementLeftPos < arrowTargetLeft) {
         // Validation message is left of the target point, move arrow right
-        const diff = arrowTargetLeft - left;
+        const diff = arrowTargetLeft - elementLeftPos;
         arrowLeftPosOnValidationMessage = diff;
-      } else if (left + width < arrowTargetLeft) {
+      } else if (elementLeftPos + validationMessageWidth < arrowTargetLeft) {
         // Edge case: target point is beyond right edge of validation message
-        arrowLeftPosOnValidationMessage = width - ARROW_WIDTH;
+        arrowLeftPosOnValidationMessage = validationMessageWidth - ARROW_WIDTH;
       } else {
         // Target point is within validation message width
-        arrowLeftPosOnValidationMessage = arrowTargetLeft - left;
+        arrowLeftPosOnValidationMessage = arrowTargetLeft - elementLeftPos;
       }
 
       // Ensure arrow stays within validation message bounds with some padding
       const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-      const maxArrowPos = width - minArrowPos;
+      const maxArrowPos = validationMessageWidth - minArrowPos;
       arrowLeftPosOnValidationMessage = Math.max(
         minArrowPos,
         Math.min(arrowLeftPosOnValidationMessage, maxArrowPos),
@@ -600,8 +604,8 @@ const stickValidationMessageToTarget = (
         validationMessageBorder.style.top = `-${BORDER_WIDTH}px`;
         validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
         validationMessageBorder.innerHTML = generateSvgWithBottomArrow(
-          width,
-          height,
+          validationMessageWidth,
+          validationMessageHeight,
           arrowLeftPosOnValidationMessage,
         );
       } else {
@@ -610,13 +614,13 @@ const stickValidationMessageToTarget = (
         validationMessageBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
         validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
         validationMessageBorder.innerHTML = generateSvgWithTopArrow(
-          width,
-          height,
+          validationMessageWidth,
+          validationMessageHeight,
           arrowLeftPosOnValidationMessage,
         );
 
         // Handle overflow at bottom with scrolling if needed
-        if (!fitsBelow && !fitsAbove) {
+        if (!elementFitsBelow && !elementFitsAbove) {
           const availableHeight =
             document.documentElement.clientHeight -
             targetBottom -
@@ -630,13 +634,50 @@ const stickValidationMessageToTarget = (
           }
         }
       }
+
+      validationMessage.style.opacity = visibilityRatio ? "1" : "0";
+      validationMessage.setAttribute("data-position", position);
+      validationMessage.style.transform = `translateX(${elementLeftPos}px) translateY(${elementTopPos}px)`;
     },
-    debug,
-  });
+  );
+  const stopObservingMessageSizeChange = observeValidationMessageSizeChange(
+    validationMessageContent,
+    (width, height) => {
+      targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
+    },
+  );
 
   return {
-    updatePosition: positionFollower.updatePosition,
-    stop: positionFollower.stop,
+    updatePosition: targetVisibleRectEffect.check,
+    stop: () => {
+      stopObservingMessageSizeChange();
+      targetVisibleRectEffect.disconnect();
+    },
+  };
+};
+
+const observeValidationMessageSizeChange = (elementSizeToObserve, callback) => {
+  let lastContentWidth;
+  let lastContentHeight;
+  const resizeObserver = new ResizeObserver((entries) => {
+    const [entry] = entries;
+    const { width, height } = entry.contentRect;
+    // Debounce tiny changes that are likely sub-pixel rounding
+    if (lastContentWidth !== undefined) {
+      const widthDiff = Math.abs(width - lastContentWidth);
+      const heightDiff = Math.abs(height - lastContentHeight);
+      const threshold = 1; // Ignore changes smaller than 1px
+      if (widthDiff < threshold && heightDiff < threshold) {
+        return;
+      }
+    }
+    lastContentWidth = width;
+    lastContentHeight = height;
+    callback(width, height);
+  });
+  resizeObserver.observe(elementSizeToObserve);
+  return () => {
+    resizeObserver.disconnect();
   };
 };
 

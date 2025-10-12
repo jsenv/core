@@ -12,6 +12,7 @@ import { getScrollableParent } from "../scroll/parent_scroll.js";
 // When scrollable parent is the document, both ratios will be the same.
 // When scrollable parent is a custom container, scrollVisibilityRatio might be 1.0 (fully visible
 // within the container) while visibilityRatio could be 0.0 (container is scrolled out of viewport).
+// A bit like https://tetherjs.dev/ but different
 export const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollableParent = getScrollableParent(element);
@@ -276,6 +277,19 @@ export const visibleRectEffect = (element, update) => {
         });
       }
     }
+    on_window_touchmove: {
+      const onWindowTouchMove = () => {
+        autoCheck("window_touchmove");
+      };
+      window.addEventListener("touchmove", onWindowTouchMove, {
+        passive: true,
+      });
+      addTeardown(() => {
+        window.removeEventListener("touchmove", onWindowTouchMove, {
+          passive: true,
+        });
+      });
+    }
   }
 
   return {
@@ -380,10 +394,8 @@ export const pickPositionRelativeTo = (element, target) => {
 
   // Prefer below, but use above if it doesn't fit below and does fit above
   const shouldPlaceAbove = !elementFitsBelow && elementFitsAbove;
-
   let elementAbsoluteTop;
   let position;
-
   if (shouldPlaceAbove) {
     position = "above";
     elementAbsoluteTop = Math.max(0, targetTop - elementHeight);
@@ -396,5 +408,13 @@ export const pickPositionRelativeTo = (element, target) => {
     position,
     left: elementAbsoluteLeft,
     top: elementAbsoluteTop,
+    width: elementWidth,
+    height: elementHeight,
+    targetLeft,
+    targetTop,
+    targetRight,
+    targetBottom,
+    elementFitsAbove,
+    elementFitsBelow,
   };
 };
