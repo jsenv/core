@@ -1,5 +1,6 @@
 import {
   getBorderSizes,
+  // getScrollableParent,
   pickPositionRelativeTo,
   visibleRectEffect,
 } from "@jsenv/dom";
@@ -187,7 +188,7 @@ export const openValidationMessage = (
     level = "warning",
     onClose,
     closeOnClickOutside = level === "info",
-    canClickThrough = level === "info",
+    canClickThrough = true,
     debug = false,
   } = {},
 ) => {
@@ -232,7 +233,7 @@ export const openValidationMessage = (
     {
       level = "warning",
       closeOnClickOutside = level === "info",
-      canClickThrough = level === "info",
+      canClickThrough = true,
     } = {},
   ) => {
     _closeOnClickOutside = closeOnClickOutside;
@@ -241,8 +242,8 @@ export const openValidationMessage = (
     const backgroundColor = "white";
 
     jsenvValidationMessage.style.pointerEvents = canClickThrough
-      ? "none"
-      : "auto";
+      ? "auto"
+      : "none";
     jsenvValidationMessage.style.setProperty("--border-color", borderColor);
     jsenvValidationMessage.style.setProperty(
       "--background-color",
@@ -263,8 +264,30 @@ export const openValidationMessage = (
   jsenvValidationMessage.style.opacity = "0";
 
   jsenvValidationMessage.style.pointerEvents = canClickThrough
-    ? "none"
-    : "auto";
+    ? "auto"
+    : "none";
+  if (canClickThrough) {
+    // jsenvValidationMessage.addEventListener("wheel", (e) => {
+    // the idea is here is to ensure the "right" scrollable parent is scrolled when we interact
+    // with the validation message
+    // it feels strange to have the document scrolling when the message concerns an element with a scrollable ancestor.
+    // The scroll feels less native but it's better than having the document to scroll
+    // TOFIX: should still scroll validation message when it has a scrollbar
+    // const elements = document.elementsFromPoint(e.clientX, e.clientY);
+    // for (const element of elements) {
+    //   const scrollableParent = getScrollableParent(element);
+    //   if (scrollableParent === document.documentElement) {
+    //     continue;
+    //   }
+    //   e.preventDefault();
+    //   scrollableParent.scrollBy({
+    //     top: e.deltaY,
+    //     left: e.deltaX,
+    //     behavior: e.deltaMode === 0 ? "auto" : "smooth", // optional tweak
+    //   });
+    // }
+    // });
+  }
 
   // Connect validation message with target element for accessibility
   const validationMessageId = `validation_message-${Date.now()}`;
