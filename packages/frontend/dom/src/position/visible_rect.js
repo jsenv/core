@@ -14,7 +14,11 @@ export const visibleRectEffect = (element, update) => {
   const scrollableParentIsDocument =
     scrollableParent === document.documentElement;
 
-  const checkVisibleRect = () => {
+  let lastMeasuredWidth;
+  let lastMeasuredHeight;
+  const checkVisibleRect = (reason) => {
+    console.group(`visibleRect.check("${reason}")`);
+
     // 1. Calculate element position relative to scrollable parent
     const { scrollLeft, scrollTop } = scrollableParent;
     const visibleAreaLeft = scrollLeft;
@@ -56,6 +60,8 @@ export const visibleRectEffect = (element, update) => {
 
     // 2. Calculate element visible width/height
     const { width, height } = element.getBoundingClientRect();
+    lastMeasuredWidth = width;
+    lastMeasuredHeight = height;
     const visibleAreaWidth = scrollableParent.clientWidth;
     const visibleAreaHeight = scrollableParent.clientHeight;
     const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
@@ -103,23 +109,24 @@ export const visibleRectEffect = (element, update) => {
       }
     }
 
-    update(
-      {
-        left: overlayLeft,
-        top: overlayTop,
-        right: overlayLeft + widthVisible,
-        bottom: overlayTop + heightVisible,
-        width: widthVisible,
-        height: heightVisible,
-      },
-      {
-        width,
-        height,
-      },
-    );
+    const visibleRect = {
+      left: overlayLeft,
+      top: overlayTop,
+      right: overlayLeft + widthVisible,
+      bottom: overlayTop + heightVisible,
+      width: widthVisible,
+      height: heightVisible,
+    };
+
+    console.log(`update(${JSON.stringify(visibleRect, null, "  ")})`);
+    console.groupEnd();
+    update(visibleRect, {
+      width,
+      height,
+    });
   };
 
-  checkVisibleRect();
+  checkVisibleRect("initialization");
   auto_check: {
     const [beforeCheck, onBeforeCheck] = createPubSub();
     let rafId = null;
@@ -127,7 +134,7 @@ export const visibleRectEffect = (element, update) => {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const beforeCheckResults = beforeCheck(reason);
-        checkVisibleRect();
+        checkVisibleRect(reason);
         for (const beforeCheckResult of beforeCheckResults) {
           if (typeof beforeCheckResult === "function") {
             beforeCheckResult();
@@ -140,48 +147,64 @@ export const visibleRectEffect = (element, update) => {
     });
 
     on_scroll: {
-      const onScroll = () => {
-        checkVisibleRect();
+      // If scrollable parent is not document, also listen to document scroll
+      // to update UI position when the scrollable parent moves in viewport
+      const onDocumentScroll = () => {
+        checkVisibleRect("document_scroll");
       };
-      scrollableParent.addEventListener("scroll", onScroll, { passive: true });
+      document.addEventListener("scroll", onDocumentScroll, {
+        passive: true,
+      });
       addTeardown(() => {
-        scrollableParent.removeEventListener("scroll", onScroll, {
+        document.removeEventListener("scroll", onDocumentScroll, {
           passive: true,
         });
       });
+      if (!scrollableParentIsDocument) {
+        const onScroll = () => {
+          checkVisibleRect("scrollable_parent_scroll");
+        };
+        scrollableParent.addEventListener("scroll", onScroll, {
+          passive: true,
+        });
+        addTeardown(() => {
+          scrollableParent.removeEventListener("scroll", onScroll, {
+            passive: true,
+          });
+        });
+      }
     }
     on_window_resize: {
       const onWindowResize = () => {
-        checkVisibleRect();
+        checkVisibleRect("window_size_change");
       };
       window.addEventListener("resize", onWindowResize);
       addTeardown(() => {
         window.removeEventListener("resize", onWindowResize);
       });
     }
-    if (!scrollableParentIsDocument) {
-      // If scrollable parent is not document, also listen to document scroll
-      // to update UI position when the scrollable parent moves in viewport
-      const onDocumentScroll = () => {
-        checkVisibleRect(); // Update container position in viewport
-      };
-      document.addEventListener("scroll", onDocumentScroll, { passive: true });
-      addTeardown(() => {
-        document.removeEventListener("scroll", onDocumentScroll, {
-          passive: true,
-        });
-      });
-    }
-
-    on_element_size_change: {
+    on_element_resize: {
       const resizeObserver = new ResizeObserver(() => {
-        scheduleCheck("size_change");
+        // we use directly the result of getBoundingClientRect() instead of the resizeEntry.contentRect or resizeEntry.borderBoxSize
+        // so that:
+        // - We can compare the dimensions measure in the last check and the current one
+        // - We don't have to check element boz-sizing to know what to compare
+        // - resizeEntry.borderBoxSize browser support is not that great
+        const { width, height } = element.getBoundingClientRect();
+        const widthDiff = Math.abs(width - lastMeasuredWidth);
+        const heightDiff = Math.abs(height - lastMeasuredHeight);
+        if (widthDiff === 0 && heightDiff === 0) {
+          return;
+        }
+        scheduleCheck(`element_size_change (${width}x${height})`);
       });
       resizeObserver.observe(element);
-      // Temporarily disconnect ResizeObserver to prevent feedback loops
+      // Temporarily disconnect ResizeObserver to prevent feedback loops eventually caused by update function
       onBeforeCheck(() => {
         resizeObserver.unobserve(element);
         return () => {
+          // This triggers a new call to the resive observer that will be ignored thanks to
+          // the widthDiff/heightDiff early return
           resizeObserver.observe(element);
         };
       });
