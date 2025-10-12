@@ -115,24 +115,22 @@ export const visibleRectEffect = (element, update) => {
     // Calculate visibility ratios
     const scrollVisibilityRatio =
       (widthVisible * heightVisible) / (width * height);
-
     // Calculate visibility ratio relative to document viewport
-    let documentVisibilityRatio = scrollVisibilityRatio;
-    if (!scrollableParentIsDocument) {
+    let documentVisibilityRatio;
+    if (scrollableParentIsDocument) {
+      documentVisibilityRatio = scrollVisibilityRatio;
+    } else {
       // For custom containers, calculate visibility relative to document viewport
       const elementRect = element.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-
       // Calculate how much of the element is visible in the document viewport
       const elementLeft = Math.max(0, elementRect.left);
       const elementTop = Math.max(0, elementRect.top);
       const elementRight = Math.min(viewportWidth, elementRect.right);
       const elementBottom = Math.min(viewportHeight, elementRect.bottom);
-
       const documentVisibleWidth = Math.max(0, elementRight - elementLeft);
       const documentVisibleHeight = Math.max(0, elementBottom - elementTop);
-
       documentVisibilityRatio =
         (documentVisibleWidth * documentVisibleHeight) / (width * height);
     }
@@ -144,8 +142,8 @@ export const visibleRectEffect = (element, update) => {
       bottom: overlayTop + heightVisible,
       width: widthVisible,
       height: heightVisible,
-      scrollVisibilityRatio,
       visibilityRatio: documentVisibilityRatio,
+      scrollVisibilityRatio,
     };
 
     console.log(`update(${JSON.stringify(visibleRect, null, "  ")})`);
@@ -247,47 +245,34 @@ export const visibleRectEffect = (element, update) => {
       });
     }
     on_intersection_change: {
-      // Always observe intersection with scrollable parent
-      const scrollableParentOptions = {
-        root: scrollableParent,
-        rootMargin: "0px",
-        threshold: [0, 1],
-      };
-      const scrollableParentIntersectionObserver = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            autoCheck("element_intersecting_scrollable_parent");
-          } else {
-            autoCheck("element_not_intersecting_scrollable_parent");
-          }
+      const documentIntersectionObserver = new IntersectionObserver(
+        () => {
+          autoCheck("element_intersection_with_document_change");
         },
-        scrollableParentOptions,
-      );
-      scrollableParentIntersectionObserver.observe(element);
-      addTeardown(() => {
-        scrollableParentIntersectionObserver.disconnect();
-      });
-
-      // If scrollable parent is not document, also observe intersection with document
-      if (!scrollableParentIsDocument) {
-        const documentOptions = {
-          root: null, // null means document viewport
+        {
+          root: null,
           rootMargin: "0px",
-          threshold: [0, 1],
-        };
-        const documentIntersectionObserver = new IntersectionObserver(
-          ([entry]) => {
-            if (entry.isIntersecting) {
-              autoCheck("element_intersecting_document");
-            } else {
-              autoCheck("element_not_intersecting_document");
-            }
+          threshold: [0, 0.1, 0.9, 1],
+        },
+      );
+      documentIntersectionObserver.observe(element);
+      addTeardown(() => {
+        documentIntersectionObserver.disconnect();
+      });
+      if (!scrollableParentIsDocument) {
+        const scrollIntersectionObserver = new IntersectionObserver(
+          () => {
+            autoCheck("element_intersection_with_scroll_change");
           },
-          documentOptions,
+          {
+            root: scrollableParent,
+            rootMargin: "0px",
+            threshold: [0, 0, 1, 0.9, 1],
+          },
         );
-        documentIntersectionObserver.observe(element);
+        scrollIntersectionObserver.observe(element);
         addTeardown(() => {
-          documentIntersectionObserver.disconnect();
+          scrollIntersectionObserver.disconnect();
         });
       }
     }
