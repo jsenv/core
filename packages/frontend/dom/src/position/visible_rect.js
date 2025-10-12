@@ -126,30 +126,34 @@ export const visibleRectEffect = (element, update) => {
   };
 
   check("initialization");
+
   auto_check: {
     const [beforeCheck, onBeforeCheck] = createPubSub();
-    let rafId = null;
-    const scheduleCheck = (reason) => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const beforeCheckResults = beforeCheck(reason);
-        check(reason);
-        for (const beforeCheckResult of beforeCheckResults) {
-          if (typeof beforeCheckResult === "function") {
-            beforeCheckResult();
-          }
+    const autoCheck = (reason) => {
+      const beforeCheckResults = beforeCheck(reason);
+      check(reason);
+      for (const beforeCheckResult of beforeCheckResults) {
+        if (typeof beforeCheckResult === "function") {
+          beforeCheckResult();
         }
-      });
+      }
     };
-    addTeardown(() => {
-      cancelAnimationFrame(rafId);
-    });
+    // let rafId = null;
+    // const scheduleCheck = (reason) => {
+    //   cancelAnimationFrame(rafId);
+    //   rafId = requestAnimationFrame(() => {
+    //     autoCheck(reason);
+    //   });
+    // };
+    // addTeardown(() => {
+    //   cancelAnimationFrame(rafId);
+    // });
 
     on_scroll: {
       // If scrollable parent is not document, also listen to document scroll
       // to update UI position when the scrollable parent moves in viewport
       const onDocumentScroll = () => {
-        check("document_scroll");
+        autoCheck("document_scroll");
       };
       document.addEventListener("scroll", onDocumentScroll, {
         passive: true,
@@ -161,7 +165,7 @@ export const visibleRectEffect = (element, update) => {
       });
       if (!scrollableParentIsDocument) {
         const onScroll = () => {
-          check("scrollable_parent_scroll");
+          autoCheck("scrollable_parent_scroll");
         };
         scrollableParent.addEventListener("scroll", onScroll, {
           passive: true,
@@ -175,7 +179,7 @@ export const visibleRectEffect = (element, update) => {
     }
     on_window_resize: {
       const onWindowResize = () => {
-        check("window_size_change");
+        autoCheck("window_size_change");
       };
       window.addEventListener("resize", onWindowResize);
       addTeardown(() => {
@@ -195,7 +199,7 @@ export const visibleRectEffect = (element, update) => {
         if (widthDiff === 0 && heightDiff === 0) {
           return;
         }
-        scheduleCheck(`element_size_change (${width}x${height})`);
+        autoCheck(`element_size_change (${width}x${height})`);
       });
       resizeObserver.observe(element);
       // Temporarily disconnect ResizeObserver to prevent feedback loops eventually caused by update function
