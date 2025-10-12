@@ -1,7 +1,17 @@
 import { createPubSub } from "../pub_sub.js";
 import { getScrollableParent } from "../scroll/parent_scroll.js";
 
-// Creates an overlay, the update function is meant to positions one element on top of another
+// Creates a visible rect effect that tracks how much of an element is visible within its scrollable parent
+// and within the document viewport. This is useful for implementing overlays, lazy loading, or any UI
+// that needs to react to element visibility changes.
+//
+// The function returns two visibility ratios:
+// - scrollVisibilityRatio: Visibility ratio relative to the scrollable parent (0-1)
+// - visibilityRatio: Visibility ratio relative to the document viewport (0-1)
+//
+// When scrollable parent is the document, both ratios will be the same.
+// When scrollable parent is a custom container, scrollVisibilityRatio might be 1.0 (fully visible
+// within the container) while visibilityRatio could be 0.0 (container is scrolled out of viewport).
 export const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollableParent = getScrollableParent(element);
@@ -102,6 +112,31 @@ export const visibleRectEffect = (element, update) => {
       }
     }
 
+    // Calculate visibility ratios
+    const scrollVisibilityRatio =
+      (widthVisible * heightVisible) / (width * height);
+
+    // Calculate visibility ratio relative to document viewport
+    let documentVisibilityRatio = scrollVisibilityRatio;
+    if (!scrollableParentIsDocument) {
+      // For custom containers, calculate visibility relative to document viewport
+      const elementRect = element.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Calculate how much of the element is visible in the document viewport
+      const elementLeft = Math.max(0, elementRect.left);
+      const elementTop = Math.max(0, elementRect.top);
+      const elementRight = Math.min(viewportWidth, elementRect.right);
+      const elementBottom = Math.min(viewportHeight, elementRect.bottom);
+
+      const documentVisibleWidth = Math.max(0, elementRight - elementLeft);
+      const documentVisibleHeight = Math.max(0, elementBottom - elementTop);
+
+      documentVisibilityRatio =
+        (documentVisibleWidth * documentVisibleHeight) / (width * height);
+    }
+
     const visibleRect = {
       left: overlayLeft,
       top: overlayTop,
@@ -109,7 +144,8 @@ export const visibleRectEffect = (element, update) => {
       bottom: overlayTop + heightVisible,
       width: widthVisible,
       height: heightVisible,
-      visibilityRatio: (widthVisible * heightVisible) / (width * height),
+      scrollVisibilityRatio,
+      visibilityRatio: documentVisibilityRatio,
     };
 
     console.log(`update(${JSON.stringify(visibleRect, null, "  ")})`);
@@ -211,22 +247,49 @@ export const visibleRectEffect = (element, update) => {
       });
     }
     on_intersection_change: {
-      const options = {
+      // Always observe intersection with scrollable parent
+      const scrollableParentOptions = {
         root: scrollableParent,
         rootMargin: "0px",
         threshold: [0, 1],
       };
-      const intersectionObserver = new IntersectionObserver(([entry]) => {
-        if (entry.isIntersecting) {
-          autoCheck("element_intersecting");
-        } else {
-          autoCheck("element_not__intersecting");
-        }
-      }, options);
-      intersectionObserver.observe(element);
+      const scrollableParentIntersectionObserver = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            autoCheck("element_intersecting_scrollable_parent");
+          } else {
+            autoCheck("element_not_intersecting_scrollable_parent");
+          }
+        },
+        scrollableParentOptions,
+      );
+      scrollableParentIntersectionObserver.observe(element);
       addTeardown(() => {
-        intersectionObserver.disconnect();
+        scrollableParentIntersectionObserver.disconnect();
       });
+
+      // If scrollable parent is not document, also observe intersection with document
+      if (!scrollableParentIsDocument) {
+        const documentOptions = {
+          root: null, // null means document viewport
+          rootMargin: "0px",
+          threshold: [0, 1],
+        };
+        const documentIntersectionObserver = new IntersectionObserver(
+          ([entry]) => {
+            if (entry.isIntersecting) {
+              autoCheck("element_intersecting_document");
+            } else {
+              autoCheck("element_not_intersecting_document");
+            }
+          },
+          documentOptions,
+        );
+        documentIntersectionObserver.observe(element);
+        addTeardown(() => {
+          documentIntersectionObserver.disconnect();
+        });
+      }
     }
   }
 

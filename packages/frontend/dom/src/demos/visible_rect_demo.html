@@ -257,10 +257,16 @@
       <h1 class="demo-title">Visible Rect Demo</h1>
       <p class="demo-description">
         This demo shows how the <code>visibleRectEffect</code> API tracks the
-        visible portion of an element. <br /><strong>Instructions:</strong>
-        Scroll the page and watch how the red overlay shows only the visible
-        portion of the blue target element. The API provides precise coordinates
-        for the visible rectangle.
+        visible portion of an element with two different visibility ratios:
+        <br />• <strong>Document Visibility:</strong> How much of the element is
+        visible in the browser viewport <br />•
+        <strong>Scroll Container Visibility:</strong> How much of the element is
+        visible within its scrollable parent <br /><strong
+          >Instructions:</strong
+        >
+        Scroll the page and watch how both ratios change. In custom container
+        mode, notice how scroll container visibility can be 100% while document
+        visibility is 0%.
       </p>
     </div>
 
@@ -285,8 +291,12 @@
         <span id="fullSize">No data</span>
       </div>
       <div class="section">
-        <strong>Visibility Ratio:</strong><br />
+        <strong>Document Visibility:</strong><br />
         <span id="visibilityRatio">No data</span>
+      </div>
+      <div class="section">
+        <strong>Scroll Container Visibility:</strong><br />
+        <span id="scrollVisibilityRatio">No data</span>
       </div>
       <div class="section">
         <strong>Visibility Status:</strong><br />
@@ -349,6 +359,9 @@
       const visibleRectSpan = document.getElementById("visibleRect");
       const fullSizeSpan = document.getElementById("fullSize");
       const visibilityRatioSpan = document.getElementById("visibilityRatio");
+      const scrollVisibilityRatioSpan = document.getElementById(
+        "scrollVisibilityRatio",
+      );
       const visibilitySpan = document.getElementById("visibility");
 
       let currentVisibleRectEffect = null;
@@ -437,10 +450,15 @@
               height: ${Math.round(fullRect.height)}px
             `;
 
-            // Display the visibility ratio from the API
+            // Display the visibility ratios from the API
             visibilityRatioSpan.innerHTML = `
               ${(visibleRect.visibilityRatio * 100).toFixed(1)}%<br>
-              <small>Ratio: ${visibleRect.visibilityRatio.toFixed(3)}</small>
+              <small>Document Ratio: ${visibleRect.visibilityRatio.toFixed(3)}</small>
+            `;
+
+            scrollVisibilityRatioSpan.innerHTML = `
+              ${(visibleRect.scrollVisibilityRatio * 100).toFixed(1)}%<br>
+              <small>Scroll Ratio: ${visibleRect.scrollVisibilityRatio.toFixed(3)}</small>
             `;
 
             const isVisible = visibleRect.width > 0 && visibleRect.height > 0;
