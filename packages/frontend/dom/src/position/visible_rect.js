@@ -215,6 +215,25 @@ export const visibleRectEffect = (element, update) => {
         resizeObserver.disconnect();
       });
     }
+
+    on_intersection_change: {
+      const options = {
+        root: null,
+        rootMargin: "0px",
+        threshold: [0, 1],
+      };
+      const intersectionObserver = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          autoCheck("element_intersecting");
+        } else {
+          autoCheck("element_not__intersecting");
+        }
+      }, options);
+      intersectionObserver.observe(element);
+      addTeardown(() => {
+        intersectionObserver.disconnect();
+      });
+    }
   }
 
   return {
