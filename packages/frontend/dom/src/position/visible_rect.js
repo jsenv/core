@@ -318,24 +318,11 @@ export const pickPositionRelativeTo = (element, target) => {
     );
   }
 
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
   // Get viewport-relative positions
   const elementRect = element.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
-
-  // Get document scroll to convert to document-relative coordinates
-  const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
-    document.documentElement;
-
-  // Convert target position to document-relative coordinates
-  const targetDocumentLeft = targetRect.left + documentScrollLeft;
-  const targetDocumentTop = targetRect.top + documentScrollTop;
-  const targetDocumentRight = targetRect.right + documentScrollLeft;
-  const targetDocumentBottom = targetRect.bottom + documentScrollTop;
-
-  // Viewport dimensions
-  const viewportWidth = document.documentElement.clientWidth;
-  const viewportHeight = document.documentElement.clientHeight;
-
   const {
     left: elementLeft,
     right: elementRight,
@@ -348,14 +335,12 @@ export const pickPositionRelativeTo = (element, target) => {
     top: targetTop,
     bottom: targetBottom,
   } = targetRect;
-
   const elementWidth = elementRight - elementLeft;
   const elementHeight = elementBottom - elementTop;
   const targetWidth = targetRight - targetLeft;
 
-  // Calculate horizontal position (document-relative)
-  let elementDocumentLeft;
-
+  // Calculate horizontal position (viewport-relative)
+  let elementPositionLeft;
   // Check if target element is wider than viewport
   const targetIsWiderThanViewport = targetWidth > viewportWidth;
   if (targetIsWiderThanViewport) {
@@ -366,76 +351,75 @@ export const pickPositionRelativeTo = (element, target) => {
       // Target extends beyond left edge but right side is visible
       const viewportCenter = viewportWidth / 2;
       const distanceFromRightEdge = viewportWidth - targetRight;
-      const viewportRelativeLeft =
+      elementPositionLeft =
         viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
-      elementDocumentLeft = viewportRelativeLeft + documentScrollLeft;
     } else if (targetLeftIsVisible && !targetRightIsVisible) {
       // Target extends beyond right edge but left side is visible
       const viewportCenter = viewportWidth / 2;
       const distanceFromLeftEdge = -targetLeft;
-      const viewportRelativeLeft =
+      elementPositionLeft =
         viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
-      elementDocumentLeft = viewportRelativeLeft + documentScrollLeft;
     } else {
       // Target extends beyond both edges or is fully visible (center in viewport)
-      const viewportRelativeLeft = viewportWidth / 2 - elementWidth / 2;
-      elementDocumentLeft = viewportRelativeLeft + documentScrollLeft;
+      elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
     }
   } else {
     // Target fits within viewport width - center element relative to target
-    elementDocumentLeft =
-      targetDocumentLeft + targetWidth / 2 - elementWidth / 2;
+    elementPositionLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
 
     // Special handling when element is wider than target
     const elementIsWiderThanTarget = elementWidth > targetWidth;
     if (elementIsWiderThanTarget) {
       const targetIsNearLeftEdge = targetLeft < 20;
       if (targetIsNearLeftEdge) {
-        elementDocumentLeft = documentScrollLeft; // Left edge of viewport in document coordinates
+        elementPositionLeft = 0; // Left edge of viewport
       }
     }
   }
-
-  // Constrain horizontal position to viewport boundaries (in document coordinates)
-  const viewportLeftInDocument = documentScrollLeft;
-  const viewportRightInDocument = documentScrollLeft + viewportWidth;
-
-  if (elementDocumentLeft < viewportLeftInDocument) {
-    elementDocumentLeft = viewportLeftInDocument;
-  } else if (elementDocumentLeft + elementWidth > viewportRightInDocument) {
-    elementDocumentLeft = viewportRightInDocument - elementWidth;
+  // Constrain horizontal position to viewport boundaries
+  if (elementPositionLeft < 0) {
+    elementPositionLeft = 0;
+  } else if (elementPositionLeft + elementWidth > viewportWidth) {
+    elementPositionLeft = viewportWidth - elementWidth;
   }
 
-  // Calculate vertical position (document-relative)
+  // Calculate vertical position (viewport-relative)
   const spaceAboveTarget = targetTop;
   const spaceBelowTarget = viewportHeight - targetBottom;
-
   const elementFitsAbove = spaceAboveTarget >= elementHeight;
   const elementFitsBelow = spaceBelowTarget >= elementHeight;
 
   // Prefer below, but use above if it doesn't fit below and does fit above
   const shouldPlaceAbove = !elementFitsBelow && elementFitsAbove;
-  let elementDocumentTop;
+  let elementPositionTop;
   let position;
-
   if (shouldPlaceAbove) {
     position = "above";
     // Calculate top position when placing above target
-    const idealTopWhenAbove = targetDocumentTop - elementHeight;
-    const minimumTopInViewport = documentScrollTop;
-    elementDocumentTop =
+    const idealTopWhenAbove = targetTop - elementHeight;
+    const minimumTopInViewport = 0;
+    elementPositionTop =
       idealTopWhenAbove < minimumTopInViewport
         ? minimumTopInViewport
         : idealTopWhenAbove;
   } else {
     position = "below";
     // Calculate top position when placing below target (ensure whole pixels)
-    const idealTopWhenBelow = targetDocumentBottom;
-    elementDocumentTop =
+    const idealTopWhenBelow = targetBottom;
+    elementPositionTop =
       idealTopWhenBelow % 1 === 0
         ? idealTopWhenBelow
         : Math.floor(idealTopWhenBelow) + 1;
   }
+
+  // Get document scroll for final coordinate conversion
+  const { scrollLeft, scrollTop } = document.documentElement;
+  const elementDocumentLeft = elementPositionLeft + scrollLeft;
+  const elementDocumentTop = elementPositionTop + scrollTop;
+  const targetDocumentLeft = targetLeft + scrollLeft;
+  const targetDocumentTop = targetTop + scrollTop;
+  const targetDocumentRight = targetRight + scrollLeft;
+  const targetDocumentBottom = targetBottom + scrollTop;
 
   return {
     position,
