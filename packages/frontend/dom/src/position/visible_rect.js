@@ -115,6 +115,7 @@ export const visibleRectEffect = (element, update) => {
       bottom: overlayTop + heightVisible,
       width: widthVisible,
       height: heightVisible,
+      visibilityRatio: (widthVisible * heightVisible) / (width * height),
     };
 
     console.log(`update(${JSON.stringify(visibleRect, null, "  ")})`);

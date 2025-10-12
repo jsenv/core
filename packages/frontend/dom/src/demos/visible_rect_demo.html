@@ -119,6 +119,26 @@
         font-weight: bold;
         text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
         font-size: 12px;
+        /* Only transition visual properties, not positioning */
+        transition:
+          background-color 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      /* Dynamic styling based on visibility ratio */
+      .overlay-container.high-visibility {
+        background: rgba(0, 255, 0, 0.6);
+        border-color: #00ff00;
+      }
+
+      .overlay-container.medium-visibility {
+        background: rgba(255, 165, 0, 0.6);
+        border-color: #ffa500;
+      }
+
+      .overlay-container.low-visibility {
+        background: rgba(255, 0, 0, 0.6);
+        border-color: #ff0000;
       }
 
       .debug-info {
@@ -265,7 +285,11 @@
         <span id="fullSize">No data</span>
       </div>
       <div class="section">
-        <strong>Visibility:</strong><br />
+        <strong>Visibility Ratio:</strong><br />
+        <span id="visibilityRatio">No data</span>
+      </div>
+      <div class="section">
+        <strong>Visibility Status:</strong><br />
         <span id="visibility">No data</span>
       </div>
     </div>
@@ -324,6 +348,7 @@
       const modeStatus = document.getElementById("modeStatus");
       const visibleRectSpan = document.getElementById("visibleRect");
       const fullSizeSpan = document.getElementById("fullSize");
+      const visibilityRatioSpan = document.getElementById("visibilityRatio");
       const visibilitySpan = document.getElementById("visibility");
 
       let currentVisibleRectEffect = null;
@@ -376,6 +401,29 @@
               overlayContainer.style.display = "flex";
             }
 
+            // Update dynamic styling based on visibility ratio
+            overlayContainer.classList.remove(
+              "high-visibility",
+              "medium-visibility",
+              "low-visibility",
+            );
+            let visibilityClass = "low-visibility";
+            let overlayText = "VISIBLE RECT";
+
+            if (visibleRect.visibilityRatio >= 0.8) {
+              visibilityClass = "high-visibility";
+              overlayText = "FULLY VISIBLE";
+            } else if (visibleRect.visibilityRatio >= 0.3) {
+              visibilityClass = "medium-visibility";
+              overlayText = "PARTIALLY VISIBLE";
+            } else if (visibleRect.visibilityRatio > 0) {
+              visibilityClass = "low-visibility";
+              overlayText = "BARELY VISIBLE";
+            }
+
+            overlayContainer.classList.add(visibilityClass);
+            overlayContainer.textContent = overlayText;
+
             // Update debug information
             visibleRectSpan.innerHTML = `
               left: ${Math.round(visibleRect.left)}px<br>
@@ -389,18 +437,17 @@
               height: ${Math.round(fullRect.height)}px
             `;
 
+            // Display the visibility ratio from the API
+            visibilityRatioSpan.innerHTML = `
+              ${(visibleRect.visibilityRatio * 100).toFixed(1)}%<br>
+              <small>Ratio: ${visibleRect.visibilityRatio.toFixed(3)}</small>
+            `;
+
             const isVisible = visibleRect.width > 0 && visibleRect.height > 0;
-            const visibilityPercentage = isVisible
-              ? Math.round(
-                  ((visibleRect.width * visibleRect.height) /
-                    (fullRect.width * fullRect.height)) *
-                    100,
-                )
-              : 0;
 
             visibilitySpan.innerHTML = `
               ${isVisible ? "Visible" : "Hidden"}<br>
-              ${visibilityPercentage}% of element visible
+              <small>${visibilityClass.replace("-", " ").toUpperCase()}</small>
             `;
 
             console.log("Visible rect updated:", { visibleRect, fullRect });
