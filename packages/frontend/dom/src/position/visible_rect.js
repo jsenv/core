@@ -317,8 +317,22 @@ export const pickPositionRelativeTo = (element, target) => {
       "pickPositionRelativeTo should be used only for document-relative element",
     );
   }
+
+  // Get viewport-relative positions
   const elementRect = element.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
+
+  // Get document scroll to convert to document-relative coordinates
+  const { scrollLeft: documentScrollLeft, scrollTop: documentScrollTop } =
+    document.documentElement;
+
+  // Convert target position to document-relative coordinates
+  const targetDocumentLeft = targetRect.left + documentScrollLeft;
+  const targetDocumentTop = targetRect.top + documentScrollTop;
+  const targetDocumentRight = targetRect.right + documentScrollLeft;
+  const targetDocumentBottom = targetRect.bottom + documentScrollTop;
+
+  // Viewport dimensions
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
 
@@ -339,8 +353,8 @@ export const pickPositionRelativeTo = (element, target) => {
   const elementHeight = elementBottom - elementTop;
   const targetWidth = targetRight - targetLeft;
 
-  // Calculate horizontal position
-  let elementAbsoluteLeft;
+  // Calculate horizontal position (document-relative)
+  let elementDocumentLeft;
 
   // Check if target element is wider than viewport
   const targetIsWiderThanViewport = targetWidth > viewportWidth;
@@ -352,40 +366,47 @@ export const pickPositionRelativeTo = (element, target) => {
       // Target extends beyond left edge but right side is visible
       const viewportCenter = viewportWidth / 2;
       const distanceFromRightEdge = viewportWidth - targetRight;
-      elementAbsoluteLeft =
+      const viewportRelativeLeft =
         viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+      elementDocumentLeft = viewportRelativeLeft + documentScrollLeft;
     } else if (targetLeftIsVisible && !targetRightIsVisible) {
       // Target extends beyond right edge but left side is visible
       const viewportCenter = viewportWidth / 2;
       const distanceFromLeftEdge = -targetLeft;
-      elementAbsoluteLeft =
+      const viewportRelativeLeft =
         viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+      elementDocumentLeft = viewportRelativeLeft + documentScrollLeft;
     } else {
       // Target extends beyond both edges or is fully visible (center in viewport)
-      elementAbsoluteLeft = viewportWidth / 2 - elementWidth / 2;
+      const viewportRelativeLeft = viewportWidth / 2 - elementWidth / 2;
+      elementDocumentLeft = viewportRelativeLeft + documentScrollLeft;
     }
   } else {
     // Target fits within viewport width - center element relative to target
-    elementAbsoluteLeft = targetLeft + targetWidth / 2 - elementWidth / 2;
+    elementDocumentLeft =
+      targetDocumentLeft + targetWidth / 2 - elementWidth / 2;
 
     // Special handling when element is wider than target
     const elementIsWiderThanTarget = elementWidth > targetWidth;
     if (elementIsWiderThanTarget) {
       const targetIsNearLeftEdge = targetLeft < 20;
       if (targetIsNearLeftEdge) {
-        elementAbsoluteLeft = 0;
+        elementDocumentLeft = documentScrollLeft; // Left edge of viewport in document coordinates
       }
     }
   }
 
-  // Constrain horizontal position to viewport boundaries
-  if (elementAbsoluteLeft < 0) {
-    elementAbsoluteLeft = 0;
-  } else if (elementAbsoluteLeft + elementWidth > viewportWidth) {
-    elementAbsoluteLeft = viewportWidth - elementWidth;
+  // Constrain horizontal position to viewport boundaries (in document coordinates)
+  const viewportLeftInDocument = documentScrollLeft;
+  const viewportRightInDocument = documentScrollLeft + viewportWidth;
+
+  if (elementDocumentLeft < viewportLeftInDocument) {
+    elementDocumentLeft = viewportLeftInDocument;
+  } else if (elementDocumentLeft + elementWidth > viewportRightInDocument) {
+    elementDocumentLeft = viewportRightInDocument - elementWidth;
   }
 
-  // Calculate vertical position
+  // Calculate vertical position (document-relative)
   const spaceAboveTarget = targetTop;
   const spaceBelowTarget = viewportHeight - targetBottom;
 
@@ -394,26 +415,38 @@ export const pickPositionRelativeTo = (element, target) => {
 
   // Prefer below, but use above if it doesn't fit below and does fit above
   const shouldPlaceAbove = !elementFitsBelow && elementFitsAbove;
-  let elementAbsoluteTop;
+  let elementDocumentTop;
   let position;
+
   if (shouldPlaceAbove) {
     position = "above";
-    elementAbsoluteTop = Math.max(0, targetTop - elementHeight);
+    // Calculate top position when placing above target
+    const idealTopWhenAbove = targetDocumentTop - elementHeight;
+    const minimumTopInViewport = documentScrollTop;
+    elementDocumentTop =
+      idealTopWhenAbove < minimumTopInViewport
+        ? minimumTopInViewport
+        : idealTopWhenAbove;
   } else {
     position = "below";
-    elementAbsoluteTop = Math.ceil(targetBottom);
+    // Calculate top position when placing below target (ensure whole pixels)
+    const idealTopWhenBelow = targetDocumentBottom;
+    elementDocumentTop =
+      idealTopWhenBelow % 1 === 0
+        ? idealTopWhenBelow
+        : Math.floor(idealTopWhenBelow) + 1;
   }
 
   return {
     position,
-    left: elementAbsoluteLeft,
-    top: elementAbsoluteTop,
+    left: elementDocumentLeft,
+    top: elementDocumentTop,
     width: elementWidth,
     height: elementHeight,
-    targetLeft,
-    targetTop,
-    targetRight,
-    targetBottom,
+    targetLeft: targetDocumentLeft,
+    targetTop: targetDocumentTop,
+    targetRight: targetDocumentRight,
+    targetBottom: targetDocumentBottom,
     elementFitsAbove,
     elementFitsBelow,
   };
