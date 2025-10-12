@@ -286,14 +286,7 @@ export const visibleRectEffect = (element, update) => {
   };
 };
 
-export const pickPositionRelativeTo = (
-  element,
-  target,
-  {
-    visibleWidth = document.documentElement.clientWidth,
-    visibleHeight = document.documentElement.clientHeight,
-  } = {},
-) => {
+export const pickPositionRelativeTo = (element, target) => {
   if (
     import.meta.dev &&
     getScrollableParent(element) !== document.documentElement
@@ -312,6 +305,8 @@ export const pickPositionRelativeTo = (
   }
   const elementRect = element.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
+  const viewportWidth = document.documentElement.clientWidth;
+  const viewportHeight = document.documentElement.clientHeight;
 
   const {
     left: elementLeft,
@@ -334,26 +329,26 @@ export const pickPositionRelativeTo = (
   let elementAbsoluteLeft;
 
   // Check if target element is wider than viewport
-  const targetIsWiderThanViewport = targetWidth > visibleWidth;
+  const targetIsWiderThanViewport = targetWidth > viewportWidth;
   if (targetIsWiderThanViewport) {
     const targetLeftIsVisible = targetLeft >= 0;
-    const targetRightIsVisible = targetRight <= visibleWidth;
+    const targetRightIsVisible = targetRight <= viewportWidth;
 
     if (!targetLeftIsVisible && targetRightIsVisible) {
       // Target extends beyond left edge but right side is visible
-      const viewportCenter = visibleWidth / 2;
-      const distanceFromRightEdge = visibleWidth - targetRight;
+      const viewportCenter = viewportWidth / 2;
+      const distanceFromRightEdge = viewportWidth - targetRight;
       elementAbsoluteLeft =
         viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
     } else if (targetLeftIsVisible && !targetRightIsVisible) {
       // Target extends beyond right edge but left side is visible
-      const viewportCenter = visibleWidth / 2;
+      const viewportCenter = viewportWidth / 2;
       const distanceFromLeftEdge = -targetLeft;
       elementAbsoluteLeft =
         viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
     } else {
       // Target extends beyond both edges or is fully visible (center in viewport)
-      elementAbsoluteLeft = visibleWidth / 2 - elementWidth / 2;
+      elementAbsoluteLeft = viewportWidth / 2 - elementWidth / 2;
     }
   } else {
     // Target fits within viewport width - center element relative to target
@@ -372,13 +367,13 @@ export const pickPositionRelativeTo = (
   // Constrain horizontal position to viewport boundaries
   if (elementAbsoluteLeft < 0) {
     elementAbsoluteLeft = 0;
-  } else if (elementAbsoluteLeft + elementWidth > visibleWidth) {
-    elementAbsoluteLeft = visibleWidth - elementWidth;
+  } else if (elementAbsoluteLeft + elementWidth > viewportWidth) {
+    elementAbsoluteLeft = viewportWidth - elementWidth;
   }
 
   // Calculate vertical position
   const spaceAboveTarget = targetTop;
-  const spaceBelowTarget = visibleHeight - targetBottom;
+  const spaceBelowTarget = viewportHeight - targetBottom;
 
   const elementFitsAbove = spaceAboveTarget >= elementHeight;
   const elementFitsBelow = spaceBelowTarget >= elementHeight;
