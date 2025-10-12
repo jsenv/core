@@ -287,13 +287,32 @@ export const visibleRectEffect = (element, update) => {
 };
 
 export const pickPositionRelativeTo = (
-  elementRect,
-  targetRect,
+  element,
+  target,
   {
     visibleWidth = document.documentElement.clientWidth,
     visibleHeight = document.documentElement.clientHeight,
   } = {},
 ) => {
+  if (
+    import.meta.dev &&
+    getScrollableParent(element) !== document.documentElement
+  ) {
+    // The idea behind this warning is that pickPositionRelativeTo is meant to position a tooltip/dropdown etc
+    // And for this use case the element to position should be document-relative
+    // (position: absolute with first scrollable parent being the document)
+    // Because this is how you achieve the best results:
+    // 1. The element naturally follow document scroll
+    // Which gives the best experience when user scrolls the page or the container
+    // 2. The element can take more visible size in case target is within a scrollable container
+    // or uses overflow: hidden somewhere in its ancestor chain
+    console.warn(
+      "pickPositionRelativeTo should be used only for document-relative element",
+    );
+  }
+  const elementRect = element.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+
   const {
     left: elementLeft,
     right: elementRight,
