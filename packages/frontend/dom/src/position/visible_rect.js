@@ -1,14 +1,20 @@
 import { createPubSub } from "../pub_sub.js";
 import { getScrollableParent } from "../scroll/parent_scroll.js";
 
+// Est ce que c'est pas juste exactement intersection observer tout ca?
+// en tous cas on va reprendre le code de follow_position le renommer et reprendre lintercae avec juste element, update
+// éviter le nom overlay, c'est juste un cas d'usage du "intersectionEffect"
+// sachant que pour le follow position on a pas de scrollable parent concept
+// surement une option un moment donné
+
 // Creates an overlay, the update function is meant to positions one element on top of another
-export const initOverlay = (element, update) => {
+export const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
   const scrollableParent = getScrollableParent(element);
   const scrollableParentIsDocument =
     scrollableParent === document.documentElement;
 
-  const updateOverlayRect = () => {
+  const checkVisibleRect = () => {
     // 1. Calculate element position relative to scrollable parent
     const { scrollLeft, scrollTop } = scrollableParent;
     const visibleAreaLeft = scrollLeft;
@@ -113,11 +119,11 @@ export const initOverlay = (element, update) => {
     );
   };
 
-  updateOverlayRect();
+  checkVisibleRect();
 
   update_on_scroll: {
     const onScroll = () => {
-      updateOverlayRect();
+      checkVisibleRect();
     };
     scrollableParent.addEventListener("scroll", onScroll, { passive: true });
     addTeardown(() => {
@@ -129,7 +135,7 @@ export const initOverlay = (element, update) => {
 
   update_on_window_resize: {
     const onWindowResize = () => {
-      updateOverlayRect();
+      checkVisibleRect();
     };
     window.addEventListener("resize", onWindowResize);
     addTeardown(() => {
@@ -141,7 +147,7 @@ export const initOverlay = (element, update) => {
     // If scrollable parent is not document, also listen to document scroll
     // to update UI position when the scrollable parent moves in viewport
     const onDocumentScroll = () => {
-      updateOverlayRect(); // Update container position in viewport
+      checkVisibleRect(); // Update container position in viewport
     };
     document.addEventListener("scroll", onDocumentScroll, { passive: true });
     addTeardown(() => {
@@ -152,8 +158,8 @@ export const initOverlay = (element, update) => {
   }
 
   return {
-    update: updateOverlayRect,
-    destroy: () => {
+    check: checkVisibleRect,
+    disconnect: () => {
       teardown();
     },
   };
