@@ -968,9 +968,11 @@ export const createDragToMoveGestureController = (options) => {
           const desiredElementLeft = leftAtStart + gestureInfo.xMove;
           const desiredElementRight =
             desiredElementLeft + elementVisuallyImpactedWidth;
-          console.log(
-            `Auto-scroll debug: desiredElementLeft=${desiredElementLeft}, desiredElementRight=${desiredElementRight}, visibleArea.left=${visibleArea.left}, visibleArea.right=${visibleArea.right}, scrollContainer.scrollLeft=${scrollContainer.scrollLeft}`,
-          );
+          // Convert constraint boundary to actual visible area boundary
+          // visibleArea.right is where element left edge can be positioned
+          // The actual visible right boundary is where element right edge can be
+          const actualVisibleAreaRight =
+            visibleArea.right + elementVisuallyImpactedWidth;
 
           // Determine if auto-scroll is allowed for sticky elements when going left
           const canAutoScrollLeft =
@@ -984,7 +986,7 @@ export const createDragToMoveGestureController = (options) => {
             desiredElementStart: desiredElementLeft,
             desiredElementEnd: desiredElementRight,
             visibleAreaStart: visibleArea.left,
-            visibleAreaEnd: visibleArea.right,
+            visibleAreaEnd: actualVisibleAreaRight,
             currentScroll: scrollContainer.scrollLeft,
             initialPosition: initialLeftToImpact,
             moveAmount: gestureInfo.xMove,
@@ -996,10 +998,15 @@ export const createDragToMoveGestureController = (options) => {
 
         // Vertical auto-scroll
         if (direction.y) {
-          const desiredElementTopRelative = topAtStart + gestureInfo.yMove;
-          const desiredElementTop = desiredElementTopRelative;
+          const desiredElementTop = topAtStart + gestureInfo.yMove;
           const desiredElementBottom =
             desiredElementTop + elementVisuallyImpactedHeight;
+
+          // Convert constraint boundary to actual visible area boundary
+          // visibleArea.bottom is where element top edge can be positioned
+          // The actual visible bottom boundary is where element bottom edge can be
+          const actualVisibleAreaBottom =
+            visibleArea.bottom + elementVisuallyImpactedHeight;
 
           // Determine if auto-scroll is allowed for sticky elements when going up
           const canAutoScrollUp =
@@ -1013,7 +1020,7 @@ export const createDragToMoveGestureController = (options) => {
             desiredElementStart: desiredElementTop,
             desiredElementEnd: desiredElementBottom,
             visibleAreaStart: visibleArea.top,
-            visibleAreaEnd: visibleArea.bottom,
+            visibleAreaEnd: actualVisibleAreaBottom,
             currentScroll: scrollContainer.scrollTop,
             initialPosition: initialTopToImpact,
             moveAmount: gestureInfo.yMove,
