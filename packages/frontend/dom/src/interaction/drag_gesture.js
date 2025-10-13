@@ -670,10 +670,19 @@ export const createDragGestureController = (options = {}) => {
         visibleArea,
       });
 
-      const [xDocumentConstrained, yDocumentConstrained] = applyConstraints(
+      const x = xDocument;
+      const y = yDocument;
+      const xMoveRaw = xDocument - gestureInfo.xAtStart;
+      const yMoveRaw = yDocument - gestureInfo.yAtStart;
+      const leftRequested =
+        gestureInfo.leftAtStart + (xDocument - gestureInfo.xAtStart);
+      const topRequested =
+        gestureInfo.topAtStart + (yDocument - gestureInfo.yAtStart);
+      // Apply constraints to the desired element position
+      const [leftConstrained, topConstrained] = applyConstraints(
         constraints,
-        xDocument,
-        yDocument,
+        leftRequested,
+        topRequested,
         {
           gestureInfo,
           elementWidth: currentRect.width,
@@ -683,13 +692,9 @@ export const createDragGestureController = (options = {}) => {
         },
       );
 
-      const x = xDocument;
-      const y = yDocument;
-      const xMoveRaw = xDocument - gestureInfo.xAtStart;
-      const yMoveRaw = yDocument - gestureInfo.yAtStart;
-      // Calculate constrained xMove/yMove based on constrained document coordinates
-      const xMoveConstrained = xDocumentConstrained - gestureInfo.xAtStart;
-      const yMoveConstrained = yDocumentConstrained - gestureInfo.yAtStart;
+      // Calculate moves based on constrained element position vs starting element position
+      const xMoveConstrained = leftConstrained - gestureInfo.leftAtStart;
+      const yMoveConstrained = topConstrained - gestureInfo.topAtStart;
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
       const previousYMove = previousGestureInfo ? previousGestureInfo.yMove : 0;
