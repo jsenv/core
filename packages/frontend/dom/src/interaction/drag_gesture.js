@@ -538,6 +538,11 @@ export const createDragGestureController = (options = {}) => {
             right,
             bottom,
           };
+
+          // Debug visible area constraint bounds
+          console.log(
+            `Visible area constraint bounds: left=${left}, top=${top}, right=${right}, bottom=${bottom}, elementWidth=${elementWidth}, elementHeight=${elementHeight}, clientWidth=${visibleConstraintElement.clientWidth}, clientHeight=${visibleConstraintElement.clientHeight}`,
+          );
         }
         return createBoundConstraint(bounds, {
           element: visibleConstraintElement,

@@ -1,4 +1,4 @@
-const CONSOLE_DEBUG_CONSTRAINTS = false;
+const CONSOLE_DEBUG_CONSTRAINTS = true;
 
 export const createBoundConstraint = (bounds, { element, name } = {}) => {
   const leftBound = bounds.left;
@@ -294,9 +294,9 @@ const logConstraintEnforcement = (
   if (!CONSOLE_DEBUG_CONSTRAINTS) {
     return;
   }
-  const direction = constrainedValue > originalValue ? "increased" : "capped";
+  const action = constrainedValue > originalValue ? "increased" : "capped";
   console.debug(
-    `Drag by ${interactionType}: ${axis} movement ${direction} from ${originalValue.toFixed(2)} to ${constrainedValue.toFixed(2)} by ${constraint.name}`,
+    `Drag by ${interactionType}: ${axis} ${action} from ${originalValue.toFixed(2)} to ${constrainedValue.toFixed(2)} by ${constraint.name}`,
     constraint.element,
     gestureInfo,
   );
