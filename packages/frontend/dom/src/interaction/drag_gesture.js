@@ -521,9 +521,9 @@ export const createDragGestureController = (options = {}) => {
     });
 
     // Set up dragging attribute
-    element.setAttribute("data-dragging", "");
+    element.setAttribute("data-grabbed", "");
     addTeardown(() => {
-      element.removeAttribute("data-dragging");
+      element.removeAttribute("data-grabbed");
     });
 
     if (gestureAttribute) {
