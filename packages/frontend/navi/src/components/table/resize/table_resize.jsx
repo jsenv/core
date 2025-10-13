@@ -348,16 +348,32 @@ const initResizeByMousedown = (
   // Convert constraint bounds from scrollable-parent coordinates to positioned-parent coordinates
   // This is needed because the drag gesture system positions elements relative to their offsetParent
   const { customAreaConstraint, areaConstraint } = (() => {
-    // Use scrollable rect helper for proper coordinate conversion
+    // Use different approaches for document vs custom scroll containers
     const scrollableParent = getScrollableParent(table);
+
+    // Always get scrollable rect for sticky detection
     const tableCellScrollableRect = getElementScrollableRect(
       tableCell,
       scrollableParent,
     );
 
-    // Calculate size and position based on axis
-    const cellStartScrollable =
+    // Always use getElementScrollableRect for consistency with drag system
+    let cellStartScrollable =
       axis === "x" ? tableCellScrollableRect.left : tableCellScrollableRect.top;
+
+    if (scrollableParent !== document.documentElement) {
+      const parentLeft =
+        scrollableParent.getBoundingClientRect().left -
+        scrollableParent.scrollLeft;
+      cellStartScrollable += parentLeft;
+    }
+
+    console.log(`cellStartScrollable (${axis}):`, cellStartScrollable, {
+      scrollableParent:
+        scrollableParent === document.documentElement ? "document" : "custom",
+      tableCellScrollableRect,
+      tableCell,
+    });
 
     // Calculate bounds based on axis
     const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
@@ -373,9 +389,20 @@ const initResizeByMousedown = (
         : defaultMaxSize;
 
     // Constraint bounds in scrollable coordinates
+    // For resizing, we constrain where the RIGHT/BOTTOM edge of the cell can move
+    // Minimum bound: right edge cannot move left of (left + minSize)
     const customStartBound = cellStartScrollable + minCellSize;
-    const maxExpandAmount = maxCellSize - currentSize;
-    const customEndBound = cellStartScrollable + currentSize + maxExpandAmount;
+    // Maximum bound: right edge cannot move right of (left + maxSize)
+    const customEndBound = cellStartScrollable + maxCellSize;
+
+    console.log({
+      cellStartScrollable,
+      currentSize,
+      minCellSize,
+      maxCellSize,
+      customStartBound,
+      customEndBound,
+    });
 
     if (axis === "x") {
       return {
