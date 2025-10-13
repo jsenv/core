@@ -366,11 +366,11 @@ const initResizeByMousedown = (
       axis === "x" ? scrollableRect.left : scrollableRect.top;
     if (scrollContainer !== document.documentElement) {
       const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      const parentLeft =
+      const scrollContainerOffset =
         axis === "x"
           ? scrollContainerRect.left - scrollContainer.scrollLeft
           : scrollContainerRect.top - scrollContainer.scrollTop;
-      startScrollable += parentLeft;
+      startScrollable += scrollContainerOffset;
     }
     const customStartBound = startScrollable + minCellSize;
     const customEndBound = startScrollable + maxCellSize;
