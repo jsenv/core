@@ -767,8 +767,8 @@ export const createDragGestureController = (options = {}) => {
     };
 
     const drag = (
-      xDocument, // Document-relative X coordinate
-      yDocument, // Document-relative Y coordinate
+      xDocument = gestureInfo.x, // Document-relative X coordinate
+      yDocument = gestureInfo.y, // Document-relative Y coordinate
       event = new CustomEvent("programmatic"),
       { isRelease = false } = {},
     ) => {
