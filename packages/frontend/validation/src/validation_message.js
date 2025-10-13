@@ -24,6 +24,15 @@ import {
  */
 
 import.meta.css = /* css */ `
+  /* Ensure the validation message CANNOT cause overflow */
+  /* might be important to ensure it cannot create scrollbars in the document */
+  /* When measuring the size it should take */
+  .jsenv_validation_message_container {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+
   .jsenv_validation_message {
     display: block;
     overflow: visible;
@@ -139,43 +148,43 @@ import.meta.css = /* css */ `
 
 // HTML template for the validation message
 const validationMessageTemplate = /* html */ `
-  <div
-    class="jsenv_validation_message"
-    role="alert"
-    aria-live="assertive"
+<div
+    class="jsenv_validation_message_container"
   >
-    <div class="jsenv_validation_message_body_wrapper">
-      <div class="jsenv_validation_message_border"></div>
-      <div class="jsenv_validation_message_body">
-        <div class="jsenv_validation_message_icon">
-          <svg
-            class="jsenv_validation_message_exclamation_svg"
-            viewBox="0 0 125 300"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fill="currentColor"
-              d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
-            />
-          </svg>
-        </div>
-        <div class="jsenv_validation_message_content">Default message</div>
-        <div class="jsenv_validation_message_close_button_column">
-          <button class="jsenv_validation_message_close_button">
+    <div class="jsenv_validation_message" role="alert" aria-live="assertive">
+      <div class="jsenv_validation_message_body_wrapper">
+        <div class="jsenv_validation_message_border"></div>
+        <div class="jsenv_validation_message_body">
+          <div class="jsenv_validation_message_icon">
             <svg
-              class="close_svg"
-              viewBox="0 0 24 24"
-              fill="none"
+              class="jsenv_validation_message_exclamation_svg"
+              viewBox="0 0 125 300"
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                fill-rule="evenodd"
-                clip-rule="evenodd"
-                d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
                 fill="currentColor"
+                d="m25,1 8,196h59l8-196zm37,224a37,37 0 1,0 2,0z"
               />
             </svg>
-          </button>
+          </div>
+          <div class="jsenv_validation_message_content">Default message</div>
+          <div class="jsenv_validation_message_close_button_column">
+            <button class="jsenv_validation_message_close_button">
+              <svg
+                class="close_svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fill-rule="evenodd"
+                  clip-rule="evenodd"
+                  d="M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -272,9 +281,7 @@ export const openValidationMessage = (
 
   document.body.appendChild(jsenvValidationMessage);
   closeCallbackSet.add(() => {
-    if (document.body.contains(jsenvValidationMessage)) {
-      document.body.removeChild(jsenvValidationMessage);
-    }
+    jsenvValidationMessage.remove();
   });
 
   const positionFollower = stickValidationMessageToTarget(
@@ -539,12 +546,16 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
     ({ left: targetLeft, right: targetRight, visibilityRatio }) => {
       // reset max height and overflow because it impacts the element size
       // and we need to re-check if we need to have an overflow or not.
-      // ideally this should not have any visual impact so we might need to clone the element to measure it
-      // but for now it seems ok
+      // to avoid visual impact we do this on an invisible clone.
+      // It's ok to do this because the element is absolutely positioned
       const validationMessageClone = validationMessage.cloneNode(true);
       validationMessageClone.style.visibility = "hidden";
-      validationMessageClone.style.maxHeight = "";
-      validationMessageClone.style.overflowY = "";
+      const validationMessageContentClone =
+        validationMessageClone.querySelector(
+          ".jsenv_validation_message_content",
+        );
+      validationMessageContentClone.style.maxHeight = "";
+      validationMessageContentClone.style.overflowY = "";
       validationMessage.parentNode.appendChild(validationMessageClone);
       const {
         position,
@@ -556,9 +567,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         spaceBelowTarget,
       } = pickPositionRelativeTo(validationMessageClone, targetElement, {
         alignToViewportEdgeWhenTargetNearEdge: 20,
-        forcePosition: "above",
       });
-      validationMessageClone.remove();
 
       // Get element padding and border to properly position arrow
       const targetBorderSizes = getBorderSizes(targetElement);
@@ -605,18 +614,27 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
 
       // Force content overflow when there is not enough space to display
       // the entirety of the validation message
-      let spaceAvailable;
-      if (position === "below") {
-        spaceAvailable = spaceBelowTarget;
-      } else {
-        spaceAvailable = spaceAboveTarget;
-      }
+      const spaceAvailable =
+        position === "below" ? spaceBelowTarget : spaceAboveTarget;
       let spaceAvailableForContent = spaceAvailable;
       spaceAvailableForContent -= ARROW_HEIGHT;
       spaceAvailableForContent -= BORDER_WIDTH * 2;
       spaceAvailableForContent -= 16; // padding * 2
-      // spaceAvailableForContent -= 8; // can't explain this one for now
-      if (spaceAvailableForContent < validationMessageHeight) {
+      let contentHeight = validationMessageHeight;
+      contentHeight -= ARROW_HEIGHT;
+      contentHeight -= BORDER_WIDTH * 2;
+      contentHeight -= 16; // padding * 2
+      const spaceRemainingAfterContent =
+        spaceAvailableForContent - contentHeight;
+      console.log({
+        position,
+        spaceBelowTarget,
+        validationMessageHeight,
+        spaceAvailableForContent,
+        contentHeight,
+        spaceRemainingAfterContent,
+      });
+      if (spaceRemainingAfterContent < 2) {
         const maxHeight = spaceAvailableForContent;
         validationMessageContent.style.maxHeight = `${maxHeight}px`;
         validationMessageContent.style.overflowY = "scroll";
@@ -652,12 +670,14 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       validationMessage.style.opacity = visibilityRatio ? "1" : "0";
       validationMessage.setAttribute("data-position", position);
       validationMessage.style.transform = `translateX(${validationMessageLeft}px) translateY(${validationMessageTop}px)`;
+
+      validationMessageClone.remove();
     },
   );
   const messageSizeChangeObserver = observeValidationMessageSizeChange(
     validationMessageContent,
     (width, height) => {
-      // targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
+      targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
     },
   );
   targetVisibleRectEffect.onBeforeCheck(() => {
