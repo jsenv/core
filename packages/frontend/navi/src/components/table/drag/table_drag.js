@@ -266,7 +266,11 @@ export const initDragTableColumnByMousedown = async (
   mousedownEvent,
   { onGrab, onDrag, onRelease },
 ) => {
-  const mousemoveEvent = await createMouseDragThresholdPromise(mousedownEvent);
+  const significantDragGestureInfo =
+    await createMouseDragThresholdPromise(mousedownEvent);
+  if (significantDragGestureInfo.status === "released") {
+    return;
+  }
 
   const [teardown, addTeardown] = createPubSub();
   const [triggerDrag, addDragEffect] = createPubSub();
@@ -553,7 +557,7 @@ export const initDragTableColumnByMousedown = async (
         elementVisuallyImpacted: colClone,
       },
     );
-    dragToMoveGesture.dragViaMouse(mousemoveEvent);
+    dragToMoveGesture.dragViaMouse(significantDragGestureInfo.dragEvent);
   }
 };
 

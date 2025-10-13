@@ -8,7 +8,8 @@ export const setupConstraintFeedbackLine = ({ scrollableParent }) => {
   let lastMouseY = null;
 
   // Internal function to update constraint feedback line
-  const onDrag = (gestureInfo, mousemoveEvent) => {
+  const onDrag = (gestureInfo) => {
+    const { dragEvent: mousemoveEvent } = gestureInfo;
     if (!mousemoveEvent) {
       // programmatic drag
       return;

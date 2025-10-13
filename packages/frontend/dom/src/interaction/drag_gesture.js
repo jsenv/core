@@ -99,23 +99,27 @@ const BASIC_MODE_OPTIONS = {
   showConstraintFeedbackLine: false,
   dragViaScroll: false,
 };
-// To help dbugging this flag can be used to reduce number of features to the bare minimum
+// This flag can be used to reduce number of features to the bare minimum to help debugging
 const KEEP_IT_STUPID_SIMPLE = false;
 
 export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
   let _resolve;
+  let resolved = false;
   const promise = new Promise((resolve) => {
     _resolve = resolve;
   });
   const dragGestureController = createDragGestureController({
     threshold,
     isThresholdOnly: true,
-    onDragStart: (_, mousemoveEvent) => {
+    onDragStart: (gestureInfo) => {
+      resolved = true;
+      _resolve(gestureInfo);
       dragGesture.release(); // kill that gesture
-      _resolve(mousemoveEvent);
     },
-    onRelease: () => {
-      // won't happen, what do we do?
+    onRelease: (gestureInfo) => {
+      if (!resolved) {
+        _resolve(gestureInfo);
+      }
     },
   });
   const dragGesture = dragGestureController.grabViaMouse(mousedownEvent, {
@@ -159,6 +163,7 @@ export const createDragGestureController = (options = {}) => {
 
   const grab = (
     element,
+    event = new CustomEvent("programmatic"),
     {
       xAtStart = 0,
       yAtStart = 0,
@@ -166,7 +171,6 @@ export const createDragGestureController = (options = {}) => {
       elementVisuallyImpacted = elementToImpact,
       direction = defaultDirection,
       cursor = "grabbing",
-      interactionType,
     } = {},
   ) => {
     if (!direction.x && !direction.y) {
@@ -304,7 +308,6 @@ export const createDragGestureController = (options = {}) => {
       topAtStart,
       scrollLeftAtStart,
       scrollTopAtStart,
-      interactionTypeAtStart: interactionType,
       visualOffsetX,
       visualOffsetY,
       isStickyLeftOrHasStickyLeftAttr,
@@ -318,7 +321,6 @@ export const createDragGestureController = (options = {}) => {
       yMouseMove: 0, // Movement caused by mouse drag
       xChanged: false,
       yChanged: false,
-      interactionType,
 
       isGoingUp: undefined,
       isGoingDown: undefined,
@@ -333,6 +335,13 @@ export const createDragGestureController = (options = {}) => {
       // they won't trigger auto-scroll and sticky obstacles can collide independently of the scroll
       hasCrossedVisibleAreaLeftOnce: false,
       hasCrossedVisibleAreaTopOnce: false,
+
+      interactionType: event.type,
+      started: !threshold,
+      status: "grabbed",
+      grabEvent: event,
+      dragEvent: null,
+      releaseEvent: null,
     };
     definePropertyAsReadOnly(gestureInfo, "direction");
     definePropertyAsReadOnly(gestureInfo, "xAtStart");
@@ -341,11 +350,9 @@ export const createDragGestureController = (options = {}) => {
     definePropertyAsReadOnly(gestureInfo, "topAtStart");
     definePropertyAsReadOnly(gestureInfo, "scrollLeftAtStart");
     definePropertyAsReadOnly(gestureInfo, "scrollTopAtStart");
-    definePropertyAsReadOnly(gestureInfo, "interactionTypeAtStart");
     definePropertyAsReadOnly(gestureInfo, "visualOffsetX");
     definePropertyAsReadOnly(gestureInfo, "visualOffsetY");
     let previousGestureInfo = null;
-    let started = !threshold;
 
     // Set up backdrop
     if (backdrop) {
@@ -554,8 +561,10 @@ export const createDragGestureController = (options = {}) => {
     const determineDragData = (
       currentXRelative,
       currentYRelative,
-      { isRelease = false, interactionType },
+      dragEvent,
+      { isRelease = false },
     ) => {
+      const interactionType = event.type;
       const previousX = gestureInfo.x;
       const previousY = gestureInfo.y;
       const x = currentXRelative;
@@ -718,35 +727,37 @@ export const createDragGestureController = (options = {}) => {
         isGoingUp,
         isGoingDown,
         visibleArea,
-        interactionType,
 
         elementVisuallyImpactedWidth: currentRect.width,
         elementVisuallyImpactedHeight: currentRect.height,
+
+        status: isRelease ? "released" : "dragging",
+        interactionType,
+        dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
+        releaseEvent: isRelease ? dragEvent : null,
       };
 
       if (isRelease) {
-        if (!started) {
-          return null;
-        }
         return dragData;
       }
-      if (!started && threshold) {
+      if (!gestureInfo.started && threshold) {
         const deltaX = Math.abs(finalXMove);
         const deltaY = Math.abs(finalYMove);
         if (direction.x && direction.y) {
           // Both directions: check both axes
           if (deltaX < threshold && deltaY < threshold) {
-            return null;
+            return dragData;
           }
         } else if (direction.x) {
           if (deltaX < threshold) {
-            return null;
+            return dragData;
           }
         } else if (direction.y) {
           if (deltaY < threshold) {
-            return null;
+            return dragData;
           }
         }
+        dragData.started = true;
       }
       return dragData;
     };
@@ -754,30 +765,20 @@ export const createDragGestureController = (options = {}) => {
     const drag = (
       currentXRelative,
       currentYRelative,
-      {
-        isRelease = false,
-        interactionType = "programmatic", // "mousemove", "scroll", "programmatic"
-        mousemoveEvent = null,
-      } = {},
+      event = new CustomEvent("programmatic"),
+      { isRelease = false } = {},
     ) => {
-      const dragData = determineDragData(currentXRelative, currentYRelative, {
-        isRelease,
-        interactionType,
-      });
+      const dragData = determineDragData(
+        currentXRelative,
+        currentYRelative,
+        event,
+        { isRelease },
+      );
 
-      if (!dragData) {
-        if (constraintFeedbackLine) {
-          constraintFeedbackLine.onDrag(gestureInfo, mousemoveEvent);
-        }
-        return;
-      }
       // Only update previousGestureInfo if it's not a release
       if (!isRelease) {
         previousGestureInfo = { ...gestureInfo };
       }
-
-      Object.assign(gestureInfo, dragData);
-
       // Calculate xChanged/yChanged based on previous gesture info
       const xChanged = previousGestureInfo
         ? dragData.xMove !== previousGestureInfo.xMove
@@ -786,6 +787,7 @@ export const createDragGestureController = (options = {}) => {
         ? dragData.yMove !== previousGestureInfo.yMove
         : true;
       Object.assign(gestureInfo, { xChanged, yChanged });
+      Object.assign(gestureInfo, dragData);
       const someChange = xChanged || yChanged;
       if (someChange) {
         lifecycle?.drag?.(gestureInfo, {
@@ -793,29 +795,22 @@ export const createDragGestureController = (options = {}) => {
           direction,
         });
       }
-      if (constraintFeedbackLine) {
-        constraintFeedbackLine.onDrag(gestureInfo, mousemoveEvent);
-      }
+      constraintFeedbackLine?.onDrag(gestureInfo);
       if (isRelease) {
-        onDrag?.(gestureInfo, "end");
-      } else if (!started) {
-        started = true;
-        onDragStart?.(gestureInfo, mousemoveEvent);
-        onDrag?.(gestureInfo, "start");
+        onDrag?.(gestureInfo);
+      } else if (!previousGestureInfo.started) {
+        onDragStart?.(gestureInfo);
+        onDrag?.(gestureInfo);
       } else {
-        onDrag?.(gestureInfo, "middle");
+        onDrag?.(gestureInfo);
       }
     };
 
-    const release = ({
-      xAtRelease = gestureInfo.x,
-      yAtRelease = gestureInfo.y,
-      interactionType = "programmatic",
-    } = {}) => {
-      drag(xAtRelease, yAtRelease, {
-        isRelease: true,
-        interactionType,
-      });
+    const release = (
+      event = new CustomEvent("programmatic"),
+      { xAtRelease = gestureInfo.x, yAtRelease = gestureInfo.y } = {},
+    ) => {
+      drag(xAtRelease, yAtRelease, event, { isRelease: true });
       teardown();
       onRelease?.(gestureInfo);
     };
@@ -847,27 +842,22 @@ export const createDragGestureController = (options = {}) => {
     };
 
     const [xAtStart, yAtStart] = mouseEventCoords(mouseEvent);
-    const dragGesture = grab(element, {
+    const dragGesture = grab(element, mouseEvent, {
       xAtStart,
       yAtStart,
-      interactionType: mouseEvent.type,
       ...options,
     });
 
     const dragViaMouse = (mousemoveEvent) => {
       const [x, y] = mouseEventCoords(mousemoveEvent);
-      dragGesture.drag(x, y, {
-        interactionType: mouseEvent.type,
-        mousemoveEvent,
-      });
+      dragGesture.drag(x, y, mousemoveEvent);
     };
 
     const releaseViaMouse = (mouseupEvent) => {
       const [x, y] = mouseEventCoords(mouseupEvent);
-      dragGesture.release({
+      dragGesture.release(mouseEvent, {
         x,
         y,
-        interactionType: mouseEvent.type,
       });
     };
     document.addEventListener("mousemove", dragViaMouse);
