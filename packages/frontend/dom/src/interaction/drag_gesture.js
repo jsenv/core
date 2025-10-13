@@ -644,25 +644,11 @@ export const createDragGestureController = (options = {}) => {
       { isRelease = false },
     ) => {
       const interactionType = event.type;
-      const x = xDocument;
-      const y = yDocument;
-      const xMove = xDocument - gestureInfo.x;
-      const yMove = yDocument - gestureInfo.y;
-
-      // Calculate direction based on where the element is trying to move (relative to previous position)
-      const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
-      const previousYMove = previousGestureInfo ? previousGestureInfo.yMove : 0;
-
-      const isGoingLeft = xMove < previousXMove;
-      const isGoingRight = xMove > previousXMove;
-      const isGoingUp = yMove < previousYMove;
-      const isGoingDown = yMove > previousYMove;
 
       // Get current element dimensions for dynamic constraint calculation
       const currentRect = elementVisuallyImpacted.getBoundingClientRect();
       const availableWidth = scrollContainer.clientWidth;
       const availableHeight = scrollContainer.clientHeight;
-
       // Calculate base visible area in document-relative coordinates
       // Convert everything to document-relative coords for consistency
       const borderSizes = getBorderSizes(scrollContainer);
@@ -713,7 +699,6 @@ export const createDragGestureController = (options = {}) => {
       } else {
         visibleArea = visibleAreaBase;
       }
-
       // Apply visible area padding (reduce the visible area by the padding amount)
       if (visibleAreaPadding > 0) {
         visibleArea = {
@@ -724,29 +709,40 @@ export const createDragGestureController = (options = {}) => {
         };
       }
 
-      const elementLeftRelative = leftAtStart + gestureInfo.xMove;
-      const elementLeft = elementLeftRelative;
-      const elementTopRelative = topAtStart + gestureInfo.yMove;
-      const elementTop = elementTopRelative;
-      if (
-        !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
-        elementLeft >= visibleArea.left
-      ) {
-        gestureInfo.hasCrossedVisibleAreaLeftOnce = true;
-      }
-      if (
-        !gestureInfo.hasCrossedVisibleAreaTopOnce &&
-        elementTop >= visibleArea.top
-      ) {
-        gestureInfo.hasCrossedVisibleAreaTopOnce = true;
-      }
-
       const constraints = prepareConstraints(constraintFunctions, {
         name,
         elementWidth: currentRect.width,
         elementHeight: currentRect.height,
         visibleArea,
       });
+
+      const [xDocumentConstrained, yDocumentConstrained] = applyConstraints(
+        constraints,
+        xDocument,
+        yDocument,
+        {
+          gestureInfo,
+          elementWidth: currentRect.width,
+          elementHeight: currentRect.height,
+          direction,
+          interactionType,
+        },
+      );
+
+      const x = xDocument;
+      const y = yDocument;
+      const xMoveRaw = xDocument - gestureInfo.xAtStart;
+      const yMoveRaw = yDocument - gestureInfo.yAtStart;
+      // Calculate constrained xMove/yMove based on constrained document coordinates
+      const xMoveConstrained = xDocumentConstrained - gestureInfo.x;
+      const yMoveConstrained = yDocumentConstrained - gestureInfo.y;
+      // Calculate direction based on where the element is trying to move (relative to previous position)
+      const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
+      const previousYMove = previousGestureInfo ? previousGestureInfo.yMove : 0;
+      const isGoingLeft = xMoveRaw < previousXMove;
+      const isGoingRight = xMoveRaw > previousXMove;
+      const isGoingUp = yMoveRaw < previousYMove;
+      const isGoingDown = yMoveRaw > previousYMove;
 
       visualMarkers.onDrag({
         constraints,
@@ -755,21 +751,11 @@ export const createDragGestureController = (options = {}) => {
         elementHeight: currentRect.height,
       });
 
-      const [finalXMove, finalYMove] = applyConstraints(constraints, {
-        gestureInfo,
-        xMove,
-        yMove,
-        elementWidth: currentRect.width,
-        elementHeight: currentRect.height,
-        direction,
-        interactionType,
-      });
-
       const dragData = {
         x,
         y,
-        xMove: finalXMove,
-        yMove: finalYMove,
+        xMove: xMoveConstrained,
+        yMove: yMoveConstrained,
         isGoingLeft,
         isGoingRight,
         isGoingUp,
@@ -784,13 +770,29 @@ export const createDragGestureController = (options = {}) => {
         dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
         releaseEvent: isRelease ? dragEvent : null,
       };
+      const elementLeftRelative = leftAtStart + gestureInfo.xMove;
+      const elementLeft = elementLeftRelative;
+      const elementTopRelative = topAtStart + gestureInfo.yMove;
+      const elementTop = elementTopRelative;
+      if (
+        !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
+        elementLeft >= visibleArea.left
+      ) {
+        dragData.hasCrossedVisibleAreaLeftOnce = true;
+      }
+      if (
+        !gestureInfo.hasCrossedVisibleAreaTopOnce &&
+        elementTop >= visibleArea.top
+      ) {
+        dragData.hasCrossedVisibleAreaTopOnce = true;
+      }
 
       if (isRelease) {
         return dragData;
       }
       if (!gestureInfo.started && threshold) {
-        const deltaX = Math.abs(finalXMove);
-        const deltaY = Math.abs(finalYMove);
+        const deltaX = Math.abs(xMoveRaw);
+        const deltaY = Math.abs(yMoveRaw);
         if (direction.x && direction.y) {
           // Both directions: check both axes
           if (deltaX < threshold && deltaY < threshold) {
