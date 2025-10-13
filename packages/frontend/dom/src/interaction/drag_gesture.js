@@ -490,8 +490,6 @@ export const createDragGestureController = (options = {}) => {
         return createBoundConstraint(
           { left, top, right, bottom },
           {
-            leftAtStart,
-            topAtStart,
             element: scrollContainer,
             name: "scroll_area",
           },
@@ -542,8 +540,6 @@ export const createDragGestureController = (options = {}) => {
           };
         }
         return createBoundConstraint(bounds, {
-          leftAtStart,
-          topAtStart,
           element: visibleConstraintElement,
           name: "visible_area_constraint",
         });
@@ -554,8 +550,6 @@ export const createDragGestureController = (options = {}) => {
     if (customAreaConstraint) {
       const customAreaConstraintFunction = () => {
         return createBoundConstraint(customAreaConstraint, {
-          leftAtStart,
-          topAtStart,
           element: scrollContainer,
           name: "custom_area",
         });
@@ -734,8 +728,8 @@ export const createDragGestureController = (options = {}) => {
       const xMoveRaw = xDocument - gestureInfo.xAtStart;
       const yMoveRaw = yDocument - gestureInfo.yAtStart;
       // Calculate constrained xMove/yMove based on constrained document coordinates
-      const xMoveConstrained = xDocumentConstrained - gestureInfo.x;
-      const yMoveConstrained = yDocumentConstrained - gestureInfo.y;
+      const xMoveConstrained = xDocumentConstrained - gestureInfo.xAtStart;
+      const yMoveConstrained = yDocumentConstrained - gestureInfo.yAtStart;
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
       const previousYMove = previousGestureInfo ? previousGestureInfo.yMove : 0;
@@ -770,9 +764,9 @@ export const createDragGestureController = (options = {}) => {
         dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
         releaseEvent: isRelease ? dragEvent : null,
       };
-      const elementLeftRelative = leftAtStart + gestureInfo.xMove;
+      const elementLeftRelative = leftAtStart + xMoveConstrained;
       const elementLeft = elementLeftRelative;
-      const elementTopRelative = topAtStart + gestureInfo.yMove;
+      const elementTopRelative = topAtStart + yMoveConstrained;
       const elementTop = elementTopRelative;
       if (
         !gestureInfo.hasCrossedVisibleAreaLeftOnce &&

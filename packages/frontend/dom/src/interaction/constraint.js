@@ -1,52 +1,33 @@
 const CONSOLE_DEBUG_CONSTRAINTS = false;
 
-export const createBoundConstraint = (
-  bounds,
-  { leftAtStart, topAtStart, element, name } = {},
-) => {
-  const { left, top, right, bottom } = bounds;
+export const createBoundConstraint = (bounds, { element, name } = {}) => {
+  const leftBound = bounds.left;
+  const rightBound = bounds.right;
+  const topBound = bounds.top;
+  const bottomBound = bounds.bottom;
 
-  if (name === "scroll_area") {
-    console.log(
-      `Bounds constraint ${name}: left=${left}, right=${right}, leftAtStart=${leftAtStart}`,
-    );
-  }
-
-  const apply = (xMove, yMove, { elementWidth, elementHeight }) => {
+  const apply = (x, y, { elementWidth, elementHeight }) => {
     // Calculate actual positions where element would end up
-    const proposedLeft = leftAtStart + xMove;
-    const proposedTop = topAtStart + yMove;
-    const proposedRight = proposedLeft + elementWidth;
-    const proposedBottom = proposedTop + elementHeight;
-
-    // Apply bounds constraints to actual positions
-    let constrainedLeft = proposedLeft;
-    let constrainedTop = proposedTop;
-    let constrainedRight = proposedRight;
-    let constrainedBottom = proposedBottom;
-
-    if (left !== undefined && proposedLeft < left) {
-      constrainedLeft = left;
-      constrainedRight = constrainedLeft + elementWidth;
+    const left = x;
+    const top = y;
+    const right = x + elementWidth;
+    const bottom = y + elementHeight;
+    let xConstrained = x;
+    let yConstrained = y;
+    if (leftBound !== undefined && left < leftBound) {
+      xConstrained = leftBound;
     }
-    if (right !== undefined && proposedRight > right) {
-      constrainedRight = right;
-      constrainedLeft = constrainedRight - elementWidth;
+    if (rightBound !== undefined && right > rightBound) {
+      xConstrained = rightBound;
     }
-    if (top !== undefined && proposedTop < top) {
-      constrainedTop = top;
-      constrainedBottom = constrainedTop + elementHeight;
+    if (topBound !== undefined && top < topBound) {
+      yConstrained = topBound;
     }
-    if (bottom !== undefined && proposedBottom > bottom) {
-      constrainedBottom = bottom;
-      constrainedTop = constrainedBottom - elementHeight;
+    if (bottomBound !== undefined && bottom > bottomBound) {
+      yConstrained = bottomBound;
     }
 
-    // Convert back to movement deltas
-    const constrainedXMove = constrainedLeft - leftAtStart;
-    const constrainedYMove = constrainedTop - topAtStart;
-
-    return [constrainedXMove, constrainedYMove];
+    return [xConstrained, yConstrained];
   };
 
   return {
@@ -59,50 +40,56 @@ export const createBoundConstraint = (
 };
 
 export const createObstacleContraint = (bounds, { element, name }) => {
-  const { left, top, right, bottom } = bounds;
-  const leftBound = roundForConstraints(left);
-  const rightBound = roundForConstraints(right);
-  const topBound = roundForConstraints(top);
-  const bottomBound = roundForConstraints(bottom);
+  const leftBound = bounds.left;
+  const rightBound = bounds.right;
+  const topBound = bounds.top;
+  const bottomBound = bounds.bottom;
+  const leftBoundRounded = roundForConstraints(leftBound);
+  const rightBoundRounded = roundForConstraints(rightBound);
+  const topBoundRounded = roundForConstraints(topBound);
+  const bottomBoundRounded = roundForConstraints(bottomBound);
 
   const apply = (x, y, { elementWidth, elementHeight }) => {
-    // Determine current position relative to obstacle (WITHOUT movement)
-    const currentLeft = roundForConstraints(x);
-    const currentRight = roundForConstraints(x + elementWidth);
-    const currentTop = roundForConstraints(y);
-    const currentBottom = roundForConstraints(y + elementHeight);
-    const isOnTheLeft = currentRight <= leftBound;
-    const isOnTheRight = currentLeft >= rightBound;
-    const isAbove = currentBottom <= topBound;
-    const isBelow = currentTop >= bottomBound;
-
-    // Debug logging to understand element position
-    if (CONSOLE_DEBUG_CONSTRAINTS) {
-      console.log(
-        `Element position relative to obstacle: left=${isOnTheLeft}, right=${isOnTheRight}, above=${isAbove}, below=${isBelow}`,
-      );
-      console.log(
-        `Element: currentRight=${currentRight}, currentBottom=${currentBottom}`,
-      );
-      console.log(
-        `Obstacle: leftBound=${leftBound}, rightBound=${rightBound}, topBound=${topBound}, bottomBound=${bottomBound}`,
-      );
-    }
-
     const left = x;
     const top = y;
-    const right = x + elementWidth;
-    const bottom = y + elementHeight;
+    const right = left + elementWidth;
+    const bottom = top + elementHeight;
+
+    // Determine current position relative to obstacle
+    let isOnTheLeft;
+    let isOnTheRight;
+    let isAbove;
+    let isBelow;
+    {
+      const leftRounded = roundForConstraints(x);
+      const rightRounded = roundForConstraints(x + elementWidth);
+      const topRounded = roundForConstraints(y);
+      const bottomRounded = roundForConstraints(y + elementHeight);
+      isOnTheLeft = rightRounded <= leftBoundRounded;
+      isOnTheRight = leftRounded >= rightBoundRounded;
+      isAbove = bottomRounded <= topBoundRounded;
+      isBelow = topRounded >= bottomBoundRounded;
+      // Debug logging to understand element position
+      if (CONSOLE_DEBUG_CONSTRAINTS) {
+        console.log(
+          `Element position relative to obstacle: left=${isOnTheLeft}, right=${isOnTheRight}, above=${isAbove}, below=${isBelow}`,
+        );
+        console.log(
+          `Element: left=${left}, right=${right}, top=${top}, bottom=${bottom}`,
+        );
+        console.log(
+          `Obstacle: leftBound=${leftBound}, rightBound=${rightBound}, topBound=${topBound}, bottomBound=${bottomBound}`,
+        );
+      }
+    }
 
     // Simple collision detection: check where element is and prevent movement into obstacle
-
     // If element is on the left, apply X constraint to prevent moving right into obstacle
     if (isOnTheLeft) {
       // Only apply constraint if there would be Y overlap (element would collide)
-
       const wouldHaveYOverlap = top < bottomBound && bottom > topBound;
       if (wouldHaveYOverlap) {
-        const maxAllowedX = leftBound - elementWidth - leftAtStart;
+        const maxAllowedX = leftBound - elementWidth;
         if (x > maxAllowedX) {
           return [maxAllowedX, y];
         }
@@ -114,7 +101,7 @@ export const createObstacleContraint = (bounds, { element, name }) => {
       const wouldHaveYOverlap = top < bottomBound && bottom > topBound;
 
       if (wouldHaveYOverlap) {
-        const minAllowedX = rightBound - leftAtStart;
+        const minAllowedX = rightBound;
         if (x < minAllowedX) {
           return [minAllowedX, y];
         }
@@ -123,11 +110,10 @@ export const createObstacleContraint = (bounds, { element, name }) => {
     // If element is above, apply Y constraint to prevent moving down into obstacle
     else if (isAbove) {
       // Only apply constraint if there would be X overlap (element would collide)
-
       const wouldHaveXOverlap = left < rightBound && right > leftBound;
 
       if (wouldHaveXOverlap) {
-        const maxAllowedY = topBound - elementHeight - topAtStart;
+        const maxAllowedY = topBound - elementHeight;
         if (y > maxAllowedY) {
           return [x, maxAllowedY];
         }
@@ -136,18 +122,15 @@ export const createObstacleContraint = (bounds, { element, name }) => {
     // If element is below, apply Y constraint to prevent moving up into obstacle
     else if (isBelow) {
       // Only apply constraint if there would be X overlap (element would collide)
-
       const wouldHaveXOverlap = left < rightBound && right > leftBound;
 
       if (wouldHaveXOverlap) {
-        const minAllowedYMove = bottomBound - topAtStart;
-        if (y < minAllowedYMove) {
-          return [x, minAllowedYMove];
+        const minAllowedY = bottomBound;
+        if (y < minAllowedY) {
+          return [x, minAllowedY];
         }
       }
     }
-
-    // Only apply overlap case if no directional constraint was applied
 
     // Element is overlapping with obstacle - push it out in the direction of least resistance
     // Calculate distances to push element out in each direction
@@ -162,28 +145,27 @@ export const createObstacleContraint = (bounds, { element, name }) => {
       distanceToTop,
       distanceToBottom,
     );
-
     if (minDistance === distanceToLeft) {
       // Push left: element should not go past leftBound - elementWidth
-      const maxAllowedX = leftBound - elementWidth - leftAtStart;
+      const maxAllowedX = leftBound - elementWidth;
       if (x > maxAllowedX) {
         return [maxAllowedX, y];
       }
     } else if (minDistance === distanceToRight) {
       // Push right: element should not go before rightBound
-      const minAllowedX = rightBound - leftAtStart;
+      const minAllowedX = rightBound;
       if (x < minAllowedX) {
         return [minAllowedX, y];
       }
     } else if (minDistance === distanceToTop) {
       // Push up: element should not go past topBound - elementHeight
-      const maxAllowedY = topBound - elementHeight - topAtStart;
+      const maxAllowedY = topBound - elementHeight;
       if (y > maxAllowedY) {
         return [x, maxAllowedY];
       }
     } else if (minDistance === distanceToBottom) {
       // Push down: element should not go before bottomBound
-      const minAllowedY = bottomBound - topAtStart;
+      const minAllowedY = bottomBound;
       if (y < minAllowedY) {
         return [x, minAllowedY];
       }
