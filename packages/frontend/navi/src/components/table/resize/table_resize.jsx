@@ -123,7 +123,7 @@ import.meta.css = /* css */ `
     left: 0;
     right: 0;
     height: 10px;
-    top: 0;
+    top: var(--table-cell-bottom);
     opacity: 0;
   }
   .navi_table_row_resize_handle {
@@ -294,18 +294,12 @@ const updateTableColumnResizerPosition = (columnCell, columnResizer) => {
     // while resizing (would move the resizer on other columns)
     return;
   }
-  // Use offset properties for position relative to table (ignores scrolls)
-  const table = columnCell.closest(".navi_table");
-  const tableRect = table.getBoundingClientRect();
   const columnCellRect = columnCell.getBoundingClientRect();
-  const columnCellLeft = columnCellRect.left;
-  const columnCellLeftRelative = columnCellLeft - tableRect.left;
-  const scrollableParent = getScrollableParent(table);
-  let cellLeft = columnCellLeftRelative;
-  if (scrollableParent !== document.documentElement) {
-    cellLeft -= scrollableParent.scrollLeft;
-  }
-  const cellRight = cellLeft + columnCellRect.width;
+  const columnResizerParent = columnResizer.parentElement; // Should be navi_table_ui_container
+  const columnResizerParentRect = columnResizerParent.getBoundingClientRect();
+
+  // Calculate cell position relative to columnResizer's parent
+  const cellRight = columnCellRect.right - columnResizerParentRect.left;
   const cellHeight = columnCellRect.height;
   columnResizer.style.setProperty("--table-cell-right", `${cellRight}px`);
   columnResizer.style.setProperty("--table-cell-height", `${cellHeight}px`);
@@ -613,18 +607,16 @@ const updateTableRowResizerPosition = (rowCell, rowResizer) => {
     // while resizing (would move the resizer on other rows)
     return;
   }
-  const tableRowCellRect = rowCell.getBoundingClientRect();
-  const tableContainer = rowCell.closest(".navi_table_container");
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  const tableRowTopRelative = tableRowCellRect.top - tableContainerRect.top;
-  const tableRowCellWidth = tableRowCellRect.width;
-  const tableRowCellHeight = tableRowCellRect.height;
-  const tableRowRelativeBottom = tableRowTopRelative + tableRowCellHeight;
-  rowResizer.style.setProperty(
-    "--table-cell-bottom",
-    `${tableRowRelativeBottom}px`,
-  );
-  rowResizer.style.setProperty("--table-cell-width", `${tableRowCellWidth}px`);
+  // Position relative to rowResizer's parent (navi_table_ui_container)
+  const rowCellRect = rowCell.getBoundingClientRect();
+  const rowResizerParent = rowResizer.parentElement; // Should be navi_table_ui_container
+  const rowResizerParentRect = rowResizerParent.getBoundingClientRect();
+
+  // Calculate cell position relative to rowResizer's parent
+  const cellBottom = rowCellRect.bottom - rowResizerParentRect.top;
+  const cellWidth = rowCellRect.width;
+  rowResizer.style.setProperty("--table-cell-bottom", `${cellBottom}px`);
+  rowResizer.style.setProperty("--table-cell-width", `${cellWidth}px`);
   rowResizer.setAttribute("data-hover", "");
 };
 const onMouseEnterTopResizeHandle = (e, rowResize) => {
