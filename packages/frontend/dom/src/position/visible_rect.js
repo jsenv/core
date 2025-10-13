@@ -1,6 +1,8 @@
 import { createPubSub } from "../pub_sub.js";
 import { getScrollableParent } from "../scroll/parent_scroll.js";
 
+const DEBUG = false;
+
 // Creates a visible rect effect that tracks how much of an element is visible within its scrollable parent
 // and within the document viewport. This is useful for implementing overlays, lazy loading, or any UI
 // that needs to react to element visibility changes.
@@ -21,7 +23,9 @@ export const visibleRectEffect = (element, update) => {
   let lastMeasuredWidth;
   let lastMeasuredHeight;
   const check = (reason) => {
-    console.group(`visibleRect.check("${reason}")`);
+    if (DEBUG) {
+      console.group(`visibleRect.check("${reason}")`);
+    }
 
     // 1. Calculate element position relative to scrollable parent
     const { scrollLeft, scrollTop } = scrollableParent;
@@ -147,8 +151,10 @@ export const visibleRectEffect = (element, update) => {
       scrollVisibilityRatio,
     };
 
-    console.log(`update(${JSON.stringify(visibleRect, null, "  ")})`);
-    console.groupEnd();
+    if (DEBUG) {
+      console.log(`update(${JSON.stringify(visibleRect, null, "  ")})`);
+      console.groupEnd();
+    }
     update(visibleRect, {
       width,
       height,
