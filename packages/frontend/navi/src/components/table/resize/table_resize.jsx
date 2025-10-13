@@ -294,21 +294,9 @@ const updateTableColumnResizerPosition = (columnCell, columnResizer) => {
     // while resizing (would move the resizer on other columns)
     return;
   }
-  const tableCellRect = columnCell.getBoundingClientRect();
-  const tableContainer = columnCell.closest(".navi_table_container");
-  const tableContainerRect = tableContainer.getBoundingClientRect();
-  const tableCellLeftRelative = tableCellRect.left - tableContainerRect.left;
-  const tableCellHeight = tableCellRect.height;
-  const tableCellWidth = tableCellRect.width;
-  const tableCellRelativeRight = tableCellLeftRelative + tableCellWidth;
-  columnResizer.style.setProperty(
-    "--table-cell-right",
-    `${tableCellRelativeRight}px`,
-  );
-  columnResizer.style.setProperty(
-    "--table-cell-height",
-    `${tableCellHeight}px`,
-  );
+  const { right, height } = getElementScrollableRect(columnCell);
+  columnResizer.style.setProperty("--table-cell-right", `${right}px`);
+  columnResizer.style.setProperty("--table-cell-height", `${height}px`);
   columnResizer.setAttribute("data-hover", "");
 };
 const onMouseEnterLeftResizeHandle = (e, columnResizer) => {

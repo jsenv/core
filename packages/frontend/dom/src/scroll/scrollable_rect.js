@@ -4,7 +4,7 @@ const { documentElement } = document;
 
 export const getElementScrollableRect = (
   element,
-  scrollableParent,
+  scrollableParent = getScrollableParent(element),
   { useOriginalPositionEvenIfSticky = false } = {},
 ) => {
   const { left, top, width, height } = element.getBoundingClientRect();
