@@ -3,12 +3,14 @@ import {
   getElementScrollableRect,
   getScrollableParent,
 } from "@jsenv/dom";
+import { forwardRef } from "preact/compat";
+import { useContext } from "preact/hooks";
 
 import {
   Z_INDEX_RESIZER_BACKDROP,
   Z_INDEX_RESIZER_HANDLE,
 } from "../z_indexes.js";
-import { useTableSize } from "./table_size.js";
+import { TableSizeContext } from "./table_size.js";
 
 const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
@@ -63,11 +65,10 @@ import.meta.css = /* css */ `
   .navi_table_column_resizer {
     pointer-events: none;
     position: absolute;
-    z-index: 1000000;
-    top: var(--table-scroll-top, 0);
+    top: 0;
     bottom: 0;
     width: 10px;
-    left: var(--table-cell-right, 0);
+    left: 0;
     opacity: 0;
   }
   .navi_table_column_resize_handle {
@@ -119,11 +120,10 @@ import.meta.css = /* css */ `
   .navi_table_row_resizer {
     pointer-events: none;
     position: absolute;
-    z-index: 1000000;
-    left: var(--table-scroll-left, 0);
+    left: 0;
     right: 0;
     height: 10px;
-    top: var(--table-cell-bottom, 0);
+    top: 0;
     opacity: 0;
   }
   .navi_table_row_resize_handle {
@@ -174,9 +174,9 @@ import.meta.css = /* css */ `
 `;
 
 // Column resize components
-export const TableColumnResizer = () => {
+export const TableColumnResizer = forwardRef((ref) => {
   return (
-    <div className="navi_table_column_resizer">
+    <div ref={ref} className="navi_table_column_resizer">
       <div className="navi_table_column_resize_handle_container">
         <div className="navi_table_column_resize_handle" data-left=""></div>
         <div className="navi_table_column_resize_handle" data-right=""></div>
@@ -184,13 +184,13 @@ export const TableColumnResizer = () => {
       <div className="navi_table_column_resizer_line"></div>
     </div>
   );
-};
+});
 export const TableCellColumnResizeHandles = ({
   columnIndex,
   columnMinWidth,
   columnMaxWidth,
 }) => {
-  const { onColumnSizeChange } = useTableSize();
+  const { onColumnSizeChange } = useContext(TableSizeContext);
   const canResize = Boolean(onColumnSizeChange);
 
   return (
@@ -524,7 +524,7 @@ export const TableCellRowResizeHandles = ({
   rowMinHeight,
   rowMaxHeight,
 }) => {
-  const { onRowSizeChange } = useTableSize();
+  const { onRowSizeChange } = useContext(TableSizeContext);
   const canResize = Boolean(onRowSizeChange);
 
   return (

@@ -72,9 +72,11 @@ import {
 import {
   TableCellColumnResizeHandles,
   TableCellRowResizeHandles,
+  TableColumnResizer,
+  TableRowResizer,
 } from "./resize/table_resize.jsx";
 import {
-  TableSizeProvider,
+  TableSizeContext,
   useTableSizeContextValue,
 } from "./resize/table_size.js";
 import {
@@ -203,11 +205,15 @@ export const Table = forwardRef((props, ref) => {
   ]);
 
   // resizing
+  const columnResizerRef = useRef();
+  const rowResizerRef = useRef();
   const tableSizeContextValue = useTableSizeContextValue({
     onColumnSizeChange,
     onRowSizeChange,
     columns,
     rows,
+    columnResizerRef,
+    rowResizerRef,
   });
 
   const tableRootRef = useRef();
@@ -244,7 +250,7 @@ export const Table = forwardRef((props, ref) => {
           data-multiselection={selection.length > 1 ? "" : undefined}
           data-border-collapse={borderCollapse ? "" : undefined}
         >
-          <TableSizeProvider value={tableSizeContextValue}>
+          <TableSizeContext.Provider value={tableSizeContextValue}>
             <TableSelectionContext.Provider value={selectionContextValue}>
               <TableDragContext.Provider value={dragContextValue}>
                 <TableStickyContext.Provider value={stickyContextValue}>
@@ -260,12 +266,14 @@ export const Table = forwardRef((props, ref) => {
                 </TableStickyContext.Provider>
               </TableDragContext.Provider>
             </TableSelectionContext.Provider>
-          </TableSizeProvider>
+          </TableSizeContext.Provider>
         </table>
         <TableUI ref={tableUIRef} tableRef={innerRef}>
           <TableStickyContext.Provider value={stickyContextValue}>
             <TableStickyFrontier tableRef={innerRef} />
           </TableStickyContext.Provider>
+          <TableColumnResizer ref={columnResizerRef} />
+          <TableRowResizer ref={rowResizerRef} />
         </TableUI>
       </div>
     </div>
