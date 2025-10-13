@@ -87,13 +87,15 @@ const canApplyScrollDelta = (element, delta, axis) => {
   let scrollEnd = axis === "x" ? scrollWidth : scrollHeight;
 
   if (size === scrollEnd) {
+    // when scrollWidth === clientWidth, there is no scroll to apply
     return false;
   }
-  if (delta > 0) {
-    if (currentScroll >= scrollEnd) {
-      return false;
-    }
-  } else if (currentScroll <= 0) {
+  if (delta < 0 && currentScroll <= 0) {
+    // when scrollLeft is 0, we can't scroll to the left
+    return false;
+  }
+  if (delta > 0 && currentScroll >= scrollEnd) {
+    // when scrollLeft + size >= scrollWidth, we can't scroll to the right
     return false;
   }
   return true;
