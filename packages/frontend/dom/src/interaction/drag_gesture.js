@@ -476,10 +476,11 @@ export const createDragGestureController = (options = {}) => {
         // When element dimensions exceed or equal scroll dimensions due to precision differences,
         // we cap the constraint bounds to prevent negative positioning that would push elements
         // outside their intended scrollable area.
-        const left = 0;
+        const elementDocumentRect = getElementDocumentRect(scrollContainer);
+        const left = elementDocumentRect.left;
         const right =
           left + getRightBound(elementWidth, scrollContainer.scrollWidth);
-        const top = 0;
+        const top = elementDocumentRect.top;
         const bottom =
           top + getBottomBound(elementHeight, scrollContainer.scrollHeight);
         return createBoundConstraint(
