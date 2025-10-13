@@ -4,7 +4,7 @@ import { isDocumentElement } from "../utils.js";
 // note: keep in mind that an element with overflow: 'hidden' is scrollable
 // it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft
 // the only overflow that prevents scroll is "visible"
-export const isScrollable = (element, { includeHidden }) => {
+export const isScrollable = (element, { includeHidden } = {}) => {
   if (canHaveVerticalScroll(element, { includeHidden })) {
     return true;
   }

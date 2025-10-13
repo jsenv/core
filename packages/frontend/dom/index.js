@@ -51,6 +51,7 @@ export {
   stickyLeftToScrollableLeft,
   stickyTopToScrollableTop,
 } from "./src/scroll/scrollable_rect.js";
+export { allowWheelThrough } from "./src/scroll/wheel_through.js";
 
 // position
 export { getPositionedParent } from "./src/position/offset_parent.js";
