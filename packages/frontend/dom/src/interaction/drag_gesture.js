@@ -357,12 +357,6 @@ export const createDragGestureController = (options = {}) => {
       }
     }
 
-    // Convert initial coordinates to document space
-    const documentScrollLeft = documentElement.scrollLeft;
-    const documentScrollTop = documentElement.scrollTop;
-    const xAtStartDocument = xAtStart + documentScrollLeft;
-    const yAtStartDocument = yAtStart + documentScrollTop;
-
     const gestureInfo = {
       direction,
       element,
@@ -371,21 +365,21 @@ export const createDragGestureController = (options = {}) => {
       scrollContainer,
 
       // Store both viewport and document coordinates for reference
-      xAtStart: xAtStartDocument, // Document coordinates
-      yAtStart: yAtStartDocument, // Document coordinates
-      xAtStartViewport: xAtStart, // Viewport coordinates (for reference)
-      yAtStartViewport: yAtStart, // Viewport coordinates (for reference)
+      xAtStart, // Document coordinates (already converted)
+      yAtStart, // Document coordinates (already converted)
       leftAtStart, // Document coordinates (already converted)
       topAtStart, // Document coordinates (already converted)
       scrollLeftAtStart,
       scrollTopAtStart,
+      documentScrollLeftAtStart: documentElement.scrollLeft,
+      documentScrollTopAtStart: documentElement.scrollTop,
       visualOffsetX,
       visualOffsetY,
       isStickyLeftOrHasStickyLeftAttr,
       isStickyTopOrHasStickyTopAttr,
 
-      x: xAtStartDocument,
-      y: yAtStartDocument,
+      x: xAtStart, // Current position in document coordinates
+      y: yAtStart, // Current position in document coordinates
       xMove: 0,
       yMove: 0,
       xMouseMove: 0, // Movement caused by mouse drag
@@ -627,18 +621,18 @@ export const createDragGestureController = (options = {}) => {
     }
 
     const determineDragData = (
-      currentXDocument, // Document-relative coordinates
-      currentYDocument, // Document-relative coordinates
+      xDocument, // Document-relative coordinates
+      yDocument, // Document-relative coordinates
       dragEvent,
       { isRelease = false },
     ) => {
       const interactionType = event.type;
       const previousX = gestureInfo.x;
       const previousY = gestureInfo.y;
-      const x = currentXDocument;
-      const y = currentYDocument;
-      const xDiff = previousX - currentXDocument;
-      const yDiff = previousY - currentYDocument;
+      const x = xDocument;
+      const y = yDocument;
+      const xDiff = previousX - xDocument;
+      const yDiff = previousY - yDocument;
 
       // Calculate movement based on interaction type
       let xMouseMove;
@@ -668,14 +662,15 @@ export const createDragGestureController = (options = {}) => {
         // the calculation is straightforward
         xMove = x - gestureInfo.xAtStart;
         yMove = y - gestureInfo.yAtStart;
-
         // Calculate pure mouse movement in viewport coordinates (ignoring scroll changes)
-        const currentDocumentScrollLeft = documentElement.scrollLeft;
-        const currentDocumentScrollTop = documentElement.scrollTop;
-        const currentViewportX = x - currentDocumentScrollLeft;
-        const currentViewportY = y - currentDocumentScrollTop;
-        xMouseMove = currentViewportX - gestureInfo.xAtStartViewport;
-        yMouseMove = currentViewportY - gestureInfo.yAtStartViewport;
+        const xViewport = x - documentElement.scrollLeft;
+        const yViewport = y - documentElement.scrollTop;
+        const xAtStartViewport =
+          gestureInfo.xAtStart - gestureInfo.documentScrollLeftAtStart;
+        const yAtStartViewport =
+          gestureInfo.yAtStart - gestureInfo.documentScrollTopAtStart;
+        xMouseMove = xViewport - xAtStartViewport;
+        yMouseMove = yViewport - yAtStartViewport;
 
         console.log("[MOVEMENT CALCULATION DEBUG]", {
           currentDocument: { x, y },
