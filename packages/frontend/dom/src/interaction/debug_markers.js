@@ -114,12 +114,12 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
             name: "visibleAreaLeft",
             x: visibleArea.left,
             y: 0,
-            color: "0 0 255", // blue
+            color: "0 128 0", // green
             side: "left",
           });
           markersToCreate.push({
             name: "visibleAreaRight",
-            x: visibleArea.right,
+            x: visibleArea.right + elementWidth,
             y: 0,
             color: "0 128 0", // green
             side: "right",
@@ -136,7 +136,7 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
           markersToCreate.push({
             name: "visibleAreaBottom",
             x: 0,
-            y: visibleArea.bottom,
+            y: visibleArea.bottom + elementHeight,
             color: "255 165 0", // orange
             side: "bottom",
           });

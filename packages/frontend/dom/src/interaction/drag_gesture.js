@@ -534,12 +534,7 @@ export const createDragGestureController = (options = {}) => {
           elementWidth,
           elementHeight,
         );
-        console.log(
-          `Visible area constraint bounds: left=${bounds.left}, top=${bounds.top}, right=${bounds.right}, bottom=${bounds.bottom}`,
-        );
-        console.log(
-          `Element position: leftAtStart=${leftAtStart}, topAtStart=${topAtStart}`,
-        );
+
         return createBoundConstraint(bounds, {
           element: visibleConstraintElement,
           name: "visible_area_constraint",
@@ -647,6 +642,7 @@ export const createDragGestureController = (options = {}) => {
         currentRect.width,
         currentRect.height,
       );
+
       let visibleArea;
       if (stickyFrontiers) {
         visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
