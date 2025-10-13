@@ -965,11 +965,9 @@ export const createDragToMoveGestureController = (options) => {
 
         // Horizontal auto-scroll
         if (direction.x) {
-          const desiredElementLeftRelative = leftAtStart + gestureInfo.xMove;
-          const desiredElementLeft = desiredElementLeftRelative;
+          const desiredElementLeft = leftAtStart + gestureInfo.xMove;
           const desiredElementRight =
             desiredElementLeft + elementVisuallyImpactedWidth;
-
           console.log(
             `Auto-scroll debug: desiredElementLeft=${desiredElementLeft}, desiredElementRight=${desiredElementRight}, visibleArea.left=${visibleArea.left}, visibleArea.right=${visibleArea.right}, scrollContainer.scrollLeft=${scrollContainer.scrollLeft}`,
           );
