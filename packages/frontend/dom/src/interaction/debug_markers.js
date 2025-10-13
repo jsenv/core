@@ -29,19 +29,44 @@ const getMarkersContainer = () => {
 const MARKER_SIZE = 12;
 
 // Convert document-relative coordinates to viewport coordinates for marker positioning
-const documentToViewportCoords = (x, y, side = null) => {
-  const { documentElement } = document;
-
-  if (side === "left" || side === "right") {
-    // Vertical markers: x should stay fixed in viewport, y adjusts for scroll
-    return [x - documentElement.scrollLeft, y];
+// Takes the scroll container into account for proper positioning relative to the container
+const documentToViewportCoords = (x, y, scrollContainer, side = null) => {
+  const isDocumentScroll = scrollContainer === document.documentElement;
+  
+  if (isDocumentScroll) {
+    // For document scrolling, use document scroll offsets
+    const { documentElement } = document;
+    if (side === "left" || side === "right") {
+      // Vertical markers: x should stay fixed in viewport, y adjusts for scroll
+      return [x - documentElement.scrollLeft, y];
+    }
+    if (side === "top" || side === "bottom") {
+      // Horizontal markers: x should stay fixed in viewport, y adjusts for scroll
+      return [x, y - documentElement.scrollTop];
+    }
+    // For all other cases (obstacles, bounds): adjust both coordinates for scroll
+    return [x - documentElement.scrollLeft, y - documentElement.scrollTop];
   }
-  if (side === "top" || side === "bottom") {
-    // Horizontal markers: x should stay fixed in viewport, y adjusts for scroll
-    return [x, y - documentElement.scrollTop];
-  }
-  // For all other cases (obstacles, bounds): adjust both coordinates for scroll
-  return [x - documentElement.scrollLeft, y - documentElement.scrollTop];
+  
+  // For custom scroll containers, markers should be positioned relative to container
+  // Get container's current position in viewport
+  const containerRect = scrollContainer.getBoundingClientRect();
+  const containerDocumentLeft = containerRect.left + document.documentElement.scrollLeft;
+  const containerDocumentTop = containerRect.top + document.documentElement.scrollTop;
+  
+  // Convert from document coordinates to container-relative coordinates
+  const xRelativeToContainer = x - containerDocumentLeft;
+  const yRelativeToContainer = y - containerDocumentTop;
+  
+  // Account for container's internal scroll
+  const xInContainer = xRelativeToContainer - scrollContainer.scrollLeft;
+  const yInContainer = yRelativeToContainer - scrollContainer.scrollTop;
+  
+  // Convert back to viewport coordinates
+  return [
+    containerRect.left + xInContainer,
+    containerRect.top + yInContainer
+  ];
 };
 
 export const setupVisualMarkers = ({ direction, scrollContainer }) => {
@@ -170,7 +195,7 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
             }
           }
         } else if (constraint.type === "obstacle") {
-          const obstacleMarker = createObstacleMarker(constraint);
+          const obstacleMarker = createObstacleMarker(constraint, scrollContainer);
           currentConstraintMarkers.push(obstacleMarker);
         }
       }
@@ -223,7 +248,7 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
     if (markers.length === 1) {
       // Single marker - create as normal
       const marker = markers[0];
-      const domMarker = createDebugMarker(marker);
+      const domMarker = createDebugMarker(marker, scrollContainer);
       domMarker.type = marker.name.includes("Bound") ? "constraint" : "visible";
       mergedMarkers.push(domMarker);
     } else {
@@ -235,7 +260,7 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
       const domMarker = createDebugMarker({
         ...firstMarker,
         name: combinedName,
-      });
+      }, scrollContainer);
       domMarker.type = markers.some((m) => m.name.includes("Bound"))
         ? "constraint"
         : "visible";
@@ -246,9 +271,9 @@ const createMergedMarkers = (markersToCreate, scrollContainer) => {
   return mergedMarkers;
 };
 
-const createDebugMarker = ({ name, x, y, color = "255 0 0", side }) => {
+const createDebugMarker = ({ name, x, y, color = "255 0 0", side }, scrollContainer) => {
   // Convert coordinates from document-relative to viewport
-  const [viewportX, viewportY] = documentToViewportCoords(x, y, side);
+  const [viewportX, viewportY] = documentToViewportCoords(x, y, scrollContainer, side);
 
   const marker = document.createElement("div");
   marker.className = `navi_debug_marker`;
@@ -272,7 +297,7 @@ const createDebugMarker = ({ name, x, y, color = "255 0 0", side }) => {
   container.appendChild(marker);
   return marker;
 };
-const createObstacleMarker = (obstacleObj) => {
+const createObstacleMarker = (obstacleObj, scrollContainer) => {
   const width = obstacleObj.bounds.right - obstacleObj.bounds.left;
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
@@ -280,6 +305,7 @@ const createObstacleMarker = (obstacleObj) => {
   const [x, y] = documentToViewportCoords(
     obstacleObj.bounds.left,
     obstacleObj.bounds.top,
+    scrollContainer,
     "obstacle",
   );
 

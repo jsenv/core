@@ -372,8 +372,6 @@ export const createDragGestureController = (options = {}) => {
       y: yAtStart, // Current position in document coordinates
       xMove: 0,
       yMove: 0,
-      xMouseMove: 0, // Movement caused by mouse drag
-      yMouseMove: 0, // Movement caused by mouse drag
       xChanged: false,
       yChanged: false,
 
@@ -605,16 +603,28 @@ export const createDragGestureController = (options = {}) => {
     // Set up scroll event handling to adjust drag position when scrolling occurs
     if (dragViaScroll) {
       let isHandlingScroll = false;
-      const handleScroll = () => {
+      const handleScroll = (scrollEvent) => {
         if (isHandlingScroll) {
           return;
         }
         isHandlingScroll = true;
-
-        // When scrolling occurs during drag, recalculate with scroll interaction type
-        // This preserves mouse movement but recalculates total movement with new scroll offset
-        drag(gestureInfo.x, gestureInfo.y, { interactionType: "scroll" });
-
+        if (scrollContainer === document.documentElement) {
+          drag(
+            gestureInfo.xAtStart + documentElement.scrollLeft,
+            gestureInfo.yAtStart + documentElement.scrollTop,
+            scrollEvent,
+          );
+        } else {
+          drag(
+            gestureInfo.xStart +
+              documentElement.scrollLeft +
+              scrollContainer.scrollLeft,
+            gestureInfo.yAtStart +
+              documentElement.scrollTop +
+              scrollContainer.scrollTop,
+            scrollEvent,
+          );
+        }
         isHandlingScroll = false;
       };
       scrollContainer.addEventListener("scroll", handleScroll, {
@@ -640,50 +650,8 @@ export const createDragGestureController = (options = {}) => {
       const y = yDocument;
       const xDiff = previousX - xDocument;
       const yDiff = previousY - yDocument;
-
-      // Calculate movement based on interaction type
-      let xMouseMove;
-      let yMouseMove;
-      let xMove;
-      let yMove;
-      if (interactionType === "scroll") {
-        // For scroll events, keep existing mouse movement but recalculate total movement with new scroll
-        xMouseMove = gestureInfo.xMouseMove; // Keep existing mouse movement
-        yMouseMove = gestureInfo.yMouseMove; // Keep existing mouse movement
-
-        // Recalculate total movement with current scroll offset
-        const currentScrollLeft = scrollContainer.scrollLeft;
-        const currentScrollTop = scrollContainer.scrollTop;
-        const scrollDeltaX = direction.x
-          ? currentScrollLeft - scrollLeftAtStart
-          : 0;
-        const scrollDeltaY = direction.y
-          ? currentScrollTop - scrollTopAtStart
-          : 0;
-
-        xMove = xMouseMove + scrollDeltaX;
-        yMove = yMouseMove + scrollDeltaY;
-      } else {
-        // For mouse movement and programmatic calls
-        // Since x,y are already in document coordinates and gestureInfo coordinates are in document space,
-        // the calculation is straightforward
-        xMove = x - gestureInfo.xAtStart;
-        yMove = y - gestureInfo.yAtStart;
-        // Calculate pure mouse movement in viewport coordinates (ignoring scroll changes)
-        const xViewport = x - documentElement.scrollLeft;
-        const yViewport = y - documentElement.scrollTop;
-        const xAtStartViewport =
-          gestureInfo.xAtStart - gestureInfo.documentScrollLeftAtStart;
-        const yAtStartViewport =
-          gestureInfo.yAtStart - gestureInfo.documentScrollTopAtStart;
-        xMouseMove = xViewport - xAtStartViewport;
-        yMouseMove = yViewport - yAtStartViewport;
-
-        console.log(
-          `Movement: current=${x}, start=${gestureInfo.xAtStart}, calculated xMove=${xMove}`,
-        );
-      }
-
+      const xMove = xDocument - gestureInfo.xAtStart;
+      const yMove = yDocument - gestureInfo.yAtStart;
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
       const previousYMove = previousGestureInfo ? previousGestureInfo.yMove : 0;
@@ -807,8 +775,6 @@ export const createDragGestureController = (options = {}) => {
         yDiff,
         xMove: finalXMove,
         yMove: finalYMove,
-        xMouseMove,
-        yMouseMove,
         isGoingLeft,
         isGoingRight,
         isGoingUp,
@@ -850,17 +816,14 @@ export const createDragGestureController = (options = {}) => {
     };
 
     const drag = (
-      currentXDocument, // Document-relative X coordinate
-      currentYDocument, // Document-relative Y coordinate
+      xDocument, // Document-relative X coordinate
+      yDocument, // Document-relative Y coordinate
       event = new CustomEvent("programmatic"),
       { isRelease = false } = {},
     ) => {
-      const dragData = determineDragData(
-        currentXDocument,
-        currentYDocument,
-        event,
-        { isRelease },
-      );
+      const dragData = determineDragData(xDocument, yDocument, event, {
+        isRelease,
+      });
       previousGestureInfo = { ...gestureInfo };
       // Calculate xChanged/yChanged based on previous gesture info
       const xChanged = previousGestureInfo
