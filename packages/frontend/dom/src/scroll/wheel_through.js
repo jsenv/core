@@ -1,9 +1,7 @@
 /**
- * Enables scroll-through behavior for overlay elements like validation messages.
- * When a user scrolls over an overlay, instead of scrolling the document or the overlay itself,
- * this finds and scrolls the most appropriate scrollable container that's behind the overlay.
- * This creates more intuitive scrolling behavior where the content the user is focused on
- * (behind the overlay) scrolls as expected, rather than unexpected document scrolling.
+ * Creates intuitive scrolling behavior when scrolling over an element that needs to stay interactive
+ * (we can't use pointer-events: none). Instead of scrolling the document unexpectedly,
+ * finds and scrolls the appropriate scrollable container behind the overlay.
  */
 
 import { isScrollable } from "./is_scrollable.js";
