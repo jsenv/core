@@ -608,19 +608,24 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       );
 
       let maxHeight;
-      // Handle overflow at bottom with scrolling if needed
-      console.log({ elementFitsBelow, elementFitsAbove });
+      // Force content overflow when there is not enough space to display
+      // the entirety of the validation message
       if (!elementFitsBelow && !elementFitsAbove) {
-        const availableHeight =
-          document.documentElement.clientHeight -
-          targetBottom -
-          ARROW_HEIGHT -
-          BORDER_WIDTH * 2 -
-          16 - // padding * 2
-          8;
+        let spaceAvailableForContent;
+        if (position === "below") {
+          spaceAvailableForContent =
+            document.documentElement.clientHeight -
+            targetBottom -
+            ARROW_HEIGHT -
+            BORDER_WIDTH * 2 -
+            16 - // padding * 2
+            8;
+        } else {
+          spaceAvailableForContent = "";
+        }
         // Only apply scrolling if we have reasonable space
-        if (availableHeight > 50) {
-          maxHeight = availableHeight;
+        if (spaceAvailableForContent > 50) {
+          maxHeight = spaceAvailableForContent;
         }
       }
 
