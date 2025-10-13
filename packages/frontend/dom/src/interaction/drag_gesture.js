@@ -519,33 +519,25 @@ export const createDragGestureController = (options = {}) => {
             bottom: top + getBottomBound(elementHeight, clientHeight),
           };
         } else {
-          // For custom scroll containers, the visible area should be the container's content area
-          // plus any scrolled content, not just the container's viewport position
-          const constraintElementRect = getElementDocumentRect(
-            visibleConstraintElement,
-          );
-          const containerLeft = constraintElementRect.left;
-          const containerTop = constraintElementRect.top;
-
-          // For custom scroll containers, the draggable area should be the full scrollable content
-          // The element can be positioned anywhere within the container's scrollWidth/scrollHeight
-          const scrollLeft = visibleConstraintElement.scrollLeft;
-          const scrollTop = visibleConstraintElement.scrollTop;
-
-          // Calculate bounds relative to the container's content area (accounting for scroll)
-          const left = containerLeft + scrollLeft;
-          const top = containerTop + scrollTop;
-          const right =
-            containerLeft +
-            scrollLeft +
-            getRightBound(elementWidth, visibleConstraintElement.clientWidth);
-          const bottom =
-            containerTop +
-            scrollTop +
-            getBottomBound(
-              elementHeight,
-              visibleConstraintElement.clientHeight,
-            );
+          // For custom scroll containers, use the same logic as visibleAreaBase calculation
+          // This ensures consistency between constraints and debug markers
+          const scrollContainerViewportRect =
+            visibleConstraintElement.getBoundingClientRect();
+          const documentScrollLeft = documentElement.scrollLeft;
+          const documentScrollTop = documentElement.scrollTop;
+          const borderSizes = getBorderSizes(visibleConstraintElement);
+          const left =
+            scrollContainerViewportRect.left +
+            documentScrollLeft +
+            borderSizes.left;
+          const top =
+            scrollContainerViewportRect.top +
+            documentScrollTop +
+            borderSizes.top;
+          const availableWidth = visibleConstraintElement.clientWidth;
+          const availableHeight = visibleConstraintElement.clientHeight;
+          const right = left + getRightBound(elementWidth, availableWidth);
+          const bottom = top + getBottomBound(elementHeight, availableHeight);
 
           bounds = {
             left,
@@ -556,7 +548,10 @@ export const createDragGestureController = (options = {}) => {
 
           // Debug visible area constraint bounds
           console.log(
-            `Visible area constraint bounds: containerLeft=${containerLeft}, containerTop=${containerTop}, scrollLeft=${scrollLeft}, scrollTop=${scrollTop}, left=${left}, top=${top}, right=${right}, bottom=${bottom}, elementWidth=${elementWidth}, elementHeight=${elementHeight}, scrollWidth=${visibleConstraintElement.scrollWidth}, scrollHeight=${visibleConstraintElement.scrollHeight}`,
+            `Visible area constraint bounds: left=${left}, top=${top}, right=${right}, bottom=${bottom}, elementWidth=${elementWidth}, elementHeight=${elementHeight}, availableWidth=${availableWidth}, availableHeight=${availableHeight}`,
+          );
+          console.log(
+            `Element position: leftAtStart=${leftAtStart}, topAtStart=${topAtStart}`,
           );
         }
         return createBoundConstraint(bounds, {
