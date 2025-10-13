@@ -294,9 +294,21 @@ const updateTableColumnResizerPosition = (columnCell, columnResizer) => {
     // while resizing (would move the resizer on other columns)
     return;
   }
-  const { right, height } = getElementScrollableRect(columnCell);
-  columnResizer.style.setProperty("--table-cell-right", `${right}px`);
-  columnResizer.style.setProperty("--table-cell-height", `${height}px`);
+  // Use offset properties for position relative to table (ignores scrolls)
+  const table = columnCell.closest(".navi_table");
+  const tableRect = table.getBoundingClientRect();
+  const columnCellRect = columnCell.getBoundingClientRect();
+  const columnCellLeft = columnCellRect.left;
+  const columnCellLeftRelative = columnCellLeft - tableRect.left;
+  const scrollableParent = getScrollableParent(table);
+  let cellLeft = columnCellLeftRelative;
+  if (scrollableParent !== document.documentElement) {
+    cellLeft -= scrollableParent.scrollLeft;
+  }
+  const cellRight = cellLeft + columnCellRect.width;
+  const cellHeight = columnCellRect.height;
+  columnResizer.style.setProperty("--table-cell-right", `${cellRight}px`);
+  columnResizer.style.setProperty("--table-cell-height", `${cellHeight}px`);
   columnResizer.setAttribute("data-hover", "");
 };
 const onMouseEnterLeftResizeHandle = (e, columnResizer) => {
