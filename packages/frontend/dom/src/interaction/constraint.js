@@ -15,8 +15,7 @@ export const createBoundConstraint = (
   const apply = (xMove, yMove) => {
     let constrainedXMove = xMove;
     let constrainedYMove = yMove;
-    // Apply bounds constraints directly using visual coordinates
-    // initialLeft/initialTop now represent elementVisuallyImpacted position
+    // Apply bounds constraints directly using document coordinates
     if (minAllowedXMove !== undefined && xMove < minAllowedXMove) {
       constrainedXMove = minAllowedXMove;
     }

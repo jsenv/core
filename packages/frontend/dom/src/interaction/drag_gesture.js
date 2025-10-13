@@ -230,8 +230,8 @@ export const createDragGestureController = (options = {}) => {
     element,
     event = new CustomEvent("programmatic"),
     {
-      xAtStart = 0,
-      yAtStart = 0,
+      xAtStart = 0, // Document coordinates
+      yAtStart = 0, // Document coordinates
       elementToImpact = element,
       elementVisuallyImpacted = elementToImpact,
       direction = defaultDirection,
@@ -267,6 +267,7 @@ export const createDragGestureController = (options = {}) => {
       fromStickyLeftAttr,
       fromStickyTopAttr,
     } = elementVisuallyImpactedDocumentRect;
+
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
     // All constraint calculations use visual coordinates (xMove, yMove)
@@ -356,6 +357,12 @@ export const createDragGestureController = (options = {}) => {
       }
     }
 
+    // Convert initial coordinates to document space
+    const documentScrollLeft = documentElement.scrollLeft;
+    const documentScrollTop = documentElement.scrollTop;
+    const xAtStartDocument = xAtStart + documentScrollLeft;
+    const yAtStartDocument = yAtStart + documentScrollTop;
+
     const gestureInfo = {
       direction,
       element,
@@ -363,10 +370,13 @@ export const createDragGestureController = (options = {}) => {
       elementVisuallyImpacted,
       scrollContainer,
 
-      xAtStart,
-      yAtStart,
-      leftAtStart,
-      topAtStart,
+      // Store both viewport and document coordinates for reference
+      xAtStart: xAtStartDocument, // Document coordinates
+      yAtStart: yAtStartDocument, // Document coordinates
+      xAtStartViewport: xAtStart, // Viewport coordinates (for reference)
+      yAtStartViewport: yAtStart, // Viewport coordinates (for reference)
+      leftAtStart, // Document coordinates (already converted)
+      topAtStart, // Document coordinates (already converted)
       scrollLeftAtStart,
       scrollTopAtStart,
       visualOffsetX,
@@ -374,8 +384,8 @@ export const createDragGestureController = (options = {}) => {
       isStickyLeftOrHasStickyLeftAttr,
       isStickyTopOrHasStickyTopAttr,
 
-      x: xAtStart,
-      y: yAtStart,
+      x: xAtStartDocument,
+      y: yAtStartDocument,
       xMove: 0,
       yMove: 0,
       xMouseMove: 0, // Movement caused by mouse drag
@@ -617,18 +627,18 @@ export const createDragGestureController = (options = {}) => {
     }
 
     const determineDragData = (
-      currentXRelative,
-      currentYRelative,
+      currentXDocument, // Document-relative coordinates
+      currentYDocument, // Document-relative coordinates
       dragEvent,
       { isRelease = false },
     ) => {
       const interactionType = event.type;
       const previousX = gestureInfo.x;
       const previousY = gestureInfo.y;
-      const x = currentXRelative;
-      const y = currentYRelative;
-      const xDiff = previousX - currentXRelative;
-      const yDiff = previousY - currentYRelative;
+      const x = currentXDocument;
+      const y = currentYDocument;
+      const xDiff = previousX - currentXDocument;
+      const yDiff = previousY - currentYDocument;
 
       // Calculate movement based on interaction type
       let xMouseMove;
@@ -654,25 +664,25 @@ export const createDragGestureController = (options = {}) => {
         yMove = yMouseMove + scrollDeltaY;
       } else {
         // For mouse movement and programmatic calls
-        // Calculate movement in document coordinate space to match element positions
+        // Since x,y are already in document coordinates and gestureInfo coordinates are in document space,
+        // the calculation is straightforward
+        xMove = x - gestureInfo.xAtStart;
+        yMove = y - gestureInfo.yAtStart;
+
+        // Calculate pure mouse movement in viewport coordinates (ignoring scroll changes)
         const currentDocumentScrollLeft = documentElement.scrollLeft;
         const currentDocumentScrollTop = documentElement.scrollTop;
+        const currentViewportX = x - currentDocumentScrollLeft;
+        const currentViewportY = y - currentDocumentScrollTop;
+        xMouseMove = currentViewportX - gestureInfo.xAtStartViewport;
+        yMouseMove = currentViewportY - gestureInfo.yAtStartViewport;
 
-        // Convert current viewport position to document coordinates
-        const xDocument = x + currentDocumentScrollLeft;
-        const yDocument = y + currentDocumentScrollTop;
-
-        // Convert start viewport position to document coordinates using scroll at start
-        const xAtStartDocument = gestureInfo.xAtStart + scrollLeftAtStart;
-        const yAtStartDocument = gestureInfo.yAtStart + scrollTopAtStart;
-
-        // Calculate total movement in document coordinate space
-        xMove = xDocument - xAtStartDocument;
-        yMove = yDocument - yAtStartDocument;
-
-        // Calculate pure mouse movement (ignoring scroll changes)
-        xMouseMove = x - gestureInfo.xAtStart;
-        yMouseMove = y - gestureInfo.yAtStart;
+        console.log("[MOVEMENT CALCULATION DEBUG]", {
+          currentDocument: { x, y },
+          startDocument: { x: gestureInfo.xAtStart, y: gestureInfo.yAtStart },
+          calculatedMove: { xMove, yMove },
+          pureMouseMove: { xMouseMove, yMouseMove },
+        });
       }
 
       // Calculate direction based on where the element is trying to move (relative to previous position)
@@ -841,14 +851,14 @@ export const createDragGestureController = (options = {}) => {
     };
 
     const drag = (
-      currentXRelative,
-      currentYRelative,
+      currentXDocument, // Document-relative X coordinate
+      currentYDocument, // Document-relative Y coordinate
       event = new CustomEvent("programmatic"),
       { isRelease = false } = {},
     ) => {
       const dragData = determineDragData(
-        currentXRelative,
-        currentYRelative,
+        currentXDocument,
+        currentYDocument,
         event,
         { isRelease },
       );
@@ -860,8 +870,17 @@ export const createDragGestureController = (options = {}) => {
       const yChanged = previousGestureInfo
         ? dragData.yMove !== previousGestureInfo.yMove
         : true;
+      console.log("[GESTURE INFO UPDATE DEBUG]", {
+        before: { xMove: gestureInfo.xMove, yMove: gestureInfo.yMove },
+        dragData: { xMove: dragData.xMove, yMove: dragData.yMove },
+      });
+
       Object.assign(gestureInfo, { xChanged, yChanged });
       Object.assign(gestureInfo, dragData);
+
+      console.log("[GESTURE INFO AFTER UPDATE DEBUG]", {
+        after: { xMove: gestureInfo.xMove, yMove: gestureInfo.yMove },
+      });
       const someChange = xChanged || yChanged;
       if (someChange) {
         lifecycle?.drag?.(gestureInfo, {
@@ -910,8 +929,13 @@ export const createDragGestureController = (options = {}) => {
     }
 
     const mouseEventCoords = (mouseEvent) => {
-      // Use viewport coordinates - scroll handling is done in the movement calculation
-      return [mouseEvent.clientX, mouseEvent.clientY];
+      // Convert immediately to document coordinates for consistency
+      const documentScrollLeft = documentElement.scrollLeft;
+      const documentScrollTop = documentElement.scrollTop;
+      return [
+        mouseEvent.clientX + documentScrollLeft,
+        mouseEvent.clientY + documentScrollTop,
+      ];
     };
 
     const [xAtStart, yAtStart] = mouseEventCoords(mouseEvent);
@@ -922,15 +946,15 @@ export const createDragGestureController = (options = {}) => {
     });
 
     const dragViaMouse = (mousemoveEvent) => {
-      const [x, y] = mouseEventCoords(mousemoveEvent);
-      dragGesture.drag(x, y, mousemoveEvent);
+      const [xDocument, yDocument] = mouseEventCoords(mousemoveEvent);
+      dragGesture.drag(xDocument, yDocument, mousemoveEvent);
     };
 
     const releaseViaMouse = (mouseupEvent) => {
-      const [x, y] = mouseEventCoords(mouseupEvent);
-      dragGesture.release(mouseEvent, {
-        x,
-        y,
+      const [xDocument, yDocument] = mouseEventCoords(mouseupEvent);
+      dragGesture.release(mouseupEvent, {
+        xAtRelease: xDocument,
+        yAtRelease: yDocument,
       });
     };
     document.addEventListener("mousemove", dragViaMouse);
@@ -1011,6 +1035,11 @@ export const createDragToMoveGestureController = (options) => {
             elementToImpact,
           );
 
+        console.log("[INITIAL POSITIONING DEBUG]", {
+          initialLeftToImpact,
+          initialTopToImpact,
+        });
+
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
           // axis,
@@ -1055,14 +1084,19 @@ export const createDragToMoveGestureController = (options) => {
             const elementPosition = initialPosition + moveAmount;
             if (elementToImpact) {
               elementToImpact.style[styleProperty] = `${elementPosition}px`;
-              // Debug final positioning for document scrolling + left case
-              console.log("[FINAL POSITIONING DEBUG]", {
-                element: elementToImpact,
-                styleProperty,
-                initialPosition,
-                moveAmount,
-                elementPosition,
-              });
+              // Debug final positioning focusing on Y
+              if (styleProperty === "top") {
+                console.log("[FINAL Y POSITIONING DEBUG]", {
+                  element:
+                    elementToImpact.tagName +
+                    (elementToImpact.id ? `#${elementToImpact.id}` : ""),
+                  styleProperty,
+                  initialPosition,
+                  moveAmount,
+                  elementPosition,
+                  finalStyle: elementToImpact.style.top,
+                });
+              }
             }
           }
         };
@@ -1102,6 +1136,16 @@ export const createDragToMoveGestureController = (options) => {
           const desiredElementTop = desiredElementTopRelative;
           const desiredElementBottom =
             desiredElementTop + elementVisuallyImpactedHeight;
+
+          console.log("[Y MOVEMENT DEBUG]", {
+            topAtStart,
+            yMove: gestureInfo.yMove,
+            desiredElementTop,
+            desiredElementBottom,
+            elementHeight: elementVisuallyImpactedHeight,
+            visibleAreaTop: visibleArea.top,
+            visibleAreaBottom: visibleArea.bottom,
+          });
 
           // Determine if auto-scroll is allowed for sticky elements when going up
           const canAutoScrollUp =
