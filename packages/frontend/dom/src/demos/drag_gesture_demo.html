@@ -839,13 +839,13 @@
           if (controls.dragInstance) return;
 
           const rectangle = controls.rectangle;
-          const positionedParent = rectangle.offsetParent || document.body;
-          const positionedParentRect = positionedParent.getBoundingClientRect();
           const rectangleRect = rectangle.getBoundingClientRect();
 
-          // Calculate current position in relative coordinates (where it actually is now)
-          const xAtStart = rectangleRect.left - positionedParentRect.left;
-          const yAtStart = rectangleRect.top - positionedParentRect.top;
+          // Calculate current position in document coordinates
+          const documentScrollLeft = document.documentElement.scrollLeft;
+          const documentScrollTop = document.documentElement.scrollTop;
+          const xAtStart = rectangleRect.left + documentScrollLeft;
+          const yAtStart = rectangleRect.top + documentScrollTop;
 
           const dragOptions = {
             backdrop: false,
