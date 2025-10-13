@@ -519,19 +519,34 @@ export const createDragGestureController = (options = {}) => {
             bottom: top + getBottomBound(elementHeight, clientHeight),
           };
         } else {
-          // Use helper function to get element coordinates in document space
-          const elementRect = getElementDocumentRect(visibleConstraintElement);
-          const left = elementRect.left;
-          const top = elementRect.top;
+          // For custom scroll containers, the visible area should be the container's content area
+          // plus any scrolled content, not just the container's viewport position
+          const constraintElementRect = getElementDocumentRect(
+            visibleConstraintElement,
+          );
+          const containerLeft = constraintElementRect.left;
+          const containerTop = constraintElementRect.top;
+
+          // For custom scroll containers, the draggable area should be the full scrollable content
+          // The element can be positioned anywhere within the container's scrollWidth/scrollHeight
+          const scrollLeft = visibleConstraintElement.scrollLeft;
+          const scrollTop = visibleConstraintElement.scrollTop;
+
+          // Calculate bounds relative to the container's content area (accounting for scroll)
+          const left = containerLeft + scrollLeft;
+          const top = containerTop + scrollTop;
           const right =
-            left +
+            containerLeft +
+            scrollLeft +
             getRightBound(elementWidth, visibleConstraintElement.clientWidth);
           const bottom =
-            top +
+            containerTop +
+            scrollTop +
             getBottomBound(
               elementHeight,
               visibleConstraintElement.clientHeight,
             );
+
           bounds = {
             left,
             top,
@@ -541,7 +556,7 @@ export const createDragGestureController = (options = {}) => {
 
           // Debug visible area constraint bounds
           console.log(
-            `Visible area constraint bounds: left=${left}, top=${top}, right=${right}, bottom=${bottom}, elementWidth=${elementWidth}, elementHeight=${elementHeight}, clientWidth=${visibleConstraintElement.clientWidth}, clientHeight=${visibleConstraintElement.clientHeight}`,
+            `Visible area constraint bounds: containerLeft=${containerLeft}, containerTop=${containerTop}, scrollLeft=${scrollLeft}, scrollTop=${scrollTop}, left=${left}, top=${top}, right=${right}, bottom=${bottom}, elementWidth=${elementWidth}, elementHeight=${elementHeight}, scrollWidth=${visibleConstraintElement.scrollWidth}, scrollHeight=${visibleConstraintElement.scrollHeight}`,
           );
         }
         return createBoundConstraint(bounds, {
