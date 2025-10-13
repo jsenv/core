@@ -542,6 +542,13 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       bottom: targetBottom,
       visibilityRatio,
     }) => {
+      // reset max height and overflow because it impacts the element size
+      // and we need to re-check if we need to have an overflow or not.
+      // ideally this should not have any visual impact so we might need to clone the element to measure it
+      // but for now it seems ok
+      validationMessageContent.style.maxHeight = "";
+      validationMessageContent.style.overflowY = "";
+
       const {
         position,
         left: validationMessageLeft,
@@ -553,7 +560,6 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       } = pickPositionRelativeTo(validationMessage, targetElement, {
         alignToViewportEdgeWhenTargetNearEdge: 20,
       });
-      console.log({ validationMessageHeight, validationMessageTop });
 
       // Get element padding and border to properly position arrow
       const targetBorderSizes = getBorderSizes(targetElement);
@@ -637,11 +643,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       if (maxHeight) {
         validationMessageContent.style.maxHeight = `${maxHeight}px`;
         validationMessageContent.style.overflowY = "auto";
-      } else {
-        validationMessageContent.style.maxHeight = "";
-        validationMessageContent.style.overflowY = "";
       }
-
       validationMessage.style.opacity = visibilityRatio ? "1" : "0";
       validationMessage.setAttribute("data-position", position);
       validationMessage.style.transform = `translateX(${validationMessageLeft}px) translateY(${validationMessageTop}px)`;
@@ -650,7 +652,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
   const messageSizeChangeObserver = observeValidationMessageSizeChange(
     validationMessageContent,
     (width, height) => {
-      // targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
+      targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
     },
   );
   targetVisibleRectEffect.onBeforeCheck(() => {
