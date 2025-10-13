@@ -465,6 +465,13 @@ export const createDragGestureController = (options = {}) => {
     };
 
     if (areaConstraint === "scroll") {
+      // Capture scroll container dimensions at drag start to ensure consistency
+      const scrollWidthAtStart = scrollContainer.scrollWidth;
+      const scrollHeightAtStart = scrollContainer.scrollHeight;
+      const scrollContainerDocumentRectAtStart = scrollContainertIsDocument
+        ? { left: 0, top: 0 }
+        : getElementDocumentRect(scrollContainer);
+
       const scrollAreaConstraintFunction = ({
         elementWidth,
         elementHeight,
@@ -476,13 +483,13 @@ export const createDragGestureController = (options = {}) => {
         // When element dimensions exceed or equal scroll dimensions due to precision differences,
         // we cap the constraint bounds to prevent negative positioning that would push elements
         // outside their intended scrollable area.
-        const elementDocumentRect = getElementDocumentRect(scrollContainer);
-        const left = elementDocumentRect.left;
-        const right =
-          left + getRightBound(elementWidth, scrollContainer.scrollWidth);
-        const top = elementDocumentRect.top;
-        const bottom =
-          top + getBottomBound(elementHeight, scrollContainer.scrollHeight);
+
+        // Use consistent scroll dimensions captured at drag start
+        const left = scrollContainerDocumentRectAtStart.left;
+        const top = scrollContainerDocumentRectAtStart.top;
+        const right = left + getRightBound(elementWidth, scrollWidthAtStart);
+        const bottom = top + getBottomBound(elementHeight, scrollHeightAtStart);
+
         return createBoundConstraint(
           { left, top, right, bottom },
           {
