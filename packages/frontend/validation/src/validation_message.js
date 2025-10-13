@@ -546,9 +546,11 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       // and we need to re-check if we need to have an overflow or not.
       // ideally this should not have any visual impact so we might need to clone the element to measure it
       // but for now it seems ok
-      validationMessageContent.style.maxHeight = "";
-      validationMessageContent.style.overflowY = "";
-
+      const validationMessageClone = validationMessage.cloneNode(true);
+      validationMessageClone.style.visibility = "hidden";
+      validationMessageClone.style.maxHeight = "";
+      validationMessageClone.style.overflowY = "";
+      validationMessage.parentNode.appendChild(validationMessageClone);
       const {
         position,
         left: validationMessageLeft,
@@ -557,9 +559,10 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         height: validationMessageHeight,
         elementFitsAbove,
         elementFitsBelow,
-      } = pickPositionRelativeTo(validationMessage, targetElement, {
+      } = pickPositionRelativeTo(validationMessageClone, targetElement, {
         alignToViewportEdgeWhenTargetNearEdge: 20,
       });
+      validationMessageClone.remove();
 
       // Get element padding and border to properly position arrow
       const targetBorderSizes = getBorderSizes(targetElement);
@@ -643,6 +646,9 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       if (maxHeight) {
         validationMessageContent.style.maxHeight = `${maxHeight}px`;
         validationMessageContent.style.overflowY = "auto";
+      } else {
+        validationMessageClone.style.maxHeight = "";
+        validationMessageClone.style.overflowY = "";
       }
       validationMessage.style.opacity = visibilityRatio ? "1" : "0";
       validationMessage.setAttribute("data-position", position);
