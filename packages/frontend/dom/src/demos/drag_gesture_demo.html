@@ -949,22 +949,22 @@
       setupProgrammaticControls(case3Controls, "solid obstacles case");
 
       // Function to set up drag gesture for any rectangle
-      function setupDragGesture(rectangle, caseLabel) {
+      function setupDragGesture(rectangle) {
         rectangle.addEventListener("mousedown", (event) => {
           event.preventDefault(); // prevent drag to select which would allow to scroll
           createDragToMoveGestureController({
             backdrop: false,
-            onGrab: (gestureInfo) => {
-              console.log(`${caseLabel} - Grab started`, gestureInfo);
+            onGrab: () => {
+              // console.log(`${caseLabel} - Grab started`, gestureInfo);
             },
-            onDragStart: (gestureInfo) => {
-              console.log(`${caseLabel} - Drag started`, gestureInfo);
+            onDragStart: () => {
+              // console.log(`${caseLabel} - Drag started`, gestureInfo);
             },
             onDrag: () => {
               // console.log(`${caseLabel} - Dragging`, gestureInfo, phase);
             },
-            onRelease: (gestureInfo) => {
-              console.log(`${caseLabel} - Drag released`, gestureInfo);
+            onRelease: () => {
+              // console.log(`${caseLabel} - Drag released`, gestureInfo);
             },
           }).grabViaMouse(event, {
             element: rectangle,
