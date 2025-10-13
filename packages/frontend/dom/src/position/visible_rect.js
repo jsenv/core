@@ -310,7 +310,7 @@ export const visibleRectEffect = (element, update) => {
 export const pickPositionRelativeTo = (
   element,
   target,
-  { alignToViewportEdgeWhenTargetNearEdge = 0 } = {},
+  { alignToViewportEdgeWhenTargetNearEdge = 0, forcePosition } = {},
 ) => {
   if (
     import.meta.dev &&
@@ -401,10 +401,10 @@ export const pickPositionRelativeTo = (
   let position;
   const spaceAboveTarget = targetTop;
   const spaceBelowTarget = viewportHeight - targetBottom;
-  const elementFitsAbove = spaceAboveTarget >= elementHeight;
-  const elementFitsBelow = spaceBelowTarget >= elementHeight;
   {
-    if (elementFitsBelow || spaceAboveTarget <= spaceBelowTarget) {
+    const elementFitsBelow = spaceBelowTarget >= elementHeight;
+    const hasMoreSpaceBelow = spaceBelowTarget >= spaceAboveTarget;
+    if ((elementFitsBelow || hasMoreSpaceBelow) && forcePosition !== "above") {
       position = "below";
       // Calculate top position when placing below target (ensure whole pixels)
       const idealTopWhenBelow = targetBottom;
@@ -443,7 +443,7 @@ export const pickPositionRelativeTo = (
     targetTop: targetDocumentTop,
     targetRight: targetDocumentRight,
     targetBottom: targetDocumentBottom,
-    elementFitsAbove,
-    elementFitsBelow,
+    spaceAboveTarget,
+    spaceBelowTarget,
   };
 };

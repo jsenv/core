@@ -536,13 +536,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
 
   const targetVisibleRectEffect = visibleRectEffect(
     targetElement,
-    ({
-      left: targetLeft,
-      top: targetTop,
-      right: targetRight,
-      bottom: targetBottom,
-      visibilityRatio,
-    }) => {
+    ({ left: targetLeft, right: targetRight, visibilityRatio }) => {
       // reset max height and overflow because it impacts the element size
       // and we need to re-check if we need to have an overflow or not.
       // ideally this should not have any visual impact so we might need to clone the element to measure it
@@ -558,10 +552,11 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         top: validationMessageTop,
         width: validationMessageWidth,
         height: validationMessageHeight,
-        elementFitsAbove,
-        elementFitsBelow,
+        spaceAboveTarget,
+        spaceBelowTarget,
       } = pickPositionRelativeTo(validationMessageClone, targetElement, {
         alignToViewportEdgeWhenTargetNearEdge: 20,
+        forcePosition: "above",
       });
       validationMessageClone.remove();
 
@@ -608,30 +603,23 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         Math.min(arrowLeftPosOnValidationMessage, maxArrowPos),
       );
 
-      let maxHeight;
       // Force content overflow when there is not enough space to display
       // the entirety of the validation message
-      if (!elementFitsBelow && !elementFitsAbove) {
-        let spaceAvailable;
-        if (position === "below") {
-          spaceAvailable = document.documentElement.clientHeight - targetBottom;
-        } else {
-          spaceAvailable = targetTop;
-        }
-        let spaceAvailableForContent = spaceAvailable;
-        spaceAvailableForContent -= ARROW_HEIGHT;
-        spaceAvailableForContent -= BORDER_WIDTH * 2;
-        spaceAvailableForContent -= 16; // padding * 2
-        spaceAvailableForContent -= 8; // can't explain this one for now
-        // Only apply scrolling if we have reasonable space
-        if (spaceAvailableForContent > 50) {
-          maxHeight = spaceAvailableForContent;
-        }
+      let spaceAvailable;
+      if (position === "below") {
+        spaceAvailable = spaceBelowTarget;
+      } else {
+        spaceAvailable = spaceAboveTarget;
       }
-
-      if (maxHeight) {
+      let spaceAvailableForContent = spaceAvailable;
+      spaceAvailableForContent -= ARROW_HEIGHT;
+      spaceAvailableForContent -= BORDER_WIDTH * 2;
+      spaceAvailableForContent -= 16; // padding * 2
+      // spaceAvailableForContent -= 8; // can't explain this one for now
+      if (spaceAvailableForContent < validationMessageHeight) {
+        const maxHeight = spaceAvailableForContent;
         validationMessageContent.style.maxHeight = `${maxHeight}px`;
-        validationMessageContent.style.overflowY = "auto";
+        validationMessageContent.style.overflowY = "scroll";
       } else {
         validationMessageContent.style.maxHeight = "";
         validationMessageContent.style.overflowY = "";
