@@ -72,8 +72,6 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
 import {
   elementToFixedCoords,
   elementToStickyCoords,
-  getElementScrollableRect,
-  mouseEventToScrollableCoords,
   scrollableCoordsToPositionedParentCoords,
 } from "../scroll/scrollable_rect.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
@@ -90,6 +88,90 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 // Coordinate conversion helpers
 const { documentElement } = document;
+
+// Helper to convert document coordinates to positioned parent coordinates
+const documentCoordsToPositionedParentCoords = (
+  leftDocument,
+  topDocument,
+  element,
+  scrollContainer,
+) => {
+  // For document scrolling case, document coords ARE scrollable coords
+  if (scrollContainer === documentElement) {
+    return scrollableCoordsToPositionedParentCoords(
+      leftDocument,
+      topDocument,
+      element,
+      scrollContainer,
+    );
+  }
+
+  // For custom scroll containers, we need to convert document coords to container-relative coords first
+  const scrollContainerRect = scrollContainer.getBoundingClientRect();
+  const containerScrollLeft = scrollContainer.scrollLeft;
+  const containerScrollTop = scrollContainer.scrollTop;
+
+  // Convert from document coords to container-relative coords
+  const leftInContainer =
+    leftDocument -
+    (scrollContainerRect.left + documentElement.scrollLeft) +
+    containerScrollLeft;
+  const topInContainer =
+    topDocument -
+    (scrollContainerRect.top + documentElement.scrollTop) +
+    containerScrollTop;
+
+  return scrollableCoordsToPositionedParentCoords(
+    leftInContainer,
+    topInContainer,
+    element,
+    scrollContainer,
+  );
+};
+
+// Helper to get element rect in document-relative coordinates with position info
+const getElementDocumentRect = (element) => {
+  const viewportRect = element.getBoundingClientRect();
+  const documentScrollLeft = documentElement.scrollLeft;
+  const documentScrollTop = documentElement.scrollTop;
+  const computedStyle = getComputedStyle(element);
+
+  // Check position type
+  const isFixed = computedStyle.position === "fixed";
+  const isSticky = computedStyle.position === "sticky";
+
+  let fromStickyLeft;
+  let fromStickyTop;
+  let fromStickyLeftAttr;
+  let fromStickyTopAttr;
+
+  if (isSticky) {
+    const isStickyLeft = computedStyle.left !== "auto";
+    const isStickyTop = computedStyle.top !== "auto";
+    fromStickyLeft = isStickyLeft
+      ? { value: parseFloat(computedStyle.left) || 0 }
+      : undefined;
+    fromStickyTop = isStickyTop
+      ? { value: parseFloat(computedStyle.top) || 0 }
+      : undefined;
+    fromStickyLeftAttr = isStickyLeft ? computedStyle.left : undefined;
+    fromStickyTopAttr = isStickyTop ? computedStyle.top : undefined;
+  }
+
+  return {
+    left: viewportRect.left + documentScrollLeft,
+    top: viewportRect.top + documentScrollTop,
+    right: viewportRect.right + documentScrollLeft,
+    bottom: viewportRect.bottom + documentScrollTop,
+    width: viewportRect.width,
+    height: viewportRect.height,
+    fromFixed: isFixed,
+    fromStickyLeft,
+    fromStickyTop,
+    fromStickyLeftAttr,
+    fromStickyTopAttr,
+  };
+};
 
 const BASIC_MODE_OPTIONS = {
   backdrop: false,
@@ -146,7 +228,7 @@ export const createDragGestureController = (options = {}) => {
     backdropZIndex = 1,
 
     stickyFrontiers = true,
-    areaConstraint = "scrollable",
+    areaConstraint = "scroll",
     areaConstraintElement,
     customAreaConstraint,
     obstacleAttributeName = "data-drag-obstacle",
@@ -186,18 +268,14 @@ export const createDragGestureController = (options = {}) => {
     const scrollLeftAtStart = scrollContainer.scrollLeft;
     const scrollTopAtStart = scrollContainer.scrollTop;
 
-    // Convert all element coordinates to scrollable-parent-relative coordinates
-    const elementToImpactScrollableRect = getElementScrollableRect(
-      elementToImpact,
-      scrollContainer,
-    );
-    const elementVisuallyImpactedScrollableRect = getElementScrollableRect(
+    // Convert all element coordinates to document-relative coordinates
+    const elementToImpactDocumentRect = getElementDocumentRect(elementToImpact);
+    const elementVisuallyImpactedDocumentRect = getElementDocumentRect(
       elementVisuallyImpacted,
-      scrollContainer,
     );
 
     const { left: elementToImpactLeft, top: elementToImpactTop } =
-      elementToImpactScrollableRect;
+      elementToImpactDocumentRect;
     const {
       left,
       top,
@@ -208,7 +286,7 @@ export const createDragGestureController = (options = {}) => {
       fromStickyTop,
       fromStickyLeftAttr,
       fromStickyTopAttr,
-    } = elementVisuallyImpactedScrollableRect;
+    } = elementVisuallyImpactedDocumentRect;
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
     // All constraint calculations use visual coordinates (xMove, yMove)
@@ -402,8 +480,8 @@ export const createDragGestureController = (options = {}) => {
       return availableHeight - elementHeight;
     };
 
-    if (areaConstraint === "scrollable") {
-      const scrollableAreaConstraintFunction = ({
+    if (areaConstraint === "scroll") {
+      const scrollAreaConstraintFunction = ({
         elementWidth,
         elementHeight,
       }) => {
@@ -426,11 +504,11 @@ export const createDragGestureController = (options = {}) => {
             leftAtStart,
             topAtStart,
             element: scrollContainer,
-            name: "scrollable_area",
+            name: "scroll_area",
           },
         );
       };
-      constraintFunctions.push(scrollableAreaConstraintFunction);
+      constraintFunctions.push(scrollAreaConstraintFunction);
     } else if (areaConstraint === "visible") {
       const visibleAreaConstraintFunction = ({
         elementWidth,
@@ -454,11 +532,8 @@ export const createDragGestureController = (options = {}) => {
             bottom: top + getBottomBound(elementHeight, clientHeight),
           };
         } else {
-          // Use helper function to get element coordinates in scrollable space
-          const elementRect = getElementScrollableRect(
-            visibleConstraintElement,
-            scrollContainer,
-          );
+          // Use helper function to get element coordinates in document space
+          const elementRect = getElementDocumentRect(visibleConstraintElement);
           const left = elementRect.left;
           const top = elementRect.top;
           const right =
@@ -598,19 +673,26 @@ export const createDragGestureController = (options = {}) => {
         xMove = xMouseMove + scrollDeltaX;
         yMove = yMouseMove + scrollDeltaY;
       } else {
-        // For mouse movement and programmatic calls, calculate scroll offset first
-        const currentScrollLeft = scrollContainer.scrollLeft;
-        const currentScrollTop = scrollContainer.scrollTop;
-        const scrollDeltaX = currentScrollLeft - scrollLeftAtStart;
-        const scrollDeltaY = currentScrollTop - scrollTopAtStart;
+        // For mouse movement and programmatic calls
+        // Calculate movement in document coordinate space to match element positions
+        const currentDocumentScrollLeft = documentElement.scrollLeft;
+        const currentDocumentScrollTop = documentElement.scrollTop;
 
-        // For mouse movement, currentXRelative already includes scroll effects
-        // So mouse movement = current position - start position - scroll offset
-        xMouseMove = x - gestureInfo.xAtStart - scrollDeltaX;
-        yMouseMove = y - gestureInfo.yAtStart - scrollDeltaY;
-        // Total movement = mouse movement + scroll offset (should equal x - xAtStart)
-        xMove = xMouseMove + scrollDeltaX;
-        yMove = yMouseMove + scrollDeltaY;
+        // Convert current viewport position to document coordinates
+        const xDocument = x + currentDocumentScrollLeft;
+        const yDocument = y + currentDocumentScrollTop;
+
+        // Convert start viewport position to document coordinates using scroll at start
+        const xAtStartDocument = gestureInfo.xAtStart + scrollLeftAtStart;
+        const yAtStartDocument = gestureInfo.yAtStart + scrollTopAtStart;
+
+        // Calculate total movement in document coordinate space
+        xMove = xDocument - xAtStartDocument;
+        yMove = yDocument - yAtStartDocument;
+
+        // Calculate pure mouse movement (ignoring scroll changes)
+        xMouseMove = x - gestureInfo.xAtStart;
+        yMouseMove = y - gestureInfo.yAtStart;
       }
 
       // Calculate direction based on where the element is trying to move (relative to previous position)
@@ -627,7 +709,8 @@ export const createDragGestureController = (options = {}) => {
       const availableWidth = scrollContainer.clientWidth;
       const availableHeight = scrollContainer.clientHeight;
 
-      // Calculate base visible area accounting for borders
+      // Calculate base visible area in document-relative coordinates
+      // Convert everything to document-relative coords for consistency
       const borderSizes = getBorderSizes(scrollContainer);
       const visibleAreaBase = {
         left: null,
@@ -636,8 +719,7 @@ export const createDragGestureController = (options = {}) => {
         bottom: null,
       };
       if (scrollContainertIsDocument) {
-        // For document scrolling, visible area is the current viewport in scrollable coordinates
-        // Since we're using scrollable-relative coordinates, the visible area moves with scroll
+        // For document scrolling, visible area is the current viewport in document coordinates
         const scrollLeft = documentElement.scrollLeft;
         const scrollTop = documentElement.scrollTop;
         const left = scrollLeft;
@@ -649,14 +731,17 @@ export const createDragGestureController = (options = {}) => {
         visibleAreaBase.right = right;
         visibleAreaBase.bottom = bottom;
       } else {
-        // For container scrollable parent, visible area should be in same coordinate space
-        // The visible area represents where elements can be seen within the container
-        const scrollContainerRect = getElementScrollableRect(
-          scrollContainer,
-          scrollContainer,
-        );
-        const left = scrollContainerRect.left + borderSizes.left;
-        const top = scrollContainerRect.top + borderSizes.top;
+        // For custom scroll containers, get the visible area in document-relative coordinates
+        const scrollContainerViewportRect =
+          scrollContainer.getBoundingClientRect();
+        const documentScrollLeft = documentElement.scrollLeft;
+        const documentScrollTop = documentElement.scrollTop;
+        const left =
+          scrollContainerViewportRect.left +
+          documentScrollLeft +
+          borderSizes.left;
+        const top =
+          scrollContainerViewportRect.top + documentScrollTop + borderSizes.top;
         const right = left + availableWidth;
         const bottom = top + availableHeight;
         visibleAreaBase.left = left;
@@ -844,10 +929,9 @@ export const createDragGestureController = (options = {}) => {
       return null;
     }
 
-    const scrollContainer = getScrollContainer(element);
     const mouseEventCoords = (mouseEvent) => {
-      // Always use scrollable-container-relative coordinates for mouse events
-      return mouseEventToScrollableCoords(mouseEvent, scrollContainer);
+      // Use viewport coordinates - scroll handling is done in the movement calculation
+      return [mouseEvent.clientX, mouseEvent.clientY];
     };
 
     const [xAtStart, yAtStart] = mouseEventCoords(mouseEvent);
@@ -896,7 +980,6 @@ export const createDragToMoveGestureController = (options) => {
           leftAtStart,
           topAtStart,
           scrollLeftAtStart,
-          scrollTopAtStart,
           visualOffsetX,
           visualOffsetY,
           isStickyLeftOrHasStickyLeftAttr,
@@ -915,64 +998,40 @@ export const createDragToMoveGestureController = (options) => {
         } = gestureInfo;
 
         // Debug logging for document scrolling + left case
-        if (scrollContainer === document.documentElement && direction.x) {
-          console.log("[LIFECYCLE DEBUG]", {
-            element: elementVisuallyImpacted,
-            elementToImpact,
-            leftAtStart,
-            scrollLeftAtStart,
-            visualOffsetX,
-            isStickyLeftOrHasStickyLeftAttr,
-            xMove: gestureInfo.xMove,
-          });
-        }
+        console.log("[LIFECYCLE DEBUG]", {
+          element: elementVisuallyImpacted,
+          elementToImpact,
+          leftAtStart,
+          scrollLeftAtStart,
+          visualOffsetX,
+          isStickyLeftOrHasStickyLeftAttr,
+          xMove: gestureInfo.xMove,
+        });
 
-        // Calculate initial position for elementToImpact
-        // For sticky elements, adjust the positioning calculation based on scrollable parent type
+        // Calculate initial position for elementToImpact using document-relative coordinates
+        // Since all coordinates are now in document space, we can use them directly
         let leftForPositioning = leftAtStart;
         let topForPositioning = topAtStart;
+
+        // For sticky elements, we may need to adjust positioning
         if (isStickyLeftOrHasStickyLeftAttr) {
-          if (scrollContainer === document.documentElement) {
-            // For document scrolling, calculate position at zero scroll
-            leftForPositioning = leftAtStart + scrollLeftAtStart;
-            console.log("[POSITIONING DEBUG]", {
-              element: elementVisuallyImpacted,
-              leftAtStart,
-              scrollLeftAtStart,
-              leftForPositioning,
-            });
-          } else {
-            // For container scrolling, use leftAtStart directly
-            leftForPositioning = leftAtStart;
-          }
+          // Document-relative coordinates already account for scroll position
+          leftForPositioning = leftAtStart;
         }
         if (isStickyTopOrHasStickyTopAttr) {
-          if (scrollContainer === document.documentElement) {
-            // For document scrolling, calculate position at zero scroll
-            topForPositioning = topAtStart + scrollTopAtStart;
-          } else {
-            // For container scrolling, use topAtStart directly
-            topForPositioning = topAtStart;
-          }
+          // Document-relative coordinates already account for scroll position
+          topForPositioning = topAtStart;
         }
+
+        // Convert from document-relative coordinates to positioned parent coordinates
+        // Since we're using document coords, this works for both document and container scrolling
         const [initialLeftToImpact, initialTopToImpact] =
-          scrollableCoordsToPositionedParentCoords(
+          documentCoordsToPositionedParentCoords(
             leftForPositioning - visualOffsetX,
             topForPositioning - visualOffsetY,
             elementToImpact,
             scrollContainer,
           );
-
-        // Debug the coordinate transformation for document scrolling + left case
-        if (scrollContainer === document.documentElement && direction.x) {
-          console.log("[COORDINATE TRANSFORM DEBUG]", {
-            element: elementVisuallyImpacted,
-            leftForPositioning,
-            visualOffsetX,
-            inputToTransform: leftForPositioning - visualOffsetX,
-            initialLeftToImpact,
-          });
-        }
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
@@ -1019,18 +1078,13 @@ export const createDragToMoveGestureController = (options) => {
             if (elementToImpact) {
               elementToImpact.style[styleProperty] = `${elementPosition}px`;
               // Debug final positioning for document scrolling + left case
-              if (
-                scrollContainer === document.documentElement &&
-                styleProperty === "left"
-              ) {
-                console.log("[FINAL POSITIONING DEBUG]", {
-                  element: elementToImpact,
-                  styleProperty,
-                  initialPosition,
-                  moveAmount,
-                  elementPosition,
-                });
-              }
+              console.log("[FINAL POSITIONING DEBUG]", {
+                element: elementToImpact,
+                styleProperty,
+                initialPosition,
+                moveAmount,
+                elementPosition,
+              });
             }
           }
         };

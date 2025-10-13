@@ -1,5 +1,20 @@
-import { getElementScrollableRect } from "../scroll/scrollable_rect.js";
 import { getElementSelector } from "./element_log.js";
+
+// Helper to get element rect in document-relative coordinates
+const getElementDocumentRect = (element) => {
+  const viewportRect = element.getBoundingClientRect();
+  const documentScrollLeft = document.documentElement.scrollLeft;
+  const documentScrollTop = document.documentElement.scrollTop;
+
+  return {
+    left: viewportRect.left + documentScrollLeft,
+    top: viewportRect.top + documentScrollTop,
+    right: viewportRect.right + documentScrollLeft,
+    bottom: viewportRect.bottom + documentScrollTop,
+    width: viewportRect.width,
+    height: viewportRect.height,
+  };
+};
 
 export const applyStickyFrontiersToVisibleArea = (
   initialVisibleArea,
@@ -146,7 +161,7 @@ const createStickyFrontierOnAxis = (
         continue;
       }
     }
-    const frontierBounds = getElementScrollableRect(frontier, scrollContainer);
+    const frontierBounds = getElementDocumentRect(frontier);
     const stickyFrontierObject = {
       type: "sticky-frontier",
       element: frontier,
