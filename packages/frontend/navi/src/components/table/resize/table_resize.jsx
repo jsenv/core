@@ -400,6 +400,7 @@ const initResizeByMousedown = (
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
     areaConstraint,
     customAreaConstraint,
+    visibleAreaPadding: 20,
     onGrab: () => {
       updateResizerPosition(tableCell, resizer);
       onGrab?.();

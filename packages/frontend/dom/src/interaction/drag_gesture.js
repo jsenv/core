@@ -151,6 +151,9 @@ export const createDragGestureController = (options = {}) => {
     customAreaConstraint,
     obstacleAttributeName = "data-drag-obstacle",
     dragViaScroll = true,
+    // Padding to reduce the visible area constraint by this amount (applied after sticky frontiers)
+    // This creates an invisible margin around the visible area where elements cannot be dragged
+    visibleAreaPadding = 0,
 
     // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
     // This provides intuitive feedback during drag operations when the element cannot reach the mouse
@@ -670,6 +673,16 @@ export const createDragGestureController = (options = {}) => {
         });
       } else {
         visibleArea = visibleAreaBase;
+      }
+
+      // Apply visible area padding (reduce the visible area by the padding amount)
+      if (visibleAreaPadding > 0) {
+        visibleArea = {
+          left: visibleArea.left + visibleAreaPadding,
+          top: visibleArea.top + visibleAreaPadding,
+          right: visibleArea.right - visibleAreaPadding,
+          bottom: visibleArea.bottom - visibleAreaPadding,
+        };
       }
 
       const elementLeftRelative = leftAtStart + gestureInfo.xMove;
