@@ -219,6 +219,8 @@ const TableColumnLeftResizeHandle = ({
   onDrag,
   onRelease,
 }) => {
+  const { columnResizerRef } = useContext(TableSizeContext);
+
   return (
     <div
       className="navi_table_cell_resize_handle"
@@ -230,6 +232,7 @@ const TableColumnLeftResizeHandle = ({
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag column or drag sticky frontier
         initResizeTableColumnByMousedown(e, {
+          columnResizer: columnResizerRef.current,
           columnMinWidth,
           columnMaxWidth,
           onGrab,
@@ -254,6 +257,8 @@ const TableColumnRightResizeHandle = ({
   onDrag,
   onRelease,
 }) => {
+  const { columnResizerRef } = useContext(TableSizeContext);
+
   return (
     <div
       className="navi_table_cell_resize_handle"
@@ -265,6 +270,7 @@ const TableColumnRightResizeHandle = ({
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag column or drag sticky frontier
         initResizeTableColumnByMousedown(e, {
+          columnResizer: columnResizerRef.current,
           columnMinWidth,
           columnMaxWidth,
           onGrab,
@@ -354,6 +360,7 @@ const initResizeByMousedown = (
   mousedownEvent,
   {
     tableCell,
+    resizer,
     minSize,
     maxSize,
     onGrab,
@@ -364,10 +371,6 @@ const initResizeByMousedown = (
   },
 ) => {
   const table = tableCell.closest(".navi_table");
-  const tableContainer = table.closest(".navi_table_container");
-  const resizerSelector =
-    axis === "x" ? ".navi_table_column_resizer" : ".navi_table_row_resizer";
-  const resizer = tableContainer.querySelector(resizerSelector);
   const updateResizerPosition =
     axis === "x"
       ? updateTableColumnResizerPosition
@@ -464,7 +467,15 @@ const initResizeByMousedown = (
 
 const initResizeTableColumnByMousedown = (
   mousedownEvent,
-  { columnMinWidth, columnMaxWidth, onGrab, onDrag, onRelease, isLeft },
+  {
+    columnResizer,
+    columnMinWidth,
+    columnMaxWidth,
+    onGrab,
+    onDrag,
+    onRelease,
+    isLeft,
+  },
 ) => {
   let tableCell = mousedownEvent.target.closest(".navi_table_cell");
   if (isLeft) {
@@ -472,6 +483,7 @@ const initResizeTableColumnByMousedown = (
   }
   initResizeByMousedown(mousedownEvent, {
     tableCell,
+    resizer: columnResizer,
     minSize: columnMinWidth,
     maxSize: columnMaxWidth,
     onGrab,
@@ -483,7 +495,7 @@ const initResizeTableColumnByMousedown = (
 
 const initResizeTableRowByMousedown = (
   mousedownEvent,
-  { rowMinHeight, rowMaxHeight, onGrab, onDrag, onRelease, isTop },
+  { rowResizer, rowMinHeight, rowMaxHeight, onGrab, onDrag, onRelease, isTop },
 ) => {
   let tableCell = mousedownEvent.target.closest(".navi_table_cell");
   if (isTop) {
@@ -498,6 +510,7 @@ const initResizeTableRowByMousedown = (
   }
   initResizeByMousedown(mousedownEvent, {
     tableCell,
+    resizer: rowResizer,
     minSize: rowMinHeight,
     maxSize: rowMaxHeight,
     onGrab,
@@ -553,6 +566,8 @@ const TableRowTopResizeHandle = ({
   onDrag,
   onRelease,
 }) => {
+  const { rowResizerRef } = useContext(TableSizeContext);
+
   return (
     <div
       className="navi_table_cell_resize_handle"
@@ -564,6 +579,7 @@ const TableRowTopResizeHandle = ({
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag row
         initResizeTableRowByMousedown(e, {
+          rowResizer: rowResizerRef.current,
           rowMinHeight,
           rowMaxHeight,
           onGrab,
@@ -588,6 +604,8 @@ const TableRowBottomResizeHandle = ({
   onDrag,
   onRelease,
 }) => {
+  const { rowResizerRef } = useContext(TableSizeContext);
+
   return (
     <div
       className="navi_table_cell_resize_handle"
@@ -599,6 +617,7 @@ const TableRowBottomResizeHandle = ({
         e.preventDefault(); // prevent text selection
         e.stopPropagation(); // prevent drag row
         initResizeTableRowByMousedown(e, {
+          rowResizer: rowResizerRef.current,
           rowMinHeight,
           rowMaxHeight,
           onGrab,
