@@ -335,17 +335,7 @@ export const createDragGestureController = (options = {}) => {
           // The current 'left' is the scrollable coordinate, which includes scroll offset
           // The position at zero scroll would be: left + scrollLeftAtStart
           const positionAtZeroScroll = left + scrollLeftAtStart;
-          const originalVisualOffsetX = left - elementToImpactLeft;
           visualOffsetX = positionAtZeroScroll - elementToImpactLeft;
-          console.log("[VISUAL OFFSET DEBUG]", {
-            element: elementVisuallyImpacted,
-            left,
-            scrollLeftAtStart,
-            elementToImpactLeft,
-            positionAtZeroScroll,
-            originalVisualOffsetX,
-            adjustedVisualOffsetX: visualOffsetX,
-          });
         }
       }
       if (fromStickyTopAttr) {
@@ -487,8 +477,17 @@ export const createDragGestureController = (options = {}) => {
         // Use consistent scroll dimensions captured at drag start
         const left = scrollContainerDocumentRectAtStart.left;
         const top = scrollContainerDocumentRectAtStart.top;
+        // Right bound should be the rightmost position where the element can start (not end)
+        // So it's containerLeft + (scrollWidth - elementWidth)
         const right = left + getRightBound(elementWidth, scrollWidthAtStart);
         const bottom = top + getBottomBound(elementHeight, scrollHeightAtStart);
+
+        console.log(
+          `Scroll area constraint: container left=${scrollContainerDocumentRectAtStart.left}, scrollWidth=${scrollWidthAtStart}, elementWidth=${elementWidth}`,
+        );
+        console.log(
+          `Calculated bounds: left=${left}, right=${right}. Element starts at leftAtStart=${leftAtStart}`,
+        );
 
         return createBoundConstraint(
           { left, top, right, bottom },
@@ -680,12 +679,9 @@ export const createDragGestureController = (options = {}) => {
         xMouseMove = xViewport - xAtStartViewport;
         yMouseMove = yViewport - yAtStartViewport;
 
-        console.log("[MOVEMENT CALCULATION DEBUG]", {
-          currentDocument: { x, y },
-          startDocument: { x: gestureInfo.xAtStart, y: gestureInfo.yAtStart },
-          calculatedMove: { xMove, yMove },
-          pureMouseMove: { xMouseMove, yMouseMove },
-        });
+        console.log(
+          `Movement: current=${x}, start=${gestureInfo.xAtStart}, calculated xMove=${xMove}`,
+        );
       }
 
       // Calculate direction based on where the element is trying to move (relative to previous position)
@@ -873,17 +869,14 @@ export const createDragGestureController = (options = {}) => {
       const yChanged = previousGestureInfo
         ? dragData.yMove !== previousGestureInfo.yMove
         : true;
-      console.log("[GESTURE INFO UPDATE DEBUG]", {
-        before: { xMove: gestureInfo.xMove, yMove: gestureInfo.yMove },
-        dragData: { xMove: dragData.xMove, yMove: dragData.yMove },
-      });
+      console.log(
+        `Gesture update: before xMove=${gestureInfo.xMove}, after xMove=${dragData.xMove}`,
+      );
 
       Object.assign(gestureInfo, { xChanged, yChanged });
       Object.assign(gestureInfo, dragData);
 
-      console.log("[GESTURE INFO AFTER UPDATE DEBUG]", {
-        after: { xMove: gestureInfo.xMove, yMove: gestureInfo.yMove },
-      });
+      console.log(`Final gesture xMove=${gestureInfo.xMove}`);
       const someChange = xChanged || yChanged;
       if (someChange) {
         lifecycle?.drag?.(gestureInfo, {
@@ -1004,17 +997,6 @@ export const createDragToMoveGestureController = (options) => {
           hasCrossedVisibleAreaTopOnce,
         } = gestureInfo;
 
-        // Debug logging for document scrolling + left case
-        console.log("[LIFECYCLE DEBUG]", {
-          element: elementVisuallyImpacted,
-          elementToImpact,
-          leftAtStart,
-          scrollLeftAtStart,
-          visualOffsetX,
-          isStickyLeftOrHasStickyLeftAttr,
-          xMove: gestureInfo.xMove,
-        });
-
         // Calculate initial position for elementToImpact using document-relative coordinates
         // Since all coordinates are now in document space, we can use them directly
         let leftForPositioning = leftAtStart;
@@ -1037,11 +1019,6 @@ export const createDragToMoveGestureController = (options) => {
             topForPositioning - visualOffsetY,
             elementToImpact,
           );
-
-        console.log("[INITIAL POSITIONING DEBUG]", {
-          initialLeftToImpact,
-          initialTopToImpact,
-        });
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
@@ -1087,19 +1064,6 @@ export const createDragToMoveGestureController = (options) => {
             const elementPosition = initialPosition + moveAmount;
             if (elementToImpact) {
               elementToImpact.style[styleProperty] = `${elementPosition}px`;
-              // Debug final positioning focusing on Y
-              if (styleProperty === "top") {
-                console.log("[FINAL Y POSITIONING DEBUG]", {
-                  element:
-                    elementToImpact.tagName +
-                    (elementToImpact.id ? `#${elementToImpact.id}` : ""),
-                  styleProperty,
-                  initialPosition,
-                  moveAmount,
-                  elementPosition,
-                  finalStyle: elementToImpact.style.top,
-                });
-              }
             }
           }
         };
@@ -1139,16 +1103,6 @@ export const createDragToMoveGestureController = (options) => {
           const desiredElementTop = desiredElementTopRelative;
           const desiredElementBottom =
             desiredElementTop + elementVisuallyImpactedHeight;
-
-          console.log("[Y MOVEMENT DEBUG]", {
-            topAtStart,
-            yMove: gestureInfo.yMove,
-            desiredElementTop,
-            desiredElementBottom,
-            elementHeight: elementVisuallyImpactedHeight,
-            visibleAreaTop: visibleArea.top,
-            visibleAreaBottom: visibleArea.bottom,
-          });
 
           // Determine if auto-scroll is allowed for sticky elements when going up
           const canAutoScrollUp =

@@ -12,6 +12,13 @@ export const createBoundConstraint = (
   const maxAllowedYMove =
     bottom === undefined ? undefined : bottom - topAtStart;
 
+  if (name === "scroll_area") {
+    console.log(
+      `Bounds constraint ${name}: left=${left}, right=${right}, leftAtStart=${leftAtStart}`,
+    );
+    console.log(`Calculated maxAllowedXMove=${maxAllowedXMove}`);
+  }
+
   const apply = (xMove, yMove) => {
     let constrainedXMove = xMove;
     let constrainedYMove = yMove;
