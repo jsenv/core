@@ -849,21 +849,21 @@
 
           const dragOptions = {
             backdrop: false,
-            onGrab: (gestureInfo) => {
+            onGrab: () => {
               updateStatus(controls, `Grabbed ${caseLabel} programmatically`);
-              console.log("Programmatic grab:", gestureInfo);
+              // console.log("Programmatic grab:", gestureInfo);
             },
-            onDragStart: (gestureInfo) => {
+            onDragStart: () => {
               updateStatus(controls, `Started drag on ${caseLabel}`);
-              console.log("Programmatic drag start:", gestureInfo);
+              // console.log("Programmatic drag start:", gestureInfo);
             },
             onDrag: (gestureInfo, phase) => {
               updateStatus(controls, `Dragging ${caseLabel} (${phase})`);
-              console.log("Programmatic drag:", gestureInfo, phase);
+              // console.log("Programmatic drag:", gestureInfo, phase);
             },
-            onRelease: (gestureInfo) => {
+            onRelease: () => {
               updateStatus(controls, `Released ${caseLabel}`);
-              console.log("Programmatic release:", gestureInfo);
+              // console.log("Programmatic release:", gestureInfo);
               controls.dragGesture = null;
               controls.dragInstance = null;
               updateButtonStates(controls, false);
