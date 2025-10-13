@@ -1,4 +1,4 @@
-import { initOverlay } from "@jsenv/dom";
+import { visibleRectEffect } from "@jsenv/dom";
 import { createPortal, forwardRef } from "preact/compat";
 import { useLayoutEffect } from "preact/hooks";
 
@@ -25,7 +25,7 @@ import.meta.css = /* css */ `
 `;
 
 export const TableUI = forwardRef((props, ref) => {
-  const { tableRef } = props;
+  const { tableRef, children } = props;
 
   // ui positioning
   useLayoutEffect(() => {
@@ -36,8 +36,9 @@ export const TableUI = forwardRef((props, ref) => {
     }
 
     const uiContainer = ui.querySelector(".navi_table_ui_container");
-    // TODO: external code should be able to call overlay.update();
-    const overlay = initOverlay(table, (visibleRect) => {
+    // TODO: external code should be able to call tableVisibleRectEffect.check();
+    // (for the drag operation when we scroll)
+    const tableVisibleRectEffect = visibleRectEffect(table, (visibleRect) => {
       uiContainer.style.setProperty(
         "--table-visual-left",
         `${visibleRect.left}px`,
@@ -55,12 +56,12 @@ export const TableUI = forwardRef((props, ref) => {
         `${visibleRect.height}px`,
       );
     });
-    return overlay.destroy;
+    return tableVisibleRectEffect.disconnect;
   });
 
   return createPortal(
     <div ref={ref} className="navi_table_ui">
-      <div className="navi_table_ui_container"></div>
+      <div className="navi_table_ui_container">{children}</div>
     </div>,
     document.body,
   );

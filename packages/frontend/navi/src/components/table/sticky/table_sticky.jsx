@@ -27,14 +27,6 @@ import.meta.css = /* css */ `
     --sticky-frontier-ghost-size: 8px;
   }
 
-  .navi_table_cell {
-    box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.06);
-  }
-  .navi_table_cell[data-sticky-left],
-  .navi_table_cell[data-sticky-top] {
-    box-shadow: none;
-  }
-
   .navi_table_cell[data-sticky-top] {
     position: sticky;
     top: var(--sticky-group-item-top, 0);
@@ -61,14 +53,14 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier {
-    position: fixed;
+    position: absolute;
     cursor: grab;
     pointer-events: auto;
   }
 
   .navi_table_sticky_frontier[data-left] {
     top: var(--sticky-group-top);
-    height: calc(var(--table-height) - var(--sticky-group-top));
+    height: calc(var(--table-visual-height) - var(--sticky-group-top));
     left: var(--sticky-group-left);
     width: var(--sticky-frontier-size);
     background: linear-gradient(
@@ -80,7 +72,7 @@ import.meta.css = /* css */ `
 
   .navi_table_sticky_frontier[data-top] {
     left: var(--sticky-group-left, 0px);
-    width: calc(var(--table-width) - var(--sticky-group-left));
+    width: calc(var(--table-visual-width) - var(--sticky-group-left));
     top: var(--sticky-group-top);
     height: var(--sticky-frontier-size);
     background: linear-gradient(
@@ -318,10 +310,6 @@ const TableStickyLeftFrontier = ({
     useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyLeftFrontierChange);
 
-  // eslint-disable-next-line no-constant-condition
-  if (true) {
-    return null;
-  }
   return (
     <div
       className="navi_table_sticky_frontier"
@@ -365,10 +353,6 @@ const TableStickyTopFrontier = ({
     useContext(TableStickyContext);
   const canMoveFrontier = Boolean(onStickyTopFrontierChange);
 
-  // eslint-disable-next-line no-constant-condition
-  if (true) {
-    return null;
-  }
   return (
     <div
       className="navi_table_sticky_frontier"

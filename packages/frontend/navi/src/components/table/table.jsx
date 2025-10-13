@@ -90,6 +90,7 @@ import {
   useTableStickyContextValue,
 } from "./sticky/table_sticky.js";
 import "./sticky/table_sticky.jsx";
+import { TableStickyFrontier } from "./sticky/table_sticky.jsx";
 import "./table_css.js";
 import { TableUI } from "./table_ui.jsx";
 
@@ -261,7 +262,11 @@ export const Table = forwardRef((props, ref) => {
             </TableSelectionContext.Provider>
           </TableSizeProvider>
         </table>
-        <TableUI ref={tableUIRef} tableRef={innerRef}></TableUI>
+        <TableUI ref={tableUIRef} tableRef={innerRef}>
+          <TableStickyContext.Provider value={stickyContextValue}>
+            <TableStickyFrontier tableRef={innerRef} />
+          </TableStickyContext.Provider>
+        </TableUI>
       </div>
     </div>
   );
