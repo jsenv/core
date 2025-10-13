@@ -538,6 +538,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
     targetElement,
     ({
       left: targetLeft,
+      top: targetTop,
       right: targetRight,
       bottom: targetBottom,
       visibilityRatio,
@@ -615,7 +616,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         if (position === "below") {
           spaceAvailable = document.documentElement.clientHeight - targetBottom;
         } else {
-          spaceAvailable = 0;
+          spaceAvailable = targetTop;
         }
         let spaceAvailableForContent = spaceAvailable;
         spaceAvailableForContent -= ARROW_HEIGHT;
