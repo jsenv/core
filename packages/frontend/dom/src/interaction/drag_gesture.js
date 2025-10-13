@@ -979,7 +979,6 @@ export const createDragToMoveGestureController = (options) => {
         const {
           leftAtStart,
           topAtStart,
-          scrollLeftAtStart,
           visualOffsetX,
           visualOffsetY,
           isStickyLeftOrHasStickyLeftAttr,
