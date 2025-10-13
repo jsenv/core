@@ -451,6 +451,32 @@ export const createDragGestureController = (options = {}) => {
       // Normal case: element can move within available space
       return availableHeight - elementHeight;
     };
+    const createBoundsFrom = (areaElement, elementWidth, elementHeight) => {
+      const documentScrollLeft = documentElement.scrollLeft;
+      const documentScrollTop = documentElement.scrollTop;
+
+      if (areaElement === documentElement) {
+        const { clientWidth, clientHeight } = documentElement;
+        const left = documentScrollLeft;
+        const top = documentScrollTop;
+        const right = left + getRightBound(elementWidth, clientWidth);
+        const bottom = top + getBottomBound(elementHeight, clientHeight);
+
+        return { left, top, right, bottom };
+      }
+
+      const areaViewportRect = areaElement.getBoundingClientRect();
+      const areaBorderSizes = getBorderSizes(areaElement);
+      const left =
+        documentScrollLeft + areaViewportRect.left + areaBorderSizes.left;
+      const top =
+        documentScrollTop + areaViewportRect.top + areaBorderSizes.top;
+      const availableWidth = areaElement.clientWidth;
+      const availableHeight = areaElement.clientHeight;
+      const right = left + getRightBound(elementWidth, availableWidth);
+      const bottom = top + getBottomBound(elementHeight, availableHeight);
+      return { left, top, right, bottom };
+    };
 
     if (areaConstraint === "scroll") {
       // Capture scroll container dimensions at drag start to ensure consistency
@@ -503,57 +529,17 @@ export const createDragGestureController = (options = {}) => {
       }) => {
         const visibleConstraintElement =
           areaConstraintElement || scrollContainer;
-        let bounds;
-        if (visibleConstraintElement === documentElement) {
-          const { clientWidth, clientHeight } = documentElement;
-          // For document scrolling, visible area is the current viewport in scrollable coordinates
-          // This accounts for the current scroll position to allow dragging in the visible area
-          const scrollLeft = documentElement.scrollLeft;
-          const scrollTop = documentElement.scrollTop;
-          const left = scrollLeft;
-          const top = scrollTop;
-          bounds = {
-            left,
-            top,
-            right: left + getRightBound(elementWidth, clientWidth),
-            bottom: top + getBottomBound(elementHeight, clientHeight),
-          };
-        } else {
-          // For custom scroll containers, use the same logic as visibleAreaBase calculation
-          // This ensures consistency between constraints and debug markers
-          const scrollContainerViewportRect =
-            visibleConstraintElement.getBoundingClientRect();
-          const documentScrollLeft = documentElement.scrollLeft;
-          const documentScrollTop = documentElement.scrollTop;
-          const borderSizes = getBorderSizes(visibleConstraintElement);
-          const left =
-            scrollContainerViewportRect.left +
-            documentScrollLeft +
-            borderSizes.left;
-          const top =
-            scrollContainerViewportRect.top +
-            documentScrollTop +
-            borderSizes.top;
-          const availableWidth = visibleConstraintElement.clientWidth;
-          const availableHeight = visibleConstraintElement.clientHeight;
-          const right = left + getRightBound(elementWidth, availableWidth);
-          const bottom = top + getBottomBound(elementHeight, availableHeight);
-
-          bounds = {
-            left,
-            top,
-            right,
-            bottom,
-          };
-
-          // Debug visible area constraint bounds
-          console.log(
-            `Visible area constraint bounds: left=${left}, top=${top}, right=${right}, bottom=${bottom}, elementWidth=${elementWidth}, elementHeight=${elementHeight}, availableWidth=${availableWidth}, availableHeight=${availableHeight}`,
-          );
-          console.log(
-            `Element position: leftAtStart=${leftAtStart}, topAtStart=${topAtStart}`,
-          );
-        }
+        const bounds = createBoundsFrom(
+          visibleConstraintElement,
+          elementWidth,
+          elementHeight,
+        );
+        console.log(
+          `Visible area constraint bounds: left=${bounds.left}, top=${bounds.top}, right=${bounds.right}, bottom=${bounds.bottom}`,
+        );
+        console.log(
+          `Element position: leftAtStart=${leftAtStart}, topAtStart=${topAtStart}`,
+        );
         return createBoundConstraint(bounds, {
           element: visibleConstraintElement,
           name: "visible_area_constraint",
@@ -656,48 +642,11 @@ export const createDragGestureController = (options = {}) => {
 
       // Get current element dimensions for dynamic constraint calculation
       const currentRect = elementVisuallyImpacted.getBoundingClientRect();
-      const availableWidth = scrollContainer.clientWidth;
-      const availableHeight = scrollContainer.clientHeight;
-      // Calculate base visible area in document-relative coordinates
-      // Convert everything to document-relative coords for consistency
-      const borderSizes = getBorderSizes(scrollContainer);
-      const visibleAreaBase = {
-        left: null,
-        top: null,
-        right: null,
-        bottom: null,
-      };
-      if (scrollContainertIsDocument) {
-        // For document scrolling, visible area is the current viewport in document coordinates
-        const scrollLeft = documentElement.scrollLeft;
-        const scrollTop = documentElement.scrollTop;
-        const left = scrollLeft;
-        const top = scrollTop;
-        const right = left + availableWidth;
-        const bottom = top + availableHeight;
-        visibleAreaBase.left = left;
-        visibleAreaBase.top = top;
-        visibleAreaBase.right = right;
-        visibleAreaBase.bottom = bottom;
-      } else {
-        // For custom scroll containers, get the visible area in document-relative coordinates
-        const scrollContainerViewportRect =
-          scrollContainer.getBoundingClientRect();
-        const documentScrollLeft = documentElement.scrollLeft;
-        const documentScrollTop = documentElement.scrollTop;
-        const left =
-          scrollContainerViewportRect.left +
-          documentScrollLeft +
-          borderSizes.left;
-        const top =
-          scrollContainerViewportRect.top + documentScrollTop + borderSizes.top;
-        const right = left + availableWidth;
-        const bottom = top + availableHeight;
-        visibleAreaBase.left = left;
-        visibleAreaBase.top = top;
-        visibleAreaBase.right = right;
-        visibleAreaBase.bottom = bottom;
-      }
+      const visibleAreaBase = createBoundsFrom(
+        scrollContainer,
+        currentRect.width,
+        currentRect.height,
+      );
       let visibleArea;
       if (stickyFrontiers) {
         visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
