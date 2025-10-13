@@ -65,7 +65,7 @@ export const allowWheelThrough = (element) => {
         // to find the next scrollable parent
         continue;
       }
-      applyScrollByWheel(elementBehindMouse, wheelEvent);
+      applyScrollByWheel(scrollableParent, wheelEvent);
       return;
     }
   };
