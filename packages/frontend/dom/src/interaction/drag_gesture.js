@@ -644,14 +644,10 @@ export const createDragGestureController = (options = {}) => {
       { isRelease = false },
     ) => {
       const interactionType = event.type;
-      const previousX = gestureInfo.x;
-      const previousY = gestureInfo.y;
       const x = xDocument;
       const y = yDocument;
-      const xDiff = previousX - xDocument;
-      const yDiff = previousY - yDocument;
-      const xMove = xDocument - gestureInfo.xAtStart;
-      const yMove = yDocument - gestureInfo.yAtStart;
+      const xMove = xDocument - gestureInfo.x;
+      const yMove = yDocument - gestureInfo.y;
 
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
@@ -772,8 +768,6 @@ export const createDragGestureController = (options = {}) => {
       const dragData = {
         x,
         y,
-        xDiff,
-        yDiff,
         xMove: finalXMove,
         yMove: finalYMove,
         isGoingLeft,
