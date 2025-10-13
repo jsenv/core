@@ -365,7 +365,6 @@ const initResizeByMousedown = (
       tableCell,
       scrollableParent,
     );
-
     let startScrollable =
       axis === "x" ? scrollableRect.left : scrollableRect.top;
     if (scrollableParent !== document.documentElement) {
@@ -374,12 +373,7 @@ const initResizeByMousedown = (
         scrollableParent.scrollLeft;
       startScrollable += parentLeft;
     }
-
-    // Constraint bounds in scrollable coordinates
-    // For resizing, we constrain where the RIGHT/BOTTOM edge of the cell can move
-    // Minimum bound: right edge cannot move left of (left + minSize)
     const customStartBound = startScrollable + minCellSize;
-    // Maximum bound: right edge cannot move right of (left + maxSize)
     const customEndBound = startScrollable + maxCellSize;
 
     if (axis === "x") {
