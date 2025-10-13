@@ -12,46 +12,24 @@ export const createBoundConstraint = (bounds, { element, name } = {}) => {
     const top = y;
     const right = x + elementWidth;
     const bottom = y + elementHeight;
-
     let xConstrained = x;
     let yConstrained = y;
-
-    console.log(
-      `${name || "bound"} constraint: checking x=${x}, y=${y}, bounds=[${leftBound},${topBound},${rightBound},${bottomBound}]`,
-    );
-    console.log(
-      `Element would be at: left=${left}, top=${top}, right=${right}, bottom=${bottom}`,
-    );
-
     // Left boundary: element's left edge should not go before leftBound
     if (leftBound !== undefined && left < leftBound) {
-      console.log(
-        `Left constraint: ${left} < ${leftBound} - constraining to ${leftBound}`,
-      );
       xConstrained = leftBound;
     }
     // Right boundary: element's right edge should not go past rightBound
     if (rightBound !== undefined && right > rightBound) {
-      console.log(
-        `Right constraint: ${right} > ${rightBound} - constraining to ${rightBound - elementWidth}`,
-      );
-      xConstrained = rightBound - elementWidth;
+      xConstrained = rightBound;
     }
     // Top boundary: element's top edge should not go before topBound
     if (topBound !== undefined && top < topBound) {
-      console.log(
-        `Top constraint: ${top} < ${topBound} - constraining to ${topBound}`,
-      );
       yConstrained = topBound;
     }
     // Bottom boundary: element's bottom edge should not go past bottomBound
     if (bottomBound !== undefined && bottom > bottomBound) {
-      console.log(
-        `Bottom constraint: ${bottom} > ${bottomBound} - constraining to ${bottomBound - elementHeight}`,
-      );
-      yConstrained = bottomBound - elementHeight;
+      yConstrained = bottomBound;
     }
-
     console.log(
       `${name || "bound"} constraint result: x=${x} -> ${xConstrained}, y=${y} -> ${yConstrained}`,
     );

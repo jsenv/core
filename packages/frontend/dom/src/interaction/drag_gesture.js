@@ -435,23 +435,7 @@ export const createDragGestureController = (options = {}) => {
       stickyFrontiers = false;
     }
 
-    const getRightBound = (elementWidth, availableWidth) => {
-      if (elementWidth >= availableWidth) {
-        // Element fills or exceeds container width - constraint to left edge only
-        return availableWidth;
-      }
-      // Normal case: element can move within available space
-      return availableWidth - elementWidth;
-    };
-    const getBottomBound = (elementHeight, availableHeight) => {
-      if (elementHeight >= availableHeight) {
-        // Element fills or exceeds container height - constraint to top edge only
-        return availableHeight;
-      }
-      // Normal case: element can move within available space
-      return availableHeight - elementHeight;
-    };
-    const createBoundsFrom = (areaElement, elementWidth, elementHeight) => {
+    const createBoundsFrom = (areaElement) => {
       const documentScrollLeft = documentElement.scrollLeft;
       const documentScrollTop = documentElement.scrollTop;
 
@@ -459,8 +443,8 @@ export const createDragGestureController = (options = {}) => {
         const { clientWidth, clientHeight } = documentElement;
         const left = documentScrollLeft;
         const top = documentScrollTop;
-        const right = left + getRightBound(elementWidth, clientWidth);
-        const bottom = top + getBottomBound(elementHeight, clientHeight);
+        const right = left + clientWidth;
+        const bottom = top + clientHeight;
 
         return { left, top, right, bottom };
       }
@@ -473,8 +457,8 @@ export const createDragGestureController = (options = {}) => {
         documentScrollTop + areaViewportRect.top + areaBorderSizes.top;
       const availableWidth = areaElement.clientWidth;
       const availableHeight = areaElement.clientHeight;
-      const right = left + getRightBound(elementWidth, availableWidth);
-      const bottom = top + getBottomBound(elementHeight, availableHeight);
+      const right = left + availableWidth;
+      const bottom = top + availableHeight;
       return { left, top, right, bottom };
     };
 
@@ -486,10 +470,7 @@ export const createDragGestureController = (options = {}) => {
         ? { left: 0, top: 0 }
         : getElementDocumentRect(scrollContainer);
 
-      const scrollAreaConstraintFunction = ({
-        elementWidth,
-        elementHeight,
-      }) => {
+      const scrollAreaConstraintFunction = () => {
         // Handle floating point precision issues between getBoundingClientRect() and scroll dimensions
         // - elementWidth/elementHeight: floats from getBoundingClientRect() (e.g., 2196.477294921875)
         // - scrollWidth/scrollHeight: integers from browser's internal calculations (e.g., 2196)
@@ -503,15 +484,8 @@ export const createDragGestureController = (options = {}) => {
         const top = scrollContainerDocumentRectAtStart.top;
         // Right bound should be the rightmost position where the element can start (not end)
         // So it's containerLeft + (scrollWidth - elementWidth)
-        const right = left + getRightBound(elementWidth, scrollWidthAtStart);
-        const bottom = top + getBottomBound(elementHeight, scrollHeightAtStart);
-
-        console.log(
-          `Scroll area constraint: container left=${scrollContainerDocumentRectAtStart.left}, scrollWidth=${scrollWidthAtStart}, elementWidth=${elementWidth}`,
-        );
-        console.log(
-          `Calculated bounds: left=${left}, right=${right}. Element starts at leftAtStart=${leftAtStart}`,
-        );
+        const right = left + scrollWidthAtStart;
+        const bottom = top + scrollHeightAtStart;
 
         return createBoundConstraint(
           { left, top, right, bottom },
@@ -523,18 +497,10 @@ export const createDragGestureController = (options = {}) => {
       };
       constraintFunctions.push(scrollAreaConstraintFunction);
     } else if (areaConstraint === "visible") {
-      const visibleAreaConstraintFunction = ({
-        elementWidth,
-        elementHeight,
-      }) => {
+      const visibleAreaConstraintFunction = () => {
         const visibleConstraintElement =
           areaConstraintElement || scrollContainer;
-        const bounds = createBoundsFrom(
-          visibleConstraintElement,
-          elementWidth,
-          elementHeight,
-        );
-
+        const bounds = createBoundsFrom(visibleConstraintElement);
         return createBoundConstraint(bounds, {
           element: visibleConstraintElement,
           name: "visible_area_constraint",
@@ -637,11 +603,7 @@ export const createDragGestureController = (options = {}) => {
 
       // Get current element dimensions for dynamic constraint calculation
       const currentRect = elementVisuallyImpacted.getBoundingClientRect();
-      const visibleAreaBase = createBoundsFrom(
-        scrollContainer,
-        currentRect.width,
-        currentRect.height,
-      );
+      const visibleAreaBase = createBoundsFrom(scrollContainer);
 
       let visibleArea;
       if (stickyFrontiers) {
@@ -957,24 +919,39 @@ export const createDragToMoveGestureController = (options) => {
           keep_into_view: {
             if (isGoingPositive) {
               if (desiredElementEnd > visibleAreaEnd) {
+                console.log(
+                  `Auto-scroll RIGHT triggered: desiredElementEnd=${desiredElementEnd} > visibleAreaEnd=${visibleAreaEnd}`,
+                );
                 const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
                 const scroll = currentScroll + scrollAmountNeeded;
+                console.log(
+                  `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
+                );
                 scrollContainer[scrollProperty] = scroll;
+              } else {
+                console.log(
+                  `Auto-scroll RIGHT NOT needed: desiredElementEnd=${desiredElementEnd} <= visibleAreaEnd=${visibleAreaEnd}`,
+                );
               }
-              // } else {
-              //   console.log(
-              //     `Auto-scroll NOT needed: desiredEnd=${desiredElementEnd} <= visibleEnd=${visibleAreaEnd}`,
-              //   );
-              // }
             } else if (isGoingNegative) {
               if (
                 canAutoScrollNegative &&
                 desiredElementStart < visibleAreaStart
               ) {
+                console.log(
+                  `Auto-scroll LEFT triggered: desiredElementStart=${desiredElementStart} < visibleAreaStart=${visibleAreaStart}`,
+                );
                 const scrollAmountNeeded =
                   visibleAreaStart - desiredElementStart;
                 const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
+                console.log(
+                  `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
+                );
                 scrollContainer[scrollProperty] = scroll;
+              } else {
+                console.log(
+                  `Auto-scroll LEFT NOT needed: canAutoScrollNegative=${canAutoScrollNegative}, desiredElementStart=${desiredElementStart} >= visibleAreaStart=${visibleAreaStart}`,
+                );
               }
             }
           }
@@ -992,6 +969,10 @@ export const createDragToMoveGestureController = (options) => {
           const desiredElementLeft = desiredElementLeftRelative;
           const desiredElementRight =
             desiredElementLeft + elementVisuallyImpactedWidth;
+
+          console.log(
+            `Auto-scroll debug: desiredElementLeft=${desiredElementLeft}, desiredElementRight=${desiredElementRight}, visibleArea.left=${visibleArea.left}, visibleArea.right=${visibleArea.right}, scrollContainer.scrollLeft=${scrollContainer.scrollLeft}`,
+          );
 
           // Determine if auto-scroll is allowed for sticky elements when going left
           const canAutoScrollLeft =

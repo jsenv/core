@@ -86,7 +86,7 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
   }
 
   return {
-    onDrag: ({ constraints, visibleArea, elementWidth, elementHeight }) => {
+    onDrag: ({ constraints, visibleArea }) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
@@ -119,7 +119,7 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
           });
           markersToCreate.push({
             name: "visibleAreaRight",
-            x: visibleArea.right + elementWidth,
+            x: visibleArea.right,
             y: 0,
             color: "0 128 0", // green
             side: "right",
@@ -136,7 +136,7 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
           markersToCreate.push({
             name: "visibleAreaBottom",
             x: 0,
-            y: visibleArea.bottom + elementHeight,
+            y: visibleArea.bottom,
             color: "255 165 0", // orange
             side: "bottom",
           });
@@ -164,7 +164,7 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
               // when element is positioned at rightBound (not the left edge position)
               markersToCreate.push({
                 name: `${constraint.name}.right`,
-                x: bounds.right + elementWidth,
+                x: bounds.right,
                 y: 0,
                 color: "128 0 128", // purple
                 side: "right",
@@ -187,7 +187,7 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
               markersToCreate.push({
                 name: `${constraint.name}.bottom`,
                 x: 0,
-                y: bounds.bottom + elementHeight,
+                y: bounds.bottom,
                 color: "128 0 128", // purple
                 side: "bottom",
               });
