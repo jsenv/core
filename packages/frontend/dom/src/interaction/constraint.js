@@ -12,19 +12,25 @@ export const createBoundConstraint = (bounds, { element, name } = {}) => {
     const top = y;
     const right = x + elementWidth;
     const bottom = y + elementHeight;
+
     let xConstrained = x;
     let yConstrained = y;
+
+    // Left boundary: element's left edge should not go before leftBound
     if (leftBound !== undefined && left < leftBound) {
       xConstrained = leftBound;
     }
+    // Right boundary: element's right edge should not go past rightBound
     if (rightBound !== undefined && right > rightBound) {
-      xConstrained = rightBound;
+      xConstrained = rightBound - elementWidth;
     }
+    // Top boundary: element's top edge should not go before topBound
     if (topBound !== undefined && top < topBound) {
       yConstrained = topBound;
     }
+    // Bottom boundary: element's bottom edge should not go past bottomBound
     if (bottomBound !== undefined && bottom > bottomBound) {
-      yConstrained = bottomBound;
+      yConstrained = bottomBound - elementHeight;
     }
 
     return [xConstrained, yConstrained];
