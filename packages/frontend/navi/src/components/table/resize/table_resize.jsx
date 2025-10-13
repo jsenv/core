@@ -368,9 +368,11 @@ const initResizeByMousedown = (
     let startScrollable =
       axis === "x" ? scrollableRect.left : scrollableRect.top;
     if (scrollableParent !== document.documentElement) {
+      const scrollableParenRect = scrollableParent.getBoundingClientRect();
       const parentLeft =
-        scrollableParent.getBoundingClientRect().left -
-        scrollableParent.scrollLeft;
+        axis === "x"
+          ? scrollableParenRect.left - scrollableParent.scrollLeft
+          : scrollableParenRect.top - scrollableParent.scrollTop;
       startScrollable += parentLeft;
     }
     const customStartBound = startScrollable + minCellSize;
