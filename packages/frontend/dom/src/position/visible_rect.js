@@ -404,9 +404,15 @@ export const pickPositionRelativeTo = (
   const elementFitsAbove = spaceAboveTarget >= elementHeight;
   const elementFitsBelow = spaceBelowTarget >= elementHeight;
   {
-    // Prefer below, but use above if it doesn't fit below and does fit above
-    const shouldPlaceAbove = !elementFitsBelow && elementFitsAbove;
-    if (shouldPlaceAbove) {
+    if (elementFitsBelow || spaceAboveTarget <= spaceBelowTarget) {
+      position = "below";
+      // Calculate top position when placing below target (ensure whole pixels)
+      const idealTopWhenBelow = targetBottom;
+      elementPositionTop =
+        idealTopWhenBelow % 1 === 0
+          ? idealTopWhenBelow
+          : Math.floor(idealTopWhenBelow) + 1;
+    } else {
       position = "above";
       // Calculate top position when placing above target
       const idealTopWhenAbove = targetTop - elementHeight;
@@ -415,14 +421,6 @@ export const pickPositionRelativeTo = (
         idealTopWhenAbove < minimumTopInViewport
           ? minimumTopInViewport
           : idealTopWhenAbove;
-    } else {
-      position = "below";
-      // Calculate top position when placing below target (ensure whole pixels)
-      const idealTopWhenBelow = targetBottom;
-      elementPositionTop =
-        idealTopWhenBelow % 1 === 0
-          ? idealTopWhenBelow
-          : Math.floor(idealTopWhenBelow) + 1;
     }
   }
 

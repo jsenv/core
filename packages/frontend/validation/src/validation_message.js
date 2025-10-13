@@ -258,7 +258,7 @@ export const openValidationMessage = (
 
   jsenvValidationMessage.style.opacity = "0";
 
-  allowWheelThrough(jsenvValidationMessage);
+  allowWheelThrough(jsenvValidationMessage, targetElement);
 
   // Connect validation message with target element for accessibility
   const validationMessageId = `jsenv_validation_message-${Date.now()}`;
@@ -608,6 +608,31 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       );
 
       let maxHeight;
+      // Handle overflow at bottom with scrolling if needed
+      console.log({ elementFitsBelow, elementFitsAbove });
+      if (!elementFitsBelow && !elementFitsAbove) {
+        const availableHeight =
+          document.documentElement.clientHeight -
+          targetBottom -
+          ARROW_HEIGHT -
+          BORDER_WIDTH * 2 -
+          16 - // padding * 2
+          8;
+        // Only apply scrolling if we have reasonable space
+        if (availableHeight > 50) {
+          maxHeight = availableHeight;
+        }
+      }
+
+      if (maxHeight) {
+        validationMessageContent.style.maxHeight = `${maxHeight}px`;
+        validationMessageContent.style.overflowY = "auto";
+      } else {
+        validationMessageContent.style.maxHeight = "";
+        validationMessageContent.style.overflowY = "";
+      }
+
+      const { width, height } = validationMessage.getBoundingClientRect();
       if (position === "above") {
         // Position above target element
         validationMessageBodyWrapper.style.marginTop = "";
@@ -615,8 +640,8 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         validationMessageBorder.style.top = `-${BORDER_WIDTH}px`;
         validationMessageBorder.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
         validationMessageBorder.innerHTML = generateSvgWithBottomArrow(
-          validationMessageWidth,
-          validationMessageHeight,
+          width,
+          height,
           arrowLeftPosOnValidationMessage,
         );
       } else {
@@ -625,31 +650,12 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         validationMessageBorder.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
         validationMessageBorder.style.bottom = `-${BORDER_WIDTH}px`;
         validationMessageBorder.innerHTML = generateSvgWithTopArrow(
-          validationMessageWidth,
-          validationMessageHeight,
+          width,
+          height,
           arrowLeftPosOnValidationMessage,
         );
-        // Handle overflow at bottom with scrolling if needed
-        if (!elementFitsBelow && !elementFitsAbove) {
-          const availableHeight =
-            document.documentElement.clientHeight -
-            targetBottom -
-            ARROW_HEIGHT -
-            BORDER_WIDTH * 2;
-          // Only apply scrolling if we have reasonable space
-          if (availableHeight > 50) {
-            maxHeight = availableHeight;
-          }
-        }
       }
 
-      if (maxHeight) {
-        validationMessageContent.style.maxHeight = `${maxHeight}px`;
-        validationMessageContent.style.overflowY = "auto";
-      } else {
-        validationMessageClone.style.maxHeight = "";
-        validationMessageClone.style.overflowY = "";
-      }
       validationMessage.style.opacity = visibilityRatio ? "1" : "0";
       validationMessage.setAttribute("data-position", position);
       validationMessage.style.transform = `translateX(${validationMessageLeft}px) translateY(${validationMessageTop}px)`;
@@ -658,7 +664,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
   const messageSizeChangeObserver = observeValidationMessageSizeChange(
     validationMessageContent,
     (width, height) => {
-      targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
+      // targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
     },
   );
   targetVisibleRectEffect.onBeforeCheck(() => {
