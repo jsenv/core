@@ -406,14 +406,14 @@ export const pickPositionRelativeTo = (
       break determine_position;
     }
     const preferredPosition = element.getAttribute("data-position");
-    const minContentVisibilityRatio = 0.4; // 40% minimum visibility to keep position
+    const minContentVisibilityRatio = 0.6; // 60% minimum visibility to keep position
     if (preferredPosition) {
       // Element has a preferred position - try to keep it unless we really struggle
       const visibleRatio =
         preferredPosition === "above"
           ? spaceAboveTarget / elementHeight
           : spaceBelowTarget / elementHeight;
-      const canShowMinimumContent = visibleRatio * minContentVisibilityRatio;
+      const canShowMinimumContent = visibleRatio >= minContentVisibilityRatio;
       if (canShowMinimumContent) {
         position = preferredPosition;
         break determine_position;
