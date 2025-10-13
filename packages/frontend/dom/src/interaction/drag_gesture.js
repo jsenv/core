@@ -616,7 +616,7 @@ export const createDragGestureController = (options = {}) => {
           );
         } else {
           drag(
-            gestureInfo.xStart +
+            gestureInfo.xAtStart +
               documentElement.scrollLeft +
               scrollContainer.scrollLeft,
             gestureInfo.yAtStart +
@@ -652,6 +652,7 @@ export const createDragGestureController = (options = {}) => {
       const yDiff = previousY - yDocument;
       const xMove = xDocument - gestureInfo.xAtStart;
       const yMove = yDocument - gestureInfo.yAtStart;
+
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
       const previousYMove = previousGestureInfo ? previousGestureInfo.yMove : 0;
