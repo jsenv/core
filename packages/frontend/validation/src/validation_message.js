@@ -24,7 +24,7 @@ import {
  */
 
 import.meta.css = /* css */ `
-  .validation_message {
+  .jsenv_validation_message {
     display: block;
     overflow: visible;
     height: auto;
@@ -37,19 +37,19 @@ import.meta.css = /* css */ `
     transition: opacity 0.2s ease-in-out;
   }
 
-  .validation_message_border {
+  .jsenv_validation_message_border {
     position: absolute;
     pointer-events: none;
     filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, 0.2));
   }
 
-  .validation_message_body_wrapper {
+  .jsenv_validation_message_body_wrapper {
     border-style: solid;
     border-color: transparent;
     position: relative;
   }
 
-  .validation_message_body {
+  .jsenv_validation_message_body {
     padding: 8px;
     position: relative;
     max-width: 47vw;
@@ -58,7 +58,7 @@ import.meta.css = /* css */ `
     gap: 10px;
   }
 
-  .validation_message_icon {
+  .jsenv_validation_message_icon {
     display: flex;
     align-self: flex-start;
     align-items: center;
@@ -69,30 +69,31 @@ import.meta.css = /* css */ `
     flex-shrink: 0;
   }
 
-  .validation_message_exclamation_svg {
+  .jsenv_validation_message_exclamation_svg {
     width: 16px;
     height: 12px;
     color: white;
   }
 
-  .validation_message[data-level="info"] .validation_message_icon {
+  .jsenv_validation_message[data-level="info"] .jsenv_validation_message_icon {
     background-color: #2196f3;
   }
-  .validation_message[data-level="warning"] .validation_message_icon {
+  .jsenv_validation_message[data-level="warning"]
+    .jsenv_validation_message_icon {
     background-color: #ff9800;
   }
-  .validation_message[data-level="error"] .validation_message_icon {
+  .jsenv_validation_message[data-level="error"] .jsenv_validation_message_icon {
     background-color: #f44336;
   }
 
-  .validation_message_content {
+  .jsenv_validation_message_content {
     align-self: center;
     word-break: break-word;
     min-width: 0;
     overflow-wrap: anywhere;
   }
 
-  .validation_message_border svg {
+  .jsenv_validation_message_border svg {
     position: absolute;
     inset: 0;
     overflow: visible;
@@ -106,11 +107,11 @@ import.meta.css = /* css */ `
     fill: var(--background-color);
   }
 
-  .validation_message_close_button_column {
+  .jsenv_validation_message_close_button_column {
     display: flex;
     height: 22px;
   }
-  .validation_message_close_button {
+  .jsenv_validation_message_close_button {
     border: none;
     background: none;
     padding: 0;
@@ -122,7 +123,7 @@ import.meta.css = /* css */ `
     align-self: center;
     color: currentColor;
   }
-  .validation_message_close_button:hover {
+  .jsenv_validation_message_close_button:hover {
     background: rgba(0, 0, 0, 0.1);
   }
   .close_svg {
@@ -139,16 +140,16 @@ import.meta.css = /* css */ `
 // HTML template for the validation message
 const validationMessageTemplate = /* html */ `
   <div
-    class="validation_message"
+    class="jsenv_validation_message"
     role="alert"
     aria-live="assertive"
   >
-    <div class="validation_message_body_wrapper">
-      <div class="validation_message_border"></div>
-      <div class="validation_message_body">
-        <div class="validation_message_icon">
+    <div class="jsenv_validation_message_body_wrapper">
+      <div class="jsenv_validation_message_border"></div>
+      <div class="jsenv_validation_message_body">
+        <div class="jsenv_validation_message_icon">
           <svg
-            class="validation_message_exclamation_svg"
+            class="jsenv_validation_message_exclamation_svg"
             viewBox="0 0 125 300"
             xmlns="http://www.w3.org/2000/svg"
           >
@@ -158,9 +159,9 @@ const validationMessageTemplate = /* html */ `
             />
           </svg>
         </div>
-        <div class="validation_message_content">Default message</div>
-        <div class="validation_message_close_button_column">
-          <button class="validation_message_close_button">
+        <div class="jsenv_validation_message_content">Default message</div>
+        <div class="jsenv_validation_message_close_button_column">
+          <button class="jsenv_validation_message_close_button">
             <svg
               class="close_svg"
               viewBox="0 0 24 24"
@@ -219,10 +220,12 @@ export const openValidationMessage = (
   // Create and add validation message to document
   const jsenvValidationMessage = createValidationMessage();
   const jsenvValidationMessageContent = jsenvValidationMessage.querySelector(
-    ".validation_message_content",
+    ".jsenv_validation_message_content",
   );
   const jsenvValidationMessageCloseButton =
-    jsenvValidationMessage.querySelector(".validation_message_close_button");
+    jsenvValidationMessage.querySelector(
+      ".jsenv_validation_message_close_button",
+    );
   jsenvValidationMessageCloseButton.onclick = () => {
     close("click_close_button");
   };
@@ -258,7 +261,7 @@ export const openValidationMessage = (
   allowWheelThrough(jsenvValidationMessage);
 
   // Connect validation message with target element for accessibility
-  const validationMessageId = `validation_message-${Date.now()}`;
+  const validationMessageId = `jsenv_validation_message-${Date.now()}`;
   jsenvValidationMessage.id = validationMessageId;
   targetElement.setAttribute("aria-invalid", "true");
   targetElement.setAttribute("aria-errormessage", validationMessageId);
@@ -510,20 +513,20 @@ const generateSvgWithBottomArrow = (width, height, arrowPosition) => {
 const createValidationMessage = () => {
   const div = document.createElement("div");
   div.innerHTML = validationMessageTemplate;
-  const validationMessage = div.querySelector(".validation_message");
+  const validationMessage = div.querySelector(".jsenv_validation_message");
   return validationMessage;
 };
 
 const stickValidationMessageToTarget = (validationMessage, targetElement) => {
   // Get references to validation message parts
   const validationMessageBodyWrapper = validationMessage.querySelector(
-    ".validation_message_body_wrapper",
+    ".jsenv_validation_message_body_wrapper",
   );
   const validationMessageBorder = validationMessage.querySelector(
-    ".validation_message_border",
+    ".jsenv_validation_message_border",
   );
   const validationMessageContent = validationMessage.querySelector(
-    ".validation_message_content",
+    ".jsenv_validation_message_content",
   );
 
   // Set initial border styles
@@ -541,8 +544,8 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
     }) => {
       const {
         position,
-        left: elementLeftPos,
-        top: elementTopPos,
+        left: validationMessageLeft,
+        top: validationMessageTop,
         width: validationMessageWidth,
         height: validationMessageHeight,
         elementFitsAbove,
@@ -550,6 +553,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       } = pickPositionRelativeTo(validationMessage, targetElement, {
         alignToViewportEdgeWhenTargetNearEdge: 20,
       });
+      console.log({ validationMessageHeight, validationMessageTop });
 
       // Get element padding and border to properly position arrow
       const targetBorderSizes = getBorderSizes(targetElement);
@@ -570,16 +574,20 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       }
 
       // Calculate arrow position within the validation message
-      if (elementLeftPos < arrowTargetLeft) {
+      if (validationMessageLeft < arrowTargetLeft) {
         // Validation message is left of the target point, move arrow right
-        const diff = arrowTargetLeft - elementLeftPos;
+        const diff = arrowTargetLeft - validationMessageLeft;
         arrowLeftPosOnValidationMessage = diff;
-      } else if (elementLeftPos + validationMessageWidth < arrowTargetLeft) {
+      } else if (
+        validationMessageLeft + validationMessageWidth <
+        arrowTargetLeft
+      ) {
         // Edge case: target point is beyond right edge of validation message
         arrowLeftPosOnValidationMessage = validationMessageWidth - ARROW_WIDTH;
       } else {
         // Target point is within validation message width
-        arrowLeftPosOnValidationMessage = arrowTargetLeft - elementLeftPos;
+        arrowLeftPosOnValidationMessage =
+          arrowTargetLeft - validationMessageLeft;
       }
 
       // Ensure arrow stays within validation message bounds with some padding
@@ -636,7 +644,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
 
       validationMessage.style.opacity = visibilityRatio ? "1" : "0";
       validationMessage.setAttribute("data-position", position);
-      validationMessage.style.transform = `translateX(${elementLeftPos}px) translateY(${elementTopPos}px)`;
+      validationMessage.style.transform = `translateX(${validationMessageLeft}px) translateY(${validationMessageTop}px)`;
     },
   );
   const messageSizeChangeObserver = observeValidationMessageSizeChange(
