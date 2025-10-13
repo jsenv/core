@@ -18,7 +18,7 @@ const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
 
 import.meta.css = /* css */ `
-  .navi_table_container {
+  body {
     --resizer-handle-color: #063b7c;
     --resizer-color: #387ec9;
   }
@@ -68,7 +68,7 @@ import.meta.css = /* css */ `
     top: 0;
     bottom: 0;
     width: 10px;
-    left: 0;
+    left: var(--table-cell-right);
     opacity: 0;
   }
   .navi_table_column_resize_handle {
@@ -288,14 +288,15 @@ const TableColumnRightResizeHandle = ({
   );
 };
 // Column resize helper functions
-const updateTableColumnResizerPosition = (tableCell, columnResizer) => {
-  const tableCellRect = tableCell.getBoundingClientRect();
+const updateTableColumnResizerPosition = (columnCell, columnResizer) => {
   if (columnResizer.hasAttribute("data-resizing")) {
     // ensure mouseenter/mouseleave while resizing cannot interfere
     // while resizing (would move the resizer on other columns)
     return;
   }
-  const tableContainerRect = columnResizer.getBoundingClientRect();
+  const tableCellRect = columnCell.getBoundingClientRect();
+  const tableContainer = columnCell.closest(".navi_table_container");
+  const tableContainerRect = tableContainer.getBoundingClientRect();
   const tableCellLeftRelative = tableCellRect.left - tableContainerRect.left;
   const tableCellHeight = tableCellRect.height;
   const tableCellWidth = tableCellRect.width;
@@ -606,43 +607,25 @@ const TableRowBottomResizeHandle = ({
 };
 
 // Row resize helper functions
-const updateTableRowResizerPosition = (rowCell) => {
-  const tableRowCellRect = rowCell.getBoundingClientRect();
-  const tableContainer = rowCell.closest(".navi_table_container");
-  const tableRowResizer = tableContainer.querySelector(
-    ".navi_table_row_resizer",
-  );
-  if (!tableRowResizer) {
-    return;
-  }
-  if (tableRowResizer.hasAttribute("data-resizing")) {
+const updateTableRowResizerPosition = (rowCell, rowResizer) => {
+  if (rowResizer.hasAttribute("data-resizing")) {
     // ensure mouseenter/mouseleave while resizing cannot interfere
     // while resizing (would move the resizer on other rows)
     return;
   }
+  const tableRowCellRect = rowCell.getBoundingClientRect();
+  const tableContainer = rowCell.closest(".navi_table_container");
   const tableContainerRect = tableContainer.getBoundingClientRect();
   const tableRowTopRelative = tableRowCellRect.top - tableContainerRect.top;
   const tableRowCellWidth = tableRowCellRect.width;
   const tableRowCellHeight = tableRowCellRect.height;
   const tableRowRelativeBottom = tableRowTopRelative + tableRowCellHeight;
-  tableRowResizer.style.setProperty(
+  rowResizer.style.setProperty(
     "--table-cell-bottom",
     `${tableRowRelativeBottom}px`,
   );
-  tableRowResizer.style.setProperty(
-    "--table-cell-width",
-    `${tableRowCellWidth}px`,
-  );
-
-  const table = rowCell.closest(".navi_table");
-  const scrollableParent = getScrollableParent(table);
-  const scrollLeft =
-    scrollableParent === document.documentElement
-      ? 0
-      : scrollableParent.scrollLeft;
-  tableRowResizer.style.setProperty("--table-scroll-left", `${scrollLeft}px`);
-
-  tableRowResizer.setAttribute("data-hover", "");
+  rowResizer.style.setProperty("--table-cell-width", `${tableRowCellWidth}px`);
+  rowResizer.setAttribute("data-hover", "");
 };
 const onMouseEnterTopResizeHandle = (e) => {
   const currentRow = e.target.closest(".navi_tr");
