@@ -582,10 +582,10 @@ export const TableCell = forwardRef((props, ref) => {
       }
       data-after-sticky-top-frontier={isAfterStickyTopFrontier ? "" : undefined}
       tabIndex={-1}
-      data-height-is-xxs={
+      data-height-xxs={
         rowHeight !== undefined && rowHeight < 42 ? "" : undefined
       }
-      data-width-is-xxs={
+      data-width-xxs={
         columnWidth !== undefined && columnWidth < 42 ? "" : undefined
       }
       data-selection-name={isInTableHead ? "column" : "cell"}
