@@ -207,3 +207,4 @@ This guide should help AI coding agents understand the architecture, patterns, a
 - Never write tests on your initiative.
 - Never rite documentation on your initiative.
 - Never use Math.max/Math.min. Code becomes hard to follow. Prefer explicit branching.
+- To add logs for debbuging, prefer console.debug and prefer plain sentence instead of objects. (Objects are harder to copy-paste)
