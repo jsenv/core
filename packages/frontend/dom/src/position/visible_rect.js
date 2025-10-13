@@ -163,8 +163,8 @@ export const visibleRectEffect = (element, update) => {
 
   check("initialization");
 
+  const [beforeCheck, onBeforeCheck] = createPubSub();
   auto_check: {
-    const [beforeCheck, onBeforeCheck] = createPubSub();
     const autoCheck = (reason) => {
       const beforeCheckResults = beforeCheck(reason);
       check(reason);
@@ -300,6 +300,7 @@ export const visibleRectEffect = (element, update) => {
 
   return {
     check,
+    onBeforeCheck,
     disconnect: () => {
       teardown();
     },

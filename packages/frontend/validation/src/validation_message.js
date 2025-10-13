@@ -590,6 +590,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
         Math.min(arrowLeftPosOnValidationMessage, maxArrowPos),
       );
 
+      let maxHeight;
       if (position === "above") {
         // Position above target element
         validationMessageBodyWrapper.style.marginTop = "";
@@ -611,7 +612,6 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
           validationMessageHeight,
           arrowLeftPosOnValidationMessage,
         );
-
         // Handle overflow at bottom with scrolling if needed
         if (!elementFitsBelow && !elementFitsAbove) {
           const availableHeight =
@@ -619,13 +619,19 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
             targetBottom -
             ARROW_HEIGHT -
             BORDER_WIDTH * 2;
-
           // Only apply scrolling if we have reasonable space
           if (availableHeight > 50) {
-            validationMessageContent.style.maxHeight = `${availableHeight}px`;
-            validationMessageContent.style.overflowY = "auto";
+            maxHeight = availableHeight;
           }
         }
+      }
+
+      if (maxHeight) {
+        validationMessageContent.style.maxHeight = `${maxHeight}px`;
+        validationMessageContent.style.overflowY = "auto";
+      } else {
+        validationMessageContent.style.maxHeight = "";
+        validationMessageContent.style.overflowY = "";
       }
 
       validationMessage.style.opacity = visibilityRatio ? "1" : "0";
@@ -633,17 +639,24 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       validationMessage.style.transform = `translateX(${elementLeftPos}px) translateY(${elementTopPos}px)`;
     },
   );
-  const stopObservingMessageSizeChange = observeValidationMessageSizeChange(
+  const messageSizeChangeObserver = observeValidationMessageSizeChange(
     validationMessageContent,
     (width, height) => {
-      targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
+      // targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
     },
   );
+  targetVisibleRectEffect.onBeforeCheck(() => {
+    // prevent feedback loop because check triggers size change which triggers check...
+    messageSizeChangeObserver.disable();
+    return () => {
+      messageSizeChangeObserver.enable();
+    };
+  });
 
   return {
     updatePosition: targetVisibleRectEffect.check,
     stop: () => {
-      stopObservingMessageSizeChange();
+      messageSizeChangeObserver.disconnect();
       targetVisibleRectEffect.disconnect();
     },
   };
@@ -669,8 +682,17 @@ const observeValidationMessageSizeChange = (elementSizeToObserve, callback) => {
     callback(width, height);
   });
   resizeObserver.observe(elementSizeToObserve);
-  return () => {
-    resizeObserver.disconnect();
+
+  return {
+    disable: () => {
+      resizeObserver.unobserve(elementSizeToObserve);
+    },
+    enable: () => {
+      resizeObserver.observe(elementSizeToObserve);
+    },
+    disconnect: () => {
+      resizeObserver.disconnect();
+    },
   };
 };
 
