@@ -774,11 +774,7 @@ export const createDragGestureController = (options = {}) => {
         event,
         { isRelease },
       );
-
-      // Only update previousGestureInfo if it's not a release
-      if (!isRelease) {
-        previousGestureInfo = { ...gestureInfo };
-      }
+      previousGestureInfo = { ...gestureInfo };
       // Calculate xChanged/yChanged based on previous gesture info
       const xChanged = previousGestureInfo
         ? dragData.xMove !== previousGestureInfo.xMove
