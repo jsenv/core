@@ -397,17 +397,40 @@ export const pickPositionRelativeTo = (
   }
 
   // Calculate vertical position (viewport-relative)
-  let elementPositionTop;
   let position;
   const spaceAboveTarget = targetTop;
   const spaceBelowTarget = viewportHeight - targetBottom;
-  {
+  determine_position: {
+    if (forcePosition) {
+      position = forcePosition;
+      break determine_position;
+    }
+    const preferredPosition = element.getAttribute("data-position");
+    const minContentVisibilityRatio = 0.4; // 40% minimum visibility to keep position
+    if (preferredPosition) {
+      // Element has a preferred position - try to keep it unless we really struggle
+      const visibleRatio =
+        preferredPosition === "above"
+          ? spaceAboveTarget / elementHeight
+          : spaceBelowTarget / elementHeight;
+      const canShowMinimumContent = visibleRatio * minContentVisibilityRatio;
+      if (canShowMinimumContent) {
+        position = preferredPosition;
+        break determine_position;
+      }
+    }
+    // No preferred position - use original logic (prefer below, fallback to above if more space)
     const elementFitsBelow = spaceBelowTarget >= elementHeight;
+    if (elementFitsBelow) {
+      position = "below";
+      break determine_position;
+    }
     const hasMoreSpaceBelow = spaceBelowTarget >= spaceAboveTarget;
-    position =
-      forcePosition || elementFitsBelow || hasMoreSpaceBelow
-        ? "below"
-        : "above";
+    position = hasMoreSpaceBelow ? "below" : "above";
+  }
+
+  let elementPositionTop;
+  {
     if (position === "below") {
       // Calculate top position when placing below target (ensure whole pixels)
       const idealTopWhenBelow = targetBottom;
