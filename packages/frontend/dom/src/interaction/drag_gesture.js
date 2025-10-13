@@ -68,7 +68,7 @@
  */
 
 import { createPubSub } from "../pub_sub.js";
-import { getScrollableParent } from "../scroll/parent_scroll.js";
+import { getScrollContainer } from "../scroll/scroll_container.js";
 import {
   elementToFixedCoords,
   elementToStickyCoords,
@@ -178,19 +178,19 @@ export const createDragGestureController = (options = {}) => {
     }
 
     const [teardown, addTeardown] = createPubSub();
-    const scrollableParent = getScrollableParent(element);
-    const scrollableParentIsDocument = scrollableParent === documentElement;
-    const scrollLeftAtStart = scrollableParent.scrollLeft;
-    const scrollTopAtStart = scrollableParent.scrollTop;
+    const scrollContainer = getScrollContainer(element);
+    const scrollContainertIsDocument = scrollContainer === documentElement;
+    const scrollLeftAtStart = scrollContainer.scrollLeft;
+    const scrollTopAtStart = scrollContainer.scrollTop;
 
     // Convert all element coordinates to scrollable-parent-relative coordinates
     const elementToImpactScrollableRect = getElementScrollableRect(
       elementToImpact,
-      scrollableParent,
+      scrollContainer,
     );
     const elementVisuallyImpactedScrollableRect = getElementScrollableRect(
       elementVisuallyImpacted,
-      scrollableParent,
+      scrollContainer,
     );
 
     const { left: elementToImpactLeft, top: elementToImpactTop } =
@@ -251,7 +251,7 @@ export const createDragGestureController = (options = {}) => {
       addTeardown(() => {
         const [leftSticky, topSticky] = elementToStickyCoords(
           element,
-          scrollableParent,
+          scrollContainer,
           { isStickyLeft, isStickyTop },
         );
         const stylesToSetOnTeardown = {};
@@ -268,7 +268,7 @@ export const createDragGestureController = (options = {}) => {
       // Handle data-sticky attributes for visual offset adjustment
       if (fromStickyLeftAttr) {
         isStickyLeftOrHasStickyLeftAttr = true;
-        if (scrollableParentIsDocument) {
+        if (scrollContainertIsDocument) {
           // For document scrolling with sticky elements, calculate the position as it would be at zero scroll
           // The current 'left' is the scrollable coordinate, which includes scroll offset
           // The position at zero scroll would be: left + scrollLeftAtStart
@@ -288,7 +288,7 @@ export const createDragGestureController = (options = {}) => {
       }
       if (fromStickyTopAttr) {
         isStickyTopOrHasStickyTopAttr = true;
-        if (scrollableParentIsDocument) {
+        if (scrollContainertIsDocument) {
           const positionAtZeroScroll = top + scrollTopAtStart;
           visualOffsetY = positionAtZeroScroll - elementToImpactTop;
         }
@@ -300,7 +300,7 @@ export const createDragGestureController = (options = {}) => {
       element,
       elementToImpact,
       elementVisuallyImpacted,
-      scrollableParent,
+      scrollContainer,
 
       xAtStart,
       yAtStart,
@@ -369,7 +369,7 @@ export const createDragGestureController = (options = {}) => {
     let constraintFeedbackLine;
     if (showConstraintFeedbackLine) {
       constraintFeedbackLine = setupConstraintFeedbackLine({
-        scrollableParent,
+        scrollContainer,
       });
       addTeardown(() => {
         constraintFeedbackLine.onRelease();
@@ -413,16 +413,16 @@ export const createDragGestureController = (options = {}) => {
         // outside their intended scrollable area.
         const left = 0;
         const right =
-          left + getRightBound(elementWidth, scrollableParent.scrollWidth);
+          left + getRightBound(elementWidth, scrollContainer.scrollWidth);
         const top = 0;
         const bottom =
-          top + getBottomBound(elementHeight, scrollableParent.scrollHeight);
+          top + getBottomBound(elementHeight, scrollContainer.scrollHeight);
         return createBoundConstraint(
           { left, top, right, bottom },
           {
             leftAtStart,
             topAtStart,
-            element: scrollableParent,
+            element: scrollContainer,
             name: "scrollable_area",
           },
         );
@@ -434,7 +434,7 @@ export const createDragGestureController = (options = {}) => {
         elementHeight,
       }) => {
         const visibleConstraintElement =
-          areaConstraintElement || scrollableParent;
+          areaConstraintElement || scrollContainer;
         let bounds;
         if (visibleConstraintElement === documentElement) {
           const { clientWidth, clientHeight } = documentElement;
@@ -454,7 +454,7 @@ export const createDragGestureController = (options = {}) => {
           // Use helper function to get element coordinates in scrollable space
           const elementRect = getElementScrollableRect(
             visibleConstraintElement,
-            scrollableParent,
+            scrollContainer,
           );
           const left = elementRect.left;
           const top = elementRect.top;
@@ -489,7 +489,7 @@ export const createDragGestureController = (options = {}) => {
         return createBoundConstraint(customAreaConstraint, {
           leftAtStart,
           topAtStart,
-          element: scrollableParent,
+          element: scrollContainer,
           name: "custom_area",
         });
       };
@@ -499,7 +499,7 @@ export const createDragGestureController = (options = {}) => {
     if (obstacleAttributeName) {
       const obstacleConstraintFunctions =
         createObstacleConstraintsFromQuerySelector(
-          areaConstraintElement || scrollableParent,
+          areaConstraintElement || scrollContainer,
           {
             name,
             obstacleAttributeName,
@@ -514,7 +514,7 @@ export const createDragGestureController = (options = {}) => {
     const visualMarkers = setupVisualMarkers({
       direction,
       element,
-      scrollableParent,
+      scrollContainer,
     });
     addTeardown(() => {
       visualMarkers.onRelease();
@@ -548,11 +548,11 @@ export const createDragGestureController = (options = {}) => {
 
         isHandlingScroll = false;
       };
-      scrollableParent.addEventListener("scroll", handleScroll, {
+      scrollContainer.addEventListener("scroll", handleScroll, {
         passive: true,
       });
       addTeardown(() => {
-        scrollableParent.removeEventListener("scroll", handleScroll, {
+        scrollContainer.removeEventListener("scroll", handleScroll, {
           passive: true,
         });
       });
@@ -583,8 +583,8 @@ export const createDragGestureController = (options = {}) => {
         yMouseMove = gestureInfo.yMouseMove; // Keep existing mouse movement
 
         // Recalculate total movement with current scroll offset
-        const currentScrollLeft = scrollableParent.scrollLeft;
-        const currentScrollTop = scrollableParent.scrollTop;
+        const currentScrollLeft = scrollContainer.scrollLeft;
+        const currentScrollTop = scrollContainer.scrollTop;
         const scrollDeltaX = direction.x
           ? currentScrollLeft - scrollLeftAtStart
           : 0;
@@ -596,8 +596,8 @@ export const createDragGestureController = (options = {}) => {
         yMove = yMouseMove + scrollDeltaY;
       } else {
         // For mouse movement and programmatic calls, calculate scroll offset first
-        const currentScrollLeft = scrollableParent.scrollLeft;
-        const currentScrollTop = scrollableParent.scrollTop;
+        const currentScrollLeft = scrollContainer.scrollLeft;
+        const currentScrollTop = scrollContainer.scrollTop;
         const scrollDeltaX = currentScrollLeft - scrollLeftAtStart;
         const scrollDeltaY = currentScrollTop - scrollTopAtStart;
 
@@ -621,18 +621,18 @@ export const createDragGestureController = (options = {}) => {
 
       // Get current element dimensions for dynamic constraint calculation
       const currentRect = elementVisuallyImpacted.getBoundingClientRect();
-      const availableWidth = scrollableParent.clientWidth;
-      const availableHeight = scrollableParent.clientHeight;
+      const availableWidth = scrollContainer.clientWidth;
+      const availableHeight = scrollContainer.clientHeight;
 
       // Calculate base visible area accounting for borders
-      const borderSizes = getBorderSizes(scrollableParent);
+      const borderSizes = getBorderSizes(scrollContainer);
       const visibleAreaBase = {
         left: null,
         top: null,
         right: null,
         bottom: null,
       };
-      if (scrollableParentIsDocument) {
+      if (scrollContainertIsDocument) {
         // For document scrolling, visible area is the current viewport in scrollable coordinates
         // Since we're using scrollable-relative coordinates, the visible area moves with scroll
         const scrollLeft = documentElement.scrollLeft;
@@ -648,12 +648,12 @@ export const createDragGestureController = (options = {}) => {
       } else {
         // For container scrollable parent, visible area should be in same coordinate space
         // The visible area represents where elements can be seen within the container
-        const scrollableRect = getElementScrollableRect(
-          scrollableParent,
-          scrollableParent,
+        const scrollContainerRect = getElementScrollableRect(
+          scrollContainer,
+          scrollContainer,
         );
-        const left = scrollableRect.left + borderSizes.left;
-        const top = scrollableRect.top + borderSizes.top;
+        const left = scrollContainerRect.left + borderSizes.left;
+        const top = scrollContainerRect.top + borderSizes.top;
         const right = left + availableWidth;
         const bottom = top + availableHeight;
         visibleAreaBase.left = left;
@@ -664,7 +664,7 @@ export const createDragGestureController = (options = {}) => {
       let visibleArea;
       if (stickyFrontiers) {
         visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
-          scrollableParent,
+          scrollContainer,
           direction,
           dragName: name,
         });
@@ -787,7 +787,7 @@ export const createDragGestureController = (options = {}) => {
       const someChange = xChanged || yChanged;
       if (someChange) {
         lifecycle?.drag?.(gestureInfo, {
-          scrollableParent,
+          scrollContainer,
           direction,
         });
       }
@@ -831,10 +831,10 @@ export const createDragGestureController = (options = {}) => {
       return null;
     }
 
-    const scrollableParent = getScrollableParent(element);
+    const scrollContainer = getScrollContainer(element);
     const mouseEventCoords = (mouseEvent) => {
       // Always use scrollable-container-relative coordinates for mouse events
-      return mouseEventToScrollableCoords(mouseEvent, scrollableParent);
+      return mouseEventToScrollableCoords(mouseEvent, scrollContainer);
     };
 
     const [xAtStart, yAtStart] = mouseEventCoords(mouseEvent);
@@ -878,7 +878,7 @@ export const createDragToMoveGestureController = (options) => {
   const dragToMoveGestureController = createDragGestureController({
     ...options,
     lifecycle: {
-      drag: (gestureInfo, { direction, scrollableParent }) => {
+      drag: (gestureInfo, { direction, scrollContainer }) => {
         const {
           leftAtStart,
           topAtStart,
@@ -902,7 +902,7 @@ export const createDragToMoveGestureController = (options) => {
         } = gestureInfo;
 
         // Debug logging for document scrolling + left case
-        if (scrollableParent === document.documentElement && direction.x) {
+        if (scrollContainer === document.documentElement && direction.x) {
           console.log("[LIFECYCLE DEBUG]", {
             element: elementVisuallyImpacted,
             elementToImpact,
@@ -919,7 +919,7 @@ export const createDragToMoveGestureController = (options) => {
         let leftForPositioning = leftAtStart;
         let topForPositioning = topAtStart;
         if (isStickyLeftOrHasStickyLeftAttr) {
-          if (scrollableParent === document.documentElement) {
+          if (scrollContainer === document.documentElement) {
             // For document scrolling, calculate position at zero scroll
             leftForPositioning = leftAtStart + scrollLeftAtStart;
             console.log("[POSITIONING DEBUG]", {
@@ -934,7 +934,7 @@ export const createDragToMoveGestureController = (options) => {
           }
         }
         if (isStickyTopOrHasStickyTopAttr) {
-          if (scrollableParent === document.documentElement) {
+          if (scrollContainer === document.documentElement) {
             // For document scrolling, calculate position at zero scroll
             topForPositioning = topAtStart + scrollTopAtStart;
           } else {
@@ -947,11 +947,11 @@ export const createDragToMoveGestureController = (options) => {
             leftForPositioning - visualOffsetX,
             topForPositioning - visualOffsetY,
             elementToImpact,
-            scrollableParent,
+            scrollContainer,
           );
 
         // Debug the coordinate transformation for document scrolling + left case
-        if (scrollableParent === document.documentElement && direction.x) {
+        if (scrollContainer === document.documentElement && direction.x) {
           console.log("[COORDINATE TRANSFORM DEBUG]", {
             element: elementVisuallyImpacted,
             leftForPositioning,
@@ -982,7 +982,7 @@ export const createDragToMoveGestureController = (options) => {
               if (desiredElementEnd > visibleAreaEnd) {
                 const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
                 const scroll = currentScroll + scrollAmountNeeded;
-                scrollableParent[scrollProperty] = scroll;
+                scrollContainer[scrollProperty] = scroll;
               }
               // } else {
               //   console.log(
@@ -997,7 +997,7 @@ export const createDragToMoveGestureController = (options) => {
                 const scrollAmountNeeded =
                   visibleAreaStart - desiredElementStart;
                 const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
-                scrollableParent[scrollProperty] = scroll;
+                scrollContainer[scrollProperty] = scroll;
               }
             }
           }
@@ -1007,7 +1007,7 @@ export const createDragToMoveGestureController = (options) => {
               elementToImpact.style[styleProperty] = `${elementPosition}px`;
               // Debug final positioning for document scrolling + left case
               if (
-                scrollableParent === document.documentElement &&
+                scrollContainer === document.documentElement &&
                 styleProperty === "left"
               ) {
                 console.log("[FINAL POSITIONING DEBUG]", {
@@ -1042,7 +1042,7 @@ export const createDragToMoveGestureController = (options) => {
             desiredElementEnd: desiredElementRight,
             visibleAreaStart: visibleArea.left,
             visibleAreaEnd: visibleArea.right,
-            currentScroll: scrollableParent.scrollLeft,
+            currentScroll: scrollContainer.scrollLeft,
             initialPosition: initialLeftToImpact,
             moveAmount: gestureInfo.xMove,
             scrollProperty: "scrollLeft",
@@ -1071,7 +1071,7 @@ export const createDragToMoveGestureController = (options) => {
             desiredElementEnd: desiredElementBottom,
             visibleAreaStart: visibleArea.top,
             visibleAreaEnd: visibleArea.bottom,
-            currentScroll: scrollableParent.scrollTop,
+            currentScroll: scrollContainer.scrollTop,
             initialPosition: initialTopToImpact,
             moveAmount: gestureInfo.yMove,
             scrollProperty: "scrollTop",

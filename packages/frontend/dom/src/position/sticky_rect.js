@@ -1,9 +1,9 @@
-import { getScrollableParent } from "../scroll/parent_scroll.js";
+import { getScrollContainer } from "../scroll/scroll_container.js";
 
 export const stickyAsRelativeCoords = (
   element,
   referenceElement,
-  { scrollableParent = getScrollableParent(element) } = {},
+  { scrollContainer = getScrollContainer(element) } = {},
 ) => {
   const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
   const hasTopStickyAttribute = element.hasAttribute("data-sticky-top");
@@ -13,7 +13,7 @@ export const stickyAsRelativeCoords = (
   const elementRect = element.getBoundingClientRect();
   const referenceElementRect = referenceElement.getBoundingClientRect();
   const computedStyle = getComputedStyle(element);
-  const isDocumentScrolling = scrollableParent === document.documentElement;
+  const isDocumentScrolling = scrollContainer === document.documentElement;
 
   let leftPosition;
   let topPosition;
@@ -46,12 +46,12 @@ export const stickyAsRelativeCoords = (
   }
 
   // For container scrolling: check if element is currently stuck and calculate offset
-  const scrollableParentRect = scrollableParent.getBoundingClientRect();
+  const scrollContainerRect = scrollContainer.getBoundingClientRect();
   if (hasStickyLeftAttribute) {
     const cssLeftValue = parseFloat(computedStyle.left) || 0;
     // Check if element is stuck to the left edge of the scrollable container
     const isStuckLeft =
-      elementRect.left <= scrollableParentRect.left + cssLeftValue;
+      elementRect.left <= scrollContainerRect.left + cssLeftValue;
     if (isStuckLeft) {
       // Element is stuck - calculate its offset relative to reference element
       const elementOffsetRelative =
@@ -65,8 +65,7 @@ export const stickyAsRelativeCoords = (
   if (hasTopStickyAttribute) {
     const cssTopValue = parseFloat(computedStyle.top) || 0;
     // Check if element is stuck to the top edge of the scrollable container
-    const isStuckTop =
-      elementRect.top <= scrollableParentRect.top + cssTopValue;
+    const isStuckTop = elementRect.top <= scrollContainerRect.top + cssTopValue;
     if (isStuckTop) {
       // Element is stuck - calculate its offset relative to reference element
       const elementOffsetRelative = elementRect.top - referenceElementRect.top;

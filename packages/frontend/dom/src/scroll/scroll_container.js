@@ -1,3 +1,5 @@
+// https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container
+
 import { getStyle } from "../style_and_attributes.js";
 import { getScrollingElement, isScrollable } from "./is_scrollable.js";
 
@@ -5,19 +7,19 @@ export const getAncestorScrolls = (element) => {
   let scrollX = 0;
   let scrollY = 0;
   const ancestorScrolls = [];
-  const visitElement = (elementOrScrollableParent) => {
-    const scrollableParent = getScrollableParent(elementOrScrollableParent);
-    if (scrollableParent) {
+  const visitElement = (elementOrScrollContainer) => {
+    const scrollContainer = getScrollContainer(elementOrScrollContainer);
+    if (scrollContainer) {
       ancestorScrolls.push({
-        element: elementOrScrollableParent,
-        scrollableParent,
+        element: elementOrScrollContainer,
+        scrollContainer,
       });
-      scrollX += scrollableParent.scrollLeft;
-      scrollY += scrollableParent.scrollTop;
-      if (scrollableParent === document) {
+      scrollX += scrollContainer.scrollLeft;
+      scrollY += scrollContainer.scrollTop;
+      if (scrollContainer === document.documentElement) {
         return;
       }
-      visitElement(scrollableParent);
+      visitElement(scrollContainer);
     }
   };
   visitElement(element);
@@ -27,29 +29,26 @@ export const getAncestorScrolls = (element) => {
 };
 
 // https://github.com/shipshapecode/tether/blob/d6817f8c49a7a26b04c45e55589279dd1b5dd2bf/src/js/utils/parents.js#L1
-export const getScrollableParentSet = (element) => {
-  const scrollableParentSet = new Set();
-  let elementOrScrollableParent = element;
+export const getScrollContainerSet = (element) => {
+  const scrollContainerSet = new Set();
+  let elementOrScrollContainer = element;
   while (true) {
-    const scrollableParent = getScrollableParent(elementOrScrollableParent);
-    if (!scrollableParent) {
+    const scrollContainer = getScrollContainer(elementOrScrollContainer);
+    if (!scrollContainer) {
       break;
     }
-    scrollableParentSet.add(scrollableParent);
-    if (
-      scrollableParent === document ||
-      scrollableParent === document.documentElement
-    ) {
+    scrollContainerSet.add(scrollContainer);
+    if (scrollContainer === document.documentElement) {
       break;
     }
-    elementOrScrollableParent = scrollableParent;
+    elementOrScrollContainer = scrollContainer;
   }
-  return scrollableParentSet;
+  return scrollContainerSet;
 };
 
-export const getScrollableParent = (arg, { includeHidden } = {}) => {
+export const getScrollContainer = (arg, { includeHidden } = {}) => {
   if (typeof arg !== "object" || arg.nodeType !== 1) {
-    throw new TypeError("getScrollableParent first argument must be DOM node");
+    throw new TypeError("getScrollContainer first argument must be DOM node");
   }
   const element = arg;
   if (element === document) {
@@ -66,12 +65,12 @@ export const getScrollableParent = (arg, { includeHidden } = {}) => {
     return getScrollingElement(element.ownerDocument);
   }
   return (
-    findScrollableParent(element, { includeHidden }) ||
+    findScrollContainer(element, { includeHidden }) ||
     getScrollingElement(element.ownerDocument)
   );
 };
 
-const findScrollableParent = (element, { includeHidden } = {}) => {
+const findScrollContainer = (element, { includeHidden } = {}) => {
   const position = getStyle(element, "position");
   let parent = element.parentNode;
   // Si l'élément est en position absolute, d'abord trouver le premier parent positionné

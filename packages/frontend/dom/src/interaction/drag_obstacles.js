@@ -40,7 +40,7 @@ export const createObstacleConstraintsFromQuerySelector = (
 
       const obstacleBounds = getElementScrollableRect(
         obstacle,
-        gestureInfo.scrollableParent,
+        gestureInfo.scrollContainer,
         {
           useOriginalPositionEvenIfSticky,
         },

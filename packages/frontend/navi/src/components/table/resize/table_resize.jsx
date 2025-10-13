@@ -1,7 +1,7 @@
 import {
   createDragToMoveGestureController,
   getElementScrollableRect,
-  getScrollableParent,
+  getScrollContainer,
 } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import { useContext } from "preact/hooks";
@@ -360,19 +360,16 @@ const initResizeByMousedown = (
         : defaultMaxSize;
 
     // Always use getElementScrollableRect for consistency with drag system
-    const scrollableParent = getScrollableParent(table);
-    const scrollableRect = getElementScrollableRect(
-      tableCell,
-      scrollableParent,
-    );
+    const scrollContainer = getScrollContainer(table);
+    const scrollableRect = getElementScrollableRect(tableCell, scrollContainer);
     let startScrollable =
       axis === "x" ? scrollableRect.left : scrollableRect.top;
-    if (scrollableParent !== document.documentElement) {
-      const scrollableParenRect = scrollableParent.getBoundingClientRect();
+    if (scrollContainer !== document.documentElement) {
+      const scrollContainerRect = scrollContainer.getBoundingClientRect();
       const parentLeft =
         axis === "x"
-          ? scrollableParenRect.left - scrollableParent.scrollLeft
-          : scrollableParenRect.top - scrollableParent.scrollTop;
+          ? scrollContainerRect.left - scrollContainer.scrollLeft
+          : scrollContainerRect.top - scrollContainer.scrollTop;
       startScrollable += parentLeft;
     }
     const customStartBound = startScrollable + minCellSize;

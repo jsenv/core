@@ -6,7 +6,7 @@
 import {
   createDragToMoveGestureController,
   getDropTargetInfo,
-  getScrollableParent,
+  getScrollContainer,
 } from "@jsenv/dom";
 import { useContext, useRef } from "preact/hooks";
 
@@ -409,9 +409,9 @@ const initMoveStickyFrontierByMousedown = (
   const previewVariableName = "--sticky-frontier-preview-position";
   const ghostElement = frontierGhost;
   const previewElement = frontierPreview;
-  const scrollableParent = getScrollableParent(table);
+  const scrollContainer = getScrollContainer(table);
   // Reset scroll to prevent starting drag in obstacle position
-  scrollableParent[scrollProperty] = 0;
+  scrollContainer[scrollProperty] = 0;
 
   // Setup table dimensions for ghost/preview
   const ghostOffsetParent = ghostElement.offsetParent;

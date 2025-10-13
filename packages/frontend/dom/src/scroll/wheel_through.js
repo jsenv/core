@@ -5,7 +5,7 @@
  */
 
 import { isScrollable } from "./is_scrollable.js";
-import { getScrollableParent } from "./parent_scroll.js";
+import { getScrollContainer } from "./scroll_container.js";
 
 export const allowWheelThrough = (element, connectedElement) => {
   const isElementOrDescendant = (possibleDescendant) => {
@@ -44,8 +44,8 @@ export const allowWheelThrough = (element, connectedElement) => {
 
   if (connectedElement) {
     const onWheel = (wheelEvent) => {
-      const connectedScrollableParent = getScrollableParent(connectedElement);
-      if (connectedScrollableParent === document.documentElement) {
+      const connectedScrollContainer = getScrollContainer(connectedElement);
+      if (connectedScrollContainer === document.documentElement) {
         // the connected scrollable parent is the document
         // there is nothing to do, browser native scroll will work as we want
         return;
@@ -67,7 +67,7 @@ export const allowWheelThrough = (element, connectedElement) => {
       }
       // At this stage the element has no scrollable parts
       // we can try to scroll the connected scrollable parent
-      tryToScrollOne(connectedScrollableParent, wheelEvent);
+      tryToScrollOne(connectedScrollContainer, wheelEvent);
     };
     element.addEventListener("wheel", onWheel);
     return;
@@ -90,8 +90,8 @@ export const allowWheelThrough = (element, connectedElement) => {
         // we search for scrollable container that might be behind it
         continue;
       }
-      const scrollableParent = getScrollableParent(elementBehindMouse);
-      if (tryToScrollOne(scrollableParent, wheelEvent)) {
+      const scrollContainer = getScrollContainer(elementBehindMouse);
+      if (tryToScrollOne(scrollContainer, wheelEvent)) {
         return;
       }
     }

@@ -5,7 +5,7 @@ import {
   getDropTargetInfo,
   getElementScrollableRect,
   getElementVisualCoords,
-  getScrollableParent,
+  getScrollContainer,
   scrollableCoordsToViewport,
   stickyAsRelativeCoords,
 } from "@jsenv/dom";
@@ -288,7 +288,7 @@ export const initDragTableColumnByMousedown = async (
   // ensure [data-drag-obstacle] inside the table clone are ignored
   tableClone.setAttribute("data-drag-ignore", "");
 
-  const scrollableParent = getScrollableParent(table);
+  const scrollContainer = getScrollContainer(table);
 
   // We'll create our own clone container in append_in_dom section
   let cloneParent; // Will be set when we create the drag clone container
@@ -303,7 +303,7 @@ export const initDragTableColumnByMousedown = async (
   update_sticky_elements: {
     // In the table clone we need to convert sticky elements to position: relative
     // with calculated offsets that match their appearance in the original context
-    const scrollableParent = getScrollableParent(table);
+    const scrollContainer = getScrollContainer(table);
 
     // important: only on cells, not on <col> nor <tr>
     const originalStickyCells = table.querySelectorAll(
@@ -321,7 +321,7 @@ export const initDragTableColumnByMousedown = async (
         // So we need the sticky position relative to <table />
         table,
         {
-          scrollableParent,
+          scrollContainer,
         },
       );
       if (relativePosition) {
@@ -378,7 +378,7 @@ export const initDragTableColumnByMousedown = async (
     viewport_positioning: {
       // position the viewport
       const updateViewportPosition = () => {
-        const { scrollLeft, scrollTop } = scrollableParent;
+        const { scrollLeft, scrollTop } = scrollContainer;
         dragCloneViewport.style.setProperty("--scroll-left", `${scrollLeft}px`);
         dragCloneViewport.style.setProperty("--scroll-top", `${scrollTop}px`);
       };
@@ -389,9 +389,9 @@ export const initDragTableColumnByMousedown = async (
       const onScroll = () => {
         updateViewportPosition();
       };
-      scrollableParent.addEventListener("scroll", onScroll, { passive: true });
+      scrollContainer.addEventListener("scroll", onScroll, { passive: true });
       addTeardown(() => {
-        scrollableParent.removeEventListener("scroll", onScroll, {
+        scrollContainer.removeEventListener("scroll", onScroll, {
           passive: true,
         });
       });
@@ -399,18 +399,18 @@ export const initDragTableColumnByMousedown = async (
 
     container_position_and_dimension: {
       // position the container on top of <table> inside this viewport
-      const { scrollLeft, scrollTop } = scrollableParent;
+      const { scrollLeft, scrollTop } = scrollContainer;
       const [
-        tableVisualLeftRelativeToScrollableParent,
-        tableVisualTopRelativeToScrollableParent,
-      ] = getElementVisualCoords(table, scrollableParent);
+        tableVisualLeftRelativeToScrollContainer,
+        tableVisualTopRelativeToScrollContainer,
+      ] = getElementVisualCoords(table, scrollContainer);
       const cloneViewportLeft =
-        scrollLeft < tableVisualLeftRelativeToScrollableParent
-          ? tableVisualLeftRelativeToScrollableParent - scrollLeft
+        scrollLeft < tableVisualLeftRelativeToScrollContainer
+          ? tableVisualLeftRelativeToScrollContainer - scrollLeft
           : 0;
       const cloneViewportTop =
-        scrollTop < tableVisualTopRelativeToScrollableParent
-          ? tableVisualTopRelativeToScrollableParent - scrollTop
+        scrollTop < tableVisualTopRelativeToScrollContainer
+          ? tableVisualTopRelativeToScrollContainer - scrollTop
           : 0;
       dragCloneContainer.style.setProperty(
         "--table-left",
@@ -472,7 +472,7 @@ export const initDragTableColumnByMousedown = async (
 
       const targetColumnRect = getElementScrollableRect(
         targetColumn,
-        scrollableParent,
+        scrollContainer,
       );
 
       // Convert column position to viewport coordinates, then to document coordinates
@@ -480,7 +480,7 @@ export const initDragTableColumnByMousedown = async (
         scrollableCoordsToViewport(
           targetColumnRect.left,
           targetColumnRect.top,
-          scrollableParent,
+          scrollContainer,
         );
 
       // Convert viewport coordinates to document coordinates for absolute positioning

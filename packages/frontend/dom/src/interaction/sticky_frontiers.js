@@ -3,16 +3,16 @@ import { getElementSelector } from "./element_log.js";
 
 export const applyStickyFrontiersToVisibleArea = (
   initialVisibleArea,
-  { direction, scrollableParent, dragName },
+  { direction, scrollContainer, dragName },
 ) => {
   let { left, right, top, bottom } = initialVisibleArea;
 
   if (direction.x) {
     const horizontalStickyFrontiers = createStickyFrontierOnAxis(
-      scrollableParent,
+      scrollContainer,
       {
         name: dragName,
-        scrollableParent,
+        scrollContainer,
         primarySide: "left",
         oppositeSide: "right",
       },
@@ -57,10 +57,10 @@ export const applyStickyFrontiersToVisibleArea = (
 
   if (direction.y) {
     const verticalStickyFrontiers = createStickyFrontierOnAxis(
-      scrollableParent,
+      scrollContainer,
       {
         name: dragName,
-        scrollableParent,
+        scrollContainer,
         primarySide: "top",
         oppositeSide: "bottom",
       },
@@ -111,7 +111,7 @@ export const applyStickyFrontiersToVisibleArea = (
 
 const createStickyFrontierOnAxis = (
   element,
-  { name, scrollableParent, primarySide, oppositeSide },
+  { name, scrollContainer, primarySide, oppositeSide },
 ) => {
   const primaryAttrName = `data-drag-sticky-${primarySide}-frontier`;
   const oppositeAttrName = `data-drag-sticky-${oppositeSide}-frontier`;
@@ -146,7 +146,7 @@ const createStickyFrontierOnAxis = (
         continue;
       }
     }
-    const frontierBounds = getElementScrollableRect(frontier, scrollableParent);
+    const frontierBounds = getElementScrollableRect(frontier, scrollContainer);
     const stickyFrontierObject = {
       type: "sticky-frontier",
       element: frontier,

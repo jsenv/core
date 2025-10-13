@@ -1,6 +1,6 @@
 import { scrollableCoordsToViewport } from "../scroll/scrollable_rect.js";
 
-export const setupConstraintFeedbackLine = ({ scrollableParent }) => {
+export const setupConstraintFeedbackLine = ({ scrollContainer }) => {
   const constraintFeedbackLine = createConstraintFeedbackLine();
 
   // Track last known mouse position for constraint feedback line during scroll
@@ -35,7 +35,7 @@ export const setupConstraintFeedbackLine = ({ scrollableParent }) => {
     const [currentGrabPointX, currentGrabPointY] = scrollableCoordsToViewport(
       xAtStart + gestureInfo.xMove,
       yAtStart + gestureInfo.yMove,
-      scrollableParent,
+      scrollContainer,
     );
 
     // Calculate distance between mouse and current grab point

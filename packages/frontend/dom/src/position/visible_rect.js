@@ -1,5 +1,5 @@
 import { createPubSub } from "../pub_sub.js";
-import { getScrollableParent } from "../scroll/parent_scroll.js";
+import { getScrollContainer } from "../scroll/scroll_container.js";
 
 const DEBUG = false;
 
@@ -17,9 +17,9 @@ const DEBUG = false;
 // A bit like https://tetherjs.dev/ but different
 export const visibleRectEffect = (element, update) => {
   const [teardown, addTeardown] = createPubSub();
-  const scrollableParent = getScrollableParent(element);
-  const scrollableParentIsDocument =
-    scrollableParent === document.documentElement;
+  const scrollContainer = getScrollContainer(element);
+  const scrollContainerIsDocument =
+    scrollContainer === document.documentElement;
   let lastMeasuredWidth;
   let lastMeasuredHeight;
   const check = (reason) => {
@@ -28,14 +28,14 @@ export const visibleRectEffect = (element, update) => {
     }
 
     // 1. Calculate element position relative to scrollable parent
-    const { scrollLeft, scrollTop } = scrollableParent;
+    const { scrollLeft, scrollTop } = scrollContainer;
     const visibleAreaLeft = scrollLeft;
     const visibleAreaTop = scrollTop;
 
     // Get element position relative to its scrollable parent
     let elementAbsoluteLeft;
     let elementAbsoluteTop;
-    if (scrollableParentIsDocument) {
+    if (scrollContainerIsDocument) {
       // For document scrolling, use offsetLeft/offsetTop relative to document
       const rect = element.getBoundingClientRect();
       elementAbsoluteLeft = rect.left + scrollLeft;
@@ -43,9 +43,11 @@ export const visibleRectEffect = (element, update) => {
     } else {
       // For custom container, get position relative to the container
       const elementRect = element.getBoundingClientRect();
-      const containerRect = scrollableParent.getBoundingClientRect();
-      elementAbsoluteLeft = elementRect.left - containerRect.left + scrollLeft;
-      elementAbsoluteTop = elementRect.top - containerRect.top + scrollTop;
+      const scrollContainerRect = scrollContainer.getBoundingClientRect();
+      elementAbsoluteLeft =
+        elementRect.left - scrollContainerRect.left + scrollLeft;
+      elementAbsoluteTop =
+        elementRect.top - scrollContainerRect.top + scrollTop;
     }
 
     const leftVisible =
@@ -59,9 +61,9 @@ export const visibleRectEffect = (element, update) => {
     // Convert to overlay coordinates (adjust for custom scrollable container)
     let overlayLeft = leftVisible;
     let overlayTop = topVisible;
-    if (!scrollableParentIsDocument) {
+    if (!scrollContainerIsDocument) {
       const { left: scrollableLeft, top: scrollableTop } =
-        scrollableParent.getBoundingClientRect();
+        scrollContainer.getBoundingClientRect();
       overlayLeft += scrollableLeft;
       overlayTop += scrollableTop;
     }
@@ -70,8 +72,8 @@ export const visibleRectEffect = (element, update) => {
     const { width, height } = element.getBoundingClientRect();
     lastMeasuredWidth = width;
     lastMeasuredHeight = height;
-    const visibleAreaWidth = scrollableParent.clientWidth;
-    const visibleAreaHeight = scrollableParent.clientHeight;
+    const visibleAreaWidth = scrollContainer.clientWidth;
+    const visibleAreaHeight = scrollContainer.clientHeight;
     const visibleAreaRight = visibleAreaLeft + visibleAreaWidth;
     const visibleAreaBottom = visibleAreaTop + visibleAreaHeight;
     // 2.1 Calculate visible width
@@ -122,7 +124,7 @@ export const visibleRectEffect = (element, update) => {
       (widthVisible * heightVisible) / (width * height);
     // Calculate visibility ratio relative to document viewport
     let documentVisibilityRatio;
-    if (scrollableParentIsDocument) {
+    if (scrollContainerIsDocument) {
       documentVisibilityRatio = scrollVisibilityRatio;
     } else {
       // For custom containers, calculate visibility relative to document viewport
@@ -199,15 +201,15 @@ export const visibleRectEffect = (element, update) => {
           passive: true,
         });
       });
-      if (!scrollableParentIsDocument) {
+      if (!scrollContainerIsDocument) {
         const onScroll = () => {
           autoCheck("scrollable_parent_scroll");
         };
-        scrollableParent.addEventListener("scroll", onScroll, {
+        scrollContainer.addEventListener("scroll", onScroll, {
           passive: true,
         });
         addTeardown(() => {
-          scrollableParent.removeEventListener("scroll", onScroll, {
+          scrollContainer.removeEventListener("scroll", onScroll, {
             passive: true,
           });
         });
@@ -266,13 +268,13 @@ export const visibleRectEffect = (element, update) => {
       addTeardown(() => {
         documentIntersectionObserver.disconnect();
       });
-      if (!scrollableParentIsDocument) {
+      if (!scrollContainerIsDocument) {
         const scrollIntersectionObserver = new IntersectionObserver(
           () => {
             autoCheck("element_intersection_with_scroll_change");
           },
           {
-            root: scrollableParent,
+            root: scrollContainer,
             rootMargin: "0px",
             threshold: [0, 0, 1, 0.9, 1],
           },
@@ -314,7 +316,7 @@ export const pickPositionRelativeTo = (
 ) => {
   if (
     import.meta.dev &&
-    getScrollableParent(element) !== document.documentElement
+    getScrollContainer(element) !== document.documentElement
   ) {
     // The idea behind this warning is that pickPositionRelativeTo is meant to position a tooltip/dropdown etc
     // And for this use case the element to position should be document-relative

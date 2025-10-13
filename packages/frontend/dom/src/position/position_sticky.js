@@ -21,7 +21,7 @@
  * The element should have a CSS "top" value specified (e.g., top: 10px).
  */
 
-import { getScrollableParentSet } from "../scroll/parent_scroll.js";
+import { getScrollContainerSet } from "../scroll/scroll_container.js";
 import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
 import { forceStyles, setStyles } from "../style_and_attributes.js";
@@ -44,17 +44,17 @@ export const initPositionSticky = (element) => {
   }
 
   // Skip polyfill if native position:sticky would work (no overflow:auto/hidden parents)
-  const scrollableParentSet = getScrollableParentSet(element);
-  check_overflow_on_parents: {
+  const scrollContainerSet = getScrollContainerSet(element);
+  check_overflow_on_containers: {
     let hasOverflowHiddenOrAuto = false;
-    for (const scrollableParent of scrollableParentSet) {
-      const scrollableParentComputedStyle = getComputedStyle(scrollableParent);
-      const overflowX = scrollableParentComputedStyle.overflowX;
+    for (const scrollContainer of scrollContainerSet) {
+      const scrollContainerComputedStyle = getComputedStyle(scrollContainer);
+      const overflowX = scrollContainerComputedStyle.overflowX;
       if (overflowX === "auto" || overflowX === "hidden") {
         hasOverflowHiddenOrAuto = true;
         break;
       }
-      const overflowY = scrollableParentComputedStyle.overflowY;
+      const overflowY = scrollContainerComputedStyle.overflowY;
       if (overflowY === "auto" || overflowY === "hidden") {
         hasOverflowHiddenOrAuto = true;
         break;
@@ -164,12 +164,12 @@ export const initPositionSticky = (element) => {
       updatePosition();
     };
 
-    for (const scrollableParent of scrollableParentSet) {
-      scrollableParent.addEventListener("scroll", handleScroll, {
+    for (const scrollContainer of scrollContainerSet) {
+      scrollContainer.addEventListener("scroll", handleScroll, {
         passive: true,
       });
       cleanupCallbackSet.add(() => {
-        scrollableParent.removeEventListener("scroll", handleScroll, {
+        scrollContainer.removeEventListener("scroll", handleScroll, {
           passive: true,
         });
       });

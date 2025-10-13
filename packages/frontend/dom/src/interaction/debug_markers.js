@@ -31,10 +31,10 @@ const getMarkersContainer = () => {
 const MARKER_SIZE = 12;
 
 // Convert scrollable-relative coordinates to viewport coordinates for marker positioning
-const scrollableToViewportCoords = (x, y, scrollableParent, side = null) => {
+const scrollableToViewportCoords = (x, y, scrollContainer, side = null) => {
   const { documentElement } = document;
 
-  if (scrollableParent === documentElement) {
+  if (scrollContainer === documentElement) {
     // For document scrolling, adjust coordinates based on marker side:
     if (side === "left" || side === "right") {
       // Vertical markers: x should stay fixed in viewport, y adjusts for scroll
@@ -47,7 +47,7 @@ const scrollableToViewportCoords = (x, y, scrollableParent, side = null) => {
     if (side === "obstacle") {
       // All obstacles now use scrollable-parent-relative coordinates
       // Use the standard coordinate conversion helper
-      return scrollableCoordsToViewport(x, y, scrollableParent);
+      return scrollableCoordsToViewport(x, y, scrollContainer);
     }
     // For other cases: adjust both coordinates for scroll
     return [x - documentElement.scrollLeft, y - documentElement.scrollTop];
@@ -56,10 +56,10 @@ const scrollableToViewportCoords = (x, y, scrollableParent, side = null) => {
   // For container scrollable parent
   // For boundary markers in container scrolling: also use the standard helper
   // All coordinates are in scrollable-parent-relative space, so we need proper conversion
-  return scrollableCoordsToViewport(x, y, scrollableParent);
+  return scrollableCoordsToViewport(x, y, scrollContainer);
 };
 
-export const setupVisualMarkers = ({ direction, scrollableParent }) => {
+export const setupVisualMarkers = ({ direction, scrollContainer }) => {
   if (!DRAG_DEBUG_MARKERS) {
     return {
       onDrag: () => {},
@@ -187,7 +187,7 @@ export const setupVisualMarkers = ({ direction, scrollableParent }) => {
         } else if (constraint.type === "obstacle") {
           const obstacleMarker = createObstacleMarker(
             constraint,
-            scrollableParent,
+            scrollContainer,
           );
           currentConstraintMarkers.push(obstacleMarker);
         }
@@ -196,7 +196,7 @@ export const setupVisualMarkers = ({ direction, scrollableParent }) => {
       // Create markers with merging for overlapping positions
       const createdMarkers = createMergedMarkers(
         markersToCreate,
-        scrollableParent,
+        scrollContainer,
       );
       currentDebugMarkers.push(
         ...createdMarkers.filter((m) => m.type !== "constraint"),
@@ -222,7 +222,7 @@ export const setupVisualMarkers = ({ direction, scrollableParent }) => {
   };
 };
 
-const createMergedMarkers = (markersToCreate, scrollableParent) => {
+const createMergedMarkers = (markersToCreate, scrollContainer) => {
   const mergedMarkers = [];
   const positionMap = new Map();
 
@@ -241,7 +241,7 @@ const createMergedMarkers = (markersToCreate, scrollableParent) => {
     if (markers.length === 1) {
       // Single marker - create as normal
       const marker = markers[0];
-      const domMarker = createDebugMarker(marker, scrollableParent);
+      const domMarker = createDebugMarker(marker, scrollContainer);
       domMarker.type = marker.name.includes("Bound") ? "constraint" : "visible";
       mergedMarkers.push(domMarker);
     } else {
@@ -255,7 +255,7 @@ const createMergedMarkers = (markersToCreate, scrollableParent) => {
           ...firstMarker,
           name: combinedName,
         },
-        scrollableParent,
+        scrollContainer,
       );
       domMarker.type = markers.some((m) => m.name.includes("Bound"))
         ? "constraint"
@@ -269,13 +269,13 @@ const createMergedMarkers = (markersToCreate, scrollableParent) => {
 
 const createDebugMarker = (
   { name, x, y, color = "255 0 0", side },
-  scrollableParent,
+  scrollContainer,
 ) => {
   // Convert coordinates based on marker side and scrollable parent
   const [viewportX, viewportY] = scrollableToViewportCoords(
     x,
     y,
-    scrollableParent,
+    scrollContainer,
     side,
   );
 
@@ -301,7 +301,7 @@ const createDebugMarker = (
   container.appendChild(marker);
   return marker;
 };
-const createObstacleMarker = (obstacleObj, scrollableParent) => {
+const createObstacleMarker = (obstacleObj, scrollContainer) => {
   const width = obstacleObj.bounds.right - obstacleObj.bounds.left;
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
@@ -310,7 +310,7 @@ const createObstacleMarker = (obstacleObj, scrollableParent) => {
   const [x, y] = scrollableToViewportCoords(
     obstacleObj.bounds.left,
     obstacleObj.bounds.top,
-    scrollableParent,
+    scrollContainer,
     "obstacle",
   );
 
