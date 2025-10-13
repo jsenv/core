@@ -72,7 +72,6 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
 import {
   elementToFixedCoords,
   elementToStickyCoords,
-  scrollableCoordsToPositionedParentCoords,
 } from "../scroll/scrollable_rect.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
@@ -94,39 +93,20 @@ const documentCoordsToPositionedParentCoords = (
   leftDocument,
   topDocument,
   element,
-  scrollContainer,
 ) => {
-  // For document scrolling case, document coords ARE scrollable coords
-  if (scrollContainer === documentElement) {
-    return scrollableCoordsToPositionedParentCoords(
-      leftDocument,
-      topDocument,
-      element,
-      scrollContainer,
-    );
-  }
+  // Use the same logic as the original scrollableCoordsToPositionedParentCoords
+  // but specifically for document coordinates (which is what the "document case" was)
+  const positionedParent = element.offsetParent || document.body;
+  const positionedParentRect = positionedParent.getBoundingClientRect();
+  const { scrollLeft, scrollTop } = documentElement;
 
-  // For custom scroll containers, we need to convert document coords to container-relative coords first
-  const scrollContainerRect = scrollContainer.getBoundingClientRect();
-  const containerScrollLeft = scrollContainer.scrollLeft;
-  const containerScrollTop = scrollContainer.scrollTop;
+  // Convert document coordinates to positioned-parent-relative coordinates
+  const positionedParentLeftInDocument = positionedParentRect.left + scrollLeft;
+  const positionedParentTopInDocument = positionedParentRect.top + scrollTop;
+  const leftPositioned = leftDocument - positionedParentLeftInDocument;
+  const topPositioned = topDocument - positionedParentTopInDocument;
 
-  // Convert from document coords to container-relative coords
-  const leftInContainer =
-    leftDocument -
-    (scrollContainerRect.left + documentElement.scrollLeft) +
-    containerScrollLeft;
-  const topInContainer =
-    topDocument -
-    (scrollContainerRect.top + documentElement.scrollTop) +
-    containerScrollTop;
-
-  return scrollableCoordsToPositionedParentCoords(
-    leftInContainer,
-    topInContainer,
-    element,
-    scrollContainer,
-  );
+  return [leftPositioned, topPositioned];
 };
 
 // Helper to get element rect in document-relative coordinates with position info
@@ -1024,13 +1004,11 @@ export const createDragToMoveGestureController = (options) => {
         }
 
         // Convert from document-relative coordinates to positioned parent coordinates
-        // Since we're using document coords, this works for both document and container scrolling
         const [initialLeftToImpact, initialTopToImpact] =
           documentCoordsToPositionedParentCoords(
             leftForPositioning - visualOffsetX,
             topForPositioning - visualOffsetY,
             elementToImpact,
-            scrollContainer,
           );
 
         // Helper function to handle auto-scroll and element positioning for an axis
