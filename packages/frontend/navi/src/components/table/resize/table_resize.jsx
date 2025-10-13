@@ -348,37 +348,8 @@ const initResizeByMousedown = (
   // Convert constraint bounds from scrollable-parent coordinates to positioned-parent coordinates
   // This is needed because the drag gesture system positions elements relative to their offsetParent
   const { customAreaConstraint, areaConstraint } = (() => {
-    // Use different approaches for document vs custom scroll containers
-    const scrollableParent = getScrollableParent(table);
-
-    // Always get scrollable rect for sticky detection
-    const tableCellScrollableRect = getElementScrollableRect(
-      tableCell,
-      scrollableParent,
-    );
-
-    // Always use getElementScrollableRect for consistency with drag system
-    let cellStartScrollable =
-      axis === "x" ? tableCellScrollableRect.left : tableCellScrollableRect.top;
-
-    if (scrollableParent !== document.documentElement) {
-      const parentLeft =
-        scrollableParent.getBoundingClientRect().left -
-        scrollableParent.scrollLeft;
-      cellStartScrollable += parentLeft;
-    }
-
-    console.log(`cellStartScrollable (${axis}):`, cellStartScrollable, {
-      scrollableParent:
-        scrollableParent === document.documentElement ? "document" : "custom",
-      tableCellScrollableRect,
-      tableCell,
-    });
-
-    // Calculate bounds based on axis
     const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
     const defaultMaxSize = axis === "x" ? COLUMN_MAX_WIDTH : ROW_MAX_HEIGHT;
-
     const minCellSize =
       typeof minSize === "number" && minSize > defaultMinSize
         ? minSize
@@ -388,37 +359,40 @@ const initResizeByMousedown = (
         ? maxSize
         : defaultMaxSize;
 
+    // Always use getElementScrollableRect for consistency with drag system
+    const scrollableParent = getScrollableParent(table);
+    const scrollableRect = getElementScrollableRect(
+      tableCell,
+      scrollableParent,
+    );
+
+    let startScrollable =
+      axis === "x" ? scrollableRect.left : scrollableRect.top;
+    if (scrollableParent !== document.documentElement) {
+      const parentLeft =
+        scrollableParent.getBoundingClientRect().left -
+        scrollableParent.scrollLeft;
+      startScrollable += parentLeft;
+    }
+
     // Constraint bounds in scrollable coordinates
     // For resizing, we constrain where the RIGHT/BOTTOM edge of the cell can move
     // Minimum bound: right edge cannot move left of (left + minSize)
-    const customStartBound = cellStartScrollable + minCellSize;
+    const customStartBound = startScrollable + minCellSize;
     // Maximum bound: right edge cannot move right of (left + maxSize)
-    const customEndBound = cellStartScrollable + maxCellSize;
-
-    console.log({
-      cellStartScrollable,
-      currentSize,
-      minCellSize,
-      maxCellSize,
-      customStartBound,
-      customEndBound,
-    });
+    const customEndBound = startScrollable + maxCellSize;
 
     if (axis === "x") {
       return {
         // Detect sticky positioning for advanced constraint handling
-        areaConstraint: tableCellScrollableRect.fromStickyLeft
-          ? "visible"
-          : "none",
+        areaConstraint: scrollableRect.fromStickyLeft ? "visible" : "none",
         customAreaConstraint: { left: customStartBound, right: customEndBound },
       };
     }
 
     return {
       // Detect sticky positioning for advanced constraint handling
-      areaConstraint: tableCellScrollableRect.fromStickyTop
-        ? "visible"
-        : "none",
+      areaConstraint: scrollableRect.fromStickyTop ? "visible" : "none",
       customAreaConstraint: { top: customStartBound, bottom: customEndBound },
     };
   })();
