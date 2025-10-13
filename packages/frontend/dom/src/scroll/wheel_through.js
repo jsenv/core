@@ -7,66 +7,93 @@
 import { isScrollable } from "./is_scrollable.js";
 import { getScrollableParent } from "./parent_scroll.js";
 
-export const allowWheelThrough = (element) => {
+export const allowWheelThrough = (element, connectedElement) => {
+  const isElementOrDescendant = (possibleDescendant) => {
+    return (
+      possibleDescendant === element || element.contains(possibleDescendant)
+    );
+  };
+  const tryToScrollOne = (element, wheelEvent) => {
+    if (element === document.documentElement) {
+      // let browser handle document scrolling
+      return true;
+    }
+
+    const { deltaX, deltaY } = wheelEvent;
+    // we found what we want: a scrollable container behind the element
+    // we try to scroll it.
+    const elementCanApplyScrollDeltaX =
+      deltaX && canApplyScrollDelta(element, deltaX, "x");
+    const elementCanApplyScrollDeltaY =
+      deltaY && canApplyScrollDelta(element, deltaY, "y");
+    if (!elementCanApplyScrollDeltaX && !elementCanApplyScrollDeltaY) {
+      return false;
+    }
+    if (!isScrollable(element)) {
+      return false;
+    }
+    const belongsToElement = isElementOrDescendant(element);
+    if (belongsToElement) {
+      // let browser handle the scroll on the element itself
+      return true;
+    }
+    wheelEvent.preventDefault();
+    applyWheelScrollThrough(element, wheelEvent);
+    return true;
+  };
+
+  if (connectedElement) {
+    const onWheel = (wheelEvent) => {
+      const connectedScrollableParent = getScrollableParent(connectedElement);
+      if (connectedScrollableParent === document.documentElement) {
+        // the connected scrollable parent is the document
+        // there is nothing to do, browser native scroll will work as we want
+        return;
+      }
+
+      const elementsBehindMouse = document.elementsFromPoint(
+        wheelEvent.clientX,
+        wheelEvent.clientY,
+      );
+      for (const elementBehindMouse of elementsBehindMouse) {
+        const belongsToElement = isElementOrDescendant(elementBehindMouse);
+        // try to scroll element itself
+        if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
+          return;
+        }
+        if (!belongsToElement) {
+          break;
+        }
+      }
+      // At this stage the element has no scrollable parts
+      // we can try to scroll the connected scrollable parent
+      tryToScrollOne(connectedScrollableParent, wheelEvent);
+    };
+    element.addEventListener("wheel", onWheel);
+    return;
+  }
+
   const onWheel = (wheelEvent) => {
-    const deltaX = wheelEvent.deltaX;
-    const deltaY = wheelEvent.deltaY;
     const elementsBehindMouse = document.elementsFromPoint(
       wheelEvent.clientX,
       wheelEvent.clientY,
     );
     for (const elementBehindMouse of elementsBehindMouse) {
-      if (elementBehindMouse === document.documentElement) {
-        // let browser handle document scrolling
+      const belongsToElement = isElementOrDescendant(elementBehindMouse);
+      // try to scroll element itself
+      if (tryToScrollOne(elementBehindMouse, wheelEvent)) {
         return;
       }
-
-      // check if jsenv validation message itself is scrollable
-      // if yes we'll let the browser handle it
-      const mightScrollLeft =
-        deltaX && canApplyScrollDelta(elementBehindMouse, deltaX, "x");
-      const mightScrollTop =
-        deltaY && canApplyScrollDelta(elementBehindMouse, deltaY, "y");
-      if (
-        (mightScrollLeft || mightScrollTop) &&
-        isScrollable(elementBehindMouse)
-      ) {
-        if (element.contains(elementBehindMouse)) {
-          // let browser handle the scroll hapenning on the jsenv validation message
-          return;
-        }
-        applyScrollByWheel(elementBehindMouse, wheelEvent);
-        return;
-      }
-
-      if (
-        elementBehindMouse === element ||
-        element.contains(elementBehindMouse)
-      ) {
-        // we don't care about jsenv validation message itself
-        // we search for scrollable element that might be behind it
+      if (belongsToElement) {
+        // the element is not scrollable and we don't care about his
+        // scrollable parent (because we know it's going to be the document)
+        // we search for scrollable container that might be behind it
         continue;
       }
-
       const scrollableParent = getScrollableParent(elementBehindMouse);
-      if (scrollableParent === document.documentElement) {
-        // the scrollable element directly behind jsenv validation message is the document
+      if (tryToScrollOne(scrollableParent, wheelEvent)) {
         return;
       }
-
-      // we found what we want to fix: a scrollable element behind jsenv validation message
-      // we want to scroll this little guy
-      const parentCanApplyScrollDeltaX =
-        deltaX && canApplyScrollDelta(scrollableParent, deltaX, "x");
-      const parentCanApplyScrollDeltaY =
-        deltaY && canApplyScrollDelta(scrollableParent, deltaY, "y");
-      if (!parentCanApplyScrollDeltaX && !parentCanApplyScrollDeltaY) {
-        // the parent cannot scroll, give a chance to next element behind
-        // to find the next scrollable parent
-        continue;
-      }
-      applyScrollByWheel(scrollableParent, wheelEvent);
-      return;
     }
   };
   element.addEventListener("wheel", onWheel);
@@ -101,7 +128,7 @@ const canApplyScrollDelta = (element, delta, axis) => {
   return true;
 };
 
-const applyScrollByWheel = (element, wheelEvent) => {
+const applyWheelScrollThrough = (element, wheelEvent) => {
   wheelEvent.preventDefault();
   element.scrollBy({
     top: wheelEvent.deltaY,
