@@ -359,25 +359,33 @@ export const createDragGestureController = (options = {}) => {
       stickyFrontiers = false;
     }
 
-    const createBoundsFrom = (areaElement) => {
-      if (areaElement === documentElement) {
-        const { clientWidth, clientHeight } = documentElement;
-        const { left, top } = getScrollRelativeRect(documentElement);
-        const right = left + clientWidth;
-        const bottom = top + clientHeight;
+    const createElementVisibleRect = (element) => {
+      if (element === documentElement) {
+        const { scrollLeft, scrollTop, clientWidth, clientHeight } =
+          documentElement;
 
-        return { left, top, right, bottom };
+        return {
+          left: scrollLeft,
+          top: scrollTop,
+          right: scrollLeft + clientWidth,
+          bottom: scrollTop + clientHeight,
+        };
       }
 
-      const { left, top } = getScrollRelativeRect(areaElement);
-      const areaBorderSizes = getBorderSizes(areaElement);
-      const leftWithBorder = left + areaBorderSizes.left;
-      const topWithBorder = top + areaBorderSizes.top;
-      const availableWidth = areaElement.clientWidth;
-      const availableHeight = areaElement.clientHeight;
+      const { scrollLeft, scrollTop, clientWidth, clientHeight } = element;
+      const elementBorderSizes = getBorderSizes(element);
+      const leftWithBorder = scrollLeft + elementBorderSizes.left;
+      const topWithBorder = scrollTop + elementBorderSizes.top;
+      const availableWidth = clientWidth;
+      const availableHeight = clientHeight;
       const right = leftWithBorder + availableWidth;
       const bottom = topWithBorder + availableHeight;
-      return { left: leftWithBorder, top: topWithBorder, right, bottom };
+      return {
+        left: leftWithBorder,
+        top: topWithBorder,
+        right,
+        bottom,
+      };
     };
 
     if (areaConstraint === "scroll") {
@@ -416,7 +424,7 @@ export const createDragGestureController = (options = {}) => {
       const visibleAreaConstraintFunction = () => {
         const visibleConstraintElement =
           areaConstraintElement || scrollContainer;
-        const bounds = createBoundsFrom(visibleConstraintElement);
+        const bounds = createElementVisibleRect(visibleConstraintElement);
         return createBoundConstraint(bounds, {
           element: visibleConstraintElement,
           name: "visible_area_constraint",
@@ -502,7 +510,7 @@ export const createDragGestureController = (options = {}) => {
       const interactionType = event.type;
       // Get current element dimensions for dynamic constraint calculation
       const currentRect = elementVisuallyImpacted.getBoundingClientRect();
-      const visibleAreaBase = createBoundsFrom(scrollContainer);
+      const visibleAreaBase = createElementVisibleRect(scrollContainer);
 
       let visibleArea;
       if (stickyFrontiers) {
