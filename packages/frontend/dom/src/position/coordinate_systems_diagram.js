@@ -5,28 +5,23 @@
  *
  *    0
  * 0 ─┼─────────────────────────────────────────────────────────────────┐
- *    │ DOCUMENT (2000×1500)                                            │
+ *    │ DOCUMENT                                                        │
  *    │                                                                 │
  *    │       100                                                       │
  *    │  100 ─┼────────────────────────────────────────────────┐        │
- *    │       │ VIEWPORT (1500×1000)                           │        │
+ *    │       │ VIEWPORT                                       │        │
  *    │       │                                                │        │
- *    │       │      200                                       │        │
- *    │       │ 200 ─┼───────────────────────────────────┐     │        │
- *    │       │      │ SCROLL CONTAINER (1000×500)       │     │        │
+ *    │       │      250                                       │        │
+ *    │       │ 250 ─┼───────────────────────────────────┐     │        │
+ *    │       │      │ SCROLL CONTAINER                  │     │        │
  *    │       │      │                                   │     │        │
- *    │       │      │      100                          │     │        │
- *    │       │      │ 100 ─┼─────────────────────────┐  │     │        │
- *    │       │      │      │ CONTENT (800×400)       │  │     │        │
- *    │       │      │      │                         │  │     │        │
- *    │       │      │      │      150                │  │     │        │
- *    │       │      │      │ 150 ─┼──────────────┐   │  │     │        │
- *    │       │      │      │      │ EL (100×100) │   │  │     │        │
- *    │       │      │      │      │              │   │  │     │        │
- *    │       │      │      │      │              │   │  │     │        │
- *    │       │      │      │      │              │   │  │     │        │
- *    │       │      │      │      └──────────────┘   │  │     │        │
- *    │       │      │      └─────────────────────────┘  │     │        │
+ *    │       │      │      200                          │     │        │
+ *    │       │      │ 200 ─┼──────────────┐             │     │        │
+ *    │       │      │      │ ELEMENT      │             │     │        │
+ *    │       │      │      │              │             │     │        │
+ *    │       │      │      │              │             │     │        │
+ *    │       │      │      │              │             │     │        │
+ *    │       │      │      └──────────────┘             │     │        │
  *    │       │      │                                   │     │        │
  *    │       │      └───────────────────────────────────┘     │        │
  *    │       │                                                │        │
@@ -38,19 +33,17 @@
  *
  * Based on the diagram positions shown:
  *
- * • Viewport coords: getBoundingClientRect() → left:450, top:450, right:550, bottom:550
- * • Document coords: viewport + document scroll → left:550, top:550, right:650, bottom:650
- * • Container content coords: relative to content → left:150, top:150, right:250, bottom:250
- * • Container scroll coords: content - container scroll → left:50, top:50, right:150, bottom:150
+ * • Viewport coords: getBoundingClientRect() → left:650, top:650, right:750, bottom:750
+ * • Document coords: viewport + document scroll → left:750, top:750, right:850, bottom:850
+ * • Container scroll coords: element position - container scroll → left:50, top:50, right:150, bottom:150
  *
  * WHEN DOCUMENT SCROLLS (from 100,100 to 200,200):
  * • Viewport coords: same (relative to window)
- * • Document coords: left:650, top:650, right:750, bottom:750
+ * • Document coords: left:850, top:850, right:950, bottom:950
  * • Container coords: unchanged (independent scrolling)
  *
- * WHEN CONTAINER SCROLLS (from 100,100 to 150,150):
- * • Viewport coords: left:400, top:400, right:500, bottom:500
- * • Document coords: left:500, top:500, right:600, bottom:600
- * • Container content coords: same (relative to content)
+ * WHEN CONTAINER SCROLLS (from 250,250 to 300,300):
+ * • Viewport coords: left:600, top:600, right:700, bottom:700
+ * • Document coords: left:700, top:700, right:800, bottom:800
  * • Container scroll coords: left:0, top:0, right:100, bottom:100
  */
