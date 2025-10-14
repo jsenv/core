@@ -1,7 +1,7 @@
 /**
  * Coordinate Systems in Web Development
  *
- * Example with dimensions showing different coordinate systems:
+ * Example showing different coordinate systems:
  *
  *    0
  * 0 ─┼─────────────────────────────────────────────────────────────────┐
@@ -29,21 +29,31 @@
  *    │                                                                 │
  *    └─────────────────────────────────────────────────────────────────┘
  *
- * COORDINATE CONVERSIONS FOR THE ELEMENT (100×100px):
+ * COORDINATE CONVERSIONS FOR THE ELEMENT (focusing on left/x axis):
  *
  * Based on the diagram positions shown:
  *
- * • Viewport coords: getBoundingClientRect() → left:650, top:650, right:750, bottom:750
- * • Document coords: viewport + document scroll → left:750, top:750, right:850, bottom:850
- * • Container scroll coords: element position - container scroll → left:50, top:50, right:150, bottom:150
+ * • Element viewport left: 650
+ *   - Why: Viewport left + scroll container left + element left
+ *               100 +              250 +     200 = 650
  *
- * WHEN DOCUMENT SCROLLS (from 100,100 to 200,200):
- * • Viewport coords: same (relative to window)
- * • Document coords: left:850, top:850, right:950, bottom:950
- * • Container coords: unchanged (independent scrolling)
+ * DOCUMENT COORDINATES:
+ * • Element document left: 750
+ *   - Why: Element is at viewport position 650, plus document scroll 100
+ *   - Calculation: elementViewportLeft(650) + documentScrollLeft(100) = 750
  *
- * WHEN CONTAINER SCROLLS (from 250,250 to 300,300):
- * • Viewport coords: left:600, top:600, right:700, bottom:700
- * • Document coords: left:700, top:700, right:800, bottom:800
- * • Container scroll coords: left:0, top:0, right:100, bottom:100
+ * CONTAINER SCROLL COORDINATES:
+ * • Element container scroll left: 50
+ *   - Why: Element is at container position 200, minus container scroll 150
+ *   - Calculation: elementContainerLeft(200) - containerScrollLeft(150) = 50
+ *
+ * WHEN DOCUMENT SCROLLS (scrollLeft: 100→200):
+ * • Viewport left: 650 (unchanged - relative to window)
+ * • Document left: 750→850 (650 + 200 = 850)
+ * • Container scroll left: 50 (unchanged - independent scrolling)
+ *
+ * WHEN CONTAINER SCROLLS (scrollLeft: 250→300):
+ * • Viewport left: 650→600 (element moves left in viewport)
+ * • Document left: 750→700 (600 + 100 = 700)
+ * • Container scroll left: 50→0 (200 - 300 = -100, but element moved)
  */
