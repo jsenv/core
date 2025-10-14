@@ -518,22 +518,15 @@ export const createDragGestureController = (options = {}) => {
       const dragXWithScroll = xScrollRelative + scrollContainer.scrollLeft;
       const dragYWithScroll = yScrollRelative + scrollContainer.scrollTop;
 
-      // Mouvement demandé par la souris
       const moveXRequested = dragXWithScroll - grabXWithScroll;
       const moveYRequested = dragYWithScroll - grabYWithScroll;
 
-      // Position demandée de l'élément (état initial + mouvement demandé)
-      const elementLeftWithScrollRequested = elementLeftAtGrab + moveXRequested;
-      const elementTopWithScrollRequested = elementTopAtGrab + moveYRequested;
-
-      console.log("apply constraints", {
-        elementLeftAtGrab,
-        elementTopAtGrab,
-        moveXRequested,
-        moveYRequested,
-        elementLeftWithScrollRequested,
-        elementTopWithScrollRequested,
-      });
+      const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
+      const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
+      const elementLeftWithScrollRequested =
+        elementLeftWithScrollAtGrab + moveXRequested;
+      const elementTopWithScrollRequested =
+        elementTopWithScrollAtGrab + moveYRequested;
 
       // === APPLIQUER LES CONTRAINTES ===
       const [elementLeftWithScroll, elementTopWithScroll] = applyConstraints(
@@ -551,8 +544,8 @@ export const createDragGestureController = (options = {}) => {
 
       // === ÉTAT FINAL ===
       // Mouvement final de l'élément (après contraintes)
-      const xMove = elementLeftWithScroll - elementLeftAtGrab;
-      const yMove = elementTopWithScroll - elementTopAtGrab;
+      const xMove = elementLeftWithScroll - elementLeftWithScrollAtGrab;
+      const yMove = elementTopWithScroll - elementTopWithScrollAtGrab;
 
       // Calcul de la direction basé sur le mouvement précédent
       const previousXMove = gestureInfo.xMove;
