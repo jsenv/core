@@ -783,10 +783,6 @@ export const createDragToMoveGestureController = (options) => {
                   `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
                 );
                 scrollContainer[scrollProperty] = scroll;
-              } else {
-                console.log(
-                  `Auto-scroll RIGHT NOT needed: desiredElementEnd=${desiredElementEnd} <= visibleAreaEnd=${visibleAreaEnd}`,
-                );
               }
             } else if (isGoingNegative) {
               if (
@@ -803,10 +799,6 @@ export const createDragToMoveGestureController = (options) => {
                   `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
                 );
                 scrollContainer[scrollProperty] = scroll;
-              } else {
-                console.log(
-                  `Auto-scroll LEFT NOT needed: canAutoScrollNegative=${canAutoScrollNegative}, desiredElementStart=${desiredElementStart} >= visibleAreaStart=${visibleAreaStart}`,
-                );
               }
             }
           }
