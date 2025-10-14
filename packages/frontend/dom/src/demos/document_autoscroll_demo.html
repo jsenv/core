@@ -460,7 +460,7 @@
       controls.dragLeftBtn.addEventListener("click", () => {
         if (!controls.dragGesture) return;
         const currentGestureInfo = controls.dragGesture.gestureInfo;
-        const newX = currentGestureInfo.x - 100;
+        const newX = currentGestureInfo.xMove - 100;
         updateStatus("Dragging left by 100px - testing document auto-scroll");
         controls.dragGesture.drag(newX, currentGestureInfo.y);
       });
@@ -468,7 +468,7 @@
       controls.dragRightBtn.addEventListener("click", () => {
         if (!controls.dragGesture) return;
         const currentGestureInfo = controls.dragGesture.gestureInfo;
-        const newX = currentGestureInfo.x + 100;
+        const newX = currentGestureInfo.xMove + 100;
         updateStatus("Dragging right by 100px - testing document auto-scroll");
         controls.dragGesture.drag(newX, currentGestureInfo.y);
       });
@@ -476,7 +476,7 @@
       controls.dragUpBtn.addEventListener("click", () => {
         if (!controls.dragGesture) return;
         const currentGestureInfo = controls.dragGesture.gestureInfo;
-        const newY = currentGestureInfo.y - 100;
+        const newY = currentGestureInfo.yMove - 100;
         updateStatus("Dragging up by 100px - testing upward auto-scroll");
         controls.dragGesture.drag(currentGestureInfo.x, newY);
       });
@@ -484,7 +484,7 @@
       controls.dragDownBtn.addEventListener("click", () => {
         if (!controls.dragGesture) return;
         const currentGestureInfo = controls.dragGesture.gestureInfo;
-        const newY = currentGestureInfo.y + 100;
+        const newY = currentGestureInfo.yMove + 100;
         updateStatus("Dragging down by 100px - testing downward auto-scroll");
         controls.dragGesture.drag(currentGestureInfo.x, newY);
       });
