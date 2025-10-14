@@ -302,8 +302,6 @@ export const createDragGestureController = (options = {}) => {
 
       grabScrollRelativeRect,
       scrollRelativeRect,
-      x: grabX + scrollRelativeRect.scrollLeft,
-      y: grabY + scrollRelativeRect.scrollTop,
       xMove: 0, // diff between x and PREVIOUS x
       yMove: 0, // diff between y and PREVIOUS y
       xChanged: false, // x changed since last gesture
@@ -535,10 +533,10 @@ export const createDragGestureController = (options = {}) => {
         visibleArea,
       });
 
-      const xNoConstraint = xScrollRelative + scrollRelativeRect.scrollLeft;
-      const yNoConstraint = yScrollRelative + scrollRelativeRect.scrollTop;
-      const previousX = gestureInfo.x;
-      const previousY = gestureInfo.y;
+      const previousX = gestureInfo.dragX + scrollRelativeRect.scrollLeft;
+      const previousY = gestureInfo.dragY + scrollRelativeRect.scrollTop;
+      const xNoConstraint = xScrollRelative + scrollContainer.scrollLeft;
+      const yNoConstraint = yScrollRelative + scrollContainer.scrollTop;
       const xMoveNoConstraint = xNoConstraint - previousX;
       const yMoveNoConstraint = yNoConstraint - previousY;
       const { grabScrollRelativeRect } = gestureInfo;
@@ -573,10 +571,10 @@ export const createDragGestureController = (options = {}) => {
       const elementTopRelative = topAtStart + yMove;
       const elementTop = elementTopRelative;
       const dragData = {
+        dragX: xScrollRelative,
+        dragY: yScrollRelative,
         xMove,
         yMove,
-        x,
-        y,
         xChanged: xMove !== gestureInfo.xMove,
         yChanged: yMove !== gestureInfo.yMove,
         scrollRelativeRect: {
@@ -585,6 +583,8 @@ export const createDragGestureController = (options = {}) => {
           top: elementTopRelative,
           right: elementLeftRelative + currentRect.width,
           bottom: elementTopRelative + currentRect.height,
+          scrollLeft: scrollContainer.scrollLeft,
+          scrollTop: scrollContainer.scrollTop,
         },
         isGoingLeft,
         isGoingRight,
