@@ -3,57 +3,60 @@
  *
  * Example with dimensions showing different coordinate systems:
  *
- * 0                                                                     1600
- * ┌─────────────────────────────────────────────────────────────────────────┐ 0
- * │ DOCUMENT (1600×2400)                                                    │
- * │                                                                         │
- * │                                                                         │
- * │                                                                         │
- * │                                                                         │
- * │         200                                           800               │
- * │         ┌───────────────────────────────────────────────┐500            │
- * │         │ VIEWPORT (600×480)                            │               │
- * │         │                                               │               │
- * │         │                                               │               │
- * │         │    300                          500           │               │
- * │         │    ┌──────────────────────────────┐600        │               │
- * │         │    │ SCROLL CONTAINER (200×120)   │           │               │
- * │         │    │                              │           │               │
- * │         │    │    350              550      │           │               │
- * │         │    │    ┌──────────────────┐650   │           │               │
- * │         │    │    │ CONTENT (200×150)│      │           │               │
- * │         │    │    │    380  440      │      │           │               │
- * │         │    │    │    ┌──────┐680   │      │           │               │
- * │         │    │    │    │ ELEM │      │      │           │               │
- * │         │    │    │    └──────┘720   │      │           │               │
- * │         │    │    │    720  760      │      │           │               │
- * │         │    │    └──────────────────┘      │           │               │
- * │         │    │                              │           │               │
- * │         │    └──────────────────────────────┘800        │               │
- * │         │                                               │               │
- * │         │                                               │               │
- * │         └───────────────────────────────────────────────┘ 980           │
- * │                                                                         │
- * │                                                                         │
- * │                                                                         │
- * │                                                                         │
- * └─────────────────────────────────────────────────────────────────────────┘ 2400
+ * 0                                                                1400
+ * ┌───────────────────────────────────────────────────────────────────┐0
+ * │ DOCUMENT (1400×1600)                                              │
+ * │                                                                   │
+ * │       100                                             900         │
+ * │       ┌─────────────────────────────────────────────────┐200      │
+ * │       │ VIEWPORT (800×650)                              │         │
+ * │       │                                                 │         │
+ * │       │     250                               650       │         │
+ * │       │     ┌───────────────────────────────────┐350    │         │
+ * │       │     │ SCROLL CONTAINER                  │       │         │
+ * │       │     │ (400×280)                         │       │         │
+ * │       │     │                                   │       │         │
+ * │       │     │   320                     720     │       │         │
+ * │       │     │   ┌─────────────────────────┐450  │       │         │
+ * │       │     │   │ CONTENT                 │     │       │         │
+ * │       │     │   │ (400×240)               │     │       │         │
+ * │       │     │   │                         │     │       │         │
+ * │       │     │   │     420         520     │     │       │         │
+ * │       │     │   │     ┌─────────────┐550  │     │       │         │
+ * │       │     │   │     │ ELEM        │     │     │       │         │
+ * │       │     │   │     │ (100×100)   │     │     │       │         │
+ * │       │     │   │     │             │     │     │       │         │
+ * │       │     │   │     │             │     │     │       │         │
+ * │       │     │   │     └─────────────┘650  │     │       │         │
+ * │       │     │   │     520         620     │     │       │         │
+ * │       │     │   │                         │     │       │         │
+ * │       │     │   │                         │     │       │         │
+ * │       │     │   └─────────────────────────┘690  │       │         │
+ * │       │     │   320                     720     │       │         │
+ * │       │     └───────────────────────────────────┘630    │         │
+ * │       │     250                               650       │         │
+ * │       │                                                 │         │
+ * │       │                                                 │         │
+ * │       └─────────────────────────────────────────────────┘850      │
+ * │       100                                             900         │
+ * │                                                                   │
+ * └───────────────────────────────────────────────────────────────────┘ 1600
  *
- * COORDINATE CONVERSIONS FOR THE ELEMENT (60×40px):
+ * COORDINATE CONVERSIONS FOR THE ELEMENT (100×100px):
  *
- * • Viewport coords: getBoundingClientRect() → left:380, top:180, right:440, bottom:220
- * • Document coords: viewport + document scroll → left:580, top:680, right:640, bottom:720
- * • Container content coords: relative to content → left:30, top:150, right:90, bottom:190
- * • Container scroll coords: content - container scroll → left:-20, top:120, right:40, bottom:160
+ * • Viewport coords: getBoundingClientRect() → left:320, top:350, right:420, bottom:450
+ * • Document coords: viewport + document scroll → left:420, top:550, right:520, bottom:650
+ * • Container content coords: relative to content → left:100, top:100, right:200, bottom:200
+ * • Container scroll coords: content - container scroll → left:50, top:70, right:150, bottom:170
  *
- * WHEN DOCUMENT SCROLLS (scrollX=200→250, scrollY=500→600):
+ * WHEN DOCUMENT SCROLLS (scrollX=100→150, scrollY=200→300):
  * • Viewport coords: same (relative to window)
- * • Document coords: left:630, top:780, right:690, bottom:820
+ * • Document coords: left:470, top:650, right:570, bottom:750
  * • Container coords: unchanged (independent scrolling)
  *
  * WHEN CONTAINER SCROLLS (scrollLeft=50→80, scrollTop=30→50):
- * • Viewport coords: left:350, top:160, right:410, bottom:200
- * • Document coords: left:550, top:660, right:610, bottom:700
+ * • Viewport coords: left:290, top:330, right:390, bottom:430
+ * • Document coords: left:390, top:530, right:490, bottom:630
  * • Container content coords: same (relative to content)
- * • Container scroll coords: left:-50, top:100, right:10, bottom:140
+ * • Container scroll coords: left:20, top:50, right:120, bottom:150
  */
