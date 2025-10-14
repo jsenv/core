@@ -375,30 +375,24 @@ export const createDragGestureController = (options = {}) => {
     }
 
     const createBoundsFrom = (areaElement) => {
-      const documentScrollLeft = documentElement.scrollLeft;
-      const documentScrollTop = documentElement.scrollTop;
-
       if (areaElement === documentElement) {
         const { clientWidth, clientHeight } = documentElement;
-        const left = documentScrollLeft;
-        const top = documentScrollTop;
+        const [left, top] = getScrollCoords(documentElement);
         const right = left + clientWidth;
         const bottom = top + clientHeight;
 
         return { left, top, right, bottom };
       }
 
-      const areaViewportRect = areaElement.getBoundingClientRect();
+      const [left, top] = getScrollCoords(areaElement);
       const areaBorderSizes = getBorderSizes(areaElement);
-      const left =
-        documentScrollLeft + areaViewportRect.left + areaBorderSizes.left;
-      const top =
-        documentScrollTop + areaViewportRect.top + areaBorderSizes.top;
+      const leftWithBorder = left + areaBorderSizes.left;
+      const topWithBorder = top + areaBorderSizes.top;
       const availableWidth = areaElement.clientWidth;
       const availableHeight = areaElement.clientHeight;
-      const right = left + availableWidth;
-      const bottom = top + availableHeight;
-      return { left, top, right, bottom };
+      const right = leftWithBorder + availableWidth;
+      const bottom = topWithBorder + availableHeight;
+      return { left: leftWithBorder, top: topWithBorder, right, bottom };
     };
 
     if (areaConstraint === "scroll") {
