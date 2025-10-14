@@ -780,6 +780,13 @@ export const createDragToMoveGestureController = (options) => {
           scrollLeft: grabScrollLeft,
           scrollTop: grabScrollTop,
         } = grabScrollRelativeRect;
+        const desiredElementLeft =
+          grabLeft + grabScrollLeft + gestureInfo.xMove;
+        const desiredElementRight =
+          desiredElementLeft + elementVisuallyImpactedWidth;
+        const desiredElementTop = grabTop + grabScrollTop + gestureInfo.yMove;
+        const desiredElementBottom =
+          desiredElementTop + elementVisuallyImpactedHeight;
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
@@ -831,15 +838,10 @@ export const createDragToMoveGestureController = (options) => {
 
         // Horizontal auto-scroll
         if (direction.x) {
-          const desiredElementLeft =
-            grabLeft + grabScrollLeft + gestureInfo.xMove;
-          const desiredElementRight =
-            desiredElementLeft + elementVisuallyImpactedWidth;
           // Determine if auto-scroll is allowed for sticky elements when going left
           const canAutoScrollLeft =
             !elementVisuallyImpacted.hasAttribute("data-sticky-left") ||
             hasCrossedVisibleAreaLeftOnce;
-
           moveAndKeepIntoView({
             // axis: "x",
             isGoingPositive: isGoingRight,
@@ -858,9 +860,6 @@ export const createDragToMoveGestureController = (options) => {
 
         // Vertical auto-scroll
         if (direction.y) {
-          const desiredElementTop = grabTop + grabScrollTop + gestureInfo.yMove;
-          const desiredElementBottom =
-            desiredElementTop + elementVisuallyImpactedHeight;
           // Determine if auto-scroll is allowed for sticky elements when going up
           const canAutoScrollUp =
             !elementVisuallyImpacted.hasAttribute("data-sticky-top") ||
