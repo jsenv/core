@@ -23,8 +23,8 @@
  *
  * This module provides the missing coordinate APIs that work seamlessly with scroll containers:
  * - **getScrollRelativeRect()**: element rect relative to scroll container (PRIMARY API)
- * - **getMouseEventScrollContainerCoords()**: Mouse coordinates in scroll container space
- * - **convertScrollContainerPosToElementPos()**: Position conversion utilities
+ * - **getMouseEventScrollRelativeRect()**: Mouse coordinates in scroll container space
+ * - **convertScrollRelativeRectToElementRect()**: Convert scroll-relative rect to element positioning coordinates
  *
  * These APIs abstract away the complexity of coordinate system conversion and provide
  * a consistent interface for element positioning regardless of scroll container depth.
@@ -46,6 +46,18 @@
  * const scrollAbsoluteLeft = left + scrollLeft;
  * const scrollAbsoluteTop = top + scrollTop;
  * ```
+ *
+ * ## Secondary APIs:
+ *
+ * - **getMouseEventScrollRelativeRect()**: Get mouse coordinates as a rect in scroll container space
+ * - **convertScrollRelativeRectToElementRect()**: Convert from scroll-relative coordinates to element positioning coordinates (for setting element.style.left/top)
+ *
+ * ## Coordinate System Terminology:
+ *
+ * - **Viewport-relative**: getBoundingClientRect() coordinates - relative to browser viewport
+ * - **Scroll-relative**: Coordinates relative to scroll container (ignoring current scroll position)
+ * - **Scroll-absolute**: Scroll-relative + scroll position (element's position in full scrollable content)
+ * - **Element coordinates**: Coordinates for positioning elements (via element.style.left/top)
  *
  * ## Legacy Coordinate System Diagrams
  *
