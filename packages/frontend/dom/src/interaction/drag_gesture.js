@@ -211,9 +211,12 @@ export const createDragGestureController = (options = {}) => {
     let visualOffsetX = grabLeft - elementToImpactLeftScrollRelative;
     let visualOffsetY = grabTop - elementToImpactTopScrollRelative;
     // const [layoutOffsetX, layoutOffsetY] = getScrollContainerOffset(element);
-    const layoutOffsetX = 0;
-    const layoutOffsetY = 0;
-    console.log({ grabLeft, visualOffsetX });
+
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    const positionedParent = element.offsetParent;
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+    const layoutOffsetX = positionedParentRect.left - scrollContainerRect.left;
+    const layoutOffsetY = positionedParentRect.top - scrollContainerRect.top;
 
     if (isThresholdOnly) {
     } else if (fromFixed) {
@@ -789,10 +792,11 @@ export const createDragToMoveGestureController = (options) => {
           scrollTop: grabScrollTop,
         } = grabScrollRelativeRect;
         const desiredElementLeft =
-          grabLeft + grabScrollLeft + gestureInfo.xMove;
+          grabLeft - layoutOffsetX + grabScrollLeft + gestureInfo.xMove;
         const desiredElementRight =
           desiredElementLeft + elementVisuallyImpactedWidth;
-        const desiredElementTop = grabTop + grabScrollTop + gestureInfo.yMove;
+        const desiredElementTop =
+          grabTop - layoutOffsetY + grabScrollTop + gestureInfo.yMove;
         const desiredElementBottom =
           desiredElementTop + elementVisuallyImpactedHeight;
 
@@ -811,7 +815,7 @@ export const createDragToMoveGestureController = (options) => {
           const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
           const styleProperty = axis === "x" ? "left" : "top";
           const visualOffset = axis === "x" ? visualOffsetX : visualOffsetY;
-          const layoutOffset = axis === "x" ? layoutOffsetX : layoutOffsetY;
+          //  const layoutOffset = axis === "x" ? layoutOffsetX : layoutOffsetY;
 
           keep_into_view: {
             if (isGoingPositive) {
@@ -839,8 +843,7 @@ export const createDragToMoveGestureController = (options) => {
             }
           }
           move: {
-            const elementPosition =
-              desiredElementStart - visualOffset - layoutOffset;
+            const elementPosition = desiredElementStart - visualOffset;
             if (elementToImpact) {
               elementToImpact.style[styleProperty] = `${elementPosition}px`;
             }
