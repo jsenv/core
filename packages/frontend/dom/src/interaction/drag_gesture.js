@@ -527,6 +527,12 @@ export const createDragGestureController = (options = {}) => {
         elementTopWithScrollRequested,
         {
           gestureInfo,
+          elementLeft:
+            gestureInfo.scrollRelativeRect.left +
+            gestureInfo.scrollRelativeRect.scrollLeft,
+          elementTop:
+            gestureInfo.scrollRelativeRect.top +
+            gestureInfo.scrollRelativeRect.scrollTop,
           elementWidth: currentRect.width,
           elementHeight: currentRect.height,
           direction,
