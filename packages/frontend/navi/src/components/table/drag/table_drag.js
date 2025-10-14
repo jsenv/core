@@ -3,9 +3,9 @@ import {
   createMouseDragThresholdPromise,
   createPubSub,
   getDropTargetInfo,
-  getElementScrollableRect,
   getElementVisualCoords,
   getScrollContainer,
+  getScrollRelativeRect,
   scrollableCoordsToViewport,
   stickyAsRelativeCoords,
 } from "@jsenv/dom";
@@ -470,7 +470,7 @@ export const initDragTableColumnByMousedown = async (
         return;
       }
 
-      const targetColumnRect = getElementScrollableRect(
+      const targetColumnRect = getScrollRelativeRect(
         targetColumn,
         scrollContainer,
       );

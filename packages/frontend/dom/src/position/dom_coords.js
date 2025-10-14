@@ -317,22 +317,20 @@ export const convertScrollRelativeRectToElementRect = (
   const isStickyLeft = Boolean(fromStickyLeft || fromStickyLeftAttr);
   const isStickyTop = Boolean(fromStickyTop || fromStickyTopAttr);
   if (isStickyLeft || isStickyTop) {
-    let elementLeftRelative;
-    let elementTopRelative;
+    let elementLeftRelative = leftScrollRelative;
+    let elementTopRelative = topScrollRelative;
 
     if (isStickyLeft) {
       const stickyLeft = fromStickyLeft
         ? fromStickyLeft.value
         : fromStickyLeftAttr.value;
-      const naturalPosition = elementLeftRelative;
+      const naturalPosition = leftScrollRelative;
       const stickyPosition = stickyLeft;
       if (naturalPosition < stickyPosition) {
         elementLeftRelative = stickyPosition;
       } else {
         elementLeftRelative = naturalPosition;
       }
-    } else {
-      elementLeftRelative = leftScrollRelative;
     }
 
     if (isStickyTop) {
@@ -342,12 +340,10 @@ export const convertScrollRelativeRectToElementRect = (
       const naturalPosition = topScrollRelative;
       const stickyPosition = stickyTop;
       if (naturalPosition < stickyPosition) {
-        elementLeftRelative = stickyPosition;
+        elementTopRelative = stickyPosition;
       } else {
-        elementLeftRelative = naturalPosition;
+        elementTopRelative = naturalPosition;
       }
-    } else {
-      elementTopRelative = topScrollRelative;
     }
 
     return createElementRect(elementLeftRelative, elementTopRelative);
@@ -365,17 +361,29 @@ export const convertScrollRelativeRectToElementRect = (
 
   if (scrollContainerIsDocument && !positionedParentIsDocument) {
     // Scroll container is document, but element is positioned relative to a parent
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    const elementLeftRelative = leftScrollRelative + positionedParentRect.left;
-    const elementTopRelative = topScrollRelative + positionedParentRect.top;
+    // Convert positioned parent to document-relative coordinates
+    const positionedParentScrollRelativeRect = getScrollRelativeRect(
+      positionedParent,
+      documentElement,
+    );
+    const elementLeftRelative =
+      leftScrollRelative - positionedParentScrollRelativeRect.left;
+    const elementTopRelative =
+      topScrollRelative - positionedParentScrollRelativeRect.top;
     return createElementRect(elementLeftRelative, elementTopRelative);
   }
 
   if (!scrollContainerIsDocument && positionedParentIsDocument) {
     // Scroll container is not document, but element is positioned relative to document
-    const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const elementLeftRelative = leftScrollRelative + scrollContainerRect.left;
-    const elementTopRelative = topScrollRelative + scrollContainerRect.top;
+    // Convert scroll container position to document-relative coordinates
+    const scrollContainerScrollRelativeRect = getScrollRelativeRect(
+      scrollContainer,
+      documentElement,
+    );
+    const elementLeftRelative =
+      leftScrollRelative + scrollContainerScrollRelativeRect.left;
+    const elementTopRelative =
+      topScrollRelative + scrollContainerScrollRelativeRect.top;
     return createElementRect(elementLeftRelative, elementTopRelative);
   }
 
@@ -385,12 +393,28 @@ export const convertScrollRelativeRectToElementRect = (
   }
 
   // General case: different scroll container and positioned parent
-  const scrollContainerRect = scrollContainer.getBoundingClientRect();
-  const positionedParentRect = positionedParent.getBoundingClientRect();
+  // Convert both scroll container and positioned parent to document-relative coordinates
+  const scrollContainerScrollRelativeRect = getScrollRelativeRect(
+    scrollContainer,
+    documentElement,
+  );
+  const positionedParentScrollRelativeRect = getScrollRelativeRect(
+    positionedParent,
+    documentElement,
+  );
+
+  // Element position in document coordinates
+  const elementLeftDocument =
+    leftScrollRelative + scrollContainerScrollRelativeRect.left;
+  const elementTopDocument =
+    topScrollRelative + scrollContainerScrollRelativeRect.top;
+
+  // Convert to positioned parent relative coordinates
   const elementLeftRelative =
-    leftScrollRelative + scrollContainerRect.left + positionedParentRect.left;
+    elementLeftDocument - positionedParentScrollRelativeRect.left;
   const elementTopRelative =
-    topScrollRelative + scrollContainerRect.top + positionedParentRect.top;
+    elementTopDocument - positionedParentScrollRelativeRect.top;
+
   return createElementRect(elementLeftRelative, elementTopRelative);
 };
 

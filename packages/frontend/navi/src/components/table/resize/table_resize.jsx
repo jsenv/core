@@ -1,7 +1,6 @@
 import {
   createDragToMoveGestureController,
-  getElementScrollableRect,
-  getScrollContainer,
+  getScrollRelativeRect,
 } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import { useContext } from "preact/hooks";
@@ -68,7 +67,7 @@ import.meta.css = /* css */ `
     top: 0;
     bottom: 0;
     width: 10px;
-    left: var(--table-cell-right);
+    left: var(--table-column-resizer-left);
     opacity: 0;
   }
   .navi_table_column_resize_handle {
@@ -297,11 +296,13 @@ const updateTableColumnResizerPosition = (columnCell, columnResizer) => {
   const columnCellRect = columnCell.getBoundingClientRect();
   const columnResizerParent = columnResizer.parentElement; // Should be navi_table_ui_container
   const columnResizerParentRect = columnResizerParent.getBoundingClientRect();
-
   // Calculate cell position relative to columnResizer's parent
-  const cellRight = columnCellRect.right - columnResizerParentRect.left;
+  const columnRight = columnCellRect.right - columnResizerParentRect.left;
   const cellHeight = columnCellRect.height;
-  columnResizer.style.setProperty("--table-cell-right", `${cellRight}px`);
+  columnResizer.style.setProperty(
+    "--table-column-resizer-left",
+    `${columnRight}px`,
+  );
   columnResizer.style.setProperty("--table-cell-height", `${cellHeight}px`);
   columnResizer.setAttribute("data-hover", "");
 };
@@ -335,7 +336,6 @@ const initResizeByMousedown = (
     axis, // 'x' or 'y'
   },
 ) => {
-  const table = tableCell.closest(".navi_table");
   const updateResizerPosition =
     axis === "x"
       ? updateTableColumnResizerPosition
@@ -360,11 +360,11 @@ const initResizeByMousedown = (
         : defaultMaxSize;
 
     // Always use getElementScrollableRect for consistency with drag system
-    const scrollContainer = getScrollContainer(table);
-    const scrollableRect = getElementScrollableRect(tableCell, scrollContainer);
+    const scrollRelativeRect = getScrollRelativeRect(tableCell);
+    const { scrollContainer, scrollContainerIsDocument } = scrollRelativeRect;
     let startScrollable =
-      axis === "x" ? scrollableRect.left : scrollableRect.top;
-    if (scrollContainer !== document.documentElement) {
+      axis === "x" ? scrollRelativeRect.left : scrollRelativeRect.top;
+    if (!scrollContainerIsDocument) {
       const scrollContainerRect = scrollContainer.getBoundingClientRect();
       const scrollContainerOffset =
         axis === "x"
@@ -377,15 +377,14 @@ const initResizeByMousedown = (
 
     if (axis === "x") {
       return {
-        // Detect sticky positioning for advanced constraint handling
-        areaConstraint: scrollableRect.fromStickyLeft ? "visible" : "none",
+        areaConstraint: scrollRelativeRect.isSticky ? "visible" : "none",
         customAreaConstraint: { left: customStartBound, right: customEndBound },
       };
     }
 
     return {
       // Detect sticky positioning for advanced constraint handling
-      areaConstraint: scrollableRect.fromStickyTop ? "visible" : "none",
+      areaConstraint: scrollRelativeRect.isSticky ? "visible" : "none",
       customAreaConstraint: { top: customStartBound, bottom: customEndBound },
     };
   })();
@@ -394,6 +393,7 @@ const initResizeByMousedown = (
   const gestureName = axis === "x" ? "resize-column" : "resize-row";
   const direction = axis === "x" ? { x: true } : { y: true };
 
+  updateResizerPosition(tableCell, resizer);
   const dragToMoveGestureController = createDragToMoveGestureController({
     name: gestureName,
     direction,
