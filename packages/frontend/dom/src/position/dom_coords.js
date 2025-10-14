@@ -257,10 +257,20 @@ const viewportPosToScrollPos = (leftViewport, topViewport, scrollContainer) => {
 };
 
 export const getMouseEventScrollCoords = (mouseEvent, scrollContainer) => {
-  const [mouseLeftViewport, mouseTopViewport] = viewportPosToScrollPos(
-    mouseEvent.clientX,
-    mouseEvent.clientY,
-    scrollContainer,
-  );
-  return [mouseLeftViewport, mouseTopViewport, {}];
+  const [mouseLeftScrollContainer, mouseTopScrollContainer] =
+    viewportPosToScrollPos(
+      mouseEvent.clientX,
+      mouseEvent.clientY,
+      scrollContainer,
+    );
+  return [
+    mouseLeftScrollContainer,
+    mouseTopScrollContainer,
+    {
+      width: 1,
+      height: 1,
+      right: mouseLeftScrollContainer + 1,
+      bottom: mouseTopScrollContainer + 1,
+    },
+  ];
 };
