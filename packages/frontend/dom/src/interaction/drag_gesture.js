@@ -70,11 +70,11 @@
 import {
   convertScrollRelativeRectToElementRect,
   getMouseEventScrollRelativeRect,
+  getScrollContainerVisibleRect,
   getScrollRelativeRect,
 } from "../position/dom_coords.js";
 import { createPubSub } from "../pub_sub.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
-import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
 import {
   applyConstraints,
@@ -85,9 +85,6 @@ import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupVisualMarkers } from "./debug_markers.js";
 import { createObstacleConstraintsFromQuerySelector } from "./drag_obstacles.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
-
-// Coordinate conversion helpers
-const { documentElement } = document;
 
 const BASIC_MODE_OPTIONS = {
   backdrop: false,
@@ -145,7 +142,6 @@ export const createDragGestureController = (options = {}) => {
 
     stickyFrontiers = true,
     areaConstraint = "scroll",
-    areaConstraintElement,
     customAreaConstraint,
     obstacleAttributeName = "data-drag-obstacle",
     dragViaScroll = true,
@@ -359,35 +355,6 @@ export const createDragGestureController = (options = {}) => {
       stickyFrontiers = false;
     }
 
-    const createElementVisibleRect = (element) => {
-      if (element === documentElement) {
-        const { scrollLeft, scrollTop, clientWidth, clientHeight } =
-          documentElement;
-
-        return {
-          left: scrollLeft,
-          top: scrollTop,
-          right: scrollLeft + clientWidth,
-          bottom: scrollTop + clientHeight,
-        };
-      }
-
-      const { scrollLeft, scrollTop, clientWidth, clientHeight } = element;
-      const elementBorderSizes = getBorderSizes(element);
-      const leftWithBorder = scrollLeft + elementBorderSizes.left;
-      const topWithBorder = scrollTop + elementBorderSizes.top;
-      const availableWidth = clientWidth;
-      const availableHeight = clientHeight;
-      const right = leftWithBorder + availableWidth;
-      const bottom = topWithBorder + availableHeight;
-      return {
-        left: leftWithBorder,
-        top: topWithBorder,
-        right,
-        bottom,
-      };
-    };
-
     if (areaConstraint === "scroll") {
       // Capture scroll container dimensions at drag start to ensure consistency
       const scrollWidthAtStart = scrollContainer.scrollWidth;
@@ -422,11 +389,9 @@ export const createDragGestureController = (options = {}) => {
       constraintFunctions.push(scrollAreaConstraintFunction);
     } else if (areaConstraint === "visible") {
       const visibleAreaConstraintFunction = () => {
-        const visibleConstraintElement =
-          areaConstraintElement || scrollContainer;
-        const bounds = createElementVisibleRect(visibleConstraintElement);
+        const bounds = getScrollContainerVisibleRect(element);
         return createBoundConstraint(bounds, {
-          element: visibleConstraintElement,
+          element: bounds.scrollContainer,
           name: "visible_area_constraint",
         });
       };
@@ -445,16 +410,13 @@ export const createDragGestureController = (options = {}) => {
 
     if (obstacleAttributeName) {
       const obstacleConstraintFunctions =
-        createObstacleConstraintsFromQuerySelector(
-          areaConstraintElement || scrollContainer,
-          {
-            name,
-            obstacleAttributeName,
-            gestureInfo,
-            isDraggedElementSticky:
-              isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
-          },
-        );
+        createObstacleConstraintsFromQuerySelector(scrollContainer, {
+          name,
+          obstacleAttributeName,
+          gestureInfo,
+          isDraggedElementSticky:
+            isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
+        });
       constraintFunctions.push(...obstacleConstraintFunctions);
     }
 
@@ -510,7 +472,7 @@ export const createDragGestureController = (options = {}) => {
       const interactionType = event.type;
       // Get current element dimensions for dynamic constraint calculation
       const currentRect = elementVisuallyImpacted.getBoundingClientRect();
-      const visibleAreaBase = createElementVisibleRect(scrollContainer);
+      const visibleAreaBase = getScrollContainerVisibleRect(element);
 
       let visibleArea;
       if (stickyFrontiers) {

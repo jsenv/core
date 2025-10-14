@@ -119,6 +119,7 @@
  */
 
 import { getScrollContainer } from "../scroll/scroll_container.js";
+import { getBorderSizes } from "../size/get_border_sizes.js";
 
 const { documentElement } = document;
 
@@ -410,5 +411,39 @@ export const getMouseEventScrollRelativeRect = (
     bottom: mouseTopScrollRelative,
     width: 0,
     height: 0,
+  };
+};
+
+export const getScrollContainerVisibleRect = (
+  element,
+  scrollContainer = getScrollContainer(element),
+) => {
+  if (scrollContainer === documentElement) {
+    const { scrollLeft, scrollTop, clientWidth, clientHeight } =
+      documentElement;
+
+    return {
+      left: scrollLeft,
+      top: scrollTop,
+      right: scrollLeft + clientWidth,
+      bottom: scrollTop + clientHeight,
+      scrollContainer,
+    };
+  }
+
+  const { scrollLeft, scrollTop, clientWidth, clientHeight } = scrollContainer;
+  const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
+  const leftWithBorder = scrollLeft + scrollContainerBorderSizes.left;
+  const topWithBorder = scrollTop + scrollContainerBorderSizes.top;
+  const availableWidth = clientWidth;
+  const availableHeight = clientHeight;
+  const right = leftWithBorder + availableWidth;
+  const bottom = topWithBorder + availableHeight;
+  return {
+    left: leftWithBorder,
+    top: topWithBorder,
+    right,
+    bottom,
+    scrollContainer,
   };
 };
