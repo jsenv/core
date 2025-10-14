@@ -514,22 +514,32 @@ export const createDragGestureController = (options = {}) => {
 
       const { left: grabLeftRelative, top: grabTopRelative } =
         grabScrollRelativeRect;
-      const leftRequested = grabLeftRelative + xMoveNoConstraint;
-      const topRequested = grabTopRelative + yMoveNoConstraint;
-      const [leftConstrained, topConstrained] = applyConstraints(
-        constraints,
-        leftRequested,
-        topRequested,
-        {
-          gestureInfo,
-          elementWidth: currentRect.width,
-          elementHeight: currentRect.height,
-          direction,
-          interactionType,
-        },
-      );
-      const xMove = leftConstrained - grabLeftRelative;
-      const yMove = topConstrained - grabTopRelative;
+      const leftWithScrollRequested = grabLeftRelative + xMoveNoConstraint;
+      const topWithScrollRequested = grabTopRelative + yMoveNoConstraint;
+
+      console.log("apply constraints", {
+        grabTopRelative,
+        grabScrollTop,
+        yScrollRelative,
+        scrollTop: scrollContainer.scrollTop,
+        topWithScrollRequested,
+      });
+
+      const [leftWithScrollConstrained, topWithScrollConstrained] =
+        applyConstraints(
+          constraints,
+          leftWithScrollRequested,
+          topWithScrollRequested,
+          {
+            gestureInfo,
+            elementWidth: currentRect.width,
+            elementHeight: currentRect.height,
+            direction,
+            interactionType,
+          },
+        );
+      const xMove = leftWithScrollConstrained - grabLeftRelative;
+      const yMove = topWithScrollConstrained - grabTopRelative;
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = gestureInfo.xMove;
       const previousYMove = gestureInfo.yMove;
@@ -633,7 +643,6 @@ export const createDragGestureController = (options = {}) => {
       previousGestureInfo = { ...gestureInfo };
       Object.assign(gestureInfo, dragData);
 
-      console.log(`Final gesture xMove=${gestureInfo.xMove}`);
       const someChange = gestureInfo.xChanged || gestureInfo.yChanged;
       if (someChange) {
         lifecycle?.drag?.(gestureInfo, {
@@ -787,9 +796,6 @@ export const createDragToMoveGestureController = (options) => {
           keep_into_view: {
             if (isGoingPositive) {
               if (desiredElementEnd > visibleAreaEnd) {
-                console.log(
-                  `Auto-scroll RIGHT triggered: desiredElementEnd=${desiredElementEnd} > visibleAreaEnd=${visibleAreaEnd}`,
-                );
                 const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
                 const scroll = currentScroll + scrollAmountNeeded;
                 console.log(
@@ -802,9 +808,6 @@ export const createDragToMoveGestureController = (options) => {
                 canAutoScrollNegative &&
                 desiredElementStart < visibleAreaStart
               ) {
-                console.log(
-                  `Auto-scroll LEFT triggered: desiredElementStart=${desiredElementStart} < visibleAreaStart=${visibleAreaStart}`,
-                );
                 const scrollAmountNeeded =
                   visibleAreaStart - desiredElementStart;
                 const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
