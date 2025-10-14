@@ -886,10 +886,10 @@
 
           // Get current gesture position and move left by 50px
           const currentGestureInfo = controls.dragInstance.gestureInfo;
-          const newX = currentGestureInfo.x - 50;
+          const newX = currentGestureInfo.moveX - 50;
 
           updateStatus(controls, `Dragging ${caseLabel} left by 50px`);
-          controls.dragInstance.drag(newX, currentGestureInfo.y);
+          controls.dragInstance.drag(newX, undefined);
         });
 
         // Drag Right button
@@ -898,10 +898,10 @@
 
           // Get current gesture position and move right by 50px
           const currentGestureInfo = controls.dragInstance.gestureInfo;
-          const newX = currentGestureInfo.x + 50;
+          const newX = currentGestureInfo.moveX + 50;
 
           updateStatus(controls, `Dragging ${caseLabel} right by 50px`);
-          controls.dragInstance.drag(newX, currentGestureInfo.y);
+          controls.dragInstance.drag(newX, undefined);
         });
 
         // Drag Up button
@@ -910,10 +910,10 @@
 
           // Get current gesture position and move up by 50px
           const currentGestureInfo = controls.dragInstance.gestureInfo;
-          const newY = currentGestureInfo.y - 50;
+          const newY = currentGestureInfo.moveY - 50;
 
           updateStatus(controls, `Dragging ${caseLabel} up by 50px`);
-          controls.dragInstance.drag(currentGestureInfo.x, newY);
+          controls.dragInstance.drag(undefined, newY);
         });
 
         // Drag Down button
@@ -922,10 +922,10 @@
 
           // Get current gesture position and move down by 50px
           const currentGestureInfo = controls.dragInstance.gestureInfo;
-          const newY = currentGestureInfo.y + 50;
+          const newY = currentGestureInfo.moveY + 50;
 
           updateStatus(controls, `Dragging ${caseLabel} down by 50px`);
-          controls.dragInstance.drag(currentGestureInfo.x, newY);
+          controls.dragInstance.drag(undefined, newY);
         });
 
         // Release button
