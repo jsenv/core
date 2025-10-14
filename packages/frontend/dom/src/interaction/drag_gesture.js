@@ -523,23 +523,23 @@ export const createDragGestureController = (options = {}) => {
       const moveYRequested = dragYWithScroll - grabYWithScroll;
 
       // Position demandée de l'élément (état initial + mouvement demandé)
-      const elementLeftRequested = elementLeftAtGrab + moveXRequested;
-      const elementTopRequested = elementTopAtGrab + moveYRequested;
+      const elementLeftWithScrollRequested = elementLeftAtGrab + moveXRequested;
+      const elementTopWithScrollRequested = elementTopAtGrab + moveYRequested;
 
       console.log("apply constraints", {
         elementLeftAtGrab,
         elementTopAtGrab,
         moveXRequested,
         moveYRequested,
-        elementLeftRequested,
-        elementTopRequested,
+        elementLeftWithScrollRequested,
+        elementTopWithScrollRequested,
       });
 
       // === APPLIQUER LES CONTRAINTES ===
-      const [elementLeftConstrained, elementTopConstrained] = applyConstraints(
+      const [elementLeftWithScroll, elementTopWithScroll] = applyConstraints(
         constraints,
-        elementLeftRequested,
-        elementTopRequested,
+        elementLeftWithScrollRequested,
+        elementTopWithScrollRequested,
         {
           gestureInfo,
           elementWidth: currentRect.width,
@@ -551,8 +551,8 @@ export const createDragGestureController = (options = {}) => {
 
       // === ÉTAT FINAL ===
       // Mouvement final de l'élément (après contraintes)
-      const xMove = elementLeftConstrained - elementLeftAtGrab;
-      const yMove = elementTopConstrained - elementTopAtGrab;
+      const xMove = elementLeftWithScroll - elementLeftAtGrab;
+      const yMove = elementTopWithScroll - elementTopAtGrab;
 
       // Calcul de la direction basé sur le mouvement précédent
       const previousXMove = gestureInfo.xMove;
@@ -561,8 +561,10 @@ export const createDragGestureController = (options = {}) => {
       const isGoingRight = xMove > previousXMove;
       const isGoingUp = yMove < previousYMove;
       const isGoingDown = yMove > previousYMove;
-      const elementLeftRelative = elementLeftConstrained;
-      const elementTopRelative = elementTopConstrained;
+      const elementLeftRelative =
+        elementLeftWithScroll - scrollContainer.scrollLeft;
+      const elementTopRelative =
+        elementTopWithScroll - scrollContainer.scrollTop;
       const dragData = {
         dragX: xScrollRelative,
         dragY: yScrollRelative,
@@ -594,9 +596,8 @@ export const createDragGestureController = (options = {}) => {
         releaseEvent: isRelease ? dragEvent : null,
 
         hasCrossedVisibleAreaLeftOnce:
-          elementLeftRelative + scrollContainer.scrollLeft >= visibleArea.left,
-        hasCrossedVisibleAreaTopOnce:
-          elementTopRelative + scrollContainer.scrollTop >= visibleArea.top,
+          elementLeftWithScroll >= visibleArea.left,
+        hasCrossedVisibleAreaTopOnce: elementTopWithScroll >= visibleArea.top,
       };
 
       visualMarkers.onDrag({
