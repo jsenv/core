@@ -257,8 +257,11 @@
       >
         <div class="container" id="horizontalContainer">
           <div class="horizontal-content">
-            <div class="draggable-rectangle" id="horizontalRectangle">
-              DRAG ME
+            <div style="position: relative; left: 50px">
+              <!-- position: relative here to make things more complex and ensure it still work -->
+              <div class="draggable-rectangle" id="horizontalRectangle">
+                DRAG ME
+              </div>
             </div>
           </div>
         </div>

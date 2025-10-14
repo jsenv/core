@@ -212,11 +212,38 @@ export const createDragGestureController = (options = {}) => {
     let visualOffsetY = grabTop - elementToImpactTopScrollRelative;
     // const [layoutOffsetX, layoutOffsetY] = getScrollContainerOffset(element);
 
-    const scrollContainerRect = scrollContainer.getBoundingClientRect();
     const positionedParent = element.offsetParent;
+
+    // Calculate layout offset: positioned parent position relative to scroll container
+    // This is needed to convert scroll-relative coordinates to CSS positioning coordinates
+
+    // Get positioned parent position in document coordinates (static, doesn't change with scroll)
     const positionedParentRect = positionedParent.getBoundingClientRect();
-    const layoutOffsetX = positionedParentRect.left - scrollContainerRect.left;
-    const layoutOffsetY = positionedParentRect.top - scrollContainerRect.top;
+    const positionedParentLeftDocument =
+      positionedParentRect.left + document.documentElement.scrollLeft;
+    const positionedParentTopDocument =
+      positionedParentRect.top + document.documentElement.scrollTop;
+
+    // Get scroll container position in document coordinates (static, doesn't change with scroll)
+    let scrollContainerLeftDocument;
+    let scrollContainerTopDocument;
+    if (scrollContainer === document.documentElement) {
+      scrollContainerLeftDocument = 0;
+      scrollContainerTopDocument = 0;
+    } else {
+      const scrollContainerRect = scrollContainer.getBoundingClientRect();
+      scrollContainerLeftDocument =
+        scrollContainerRect.left + document.documentElement.scrollLeft;
+      scrollContainerTopDocument =
+        scrollContainerRect.top + document.documentElement.scrollTop;
+    }
+
+    // Calculate static offset between positioned parent and scroll container
+    const layoutOffsetX =
+      positionedParentLeftDocument - scrollContainerLeftDocument;
+    const layoutOffsetY =
+      positionedParentTopDocument - scrollContainerTopDocument;
+    console.log({ layoutOffsetY });
 
     if (isThresholdOnly) {
     } else if (fromFixed) {
