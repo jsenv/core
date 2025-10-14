@@ -95,7 +95,7 @@ const BASIC_MODE_OPTIONS = {
   dragViaScroll: false,
 };
 // This flag can be used to reduce number of features to the bare minimum to help debugging
-const KEEP_IT_STUPID_SIMPLE = true;
+const KEEP_IT_STUPID_SIMPLE = false;
 
 const getScrollContainerVisibleRect = (scrollContainer) => {
   const { left, top, width, height } =
@@ -837,11 +837,6 @@ export const createDragToMoveGestureController = (options) => {
             grabLeft + grabScrollLeft + gestureInfo.xMove;
           const desiredElementRight =
             desiredElementLeft + elementVisuallyImpactedWidth;
-          // Convert constraint boundary to actual visible area boundary
-          // visibleArea.right is where element left edge can be positioned
-          // The actual visible right boundary is where element right edge can be
-          const actualVisibleAreaRight =
-            visibleArea.right + elementVisuallyImpactedWidth;
           // Determine if auto-scroll is allowed for sticky elements when going left
           const canAutoScrollLeft =
             !elementVisuallyImpacted.hasAttribute("data-sticky-left") ||
@@ -854,7 +849,7 @@ export const createDragToMoveGestureController = (options) => {
             desiredElementStart: desiredElementLeft,
             desiredElementEnd: desiredElementRight,
             visibleAreaStart: visibleArea.left,
-            visibleAreaEnd: actualVisibleAreaRight,
+            visibleAreaEnd: visibleArea.right,
             canAutoScrollNegative: canAutoScrollLeft,
             currentScroll: scrollContainer.scrollLeft,
             scrollProperty: "scrollLeft",
@@ -868,11 +863,6 @@ export const createDragToMoveGestureController = (options) => {
           const desiredElementTop = grabTop + grabScrollTop + gestureInfo.yMove;
           const desiredElementBottom =
             desiredElementTop + elementVisuallyImpactedHeight;
-          // Convert constraint boundary to actual visible area boundary
-          // visibleArea.bottom is where element top edge can be positioned
-          // The actual visible bottom boundary is where element bottom edge can be
-          const actualVisibleAreaBottom =
-            visibleArea.bottom + elementVisuallyImpactedHeight;
           // Determine if auto-scroll is allowed for sticky elements when going up
           const canAutoScrollUp =
             !elementVisuallyImpacted.hasAttribute("data-sticky-top") ||
@@ -885,7 +875,7 @@ export const createDragToMoveGestureController = (options) => {
             desiredElementStart: desiredElementTop,
             desiredElementEnd: desiredElementBottom,
             visibleAreaStart: visibleArea.top,
-            visibleAreaEnd: actualVisibleAreaBottom,
+            visibleAreaEnd: visibleArea.bottom,
             canAutoScrollNegative: canAutoScrollUp,
             currentScroll: scrollContainer.scrollTop,
             scrollProperty: "scrollTop",
