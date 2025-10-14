@@ -346,6 +346,7 @@
 
       // Manual drag gesture (mouse-based)
       const manualDragGestureController = createDragToMoveGestureController({
+        threshold: 0,
         areaConstraint: "scroll",
       });
 
@@ -418,6 +419,7 @@
         );
 
         const dragOptions = {
+          threshold: 0,
           onGrab: (gestureInfo) => {
             updateStatus("Element grabbed programmatically - ready to drag");
             console.log("Programmatic grab:", gestureInfo);
