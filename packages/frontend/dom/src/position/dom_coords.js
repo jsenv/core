@@ -306,11 +306,118 @@ export const convertScrollPosToElementPos = (
   topScrollContainer,
   element,
   scrollContainer = getScrollContainer(element),
+  { isFixed, isStickyLeft, isStickyTop, stickyLeftValue, stickyTopValue } = {},
 ) => {
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+  const computedStyle = getComputedStyle(element);
+
+  // Auto-detect if not explicitly provided
+  const usePositionFixed =
+    isFixed === undefined ? computedStyle.position === "fixed" : isFixed;
+  const usePositionSticky = computedStyle.position === "sticky";
+  const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
+  const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
+
+  const finalIsStickyLeft =
+    isStickyLeft === undefined
+      ? hasStickyLeftAttribute ||
+        (usePositionSticky && computedStyle.left !== "auto")
+      : isStickyLeft;
+
+  const finalIsStickyTop =
+    isStickyTop === undefined
+      ? hasStickyTopAttribute ||
+        (usePositionSticky && computedStyle.top !== "auto")
+      : isStickyTop;
+
+  const finalStickyLeftValue =
+    stickyLeftValue !== null
+      ? stickyLeftValue
+      : usePositionSticky
+        ? parseFloat(computedStyle.left) || 0
+        : hasStickyLeftAttribute
+          ? parseFloat(computedStyle.left) || 0
+          : 0;
+  const finalStickyTopValue =
+    stickyTopValue !== null
+      ? stickyTopValue
+      : usePositionSticky
+        ? parseFloat(computedStyle.top) || 0
+        : hasStickyTopAttribute
+          ? parseFloat(computedStyle.top) || 0
+          : 0;
+
+  // Handle fixed positioning
+  if (usePositionFixed) {
+    if (scrollContainerIsDocument) {
+      // Convert from document coordinates to viewport coordinates (fixed position)
+      const documentScrollLeft = documentElement.scrollLeft;
+      const documentScrollTop = documentElement.scrollTop;
+      return [
+        leftScrollContainer - documentScrollLeft,
+        topScrollContainer - documentScrollTop,
+      ];
+    }
+    // Convert from container coordinates to viewport coordinates
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    return [
+      leftScrollContainer -
+        scrollContainer.scrollLeft +
+        scrollContainerRect.left,
+      topScrollContainer - scrollContainer.scrollTop + scrollContainerRect.top,
+    ];
+  }
+
+  // Handle sticky positioning
+  if (finalIsStickyLeft || finalIsStickyTop) {
+    let leftSticky = leftScrollContainer;
+    let topSticky = topScrollContainer;
+
+    if (finalIsStickyLeft) {
+      if (scrollContainerIsDocument) {
+        // For document scrolling: calculate sticky position
+        const documentScrollLeft = documentElement.scrollLeft;
+        const naturalPosition = leftScrollContainer - documentScrollLeft; // Convert to viewport
+        const stickyPosition = finalStickyLeftValue;
+        // Element sticks when natural position would be less than sticky value
+        leftSticky =
+          naturalPosition < stickyPosition ? stickyPosition : naturalPosition;
+      } else {
+        // For container scrolling: sticky relative to container
+        const containerScrollLeft = scrollContainer.scrollLeft;
+        const naturalPosition = leftScrollContainer - containerScrollLeft;
+        const stickyPosition = finalStickyLeftValue;
+        leftSticky =
+          naturalPosition < stickyPosition ? stickyPosition : naturalPosition;
+      }
+    }
+
+    if (finalIsStickyTop) {
+      if (scrollContainerIsDocument) {
+        // For document scrolling: calculate sticky position
+        const documentScrollTop = documentElement.scrollTop;
+        const naturalPosition = topScrollContainer - documentScrollTop; // Convert to viewport
+        const stickyPosition = finalStickyTopValue;
+        // Element sticks when natural position would be less than sticky value
+        topSticky =
+          naturalPosition < stickyPosition ? stickyPosition : naturalPosition;
+      } else {
+        // For container scrolling: sticky relative to container
+        const containerScrollTop = scrollContainer.scrollTop;
+        const naturalPosition = topScrollContainer - containerScrollTop;
+        const stickyPosition = finalStickyTopValue;
+        topSticky =
+          naturalPosition < stickyPosition ? stickyPosition : naturalPosition;
+      }
+    }
+
+    return [leftSticky, topSticky];
+  }
+
+  // Handle normal positioning (existing logic)
   const offsetParent = element.offsetParent || documentElement;
   const positionedParent =
     offsetParent === document.body ? documentElement : offsetParent;
-  const scrollContainerIsDocument = scrollContainer === documentElement;
   const positionedParentIsDocument = positionedParent === documentElement;
 
   if (scrollContainerIsDocument && positionedParentIsDocument) {
