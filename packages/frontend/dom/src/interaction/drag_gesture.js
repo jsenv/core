@@ -792,35 +792,9 @@ export const createDragToMoveGestureController = (options) => {
           hasCrossedVisibleAreaTopOnce,
         } = gestureInfo;
 
-        const {
-          left: grabLeft,
-          top: grabTop,
-          isStickyLeftOrHasStickyLeftAttr,
-          isStickyTopOrHasStickyTopAttr,
-        } = grabScrollRelativeRect;
-        // Calculate initial position for elementToImpact using document-relative coordinates
-        // Since all coordinates are now in document space, we can use them directly
-        let leftForPositioning = grabLeft;
-        let topForPositioning = grabTop;
-        // For sticky elements, we may need to adjust positioning
-        if (isStickyLeftOrHasStickyLeftAttr) {
-          // Document-relative coordinates already account for scroll position
-          leftForPositioning = grabLeft;
-        }
-        if (isStickyTopOrHasStickyTopAttr) {
-          // Document-relative coordinates already account for scroll position
-          topForPositioning = grabTop;
-        }
-        // Convert from document-relative coordinates to positioned parent coordinates
-        const { left: initialLeftToImpact, top: initialTopToImpact } =
-          convertScrollRelativeRectToElementRect(
-            {
-              ...gestureInfo.scrollRelativeRect,
-              left: leftForPositioning - visualOffsetX,
-              top: topForPositioning - visualOffsetY,
-            },
-            elementToImpact,
-          );
+        const { left: grabLeft, top: grabTop } = grabScrollRelativeRect;
+        const initialLeftToImpact = grabLeft - visualOffsetX;
+        const initialTopToImpact = grabTop - visualOffsetY;
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
@@ -895,7 +869,6 @@ export const createDragToMoveGestureController = (options) => {
           // The actual visible right boundary is where element right edge can be
           const actualVisibleAreaRight =
             visibleArea.right + elementVisuallyImpactedWidth;
-
           // Determine if auto-scroll is allowed for sticky elements when going left
           const canAutoScrollLeft =
             !elementVisuallyImpacted.hasAttribute("data-sticky-left") ||
@@ -923,13 +896,11 @@ export const createDragToMoveGestureController = (options) => {
           const desiredElementTop = grabTop + gestureInfo.yMove;
           const desiredElementBottom =
             desiredElementTop + elementVisuallyImpactedHeight;
-
           // Convert constraint boundary to actual visible area boundary
           // visibleArea.bottom is where element top edge can be positioned
           // The actual visible bottom boundary is where element bottom edge can be
           const actualVisibleAreaBottom =
             visibleArea.bottom + elementVisuallyImpactedHeight;
-
           // Determine if auto-scroll is allowed for sticky elements when going up
           const canAutoScrollUp =
             !elementVisuallyImpacted.hasAttribute("data-sticky-top") ||
