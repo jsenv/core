@@ -283,6 +283,8 @@ export const createDragGestureController = (options = {}) => {
       }
     }
 
+    const scrollRelativeRect = { ...grabScrollRelativeRect };
+
     const gestureInfo = {
       direction,
       element,
@@ -293,17 +295,19 @@ export const createDragGestureController = (options = {}) => {
       elementVisuallyImpactedWidth: width,
       elementVisuallyImpactedHeight: height,
 
-      grabScrollRelativeRect,
       grabX, // x grab coordinate (scroll relative), default to 0
       grabY, // y grab coordinate (scroll relative), default to 0
       dragX: grabX, // coordinate of the last drag (scroll relative)
       dragY: grabY, // coordinate of the last drag (scroll relative)
-      xMove: 0, // diff between dragX and grabX
-      yMove: 0, // diff between dragY and grabY
+
+      grabScrollRelativeRect,
+      scrollRelativeRect,
+      x: grabX + scrollRelativeRect.scrollLeft,
+      y: grabY + scrollRelativeRect.scrollTop,
+      xMove: 0, // diff between x and PREVIOUS x
+      yMove: 0, // diff between y and PREVIOUS y
       xChanged: false, // x changed since last gesture
       yChanged: false, // y changed since last gesture
-      x: grabX + scrollContainer.scrollLeft, // scroll absolute coordinate
-      y: grabY + scrollContainer.scrollTop, // scroll absolute coordinate
 
       isGoingUp: undefined,
       isGoingDown: undefined,
@@ -493,14 +497,13 @@ export const createDragGestureController = (options = {}) => {
       });
     }
 
-    const determineDragData = (
-      xScrollContainer, // Scroll container relative coordinates
-      yScrollContainer, // Scroll container relative coordinates
+    const determineDragData = ({
+      xScrollRelative,
+      yScrollRelative,
       dragEvent,
-      { isRelease = false },
-    ) => {
+      isRelease = false,
+    }) => {
       const interactionType = event.type;
-
       // Get current element dimensions for dynamic constraint calculation
       const currentRect = elementVisuallyImpacted.getBoundingClientRect();
       const visibleAreaBase = createBoundsFrom(scrollContainer);
@@ -532,15 +535,16 @@ export const createDragGestureController = (options = {}) => {
         visibleArea,
       });
 
-      const x = xScrollContainer;
-      const y = yScrollContainer;
-      const xMoveRaw = xScrollContainer - gestureInfo.xAtStart;
-      const yMoveRaw = yScrollContainer - gestureInfo.yAtStart;
-      const leftRequested =
-        gestureInfo.leftAtStart + (xScrollContainer - gestureInfo.xAtStart);
-      const topRequested =
-        gestureInfo.topAtStart + (yScrollContainer - gestureInfo.yAtStart);
-      // Apply constraints to the desired element position
+      const xNoConstraint = xScrollRelative + scrollRelativeRect.scrollLeft;
+      const yNoConstraint = yScrollRelative + scrollRelativeRect.scrollTop;
+      const previousX = gestureInfo.x;
+      const previousY = gestureInfo.y;
+      const xMoveNoConstraint = xNoConstraint - previousX;
+      const yMoveNoConstraint = yNoConstraint - previousY;
+      const { grabScrollRelativeRect } = gestureInfo;
+      const { left: leftAtStart, top: topAtStart } = grabScrollRelativeRect;
+      const leftRequested = leftAtStart + xMoveNoConstraint;
+      const topRequested = topAtStart + yMoveNoConstraint;
       const [leftConstrained, topConstrained] = applyConstraints(
         constraints,
         leftRequested,
@@ -555,28 +559,27 @@ export const createDragGestureController = (options = {}) => {
       );
 
       // Calculate moves based on constrained element position vs starting element position
-      const xMoveConstrained = leftConstrained - gestureInfo.leftAtStart;
-      const yMoveConstrained = topConstrained - gestureInfo.topAtStart;
+      const xMove = leftConstrained - leftAtStart;
+      const yMove = topConstrained - topAtStart;
       // Calculate direction based on where the element is trying to move (relative to previous position)
-      const previousXMove = previousGestureInfo ? previousGestureInfo.xMove : 0;
-      const previousYMove = previousGestureInfo ? previousGestureInfo.yMove : 0;
-      const isGoingLeft = xMoveRaw < previousXMove;
-      const isGoingRight = xMoveRaw > previousXMove;
-      const isGoingUp = yMoveRaw < previousYMove;
-      const isGoingDown = yMoveRaw > previousYMove;
-
-      visualMarkers.onDrag({
-        constraints,
-        visibleArea,
-        elementWidth: currentRect.width,
-        elementHeight: currentRect.height,
-      });
-
+      const previousXMove = gestureInfo.xMove;
+      const previousYMove = gestureInfo.yMove;
+      const isGoingLeft = xMove < previousXMove;
+      const isGoingRight = xMove > previousXMove;
+      const isGoingUp = yMove < previousYMove;
+      const isGoingDown = yMove > previousYMove;
+      const elementLeftRelative = leftAtStart + xMove;
+      const elementLeft = elementLeftRelative;
+      const elementTopRelative = topAtStart + yMove;
+      const elementTop = elementTopRelative;
       const dragData = {
+        xMove,
+        yMove,
         x,
         y,
-        xMove: xMoveConstrained,
-        yMove: yMoveConstrained,
+        xChanged: xMove !== gestureInfo.xMove,
+        yChanged: yMove !== gestureInfo.yMove,
+
         isGoingLeft,
         isGoingRight,
         isGoingUp,
@@ -590,30 +593,24 @@ export const createDragGestureController = (options = {}) => {
         interactionType,
         dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
         releaseEvent: isRelease ? dragEvent : null,
+
+        hasCrossedVisibleAreaLeftOnce: elementLeft >= visibleArea.left,
+        hasCrossedVisibleAreaTopOnce: elementTop >= visibleArea.top,
       };
-      const elementLeftRelative = leftAtStart + xMoveConstrained;
-      const elementLeft = elementLeftRelative;
-      const elementTopRelative = topAtStart + yMoveConstrained;
-      const elementTop = elementTopRelative;
-      if (
-        !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
-        elementLeft >= visibleArea.left
-      ) {
-        dragData.hasCrossedVisibleAreaLeftOnce = true;
-      }
-      if (
-        !gestureInfo.hasCrossedVisibleAreaTopOnce &&
-        elementTop >= visibleArea.top
-      ) {
-        dragData.hasCrossedVisibleAreaTopOnce = true;
-      }
+
+      visualMarkers.onDrag({
+        constraints,
+        visibleArea,
+        elementWidth: currentRect.width,
+        elementHeight: currentRect.height,
+      });
 
       if (isRelease) {
         return dragData;
       }
       if (!gestureInfo.started && threshold) {
-        const deltaX = Math.abs(xMoveRaw);
-        const deltaY = Math.abs(yMoveRaw);
+        const deltaX = Math.abs(xMoveNoConstraint);
+        const deltaY = Math.abs(yMoveNoConstraint);
         if (direction.x && direction.y) {
           // Both directions: check both axes
           if (deltaX < threshold && deltaY < threshold) {
@@ -638,31 +635,18 @@ export const createDragGestureController = (options = {}) => {
       yScrollRelative = gestureInfo.dragY, // Scroll container relative Y coordinate
       { event = new CustomEvent("programmatic"), isRelease = false } = {},
     ) => {
-      const dragData = determineDragData(
+      const dragData = determineDragData({
         xScrollRelative,
         yScrollRelative,
         event,
-        {
-          isRelease,
-        },
-      );
+        isRelease,
+      });
       previousGestureInfo = { ...gestureInfo };
-      // Calculate xChanged/yChanged based on previous gesture info
-      const xChanged = previousGestureInfo
-        ? dragData.xMove !== previousGestureInfo.xMove
-        : true;
-      const yChanged = previousGestureInfo
-        ? dragData.yMove !== previousGestureInfo.yMove
-        : true;
-      console.log(
-        `Gesture update: before xMove=${gestureInfo.xMove}, after xMove=${dragData.xMove}`,
-      );
 
-      Object.assign(gestureInfo, { xChanged, yChanged });
       Object.assign(gestureInfo, dragData);
 
       console.log(`Final gesture xMove=${gestureInfo.xMove}`);
-      const someChange = xChanged || yChanged;
+      const someChange = gestureInfo.xChanged || gestureInfo.yChanged;
       if (someChange) {
         lifecycle?.drag?.(gestureInfo, {
           scrollContainer,
@@ -670,6 +654,7 @@ export const createDragGestureController = (options = {}) => {
         });
       }
       constraintFeedbackLine?.onDrag(gestureInfo);
+
       if (isRelease) {
         onDrag?.(gestureInfo);
       } else if (!previousGestureInfo.started) {
