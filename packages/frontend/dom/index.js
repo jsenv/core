@@ -55,11 +55,9 @@ export { allowWheelThrough } from "./src/scroll/wheel_through.js";
 
 // position
 export {
-  convertScrollPosToElementPos,
-  getDocumentCoords,
-  getMouseEventScrollCoords,
-  getScrollCoords,
-  getViewportCoords,
+  convertScrollRelativeRectToElementRect,
+  getMouseEventScrollRelativeRect,
+  getScrollRelativeRect,
 } from "./src/position/dom_coords.js";
 export { getPositionedParent } from "./src/position/offset_parent.js";
 export { initPositionSticky } from "./src/position/position_sticky.js";

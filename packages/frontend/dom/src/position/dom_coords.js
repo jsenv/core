@@ -1,4 +1,54 @@
 /**
+ * DOM Coordinate Systems: The Missing APIs Problem
+ *
+ * When positioning and moving DOM elements, we commonly need coordinate information.
+ * The web platform provides getBoundingClientRect() which gives viewport-relative coordinates,
+ * but this creates several challenges when working with scrollable containers:
+ *
+ * ## The Problem
+ *
+ * 1. **Basic positioning**: getBoundingClientRect() works great for viewport-relative positioning
+ * 2. **Document scrolling**: When document has scroll, we add document.scrollLeft/scrollTop
+ * 3. **Scroll containers**: When elements are inside scrollable containers, we need coordinates
+ *    relative to that container, not the document
+ *
+ * ## Missing Browser APIs
+ *
+ * The web platform lacks essential APIs for scroll container workflows:
+ * - No equivalent of getBoundingClientRect() relative to scroll container
+ * - No built-in way to get element coordinates in scroll container space
+ * - Manual coordinate conversion is error-prone and inconsistent
+ *
+ * ## This Module's Solution
+ *
+ * This module provides the missing coordinate APIs that work seamlessly with scroll containers:
+ * - **getScrollRelativeRect()**: element rect relative to scroll container (PRIMARY API)
+ * - **getMouseEventScrollContainerCoords()**: Mouse coordinates in scroll container space
+ * - **convertScrollContainerPosToElementPos()**: Position conversion utilities
+ *
+ * These APIs abstract away the complexity of coordinate system conversion and provide
+ * a consistent interface for element positioning regardless of scroll container depth.
+ *
+ * ## Primary API: getScrollRelativeRect()
+ *
+ * This is the main API you want - element rectangle relative to scroll container:
+ *
+ * ```js
+ * const rect = element.getBoundingClientRect(); // viewport-relative
+ * const scrollRect = getScrollRelativeRect(element, scrollContainer); // scroll-relative
+ * ```
+ *
+ * Returns: { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
+ *
+ * The scroll values are included so you can calculate scroll-absolute coordinates yourself:
+ * ```js
+ * const { left, top, scrollLeft, scrollTop } = getScrollRelativeRect(element);
+ * const scrollAbsoluteLeft = left + scrollLeft;
+ * const scrollAbsoluteTop = top + scrollTop;
+ * ```
+ *
+ * ## Legacy Coordinate System Diagrams
+ *
  * X-Axis Coordinate Systems in Web Development
  *
  * Diagram showing horizontal positioning and scrollbars:
@@ -60,450 +110,283 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
 
 const { documentElement } = document;
 
-export const getDocumentCoords = (element) => {
-  const { left, top, right, bottom, width, height } =
-    element.getBoundingClientRect();
-  const documentScrollLeft = documentElement.scrollLeft;
-  const documentScrollTop = documentElement.scrollTop;
-  const leftDocument = left + documentScrollLeft;
-  const topDocument = top + documentScrollTop;
-  const rightDocument = right + documentScrollLeft;
-  const bottomDocument = bottom + documentScrollTop;
-
-  return [
-    leftDocument,
-    topDocument,
-    {
-      right: rightDocument,
-      bottom: bottomDocument,
-      width,
-      height,
-    },
-  ];
-};
-
-export const getViewportCoords = (element) => {
-  const { left, top, right, bottom, width, height } =
-    element.getBoundingClientRect();
-
-  return [left, top, { right, bottom, width, height }];
-};
-
-export const getScrollCoords = (
+/**
+ * Get element rectangle relative to its scroll container
+ *
+ * @param {Element} element - The element to get coordinates for
+ * @param {Element} [scrollContainer] - Optional scroll container (auto-detected if not provided)
+ * @param {object} [options] - Configuration options
+ * @returns {object} { left, top, right, bottom, width, height, scrollLeft, scrollTop, scrollContainer, ...metadata }
+ */
+export const getScrollRelativeRect = (
   element,
   scrollContainer = getScrollContainer(element),
   { useOriginalPositionEvenIfSticky = false } = {},
 ) => {
-  const [leftViewport, topViewport, { width, height }] =
-    getViewportCoords(element);
+  const {
+    left: leftViewport,
+    top: topViewport,
+    width,
+    height,
+  } = element.getBoundingClientRect();
 
   let fromFixed = false;
   let fromStickyLeft;
   let fromStickyTop;
   let fromStickyLeftAttr;
   let fromStickyTopAttr;
-  const createScrollCoords = (leftScrollContainer, topScrollContainer) => {
-    return [
-      leftScrollContainer,
-      topScrollContainer,
-      {
-        right: leftScrollContainer + width,
-        bottom: topScrollContainer + height,
-        width,
-        height,
-        fromFixed,
-        fromStickyLeft,
-        fromStickyTop,
-        fromStickyLeftAttr,
-        fromStickyTopAttr,
-      },
-    ];
+  const scrollLeft = scrollContainer.scrollLeft;
+  const scrollTop = scrollContainer.scrollTop;
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+  const createScrollRelativeRect = (leftScrollRelative, topScrollRelative) => {
+    return {
+      left: leftScrollRelative,
+      top: topScrollRelative,
+      right: leftScrollRelative + width,
+      bottom: topScrollRelative + height,
+
+      // metadata
+      width,
+      height,
+      scrollContainer,
+      scrollContainerIsDocument,
+      scrollLeft,
+      scrollTop,
+      fromFixed,
+      fromStickyLeft,
+      fromStickyTop,
+      fromStickyLeftAttr,
+      fromStickyTopAttr,
+    };
   };
 
-  const computedStyle = getComputedStyle(element);
-  const usePositionSticky = computedStyle.position === "sticky";
-  const scrollContainerIsDocument = scrollContainer === documentElement;
-  if (usePositionSticky) {
-    // For CSS position:sticky elements, use scrollable-relative coordinates
-    const [leftScrollContainer, topScrollContainer] = viewportPosToScrollPos(
-      leftViewport,
-      topViewport,
-      scrollContainer,
-    );
-    const isStickyLeft = computedStyle.left !== "auto";
-    const isStickyTop = computedStyle.top !== "auto";
-    fromStickyLeft = isStickyLeft
-      ? { value: parseFloat(computedStyle.left) || 0 }
-      : undefined;
-    fromStickyTop = isStickyTop
-      ? { value: parseFloat(computedStyle.top) || 0 }
-      : undefined;
-    return createScrollCoords(leftScrollContainer, topScrollContainer);
-  }
-  const usePositionFixed = computedStyle.position === "fixed";
-  if (usePositionFixed) {
-    fromFixed = true;
-    // For position:fixed elements, get viewport coordinates and convert to scrollable-relative
-    if (scrollContainerIsDocument) {
-      const [leftScrollContainer, topScrollContainer] = viewportPosToScrollPos(
-        leftViewport,
-        topViewport,
-        documentElement,
-      );
-      return createScrollCoords(leftScrollContainer, topScrollContainer);
-    }
-    // For container scrolling, we need to convert relative to the container
-    // Fixed elements are positioned relative to viewport, but we need coordinates
-    // relative to the scrollable parent for constraint calculations
-    const [scrollContainerLeftViewport, scrollContainerTopViewport] =
-      getViewportCoords(scrollContainer);
-    const leftScrollContainer = leftViewport - scrollContainerLeftViewport;
-    const topScrollContainer = topViewport - scrollContainerTopViewport;
-    return createScrollCoords(leftScrollContainer, topScrollContainer);
-  }
-
-  const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
-  const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
-  const useStickyAttribute = hasStickyLeftAttribute || hasStickyTopAttribute;
-  if (useStickyAttribute) {
-    // Handle virtually sticky obstacles (<col> or <tr>) - elements with data-sticky attributes
-    // but not CSS position:sticky. Calculate their position based on scroll and sticky behavior
-    let [leftScrollContainer, topScrollContainer] = viewportPosToScrollPos(
-      leftViewport,
-      topViewport,
-      scrollContainer,
-    );
-    if (hasStickyLeftAttribute) {
-      const leftCssValue = parseFloat(computedStyle.left) || 0;
-      fromStickyLeftAttr = { value: leftCssValue };
-
-      const originalPosition = leftScrollContainer; // Natural position in scrollable coordinates
-
-      if (useOriginalPositionEvenIfSticky) {
-        // For obstacles: use original position only (ignore sticky behavior)
-        leftScrollContainer = originalPosition;
-      } else if (scrollContainerIsDocument) {
-        // For frontiers with document scrolling: element sticks when scroll passes its natural position
-        const scrollLeft = scrollContainer.scrollLeft;
-        const stickyPosition = scrollLeft + leftCssValue;
-        if (stickyPosition > originalPosition) {
-          leftScrollContainer = stickyPosition; // Element is stuck
-        } else {
-          leftScrollContainer = originalPosition; // Element in natural position
-        }
-      } else {
-        // For frontiers with container scrolling: element sticks relative to container scroll
-        const scrollLeft = scrollContainer.scrollLeft;
-        const stickyPosition = scrollLeft + leftCssValue;
-        if (stickyPosition > originalPosition) {
-          leftScrollContainer = stickyPosition; // Element is stuck
-        } else {
-          leftScrollContainer = originalPosition; // Element in natural position
-        }
+  sticky: {
+    const computedStyle = getComputedStyle(element);
+    sticky_position: {
+      const usePositionSticky = computedStyle.position === "sticky";
+      if (usePositionSticky) {
+        // For CSS position:sticky elements, use scrollable-relative coordinates
+        const [leftScrollRelative, topScrollRelative] =
+          viewportPosToScrollRelativePos(
+            leftViewport,
+            topViewport,
+            scrollContainer,
+          );
+        const isStickyLeft = computedStyle.left !== "auto";
+        const isStickyTop = computedStyle.top !== "auto";
+        fromStickyLeft = isStickyLeft
+          ? { value: parseFloat(computedStyle.left) || 0 }
+          : undefined;
+        fromStickyTop = isStickyTop
+          ? { value: parseFloat(computedStyle.top) || 0 }
+          : undefined;
+        return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
       }
     }
-    if (hasStickyTopAttribute) {
-      const topCssValue = parseFloat(computedStyle.top) || 0;
-      fromStickyTopAttr = { value: topCssValue };
-
-      const originalPosition = topScrollContainer; // Natural position in scrollable coordinates
-
-      if (useOriginalPositionEvenIfSticky) {
-        // For obstacles: use original position only (ignore sticky behavior)
-        topScrollContainer = originalPosition;
-      } else if (scrollContainerIsDocument) {
-        // For frontiers with document scrolling: element sticks when scroll passes its natural position
-        const scrollTop = scrollContainer.scrollTop;
-        const stickyPosition = scrollTop + topCssValue;
-        if (stickyPosition > originalPosition) {
-          topScrollContainer = stickyPosition; // Element is stuck
-        } else {
-          topScrollContainer = originalPosition; // Element in natural position
+    sticky_attribute: {
+      const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
+      const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
+      const useStickyAttribute =
+        hasStickyLeftAttribute || hasStickyTopAttribute;
+      if (useStickyAttribute) {
+        // Handle virtually sticky obstacles (<col> or <tr>) - elements with data-sticky attributes
+        // but not CSS position:sticky. Calculate their position based on scroll and sticky behavior
+        let [leftScrollRelative, topScrollRelative] =
+          viewportPosToScrollRelativePos(
+            leftViewport,
+            topViewport,
+            scrollContainer,
+          );
+        if (hasStickyLeftAttribute) {
+          const leftCssValue = parseFloat(computedStyle.left) || 0;
+          fromStickyLeftAttr = { value: leftCssValue };
+          if (useOriginalPositionEvenIfSticky) {
+            // For obstacles: use original position only (ignore sticky behavior)
+          } else {
+            const scrollLeft = scrollContainer.scrollLeft;
+            const stickyPosition = scrollLeft + leftCssValue;
+            const leftWithScroll = leftScrollRelative + scrollLeft;
+            if (stickyPosition > leftWithScroll) {
+              leftScrollRelative = leftCssValue; // Element is stuck
+            } else {
+              // Element in natural position
+            }
+          }
         }
-      } else {
-        // For frontiers with container scrolling: element sticks relative to container scroll
-        const scrollTop = scrollContainer.scrollTop;
-        const stickyPosition = scrollTop + topCssValue;
-        if (stickyPosition > originalPosition) {
-          topScrollContainer = stickyPosition; // Element is stuck
-        } else {
-          topScrollContainer = originalPosition; // Element in natural position
+        if (hasStickyTopAttribute) {
+          const topCssValue = parseFloat(computedStyle.top) || 0;
+          fromStickyTopAttr = { value: topCssValue };
+          if (useOriginalPositionEvenIfSticky) {
+            // For obstacles: use original position only (ignore sticky behavior)
+          } else {
+            const scrollTop = scrollContainer.scrollTop;
+            const stickyPosition = scrollTop + topCssValue;
+            const topWithScroll = topScrollRelative + scrollTop;
+            if (stickyPosition > topWithScroll) {
+              topScrollRelative = topCssValue; // Element is stuck
+            } else {
+              // Element in natural position
+            }
+          }
         }
+        return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
       }
     }
-    return createScrollCoords(leftScrollContainer, topScrollContainer);
   }
 
   // For normal elements, use scrollable-relative coordinates
-  const [leftScrollContainer, topScrollContainer] = viewportPosToScrollPos(
-    leftViewport,
-    topViewport,
-    scrollContainer,
-  );
-  return createScrollCoords(leftScrollContainer, topScrollContainer);
+  const [leftScrollRelative, topScrollRelative] =
+    viewportPosToScrollRelativePos(leftViewport, topViewport, scrollContainer);
+  return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
 };
-const viewportPosToScrollPos = (leftViewport, topViewport, scrollContainer) => {
+const viewportPosToScrollRelativePos = (
+  leftViewport,
+  topViewport,
+  scrollContainer,
+) => {
   const scrollContainerIsDocument = scrollContainer === documentElement;
-  const { scrollLeft, scrollTop } = scrollContainer;
   if (scrollContainerIsDocument) {
-    return [leftViewport + scrollLeft, topViewport + scrollTop];
+    return [leftViewport, topViewport];
   }
   const { left: scrollContainerLeftViewport, top: scrollContainerTopViewport } =
     scrollContainer.getBoundingClientRect();
   return [
-    leftViewport - scrollContainerLeftViewport + scrollLeft,
-    topViewport - scrollContainerTopViewport + scrollTop,
+    leftViewport - scrollContainerLeftViewport,
+    topViewport - scrollContainerTopViewport,
   ];
 };
 
-export const getMouseEventScrollCoords = (mouseEvent, scrollContainer) => {
-  const [mouseLeftScrollContainer, mouseTopScrollContainer] =
-    viewportPosToScrollPos(
-      mouseEvent.clientX,
-      mouseEvent.clientY,
-      scrollContainer,
-    );
-  return [
-    mouseLeftScrollContainer,
-    mouseTopScrollContainer,
-    {
-      width: 1,
-      height: 1,
-      right: mouseLeftScrollContainer + 1,
-      bottom: mouseTopScrollContainer + 1,
-    },
-  ];
-};
-
-export const getElementStickyPos = (
+export const convertScrollRelativeRectToElementRect = (
+  scrollRelativeRect,
   element,
-  scrollContainer,
-  { isStickyLeft, isStickyTop },
 ) => {
-  const elementRect = element.getBoundingClientRect();
-  const scrollContainerRect = scrollContainer.getBoundingClientRect();
-  const leftRelative = elementRect.left - scrollContainerRect.left;
-  const topRelative = elementRect.top - scrollContainerRect.top;
-  const scrollContainerIsDocument = scrollContainer === documentElement;
+  const {
+    left: leftScrollRelative,
+    top: topScrollRelative,
+    width,
+    height,
+    scrollContainer,
+    scrollContainerIsDocument,
+    fromFixed,
+    fromStickyLeft,
+    fromStickyTop,
+    fromStickyLeftAttr,
+    fromStickyTopAttr,
+  } = scrollRelativeRect;
 
-  let leftSticky = leftRelative;
-  let topSticky = topRelative;
-  if (isStickyLeft && !scrollContainerIsDocument) {
-    leftSticky -= scrollContainer.scrollLeft;
-  }
-  if (isStickyTop && !scrollContainerIsDocument) {
-    topSticky -= scrollContainer.scrollTop;
-  }
-  return [leftSticky, topSticky];
-};
-export const getElementFixedPos = (element) => {
-  const rect = element.getBoundingClientRect();
-  // getBoundingClientRect already gives viewport coordinates, which is what fixed positioning uses
-  return [rect.left, rect.top];
-};
-export const convertScrollPosToElementPos = (
-  leftScrollContainer,
-  topScrollContainer,
-  element,
-  scrollContainer = getScrollContainer(element),
-  { isFixed, isStickyLeft, isStickyTop, stickyLeftValue, stickyTopValue } = {},
-) => {
-  const scrollContainerIsDocument = scrollContainer === documentElement;
-  const computedStyle = getComputedStyle(element);
-
-  // Auto-detect if not explicitly provided
-  const usePositionFixed =
-    isFixed === undefined ? computedStyle.position === "fixed" : isFixed;
-  const usePositionSticky = computedStyle.position === "sticky";
-  const hasStickyLeftAttribute = element.hasAttribute("data-sticky-left");
-  const hasStickyTopAttribute = element.hasAttribute("data-sticky-top");
-
-  const finalIsStickyLeft =
-    isStickyLeft === undefined
-      ? hasStickyLeftAttribute ||
-        (usePositionSticky && computedStyle.left !== "auto")
-      : isStickyLeft;
-
-  const finalIsStickyTop =
-    isStickyTop === undefined
-      ? hasStickyTopAttribute ||
-        (usePositionSticky && computedStyle.top !== "auto")
-      : isStickyTop;
-
-  const finalStickyLeftValue =
-    stickyLeftValue !== null
-      ? stickyLeftValue
-      : usePositionSticky
-        ? parseFloat(computedStyle.left) || 0
-        : hasStickyLeftAttribute
-          ? parseFloat(computedStyle.left) || 0
-          : 0;
-  const finalStickyTopValue =
-    stickyTopValue !== null
-      ? stickyTopValue
-      : usePositionSticky
-        ? parseFloat(computedStyle.top) || 0
-        : hasStickyTopAttribute
-          ? parseFloat(computedStyle.top) || 0
-          : 0;
+  const createElementRect = (left, top) => {
+    return {
+      left,
+      top,
+      right: left + width,
+      bottom: top + height,
+      width,
+      height,
+    };
+  };
 
   // Handle fixed positioning
-  if (usePositionFixed) {
-    if (scrollContainerIsDocument) {
-      // Convert from document coordinates to viewport coordinates (fixed position)
-      const documentScrollLeft = documentElement.scrollLeft;
-      const documentScrollTop = documentElement.scrollTop;
-      return [
-        leftScrollContainer - documentScrollLeft,
-        topScrollContainer - documentScrollTop,
-      ];
-    }
-    // Convert from container coordinates to viewport coordinates
-    const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    return [
-      leftScrollContainer -
-        scrollContainer.scrollLeft +
-        scrollContainerRect.left,
-      topScrollContainer - scrollContainer.scrollTop + scrollContainerRect.top,
-    ];
+  if (fromFixed) {
+    return createElementRect(leftScrollRelative, topScrollRelative);
   }
 
-  // Handle sticky positioning
-  if (finalIsStickyLeft || finalIsStickyTop) {
-    let leftSticky = leftScrollContainer;
-    let topSticky = topScrollContainer;
+  // Auto-detect if not explicitly provided
+  const isStickyLeft = Boolean(fromStickyLeft || fromStickyLeftAttr);
+  const isStickyTop = Boolean(fromStickyTop || fromStickyTopAttr);
+  if (isStickyLeft || isStickyTop) {
+    let elementLeftRelative;
+    let elementTopRelative;
 
-    if (finalIsStickyLeft) {
-      if (scrollContainerIsDocument) {
-        // For document scrolling: calculate sticky position
-        const documentScrollLeft = documentElement.scrollLeft;
-        const naturalPosition = leftScrollContainer - documentScrollLeft; // Convert to viewport
-        const stickyPosition = finalStickyLeftValue;
-        // Element sticks when natural position would be less than sticky value
-        leftSticky =
-          naturalPosition < stickyPosition ? stickyPosition : naturalPosition;
+    if (isStickyLeft) {
+      const stickyLeft = fromStickyLeft
+        ? fromStickyLeft.value
+        : fromStickyLeftAttr.value;
+      const naturalPosition = elementLeftRelative;
+      const stickyPosition = stickyLeft;
+      if (naturalPosition < stickyPosition) {
+        elementLeftRelative = stickyPosition;
       } else {
-        // For container scrolling: sticky relative to container
-        const containerScrollLeft = scrollContainer.scrollLeft;
-        const naturalPosition = leftScrollContainer - containerScrollLeft;
-        const stickyPosition = finalStickyLeftValue;
-        leftSticky =
-          naturalPosition < stickyPosition ? stickyPosition : naturalPosition;
+        elementLeftRelative = naturalPosition;
       }
+    } else {
+      elementLeftRelative = leftScrollRelative;
     }
 
-    if (finalIsStickyTop) {
-      if (scrollContainerIsDocument) {
-        // For document scrolling: calculate sticky position
-        const documentScrollTop = documentElement.scrollTop;
-        const naturalPosition = topScrollContainer - documentScrollTop; // Convert to viewport
-        const stickyPosition = finalStickyTopValue;
-        // Element sticks when natural position would be less than sticky value
-        topSticky =
-          naturalPosition < stickyPosition ? stickyPosition : naturalPosition;
+    if (isStickyTop) {
+      const stickyTop = fromStickyTop
+        ? fromStickyTop.value
+        : fromStickyTopAttr.value;
+      const naturalPosition = topScrollRelative;
+      const stickyPosition = stickyTop;
+      if (naturalPosition < stickyPosition) {
+        elementLeftRelative = stickyPosition;
       } else {
-        // For container scrolling: sticky relative to container
-        const containerScrollTop = scrollContainer.scrollTop;
-        const naturalPosition = topScrollContainer - containerScrollTop;
-        const stickyPosition = finalStickyTopValue;
-        topSticky =
-          naturalPosition < stickyPosition ? stickyPosition : naturalPosition;
+        elementLeftRelative = naturalPosition;
       }
+    } else {
+      elementTopRelative = topScrollRelative;
     }
 
-    return [leftSticky, topSticky];
+    return createElementRect(elementLeftRelative, elementTopRelative);
   }
 
-  // Handle normal positioning (existing logic)
+  // Handle normal positioning
   const offsetParent = element.offsetParent || documentElement;
   const positionedParent =
     offsetParent === document.body ? documentElement : offsetParent;
   const positionedParentIsDocument = positionedParent === documentElement;
 
   if (scrollContainerIsDocument && positionedParentIsDocument) {
-    // Both scroll container and positioned parent are document
-    // Convert from document coordinates to viewport coordinates
-    const documentScrollLeft = documentElement.scrollLeft;
-    const documentScrollTop = documentElement.scrollTop;
-    return [
-      leftScrollContainer - documentScrollLeft,
-      topScrollContainer - documentScrollTop,
-    ];
+    return createElementRect(leftScrollRelative, topScrollRelative);
   }
 
   if (scrollContainerIsDocument && !positionedParentIsDocument) {
     // Scroll container is document, but element is positioned relative to a parent
     const positionedParentRect = positionedParent.getBoundingClientRect();
-    const documentScrollLeft = documentElement.scrollLeft;
-    const documentScrollTop = documentElement.scrollTop;
-    // Convert from document coordinates to positioned parent coordinates
-    const positionedParentDocumentLeft =
-      positionedParentRect.left + documentScrollLeft;
-    const positionedParentDocumentTop =
-      positionedParentRect.top + documentScrollTop;
-    return [
-      leftScrollContainer - positionedParentDocumentLeft,
-      topScrollContainer - positionedParentDocumentTop,
-    ];
+    const elementLeftRelative = leftScrollRelative + positionedParentRect.left;
+    const elementTopRelative = topScrollRelative + positionedParentRect.top;
+    return createElementRect(elementLeftRelative, elementTopRelative);
   }
 
   if (!scrollContainerIsDocument && positionedParentIsDocument) {
     // Scroll container is not document, but element is positioned relative to document
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const documentScrollLeft = documentElement.scrollLeft;
-    const documentScrollTop = documentElement.scrollTop;
-    // Convert from container coordinates to document coordinates, then to viewport
-    const elementDocumentLeft =
-      leftScrollContainer +
-      scrollContainerRect.left +
-      documentScrollLeft -
-      scrollContainer.scrollLeft;
-    const elementDocumentTop =
-      topScrollContainer +
-      scrollContainerRect.top +
-      documentScrollTop -
-      scrollContainer.scrollTop;
-    return [
-      elementDocumentLeft - documentScrollLeft,
-      elementDocumentTop - documentScrollTop,
-    ];
+    const elementLeftRelative = leftScrollRelative + scrollContainerRect.left;
+    const elementTopRelative = topScrollRelative + scrollContainerRect.top;
+    return createElementRect(elementLeftRelative, elementTopRelative);
   }
 
   // Both scroll container and positioned parent are the same container
   if (scrollContainer === positionedParent) {
-    // Element is positioned relative to its scroll container
-    return [
-      leftScrollContainer - scrollContainer.scrollLeft,
-      topScrollContainer - scrollContainer.scrollTop,
-    ];
+    return createElementRect(leftScrollRelative, topScrollRelative);
   }
 
   // General case: different scroll container and positioned parent
   const scrollContainerRect = scrollContainer.getBoundingClientRect();
   const positionedParentRect = positionedParent.getBoundingClientRect();
-  const documentScrollLeft = documentElement.scrollLeft;
-  const documentScrollTop = documentElement.scrollTop;
+  const elementLeftRelative =
+    leftScrollRelative + scrollContainerRect.left + positionedParentRect.left;
+  const elementTopRelative =
+    topScrollRelative + scrollContainerRect.top + positionedParentRect.top;
+  return createElementRect(elementLeftRelative, elementTopRelative);
+};
 
-  // Convert scroll container coordinates to document coordinates
-  const elementDocumentLeft =
-    leftScrollContainer +
-    scrollContainerRect.left +
-    documentScrollLeft -
-    scrollContainer.scrollLeft;
-  const elementDocumentTop =
-    topScrollContainer +
-    scrollContainerRect.top +
-    documentScrollTop -
-    scrollContainer.scrollTop;
-
-  // Convert document coordinates to positioned parent coordinates
-  const positionedParentDocumentLeft =
-    positionedParentRect.left + documentScrollLeft;
-  const positionedParentDocumentTop =
-    positionedParentRect.top + documentScrollTop;
-
-  return [
-    elementDocumentLeft - positionedParentDocumentLeft,
-    elementDocumentTop - positionedParentDocumentTop,
-  ];
+export const getMouseEventScrollRelativeRect = (
+  mouseEvent,
+  scrollContainer,
+) => {
+  const [mouseLeftScrollRelative, mouseTopScrollRelative] =
+    viewportPosToScrollRelativePos(
+      mouseEvent.clientX,
+      mouseEvent.clientY,
+      scrollContainer,
+    );
+  return {
+    left: mouseLeftScrollRelative,
+    top: mouseTopScrollRelative,
+    right: mouseLeftScrollRelative,
+    bottom: mouseTopScrollRelative,
+    width: 0,
+    height: 0,
+  };
 };

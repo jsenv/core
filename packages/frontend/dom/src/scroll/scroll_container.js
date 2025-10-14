@@ -3,6 +3,8 @@
 import { getStyle } from "../style_and_attributes.js";
 import { getScrollingElement, isScrollable } from "./is_scrollable.js";
 
+const { documentElement } = document;
+
 export const getAncestorScrolls = (element) => {
   let scrollX = 0;
   let scrollY = 0;
@@ -38,7 +40,7 @@ export const getScrollContainerSet = (element) => {
       break;
     }
     scrollContainerSet.add(scrollContainer);
-    if (scrollContainer === document.documentElement) {
+    if (scrollContainer === documentElement) {
       break;
     }
     elementOrScrollContainer = scrollContainer;
@@ -54,7 +56,7 @@ export const getScrollContainer = (arg, { includeHidden } = {}) => {
   if (element === document) {
     return null;
   }
-  if (element === document.documentElement) {
+  if (element === documentElement) {
     if (isScrollable(element, { includeHidden })) {
       return element;
     }
@@ -76,7 +78,7 @@ const findScrollContainer = (element, { includeHidden } = {}) => {
   // Si l'élément est en position absolute, d'abord trouver le premier parent positionné
   if (position === "absolute") {
     while (parent && parent !== document) {
-      if (parent === document.documentElement) {
+      if (parent === documentElement) {
         break; // documentElement est considéré comme positionné
       }
       const parentPosition = getStyle(parent, "position");
