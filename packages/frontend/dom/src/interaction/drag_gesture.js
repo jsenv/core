@@ -296,8 +296,8 @@ export const createDragGestureController = (options = {}) => {
       // Store both viewport and document coordinates for reference
       xAtStart, // Scroll container coordinates (already converted)
       yAtStart, // Scroll container coordinates (already converted)
-      leftAtStart, // Document coordinates (already converted)
-      topAtStart, // Document coordinates (already converted)
+      leftAtStart, // Scroll container coordinates (already converted)
+      topAtStart, // Scroll container coordinates (already converted)
       scrollLeftAtStart,
       scrollTopAtStart,
       documentScrollLeftAtStart: documentElement.scrollLeft,
