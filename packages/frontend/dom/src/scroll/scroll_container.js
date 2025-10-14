@@ -5,49 +5,6 @@ import { getScrollingElement, isScrollable } from "./is_scrollable.js";
 
 const { documentElement } = document;
 
-export const getAncestorScrolls = (element) => {
-  let scrollX = 0;
-  let scrollY = 0;
-  const ancestorScrolls = [];
-  const visitElement = (elementOrScrollContainer) => {
-    const scrollContainer = getScrollContainer(elementOrScrollContainer);
-    if (scrollContainer) {
-      ancestorScrolls.push({
-        element: elementOrScrollContainer,
-        scrollContainer,
-      });
-      scrollX += scrollContainer.scrollLeft;
-      scrollY += scrollContainer.scrollTop;
-      if (scrollContainer === document.documentElement) {
-        return;
-      }
-      visitElement(scrollContainer);
-    }
-  };
-  visitElement(element);
-  ancestorScrolls.scrollX = scrollX;
-  ancestorScrolls.scrollY = scrollY;
-  return ancestorScrolls;
-};
-
-// https://github.com/shipshapecode/tether/blob/d6817f8c49a7a26b04c45e55589279dd1b5dd2bf/src/js/utils/parents.js#L1
-export const getScrollContainerSet = (element) => {
-  const scrollContainerSet = new Set();
-  let elementOrScrollContainer = element;
-  while (true) {
-    const scrollContainer = getScrollContainer(elementOrScrollContainer);
-    if (!scrollContainer) {
-      break;
-    }
-    scrollContainerSet.add(scrollContainer);
-    if (scrollContainer === documentElement) {
-      break;
-    }
-    elementOrScrollContainer = scrollContainer;
-  }
-  return scrollContainerSet;
-};
-
 export const getScrollContainer = (arg, { includeHidden } = {}) => {
   if (typeof arg !== "object" || arg.nodeType !== 1) {
     throw new TypeError("getScrollContainer first argument must be DOM node");
@@ -100,4 +57,54 @@ const findScrollContainer = (element, { includeHidden } = {}) => {
     parent = parent.parentNode;
   }
   return null;
+};
+
+export const getAncestorScrolls = (element, startOnParent) => {
+  let scrollX = 0;
+  let scrollY = 0;
+  const ancestorScrolls = [];
+  const visitElement = (elementOrScrollContainer) => {
+    const scrollContainer = getScrollContainer(elementOrScrollContainer);
+    if (scrollContainer) {
+      ancestorScrolls.push({
+        element: elementOrScrollContainer,
+        scrollContainer,
+      });
+      scrollX += scrollContainer.scrollLeft;
+      scrollY += scrollContainer.scrollTop;
+      if (scrollContainer === document.documentElement) {
+        return;
+      }
+      visitElement(scrollContainer);
+    }
+  };
+  if (startOnParent) {
+    if (element === documentElement) {
+    } else {
+      visitElement(element.parentNode);
+    }
+  } else {
+    visitElement(element);
+  }
+  ancestorScrolls.scrollX = scrollX;
+  ancestorScrolls.scrollY = scrollY;
+  return ancestorScrolls;
+};
+
+// https://github.com/shipshapecode/tether/blob/d6817f8c49a7a26b04c45e55589279dd1b5dd2bf/src/js/utils/parents.js#L1
+export const getScrollContainerSet = (element) => {
+  const scrollContainerSet = new Set();
+  let elementOrScrollContainer = element;
+  while (true) {
+    const scrollContainer = getScrollContainer(elementOrScrollContainer);
+    if (!scrollContainer) {
+      break;
+    }
+    scrollContainerSet.add(scrollContainer);
+    if (scrollContainer === documentElement) {
+      break;
+    }
+    elementOrScrollContainer = scrollContainer;
+  }
+  return scrollContainerSet;
 };

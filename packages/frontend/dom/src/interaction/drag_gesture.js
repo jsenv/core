@@ -75,7 +75,10 @@ import {
   getScrollRelativeVisibleRect,
 } from "../position/dom_coords.js";
 import { createPubSub } from "../pub_sub.js";
-import { getScrollContainer } from "../scroll/scroll_container.js";
+import {
+  getAncestorScrolls,
+  getScrollContainer,
+} from "../scroll/scroll_container.js";
 import { setStyles } from "../style_and_attributes.js";
 import {
   applyConstraints,
@@ -213,37 +216,31 @@ export const createDragGestureController = (options = {}) => {
     // const [layoutOffsetX, layoutOffsetY] = getScrollContainerOffset(element);
 
     const positionedParent = element.offsetParent;
-
-    // Calculate layout offset: positioned parent position relative to scroll container
-    // This is needed to convert scroll-relative coordinates to CSS positioning coordinates
-
-    // Get positioned parent position in document coordinates (static, doesn't change with scroll)
     const positionedParentRect = positionedParent.getBoundingClientRect();
-    const positionedParentLeftDocument =
-      positionedParentRect.left + document.documentElement.scrollLeft;
-    const positionedParentTopDocument =
-      positionedParentRect.top + document.documentElement.scrollTop;
-
-    // Get scroll container position in document coordinates (static, doesn't change with scroll)
-    let scrollContainerLeftDocument;
-    let scrollContainerTopDocument;
-    if (scrollContainer === document.documentElement) {
-      scrollContainerLeftDocument = 0;
-      scrollContainerTopDocument = 0;
-    } else {
-      const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      scrollContainerLeftDocument =
-        scrollContainerRect.left + document.documentElement.scrollLeft;
-      scrollContainerTopDocument =
-        scrollContainerRect.top + document.documentElement.scrollTop;
-    }
-
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    let positionedParentLeftStatic = positionedParentRect.left;
+    let positionedParentTopStatic = positionedParentRect.top;
+    let scrollContainerLeftStatic = scrollContainerRect.left;
+    let scrollContainerTopStatic = scrollContainerRect.top;
+    const positionedParentScrolls = getAncestorScrolls(
+      positionedParent.parentNode,
+      true,
+    );
+    const scrollContainerScrolls = getAncestorScrolls(
+      scrollContainer.parentNode,
+      true,
+    );
+    const positionedScrollX = positionedParentScrolls.scrollX;
+    const scrollContainerScrollX = scrollContainerScrolls.scrollX;
+    const positionedScrollY = positionedParentScrolls.scrollY;
+    const scrollContainerScrollY = scrollContainerScrolls.scrollY;
+    scrollContainerTopStatic -= scrollContainerScrollY;
+    positionedParentTopStatic -= positionedScrollY;
     // Calculate static offset between positioned parent and scroll container
     const layoutOffsetX =
-      positionedParentLeftDocument - scrollContainerLeftDocument;
-    const layoutOffsetY =
-      positionedParentTopDocument - scrollContainerTopDocument;
-    console.log({ layoutOffsetY });
+      positionedParentLeftStatic - scrollContainerLeftStatic;
+    const layoutOffsetY = positionedParentTopStatic - scrollContainerTopStatic;
+    console.log({ layoutOffsetY, positionedScrollY, scrollContainerScrollY });
 
     if (isThresholdOnly) {
     } else if (fromFixed) {
