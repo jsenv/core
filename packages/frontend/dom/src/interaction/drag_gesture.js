@@ -579,7 +579,13 @@ export const createDragGestureController = (options = {}) => {
         y,
         xChanged: xMove !== gestureInfo.xMove,
         yChanged: yMove !== gestureInfo.yMove,
-
+        scrollRelativeRect: {
+          ...gestureInfo.scrollRelativeRect,
+          left: elementLeftRelative,
+          top: elementTopRelative,
+          right: elementLeftRelative + currentRect.width,
+          bottom: elementTopRelative + currentRect.height,
+        },
         isGoingLeft,
         isGoingRight,
         isGoingUp,
@@ -642,7 +648,6 @@ export const createDragGestureController = (options = {}) => {
         isRelease,
       });
       previousGestureInfo = { ...gestureInfo };
-
       Object.assign(gestureInfo, dragData);
 
       console.log(`Final gesture xMove=${gestureInfo.xMove}`);
