@@ -222,25 +222,27 @@ export const createDragGestureController = (options = {}) => {
     let positionedParentTopStatic = positionedParentRect.top;
     let scrollContainerLeftStatic = scrollContainerRect.left;
     let scrollContainerTopStatic = scrollContainerRect.top;
-    const positionedParentScrolls = getAncestorScrolls(
-      positionedParent.parentNode,
-      true,
-    );
-    const scrollContainerScrolls = getAncestorScrolls(
-      scrollContainer.parentNode,
-      true,
-    );
+    const positionedParentScrolls = getAncestorScrolls(positionedParent, true);
+    const scrollContainerScrolls = getAncestorScrolls(scrollContainer, true);
     const positionedScrollX = positionedParentScrolls.scrollX;
     const scrollContainerScrollX = scrollContainerScrolls.scrollX;
     const positionedScrollY = positionedParentScrolls.scrollY;
     const scrollContainerScrollY = scrollContainerScrolls.scrollY;
+    scrollContainerLeftStatic -= scrollContainerScrollX;
+    positionedParentLeftStatic -= positionedScrollX;
     scrollContainerTopStatic -= scrollContainerScrollY;
     positionedParentTopStatic -= positionedScrollY;
     // Calculate static offset between positioned parent and scroll container
     const layoutOffsetX =
       positionedParentLeftStatic - scrollContainerLeftStatic;
     const layoutOffsetY = positionedParentTopStatic - scrollContainerTopStatic;
-    console.log({ layoutOffsetY, positionedScrollY, scrollContainerScrollY });
+    console.log({
+      grabTop,
+      layoutOffsetX,
+      layoutOffsetY,
+      positionedScrollY,
+      scrollContainerScrollY,
+    });
 
     if (isThresholdOnly) {
     } else if (fromFixed) {
@@ -823,6 +825,13 @@ export const createDragToMoveGestureController = (options) => {
           grabTop - layoutOffsetY + grabScrollTop + gestureInfo.yMove;
         const desiredElementBottom =
           desiredElementTop + elementVisuallyImpactedHeight;
+
+        console.log({
+          grabTop,
+          layoutOffsetY,
+          grabScrollTop,
+          yMove: gestureInfo.yMove,
+        });
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({

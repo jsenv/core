@@ -39,9 +39,6 @@
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border: 3px solid #333;
         border-radius: 12px;
-        position: absolute;
-        top: 300px;
-        left: 100px;
         cursor: grab;
         display: flex;
         align-items: center;
@@ -108,6 +105,16 @@
         document itself is the scrollable parent, so scrolling should work
         throughout the entire page.
       </p>
+    </div>
+
+    <div style="position: relative; inset: 0; left: 200px; top: 50px">
+      <div
+        class="draggable-element"
+        id="dragElement"
+        style="position: absolute"
+      >
+        Drag Me
+      </div>
     </div>
 
     <!-- Programmatic Controls -->
@@ -239,10 +246,6 @@
       >
         Ready - Click "Grab Element" to start programmatic control
       </div>
-    </div>
-
-    <div style="position: fixed; inset: 0; left: 200px; top: 50px">
-      <div class="draggable-element" id="dragElement">Drag Me</div>
     </div>
 
     <div
