@@ -296,8 +296,8 @@ export const createDragGestureController = (options = {}) => {
 
       grabScrollRelativeRect,
       scrollRelativeRect,
-      xMove: 0, // diff between x and PREVIOUS x
-      yMove: 0, // diff between y and PREVIOUS y
+      xMove: 0, // dragX + scrollLeft + x constraints
+      yMove: 0, // dragY + scrollTop + y constraints
       xChanged: false, // x changed since last gesture
       yChanged: false, // y changed since last gesture
 
@@ -499,9 +499,10 @@ export const createDragGestureController = (options = {}) => {
       const xMoveNoConstraint = dragXWithScrollNoConstraint - grabXWithScroll;
       const yMoveNoConstraint = dragYWithScrollNoConstraint - grabYWithScroll;
 
-      const { left: grabLeft, top: grabTop } = grabScrollRelativeRect;
-      const leftRequested = grabLeft + grabScrollLeft + xMoveNoConstraint;
-      const topRequested = grabTop + grabScrollTop + yMoveNoConstraint;
+      const { left: grabLeftRelative, top: grabTopRelative } =
+        grabScrollRelativeRect;
+      const leftRequested = grabLeftRelative + xMoveNoConstraint;
+      const topRequested = grabTopRelative + yMoveNoConstraint;
       const [leftConstrained, topConstrained] = applyConstraints(
         constraints,
         leftRequested,
@@ -514,8 +515,8 @@ export const createDragGestureController = (options = {}) => {
           interactionType,
         },
       );
-      const xMove = leftConstrained - grabLeft;
-      const yMove = topConstrained - grabTop;
+      const xMove = leftConstrained - grabLeftRelative;
+      const yMove = topConstrained - grabTopRelative;
       // Calculate direction based on where the element is trying to move (relative to previous position)
       const previousXMove = gestureInfo.xMove;
       const previousYMove = gestureInfo.yMove;
