@@ -24,7 +24,7 @@
  * This module provides the missing coordinate APIs that work seamlessly with scroll containers:
  * - **getScrollRelativeRect()**: element rect relative to scroll container (PRIMARY API)
  * - **getMouseEventScrollRelativeRect()**: Mouse coordinates in scroll container space
- * - **convertScrollRelativeRectToElementRect()**: Convert scroll-relative rect to element positioning coordinates
+ * - **convertScrollRelativeRectInto()**: Convert scroll-relative rect to element positioning coordinates
  *
  * These APIs abstract away the complexity of coordinate system conversion and provide
  * a consistent interface for element positioning regardless of scroll container depth.
@@ -50,7 +50,7 @@
  * ## Secondary APIs:
  *
  * - **getMouseEventScrollRelativeRect()**: Get mouse coordinates as a rect in scroll container space
- * - **convertScrollRelativeRectToElementRect()**: Convert from scroll-relative coordinates to element positioning coordinates (for setting element.style.left/top)
+ * - **convertScrollRelativeRectInto()**: Convert from scroll-relative coordinates to element positioning coordinates (for setting element.style.left/top)
  *
  * ## Coordinate System Terminology:
  *
@@ -279,6 +279,176 @@ const viewportPosToScrollRelativePos = (
   ];
 };
 
+export const getMouseEventScrollRelativeRect = (
+  mouseEvent,
+  scrollContainer,
+) => {
+  const [mouseLeftScrollRelative, mouseTopScrollRelative] =
+    viewportPosToScrollRelativePos(
+      mouseEvent.clientX,
+      mouseEvent.clientY,
+      scrollContainer,
+    );
+  return {
+    left: mouseLeftScrollRelative,
+    top: mouseTopScrollRelative,
+    right: mouseLeftScrollRelative,
+    bottom: mouseTopScrollRelative,
+    width: 0,
+    height: 0,
+  };
+};
+
+export const getScrollRelativeVisibleRect = (scrollContainer) => {
+  if (scrollContainer === documentElement) {
+    const { clientWidth, clientHeight } = documentElement;
+
+    return {
+      left: 0,
+      top: 0,
+      right: clientWidth,
+      bottom: clientHeight,
+      width: clientWidth,
+      height: clientHeight,
+      scrollContainer,
+      scrollLeft: scrollContainer.scrollLeft,
+      scrollTop: scrollContainer.scrollTop,
+    };
+  }
+
+  const { clientWidth, clientHeight } = scrollContainer;
+  const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
+  const leftWithBorder = scrollContainerBorderSizes.left;
+  const topWithBorder = scrollContainerBorderSizes.top;
+  const availableWidth = clientWidth;
+  const availableHeight = clientHeight;
+  const right = leftWithBorder + availableWidth;
+  const bottom = topWithBorder + availableHeight;
+  return {
+    left: leftWithBorder,
+    top: topWithBorder,
+    right,
+    bottom,
+    width: availableWidth,
+    height: availableHeight,
+    scrollContainer,
+    scrollLeft: scrollContainer.scrollLeft,
+    scrollTop: scrollContainer.scrollTop,
+  };
+};
+
+export const addScrollToRect = (scrollRelativeRect) => {
+  const { left, top, width, height, scrollLeft, scrollTop } =
+    scrollRelativeRect;
+  const leftWithScroll = left + scrollLeft;
+  const topWithScroll = top + scrollTop;
+  return {
+    ...scrollRelativeRect,
+    left: leftWithScroll,
+    top: topWithScroll,
+    right: leftWithScroll + width,
+    bottom: topWithScroll + height,
+  };
+};
+
+export const convertScrollRelativeRectInto = (
+  scrollRelativeRect,
+  targetScrollContainer = documentElement,
+) => {
+  const {
+    left: leftScrollRelative,
+    top: topScrollRelative,
+    width,
+    height,
+    scrollContainer: sourceScrollContainer,
+  } = scrollRelativeRect;
+
+  const createScrollRelativeRect = (left, top) => {
+    return {
+      left,
+      top,
+      right: left + width,
+      bottom: top + height,
+      width,
+      height,
+      scrollContainer: targetScrollContainer,
+      scrollLeft: targetScrollContainer.scrollLeft,
+      scrollTop: targetScrollContainer.scrollTop,
+    };
+  };
+
+  // Same scroll container - no conversion needed
+  if (sourceScrollContainer === targetScrollContainer) {
+    return createScrollRelativeRect(leftScrollRelative, topScrollRelative);
+  }
+
+  // Convert from source scroll container to target scroll container
+  // Strategy: source -> document -> target
+
+  // Step 1: Convert from source to document coordinates
+  let leftDocument;
+  let topDocument;
+  if (sourceScrollContainer === documentElement) {
+    leftDocument = leftScrollRelative;
+    topDocument = topScrollRelative;
+  } else {
+    const sourceScrollContainerRect = getScrollRelativeRect(
+      sourceScrollContainer,
+      documentElement,
+    );
+    leftDocument = leftScrollRelative + sourceScrollContainerRect.left;
+    topDocument = topScrollRelative + sourceScrollContainerRect.top;
+  }
+
+  // Step 2: Convert from document to target coordinates
+  let leftTarget;
+  let topTarget;
+  if (targetScrollContainer === documentElement) {
+    leftTarget = leftDocument;
+    topTarget = topDocument;
+  } else {
+    const targetScrollContainerRect = getScrollRelativeRect(
+      targetScrollContainer,
+      documentElement,
+    );
+    leftTarget = leftDocument - targetScrollContainerRect.left;
+    topTarget = topDocument - targetScrollContainerRect.top;
+  }
+
+  return createScrollRelativeRect(leftTarget, topTarget);
+};
+
+export const getScrollContainerOffset = (element) => {
+  const scrollContainer = getScrollContainer(element);
+  const offsetParent = element.offsetParent || documentElement;
+  const positionedParent =
+    offsetParent === document.body ? documentElement : offsetParent;
+  const positionedParentRect = positionedParent.getBoundingClientRect();
+  const scrollContainerRect = scrollContainer.getBoundingClientRect();
+  if (positionedParent.contains(scrollContainer)) {
+    return [
+      scrollContainerRect.left -
+        positionedParentRect.left -
+        scrollContainer.scrollLeft,
+
+      scrollContainerRect.top -
+        positionedParentRect.top -
+        scrollContainer.scrollTop,
+    ];
+  }
+
+  const positionedLeft = positionedParentRect.left + documentElement.scrollLeft;
+  const positionedTop = positionedParentRect.top + documentElement.scrollTop;
+  const scrollContainerLeft =
+    scrollContainerRect.left + documentElement.scrollLeft;
+  const scrollContainerTop =
+    scrollContainerRect.top + documentElement.scrollTop;
+  return [
+    positionedLeft - scrollContainerLeft,
+    positionedTop - scrollContainerTop,
+  ];
+};
+
 export const convertScrollRelativeRectToElementRect = (
   scrollRelativeRect,
   element,
@@ -416,76 +586,4 @@ export const convertScrollRelativeRectToElementRect = (
     elementTopDocument - positionedParentScrollRelativeRect.top;
 
   return createElementRect(elementLeftRelative, elementTopRelative);
-};
-
-export const getMouseEventScrollRelativeRect = (
-  mouseEvent,
-  scrollContainer,
-) => {
-  const [mouseLeftScrollRelative, mouseTopScrollRelative] =
-    viewportPosToScrollRelativePos(
-      mouseEvent.clientX,
-      mouseEvent.clientY,
-      scrollContainer,
-    );
-  return {
-    left: mouseLeftScrollRelative,
-    top: mouseTopScrollRelative,
-    right: mouseLeftScrollRelative,
-    bottom: mouseTopScrollRelative,
-    width: 0,
-    height: 0,
-  };
-};
-
-export const getScrollRelativeVisibleRect = (scrollContainer) => {
-  if (scrollContainer === documentElement) {
-    const { clientWidth, clientHeight } = documentElement;
-
-    return {
-      left: 0,
-      top: 0,
-      right: clientWidth,
-      bottom: clientHeight,
-      width: clientWidth,
-      height: clientHeight,
-      scrollContainer,
-      scrollLeft: scrollContainer.scrollLeft,
-      scrollTop: scrollContainer.scrollTop,
-    };
-  }
-
-  const { clientWidth, clientHeight } = scrollContainer;
-  const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
-  const leftWithBorder = scrollContainerBorderSizes.left;
-  const topWithBorder = scrollContainerBorderSizes.top;
-  const availableWidth = clientWidth;
-  const availableHeight = clientHeight;
-  const right = leftWithBorder + availableWidth;
-  const bottom = topWithBorder + availableHeight;
-  return {
-    left: leftWithBorder,
-    top: topWithBorder,
-    right,
-    bottom,
-    width: availableWidth,
-    height: availableHeight,
-    scrollContainer,
-    scrollLeft: scrollContainer.scrollLeft,
-    scrollTop: scrollContainer.scrollTop,
-  };
-};
-
-export const addScrollToRect = (scrollRelativeRect) => {
-  const { left, top, width, height, scrollLeft, scrollTop } =
-    scrollRelativeRect;
-  const leftWithScroll = left + scrollLeft;
-  const topWithScroll = top + scrollTop;
-  return {
-    ...scrollRelativeRect,
-    left: leftWithScroll,
-    top: topWithScroll,
-    right: leftWithScroll + width,
-    bottom: topWithScroll + height,
-  };
 };

@@ -360,7 +360,10 @@ const initResizeByMousedown = (
         : defaultMaxSize;
 
     // Always use getElementScrollableRect for consistency with drag system
-    const scrollRelativeRect = getScrollRelativeRect(tableCell);
+    const scrollRelativeRect = getScrollRelativeRect(
+      tableCell,
+      document.documentElement, // resizer is within the document, no withing the table
+    );
     const { scrollContainer, scrollContainerIsDocument } = scrollRelativeRect;
     let startScrollable =
       axis === "x" ? scrollRelativeRect.left : scrollRelativeRect.top;
@@ -402,7 +405,6 @@ const initResizeByMousedown = (
     customAreaConstraint,
     visibleAreaPadding: 20,
     onGrab: () => {
-      updateResizerPosition(tableCell, resizer);
       onGrab?.();
     },
     onDrag,
