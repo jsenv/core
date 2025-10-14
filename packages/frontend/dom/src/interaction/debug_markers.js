@@ -1,3 +1,5 @@
+import { convertScrollPosToElementPos } from "../position/dom_coords.js";
+
 export let DRAG_DEBUG_MARKERS = true;
 export const enableDebugMarkers = () => {
   DRAG_DEBUG_MARKERS = true;
@@ -30,42 +32,29 @@ const MARKER_SIZE = 12;
 
 // Convert document-relative coordinates to viewport coordinates for marker positioning
 // Takes the scroll container into account for proper positioning relative to the container
-const documentToViewportCoords = (x, y, scrollContainer, side = null) => {
-  const isDocumentScroll = scrollContainer === document.documentElement;
+const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
+  const { documentElement } = document;
 
-  if (isDocumentScroll) {
-    // For document scrolling, use document scroll offsets
-    const { documentElement } = document;
-    if (side === "left" || side === "right") {
-      // Vertical markers: x should stay fixed in viewport, y adjusts for scroll
-      return [x - documentElement.scrollLeft, y];
-    }
-    if (side === "top" || side === "bottom") {
-      // Horizontal markers: x should stay fixed in viewport, y adjusts for scroll
-      return [x, y - documentElement.scrollTop];
-    }
-    // For all other cases (obstacles, bounds): adjust both coordinates for scroll
-    return [x - documentElement.scrollLeft, y - documentElement.scrollTop];
+  // Use convertScrollPosToElementPos to handle coordinate conversion properly
+  const [baseX, baseY] = convertScrollPosToElementPos(
+    x,
+    y,
+    documentElement,
+    scrollContainer,
+  );
+
+  // Apply side-specific logic for extending markers across viewport
+  if (side === "left" || side === "right") {
+    // Vertical markers: x should stay fixed in viewport, y can extend
+    return [baseX, 0]; // y=0 to start from top of viewport
+  }
+  if (side === "top" || side === "bottom") {
+    // Horizontal markers: y should stay fixed in viewport, x can extend
+    return [0, baseY]; // x=0 to start from left of viewport
   }
 
-  // For custom scroll containers, markers should be positioned relative to container
-  // Get container's current position in viewport
-  const containerRect = scrollContainer.getBoundingClientRect();
-  const containerDocumentLeft =
-    containerRect.left + document.documentElement.scrollLeft;
-  const containerDocumentTop =
-    containerRect.top + document.documentElement.scrollTop;
-
-  // Convert from document coordinates to container-relative coordinates
-  const xRelativeToContainer = x - containerDocumentLeft;
-  const yRelativeToContainer = y - containerDocumentTop;
-
-  // Account for container's internal scroll
-  const xInContainer = xRelativeToContainer - scrollContainer.scrollLeft;
-  const yInContainer = yRelativeToContainer - scrollContainer.scrollTop;
-
-  // Convert back to viewport coordinates
-  return [containerRect.left + xInContainer, containerRect.top + yInContainer];
+  // For obstacles and other markers: use converted coordinates directly
+  return [baseX, baseY];
 };
 
 export const setupVisualMarkers = ({ direction, scrollContainer }) => {
@@ -281,12 +270,7 @@ const createDebugMarker = (
   scrollContainer,
 ) => {
   // Convert coordinates from document-relative to viewport
-  const [viewportX, viewportY] = documentToViewportCoords(
-    x,
-    y,
-    scrollContainer,
-    side,
-  );
+  const [viewportX, viewportY] = getDebugMarkerPos(x, y, scrollContainer, side);
 
   const marker = document.createElement("div");
   marker.className = `navi_debug_marker`;
@@ -315,7 +299,7 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   const height = obstacleObj.bounds.bottom - obstacleObj.bounds.top;
 
   // Convert document-relative coordinates to viewport coordinates
-  const [x, y] = documentToViewportCoords(
+  const [x, y] = getDebugMarkerPos(
     obstacleObj.bounds.left,
     obstacleObj.bounds.top,
     scrollContainer,
