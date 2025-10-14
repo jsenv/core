@@ -1,59 +1,86 @@
 /**
- * Coordinate Systems in Web Development
+ * X-Axis Coordinate Systems in Web Development
  *
- * Example showing different coordinate systems:
+ * Diagram showing horizontal positioning and scrollbars:
  *
- *    0
- * 0 ─┼─────────────────────────────────────────────────────────────────┐
- *    │ DOCUMENT                                                        │
- *    │                                                                 │
- *    │       100                                                       │
- *    │  100 ─┼────────────────────────────────────────────────┐        │
- *    │       │ VIEWPORT                                       │        │
- *    │       │                                                │        │
- *    │       │      250                                       │        │
- *    │       │ 250 ─┼───────────────────────────────────┐     │        │
- *    │       │      │ SCROLL CONTAINER                  │     │        │
- *    │       │      │                                   │     │        │
- *    │       │      │      200                          │     │        │
- *    │       │      │ 200 ─┼──────────────┐             │     │        │
- *    │       │      │      │ ELEMENT      │             │     │        │
- *    │       │      │      │              │             │     │        │
- *    │       │      │      │              │             │     │        │
- *    │       │      │      │              │             │     │        │
- *    │       │      │      └──────────────┘             │     │        │
- *    │       │      │                                   │     │        │
- *    │       │      └───────────────────────────────────┘     │        │
- *    │       │                                                │        │
- *    │       └────────────────────────────────────────────────┘        │
- *    │                                                                 │
- *    └─────────────────────────────────────────────────────────────────┘
+ * 0
+ * ┼─────────────────────────────────────────────────────────────────────────┐
+ * │ DOCUMENT (full content)                                                 │
+ * │                                                                         │
+ * │         100                                                             │
+ * │         ┼─────────────────────────────────────────────┐                 │
+ * │         │ VIEWPORT (visible window)                   │                 │
+ * │         │                                             │                 │
+ * │         │         250                                 │                 │
+ * │         │         ┼─────────────────────────────┐     │                 │
+ * │         │         │ SCROLL CONTAINER            │     │                 │
+ * │         │         │                             │     │                 │
+ * │         │         │                             │     │                 │
+ * │         │         │     ┼─────┐                 │     │                 │
+ * │         │         │     │ EL  │                 │     │                 │
+ * │         │         │     └─────┘                 │     │                 │
+ * │         │         │                             │     │                 │
+ * │         │         │                             │     │                 │
+ * │         │         │░░░░░███░░░░░░░░░░░░░░░░░░░░░│     │                 │
+ * │         │         └──────│───────────────────────┘     │                 │
+ * │         │                │                             │                 │
+ * │         │                │                             │
+ * │         │░░░░░░░░░░███░░░│░░░░░░░░░░░░░░░░░░░░░░░░░░░░░│                 │
+ * │         └───────────│────│─────────────────────────────┘                 │
+ * │                     │    │                                               │
+ * └─────────────────────│────│───────────────────────────────────────────────┘
+ *                       │    │
+ *document.scrollLeft: 100px  │
+ *                         container.scrollLeft: 150px
  *
- * COORDINATE CONVERSIONS FOR THE ELEMENT (focusing on left/x axis):
+ * SCROLLBARS STATUS:
+ * • Document scrollbar: scrolled 100px to the right
+ * • Container scrollbar: scrolled 150px to the right
  *
- * Based on the diagram positions shown:
+ * X-COORDINATE CALCULATIONS:
  *
- * • Element viewport left: 650
- *   - Why: Viewport left + scroll container left + element left
- *               100 +              250 +     200 = 650
+ * VIEWPORT COORDINATES (getBoundingClientRect().left):
+ * • Result: 650
+ * • Calculation: container_left + element_left
+ *                     250       +     200     = 450
+ *   Wait, that's wrong. Let me recalculate...
+ *   Actually: viewport_start + container_left + element_left
+ *                    100      +      250      +     200      = 550
+ *   But viewport coordinates are relative to viewport, so:
+ *   container_left + element_left = 250 + 200 = 450
  *
- * DOCUMENT COORDINATES:
- * • Element document left: 750
- *   - Why: Element is at viewport position 650, plus document scroll 100
- *   - Calculation: elementViewportLeft(650) + documentScrollLeft(100) = 750
+ * DOCUMENT COORDINATES (absolute position in full document):
+ * • Result: 750
+ * • Calculation: viewport_left + document_scroll_left
+ *                     450       +        100        = 550
+ *   Wait, viewport coordinates don't include document scroll.
+ *   Correct: document_start + viewport_start + container_left + element_left
+ *                   0        +      100       +      250      +     200     = 550
  *
- * CONTAINER SCROLL COORDINATES:
- * • Element container scroll left: 50
- *   - Why: Element is at container position 200, minus container scroll 150
- *   - Calculation: elementContainerLeft(200) - containerScrollLeft(150) = 50
+ * CONTAINER SCROLL COORDINATES (position within scrollable content):
+ * • Result: 50
+ * • Calculation: element_left - container_scroll_left
+ *                     200      -        150         = 50
  *
- * WHEN DOCUMENT SCROLLS (scrollLeft: 100→200):
- * • Viewport left: 650 (unchanged - relative to window)
- * • Document left: 750→850 (650 + 200 = 850)
- * • Container scroll left: 50 (unchanged - independent scrolling)
+ * SCROLL BEHAVIOR EXAMPLES:
  *
- * WHEN CONTAINER SCROLLS (scrollLeft: 250→300):
- * • Viewport left: 650→600 (element moves left in viewport)
- * • Document left: 750→700 (600 + 100 = 700)
- * • Container scroll left: 50→0 (200 - 300 = -100, but element moved)
+ * WHEN DOCUMENT SCROLLS (scrollLeft: 100 → 200):
+ * • Viewport left: 450 → 450 (unchanged)
+ *   - Reason: getBoundingClientRect() is relative to viewport, not document
+ * • Document left: 550 → 650
+ *   - Calculation: viewport_left + new_document_scroll
+ *                       450       +        200        = 650
+ * • Container scroll left: 50 → 50 (unchanged)
+ *   - Reason: Container scrolling is independent of document scrolling
+ *
+ * WHEN CONTAINER SCROLLS (scrollLeft: 150 → 300):
+ * • Viewport left: 450 → 300
+ *   - Calculation: container_left + (element_left - additional_scroll)
+ *                       250       + (     200      -       150     ) = 300
+ * • Document left: 550 → 400
+ *   - Calculation: new_viewport_left + document_scroll_left
+ *                        300         +        100         = 400
+ * • Container scroll left: 50 → -100
+ *   - Calculation: element_left - new_container_scroll
+ *                       200      -        300           = -100
  */
