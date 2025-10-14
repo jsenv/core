@@ -1,58 +1,35 @@
+import { getScrollCoords } from "../position/dom_coords.js";
 import { createObstacleContraint } from "./constraint.js";
 import { getElementSelector } from "./element_log.js";
 
-// Helper to get element rect in document-relative coordinates with sticky position handling
-const getElementDocumentRect = (
+// Helper to get element rect in scroll container coordinates with sticky position handling
+const getElementScrollRect = (
   element,
+  scrollContainer,
   { useOriginalPositionEvenIfSticky = false } = {},
 ) => {
-  const viewportRect = element.getBoundingClientRect();
-  const documentScrollLeft = document.documentElement.scrollLeft;
-  const documentScrollTop = document.documentElement.scrollTop;
-  const computedStyle = getComputedStyle(element);
-
-  // Check position type
-  const isFixed = computedStyle.position === "fixed";
-  const isSticky = computedStyle.position === "sticky";
-
-  // For now, use the current position regardless of this flag
-  // TODO: Implement proper sticky position handling if needed
-  if (useOriginalPositionEvenIfSticky && isSticky) {
-    // This would need more complex logic to get the original position
-    // For now, just use the current position
-  }
-
-  let fromStickyLeft;
-  let fromStickyTop;
-  let fromStickyLeftAttr;
-  let fromStickyTopAttr;
-
-  if (isSticky) {
-    const isStickyLeft = computedStyle.left !== "auto";
-    const isStickyTop = computedStyle.top !== "auto";
-    fromStickyLeft = isStickyLeft
-      ? { value: parseFloat(computedStyle.left) || 0 }
-      : undefined;
-    fromStickyTop = isStickyTop
-      ? { value: parseFloat(computedStyle.top) || 0 }
-      : undefined;
-    fromStickyLeftAttr = isStickyLeft ? computedStyle.left : undefined;
-    fromStickyTopAttr = isStickyTop ? computedStyle.top : undefined;
-  }
+  const [left, top, metadata] = getScrollCoords(element, scrollContainer, {
+    useOriginalPositionEvenIfSticky,
+  });
 
   return {
-    left: viewportRect.left + documentScrollLeft,
-    top: viewportRect.top + documentScrollTop,
-    right: viewportRect.right + documentScrollLeft,
-    bottom: viewportRect.bottom + documentScrollTop,
-    width: viewportRect.width,
-    height: viewportRect.height,
-    fromFixed: isFixed,
-    fromStickyLeft,
-    fromStickyTop,
-    fromStickyLeftAttr,
-    fromStickyTopAttr,
-    sticky: isSticky,
+    left,
+    top,
+    right: metadata.right,
+    bottom: metadata.bottom,
+    width: metadata.width,
+    height: metadata.height,
+    fromFixed: metadata.fromFixed,
+    fromStickyLeft: metadata.fromStickyLeft,
+    fromStickyTop: metadata.fromStickyTop,
+    fromStickyLeftAttr: metadata.fromStickyLeftAttr,
+    fromStickyTopAttr: metadata.fromStickyTopAttr,
+    sticky: Boolean(
+      metadata.fromStickyLeft ||
+        metadata.fromStickyTop ||
+        metadata.fromStickyLeftAttr ||
+        metadata.fromStickyTopAttr,
+    ),
   };
 };
 
@@ -92,7 +69,7 @@ export const createObstacleConstraintsFromQuerySelector = (
           !gestureInfo.hasCrossedVisibleAreaTopOnce
         : true;
 
-      const obstacleBounds = getElementDocumentRect(obstacle, {
+      const obstacleBounds = getElementScrollRect(obstacle, scrollableElement, {
         useOriginalPositionEvenIfSticky,
       });
 
