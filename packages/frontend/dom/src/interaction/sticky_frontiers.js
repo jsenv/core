@@ -1,19 +1,5 @@
-import { getScrollCoords } from "../position/dom_coords.js";
+import { getScrollRelativeRect } from "../position/dom_coords.js";
 import { getElementSelector } from "./element_log.js";
-
-// Helper to get element rect in scroll container coordinates
-const getElementScrollRect = (element, scrollContainer) => {
-  const [left, top, metadata] = getScrollCoords(element, scrollContainer);
-
-  return {
-    left,
-    top,
-    right: metadata.right,
-    bottom: metadata.bottom,
-    width: metadata.width,
-    height: metadata.height,
-  };
-};
 
 export const applyStickyFrontiersToVisibleArea = (
   initialVisibleArea,
@@ -160,7 +146,7 @@ const createStickyFrontierOnAxis = (
         continue;
       }
     }
-    const frontierBounds = getElementScrollRect(frontier, scrollContainer);
+    const frontierBounds = getScrollRelativeRect(frontier, scrollContainer);
     const stickyFrontierObject = {
       type: "sticky-frontier",
       element: frontier,

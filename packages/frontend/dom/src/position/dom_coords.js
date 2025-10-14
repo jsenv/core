@@ -151,6 +151,12 @@ export const getScrollRelativeRect = (
   const scrollTop = scrollContainer.scrollTop;
   const scrollContainerIsDocument = scrollContainer === documentElement;
   const createScrollRelativeRect = (leftScrollRelative, topScrollRelative) => {
+    const isStickyLeftOrHasStickyLeftAttr = Boolean(
+      fromStickyLeft || fromStickyLeftAttr,
+    );
+    const isStickyTopOrHasStickyTopAttr = Boolean(
+      fromStickyTop || fromStickyTopAttr,
+    );
     return {
       left: leftScrollRelative,
       top: topScrollRelative,
@@ -169,12 +175,10 @@ export const getScrollRelativeRect = (
       fromStickyTop,
       fromStickyLeftAttr,
       fromStickyTopAttr,
-      isStickyLeftOrHasStickyLeftAttr: Boolean(
-        fromStickyLeft || fromStickyLeftAttr,
-      ),
-      isStickyTopOrHasStickyTopAttr: Boolean(
-        fromStickyTop || fromStickyTopAttr,
-      ),
+      isStickyLeftOrHasStickyLeftAttr,
+      isStickyTopOrHasStickyTopAttr,
+      isSticky:
+        isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
     };
   };
 

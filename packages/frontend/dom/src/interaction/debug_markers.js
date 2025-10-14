@@ -1,4 +1,4 @@
-import { convertScrollPosToElementPos } from "../position/dom_coords.js";
+import { convertScrollRelativeRectToElementRect } from "../position/dom_coords.js";
 
 export let DRAG_DEBUG_MARKERS = true;
 export const enableDebugMarkers = () => {
@@ -36,11 +36,16 @@ const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
   const { documentElement } = document;
 
   // Use convertScrollPosToElementPos to handle coordinate conversion properly
-  const [baseX, baseY] = convertScrollPosToElementPos(
-    x,
-    y,
+  const [baseX, baseY] = convertScrollRelativeRectToElementRect(
+    {
+      left: x,
+      top: y,
+      scrollContainer,
+      scrollContainerIsDocument: scrollContainer === documentElement,
+      scrollLeft: scrollContainer.scrollLeft,
+      scrollTop: scrollContainer.scrollTop,
+    },
     documentElement,
-    scrollContainer,
   );
 
   // Apply side-specific logic for extending markers across viewport
