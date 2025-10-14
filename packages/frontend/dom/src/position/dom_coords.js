@@ -169,6 +169,12 @@ export const getScrollRelativeRect = (
       fromStickyTop,
       fromStickyLeftAttr,
       fromStickyTopAttr,
+      isStickyLeftOrHasStickyLeftAttr: Boolean(
+        fromStickyLeft || fromStickyLeftAttr,
+      ),
+      isStickyTopOrHasStickyTopAttr: Boolean(
+        fromStickyTop || fromStickyTopAttr,
+      ),
     };
   };
 

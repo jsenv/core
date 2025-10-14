@@ -68,11 +68,9 @@
  */
 
 import {
-  convertScrollPosToElementPos,
-  getElementFixedPos,
-  getElementStickyPos,
-  getMouseEventScrollCoords,
-  getScrollCoords,
+  convertScrollRelativeRectToElementRect,
+  getMouseEventScrollRelativeRect,
+  getScrollRelativeRect,
 } from "../position/dom_coords.js";
 import { createPubSub } from "../pub_sub.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
@@ -187,34 +185,35 @@ export const createDragGestureController = (options = {}) => {
     const scrollTopAtStart = scrollContainer.scrollTop;
 
     // Convert all element coordinates to document-relative coordinates
-    const [
-      elementToImpactLeftScrollContainer,
-      elementToImpactTopScrollContainer,
-    ] = getScrollCoords(elementToImpact);
-    const [
+    const {
+      left: elementToImpactLeftScrollRelative,
+      top: elementToImpactTopScrollRelative,
+    } = getScrollRelativeRect(elementToImpact);
+    const scrollRelativeRectAtStart = getScrollRelativeRect(
+      elementVisuallyImpacted,
+    );
+    const {
       left,
       top,
-      {
-        width,
-        height,
-        fromFixed,
-        fromStickyLeft,
-        fromStickyTop,
-        fromStickyLeftAttr,
-        fromStickyTopAttr,
-      },
-    ] = getScrollCoords(elementVisuallyImpacted);
+      width,
+      height,
+      fromFixed,
+      fromStickyLeft,
+      fromStickyTop,
+      fromStickyLeftAttr,
+      fromStickyTopAttr,
+      isStickyLeftOrHasStickyLeftAttr,
+      isStickyTopOrHasStickyTopAttr,
+    } = scrollRelativeRectAtStart;
 
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
     // All constraint calculations use visual coordinates (xMove, yMove)
-    let visualOffsetX = left - elementToImpactLeftScrollContainer;
-    let visualOffsetY = top - elementToImpactTopScrollContainer;
+    let visualOffsetX = left - elementToImpactLeftScrollRelative;
+    let visualOffsetY = top - elementToImpactTopScrollRelative;
     let leftAtStart = left;
     let topAtStart = top;
 
-    let isStickyLeftOrHasStickyLeftAttr;
-    let isStickyTopOrHasStickyTopAttr;
     if (isThresholdOnly) {
     } else if (fromFixed) {
       const stylesToSet = {
@@ -225,7 +224,11 @@ export const createDragGestureController = (options = {}) => {
       };
       const restoreStyles = setStyles(element, stylesToSet);
       addTeardown(() => {
-        const [leftFixed, topFixed] = getElementFixedPos(element);
+        const { left: leftFixed, top: topFixed } =
+          convertScrollRelativeRectToElementRect(
+            gestureInfo.scrollRelativeRect,
+            element,
+          );
         restoreStyles();
         setStyles(element, {
           left: `${leftFixed}px`,
@@ -239,20 +242,18 @@ export const createDragGestureController = (options = {}) => {
         position: "relative",
       };
       if (isStickyLeft) {
-        isStickyLeftOrHasStickyLeftAttr = true;
         stylesToSet.left = `${left}px`;
       }
       if (isStickyTop) {
-        isStickyTopOrHasStickyTopAttr = true;
         stylesToSet.top = `${top}px`;
       }
       const restoreStyles = setStyles(element, stylesToSet);
       addTeardown(() => {
-        const [leftSticky, topSticky] = getElementStickyPos(
-          element,
-          scrollContainer,
-          { isStickyLeft, isStickyTop },
-        );
+        const { left: leftSticky, top: topSticky } =
+          convertScrollRelativeRectToElementRect(
+            gestureInfo.scrollRelativeRect,
+            element,
+          );
         const stylesToSetOnTeardown = {};
         restoreStyles();
         if (isStickyLeft) {
@@ -266,22 +267,20 @@ export const createDragGestureController = (options = {}) => {
     } else {
       // Handle data-sticky attributes for visual offset adjustment
       if (fromStickyLeftAttr) {
-        isStickyLeftOrHasStickyLeftAttr = true;
         if (scrollContainerIsDocument) {
           // For document scrolling with sticky elements, calculate the position as it would be at zero scroll
           // The current 'left' is the scrollable coordinate, which includes scroll offset
           // The position at zero scroll would be: left + scrollLeftAtStart
           const positionAtZeroScroll = left + scrollLeftAtStart;
           visualOffsetX =
-            positionAtZeroScroll - elementToImpactLeftScrollContainer;
+            positionAtZeroScroll - elementToImpactLeftScrollRelative;
         }
       }
       if (fromStickyTopAttr) {
-        isStickyTopOrHasStickyTopAttr = true;
         if (scrollContainerIsDocument) {
           const positionAtZeroScroll = top + scrollTopAtStart;
           visualOffsetY =
-            positionAtZeroScroll - elementToImpactTopScrollContainer;
+            positionAtZeroScroll - elementToImpactTopScrollRelative;
         }
       }
     }
@@ -293,15 +292,10 @@ export const createDragGestureController = (options = {}) => {
       elementVisuallyImpacted,
       scrollContainer,
 
+      scrollRelativeRectAtStart,
       // Store both viewport and document coordinates for reference
       xAtStart, // Scroll container coordinates (already converted)
       yAtStart, // Scroll container coordinates (already converted)
-      leftAtStart, // Scroll container coordinates (already converted)
-      topAtStart, // Scroll container coordinates (already converted)
-      scrollLeftAtStart,
-      scrollTopAtStart,
-      documentScrollLeftAtStart: documentElement.scrollLeft,
-      documentScrollTopAtStart: documentElement.scrollTop,
       visualOffsetX,
       visualOffsetY,
       isStickyLeftOrHasStickyLeftAttr,
@@ -377,14 +371,14 @@ export const createDragGestureController = (options = {}) => {
     const createBoundsFrom = (areaElement) => {
       if (areaElement === documentElement) {
         const { clientWidth, clientHeight } = documentElement;
-        const [left, top] = getScrollCoords(documentElement);
+        const { left, top } = getScrollRelativeRect(documentElement);
         const right = left + clientWidth;
         const bottom = top + clientHeight;
 
         return { left, top, right, bottom };
       }
 
-      const [left, top] = getScrollCoords(areaElement);
+      const { left, top } = getScrollRelativeRect(areaElement);
       const areaBorderSizes = getBorderSizes(areaElement);
       const leftWithBorder = left + areaBorderSizes.left;
       const topWithBorder = top + areaBorderSizes.top;
@@ -400,9 +394,9 @@ export const createDragGestureController = (options = {}) => {
       const scrollWidthAtStart = scrollContainer.scrollWidth;
       const scrollHeightAtStart = scrollContainer.scrollHeight;
       // Use consistent scroll dimensions captured at drag start
-      const [left, top] = scrollContainerIsDocument
+      const { left, top } = scrollContainerIsDocument
         ? { left: 0, top: 0 }
-        : getScrollCoords(scrollContainer);
+        : getScrollRelativeRect(scrollContainer);
 
       const scrollAreaConstraintFunction = () => {
         // Handle floating point precision issues between getBoundingClientRect() and scroll dimensions
@@ -746,11 +740,11 @@ export const createDragGestureController = (options = {}) => {
 
     const mouseEventCoords = (mouseEvent) => {
       // Use scroll coordinates for consistency with drag system
-      const [xScrollContainer, yScrollContainer] = getMouseEventScrollCoords(
+      const { left, top } = getMouseEventScrollRelativeRect(
         mouseEvent,
         scrollContainer,
       );
-      return [xScrollContainer, yScrollContainer];
+      return [left, top];
     };
 
     const [xAtStart, yAtStart] = mouseEventCoords(mouseEvent);
@@ -834,11 +828,13 @@ export const createDragToMoveGestureController = (options) => {
 
         // Convert from document-relative coordinates to positioned parent coordinates
         const [initialLeftToImpact, initialTopToImpact] =
-          convertScrollPosToElementPos(
-            leftForPositioning - visualOffsetX,
-            topForPositioning - visualOffsetY,
+          convertScrollRelativeRectToElementRect(
+            {
+              ...gestureInfo.scrollRelativeRect,
+              left: leftForPositioning - visualOffsetX,
+              top: topForPositioning - visualOffsetY,
+            },
             elementToImpact,
-            scrollContainer,
           );
 
         // Helper function to handle auto-scroll and element positioning for an axis
