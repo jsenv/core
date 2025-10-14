@@ -208,7 +208,7 @@ export const createDragGestureController = (options = {}) => {
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
     // All constraint calculations use visual coordinates (xMove, yMove)
     let visualOffsetX = grabLeft - elementToImpactLeftScrollRelative;
-    let visualOffsetY = grabLeft - elementToImpactTopScrollRelative;
+    let visualOffsetY = grabTop - elementToImpactTopScrollRelative;
 
     if (isThresholdOnly) {
     } else if (fromFixed) {
