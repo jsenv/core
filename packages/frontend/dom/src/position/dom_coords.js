@@ -274,3 +274,56 @@ export const getMouseEventScrollCoords = (mouseEvent, scrollContainer) => {
     },
   ];
 };
+
+export const getElementStickyPos = (
+  element,
+  scrollContainer,
+  { isStickyLeft, isStickyTop },
+) => {
+  const elementRect = element.getBoundingClientRect();
+  const scrollContainerRect = scrollContainer.getBoundingClientRect();
+  const leftRelative = elementRect.left - scrollContainerRect.left;
+  const topRelative = elementRect.top - scrollContainerRect.top;
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+
+  let leftSticky = leftRelative;
+  let topSticky = topRelative;
+  if (isStickyLeft && !scrollContainerIsDocument) {
+    leftSticky -= scrollContainer.scrollLeft;
+  }
+  if (isStickyTop && !scrollContainerIsDocument) {
+    topSticky -= scrollContainer.scrollTop;
+  }
+  return [leftSticky, topSticky];
+};
+export const getElementFixedPos = (element) => {
+  const rect = element.getBoundingClientRect();
+  // getBoundingClientRect already gives viewport coordinates, which is what fixed positioning uses
+  return [rect.left, rect.top];
+};
+export const getElementPosFromScrollPos = (
+  element,
+  leftScrollContainer,
+  topScrollContainer,
+  scrollContainer = getScrollContainer(element),
+) => {
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+  if (scrollContainerIsDocument) {
+    // For document-level positioning, convert from document coordinates to positioned-parent coordinates
+    const positionedParent = element.offsetParent || document.body;
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+    const { scrollLeft, scrollTop } = documentElement;
+    // Convert document coordinates to positioned-parent-relative coordinates
+    const positionedParentLeftInDocument =
+      positionedParentRect.left + scrollLeft;
+    const positionedParentTopInDocument = positionedParentRect.top + scrollTop;
+    const leftPositioned = leftScrollContainer - positionedParentLeftInDocument;
+    const topPositioned = topScrollContainer - positionedParentTopInDocument;
+
+    return [leftPositioned, topPositioned];
+  }
+
+  // For container scrolling, coordinates are already in the right space
+  // (scrollable-parent coordinates can be used directly as positioned coordinates)
+  return [leftScrollContainer, topScrollContainer];
+};

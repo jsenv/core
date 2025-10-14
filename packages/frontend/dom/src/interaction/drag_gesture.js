@@ -67,12 +67,14 @@
  * ```
  */
 
+import {
+  getElementFixedPos,
+  getElementPosFromScrollPos,
+  getElementStickyPos,
+  getScrollCoords,
+} from "../position/dom_coords.js";
 import { createPubSub } from "../pub_sub.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
-import {
-  elementToFixedCoords,
-  elementToStickyCoords,
-} from "../scroll/scrollable_rect.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { setStyles } from "../style_and_attributes.js";
 import {
@@ -87,71 +89,6 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 // Coordinate conversion helpers
 const { documentElement } = document;
-
-// Helper to convert document coordinates to positioned parent coordinates
-const documentCoordsToPositionedParentCoords = (
-  leftDocument,
-  topDocument,
-  element,
-) => {
-  // Use the same logic as the original scrollableCoordsToPositionedParentCoords
-  // but specifically for document coordinates (which is what the "document case" was)
-  const positionedParent = element.offsetParent || document.body;
-  const positionedParentRect = positionedParent.getBoundingClientRect();
-  const { scrollLeft, scrollTop } = documentElement;
-
-  // Convert document coordinates to positioned-parent-relative coordinates
-  const positionedParentLeftInDocument = positionedParentRect.left + scrollLeft;
-  const positionedParentTopInDocument = positionedParentRect.top + scrollTop;
-  const leftPositioned = leftDocument - positionedParentLeftInDocument;
-  const topPositioned = topDocument - positionedParentTopInDocument;
-
-  return [leftPositioned, topPositioned];
-};
-
-// Helper to get element rect in document-relative coordinates with position info
-const getElementDocumentRect = (element) => {
-  const viewportRect = element.getBoundingClientRect();
-  const documentScrollLeft = documentElement.scrollLeft;
-  const documentScrollTop = documentElement.scrollTop;
-  const computedStyle = getComputedStyle(element);
-
-  // Check position type
-  const isFixed = computedStyle.position === "fixed";
-  const isSticky = computedStyle.position === "sticky";
-
-  let fromStickyLeft;
-  let fromStickyTop;
-  let fromStickyLeftAttr;
-  let fromStickyTopAttr;
-
-  if (isSticky) {
-    const isStickyLeft = computedStyle.left !== "auto";
-    const isStickyTop = computedStyle.top !== "auto";
-    fromStickyLeft = isStickyLeft
-      ? { value: parseFloat(computedStyle.left) || 0 }
-      : undefined;
-    fromStickyTop = isStickyTop
-      ? { value: parseFloat(computedStyle.top) || 0 }
-      : undefined;
-    fromStickyLeftAttr = isStickyLeft ? computedStyle.left : undefined;
-    fromStickyTopAttr = isStickyTop ? computedStyle.top : undefined;
-  }
-
-  return {
-    left: viewportRect.left + documentScrollLeft,
-    top: viewportRect.top + documentScrollTop,
-    right: viewportRect.right + documentScrollLeft,
-    bottom: viewportRect.bottom + documentScrollTop,
-    width: viewportRect.width,
-    height: viewportRect.height,
-    fromFixed: isFixed,
-    fromStickyLeft,
-    fromStickyTop,
-    fromStickyLeftAttr,
-    fromStickyTopAttr,
-  };
-};
 
 const BASIC_MODE_OPTIONS = {
   backdrop: false,
@@ -244,35 +181,34 @@ export const createDragGestureController = (options = {}) => {
 
     const [teardown, addTeardown] = createPubSub();
     const scrollContainer = getScrollContainer(element);
-    const scrollContainertIsDocument = scrollContainer === documentElement;
+    const scrollContainerIsDocument = scrollContainer === documentElement;
     const scrollLeftAtStart = scrollContainer.scrollLeft;
     const scrollTopAtStart = scrollContainer.scrollTop;
 
     // Convert all element coordinates to document-relative coordinates
-    const elementToImpactDocumentRect = getElementDocumentRect(elementToImpact);
-    const elementVisuallyImpactedDocumentRect = getElementDocumentRect(
-      elementVisuallyImpacted,
-    );
-
-    const { left: elementToImpactLeft, top: elementToImpactTop } =
-      elementToImpactDocumentRect;
-    const {
+    const [
+      elementToImpactLeftScrollContainer,
+      elementToImpactTopScrollContainer,
+    ] = getScrollCoords(elementToImpact);
+    const [
       left,
       top,
-      width,
-      height,
-      fromFixed,
-      fromStickyLeft,
-      fromStickyTop,
-      fromStickyLeftAttr,
-      fromStickyTopAttr,
-    } = elementVisuallyImpactedDocumentRect;
+      {
+        width,
+        height,
+        fromFixed,
+        fromStickyLeft,
+        fromStickyTop,
+        fromStickyLeftAttr,
+        fromStickyTopAttr,
+      },
+    ] = getScrollCoords(elementVisuallyImpacted);
 
     // Calculate offset to translate visual movement to elementToImpact movement
     // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
     // All constraint calculations use visual coordinates (xMove, yMove)
-    let visualOffsetX = left - elementToImpactLeft;
-    let visualOffsetY = top - elementToImpactTop;
+    let visualOffsetX = left - elementToImpactLeftScrollContainer;
+    let visualOffsetY = top - elementToImpactTopScrollContainer;
     let leftAtStart = left;
     let topAtStart = top;
 
@@ -288,7 +224,7 @@ export const createDragGestureController = (options = {}) => {
       };
       const restoreStyles = setStyles(element, stylesToSet);
       addTeardown(() => {
-        const [leftFixed, topFixed] = elementToFixedCoords(element);
+        const [leftFixed, topFixed] = getElementFixedPos(element);
         restoreStyles();
         setStyles(element, {
           left: `${leftFixed}px`,
@@ -311,7 +247,7 @@ export const createDragGestureController = (options = {}) => {
       }
       const restoreStyles = setStyles(element, stylesToSet);
       addTeardown(() => {
-        const [leftSticky, topSticky] = elementToStickyCoords(
+        const [leftSticky, topSticky] = getElementStickyPos(
           element,
           scrollContainer,
           { isStickyLeft, isStickyTop },
@@ -330,19 +266,21 @@ export const createDragGestureController = (options = {}) => {
       // Handle data-sticky attributes for visual offset adjustment
       if (fromStickyLeftAttr) {
         isStickyLeftOrHasStickyLeftAttr = true;
-        if (scrollContainertIsDocument) {
+        if (scrollContainerIsDocument) {
           // For document scrolling with sticky elements, calculate the position as it would be at zero scroll
           // The current 'left' is the scrollable coordinate, which includes scroll offset
           // The position at zero scroll would be: left + scrollLeftAtStart
           const positionAtZeroScroll = left + scrollLeftAtStart;
-          visualOffsetX = positionAtZeroScroll - elementToImpactLeft;
+          visualOffsetX =
+            positionAtZeroScroll - elementToImpactLeftScrollContainer;
         }
       }
       if (fromStickyTopAttr) {
         isStickyTopOrHasStickyTopAttr = true;
-        if (scrollContainertIsDocument) {
+        if (scrollContainerIsDocument) {
           const positionAtZeroScroll = top + scrollTopAtStart;
-          visualOffsetY = positionAtZeroScroll - elementToImpactTop;
+          visualOffsetY =
+            positionAtZeroScroll - elementToImpactTopScrollContainer;
         }
       }
     }
@@ -466,9 +404,10 @@ export const createDragGestureController = (options = {}) => {
       // Capture scroll container dimensions at drag start to ensure consistency
       const scrollWidthAtStart = scrollContainer.scrollWidth;
       const scrollHeightAtStart = scrollContainer.scrollHeight;
-      const scrollContainerDocumentRectAtStart = scrollContainertIsDocument
+      // Use consistent scroll dimensions captured at drag start
+      const [left, top] = scrollContainerIsDocument
         ? { left: 0, top: 0 }
-        : getElementDocumentRect(scrollContainer);
+        : getScrollCoords(scrollContainer);
 
       const scrollAreaConstraintFunction = () => {
         // Handle floating point precision issues between getBoundingClientRect() and scroll dimensions
@@ -479,9 +418,6 @@ export const createDragGestureController = (options = {}) => {
         // we cap the constraint bounds to prevent negative positioning that would push elements
         // outside their intended scrollable area.
 
-        // Use consistent scroll dimensions captured at drag start
-        const left = scrollContainerDocumentRectAtStart.left;
-        const top = scrollContainerDocumentRectAtStart.top;
         // Right bound should be the rightmost position where the element can start (not end)
         // So it's containerLeft + (scrollWidth - elementWidth)
         const right = left + scrollWidthAtStart;
@@ -894,10 +830,11 @@ export const createDragToMoveGestureController = (options) => {
 
         // Convert from document-relative coordinates to positioned parent coordinates
         const [initialLeftToImpact, initialTopToImpact] =
-          documentCoordsToPositionedParentCoords(
+          getElementPosFromScrollPos(
+            elementToImpact,
             leftForPositioning - visualOffsetX,
             topForPositioning - visualOffsetY,
-            elementToImpact,
+            scrollContainer,
           );
 
         // Helper function to handle auto-scroll and element positioning for an axis
