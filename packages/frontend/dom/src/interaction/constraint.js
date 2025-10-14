@@ -1,4 +1,4 @@
-const CONSOLE_DEBUG_CONSTRAINTS = true;
+const CONSOLE_DEBUG_CONSTRAINTS = false;
 
 export const createBoundConstraint = (bounds, { element, name } = {}) => {
   const leftBound = bounds.left;
@@ -30,9 +30,11 @@ export const createBoundConstraint = (bounds, { element, name } = {}) => {
     if (bottomBound !== undefined && bottom > bottomBound) {
       yConstrained = bottomBound - elementHeight;
     }
-    console.log(
-      `${name || "bound"} constraint result: x=${x} -> ${xConstrained}, y=${y} -> ${yConstrained}`,
-    );
+    if (CONSOLE_DEBUG_CONSTRAINTS) {
+      console.log(
+        `${name || "bound"} constraint result: x=${x} -> ${xConstrained}, y=${y} -> ${yConstrained}`,
+      );
+    }
     return [xConstrained, yConstrained];
   };
 

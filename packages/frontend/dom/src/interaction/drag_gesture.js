@@ -213,7 +213,7 @@ export const createDragGestureController = (options = {}) => {
     // const [layoutOffsetX, layoutOffsetY] = getScrollContainerOffset(element);
     const layoutOffsetX = 0;
     const layoutOffsetY = 0;
-    console.log(grabLeft);
+    console.log({ grabLeft, visualOffsetX });
 
     if (isThresholdOnly) {
     } else if (fromFixed) {
