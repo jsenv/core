@@ -500,8 +500,8 @@ export const createDragGestureController = (options = {}) => {
       const yMoveNoConstraint = dragYWithScrollNoConstraint - grabYWithScroll;
 
       const { left: grabLeft, top: grabTop } = grabScrollRelativeRect;
-      const leftRequested = grabLeft + xMoveNoConstraint;
-      const topRequested = grabTop + yMoveNoConstraint;
+      const leftRequested = grabLeft + grabScrollLeft + xMoveNoConstraint;
+      const topRequested = grabTop + grabScrollTop + yMoveNoConstraint;
       const [leftConstrained, topConstrained] = applyConstraints(
         constraints,
         leftRequested,
@@ -748,9 +748,12 @@ export const createDragToMoveGestureController = (options) => {
           hasCrossedVisibleAreaTopOnce,
         } = gestureInfo;
 
-        const { left: grabLeft, top: grabTop } = grabScrollRelativeRect;
-        const initialLeftToImpact = grabLeft - visualOffsetX;
-        const initialTopToImpact = grabTop - visualOffsetY;
+        const {
+          left: grabLeft,
+          top: grabTop,
+          scrollLeft: grabScrollLeft,
+          scrollTop: grabScrollTop,
+        } = grabScrollRelativeRect;
 
         // Helper function to handle auto-scroll and element positioning for an axis
         const moveAndKeepIntoView = ({
@@ -759,11 +762,10 @@ export const createDragToMoveGestureController = (options) => {
           isGoingNegative, // left/up
           desiredElementStart, // left/top edge of element
           desiredElementEnd, // right/bottom edge of element
+          visualOffset,
           visibleAreaStart, // visible left/top boundary
           visibleAreaEnd, // visible right/bottom boundary
           currentScroll, // current scrollLeft or scrollTop value
-          initialPosition, // initialLeft or initialTop
-          moveAmount, // gestureInfo.xMove or gestureInfo.yMove
           scrollProperty, // 'scrollLeft' or 'scrollTop'
           styleProperty, // 'left' or 'top'
           canAutoScrollNegative, // whether auto-scroll is allowed for sticky elements when going negative
@@ -808,7 +810,7 @@ export const createDragToMoveGestureController = (options) => {
             }
           }
           move: {
-            const elementPosition = initialPosition + moveAmount;
+            const elementPosition = desiredElementStart - visualOffset;
             if (elementToImpact) {
               elementToImpact.style[styleProperty] = `${elementPosition}px`;
             }
@@ -817,7 +819,8 @@ export const createDragToMoveGestureController = (options) => {
 
         // Horizontal auto-scroll
         if (direction.x) {
-          const desiredElementLeft = grabLeft + gestureInfo.xMove;
+          const desiredElementLeft =
+            grabLeft + grabScrollLeft + gestureInfo.xMove;
           const desiredElementRight =
             desiredElementLeft + elementVisuallyImpactedWidth;
           // Convert constraint boundary to actual visible area boundary
@@ -838,18 +841,17 @@ export const createDragToMoveGestureController = (options) => {
             desiredElementEnd: desiredElementRight,
             visibleAreaStart: visibleArea.left,
             visibleAreaEnd: actualVisibleAreaRight,
+            canAutoScrollNegative: canAutoScrollLeft,
             currentScroll: scrollContainer.scrollLeft,
-            initialPosition: initialLeftToImpact,
-            moveAmount: gestureInfo.xMove,
             scrollProperty: "scrollLeft",
             styleProperty: "left",
-            canAutoScrollNegative: canAutoScrollLeft,
+            visualOffset: visualOffsetX,
           });
         }
 
         // Vertical auto-scroll
         if (direction.y) {
-          const desiredElementTop = grabTop + gestureInfo.yMove;
+          const desiredElementTop = grabTop + grabScrollTop + gestureInfo.yMove;
           const desiredElementBottom =
             desiredElementTop + elementVisuallyImpactedHeight;
           // Convert constraint boundary to actual visible area boundary
@@ -870,12 +872,11 @@ export const createDragToMoveGestureController = (options) => {
             desiredElementEnd: desiredElementBottom,
             visibleAreaStart: visibleArea.top,
             visibleAreaEnd: actualVisibleAreaBottom,
+            canAutoScrollNegative: canAutoScrollUp,
             currentScroll: scrollContainer.scrollTop,
-            initialPosition: initialTopToImpact,
-            moveAmount: gestureInfo.yMove,
             scrollProperty: "scrollTop",
             styleProperty: "top",
-            canAutoScrollNegative: canAutoScrollUp,
+            visualOffset: visualOffsetY,
           });
         }
       },
