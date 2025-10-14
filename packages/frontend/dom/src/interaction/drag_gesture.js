@@ -70,8 +70,8 @@
 import {
   convertScrollRelativeRectToElementRect,
   getMouseEventScrollRelativeRect,
-  getScrollContainerVisibleRect,
   getScrollRelativeRect,
+  getScrollRelativeVisibleRect,
 } from "../position/dom_coords.js";
 import { createPubSub } from "../pub_sub.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
@@ -357,27 +357,13 @@ export const createDragGestureController = (options = {}) => {
 
     if (areaConstraint === "scroll") {
       // Capture scroll container dimensions at drag start to ensure consistency
+      let left = 0;
+      let top = 0;
       const scrollWidthAtStart = scrollContainer.scrollWidth;
       const scrollHeightAtStart = scrollContainer.scrollHeight;
-      // Use consistent scroll dimensions captured at drag start
-      const { left, top } = scrollContainerIsDocument
-        ? { left: 0, top: 0 }
-        : getScrollRelativeRect(scrollContainer);
-
       const scrollAreaConstraintFunction = () => {
-        // Handle floating point precision issues between getBoundingClientRect() and scroll dimensions
-        // - elementWidth/elementHeight: floats from getBoundingClientRect() (e.g., 2196.477294921875)
-        // - scrollWidth/scrollHeight: integers from browser's internal calculations (e.g., 2196)
-        //
-        // When element dimensions exceed or equal scroll dimensions due to precision differences,
-        // we cap the constraint bounds to prevent negative positioning that would push elements
-        // outside their intended scrollable area.
-
-        // Right bound should be the rightmost position where the element can start (not end)
-        // So it's containerLeft + (scrollWidth - elementWidth)
         const right = left + scrollWidthAtStart;
         const bottom = top + scrollHeightAtStart;
-
         return createBoundConstraint(
           { left, top, right, bottom },
           {
@@ -389,7 +375,7 @@ export const createDragGestureController = (options = {}) => {
       constraintFunctions.push(scrollAreaConstraintFunction);
     } else if (areaConstraint === "visible") {
       const visibleAreaConstraintFunction = () => {
-        const bounds = getScrollContainerVisibleRect(element);
+        const bounds = getScrollRelativeVisibleRect(scrollContainer);
         return createBoundConstraint(bounds, {
           element: bounds.scrollContainer,
           name: "visible_area_constraint",
@@ -472,7 +458,7 @@ export const createDragGestureController = (options = {}) => {
       const interactionType = event.type;
       // Get current element dimensions for dynamic constraint calculation
       const currentRect = elementVisuallyImpacted.getBoundingClientRect();
-      const visibleAreaBase = getScrollContainerVisibleRect(element);
+      const visibleAreaBase = getScrollRelativeVisibleRect(scrollContainer);
 
       let visibleArea;
       if (stickyFrontiers) {

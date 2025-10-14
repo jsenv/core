@@ -414,27 +414,22 @@ export const getMouseEventScrollRelativeRect = (
   };
 };
 
-export const getScrollContainerVisibleRect = (
-  element,
-  scrollContainer = getScrollContainer(element),
-) => {
+export const getScrollRelativeVisibleRect = (scrollContainer) => {
   if (scrollContainer === documentElement) {
-    const { scrollLeft, scrollTop, clientWidth, clientHeight } =
-      documentElement;
+    const { clientWidth, clientHeight } = documentElement;
 
     return {
-      left: scrollLeft,
-      top: scrollTop,
-      right: scrollLeft + clientWidth,
-      bottom: scrollTop + clientHeight,
-      scrollContainer,
+      left: 0,
+      top: 0,
+      right: clientWidth,
+      bottom: clientHeight,
     };
   }
 
-  const { scrollLeft, scrollTop, clientWidth, clientHeight } = scrollContainer;
+  const { clientWidth, clientHeight } = scrollContainer;
   const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
-  const leftWithBorder = scrollLeft + scrollContainerBorderSizes.left;
-  const topWithBorder = scrollTop + scrollContainerBorderSizes.top;
+  const leftWithBorder = scrollContainerBorderSizes.left;
+  const topWithBorder = scrollContainerBorderSizes.top;
   const availableWidth = clientWidth;
   const availableHeight = clientHeight;
   const right = leftWithBorder + availableWidth;
@@ -444,6 +439,5 @@ export const getScrollContainerVisibleRect = (
     top: topWithBorder,
     right,
     bottom,
-    scrollContainer,
   };
 };
