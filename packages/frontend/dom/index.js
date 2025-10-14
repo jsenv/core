@@ -55,8 +55,8 @@ export { allowWheelThrough } from "./src/scroll/wheel_through.js";
 
 // position
 export {
+  convertScrollPosToElementPos,
   getDocumentCoords,
-  getElementPosFromScrollPos,
   getMouseEventScrollCoords,
   getScrollCoords,
   getViewportCoords,

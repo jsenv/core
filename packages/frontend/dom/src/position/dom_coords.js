@@ -301,29 +301,102 @@ export const getElementFixedPos = (element) => {
   // getBoundingClientRect already gives viewport coordinates, which is what fixed positioning uses
   return [rect.left, rect.top];
 };
-export const getElementPosFromScrollPos = (
-  element,
+export const convertScrollPosToElementPos = (
   leftScrollContainer,
   topScrollContainer,
+  element,
   scrollContainer = getScrollContainer(element),
 ) => {
+  const offsetParent = element.offsetParent || documentElement;
+  const positionedParent =
+    offsetParent === document.body ? documentElement : offsetParent;
   const scrollContainerIsDocument = scrollContainer === documentElement;
-  if (scrollContainerIsDocument) {
-    // For document-level positioning, convert from document coordinates to positioned-parent coordinates
-    const positionedParent = element.offsetParent || document.body;
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    const { scrollLeft, scrollTop } = documentElement;
-    // Convert document coordinates to positioned-parent-relative coordinates
-    const positionedParentLeftInDocument =
-      positionedParentRect.left + scrollLeft;
-    const positionedParentTopInDocument = positionedParentRect.top + scrollTop;
-    const leftPositioned = leftScrollContainer - positionedParentLeftInDocument;
-    const topPositioned = topScrollContainer - positionedParentTopInDocument;
+  const positionedParentIsDocument = positionedParent === documentElement;
 
-    return [leftPositioned, topPositioned];
+  if (scrollContainerIsDocument && positionedParentIsDocument) {
+    // Both scroll container and positioned parent are document
+    // Convert from document coordinates to viewport coordinates
+    const documentScrollLeft = documentElement.scrollLeft;
+    const documentScrollTop = documentElement.scrollTop;
+    return [
+      leftScrollContainer - documentScrollLeft,
+      topScrollContainer - documentScrollTop,
+    ];
   }
 
-  // For container scrolling, coordinates are already in the right space
-  // (scrollable-parent coordinates can be used directly as positioned coordinates)
-  return [leftScrollContainer, topScrollContainer];
+  if (scrollContainerIsDocument && !positionedParentIsDocument) {
+    // Scroll container is document, but element is positioned relative to a parent
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+    const documentScrollLeft = documentElement.scrollLeft;
+    const documentScrollTop = documentElement.scrollTop;
+    // Convert from document coordinates to positioned parent coordinates
+    const positionedParentDocumentLeft =
+      positionedParentRect.left + documentScrollLeft;
+    const positionedParentDocumentTop =
+      positionedParentRect.top + documentScrollTop;
+    return [
+      leftScrollContainer - positionedParentDocumentLeft,
+      topScrollContainer - positionedParentDocumentTop,
+    ];
+  }
+
+  if (!scrollContainerIsDocument && positionedParentIsDocument) {
+    // Scroll container is not document, but element is positioned relative to document
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    const documentScrollLeft = documentElement.scrollLeft;
+    const documentScrollTop = documentElement.scrollTop;
+    // Convert from container coordinates to document coordinates, then to viewport
+    const elementDocumentLeft =
+      leftScrollContainer +
+      scrollContainerRect.left +
+      documentScrollLeft -
+      scrollContainer.scrollLeft;
+    const elementDocumentTop =
+      topScrollContainer +
+      scrollContainerRect.top +
+      documentScrollTop -
+      scrollContainer.scrollTop;
+    return [
+      elementDocumentLeft - documentScrollLeft,
+      elementDocumentTop - documentScrollTop,
+    ];
+  }
+
+  // Both scroll container and positioned parent are the same container
+  if (scrollContainer === positionedParent) {
+    // Element is positioned relative to its scroll container
+    return [
+      leftScrollContainer - scrollContainer.scrollLeft,
+      topScrollContainer - scrollContainer.scrollTop,
+    ];
+  }
+
+  // General case: different scroll container and positioned parent
+  const scrollContainerRect = scrollContainer.getBoundingClientRect();
+  const positionedParentRect = positionedParent.getBoundingClientRect();
+  const documentScrollLeft = documentElement.scrollLeft;
+  const documentScrollTop = documentElement.scrollTop;
+
+  // Convert scroll container coordinates to document coordinates
+  const elementDocumentLeft =
+    leftScrollContainer +
+    scrollContainerRect.left +
+    documentScrollLeft -
+    scrollContainer.scrollLeft;
+  const elementDocumentTop =
+    topScrollContainer +
+    scrollContainerRect.top +
+    documentScrollTop -
+    scrollContainer.scrollTop;
+
+  // Convert document coordinates to positioned parent coordinates
+  const positionedParentDocumentLeft =
+    positionedParentRect.left + documentScrollLeft;
+  const positionedParentDocumentTop =
+    positionedParentRect.top + documentScrollTop;
+
+  return [
+    elementDocumentLeft - positionedParentDocumentLeft,
+    elementDocumentTop - positionedParentDocumentTop,
+  ];
 };

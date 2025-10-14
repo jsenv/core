@@ -68,8 +68,8 @@
  */
 
 import {
+  convertScrollPosToElementPos,
   getElementFixedPos,
-  getElementPosFromScrollPos,
   getElementStickyPos,
   getScrollCoords,
 } from "../position/dom_coords.js";
@@ -830,10 +830,10 @@ export const createDragToMoveGestureController = (options) => {
 
         // Convert from document-relative coordinates to positioned parent coordinates
         const [initialLeftToImpact, initialTopToImpact] =
-          getElementPosFromScrollPos(
-            elementToImpact,
+          convertScrollPosToElementPos(
             leftForPositioning - visualOffsetX,
             topForPositioning - visualOffsetY,
+            elementToImpact,
             scrollContainer,
           );
 
