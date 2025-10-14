@@ -97,6 +97,19 @@ const BASIC_MODE_OPTIONS = {
 // This flag can be used to reduce number of features to the bare minimum to help debugging
 const KEEP_IT_STUPID_SIMPLE = true;
 
+const getScrollContainerVisibleRect = (scrollContainer) => {
+  const { left, top, width, height } =
+    getScrollRelativeVisibleRect(scrollContainer);
+  const leftWithScroll = left + scrollContainer.scrollLeft;
+  const topWithScroll = top + scrollContainer.scrollTop;
+  return {
+    left: leftWithScroll,
+    top: topWithScroll,
+    right: leftWithScroll + width,
+    bottom: topWithScroll + height,
+  };
+};
+
 export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
   let _resolve;
   let resolved = false;
@@ -375,9 +388,9 @@ export const createDragGestureController = (options = {}) => {
       constraintFunctions.push(scrollAreaConstraintFunction);
     } else if (areaConstraint === "visible") {
       const visibleAreaConstraintFunction = () => {
-        const bounds = getScrollRelativeVisibleRect(scrollContainer);
+        const bounds = getScrollContainerVisibleRect(scrollContainer);
         return createBoundConstraint(bounds, {
-          element: bounds.scrollContainer,
+          element: scrollContainer,
           name: "visible_area_constraint",
         });
       };
@@ -458,7 +471,7 @@ export const createDragGestureController = (options = {}) => {
       const interactionType = event.type;
       // Get current element dimensions for dynamic constraint calculation
       const currentRect = elementVisuallyImpacted.getBoundingClientRect();
-      const visibleAreaBase = getScrollRelativeVisibleRect(scrollContainer);
+      const visibleAreaBase = getScrollContainerVisibleRect(scrollContainer);
 
       let visibleArea;
       if (stickyFrontiers) {

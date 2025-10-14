@@ -38,8 +38,9 @@ const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
   // Use convertScrollPosToElementPos to handle coordinate conversion properly
   const { left: baseX, top: baseY } = convertScrollRelativeRectToElementRect(
     {
-      left: x,
-      top: y,
+      // at this stage our coords includes the scrolls
+      left: x - scrollContainer.scrollLeft,
+      top: y - scrollContainer.scrollTop,
       scrollContainer,
       scrollContainerIsDocument: scrollContainer === documentElement,
       scrollLeft: scrollContainer.scrollLeft,

@@ -423,6 +423,8 @@ export const getScrollRelativeVisibleRect = (scrollContainer) => {
       top: 0,
       right: clientWidth,
       bottom: clientHeight,
+      width: clientWidth,
+      height: clientHeight,
     };
   }
 
@@ -439,5 +441,7 @@ export const getScrollRelativeVisibleRect = (scrollContainer) => {
     top: topWithBorder,
     right,
     bottom,
+    width: availableWidth,
+    height: availableHeight,
   };
 };
