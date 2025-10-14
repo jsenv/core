@@ -68,6 +68,7 @@
  */
 
 import {
+  addScrollToRect,
   convertScrollRelativeRectToElementRect,
   getMouseEventScrollRelativeRect,
   getScrollRelativeRect,
@@ -98,16 +99,7 @@ const BASIC_MODE_OPTIONS = {
 const KEEP_IT_STUPID_SIMPLE = false;
 
 const getScrollContainerVisibleRect = (scrollContainer) => {
-  const { left, top, width, height } =
-    getScrollRelativeVisibleRect(scrollContainer);
-  const leftWithScroll = left + scrollContainer.scrollLeft;
-  const topWithScroll = top + scrollContainer.scrollTop;
-  return {
-    left: leftWithScroll,
-    top: topWithScroll,
-    right: leftWithScroll + width,
-    bottom: topWithScroll + height,
-  };
+  return addScrollToRect(getScrollRelativeVisibleRect(scrollContainer));
 };
 
 export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {

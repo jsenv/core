@@ -425,6 +425,9 @@ export const getScrollRelativeVisibleRect = (scrollContainer) => {
       bottom: clientHeight,
       width: clientWidth,
       height: clientHeight,
+      scrollContainer,
+      scrollLeft: scrollContainer.scrollLeft,
+      scrollTop: scrollContainer.scrollTop,
     };
   }
 
@@ -443,5 +446,22 @@ export const getScrollRelativeVisibleRect = (scrollContainer) => {
     bottom,
     width: availableWidth,
     height: availableHeight,
+    scrollContainer,
+    scrollLeft: scrollContainer.scrollLeft,
+    scrollTop: scrollContainer.scrollTop,
+  };
+};
+
+export const addScrollToRect = (scrollRelativeRect) => {
+  const { left, top, width, height, scrollLeft, scrollTop } =
+    scrollRelativeRect;
+  const leftWithScroll = left + scrollLeft;
+  const topWithScroll = top + scrollTop;
+  return {
+    ...scrollRelativeRect,
+    left: leftWithScroll,
+    top: topWithScroll,
+    right: leftWithScroll + width,
+    bottom: topWithScroll + height,
   };
 };

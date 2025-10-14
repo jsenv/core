@@ -1,4 +1,7 @@
-import { getScrollRelativeRect } from "../position/dom_coords.js";
+import {
+  addScrollToRect,
+  getScrollRelativeRect,
+} from "../position/dom_coords.js";
 import { createObstacleContraint } from "./constraint.js";
 import { getElementSelector } from "./element_log.js";
 
@@ -38,13 +41,22 @@ export const createObstacleConstraintsFromQuerySelector = (
           !gestureInfo.hasCrossedVisibleAreaTopOnce
         : true;
 
-      const obstacleBounds = getScrollRelativeRect(
+      const obstacleScrollRelativeRect = getScrollRelativeRect(
         obstacle,
         scrollableElement,
         {
           useOriginalPositionEvenIfSticky,
         },
       );
+      let obstacleBounds;
+      if (
+        useOriginalPositionEvenIfSticky &&
+        obstacleScrollRelativeRect.isSticky
+      ) {
+        obstacleBounds = obstacleScrollRelativeRect;
+      } else {
+        obstacleBounds = addScrollToRect(obstacleScrollRelativeRect);
+      }
 
       // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
       const obstacleObject = createObstacleContraint(obstacleBounds, {
