@@ -768,7 +768,7 @@ export const createDragToMoveGestureController = (options) => {
           elementVisuallyImpactedHeight,
           visualOffsetX,
           visualOffsetY,
-          scrollRectAtStart,
+          grabScrollRelativeRect,
 
           isGoingDown,
           isGoingUp,
@@ -780,26 +780,26 @@ export const createDragToMoveGestureController = (options) => {
         } = gestureInfo;
 
         const {
-          left: leftAtStart,
-          top: topAtStart,
+          left: grabLeft,
+          top: grabTop,
           isStickyLeftOrHasStickyLeftAttr,
           isStickyTopOrHasStickyTopAttr,
-        } = scrollRectAtStart;
+        } = grabScrollRelativeRect;
         // Calculate initial position for elementToImpact using document-relative coordinates
         // Since all coordinates are now in document space, we can use them directly
-        let leftForPositioning = leftAtStart;
-        let topForPositioning = topAtStart;
+        let leftForPositioning = grabLeft;
+        let topForPositioning = grabTop;
         // For sticky elements, we may need to adjust positioning
         if (isStickyLeftOrHasStickyLeftAttr) {
           // Document-relative coordinates already account for scroll position
-          leftForPositioning = leftAtStart;
+          leftForPositioning = grabLeft;
         }
         if (isStickyTopOrHasStickyTopAttr) {
           // Document-relative coordinates already account for scroll position
-          topForPositioning = topAtStart;
+          topForPositioning = grabTop;
         }
         // Convert from document-relative coordinates to positioned parent coordinates
-        const [initialLeftToImpact, initialTopToImpact] =
+        const { left: initialLeftToImpact, top: initialTopToImpact } =
           convertScrollRelativeRectToElementRect(
             {
               ...gestureInfo.scrollRelativeRect,
@@ -874,7 +874,7 @@ export const createDragToMoveGestureController = (options) => {
 
         // Horizontal auto-scroll
         if (direction.x) {
-          const desiredElementLeft = leftAtStart + gestureInfo.xMove;
+          const desiredElementLeft = grabLeft + gestureInfo.xMove;
           const desiredElementRight =
             desiredElementLeft + elementVisuallyImpactedWidth;
           // Convert constraint boundary to actual visible area boundary
@@ -907,7 +907,7 @@ export const createDragToMoveGestureController = (options) => {
 
         // Vertical auto-scroll
         if (direction.y) {
-          const desiredElementTop = topAtStart + gestureInfo.yMove;
+          const desiredElementTop = grabTop + gestureInfo.yMove;
           const desiredElementBottom =
             desiredElementTop + elementVisuallyImpactedHeight;
 
