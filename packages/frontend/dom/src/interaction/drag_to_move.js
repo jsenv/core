@@ -57,14 +57,14 @@ export const createDragToMoveGestureController = ({
       dragGesture.addBeforeDragCallback(updateVisibleArea);
     }
 
-    let elementLeftAtGrab;
-    let elementTopAtGrab;
+    let elementLeftWithoutScrollAtGrab;
+    let elementTopWithoutScrollAtGrab;
     let layoutConverter;
     {
       const positioner = createElementPositioner(element, { scrollContainer });
       // Get current element positions from the positioner
-      elementLeftAtGrab = positioner.scrollRelativeLeft;
-      elementTopAtGrab = positioner.scrollRelativeTop;
+      elementLeftWithoutScrollAtGrab = positioner.scrollRelativeLeft;
+      elementTopWithoutScrollAtGrab = positioner.scrollRelativeTop;
 
       const toLayoutLeft = (leftRelativeToScrollContainer) => {
         return positioner.toLayoutLeft(leftRelativeToScrollContainer);
@@ -82,8 +82,10 @@ export const createDragToMoveGestureController = ({
     {
       const scrollLeftAtGrab = dragGesture.gestureInfo.grabScrollLeft;
       const scrollTopAtGrab = dragGesture.gestureInfo.grabScrollTop;
-      const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
-      const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
+      const elementLeftWithScrollAtGrab =
+        elementLeftWithoutScrollAtGrab + scrollLeftAtGrab;
+      const elementTopWithScrollAtGrab =
+        elementTopWithoutScrollAtGrab + scrollTopAtGrab;
 
       const toElementLeft = (moveX) => elementLeftWithScrollAtGrab + moveX;
       const toElementTop = (moveY) => elementTopWithScrollAtGrab + moveY;
