@@ -740,7 +740,7 @@
     <script type="module">
       // Import the drag gesture functionality
       // Note: You'll need to adjust the import path based on your setup
-      import { createDragToMoveGestureController } from "../interaction/drag_gesture.js";
+      import { createDragToMoveGestureController } from "../interaction/drag_to_move.js";
       import {
         DRAG_DEBUG_MARKERS,
         enableDebugMarkers,
@@ -842,13 +842,6 @@
           if (controls.dragInstance) return;
 
           const rectangle = controls.rectangle;
-          const rectangleRect = rectangle.getBoundingClientRect();
-
-          // Calculate current position in document coordinates
-          const documentScrollLeft = document.documentElement.scrollLeft;
-          const documentScrollTop = document.documentElement.scrollTop;
-          const xAtStart = rectangleRect.left + documentScrollLeft;
-          const yAtStart = rectangleRect.top + documentScrollTop;
 
           const dragOptions = {
             backdrop: false,
@@ -874,12 +867,9 @@
           };
 
           controls.dragGesture = createDragToMoveGestureController(dragOptions);
-
-          controls.dragInstance = controls.dragGesture.grab(rectangle, {
-            xAtStart,
-            yAtStart,
+          controls.dragInstance = controls.dragGesture.grab({
+            element: rectangle,
           });
-
           updateButtonStates(controls, true);
         });
 

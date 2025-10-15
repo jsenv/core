@@ -8,7 +8,7 @@ export const createDragToMoveGestureController = ({
   visibleAreaPadding,
   ...options
 } = {}) => {
-  const grabToMoveElement = (
+  const initGrabToMoveElement = (
     dragGesture,
     { element, elementToImpact = element },
   ) => {
@@ -209,19 +209,35 @@ export const createDragToMoveGestureController = ({
     dragGesture.addDragCallback(dragToMove);
   };
 
-  const dragToMoveGestureController = createDragGestureController({
+  const dragGestureController = createDragGestureController({
     ...options,
     inferScrollContainer: ({ element }) => {
       if (!element) {
         throw new Error("element is required");
       }
-      return getScrollContainer(element);
-    },
-    lifecycle: {
-      grab: grabToMoveElement,
+      return;
     },
   });
-  return dragToMoveGestureController;
+  const dragGestureControllerGrab = dragGestureController.grab;
+  dragGestureController.grab = ({
+    element,
+    elementToImpact = element,
+    ...rest
+  } = {}) => {
+    if (!element) {
+      throw new Error("element is required");
+    }
+    const scrollContainer = getScrollContainer(element);
+    const dragGesture = dragGestureControllerGrab({
+      scrollContainer,
+      ...rest,
+    });
+    initGrabToMoveElement(dragGesture, {
+      element,
+      elementToImpact,
+    });
+  };
+  return dragGestureController;
 };
 
 // We need a unique coordinate system internally
