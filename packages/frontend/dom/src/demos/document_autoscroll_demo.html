@@ -108,13 +108,13 @@
       </p>
     </div>
 
+    <div data-draggable class="draggable-element" style="position: absolute">
+      Drag Me
+    </div>
+
     <div style="position: relative; inset: 0; left: 200px; top: 50px">
-      <div
-        class="draggable-element"
-        id="dragElement"
-        style="position: absolute"
-      >
-        Drag Me
+      <div class="draggable-element" data-draggable style="position: absolute">
+        Drag Me (custom positioned parent)
       </div>
     </div>
 
@@ -335,7 +335,27 @@
     <script type="module">
       import { createDragToMoveGestureController } from "../interaction/drag_to_move.js";
 
-      const dragElement = document.getElementById("dragElement");
+      const draggableElements = document.querySelectorAll("[data-draggable]");
+      const dragElement = draggableElements[0];
+      for (const draggable of draggableElements) {
+        draggable.onmousedown = (e) => {
+          // Set up the manual drag behavior
+          manualDragGestureController.grabViaMouse(e, {
+            element: draggable,
+            onStart: () => {
+              draggable.setAttribute("data-dragging", "");
+              updateStatus(
+                "Manual drag started - document auto-scroll enabled",
+              );
+            },
+            onEnd: () => {
+              draggable.removeAttribute("data-dragging");
+              updateStatus("Manual drag ended");
+            },
+          });
+        };
+      }
+
       const scrollIndicator = document.getElementById("scrollIndicator");
 
       // Update scroll indicator
@@ -353,21 +373,6 @@
         threshold: 0,
         areaConstraint: "scroll",
       });
-
-      dragElement.onmousedown = (e) => {
-        // Set up the manual drag behavior
-        manualDragGestureController.grabViaMouse(e, {
-          element: dragElement,
-          onStart: () => {
-            dragElement.setAttribute("data-dragging", "");
-            updateStatus("Manual drag started - document auto-scroll enabled");
-          },
-          onEnd: () => {
-            dragElement.removeAttribute("data-dragging");
-            updateStatus("Manual drag ended");
-          },
-        });
-      };
 
       // Programmatic Controls
       const controls = {
