@@ -86,9 +86,13 @@ export const createDragToMoveGestureController = ({
         elementLeftWithoutScrollAtGrab + scrollLeftAtGrab;
       const elementTopWithScrollAtGrab =
         elementTopWithoutScrollAtGrab + scrollTopAtGrab;
+      console.log({
+        elementLeftWithoutScrollAtGrab,
+        elementLeftWithScrollAtGrab,
+      });
 
-      const toElementLeft = (moveX) => elementLeftWithScrollAtGrab + moveX;
-      const toElementTop = (moveY) => elementTopWithScrollAtGrab + moveY;
+      const toElementLeft = (moveX) => elementLeftWithoutScrollAtGrab + moveX;
+      const toElementTop = (moveY) => elementTopWithoutScrollAtGrab + moveY;
       const fromElementLeft = (left) => left - elementLeftWithScrollAtGrab;
       const fromElementTop = (top) => top - elementTopWithScrollAtGrab;
       moveConverter = {
@@ -124,17 +128,16 @@ export const createDragToMoveGestureController = ({
       } = gestureInfo;
       const elementLeft = moveConverter.toElementLeft(moveX);
       const elementTop = moveConverter.toElementTop(moveY);
+      const elementRight = elementLeft + elementWidth;
+      const elementBottom = elementTop + elementHeight;
       const elementLeftLayout = layoutConverter.toLayoutLeft(elementLeft);
       const elementTopLayout = layoutConverter.toLayoutTop(elementTop);
       const elementRightLayout = elementLeft + elementWidth;
       const elementBottomLayout = elementTopLayout + elementHeight;
-      console.log({ elementLeft, elementLeftLayout });
 
       // Helper function to handle auto-scroll and element positioning for an axis
       const moveAndKeepIntoView = ({
         axis,
-        elementStart, // left/top edge of element
-        elemendEnd, // right/bottom edge of element
         visibleAreaStart, // visible left/top boundary
         visibleAreaEnd, // visible right/bottom boundary
         canAutoScrollNegative, // whether auto-scroll is allowed for sticky elements when going negative
@@ -143,6 +146,8 @@ export const createDragToMoveGestureController = ({
         isGoingNegative, // left/up
       }) => {
         keep_into_view: {
+          const elementStart = axis === "x" ? elementLeft : elementTop;
+          const elemendEnd = axis === "x" ? elementRight : elementBottom;
           const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
           const currentScroll =
             axis === "x"
@@ -172,11 +177,10 @@ export const createDragToMoveGestureController = ({
         move: {
           const styleProperty = axis === "x" ? "left" : "top";
           const visualOffset = axis === "x" ? visualOffsetX : visualOffsetY;
-
+          const elementStart =
+            axis === "x" ? elementLeftLayout : elementTopLayout;
           const elementPosition = elementStart - visualOffset;
-          if (elementToImpact) {
-            elementToImpact.style[styleProperty] = `${elementPosition}px`;
-          }
+          elementToImpact.style[styleProperty] = `${elementPosition}px`;
         }
       };
 
@@ -284,13 +288,6 @@ const createElementPositioner = (element, { scrollContainer }) => {
       // Convert from scroll container coordinates to positioned parent coordinates
       return topRelativeToScrollContainer - offsetY;
     };
-
-    console.log({
-      layoutLeft,
-      scrollRelativeLeft,
-      layoutTop,
-      scrollRelativeTop,
-    });
 
     return {
       layoutLeft,
