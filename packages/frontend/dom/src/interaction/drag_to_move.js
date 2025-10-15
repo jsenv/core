@@ -1,3 +1,4 @@
+import { getScrollContainer } from "../scroll/scroll_container.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
@@ -7,10 +8,6 @@ export const createDragToMoveGestureController = ({
   ...options
 } = {}) => {
   const grabToMoveElement = (dragGesture, { element, elementToImpact }) => {
-    if (!element) {
-      throw new Error("element is required");
-    }
-
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
@@ -219,6 +216,12 @@ export const createDragToMoveGestureController = ({
 
   const dragToMoveGestureController = createDragGestureController({
     ...options,
+    inferScrollContainer: ({ element }) => {
+      if (!element) {
+        throw new Error("element is required");
+      }
+      return getScrollContainer(element);
+    },
     lifecycle: {
       grab: grabToMoveElement,
     },

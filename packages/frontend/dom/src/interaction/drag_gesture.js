@@ -16,6 +16,7 @@ export const createDragGestureController = (options = {}) => {
     direction: defaultDirection = { x: true, y: true },
     backdrop = true,
     backdropZIndex = 1,
+    inferScrollContainer = () => document.documentElement,
     lifecycle,
   } = options;
 
@@ -25,12 +26,13 @@ export const createDragGestureController = (options = {}) => {
     grabX = 0,
     grabY = 0,
     cursor = "grabbing",
-    scrollContainer = document.documentElement,
+    scrollContainer,
     ...rest
   } = {}) => {
     if (!direction.x && !direction.y) {
       return null;
     }
+    scrollContainer = scrollContainer || inferScrollContainer(rest);
 
     const [publishDrag, addDragCallback] = createPubSub();
     const [publishRelease, addReleaseCallback] = createPubSub();
