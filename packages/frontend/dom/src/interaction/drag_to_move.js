@@ -12,7 +12,6 @@ export const createDragToMoveGestureController = ({
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
-    const positionedParent = element.offsetParent;
 
     let elementWidth;
     let elementHeight;
@@ -57,44 +56,8 @@ export const createDragToMoveGestureController = ({
 
     let elementLeftAtGrab;
     let elementTopAtGrab;
-
     let layoutConverter;
-    // We need a unique coordinate system internally
-    // (which is position relative to the scroll container)
-    // but we also need to be able to set the element position
-    // in the DOM which might be different according to his own position + ancestor positions
     {
-      const positionedParentRect = positionedParent.getBoundingClientRect();
-      const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      let positionedParentLeftStatic = positionedParentRect.left;
-      let positionedParentTopStatic = positionedParentRect.top;
-      let scrollContainerLeftStatic = scrollContainerRect.left;
-      let scrollContainerTopStatic = scrollContainerRect.top;
-      const positionedParentScrolls = getAncestorScrolls(
-        positionedParent,
-        true,
-      );
-      const scrollContainerScrolls = getAncestorScrolls(scrollContainer, true);
-      const positionedScrollX = positionedParentScrolls.scrollX;
-      const scrollContainerScrollX = scrollContainerScrolls.scrollX;
-      const positionedScrollY = positionedParentScrolls.scrollY;
-      const scrollContainerScrollY = scrollContainerScrolls.scrollY;
-      scrollContainerLeftStatic -= scrollContainerScrollX;
-      positionedParentLeftStatic -= positionedScrollX;
-      scrollContainerTopStatic -= scrollContainerScrollY;
-      positionedParentTopStatic -= positionedScrollY;
-      // Calculate static offset between positioned parent and scroll container
-      const layoutOffsetX =
-        positionedParentLeftStatic - scrollContainerLeftStatic;
-      const layoutOffsetY =
-        positionedParentTopStatic - scrollContainerTopStatic;
-      console.log({
-        layoutOffsetX,
-        layoutOffsetY,
-        positionedScrollY,
-        scrollContainerScrollY,
-      });
-
       const toLayoutLeft = () => {};
       const toLayoutTop = () => {};
       layoutConverter = {
@@ -252,4 +215,37 @@ export const createDragToMoveGestureController = ({
     },
   });
   return dragToMoveGestureController;
+};
+
+// We need a unique coordinate system internally
+// (which is position relative to the scroll container)
+// but we also need to be able to set the element position
+// in the DOM which might be different according to his own position + ancestor positions
+const createElementPositioner = (element, { scrollContainer }) => {
+  const positionedParent = element.offsetParent;
+  const positionedParentRect = positionedParent.getBoundingClientRect();
+  const scrollContainerRect = scrollContainer.getBoundingClientRect();
+  let positionedParentLeftStatic = positionedParentRect.left;
+  let positionedParentTopStatic = positionedParentRect.top;
+  let scrollContainerLeftStatic = scrollContainerRect.left;
+  let scrollContainerTopStatic = scrollContainerRect.top;
+  const positionedParentScrolls = getAncestorScrolls(positionedParent, true);
+  const scrollContainerScrolls = getAncestorScrolls(scrollContainer, true);
+  const positionedScrollX = positionedParentScrolls.scrollX;
+  const scrollContainerScrollX = scrollContainerScrolls.scrollX;
+  const positionedScrollY = positionedParentScrolls.scrollY;
+  const scrollContainerScrollY = scrollContainerScrolls.scrollY;
+  scrollContainerLeftStatic -= scrollContainerScrollX;
+  positionedParentLeftStatic -= positionedScrollX;
+  scrollContainerTopStatic -= scrollContainerScrollY;
+  positionedParentTopStatic -= positionedScrollY;
+  // Calculate static offset between positioned parent and scroll container
+  const layoutOffsetX = positionedParentLeftStatic - scrollContainerLeftStatic;
+  const layoutOffsetY = positionedParentTopStatic - scrollContainerTopStatic;
+  console.log({
+    layoutOffsetX,
+    layoutOffsetY,
+    positionedScrollY,
+    scrollContainerScrollY,
+  });
 };
