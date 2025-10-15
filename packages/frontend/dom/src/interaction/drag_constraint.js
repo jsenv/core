@@ -4,7 +4,7 @@ import {
   getScrollRelativeRect,
 } from "../position/dom_coords.js";
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
-import { setupVisualMarkers } from "./debug_markers.js";
+import { setupDragDebugMarkers } from "./drag_debug_markers.js";
 import { getElementSelector } from "./element_log.js";
 
 const CONSOLE_DEBUG_CONSTRAINTS = false;
@@ -18,7 +18,7 @@ export const initDragConstraints = (
     obstaclesContainer,
     obstacleAttributeName,
     showConstraintFeedbackLine,
-    showVisualMarkers,
+    showDebugMarkers,
   },
 ) => {
   const dragGestureName = dragGesture.gestureInfo.name;
@@ -38,11 +38,11 @@ export const initDragConstraints = (
       constraintFeedbackLine.onRelease();
     });
   }
-  let visualMarkers;
-  if (showVisualMarkers) {
-    visualMarkers = setupVisualMarkers(dragGesture);
+  let dragDebugMarkers;
+  if (showDebugMarkers) {
+    dragDebugMarkers = setupDragDebugMarkers(dragGesture);
     dragGesture.addReleaseCallback(() => {
-      visualMarkers.onRelease();
+      dragDebugMarkers.onRelease();
     });
   }
 
@@ -125,8 +125,8 @@ export const initDragConstraints = (
     if (import.meta.dev) {
       validateConstraints(constraints, constraintInitParams);
     }
-    if (visualMarkers) {
-      visualMarkers.onConstraints(constraints, {
+    if (dragDebugMarkers) {
+      dragDebugMarkers.onConstraints(constraints, {
         elementWidth,
         elementHeight,
         visibleArea,

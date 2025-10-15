@@ -9,7 +9,7 @@ const MARKER_SIZE = 12;
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 
-export const setupVisualMarkers = (dragGesture) => {
+export const setupDragDebugMarkers = (dragGesture) => {
   // Clean up any existing persistent markers from previous drag gestures
   if (KEEP_MARKERS_ON_RELEASE) {
     // Remove any existing markers from previous gestures
