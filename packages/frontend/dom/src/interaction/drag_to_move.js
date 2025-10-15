@@ -132,29 +132,23 @@ export const createDragToMoveGestureController = ({
       const elementBottom = elementTop + elementHeight;
       const elementLeftLayout = layoutConverter.toLayoutLeft(elementLeft);
       const elementTopLayout = layoutConverter.toLayoutTop(elementTop);
-      const elementRightLayout = elementLeft + elementWidth;
-      const elementBottomLayout = elementTopLayout + elementHeight;
 
       // Helper function to handle auto-scroll and element positioning for an axis
-      const moveAndKeepIntoView = ({
-        axis,
-        visibleAreaStart, // visible left/top boundary
-        visibleAreaEnd, // visible right/bottom boundary
-        canAutoScrollNegative, // whether auto-scroll is allowed for sticky elements when going negative
-
-        isGoingPositive, // right/down
-        isGoingNegative, // left/up
-      }) => {
+      const moveAndKeepIntoView = (axis) => {
         keep_into_view: {
-          const elementStart = axis === "x" ? elementLeft : elementTop;
-          const elemendEnd = axis === "x" ? elementRight : elementBottom;
           const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
           const currentScroll =
             axis === "x"
               ? scrollContainer.scrollLeft
               : scrollContainer.scrollTop;
+          const isGoingPositive = axis === "x" ? isGoingRight : isGoingDown;
+          const isGoingNegative = axis === "x" ? isGoingLeft : isGoingUp;
 
           if (isGoingPositive) {
+            const elemendEnd = axis === "x" ? elementRight : elementBottom;
+            const visibleAreaEnd =
+              axis === "x" ? visibleArea.right : visibleArea.bottom;
+
             if (elemendEnd > visibleAreaEnd) {
               const scrollAmountNeeded = elemendEnd - visibleAreaEnd;
               const scroll = currentScroll + scrollAmountNeeded;
@@ -164,6 +158,16 @@ export const createDragToMoveGestureController = ({
               scrollContainer[scrollProperty] = scroll;
             }
           } else if (isGoingNegative) {
+            const canAutoScrollNegative =
+              axis === "x"
+                ? !element.hasAttribute("data-sticky-left") ||
+                  hasCrossedVisibleAreaLeftOnce
+                : !element.hasAttribute("data-sticky-top") ||
+                  hasCrossedVisibleAreaTopOnce;
+            const elementStart = axis === "x" ? elementLeft : elementTop;
+            const visibleAreaStart =
+              axis === "x" ? visibleArea.left : visibleArea.top;
+
             if (canAutoScrollNegative && elementStart < visibleAreaStart) {
               const scrollAmountNeeded = visibleAreaStart - elementStart;
               const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
@@ -185,36 +189,10 @@ export const createDragToMoveGestureController = ({
       };
 
       if (direction.x) {
-        // Determine if auto-scroll is allowed for sticky elements when going left
-        const canAutoScrollLeft =
-          !element.hasAttribute("data-sticky-left") ||
-          hasCrossedVisibleAreaLeftOnce;
-        moveAndKeepIntoView({
-          axis: "x",
-          isGoingPositive: isGoingRight,
-          isGoingNegative: isGoingLeft,
-          elementStart: elementLeftLayout,
-          elemendEnd: elementRightLayout,
-          visibleAreaStart: visibleArea.left,
-          visibleAreaEnd: visibleArea.right,
-          canAutoScrollNegative: canAutoScrollLeft,
-        });
+        moveAndKeepIntoView("x");
       }
       if (direction.y) {
-        // Determine if auto-scroll is allowed for sticky elements when going up
-        const canAutoScrollUp =
-          !element.hasAttribute("data-sticky-top") ||
-          hasCrossedVisibleAreaTopOnce;
-        moveAndKeepIntoView({
-          axis: "y",
-          isGoingPositive: isGoingDown,
-          isGoingNegative: isGoingUp,
-          elementStart: elementTopLayout,
-          elemendEnd: elementBottomLayout,
-          visibleAreaStart: visibleArea.top,
-          visibleAreaEnd: visibleArea.bottom,
-          canAutoScrollNegative: canAutoScrollUp,
-        });
+        moveAndKeepIntoView("y");
       }
     };
     dragGesture.addDragCallback(dragToMove);
