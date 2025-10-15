@@ -1,12 +1,18 @@
 import { createDragGestureController } from "./drag_gesture.js";
+import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
-export const createDragToMoveGestureController = (options) => {
+export const createDragToMoveGestureController = ({
+  stickyFrontiers = true,
+  visibleAreaPadding,
+  ...options
+} = {}) => {
   const grabToMoveElement = (dragGesture, { element, elementToImpact }) => {
     if (!element) {
       throw new Error("element is required");
     }
 
     const direction = dragGesture.gestureInfo.direction;
+    const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const positionedParent = element.offsetParent;
     const elementRect = element.getBoundingClientRect();
@@ -75,6 +81,35 @@ export const createDragToMoveGestureController = (options) => {
     dragGesture.addReleaseCallback(() => {
       element.removeAttribute("data-grabbed");
     });
+
+    const getVisibleArea = () => {
+      let visibleArea;
+      const visibleAreaBase = getScrollContainerVisibleRect(scrollContainer);
+      if (stickyFrontiers) {
+        visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
+          scrollContainer,
+          direction,
+          dragGestureName,
+        });
+      } else {
+        visibleArea = visibleAreaBase;
+      }
+      // Apply visible area padding (reduce the visible area by the padding amount)
+      if (visibleAreaPadding > 0) {
+        visibleArea = {
+          left: visibleArea.left + visibleAreaPadding,
+          top: visibleArea.top + visibleAreaPadding,
+          right: visibleArea.right - visibleAreaPadding,
+          bottom: visibleArea.bottom - visibleAreaPadding,
+        };
+      }
+      return visibleArea;
+    };
+    let visibleArea = getVisibleArea();
+    const applyConstraints = (moveXRequested, moveYRequested) => {
+      visibleArea = getVisibleArea();
+      return [moveXRequested, moveYRequested];
+    };
 
     const dragToMove = (gestureInfo) => {
       const {
@@ -179,7 +214,7 @@ export const createDragToMoveGestureController = (options) => {
       }
     };
 
-    return { drag: dragToMove };
+    return { applyConstraints, drag: dragToMove };
   };
 
   const dragToMoveGestureController = createDragGestureController({

@@ -6,7 +6,6 @@ import {
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupVisualMarkers } from "./debug_markers.js";
 import { getElementSelector } from "./element_log.js";
-import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 const CONSOLE_DEBUG_CONSTRAINTS = false;
 
@@ -146,31 +145,11 @@ export const initDragConstraints = (
     };
   }
 
-  const applyConstraints = (moveXRequested, moveYRequested, { dragEvent }) => {
-    let visibleArea;
-    compute_visible_area: {
-      const visibleAreaBase = getScrollContainerVisibleRect(scrollContainer);
-
-      if (stickyFrontiers) {
-        visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
-          scrollContainer,
-          direction,
-          dragGestureName,
-        });
-      } else {
-        visibleArea = visibleAreaBase;
-      }
-      // Apply visible area padding (reduce the visible area by the padding amount)
-      if (visibleAreaPadding > 0) {
-        visibleArea = {
-          left: visibleArea.left + visibleAreaPadding,
-          top: visibleArea.top + visibleAreaPadding,
-          right: visibleArea.right - visibleAreaPadding,
-          bottom: visibleArea.bottom - visibleAreaPadding,
-        };
-      }
-    }
-
+  const applyConstraints = (
+    moveXRequested,
+    moveYRequested,
+    { dragEvent, visibleArea },
+  ) => {
     let constraints;
     instantiate_constraints: {
       const constraintInitParams = {

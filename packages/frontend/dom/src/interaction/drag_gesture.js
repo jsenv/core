@@ -45,6 +45,9 @@ export const createDragGestureController = (options = {}) => {
     const gestureInfo = {
       name,
       direction,
+      started: !threshold,
+      status: "grabbed",
+
       scrollContainer,
       grabScrollLeft: scrollContainer.scrollLeft, // scrollLeft of the scrollContainer at grab time
       grabScrollTop: scrollContainer.scrollTop, // scrollTop of the scrollContainer at grab time
@@ -53,10 +56,10 @@ export const createDragGestureController = (options = {}) => {
 
       dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
       dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
-      moveX: 0, // dragX + scrollLeft + x constraints
-      moveY: 0, // dragY + scrollTop + y constraints
 
-      // metadata around the move
+      moveX: 0, // dragX + scrollLeft + constraints applied
+      moveY: 0, // dragY + scrollTop + constraints applied
+      // metadata about the move
       moveXChanged: false, // x changed since last gesture
       moveYChanged: false, // y changed since last gesture
       isGoingUp: undefined,
@@ -64,10 +67,7 @@ export const createDragGestureController = (options = {}) => {
       isGoingLeft: undefined,
       isGoingRight: undefined,
 
-      started: !threshold,
-      status: "grabbed",
-
-      // metadata around interaction sources
+      // metadata about interaction sources
       grabEvent: event,
       dragEvent: null,
       releaseEvent: null,
