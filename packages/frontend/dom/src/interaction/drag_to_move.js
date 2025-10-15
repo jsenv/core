@@ -207,8 +207,7 @@ export const createDragToMoveGestureController = ({
         });
       }
     };
-
-    return { drag: dragToMove };
+    dragGesture.addDragCallback(dragToMove);
   };
 
   const dragToMoveGestureController = createDragGestureController({

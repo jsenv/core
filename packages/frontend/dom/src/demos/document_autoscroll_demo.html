@@ -333,8 +333,6 @@
 
     <script type="module">
       import { createDragToMoveGestureController } from "../interaction/drag_to_move.js";
-      import { getElementScrollableRect } from "../scroll/scrollable_rect.js";
-      import { getScrollContainer } from "../scroll/scroll_container.js";
 
       const dragElement = document.getElementById("dragElement");
       const scrollIndicator = document.getElementById("scrollIndicator");
@@ -416,13 +414,6 @@
       controls.grabBtn.addEventListener("click", () => {
         if (controls.dragGesture) return;
 
-        // Convert viewport coordinates to scrollable-parent-relative coordinates
-        const scrollContainer = getScrollContainer(dragElement);
-        const { left: xAtStart, top: yAtStart } = getElementScrollableRect(
-          dragElement,
-          scrollContainer,
-        );
-
         const dragOptions = {
           threshold: 0,
           onGrab: (gestureInfo) => {
@@ -452,13 +443,9 @@
 
         controls.dragGestureController =
           createDragToMoveGestureController(dragOptions);
-        controls.dragGesture = controls.dragGestureController.grab(
+        controls.dragGesture = controls.dragGestureController.grab({
           dragElement,
-          {
-            xAtStart,
-            yAtStart,
-          },
-        );
+        });
 
         updateButtonStates(true);
       });

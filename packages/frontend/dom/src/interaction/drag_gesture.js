@@ -44,7 +44,6 @@ export const createDragGestureController = (options = {}) => {
       addReleaseCallback(onRelease);
     }
 
-    let lifecycleHooks;
     const gestureInfo = {
       name,
       direction,
@@ -227,9 +226,8 @@ export const createDragGestureController = (options = {}) => {
       if (!startedPrevious && gestureInfo.started) {
         onDragStart?.(gestureInfo);
       }
-      const someChange = gestureInfo.xChanged || gestureInfo.yChanged;
+      const someChange = gestureInfo.moveXChanged || gestureInfo.moveYChanged;
       if (someChange) {
-        lifecycleHooks?.drag?.(gestureInfo);
         publishDrag(gestureInfo);
       }
     };
@@ -240,7 +238,6 @@ export const createDragGestureController = (options = {}) => {
       releaseY = gestureInfo.dragY,
     } = {}) => {
       drag(releaseX, releaseY, { event, isRelease: true });
-      lifecycleHooks?.release?.(gestureInfo);
       publishRelease(gestureInfo);
     };
 
@@ -253,7 +250,7 @@ export const createDragGestureController = (options = {}) => {
       drag,
       release,
     };
-    lifecycleHooks = lifecycle?.grab(dragGesture, rest);
+    lifecycle?.grab(dragGesture, rest);
     return dragGesture;
   };
 
