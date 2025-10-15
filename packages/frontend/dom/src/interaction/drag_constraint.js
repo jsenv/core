@@ -133,30 +133,32 @@ export const initDragConstraints = (
       });
     }
 
-    let moveX = moveXRequested;
-    let moveY = moveYRequested;
+    let moveXConstrained = moveXRequested;
+    let moveYConstrained = moveYRequested;
     const logConstraintEnforcement = (axis, constraint) => {
       if (!CONSOLE_DEBUG_CONSTRAINTS) {
         return;
       }
-      const originalMoveValue = axis === "x" ? moveXRequested : moveYRequested;
-      const constrainedMoveValue = axis === "x" ? moveX : moveY;
-      const action =
-        constrainedMoveValue > originalMoveValue ? "increased" : "capped";
+      const moveRequested = axis === "x" ? moveXRequested : moveYRequested;
+      const moveConstrained =
+        axis === "x" ? moveXConstrained : moveYConstrained;
+      const action = moveConstrained > moveRequested ? "increased" : "capped";
       console.debug(
-        `Drag by ${dragEvent.type}: ${axis} ${action} from ${originalMoveValue.toFixed(2)} to ${constrainedMoveValue.toFixed(2)} by ${constraint.name}`,
+        `Drag by ${dragEvent.type}: ${axis} ${action} from ${moveRequested.toFixed(2)} to ${moveConstrained.toFixed(2)} by ${constraint.name}`,
         constraint.element,
       );
     };
 
-    let elementLeft = moveConverter.toElementLeft(moveXRequested);
-    let elementTop = moveConverter.toElementTop(moveYRequested);
+    const elementLeftRequested = moveConverter.toElementLeft(moveXRequested);
+    const elementTopRequested = moveConverter.toElementTop(moveYRequested);
+    let elementLeftToTry = elementLeftRequested;
+    let elementTopToTry = elementTopRequested;
     for (const constraint of constraints) {
       const result = constraint.apply({
-        left: elementLeft,
-        top: elementTop,
-        right: elementLeft + elementWidth,
-        bottom: elementTop + elementHeight,
+        left: elementLeftToTry,
+        top: elementTopToTry,
+        right: elementLeftToTry + elementWidth,
+        bottom: elementTopToTry + elementHeight,
         width: elementWidth,
         height: elementHeight,
         visibleArea,
@@ -166,29 +168,31 @@ export const initDragConstraints = (
       if (!result) {
         continue;
       }
-      const [leftConstrained, topConstrained] = result;
-      if (direction.x && leftConstrained !== elementLeft) {
-        elementLeft = leftConstrained;
-        moveX = moveConverter.fromElementLeft(leftConstrained);
+      const [elementLeftConstrained, elementTopConstrained] = result;
+      if (direction.x && elementLeftConstrained !== elementLeftToTry) {
+        moveXConstrained = moveConverter.fromElementLeft(
+          elementLeftConstrained,
+        );
         logConstraintEnforcement("x", constraint);
+        elementLeftToTry = elementLeftConstrained;
       }
-      if (direction.y && topConstrained !== moveY) {
-        elementTop = topConstrained;
-        moveY = moveConverter.fromElementTop(topConstrained);
+      if (direction.y && elementTopConstrained !== elementTopToTry) {
+        moveYConstrained = moveConverter.fromElementTop(elementTopConstrained);
         logConstraintEnforcement("y", constraint);
+        elementTopToTry = elementTopConstrained;
       }
     }
     // Log when no constraints were applied (movement unchanged)
     if (
       CONSOLE_DEBUG_CONSTRAINTS &&
-      moveXRequested === moveX &&
-      moveYRequested === moveY
+      moveXRequested === moveXConstrained &&
+      moveYRequested === moveYConstrained
     ) {
       console.debug(
-        `Drag by ${dragEvent.type}: no constraint enforcement needed (moveX=${moveX.toFixed(2)}, moveY=${moveY.toFixed(2)})`,
+        `Drag by ${dragEvent.type}: no constraint enforcement needed (moveX=${moveXRequested.toFixed(2)}, moveY=${moveYRequested.toFixed(2)})`,
       );
     }
-    return [moveX, moveY];
+    return [moveXConstrained, moveYConstrained];
   };
 
   return { applyConstraints };
