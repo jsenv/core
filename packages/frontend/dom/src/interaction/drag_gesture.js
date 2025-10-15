@@ -136,6 +136,16 @@ export const createDragGestureController = (options = {}) => {
       const dragYWithScroll = dragY + scrollContainer.scrollTop;
       const moveXRequested = dragXWithScroll - grabXWithScroll;
       const moveYRequested = dragYWithScroll - grabYWithScroll;
+      // Calcul de la direction basé sur le mouvement précédent
+      // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
+      // (ici on veut connaitre l'intention)
+      // on va utiliser cela pour savoir vers où on scroll si nécéssaire par ex
+      const currentMoveX = gestureInfo.moveX;
+      const currentMoveY = gestureInfo.moveY;
+      const isGoingLeft = moveXRequested < currentMoveX;
+      const isGoingRight = moveXRequested > currentMoveX;
+      const isGoingUp = moveYRequested < currentMoveY;
+      const isGoingDown = moveYRequested > currentMoveY;
       // === APPLIQUER LES CONTRAINTES ===
       let moveXConstrained = moveXRequested;
       let moveYConstrained = moveYRequested;
@@ -154,13 +164,6 @@ export const createDragGestureController = (options = {}) => {
       // === ÉTAT FINAL ===
       const moveX = moveXConstrained;
       const moveY = moveYConstrained;
-      // Calcul de la direction basé sur le mouvement précédent
-      const currentMoveX = gestureInfo.moveX;
-      const currentMoveY = gestureInfo.moveY;
-      const isGoingLeft = moveX < currentMoveX;
-      const isGoingRight = moveX > currentMoveX;
-      const isGoingUp = moveY < currentMoveY;
-      const isGoingDown = moveY > currentMoveY;
 
       const dragData = {
         dragX,
