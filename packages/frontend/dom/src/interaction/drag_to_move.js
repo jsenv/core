@@ -80,7 +80,6 @@ export const createDragToMoveGestureController = ({
       positioner = createElementPositioner(element, { scrollContainer });
       elementLeftWithoutScrollAtGrab = positioner.leftRelativeToScrollContainer;
       elementTopWithoutScrollAtGrab = positioner.topRelativeToScrollContainer;
-      console.log(positioner);
     }
 
     let moveConverter;
@@ -282,7 +281,9 @@ const createElementPositioner = (element, { scrollContainer }) => {
     // to get the true static offset between positioned parent and scroll container
     let staticOffsetX;
     let staticOffsetY;
-    if (scrollContainer === document.documentElement) {
+    const scrollContainerIsDocument =
+      scrollContainer === document.documentElement;
+    if (scrollContainerIsDocument) {
       // Document case: getBoundingClientRect is not affected by document scroll
       staticOffsetX =
         positionedParentViewportLeft - scrollContainerViewportLeft;
@@ -310,10 +311,12 @@ const createElementPositioner = (element, { scrollContainer }) => {
       elementViewportTop - positionedParentViewportTop;
 
     // Calculate current element position relative to scroll container
-    const leftRelativeToScrollContainer =
-      elementViewportLeft - scrollContainerViewportLeft;
-    const topRelativeToScrollContainer =
-      elementViewportTop - scrollContainerViewportTop;
+    const leftRelativeToScrollContainer = scrollContainerIsDocument
+      ? elementViewportLeft
+      : elementViewportLeft - scrollContainerViewportLeft;
+    const topRelativeToScrollContainer = scrollContainerIsDocument
+      ? elementViewportTop
+      : elementViewportTop - scrollContainerViewportTop;
 
     const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
       // Convert from positioned parent coordinates to scroll container coordinates
@@ -346,6 +349,13 @@ const createElementPositioner = (element, { scrollContainer }) => {
         positionedParentTopOffsetWithScrollContainer
       );
     };
+
+    // console.log({
+    //   leftRelativeToPositionedParent,
+    //   leftRelativeToScrollContainer,
+    //   positionedParentLeftOffsetWithScrollContainer,
+    //   scrollContainerIsDocument,
+    // });
 
     return {
       leftRelativeToPositionedParent,

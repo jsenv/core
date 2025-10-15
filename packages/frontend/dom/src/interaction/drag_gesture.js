@@ -104,7 +104,7 @@ export const createDragGestureController = (options = {}) => {
           return;
         }
         isHandlingScroll = true;
-        // drag(gestureInfo.dragX, gestureInfo.dragY, { event: scrollEvent });
+        drag(gestureInfo.dragX, gestureInfo.dragY, { event: scrollEvent });
         isHandlingScroll = false;
       };
       const scrollEventReceiver =
