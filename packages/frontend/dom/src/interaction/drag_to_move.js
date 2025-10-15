@@ -1,3 +1,4 @@
+import { getScrollBox } from "../position/dom_coords.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
@@ -12,12 +13,63 @@ export const createDragToMoveGestureController = ({
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const positionedParent = element.offsetParent;
-    const elementRect = element.getBoundingClientRect();
 
     let elementLeftAtGrab;
     let elementTopAtGrab;
-    let elementWidth = elementRect.width;
-    let elementHeight = elementRect.height;
+
+    let elementWidth;
+    let elementHeight;
+    const updateElementDimension = () => {
+      const elementRect = element.getBoundingClientRect();
+      elementWidth = elementRect.width;
+      elementHeight = elementRect.height;
+    };
+    updateElementDimension();
+
+    let layoutConverter;
+    // We need a unique coordinate system internally
+    // (which is position relative to the scroll container)
+    // but we also need to be able to set the element position
+    // in the DOM which might be different according to his own position + ancestor positions
+    {
+      const positionedParentRect = positionedParent.getBoundingClientRect();
+      const scrollContainerRect = scrollContainer.getBoundingClientRect();
+      let positionedParentLeftStatic = positionedParentRect.left;
+      let positionedParentTopStatic = positionedParentRect.top;
+      let scrollContainerLeftStatic = scrollContainerRect.left;
+      let scrollContainerTopStatic = scrollContainerRect.top;
+      const positionedParentScrolls = getAncestorScrolls(
+        positionedParent,
+        true,
+      );
+      const scrollContainerScrolls = getAncestorScrolls(scrollContainer, true);
+      const positionedScrollX = positionedParentScrolls.scrollX;
+      const scrollContainerScrollX = scrollContainerScrolls.scrollX;
+      const positionedScrollY = positionedParentScrolls.scrollY;
+      const scrollContainerScrollY = scrollContainerScrolls.scrollY;
+      scrollContainerLeftStatic -= scrollContainerScrollX;
+      positionedParentLeftStatic -= positionedScrollX;
+      scrollContainerTopStatic -= scrollContainerScrollY;
+      positionedParentTopStatic -= positionedScrollY;
+      // Calculate static offset between positioned parent and scroll container
+      const layoutOffsetX =
+        positionedParentLeftStatic - scrollContainerLeftStatic;
+      const layoutOffsetY =
+        positionedParentTopStatic - scrollContainerTopStatic;
+      console.log({
+        layoutOffsetX,
+        layoutOffsetY,
+        positionedScrollY,
+        scrollContainerScrollY,
+      });
+
+      const toLayoutLeft = () => {};
+      const toLayoutTop = () => {};
+      layoutConverter = {
+        toLayoutLeft,
+        toLayoutTop,
+      };
+    }
 
     let moveConverter;
     {
@@ -46,65 +98,41 @@ export const createDragToMoveGestureController = ({
     let hasCrossedVisibleAreaLeftOnce = false;
     let hasCrossedVisibleAreaTopOnce = false;
 
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    let positionedParentLeftStatic = positionedParentRect.left;
-    let positionedParentTopStatic = positionedParentRect.top;
-    let scrollContainerLeftStatic = scrollContainerRect.left;
-    let scrollContainerTopStatic = scrollContainerRect.top;
-    const positionedParentScrolls = getAncestorScrolls(positionedParent, true);
-    const scrollContainerScrolls = getAncestorScrolls(scrollContainer, true);
-    const positionedScrollX = positionedParentScrolls.scrollX;
-    const scrollContainerScrollX = scrollContainerScrolls.scrollX;
-    const positionedScrollY = positionedParentScrolls.scrollY;
-    const scrollContainerScrollY = scrollContainerScrolls.scrollY;
-    scrollContainerLeftStatic -= scrollContainerScrollX;
-    positionedParentLeftStatic -= positionedScrollX;
-    scrollContainerTopStatic -= scrollContainerScrollY;
-    positionedParentTopStatic -= positionedScrollY;
-    // Calculate static offset between positioned parent and scroll container
-    const layoutOffsetX =
-      positionedParentLeftStatic - scrollContainerLeftStatic;
-    const layoutOffsetY = positionedParentTopStatic - scrollContainerTopStatic;
-    console.log({
-      layoutOffsetX,
-      layoutOffsetY,
-      positionedScrollY,
-      scrollContainerScrollY,
-    });
-
     // Set up dragging attribute
     element.setAttribute("data-grabbed", "");
     dragGesture.addReleaseCallback(() => {
       element.removeAttribute("data-grabbed");
     });
 
-    const getVisibleArea = () => {
-      let visibleArea;
-      const visibleAreaBase = getScrollContainerVisibleRect(scrollContainer);
+    let visibleArea;
+    const updateVisibleArea = () => {
+      const visibleAreaBase = getScrollBox(scrollContainer);
+      let visibleAreaCurrent = visibleAreaBase;
       if (stickyFrontiers) {
-        visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
-          scrollContainer,
-          direction,
-          dragGestureName,
-        });
-      } else {
-        visibleArea = visibleAreaBase;
+        visibleAreaCurrent = applyStickyFrontiersToVisibleArea(
+          visibleAreaCurrent,
+          {
+            scrollContainer,
+            direction,
+            dragGestureName,
+          },
+        );
       }
-      // Apply visible area padding (reduce the visible area by the padding amount)
       if (visibleAreaPadding > 0) {
-        visibleArea = {
-          left: visibleArea.left + visibleAreaPadding,
-          top: visibleArea.top + visibleAreaPadding,
-          right: visibleArea.right - visibleAreaPadding,
-          bottom: visibleArea.bottom - visibleAreaPadding,
+        visibleAreaCurrent = {
+          left: visibleAreaCurrent.left + visibleAreaPadding,
+          top: visibleAreaCurrent.top + visibleAreaPadding,
+          right: visibleAreaCurrent.right - visibleAreaPadding,
+          bottom: visibleAreaCurrent.bottom - visibleAreaPadding,
         };
       }
-      return visibleArea;
+      visibleArea = visibleAreaCurrent;
     };
-    let visibleArea = getVisibleArea();
+    updateVisibleArea();
     const applyConstraints = (moveXRequested, moveYRequested) => {
-      visibleArea = getVisibleArea();
+      updateVisibleArea();
+      updateElementDimension();
+
       return [moveXRequested, moveYRequested];
     };
 
@@ -119,9 +147,9 @@ export const createDragToMoveGestureController = ({
       } = gestureInfo;
       const elementLeft = moveConverter.toElementLeft(moveX);
       const elementTop = moveConverter.toElementTop(moveY);
-      const elementLeftLayout = elementLeft - layoutOffsetX;
+      const elementLeftLayout = layoutConverter.toLayoutLeft(elementLeft);
+      const elementTopLayout = layoutConverter.toLayoutTop(elementTop);
       const elementRightLayout = elementLeft + elementWidth;
-      const elementTopLayout = elementTop - layoutOffsetY;
       const elementBottomLayout = elementTopLayout + elementHeight;
 
       // Helper function to handle auto-scroll and element positioning for an axis

@@ -299,44 +299,6 @@ export const getMouseEventScrollRelativeRect = (
   };
 };
 
-export const getScrollRelativeVisibleRect = (scrollContainer) => {
-  if (scrollContainer === documentElement) {
-    const { clientWidth, clientHeight } = documentElement;
-
-    return {
-      left: 0,
-      top: 0,
-      right: clientWidth,
-      bottom: clientHeight,
-      width: clientWidth,
-      height: clientHeight,
-      scrollContainer,
-      scrollLeft: scrollContainer.scrollLeft,
-      scrollTop: scrollContainer.scrollTop,
-    };
-  }
-
-  const { clientWidth, clientHeight } = scrollContainer;
-  const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
-  const leftWithBorder = scrollContainerBorderSizes.left;
-  const topWithBorder = scrollContainerBorderSizes.top;
-  const availableWidth = clientWidth;
-  const availableHeight = clientHeight;
-  const right = leftWithBorder + availableWidth;
-  const bottom = topWithBorder + availableHeight;
-  return {
-    left: leftWithBorder,
-    top: topWithBorder,
-    right,
-    bottom,
-    width: availableWidth,
-    height: availableHeight,
-    scrollContainer,
-    scrollLeft: scrollContainer.scrollLeft,
-    scrollTop: scrollContainer.scrollTop,
-  };
-};
-
 export const addScrollToRect = (scrollRelativeRect) => {
   const { left, top, width, height, scrollLeft, scrollTop } =
     scrollRelativeRect;
@@ -586,4 +548,44 @@ export const convertScrollRelativeRectToElementRect = (
     elementTopDocument - positionedParentScrollRelativeRect.top;
 
   return createElementRect(elementLeftRelative, elementTopRelative);
+};
+
+// https://github.com/w3c/csswg-drafts/issues/3329
+// Return the portion of the element that is visible for this scoll container
+export const getScrollBox = (scrollContainer) => {
+  if (scrollContainer === documentElement) {
+    const { clientWidth, clientHeight } = documentElement;
+
+    return {
+      left: 0,
+      top: 0,
+      right: clientWidth,
+      bottom: clientHeight,
+      width: clientWidth,
+      height: clientHeight,
+      scrollContainer,
+      scrollLeft: scrollContainer.scrollLeft,
+      scrollTop: scrollContainer.scrollTop,
+    };
+  }
+
+  const { clientWidth, clientHeight } = scrollContainer;
+  const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
+  const leftWithBorder = scrollContainerBorderSizes.left;
+  const topWithBorder = scrollContainerBorderSizes.top;
+  const availableWidth = clientWidth;
+  const availableHeight = clientHeight;
+  const right = leftWithBorder + availableWidth;
+  const bottom = topWithBorder + availableHeight;
+  return {
+    left: leftWithBorder,
+    top: topWithBorder,
+    right,
+    bottom,
+    width: availableWidth,
+    height: availableHeight,
+    scrollContainer,
+    scrollLeft: scrollContainer.scrollLeft,
+    scrollTop: scrollContainer.scrollTop,
+  };
 };
