@@ -21,6 +21,7 @@ export const createDragToMoveGestureController = ({
   // initially grabbed the element, but moves with the element to show the current anchor position.
   // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = true,
+  showVisualMarkers = true,
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
@@ -139,6 +140,7 @@ export const createDragToMoveGestureController = ({
       obstaclesContainer: obstaclesContainer || scrollContainer,
       obstacleAttributeName,
       showConstraintFeedbackLine,
+      showVisualMarkers,
     });
     dragGesture.addBeforeDragCallback(
       (
