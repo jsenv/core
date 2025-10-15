@@ -10,6 +10,10 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 const CONSOLE_DEBUG_CONSTRAINTS = false;
 
+//             hasCrossedVisibleAreaLeftOnce:
+//               elementLeftWithScroll >= visibleArea.left,
+//             hasCrossedVisibleAreaTopOnce: elementTopWithScroll >= visibleArea.top,
+
 export const initDragConstraints = (
   dragGesture,
   {
@@ -125,32 +129,22 @@ export const initDragConstraints = (
     }
   }
 
-  //   const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
-  //           const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
-  //           const elementLeftWithScrollRequested =
-  //             elementLeftWithScrollAtGrab + moveXRequested;
-  //           const elementTopWithScrollRequested =
-  //             elementTopWithScrollAtGrab + moveYRequested;
+  let getMoveConverter = () => {};
+  move_conversion: {
+    getMoveConverter = () => {
+      const scrollLeftAtGrab = dragGesture.gestureInfo.grabScrollLeft;
+      const scrollTopAtGrab = dragGesture.gestureInfo.grabScrollTop;
+      const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
+      const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
 
-  //             // when applying constraint
-  //              elementLeft:
-  //                   gestureInfo.scrollRelativeRect.left +
-  //                   gestureInfo.scrollRelativeRect.scrollLeft,
-  //                 elementTop:
-  //                   gestureInfo.scrollRelativeRect.top +
-  //                   gestureInfo.scrollRelativeRect.scrollTop,
-  //                 elementWidth: currentRect.width,
-  //                 elementHeight: currentRect.height,
+      const toElementLeft = (moveX) => elementLeftWithScrollAtGrab + moveX;
+      const toElementTop = (moveY) => elementTopWithScrollAtGrab + moveY;
+      const fromElementLeft = (left) => left - elementLeftWithScrollAtGrab;
+      const fromElementTop = (top) => top - elementTopWithScrollAtGrab;
 
-  //                     const elementLeftRelative =
-  //             elementLeftWithScroll - scrollContainer.scrollLeft;
-  //           const elementTopRelative =
-  //             elementTopWithScroll - scrollContainer.scrollTop;
-  //             elementVisuallyImpactedWidth: currentRect.width,
-  //             elementVisuallyImpactedHeight: currentRect.height,
-  //             hasCrossedVisibleAreaLeftOnce:
-  //               elementLeftWithScroll >= visibleArea.left,
-  //             hasCrossedVisibleAreaTopOnce: elementTopWithScroll >= visibleArea.top,
+      return { toElementLeft, toElementTop, fromElementLeft, fromElementTop };
+    };
+  }
 
   const applyConstraints = (moveXRequested, moveYRequested, { dragEvent }) => {
     let visibleArea;
@@ -195,18 +189,6 @@ export const initDragConstraints = (
       return [moveXRequested, moveYRequested];
     }
 
-    const logConstraintEnforcement = (axis, constrainedValue, constraint) => {
-      if (!CONSOLE_DEBUG_CONSTRAINTS) {
-        return;
-      }
-      const originalValue = axis === "x" ? moveXRequested : moveYRequested;
-      const action = constrainedValue > originalValue ? "increased" : "capped";
-      console.debug(
-        `Drag by ${dragEvent.type}: ${axis} ${action} from ${originalValue.toFixed(2)} to ${constrainedValue.toFixed(2)} by ${constraint.name}`,
-        constraint.element,
-      );
-    };
-
     // Get current element dimensions for dynamic constraint calculation
     const { width, height } = elementVisuallyImpacted.getBoundingClientRect();
     visualMarkers.onDrag({
@@ -218,30 +200,46 @@ export const initDragConstraints = (
 
     let moveX = moveXRequested;
     let moveY = moveYRequested;
+    const logConstraintEnforcement = (axis, constraint) => {
+      if (!CONSOLE_DEBUG_CONSTRAINTS) {
+        return;
+      }
+      const originalMoveValue = axis === "x" ? moveXRequested : moveYRequested;
+      const constrainedMoveValue = axis === "x" ? moveX : moveY;
+      const action =
+        constrainedMoveValue > originalMoveValue ? "increased" : "capped";
+      console.debug(
+        `Drag by ${dragEvent.type}: ${axis} ${action} from ${originalMoveValue.toFixed(2)} to ${constrainedMoveValue.toFixed(2)} by ${constraint.name}`,
+        constraint.element,
+      );
+    };
+
+    const moveConverter = getMoveConverter();
+    let elementLeft = moveConverter.toElementLeft(moveXRequested);
+    let elementTop = moveConverter.toElementTop(moveYRequested);
     for (const constraint of constraints) {
-      const left = moveX;
-      const top = moveY;
       const result = constraint.apply({
-        left,
-        top,
-        right: left + width,
-        bottom: top + height,
+        left: elementLeft,
+        top: elementTop,
+        right: elementLeft + width,
+        bottom: elementTop + height,
         width,
         height,
-
         visibleArea,
       });
       if (!result) {
         continue;
       }
-      const [constrainedX, constrainedY] = result;
-      if (direction.x && constrainedX !== moveX) {
-        logConstraintEnforcement("x", constrainedX, constraint);
-        moveX = constrainedX;
+      const [leftConstrained, topConstrained] = result;
+      if (direction.x && leftConstrained !== elementLeft) {
+        elementLeft = leftConstrained;
+        moveX = moveConverter.fromElementLeft(leftConstrained);
+        logConstraintEnforcement("x", constraint);
       }
-      if (direction.y && constrainedY !== moveY) {
-        logConstraintEnforcement("y", constrainedY, constraint);
-        moveY = constrainedY;
+      if (direction.y && topConstrained !== moveY) {
+        elementTop = topConstrained;
+        moveY = moveConverter.fromElementTop(topConstrained);
+        logConstraintEnforcement("y", constraint);
       }
     }
     // Log when no constraints were applied (movement unchanged)
