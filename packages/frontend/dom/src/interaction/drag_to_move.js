@@ -233,10 +233,7 @@ export const createDragToMoveGestureController = ({
 const createElementPositioner = (element, { scrollContainer }) => {
   const positionedParent = element.offsetParent;
   const positionedParentRect = positionedParent.getBoundingClientRect();
-
-  // Get current element position in layout coordinates (relative to positioned parent)
-  const layoutLeft = parseFloat(element.style.left) || 0;
-  const layoutTop = parseFloat(element.style.top) || 0;
+  const elementRect = element.getBoundingClientRect();
 
   // Most common case: positioned parent is inside the scroll container
   if (scrollContainer.contains(positionedParent)) {
@@ -250,9 +247,18 @@ const createElementPositioner = (element, { scrollContainer }) => {
     const offsetX = positionedParentViewportLeft - scrollContainerViewportLeft;
     const offsetY = positionedParentViewportTop - scrollContainerViewportTop;
 
-    // Calculate current element position in scroll container coordinates
-    const scrollRelativeLeft = layoutLeft + offsetX;
-    const scrollRelativeTop = layoutTop + offsetY;
+    // Get current element position using getBoundingClientRect (actual rendered position)
+    const elementViewportLeft = elementRect.left;
+    const elementViewportTop = elementRect.top;
+
+    // Calculate current element position relative to positioned parent (layout coordinates)
+    const layoutLeft = elementViewportLeft - positionedParentViewportLeft;
+    const layoutTop = elementViewportTop - positionedParentViewportTop;
+
+    // Calculate current element position relative to scroll container
+    const scrollRelativeLeft =
+      elementViewportLeft - scrollContainerViewportLeft;
+    const scrollRelativeTop = elementViewportTop - scrollContainerViewportTop;
 
     const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
       // Convert from positioned parent coordinates to scroll container coordinates
@@ -273,6 +279,13 @@ const createElementPositioner = (element, { scrollContainer }) => {
       // Convert from scroll container coordinates to positioned parent coordinates
       return topRelativeToScrollContainer - offsetY;
     };
+
+    console.log({
+      layoutLeft,
+      scrollRelativeLeft,
+      layoutTop,
+      scrollRelativeTop,
+    });
 
     return {
       layoutLeft,
