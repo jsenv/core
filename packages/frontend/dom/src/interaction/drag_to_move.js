@@ -79,8 +79,15 @@ export const createDragToMoveGestureController = ({
     {
       const positioner = createElementPositioner(element, { scrollContainer });
       // Get current element positions from the positioner
-      elementLeftWithoutScrollAtGrab = positioner.scrollRelativeLeft;
-      elementTopWithoutScrollAtGrab = positioner.scrollRelativeTop;
+      elementLeftWithoutScrollAtGrab = positioner.leftRelativeToScrollContainer;
+      elementTopWithoutScrollAtGrab = positioner.topRelativeToScrollContainer;
+
+      console.log({
+        positioner,
+        leftRelativeToPositionedParent:
+          positioner.leftRelativeToPositionedParent,
+        leftRelativeToScrollContainer: positioner.leftRelativeToScrollContainer,
+      });
 
       const toLayoutLeft = (leftRelativeToScrollContainer) => {
         return positioner.toLayoutLeft(leftRelativeToScrollContainer);
@@ -281,48 +288,87 @@ const createElementPositioner = (element, { scrollContainer }) => {
     const scrollContainerViewportLeft = scrollContainerRect.left;
     const scrollContainerViewportTop = scrollContainerRect.top;
 
-    // Calculate static offset between positioned parent and scroll container
-    const offsetX = positionedParentViewportLeft - scrollContainerViewportLeft;
-    const offsetY = positionedParentViewportTop - scrollContainerViewportTop;
-
     // Get current element position using getBoundingClientRect (actual rendered position)
     const elementViewportLeft = elementRect.left;
     const elementViewportTop = elementRect.top;
 
+    // When scroll container is not document, we need to account for its scroll
+    // to get the true static offset between positioned parent and scroll container
+    let staticOffsetX;
+    let staticOffsetY;
+    if (scrollContainer === document.documentElement) {
+      // Document case: getBoundingClientRect is not affected by document scroll
+      staticOffsetX =
+        positionedParentViewportLeft - scrollContainerViewportLeft;
+      staticOffsetY = positionedParentViewportTop - scrollContainerViewportTop;
+    } else {
+      // Custom scroll container case: getBoundingClientRect is affected by container scroll
+      // Add scroll position to get static offset (position as if scroll was 0)
+      staticOffsetX =
+        positionedParentViewportLeft +
+        scrollContainer.scrollLeft -
+        (scrollContainerViewportLeft + scrollContainer.scrollLeft);
+      staticOffsetY =
+        positionedParentViewportTop +
+        scrollContainer.scrollTop -
+        (scrollContainerViewportTop + scrollContainer.scrollTop);
+    }
+
     // Calculate current element position relative to positioned parent (layout coordinates)
-    const layoutLeft = elementViewportLeft - positionedParentViewportLeft;
-    const layoutTop = elementViewportTop - positionedParentViewportTop;
+    const leftRelativeToPositionedParent =
+      elementViewportLeft - positionedParentViewportLeft;
+    const topRelativeToPositionedParent =
+      elementViewportTop - positionedParentViewportTop;
 
     // Calculate current element position relative to scroll container
-    const scrollRelativeLeft =
+    const leftRelativeToScrollContainer =
       elementViewportLeft - scrollContainerViewportLeft;
-    const scrollRelativeTop = elementViewportTop - scrollContainerViewportTop;
+    const topRelativeToScrollContainer =
+      elementViewportTop - scrollContainerViewportTop;
+
+    // Calculate offset between positioned parent and scroll container (this is what we need for conversions)
+    const positionedParentLeftOffsetWithScrollContainer = staticOffsetX;
+    const positionedParentTopOffsetWithScrollContainer = staticOffsetY;
 
     const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
       // Convert from positioned parent coordinates to scroll container coordinates
-      return leftRelativeToPositionedParent + offsetX;
+      return (
+        leftRelativeToPositionedParent +
+        positionedParentLeftOffsetWithScrollContainer
+      );
     };
 
     const toScrollRelativeTop = (topRelativeToPositionedParent) => {
       // Convert from positioned parent coordinates to scroll container coordinates
-      return topRelativeToPositionedParent + offsetY;
+      return (
+        topRelativeToPositionedParent +
+        positionedParentTopOffsetWithScrollContainer
+      );
     };
 
     const toLayoutLeft = (leftRelativeToScrollContainer) => {
       // Convert from scroll container coordinates to positioned parent coordinates
-      return leftRelativeToScrollContainer - offsetX;
+      return (
+        leftRelativeToScrollContainer -
+        positionedParentLeftOffsetWithScrollContainer
+      );
     };
 
     const toLayoutTop = (topRelativeToScrollContainer) => {
       // Convert from scroll container coordinates to positioned parent coordinates
-      return topRelativeToScrollContainer - offsetY;
+      return (
+        topRelativeToScrollContainer -
+        positionedParentTopOffsetWithScrollContainer
+      );
     };
 
     return {
-      layoutLeft,
-      layoutTop,
-      scrollRelativeLeft,
-      scrollRelativeTop,
+      leftRelativeToPositionedParent,
+      topRelativeToPositionedParent,
+      leftRelativeToScrollContainer,
+      topRelativeToScrollContainer,
+      positionedParentLeftOffsetWithScrollContainer,
+      positionedParentTopOffsetWithScrollContainer,
       toScrollRelativeLeft,
       toScrollRelativeTop,
       toLayoutLeft,
