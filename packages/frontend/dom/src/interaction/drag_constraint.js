@@ -134,8 +134,11 @@ export const initDragConstraints = (
       });
     }
 
-    let moveXConstrained = moveXRequested;
-    let moveYConstrained = moveYRequested;
+    const elementLeftRequested = moveConverter.toElementLeft(moveXRequested);
+    const elementTopRequested = moveConverter.toElementTop(moveYRequested);
+    let elementLeft = elementLeftRequested;
+    let elementTop = elementTopRequested;
+
     const logConstraintEnforcement = (axis, constraint) => {
       if (!CONSOLE_DEBUG_BOUNDS && constraint.type === "bounds") {
         return;
@@ -143,59 +146,67 @@ export const initDragConstraints = (
       if (!CONSOLE_DEBUG_OBSTACLES && constraint.type === "obstacle") {
         return;
       }
-      const moveRequested = axis === "x" ? moveXRequested : moveYRequested;
-      const moveConstrained =
-        axis === "x" ? moveXConstrained : moveYConstrained;
-      const action = moveConstrained > moveRequested ? "increased" : "capped";
+      const requested =
+        axis === "x" ? elementLeftRequested : elementTopRequested;
+      const constrained = axis === "x" ? elementLeft : elementTop;
+      const action = constrained > requested ? "increased" : "capped";
       console.debug(
-        `Drag by ${dragEvent.type}: ${axis} ${action} from ${moveRequested.toFixed(2)} to ${moveConstrained.toFixed(2)} by ${constraint.type}:${constraint.name}`,
+        `Drag by ${dragEvent.type}: ${axis} ${action} from ${requested.toFixed(2)} to ${constrained.toFixed(2)} by ${constraint.type}:${constraint.name}`,
         constraint.element,
       );
     };
 
-    const elementLeftRequested = moveConverter.toElementLeft(moveXRequested);
-    const elementTopRequested = moveConverter.toElementTop(moveYRequested);
-    let elementLeftToTry = elementLeftRequested;
-    let elementTopToTry = elementTopRequested;
+    const elementCurrentLeft = moveConverter.toElementLeft(
+      dragGesture.gestureInfo.moveX,
+    );
+    const elementCurrentTop = moveConverter.toElementTop(
+      dragGesture.gestureInfo.moveY,
+    );
+    // Apply each constraint in sequence, accumulating their effects
+    // This allows multiple constraints to work together (e.g., bounds + obstacles)
     for (const constraint of constraints) {
       const result = constraint.apply({
-        left: elementLeftToTry,
-        top: elementTopToTry,
-        right: elementLeftToTry + elementWidth,
-        bottom: elementTopToTry + elementHeight,
+        left: elementLeft,
+        top: elementTop,
+        right: elementLeft + elementWidth,
+        bottom: elementTop + elementHeight,
         width: elementWidth,
         height: elementHeight,
         visibleArea,
-        currentLeft: moveConverter.toElementLeft(dragGesture.gestureInfo.moveX),
-        currentTop: moveConverter.toElementTop(dragGesture.gestureInfo.moveY),
+        currentLeft: elementCurrentLeft,
+        currentTop: elementCurrentTop,
       });
       if (!result) {
         continue;
       }
       const [elementLeftConstrained, elementTopConstrained] = result;
-      if (direction.x && elementLeftConstrained !== elementLeftToTry) {
-        moveXConstrained = moveConverter.fromElementLeft(
-          elementLeftConstrained,
-        );
+      if (direction.x && elementLeftConstrained !== elementLeft) {
+        elementLeft = elementLeftConstrained;
         logConstraintEnforcement("x", constraint);
-        elementLeftToTry = elementLeftConstrained;
       }
-      if (direction.y && elementTopConstrained !== elementTopToTry) {
-        moveYConstrained = moveConverter.fromElementTop(elementTopConstrained);
+      if (direction.y && elementTopConstrained !== elementTop) {
+        elementTop = elementTopConstrained;
         logConstraintEnforcement("y", constraint);
-        elementTopToTry = elementTopConstrained;
       }
     }
-    // Log when no constraints were applied (movement unchanged)
-    if (
-      (CONSOLE_DEBUG_BOUNDS || CONSOLE_DEBUG_OBSTACLES) &&
-      moveXRequested === moveXConstrained &&
-      moveYRequested === moveYConstrained
-    ) {
-      console.debug(
-        `Drag by ${dragEvent.type}: no constraint enforcement needed (moveX=${moveXRequested.toFixed(2)}, moveY=${moveYRequested.toFixed(2)})`,
-      );
+
+    const leftModified = elementLeft !== elementLeftRequested;
+    const topModified = elementTop !== elementTopRequested;
+    if (!leftModified && !topModified) {
+      if (CONSOLE_DEBUG_BOUNDS || CONSOLE_DEBUG_OBSTACLES) {
+        console.debug(
+          `Drag by ${dragEvent.type}: no constraint enforcement needed (${elementLeftRequested.toFixed(2)}, ${elementTopRequested.toFixed(2)})`,
+        );
+      }
+      return [moveXRequested, moveYRequested];
     }
+
+    const moveXConstrained = leftModified
+      ? moveConverter.fromElementLeft(elementLeft)
+      : moveXRequested;
+    const moveYConstrained = topModified
+      ? moveConverter.fromElementTop(elementTop)
+      : moveYRequested;
     return [moveXConstrained, moveYConstrained];
   };
 
