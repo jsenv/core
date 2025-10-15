@@ -1,371 +1,82 @@
 /**
  * Drag Gesture System
  *
- * Provides constraint-based dragging functionality for DOM elements with support for:
- *
- * **Core Features:**
- * - Mouse and scroll-based dragging interactions
- * - Bounds constraints (keep elements within container boundaries)
- * - Obstacle constraints (prevent elements from overlapping with other elements)
- * - Visual feedback with constraint lines and debug markers
- *
- * **Interaction Types:**
- * - Mouse dragging: Traditional click-and-drag with mouse events
- * - Scroll dragging: Drag using scroll wheel while holding mouse button
- * - Programmatic: Direct position updates via API
- *
- * **Constraint System:**
- * - Bounds constraints: Define rectangular areas elements must stay within
- * - Obstacle constraints: Define rectangular areas elements cannot overlap
- * - Sticky frontiers: Trigger scrolling when encountered, allow movement beyond when scroll exhausted
- * - Floating point precision handling: Ensures reliable constraint detection
- * - Overlap resolution: Automatic collision detection and resolution
- *
- * **Technical Details:**
- * - Uses floating point rounding to prevent precision issues in boundary detection
- * - Scroll events are more susceptible to floating point errors than mouse events
- * - Supports both relative and absolute positioning contexts
- * - Integrates with scrollable containers for viewport-aware constraints
- *
- * **Debug Features:**
- * - Visual markers show bounds, obstacles, and constraint feedback lines
- * - Optional marker persistence after drag ends for debugging constraint systems
- * - Enable/disable debug markers globally via DRAG_DEBUG_VISUAL_MARKERS
- *
- * **Usage:**
- * Call `createDragGesture(options)` to create a drag gesture system.
- * Configure constraints, interaction callbacks, visual feedback, and debug options.
- *
- * **Sticky Frontiers:**
- * Elements with one of
- * `[data-drag-sticky-frontier-left="dragName"]`,
- * `[data-drag-sticky-frontier-right="dragName"]`,
- * `[data-drag-sticky-frontier-top="dragName"]`,
- * `[data-drag-sticky-frontier-bottom="dragName"]`
- * create directional scroll barriers. When dragging encounters these barriers on their specified side,
- * scrolling is triggered first. Once scroll is exhausted, dragging can continue beyond the frontier.
- * This allows smooth scrolling behavior while maintaining drag flexibility.
- *
- * **Important:** Each sticky frontier element should have only ONE side attribute. Elements with
- * multiple side attributes will log a warning and only use the first detected side.
- *
- * **Examples:**
- * ```html
- * <!-- Sticky column header (blocks vertical movement from top) -->
- * <div
- *   data-drag-sticky-frontier-bottom="table-content"
- * >
- *   Header
- * </div>
- *
- * <!-- Sticky left sidebar (blocks horizontal movement from left) -->
- * <div
- *   data-drag-sticky-frontier-right="main-content"
- * >
- *   Sidebar
- * </div>
- * ```
  */
 
-import {
-  addScrollToRect,
-  convertScrollRelativeRectToElementRect,
-  getMouseEventScrollRelativeRect,
-  getScrollRelativeRect,
-  getScrollRelativeVisibleRect,
-} from "../position/dom_coords.js";
 import { createPubSub } from "../pub_sub.js";
-import {
-  getAncestorScrolls,
-  getScrollContainer,
-} from "../scroll/scroll_container.js";
-import { setStyles } from "../style_and_attributes.js";
-import {
-  applyConstraints,
-  createBoundConstraint,
-  prepareConstraints,
-} from "./constraint.js";
-import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
-import { setupVisualMarkers } from "./debug_markers.js";
-import { createObstacleConstraintsFromQuerySelector } from "./drag_obstacles.js";
-import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
-
-const BASIC_MODE_OPTIONS = {
-  backdrop: false,
-  stickyFrontiers: false,
-  areaConstraint: "visible",
-  obstacleAttributeName: null,
-  showConstraintFeedbackLine: false,
-  dragViaScroll: false,
-};
-// This flag can be used to reduce number of features to the bare minimum to help debugging
-const KEEP_IT_STUPID_SIMPLE = false;
-
-const getScrollContainerVisibleRect = (scrollContainer) => {
-  return addScrollToRect(getScrollRelativeVisibleRect(scrollContainer));
-};
-
-export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
-  let _resolve;
-  let resolved = false;
-  const promise = new Promise((resolve) => {
-    _resolve = resolve;
-  });
-  const dragGestureController = createDragGestureController({
-    threshold,
-    isThresholdOnly: true,
-    onDragStart: (gestureInfo) => {
-      resolved = true;
-      _resolve(gestureInfo);
-      dragGesture.release(); // kill that gesture
-    },
-    onRelease: (gestureInfo) => {
-      if (!resolved) {
-        _resolve(gestureInfo);
-      }
-    },
-  });
-  const dragGesture = dragGestureController.grabViaMouse(mousedownEvent, {
-    element: mousedownEvent.target,
-  });
-  return promise;
-};
 
 export const createDragGestureController = (options = {}) => {
-  if (KEEP_IT_STUPID_SIMPLE) {
-    Object.assign(options, BASIC_MODE_OPTIONS);
-  }
-  let {
-    name,
+  const {
     onGrab,
     onDragStart,
     onDrag,
     onRelease,
-    isThresholdOnly,
-    gestureAttribute,
     threshold = 5,
     direction: defaultDirection = { x: true, y: true },
-    backdrop = !isThresholdOnly,
+    backdrop = true,
     backdropZIndex = 1,
-
-    stickyFrontiers = true,
-    areaConstraint = "scroll",
-    customAreaConstraint,
-    obstacleAttributeName = "data-drag-obstacle",
-    dragViaScroll = true,
-    // Padding to reduce the visible area constraint by this amount (applied after sticky frontiers)
-    // This creates an invisible margin around the visible area where elements cannot be dragged
-    visibleAreaPadding = 0,
-
-    // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
-    // This provides intuitive feedback during drag operations when the element cannot reach the mouse
-    // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
-    // initially grabbed the element, but moves with the element to show the current anchor position.
-    // It becomes visible when there's a significant distance between mouse and grab point.
-    showConstraintFeedbackLine = true,
     lifecycle,
   } = options;
 
-  const grab = (
-    element,
-    {
-      event = new CustomEvent("programmatic"),
-      grabX = 0,
-      grabY = 0,
-      elementToImpact = element,
-      elementVisuallyImpacted = elementToImpact,
-      direction = defaultDirection,
-      cursor = "grabbing",
-    } = {},
-  ) => {
+  const grab = ({
+    direction = defaultDirection,
+    event = new CustomEvent("programmatic"),
+    grabX = 0,
+    grabY = 0,
+    cursor = "grabbing",
+    scrollContainer = document.documentElement,
+    ...rest
+  } = {}) => {
     if (!direction.x && !direction.y) {
       return null;
     }
 
-    const [teardown, addTeardown] = createPubSub();
-
-    // Convert all element coordinates to document-relative coordinates
-    const {
-      left: elementToImpactLeftScrollRelative,
-      top: elementToImpactTopScrollRelative,
-    } = getScrollRelativeRect(elementToImpact);
-    const grabScrollRelativeRect = getScrollRelativeRect(
-      elementVisuallyImpacted,
-    );
-    const {
-      left: grabLeft,
-      top: grabTop,
-      width,
-      height,
-      scrollContainer,
-      scrollContainerIsDocument,
-      fromFixed,
-      fromStickyLeft,
-      fromStickyTop,
-      fromStickyLeftAttr,
-      fromStickyTopAttr,
-      isStickyLeftOrHasStickyLeftAttr,
-      isStickyTopOrHasStickyTopAttr,
-    } = grabScrollRelativeRect;
-
-    // Calculate offset to translate visual movement to elementToImpact movement
-    // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
-    // All constraint calculations use visual coordinates (xMove, yMove)
-    let visualOffsetX = grabLeft - elementToImpactLeftScrollRelative;
-    let visualOffsetY = grabTop - elementToImpactTopScrollRelative;
-    // const [layoutOffsetX, layoutOffsetY] = getScrollContainerOffset(element);
-
-    const positionedParent = element.offsetParent;
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    let positionedParentLeftStatic = positionedParentRect.left;
-    let positionedParentTopStatic = positionedParentRect.top;
-    let scrollContainerLeftStatic = scrollContainerRect.left;
-    let scrollContainerTopStatic = scrollContainerRect.top;
-    const positionedParentScrolls = getAncestorScrolls(positionedParent, true);
-    const scrollContainerScrolls = getAncestorScrolls(scrollContainer, true);
-    const positionedScrollX = positionedParentScrolls.scrollX;
-    const scrollContainerScrollX = scrollContainerScrolls.scrollX;
-    const positionedScrollY = positionedParentScrolls.scrollY;
-    const scrollContainerScrollY = scrollContainerScrolls.scrollY;
-    scrollContainerLeftStatic -= scrollContainerScrollX;
-    positionedParentLeftStatic -= positionedScrollX;
-    scrollContainerTopStatic -= scrollContainerScrollY;
-    positionedParentTopStatic -= positionedScrollY;
-    // Calculate static offset between positioned parent and scroll container
-    const layoutOffsetX =
-      positionedParentLeftStatic - scrollContainerLeftStatic;
-    const layoutOffsetY = positionedParentTopStatic - scrollContainerTopStatic;
-    console.log({
-      grabTop,
-      layoutOffsetX,
-      layoutOffsetY,
-      positionedScrollY,
-      scrollContainerScrollY,
-    });
-
-    if (isThresholdOnly) {
-    } else if (fromFixed) {
-      const stylesToSet = {
-        position: "absolute",
-        left: `${grabLeft}px`,
-        top: `${grabTop}px`,
-        transform: "none",
-      };
-      const restoreStyles = setStyles(element, stylesToSet);
-      addTeardown(() => {
-        const { left: leftFixed, top: topFixed } =
-          convertScrollRelativeRectToElementRect(
-            gestureInfo.scrollRelativeRect,
-            element,
-          );
-        restoreStyles();
-        setStyles(element, {
-          left: `${leftFixed}px`,
-          top: `${topFixed}px`,
-        });
-      });
-    } else if (fromStickyLeft || fromStickyTop) {
-      const isStickyLeft = Boolean(fromStickyLeft);
-      const isStickyTop = Boolean(fromStickyTop);
-      const stylesToSet = {
-        position: "relative",
-      };
-      if (isStickyLeft) {
-        stylesToSet.left = `${grabLeft}px`;
-      }
-      if (isStickyTop) {
-        stylesToSet.top = `${grabTop}px`;
-      }
-      const restoreStyles = setStyles(element, stylesToSet);
-      addTeardown(() => {
-        const { left: leftSticky, top: topSticky } =
-          convertScrollRelativeRectToElementRect(
-            gestureInfo.scrollRelativeRect,
-            element,
-          );
-        const stylesToSetOnTeardown = {};
-        restoreStyles();
-        if (isStickyLeft) {
-          stylesToSetOnTeardown.left = `${leftSticky}px`;
-        }
-        if (isStickyTop) {
-          stylesToSetOnTeardown.top = `${topSticky}px`;
-        }
-        setStyles(element, stylesToSetOnTeardown);
-      });
-    } else {
-      // Handle data-sticky attributes for visual offset adjustment
-      if (fromStickyLeftAttr) {
-        if (scrollContainerIsDocument) {
-          // For document scrolling with sticky elements, calculate the position as it would be at zero scroll
-          // The current 'left' is the scrollable coordinate, which includes scroll offset
-          // The position at zero scroll would be: left + scrollLeftAtStart
-          const positionAtZeroScroll = grabLeft + scrollContainer.scrollLeft;
-          visualOffsetX =
-            positionAtZeroScroll - elementToImpactLeftScrollRelative;
-        }
-      }
-      if (fromStickyTopAttr) {
-        if (scrollContainerIsDocument) {
-          const positionAtZeroScroll = grabTop + scrollContainer.scrollTop;
-          visualOffsetY =
-            positionAtZeroScroll - elementToImpactTopScrollRelative;
-        }
-      }
+    const [publishDrag, addDragCallback] = createPubSub();
+    const [publishRelease, addReleaseCallback] = createPubSub();
+    if (onDrag) {
+      addDragCallback(onDrag);
+    }
+    if (onRelease) {
+      addReleaseCallback(onRelease);
     }
 
-    const scrollRelativeRect = { ...grabScrollRelativeRect };
-
+    let lifecycleHooks;
     const gestureInfo = {
       direction,
-      element,
-      elementToImpact,
-      elementVisuallyImpacted,
-      visualOffsetX,
-      visualOffsetY,
-      layoutOffsetX,
-      layoutOffsetY,
-      elementVisuallyImpactedWidth: width,
-      elementVisuallyImpactedHeight: height,
+      scrollContainer,
+      grabScrollLeft: scrollContainer.scrollLeft, // scrollLeft of the scrollContainer at grab time
+      grabScrollTop: scrollContainer.scrollTop, // scrollTop of the scrollContainer at grab time
+      grabX, // x grab coordinate (excluding scroll of the scrollContainer)
+      grabY, // y grab coordinate (excluding scroll of the scrollContainer)
 
-      grabX, // x grab coordinate (scroll relative), default to 0
-      grabY, // y grab coordinate (scroll relative), default to 0
-      dragX: grabX, // coordinate of the last drag (scroll relative)
-      dragY: grabY, // coordinate of the last drag (scroll relative)
+      dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
+      dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
+      moveX: 0, // dragX + scrollLeft + x constraints
+      moveY: 0, // dragY + scrollTop + y constraints
 
-      grabScrollRelativeRect,
-      scrollRelativeRect,
-      xMove: 0, // dragX + scrollLeft + x constraints
-      yMove: 0, // dragY + scrollTop + y constraints
-      xChanged: false, // x changed since last gesture
-      yChanged: false, // y changed since last gesture
-
+      // metadata around the move
+      moveXChanged: false, // x changed since last gesture
+      moveYChanged: false, // y changed since last gesture
       isGoingUp: undefined,
       isGoingDown: undefined,
       isGoingLeft: undefined,
       isGoingRight: undefined,
-      // Track whether elements have entered visible area once
-      // Elements may start outside the visible area (mostly when sticky + sticky frontiers)
-      // In that case until they cross the visible sides
-      // they won't trigger auto-scroll and sticky obstacles can collide independently of the scroll
-      hasCrossedVisibleAreaLeftOnce: false,
-      hasCrossedVisibleAreaTopOnce: false,
 
       started: !threshold,
       status: "grabbed",
-      interactionType: event.type,
+
+      // metadata around interaction sources
       grabEvent: event,
       dragEvent: null,
       releaseEvent: null,
     };
     definePropertyAsReadOnly(gestureInfo, "direction");
-    definePropertyAsReadOnly(gestureInfo, "visualOffsetX");
-    definePropertyAsReadOnly(gestureInfo, "visualOffsetY");
-    definePropertyAsReadOnly(gestureInfo, "grabScrollRelativeRect");
+    definePropertyAsReadOnly(gestureInfo, "scrollContainer");
+    definePropertyAsReadOnly(gestureInfo, "grabScrollLeft");
+    definePropertyAsReadOnly(gestureInfo, "grabScrollTop");
     definePropertyAsReadOnly(gestureInfo, "grabX");
     definePropertyAsReadOnly(gestureInfo, "grabY");
-    let previousGestureInfo = null;
+    definePropertyAsReadOnly(gestureInfo, "grabEvent");
 
     // Set up backdrop
     if (backdrop) {
@@ -374,102 +85,13 @@ export const createDragGestureController = (options = {}) => {
       backdropElement.style.zIndex = backdropZIndex;
       backdropElement.style.cursor = cursor;
       document.body.appendChild(backdropElement);
-      addTeardown(() => {
+      addReleaseCallback(() => {
         backdropElement.remove();
       });
     }
 
-    let constraintFeedbackLine;
-    if (showConstraintFeedbackLine) {
-      constraintFeedbackLine = setupConstraintFeedbackLine({
-        scrollContainer,
-      });
-      addTeardown(() => {
-        constraintFeedbackLine.onRelease();
-      });
-    }
-
-    // Collect all constraint functions
-    const constraintFunctions = [];
-    if (areaConstraint === "visible") {
-      stickyFrontiers = false;
-    }
-
-    if (areaConstraint === "scroll") {
-      // Capture scroll container dimensions at drag start to ensure consistency
-      let left = 0;
-      let top = 0;
-      const scrollWidthAtStart = scrollContainer.scrollWidth;
-      const scrollHeightAtStart = scrollContainer.scrollHeight;
-      const scrollAreaConstraintFunction = () => {
-        const right = left + scrollWidthAtStart;
-        const bottom = top + scrollHeightAtStart;
-        return createBoundConstraint(
-          { left, top, right, bottom },
-          {
-            element: scrollContainer,
-            name: "scroll_area",
-          },
-        );
-      };
-      constraintFunctions.push(scrollAreaConstraintFunction);
-    } else if (areaConstraint === "visible") {
-      const visibleAreaConstraintFunction = () => {
-        const bounds = getScrollContainerVisibleRect(scrollContainer);
-        return createBoundConstraint(bounds, {
-          element: scrollContainer,
-          name: "visible_area_constraint",
-        });
-      };
-      constraintFunctions.push(visibleAreaConstraintFunction);
-    }
-
-    if (customAreaConstraint) {
-      const customAreaConstraintFunction = () => {
-        return createBoundConstraint(customAreaConstraint, {
-          element: scrollContainer,
-          name: "custom_area",
-        });
-      };
-      constraintFunctions.push(customAreaConstraintFunction);
-    }
-
-    if (obstacleAttributeName) {
-      const obstacleConstraintFunctions =
-        createObstacleConstraintsFromQuerySelector(scrollContainer, {
-          name,
-          obstacleAttributeName,
-          gestureInfo,
-          isDraggedElementSticky:
-            isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
-        });
-      constraintFunctions.push(...obstacleConstraintFunctions);
-    }
-
-    const visualMarkers = setupVisualMarkers({
-      direction,
-      element,
-      scrollContainer,
-    });
-    addTeardown(() => {
-      visualMarkers.onRelease();
-    });
-
-    // Set up dragging attribute
-    element.setAttribute("data-grabbed", "");
-    addTeardown(() => {
-      element.removeAttribute("data-grabbed");
-    });
-
-    if (gestureAttribute) {
-      element.setAttribute(gestureAttribute, "");
-      addTeardown(() => {
-        element.removeAttribute(gestureAttribute);
-      });
-    }
-
     // Set up scroll event handling to adjust drag position when scrolling occurs
-    if (dragViaScroll) {
+    drag_on_scroll: {
       let isHandlingScroll = false;
       const handleScroll = (scrollEvent) => {
         if (isHandlingScroll) {
@@ -482,7 +104,7 @@ export const createDragGestureController = (options = {}) => {
       scrollContainer.addEventListener("scroll", handleScroll, {
         passive: true,
       });
-      addTeardown(() => {
+      addReleaseCallback(() => {
         scrollContainer.removeEventListener("scroll", handleScroll, {
           passive: true,
         });
@@ -490,148 +112,54 @@ export const createDragGestureController = (options = {}) => {
     }
 
     const determineDragData = ({
-      xScrollRelative,
-      yScrollRelative,
+      dragX,
+      dragY,
       dragEvent,
       isRelease = false,
     }) => {
-      const interactionType = event.type;
-      // Get current element dimensions for dynamic constraint calculation
-      const currentRect = elementVisuallyImpacted.getBoundingClientRect();
-      const visibleAreaBase = getScrollContainerVisibleRect(scrollContainer);
-
-      let visibleArea;
-      if (stickyFrontiers) {
-        visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
-          scrollContainer,
-          direction,
-          dragName: name,
-        });
-      } else {
-        visibleArea = visibleAreaBase;
-      }
-      // Apply visible area padding (reduce the visible area by the padding amount)
-      if (visibleAreaPadding > 0) {
-        visibleArea = {
-          left: visibleArea.left + visibleAreaPadding,
-          top: visibleArea.top + visibleAreaPadding,
-          right: visibleArea.right - visibleAreaPadding,
-          bottom: visibleArea.bottom - visibleAreaPadding,
-        };
-      }
-
-      const constraints = prepareConstraints(constraintFunctions, {
-        name,
-        elementWidth: currentRect.width,
-        elementHeight: currentRect.height,
-        visibleArea,
-      });
-
-      const { grabX, grabY, grabScrollRelativeRect } = gestureInfo;
-
       // === ÉTAT INITIAL (au moment du grab) ===
-      const {
-        left: elementLeftAtGrab,
-        top: elementTopAtGrab,
-        scrollLeft: scrollLeftAtGrab,
-        scrollTop: scrollTopAtGrab,
-      } = grabScrollRelativeRect;
-      // Position de la souris au grab dans l'espace scroll-absolu
-      const grabXWithScroll = grabX + scrollLeftAtGrab;
-      const grabYWithScroll = grabY + scrollTopAtGrab;
-
+      const { grabX, grabY, grabScrollLeft, grabScrollTop } = gestureInfo;
+      const grabXWithScroll = grabX + grabScrollLeft;
+      const grabYWithScroll = grabY + grabScrollTop;
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
-      // Position de la souris actuelle dans l'espace scroll-absolu
-      const dragXWithScroll = xScrollRelative + scrollContainer.scrollLeft;
-      const dragYWithScroll = yScrollRelative + scrollContainer.scrollTop;
-
+      const dragXWithScroll = dragX + scrollContainer.scrollLeft;
+      const dragYWithScroll = dragY + scrollContainer.scrollTop;
       const moveXRequested = dragXWithScroll - grabXWithScroll;
       const moveYRequested = dragYWithScroll - grabYWithScroll;
-
-      const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
-      const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
-      const elementLeftWithScrollRequested =
-        elementLeftWithScrollAtGrab + moveXRequested;
-      const elementTopWithScrollRequested =
-        elementTopWithScrollAtGrab + moveYRequested;
-
       // === APPLIQUER LES CONTRAINTES ===
-      const [elementLeftWithScroll, elementTopWithScroll] = applyConstraints(
-        constraints,
-        elementLeftWithScrollRequested,
-        elementTopWithScrollRequested,
-        {
-          gestureInfo,
-          elementLeft:
-            gestureInfo.scrollRelativeRect.left +
-            gestureInfo.scrollRelativeRect.scrollLeft,
-          elementTop:
-            gestureInfo.scrollRelativeRect.top +
-            gestureInfo.scrollRelativeRect.scrollTop,
-          elementWidth: currentRect.width,
-          elementHeight: currentRect.height,
-          direction,
-          interactionType,
-        },
-      );
-
+      const [moveXConstrained, moveYConstrained] =
+        lifecycleHooks?.applyConstraints?.(moveXRequested, moveYRequested, {
+          dragEvent,
+          isRelease,
+        }) || [moveXRequested, moveYRequested];
       // === ÉTAT FINAL ===
-      // Mouvement final de l'élément (après contraintes)
-      const xMove = elementLeftWithScroll - elementLeftWithScrollAtGrab;
-      const yMove = elementTopWithScroll - elementTopWithScrollAtGrab;
-
+      const moveX = moveXConstrained;
+      const moveY = moveYConstrained;
       // Calcul de la direction basé sur le mouvement précédent
-      const previousXMove = gestureInfo.xMove;
-      const previousYMove = gestureInfo.yMove;
-      const isGoingLeft = xMove < previousXMove;
-      const isGoingRight = xMove > previousXMove;
-      const isGoingUp = yMove < previousYMove;
-      const isGoingDown = yMove > previousYMove;
-      const elementLeftRelative =
-        elementLeftWithScroll - scrollContainer.scrollLeft;
-      const elementTopRelative =
-        elementTopWithScroll - scrollContainer.scrollTop;
+      const currentMoveX = gestureInfo.moveX;
+      const currentMoveY = gestureInfo.moveY;
+      const isGoingLeft = moveX < currentMoveX;
+      const isGoingRight = moveX > currentMoveX;
+      const isGoingUp = moveY < currentMoveY;
+      const isGoingDown = moveY > currentMoveY;
+
       const dragData = {
-        dragX: xScrollRelative,
-        dragY: yScrollRelative,
-        xMove,
-        yMove,
-        xChanged: xMove !== gestureInfo.xMove,
-        yChanged: yMove !== gestureInfo.yMove,
-        scrollRelativeRect: {
-          ...gestureInfo.scrollRelativeRect,
-          left: elementLeftRelative,
-          top: elementTopRelative,
-          right: elementLeftRelative + currentRect.width,
-          bottom: elementTopRelative + currentRect.height,
-          scrollLeft: scrollContainer.scrollLeft,
-          scrollTop: scrollContainer.scrollTop,
-        },
+        dragX,
+        dragY,
+        moveX,
+        moveY,
+
+        moveXChanged: moveX !== currentMoveX,
+        moveYChanged: moveY !== currentMoveY,
         isGoingLeft,
         isGoingRight,
         isGoingUp,
         isGoingDown,
-        visibleArea,
-
-        elementVisuallyImpactedWidth: currentRect.width,
-        elementVisuallyImpactedHeight: currentRect.height,
 
         status: isRelease ? "released" : "dragging",
-        interactionType,
         dragEvent: isRelease ? gestureInfo.dragEvent : dragEvent,
         releaseEvent: isRelease ? dragEvent : null,
-
-        hasCrossedVisibleAreaLeftOnce:
-          elementLeftWithScroll >= visibleArea.left,
-        hasCrossedVisibleAreaTopOnce: elementTopWithScroll >= visibleArea.top,
       };
-
-      visualMarkers.onDrag({
-        constraints,
-        visibleArea,
-        elementWidth: currentRect.width,
-        elementHeight: currentRect.height,
-      });
 
       if (isRelease) {
         return dragData;
@@ -678,25 +206,16 @@ export const createDragGestureController = (options = {}) => {
         event,
         isRelease,
       });
-      previousGestureInfo = { ...gestureInfo };
+      const startedPrevious = gestureInfo.started;
+      // previousGestureInfo = { ...gestureInfo };
       Object.assign(gestureInfo, dragData);
-
+      if (!startedPrevious && gestureInfo.started) {
+        onDragStart?.(gestureInfo);
+      }
       const someChange = gestureInfo.xChanged || gestureInfo.yChanged;
       if (someChange) {
-        lifecycle?.drag?.(gestureInfo, {
-          scrollContainer,
-          direction,
-        });
-      }
-      constraintFeedbackLine?.onDrag(gestureInfo);
-
-      if (isRelease) {
-        onDrag?.(gestureInfo);
-      } else if (!previousGestureInfo.started) {
-        onDragStart?.(gestureInfo);
-        onDrag?.(gestureInfo);
-      } else {
-        onDrag?.(gestureInfo);
+        lifecycleHooks?.drag?.(gestureInfo);
+        publishDrag(gestureInfo);
       }
     };
 
@@ -706,22 +225,23 @@ export const createDragGestureController = (options = {}) => {
       releaseY = gestureInfo.dragY,
     } = {}) => {
       drag(releaseX, releaseY, { event, isRelease: true });
-      teardown();
-      onRelease?.(gestureInfo);
+      lifecycleHooks?.release?.(gestureInfo);
+      publishRelease(gestureInfo);
     };
 
     onGrab?.(gestureInfo);
-
     const dragGesture = {
+      gestureInfo,
+      addReleaseCallback,
+      addDragCallback,
       drag,
       release,
-      gestureInfo,
-      addTeardown,
     };
+    lifecycleHooks = lifecycle?.grab(dragGesture, rest);
     return dragGesture;
   };
 
-  const grabViaMouse = (mouseEvent, { element, ...options } = {}) => {
+  const grabViaMouse = (mouseEvent, options = {}) => {
     if (mouseEvent.type === "mousedown" && mouseEvent.button !== 0) {
       return null;
     }
@@ -729,52 +249,40 @@ export const createDragGestureController = (options = {}) => {
     if (!target.closest) {
       return null;
     }
-
-    // Get scroll container for proper coordinate conversion
-    const scrollContainer = getScrollContainer(element);
-
     const mouseEventCoords = (mouseEvent) => {
-      // Use scroll coordinates for consistency with drag system
-      const { left, top } = getMouseEventScrollRelativeRect(
-        mouseEvent,
-        scrollContainer,
-      );
-      return [left, top];
+      const { clientX, clientY } = mouseEvent;
+      return [clientX, clientY];
     };
 
-    const [mouseXScrollRelative, mouseYScrollRelative] =
-      mouseEventCoords(mouseEvent);
-    const dragGesture = grab(element, {
+    const [mouseGrabX, mouseGrabY] = mouseEventCoords(mouseEvent);
+    const dragGesture = grab({
+      grabX: mouseGrabX,
+      grabY: mouseGrabY,
       event: mouseEvent,
-      grabX: mouseXScrollRelative,
-      grabY: mouseYScrollRelative,
       ...options,
     });
 
     const dragViaMouse = (mousemoveEvent) => {
-      const [xScrollContainer, yScrollContainer] =
-        mouseEventCoords(mousemoveEvent);
-      dragGesture.drag(xScrollContainer, yScrollContainer, {
+      const [mouseDragX, mouseDragY] = mouseEventCoords(mousemoveEvent);
+      dragGesture.drag(mouseDragX, mouseDragY, {
         event: mousemoveEvent,
       });
     };
 
     const releaseViaMouse = (mouseupEvent) => {
-      const [mouseXScrollRelative, mouseYScrollRelative] =
-        mouseEventCoords(mouseupEvent);
+      const [mouseReleaseX, mouseReleaseY] = mouseEventCoords(mouseupEvent);
       dragGesture.release({
         event: mouseupEvent,
-        releaseX: mouseXScrollRelative,
-        releaseY: mouseYScrollRelative,
+        releaseX: mouseReleaseX,
+        releaseY: mouseReleaseY,
       });
     };
     document.addEventListener("mousemove", dragViaMouse);
     document.addEventListener("mouseup", releaseViaMouse);
-    dragGesture.addTeardown(() => {
+    dragGesture.addReleaseCallback(() => {
       document.removeEventListener("mousemove", dragViaMouse);
       document.removeEventListener("mouseup", releaseViaMouse);
     });
-
     dragGesture.dragViaMouse = dragViaMouse;
     dragGesture.releaseViaMouse = releaseViaMouse;
     return dragGesture;
@@ -786,144 +294,30 @@ export const createDragGestureController = (options = {}) => {
   };
 };
 
-export const createDragToMoveGestureController = (options) => {
-  const dragToMoveGestureController = createDragGestureController({
-    ...options,
-    lifecycle: {
-      drag: (gestureInfo, { direction, scrollContainer }) => {
-        const {
-          elementToImpact,
-          elementVisuallyImpacted,
-          elementVisuallyImpactedWidth,
-          elementVisuallyImpactedHeight,
-          visualOffsetX,
-          visualOffsetY,
-          layoutOffsetX,
-          layoutOffsetY,
-          grabScrollRelativeRect,
-
-          isGoingDown,
-          isGoingUp,
-          isGoingLeft,
-          isGoingRight,
-          visibleArea,
-          hasCrossedVisibleAreaLeftOnce,
-          hasCrossedVisibleAreaTopOnce,
-        } = gestureInfo;
-
-        const {
-          left: grabLeft,
-          top: grabTop,
-          scrollLeft: grabScrollLeft,
-          scrollTop: grabScrollTop,
-        } = grabScrollRelativeRect;
-        const desiredElementLeft =
-          grabLeft - layoutOffsetX + grabScrollLeft + gestureInfo.xMove;
-        const desiredElementRight =
-          desiredElementLeft + elementVisuallyImpactedWidth;
-        const desiredElementTop =
-          grabTop - layoutOffsetY + grabScrollTop + gestureInfo.yMove;
-        const desiredElementBottom =
-          desiredElementTop + elementVisuallyImpactedHeight;
-
-        console.log({
-          grabTop,
-          layoutOffsetY,
-          grabScrollTop,
-          yMove: gestureInfo.yMove,
-        });
-
-        // Helper function to handle auto-scroll and element positioning for an axis
-        const moveAndKeepIntoView = ({
-          axis,
-          isGoingPositive, // right/down
-          isGoingNegative, // left/up
-          desiredElementStart, // left/top edge of element
-          desiredElementEnd, // right/bottom edge of element
-          visibleAreaStart, // visible left/top boundary
-          visibleAreaEnd, // visible right/bottom boundary
-          currentScroll, // current scrollLeft or scrollTop value
-          canAutoScrollNegative, // whether auto-scroll is allowed for sticky elements when going negative
-        }) => {
-          const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
-          const styleProperty = axis === "x" ? "left" : "top";
-          const visualOffset = axis === "x" ? visualOffsetX : visualOffsetY;
-          //  const layoutOffset = axis === "x" ? layoutOffsetX : layoutOffsetY;
-
-          keep_into_view: {
-            if (isGoingPositive) {
-              if (desiredElementEnd > visibleAreaEnd) {
-                const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
-                const scroll = currentScroll + scrollAmountNeeded;
-                console.log(
-                  `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
-                );
-                scrollContainer[scrollProperty] = scroll;
-              }
-            } else if (isGoingNegative) {
-              if (
-                canAutoScrollNegative &&
-                desiredElementStart < visibleAreaStart
-              ) {
-                const scrollAmountNeeded =
-                  visibleAreaStart - desiredElementStart;
-                const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
-                console.log(
-                  `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
-                );
-                scrollContainer[scrollProperty] = scroll;
-              }
-            }
-          }
-          move: {
-            const elementPosition = desiredElementStart - visualOffset;
-            if (elementToImpact) {
-              elementToImpact.style[styleProperty] = `${elementPosition}px`;
-            }
-          }
-        };
-
-        // Horizontal auto-scroll
-        if (direction.x) {
-          // Determine if auto-scroll is allowed for sticky elements when going left
-          const canAutoScrollLeft =
-            !elementVisuallyImpacted.hasAttribute("data-sticky-left") ||
-            hasCrossedVisibleAreaLeftOnce;
-          moveAndKeepIntoView({
-            axis: "x",
-            isGoingPositive: isGoingRight,
-            isGoingNegative: isGoingLeft,
-            desiredElementStart: desiredElementLeft,
-            desiredElementEnd: desiredElementRight,
-            visibleAreaStart: visibleArea.left,
-            visibleAreaEnd: visibleArea.right,
-            canAutoScrollNegative: canAutoScrollLeft,
-            currentScroll: scrollContainer.scrollLeft,
-          });
-        }
-
-        // Vertical auto-scroll
-        if (direction.y) {
-          // Determine if auto-scroll is allowed for sticky elements when going up
-          const canAutoScrollUp =
-            !elementVisuallyImpacted.hasAttribute("data-sticky-top") ||
-            hasCrossedVisibleAreaTopOnce;
-          moveAndKeepIntoView({
-            axis: "y",
-            isGoingPositive: isGoingDown,
-            isGoingNegative: isGoingUp,
-            desiredElementStart: desiredElementTop,
-            desiredElementEnd: desiredElementBottom,
-            visibleAreaStart: visibleArea.top,
-            visibleAreaEnd: visibleArea.bottom,
-            canAutoScrollNegative: canAutoScrollUp,
-            currentScroll: scrollContainer.scrollTop,
-          });
-        }
-      },
+export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
+  let _resolve;
+  let resolved = false;
+  const promise = new Promise((resolve) => {
+    _resolve = resolve;
+  });
+  const dragGestureController = createDragGestureController({
+    threshold,
+    backdrop: false,
+    onDragStart: (gestureInfo) => {
+      resolved = true;
+      _resolve(gestureInfo);
+      dragGesture.release(); // kill that gesture
+    },
+    onRelease: (gestureInfo) => {
+      if (!resolved) {
+        _resolve(gestureInfo);
+      }
     },
   });
-  return dragToMoveGestureController;
+  const dragGesture = dragGestureController.grabViaMouse(mousedownEvent, {
+    element: mousedownEvent.target,
+  });
+  return promise;
 };
 
 const definePropertyAsReadOnly = (object, propertyName) => {
