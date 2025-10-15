@@ -307,12 +307,15 @@ const createElementPositioner = (element, { scrollContainer }) => {
       staticOffsetX =
         positionedParentViewportLeft +
         scrollContainer.scrollLeft -
-        (scrollContainerViewportLeft + scrollContainer.scrollLeft);
+        scrollContainerViewportLeft;
       staticOffsetY =
         positionedParentViewportTop +
         scrollContainer.scrollTop -
-        (scrollContainerViewportTop + scrollContainer.scrollTop);
+        scrollContainerViewportTop;
     }
+    // Calculate offset between positioned parent and scroll container (this is what we need for conversions)
+    const positionedParentLeftOffsetWithScrollContainer = staticOffsetX;
+    const positionedParentTopOffsetWithScrollContainer = staticOffsetY;
 
     // Calculate current element position relative to positioned parent (layout coordinates)
     const leftRelativeToPositionedParent =
@@ -325,10 +328,6 @@ const createElementPositioner = (element, { scrollContainer }) => {
       elementViewportLeft - scrollContainerViewportLeft;
     const topRelativeToScrollContainer =
       elementViewportTop - scrollContainerViewportTop;
-
-    // Calculate offset between positioned parent and scroll container (this is what we need for conversions)
-    const positionedParentLeftOffsetWithScrollContainer = staticOffsetX;
-    const positionedParentTopOffsetWithScrollContainer = staticOffsetY;
 
     const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
       // Convert from positioned parent coordinates to scroll container coordinates
