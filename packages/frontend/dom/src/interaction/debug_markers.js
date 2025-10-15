@@ -12,58 +12,12 @@ export const disableDebugMarkers = () => {
 // Useful for debugging constraint systems and understanding why elements behave certain ways
 // When enabled, markers persist until next drag gesture starts or page is refreshed
 const KEEP_MARKERS_ON_RELEASE = true;
+const MARKER_SIZE = 12;
 
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 
-// Ensure markers container exists and return it
-const getMarkersContainer = () => {
-  let container = document.getElementById("navi_debug_markers_container");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "navi_debug_markers_container";
-    container.className = "navi_debug_markers_container";
-    document.body.appendChild(container);
-  }
-  return container;
-};
-
-const MARKER_SIZE = 12;
-
-// Convert document-relative coordinates to viewport coordinates for marker positioning
-// Takes the scroll container into account for proper positioning relative to the container
-const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
-  const { documentElement } = document;
-
-  // Use convertScrollPosToElementPos to handle coordinate conversion properly
-  const { left: baseX, top: baseY } = convertScrollRelativeRectInto(
-    {
-      // at this stage our coords includes the scrolls
-      left: x - scrollContainer.scrollLeft,
-      top: y - scrollContainer.scrollTop,
-      scrollContainer,
-      scrollContainerIsDocument: scrollContainer === documentElement,
-      scrollLeft: scrollContainer.scrollLeft,
-      scrollTop: scrollContainer.scrollTop,
-    },
-    documentElement,
-  );
-
-  // Apply side-specific logic for extending markers across viewport
-  if (side === "left" || side === "right") {
-    // Vertical markers: x should stay fixed in viewport, y can extend
-    return [baseX, 0]; // y=0 to start from top of viewport
-  }
-  if (side === "top" || side === "bottom") {
-    // Horizontal markers: y should stay fixed in viewport, x can extend
-    return [0, baseY]; // x=0 to start from left of viewport
-  }
-
-  // For obstacles and other markers: use converted coordinates directly
-  return [baseX, baseY];
-};
-
-export const setupVisualMarkers = ({ direction, scrollContainer }) => {
+export const setupVisualMarkers = (dragGesture) => {
   if (!DRAG_DEBUG_MARKERS) {
     return {
       onDrag: () => {},
@@ -80,8 +34,10 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
     }
   }
 
+  const { direction, scrollContainer } = dragGesture.gestureInfo;
+
   return {
-    onDrag: ({ constraints, visibleArea }) => {
+    onConstraints: (constraints, { visibleArea }) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
@@ -224,6 +180,51 @@ export const setupVisualMarkers = ({ direction, scrollContainer }) => {
       currentConstraintMarkers = [];
     },
   };
+};
+
+// Ensure markers container exists and return it
+const getMarkersContainer = () => {
+  let container = document.getElementById("navi_debug_markers_container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "navi_debug_markers_container";
+    container.className = "navi_debug_markers_container";
+    document.body.appendChild(container);
+  }
+  return container;
+};
+
+// Convert document-relative coordinates to viewport coordinates for marker positioning
+// Takes the scroll container into account for proper positioning relative to the container
+const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
+  const { documentElement } = document;
+
+  // Use convertScrollPosToElementPos to handle coordinate conversion properly
+  const { left: baseX, top: baseY } = convertScrollRelativeRectInto(
+    {
+      // at this stage our coords includes the scrolls
+      left: x - scrollContainer.scrollLeft,
+      top: y - scrollContainer.scrollTop,
+      scrollContainer,
+      scrollContainerIsDocument: scrollContainer === documentElement,
+      scrollLeft: scrollContainer.scrollLeft,
+      scrollTop: scrollContainer.scrollTop,
+    },
+    documentElement,
+  );
+
+  // Apply side-specific logic for extending markers across viewport
+  if (side === "left" || side === "right") {
+    // Vertical markers: x should stay fixed in viewport, y can extend
+    return [baseX, 0]; // y=0 to start from top of viewport
+  }
+  if (side === "top" || side === "bottom") {
+    // Horizontal markers: y should stay fixed in viewport, x can extend
+    return [0, baseY]; // x=0 to start from left of viewport
+  }
+
+  // For obstacles and other markers: use converted coordinates directly
+  return [baseX, baseY];
 };
 
 const createMergedMarkers = (markersToCreate, scrollContainer) => {

@@ -18,6 +18,7 @@ export const initDragConstraints = (
     obstaclesContainer,
     obstacleAttributeName,
     showConstraintFeedbackLine,
+    showVisualMarkers,
   },
 ) => {
   const dragGestureName = dragGesture.gestureInfo.name;
@@ -29,7 +30,7 @@ export const initDragConstraints = (
   };
 
   if (showConstraintFeedbackLine) {
-    const constraintFeedbackLine = setupConstraintFeedbackLine();
+    const constraintFeedbackLine = setupConstraintFeedbackLine(dragGesture);
     dragGesture.addDragCallback((gestureInfo) => {
       constraintFeedbackLine.onDrag(gestureInfo);
     });
@@ -37,13 +38,13 @@ export const initDragConstraints = (
       constraintFeedbackLine.onRelease();
     });
   }
-  // visual markers (for debug)
-  const visualMarkers = setupVisualMarkers({
-    direction: dragGesture.gestureInfo.direction,
-  });
-  dragGesture.addReleaseCallback(() => {
-    visualMarkers.onRelease();
-  });
+  let visualMarkers;
+  if (showVisualMarkers) {
+    visualMarkers = setupVisualMarkers(dragGesture);
+    dragGesture.addReleaseCallback(() => {
+      visualMarkers.onRelease();
+    });
+  }
 
   area: {
     if (areaConstraint === "scroll") {
@@ -107,7 +108,7 @@ export const initDragConstraints = (
   const applyConstraints = (
     moveXRequested,
     moveYRequested,
-    { dragEvent, visibleArea, elementWidth, elementHeight, moveConverter },
+    { elementWidth, elementHeight, moveConverter, visibleArea, dragEvent },
   ) => {
     if (constraintFunctions.length === 0) {
       return [moveXRequested, moveYRequested];
@@ -124,13 +125,13 @@ export const initDragConstraints = (
     if (import.meta.dev) {
       validateConstraints(constraints, constraintInitParams);
     }
-
-    visualMarkers.onDrag({
-      constraints,
-      visibleArea,
-      elementWidth,
-      elementHeight,
-    });
+    if (visualMarkers) {
+      visualMarkers.onConstraints(constraints, {
+        elementWidth,
+        elementHeight,
+        visibleArea,
+      });
+    }
 
     let moveX = moveXRequested;
     let moveY = moveYRequested;
