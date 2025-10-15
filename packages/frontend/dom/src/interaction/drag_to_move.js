@@ -85,10 +85,16 @@ export const createDragToMoveGestureController = ({
 
     let moveConverter;
     {
-      const toElementLeft = (moveX) => elementLeftWithoutScrollAtGrab + moveX;
-      const toElementTop = (moveY) => elementTopWithoutScrollAtGrab + moveY;
-      const fromElementLeft = (left) => left - elementLeftWithoutScrollAtGrab;
-      const fromElementTop = (top) => top - elementTopWithoutScrollAtGrab;
+      const { grabScrollLeft, grabScrollTop } = dragGesture.gestureInfo;
+
+      const toElementLeft = (moveX) =>
+        elementLeftWithoutScrollAtGrab + moveX + grabScrollLeft;
+      const toElementTop = (moveY) =>
+        elementTopWithoutScrollAtGrab + moveY + grabScrollTop;
+      const fromElementLeft = (left) =>
+        left - elementLeftWithoutScrollAtGrab - grabScrollLeft;
+      const fromElementTop = (top) =>
+        top - elementTopWithoutScrollAtGrab - grabScrollTop;
       moveConverter = {
         toElementLeft,
         toElementTop,
@@ -149,27 +155,17 @@ export const createDragToMoveGestureController = ({
         moveX,
         moveY,
       } = gestureInfo;
-      const elementLeftRelativeToScrollContainer =
-        moveConverter.toElementLeft(moveX);
-      const elementTopRelativeToScrollContainer =
-        moveConverter.toElementTop(moveY);
-      const elementRightRelativeScrollContainer =
-        elementLeftRelativeToScrollContainer + elementWidth;
-      const elementBottomRelativeToScrollContainer =
-        elementTopRelativeToScrollContainer + elementHeight;
-      const elementLeft =
-        elementLeftRelativeToScrollContainer + scrollContainer.scrollLeft;
-      const elementTop =
-        elementTopRelativeToScrollContainer + scrollContainer.scrollTop;
+      const elementLeft = moveConverter.toElementLeft(moveX);
+      const elementTop = moveConverter.toElementTop(moveY);
+      const elementRight = elementLeft + elementWidth;
+      const elementBottom = elementTop + elementHeight;
       const elementLeftLayout = positioner.toLayoutLeft(elementLeft);
       const elementTopLayout = positioner.toLayoutTop(elementTop);
 
       hasCrossedVisibleAreaLeftOnce =
-        hasCrossedVisibleAreaLeftOnce ||
-        elementLeftRelativeToScrollContainer < visibleArea.left;
+        hasCrossedVisibleAreaLeftOnce || elementLeft < visibleArea.left;
       hasCrossedVisibleAreaTopOnce =
-        hasCrossedVisibleAreaTopOnce ||
-        elementTopRelativeToScrollContainer < visibleArea.top;
+        hasCrossedVisibleAreaTopOnce || elementTop < visibleArea.top;
 
       // Helper function to handle auto-scroll and element positioning for an axis
       const moveAndKeepIntoView = (axis) => {
@@ -183,10 +179,7 @@ export const createDragToMoveGestureController = ({
           const isGoingNegative = axis === "x" ? isGoingLeft : isGoingUp;
 
           if (isGoingPositive) {
-            const elementEnd =
-              axis === "x"
-                ? elementRightRelativeScrollContainer
-                : elementBottomRelativeToScrollContainer;
+            const elementEnd = axis === "x" ? elementRight : elementBottom;
             const visibleAreaEnd =
               axis === "x" ? visibleArea.right : visibleArea.bottom;
 
@@ -199,10 +192,7 @@ export const createDragToMoveGestureController = ({
               scrollContainer[scrollProperty] = scroll;
             }
           } else if (isGoingNegative) {
-            const elementStart =
-              axis === "x"
-                ? elementLeftRelativeToScrollContainer
-                : elementTopRelativeToScrollContainer;
+            const elementStart = axis === "x" ? elementLeft : elementTop;
             const visibleAreaStart =
               axis === "x" ? visibleArea.left : visibleArea.top;
             const canAutoScrollNegative =
