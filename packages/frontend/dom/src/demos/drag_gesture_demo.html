@@ -235,13 +235,6 @@
       </ul>
     </div>
 
-    <div class="debug-toggle">
-      <label>
-        <input type="checkbox" id="debugMarkersCheckbox" checked />
-        Show Debug Markers
-      </label>
-    </div>
-
     <!-- Case 1: Only Horizontal Scrollbar -->
     <div class="demo-section">
       <h2 class="demo-title">
@@ -741,28 +734,12 @@
       // Import the drag gesture functionality
       // Note: You'll need to adjust the import path based on your setup
       import { createDragToMoveGestureController } from "../interaction/drag_to_move.js";
-      import {
-        DRAG_DEBUG_MARKERS,
-        enableDebugMarkers,
-        disableDebugMarkers,
-      } from "../interaction/debug_markers.js";
 
       const horizontalRectangle = document.getElementById(
         "horizontalRectangle",
       );
       const bothRectangle = document.getElementById("bothRectangle");
       const obstacleRectangle = document.getElementById("obstacleRectangle");
-      const debugCheckbox = document.getElementById("debugMarkersCheckbox");
-
-      // Handle debug markers toggle
-      debugCheckbox.checked = DRAG_DEBUG_MARKERS;
-      debugCheckbox.addEventListener("change", (e) => {
-        if (e.target.checked) {
-          enableDebugMarkers();
-        } else {
-          disableDebugMarkers();
-        }
-      });
 
       // Programmatic controls for Case 1 (Horizontal)
       const case1Controls = {
