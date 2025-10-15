@@ -59,7 +59,7 @@ const findScrollContainer = (element, { includeHidden } = {}) => {
   return null;
 };
 
-export const getAncestorScrolls = (element, startOnParent) => {
+export const getSelfAndAncestorScrolls = (element, startOnParent) => {
   let scrollX = 0;
   let scrollY = 0;
   const ancestorScrolls = [];

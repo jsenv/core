@@ -24,42 +24,24 @@ import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 import { createDragGestureController } from "./drag_gesture.js";
 
 export const createDragToMoveGestureController = (options) => {
-  const grabToMove = (
-    dragGesture,
-    { element, elementToImpact, elementVisuallyImpacted },
-  ) => {
-    // Convert all element coordinates to document-relative coordinates
-    const {
-      left: elementToImpactLeftScrollRelative,
-      top: elementToImpactTopScrollRelative,
-    } = getScrollRelativeRect(elementToImpact);
-    const grabScrollRelativeRect = getScrollRelativeRect(
-      elementVisuallyImpacted,
-    );
-    const {
-      left: grabLeft,
-      top: grabTop,
-      width,
-      height,
-      scrollContainer,
-      scrollContainerIsDocument,
-      fromFixed,
-      fromStickyLeft,
-      fromStickyTop,
-      fromStickyLeftAttr,
-      fromStickyTopAttr,
-      isStickyLeftOrHasStickyLeftAttr,
-      isStickyTopOrHasStickyTopAttr,
-    } = grabScrollRelativeRect;
-
-    // Calculate offset to translate visual movement to elementToImpact movement
-    // This offset is applied only when setting elementToImpact position (xMoveToApply, yMoveToApply)
-    // All constraint calculations use visual coordinates (xMove, yMove)
-    let visualOffsetX = grabLeft - elementToImpactLeftScrollRelative;
-    let visualOffsetY = grabTop - elementToImpactTopScrollRelative;
-    // const [layoutOffsetX, layoutOffsetY] = getScrollContainerOffset(element);
-
+  const grabToMoveElement = (dragGesture, { element, elementToImpact }) => {
     const positionedParent = element.offsetParent;
+
+    const elementRect = element.getBoundingClientRect();
+
+    let elementLeftAtGrab;
+    let elementTopAtGrab;
+    let elementWidth = elementRect.width;
+    let elementHeight = elementRect.height;
+
+    // TODO: will be the diff between elementToImpact and elementVisuallyImpacted
+    let visualOffsetX = 0;
+    let visualOffsetY = 0;
+
+    // Will be used for dynamic constraints on sticky elements
+    let hasCrossedVisibleAreaLeftOnce = false;
+    let hasCrossedVisibleAreaTopOnce = false;
+
     const positionedParentRect = positionedParent.getBoundingClientRect();
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
     let positionedParentLeftStatic = positionedParentRect.left;
@@ -81,105 +63,11 @@ export const createDragToMoveGestureController = (options) => {
       positionedParentLeftStatic - scrollContainerLeftStatic;
     const layoutOffsetY = positionedParentTopStatic - scrollContainerTopStatic;
     console.log({
-      grabTop,
       layoutOffsetX,
       layoutOffsetY,
       positionedScrollY,
       scrollContainerScrollY,
     });
-
-    if (fromFixed) {
-      const stylesToSet = {
-        position: "absolute",
-        left: `${grabLeft}px`,
-        top: `${grabTop}px`,
-        transform: "none",
-      };
-      const restoreStyles = setStyles(element, stylesToSet);
-      addTeardown(() => {
-        const { left: leftFixed, top: topFixed } =
-          convertScrollRelativeRectToElementRect(
-            gestureInfo.scrollRelativeRect,
-            element,
-          );
-        restoreStyles();
-        setStyles(element, {
-          left: `${leftFixed}px`,
-          top: `${topFixed}px`,
-        });
-      });
-    } else if (fromStickyLeft || fromStickyTop) {
-      const isStickyLeft = Boolean(fromStickyLeft);
-      const isStickyTop = Boolean(fromStickyTop);
-      const stylesToSet = {
-        position: "relative",
-      };
-      if (isStickyLeft) {
-        stylesToSet.left = `${grabLeft}px`;
-      }
-      if (isStickyTop) {
-        stylesToSet.top = `${grabTop}px`;
-      }
-      const restoreStyles = setStyles(element, stylesToSet);
-      addTeardown(() => {
-        const { left: leftSticky, top: topSticky } =
-          convertScrollRelativeRectToElementRect(
-            gestureInfo.scrollRelativeRect,
-            element,
-          );
-        const stylesToSetOnTeardown = {};
-        restoreStyles();
-        if (isStickyLeft) {
-          stylesToSetOnTeardown.left = `${leftSticky}px`;
-        }
-        if (isStickyTop) {
-          stylesToSetOnTeardown.top = `${topSticky}px`;
-        }
-        setStyles(element, stylesToSetOnTeardown);
-      });
-    } else {
-      // Handle data-sticky attributes for visual offset adjustment
-      if (fromStickyLeftAttr) {
-        if (scrollContainerIsDocument) {
-          // For document scrolling with sticky elements, calculate the position as it would be at zero scroll
-          // The current 'left' is the scrollable coordinate, which includes scroll offset
-          // The position at zero scroll would be: left + scrollLeftAtStart
-          const positionAtZeroScroll = grabLeft + scrollContainer.scrollLeft;
-          visualOffsetX =
-            positionAtZeroScroll - elementToImpactLeftScrollRelative;
-        }
-      }
-      if (fromStickyTopAttr) {
-        if (scrollContainerIsDocument) {
-          const positionAtZeroScroll = grabTop + scrollContainer.scrollTop;
-          visualOffsetY =
-            positionAtZeroScroll - elementToImpactTopScrollRelative;
-        }
-      }
-    }
-
-    const scrollRelativeRect = { ...grabScrollRelativeRect };
-
-    const grabGestureInfo = {
-      element,
-      elementToImpact,
-      elementVisuallyImpacted,
-      visualOffsetX,
-      visualOffsetY,
-      layoutOffsetX,
-      layoutOffsetY,
-      elementVisuallyImpactedWidth: width,
-      elementVisuallyImpactedHeight: height,
-
-      grabScrollRelativeRect,
-      scrollRelativeRect,
-      // Track whether elements have entered visible area once
-      // Elements may start outside the visible area (mostly when sticky + sticky frontiers)
-      // In that case until they cross the visible sides
-      // they won't trigger auto-scroll and sticky obstacles can collide independently of the scroll
-      hasCrossedVisibleAreaLeftOnce: false,
-      hasCrossedVisibleAreaTopOnce: false,
-    };
 
     // Set up dragging attribute
     element.setAttribute("data-grabbed", "");
@@ -189,8 +77,6 @@ export const createDragToMoveGestureController = (options) => {
 
     const dragToMove = () => {
       const {
-        elementToImpact,
-        elementVisuallyImpacted,
         elementVisuallyImpactedWidth,
         elementVisuallyImpactedHeight,
         visualOffsetX,
@@ -324,7 +210,7 @@ export const createDragToMoveGestureController = (options) => {
   const dragToMoveGestureController = createDragGestureController({
     ...options,
     lifecycle: {
-      grab: grabToMove,
+      grab: grabToMoveElement,
     },
   });
   return dragToMoveGestureController;

@@ -1,7 +1,7 @@
 import {
   elementIsFocusable,
   findDescendant,
-  getAncestorScrolls,
+  getSelfAndAncestorScrolls,
   setAttributes,
   trapFocusInside,
   trapScrollInside,
@@ -37,7 +37,7 @@ const ModalOpened = ({
    */
   useLayoutEffect(() => {
     const modal = modalRef.current;
-    const { scrollX, scrollY } = getAncestorScrolls(modal);
+    const { scrollX, scrollY } = getSelfAndAncestorScrolls(modal);
     modal.style.left = `${scrollX}px`;
     modal.style.top = `${scrollY}px`;
     return trapScrollInside(modal);

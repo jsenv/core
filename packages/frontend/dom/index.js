@@ -35,9 +35,9 @@ export { canInterceptKeys } from "./src/keyboard.js";
 export { captureScrollState } from "./src/scroll/capture_scroll.js";
 export { isScrollable } from "./src/scroll/is_scrollable.js";
 export {
-  getAncestorScrolls,
   getScrollContainer,
   getScrollContainerSet,
+  getSelfAndAncestorScrolls,
 } from "./src/scroll/scroll_container.js";
 export { trapScrollInside } from "./src/scroll/scroll_trap.js";
 export {

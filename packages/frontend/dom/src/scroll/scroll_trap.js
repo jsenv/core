@@ -1,6 +1,6 @@
 import { getStyle, setStyles } from "../style_and_attributes.js";
 import { isScrollable } from "./is_scrollable.js";
-import { getAncestorScrolls } from "./scroll_container.js";
+import { getSelfAndAncestorScrolls } from "./scroll_container.js";
 import { measureScrollbar } from "./scrollbar_size.js";
 
 export const trapScrollInside = (element) => {
@@ -29,9 +29,9 @@ export const trapScrollInside = (element) => {
     previous = previous.previousSibling;
   }
 
-  const ancestorScrolls = getAncestorScrolls(element);
-  for (const ancestorScroll of ancestorScrolls) {
-    const elementToScrollLock = ancestorScroll.scrollContainer;
+  const selfAndAncestorScrolls = getSelfAndAncestorScrolls(element);
+  for (const selfOrAncestorScroll of selfAndAncestorScrolls) {
+    const elementToScrollLock = selfOrAncestorScroll.scrollContainer;
     lockScroll(elementToScrollLock);
   }
 
