@@ -217,7 +217,7 @@ export const createDragGestureController = (options = {}) => {
       const dragData = determineDragData({
         dragX,
         dragY,
-        event,
+        dragEvent: event,
         isRelease,
       });
       const startedPrevious = gestureInfo.started;

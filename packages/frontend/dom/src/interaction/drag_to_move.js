@@ -21,7 +21,7 @@ export const createDragToMoveGestureController = ({
   // initially grabbed the element, but moves with the element to show the current anchor position.
   // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = true,
-  showVisualMarkers = true,
+  showDebugMarkers = true,
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
@@ -140,7 +140,7 @@ export const createDragToMoveGestureController = ({
       obstaclesContainer: obstaclesContainer || scrollContainer,
       obstacleAttributeName,
       showConstraintFeedbackLine,
-      showVisualMarkers,
+      showDebugMarkers,
     });
     dragGesture.addBeforeDragCallback(
       (
@@ -153,8 +153,8 @@ export const createDragToMoveGestureController = ({
             elementWidth,
             elementHeight,
             moveConverter,
-            dragEvent,
             visibleArea,
+            dragEvent,
           });
         limitMoveX(moveXConstrained);
         limitMoveY(moveYConstrained);
@@ -192,6 +192,9 @@ export const createDragToMoveGestureController = ({
             const elementEnd = axis === "x" ? elementRight : elementBottom;
             const visibleAreaEnd =
               axis === "x" ? visibleArea.right : visibleArea.bottom;
+            if (axis === "x") {
+              console.log({ elementEnd, visibleAreaEnd });
+            }
 
             if (elementEnd > visibleAreaEnd) {
               const scrollAmountNeeded = elementEnd - visibleAreaEnd;

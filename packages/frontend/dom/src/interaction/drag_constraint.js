@@ -7,7 +7,7 @@ import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupDragDebugMarkers } from "./drag_debug_markers.js";
 import { getElementSelector } from "./element_log.js";
 
-const CONSOLE_DEBUG_CONSTRAINTS = false;
+const CONSOLE_DEBUG_CONSTRAINTS = true;
 
 export const initDragConstraints = (
   dragGesture,
