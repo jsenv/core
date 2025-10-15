@@ -201,13 +201,19 @@ export const initDragConstraints = (
       return [moveXRequested, moveYRequested];
     }
 
-    const moveXConstrained = leftModified
-      ? moveConverter.fromElementLeft(elementLeft)
-      : moveXRequested;
-    const moveYConstrained = topModified
-      ? moveConverter.fromElementTop(elementTop)
-      : moveYRequested;
-    return [moveXConstrained, moveYConstrained];
+    let moveX;
+    if (leftModified) {
+      moveX = moveConverter.fromElementLeft(elementLeft);
+    } else {
+      moveX = moveXRequested;
+    }
+    let moveY;
+    if (topModified) {
+      moveY = moveConverter.fromElementTop(elementTop);
+    } else {
+      moveY = moveYRequested;
+    }
+    return [moveX, moveY];
   };
 
   return { applyConstraints };
