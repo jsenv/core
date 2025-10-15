@@ -250,11 +250,8 @@
       >
         <div class="container" id="horizontalContainer">
           <div class="horizontal-content">
-            <div style="position: relative; left: 50px">
-              <!-- position: relative here to make things more complex and ensure it still work -->
-              <div class="draggable-rectangle" id="horizontalRectangle">
-                DRAG ME
-              </div>
+            <div class="draggable-rectangle" id="horizontalRectangle">
+              DRAG ME
             </div>
           </div>
         </div>
@@ -403,7 +400,10 @@
       >
         <div class="container" id="bothContainer">
           <div class="both-content">
-            <div class="draggable-rectangle" id="bothRectangle">DRAG ME</div>
+            <div style="position: relative; left: 50px">
+              <!-- position: relative here to make things more complex and ensure it still work -->
+              <div class="draggable-rectangle" id="bothRectangle">DRAG ME</div>
+            </div>
           </div>
         </div>
 
@@ -856,7 +856,7 @@
 
           // Get current gesture position and move left by 50px
           const currentGestureInfo = controls.dragInstance.gestureInfo;
-          const newX = currentGestureInfo.xMove - 50;
+          const newX = currentGestureInfo.moveX - 50;
 
           updateStatus(controls, `Dragging ${caseLabel} left by 50px`);
           controls.dragInstance.drag(newX, undefined);
@@ -868,7 +868,7 @@
 
           // Get current gesture position and move right by 50px
           const currentGestureInfo = controls.dragInstance.gestureInfo;
-          const newX = currentGestureInfo.xMove + 50;
+          const newX = currentGestureInfo.moveX + 50;
 
           updateStatus(controls, `Dragging ${caseLabel} right by 50px`);
           controls.dragInstance.drag(newX, undefined);
@@ -880,7 +880,7 @@
 
           // Get current gesture position and move up by 50px
           const currentGestureInfo = controls.dragInstance.gestureInfo;
-          const newY = currentGestureInfo.yMove - 50;
+          const newY = currentGestureInfo.moveY - 50;
 
           updateStatus(controls, `Dragging ${caseLabel} up by 50px`);
           controls.dragInstance.drag(undefined, newY);
@@ -892,7 +892,7 @@
 
           // Get current gesture position and move down by 50px
           const currentGestureInfo = controls.dragInstance.gestureInfo;
-          const newY = currentGestureInfo.yMove + 50;
+          const newY = currentGestureInfo.moveY + 50;
 
           updateStatus(controls, `Dragging ${caseLabel} down by 50px`);
           controls.dragInstance.drag(undefined, newY);
@@ -902,12 +902,8 @@
         controls.releaseBtn.addEventListener("click", () => {
           if (!controls.dragInstance) return;
 
-          const currentGestureInfo = controls.dragInstance.gestureInfo;
           updateStatus(controls, `Releasing ${caseLabel}`);
-          controls.dragInstance.release(
-            currentGestureInfo.x,
-            currentGestureInfo.y,
-          );
+          controls.dragInstance.release();
         });
 
         updateButtonStates(controls, false);
