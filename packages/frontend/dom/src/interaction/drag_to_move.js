@@ -371,6 +371,58 @@ const createElementPositioner = (element, { scrollContainer }) => {
     };
   }
 
+  if (scrollContainer === positionedParent) {
+    // Special case: the scroll container IS the positioned parent
+    // In this case, there's no offset between them (they are the same element)
+    const elementRect = element.getBoundingClientRect();
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+
+    // Element position relative to positioned parent (which is also the scroll container)
+    const leftRelativeToPositionedParent = elementRect.left - positionedParentRect.left;
+    const topRelativeToPositionedParent = elementRect.top - positionedParentRect.top;
+
+    // Element position relative to scroll container (same as relative to positioned parent)
+    const leftRelativeToScrollContainer = leftRelativeToPositionedParent;
+    const topRelativeToScrollContainer = topRelativeToPositionedParent;
+
+    // No offset between positioned parent and scroll container (they are the same)
+    const positionedParentLeftOffsetWithScrollContainer = 0;
+    const positionedParentTopOffsetWithScrollContainer = 0;
+
+    const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
+      // No conversion needed since they are the same coordinate system
+      return leftRelativeToPositionedParent;
+    };
+
+    const toScrollRelativeTop = (topRelativeToPositionedParent) => {
+      // No conversion needed since they are the same coordinate system
+      return topRelativeToPositionedParent;
+    };
+
+    const toLayoutLeft = (leftRelativeToScrollContainer) => {
+      // No conversion needed since they are the same coordinate system
+      return leftRelativeToScrollContainer;
+    };
+
+    const toLayoutTop = (topRelativeToScrollContainer) => {
+      // No conversion needed since they are the same coordinate system
+      return topRelativeToScrollContainer;
+    };
+
+    return {
+      leftRelativeToPositionedParent,
+      topRelativeToPositionedParent,
+      leftRelativeToScrollContainer,
+      topRelativeToScrollContainer,
+      positionedParentLeftOffsetWithScrollContainer,
+      positionedParentTopOffsetWithScrollContainer,
+      toScrollRelativeLeft,
+      toScrollRelativeTop,
+      toLayoutLeft,
+      toLayoutTop,
+    };
+  }
+
   // TODO: Handle other cases (positioned parent === scroll container, positioned parent is ancestor of scroll container)
   throw new Error(
     "Unsupported positioning configuration: positioned parent must be inside scroll container for now",
