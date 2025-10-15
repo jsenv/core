@@ -6,6 +6,7 @@ import {
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupVisualMarkers } from "./debug_markers.js";
 import { getElementSelector } from "./element_log.js";
+import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 const CONSOLE_DEBUG_CONSTRAINTS = false;
 
@@ -124,7 +125,34 @@ export const initDragConstraints = (
     }
   }
 
-  const applyConstraints = (dragXRequested, dragYRequested, { dragEvent }) => {
+  //   const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
+  //           const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
+  //           const elementLeftWithScrollRequested =
+  //             elementLeftWithScrollAtGrab + moveXRequested;
+  //           const elementTopWithScrollRequested =
+  //             elementTopWithScrollAtGrab + moveYRequested;
+
+  //             // when applying constraint
+  //              elementLeft:
+  //                   gestureInfo.scrollRelativeRect.left +
+  //                   gestureInfo.scrollRelativeRect.scrollLeft,
+  //                 elementTop:
+  //                   gestureInfo.scrollRelativeRect.top +
+  //                   gestureInfo.scrollRelativeRect.scrollTop,
+  //                 elementWidth: currentRect.width,
+  //                 elementHeight: currentRect.height,
+
+  //                     const elementLeftRelative =
+  //             elementLeftWithScroll - scrollContainer.scrollLeft;
+  //           const elementTopRelative =
+  //             elementTopWithScroll - scrollContainer.scrollTop;
+  //             elementVisuallyImpactedWidth: currentRect.width,
+  //             elementVisuallyImpactedHeight: currentRect.height,
+  //             hasCrossedVisibleAreaLeftOnce:
+  //               elementLeftWithScroll >= visibleArea.left,
+  //             hasCrossedVisibleAreaTopOnce: elementTopWithScroll >= visibleArea.top,
+
+  const applyConstraints = (moveXRequested, moveYRequested, { dragEvent }) => {
     let visibleArea;
     compute_visible_area: {
       const visibleAreaBase = getScrollContainerVisibleRect(scrollContainer);
@@ -164,8 +192,20 @@ export const initDragConstraints = (
 
     // apply_constraints
     if (constraints.length === 0) {
-      return [dragXRequested, dragYRequested];
+      return [moveXRequested, moveYRequested];
     }
+
+    const logConstraintEnforcement = (axis, constrainedValue, constraint) => {
+      if (!CONSOLE_DEBUG_CONSTRAINTS) {
+        return;
+      }
+      const originalValue = axis === "x" ? moveXRequested : moveYRequested;
+      const action = constrainedValue > originalValue ? "increased" : "capped";
+      console.debug(
+        `Drag by ${dragEvent.type}: ${axis} ${action} from ${originalValue.toFixed(2)} to ${constrainedValue.toFixed(2)} by ${constraint.name}`,
+        constraint.element,
+      );
+    };
 
     // Get current element dimensions for dynamic constraint calculation
     const { width, height } = elementVisuallyImpacted.getBoundingClientRect();
@@ -176,9 +216,11 @@ export const initDragConstraints = (
       height,
     });
 
-    let dragX = x;
-    let dragY = y;
+    let moveX = moveXRequested;
+    let moveY = moveYRequested;
     for (const constraint of constraints) {
+      const left = moveX;
+      const top = moveY;
       const result = constraint.apply({
         left,
         top,
@@ -193,41 +235,26 @@ export const initDragConstraints = (
         continue;
       }
       const [constrainedX, constrainedY] = result;
-      if (direction.x && constrainedX !== currentX) {
-        logConstraintEnforcement(
-          "x",
-          currentX,
-          constrainedX,
-          constraint,
-          interactionType,
-          gestureInfo,
-        );
-        currentX = constrainedX;
+      if (direction.x && constrainedX !== moveX) {
+        logConstraintEnforcement("x", constrainedX, constraint);
+        moveX = constrainedX;
       }
-      if (direction.y && constrainedY !== currentY) {
-        logConstraintEnforcement(
-          "y",
-          currentY,
-          constrainedY,
-          constraint,
-          interactionType,
-          gestureInfo,
-        );
-        currentY = constrainedY;
+      if (direction.y && constrainedY !== moveY) {
+        logConstraintEnforcement("y", constrainedY, constraint);
+        moveY = constrainedY;
       }
     }
     // Log when no constraints were applied (movement unchanged)
     if (
       CONSOLE_DEBUG_CONSTRAINTS &&
-      dragXRequested === dragX &&
-      dragYRequested === dragY
+      moveXRequested === moveX &&
+      moveYRequested === moveY
     ) {
       console.debug(
-        `Drag by ${dragEvent.type}: no constraint enforcement needed (dragX=${dragX.toFixed(2)}, dragY=${dragY.toFixed(2)})`,
-        gestureInfo,
+        `Drag by ${dragEvent.type}: no constraint enforcement needed (moveX=${moveX.toFixed(2)}, moveY=${moveY.toFixed(2)})`,
       );
     }
-    return [dragX, dragY];
+    return [moveX, moveY];
   };
 
   return { apply: applyConstraints };
@@ -516,25 +543,6 @@ const roundForConstraints = (value) => {
   return Math.round(value * 100) / 100;
 };
 
-const logConstraintEnforcement = (
-  axis,
-  originalValue,
-  constrainedValue,
-  constraint,
-  interactionType = "unknown",
-  gestureInfo,
-) => {
-  if (!CONSOLE_DEBUG_CONSTRAINTS) {
-    return;
-  }
-  const action = constrainedValue > originalValue ? "increased" : "capped";
-  console.debug(
-    `Drag by ${interactionType}: ${axis} ${action} from ${originalValue.toFixed(2)} to ${constrainedValue.toFixed(2)} by ${constraint.name}`,
-    constraint.element,
-    gestureInfo,
-  );
-};
-
 /**
  * Validates constraints for logical consistency and reports issues during development.
  * Helps catch configuration errors like inappropriate obstacle assignments.
@@ -648,30 +656,3 @@ const validateConstraints = (
     });
   });
 };
-
-//   const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
-//           const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
-//           const elementLeftWithScrollRequested =
-//             elementLeftWithScrollAtGrab + moveXRequested;
-//           const elementTopWithScrollRequested =
-//             elementTopWithScrollAtGrab + moveYRequested;
-
-//             // when applying constraint
-//              elementLeft:
-//                   gestureInfo.scrollRelativeRect.left +
-//                   gestureInfo.scrollRelativeRect.scrollLeft,
-//                 elementTop:
-//                   gestureInfo.scrollRelativeRect.top +
-//                   gestureInfo.scrollRelativeRect.scrollTop,
-//                 elementWidth: currentRect.width,
-//                 elementHeight: currentRect.height,
-
-//                     const elementLeftRelative =
-//             elementLeftWithScroll - scrollContainer.scrollLeft;
-//           const elementTopRelative =
-//             elementTopWithScroll - scrollContainer.scrollTop;
-//             elementVisuallyImpactedWidth: currentRect.width,
-//             elementVisuallyImpactedHeight: currentRect.height,
-//             hasCrossedVisibleAreaLeftOnce:
-//               elementLeftWithScroll >= visibleArea.left,
-//             hasCrossedVisibleAreaTopOnce: elementTopWithScroll >= visibleArea.top,
