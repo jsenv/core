@@ -309,11 +309,6 @@ const createBoundConstraint = (bounds, { name, element } = {}) => {
     if (bottomBound !== undefined && bottom > bottomBound) {
       topConstrained = bottomBound - height;
     }
-    if (CONSOLE_DEBUG_BOUNDS) {
-      console.log(
-        `${name || "bound"} constraint result: left=${left} -> ${leftConstrained}, top=${top} -> ${topConstrained}`,
-      );
-    }
     return [leftConstrained, topConstrained];
   };
 
