@@ -1,17 +1,319 @@
+import {
+  addScrollToRect,
+  getScrollRelativeRect,
+  getScrollRelativeVisibleRect,
+} from "../position/dom_coords.js";
+import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
+import { setupVisualMarkers } from "./debug_markers.js";
+import { getElementSelector } from "./element_log.js";
+
 const CONSOLE_DEBUG_CONSTRAINTS = false;
 
-export const createBoundConstraint = (bounds, { element, name } = {}) => {
+export const initDragConstraints = (
+  dragGesture,
+  {
+    element,
+    elementToImpact = element,
+    elementVisuallyImpacted = elementToImpact,
+
+    areaConstraintElement = dragGesture.gestureInfo.scrollContainer,
+    areaConstraint = "scroll",
+    customAreaConstraint,
+    obstaclesContainer = dragGesture.gestureInfo.scrollContainer,
+    obstacleAttributeName = "data-drag-obstacle",
+    stickyFrontiers = true,
+
+    // Padding to reduce the visible area constraint by this amount (applied after sticky frontiers)
+    // This creates an invisible margin around the visible area where elements cannot be dragged
+    visibleAreaPadding = 0,
+    // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
+    // This provides intuitive feedback during drag operations when the element cannot reach the mouse
+    // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
+    // initially grabbed the element, but moves with the element to show the current anchor position.
+    // It becomes visible when there's a significant distance between mouse and grab point.
+    showConstraintFeedbackLine = true,
+  },
+) => {
+  const dragGestureName = dragGesture.gestureInfo.name;
+  const direction = dragGesture.gestureInfo.direction;
+  const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+
+  const constraintFunctions = [];
+  const addConstraint = (constraint) => {
+    constraintFunctions.push(constraint);
+  };
+
+  if (showConstraintFeedbackLine) {
+    const constraintFeedbackLine = setupConstraintFeedbackLine();
+    dragGesture.addDragCallback((gestureInfo) => {
+      constraintFeedbackLine.onDrag(gestureInfo);
+    });
+    dragGesture.addReleaseCallback(() => {
+      constraintFeedbackLine.onRelease();
+    });
+  }
+  // visual markers (for debug)
+  const visualMarkers = setupVisualMarkers({
+    direction: dragGesture.gestureInfo.direction,
+    element,
+  });
+  dragGesture.addReleaseCallback(() => {
+    visualMarkers.onRelease();
+  });
+
+  area: {
+    if (areaConstraint === "visible") {
+      stickyFrontiers = false;
+    }
+    if (areaConstraint === "scroll") {
+      // Capture scroll container dimensions at drag start to ensure consistency
+      let left = 0;
+      let top = 0;
+      const scrollWidthAtStart = areaConstraintElement.scrollWidth;
+      const scrollHeightAtStart = areaConstraintElement.scrollHeight;
+      const scrollAreaConstraintFunction = () => {
+        const right = left + scrollWidthAtStart;
+        const bottom = top + scrollHeightAtStart;
+        return createBoundConstraint(
+          { left, top, right, bottom },
+          {
+            element: areaConstraintElement,
+            name: "scroll_area",
+          },
+        );
+      };
+      addConstraint(scrollAreaConstraintFunction);
+      break area;
+    }
+    if (areaConstraint === "visible") {
+      const visibleAreaConstraintFunction = () => {
+        const bounds = getScrollContainerVisibleRect(areaConstraintElement);
+        return createBoundConstraint(bounds, {
+          element: areaConstraintElement,
+          name: "visible_area",
+        });
+      };
+      addConstraint(visibleAreaConstraintFunction);
+      break area;
+    }
+  }
+  custom_area: {
+    if (customAreaConstraint) {
+      const customAreaConstraintFunction = () => {
+        return createBoundConstraint(customAreaConstraint, {
+          element: undefined,
+          name: "custom_area",
+        });
+      };
+      addConstraint(customAreaConstraintFunction);
+    }
+  }
+  obstacles: {
+    if (!obstacleAttributeName || !obstaclesContainer) {
+      break obstacles;
+    }
+    const obstacleConstraintFunctions =
+      createObstacleConstraintsFromQuerySelector(obstaclesContainer, {
+        obstacleAttributeName,
+        gestureInfo: dragGesture.gestureInfo,
+        isDraggedElementSticky: false,
+        // isStickyLeftOrHasStickyLeftAttr || isStickyTopOrHasStickyTopAttr,
+      });
+    for (const obstacleConstraintFunction of obstacleConstraintFunctions) {
+      addConstraint(obstacleConstraintFunction);
+    }
+  }
+
+  const applyConstraints = (dragXRequested, dragYRequested, { dragEvent }) => {
+    let visibleArea;
+    compute_visible_area: {
+      const visibleAreaBase = getScrollContainerVisibleRect(scrollContainer);
+
+      if (stickyFrontiers) {
+        visibleArea = applyStickyFrontiersToVisibleArea(visibleAreaBase, {
+          scrollContainer,
+          direction,
+          dragGestureName,
+        });
+      } else {
+        visibleArea = visibleAreaBase;
+      }
+      // Apply visible area padding (reduce the visible area by the padding amount)
+      if (visibleAreaPadding > 0) {
+        visibleArea = {
+          left: visibleArea.left + visibleAreaPadding,
+          top: visibleArea.top + visibleAreaPadding,
+          right: visibleArea.right - visibleAreaPadding,
+          bottom: visibleArea.bottom - visibleAreaPadding,
+        };
+      }
+    }
+
+    let constraints;
+    instantiate_constraints: {
+      const constraintInitParams = {
+        dragGestureName,
+        visibleArea,
+      };
+      constraints = constraintFunctions.map((fn) => fn(constraintInitParams));
+      // Development safeguards: detect impossible/illogical constraints
+      if (import.meta.dev) {
+        validateConstraints(constraints, constraintInitParams);
+      }
+    }
+
+    // apply_constraints
+    if (constraints.length === 0) {
+      return [dragXRequested, dragYRequested];
+    }
+
+    // Get current element dimensions for dynamic constraint calculation
+    const { width, height } = elementVisuallyImpacted.getBoundingClientRect();
+    visualMarkers.onDrag({
+      constraints,
+      visibleArea,
+      width,
+      height,
+    });
+
+    let dragX = x;
+    let dragY = y;
+    for (const constraint of constraints) {
+      const result = constraint.apply({
+        left,
+        top,
+        right: left + width,
+        bottom: top + height,
+        width,
+        height,
+
+        visibleArea,
+      });
+      if (!result) {
+        continue;
+      }
+      const [constrainedX, constrainedY] = result;
+      if (direction.x && constrainedX !== currentX) {
+        logConstraintEnforcement(
+          "x",
+          currentX,
+          constrainedX,
+          constraint,
+          interactionType,
+          gestureInfo,
+        );
+        currentX = constrainedX;
+      }
+      if (direction.y && constrainedY !== currentY) {
+        logConstraintEnforcement(
+          "y",
+          currentY,
+          constrainedY,
+          constraint,
+          interactionType,
+          gestureInfo,
+        );
+        currentY = constrainedY;
+      }
+    }
+    // Log when no constraints were applied (movement unchanged)
+    if (
+      CONSOLE_DEBUG_CONSTRAINTS &&
+      dragXRequested === dragX &&
+      dragYRequested === dragY
+    ) {
+      console.debug(
+        `Drag by ${dragEvent.type}: no constraint enforcement needed (dragX=${dragX.toFixed(2)}, dragY=${dragY.toFixed(2)})`,
+        gestureInfo,
+      );
+    }
+    return [dragX, dragY];
+  };
+
+  return { apply: applyConstraints };
+};
+
+const getScrollContainerVisibleRect = (scrollContainer) => {
+  return addScrollToRect(getScrollRelativeVisibleRect(scrollContainer));
+};
+
+const createObstacleConstraintsFromQuerySelector = (
+  scrollableElement,
+  { obstacleAttributeName, gestureInfo, isDraggedElementSticky = false },
+) => {
+  const dragGestureName = gestureInfo.name;
+  const obstacles = scrollableElement.querySelectorAll(
+    `[${obstacleAttributeName}]`,
+  );
+  const obstacleConstraintFunctions = [];
+  for (const obstacle of obstacles) {
+    if (obstacle.closest("[data-drag-ignore]")) {
+      continue;
+    }
+    if (dragGestureName) {
+      const obstacleAttributeValue = obstacle.getAttribute(
+        obstacleAttributeName,
+      );
+      if (obstacleAttributeValue) {
+        const obstacleNames = obstacleAttributeValue.split(",");
+        const found = obstacleNames.some(
+          (obstacleName) =>
+            obstacleName.trim().toLowerCase() === dragGestureName.toLowerCase(),
+        );
+        if (!found) {
+          continue;
+        }
+      }
+    }
+
+    obstacleConstraintFunctions.push(() => {
+      // Only apply the "before crossing visible area" logic when dragging sticky elements
+      // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
+      const useOriginalPositionEvenIfSticky = isDraggedElementSticky
+        ? !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
+          !gestureInfo.hasCrossedVisibleAreaTopOnce
+        : true;
+
+      const obstacleScrollRelativeRect = getScrollRelativeRect(
+        obstacle,
+        scrollableElement,
+        {
+          useOriginalPositionEvenIfSticky,
+        },
+      );
+      let obstacleBounds;
+      if (
+        useOriginalPositionEvenIfSticky &&
+        obstacleScrollRelativeRect.isSticky
+      ) {
+        obstacleBounds = obstacleScrollRelativeRect;
+      } else {
+        obstacleBounds = addScrollToRect(obstacleScrollRelativeRect);
+      }
+
+      // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
+      const obstacleObject = createObstacleContraint(obstacleBounds, {
+        name: `${obstacleBounds.isSticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
+        element: obstacle,
+      });
+      return obstacleObject;
+    });
+  }
+  return obstacleConstraintFunctions;
+};
+
+const createBoundConstraint = (bounds, { name, element } = {}) => {
   const leftBound = bounds.left;
   const rightBound = bounds.right;
   const topBound = bounds.top;
   const bottomBound = bounds.bottom;
 
-  const apply = (x, y, { elementWidth, elementHeight }) => {
+  const apply = (x, y, { width, height }) => {
     // Calculate actual positions where element would end up
     const left = x;
     const top = y;
-    const right = x + elementWidth;
-    const bottom = y + elementHeight;
+    const right = x + width;
+    const bottom = y + height;
     let xConstrained = x;
     let yConstrained = y;
     // Left boundary: element's left edge should not go before leftBound
@@ -20,7 +322,7 @@ export const createBoundConstraint = (bounds, { element, name } = {}) => {
     }
     // Right boundary: element's right edge should not go past rightBound
     if (rightBound !== undefined && right > rightBound) {
-      xConstrained = rightBound - elementWidth;
+      xConstrained = rightBound - width;
     }
     // Top boundary: element's top edge should not go before topBound
     if (topBound !== undefined && top < topBound) {
@@ -28,7 +330,7 @@ export const createBoundConstraint = (bounds, { element, name } = {}) => {
     }
     // Bottom boundary: element's bottom edge should not go past bottomBound
     if (bottomBound !== undefined && bottom > bottomBound) {
-      yConstrained = bottomBound - elementHeight;
+      yConstrained = bottomBound - height;
     }
     if (CONSOLE_DEBUG_CONSTRAINTS) {
       console.log(
@@ -46,8 +348,7 @@ export const createBoundConstraint = (bounds, { element, name } = {}) => {
     bounds,
   };
 };
-
-export const createObstacleContraint = (bounds, { element, name }) => {
+const createObstacleContraint = (bounds, { element, name }) => {
   const leftBound = bounds.left;
   const rightBound = bounds.right;
   const topBound = bounds.top;
@@ -57,27 +358,19 @@ export const createObstacleContraint = (bounds, { element, name }) => {
   const topBoundRounded = roundForConstraints(topBound);
   const bottomBoundRounded = roundForConstraints(bottomBound);
 
-  const apply = (
-    x,
-    y,
-    { elementLeft, elementTop, elementWidth, elementHeight },
-  ) => {
+  const apply = (x, y, { elementLeft, elementTop, width, height }) => {
     const left = x;
     const top = y;
-    const right = left + elementWidth;
-    const bottom = top + elementHeight;
+    const right = left + width;
+    const bottom = top + height;
 
     // Simple collision detection: check where element is and prevent movement into obstacle
     {
       // Determine current position relative to obstacle
       const currentLeftRounded = roundForConstraints(elementLeft);
-      const currentRightRounded = roundForConstraints(
-        elementLeft + elementWidth,
-      );
+      const currentRightRounded = roundForConstraints(elementLeft + width);
       const currentTopRounded = roundForConstraints(elementTop);
-      const currentBottomRounded = roundForConstraints(
-        elementTop + elementHeight,
-      );
+      const currentBottomRounded = roundForConstraints(elementTop + height);
       const isOnTheLeft = currentRightRounded <= leftBoundRounded;
       const isOnTheRight = currentLeftRounded >= rightBoundRounded;
       const isAbove = currentBottomRounded <= topBoundRounded;
@@ -107,7 +400,7 @@ export const createObstacleContraint = (bounds, { element, name }) => {
         // Only apply constraint if there would be Y overlap (element would collide)
         const wouldHaveYOverlap = top < bottomBound && bottom > topBound;
         if (wouldHaveYOverlap) {
-          const maxAllowedX = leftBound - elementWidth;
+          const maxAllowedX = leftBound - width;
           if (x > maxAllowedX) {
             return [maxAllowedX, y];
           }
@@ -131,7 +424,7 @@ export const createObstacleContraint = (bounds, { element, name }) => {
         const wouldHaveXOverlap = left < rightBound && right > leftBound;
 
         if (wouldHaveXOverlap) {
-          const maxAllowedY = topBound - elementHeight;
+          const maxAllowedY = topBound - height;
           if (y > maxAllowedY) {
             return [x, maxAllowedY];
           }
@@ -166,7 +459,7 @@ export const createObstacleContraint = (bounds, { element, name }) => {
     );
     if (minDistance === distanceToLeft) {
       // Push left: element should not go past leftBound - elementWidth
-      const maxAllowedX = leftBound - elementWidth;
+      const maxAllowedX = leftBound - width;
       if (x > maxAllowedX) {
         return [maxAllowedX, y];
       }
@@ -178,7 +471,7 @@ export const createObstacleContraint = (bounds, { element, name }) => {
       }
     } else if (minDistance === distanceToTop) {
       // Push up: element should not go past topBound - elementHeight
-      const maxAllowedY = topBound - elementHeight;
+      const maxAllowedY = topBound - height;
       if (y > maxAllowedY) {
         return [x, maxAllowedY];
       }
@@ -202,15 +495,6 @@ export const createObstacleContraint = (bounds, { element, name }) => {
   };
 };
 
-export const prepareConstraints = (constraintFunctions, constraintInfo) => {
-  const constraints = constraintFunctions.map((fn) => fn(constraintInfo));
-  // Development safeguards: detect impossible/illogical constraints
-  if (import.meta.dev) {
-    validateConstraints(constraints, constraintInfo);
-  }
-  return constraints;
-};
-
 /**
  * Rounds coordinates to prevent floating point precision issues in constraint calculations.
  *
@@ -232,80 +516,6 @@ const roundForConstraints = (value) => {
   return Math.round(value * 100) / 100;
 };
 
-// Apply constraints on both X and Y axes
-export const applyConstraints = (
-  constraints,
-  x,
-  y,
-  {
-    gestureInfo,
-    elementLeft,
-    elementTop,
-    elementWidth,
-    elementHeight,
-    direction,
-    interactionType,
-  },
-) => {
-  if (constraints.length === 0) {
-    return [x, y];
-  }
-
-  // Capture original movement values for debug logging
-  const xNoConstraint = x;
-  const yNoConstraint = y;
-  let currentX = x;
-  let currentY = y;
-
-  for (const constraint of constraints) {
-    const result = constraint.apply(currentX, currentY, {
-      gestureInfo,
-      elementLeft,
-      elementTop,
-      elementWidth,
-      elementHeight,
-      interactionType,
-    });
-    if (!result) {
-      continue;
-    }
-    const [constrainedX, constrainedY] = result;
-    if (direction.x && constrainedX !== currentX) {
-      logConstraintEnforcement(
-        "x",
-        currentX,
-        constrainedX,
-        constraint,
-        interactionType,
-        gestureInfo,
-      );
-      currentX = constrainedX;
-    }
-    if (direction.y && constrainedY !== currentY) {
-      logConstraintEnforcement(
-        "y",
-        currentY,
-        constrainedY,
-        constraint,
-        interactionType,
-        gestureInfo,
-      );
-      currentY = constrainedY;
-    }
-  }
-  // Log when no constraints were applied (movement unchanged)
-  if (
-    CONSOLE_DEBUG_CONSTRAINTS &&
-    xNoConstraint === currentX &&
-    yNoConstraint === currentY
-  ) {
-    console.debug(
-      `Drag by ${interactionType}: no constraint enforcement needed (xMove=${currentX.toFixed(2)}, yMove=${currentY.toFixed(2)})`,
-      gestureInfo,
-    );
-  }
-  return [currentX, currentY];
-};
 const logConstraintEnforcement = (
   axis,
   originalValue,
@@ -438,3 +648,30 @@ const validateConstraints = (
     });
   });
 };
+
+//   const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
+//           const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
+//           const elementLeftWithScrollRequested =
+//             elementLeftWithScrollAtGrab + moveXRequested;
+//           const elementTopWithScrollRequested =
+//             elementTopWithScrollAtGrab + moveYRequested;
+
+//             // when applying constraint
+//              elementLeft:
+//                   gestureInfo.scrollRelativeRect.left +
+//                   gestureInfo.scrollRelativeRect.scrollLeft,
+//                 elementTop:
+//                   gestureInfo.scrollRelativeRect.top +
+//                   gestureInfo.scrollRelativeRect.scrollTop,
+//                 elementWidth: currentRect.width,
+//                 elementHeight: currentRect.height,
+
+//                     const elementLeftRelative =
+//             elementLeftWithScroll - scrollContainer.scrollLeft;
+//           const elementTopRelative =
+//             elementTopWithScroll - scrollContainer.scrollTop;
+//             elementVisuallyImpactedWidth: currentRect.width,
+//             elementVisuallyImpactedHeight: currentRect.height,
+//             hasCrossedVisibleAreaLeftOnce:
+//               elementLeftWithScroll >= visibleArea.left,
+//             hasCrossedVisibleAreaTopOnce: elementTopWithScroll >= visibleArea.top,

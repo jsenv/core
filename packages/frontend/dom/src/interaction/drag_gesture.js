@@ -7,6 +7,7 @@ import { createPubSub } from "../pub_sub.js";
 
 export const createDragGestureController = (options = {}) => {
   const {
+    name,
     onGrab,
     onDragStart,
     onDrag,
@@ -42,6 +43,7 @@ export const createDragGestureController = (options = {}) => {
 
     let lifecycleHooks;
     const gestureInfo = {
+      name,
       direction,
       scrollContainer,
       grabScrollLeft: scrollContainer.scrollLeft, // scrollLeft of the scrollContainer at grab time
@@ -70,6 +72,7 @@ export const createDragGestureController = (options = {}) => {
       dragEvent: null,
       releaseEvent: null,
     };
+    definePropertyAsReadOnly(gestureInfo, "name");
     definePropertyAsReadOnly(gestureInfo, "direction");
     definePropertyAsReadOnly(gestureInfo, "scrollContainer");
     definePropertyAsReadOnly(gestureInfo, "grabScrollLeft");
