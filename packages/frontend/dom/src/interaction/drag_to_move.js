@@ -209,15 +209,7 @@ export const createDragToMoveGestureController = ({
     dragGesture.addDragCallback(dragToMove);
   };
 
-  const dragGestureController = createDragGestureController({
-    ...options,
-    inferScrollContainer: ({ element }) => {
-      if (!element) {
-        throw new Error("element is required");
-      }
-      return;
-    },
-  });
+  const dragGestureController = createDragGestureController(options);
   const dragGestureControllerGrab = dragGestureController.grab;
   dragGestureController.grab = ({
     element,
@@ -236,7 +228,9 @@ export const createDragToMoveGestureController = ({
       element,
       elementToImpact,
     });
+    return dragGesture;
   };
+
   return dragGestureController;
 };
 

@@ -18,6 +18,11 @@ export const createDragGestureController = (options = {}) => {
     backdropZIndex = 1,
   } = options;
 
+  const dragGestureController = {
+    grab: null,
+    grabViaMouse: null,
+  };
+
   const grab = ({
     direction = defaultDirection,
     event = new CustomEvent("programmatic"),
@@ -247,6 +252,7 @@ export const createDragGestureController = (options = {}) => {
     };
     return dragGesture;
   };
+  dragGestureController.grab = grab;
 
   const grabViaMouse = (mouseEvent, options = {}) => {
     if (mouseEvent.type === "mousedown" && mouseEvent.button !== 0) {
@@ -262,7 +268,7 @@ export const createDragGestureController = (options = {}) => {
     };
 
     const [mouseGrabX, mouseGrabY] = mouseEventCoords(mouseEvent);
-    const dragGesture = grab({
+    const dragGesture = dragGestureController.grab({
       grabX: mouseGrabX,
       grabY: mouseGrabY,
       event: mouseEvent,
@@ -294,11 +300,9 @@ export const createDragGestureController = (options = {}) => {
     dragGesture.releaseViaMouse = releaseViaMouse;
     return dragGesture;
   };
+  dragGestureController.grabViaMouse = grabViaMouse;
 
-  return {
-    grab,
-    grabViaMouse,
-  };
+  return dragGestureController;
 };
 
 export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
