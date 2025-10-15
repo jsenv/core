@@ -96,21 +96,12 @@ export const createDragToMoveGestureController = ({
 
     let moveConverter;
     {
-      const scrollLeftAtGrab = dragGesture.gestureInfo.grabScrollLeft;
-      const scrollTopAtGrab = dragGesture.gestureInfo.grabScrollTop;
-      const elementLeftWithScrollAtGrab =
-        elementLeftWithoutScrollAtGrab + scrollLeftAtGrab;
-      const elementTopWithScrollAtGrab =
-        elementTopWithoutScrollAtGrab + scrollTopAtGrab;
-      console.log({
-        elementLeftWithoutScrollAtGrab,
-        elementLeftWithScrollAtGrab,
-      });
-
       const toElementLeft = (moveX) => elementLeftWithoutScrollAtGrab + moveX;
       const toElementTop = (moveY) => elementTopWithoutScrollAtGrab + moveY;
-      const fromElementLeft = (left) => left - elementLeftWithScrollAtGrab;
-      const fromElementTop = (top) => top - elementTopWithScrollAtGrab;
+      const fromElementLeft = (left) =>
+        left - elementLeftWithoutScrollAtGrab + scrollContainer.scrollLeft;
+      const fromElementTop = (top) =>
+        top - elementTopWithoutScrollAtGrab + scrollContainer.scrollTop;
       moveConverter = {
         toElementLeft,
         toElementTop,
@@ -176,6 +167,7 @@ export const createDragToMoveGestureController = ({
       const elementBottom = elementTop + elementHeight;
       const elementLeftLayout = layoutConverter.toLayoutLeft(elementLeft);
       const elementTopLayout = layoutConverter.toLayoutTop(elementTop);
+      // console.log({ moveX, elementLeft, elementLeftLayout });
 
       // Helper function to handle auto-scroll and element positioning for an axis
       const moveAndKeepIntoView = (axis) => {
