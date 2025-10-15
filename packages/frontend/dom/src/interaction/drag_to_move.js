@@ -75,30 +75,12 @@ export const createDragToMoveGestureController = ({
 
     let elementLeftWithoutScrollAtGrab;
     let elementTopWithoutScrollAtGrab;
-    let layoutConverter;
+    let positioner;
     {
-      const positioner = createElementPositioner(element, { scrollContainer });
-      // Get current element positions from the positioner
+      positioner = createElementPositioner(element, { scrollContainer });
       elementLeftWithoutScrollAtGrab = positioner.leftRelativeToScrollContainer;
       elementTopWithoutScrollAtGrab = positioner.topRelativeToScrollContainer;
-
-      console.log({
-        positioner,
-        leftRelativeToPositionedParent:
-          positioner.leftRelativeToPositionedParent,
-        leftRelativeToScrollContainer: positioner.leftRelativeToScrollContainer,
-      });
-
-      const toLayoutLeft = (leftRelativeToScrollContainer) => {
-        return positioner.toLayoutLeft(leftRelativeToScrollContainer);
-      };
-      const toLayoutTop = (topRelativeToScrollContainer) => {
-        return positioner.toLayoutTop(topRelativeToScrollContainer);
-      };
-      layoutConverter = {
-        toLayoutLeft,
-        toLayoutTop,
-      };
+      console.log(positioner);
     }
 
     let moveConverter;
@@ -169,8 +151,8 @@ export const createDragToMoveGestureController = ({
       const elementTop = moveConverter.toElementTop(moveY);
       const elementRight = elementLeft + elementWidth;
       const elementBottom = elementTop + elementHeight;
-      const elementLeftLayout = layoutConverter.toLayoutLeft(elementLeft);
-      const elementTopLayout = layoutConverter.toLayoutTop(elementTop);
+      const elementLeftLayout = positioner.toLayoutLeft(elementLeft);
+      const elementTopLayout = positioner.toLayoutTop(elementTop);
       // console.log({ moveX, elementLeft, elementLeftLayout });
 
       hasCrossedVisibleAreaLeftOnce =
