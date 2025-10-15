@@ -583,3 +583,16 @@ export const getScrollBox = (scrollContainer) => {
     height: availableHeight,
   };
 };
+export const getScrollContainerVisibleArea = (scrollContainer) => {
+  const { left, top, width, height } = getScrollBox(scrollContainer);
+  const leftWithScroll = left + scrollContainer.scrollLeft;
+  const topWithScroll = top + scrollContainer.scrollTop;
+  const rightWithScroll = leftWithScroll + width;
+  const bottomWithScroll = topWithScroll + height;
+  return {
+    left: leftWithScroll,
+    top: topWithScroll,
+    right: rightWithScroll,
+    bottom: bottomWithScroll,
+  };
+};

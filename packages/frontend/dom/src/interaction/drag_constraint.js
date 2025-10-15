@@ -1,7 +1,7 @@
 import {
   addScrollToRect,
+  getScrollContainerVisibleArea,
   getScrollRelativeRect,
-  getScrollRelativeVisibleRect,
 } from "../position/dom_coords.js";
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupVisualMarkers } from "./debug_markers.js";
@@ -9,38 +9,19 @@ import { getElementSelector } from "./element_log.js";
 
 const CONSOLE_DEBUG_CONSTRAINTS = false;
 
-//             hasCrossedVisibleAreaLeftOnce:
-//               elementLeftWithScroll >= visibleArea.left,
-//             hasCrossedVisibleAreaTopOnce: elementTopWithScroll >= visibleArea.top,
-
 export const initDragConstraints = (
   dragGesture,
   {
-    element,
-    elementToImpact = element,
-    elementVisuallyImpacted = elementToImpact,
-
-    areaConstraintElement = dragGesture.gestureInfo.scrollContainer,
-    areaConstraint = "scroll",
+    areaConstraintElement,
+    areaConstraint,
     customAreaConstraint,
-    obstaclesContainer = dragGesture.gestureInfo.scrollContainer,
-    obstacleAttributeName = "data-drag-obstacle",
-    stickyFrontiers = true,
-
-    // Padding to reduce the visible area constraint by this amount (applied after sticky frontiers)
-    // This creates an invisible margin around the visible area where elements cannot be dragged
-    visibleAreaPadding = 0,
-    // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
-    // This provides intuitive feedback during drag operations when the element cannot reach the mouse
-    // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
-    // initially grabbed the element, but moves with the element to show the current anchor position.
-    // It becomes visible when there's a significant distance between mouse and grab point.
-    showConstraintFeedbackLine = true,
+    obstaclesContainer,
+    obstacleAttributeName,
+    showConstraintFeedbackLine,
   },
 ) => {
   const dragGestureName = dragGesture.gestureInfo.name;
   const direction = dragGesture.gestureInfo.direction;
-  const scrollContainer = dragGesture.gestureInfo.scrollContainer;
 
   const constraintFunctions = [];
   const addConstraint = (constraint) => {
@@ -59,22 +40,17 @@ export const initDragConstraints = (
   // visual markers (for debug)
   const visualMarkers = setupVisualMarkers({
     direction: dragGesture.gestureInfo.direction,
-    element,
   });
   dragGesture.addReleaseCallback(() => {
     visualMarkers.onRelease();
   });
 
   area: {
-    if (areaConstraint === "visible") {
-      stickyFrontiers = false;
-    }
     if (areaConstraint === "scroll") {
-      // Capture scroll container dimensions at drag start to ensure consistency
-      let left = 0;
-      let top = 0;
       const scrollWidthAtStart = areaConstraintElement.scrollWidth;
       const scrollHeightAtStart = areaConstraintElement.scrollHeight;
+      let left = 0;
+      let top = 0;
       const scrollAreaConstraintFunction = () => {
         const right = left + scrollWidthAtStart;
         const bottom = top + scrollHeightAtStart;
@@ -91,7 +67,7 @@ export const initDragConstraints = (
     }
     if (areaConstraint === "visible") {
       const visibleAreaConstraintFunction = () => {
-        const bounds = getScrollContainerVisibleRect(areaConstraintElement);
+        const bounds = getScrollContainerVisibleArea(areaConstraintElement);
         return createBoundConstraint(bounds, {
           element: areaConstraintElement,
           name: "visible_area",
@@ -128,53 +104,32 @@ export const initDragConstraints = (
     }
   }
 
-  let getMoveConverter = () => {};
-  move_conversion: {
-    getMoveConverter = () => {
-      const scrollLeftAtGrab = dragGesture.gestureInfo.grabScrollLeft;
-      const scrollTopAtGrab = dragGesture.gestureInfo.grabScrollTop;
-      const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
-      const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
-
-      const toElementLeft = (moveX) => elementLeftWithScrollAtGrab + moveX;
-      const toElementTop = (moveY) => elementTopWithScrollAtGrab + moveY;
-      const fromElementLeft = (left) => left - elementLeftWithScrollAtGrab;
-      const fromElementTop = (top) => top - elementTopWithScrollAtGrab;
-
-      return { toElementLeft, toElementTop, fromElementLeft, fromElementTop };
-    };
-  }
-
   const applyConstraints = (
     moveXRequested,
     moveYRequested,
-    { dragEvent, visibleArea },
+    { dragEvent, visibleArea, elementWidth, elementHeight, moveConverter },
   ) => {
-    let constraints;
-    instantiate_constraints: {
-      const constraintInitParams = {
-        dragGestureName,
-        visibleArea,
-      };
-      constraints = constraintFunctions.map((fn) => fn(constraintInitParams));
-      // Development safeguards: detect impossible/illogical constraints
-      if (import.meta.dev) {
-        validateConstraints(constraints, constraintInitParams);
-      }
-    }
-
-    // apply_constraints
-    if (constraints.length === 0) {
+    if (constraintFunctions.length === 0) {
       return [moveXRequested, moveYRequested];
     }
 
-    // Get current element dimensions for dynamic constraint calculation
-    const { width, height } = elementVisuallyImpacted.getBoundingClientRect();
+    const constraintInitParams = {
+      dragGestureName,
+      visibleArea,
+    };
+    const constraints = constraintFunctions.map((fn) =>
+      fn(constraintInitParams),
+    );
+    // Development safeguards: detect impossible/illogical constraints
+    if (import.meta.dev) {
+      validateConstraints(constraints, constraintInitParams);
+    }
+
     visualMarkers.onDrag({
       constraints,
       visibleArea,
-      width,
-      height,
+      elementWidth,
+      elementHeight,
     });
 
     let moveX = moveXRequested;
@@ -193,17 +148,16 @@ export const initDragConstraints = (
       );
     };
 
-    const moveConverter = getMoveConverter();
     let elementLeft = moveConverter.toElementLeft(moveXRequested);
     let elementTop = moveConverter.toElementTop(moveYRequested);
     for (const constraint of constraints) {
       const result = constraint.apply({
         left: elementLeft,
         top: elementTop,
-        right: elementLeft + width,
-        bottom: elementTop + height,
-        width,
-        height,
+        right: elementLeft + elementWidth,
+        bottom: elementTop + elementHeight,
+        width: elementWidth,
+        height: elementHeight,
         visibleArea,
       });
       if (!result) {
@@ -234,11 +188,7 @@ export const initDragConstraints = (
     return [moveX, moveY];
   };
 
-  return { apply: applyConstraints };
-};
-
-const getScrollContainerVisibleRect = (scrollContainer) => {
-  return addScrollToRect(getScrollRelativeVisibleRect(scrollContainer));
+  return { applyConstraints };
 };
 
 const createObstacleConstraintsFromQuerySelector = (

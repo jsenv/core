@@ -1,11 +1,26 @@
-import { getScrollBox } from "../position/dom_coords.js";
+import { getScrollContainerVisibleArea } from "../position/dom_coords.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
+import { initDragConstraints } from "./drag_constraint.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
 
 export const createDragToMoveGestureController = ({
   stickyFrontiers = true,
-  visibleAreaPadding,
+  // Padding to reduce the visible area constraint by this amount (applied after sticky frontiers)
+  // This creates an invisible margin around the visible area where elements cannot be dragged
+  visibleAreaPadding = 0,
+  // constraints,
+  areaConstraintElement,
+  areaConstraint = "scroll",
+  customAreaConstraint,
+  obstaclesContainer,
+  obstacleAttributeName = "data-drag-obstacle",
+  // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
+  // This provides intuitive feedback during drag operations when the element cannot reach the mouse
+  // position due to obstacles, boundaries, or other constraints. The line originates from where the mouse
+  // initially grabbed the element, but moves with the element to show the current anchor position.
+  // It becomes visible when there's a significant distance between mouse and grab point.
+  showConstraintFeedbackLine = true,
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
@@ -31,18 +46,7 @@ export const createDragToMoveGestureController = ({
     let visibleArea;
     {
       const updateVisibleArea = () => {
-        const { left, top, width, height } = getScrollBox(scrollContainer);
-        const leftWithScroll = left + scrollContainer.scrollLeft;
-        const topWithScroll = top + scrollContainer.scrollTop;
-        const rightWithScroll = leftWithScroll + width;
-        const bottomWithScroll = topWithScroll + height;
-
-        const visibleAreaBase = {
-          left: leftWithScroll,
-          top: topWithScroll,
-          right: rightWithScroll,
-          bottom: bottomWithScroll,
-        };
+        const visibleAreaBase = getScrollContainerVisibleArea(scrollContainer);
         let visibleAreaCurrent = visibleAreaBase;
         if (stickyFrontiers) {
           visibleAreaCurrent = applyStickyFrontiersToVisibleArea(
@@ -127,6 +131,33 @@ export const createDragToMoveGestureController = ({
     dragGesture.addReleaseCallback(() => {
       element.removeAttribute("data-grabbed");
     });
+
+    const dragConstraints = initDragConstraints(dragGesture, {
+      areaConstraintElement: areaConstraintElement || scrollContainer,
+      areaConstraint,
+      customAreaConstraint,
+      obstaclesContainer: obstaclesContainer || scrollContainer,
+      obstacleAttributeName,
+      showConstraintFeedbackLine,
+    });
+    dragGesture.addBeforeDragCallback(
+      (
+        moveXRequested,
+        moveYRequested,
+        { limitMoveX, limitMoveY, dragEvent },
+      ) => {
+        const [moveXConstrained, moveYConstrained] =
+          dragConstraints.applyConstraints(moveXRequested, moveYRequested, {
+            elementWidth,
+            elementHeight,
+            moveConverter,
+            dragEvent,
+            visibleArea,
+          });
+        limitMoveX(moveXConstrained);
+        limitMoveY(moveYConstrained);
+      },
+    );
 
     const dragToMove = (gestureInfo) => {
       const {
