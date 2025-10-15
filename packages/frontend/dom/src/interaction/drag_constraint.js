@@ -7,7 +7,8 @@ import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
 import { setupDragDebugMarkers } from "./drag_debug_markers.js";
 import { getElementSelector } from "./element_log.js";
 
-const CONSOLE_DEBUG_CONSTRAINTS = true;
+const CONSOLE_DEBUG_BOUNDS = true;
+const CONSOLE_DEBUG_OBSTACLES = false;
 
 export const initDragConstraints = (
   dragGesture,
@@ -136,7 +137,10 @@ export const initDragConstraints = (
     let moveXConstrained = moveXRequested;
     let moveYConstrained = moveYRequested;
     const logConstraintEnforcement = (axis, constraint) => {
-      if (!CONSOLE_DEBUG_CONSTRAINTS) {
+      if (!CONSOLE_DEBUG_BOUNDS && constraint.type === "bounds") {
+        return;
+      }
+      if (!CONSOLE_DEBUG_OBSTACLES && constraint.type === "obstacle") {
         return;
       }
       const moveRequested = axis === "x" ? moveXRequested : moveYRequested;
@@ -144,7 +148,7 @@ export const initDragConstraints = (
         axis === "x" ? moveXConstrained : moveYConstrained;
       const action = moveConstrained > moveRequested ? "increased" : "capped";
       console.debug(
-        `Drag by ${dragEvent.type}: ${axis} ${action} from ${moveRequested.toFixed(2)} to ${moveConstrained.toFixed(2)} by ${constraint.name}`,
+        `Drag by ${dragEvent.type}: ${axis} ${action} from ${moveRequested.toFixed(2)} to ${moveConstrained.toFixed(2)} by ${constraint.type}:${constraint.name}`,
         constraint.element,
       );
     };
@@ -184,7 +188,7 @@ export const initDragConstraints = (
     }
     // Log when no constraints were applied (movement unchanged)
     if (
-      CONSOLE_DEBUG_CONSTRAINTS &&
+      (CONSOLE_DEBUG_BOUNDS || CONSOLE_DEBUG_OBSTACLES) &&
       moveXRequested === moveXConstrained &&
       moveYRequested === moveYConstrained
     ) {
@@ -288,7 +292,7 @@ const createBoundConstraint = (bounds, { name, element } = {}) => {
     if (bottomBound !== undefined && bottom > bottomBound) {
       topConstrained = bottomBound - height;
     }
-    if (CONSOLE_DEBUG_CONSTRAINTS) {
+    if (CONSOLE_DEBUG_BOUNDS) {
       console.log(
         `${name || "bound"} constraint result: left=${left} -> ${leftConstrained}, top=${top} -> ${topConstrained}`,
       );
@@ -336,7 +340,7 @@ const createObstacleContraint = (bounds, { element, name }) => {
       const isAbove = currentBottomRounded <= topBoundRounded;
       const isBelow = currentTopRounded >= bottomBoundRounded;
       // Debug logging to understand element position
-      if (CONSOLE_DEBUG_CONSTRAINTS) {
+      if (CONSOLE_DEBUG_OBSTACLES) {
         const position = isOnTheLeft
           ? "left"
           : isOnTheRight
