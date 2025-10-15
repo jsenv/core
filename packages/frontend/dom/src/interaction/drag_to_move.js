@@ -112,10 +112,6 @@ export const createDragToMoveGestureController = ({
     let visualOffsetX = 0;
     let visualOffsetY = 0;
 
-    // Will be used for dynamic constraints on sticky elements
-    let hasCrossedVisibleAreaLeftOnce = false;
-    let hasCrossedVisibleAreaTopOnce = false;
-
     // Set up dragging attribute
     element.setAttribute("data-grabbed", "");
     dragGesture.addReleaseCallback(() => {
@@ -150,6 +146,9 @@ export const createDragToMoveGestureController = ({
       },
     );
 
+    // Will be used for dynamic constraints on sticky elements
+    let hasCrossedVisibleAreaLeftOnce = false;
+    let hasCrossedVisibleAreaTopOnce = false;
     const dragToMove = (gestureInfo) => {
       const {
         isGoingDown,
@@ -166,6 +165,11 @@ export const createDragToMoveGestureController = ({
       const elementLeftLayout = layoutConverter.toLayoutLeft(elementLeft);
       const elementTopLayout = layoutConverter.toLayoutTop(elementTop);
       // console.log({ moveX, elementLeft, elementLeftLayout });
+
+      hasCrossedVisibleAreaLeftOnce =
+        hasCrossedVisibleAreaLeftOnce || elementLeft < visibleArea.left;
+      hasCrossedVisibleAreaTopOnce =
+        hasCrossedVisibleAreaTopOnce || elementTop < visibleArea.top;
 
       // Helper function to handle auto-scroll and element positioning for an axis
       const moveAndKeepIntoView = (axis) => {
