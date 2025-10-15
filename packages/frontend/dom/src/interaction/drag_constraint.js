@@ -160,6 +160,8 @@ export const initDragConstraints = (
         width: elementWidth,
         height: elementHeight,
         visibleArea,
+        currentLeft: moveConverter.toElementLeft(dragGesture.gestureInfo.moveX),
+        currentTop: moveConverter.toElementTop(dragGesture.gestureInfo.moveY),
       });
       if (!result) {
         continue;
@@ -263,36 +265,31 @@ const createBoundConstraint = (bounds, { name, element } = {}) => {
   const topBound = bounds.top;
   const bottomBound = bounds.bottom;
 
-  const apply = (x, y, { width, height }) => {
-    // Calculate actual positions where element would end up
-    const left = x;
-    const top = y;
-    const right = x + width;
-    const bottom = y + height;
-    let xConstrained = x;
-    let yConstrained = y;
+  const apply = ({ left, top, right, bottom, width, height }) => {
+    let leftConstrained = left;
+    let topConstrained = top;
     // Left boundary: element's left edge should not go before leftBound
     if (leftBound !== undefined && left < leftBound) {
-      xConstrained = leftBound;
+      leftConstrained = leftBound;
     }
     // Right boundary: element's right edge should not go past rightBound
     if (rightBound !== undefined && right > rightBound) {
-      xConstrained = rightBound - width;
+      leftConstrained = rightBound - width;
     }
     // Top boundary: element's top edge should not go before topBound
     if (topBound !== undefined && top < topBound) {
-      yConstrained = topBound;
+      topConstrained = topBound;
     }
     // Bottom boundary: element's bottom edge should not go past bottomBound
     if (bottomBound !== undefined && bottom > bottomBound) {
-      yConstrained = bottomBound - height;
+      topConstrained = bottomBound - height;
     }
     if (CONSOLE_DEBUG_CONSTRAINTS) {
       console.log(
-        `${name || "bound"} constraint result: x=${x} -> ${xConstrained}, y=${y} -> ${yConstrained}`,
+        `${name || "bound"} constraint result: left=${left} -> ${leftConstrained}, top=${top} -> ${topConstrained}`,
       );
     }
-    return [xConstrained, yConstrained];
+    return [leftConstrained, topConstrained];
   };
 
   return {
@@ -313,19 +310,23 @@ const createObstacleContraint = (bounds, { element, name }) => {
   const topBoundRounded = roundForConstraints(topBound);
   const bottomBoundRounded = roundForConstraints(bottomBound);
 
-  const apply = (x, y, { elementLeft, elementTop, width, height }) => {
-    const left = x;
-    const top = y;
-    const right = left + width;
-    const bottom = top + height;
-
+  const apply = ({
+    left,
+    top,
+    right,
+    bottom,
+    width,
+    height,
+    currentLeft,
+    currentTop,
+  }) => {
     // Simple collision detection: check where element is and prevent movement into obstacle
     {
       // Determine current position relative to obstacle
-      const currentLeftRounded = roundForConstraints(elementLeft);
-      const currentRightRounded = roundForConstraints(elementLeft + width);
-      const currentTopRounded = roundForConstraints(elementTop);
-      const currentBottomRounded = roundForConstraints(elementTop + height);
+      const currentLeftRounded = roundForConstraints(currentLeft);
+      const currentRightRounded = roundForConstraints(currentLeft + width);
+      const currentTopRounded = roundForConstraints(currentTop);
+      const currentBottomRounded = roundForConstraints(currentTop + height);
       const isOnTheLeft = currentRightRounded <= leftBoundRounded;
       const isOnTheRight = currentLeftRounded >= rightBoundRounded;
       const isAbove = currentBottomRounded <= topBoundRounded;
@@ -352,48 +353,41 @@ const createObstacleContraint = (bounds, { element, name }) => {
 
       // If element is on the left, apply X constraint to prevent moving right into obstacle
       if (isOnTheLeft) {
-        // Only apply constraint if there would be Y overlap (element would collide)
         const wouldHaveYOverlap = top < bottomBound && bottom > topBound;
         if (wouldHaveYOverlap) {
-          const maxAllowedX = leftBound - width;
-          if (x > maxAllowedX) {
-            return [maxAllowedX, y];
+          const maxLeft = leftBound - width;
+          if (left > maxLeft) {
+            return [maxLeft, top];
           }
         }
       }
       // If element is on the right, apply X constraint to prevent moving left into obstacle
       else if (isOnTheRight) {
-        // Only apply constraint if there would be Y overlap (element would collide)
         const wouldHaveYOverlap = top < bottomBound && bottom > topBound;
-
         if (wouldHaveYOverlap) {
-          const minAllowedX = rightBound;
-          if (x < minAllowedX) {
-            return [minAllowedX, y];
+          const minLeft = rightBound;
+          if (left < minLeft) {
+            return [minLeft, top];
           }
         }
       }
       // If element is above, apply Y constraint to prevent moving down into obstacle
       else if (isAbove) {
-        // Only apply constraint if there would be X overlap (element would collide)
         const wouldHaveXOverlap = left < rightBound && right > leftBound;
-
         if (wouldHaveXOverlap) {
-          const maxAllowedY = topBound - height;
-          if (y > maxAllowedY) {
-            return [x, maxAllowedY];
+          const maxTop = topBound - height;
+          if (top > maxTop) {
+            return [left, maxTop];
           }
         }
       }
       // If element is below, apply Y constraint to prevent moving up into obstacle
       else if (isBelow) {
-        // Only apply constraint if there would be X overlap (element would collide)
         const wouldHaveXOverlap = left < rightBound && right > leftBound;
-
         if (wouldHaveXOverlap) {
-          const minAllowedY = bottomBound;
-          if (y < minAllowedY) {
-            return [x, minAllowedY];
+          const minTop = bottomBound;
+          if (top < minTop) {
+            return [left, minTop];
           }
         }
       }
@@ -414,27 +408,27 @@ const createObstacleContraint = (bounds, { element, name }) => {
     );
     if (minDistance === distanceToLeft) {
       // Push left: element should not go past leftBound - elementWidth
-      const maxAllowedX = leftBound - width;
-      if (x > maxAllowedX) {
-        return [maxAllowedX, y];
+      const maxLeft = leftBound - width;
+      if (left > maxLeft) {
+        return [maxLeft, top];
       }
     } else if (minDistance === distanceToRight) {
       // Push right: element should not go before rightBound
-      const minAllowedX = rightBound;
-      if (x < minAllowedX) {
-        return [minAllowedX, y];
+      const minLeft = rightBound;
+      if (left < minLeft) {
+        return [minLeft, top];
       }
     } else if (minDistance === distanceToTop) {
       // Push up: element should not go past topBound - elementHeight
-      const maxAllowedY = topBound - height;
-      if (y > maxAllowedY) {
-        return [x, maxAllowedY];
+      const maxTop = topBound - height;
+      if (top > maxTop) {
+        return [left, maxTop];
       }
     } else if (minDistance === distanceToBottom) {
       // Push down: element should not go before bottomBound
-      const minAllowedY = bottomBound;
-      if (y < minAllowedY) {
-        return [x, minAllowedY];
+      const minTop = bottomBound;
+      if (top < minTop) {
+        return [left, minTop];
       }
     }
 
