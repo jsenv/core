@@ -201,22 +201,17 @@ export const createDragGestureController = (options = {}) => {
     };
 
     const drag = (
-      xScrollRelative = gestureInfo.dragX, // Scroll container relative X coordinate
-      yScrollRelative = gestureInfo.dragY, // Scroll container relative Y coordinate
+      dragX = gestureInfo.dragX, // Scroll container relative X coordinate
+      dragY = gestureInfo.dragY, // Scroll container relative Y coordinate
       { event = new CustomEvent("programmatic"), isRelease = false } = {},
     ) => {
-      if (
-        import.meta.dev &&
-        (isNaN(xScrollRelative) || isNaN(yScrollRelative))
-      ) {
-        throw new Error(
-          `Invalid drag coordinates x=${xScrollRelative} y=${yScrollRelative}`,
-        );
+      if (import.meta.dev && (isNaN(dragX) || isNaN(dragY))) {
+        throw new Error(`Invalid drag coordinates x=${dragX} y=${dragY}`);
       }
 
       const dragData = determineDragData({
-        xScrollRelative,
-        yScrollRelative,
+        dragX,
+        dragY,
         event,
         isRelease,
       });
