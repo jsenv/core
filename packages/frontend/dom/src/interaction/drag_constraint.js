@@ -109,7 +109,15 @@ export const initDragConstraints = (
   const applyConstraints = (
     moveXRequested,
     moveYRequested,
-    { elementWidth, elementHeight, moveConverter, visibleArea, dragEvent },
+    {
+      elementWidth,
+      elementHeight,
+      moveConverter,
+      visibleArea,
+      hasCrossedVisibleAreaLeftOnce,
+      hasCrossedVisibleAreaTopOnce,
+      dragEvent,
+    },
   ) => {
     if (constraintFunctions.length === 0) {
       return [moveXRequested, moveYRequested];
@@ -172,9 +180,11 @@ export const initDragConstraints = (
         bottom: elementTop + elementHeight,
         width: elementWidth,
         height: elementHeight,
-        visibleArea,
         currentLeft: elementCurrentLeft,
         currentTop: elementCurrentTop,
+        visibleArea,
+        hasCrossedVisibleAreaLeftOnce,
+        hasCrossedVisibleAreaTopOnce,
       });
       if (!result) {
         continue;
@@ -248,38 +258,39 @@ const createObstacleConstraintsFromQuerySelector = (
       }
     }
 
-    obstacleConstraintFunctions.push(() => {
-      // Only apply the "before crossing visible area" logic when dragging sticky elements
-      // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
-      const useOriginalPositionEvenIfSticky = isDraggedElementSticky
-        ? !gestureInfo.hasCrossedVisibleAreaLeftOnce &&
-          !gestureInfo.hasCrossedVisibleAreaTopOnce
-        : true;
+    obstacleConstraintFunctions.push(
+      ({ hasCrossedVisibleAreaLeftOnce, hasCrossedVisibleAreaTopOnce }) => {
+        // Only apply the "before crossing visible area" logic when dragging sticky elements
+        // Non-sticky elements should be able to cross sticky obstacles while stuck regardless of visible area crossing
+        const useOriginalPositionEvenIfSticky = isDraggedElementSticky
+          ? !hasCrossedVisibleAreaLeftOnce && !hasCrossedVisibleAreaTopOnce
+          : true;
 
-      const obstacleScrollRelativeRect = getScrollRelativeRect(
-        obstacle,
-        scrollableElement,
-        {
-          useOriginalPositionEvenIfSticky,
-        },
-      );
-      let obstacleBounds;
-      if (
-        useOriginalPositionEvenIfSticky &&
-        obstacleScrollRelativeRect.isSticky
-      ) {
-        obstacleBounds = obstacleScrollRelativeRect;
-      } else {
-        obstacleBounds = addScrollToRect(obstacleScrollRelativeRect);
-      }
+        const obstacleScrollRelativeRect = getScrollRelativeRect(
+          obstacle,
+          scrollableElement,
+          {
+            useOriginalPositionEvenIfSticky,
+          },
+        );
+        let obstacleBounds;
+        if (
+          useOriginalPositionEvenIfSticky &&
+          obstacleScrollRelativeRect.isSticky
+        ) {
+          obstacleBounds = obstacleScrollRelativeRect;
+        } else {
+          obstacleBounds = addScrollToRect(obstacleScrollRelativeRect);
+        }
 
-      // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
-      const obstacleObject = createObstacleContraint(obstacleBounds, {
-        name: `${obstacleBounds.isSticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
-        element: obstacle,
-      });
-      return obstacleObject;
-    });
+        // obstacleBounds are already in scrollable-relative coordinates, no conversion needed
+        const obstacleObject = createObstacleContraint(obstacleBounds, {
+          name: `${obstacleBounds.isSticky ? "sticky " : ""}obstacle (${getElementSelector(obstacle)})`,
+          element: obstacle,
+        });
+        return obstacleObject;
+      },
+    );
   }
   return obstacleConstraintFunctions;
 };
