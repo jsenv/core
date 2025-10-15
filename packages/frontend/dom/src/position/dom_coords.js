@@ -568,19 +568,17 @@ export const getScrollBox = (scrollContainer) => {
 
   const { clientWidth, clientHeight } = scrollContainer;
   const scrollContainerBorderSizes = getBorderSizes(scrollContainer);
-  const leftWithBorder = scrollContainerBorderSizes.left;
-  const topWithBorder = scrollContainerBorderSizes.top;
-  const availableWidth = clientWidth;
-  const availableHeight = clientHeight;
-  const right = leftWithBorder + availableWidth;
-  const bottom = topWithBorder + availableHeight;
+  const left = scrollContainerBorderSizes.left;
+  const top = scrollContainerBorderSizes.top;
+  const right = left + clientWidth;
+  const bottom = top + clientHeight;
   return {
-    left: leftWithBorder,
-    top: topWithBorder,
+    left,
+    top,
     right,
     bottom,
-    width: availableWidth,
-    height: availableHeight,
+    width: clientWidth,
+    height: clientHeight,
   };
 };
 export const getScrollContainerVisibleArea = (scrollContainer) => {
