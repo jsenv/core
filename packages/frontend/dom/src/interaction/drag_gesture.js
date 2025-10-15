@@ -106,11 +106,15 @@ export const createDragGestureController = (options = {}) => {
         drag(gestureInfo.dragX, gestureInfo.dragY, { event: scrollEvent });
         isHandlingScroll = false;
       };
-      scrollContainer.addEventListener("scroll", handleScroll, {
+      const scrollEventReceiver =
+        scrollContainer === document.documentElement
+          ? document
+          : scrollContainer;
+      scrollEventReceiver.addEventListener("scroll", handleScroll, {
         passive: true,
       });
       addReleaseCallback(() => {
-        scrollContainer.removeEventListener("scroll", handleScroll, {
+        scrollEventReceiver.removeEventListener("scroll", handleScroll, {
           passive: true,
         });
       });
