@@ -262,18 +262,16 @@ export const createDragToMoveGestureController = ({
 // in the DOM which might be different according to his own position + ancestor positions
 const createElementPositioner = (element, { scrollContainer }) => {
   const positionedParent = element.offsetParent;
-  const positionedParentRect = positionedParent.getBoundingClientRect();
-  const elementRect = element.getBoundingClientRect();
 
   // Most common case: positioned parent is inside the scroll container
   if (scrollContainer.contains(positionedParent)) {
-    const positionedParentViewportLeft = positionedParentRect.left;
-    const positionedParentViewportTop = positionedParentRect.top;
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
     const scrollContainerViewportLeft = scrollContainerRect.left;
     const scrollContainerViewportTop = scrollContainerRect.top;
-
-    // Get current element position using getBoundingClientRect (actual rendered position)
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+    const positionedParentViewportLeft = positionedParentRect.left;
+    const positionedParentViewportTop = positionedParentRect.top;
+    const elementRect = element.getBoundingClientRect();
     const elementViewportLeft = elementRect.left;
     const elementViewportTop = elementRect.top;
 
@@ -371,15 +369,17 @@ const createElementPositioner = (element, { scrollContainer }) => {
     };
   }
 
+  // Special case: the scroll container IS the positioned parent
+  // In this case, there's no offset between them (they are the same element)
   if (scrollContainer === positionedParent) {
-    // Special case: the scroll container IS the positioned parent
-    // In this case, there's no offset between them (they are the same element)
-    const elementRect = element.getBoundingClientRect();
     const positionedParentRect = positionedParent.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
 
     // Element position relative to positioned parent (which is also the scroll container)
-    const leftRelativeToPositionedParent = elementRect.left - positionedParentRect.left;
-    const topRelativeToPositionedParent = elementRect.top - positionedParentRect.top;
+    const leftRelativeToPositionedParent =
+      elementRect.left - positionedParentRect.left;
+    const topRelativeToPositionedParent =
+      elementRect.top - positionedParentRect.top;
 
     // Element position relative to scroll container (same as relative to positioned parent)
     const leftRelativeToScrollContainer = leftRelativeToPositionedParent;
@@ -423,8 +423,75 @@ const createElementPositioner = (element, { scrollContainer }) => {
     };
   }
 
-  // TODO: Handle other cases (positioned parent === scroll container, positioned parent is ancestor of scroll container)
+  // Case: positioned parent is ancestor of scroll container
+  if (positionedParent.contains(scrollContainer)) {
+    const positionedParentRect = positionedParent.getBoundingClientRect();
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+
+    // Calculate element position relative to positioned parent
+    const leftRelativeToPositionedParent =
+      elementRect.left - positionedParentRect.left;
+    const topRelativeToPositionedParent =
+      elementRect.top - positionedParentRect.top;
+
+    // Calculate element position relative to scroll container
+    const leftRelativeToScrollContainer =
+      elementRect.left - scrollContainerRect.left;
+    const topRelativeToScrollContainer =
+      elementRect.top - scrollContainerRect.top;
+
+    // Calculate offset from positioned parent to scroll container
+    const positionedParentLeftOffsetWithScrollContainer =
+      scrollContainerRect.left - positionedParentRect.left;
+    const positionedParentTopOffsetWithScrollContainer =
+      scrollContainerRect.top - positionedParentRect.top;
+
+    const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
+      return (
+        leftRelativeToPositionedParent -
+        positionedParentLeftOffsetWithScrollContainer
+      );
+    };
+
+    const toScrollRelativeTop = (topRelativeToPositionedParent) => {
+      return (
+        topRelativeToPositionedParent -
+        positionedParentTopOffsetWithScrollContainer
+      );
+    };
+
+    const toLayoutLeft = (leftRelativeToScrollContainer) => {
+      return (
+        leftRelativeToScrollContainer +
+        positionedParentLeftOffsetWithScrollContainer
+      );
+    };
+
+    const toLayoutTop = (topRelativeToScrollContainer) => {
+      return (
+        topRelativeToScrollContainer +
+        positionedParentTopOffsetWithScrollContainer
+      );
+    };
+
+    return {
+      leftRelativeToPositionedParent,
+      topRelativeToPositionedParent,
+      leftRelativeToScrollContainer,
+      topRelativeToScrollContainer,
+      positionedParentLeftOffsetWithScrollContainer,
+      positionedParentTopOffsetWithScrollContainer,
+      toScrollRelativeLeft,
+      toScrollRelativeTop,
+      toLayoutLeft,
+      toLayoutTop,
+    };
+  }
+
+  // never supposed to happen
+  // (scroll container is a parent of element and positioned parent too, but in case we have an error)
   throw new Error(
-    "Unsupported positioning configuration: positioned parent must be inside scroll container for now",
+    "Unsupported positioning configuration: positioned parent must be in a parent-child relationship or be the same.",
   );
 };
