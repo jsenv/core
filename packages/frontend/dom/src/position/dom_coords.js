@@ -563,9 +563,6 @@ export const getScrollBox = (scrollContainer) => {
       bottom: clientHeight,
       width: clientWidth,
       height: clientHeight,
-      scrollContainer,
-      scrollLeft: scrollContainer.scrollLeft,
-      scrollTop: scrollContainer.scrollTop,
     };
   }
 
@@ -584,8 +581,5 @@ export const getScrollBox = (scrollContainer) => {
     bottom,
     width: availableWidth,
     height: availableHeight,
-    scrollContainer,
-    scrollLeft: scrollContainer.scrollLeft,
-    scrollTop: scrollContainer.scrollTop,
   };
 };

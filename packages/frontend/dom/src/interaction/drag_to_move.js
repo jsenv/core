@@ -31,7 +31,18 @@ export const createDragToMoveGestureController = ({
     let visibleArea;
     {
       const updateVisibleArea = () => {
-        const visibleAreaBase = getScrollBox(scrollContainer);
+        const { left, top, right, bottom } = getScrollBox(scrollContainer);
+        const leftWithScroll = left + scrollContainer.scrollLeft;
+        const topWithScroll = top + scrollContainer.scrollTop;
+        const rightWithScroll = right + scrollContainer.scrollLeft;
+        const bottomWithScroll = bottom + scrollContainer.scrollTop;
+
+        const visibleAreaBase = {
+          left: leftWithScroll,
+          top: topWithScroll,
+          right: rightWithScroll,
+          bottom: bottomWithScroll,
+        };
         let visibleAreaCurrent = visibleAreaBase;
         if (stickyFrontiers) {
           visibleAreaCurrent = applyStickyFrontiersToVisibleArea(
@@ -145,12 +156,12 @@ export const createDragToMoveGestureController = ({
           const isGoingNegative = axis === "x" ? isGoingLeft : isGoingUp;
 
           if (isGoingPositive) {
-            const elemendEnd = axis === "x" ? elementRight : elementBottom;
+            const elementEnd = axis === "x" ? elementRight : elementBottom;
             const visibleAreaEnd =
               axis === "x" ? visibleArea.right : visibleArea.bottom;
 
-            if (elemendEnd > visibleAreaEnd) {
-              const scrollAmountNeeded = elemendEnd - visibleAreaEnd;
+            if (elementEnd > visibleAreaEnd) {
+              const scrollAmountNeeded = elementEnd - visibleAreaEnd;
               const scroll = currentScroll + scrollAmountNeeded;
               // console.log(
               //   `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
@@ -158,15 +169,15 @@ export const createDragToMoveGestureController = ({
               scrollContainer[scrollProperty] = scroll;
             }
           } else if (isGoingNegative) {
+            const elementStart = axis === "x" ? elementLeft : elementTop;
+            const visibleAreaStart =
+              axis === "x" ? visibleArea.left : visibleArea.top;
             const canAutoScrollNegative =
               axis === "x"
                 ? !element.hasAttribute("data-sticky-left") ||
                   hasCrossedVisibleAreaLeftOnce
                 : !element.hasAttribute("data-sticky-top") ||
                   hasCrossedVisibleAreaTopOnce;
-            const elementStart = axis === "x" ? elementLeft : elementTop;
-            const visibleAreaStart =
-              axis === "x" ? visibleArea.left : visibleArea.top;
 
             if (canAutoScrollNegative && elementStart < visibleAreaStart) {
               const scrollAmountNeeded = visibleAreaStart - elementStart;
