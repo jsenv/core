@@ -1,38 +1,39 @@
-import {
-  addScrollToRect,
-  convertScrollRelativeRectToElementRect,
-  getMouseEventScrollRelativeRect,
-  getScrollRelativeRect,
-  getScrollRelativeVisibleRect,
-} from "../position/dom_coords.js";
-import { createPubSub } from "../pub_sub.js";
-import {
-  getAncestorScrolls,
-  getScrollContainer,
-} from "../scroll/scroll_container.js";
-import { setStyles } from "../style_and_attributes.js";
-import {
-  applyConstraints,
-  createBoundConstraint,
-  prepareConstraints,
-} from "./constraint.js";
-import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
-import { setupVisualMarkers } from "./debug_markers.js";
-import { createObstacleConstraintsFromQuerySelector } from "./drag_obstacles.js";
-import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
-
 import { createDragGestureController } from "./drag_gesture.js";
 
 export const createDragToMoveGestureController = (options) => {
   const grabToMoveElement = (dragGesture, { element, elementToImpact }) => {
-    const positionedParent = element.offsetParent;
+    if (!element) {
+      throw new Error("element is required");
+    }
 
+    const direction = dragGesture.gestureInfo.direction;
+    const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+    const positionedParent = element.offsetParent;
     const elementRect = element.getBoundingClientRect();
 
     let elementLeftAtGrab;
     let elementTopAtGrab;
     let elementWidth = elementRect.width;
     let elementHeight = elementRect.height;
+
+    let moveConverter;
+    {
+      const scrollLeftAtGrab = dragGesture.gestureInfo.grabScrollLeft;
+      const scrollTopAtGrab = dragGesture.gestureInfo.grabScrollTop;
+      const elementLeftWithScrollAtGrab = elementLeftAtGrab + scrollLeftAtGrab;
+      const elementTopWithScrollAtGrab = elementTopAtGrab + scrollTopAtGrab;
+
+      const toElementLeft = (moveX) => elementLeftWithScrollAtGrab + moveX;
+      const toElementTop = (moveY) => elementTopWithScrollAtGrab + moveY;
+      const fromElementLeft = (left) => left - elementLeftWithScrollAtGrab;
+      const fromElementTop = (top) => top - elementTopWithScrollAtGrab;
+      moveConverter = {
+        toElementLeft,
+        toElementTop,
+        fromElementLeft,
+        fromElementTop,
+      };
+    }
 
     // TODO: will be the diff between elementToImpact and elementVisuallyImpacted
     let visualOffsetX = 0;
@@ -75,68 +76,44 @@ export const createDragToMoveGestureController = (options) => {
       element.removeAttribute("data-grabbed");
     });
 
-    const dragToMove = () => {
+    const dragToMove = (gestureInfo) => {
       const {
-        elementVisuallyImpactedWidth,
-        elementVisuallyImpactedHeight,
-        visualOffsetX,
-        visualOffsetY,
-        layoutOffsetX,
-        layoutOffsetY,
-        grabScrollRelativeRect,
-
         isGoingDown,
         isGoingUp,
         isGoingLeft,
         isGoingRight,
-        visibleArea,
-        hasCrossedVisibleAreaLeftOnce,
-        hasCrossedVisibleAreaTopOnce,
+        moveX,
+        moveY,
       } = gestureInfo;
-
-      const {
-        left: grabLeft,
-        top: grabTop,
-        scrollLeft: grabScrollLeft,
-        scrollTop: grabScrollTop,
-      } = grabScrollRelativeRect;
-      const desiredElementLeft =
-        grabLeft - layoutOffsetX + grabScrollLeft + gestureInfo.xMove;
-      const desiredElementRight =
-        desiredElementLeft + elementVisuallyImpactedWidth;
-      const desiredElementTop =
-        grabTop - layoutOffsetY + grabScrollTop + gestureInfo.yMove;
-      const desiredElementBottom =
-        desiredElementTop + elementVisuallyImpactedHeight;
-
-      console.log({
-        grabTop,
-        layoutOffsetY,
-        grabScrollTop,
-        yMove: gestureInfo.yMove,
-      });
+      const elementLeft = moveConverter.toElementLeft(moveX);
+      const elementTop = moveConverter.toElementTop(moveY);
+      const elementLeftLayout = elementLeft - layoutOffsetX;
+      const elementRightLayout = elementLeft + elementWidth;
+      const elementTopLayout = elementTop - layoutOffsetY;
+      const elementBottomLayout = elementTopLayout + elementHeight;
 
       // Helper function to handle auto-scroll and element positioning for an axis
       const moveAndKeepIntoView = ({
         axis,
-        isGoingPositive, // right/down
-        isGoingNegative, // left/up
-        desiredElementStart, // left/top edge of element
-        desiredElementEnd, // right/bottom edge of element
+        elementStart, // left/top edge of element
+        elemendEnd, // right/bottom edge of element
         visibleAreaStart, // visible left/top boundary
         visibleAreaEnd, // visible right/bottom boundary
-        currentScroll, // current scrollLeft or scrollTop value
         canAutoScrollNegative, // whether auto-scroll is allowed for sticky elements when going negative
-      }) => {
-        const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
-        const styleProperty = axis === "x" ? "left" : "top";
-        const visualOffset = axis === "x" ? visualOffsetX : visualOffsetY;
-        //  const layoutOffset = axis === "x" ? layoutOffsetX : layoutOffsetY;
 
+        isGoingPositive, // right/down
+        isGoingNegative, // left/up
+      }) => {
         keep_into_view: {
+          const scrollProperty = axis === "x" ? "scrollLeft" : "scrollTop";
+          const currentScroll =
+            axis === "x"
+              ? scrollContainer.scrollLeft
+              : scrollContainer.scrollTop;
+
           if (isGoingPositive) {
-            if (desiredElementEnd > visibleAreaEnd) {
-              const scrollAmountNeeded = desiredElementEnd - visibleAreaEnd;
+            if (elemendEnd > visibleAreaEnd) {
+              const scrollAmountNeeded = elemendEnd - visibleAreaEnd;
               const scroll = currentScroll + scrollAmountNeeded;
               console.log(
                 `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
@@ -144,11 +121,8 @@ export const createDragToMoveGestureController = (options) => {
               scrollContainer[scrollProperty] = scroll;
             }
           } else if (isGoingNegative) {
-            if (
-              canAutoScrollNegative &&
-              desiredElementStart < visibleAreaStart
-            ) {
-              const scrollAmountNeeded = visibleAreaStart - desiredElementStart;
+            if (canAutoScrollNegative && elementStart < visibleAreaStart) {
+              const scrollAmountNeeded = visibleAreaStart - elementStart;
               const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
               console.log(
                 `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
@@ -158,7 +132,10 @@ export const createDragToMoveGestureController = (options) => {
           }
         }
         move: {
-          const elementPosition = desiredElementStart - visualOffset;
+          const styleProperty = axis === "x" ? "left" : "top";
+          const visualOffset = axis === "x" ? visualOffsetX : visualOffsetY;
+
+          const elementPosition = elementStart - visualOffset;
           if (elementToImpact) {
             elementToImpact.style[styleProperty] = `${elementPosition}px`;
           }
@@ -169,18 +146,17 @@ export const createDragToMoveGestureController = (options) => {
       if (direction.x) {
         // Determine if auto-scroll is allowed for sticky elements when going left
         const canAutoScrollLeft =
-          !elementVisuallyImpacted.hasAttribute("data-sticky-left") ||
+          !element.hasAttribute("data-sticky-left") ||
           hasCrossedVisibleAreaLeftOnce;
         moveAndKeepIntoView({
           axis: "x",
           isGoingPositive: isGoingRight,
           isGoingNegative: isGoingLeft,
-          desiredElementStart: desiredElementLeft,
-          desiredElementEnd: desiredElementRight,
+          desiredElementStart: elementLeftLayout,
+          desiredElementEnd: elementRightLayout,
           visibleAreaStart: visibleArea.left,
           visibleAreaEnd: visibleArea.right,
           canAutoScrollNegative: canAutoScrollLeft,
-          currentScroll: scrollContainer.scrollLeft,
         });
       }
 
@@ -188,18 +164,17 @@ export const createDragToMoveGestureController = (options) => {
       if (direction.y) {
         // Determine if auto-scroll is allowed for sticky elements when going up
         const canAutoScrollUp =
-          !elementVisuallyImpacted.hasAttribute("data-sticky-top") ||
+          !element.hasAttribute("data-sticky-top") ||
           hasCrossedVisibleAreaTopOnce;
         moveAndKeepIntoView({
           axis: "y",
           isGoingPositive: isGoingDown,
           isGoingNegative: isGoingUp,
-          desiredElementStart: desiredElementTop,
-          desiredElementEnd: desiredElementBottom,
+          desiredElementStart: elementTopLayout,
+          desiredElementEnd: elementBottomLayout,
           visibleAreaStart: visibleArea.top,
           visibleAreaEnd: visibleArea.bottom,
           canAutoScrollNegative: canAutoScrollUp,
-          currentScroll: scrollContainer.scrollTop,
         });
       }
     };
