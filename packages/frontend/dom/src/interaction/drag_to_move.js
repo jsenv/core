@@ -31,11 +31,11 @@ export const createDragToMoveGestureController = ({
     let visibleArea;
     {
       const updateVisibleArea = () => {
-        const { left, top, right, bottom } = getScrollBox(scrollContainer);
+        const { left, top, width, height } = getScrollBox(scrollContainer);
         const leftWithScroll = left + scrollContainer.scrollLeft;
         const topWithScroll = top + scrollContainer.scrollTop;
-        const rightWithScroll = right + scrollContainer.scrollLeft;
-        const bottomWithScroll = bottom + scrollContainer.scrollTop;
+        const rightWithScroll = leftWithScroll + width;
+        const bottomWithScroll = topWithScroll + height;
 
         const visibleAreaBase = {
           left: leftWithScroll,
