@@ -14,17 +14,49 @@ export const createDragToMoveGestureController = ({
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
     const positionedParent = element.offsetParent;
 
-    let elementLeftAtGrab;
-    let elementTopAtGrab;
-
     let elementWidth;
     let elementHeight;
-    const updateElementDimension = () => {
-      const elementRect = element.getBoundingClientRect();
-      elementWidth = elementRect.width;
-      elementHeight = elementRect.height;
-    };
-    updateElementDimension();
+    {
+      const updateElementDimension = () => {
+        const elementRect = element.getBoundingClientRect();
+        elementWidth = elementRect.width;
+        elementHeight = elementRect.height;
+      };
+      updateElementDimension();
+      dragGesture.addBeforeDragCallback(updateElementDimension);
+    }
+
+    let visibleArea;
+    {
+      const updateVisibleArea = () => {
+        const visibleAreaBase = getScrollBox(scrollContainer);
+        let visibleAreaCurrent = visibleAreaBase;
+        if (stickyFrontiers) {
+          visibleAreaCurrent = applyStickyFrontiersToVisibleArea(
+            visibleAreaCurrent,
+            {
+              scrollContainer,
+              direction,
+              dragGestureName,
+            },
+          );
+        }
+        if (visibleAreaPadding > 0) {
+          visibleAreaCurrent = {
+            left: visibleAreaCurrent.left + visibleAreaPadding,
+            top: visibleAreaCurrent.top + visibleAreaPadding,
+            right: visibleAreaCurrent.right - visibleAreaPadding,
+            bottom: visibleAreaCurrent.bottom - visibleAreaPadding,
+          };
+        }
+        visibleArea = visibleAreaCurrent;
+      };
+      updateVisibleArea();
+      dragGesture.addBeforeDragCallback(updateVisibleArea);
+    }
+
+    let elementLeftAtGrab;
+    let elementTopAtGrab;
 
     let layoutConverter;
     // We need a unique coordinate system internally
@@ -104,38 +136,6 @@ export const createDragToMoveGestureController = ({
       element.removeAttribute("data-grabbed");
     });
 
-    let visibleArea;
-    const updateVisibleArea = () => {
-      const visibleAreaBase = getScrollBox(scrollContainer);
-      let visibleAreaCurrent = visibleAreaBase;
-      if (stickyFrontiers) {
-        visibleAreaCurrent = applyStickyFrontiersToVisibleArea(
-          visibleAreaCurrent,
-          {
-            scrollContainer,
-            direction,
-            dragGestureName,
-          },
-        );
-      }
-      if (visibleAreaPadding > 0) {
-        visibleAreaCurrent = {
-          left: visibleAreaCurrent.left + visibleAreaPadding,
-          top: visibleAreaCurrent.top + visibleAreaPadding,
-          right: visibleAreaCurrent.right - visibleAreaPadding,
-          bottom: visibleAreaCurrent.bottom - visibleAreaPadding,
-        };
-      }
-      visibleArea = visibleAreaCurrent;
-    };
-    updateVisibleArea();
-    const applyConstraints = (moveXRequested, moveYRequested) => {
-      updateVisibleArea();
-      updateElementDimension();
-
-      return [moveXRequested, moveYRequested];
-    };
-
     const dragToMove = (gestureInfo) => {
       const {
         isGoingDown,
@@ -202,7 +202,6 @@ export const createDragToMoveGestureController = ({
         }
       };
 
-      // Horizontal auto-scroll
       if (direction.x) {
         // Determine if auto-scroll is allowed for sticky elements when going left
         const canAutoScrollLeft =
@@ -219,8 +218,6 @@ export const createDragToMoveGestureController = ({
           canAutoScrollNegative: canAutoScrollLeft,
         });
       }
-
-      // Vertical auto-scroll
       if (direction.y) {
         // Determine if auto-scroll is allowed for sticky elements when going up
         const canAutoScrollUp =
@@ -239,7 +236,7 @@ export const createDragToMoveGestureController = ({
       }
     };
 
-    return { applyConstraints, drag: dragToMove };
+    return { drag: dragToMove };
   };
 
   const dragToMoveGestureController = createDragGestureController({

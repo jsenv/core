@@ -34,6 +34,7 @@ export const createDragGestureController = (options = {}) => {
     }
     scrollContainer = scrollContainer || inferScrollContainer(rest);
 
+    const [publishBeforeDrag, addBeforeDragCallback] = createPubSub();
     const [publishDrag, addDragCallback] = createPubSub();
     const [publishRelease, addReleaseCallback] = createPubSub();
     if (onDrag) {
@@ -132,11 +133,20 @@ export const createDragGestureController = (options = {}) => {
       const moveXRequested = dragXWithScroll - grabXWithScroll;
       const moveYRequested = dragYWithScroll - grabYWithScroll;
       // === APPLIQUER LES CONTRAINTES ===
-      const [moveXConstrained, moveYConstrained] =
-        lifecycleHooks?.applyConstraints?.(moveXRequested, moveYRequested, {
-          dragEvent,
-          isRelease,
-        }) || [moveXRequested, moveYRequested];
+      let moveXConstrained = moveXRequested;
+      let moveYConstrained = moveYRequested;
+      const limitMoveX = (value) => {
+        moveXConstrained = value;
+      };
+      const limitMoveY = (value) => {
+        moveYConstrained = value;
+      };
+      publishBeforeDrag(moveXRequested, moveYRequested, {
+        limitMoveX,
+        limitMoveY,
+        dragEvent,
+        isRelease,
+      });
       // === ÉTAT FINAL ===
       const moveX = moveXConstrained;
       const moveY = moveYConstrained;
@@ -237,8 +247,9 @@ export const createDragGestureController = (options = {}) => {
     onGrab?.(gestureInfo);
     const dragGesture = {
       gestureInfo,
-      addReleaseCallback,
+      addBeforeDragCallback,
       addDragCallback,
+      addReleaseCallback,
       drag,
       release,
     };
