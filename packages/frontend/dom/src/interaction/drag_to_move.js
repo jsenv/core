@@ -8,7 +8,10 @@ export const createDragToMoveGestureController = ({
   visibleAreaPadding,
   ...options
 } = {}) => {
-  const grabToMoveElement = (dragGesture, { element, elementToImpact }) => {
+  const grabToMoveElement = (
+    dragGesture,
+    { element, elementToImpact = element },
+  ) => {
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
@@ -117,13 +120,13 @@ export const createDragToMoveGestureController = ({
         moveX,
         moveY,
       } = gestureInfo;
-      debugger;
       const elementLeft = moveConverter.toElementLeft(moveX);
       const elementTop = moveConverter.toElementTop(moveY);
       const elementLeftLayout = layoutConverter.toLayoutLeft(elementLeft);
       const elementTopLayout = layoutConverter.toLayoutTop(elementTop);
       const elementRightLayout = elementLeft + elementWidth;
       const elementBottomLayout = elementTopLayout + elementHeight;
+      console.log({ elementLeft, elementLeftLayout });
 
       // Helper function to handle auto-scroll and element positioning for an axis
       const moveAndKeepIntoView = ({
@@ -148,18 +151,18 @@ export const createDragToMoveGestureController = ({
             if (elemendEnd > visibleAreaEnd) {
               const scrollAmountNeeded = elemendEnd - visibleAreaEnd;
               const scroll = currentScroll + scrollAmountNeeded;
-              console.log(
-                `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
-              );
+              // console.log(
+              //   `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
+              // );
               scrollContainer[scrollProperty] = scroll;
             }
           } else if (isGoingNegative) {
             if (canAutoScrollNegative && elementStart < visibleAreaStart) {
               const scrollAmountNeeded = visibleAreaStart - elementStart;
               const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
-              console.log(
-                `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
-              );
+              // console.log(
+              //   `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
+              // );
               scrollContainer[scrollProperty] = scroll;
             }
           }
