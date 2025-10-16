@@ -88,18 +88,7 @@ const createSameScrollDifferentParentPositioner = (
   const topRelativeToScrollContainer =
     elementRect.top - scrollContainerRect.top;
 
-  // Helper function to check if element has a position: fixed ancestor
-  const checkForFixedAncestor = (element) => {
-    let current = element.parentElement;
-    while (current && current !== document.documentElement) {
-      const computedStyle = window.getComputedStyle(current);
-      if (computedStyle.position === "fixed") {
-        return true;
-      }
-      current = current.parentElement;
-    }
-    return false;
-  };
+  const ancestorFixedPosition = findAncestorFixedPosition(element);
 
   // Override toLayoutLeft/Top to convert to element's positioned parent coordinates
   const toLayoutLeft = (leftRelativeToScrollContainerToConvert) => {
@@ -124,12 +113,10 @@ const createSameScrollDifferentParentPositioner = (
     // Step 4: Handle position: fixed ancestors
     // If element has position: fixed ancestor and scroll container is document,
     // we need to remove document scroll offsets since fixed positioning is viewport-relative
-    const hasFixedAncestor = checkForFixedAncestor(element);
     const scrollContainerIsDocument =
       scrollContainer === document.documentElement;
-
-    if (hasFixedAncestor && scrollContainerIsDocument) {
-      return result;
+    if (ancestorFixedPosition && scrollContainerIsDocument) {
+      return ancestorFixedPosition.left + result;
     }
     return result + scrollLeft;
   };
@@ -156,12 +143,11 @@ const createSameScrollDifferentParentPositioner = (
     // Step 4: Handle position: fixed ancestors
     // If element has position: fixed ancestor and scroll container is document,
     // we need to remove document scroll offsets since fixed positioning is viewport-relative
-    const hasFixedAncestor = checkForFixedAncestor(element);
+
     const scrollContainerIsDocument =
       scrollContainer === document.documentElement;
-
-    if (hasFixedAncestor && scrollContainerIsDocument) {
-      return result;
+    if (ancestorFixedPosition && scrollContainerIsDocument) {
+      return ancestorFixedPosition.top + result;
     }
     return result + scrollTop;
   };
@@ -561,4 +547,18 @@ const createStandardElementPositioner = (element) => {
   throw new Error(
     "Unsupported positioning configuration: positioned parent must be in a parent-child relationship or be the same.",
   );
+};
+
+// Helper function to check if ancestor has a position: fixed
+const findAncestorFixedPosition = (element) => {
+  let current = element.parentElement;
+  while (current && current !== document.documentElement) {
+    const computedStyle = window.getComputedStyle(current);
+    if (computedStyle.position === "fixed") {
+      const { left, top } = current.getBoundingClientRect();
+      return [left, top];
+    }
+    current = current.parentElement;
+  }
+  return null;
 };
