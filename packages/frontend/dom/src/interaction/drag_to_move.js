@@ -265,7 +265,7 @@ export const createDragToMoveGestureController = ({
     if (!element) {
       throw new Error("element is required");
     }
-    const scrollContainer = getScrollContainer(element);
+    const scrollContainer = getScrollContainer(referenceElement || element);
     const dragGesture = dragGestureControllerGrab({
       scrollContainer,
       ...rest,
