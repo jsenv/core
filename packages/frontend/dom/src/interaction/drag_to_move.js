@@ -74,30 +74,32 @@ export const createDragToMoveGestureController = ({
       dragGesture.addBeforeDragCallback(updateVisibleArea);
     }
 
-    let elementLeftWithoutScrollAtGrab;
-    let elementTopWithoutScrollAtGrab;
     let positioner;
-    {
-      positioner = createDragElementPositioner(element, referenceElement);
-      elementLeftWithoutScrollAtGrab = positioner.leftRelativeToScrollContainer;
-      elementTopWithoutScrollAtGrab = positioner.topRelativeToScrollContainer;
-      console.log(positioner);
-    }
-
     let moveConverter;
     {
+      positioner = createDragElementPositioner(element, referenceElement);
+      console.log(positioner);
+
+      const elementLeftWithScrollAtGrab =
+        positioner.leftRelativeToScrollContainer;
+      const elementTopWithScrollAtGrab =
+        positioner.topRelativeToScrollContainer;
       const { grabScrollLeft, grabScrollTop } = dragGesture.gestureInfo;
+      const elementLeftWithoutScrollAtGrab =
+        elementLeftWithScrollAtGrab - grabScrollLeft;
+      const elementTopWithoutScrollAtGrab =
+        elementTopWithScrollAtGrab - grabScrollTop;
 
       const toElementLeft = (moveX) => elementLeftWithoutScrollAtGrab + moveX;
       const toElementTop = (moveY) => elementTopWithoutScrollAtGrab + moveY;
       const toElementLeftWithScroll = (moveX) =>
-        elementLeftWithoutScrollAtGrab + grabScrollLeft + moveX;
+        elementLeftWithScrollAtGrab + moveX;
       const toElementTopWithScroll = (moveY) =>
-        elementTopWithoutScrollAtGrab + grabScrollTop + moveY;
+        elementTopWithScrollAtGrab + moveY;
       const fromElementLeftWithScroll = (leftWithScroll) =>
-        leftWithScroll - elementLeftWithoutScrollAtGrab - grabScrollLeft;
+        leftWithScroll - elementLeftWithScrollAtGrab;
       const fromElementTopWithScroll = (topWithScroll) =>
-        topWithScroll - elementTopWithoutScrollAtGrab - grabScrollTop;
+        topWithScroll - elementTopWithScrollAtGrab;
 
       moveConverter = {
         toElementLeft,

@@ -412,10 +412,10 @@ const createStandardElementPositioner = (element) => {
 
     // Calculate current element position relative to scroll container
     const leftRelativeToScrollContainer = scrollContainerIsDocument
-      ? elementViewportLeft
+      ? elementViewportLeft + scrollLeft
       : elementViewportLeft - scrollContainerViewportLeft;
     const topRelativeToScrollContainer = scrollContainerIsDocument
-      ? elementViewportTop
+      ? elementViewportTop + scrollTop
       : elementViewportTop - scrollContainerViewportTop;
 
     // Calculate static offset between positioned parent and scroll container
