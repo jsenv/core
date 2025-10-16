@@ -107,19 +107,13 @@ const createSameScrollDifferentParentPositioner = (
       leftRelativeToScrollContainerToConvert -
       referenceStandardPositioner.leftRelativeToScrollContainer +
       referenceStandardPositioner.leftRelativeToPositionedParent;
-
-    if (ancestorFixedPosition && scrollContainerIsDocument) {
-      const referenceViewportLeft =
-        referencePositionedParentLeft +
-        referenceLeftRelativeToPositionedParent -
-        document.documentElement.scrollLeft;
-      const left = referenceViewportLeft - positionedParentLeft;
-      return ancestorFixedPosition[0] + left;
-    }
-
     const referenceViewportLeft =
       referencePositionedParentLeft + referenceLeftRelativeToPositionedParent;
     const left = referenceViewportLeft - positionedParentLeft;
+
+    if (ancestorFixedPosition && scrollContainerIsDocument) {
+      return ancestorFixedPosition[0] + left;
+    }
     return scrollLeft + left;
   };
 
@@ -129,19 +123,13 @@ const createSameScrollDifferentParentPositioner = (
       topRelativeToScrollContainerToConvert -
       referenceStandardPositioner.topRelativeToScrollContainer +
       referenceStandardPositioner.topRelativeToPositionedParent;
-
-    if (ancestorFixedPosition && scrollContainerIsDocument) {
-      const referenceViewportTop =
-        referencePositionedParentTop +
-        referenceTopRelativeToPositionedParent -
-        document.documentElement.scrollTop;
-      const top = referenceViewportTop - positionedParentTop;
-      return ancestorFixedPosition[1] + top;
-    }
-
     const referenceViewportTop =
       referencePositionedParentTop + referenceTopRelativeToPositionedParent;
     const top = referenceViewportTop - positionedParentTop;
+
+    if (ancestorFixedPosition && scrollContainerIsDocument) {
+      return ancestorFixedPosition[1] + top;
+    }
     return scrollTop + top;
   };
 

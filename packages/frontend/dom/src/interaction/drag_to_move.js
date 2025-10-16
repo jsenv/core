@@ -168,12 +168,19 @@ export const createDragToMoveGestureController = ({
         elementLeftWithoutScroll,
       );
       const elementTopLayout = positioner.toLayoutTop(elementTopWithoutScroll);
-      console.log({ moveX, elementLeftWithoutScroll, elementLeftLayout });
 
       const elementLeft = moveConverter.toElementLeftWithScroll(moveX);
       const elementTop = moveConverter.toElementTopWithScroll(moveY);
       const elementRight = elementLeft + elementWidth;
       const elementBottom = elementTop + elementHeight;
+
+      console.log({
+        moveX,
+        elementLeftWithoutScroll,
+        elementLeftLayout,
+        elementLeft,
+        grabScrollLeft: gestureInfo.grabScrollLeft,
+      });
 
       hasCrossedVisibleAreaLeftOnce =
         hasCrossedVisibleAreaLeftOnce || elementLeft < visibleArea.left;
