@@ -74,18 +74,28 @@ const createSameScrollDifferentParentPositioner = (
   const referencePositionedParent = referenceElement.offsetParent;
   const elementPositionedParent = element.offsetParent;
 
-  // Use reference element for position calculations (API contract)
-  const standardPositioner = createStandardElementPositioner(referenceElement);
+  // Calculate element position relative to reference element's scroll container
+  const referenceScrollContainer = getScrollContainer(referenceElement);
+  const elementRect = element.getBoundingClientRect();
+  const referenceScrollContainerRect =
+    referenceScrollContainer.getBoundingClientRect();
+
+  const leftRelativeToScrollContainer =
+    elementRect.left - referenceScrollContainerRect.left;
+  const topRelativeToScrollContainer =
+    elementRect.top - referenceScrollContainerRect.top;
+
+  // Get reference element positioning info for other properties
+  const referenceStandardPositioner =
+    createStandardElementPositioner(referenceElement);
 
   // Override toLayoutLeft/Top to convert to element's positioned parent coordinates
-  const originalToLayoutLeft = standardPositioner.toLayoutLeft;
-  const originalToLayoutTop = standardPositioner.toLayoutTop;
-
   const toLayoutLeft = (leftRelativeToScrollContainer) => {
-    // Step 1: Convert to reference element's positioned parent coordinates
-    const referenceLeftRelativeToPositionedParent = originalToLayoutLeft(
-      leftRelativeToScrollContainer,
-    );
+    // Step 1: Convert to reference element's positioned parent coordinates using reference positioning
+    const referenceLeftRelativeToPositionedParent =
+      leftRelativeToScrollContainer -
+      referenceStandardPositioner.leftRelativeToScrollContainer +
+      referenceStandardPositioner.leftRelativeToPositionedParent;
 
     // Step 2: Convert to viewport coordinates
     const referencePositionedParentRect =
@@ -101,10 +111,11 @@ const createSameScrollDifferentParentPositioner = (
   };
 
   const toLayoutTop = (topRelativeToScrollContainer) => {
-    // Step 1: Convert to reference element's positioned parent coordinates
-    const referenceTopRelativeToPositionedParent = originalToLayoutTop(
-      topRelativeToScrollContainer,
-    );
+    // Step 1: Convert to reference element's positioned parent coordinates using reference positioning
+    const referenceTopRelativeToPositionedParent =
+      topRelativeToScrollContainer -
+      referenceStandardPositioner.topRelativeToScrollContainer +
+      referenceStandardPositioner.topRelativeToPositionedParent;
 
     // Step 2: Convert to viewport coordinates
     const referencePositionedParentRect =
@@ -120,9 +131,16 @@ const createSameScrollDifferentParentPositioner = (
   };
 
   return {
-    ...standardPositioner,
+    leftRelativeToScrollContainer,
+    topRelativeToScrollContainer,
     toLayoutLeft,
     toLayoutTop,
+    leftRelativeToPositionedParent:
+      referenceStandardPositioner.leftRelativeToPositionedParent,
+    topRelativeToPositionedParent:
+      referenceStandardPositioner.topRelativeToPositionedParent,
+    toScrollRelativeLeft: referenceStandardPositioner.toScrollRelativeLeft,
+    toScrollRelativeTop: referenceStandardPositioner.toScrollRelativeTop,
   };
 };
 
@@ -207,17 +225,18 @@ const createFullyDifferentPositioner = (element, referenceElement) => {
   const referencePositionedParent = referenceElement.offsetParent;
   const elementPositionedParent = element.offsetParent;
 
-  // Calculate reference element positions relative to reference element's scroll container (API contract)
-  const referenceElementRect = referenceElement.getBoundingClientRect();
+  // Calculate element position relative to reference element's scroll container (API contract)
+  const elementRect = element.getBoundingClientRect();
   const referenceScrollContainerRect =
     referenceScrollContainer.getBoundingClientRect();
 
   const leftRelativeToScrollContainer =
-    referenceElementRect.left - referenceScrollContainerRect.left;
+    elementRect.left - referenceScrollContainerRect.left;
   const topRelativeToScrollContainer =
-    referenceElementRect.top - referenceScrollContainerRect.top;
+    elementRect.top - referenceScrollContainerRect.top;
 
-  // Calculate positions relative to reference element's positioned parent
+  // Calculate positions relative to reference element's positioned parent (for coordinate conversion)
+  const referenceElementRect = referenceElement.getBoundingClientRect();
   const referencePositionedParentRect =
     referencePositionedParent.getBoundingClientRect();
   const leftRelativeToPositionedParent =
