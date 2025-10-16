@@ -89,6 +89,9 @@ const createSameScrollDifferentParentPositioner = (
     elementRect.top - scrollContainerRect.top;
 
   const ancestorFixedPosition = findAncestorFixedPosition(element);
+  const positionedParentRect = elementPositionedParent.getBoundingClientRect();
+  const positionedParentLeft = positionedParentRect.left;
+  const positionedParentTop = positionedParentRect.top;
 
   // Override toLayoutLeft/Top to convert to element's positioned parent coordinates
   const toLayoutLeft = (leftRelativeToScrollContainerToConvert) => {
@@ -106,9 +109,7 @@ const createSameScrollDifferentParentPositioner = (
       referenceLeftRelativeToPositionedParent;
 
     // Step 3: Convert to element's positioned parent coordinates
-    const elementPositionedParentRect =
-      elementPositionedParent.getBoundingClientRect();
-    let result = referenceViewportLeft - elementPositionedParentRect.left;
+    let result = referenceViewportLeft - positionedParentLeft;
 
     // Step 4: Handle position: fixed ancestors
     // If element has position: fixed ancestor and scroll container is document,
@@ -116,7 +117,14 @@ const createSameScrollDifferentParentPositioner = (
     const scrollContainerIsDocument =
       scrollContainer === document.documentElement;
     if (ancestorFixedPosition && scrollContainerIsDocument) {
-      return ancestorFixedPosition.left + result;
+      console.log({
+        leftRelativeToScrollContainerToConvert,
+        referenceLeftRelativeToPositionedParent,
+        referenceViewportLeft,
+        positionedParentLeft,
+        layoutLeft: result,
+      });
+      return ancestorFixedPosition[0] + result;
     }
     return result + scrollLeft;
   };
@@ -136,9 +144,7 @@ const createSameScrollDifferentParentPositioner = (
       referenceTopRelativeToPositionedParent;
 
     // Step 3: Convert to element's positioned parent coordinates
-    const elementPositionedParentRect =
-      elementPositionedParent.getBoundingClientRect();
-    let result = referenceViewportTop - elementPositionedParentRect.top;
+    let result = referenceViewportTop - positionedParentTop;
 
     // Step 4: Handle position: fixed ancestors
     // If element has position: fixed ancestor and scroll container is document,
@@ -147,7 +153,7 @@ const createSameScrollDifferentParentPositioner = (
     const scrollContainerIsDocument =
       scrollContainer === document.documentElement;
     if (ancestorFixedPosition && scrollContainerIsDocument) {
-      return ancestorFixedPosition.top + result;
+      return ancestorFixedPosition[1] + result;
     }
     return result + scrollTop;
   };
