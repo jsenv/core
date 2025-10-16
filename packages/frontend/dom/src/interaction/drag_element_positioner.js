@@ -28,7 +28,7 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
  *   scroll-relative coordinates to the element's offsetParent-relative coordinates.
  *
  * OTHER PROPERTIES:
- * The remaining returned properties provide coordinate conversion utilities but are less critical.
+ * The remaining returned properties provide coordinate conversion utilities but are not used for now.
  */
 export const createDragElementPositioner = (element, referenceElement) => {
   if (!referenceElement) {
@@ -135,10 +135,11 @@ const createSameScrollDifferentParentPositioner = (
     topRelativeToScrollContainer,
     toLayoutLeft,
     toLayoutTop,
+    // Calculate element position relative to reference element's positioned parent
     leftRelativeToPositionedParent:
-      referenceStandardPositioner.leftRelativeToPositionedParent,
+      elementRect.left - referencePositionedParent.getBoundingClientRect().left,
     topRelativeToPositionedParent:
-      referenceStandardPositioner.topRelativeToPositionedParent,
+      elementRect.top - referencePositionedParent.getBoundingClientRect().top,
     toScrollRelativeLeft: referenceStandardPositioner.toScrollRelativeLeft,
     toScrollRelativeTop: referenceStandardPositioner.toScrollRelativeTop,
   };
@@ -180,12 +181,13 @@ const createDifferentScrollSameParentPositioner = (
 
   // Other properties using reference element's coordinate system
   const positionedParent = referenceElement.offsetParent;
-  const referenceElementRect = referenceElement.getBoundingClientRect();
   const positionedParentRect = positionedParent.getBoundingClientRect();
+
+  // Calculate element position relative to reference element's positioned parent
   const leftRelativeToPositionedParent =
-    referenceElementRect.left - positionedParentRect.left;
+    elementRect.left - positionedParentRect.left;
   const topRelativeToPositionedParent =
-    referenceElementRect.top - positionedParentRect.top;
+    elementRect.top - positionedParentRect.top;
 
   const positionedParentLeftOffsetWithScrollContainer =
     referenceScrollContainerRect.left - positionedParentRect.left;
@@ -235,14 +237,13 @@ const createFullyDifferentPositioner = (element, referenceElement) => {
   const topRelativeToScrollContainer =
     elementRect.top - referenceScrollContainerRect.top;
 
-  // Calculate positions relative to reference element's positioned parent (for coordinate conversion)
-  const referenceElementRect = referenceElement.getBoundingClientRect();
+  // Calculate element position relative to reference element's positioned parent (for coordinate conversion)
   const referencePositionedParentRect =
     referencePositionedParent.getBoundingClientRect();
   const leftRelativeToPositionedParent =
-    referenceElementRect.left - referencePositionedParentRect.left;
+    elementRect.left - referencePositionedParentRect.left;
   const topRelativeToPositionedParent =
-    referenceElementRect.top - referencePositionedParentRect.top;
+    elementRect.top - referencePositionedParentRect.top;
 
   // Calculate offset between reference element's scroll container and positioned parent
   const positionedParentLeftOffsetWithScrollContainer =

@@ -81,6 +81,7 @@ export const createDragToMoveGestureController = ({
       positioner = createDragElementPositioner(element, referenceElement);
       elementLeftWithoutScrollAtGrab = positioner.leftRelativeToScrollContainer;
       elementTopWithoutScrollAtGrab = positioner.topRelativeToScrollContainer;
+      console.log(positioner);
     }
 
     let moveConverter;
