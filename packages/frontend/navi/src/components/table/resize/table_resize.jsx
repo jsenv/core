@@ -400,23 +400,17 @@ const initResizeByMousedown = (
       onGrab?.();
     },
     onDrag,
-    onDragStart: () => {
-      resizer.setAttribute("data-resizing", "");
-      // onDragStart?.(...args);
-    },
-    onRelease: (gesture) => {
+    onRelease: (gestureInfo) => {
       const styleProperty = axis === "x" ? "left" : "top";
       resizer.style[styleProperty] = "";
-      resizer.removeAttribute("data-resizing");
-
-      const sizeChange = axis === "x" ? gesture.xMove : gesture.yMove;
+      const sizeChange = axis === "x" ? gestureInfo.moveX : gestureInfo.moveY;
       const newSize = currentSize + sizeChange;
       onRelease(newSize, currentSize);
     },
   });
   dragToMoveGestureController.grabViaMouse(mousedownEvent, {
     element: tableCell,
-    elementToImpact: resizer,
+    elementProxy: resizer,
   });
 };
 

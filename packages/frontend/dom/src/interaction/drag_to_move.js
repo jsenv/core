@@ -24,7 +24,7 @@ export const createDragToMoveGestureController = ({
   showDebugMarkers = true,
   ...options
 } = {}) => {
-  const initGrabToMoveElement = (dragGesture, { element, elementToImpact }) => {
+  const initGrabToMoveElement = (dragGesture, { element, elementProxy }) => {
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
@@ -33,7 +33,7 @@ export const createDragToMoveGestureController = ({
     let elementHeight;
     {
       const updateElementDimension = () => {
-        const elementRect = element.getBoundingClientRect();
+        const elementRect = elementProxy.getBoundingClientRect();
         elementWidth = elementRect.width;
         elementHeight = elementRect.height;
       };
@@ -74,7 +74,7 @@ export const createDragToMoveGestureController = ({
     let elementTopWithoutScrollAtGrab;
     let positioner;
     {
-      positioner = createElementPositioner(element, { scrollContainer });
+      positioner = createElementPositioner(elementProxy, { scrollContainer });
       elementLeftWithoutScrollAtGrab = positioner.leftRelativeToScrollContainer;
       elementTopWithoutScrollAtGrab = positioner.topRelativeToScrollContainer;
     }
@@ -104,9 +104,9 @@ export const createDragToMoveGestureController = ({
     let visualOffsetY = 0;
 
     // Set up dragging attribute
-    element.setAttribute("data-grabbed", "");
+    elementProxy.setAttribute("data-grabbed", "");
     dragGesture.addReleaseCallback(() => {
-      element.removeAttribute("data-grabbed");
+      elementProxy.removeAttribute("data-grabbed");
     });
 
     const dragConstraints = initDragConstraints(dragGesture, {
@@ -214,7 +214,7 @@ export const createDragToMoveGestureController = ({
           const elementStart =
             axis === "x" ? elementLeftLayout : elementTopLayout;
           const elementPosition = elementStart - visualOffset;
-          elementToImpact.style[styleProperty] = `${elementPosition}px`;
+          elementProxy.style[styleProperty] = `${elementPosition}px`;
         }
       };
 
@@ -232,7 +232,7 @@ export const createDragToMoveGestureController = ({
   const dragGestureControllerGrab = dragGestureController.grab;
   dragGestureController.grab = ({
     element,
-    elementToImpact = element,
+    elementProxy = element,
     ...rest
   } = {}) => {
     if (!element) {
@@ -245,7 +245,7 @@ export const createDragToMoveGestureController = ({
     });
     initGrabToMoveElement(dragGesture, {
       element,
-      elementToImpact,
+      elementProxy,
     });
     return dragGesture;
   };
