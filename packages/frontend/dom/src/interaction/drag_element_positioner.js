@@ -377,16 +377,16 @@ const createStandardElementPositioner = (element) => {
     };
 
     const toScrollRelativeLeft = (leftRelativeToPositionedParentToConvert) => {
-      const leftAsRelativeToScrollContainer =
+      const leftWithScroll =
         leftRelativeToPositionedParentToConvert +
         positionedParentLeftOffsetWithScrollContainer;
-      return leftAsRelativeToScrollContainer;
+      return leftWithScroll;
     };
     const toScrollRelativeTop = (topRelativeToPositionedParentToConvert) => {
-      const topAsRelativeToScrollContainer =
+      const topWithScroll =
         topRelativeToPositionedParentToConvert +
         positionedParentTopOffsetWithScrollContainer;
-      return topAsRelativeToScrollContainer;
+      return topWithScroll;
     };
 
     return {
