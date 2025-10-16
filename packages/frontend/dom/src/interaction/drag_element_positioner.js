@@ -107,17 +107,19 @@ const createSameScrollDifferentParentPositioner = (
       leftRelativeToScrollContainerToConvert -
       referenceStandardPositioner.leftRelativeToScrollContainer +
       referenceStandardPositioner.leftRelativeToPositionedParent;
-    // Step 2: Convert to viewport coordinates
+
+    if (ancestorFixedPosition && scrollContainerIsDocument) {
+      const referenceViewportLeft =
+        referencePositionedParentLeft +
+        referenceLeftRelativeToPositionedParent -
+        document.documentElement.scrollLeft;
+      const left = referenceViewportLeft - positionedParentLeft;
+      return ancestorFixedPosition[0] + left;
+    }
+
     const referenceViewportLeft =
       referencePositionedParentLeft + referenceLeftRelativeToPositionedParent;
-    // Step 3: Convert to element's positioned parent coordinates
     const left = referenceViewportLeft - positionedParentLeft;
-    // Step 4: Handle position: fixed ancestors
-    if (ancestorFixedPosition && scrollContainerIsDocument) {
-      return (
-        ancestorFixedPosition[0] + left - document.documentElement.scrollLeft
-      );
-    }
     return scrollLeft + left;
   };
 
@@ -127,17 +129,19 @@ const createSameScrollDifferentParentPositioner = (
       topRelativeToScrollContainerToConvert -
       referenceStandardPositioner.topRelativeToScrollContainer +
       referenceStandardPositioner.topRelativeToPositionedParent;
-    // Step 2: Convert to viewport coordinates
+
+    if (ancestorFixedPosition && scrollContainerIsDocument) {
+      const referenceViewportTop =
+        referencePositionedParentTop +
+        referenceTopRelativeToPositionedParent -
+        document.documentElement.scrollTop;
+      const top = referenceViewportTop - positionedParentTop;
+      return ancestorFixedPosition[1] + top;
+    }
+
     const referenceViewportTop =
       referencePositionedParentTop + referenceTopRelativeToPositionedParent;
-    // Step 3: Convert to element's positioned parent coordinates
     const top = referenceViewportTop - positionedParentTop;
-    // Step 4: Handle position: fixed ancestors
-    if (ancestorFixedPosition && scrollContainerIsDocument) {
-      return (
-        ancestorFixedPosition[1] + top - document.documentElement.scrollTop
-      );
-    }
     return scrollTop + top;
   };
 
