@@ -181,7 +181,7 @@ export const createDragToMoveGestureController = ({
         elementLeftWithoutScroll,
         elementLeftLayout,
         elementLeft,
-        grabScrollLeft: gestureInfo.grabScrollLeft,
+        diff: elementLeftLayout - elementLeftWithoutScroll,
       });
 
       hasCrossedVisibleAreaLeftOnce =

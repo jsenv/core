@@ -115,7 +115,16 @@ const createSameScrollDifferentParentPositioner = (
     const left = referenceViewportLeft - positionedParentLeft;
 
     if (ancestorFixedPosition && scrollContainerIsDocument) {
-      return ancestorFixedPosition[0] + scrollLeft + left;
+      console.log("to convert", {
+        leftWithoutScroll,
+        scrollLeftAtStart: scrollLeft,
+        scrollLeftNow: scrollContainer.scrollLeft,
+        referenceLeftRelativeToPositionedParent,
+        referenceViewportLeft,
+        left,
+      });
+      const leftFixed = ancestorFixedPosition[0] + scrollLeft + left;
+      return leftFixed;
     }
     return scrollLeft + left;
   };
@@ -130,7 +139,8 @@ const createSameScrollDifferentParentPositioner = (
     const top = referenceViewportTop - positionedParentTop;
 
     if (ancestorFixedPosition && scrollContainerIsDocument) {
-      return ancestorFixedPosition[1] + top;
+      const topFixed = ancestorFixedPosition[1] + top;
+      return topFixed;
     }
     return scrollTop + top;
   };
