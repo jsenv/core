@@ -156,6 +156,7 @@ export const createDragToMoveGestureController = ({
         moveX,
         moveY,
       } = gestureInfo;
+      // here coordinates include the scroll
       const elementLeft = moveConverter.toElementLeft(moveX);
       const elementTop = moveConverter.toElementTop(moveY);
       const elementRight = elementLeft + elementWidth;

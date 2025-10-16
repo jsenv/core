@@ -175,6 +175,8 @@ export const initDragConstraints = (
     // This allows multiple constraints to work together (e.g., bounds + obstacles)
     for (const constraint of constraints) {
       const result = constraint.apply({
+        // each constraint works with scroll included coordinates
+        // and coordinates we provide here includes the scroll of the container
         left: elementLeft,
         top: elementTop,
         right: elementLeft + elementWidth,
