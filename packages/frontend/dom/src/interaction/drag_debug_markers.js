@@ -8,8 +8,9 @@ const MARKER_SIZE = 12;
 
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
+let currentReferenceElementMarker = null;
 
-export const setupDragDebugMarkers = (dragGesture) => {
+export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
   // Clean up any existing persistent markers from previous drag gestures
   if (KEEP_MARKERS_ON_RELEASE) {
     // Remove any existing markers from previous gestures
@@ -22,24 +23,41 @@ export const setupDragDebugMarkers = (dragGesture) => {
   const { direction, scrollContainer } = dragGesture.gestureInfo;
 
   return {
-    onConstraints: (constraints, { visibleArea }) => {
+    onConstraints: (constraints, { left, top, right, bottom, visibleArea }) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
+      const previousReferenceElementMarker = currentReferenceElementMarker;
 
       if (
         previousDebugMarkers.length > 0 ||
-        previousConstraintMarkers.length > 0
+        previousConstraintMarkers.length > 0 ||
+        previousReferenceElementMarker
       ) {
         setTimeout(() => {
           previousDebugMarkers.forEach((marker) => marker.remove());
           previousConstraintMarkers.forEach((marker) => marker.remove());
+          if (previousReferenceElementMarker) {
+            previousReferenceElementMarker.remove();
+          }
         }, 100);
       }
 
       // Clear current marker arrays
       currentDebugMarkers.length = 0;
       currentConstraintMarkers.length = 0;
+      currentReferenceElementMarker = null;
+
+      // Create reference element marker if reference element exists
+      if (referenceElement) {
+        currentReferenceElementMarker = createReferenceElementMarker({
+          left,
+          top,
+          right,
+          bottom,
+          scrollContainer,
+        });
+      }
 
       // Collect all markers to be created, then merge duplicates
       const markersToCreate = [];
@@ -161,8 +179,12 @@ export const setupDragDebugMarkers = (dragGesture) => {
       currentConstraintMarkers.forEach((marker) => {
         marker.remove();
       });
+      if (currentReferenceElementMarker) {
+        currentReferenceElementMarker.remove();
+      }
       currentDebugMarkers = [];
       currentConstraintMarkers = [];
+      currentReferenceElementMarker = null;
     },
   };
 };
@@ -317,6 +339,37 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   return marker;
 };
 
+const createReferenceElementMarker = ({
+  left,
+  top,
+  right,
+  bottom,
+  scrollContainer,
+}) => {
+  const width = right - left;
+  const height = bottom - top;
+  // Convert document-relative coordinates to viewport coordinates
+  const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "reference");
+
+  const marker = document.createElement("div");
+  marker.className = "navi_reference_element_marker";
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
+  marker.title = "Reference Element";
+
+  // Add label
+  const label = document.createElement("div");
+  label.className = "navi_reference_element_marker_label";
+  label.textContent = "Reference Element";
+  marker.appendChild(label);
+
+  const container = getMarkersContainer();
+  container.appendChild(marker);
+  return marker;
+};
+
 import.meta.css = /* css */ `
   .navi_debug_markers_container {
     position: fixed;
@@ -452,6 +505,30 @@ import.meta.css = /* css */ `
     font-weight: bold;
     color: white;
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker {
+    position: absolute;
+    background-color: rgba(0, 150, 255, 0.3);
+    border: 2px dashed rgba(0, 150, 255, 0.7);
+    opacity: 0.8;
+    z-index: 9998;
+    pointer-events: none;
+  }
+
+  .navi_reference_element_marker_label {
+    position: absolute;
+    top: -25px;
+    left: 0;
+    font-size: 11px;
+    font-weight: bold;
+    color: rgba(0, 150, 255, 1);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 150, 255, 0.7);
+    white-space: nowrap;
     pointer-events: none;
   }
 `;

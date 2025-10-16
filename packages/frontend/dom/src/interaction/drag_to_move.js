@@ -127,6 +127,7 @@ export const createDragToMoveGestureController = ({
       obstacleAttributeName,
       showConstraintFeedbackLine,
       showDebugMarkers,
+      referenceElement,
     });
     dragGesture.addBeforeDragCallback(
       (

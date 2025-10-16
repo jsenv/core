@@ -20,6 +20,7 @@ export const initDragConstraints = (
     obstacleAttributeName,
     showConstraintFeedbackLine,
     showDebugMarkers,
+    referenceElement,
   },
 ) => {
   const dragGestureName = dragGesture.gestureInfo.name;
@@ -41,7 +42,9 @@ export const initDragConstraints = (
   }
   let dragDebugMarkers;
   if (showDebugMarkers) {
-    dragDebugMarkers = setupDragDebugMarkers(dragGesture);
+    dragDebugMarkers = setupDragDebugMarkers(dragGesture, {
+      referenceElement,
+    });
     dragGesture.addReleaseCallback(() => {
       dragDebugMarkers.onRelease();
     });
@@ -134,13 +137,6 @@ export const initDragConstraints = (
     if (import.meta.dev) {
       validateConstraints(constraints, constraintInitParams);
     }
-    if (dragDebugMarkers) {
-      dragDebugMarkers.onConstraints(constraints, {
-        elementWidth,
-        elementHeight,
-        visibleArea,
-      });
-    }
 
     const elementLeftRequested =
       moveConverter.toElementLeftWithScroll(moveXRequested);
@@ -203,6 +199,18 @@ export const initDragConstraints = (
         elementTop = elementTopConstrained;
         logConstraintEnforcement("y", constraint);
       }
+    }
+
+    if (dragDebugMarkers) {
+      dragDebugMarkers.onConstraints(constraints, {
+        left: elementLeft,
+        top: elementTop,
+        right: elementLeft + elementWidth,
+        bottom: elementTop + elementHeight,
+        elementWidth,
+        elementHeight,
+        visibleArea,
+      });
     }
 
     const leftModified = elementLeft !== elementLeftRequested;
