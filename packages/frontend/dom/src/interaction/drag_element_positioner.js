@@ -51,64 +51,76 @@ const createProxiedElementPositioner = (element, elementProxy) => {
     hasDifferentScrollContainer || hasDifferentPositionedParent;
 
   const createProxiedPositioner = ({
-    leftRelativeToPositionedParent,
-    topRelativeToPositionedParent,
+    // current position
     leftRelativeToScrollContainer,
     topRelativeToScrollContainer,
+    // help to implement toLayoutLeft/toLayoutTop
     positionedParentLeftOffsetWithScrollContainer,
     positionedParentTopOffsetWithScrollContainer,
-
     positionedParentLeft,
     positionedParentTop,
+    proxyPositionedParentLeft,
+    proxyPositionedParentTop,
+    // less important properties
+    leftRelativeToPositionedParent,
+    topRelativeToPositionedParent,
   }) => {
-    const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
+    const toLayoutLeft = (currentLeftRelativeToScrollContainer) => {
+      // Convert from element scroll-relative coordinates to proxy positioned-parent-relative coordinates
+
+      // Step 1: Convert from scroll-relative to element's positioned-parent-relative
+      const elementLeftRelativeToPositionedParent =
+        currentLeftRelativeToScrollContainer -
+        positionedParentLeftOffsetWithScrollContainer;
+
+      // Step 2: Convert to viewport coordinates using element's positioned parent
+      const elementViewportLeft =
+        positionedParentLeft + elementLeftRelativeToPositionedParent;
+
+      // Step 3: Convert to proxy positioned-parent-relative coordinates
+      return elementViewportLeft - proxyPositionedParentLeft;
+    };
+
+    const toLayoutTop = (currentTopRelativeToScrollContainer) => {
+      // Convert from element scroll-relative coordinates to proxy positioned-parent-relative coordinates
+
+      // Step 1: Convert from scroll-relative to element's positioned-parent-relative
+      const elementTopRelativeToPositionedParent =
+        currentTopRelativeToScrollContainer -
+        positionedParentTopOffsetWithScrollContainer;
+
+      // Step 2: Convert to viewport coordinates using element's positioned parent
+      const elementViewportTop =
+        positionedParentTop + elementTopRelativeToPositionedParent;
+
+      // Step 3: Convert to proxy positioned-parent-relative coordinates
+      return elementViewportTop - proxyPositionedParentTop;
+    };
+
+    const toScrollRelativeLeft = (currentLeftRelativeToPositionedParent) => {
       return (
-        leftRelativeToPositionedParent +
+        currentLeftRelativeToPositionedParent +
         positionedParentLeftOffsetWithScrollContainer
       );
     };
 
-    const toScrollRelativeTop = (topRelativeToPositionedParent) => {
+    const toScrollRelativeTop = (currentTopRelativeToPositionedParent) => {
       return (
-        topRelativeToPositionedParent +
+        currentTopRelativeToPositionedParent +
         positionedParentTopOffsetWithScrollContainer
       );
     };
 
-    const toLayoutLeft = (leftRelativeToScrollContainer) => {
-      // Convert from element coordinates to proxy coordinates for positioning
-      const elementLeftRelativeToPositionedParent =
-        leftRelativeToScrollContainer -
-        positionedParentLeftOffsetWithScrollContainer;
-
-      // Step 1: Convert to viewport coordinates
-      const elementViewportLeft =
-        positionedParentLeft + elementLeftRelativeToPositionedParent;
-      // Step 2: Convert to proxy positioned-parent-relative coordinates
-      return elementViewportLeft - positionedParentLeft;
-    };
-
-    const toLayoutTop = (topRelativeToScrollContainer) => {
-      // Convert from element coordinates to proxy coordinates for positioning
-      const elementTopRelativeToPositionedParent =
-        topRelativeToScrollContainer -
-        positionedParentTopOffsetWithScrollContainer;
-
-      // Step 1: Convert to viewport coordinates
-      const elementViewportTop =
-        positionedParentTop + elementTopRelativeToPositionedParent;
-      // Step 2: Convert to proxy positioned-parent-relative coordinates
-      return elementViewportTop - positionedParentTop;
-    };
     return {
-      leftRelativeToPositionedParent,
-      topRelativeToPositionedParent,
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
-      toScrollRelativeLeft,
-      toScrollRelativeTop,
       toLayoutLeft,
       toLayoutTop,
+
+      leftRelativeToPositionedParent,
+      topRelativeToPositionedParent,
+      toScrollRelativeLeft,
+      toScrollRelativeTop,
     };
   };
 
@@ -144,13 +156,15 @@ const createProxiedElementPositioner = (element, elementProxy) => {
     return createProxiedPositioner({
       leftRelativeToPositionedParent,
       topRelativeToPositionedParent,
-      leftRelativeToScrollContainer,
-      topRelativeToScrollContainer,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
+      positionedParentLeft: positionedParentRect.left,
+      positionedParentTop: positionedParentRect.top,
+      proxyPositionedParentLeft: proxyPositionedParentRect.left,
+      proxyPositionedParentTop: proxyPositionedParentRect.top,
 
-      positionedParentLeft: proxyPositionedParentRect.left,
-      positionedParentTop: proxyPositionedParentRect.top,
+      leftRelativeToScrollContainer,
+      topRelativeToScrollContainer,
     });
   }
 
@@ -163,52 +177,52 @@ const createStandardElementPositioner = (element) => {
 
   // Helper function to create the positioner object (clean, no proxy logic)
   const createStandardPositioner = ({
+    // current position
     leftRelativeToPositionedParent,
     topRelativeToPositionedParent,
-    leftRelativeToScrollContainer,
-    topRelativeToScrollContainer,
+    // help to implement toLayoutLeft/toLayoutTop
     positionedParentLeftOffsetWithScrollContainer,
     positionedParentTopOffsetWithScrollContainer,
+    // less important properties
+    leftRelativeToScrollContainer,
+    topRelativeToScrollContainer,
   }) => {
-    const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
+    const toLayoutLeft = (currentLeftRelativeToScrollContainer) => {
       return (
-        leftRelativeToPositionedParent +
+        currentLeftRelativeToScrollContainer -
         positionedParentLeftOffsetWithScrollContainer
       );
     };
-
-    const toScrollRelativeTop = (topRelativeToPositionedParent) => {
+    const toLayoutTop = (currentTopRelativeToScrollContainer) => {
       return (
-        topRelativeToPositionedParent +
+        currentTopRelativeToScrollContainer -
         positionedParentTopOffsetWithScrollContainer
       );
     };
 
-    const toLayoutLeft = (leftRelativeToScrollContainer) => {
+    const toScrollRelativeLeft = (currentLeftRelativeToPositionedParent) => {
       return (
-        leftRelativeToScrollContainer -
+        currentLeftRelativeToPositionedParent +
         positionedParentLeftOffsetWithScrollContainer
       );
     };
-
-    const toLayoutTop = (topRelativeToScrollContainer) => {
+    const toScrollRelativeTop = (currentTopRelativeToPositionedParent) => {
       return (
-        topRelativeToScrollContainer -
+        currentTopRelativeToPositionedParent +
         positionedParentTopOffsetWithScrollContainer
       );
     };
 
     return {
-      leftRelativeToPositionedParent,
-      topRelativeToPositionedParent,
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
-      positionedParentLeftOffsetWithScrollContainer,
-      positionedParentTopOffsetWithScrollContainer,
-      toScrollRelativeLeft,
-      toScrollRelativeTop,
       toLayoutLeft,
       toLayoutTop,
+
+      leftRelativeToPositionedParent,
+      topRelativeToPositionedParent,
+      toScrollRelativeLeft,
+      toScrollRelativeTop,
     };
   };
 
@@ -267,12 +281,12 @@ const createStandardElementPositioner = (element) => {
       : elementViewportTop - scrollContainerViewportTop;
 
     return createStandardPositioner({
-      leftRelativeToPositionedParent,
-      topRelativeToPositionedParent,
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
+      leftRelativeToPositionedParent,
+      topRelativeToPositionedParent,
     });
   }
 
@@ -302,12 +316,12 @@ const createStandardElementPositioner = (element) => {
     const positionedParentTopOffsetWithScrollContainer = 0;
 
     return createStandardPositioner({
-      leftRelativeToPositionedParent,
-      topRelativeToPositionedParent,
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
+      leftRelativeToPositionedParent,
+      topRelativeToPositionedParent,
     });
   }
 
@@ -344,12 +358,12 @@ const createStandardElementPositioner = (element) => {
         : scrollContainerRect.top - positionedParentRect.top;
 
     return createStandardPositioner({
-      leftRelativeToPositionedParent,
-      topRelativeToPositionedParent,
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
+      leftRelativeToPositionedParent,
+      topRelativeToPositionedParent,
     });
   }
 
