@@ -1,6 +1,6 @@
 import {
   createDragToMoveGestureController,
-  getScrollRelativeRect,
+  getScrollContainer,
 } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import { useContext } from "preact/hooks";
@@ -345,8 +345,8 @@ const initResizeByMousedown = (
   // Calculate size and position based on axis
   const currentSize = axis === "x" ? tableCellRect.width : tableCellRect.height;
 
-  // Convert constraint bounds from scrollable-parent coordinates to positioned-parent coordinates
-  // This is needed because the drag gesture system positions elements relative to their offsetParent
+  // Convert constraint bounds to scroll container coordinates
+  // (Same as boundingClientRect + document scrolls but within the scroll container)
   const { customAreaConstraint, areaConstraint } = (() => {
     const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
     const defaultMaxSize = axis === "x" ? COLUMN_MAX_WIDTH : ROW_MAX_HEIGHT;
@@ -359,35 +359,27 @@ const initResizeByMousedown = (
         ? maxSize
         : defaultMaxSize;
 
-    // Always use getElementScrollableRect for consistency with drag system
-    const scrollRelativeRect = getScrollRelativeRect(
-      tableCell,
-      document.documentElement, // resizer is within the document, no withing the table
-    );
-    const { scrollContainer, scrollContainerIsDocument } = scrollRelativeRect;
-    let startScrollable =
-      axis === "x" ? scrollRelativeRect.left : scrollRelativeRect.top;
-    if (!scrollContainerIsDocument) {
-      const scrollContainerRect = scrollContainer.getBoundingClientRect();
-      const scrollContainerOffset =
-        axis === "x"
-          ? scrollContainerRect.left - scrollContainer.scrollLeft
-          : scrollContainerRect.top - scrollContainer.scrollTop;
-      startScrollable += scrollContainerOffset;
-    }
-    const customStartBound = startScrollable + minCellSize;
-    const customEndBound = startScrollable + maxCellSize;
+    const scrollContainer = getScrollContainer(tableCell);
+    const { left, top } = tableCell.getBoundingClientRect();
+    const isSticky =
+      axis === "x"
+        ? tableCell.hasAttribute("data-sticky-left")
+        : tableCell.hasAttribute("data-sticky-top");
+    let cellStart = axis === "x" ? left : top;
+    cellStart +=
+      axis === "x" ? scrollContainer.scrollLeft : scrollContainer.scrollTop;
+
+    const customStartBound = cellStart + minCellSize;
+    const customEndBound = cellStart + maxCellSize;
 
     if (axis === "x") {
       return {
-        areaConstraint: scrollRelativeRect.isSticky ? "visible" : "none",
+        areaConstraint: isSticky ? "visible" : "none",
         customAreaConstraint: { left: customStartBound, right: customEndBound },
       };
     }
-
     return {
-      // Detect sticky positioning for advanced constraint handling
-      areaConstraint: scrollRelativeRect.isSticky ? "visible" : "none",
+      areaConstraint: isSticky ? "visible" : "none",
       customAreaConstraint: { top: customStartBound, bottom: customEndBound },
     };
   })();
@@ -423,7 +415,8 @@ const initResizeByMousedown = (
     },
   });
   dragToMoveGestureController.grabViaMouse(mousedownEvent, {
-    element: resizer,
+    element: tableCell,
+    elementToImpact: resizer,
   });
 };
 

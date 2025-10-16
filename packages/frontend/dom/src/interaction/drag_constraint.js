@@ -158,8 +158,9 @@ export const initDragConstraints = (
         axis === "x" ? elementLeftRequested : elementTopRequested;
       const constrained = axis === "x" ? elementLeft : elementTop;
       const action = constrained > requested ? "increased" : "capped";
+      const property = axis === "x" ? "left" : "top";
       console.debug(
-        `Drag by ${dragEvent.type}: ${axis} ${action} from ${requested.toFixed(2)} to ${constrained.toFixed(2)} by ${constraint.type}:${constraint.name}`,
+        `Drag by ${dragEvent.type}: ${property} ${action} from ${requested.toFixed(2)} to ${constrained.toFixed(2)} by ${constraint.type}:${constraint.name}`,
         constraint.element,
       );
     };
