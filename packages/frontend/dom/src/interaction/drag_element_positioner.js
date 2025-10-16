@@ -12,9 +12,16 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
  * And also very likely to happen when using an elementProxy
  * (The element being moved is not the original element)
  *
- * The code calling this helper expects the following:
+ * The code calling this helper expects
  *
- * - leftRelativeToScrollContainer
+ * - leftRelativeToScrollContainer/topRelativeToScrollContainer
+ *   Current coodinates of the proxy relative to the scroll container of element
+ *   As a result code can still use coordinates of "element" but it's actually the proxy that dictates
+ *   the original position
+ * - toLayoutLeft/toLayoutTop functions
+ *   Returns the position that should be applied to the element proxy in order to position it
+ *   So these functions must convert from scroll relative coordinates of element to
+ *   positioned parent relative coordinates of element proxy
  */
 export const createDragElementPositioner = (element, elementProxy) => {
   if (elementProxy) {
