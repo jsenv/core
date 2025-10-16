@@ -264,18 +264,16 @@ const createElementPositioner = (element, elementProxy) => {
 
 const createProxiedElementPositioner = (element, elementProxy) => {
   // Handle proxy scenario: element proxy has different positioning context
-
+  const elementScrollContainer = getScrollContainer(element);
+  const elementPositionedParent = element.offsetParent;
   const proxyPositionedParent = elementProxy.offsetParent;
   const proxyScrollContainer = getScrollContainer(elementProxy);
-  const elementScrollContainer = getScrollContainer(element);
-
-  const hasProxyWithDifferentScrollContainer =
+  const hasDifferentScrollContainer =
     proxyScrollContainer !== elementScrollContainer;
-  const hasProxyWithDifferentPositionedParent =
-    proxyPositionedParent !== element.offsetParent;
-  const hasProxyWithDifferentPositioningContext =
-    hasProxyWithDifferentScrollContainer ||
-    hasProxyWithDifferentPositionedParent;
+  const hasDifferentPositionedParent =
+    proxyPositionedParent !== elementPositionedParent;
+  const hasDifferentPositioningContext =
+    hasDifferentScrollContainer || hasDifferentPositionedParent;
 
   const createProxiedPositioner = ({
     leftRelativeToPositionedParent,
@@ -339,10 +337,9 @@ const createProxiedElementPositioner = (element, elementProxy) => {
     };
   };
 
-  if (hasProxyWithDifferentPositioningContext) {
+  if (hasDifferentPositioningContext) {
     // Proxy has different positioning context - handle separately
     const elementRect = element.getBoundingClientRect();
-    const positionedParent = element.offsetParent;
 
     // Calculate element positions using element's own positioning context (for external coordinates)
     const elementScrollContainerRect =
@@ -352,7 +349,8 @@ const createProxiedElementPositioner = (element, elementProxy) => {
     const topRelativeToScrollContainer =
       elementRect.top - elementScrollContainerRect.top;
 
-    const positionedParentRect = positionedParent.getBoundingClientRect();
+    const positionedParentRect =
+      elementPositionedParent.getBoundingClientRect();
     const leftRelativeToPositionedParent =
       elementRect.left - positionedParentRect.left;
     const topRelativeToPositionedParent =
@@ -380,6 +378,8 @@ const createProxiedElementPositioner = (element, elementProxy) => {
       positionedParentTop: proxyPositionedParentRect.top,
     });
   }
+
+  return createStandardElementPositioner(element);¯
 };
 
 const createStandardElementPositioner = (element) => {
