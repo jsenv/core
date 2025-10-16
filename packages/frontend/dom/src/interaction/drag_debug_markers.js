@@ -1,5 +1,3 @@
-import { convertScrollRelativeRectInto } from "../position/dom_coords.js";
-
 // Keep visual markers (debug markers, obstacle markers, constraint feedback line) in DOM after drag ends
 // Useful for debugging constraint systems and understanding why elements behave certain ways
 // When enabled, markers persist until next drag gesture starts or page is refreshed
@@ -206,19 +204,22 @@ const getMarkersContainer = () => {
 const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
   const { documentElement } = document;
 
-  // Use convertScrollPosToElementPos to handle coordinate conversion properly
-  const { left: baseX, top: baseY } = convertScrollRelativeRectInto(
-    {
-      // at this stage our coords includes the scrolls
-      left: x - scrollContainer.scrollLeft,
-      top: y - scrollContainer.scrollTop,
-      scrollContainer,
-      scrollContainerIsDocument: scrollContainer === documentElement,
-      scrollLeft: scrollContainer.scrollLeft,
-      scrollTop: scrollContainer.scrollTop,
-    },
-    documentElement,
-  );
+  const leftWithoutScroll = x - scrollContainer.scrollLeft;
+  const topWithoutScroll = y - scrollContainer.scrollTop;
+  let baseX;
+  let baseY;
+  if (scrollContainer === documentElement) {
+    // our markers are injected into the document so we have the right coordinates already
+    // and we remove scroll because our markers are in a fixed position ancestor (to ensure they cannot influence scrollbars)
+    baseX = leftWithoutScroll;
+    baseY = topWithoutScroll;
+  } else {
+    // we need to remove the scroll of the container?
+    // not sure I think here we might want to keep the scroll container scroll
+    // and that's it
+    baseX = x;
+    baseY = y;
+  }
 
   // Apply side-specific logic for extending markers across viewport
   if (side === "left" || side === "right") {
