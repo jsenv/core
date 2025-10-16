@@ -326,13 +326,11 @@ const createStandardElementPositioner = (element) => {
       scrollContainer.getBoundingClientRect();
     const { left: elementViewportLeft, top: elementViewportTop } =
       element.getBoundingClientRect();
-    const { scrollLeft, scrollTop } = scrollContainer;
 
-    // Calculate current element position relative to scroll container
     const leftRelativeToScrollContainer =
-      elementViewportLeft - scrollContainerLeft + scrollLeft;
+      elementViewportLeft - scrollContainerLeft;
     const topRelativeToScrollContainer =
-      elementViewportTop - scrollContainerTop + scrollTop;
+      elementViewportTop - scrollContainerTop;
     const [
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
@@ -344,8 +342,6 @@ const createStandardElementPositioner = (element) => {
     return createStandardPositioner({
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
-      scrollLeft,
-      scrollTop,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
     });
@@ -378,8 +374,6 @@ const createStandardElementPositioner = (element) => {
       elementRect.top - positionedParentRect.top;
 
     return createStandardPositioner({
-      scrollLeft,
-      scrollTop,
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
       positionedParentLeftOffsetWithScrollContainer,
@@ -425,8 +419,6 @@ const createStandardElementPositioner = (element) => {
     return createStandardPositioner({
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
-      scrollLeft,
-      scrollTop,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
       leftRelativeToPositionedParent,

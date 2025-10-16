@@ -339,8 +339,6 @@
     <script type="module">
       import { createDragToMoveGestureController } from "../interaction/drag_to_move.js";
 
-      document.documentElement.scrollLeft = 100;
-
       const draggableElements = document.querySelectorAll("[data-draggable]");
       const dragElement = draggableElements[0];
       for (const draggable of draggableElements) {
@@ -508,6 +506,12 @@
       console.log(
         "Document auto-scroll demo with programmatic controls initialized",
       );
+
+      document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => {
+          window.scrollTo(100, 0);
+        }, 100);
+      });
     </script>
   </body>
 </html>
