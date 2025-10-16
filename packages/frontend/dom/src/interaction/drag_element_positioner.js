@@ -457,8 +457,8 @@ const getPositionedParentOffsetWithScrollContainer = (
   if (scrollContainerIsDocument) {
     // Document case: getBoundingClientRect we want offset relative to document
     // and document.body is scolled. We want to know offset exluding scrolls
-    const offsetLeft = positionedParentLeft + scrollContainer.scrollLeft;
-    const offsetTop = positionedParentTop + scrollContainer.scrollTop;
+    const offsetLeft = scrollContainer.scrollLeft + positionedParentLeft;
+    const offsetTop = scrollContainer.scrollTop + positionedParentTop;
     return [offsetLeft, offsetTop];
   }
   // Custom scroll container case: getBoundingClientRect is affected by container scroll
