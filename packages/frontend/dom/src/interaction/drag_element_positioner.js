@@ -31,144 +31,255 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
  * The remaining returned properties provide coordinate conversion utilities but are less critical.
  */
 export const createDragElementPositioner = (element, elementProxy) => {
-  if (elementProxy) {
-    return createProxiedElementPositioner(element, elementProxy);
+  if (!elementProxy) {
+    return createStandardElementPositioner(element);
   }
-  return createStandardElementPositioner(element);
+
+  // Analyze proxy positioning context
+  const elementScrollContainer = getScrollContainer(element);
+  const elementPositionedParent = element.offsetParent;
+  const proxyScrollContainer = getScrollContainer(elementProxy);
+  const proxyPositionedParent = elementProxy.offsetParent;
+
+  const sameScrollContainer = proxyScrollContainer === elementScrollContainer;
+  const samePositionedParent =
+    proxyPositionedParent === elementPositionedParent;
+
+  if (sameScrollContainer && samePositionedParent) {
+    // Scenario 1: Same everything - use standard logic with proxy as effective element
+    return createStandardElementPositioner(elementProxy);
+  }
+
+  if (sameScrollContainer && !samePositionedParent) {
+    // Scenario 2: Same scroll container, different positioned parent
+    return createSameScrollDifferentParentPositioner(element, elementProxy);
+  }
+
+  if (!sameScrollContainer && samePositionedParent) {
+    // Scenario 3: Different scroll container, same positioned parent
+    return createDifferentScrollSameParentPositioner(element, elementProxy);
+  }
+
+  // Scenario 4: Both different - most complex case
+  return createFullyDifferentPositioner(element, elementProxy);
 };
 
-const createProxiedElementPositioner = (element, elementProxy) => {
-  // Handle proxy scenario: element proxy has different positioning context
+// Scenario 2: Same scroll container, different positioned parent
+// The coordinate system is the same, but we need different DOM positioning
+const createSameScrollDifferentParentPositioner = (element, elementProxy) => {
+  const elementPositionedParent = element.offsetParent;
+  const proxyPositionedParent = elementProxy.offsetParent;
+
+  // Use element for position calculations (API contract)
+  const standardPositioner = createStandardElementPositioner(element);
+
+  // Override toLayoutLeft/Top to convert to proxy's positioned parent coordinates
+  const originalToLayoutLeft = standardPositioner.toLayoutLeft;
+  const originalToLayoutTop = standardPositioner.toLayoutTop;
+
+  const toLayoutLeft = (leftRelativeToScrollContainer) => {
+    // Step 1: Convert to element's positioned parent coordinates
+    const elementLeftRelativeToPositionedParent = originalToLayoutLeft(
+      leftRelativeToScrollContainer,
+    );
+
+    // Step 2: Convert to viewport coordinates
+    const elementPositionedParentRect =
+      elementPositionedParent.getBoundingClientRect();
+    const elementViewportLeft =
+      elementPositionedParentRect.left + elementLeftRelativeToPositionedParent;
+
+    // Step 3: Convert to proxy's positioned parent coordinates
+    const proxyPositionedParentRect =
+      proxyPositionedParent.getBoundingClientRect();
+    return elementViewportLeft - proxyPositionedParentRect.left;
+  };
+
+  const toLayoutTop = (topRelativeToScrollContainer) => {
+    // Step 1: Convert to element's positioned parent coordinates
+    const elementTopRelativeToPositionedParent = originalToLayoutTop(
+      topRelativeToScrollContainer,
+    );
+
+    // Step 2: Convert to viewport coordinates
+    const elementPositionedParentRect =
+      elementPositionedParent.getBoundingClientRect();
+    const elementViewportTop =
+      elementPositionedParentRect.top + elementTopRelativeToPositionedParent;
+
+    // Step 3: Convert to proxy's positioned parent coordinates
+    const proxyPositionedParentRect =
+      proxyPositionedParent.getBoundingClientRect();
+    return elementViewportTop - proxyPositionedParentRect.top;
+  };
+
+  return {
+    ...standardPositioner,
+    toLayoutLeft,
+    toLayoutTop,
+  };
+};
+
+// Scenario 3: Different scroll container, same positioned parent
+// The DOM positioning is the same, but coordinate system reference differs
+// eslint-disable-next-line no-unused-vars
+const createDifferentScrollSameParentPositioner = (element, elementProxy) => {
+  const elementScrollContainer = getScrollContainer(element);
+  const positionedParent = element.offsetParent; // Same for both
+  // Note: elementProxy has different scroll container but same positioned parent
+
+  // Calculate element positions relative to element's scroll container (API contract)
+  const elementRect = element.getBoundingClientRect();
+  const elementScrollContainerRect =
+    elementScrollContainer.getBoundingClientRect();
+
+  const leftRelativeToScrollContainer =
+    elementRect.left - elementScrollContainerRect.left;
+  const topRelativeToScrollContainer =
+    elementRect.top - elementScrollContainerRect.top;
+
+  // Calculate positions relative to positioned parent
+  const positionedParentRect = positionedParent.getBoundingClientRect();
+  const leftRelativeToPositionedParent =
+    elementRect.left - positionedParentRect.left;
+  const topRelativeToPositionedParent =
+    elementRect.top - positionedParentRect.top;
+
+  // Calculate offset between element's scroll container and positioned parent
+  const positionedParentLeftOffsetWithScrollContainer =
+    elementScrollContainerRect.left - positionedParentRect.left;
+  const positionedParentTopOffsetWithScrollContainer =
+    elementScrollContainerRect.top - positionedParentRect.top;
+
+  const toLayoutLeft = (leftRelativeToScrollContainer) => {
+    // Since positioned parent is the same, just convert from scroll-relative to positioned-parent-relative
+    return (
+      leftRelativeToScrollContainer -
+      positionedParentLeftOffsetWithScrollContainer
+    );
+  };
+
+  const toLayoutTop = (topRelativeToScrollContainer) => {
+    // Since positioned parent is the same, just convert from scroll-relative to positioned-parent-relative
+    return (
+      topRelativeToScrollContainer -
+      positionedParentTopOffsetWithScrollContainer
+    );
+  };
+
+  const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
+    return (
+      leftRelativeToPositionedParent +
+      positionedParentLeftOffsetWithScrollContainer
+    );
+  };
+
+  const toScrollRelativeTop = (topRelativeToPositionedParent) => {
+    return (
+      topRelativeToPositionedParent +
+      positionedParentTopOffsetWithScrollContainer
+    );
+  };
+
+  return {
+    leftRelativeToScrollContainer,
+    topRelativeToScrollContainer,
+    toLayoutLeft,
+    toLayoutTop,
+    leftRelativeToPositionedParent,
+    topRelativeToPositionedParent,
+    toScrollRelativeLeft,
+    toScrollRelativeTop,
+  };
+};
+
+// Scenario 4: Both different - most complex case
+// Both coordinate system and DOM positioning differ
+const createFullyDifferentPositioner = (element, elementProxy) => {
   const elementScrollContainer = getScrollContainer(element);
   const elementPositionedParent = element.offsetParent;
   const proxyPositionedParent = elementProxy.offsetParent;
-  const proxyScrollContainer = getScrollContainer(elementProxy);
-  const hasDifferentScrollContainer =
-    proxyScrollContainer !== elementScrollContainer;
-  const hasDifferentPositionedParent =
-    proxyPositionedParent !== elementPositionedParent;
-  const hasDifferentPositioningContext =
-    hasDifferentScrollContainer || hasDifferentPositionedParent;
 
-  const createProxiedPositioner = ({
-    // current position
-    leftRelativeToScrollContainer,
-    topRelativeToScrollContainer,
-    // help to implement toLayoutLeft/toLayoutTop
-    positionedParentLeftOffsetWithScrollContainer,
-    positionedParentTopOffsetWithScrollContainer,
-    positionedParentLeft,
-    positionedParentTop,
-    proxyPositionedParentLeft,
-    proxyPositionedParentTop,
-    // less important properties
-    leftRelativeToPositionedParent,
-    topRelativeToPositionedParent,
-  }) => {
-    const toLayoutLeft = (currentLeftRelativeToScrollContainer) => {
-      // Convert from element scroll-relative coordinates to proxy positioned-parent-relative coordinates
+  // Calculate element positions relative to element's scroll container (API contract)
+  const elementRect = element.getBoundingClientRect();
+  const elementScrollContainerRect =
+    elementScrollContainer.getBoundingClientRect();
 
-      // Step 1: Convert from scroll-relative to element's positioned-parent-relative
-      const elementLeftRelativeToPositionedParent =
-        currentLeftRelativeToScrollContainer -
-        positionedParentLeftOffsetWithScrollContainer;
+  const leftRelativeToScrollContainer =
+    elementRect.left - elementScrollContainerRect.left;
+  const topRelativeToScrollContainer =
+    elementRect.top - elementScrollContainerRect.top;
 
-      // Step 2: Convert to viewport coordinates using element's positioned parent
-      const elementViewportLeft =
-        positionedParentLeft + elementLeftRelativeToPositionedParent;
+  // Calculate positions relative to element's positioned parent
+  const elementPositionedParentRect =
+    elementPositionedParent.getBoundingClientRect();
+  const leftRelativeToPositionedParent =
+    elementRect.left - elementPositionedParentRect.left;
+  const topRelativeToPositionedParent =
+    elementRect.top - elementPositionedParentRect.top;
 
-      // Step 3: Convert to proxy positioned-parent-relative coordinates
-      return elementViewportLeft - proxyPositionedParentLeft;
-    };
+  // Calculate offset between element's scroll container and positioned parent
+  const positionedParentLeftOffsetWithScrollContainer =
+    elementScrollContainerRect.left - elementPositionedParentRect.left;
+  const positionedParentTopOffsetWithScrollContainer =
+    elementScrollContainerRect.top - elementPositionedParentRect.top;
 
-    const toLayoutTop = (currentTopRelativeToScrollContainer) => {
-      // Convert from element scroll-relative coordinates to proxy positioned-parent-relative coordinates
+  const toLayoutLeft = (leftRelativeToScrollContainer) => {
+    // Step 1: Convert from scroll-relative to element's positioned-parent-relative
+    const elementLeftRelativeToPositionedParent =
+      leftRelativeToScrollContainer -
+      positionedParentLeftOffsetWithScrollContainer;
 
-      // Step 1: Convert from scroll-relative to element's positioned-parent-relative
-      const elementTopRelativeToPositionedParent =
-        currentTopRelativeToScrollContainer -
-        positionedParentTopOffsetWithScrollContainer;
+    // Step 2: Convert to viewport coordinates using element's positioned parent
+    const elementViewportLeft =
+      elementPositionedParentRect.left + elementLeftRelativeToPositionedParent;
 
-      // Step 2: Convert to viewport coordinates using element's positioned parent
-      const elementViewportTop =
-        positionedParentTop + elementTopRelativeToPositionedParent;
-
-      // Step 3: Convert to proxy positioned-parent-relative coordinates
-      return elementViewportTop - proxyPositionedParentTop;
-    };
-
-    const toScrollRelativeLeft = (currentLeftRelativeToPositionedParent) => {
-      return (
-        currentLeftRelativeToPositionedParent +
-        positionedParentLeftOffsetWithScrollContainer
-      );
-    };
-
-    const toScrollRelativeTop = (currentTopRelativeToPositionedParent) => {
-      return (
-        currentTopRelativeToPositionedParent +
-        positionedParentTopOffsetWithScrollContainer
-      );
-    };
-
-    return {
-      leftRelativeToScrollContainer,
-      topRelativeToScrollContainer,
-      toLayoutLeft,
-      toLayoutTop,
-
-      leftRelativeToPositionedParent,
-      topRelativeToPositionedParent,
-      toScrollRelativeLeft,
-      toScrollRelativeTop,
-    };
-  };
-
-  if (hasDifferentPositioningContext) {
-    // Proxy has different positioning context - handle separately
-    const elementRect = element.getBoundingClientRect();
-
-    // Calculate element positions using element's own positioning context (for external coordinates)
-    const elementScrollContainerRect =
-      elementScrollContainer.getBoundingClientRect();
-    const leftRelativeToScrollContainer =
-      elementRect.left - elementScrollContainerRect.left;
-    const topRelativeToScrollContainer =
-      elementRect.top - elementScrollContainerRect.top;
-
-    const positionedParentRect =
-      elementPositionedParent.getBoundingClientRect();
-    const leftRelativeToPositionedParent =
-      elementRect.left - positionedParentRect.left;
-    const topRelativeToPositionedParent =
-      elementRect.top - positionedParentRect.top;
-
-    // Calculate offset between positioned parent and element's scroll container
-    const positionedParentLeftOffsetWithScrollContainer =
-      elementScrollContainerRect.left - positionedParentRect.left;
-    const positionedParentTopOffsetWithScrollContainer =
-      elementScrollContainerRect.top - positionedParentRect.top;
-
-    // Create proxy positioner to convert from element coordinates to proxy coordinates
+    // Step 3: Convert to proxy's positioned-parent-relative coordinates
     const proxyPositionedParentRect =
       proxyPositionedParent.getBoundingClientRect();
+    return elementViewportLeft - proxyPositionedParentRect.left;
+  };
 
-    return createProxiedPositioner({
-      leftRelativeToPositionedParent,
-      topRelativeToPositionedParent,
-      positionedParentLeftOffsetWithScrollContainer,
-      positionedParentTopOffsetWithScrollContainer,
-      positionedParentLeft: positionedParentRect.left,
-      positionedParentTop: positionedParentRect.top,
-      proxyPositionedParentLeft: proxyPositionedParentRect.left,
-      proxyPositionedParentTop: proxyPositionedParentRect.top,
+  const toLayoutTop = (topRelativeToScrollContainer) => {
+    // Step 1: Convert from scroll-relative to element's positioned-parent-relative
+    const elementTopRelativeToPositionedParent =
+      topRelativeToScrollContainer -
+      positionedParentTopOffsetWithScrollContainer;
 
-      leftRelativeToScrollContainer,
-      topRelativeToScrollContainer,
-    });
-  }
+    // Step 2: Convert to viewport coordinates using element's positioned parent
+    const elementViewportTop =
+      elementPositionedParentRect.top + elementTopRelativeToPositionedParent;
 
-  return createStandardElementPositioner(element);
+    // Step 3: Convert to proxy's positioned-parent-relative coordinates
+    const proxyPositionedParentRect =
+      proxyPositionedParent.getBoundingClientRect();
+    return elementViewportTop - proxyPositionedParentRect.top;
+  };
+
+  const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
+    return (
+      leftRelativeToPositionedParent +
+      positionedParentLeftOffsetWithScrollContainer
+    );
+  };
+
+  const toScrollRelativeTop = (topRelativeToPositionedParent) => {
+    return (
+      topRelativeToPositionedParent +
+      positionedParentTopOffsetWithScrollContainer
+    );
+  };
+
+  return {
+    leftRelativeToScrollContainer,
+    topRelativeToScrollContainer,
+    toLayoutLeft,
+    toLayoutTop,
+    leftRelativeToPositionedParent,
+    topRelativeToPositionedParent,
+    toScrollRelativeLeft,
+    toScrollRelativeTop,
+  };
 };
 
 const createStandardElementPositioner = (element) => {
