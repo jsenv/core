@@ -149,18 +149,20 @@ export const createDragGestureController = (options = {}) => {
       // === APPLIQUER LES CONTRAINTES ===
       let moveXConstrained = moveXRequested;
       let moveYConstrained = moveYRequested;
-      const limitMoveX = (value) => {
-        moveXConstrained = value;
-      };
-      const limitMoveY = (value) => {
-        moveYConstrained = value;
-      };
-      publishBeforeDrag(moveXRequested, moveYRequested, {
-        limitMoveX,
-        limitMoveY,
-        dragEvent,
-        isRelease,
-      });
+      if (moveXRequested !== currentMoveX || moveYRequested !== currentMoveY) {
+        const limitMoveX = (value) => {
+          moveXConstrained = value;
+        };
+        const limitMoveY = (value) => {
+          moveYConstrained = value;
+        };
+        publishBeforeDrag(moveXRequested, moveYRequested, {
+          limitMoveX,
+          limitMoveY,
+          dragEvent,
+          isRelease,
+        });
+      }
       // === ÉTAT FINAL ===
       const moveX = moveXConstrained;
       const moveY = moveYConstrained;
