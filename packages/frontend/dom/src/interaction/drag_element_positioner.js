@@ -171,8 +171,7 @@ const createDifferentScrollSameParentPositioner = (
     scrollContainer === document.documentElement;
   const referenceScrollContainer = getScrollContainer(referenceElement);
   const elementRect = element.getBoundingClientRect();
-  const scrollLeft = referenceScrollContainer.scrollLeft;
-  const scrollTop = referenceScrollContainer.scrollTop;
+  const { scrollLeft, scrollTop } = scrollContainer;
   const referenceScrollContainerRect =
     referenceScrollContainer.getBoundingClientRect();
   const ancestorFixedPosition = findAncestorFixedPosition(element);
@@ -187,8 +186,8 @@ const createDifferentScrollSameParentPositioner = (
   const toLayoutLeft = (leftRelativeToScrollContainerToConvert) => {
     const left =
       leftRelativeToScrollContainerToConvert -
-      referenceScrollContainerRect.left +
-      elementRect.left;
+      leftRelativeToScrollContainer +
+      leftRelativeToPositionedParent;
     if (ancestorFixedPosition && scrollContainerIsDocument) {
       return ancestorFixedPosition[0] + left;
     }
@@ -197,8 +196,8 @@ const createDifferentScrollSameParentPositioner = (
   const toLayoutTop = (topRelativeToScrollContainerToConvert) => {
     const top =
       topRelativeToScrollContainerToConvert -
-      referenceScrollContainerRect.top +
-      elementRect.top;
+      topRelativeToScrollContainer +
+      topRelativeToPositionedParent;
     if (ancestorFixedPosition && scrollContainerIsDocument) {
       return ancestorFixedPosition[1] + top;
     }
@@ -250,8 +249,7 @@ const createFullyDifferentPositioner = (element, referenceElement) => {
   const referenceScrollContainer = getScrollContainer(referenceElement);
   const referencePositionedParent = referenceElement.offsetParent;
   const elementPositionedParent = element.offsetParent;
-  const scrollLeft = referenceScrollContainer.scrollLeft;
-  const scrollTop = referenceScrollContainer.scrollTop;
+  const { scrollLeft, scrollTop } = scrollContainer;
   const elementRect = element.getBoundingClientRect();
   const referenceScrollContainerRect =
     referenceScrollContainer.getBoundingClientRect();
@@ -377,7 +375,7 @@ const createStandardElementPositioner = (element) => {
         topRelativeToScrollContainerToConvert -
         positionedParentTopOffsetWithScrollContainer;
       if (ancestorFixedPosition && scrollContainerIsDocument) {
-        return ancestorFixedPosition[0] + top;
+        return ancestorFixedPosition[1] + top;
       }
       return scrollTop + top;
     };
