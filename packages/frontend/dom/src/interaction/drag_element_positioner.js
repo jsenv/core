@@ -1,27 +1,34 @@
 import { getScrollContainer } from "../scroll/scroll_container.js";
 
 /**
- * We use a unique coordinate system internally described as:
- * "position relative to the scroll container without scrolls"
- * a sort of getBoundingClientRect() relative to the scroll container instead of being always relative to document.documentElement
+ * Creates a coordinate system positioner for drag operations.
  *
- * But in the end we need to convert these coordinates back to the actual layour coordinates in the DOM
- * Which might be different when offset parent position differs from scoll container position
- * (e.g. offset parent is positionned and scroll container is not, or both are positionned but not the same)
+ * COORDINATE SYSTEM:
+ * Internally, we use a coordinate system described as "position relative to the scroll container".
+ * This is similar to getBoundingClientRect() but relative to the scroll container
+ * instead of always being relative to the viewport.
  *
- * And also very likely to happen when using an elementProxy
- * (The element being moved is not the original element)
+ * CONVERSION CHALLENGE:
+ * We need to convert these internal coordinates back to actual DOM layout coordinates.
+ * This becomes complex when:
+ * - The offsetParent position differs from the scroll container position
+ * - An elementProxy is used (the visual element being moved differs from the logical element)
  *
- * The code calling this helper expects
+ * EXPECTED API CONTRACT:
+ * The calling code expects this positioner to return:
  *
- * - leftRelativeToScrollContainer/topRelativeToScrollContainer
- *   Current coodinates of the proxy relative to the scroll container of element
- *   As a result code can still use coordinates of "element" but it's actually the proxy that dictates
- *   the original position
- * - toLayoutLeft/toLayoutTop functions
- *   Returns the position that should be applied to the element proxy in order to position it
- *   So these functions must convert from scroll relative coordinates of element to
- *   positioned parent relative coordinates of element proxy
+ * - leftRelativeToScrollContainer/topRelativeToScrollContainer:
+ *   Current coordinates of the element (or proxy) relative to the element's scroll container.
+ *   When using a proxy, these coordinates represent where the proxy appears to be positioned
+ *   from the perspective of the original element's coordinate system.
+ *
+ * - toLayoutLeft/toLayoutTop functions:
+ *   Convert from the internal scroll-relative coordinates to DOM positioning coordinates.
+ *   When using a proxy, these functions must convert from the element's scroll-relative coordinates
+ *   to the proxy's offsetParent-relative coordinates for actual DOM positioning.
+ *
+ * OTHER PROPERTIES:
+ * The remaining returned properties provide coordinate conversion utilities but are less critical.
  */
 export const createDragElementPositioner = (element, elementProxy) => {
   if (elementProxy) {
