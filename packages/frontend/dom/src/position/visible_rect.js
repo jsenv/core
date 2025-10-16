@@ -165,10 +165,10 @@ export const visibleRectEffect = (element, update) => {
 
   check("initialization");
 
-  const [beforeCheck, onBeforeCheck] = createPubSub();
+  const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
   auto_check: {
     const autoCheck = (reason) => {
-      const beforeCheckResults = beforeCheck(reason);
+      const beforeCheckResults = publishBeforeAutoCheck(reason);
       check(reason);
       for (const beforeCheckResult of beforeCheckResults) {
         if (typeof beforeCheckResult === "function") {
@@ -225,7 +225,11 @@ export const visibleRectEffect = (element, update) => {
       });
     }
     on_element_resize: {
+      let handlingResize = true;
       const resizeObserver = new ResizeObserver(() => {
+        if (handlingResize) {
+          return;
+        }
         // we use directly the result of getBoundingClientRect() instead of the resizeEntry.contentRect or resizeEntry.borderBoxSize
         // so that:
         // - We can compare the dimensions measure in the last check and the current one
@@ -237,11 +241,13 @@ export const visibleRectEffect = (element, update) => {
         if (widthDiff === 0 && heightDiff === 0) {
           return;
         }
+        handlingResize = true;
         autoCheck(`element_size_change (${width}x${height})`);
+        handlingResize = false;
       });
       resizeObserver.observe(element);
       // Temporarily disconnect ResizeObserver to prevent feedback loops eventually caused by update function
-      onBeforeCheck(() => {
+      onBeforeAutoCheck(() => {
         resizeObserver.unobserve(element);
         return () => {
           // This triggers a new call to the resive observer that will be ignored thanks to
@@ -302,7 +308,7 @@ export const visibleRectEffect = (element, update) => {
 
   return {
     check,
-    onBeforeCheck,
+    onBeforeAutoCheck,
     disconnect: () => {
       teardown();
     },

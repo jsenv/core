@@ -680,7 +680,7 @@ const stickValidationMessageToTarget = (validationMessage, targetElement) => {
       targetVisibleRectEffect.check(`content_size_change (${width}x${height})`);
     },
   );
-  targetVisibleRectEffect.onBeforeCheck(() => {
+  targetVisibleRectEffect.onBeforeAutoCheck(() => {
     // prevent feedback loop because check triggers size change which triggers check...
     messageSizeChangeObserver.disable();
     return () => {
