@@ -52,10 +52,10 @@ export const createDragGestureController = (options = {}) => {
       status: "grabbed",
 
       scrollContainer,
-      grabScrollLeft: scrollContainer.scrollLeft, // scrollLeft of the scrollContainer at grab time
-      grabScrollTop: scrollContainer.scrollTop, // scrollTop of the scrollContainer at grab time
-      grabX, // x grab coordinate (excluding scroll of the scrollContainer)
-      grabY, // y grab coordinate (excluding scroll of the scrollContainer)
+      grabX, // x grab coordinate (excluding scroll)
+      grabY, // y grab coordinate (excluding scroll)
+      grabScrollLeft: scrollContainer.scrollLeft, // scrollLeft at grab time
+      grabScrollTop: scrollContainer.scrollTop, // scrollTop at grab time
 
       dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
       dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
@@ -129,16 +129,12 @@ export const createDragGestureController = (options = {}) => {
     }) => {
       // === ÉTAT INITIAL (au moment du grab) ===
       const { grabX, grabY, grabScrollLeft, grabScrollTop } = gestureInfo;
-      const grabXWithScroll = grabX + grabScrollLeft;
-      const grabYWithScroll = grabY + grabScrollTop;
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
-      const dragXWithScroll = dragX + scrollContainer.scrollLeft;
-      const dragYWithScroll = dragY + scrollContainer.scrollTop;
       const moveXRequested = direction.x
-        ? dragXWithScroll - grabXWithScroll
+        ? scrollContainer.scrollLeft + dragX - (grabScrollLeft + grabX)
         : 0;
       const moveYRequested = direction.y
-        ? dragYWithScroll - grabYWithScroll
+        ? scrollContainer.scrollTop + dragY - (grabScrollTop + grabY)
         : 0;
       // Calcul de la direction basé sur le mouvement précédent
       // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
@@ -193,8 +189,8 @@ export const createDragGestureController = (options = {}) => {
         return dragData;
       }
       if (!gestureInfo.started && threshold) {
-        const deltaX = Math.abs(moveXRequested);
-        const deltaY = Math.abs(moveYRequested);
+        const deltaX = Math.abs(dragX - grabX);
+        const deltaY = Math.abs(dragY - grabY);
         if (direction.x && direction.y) {
           // Both directions: check both axes
           if (deltaX < threshold && deltaY < threshold) {

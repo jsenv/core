@@ -289,39 +289,27 @@ const createFullyDifferentPositioner = (element, referenceElement) => {
 const createStandardElementPositioner = (element) => {
   const positionedParent = element.offsetParent;
   const scrollContainer = getScrollContainer(element);
-  const scrollContainerIsDocument =
-    scrollContainer === document.documentElement;
-  const ancestorFixedPosition = findAncestorFixedPosition(element);
 
   // Helper function to create the positioner object (clean, no proxy logic)
   const createStandardPositioner = ({
     // current position
-    leftRelativeToPositionedParent,
-    topRelativeToPositionedParent,
-    // help to implement toLayoutLeft/toLayoutTop
-    scrollLeft,
-    scrollTop,
-    positionedParentLeftOffsetWithScrollContainer,
-    positionedParentTopOffsetWithScrollContainer,
-    // less important properties
     leftRelativeToScrollContainer,
     topRelativeToScrollContainer,
+    // help to implement toLayoutLeft/toLayoutTop
+    positionedParentLeftOffsetWithScrollContainer,
+    positionedParentTopOffsetWithScrollContainer,
   }) => {
     const toLayoutLeft = (leftWithoutScroll) => {
-      const left =
+      const leftWithoutScrollForParent =
         leftWithoutScroll - positionedParentLeftOffsetWithScrollContainer;
-      if (ancestorFixedPosition && scrollContainerIsDocument) {
-        return ancestorFixedPosition[0] + left;
-      }
-      return scrollLeft + left;
+      const left = scrollContainer.scrollLeft + leftWithoutScrollForParent;
+      return left;
     };
     const toLayoutTop = (topWithoutScroll) => {
-      const top =
+      const topWithoutScrollForParent =
         topWithoutScroll - positionedParentTopOffsetWithScrollContainer;
-      if (ancestorFixedPosition && scrollContainerIsDocument) {
-        return ancestorFixedPosition[1] + top;
-      }
-      return scrollTop + top;
+      const top = scrollContainer.scrollTop + topWithoutScrollForParent;
+      return top;
     };
 
     return {
@@ -329,36 +317,22 @@ const createStandardElementPositioner = (element) => {
       topRelativeToScrollContainer,
       toLayoutLeft,
       toLayoutTop,
-
-      leftRelativeToPositionedParent,
-      topRelativeToPositionedParent,
     };
   };
 
   // Most common case: positioned parent is inside the scroll container
   if (scrollContainer.contains(positionedParent)) {
-    const scrollContainerRect = scrollContainer.getBoundingClientRect();
-    const scrollContainerViewportLeft = scrollContainerRect.left;
-    const scrollContainerViewportTop = scrollContainerRect.top;
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    const positionedParentViewportLeft = positionedParentRect.left;
-    const positionedParentViewportTop = positionedParentRect.top;
-    const elementRect = element.getBoundingClientRect();
-    const elementViewportLeft = elementRect.left;
-    const elementViewportTop = elementRect.top;
-    const scrollContainerIsDocument =
-      scrollContainer === document.documentElement;
-    const scrollLeft = scrollContainer.scrollLeft;
-    const scrollTop = scrollContainer.scrollTop;
+    const { left: scrollContainerLeft, top: scrollContainerTop } =
+      scrollContainer.getBoundingClientRect();
+    const { left: elementViewportLeft, top: elementViewportTop } =
+      element.getBoundingClientRect();
+    const { scrollLeft, scrollTop } = scrollContainer;
 
     // Calculate current element position relative to scroll container
-    const leftRelativeToScrollContainer = scrollContainerIsDocument
-      ? elementViewportLeft + scrollLeft
-      : elementViewportLeft - scrollContainerViewportLeft + scrollLeft;
-    const topRelativeToScrollContainer = scrollContainerIsDocument
-      ? elementViewportTop + scrollTop
-      : elementViewportTop - scrollContainerViewportTop + scrollTop;
-
+    const leftRelativeToScrollContainer =
+      elementViewportLeft - scrollContainerLeft + scrollLeft;
+    const topRelativeToScrollContainer =
+      elementViewportTop - scrollContainerTop + scrollTop;
     const [
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
@@ -367,12 +341,6 @@ const createStandardElementPositioner = (element) => {
       scrollContainer,
     );
 
-    // Calculate current element position relative to positioned parent (layout coordinates)
-    const leftRelativeToPositionedParent =
-      elementViewportLeft - positionedParentViewportLeft;
-    const topRelativeToPositionedParent =
-      elementViewportTop - positionedParentViewportTop;
-
     return createStandardPositioner({
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
@@ -380,8 +348,6 @@ const createStandardElementPositioner = (element) => {
       scrollTop,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
-      leftRelativeToPositionedParent,
-      topRelativeToPositionedParent,
     });
   }
 
