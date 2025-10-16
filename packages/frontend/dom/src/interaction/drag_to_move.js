@@ -88,20 +88,21 @@ export const createDragToMoveGestureController = ({
        *
        */
 
-      const elementLeftWithScrollAtGrab =
+      const elementLeftWithoutScrollAtGrab =
         positioner.leftRelativeToScrollContainer;
-      const elementTopWithScrollAtGrab =
+      const elementTopWithoutScrollAtGrab =
         positioner.topRelativeToScrollContainer;
       const { grabScrollLeft, grabScrollTop } = dragGesture.gestureInfo;
-      const elementLeftWithoutScrollAtGrab =
-        elementLeftWithScrollAtGrab - grabScrollLeft;
-      const elementTopWithoutScrollAtGrab =
-        elementTopWithScrollAtGrab - grabScrollTop;
+      const elementLeftWithScrollAtGrab =
+        elementLeftWithoutScrollAtGrab + grabScrollLeft;
+      const elementTopWithScrollAtGrab =
+        elementTopWithoutScrollAtGrab + grabScrollTop;
       // const { grabX, grabY } = dragGesture.gestureInfo.name;
 
       console.log({
-        elementLeftWithScrollAtGrab,
+        grabScrollLeft,
         elementLeftWithoutScrollAtGrab,
+        elementLeftWithScrollAtGrab,
       });
 
       const toElementLeft = (moveX) =>
