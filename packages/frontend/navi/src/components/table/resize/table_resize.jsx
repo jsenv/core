@@ -361,16 +361,14 @@ const initResizeByMousedown = (
 
     const scrollContainer = getScrollContainer(tableCell);
     const { left, top } = tableCell.getBoundingClientRect();
+    const { scrollLeft, scrollTop } = scrollContainer;
+    const cellStart = axis === "x" ? scrollLeft + left : scrollTop + top;
+    const customStartBound = cellStart + minCellSize;
+    const customEndBound = cellStart + maxCellSize;
     const isSticky =
       axis === "x"
         ? tableCell.hasAttribute("data-sticky-left")
         : tableCell.hasAttribute("data-sticky-top");
-    let cellStart = axis === "x" ? left : top;
-    cellStart +=
-      axis === "x" ? scrollContainer.scrollLeft : scrollContainer.scrollTop;
-
-    const customStartBound = cellStart + minCellSize;
-    const customEndBound = cellStart + maxCellSize;
 
     if (axis === "x") {
       return {
