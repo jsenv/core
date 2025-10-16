@@ -64,10 +64,10 @@ import.meta.css = /* css */ `
   .navi_table_column_resizer {
     pointer-events: none;
     position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 10px;
     left: var(--table-column-resizer-left);
+    width: 10px;
+    top: var(--table-visual-top);
+    height: var(--table-visual-height);
     opacity: 0;
   }
   .navi_table_column_resize_handle {
@@ -119,10 +119,10 @@ import.meta.css = /* css */ `
   .navi_table_row_resizer {
     pointer-events: none;
     position: absolute;
-    left: 0;
-    right: 0;
+    left: var(--table-visual-left);
+    width: var(--table-visual-width);
+    top: var(--table-row-resize-top);
     height: 10px;
-    top: var(--table-cell-bottom);
     opacity: 0;
   }
   .navi_table_row_resize_handle {
@@ -294,10 +294,7 @@ const updateTableColumnResizerPosition = (columnCell, columnResizer) => {
     return;
   }
   const columnCellRect = columnCell.getBoundingClientRect();
-  const columnResizerParent = columnResizer.parentElement; // Should be navi_table_ui_container
-  const columnResizerParentRect = columnResizerParent.getBoundingClientRect();
-  // Calculate cell position relative to columnResizer's parent
-  const columnRight = columnCellRect.right - columnResizerParentRect.left;
+  const columnRight = columnCellRect.right;
   const cellHeight = columnCellRect.height;
   columnResizer.style.setProperty(
     "--table-column-resizer-left",
@@ -589,15 +586,11 @@ const updateTableRowResizerPosition = (rowCell, rowResizer) => {
     // while resizing (would move the resizer on other rows)
     return;
   }
-  // Position relative to rowResizer's parent (navi_table_ui_container)
   const rowCellRect = rowCell.getBoundingClientRect();
-  const rowResizerParent = rowResizer.parentElement; // Should be navi_table_ui_container
-  const rowResizerParentRect = rowResizerParent.getBoundingClientRect();
 
-  // Calculate cell position relative to rowResizer's parent
-  const cellBottom = rowCellRect.bottom - rowResizerParentRect.top;
+  const rowBottom = rowCellRect.bottom;
   const cellWidth = rowCellRect.width;
-  rowResizer.style.setProperty("--table-cell-bottom", `${cellBottom}px`);
+  rowResizer.style.setProperty("--table-row-resizer-top", `${rowBottom}px`);
   rowResizer.style.setProperty("--table-cell-width", `${cellWidth}px`);
   rowResizer.setAttribute("data-hover", "");
 };

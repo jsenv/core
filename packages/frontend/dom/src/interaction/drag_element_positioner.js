@@ -107,10 +107,7 @@ const createSameScrollDifferentParentPositioner = (
     positioner.leftRelativeToScrollContainer = leftRelativeToScrollContainer;
     positioner.topRelativeToScrollContainer = topRelativeToScrollContainer;
   }
-
   to_layout: {
-    const ancestorFixedPosition = findAncestorFixedPosition(element);
-    // const referencePositionedParent = referenceElement.offsetParent;
     const elementPositionedParent = element.offsetParent;
     const [
       positionedParentLeftOffsetWithScrollContainer,
@@ -120,29 +117,18 @@ const createSameScrollDifferentParentPositioner = (
       scrollContainer,
     );
 
-    // left
-
     positioner.toLayoutLeft = (referenceLeftWithoutScroll) => {
       const leftWithoutScroll =
         referenceLeftWithoutScroll -
         positionedParentLeftOffsetWithScrollContainer;
-      if (ancestorFixedPosition && scrollContainerIsDocument) {
-        const leftFixed = ancestorFixedPosition[0] + leftWithoutScroll;
-        return leftFixed;
-      }
-      const left = scrollContainer.scrollLeft + scrollLeft + leftWithoutScroll;
+      const left = scrollLeft + leftWithoutScroll;
       return left;
     };
-    // top
     positioner.toLayoutTop = (referenceTopWithoutScroll) => {
       const topWithoutScroll =
         referenceTopWithoutScroll -
         positionedParentTopOffsetWithScrollContainer;
-      if (ancestorFixedPosition && scrollContainerIsDocument) {
-        const topFixed = ancestorFixedPosition[1] + topWithoutScroll;
-        return topFixed;
-      }
-      const top = scrollContainer.scrollTop + scrollTop + topWithoutScroll;
+      const top = scrollTop + topWithoutScroll;
       return top;
     };
   }

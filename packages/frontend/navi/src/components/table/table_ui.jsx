@@ -13,15 +13,6 @@ import.meta.css = /* css */ `
     pointer-events: none; /* UI elements must use pointer-events: auto if they need to be interactive */
     /* background: rgba(0, 255, 0, 0.2); */
   }
-
-  .navi_table_ui_container {
-    position: absolute;
-    left: var(--table-visual-left);
-    top: var(--table-visual-top);
-    width: var(--table-visual-width);
-    height: var(--table-visual-height);
-    /* background: rgba(0, 0, 0, 0.7); */
-  }
 `;
 
 export const TableUI = forwardRef((props, ref) => {
@@ -35,33 +26,20 @@ export const TableUI = forwardRef((props, ref) => {
       return null;
     }
 
-    const uiContainer = ui.querySelector(".navi_table_ui_container");
     // TODO: external code should be able to call tableVisibleRectEffect.check();
     // (for the drag operation when we scroll)
     const tableVisibleRectEffect = visibleRectEffect(table, (visibleRect) => {
-      uiContainer.style.setProperty(
-        "--table-visual-left",
-        `${visibleRect.left}px`,
-      );
-      uiContainer.style.setProperty(
-        "--table-visual-width",
-        `${visibleRect.width}px`,
-      );
-      uiContainer.style.setProperty(
-        "--table-visual-top",
-        `${visibleRect.top}px`,
-      );
-      uiContainer.style.setProperty(
-        "--table-visual-height",
-        `${visibleRect.height}px`,
-      );
+      ui.style.setProperty("--table-visual-left", `${visibleRect.left}px`);
+      ui.style.setProperty("--table-visual-width", `${visibleRect.width}px`);
+      ui.style.setProperty("--table-visual-top", `${visibleRect.top}px`);
+      ui.style.setProperty("--table-visual-height", `${visibleRect.height}px`);
     });
     return tableVisibleRectEffect.disconnect;
   });
 
   return createPortal(
     <div ref={ref} className="navi_table_ui">
-      <div className="navi_table_ui_container">{children}</div>
+      {children}
     </div>,
     document.body,
   );
