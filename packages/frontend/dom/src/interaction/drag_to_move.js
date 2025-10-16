@@ -24,10 +24,7 @@ export const createDragToMoveGestureController = ({
   showDebugMarkers = true,
   ...options
 } = {}) => {
-  const initGrabToMoveElement = (
-    dragGesture,
-    { element, elementToImpact = element },
-  ) => {
+  const initGrabToMoveElement = (dragGesture, { element, elementToImpact }) => {
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
@@ -263,6 +260,57 @@ export const createDragToMoveGestureController = ({
 const createElementPositioner = (element, { scrollContainer }) => {
   const positionedParent = element.offsetParent;
 
+  const createPositioner = ({
+    leftRelativeToPositionedParent,
+    topRelativeToPositionedParent,
+    leftRelativeToScrollContainer,
+    topRelativeToScrollContainer,
+    positionedParentLeftOffsetWithScrollContainer,
+    positionedParentTopOffsetWithScrollContainer,
+  }) => {
+    // Convert from positioned parent coordinates to scroll container coordinates
+    const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
+      return (
+        leftRelativeToPositionedParent +
+        positionedParentLeftOffsetWithScrollContainer
+      );
+    };
+    // Convert from positioned parent coordinates to scroll container coordinates
+    const toScrollRelativeTop = (topRelativeToPositionedParent) => {
+      return (
+        topRelativeToPositionedParent +
+        positionedParentTopOffsetWithScrollContainer
+      );
+    };
+
+    // Convert from scroll container coordinates to positioned parent coordinates
+    const toLayoutLeft = (leftRelativeToScrollContainer) => {
+      return (
+        leftRelativeToScrollContainer -
+        positionedParentLeftOffsetWithScrollContainer
+      );
+    };
+    // Convert from scroll container coordinates to positioned parent coordinates
+    const toLayoutTop = (topRelativeToScrollContainer) => {
+      return (
+        topRelativeToScrollContainer -
+        positionedParentTopOffsetWithScrollContainer
+      );
+    };
+    return {
+      leftRelativeToPositionedParent,
+      topRelativeToPositionedParent,
+      leftRelativeToScrollContainer,
+      topRelativeToScrollContainer,
+      positionedParentLeftOffsetWithScrollContainer,
+      positionedParentTopOffsetWithScrollContainer,
+      toScrollRelativeLeft,
+      toScrollRelativeTop,
+      toLayoutLeft,
+      toLayoutTop,
+    };
+  };
+
   // Most common case: positioned parent is inside the scroll container
   if (scrollContainer.contains(positionedParent)) {
     const scrollContainerRect = scrollContainer.getBoundingClientRect();
@@ -316,57 +364,14 @@ const createElementPositioner = (element, { scrollContainer }) => {
       ? elementViewportTop
       : elementViewportTop - scrollContainerViewportTop;
 
-    const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
-      // Convert from positioned parent coordinates to scroll container coordinates
-      return (
-        leftRelativeToPositionedParent +
-        positionedParentLeftOffsetWithScrollContainer
-      );
-    };
-
-    const toScrollRelativeTop = (topRelativeToPositionedParent) => {
-      // Convert from positioned parent coordinates to scroll container coordinates
-      return (
-        topRelativeToPositionedParent +
-        positionedParentTopOffsetWithScrollContainer
-      );
-    };
-
-    const toLayoutLeft = (leftRelativeToScrollContainer) => {
-      // Convert from scroll container coordinates to positioned parent coordinates
-      return (
-        leftRelativeToScrollContainer -
-        positionedParentLeftOffsetWithScrollContainer
-      );
-    };
-
-    const toLayoutTop = (topRelativeToScrollContainer) => {
-      // Convert from scroll container coordinates to positioned parent coordinates
-      return (
-        topRelativeToScrollContainer -
-        positionedParentTopOffsetWithScrollContainer
-      );
-    };
-
-    // console.log({
-    //   leftRelativeToPositionedParent,
-    //   leftRelativeToScrollContainer,
-    //   positionedParentLeftOffsetWithScrollContainer,
-    //   scrollContainerIsDocument,
-    // });
-
-    return {
+    return createPositioner({
       leftRelativeToPositionedParent,
       topRelativeToPositionedParent,
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
-      toScrollRelativeLeft,
-      toScrollRelativeTop,
-      toLayoutLeft,
-      toLayoutTop,
-    };
+    });
   }
 
   // Special case: the scroll container IS the positioned parent
@@ -395,38 +400,14 @@ const createElementPositioner = (element, { scrollContainer }) => {
     const positionedParentLeftOffsetWithScrollContainer = 0;
     const positionedParentTopOffsetWithScrollContainer = 0;
 
-    const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
-      // No conversion needed since they are the same coordinate system
-      return leftRelativeToPositionedParent;
-    };
-
-    const toScrollRelativeTop = (topRelativeToPositionedParent) => {
-      // No conversion needed since they are the same coordinate system
-      return topRelativeToPositionedParent;
-    };
-
-    const toLayoutLeft = (leftRelativeToScrollContainer) => {
-      // No conversion needed since they are the same coordinate system
-      return leftRelativeToScrollContainer;
-    };
-
-    const toLayoutTop = (topRelativeToScrollContainer) => {
-      // No conversion needed since they are the same coordinate system
-      return topRelativeToScrollContainer;
-    };
-
-    return {
+    return createPositioner({
       leftRelativeToPositionedParent,
       topRelativeToPositionedParent,
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
-      toScrollRelativeLeft,
-      toScrollRelativeTop,
-      toLayoutLeft,
-      toLayoutTop,
-    };
+    });
   }
 
   // Case: positioned parent is ancestor of scroll container
@@ -461,46 +442,14 @@ const createElementPositioner = (element, { scrollContainer }) => {
         ? positionedParentRect.top
         : scrollContainerRect.top - positionedParentRect.top;
 
-    const toScrollRelativeLeft = (leftRelativeToPositionedParent) => {
-      return (
-        leftRelativeToPositionedParent -
-        positionedParentLeftOffsetWithScrollContainer
-      );
-    };
-
-    const toScrollRelativeTop = (topRelativeToPositionedParent) => {
-      return (
-        topRelativeToPositionedParent -
-        positionedParentTopOffsetWithScrollContainer
-      );
-    };
-
-    const toLayoutLeft = (leftRelativeToScrollContainer) => {
-      return (
-        leftRelativeToScrollContainer +
-        positionedParentLeftOffsetWithScrollContainer
-      );
-    };
-
-    const toLayoutTop = (topRelativeToScrollContainer) => {
-      return (
-        topRelativeToScrollContainer +
-        positionedParentTopOffsetWithScrollContainer
-      );
-    };
-
-    return {
+    return createPositioner({
       leftRelativeToPositionedParent,
       topRelativeToPositionedParent,
       leftRelativeToScrollContainer,
       topRelativeToScrollContainer,
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
-      toScrollRelativeLeft,
-      toScrollRelativeTop,
-      toLayoutLeft,
-      toLayoutTop,
-    };
+    });
   }
 
   // never supposed to happen
