@@ -232,9 +232,15 @@ export const createDragGestureController = (options = {}) => {
         onDragStart?.(gestureInfo);
       }
       const someChange = gestureInfo.moveXChanged || gestureInfo.moveYChanged;
-      if (someChange) {
-        publishDrag(gestureInfo);
-      }
+
+      publishDrag(
+        gestureInfo,
+        // we still publish drag event even when unchanged
+        // because UI might need to adjust when document scrolls
+        // even if nothing truly changes visually the element
+        // can decide to stick to the scroll for example
+        someChange,
+      );
     };
 
     const release = ({
