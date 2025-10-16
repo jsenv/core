@@ -60,8 +60,8 @@ export const createDragGestureController = (options = {}) => {
       dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
       dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
 
-      moveX: 0, // dragX + scrollLeft + constraints applied
-      moveY: 0, // dragY + scrollTop + constraints applied
+      moveX: grabX + scrollContainer.scrollLeft, // dragX + scrollLeft + constraints applied
+      moveY: grabY + scrollContainer.scrollTop, // dragY + scrollTop + constraints applied
       // metadata about the move
       moveXChanged: false, // x changed since last gesture
       moveYChanged: false, // y changed since last gesture
@@ -131,11 +131,17 @@ export const createDragGestureController = (options = {}) => {
       const { grabX, grabY, grabScrollLeft, grabScrollTop } = gestureInfo;
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
       const moveXRequested = direction.x
-        ? scrollContainer.scrollLeft + dragX - (grabScrollLeft + grabX)
-        : 0;
+        ? scrollContainer.scrollLeft + (dragX - grabX)
+        : grabX + grabScrollLeft;
       const moveYRequested = direction.y
-        ? scrollContainer.scrollTop + dragY - (grabScrollTop + grabY)
-        : 0;
+        ? scrollContainer.scrollTop + (dragY - grabY)
+        : grabY + grabScrollTop;
+      console.log({
+        dragX,
+        grabX,
+        moveXRequested,
+        scrollLeft: scrollContainer.scrollLeft,
+      });
       // Calcul de la direction basé sur le mouvement précédent
       // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
       // (ici on veut connaitre l'intention)
