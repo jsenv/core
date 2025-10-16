@@ -87,6 +87,7 @@ const createSameScrollDifferentParentPositioner = (
   const scrollContainerIsDocument =
     scrollContainer === document.documentElement;
   const { scrollLeft, scrollTop } = scrollContainer;
+  const scrollContainerRect = scrollContainer.getBoundingClientRect();
 
   current_position: {
     const { left: elementLeft, top: elementTop } =
@@ -98,7 +99,6 @@ const createSameScrollDifferentParentPositioner = (
       leftRelativeToScrollContainer = elementLeft + scrollLeft;
       topRelativeToScrollContainer = elementTop + scrollTop;
     } else {
-      const scrollContainerRect = scrollContainer.getBoundingClientRect();
       leftRelativeToScrollContainer =
         elementLeft - scrollContainerRect.left + scrollLeft;
       topRelativeToScrollContainer =
@@ -109,29 +109,23 @@ const createSameScrollDifferentParentPositioner = (
   }
 
   to_layout: {
-    const {
-      leftRelativeToScrollContainer: referenceLeftRelativeToScrollContainer,
-      topRelativeToScrollContainer: referenceTopRelativeToScrollContainer,
-      leftRelativeToPositionedParent: referenceLeftRelativeToPositionedParent,
-      topRelativeToPositionedParent: referenceTopRelativeToPositionedParent,
-    } = createStandardElementPositioner(referenceElement);
     const ancestorFixedPosition = findAncestorFixedPosition(element);
-    const referencePositionedParent = referenceElement.offsetParent;
+    // const referencePositionedParent = referenceElement.offsetParent;
     const elementPositionedParent = element.offsetParent;
+    const [
+      positionedParentLeftOffsetWithScrollContainer,
+      positionedParentTopOffsetWithScrollContainer,
+    ] = getPositionedParentOffsetWithScrollContainer(
+      elementPositionedParent,
+      scrollContainer,
+    );
 
     // left
-    const { left: positionedParentLeft } =
-      elementPositionedParent.getBoundingClientRect();
-    const { left: referencePositionedParentLeft } =
-      referencePositionedParent.getBoundingClientRect();
-    const positionedParentOffsetLeft =
-      referencePositionedParentLeft - positionedParentLeft;
-    const layoutOffsetLeft =
-      positionedParentOffsetLeft +
-      referenceLeftRelativeToScrollContainer +
-      referenceLeftRelativeToPositionedParent;
+
     positioner.toLayoutLeft = (referenceLeftWithoutScroll) => {
-      const leftWithoutScroll = referenceLeftWithoutScroll - layoutOffsetLeft;
+      const leftWithoutScroll =
+        referenceLeftWithoutScroll -
+        positionedParentLeftOffsetWithScrollContainer;
       if (ancestorFixedPosition && scrollContainerIsDocument) {
         const leftFixed = ancestorFixedPosition[0] + leftWithoutScroll;
         return leftFixed;
@@ -140,18 +134,10 @@ const createSameScrollDifferentParentPositioner = (
       return left;
     };
     // top
-    const { top: referencePositionedParentTop } =
-      referencePositionedParent.getBoundingClientRect();
-    const { top: positionedParentTop } =
-      elementPositionedParent.getBoundingClientRect();
-    const positionedParentOffsetTop =
-      referencePositionedParentTop - positionedParentTop;
-    const layoutOffsetTop =
-      positionedParentOffsetTop +
-      referenceTopRelativeToScrollContainer +
-      referenceTopRelativeToPositionedParent;
     positioner.toLayoutTop = (referenceTopWithoutScroll) => {
-      const topWithoutScroll = referenceTopWithoutScroll - layoutOffsetTop;
+      const topWithoutScroll =
+        referenceTopWithoutScroll -
+        positionedParentTopOffsetWithScrollContainer;
       if (ancestorFixedPosition && scrollContainerIsDocument) {
         const topFixed = ancestorFixedPosition[1] + topWithoutScroll;
         return topFixed;
@@ -387,30 +373,13 @@ const createStandardElementPositioner = (element) => {
       ? elementViewportTop + scrollTop
       : elementViewportTop - scrollContainerViewportTop + scrollTop;
 
-    // Calculate static offset between positioned parent and scroll container
-    // This offset should be independent of scroll position
-    let staticOffsetX;
-    let staticOffsetY;
-    if (scrollContainerIsDocument) {
-      // Document case: getBoundingClientRect is not affected by document scroll
-      staticOffsetX =
-        positionedParentViewportLeft - scrollContainerViewportLeft;
-      staticOffsetY = positionedParentViewportTop - scrollContainerViewportTop;
-    } else {
-      // Custom scroll container case: getBoundingClientRect is affected by container scroll
-      // Add scroll position to get static offset (position as if scroll was 0)
-      staticOffsetX =
-        positionedParentViewportLeft +
-        scrollContainer.scrollLeft -
-        scrollContainerViewportLeft;
-      staticOffsetY =
-        positionedParentViewportTop +
-        scrollContainer.scrollTop -
-        scrollContainerViewportTop;
-    }
-    // Calculate offset between positioned parent and scroll container
-    const positionedParentLeftOffsetWithScrollContainer = staticOffsetX;
-    const positionedParentTopOffsetWithScrollContainer = staticOffsetY;
+    const [
+      positionedParentLeftOffsetWithScrollContainer,
+      positionedParentTopOffsetWithScrollContainer,
+    ] = getPositionedParentOffsetWithScrollContainer(
+      positionedParent,
+      scrollContainer,
+    );
 
     // Calculate current element position relative to positioned parent (layout coordinates)
     const leftRelativeToPositionedParent =
@@ -517,6 +486,34 @@ const createStandardElementPositioner = (element) => {
   throw new Error(
     "Unsupported positioning configuration: positioned parent must be in a parent-child relationship or be the same.",
   );
+};
+
+// Calculate static offset between positioned parent and scroll container
+// This offset should be independent of scroll position
+const getPositionedParentOffsetWithScrollContainer = (
+  positionedParent,
+  scrollContainer,
+) => {
+  const scrollContainerIsDocument =
+    scrollContainer === document.documentElement;
+  const { left: positionedParentLeft, top: positionedParentTop } =
+    positionedParent.getBoundingClientRect();
+
+  if (scrollContainerIsDocument) {
+    // Document case: getBoundingClientRect is not affected by document scroll
+    const offsetLeft = positionedParentLeft;
+    const offsetTop = positionedParentTop;
+    return [offsetLeft, offsetTop];
+  }
+  // Custom scroll container case: getBoundingClientRect is affected by container scroll
+  // Add scroll position to get static offset (position as if scroll was 0)
+  const { left: scrollContainerLeft, top: scrollContainerTop } =
+    scrollContainer.getBoundingClientRect();
+  const offsetLeft =
+    scrollContainer.scrollLeft + positionedParentLeft - scrollContainerLeft;
+  const offsetTop =
+    scrollContainer.scrollTop + positionedParentTop - scrollContainerTop;
+  return [offsetLeft, offsetTop];
 };
 
 // Helper function to check if ancestor has a position: fixed
