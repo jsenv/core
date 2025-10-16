@@ -217,8 +217,9 @@ const getDebugMarkerPos = (x, y, scrollContainer, side = null) => {
     // we need to remove the scroll of the container?
     // not sure I think here we might want to keep the scroll container scroll
     // and that's it
-    baseX = x;
-    baseY = y;
+    const scrollContainerRect = scrollContainer.getBoundingClientRect();
+    baseX = scrollContainerRect.left + leftWithoutScroll;
+    baseY = scrollContainerRect.top + topWithoutScroll;
   }
 
   // Apply side-specific logic for extending markers across viewport
