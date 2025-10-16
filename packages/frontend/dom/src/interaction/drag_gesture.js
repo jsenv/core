@@ -134,8 +134,12 @@ export const createDragGestureController = (options = {}) => {
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
       const dragXWithScroll = dragX + scrollContainer.scrollLeft;
       const dragYWithScroll = dragY + scrollContainer.scrollTop;
-      const moveXRequested = dragXWithScroll - grabXWithScroll;
-      const moveYRequested = dragYWithScroll - grabYWithScroll;
+      const moveXRequested = direction.x
+        ? dragXWithScroll - grabXWithScroll
+        : 0;
+      const moveYRequested = direction.y
+        ? dragYWithScroll - grabYWithScroll
+        : 0;
       // Calcul de la direction basé sur le mouvement précédent
       // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
       // (ici on veut connaitre l'intention)
