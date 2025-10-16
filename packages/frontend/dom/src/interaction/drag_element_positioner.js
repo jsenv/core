@@ -99,43 +99,54 @@ const createSameScrollDifferentParentPositioner = (
   const positionedParentLeft = positionedParentRect.left;
   const positionedParentTop = positionedParentRect.top;
 
-  const referenceStandardPositioner =
-    createStandardElementPositioner(referenceElement);
+  const {
+    leftRelativeToScrollContainer: referenceLeftRelativeToScrollContainer,
+    topRelativeToScrollContainer: referenceTopRelativeToScrollContainer,
+    leftRelativeToPositionedParent: referenceLeftRelativeToPositionedParent,
+    topRelativeToPositionedParent: referenceTopRelativeToPositionedParent,
+  } = createStandardElementPositioner(referenceElement);
   const referencePositionedParentRect =
     referencePositionedParent.getBoundingClientRect();
   const referencePositionedParentLeft = referencePositionedParentRect.left;
   const referencePositionedParentTop = referencePositionedParentRect.top;
   const toLayoutLeft = (leftWithoutScroll) => {
-    const referenceLeftRelativeToPositionedParent =
+    const localReferenceLeftRelativeToPositionedParent =
       leftWithoutScroll -
-      referenceStandardPositioner.leftRelativeToScrollContainer +
-      referenceStandardPositioner.leftRelativeToPositionedParent;
+      referenceLeftRelativeToScrollContainer +
+      referenceLeftRelativeToPositionedParent;
     const referenceViewportLeft =
-      referencePositionedParentLeft + referenceLeftRelativeToPositionedParent;
+      referencePositionedParentLeft +
+      localReferenceLeftRelativeToPositionedParent;
     const left = referenceViewportLeft - positionedParentLeft;
 
     if (ancestorFixedPosition && scrollContainerIsDocument) {
-      console.log("to convert", {
-        leftWithoutScroll,
-        scrollLeftAtStart: scrollLeft,
-        scrollLeftNow: scrollContainer.scrollLeft,
-        referenceLeftRelativeToPositionedParent,
-        referenceViewportLeft,
-        left,
-      });
-      const leftFixed = ancestorFixedPosition[0] + scrollLeft + left;
+      let leftFixed = ancestorFixedPosition[0] + scrollLeft + left;
+      leftFixed -= scrollContainer.scrollLeft;
+      console.log(
+        "to convert",
+        {
+          leftWithoutScroll,
+          scrollLeftAtStart: scrollLeft,
+          scrollLeftNow: scrollContainer.scrollLeft,
+          localReferenceLeftRelativeToPositionedParent,
+          referenceViewportLeft,
+          left,
+        },
+        `-> ${leftFixed}`,
+      );
       return leftFixed;
     }
     return scrollLeft + left;
   };
 
   const toLayoutTop = (topWithoutScroll) => {
-    const referenceTopRelativeToPositionedParent =
+    const localReferenceTopRelativeToPositionedParent =
       topWithoutScroll -
-      referenceStandardPositioner.topRelativeToScrollContainer +
-      referenceStandardPositioner.topRelativeToPositionedParent;
+      referenceTopRelativeToScrollContainer +
+      referenceTopRelativeToPositionedParent;
     const referenceViewportTop =
-      referencePositionedParentTop + referenceTopRelativeToPositionedParent;
+      referencePositionedParentTop +
+      localReferenceTopRelativeToPositionedParent;
     const top = referenceViewportTop - positionedParentTop;
 
     if (ancestorFixedPosition && scrollContainerIsDocument) {
