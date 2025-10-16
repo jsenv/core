@@ -7,6 +7,7 @@ const MARKER_SIZE = 12;
 let currentDebugMarkers = [];
 let currentConstraintMarkers = [];
 let currentReferenceElementMarker = null;
+let currentElementMarker = null;
 
 export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
   // Clean up any existing persistent markers from previous drag gestures
@@ -26,17 +27,22 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
       const previousReferenceElementMarker = currentReferenceElementMarker;
+      const previousElementMarker = currentElementMarker;
 
       if (
         previousDebugMarkers.length > 0 ||
         previousConstraintMarkers.length > 0 ||
-        previousReferenceElementMarker
+        previousReferenceElementMarker ||
+        previousElementMarker
       ) {
         setTimeout(() => {
           previousDebugMarkers.forEach((marker) => marker.remove());
           previousConstraintMarkers.forEach((marker) => marker.remove());
           if (previousReferenceElementMarker) {
             previousReferenceElementMarker.remove();
+          }
+          if (previousElementMarker) {
+            previousElementMarker.remove();
           }
         }, 100);
       }
@@ -45,6 +51,23 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
       currentDebugMarkers.length = 0;
       currentConstraintMarkers.length = 0;
       currentReferenceElementMarker = null;
+      currentElementMarker = null;
+
+      // Create element marker (always show the dragged element)
+      // When there's a reference element, show it as "Dragged Element"
+      // When there's no reference element, show it as "Element"
+      const elementLabel = referenceElement ? "Dragged Element" : "Element";
+      const elementColor = referenceElement ? "255, 0, 150" : "0, 200, 0"; // Pink when with reference, green when standalone
+
+      currentElementMarker = createElementMarker({
+        left,
+        top,
+        right,
+        bottom,
+        scrollContainer,
+        label: elementLabel,
+        color: elementColor,
+      });
 
       // Create reference element marker if reference element exists
       if (referenceElement) {
@@ -180,9 +203,13 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
       if (currentReferenceElementMarker) {
         currentReferenceElementMarker.remove();
       }
+      if (currentElementMarker) {
+        currentElementMarker.remove();
+      }
       currentDebugMarkers = [];
       currentConstraintMarkers = [];
       currentReferenceElementMarker = null;
+      currentElementMarker = null;
     },
   };
 };
@@ -335,6 +362,43 @@ const createObstacleMarker = (obstacleObj, scrollContainer) => {
   label.className = "navi_obstacle_marker_label";
   label.textContent = obstacleObj.name;
   marker.appendChild(label);
+
+  const container = getMarkersContainer();
+  container.appendChild(marker);
+  return marker;
+};
+
+const createElementMarker = ({
+  left,
+  top,
+  right,
+  bottom,
+  scrollContainer,
+  label = "Element",
+  color = "0, 200, 0", // Default green color
+}) => {
+  const width = right - left;
+  const height = bottom - top;
+  // Convert document-relative coordinates to viewport coordinates
+  const [x, y] = getDebugMarkerPos(left, top, scrollContainer, "element");
+
+  const marker = document.createElement("div");
+  marker.className = "navi_element_marker";
+  marker.style.left = `${x}px`;
+  marker.style.top = `${y}px`;
+  marker.style.width = `${width}px`;
+  marker.style.height = `${height}px`;
+  marker.title = label;
+
+  // Set the color as CSS custom properties
+  marker.style.setProperty("--element-color", `rgb(${color})`);
+  marker.style.setProperty("--element-color-alpha", `rgba(${color}, 0.3)`);
+
+  // Add label
+  const labelEl = document.createElement("div");
+  labelEl.className = "navi_element_marker_label";
+  labelEl.textContent = label;
+  marker.appendChild(labelEl);
 
   const container = getMarkersContainer();
   container.appendChild(marker);
@@ -507,6 +571,30 @@ import.meta.css = /* css */ `
     font-weight: bold;
     color: white;
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
+
+  .navi_element_marker {
+    position: absolute;
+    background-color: var(--element-color-alpha, rgba(255, 0, 150, 0.3));
+    border: 2px solid var(--element-color, rgb(255, 0, 150));
+    opacity: 0.9;
+    z-index: 9997;
+    pointer-events: none;
+  }
+
+  .navi_element_marker_label {
+    position: absolute;
+    top: -25px;
+    right: 0;
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--element-color, rgb(255, 0, 150));
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--element-color, rgb(255, 0, 150));
+    white-space: nowrap;
     pointer-events: none;
   }
 
