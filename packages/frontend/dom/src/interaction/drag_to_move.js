@@ -25,7 +25,10 @@ export const createDragToMoveGestureController = ({
   showDebugMarkers = true,
   ...options
 } = {}) => {
-  const initGrabToMoveElement = (dragGesture, { element, elementProxy }) => {
+  const initGrabToMoveElement = (
+    dragGesture,
+    { element, referenceElement },
+  ) => {
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
@@ -34,7 +37,7 @@ export const createDragToMoveGestureController = ({
     let elementHeight;
     {
       const updateElementDimension = () => {
-        const elementRect = (elementProxy || element).getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
         elementWidth = elementRect.width;
         elementHeight = elementRect.height;
       };
@@ -75,7 +78,7 @@ export const createDragToMoveGestureController = ({
     let elementTopWithoutScrollAtGrab;
     let positioner;
     {
-      positioner = createDragElementPositioner(element, elementProxy);
+      positioner = createDragElementPositioner(element, referenceElement);
       elementLeftWithoutScrollAtGrab = positioner.leftRelativeToScrollContainer;
       elementTopWithoutScrollAtGrab = positioner.topRelativeToScrollContainer;
     }
@@ -105,9 +108,9 @@ export const createDragToMoveGestureController = ({
     let visualOffsetY = 0;
 
     // Set up dragging attribute
-    (elementProxy || element).setAttribute("data-grabbed", "");
+    element.setAttribute("data-grabbed", "");
     dragGesture.addReleaseCallback(() => {
-      (elementProxy || element).removeAttribute("data-grabbed");
+      element.removeAttribute("data-grabbed");
     });
 
     const dragConstraints = initDragConstraints(dragGesture, {
@@ -194,9 +197,9 @@ export const createDragToMoveGestureController = ({
               axis === "x" ? visibleArea.left : visibleArea.top;
             const canAutoScrollNegative =
               axis === "x"
-                ? !element.hasAttribute("data-sticky-left") ||
+                ? !referenceElement.hasAttribute("data-sticky-left") ||
                   hasCrossedVisibleAreaLeftOnce
-                : !element.hasAttribute("data-sticky-top") ||
+                : !referenceElement.hasAttribute("data-sticky-top") ||
                   hasCrossedVisibleAreaTopOnce;
 
             if (canAutoScrollNegative && elementStart < visibleAreaStart) {
@@ -215,8 +218,7 @@ export const createDragToMoveGestureController = ({
           const elementStart =
             axis === "x" ? elementLeftLayout : elementTopLayout;
           const elementPosition = elementStart - visualOffset;
-          (elementProxy || element).style[styleProperty] =
-            `${elementPosition}px`;
+          element.style[styleProperty] = `${elementPosition}px`;
         }
       };
 
@@ -232,7 +234,11 @@ export const createDragToMoveGestureController = ({
 
   const dragGestureController = createDragGestureController(options);
   const dragGestureControllerGrab = dragGestureController.grab;
-  dragGestureController.grab = ({ element, elementProxy, ...rest } = {}) => {
+  dragGestureController.grab = ({
+    element,
+    referenceElement,
+    ...rest
+  } = {}) => {
     if (!element) {
       throw new Error("element is required");
     }
@@ -243,7 +249,7 @@ export const createDragToMoveGestureController = ({
     });
     initGrabToMoveElement(dragGesture, {
       element,
-      elementProxy,
+      referenceElement,
     });
     return dragGesture;
   };

@@ -409,8 +409,8 @@ const initResizeByMousedown = (
     },
   });
   dragToMoveGestureController.grabViaMouse(mousedownEvent, {
-    element: tableCell,
-    elementProxy: resizer,
+    element: resizer,
+    referenceElement: tableCell,
   });
 };
 
