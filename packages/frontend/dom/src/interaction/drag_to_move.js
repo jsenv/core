@@ -88,19 +88,24 @@ export const createDragToMoveGestureController = ({
     {
       const { grabScrollLeft, grabScrollTop } = dragGesture.gestureInfo;
 
-      const toElementLeft = (moveX) =>
-        elementLeftWithoutScrollAtGrab + moveX + grabScrollLeft;
-      const toElementTop = (moveY) =>
-        elementTopWithoutScrollAtGrab + moveY + grabScrollTop;
-      const fromElementLeft = (left) =>
-        left - elementLeftWithoutScrollAtGrab - grabScrollLeft;
-      const fromElementTop = (top) =>
-        top - elementTopWithoutScrollAtGrab - grabScrollTop;
+      const toElementLeft = (moveX) => elementLeftWithoutScrollAtGrab + moveX;
+      const toElementTop = (moveY) => elementTopWithoutScrollAtGrab + moveY;
+      const toElementLeftWithScroll = (moveX) =>
+        elementLeftWithoutScrollAtGrab + grabScrollLeft + moveX;
+      const toElementTopWithScroll = (moveY) =>
+        elementTopWithoutScrollAtGrab + grabScrollTop + moveY;
+      const fromElementLeftWithScroll = (leftWithScroll) =>
+        leftWithScroll - elementLeftWithoutScrollAtGrab - grabScrollLeft;
+      const fromElementTopWithScroll = (topWithScroll) =>
+        topWithScroll - elementTopWithoutScrollAtGrab - grabScrollTop;
+
       moveConverter = {
         toElementLeft,
         toElementTop,
-        fromElementLeft,
-        fromElementTop,
+        fromElementLeftWithScroll,
+        fromElementTopWithScroll,
+        toElementLeftWithScroll,
+        toElementTopWithScroll,
       };
     }
 
@@ -156,13 +161,18 @@ export const createDragToMoveGestureController = ({
         moveX,
         moveY,
       } = gestureInfo;
-      // here coordinates include the scroll
-      const elementLeft = moveConverter.toElementLeft(moveX);
-      const elementTop = moveConverter.toElementTop(moveY);
+      const elementLeftWithoutScroll = moveConverter.toElementLeft(moveX);
+      const elementTopWithoutScroll = moveConverter.toElementTop(moveY);
+      const elementLeftLayout = positioner.toLayoutLeft(
+        elementLeftWithoutScroll,
+      );
+      const elementTopLayout = positioner.toLayoutTop(elementTopWithoutScroll);
+      console.log({ moveX, elementLeftWithoutScroll, elementLeftLayout });
+
+      const elementLeft = moveConverter.toElementLeftWithScroll(moveX);
+      const elementTop = moveConverter.toElementTopWithScroll(moveY);
       const elementRight = elementLeft + elementWidth;
       const elementBottom = elementTop + elementHeight;
-      const elementLeftLayout = positioner.toLayoutLeft(elementLeft);
-      const elementTopLayout = positioner.toLayoutTop(elementTop);
 
       hasCrossedVisibleAreaLeftOnce =
         hasCrossedVisibleAreaLeftOnce || elementLeft < visibleArea.left;
@@ -197,11 +207,12 @@ export const createDragToMoveGestureController = ({
             const elementStart = axis === "x" ? elementLeft : elementTop;
             const visibleAreaStart =
               axis === "x" ? visibleArea.left : visibleArea.top;
+            const referenceOrEl = referenceElement || element;
             const canAutoScrollNegative =
               axis === "x"
-                ? !referenceElement.hasAttribute("data-sticky-left") ||
+                ? !referenceOrEl.hasAttribute("data-sticky-left") ||
                   hasCrossedVisibleAreaLeftOnce
-                : !referenceElement.hasAttribute("data-sticky-top") ||
+                : !referenceOrEl.hasAttribute("data-sticky-top") ||
                   hasCrossedVisibleAreaTopOnce;
 
             if (canAutoScrollNegative && elementStart < visibleAreaStart) {

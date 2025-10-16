@@ -142,8 +142,10 @@ export const initDragConstraints = (
       });
     }
 
-    const elementLeftRequested = moveConverter.toElementLeft(moveXRequested);
-    const elementTopRequested = moveConverter.toElementTop(moveYRequested);
+    const elementLeftRequested =
+      moveConverter.toElementLeftWithScroll(moveXRequested);
+    const elementTopRequested =
+      moveConverter.toElementTopWithScroll(moveYRequested);
     let elementLeft = elementLeftRequested;
     let elementTop = elementTopRequested;
 
@@ -165,10 +167,10 @@ export const initDragConstraints = (
       );
     };
 
-    const elementCurrentLeft = moveConverter.toElementLeft(
+    const elementCurrentLeft = moveConverter.toElementLeftWithScroll(
       dragGesture.gestureInfo.moveX,
     );
-    const elementCurrentTop = moveConverter.toElementTop(
+    const elementCurrentTop = moveConverter.toElementTopWithScroll(
       dragGesture.gestureInfo.moveY,
     );
     // Apply each constraint in sequence, accumulating their effects
@@ -216,13 +218,13 @@ export const initDragConstraints = (
 
     let moveX;
     if (leftModified) {
-      moveX = moveConverter.fromElementLeft(elementLeft);
+      moveX = moveConverter.fromElementLeftWithScroll(elementLeft);
     } else {
       moveX = moveXRequested;
     }
     let moveY;
     if (topModified) {
-      moveY = moveConverter.fromElementTop(elementTop);
+      moveY = moveConverter.fromElementTopWithScroll(elementTop);
     } else {
       moveY = moveYRequested;
     }
