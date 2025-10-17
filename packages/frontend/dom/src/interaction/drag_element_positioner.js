@@ -181,18 +181,26 @@ const createDifferentScrollSameParentPositioner = (
 
   scrollable_current: {
     const elementRect = element.getBoundingClientRect();
-    const referenceScrollContainerRect =
-      referenceScrollContainer.getBoundingClientRect();
+    const referenceScrollContainerIsDocument =
+      referenceScrollContainer === documentElement;
 
-    // Calculate element positions relative to reference element's scroll container
-    scrollableLeft =
-      elementRect.left -
-      referenceScrollContainerRect.left +
-      referenceScrollContainer.scrollLeft;
-    scrollableTop =
-      elementRect.top -
-      referenceScrollContainerRect.top +
-      referenceScrollContainer.scrollTop;
+    if (referenceScrollContainerIsDocument) {
+      // Document case: element position is already relative to viewport, which is what we want
+      scrollableLeft = elementRect.left;
+      scrollableTop = elementRect.top;
+    } else {
+      // Custom scroll container case: convert to scroll container relative coordinates
+      const referenceScrollContainerRect =
+        referenceScrollContainer.getBoundingClientRect();
+      scrollableLeft =
+        elementRect.left -
+        referenceScrollContainerRect.left +
+        referenceScrollContainer.scrollLeft;
+      scrollableTop =
+        elementRect.top -
+        referenceScrollContainerRect.top +
+        referenceScrollContainer.scrollTop;
+    }
   }
   scrollable_converter: {
     const [
