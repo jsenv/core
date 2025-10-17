@@ -38,13 +38,11 @@ export const createDragElementPositioner = (element, referenceElement) => {
   // Analyze element positioning context relative to reference
   const referenceScrollContainer = getScrollContainer(referenceElement);
   const referencePositionedParent = referenceElement.offsetParent;
-  const elementScrollContainer = getScrollContainer(element);
-  const elementPositionedParent = element.offsetParent;
+  const scrollContainer = getScrollContainer(element);
+  const positionedParent = element.offsetParent;
 
-  const sameScrollContainer =
-    elementScrollContainer === referenceScrollContainer;
-  const samePositionedParent =
-    elementPositionedParent === referencePositionedParent;
+  const sameScrollContainer = scrollContainer === referenceScrollContainer;
+  const samePositionedParent = positionedParent === referencePositionedParent;
 
   if (sameScrollContainer && samePositionedParent) {
     // Scenario 1: Same everything - use standard logic with element as effective element
@@ -53,16 +51,29 @@ export const createDragElementPositioner = (element, referenceElement) => {
 
   if (sameScrollContainer && !samePositionedParent) {
     // Scenario 2: Same scroll container, different positioned parent
-    return createSameScrollDifferentParentPositioner(element, referenceElement);
+    return createSameScrollDifferentParentPositioner(element, {
+      scrollContainer,
+      positionedParent,
+      referencePositionedParent,
+    });
   }
 
   if (!sameScrollContainer && samePositionedParent) {
     // Scenario 3: Different scroll container, same positioned parent
-    return createDifferentScrollSameParentPositioner(element, referenceElement);
+    return createDifferentScrollSameParentPositioner(element, {
+      scrollContainer,
+      referenceScrollContainer,
+      positionedParent,
+    });
   }
 
   // Scenario 4: Both different - most complex case
-  return createFullyDifferentPositioner(element, referenceElement);
+  return createFullyDifferentPositioner(element, {
+    positionedParent,
+    scrollContainer,
+    referencePositionedParent,
+    referenceScrollContainer,
+  });
 };
 
 const { documentElement } = document;
@@ -76,13 +87,11 @@ const { documentElement } = document;
 // - This requires a 3-step conversion process through reference positioned parent coordinates
 const createSameScrollDifferentParentPositioner = (
   element,
-  referenceElement,
+  { scrollContainer, positionedParent, referencePositionedParent },
 ) => {
   let scrollableLeft;
   let scrollableTop;
   let convertScrollablePosition;
-
-  const scrollContainer = getScrollContainer(referenceElement);
 
   scrollable_current: {
     const { left: elementViewportLeft, top: elementViewportTop } =
@@ -100,9 +109,6 @@ const createSameScrollDifferentParentPositioner = (
     }
   }
   scrollable_converter: {
-    const positionedParent = element.offsetParent;
-    const referencePositionedParent = referenceElement.offsetParent;
-
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
@@ -168,12 +174,10 @@ const createSameScrollDifferentParentPositioner = (
 // The DOM positioning is the same, but coordinate system reference differs
 const createDifferentScrollSameParentPositioner = (
   element,
-  referenceElement,
+  { scrollContainer, referenceScrollContainer, positionedParent },
 ) => {
-  const scrollContainer = getScrollContainer(element);
   const scrollContainerIsDocument =
     scrollContainer === document.documentElement;
-  const referenceScrollContainer = getScrollContainer(referenceElement);
   const elementRect = element.getBoundingClientRect();
   const { scrollLeft, scrollTop } = scrollContainer;
   const referenceScrollContainerRect =
@@ -213,7 +217,6 @@ const createDifferentScrollSameParentPositioner = (
   };
 
   // Other properties using reference element's coordinate system
-  const positionedParent = referenceElement.offsetParent;
   const positionedParentRect = positionedParent.getBoundingClientRect();
   // Calculate element position relative to reference element's positioned parent
   const leftRelativeToPositionedParent =
@@ -232,11 +235,15 @@ const createDifferentScrollSameParentPositioner = (
 
 // Scenario 4: Both different - most complex case
 // Both coordinate system and DOM positioning differ
-const createFullyDifferentPositioner = (element, referenceElement) => {
-  const scrollContainer = getScrollContainer(element);
-  const referenceScrollContainer = getScrollContainer(referenceElement);
-  const referencePositionedParent = referenceElement.offsetParent;
-  const elementPositionedParent = element.offsetParent;
+const createFullyDifferentPositioner = (
+  element,
+  {
+    scrollContainer,
+    referenceScrollContainer,
+    positionedParent,
+    referencePositionedParent,
+  },
+) => {
   const { scrollLeft, scrollTop } = scrollContainer;
   const elementRect = element.getBoundingClientRect();
   const referenceScrollContainerRect =
@@ -277,7 +284,7 @@ const createFullyDifferentPositioner = (element, referenceElement) => {
       referenceLeftRelativeToPositionedParent;
     // Step 3: Convert to element's positioned-parent-relative coordinates
     const elementPositionedParentRect =
-      elementPositionedParent.getBoundingClientRect();
+      positionedParent.getBoundingClientRect();
     const left = referenceViewportLeft - elementPositionedParentRect.left;
     if (ancestorFixedPosition && scrollContainerIsDocument) {
       return ancestorFixedPosition[0] + left;
@@ -295,7 +302,7 @@ const createFullyDifferentPositioner = (element, referenceElement) => {
       referenceTopRelativeToPositionedParent;
     // Step 3: Convert to element's positioned-parent-relative coordinates
     const elementPositionedParentRect =
-      elementPositionedParent.getBoundingClientRect();
+      positionedParent.getBoundingClientRect();
 
     const top = referenceViewportTop - elementPositionedParentRect.top;
     if (ancestorFixedPosition && scrollContainerIsDocument) {
