@@ -195,6 +195,14 @@ const createDifferentScrollSameParentPositioner = (
       referenceScrollContainer.scrollTop;
   }
   scrollable_converter: {
+    const [
+      positionedParentLeftOffsetWithReferenceScrollContainer,
+      positionedParentTopOffsetWithReferenceScrollContainer,
+    ] = getPositionedParentOffsetWithScrollContainer(
+      positionedParent,
+      referenceScrollContainer,
+    );
+
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
@@ -202,27 +210,17 @@ const createDifferentScrollSameParentPositioner = (
       let positionedLeft;
       let positionedTop;
 
-      const positionedParentRect = positionedParent.getBoundingClientRect();
-      const referenceScrollContainerRect =
-        referenceScrollContainer.getBoundingClientRect();
-
       left: {
-        // Step 1: Convert from reference scroll container coordinates to viewport coordinates
-        const referenceViewportLeft =
-          referenceScrollContainerRect.left +
+        // Convert from reference scroll container coordinates to positioned parent coordinates
+        positionedLeft =
           referenceScrollableLeftToConvert -
-          referenceScrollContainer.scrollLeft;
-        // Step 2: Convert to element's positioned parent relative coordinates (final result)
-        positionedLeft = referenceViewportLeft - positionedParentRect.left;
+          positionedParentLeftOffsetWithReferenceScrollContainer;
       }
       top: {
-        // Step 1: Convert from reference scroll container coordinates to viewport coordinates
-        const referenceViewportTop =
-          referenceScrollContainerRect.top +
+        // Convert from reference scroll container coordinates to positioned parent coordinates
+        positionedTop =
           referenceScrollableTopToConvert -
-          referenceScrollContainer.scrollTop;
-        // Step 2: Convert to element's positioned parent relative coordinates (final result)
-        positionedTop = referenceViewportTop - positionedParentRect.top;
+          positionedParentTopOffsetWithReferenceScrollContainer;
       }
 
       return [positionedLeft, positionedTop];
