@@ -196,19 +196,19 @@ const createDifferentScrollSameParentPositioner = (
       referenceScrollContainer.scrollTop;
   }
   scrollable_converter: {
-    const elementRect = element.getBoundingClientRect();
-    const positionedParentRect = positionedParent.getBoundingClientRect();
-    const leftRelativeToPositionedParent =
-      elementRect.left - positionedParentRect.left;
-    const topRelativeToPositionedParent =
-      elementRect.top - positionedParentRect.top;
-
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
     ) => {
       let positionedLeft;
       let positionedTop;
+
+      const elementRect = element.getBoundingClientRect();
+      const positionedParentRect = positionedParent.getBoundingClientRect();
+      const leftRelativeToPositionedParent =
+        elementRect.left - positionedParentRect.left;
+      const topRelativeToPositionedParent =
+        elementRect.top - positionedParentRect.top;
 
       left: {
         const left =
@@ -279,6 +279,8 @@ const createFullyDifferentPositioner = (
         referenceScrollContainerRect.left - referencePositionedParentRect.left;
       const positionedParentTopOffsetWithScrollContainer =
         referenceScrollContainerRect.top - referencePositionedParentRect.top;
+      const elementPositionedParentRect =
+        positionedParent.getBoundingClientRect();
 
       left: {
         // Step 1: Convert from scroll-relative to reference element's positioned-parent-relative
@@ -290,8 +292,6 @@ const createFullyDifferentPositioner = (
           referencePositionedParentRect.left +
           referenceLeftRelativeToPositionedParent;
         // Step 3: Convert to element's positioned-parent-relative coordinates
-        const elementPositionedParentRect =
-          positionedParent.getBoundingClientRect();
         const left = referenceViewportLeft - elementPositionedParentRect.left;
         positionedLeft = scrollContainer.scrollLeft + left;
       }
@@ -305,8 +305,6 @@ const createFullyDifferentPositioner = (
           referencePositionedParentRect.top +
           referenceTopRelativeToPositionedParent;
         // Step 3: Convert to element's positioned-parent-relative coordinates
-        const elementPositionedParentRect =
-          positionedParent.getBoundingClientRect();
         const top = referenceViewportTop - elementPositionedParentRect.top;
         positionedTop = scrollContainer.scrollTop + top;
       }
