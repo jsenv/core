@@ -70,7 +70,6 @@ export const createDragElementPositioner = (element, referenceElement) => {
   return createFullyDifferentPositioner(element, {
     positionedParent,
     scrollContainer,
-    referencePositionedParent,
     referenceScrollContainer,
   });
 };
@@ -233,12 +232,7 @@ const createDifferentScrollSameParentPositioner = (
 // Both coordinate system and DOM positioning differ
 const createFullyDifferentPositioner = (
   element,
-  {
-    scrollContainer,
-    referenceScrollContainer,
-    positionedParent,
-    referencePositionedParent,
-  },
+  { referenceScrollContainer, positionedParent, scrollContainer },
 ) => {
   let scrollableLeft;
   let scrollableTop;
@@ -276,50 +270,28 @@ const createFullyDifferentPositioner = (
       let positionedTop;
 
       const [
-        referencePositionedParentLeftOffsetWithReferenceScrollContainer,
-        referencePositionedParentTopOffsetWithReferenceScrollContainer,
-      ] = getPositionedParentOffsetWithScrollContainer(
-        referencePositionedParent,
-        referenceScrollContainer,
-      );
-      const [
-        positionedParentLeftOffsetWithScrollContainer,
-        positionedParentTopOffsetWithScrollContainer,
+        positionedParentLeftOffsetWithReferenceScrollContainer,
+        positionedParentTopOffsetWithReferenceScrollContainer,
       ] = getPositionedParentOffsetWithScrollContainer(
         positionedParent,
-        scrollContainer,
+        referenceScrollContainer,
       );
 
       left: {
-        // Step 1: Convert from reference scroll container coordinates to reference positioned parent coordinates
-        const referencePositionedLeftWithoutScroll =
-          referenceScrollableLeftToConvert -
-          referencePositionedParentLeftOffsetWithReferenceScrollContainer;
-        // Step 2: Apply reference positioned parent scroll to get final positioning
-        const referencePositionedLeft =
-          referenceScrollContainer.scrollLeft +
-          referencePositionedLeftWithoutScroll;
-        // Step 3: Convert to element positioned parent coordinates
+        // Step 1: Convert from reference scroll container coordinates to element positioned parent coordinates (without scroll)
         const positionedLeftWithoutScroll =
-          referencePositionedLeft -
-          positionedParentLeftOffsetWithScrollContainer;
-        // Step 4: Apply element scroll container scroll to get final position
+          referenceScrollableLeftToConvert -
+          positionedParentLeftOffsetWithReferenceScrollContainer;
+        // Step 2: Apply element's scroll container scroll to get final position
         positionedLeft =
           scrollContainer.scrollLeft + positionedLeftWithoutScroll;
       }
       top: {
-        // Step 1: Convert from reference scroll container coordinates to reference positioned parent coordinates
-        const referencePositionedTopWithoutScroll =
-          referenceScrollableTopToConvert -
-          referencePositionedParentTopOffsetWithReferenceScrollContainer;
-        // Step 2: Apply reference positioned parent scroll to get final positioning
-        const referencePositionedTop =
-          referenceScrollContainer.scrollTop +
-          referencePositionedTopWithoutScroll;
-        // Step 3: Convert to element positioned parent coordinates
+        // Step 1: Convert from reference scroll container coordinates to element positioned parent coordinates (without scroll)
         const positionedTopWithoutScroll =
-          referencePositionedTop - positionedParentTopOffsetWithScrollContainer;
-        // Step 4: Apply element scroll container scroll to get final position
+          referenceScrollableTopToConvert -
+          positionedParentTopOffsetWithReferenceScrollContainer;
+        // Step 2: Apply element's scroll container scroll to get final position
         positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
       }
 
