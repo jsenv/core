@@ -414,9 +414,7 @@ const initResizeByMousedown = (
       const styleProperty = axis === "x" ? "left" : "top";
       resizer.style[styleProperty] = "";
       const sizeChange =
-        axis === "x"
-          ? gestureInfo.moveX - gestureInfo.scrollContainer.scrollLeft
-          : gestureInfo.moveY - gestureInfo.scrollContainer.scrollTop;
+        axis === "x" ? gestureInfo.layout.xDelta : gestureInfo.layout.yDelta;
       const newSize = currentSize + sizeChange;
       onRelease(newSize, currentSize);
     },

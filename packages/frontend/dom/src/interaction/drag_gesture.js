@@ -53,10 +53,16 @@ export const createDragGestureController = (options = {}) => {
       addReleaseCallback(onRelease);
     }
 
+    const scrollLeftAtGrab = scrollContainer.scrollLeft;
+    const scrollTopAtGrab = scrollContainer.scrollTop;
+    const leftAtGrab = scrollLeftAtGrab + scrollableLeftAtGrab;
+    const topAtGrab = scrollTopAtGrab + scrollableTopAtGrab;
     const createLayout = (x, y) => {
       const { scrollLeft, scrollTop } = scrollContainer;
       const left = scrollableLeftAtGrab + x;
       const top = scrollableTopAtGrab + y;
+      const scrollableLeft = left - scrollLeft;
+      const scrollableTop = top - scrollTop;
       const layoutProps = {
         // Raw input coordinates (dragX - grabX + scrollContainer.scrollLeft)
         x,
@@ -65,11 +71,14 @@ export const createDragGestureController = (options = {}) => {
         scrollLeft,
         scrollTop,
         // Position relative to container excluding scrolls
-        scrollableLeft: left - scrollLeft,
-        scrollableTop: top - scrollTop,
+        scrollableLeft,
+        scrollableTop,
         // Position relative to container including scrolls
         left,
         top,
+        // Delta since grab (number representing how much we dragged)
+        xDelta: left - leftAtGrab,
+        yDelta: top - topAtGrab,
       };
       return layoutProps;
     };
