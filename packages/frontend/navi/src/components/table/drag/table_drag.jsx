@@ -257,7 +257,7 @@ export const TableColumnDropPreview = forwardRef((props, ref) => {
 
 export const initDragTableColumnByMousedown = async (
   mousedownEvent,
-  { dragCloneContainer, dropPreview, onGrab, onDrag, onRelease },
+  { tableDragCloneContainer, dropPreview, onGrab, onDrag, onRelease },
 ) => {
   const significantDragGestureInfo =
     await createMouseDragThresholdPromise(mousedownEvent);
@@ -346,7 +346,7 @@ export const initDragTableColumnByMousedown = async (
   }
 
   append_in_dom: {
-    dragCloneContainer.appendChild(tableClone);
+    tableDragCloneContainer.appendChild(tableClone);
     addTeardown(() => {
       // tableClone.remove();
     });

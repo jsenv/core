@@ -375,7 +375,9 @@ export const createMouseDragThresholdPromise = (mousedownEvent, threshold) => {
     onDragStart: (gestureInfo) => {
       resolved = true;
       _resolve(gestureInfo);
-      dragGesture.release(); // kill that gesture
+      setTimeout(() => {
+        dragGesture.release(); // kill that gesture
+      });
     },
     onRelease: (gestureInfo) => {
       if (!resolved) {
