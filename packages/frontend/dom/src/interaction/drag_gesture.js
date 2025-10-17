@@ -54,15 +54,19 @@ export const createDragGestureController = (options = {}) => {
     }
 
     const createLayout = (x, y) => {
+      const { scrollLeft, scrollTop } = scrollContainer;
       const left = scrollableLeftAtGrab + x;
       const top = scrollableTopAtGrab + y;
       const layoutProps = {
         // Raw input coordinates (dragX - grabX + scrollContainer.scrollLeft)
         x,
         y,
+        // container scrolls when layout is created
+        scrollLeft,
+        scrollTop,
         // Position relative to container excluding scrolls
-        scrollableLeft: left - scrollContainer.scrollLeft,
-        scrollableTop: top - scrollContainer.scrollTop,
+        scrollableLeft: left - scrollLeft,
+        scrollableTop: top - scrollTop,
         // Position relative to container including scrolls
         left,
         top,
@@ -83,8 +87,6 @@ export const createDragGestureController = (options = {}) => {
       scrollContainer,
       grabX, // x grab coordinate (excluding scroll)
       grabY, // y grab coordinate (excluding scroll)
-      grabScrollLeft: scrollContainer.scrollLeft, // scrollLeft at grab time
-      grabScrollTop: scrollContainer.scrollTop, // scrollTop at grab time
       grabLayout,
 
       dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
@@ -104,8 +106,7 @@ export const createDragGestureController = (options = {}) => {
     definePropertyAsReadOnly(gestureInfo, "name");
     definePropertyAsReadOnly(gestureInfo, "direction");
     definePropertyAsReadOnly(gestureInfo, "scrollContainer");
-    definePropertyAsReadOnly(gestureInfo, "grabScrollLeft");
-    definePropertyAsReadOnly(gestureInfo, "grabScrollTop");
+    definePropertyAsReadOnly(gestureInfo, "grabLayout");
     definePropertyAsReadOnly(gestureInfo, "grabX");
     definePropertyAsReadOnly(gestureInfo, "grabY");
     definePropertyAsReadOnly(gestureInfo, "grabEvent");
@@ -154,7 +155,7 @@ export const createDragGestureController = (options = {}) => {
       isRelease = false,
     }) => {
       // === ÉTAT INITIAL (au moment du grab) ===
-      const { grabX, grabY, grabScrollLeft, grabScrollTop } = gestureInfo;
+      const { grabX, grabY, grabLayout } = gestureInfo;
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
       // Calcul de la direction basé sur le mouvement précédent
       // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
@@ -169,10 +170,10 @@ export const createDragGestureController = (options = {}) => {
 
       const layoutXRequested = direction.x
         ? scrollContainer.scrollLeft + (dragX - grabX)
-        : grabScrollLeft;
+        : grabLayout.scrollLeft;
       const layoutYRequested = direction.y
         ? scrollContainer.scrollTop + (dragY - grabY)
-        : grabScrollTop;
+        : grabLayout.scrollTop;
       const layoutRequested = createLayout(layoutXRequested, layoutYRequested);
       const currentLayout = gestureInfo.layout;
       let layout;
