@@ -17,18 +17,16 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
  * EXPECTED API CONTRACT:
  * The calling code expects this positioner to return:
  *
- * - leftRelativeToScrollContainer/topRelativeToScrollContainer:
+ * - scrollablePosition: [scrollableLeft, scrollableTop]
  *   Current coordinates relative to the reference element's scroll container.
  *   When using a reference element, these coordinates represent where the element appears
  *   from the perspective of the reference element's coordinate system.
  *
- * - toLayoutLeft/toLayoutTop functions:
+ * - toLeft/toTop functions:
  *   Convert from the internal scroll-relative coordinates to DOM positioning coordinates.
  *   When using a reference element, these functions must convert from the reference element's
  *   scroll-relative coordinates to the element's offsetParent-relative coordinates.
  *
- * OTHER PROPERTIES:
- * The remaining returned properties provide coordinate conversion utilities but are not used for now.
  */
 export const createDragElementPositioner = (element, referenceElement) => {
   if (!referenceElement) {
@@ -79,37 +77,31 @@ const createSameScrollDifferentParentPositioner = (
   referenceElement,
 ) => {
   const positioner = {
-    leftRelativeToScrollContainer: null,
-    topRelativeToScrollContainer: null,
-    toLayoutLeft: null,
-    toLayoutTop: null,
+    scrollablePosition: null,
+    toLeft: null,
+    toTop: null,
   };
 
   const scrollContainer = getScrollContainer(referenceElement);
-  const scrollContainerIsDocument =
-    scrollContainer === document.documentElement;
-  const { scrollLeft, scrollTop } = scrollContainer;
-  const scrollContainerRect = scrollContainer.getBoundingClientRect();
 
-  current_position: {
-    const { left: elementLeft, top: elementTop } =
+  scrollable_position: {
+    const { left: elementViewportLeft, top: elementViewportTop } =
       element.getBoundingClientRect();
+    const scrollContainerIsDocument = scrollContainer === documentElement;
 
-    let leftRelativeToScrollContainer;
-    let topRelativeToScrollContainer;
     if (scrollContainerIsDocument) {
-      leftRelativeToScrollContainer = elementLeft + scrollLeft;
-      topRelativeToScrollContainer = elementTop + scrollTop;
+      const scrollableLeft = elementViewportLeft;
+      const scrollableTop = elementViewportTop;
+      positioner.scrollablePosition = [scrollableLeft, scrollableTop];
     } else {
-      leftRelativeToScrollContainer =
-        elementLeft - scrollContainerRect.left + scrollLeft;
-      topRelativeToScrollContainer =
-        elementTop - scrollContainerRect.top + scrollTop;
+      const { left: scrollContainerLeft, top: scrollContainerTop } =
+        scrollContainer.getBoundingClientRect();
+      const scrollableLeft = elementViewportLeft - scrollContainerLeft;
+      const scrollableTop = elementViewportTop - scrollContainerTop;
+      positioner.scrollablePosition = [scrollableLeft, scrollableTop];
     }
-    positioner.leftRelativeToScrollContainer = leftRelativeToScrollContainer;
-    positioner.topRelativeToScrollContainer = topRelativeToScrollContainer;
   }
-  to_layout: {
+  to_position: {
     const elementPositionedParent = element.offsetParent;
     const [
       positionedParentLeftOffsetWithScrollContainer,
@@ -119,19 +111,21 @@ const createSameScrollDifferentParentPositioner = (
       scrollContainer,
     );
 
-    positioner.toLayoutLeft = (referenceLeftWithoutScroll) => {
-      const leftWithoutScroll =
-        referenceLeftWithoutScroll -
+    positioner.toLeft = (referenceScrollableLeftToConvert) => {
+      const positionedLeftWithoutScroll =
+        referenceScrollableLeftToConvert -
         positionedParentLeftOffsetWithScrollContainer;
-      const left = scrollLeft + leftWithoutScroll;
-      return left;
+      const positionedLeft =
+        scrollContainer.scrollLeft + positionedLeftWithoutScroll;
+      return positionedLeft;
     };
-    positioner.toLayoutTop = (referenceTopWithoutScroll) => {
-      const topWithoutScroll =
-        referenceTopWithoutScroll -
+    positioner.toTop = (referenceScrollableTopToConvert) => {
+      const positionedTopWithoutScroll =
+        referenceScrollableTopToConvert -
         positionedParentTopOffsetWithScrollContainer;
-      const top = scrollTop + topWithoutScroll;
-      return top;
+      const positionedTop =
+        scrollContainer.scrollTop + positionedTopWithoutScroll;
+      return positionedTop;
     };
   }
 
