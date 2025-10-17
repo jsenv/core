@@ -61,15 +61,14 @@ export const createDragElementPositioner = (element, referenceElement) => {
   if (!sameScrollContainer && samePositionedParent) {
     // Scenario 3: Different scroll container, same positioned parent
     return createDifferentScrollSameParentPositioner(element, {
-      referenceScrollContainer,
       positionedParent,
+      referenceScrollContainer,
     });
   }
 
   // Scenario 4: Both different - most complex case
   return createFullyDifferentPositioner(element, {
     positionedParent,
-    scrollContainer,
     referenceScrollContainer,
   });
 };
@@ -215,7 +214,7 @@ const createDifferentScrollSameParentPositioner = (
 // Both coordinate system and DOM positioning differ
 const createFullyDifferentPositioner = (
   element,
-  { referenceScrollContainer, positionedParent, scrollContainer },
+  { referenceScrollContainer, positionedParent },
 ) => {
   let scrollableLeft;
   let scrollableTop;
@@ -250,7 +249,7 @@ const createFullyDifferentPositioner = (
           positionedParentLeftOffsetWithReferenceScrollContainer;
         // Step 2: Apply element's scroll container scroll to get final position
         positionedLeft =
-          scrollContainer.scrollLeft + positionedLeftWithoutScroll;
+          referenceScrollContainer.scrollLeft + positionedLeftWithoutScroll;
       }
       top: {
         // Step 1: Convert from reference scroll container coordinates to element positioned parent coordinates (without scroll)
@@ -258,7 +257,8 @@ const createFullyDifferentPositioner = (
           referenceScrollableTopToConvert -
           positionedParentTopOffsetWithReferenceScrollContainer;
         // Step 2: Apply element's scroll container scroll to get final position
-        positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
+        positionedTop =
+          referenceScrollContainer.scrollTop + positionedTopWithoutScroll;
       }
 
       return [positionedLeft, positionedTop];
