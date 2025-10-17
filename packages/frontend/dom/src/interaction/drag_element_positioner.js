@@ -327,19 +327,9 @@ const createStandardElementPositioner = (element) => {
       scrollContainer.getBoundingClientRect();
     const { left: elementViewportLeft, top: elementViewportTop } =
       element.getBoundingClientRect();
-    const scrollContainerIsDocument =
-      scrollContainer === document.documentElement;
 
-    let scrollableLeft;
-    let scrollableTop;
-    if (scrollContainerIsDocument) {
-      scrollableLeft = elementViewportLeft;
-      scrollableTop = elementViewportTop;
-    } else {
-      const { scrollLeft, scrollTop } = scrollContainer;
-      scrollableLeft = scrollLeft + elementViewportLeft - scrollContainerLeft;
-      scrollableTop = scrollTop + elementViewportTop - scrollContainerTop;
-    }
+    const scrollableLeft = elementViewportLeft - scrollContainerLeft;
+    const scrollableTop = elementViewportTop - scrollContainerTop;
 
     const [
       positionedParentLeftOffsetWithScrollContainer,

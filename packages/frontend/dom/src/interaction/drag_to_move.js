@@ -253,7 +253,7 @@ export const createDragToMoveGestureController = ({
   };
 
   const dragGestureController = createDragGestureController(options);
-  const dragGestureControllerGrab = dragGestureController.grab;
+  const grab = dragGestureController.grab;
   dragGestureController.grab = ({
     element,
     referenceElement,
@@ -263,7 +263,7 @@ export const createDragToMoveGestureController = ({
       throw new Error("element is required");
     }
     const scrollContainer = getScrollContainer(referenceElement || element);
-    const dragGesture = dragGestureControllerGrab({
+    const dragGesture = grab({
       scrollContainer,
       ...rest,
     });

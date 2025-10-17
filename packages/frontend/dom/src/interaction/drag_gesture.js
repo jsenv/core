@@ -277,7 +277,7 @@ export const createDragGestureController = (options = {}) => {
   };
   dragGestureController.grab = grab;
 
-  const grabViaMouse = (mouseEvent, options = {}) => {
+  const grabViaMouse = (mouseEvent, options) => {
     if (mouseEvent.type === "mousedown" && mouseEvent.button !== 0) {
       return null;
     }
