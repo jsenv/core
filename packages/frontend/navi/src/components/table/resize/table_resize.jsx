@@ -121,7 +121,7 @@ import.meta.css = /* css */ `
     position: absolute;
     left: var(--table-visual-left);
     width: var(--table-visual-width);
-    top: var(--table-row-resize-top);
+    top: var(--table-row-resizer-top);
     height: 10px;
     opacity: 0;
   }
@@ -413,7 +413,10 @@ const initResizeByMousedown = (
     onRelease: (gestureInfo) => {
       const styleProperty = axis === "x" ? "left" : "top";
       resizer.style[styleProperty] = "";
-      const sizeChange = axis === "x" ? gestureInfo.moveX : gestureInfo.moveY;
+      const sizeChange =
+        axis === "x"
+          ? gestureInfo.moveX - gestureInfo.scrollContainer.scrollLeft
+          : gestureInfo.moveY - gestureInfo.scrollContainer.scrollTop;
       const newSize = currentSize + sizeChange;
       onRelease(newSize, currentSize);
     },
