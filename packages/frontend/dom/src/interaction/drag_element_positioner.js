@@ -61,7 +61,6 @@ export const createDragElementPositioner = (element, referenceElement) => {
   if (!sameScrollContainer && samePositionedParent) {
     // Scenario 3: Different scroll container, same positioned parent
     return createDifferentScrollSameParentPositioner(element, {
-      scrollContainer,
       referenceScrollContainer,
       positionedParent,
     });
@@ -174,7 +173,7 @@ const createSameScrollDifferentParentPositioner = (
 // The DOM positioning is the same, but coordinate system reference differs
 const createDifferentScrollSameParentPositioner = (
   element,
-  { scrollContainer, referenceScrollContainer, positionedParent },
+  { referenceScrollContainer, positionedParent },
 ) => {
   let scrollableLeft;
   let scrollableTop;
@@ -213,12 +212,8 @@ const createDifferentScrollSameParentPositioner = (
           referenceScrollContainerRect.left +
           referenceScrollableLeftToConvert -
           referenceScrollContainer.scrollLeft;
-        // Step 2: Convert to element's positioned parent relative coordinates
-        const positionedLeftWithoutScroll =
-          referenceViewportLeft - positionedParentRect.left;
-        // Step 3: Apply element's scroll container scroll to get final position
-        positionedLeft =
-          scrollContainer.scrollLeft + positionedLeftWithoutScroll;
+        // Step 2: Convert to element's positioned parent relative coordinates (final result)
+        positionedLeft = referenceViewportLeft - positionedParentRect.left;
       }
       top: {
         // Step 1: Convert from reference scroll container coordinates to viewport coordinates
@@ -226,11 +221,8 @@ const createDifferentScrollSameParentPositioner = (
           referenceScrollContainerRect.top +
           referenceScrollableTopToConvert -
           referenceScrollContainer.scrollTop;
-        // Step 2: Convert to element's positioned parent relative coordinates
-        const positionedTopWithoutScroll =
-          referenceViewportTop - positionedParentRect.top;
-        // Step 3: Apply element's scroll container scroll to get final position
-        positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
+        // Step 2: Convert to element's positioned parent relative coordinates (final result)
+        positionedTop = referenceViewportTop - positionedParentRect.top;
       }
 
       return [positionedLeft, positionedTop];
