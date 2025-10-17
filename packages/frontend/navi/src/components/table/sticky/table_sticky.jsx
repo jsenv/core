@@ -59,10 +59,10 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-left] {
-    top: var(--sticky-group-top);
-    height: calc(var(--table-visual-height) - var(--sticky-group-top));
-    left: var(--sticky-group-left);
+    left: calc(var(--table-visual-left) + var(--sticky-group-left));
     width: var(--sticky-frontier-size);
+    top: calc(var(--table-visual-top) + var(--sticky-group-top));
+    height: calc(var(--table-visual-height) - var(--sticky-group-top));
     background: linear-gradient(
       to right,
       rgba(0, 0, 0, 0.1) 0%,
@@ -71,9 +71,9 @@ import.meta.css = /* css */ `
   }
 
   .navi_table_sticky_frontier[data-top] {
-    left: var(--sticky-group-left, 0px);
+    left: calc(var(--table-visual-left) + var(--sticky-group-left));
     width: calc(var(--table-visual-width) - var(--sticky-group-left));
-    top: var(--sticky-group-top);
+    top: calc(var(--table-visual-top) + var(--sticky-group-top));
     height: var(--sticky-frontier-size);
     background: linear-gradient(
       to bottom,
