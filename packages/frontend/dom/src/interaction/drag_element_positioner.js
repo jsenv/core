@@ -102,27 +102,60 @@ const createSameScrollDifferentParentPositioner = (
     }
   }
   to_position: {
-    const elementPositionedParent = element.offsetParent;
+    const positionedParent = element.offsetParent;
+    const referencePositionedParent = referenceElement.offsetParent;
+
     const [
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
     ] = getPositionedParentOffsetWithScrollContainer(
-      elementPositionedParent,
+      positionedParent,
       scrollContainer,
     );
 
+    const [
+      referencePositionedParentLeftOffsetWithScrollContainer,
+      referencePositionedParentTopOffsetWithScrollContainer,
+    ] = getPositionedParentOffsetWithScrollContainer(
+      referencePositionedParent,
+      scrollContainer,
+    );
+
+    console.log({
+      positionedParentTopOffsetWithScrollContainer,
+      referencePositionedParentTopOffsetWithScrollContainer,
+    });
+
     positioner.toLeft = (referenceScrollableLeftToConvert) => {
-      const positionedLeftWithoutScroll =
+      // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
+      const referencePositionedLeftWithoutScroll =
         referenceScrollableLeftToConvert -
-        positionedParentLeftOffsetWithScrollContainer;
+        referencePositionedParentLeftOffsetWithScrollContainer;
+
+      // Step 2: Convert to element positioned-parent-relative by adding the difference
+      const positionedLeftWithoutScroll =
+        referencePositionedLeftWithoutScroll +
+        (referencePositionedParentLeftOffsetWithScrollContainer -
+          positionedParentLeftOffsetWithScrollContainer);
+
+      // Step 3: Apply scroll to get final positioning
       const positionedLeft =
         scrollContainer.scrollLeft + positionedLeftWithoutScroll;
       return positionedLeft;
     };
     positioner.toTop = (referenceScrollableTopToConvert) => {
-      const positionedTopWithoutScroll =
+      // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
+      const referencePositionedTopWithoutScroll =
         referenceScrollableTopToConvert -
-        positionedParentTopOffsetWithScrollContainer;
+        referencePositionedParentTopOffsetWithScrollContainer;
+
+      // Step 2: Convert to element positioned-parent-relative by adding the difference
+      const positionedTopWithoutScroll =
+        referencePositionedTopWithoutScroll +
+        (referencePositionedParentTopOffsetWithScrollContainer -
+          positionedParentTopOffsetWithScrollContainer);
+
+      // Step 3: Apply scroll to get final positioning
       const positionedTop =
         scrollContainer.scrollTop + positionedTopWithoutScroll;
       return positionedTop;
