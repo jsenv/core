@@ -284,47 +284,51 @@ const createFullyDifferentPositioner = (
       let positionedLeft;
       let positionedTop;
 
-      // Calculate offset between reference element's scroll container and positioned parent
-      const referenceScrollContainerRect =
-        referenceScrollContainer.getBoundingClientRect();
-      const referencePositionedParentRect =
-        referencePositionedParent.getBoundingClientRect();
-      const positionedParentLeftOffsetWithScrollContainer =
-        referenceScrollContainerRect.left - referencePositionedParentRect.left;
-      const positionedParentTopOffsetWithScrollContainer =
-        referenceScrollContainerRect.top - referencePositionedParentRect.top;
-      const elementPositionedParentRect =
-        positionedParent.getBoundingClientRect();
+      const [
+        referencePositionedParentLeftOffsetWithReferenceScrollContainer,
+        referencePositionedParentTopOffsetWithReferenceScrollContainer,
+      ] = getPositionedParentOffsetWithScrollContainer(
+        referencePositionedParent,
+        referenceScrollContainer,
+      );
+      const [
+        positionedParentLeftOffsetWithScrollContainer,
+        positionedParentTopOffsetWithScrollContainer,
+      ] = getPositionedParentOffsetWithScrollContainer(
+        positionedParent,
+        scrollContainer,
+      );
 
       left: {
-        // Step 1: Convert from scroll-relative to reference element's positioned-parent-relative
-        const referenceLeftRelativeToPositionedParent =
+        // Step 1: Convert from reference scroll container coordinates to reference positioned parent coordinates
+        const referencePositionedLeftWithoutScroll =
           referenceScrollableLeftToConvert -
-          positionedParentLeftOffsetWithScrollContainer;
-        // Step 2: Convert to viewport coordinates using reference element's positioned parent
-        const referenceViewportLeft =
-          referencePositionedParentRect.left +
-          referenceLeftRelativeToPositionedParent;
-        // Step 3: Convert to element's positioned-parent-relative coordinates
+          referencePositionedParentLeftOffsetWithReferenceScrollContainer;
+        // Step 2: Apply reference positioned parent scroll to get final positioning
+        const referencePositionedLeft =
+          referenceScrollContainer.scrollLeft +
+          referencePositionedLeftWithoutScroll;
+        // Step 3: Convert to element positioned parent coordinates
         const positionedLeftWithoutScroll =
-          referenceViewportLeft - elementPositionedParentRect.left;
-        // Step 4: Apply element's scroll container scroll to get final position
+          referencePositionedLeft -
+          positionedParentLeftOffsetWithScrollContainer;
+        // Step 4: Apply element scroll container scroll to get final position
         positionedLeft =
           scrollContainer.scrollLeft + positionedLeftWithoutScroll;
       }
       top: {
-        // Step 1: Convert from scroll-relative to reference element's positioned-parent-relative
-        const referenceTopRelativeToPositionedParent =
+        // Step 1: Convert from reference scroll container coordinates to reference positioned parent coordinates
+        const referencePositionedTopWithoutScroll =
           referenceScrollableTopToConvert -
-          positionedParentTopOffsetWithScrollContainer;
-        // Step 2: Convert to viewport coordinates using reference element's positioned parent
-        const referenceViewportTop =
-          referencePositionedParentRect.top +
-          referenceTopRelativeToPositionedParent;
-        // Step 3: Convert to element's positioned-parent-relative coordinates
+          referencePositionedParentTopOffsetWithReferenceScrollContainer;
+        // Step 2: Apply reference positioned parent scroll to get final positioning
+        const referencePositionedTop =
+          referenceScrollContainer.scrollTop +
+          referencePositionedTopWithoutScroll;
+        // Step 3: Convert to element positioned parent coordinates
         const positionedTopWithoutScroll =
-          referenceViewportTop - elementPositionedParentRect.top;
-        // Step 4: Apply element's scroll container scroll to get final position
+          referencePositionedTop - positionedParentTopOffsetWithScrollContainer;
+        // Step 4: Apply element scroll container scroll to get final position
         positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
       }
 
