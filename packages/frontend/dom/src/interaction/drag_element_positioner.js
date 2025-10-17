@@ -17,12 +17,14 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
  * EXPECTED API CONTRACT:
  * The calling code expects this positioner to return:
  *
- * - scrollablePosition: [scrollableLeft, scrollableTop]
+ * - [scrollableLeft, scrollableTop, convertScrollablePosition]
+ *
+ * - scrollableLeft/scrollableTop:
  *   Current coordinates relative to the reference element's scroll container.
  *   When using a reference element, these coordinates represent where the element appears
  *   from the perspective of the reference element's coordinate system.
  *
- * - toLeft/toTop functions:
+ * - convertScrollablePosition:
  *   Convert from the internal scroll-relative coordinates to DOM positioning coordinates.
  *   When using a reference element, these functions must convert from the reference element's
  *   scroll-relative coordinates to the element's offsetParent-relative coordinates.
@@ -76,96 +78,90 @@ const createSameScrollDifferentParentPositioner = (
   element,
   referenceElement,
 ) => {
-  const positioner = {
-    scrollablePosition: null,
-    toLeft: null,
-    toTop: null,
-  };
+  let scrollableLeft;
+  let scrollableTop;
+  let convertScrollablePosition;
 
   const scrollContainer = getScrollContainer(referenceElement);
 
-  scrollable_position: {
+  scrollable_current: {
     const { left: elementViewportLeft, top: elementViewportTop } =
       element.getBoundingClientRect();
     const scrollContainerIsDocument = scrollContainer === documentElement;
 
     if (scrollContainerIsDocument) {
-      const scrollableLeft = elementViewportLeft;
-      const scrollableTop = elementViewportTop;
-      positioner.scrollablePosition = [scrollableLeft, scrollableTop];
+      scrollableLeft = elementViewportLeft;
+      scrollableTop = elementViewportTop;
     } else {
       const { left: scrollContainerLeft, top: scrollContainerTop } =
         scrollContainer.getBoundingClientRect();
-      const scrollableLeft = elementViewportLeft - scrollContainerLeft;
-      const scrollableTop = elementViewportTop - scrollContainerTop;
-      positioner.scrollablePosition = [scrollableLeft, scrollableTop];
+      scrollableLeft = elementViewportLeft - scrollContainerLeft;
+      scrollableTop = elementViewportTop - scrollContainerTop;
     }
   }
-  to_position: {
+  scrollable_converter: {
     const positionedParent = element.offsetParent;
     const referencePositionedParent = referenceElement.offsetParent;
 
-    positioner.toLeft = (referenceScrollableLeftToConvert) => {
-      const [positionedParentLeftOffsetWithScrollContainer] =
-        getPositionedParentOffsetWithScrollContainer(
-          positionedParent,
-          scrollContainer,
-        );
+    convertScrollablePosition = (
+      referenceScrollableLeftToConvert,
+      referenceScrollableTopToConvert,
+    ) => {
+      let positionedLeft;
+      let positionedTop;
 
-      const [referencePositionedParentLeftOffsetWithScrollContainer] =
-        getPositionedParentOffsetWithScrollContainer(
-          referencePositionedParent,
-          scrollContainer,
-        );
+      const [
+        positionedParentLeftOffsetWithScrollContainer,
+        positionedParentTopOffsetWithScrollContainer,
+      ] = getPositionedParentOffsetWithScrollContainer(
+        positionedParent,
+        scrollContainer,
+      );
+      const [
+        referencePositionedParentLeftOffsetWithScrollContainer,
+        referencePositionedParentTopOffsetWithScrollContainer,
+      ] = getPositionedParentOffsetWithScrollContainer(
+        referencePositionedParent,
+        scrollContainer,
+      );
 
-      // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
-      const referencePositionedLeftWithoutScroll =
-        referenceScrollableLeftToConvert -
-        referencePositionedParentLeftOffsetWithScrollContainer;
+      left: {
+        // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
+        const referencePositionedLeftWithoutScroll =
+          referenceScrollableLeftToConvert -
+          referencePositionedParentLeftOffsetWithScrollContainer;
 
-      // Step 2: Convert to element positioned-parent-relative by adding the difference
-      const positionedLeftWithoutScroll =
-        referencePositionedLeftWithoutScroll +
-        (referencePositionedParentLeftOffsetWithScrollContainer -
-          positionedParentLeftOffsetWithScrollContainer);
+        // Step 2: Convert to element positioned-parent-relative by adding the difference
+        const positionedLeftWithoutScroll =
+          referencePositionedLeftWithoutScroll +
+          (referencePositionedParentLeftOffsetWithScrollContainer -
+            positionedParentLeftOffsetWithScrollContainer);
 
-      // Step 3: Apply scroll to get final positioning
-      const positionedLeft =
-        scrollContainer.scrollLeft + positionedLeftWithoutScroll;
-      return positionedLeft;
-    };
-    positioner.toTop = (referenceScrollableTopToConvert) => {
-      const [, positionedParentTopOffsetWithScrollContainer] =
-        getPositionedParentOffsetWithScrollContainer(
-          positionedParent,
-          scrollContainer,
-        );
+        // Step 3: Apply scroll to get final positioning
+        positionedLeft =
+          scrollContainer.scrollLeft + positionedLeftWithoutScroll;
+      }
+      top: {
+        // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
+        const referencePositionedTopWithoutScroll =
+          referenceScrollableTopToConvert -
+          referencePositionedParentTopOffsetWithScrollContainer;
 
-      const [, referencePositionedParentTopOffsetWithScrollContainer] =
-        getPositionedParentOffsetWithScrollContainer(
-          referencePositionedParent,
-          scrollContainer,
-        );
+        // Step 2: Convert to element positioned-parent-relative by adding the difference
+        const positionedTopWithoutScroll =
+          referencePositionedTopWithoutScroll +
+          (referencePositionedParentTopOffsetWithScrollContainer -
+            positionedParentTopOffsetWithScrollContainer);
 
-      // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative
-      const referencePositionedTopWithoutScroll =
-        referenceScrollableTopToConvert -
-        referencePositionedParentTopOffsetWithScrollContainer;
+        // Step 3: Apply scroll to get final positioning
+        positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
+      }
 
-      // Step 2: Convert to element positioned-parent-relative by adding the difference
-      const positionedTopWithoutScroll =
-        referencePositionedTopWithoutScroll +
-        (referencePositionedParentTopOffsetWithScrollContainer -
-          positionedParentTopOffsetWithScrollContainer);
-
-      // Step 3: Apply scroll to get final positioning
-      const positionedTop =
-        scrollContainer.scrollTop + positionedTopWithoutScroll;
-      return positionedTop;
+      return [positionedLeft, positionedTop];
     };
   }
 
-  return positioner;
+  return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
 
 // Scenario 3: Different scroll container, same positioned parent
@@ -319,32 +315,27 @@ const createFullyDifferentPositioner = (element, referenceElement) => {
 };
 
 const createStandardElementPositioner = (element) => {
-  const positioner = {
-    scrollablePosition: null,
-    toLeft: null,
-    toTop: null,
-  };
+  let scrollableLeft;
+  let scrollableTop;
+  let convertScrollablePosition;
 
   const scrollContainer = getScrollContainer(element);
 
-  scrollable_position: {
+  scrollable_current: {
     const { left: elementViewportLeft, top: elementViewportTop } =
       element.getBoundingClientRect();
     const scrollContainerIsDocument = scrollContainer === documentElement;
-
     if (scrollContainerIsDocument) {
-      const scrollableLeft = elementViewportLeft;
-      const scrollableTop = elementViewportTop;
-      positioner.scrollablePosition = [scrollableLeft, scrollableTop];
+      scrollableLeft = elementViewportLeft;
+      scrollableTop = elementViewportTop;
     } else {
       const { left: scrollContainerLeft, top: scrollContainerTop } =
         scrollContainer.getBoundingClientRect();
-      const scrollableLeft = elementViewportLeft - scrollContainerLeft;
-      const scrollableTop = elementViewportTop - scrollContainerTop;
-      positioner.scrollablePosition = [scrollableLeft, scrollableTop];
+      scrollableLeft = elementViewportLeft - scrollContainerLeft;
+      scrollableTop = elementViewportTop - scrollContainerTop;
     }
   }
-  to_position: {
+  scrollable_converter: {
     const positionedParent = element.offsetParent;
     const [
       positionedParentLeftOffsetWithScrollContainer,
@@ -353,22 +344,28 @@ const createStandardElementPositioner = (element) => {
       positionedParent,
       scrollContainer,
     );
-    positioner.toLeft = (scrollableLeftToConvert) => {
-      const positionedLeftWithoutScroll =
-        scrollableLeftToConvert - positionedParentLeftOffsetWithScrollContainer;
-      const positionedLeft =
-        scrollContainer.scrollLeft + positionedLeftWithoutScroll;
-      return positionedLeft;
-    };
-    positioner.toTop = (scrollableTopToConvert) => {
-      const positionedTopWithoutScroll =
-        scrollableTopToConvert - positionedParentTopOffsetWithScrollContainer;
-      const positionedTop =
-        scrollContainer.scrollTop + positionedTopWithoutScroll;
-      return positionedTop;
+    convertScrollablePosition = (
+      scrollableLeftToConvert,
+      scrollableTopToConvert,
+    ) => {
+      let positionedLeft;
+      let positionedTop;
+      left: {
+        const positionedLeftWithoutScroll =
+          scrollableLeftToConvert -
+          positionedParentLeftOffsetWithScrollContainer;
+        positionedLeft =
+          scrollContainer.scrollLeft + positionedLeftWithoutScroll;
+      }
+      top: {
+        const positionedTopWithoutScroll =
+          scrollableTopToConvert - positionedParentTopOffsetWithScrollContainer;
+        positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
+      }
+      return [positionedLeft, positionedTop];
     };
   }
-  return positioner;
+  return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
 
 // Calculate static offset between positioned parent and scroll container
