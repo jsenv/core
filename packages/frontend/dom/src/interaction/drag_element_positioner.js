@@ -170,27 +170,10 @@ const createDifferentScrollSameParentPositioner = (
   let convertScrollablePosition;
 
   scrollable_current: {
-    const elementRect = element.getBoundingClientRect();
-    const referenceScrollContainerIsDocument =
-      referenceScrollContainer === documentElement;
-
-    if (referenceScrollContainerIsDocument) {
-      // Document case: element position is already relative to viewport, which is what we want
-      scrollableLeft = elementRect.left;
-      scrollableTop = elementRect.top;
-    } else {
-      // Custom scroll container case: convert to scroll container relative coordinates
-      const referenceScrollContainerRect =
-        referenceScrollContainer.getBoundingClientRect();
-      scrollableLeft =
-        elementRect.left -
-        referenceScrollContainerRect.left +
-        referenceScrollContainer.scrollLeft;
-      scrollableTop =
-        elementRect.top -
-        referenceScrollContainerRect.top +
-        referenceScrollContainer.scrollTop;
-    }
+    [scrollableLeft, scrollableTop] = getScrollablePosition(
+      element,
+      referenceScrollContainer,
+    );
   }
   scrollable_converter: {
     convertScrollablePosition = (
@@ -239,27 +222,10 @@ const createFullyDifferentPositioner = (
   let convertScrollablePosition;
 
   scrollable_current: {
-    const elementRect = element.getBoundingClientRect();
-    const referenceScrollContainerIsDocument =
-      referenceScrollContainer === documentElement;
-
-    if (referenceScrollContainerIsDocument) {
-      // Document case: element position is already relative to viewport, which is what we want
-      scrollableLeft = elementRect.left;
-      scrollableTop = elementRect.top;
-    } else {
-      // Custom scroll container case: convert to scroll container relative coordinates
-      const referenceScrollContainerRect =
-        referenceScrollContainer.getBoundingClientRect();
-      scrollableLeft =
-        elementRect.left -
-        referenceScrollContainerRect.left +
-        referenceScrollContainer.scrollLeft;
-      scrollableTop =
-        elementRect.top -
-        referenceScrollContainerRect.top +
-        referenceScrollContainer.scrollTop;
-    }
+    [scrollableLeft, scrollableTop] = getScrollablePosition(
+      element,
+      referenceScrollContainer,
+    );
   }
   scrollable_converter: {
     convertScrollablePosition = (
