@@ -196,9 +196,6 @@ const createDifferentScrollSameParentPositioner = (
       referenceScrollContainer.scrollTop;
   }
   scrollable_converter: {
-    const scrollContainerIsDocument =
-      scrollContainer === document.documentElement;
-    const ancestorFixedPosition = findAncestorFixedPosition(element);
     const elementRect = element.getBoundingClientRect();
     const positionedParentRect = positionedParent.getBoundingClientRect();
     const leftRelativeToPositionedParent =
@@ -218,22 +215,14 @@ const createDifferentScrollSameParentPositioner = (
           referenceScrollableLeftToConvert -
           scrollableLeft +
           leftRelativeToPositionedParent;
-        if (ancestorFixedPosition && scrollContainerIsDocument) {
-          positionedLeft = ancestorFixedPosition[0] + left;
-        } else {
-          positionedLeft = scrollContainer.scrollLeft + left;
-        }
+        positionedLeft = scrollContainer.scrollLeft + left;
       }
       top: {
         const top =
           referenceScrollableTopToConvert -
           scrollableTop +
           topRelativeToPositionedParent;
-        if (ancestorFixedPosition && scrollContainerIsDocument) {
-          positionedTop = ancestorFixedPosition[1] + top;
-        } else {
-          positionedTop = scrollContainer.scrollTop + top;
-        }
+        positionedTop = scrollContainer.scrollTop + top;
       }
 
       return [positionedLeft, positionedTop];
@@ -274,10 +263,6 @@ const createFullyDifferentPositioner = (
       referenceScrollContainer.scrollTop;
   }
   scrollable_converter: {
-    const scrollContainerIsDocument =
-      scrollContainer === document.documentElement;
-    const ancestorFixedPosition = findAncestorFixedPosition(element);
-
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
@@ -308,11 +293,7 @@ const createFullyDifferentPositioner = (
         const elementPositionedParentRect =
           positionedParent.getBoundingClientRect();
         const left = referenceViewportLeft - elementPositionedParentRect.left;
-        if (ancestorFixedPosition && scrollContainerIsDocument) {
-          positionedLeft = ancestorFixedPosition[0] + left;
-        } else {
-          positionedLeft = scrollContainer.scrollLeft + left;
-        }
+        positionedLeft = scrollContainer.scrollLeft + left;
       }
       top: {
         // Step 1: Convert from scroll-relative to reference element's positioned-parent-relative
@@ -327,17 +308,12 @@ const createFullyDifferentPositioner = (
         const elementPositionedParentRect =
           positionedParent.getBoundingClientRect();
         const top = referenceViewportTop - elementPositionedParentRect.top;
-        if (ancestorFixedPosition && scrollContainerIsDocument) {
-          positionedTop = ancestorFixedPosition[1] + top;
-        } else {
-          positionedTop = scrollContainer.scrollTop + top;
-        }
+        positionedTop = scrollContainer.scrollTop + top;
       }
 
       return [positionedLeft, positionedTop];
     };
   }
-
   return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
 
@@ -424,18 +400,4 @@ const getPositionedParentOffsetWithScrollContainer = (
   const offsetTop =
     scrollContainer.scrollTop + positionedParentTop - scrollContainerTop;
   return [offsetLeft, offsetTop];
-};
-
-// Helper function to check if ancestor has a position: fixed
-const findAncestorFixedPosition = (element) => {
-  let current = element.parentElement;
-  while (current && current !== document.documentElement) {
-    const computedStyle = window.getComputedStyle(current);
-    if (computedStyle.position === "fixed") {
-      const { left, top } = current.getBoundingClientRect();
-      return [left, top];
-    }
-    current = current.parentElement;
-  }
-  return null;
 };
