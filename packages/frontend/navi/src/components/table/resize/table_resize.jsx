@@ -286,7 +286,7 @@ const TableColumnRightResizeHandle = ({
     ></div>
   );
 };
-// Column resize helper functions
+
 const updateTableColumnResizerPosition = (columnCell, columnResizer) => {
   if (columnResizer.hasAttribute("data-grabbed")) {
     // ensure mouseenter/mouseleave while resizing cannot interfere
@@ -303,6 +303,21 @@ const updateTableColumnResizerPosition = (columnCell, columnResizer) => {
   columnResizer.style.setProperty("--table-cell-height", `${cellHeight}px`);
   columnResizer.setAttribute("data-hover", "");
 };
+// Row resize helper functions
+const updateTableRowResizerPosition = (rowCell, rowResizer) => {
+  if (rowResizer.hasAttribute("data-grabbed")) {
+    // ensure mouseenter/mouseleave while resizing cannot interfere
+    // while resizing (would move the resizer on other rows)
+    return;
+  }
+  const rowCellRect = rowCell.getBoundingClientRect();
+  const rowBottom = rowCellRect.bottom;
+  const cellWidth = rowCellRect.width;
+  rowResizer.style.setProperty("--table-row-resizer-top", `${rowBottom}px`);
+  rowResizer.style.setProperty("--table-cell-width", `${cellWidth}px`);
+  rowResizer.setAttribute("data-hover", "");
+};
+
 const onMouseEnterLeftResizeHandle = (e, columnResizer) => {
   const previousCell =
     e.target.closest(".navi_table_cell").previousElementSibling;
@@ -436,7 +451,6 @@ const initResizeTableColumnByMousedown = (
     axis: "x",
   });
 };
-
 const initResizeTableRowByMousedown = (
   mousedownEvent,
   { rowResizer, rowMinHeight, rowMaxHeight, onGrab, onDrag, onRelease, isTop },
@@ -579,21 +593,6 @@ const TableRowBottomResizeHandle = ({
   );
 };
 
-// Row resize helper functions
-const updateTableRowResizerPosition = (rowCell, rowResizer) => {
-  if (rowResizer.hasAttribute("data-grabbed")) {
-    // ensure mouseenter/mouseleave while resizing cannot interfere
-    // while resizing (would move the resizer on other rows)
-    return;
-  }
-  const rowCellRect = rowCell.getBoundingClientRect();
-
-  const rowBottom = rowCellRect.bottom;
-  const cellWidth = rowCellRect.width;
-  rowResizer.style.setProperty("--table-row-resizer-top", `${rowBottom}px`);
-  rowResizer.style.setProperty("--table-cell-width", `${cellWidth}px`);
-  rowResizer.setAttribute("data-hover", "");
-};
 const onMouseEnterTopResizeHandle = (e, rowResize) => {
   const currentRow = e.target.closest(".navi_tr");
   const previousRow = findPreviousTableRow(currentRow);
