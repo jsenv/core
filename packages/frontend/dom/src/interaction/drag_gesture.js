@@ -136,6 +136,17 @@ export const createDragGestureController = (options = {}) => {
       // === ÉTAT INITIAL (au moment du grab) ===
       const { grabX, grabY, grabScrollLeft, grabScrollTop } = gestureInfo;
       // === CE QUI EST DEMANDÉ (où on veut aller) ===
+      // Calcul de la direction basé sur le mouvement précédent
+      // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
+      // (ici on veut connaitre l'intention)
+      // on va utiliser cela pour savoir vers où on scroll si nécéssaire par ex
+      const currentDragX = gestureInfo.dragX;
+      const currentDragY = gestureInfo.dragY;
+      const isGoingLeft = dragX < currentDragX;
+      const isGoingRight = dragX > currentDragX;
+      const isGoingUp = dragY < currentDragY;
+      const isGoingDown = dragY > currentDragY;
+
       const moveXRequested = direction.x
         ? scrollContainer.scrollLeft + (dragX - grabX)
         : grabX + grabScrollLeft;
@@ -148,19 +159,12 @@ export const createDragGestureController = (options = {}) => {
         moveXRequested,
         scrollLeft: scrollContainer.scrollLeft,
       });
-      // Calcul de la direction basé sur le mouvement précédent
-      // (ne tient pas compte du mouvement final une fois les contraintes appliquées)
-      // (ici on veut connaitre l'intention)
-      // on va utiliser cela pour savoir vers où on scroll si nécéssaire par ex
-      const currentMoveX = gestureInfo.moveX;
-      const currentMoveY = gestureInfo.moveY;
-      const isGoingLeft = moveXRequested < currentMoveX;
-      const isGoingRight = moveXRequested > currentMoveX;
-      const isGoingUp = moveYRequested < currentMoveY;
-      const isGoingDown = moveYRequested > currentMoveY;
       // === APPLIQUER LES CONTRAINTES ===
       let moveXConstrained = moveXRequested;
       let moveYConstrained = moveYRequested;
+
+      const currentMoveX = gestureInfo.moveX;
+      const currentMoveY = gestureInfo.moveY;
       if (moveXRequested !== currentMoveX || moveYRequested !== currentMoveY) {
         const limitMoveX = (value) => {
           moveXConstrained = value;
