@@ -66,9 +66,11 @@ import {
 import { useFocusGroup } from "../use_focus_group.js";
 import {
   initDragTableColumnByMousedown,
+  TableColumnDropPreview,
+  TableDragCloneContainer,
   TableDragContext,
   useTableDragContextValue,
-} from "./drag/table_drag.js";
+} from "./drag/table_drag.jsx";
 import {
   TableCellColumnResizeHandles,
   TableCellRowResizeHandles,
@@ -226,7 +228,11 @@ export const Table = forwardRef((props, ref) => {
   };
 
   // drag columns
+  const tableDragCloneContainerRef = useRef();
+  const tableColumnDropPreviewRef = useRef();
   const dragContextValue = useTableDragContextValue({
+    tableDragCloneContainerRef,
+    tableColumnDropPreviewRef,
     setColumnOrder,
     columns,
     canChangeColumnOrder: Boolean(onColumnOrderChange),
@@ -274,6 +280,8 @@ export const Table = forwardRef((props, ref) => {
           </TableStickyContext.Provider>
           <TableColumnResizer ref={columnResizerRef} />
           <TableRowResizer ref={rowResizerRef} />
+          <TableDragCloneContainer ref={tableDragCloneContainerRef} />
+          <TableColumnDropPreview ref={tableColumnDropPreviewRef} />
         </TableUI>
       </div>
     </div>
@@ -495,8 +503,14 @@ export const TableCell = forwardRef((props, ref) => {
   });
 
   // moving column
-  const { grabTarget, grabColumn, releaseColumn, canChangeColumnOrder } =
-    useContext(TableDragContext);
+  const {
+    tableDragCloneContainerRef,
+    tableColumnDropPreviewRef,
+    grabTarget,
+    grabColumn,
+    releaseColumn,
+    canChangeColumnOrder,
+  } = useContext(TableDragContext);
   const columnGrabbed = grabTarget === `column:${columnIndex}`;
 
   // resizing
@@ -603,6 +617,8 @@ export const TableCell = forwardRef((props, ref) => {
           return;
         }
         initDragTableColumnByMousedown(e, {
+          tableDragCloneContainer: tableDragCloneContainerRef.current,
+          dropPreview: tableColumnDropPreviewRef.current,
           onGrab: () => grabColumn(columnIndex),
           onDrag: () => {},
           onRelease: (_, newColumnIndex) =>
