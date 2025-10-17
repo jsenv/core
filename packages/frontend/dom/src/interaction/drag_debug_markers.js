@@ -87,7 +87,7 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
         if (direction.x) {
           markersToCreate.push({
             name: visibleArea.paddingLeft
-              ? `visibleArea.left + paddingLeft(${visibleArea.paddingLeft})`
+              ? `visibleArea.left + padding(${visibleArea.paddingLeft})`
               : "visibleArea.left",
             x: visibleArea.left,
             y: 0,
@@ -96,7 +96,7 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
           });
           markersToCreate.push({
             name: visibleArea.paddingRight
-              ? `visibleArea.right + paddingRight(${visibleArea.paddingRight})`
+              ? `visibleArea.right + padding(${visibleArea.paddingRight})`
               : "visibleArea.right",
             x: visibleArea.right,
             y: 0,
@@ -107,7 +107,7 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
         if (direction.y) {
           markersToCreate.push({
             name: visibleArea.paddingTop
-              ? `visibleArea.top + paddingTop(${visibleArea.paddingTop})`
+              ? `visibleArea.top + padding(${visibleArea.paddingTop})`
               : "visibleArea.top",
             x: 0,
             y: visibleArea.top,
@@ -116,7 +116,7 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
           });
           markersToCreate.push({
             name: visibleArea.paddingBottom
-              ? `visibleArea.bottom + paddingBottom(${visibleArea.paddingBottom})`
+              ? `visibleArea.bottom + padding(${visibleArea.paddingBottom})`
               : "visibleArea.bottom",
             x: 0,
             y: visibleArea.bottom,
