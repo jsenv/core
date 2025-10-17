@@ -1,6 +1,6 @@
 import {
   createDragToMoveGestureController,
-  getScrollContainer,
+  getDragCoordinates,
 } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import { useContext } from "preact/hooks";
@@ -371,10 +371,9 @@ const initResizeByMousedown = (
         ? maxSize
         : defaultMaxSize;
 
-    const scrollContainer = getScrollContainer(tableCell);
-    const { left, top } = tableCell.getBoundingClientRect();
-    const { scrollLeft, scrollTop } = scrollContainer;
-    const cellStart = axis === "x" ? scrollLeft + left : scrollTop + top;
+    const tableCellDragCoordinates = getDragCoordinates(tableCell);
+    const cellStart =
+      axis === "x" ? tableCellDragCoordinates[0] : tableCellDragCoordinates[1];
     const customStartBound = cellStart + minCellSize;
     const customEndBound = cellStart + maxCellSize;
     const isSticky =

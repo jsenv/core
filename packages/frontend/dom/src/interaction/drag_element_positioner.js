@@ -93,19 +93,10 @@ const createSameScrollDifferentParentPositioner = (
   let convertScrollablePosition;
 
   scrollable_current: {
-    const { left: elementViewportLeft, top: elementViewportTop } =
-      element.getBoundingClientRect();
-    const scrollContainerIsDocument = scrollContainer === documentElement;
-
-    if (scrollContainerIsDocument) {
-      scrollableLeft = elementViewportLeft;
-      scrollableTop = elementViewportTop;
-    } else {
-      const { left: scrollContainerLeft, top: scrollContainerTop } =
-        scrollContainer.getBoundingClientRect();
-      scrollableLeft = elementViewportLeft - scrollContainerLeft;
-      scrollableTop = elementViewportTop - scrollContainerTop;
-    }
+    [scrollableLeft, scrollableTop] = getScrollablePosition(
+      element,
+      scrollContainer,
+    );
   }
   scrollable_converter: {
     convertScrollablePosition = (
@@ -346,18 +337,10 @@ const createStandardElementPositioner = (element) => {
   const scrollContainer = getScrollContainer(element);
 
   scrollable_current: {
-    const { left: elementViewportLeft, top: elementViewportTop } =
-      element.getBoundingClientRect();
-    const scrollContainerIsDocument = scrollContainer === documentElement;
-    if (scrollContainerIsDocument) {
-      scrollableLeft = elementViewportLeft;
-      scrollableTop = elementViewportTop;
-    } else {
-      const { left: scrollContainerLeft, top: scrollContainerTop } =
-        scrollContainer.getBoundingClientRect();
-      scrollableLeft = elementViewportLeft - scrollContainerLeft;
-      scrollableTop = elementViewportTop - scrollContainerTop;
-    }
+    [scrollableLeft, scrollableTop] = getScrollablePosition(
+      element,
+      scrollContainer,
+    );
   }
   scrollable_converter: {
     const positionedParent = element.offsetParent;
@@ -390,6 +373,35 @@ const createStandardElementPositioner = (element) => {
     };
   }
   return [scrollableLeft, scrollableTop, convertScrollablePosition];
+};
+
+export const getDragCoordinates = (
+  element,
+  scrollContainer = getScrollContainer(element),
+) => {
+  const [scrollableLeft, scrollableTop] = getScrollablePosition(
+    element,
+    scrollContainer,
+  );
+  const { scrollLeft, scrollTop } = scrollContainer;
+  const leftRelativeToScrollContainer = scrollableLeft + scrollLeft;
+  const topRelativeToScrollContainer = scrollableTop + scrollTop;
+  return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
+};
+
+const getScrollablePosition = (element, scrollContainer) => {
+  const { left: elementViewportLeft, top: elementViewportTop } =
+    element.getBoundingClientRect();
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+  if (scrollContainerIsDocument) {
+    return [elementViewportLeft, elementViewportTop];
+  }
+  const { left: scrollContainerLeft, top: scrollContainerTop } =
+    scrollContainer.getBoundingClientRect();
+  const scrollableLeft = elementViewportLeft - scrollContainerLeft;
+  const scrollableTop = elementViewportTop - scrollContainerTop;
+
+  return [scrollableLeft, scrollableTop];
 };
 
 // Calculate static offset between positioned parent and scroll container

@@ -106,6 +106,7 @@ export {
 export { initUITransition } from "./src/ui_transition/ui_transition.js";
 
 // interaction
+export { getDragCoordinates } from "./src/interaction/drag_element_positioner.js";
 export {
   createDragGestureController,
   createMouseDragThresholdPromise,
