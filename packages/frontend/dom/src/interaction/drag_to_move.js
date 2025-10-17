@@ -88,6 +88,9 @@ export const createDragToMoveGestureController = ({
       element.removeAttribute("data-grabbed");
     });
 
+    // Will be used for dynamic constraints on sticky elements
+    let hasCrossedVisibleAreaLeftOnce = false;
+    let hasCrossedVisibleAreaTopOnce = false;
     const dragConstraints = initDragConstraints(dragGesture, {
       areaConstraintElement: areaConstraintElement || scrollContainer,
       areaConstraint,
@@ -116,9 +119,6 @@ export const createDragToMoveGestureController = ({
       },
     );
 
-    // Will be used for dynamic constraints on sticky elements
-    let hasCrossedVisibleAreaLeftOnce = false;
-    let hasCrossedVisibleAreaTopOnce = false;
     const dragToMove = (gestureInfo) => {
       const { isGoingDown, isGoingUp, isGoingLeft, isGoingRight, layout } =
         gestureInfo;
@@ -132,17 +132,17 @@ export const createDragToMoveGestureController = ({
       console.log({
         layoutX: layout.x,
         elementScrollableLeft,
-        elementPositionedLeft,
         elementLeft,
+        elementPositionedLeft,
       });
       const elementScrollableTop = layout.scrollableTop;
       const elementPositionedTop = positioner.toTop(elementScrollableTop);
-      console.log({
-        layoutY: layout.y,
-        elementScrollableTop,
-        elementPositionedTop,
-        elementTop,
-      });
+      // console.log({
+      //   layoutY: layout.y,
+      //   elementScrollableTop,
+      //   elementPositionedTop,
+      //   elementTop,
+      // });
 
       hasCrossedVisibleAreaLeftOnce =
         hasCrossedVisibleAreaLeftOnce || elementLeft < visibleArea.left;
