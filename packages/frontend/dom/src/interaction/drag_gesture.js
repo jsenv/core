@@ -36,6 +36,8 @@ export const createDragGestureController = (options = {}) => {
     grabY = 0,
     cursor = "grabbing",
     scrollContainer = document.documentElement,
+    scrollableLeftAtGrab = 0,
+    scrollableTopAtGrab = 0,
   } = {}) => {
     if (!direction.x && !direction.y) {
       return null;
@@ -50,6 +52,21 @@ export const createDragGestureController = (options = {}) => {
     if (onRelease) {
       addReleaseCallback(onRelease);
     }
+
+    const createLayout = (x, y) => {
+      const layoutProps = {
+        // Raw input coordinates (dragX - grabX + scrollContainer.scrollLeft)
+        x,
+        y,
+        // Position relative to container excluding scrolls
+        scrollableLeft: scrollableLeftAtGrab + x - scrollContainer.scrollLeft,
+        scrollableTop: scrollableTopAtGrab + y - scrollContainer.scrollTop,
+        // Position relative to container including scrolls
+        left: scrollableLeftAtGrab + x,
+        top: scrollableTopAtGrab + y,
+      };
+      return layoutProps;
+    };
 
     const gestureInfo = {
       name,
@@ -66,11 +83,11 @@ export const createDragGestureController = (options = {}) => {
       dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
       dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
 
-      moveX: grabX + scrollContainer.scrollLeft, // dragX + scrollLeft + constraints applied
-      moveY: grabY + scrollContainer.scrollTop, // dragY + scrollTop + constraints applied
-      // metadata about the move
-      moveXChanged: false, // x changed since last gesture
-      moveYChanged: false, // y changed since last gesture
+      layout: createLayout(
+        grabX + scrollContainer.scrollLeft,
+        grabY + scrollContainer.scrollTop,
+      ),
+
       isGoingUp: undefined,
       isGoingDown: undefined,
       isGoingLeft: undefined,
@@ -147,50 +164,51 @@ export const createDragGestureController = (options = {}) => {
       const isGoingUp = dragY < currentDragY;
       const isGoingDown = dragY > currentDragY;
 
-      const moveXRequested = direction.x
+      const layoutXRequested = direction.x
         ? scrollContainer.scrollLeft + (dragX - grabX)
-        : grabX + grabScrollLeft;
-      const moveYRequested = direction.y
+        : grabScrollLeft;
+      const layoutYRequested = direction.y
         ? scrollContainer.scrollTop + (dragY - grabY)
-        : grabY + grabScrollTop;
-      console.log({
-        dragX,
-        grabX,
-        moveXRequested,
-        scrollLeft: scrollContainer.scrollLeft,
-      });
-      // === APPLIQUER LES CONTRAINTES ===
-      let moveXConstrained = moveXRequested;
-      let moveYConstrained = moveYRequested;
+        : grabScrollTop;
+      const layoutRequested = createLayout(layoutXRequested, layoutYRequested);
+      const currentLayout = gestureInfo.layout;
+      let layout;
+      if (
+        layoutRequested.x === currentLayout.x &&
+        layoutRequested.y === currentLayout.y
+      ) {
+        layout = currentLayout;
+      } else {
+        // === APPLICATION DES CONTRAINTES ===
+        console.log({
+          dragX,
+          grabX,
+          layoutRequested,
+          scrollLeft: scrollContainer.scrollLeft,
+        });
+        let layoutConstrained = layoutRequested;
+        const limitLayout = (left, top) => {
+          layoutConstrained = createLayout(
+            left === undefined
+              ? layoutConstrained.x
+              : left - scrollableLeftAtGrab,
+            top === undefined ? layoutConstrained.y : top - scrollableTopAtGrab,
+          );
+        };
 
-      const currentMoveX = gestureInfo.moveX;
-      const currentMoveY = gestureInfo.moveY;
-      if (moveXRequested !== currentMoveX || moveYRequested !== currentMoveY) {
-        const limitMoveX = (value) => {
-          moveXConstrained = value;
-        };
-        const limitMoveY = (value) => {
-          moveYConstrained = value;
-        };
-        publishBeforeDrag(moveXRequested, moveYRequested, {
-          limitMoveX,
-          limitMoveY,
+        publishBeforeDrag(layoutRequested, currentLayout, limitLayout, {
           dragEvent,
           isRelease,
         });
+        // === ÉTAT FINAL ===
+        layout = layoutConstrained;
       }
-      // === ÉTAT FINAL ===
-      const moveX = moveXConstrained;
-      const moveY = moveYConstrained;
 
       const dragData = {
         dragX,
         dragY,
-        moveX,
-        moveY,
+        layout,
 
-        moveXChanged: moveX !== currentMoveX,
-        moveYChanged: moveY !== currentMoveY,
         isGoingLeft,
         isGoingRight,
         isGoingUp,
@@ -242,20 +260,20 @@ export const createDragGestureController = (options = {}) => {
         isRelease,
       });
       const startedPrevious = gestureInfo.started;
+      const layoutPrevious = gestureInfo.layout;
       // previousGestureInfo = { ...gestureInfo };
       Object.assign(gestureInfo, dragData);
       if (!startedPrevious && gestureInfo.started) {
         onDragStart?.(gestureInfo);
       }
-      const someChange = gestureInfo.moveXChanged || gestureInfo.moveYChanged;
-
+      const someLayoutChange = gestureInfo.layout !== layoutPrevious;
       publishDrag(
         gestureInfo,
         // we still publish drag event even when unchanged
         // because UI might need to adjust when document scrolls
         // even if nothing truly changes visually the element
         // can decide to stick to the scroll for example
-        someChange,
+        someLayoutChange,
       );
     };
 

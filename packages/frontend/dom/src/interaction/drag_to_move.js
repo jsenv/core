@@ -27,7 +27,7 @@ export const createDragToMoveGestureController = ({
 } = {}) => {
   const initGrabToMoveElement = (
     dragGesture,
-    { element, referenceElement },
+    { element, referenceElement, positioner },
   ) => {
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
@@ -78,43 +78,6 @@ export const createDragToMoveGestureController = ({
       dragGesture.addBeforeDragCallback(updateVisibleArea);
     }
 
-    let positioner;
-    let moveConverter;
-    {
-      positioner = createDragElementPositioner(element, referenceElement);
-
-      /**
-       *
-       * - moveX = (dragX - grabX) + scrollContainer.scrollLeft
-       * - elementLeftRequested = elementLeftWithoutScrollAtGrab + moveX
-       * - elementLeftRequestedWithoutScroll = elementLeftWithoutScrollAtGrab + moveX - scrollContainer.scrollLeft
-       * - dragX = (moveX - grabX) - scrollContainer.scrollLeft
-       *
-       */
-
-      const [elementScrollableLeftAtGrab, elementScrollableTopAtGrab] =
-        positioner.scrollablePosition;
-
-      const toElementScrollableLeft = (moveX) =>
-        elementScrollableLeftAtGrab + moveX - scrollContainer.scrollLeft;
-      const toElementLeft = (moveX) => elementScrollableLeftAtGrab + moveX;
-      const fromElementLeft = (left) => left - elementScrollableLeftAtGrab;
-
-      const toElementScrollableTop = (moveY) =>
-        elementScrollableTopAtGrab + moveY - scrollContainer.scrollTop;
-      const toElementTop = (moveY) => elementScrollableTopAtGrab + moveY;
-      const fromElementTop = (top) => top - elementScrollableTopAtGrab;
-
-      moveConverter = {
-        toElementScrollableLeft,
-        toElementScrollableTop,
-        toElementLeft,
-        toElementTop,
-        fromElementLeft,
-        fromElementTop,
-      };
-    }
-
     // TODO: will be the diff between elementToImpact and elementVisuallyImpacted
     let visualOffsetX = 0;
     let visualOffsetY = 0;
@@ -136,23 +99,20 @@ export const createDragToMoveGestureController = ({
       referenceElement,
     });
     dragGesture.addBeforeDragCallback(
-      (
-        moveXRequested,
-        moveYRequested,
-        { limitMoveX, limitMoveY, dragEvent },
-      ) => {
-        const [moveXConstrained, moveYConstrained] =
-          dragConstraints.applyConstraints(moveXRequested, moveYRequested, {
+      (layoutRequested, currentLayout, limitLayout, { dragEvent }) => {
+        dragConstraints.applyConstraints(
+          layoutRequested,
+          currentLayout,
+          limitLayout,
+          {
             elementWidth,
             elementHeight,
-            moveConverter,
             visibleArea,
             hasCrossedVisibleAreaLeftOnce,
             hasCrossedVisibleAreaTopOnce,
             dragEvent,
-          });
-        limitMoveX(moveXConstrained);
-        limitMoveY(moveYConstrained);
+          },
+        );
       },
     );
 
@@ -160,32 +120,25 @@ export const createDragToMoveGestureController = ({
     let hasCrossedVisibleAreaLeftOnce = false;
     let hasCrossedVisibleAreaTopOnce = false;
     const dragToMove = (gestureInfo) => {
-      const {
-        isGoingDown,
-        isGoingUp,
-        isGoingLeft,
-        isGoingRight,
-        moveX,
-        moveY,
-      } = gestureInfo;
-      const elementLeft = moveConverter.toElementLeft(moveX);
-      const elementTop = moveConverter.toElementTop(moveY);
+      const { isGoingDown, isGoingUp, isGoingLeft, isGoingRight, layout } =
+        gestureInfo;
+      const elementLeft = layout.left;
+      const elementTop = layout.top;
       const elementRight = elementLeft + elementWidth;
       const elementBottom = elementTop + elementHeight;
 
-      const elementScrollableLeft =
-        moveConverter.toElementScrollableLeft(moveX);
+      const elementScrollableLeft = layout.scrollableLeft;
       const elementPositionedLeft = positioner.toLeft(elementScrollableLeft);
       console.log({
-        moveX,
+        layoutX: layout.x,
         elementScrollableLeft,
         elementPositionedLeft,
         elementLeft,
       });
-      const elementScrollableTop = moveConverter.toElementScrollableTop(moveY);
+      const elementScrollableTop = layout.scrollableTop;
       const elementPositionedTop = positioner.toTop(elementScrollableTop);
       console.log({
-        moveY,
+        layoutY: layout.y,
         elementScrollableTop,
         elementPositionedTop,
         elementTop,
@@ -273,13 +226,19 @@ export const createDragToMoveGestureController = ({
       throw new Error("element is required");
     }
     const scrollContainer = getScrollContainer(referenceElement || element);
+    const positioner = createDragElementPositioner(element, referenceElement);
+    const [scrollableLeftAtGrab, scrollableTopAtGrab] =
+      positioner.scrollablePosition;
     const dragGesture = grab({
       scrollContainer,
+      scrollableLeftAtGrab,
+      scrollableTopAtGrab,
       ...rest,
     });
     initGrabToMoveElement(dragGesture, {
       element,
       referenceElement,
+      positioner,
     });
     return dragGesture;
   };

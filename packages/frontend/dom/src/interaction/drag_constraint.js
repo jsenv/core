@@ -110,12 +110,12 @@ export const initDragConstraints = (
   }
 
   const applyConstraints = (
-    moveXRequested,
-    moveYRequested,
+    layoutRequested,
+    currentLayout,
+    limitLayout,
     {
       elementWidth,
       elementHeight,
-      moveConverter,
       visibleArea,
       hasCrossedVisibleAreaLeftOnce,
       hasCrossedVisibleAreaTopOnce,
@@ -123,7 +123,7 @@ export const initDragConstraints = (
     },
   ) => {
     if (constraintFunctions.length === 0) {
-      return [moveXRequested, moveYRequested];
+      return;
     }
 
     const constraintInitParams = {
@@ -138,8 +138,8 @@ export const initDragConstraints = (
       validateConstraints(constraints, constraintInitParams);
     }
 
-    const elementLeftRequested = moveConverter.toElementLeft(moveXRequested);
-    const elementTopRequested = moveConverter.toElementTop(moveYRequested);
+    const elementLeftRequested = layoutRequested.left;
+    const elementTopRequested = layoutRequested.top;
     let elementLeft = elementLeftRequested;
     let elementTop = elementTopRequested;
 
@@ -161,12 +161,8 @@ export const initDragConstraints = (
       );
     };
 
-    const elementCurrentLeft = moveConverter.toElementLeft(
-      dragGesture.gestureInfo.moveX,
-    );
-    const elementCurrentTop = moveConverter.toElementTop(
-      dragGesture.gestureInfo.moveY,
-    );
+    const elementCurrentLeft = currentLayout.left;
+    const elementCurrentTop = currentLayout.top;
     // Apply each constraint in sequence, accumulating their effects
     // This allows multiple constraints to work together (e.g., bounds + obstacles)
     for (const constraint of constraints) {
@@ -219,22 +215,10 @@ export const initDragConstraints = (
           `Drag by ${dragEvent.type}: no constraint enforcement needed (${elementLeftRequested.toFixed(2)}, ${elementTopRequested.toFixed(2)})`,
         );
       }
-      return [moveXRequested, moveYRequested];
+      return;
     }
 
-    let moveX;
-    if (leftModified) {
-      moveX = moveConverter.fromElementLeft(elementLeft);
-    } else {
-      moveX = moveXRequested;
-    }
-    let moveY;
-    if (topModified) {
-      moveY = moveConverter.fromElementTop(elementTop);
-    } else {
-      moveY = moveYRequested;
-    }
-    return [moveX, moveY];
+    limitLayout(elementLeft, elementTop);
   };
 
   return { applyConstraints };
