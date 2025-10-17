@@ -78,10 +78,6 @@ export const createDragToMoveGestureController = ({
       dragGesture.addBeforeDragCallback(updateVisibleArea);
     }
 
-    // TODO: will be the diff between elementToImpact and elementVisuallyImpacted
-    let visualOffsetX = 0;
-    let visualOffsetY = 0;
-
     // Set up dragging attribute
     element.setAttribute("data-grabbed", "");
     dragGesture.addReleaseCallback(() => {
@@ -197,10 +193,9 @@ export const createDragToMoveGestureController = ({
         }
         move: {
           const styleProperty = axis === "x" ? "left" : "top";
-          const visualOffset = axis === "x" ? visualOffsetX : visualOffsetY;
           const elementStart =
             axis === "x" ? elementPositionedLeft : elementPositionedTop;
-          const elementPosition = elementStart - visualOffset;
+          const elementPosition = elementStart;
           element.style[styleProperty] = `${elementPosition}px`;
         }
       };
