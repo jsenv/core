@@ -211,18 +211,25 @@ const createDifferentScrollSameParentPositioner = (
         elementRect.top - positionedParentRect.top;
 
       left: {
-        const left =
-          referenceScrollableLeftToConvert -
-          scrollableLeft +
-          leftRelativeToPositionedParent;
-        positionedLeft = scrollContainer.scrollLeft + left;
+        // Convert from reference scroll coordinates to element scroll coordinates
+        const elementScrollableLeft =
+          referenceScrollableLeftToConvert - scrollableLeft;
+        // Convert to positioned parent relative coordinates
+        const positionedLeftWithoutScroll =
+          elementScrollableLeft + leftRelativeToPositionedParent;
+        // Apply element's scroll container scroll to get final position
+        positionedLeft =
+          scrollContainer.scrollLeft + positionedLeftWithoutScroll;
       }
       top: {
-        const top =
-          referenceScrollableTopToConvert -
-          scrollableTop +
-          topRelativeToPositionedParent;
-        positionedTop = scrollContainer.scrollTop + top;
+        // Convert from reference scroll coordinates to element scroll coordinates
+        const elementScrollableTop =
+          referenceScrollableTopToConvert - scrollableTop;
+        // Convert to positioned parent relative coordinates
+        const positionedTopWithoutScroll =
+          elementScrollableTop + topRelativeToPositionedParent;
+        // Apply element's scroll container scroll to get final position
+        positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
       }
 
       return [positionedLeft, positionedTop];
@@ -292,8 +299,11 @@ const createFullyDifferentPositioner = (
           referencePositionedParentRect.left +
           referenceLeftRelativeToPositionedParent;
         // Step 3: Convert to element's positioned-parent-relative coordinates
-        const left = referenceViewportLeft - elementPositionedParentRect.left;
-        positionedLeft = scrollContainer.scrollLeft + left;
+        const positionedLeftWithoutScroll =
+          referenceViewportLeft - elementPositionedParentRect.left;
+        // Step 4: Apply element's scroll container scroll to get final position
+        positionedLeft =
+          scrollContainer.scrollLeft + positionedLeftWithoutScroll;
       }
       top: {
         // Step 1: Convert from scroll-relative to reference element's positioned-parent-relative
@@ -305,8 +315,10 @@ const createFullyDifferentPositioner = (
           referencePositionedParentRect.top +
           referenceTopRelativeToPositionedParent;
         // Step 3: Convert to element's positioned-parent-relative coordinates
-        const top = referenceViewportTop - elementPositionedParentRect.top;
-        positionedTop = scrollContainer.scrollTop + top;
+        const positionedTopWithoutScroll =
+          referenceViewportTop - elementPositionedParentRect.top;
+        // Step 4: Apply element's scroll container scroll to get final position
+        positionedTop = scrollContainer.scrollTop + positionedTopWithoutScroll;
       }
 
       return [positionedLeft, positionedTop];
