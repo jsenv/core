@@ -86,14 +86,18 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
       visible_area_markers: {
         if (direction.x) {
           markersToCreate.push({
-            name: "visibleAreaLeft",
+            name: visibleArea.paddingLeft
+              ? `visibleArea.left + paddingLeft(${visibleArea.paddingLeft})`
+              : "visibleArea.left",
             x: visibleArea.left,
             y: 0,
             color: "0 128 0", // green
             side: "left",
           });
           markersToCreate.push({
-            name: "visibleAreaRight",
+            name: visibleArea.paddingRight
+              ? `visibleArea.right + paddingRight(${visibleArea.paddingRight})`
+              : "visibleArea.right",
             x: visibleArea.right,
             y: 0,
             color: "0 128 0", // green
@@ -102,14 +106,18 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
         }
         if (direction.y) {
           markersToCreate.push({
-            name: "visibleAreaTop",
+            name: visibleArea.paddingTop
+              ? `visibleArea.top + paddingTop(${visibleArea.paddingTop})`
+              : "visibleArea.top",
             x: 0,
             y: visibleArea.top,
             color: "255 0 0", // red
             side: "top",
           });
           markersToCreate.push({
-            name: "visibleAreaBottom",
+            name: visibleArea.paddingBottom
+              ? `visibleArea.bottom + paddingBottom(${visibleArea.paddingBottom})`
+              : "visibleArea.bottom",
             x: 0,
             y: visibleArea.bottom,
             color: "255 165 0", // orange

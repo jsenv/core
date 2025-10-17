@@ -62,6 +62,10 @@ export const createDragToMoveGestureController = ({
         }
         if (visibleAreaPadding > 0) {
           visibleAreaCurrent = {
+            paddingLeft: visibleAreaPadding,
+            paddingTop: visibleAreaPadding,
+            paddingRight: visibleAreaPadding,
+            paddingBottom: visibleAreaPadding,
             left: visibleAreaCurrent.left + visibleAreaPadding,
             top: visibleAreaCurrent.top + visibleAreaPadding,
             right: visibleAreaCurrent.right - visibleAreaPadding,
@@ -180,6 +184,12 @@ export const createDragToMoveGestureController = ({
       });
       const elementScrollableTop = moveConverter.toElementScrollableTop(moveY);
       const elementPositionedTop = positioner.toTop(elementScrollableTop);
+      console.log({
+        moveY,
+        elementScrollableTop,
+        elementPositionedTop,
+        elementTop,
+      });
 
       hasCrossedVisibleAreaLeftOnce =
         hasCrossedVisibleAreaLeftOnce || elementLeft < visibleArea.left;
