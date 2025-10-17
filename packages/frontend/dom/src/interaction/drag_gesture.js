@@ -1,6 +1,12 @@
 /**
  * Drag Gesture System
  *
+ * TODO: rename moveX/moveY en juste x/y
+ * puisque move c'est perturbant sachant que c'est drag + scroll
+ * et que drag c'est juste la partie mouvement de la souris
+ *
+ * donc juste x/y ca seras surement mieux
+ *
  */
 
 import { createPubSub } from "../pub_sub.js";

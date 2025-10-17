@@ -291,32 +291,33 @@ const createStandardElementPositioner = (element) => {
   const scrollContainer = getScrollContainer(element);
 
   // Helper function to create the positioner object (clean, no proxy logic)
-  const createStandardPositioner = ({
-    // current position
-    leftRelativeToScrollContainer,
-    topRelativeToScrollContainer,
-    // help to implement toLayoutLeft/toLayoutTop
-    positionedParentLeftOffsetWithScrollContainer,
-    positionedParentTopOffsetWithScrollContainer,
-  }) => {
-    const toLayoutLeft = (leftWithoutScroll) => {
-      const leftWithoutScrollForParent =
-        leftWithoutScroll - positionedParentLeftOffsetWithScrollContainer;
-      const left = scrollContainer.scrollLeft + leftWithoutScrollForParent;
-      return left;
+  const createStandardPositioner = (
+    scrollablePosition,
+    {
+      // help to implement toLayoutLeft/toLayoutTop
+      positionedParentLeftOffsetWithScrollContainer,
+      positionedParentTopOffsetWithScrollContainer,
+    },
+  ) => {
+    const toLeft = (scrollableLeftToConvert) => {
+      const positionedLeftWithoutScroll =
+        scrollableLeftToConvert - positionedParentLeftOffsetWithScrollContainer;
+      const positionedLeft =
+        scrollContainer.scrollLeft + positionedLeftWithoutScroll;
+      return positionedLeft;
     };
-    const toLayoutTop = (topWithoutScroll) => {
-      const topWithoutScrollForParent =
-        topWithoutScroll - positionedParentTopOffsetWithScrollContainer;
-      const top = scrollContainer.scrollTop + topWithoutScrollForParent;
-      return top;
+    const toTop = (scrollableTopToConvert) => {
+      const positionedTopWithoutScroll =
+        scrollableTopToConvert - positionedParentTopOffsetWithScrollContainer;
+      const positionedTop =
+        scrollContainer.scrollTop + positionedTopWithoutScroll;
+      return positionedTop;
     };
 
     return {
-      leftRelativeToScrollContainer,
-      topRelativeToScrollContainer,
-      toLayoutLeft,
-      toLayoutTop,
+      scrollablePosition,
+      toLeft,
+      toTop,
     };
   };
 
@@ -329,17 +330,15 @@ const createStandardElementPositioner = (element) => {
     const scrollContainerIsDocument =
       scrollContainer === document.documentElement;
 
-    let leftRelativeToScrollContainer;
-    let topRelativeToScrollContainer;
+    let scrollableLeft;
+    let scrollableTop;
     if (scrollContainerIsDocument) {
-      leftRelativeToScrollContainer = elementViewportLeft;
-      topRelativeToScrollContainer = elementViewportTop;
+      scrollableLeft = elementViewportLeft;
+      scrollableTop = elementViewportTop;
     } else {
       const { scrollLeft, scrollTop } = scrollContainer;
-      leftRelativeToScrollContainer =
-        scrollLeft + elementViewportLeft - scrollContainerLeft;
-      topRelativeToScrollContainer =
-        scrollTop + elementViewportTop - scrollContainerTop;
+      scrollableLeft = scrollLeft + elementViewportLeft - scrollContainerLeft;
+      scrollableTop = scrollTop + elementViewportTop - scrollContainerTop;
     }
 
     const [
@@ -350,9 +349,7 @@ const createStandardElementPositioner = (element) => {
       scrollContainer,
     );
 
-    return createStandardPositioner({
-      leftRelativeToScrollContainer,
-      topRelativeToScrollContainer,
+    return createStandardPositioner([scrollableLeft, scrollableTop], {
       positionedParentLeftOffsetWithScrollContainer,
       positionedParentTopOffsetWithScrollContainer,
     });
