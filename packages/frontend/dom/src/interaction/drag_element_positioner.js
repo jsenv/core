@@ -203,20 +203,20 @@ const createDifferentScrollSameParentPositioner = (
     }
   }
   scrollable_converter: {
-    const [
-      positionedParentLeftOffsetWithReferenceScrollContainer,
-      positionedParentTopOffsetWithReferenceScrollContainer,
-    ] = getPositionedParentOffsetWithScrollContainer(
-      positionedParent,
-      referenceScrollContainer,
-    );
-
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
     ) => {
       let positionedLeft;
       let positionedTop;
+
+      const [
+        positionedParentLeftOffsetWithReferenceScrollContainer,
+        positionedParentTopOffsetWithReferenceScrollContainer,
+      ] = getPositionedParentOffsetWithScrollContainer(
+        positionedParent,
+        referenceScrollContainer,
+      );
 
       left: {
         // Convert from reference scroll container coordinates to positioned parent coordinates
