@@ -20,7 +20,7 @@ const DEBUG_VISUAL = false;
 import.meta.css = /* css */ `
   .navi_table_drag_clone_container {
     position: absolute;
-    pointer-events: auto; /* Allow wheel events */
+    pointer-events: none; /* Allow wheel events */
     /* background: rgba(0, 0, 0, 0.5); */
     left: var(--table-visual-left);
     top: var(--table-visual-top);
@@ -142,6 +142,7 @@ import.meta.css = /* css */ `
 export const TableDragContext = createContext();
 export const useTableDragContextValue = ({
   tableDragCloneContainerRef,
+  tableColumnDropPreviewRef,
   columns,
   setColumnOrder,
   canChangeColumnOrder,
@@ -169,6 +170,7 @@ export const useTableDragContextValue = ({
   return useMemo(() => {
     return {
       tableDragCloneContainerRef,
+      tableColumnDropPreviewRef,
       grabTarget,
       grabColumn,
       releaseColumn,
