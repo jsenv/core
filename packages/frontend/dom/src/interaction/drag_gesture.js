@@ -36,8 +36,8 @@ export const createDragGestureController = (options = {}) => {
     grabY = 0,
     cursor = "grabbing",
     scrollContainer = document.documentElement,
-    scrollableLeftAtGrab = 0,
-    scrollableTopAtGrab = 0,
+    layoutScrollableLeft: scrollableLeftAtGrab = 0,
+    layoutScrollableTop: scrollableTopAtGrab = 0,
   } = {}) => {
     if (!direction.x && !direction.y) {
       return null;
@@ -70,6 +70,10 @@ export const createDragGestureController = (options = {}) => {
       return layoutProps;
     };
 
+    const grabLayout = createLayout(
+      grabX + scrollContainer.scrollLeft,
+      grabY + scrollContainer.scrollTop,
+    );
     const gestureInfo = {
       name,
       direction,
@@ -81,14 +85,11 @@ export const createDragGestureController = (options = {}) => {
       grabY, // y grab coordinate (excluding scroll)
       grabScrollLeft: scrollContainer.scrollLeft, // scrollLeft at grab time
       grabScrollTop: scrollContainer.scrollTop, // scrollTop at grab time
+      grabLayout,
 
       dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
       dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
-
-      layout: createLayout(
-        grabX + scrollContainer.scrollLeft,
-        grabY + scrollContainer.scrollTop,
-      ),
+      layout: grabLayout,
 
       isGoingUp: undefined,
       isGoingDown: undefined,

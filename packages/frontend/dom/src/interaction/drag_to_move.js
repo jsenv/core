@@ -227,12 +227,12 @@ export const createDragToMoveGestureController = ({
     }
     const scrollContainer = getScrollContainer(referenceElement || element);
     const positioner = createDragElementPositioner(element, referenceElement);
-    const [scrollableLeftAtGrab, scrollableTopAtGrab] =
+    const [elementScrollableLeft, elementScrollableTop] =
       positioner.scrollablePosition;
     const dragGesture = grab({
       scrollContainer,
-      scrollableLeftAtGrab,
-      scrollableTopAtGrab,
+      layoutScrollableLeft: elementScrollableLeft,
+      layoutScrollableTop: elementScrollableTop,
       ...rest,
     });
     initGrabToMoveElement(dragGesture, {
