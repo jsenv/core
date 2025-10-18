@@ -101,8 +101,8 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
       return value;
       // Keep as number for unitless properties
     }
-    // Default: add px for numeric values (safe assumption for most CSS)
-    return `${value}px`;
+    // For unknown properties, return as-is - don't assume units
+    return value;
   }
 
   // For "js" context with string values, try to convert to numbers when appropriate
