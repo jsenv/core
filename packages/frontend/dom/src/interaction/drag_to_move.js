@@ -9,7 +9,7 @@ export const createDragToMoveGestureController = ({
   stickyFrontiers = true,
   // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
   // This creates an invisible space around the area where elements cannot be dragged
-  autoscrollAreaPadding = 0,
+  autoScrollAreaPadding = 0,
   // constraints,
   areaConstraint = "scroll", // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
   obstaclesContainer,
@@ -74,16 +74,16 @@ export const createDragToMoveGestureController = ({
             },
           );
         }
-        if (autoscrollAreaPadding > 0) {
+        if (autoScrollAreaPadding > 0) {
           autoScrollArea = {
-            paddingLeft: autoscrollAreaPadding,
-            paddingTop: autoscrollAreaPadding,
-            paddingRight: autoscrollAreaPadding,
-            paddingBottom: autoscrollAreaPadding,
-            left: autoScrollArea.left + autoscrollAreaPadding,
-            top: autoScrollArea.top + autoscrollAreaPadding,
-            right: autoScrollArea.right - autoscrollAreaPadding,
-            bottom: autoScrollArea.bottom - autoscrollAreaPadding,
+            paddingLeft: autoScrollAreaPadding,
+            paddingTop: autoScrollAreaPadding,
+            paddingRight: autoScrollAreaPadding,
+            paddingBottom: autoScrollAreaPadding,
+            left: autoScrollArea.left + autoScrollAreaPadding,
+            top: autoScrollArea.top + autoScrollAreaPadding,
+            right: autoScrollArea.right - autoScrollAreaPadding,
+            bottom: autoScrollArea.bottom - autoScrollAreaPadding,
           };
         }
       };

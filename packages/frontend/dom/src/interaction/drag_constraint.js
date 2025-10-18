@@ -217,7 +217,7 @@ const createAreaConstraint = (areaConstraint, { scrollContainer }) => {
     };
     return scrollportConstraintFunction;
   }
-  if (areaConstraint === "scroll_area") {
+  if (areaConstraint === "scroll") {
     const scrollAreaConstraintFunction = ({ scrollArea }) => {
       return createBoundConstraint(scrollArea, {
         element: scrollContainer,
@@ -271,6 +271,9 @@ const createAreaConstraint = (areaConstraint, { scrollContainer }) => {
     };
     return dynamicAreaConstraintFunction;
   }
+  console.warn(
+    `Unknown areaConstraint value: ${areaConstraint}. Expected "scrollport", "scroll", "none", an object with boundary definitions, or a function returning boundary definitions.`,
+  );
   return null;
 };
 
