@@ -1,3 +1,12 @@
+/**
+ * TODO: use style_controller.js
+ *
+ * - Able to force transition styles
+ * - Able to read natural styles (getUnderlyingValue)
+ * - Able to getWith/Height/opacity without transition
+ *
+ */
+
 import { getHeight } from "../size/get_height.js";
 import { getWidth } from "../size/get_width.js";
 import { addWillChange } from "../style_and_attributes.js";
