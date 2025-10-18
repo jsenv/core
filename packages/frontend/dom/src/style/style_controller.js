@@ -9,7 +9,7 @@
  */
 
 import { mergeStyles } from "./style_composition.js";
-import { normalizeStyles } from "./style_parsing.js";
+import { normalizeStyles, parseTransformString } from "./style_parsing.js";
 
 // Helper function to handle transform parsing in mergeStyles
 const parseTransformIfNeeded = (value) => {
@@ -205,26 +205,6 @@ const getExistingStyles = (element) => {
   }
 
   return existingStyles;
-};
-
-// Parse transform CSS string into object
-const parseTransformString = (transformString) => {
-  const transformObj = {};
-
-  if (!transformString || transformString === "none") {
-    return transformObj;
-  }
-
-  // Simple regex to parse transform functions
-  const transformPattern = /(\w+)\(([^)]+)\)/g;
-  let match;
-
-  while ((match = transformPattern.exec(transformString)) !== null) {
-    const [, functionName, value] = match;
-    transformObj[functionName] = value.trim();
-  }
-
-  return transformObj;
 };
 
 // Compute final styles by merging all controllers' styles for an element

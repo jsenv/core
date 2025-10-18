@@ -50,3 +50,23 @@ const transformObjectToString = (transformObj) => {
 
   return transforms.join(" ");
 };
+
+// Parse transform CSS string into object
+export const parseTransformString = (transformString) => {
+  const transformObj = {};
+
+  if (!transformString || transformString === "none") {
+    return transformObj;
+  }
+
+  // Simple regex to parse transform functions
+  const transformPattern = /(\w+)\(([^)]+)\)/g;
+  let match;
+
+  while ((match = transformPattern.exec(transformString)) !== null) {
+    const [, functionName, value] = match;
+    transformObj[functionName] = value.trim();
+  }
+
+  return transformObj;
+};
