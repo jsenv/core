@@ -23,8 +23,8 @@ export const initDragConstraints = (
   const dragGestureName = dragGesture.gestureInfo.name;
   const direction = dragGesture.gestureInfo.direction;
   const scrollContainer = dragGesture.gestureInfo.scrollContainer;
-  const leftAtGrab = dragGesture.gestureInfo.grabLayout.left;
-  const topAtGrab = dragGesture.gestureInfo.grabLayout.top;
+  const leftAtGrab = dragGesture.gestureInfo.leftAtGrab;
+  const topAtGrab = dragGesture.gestureInfo.topAtGrab;
 
   const constraintFunctions = [];
   const addConstraint = (constraint) => {

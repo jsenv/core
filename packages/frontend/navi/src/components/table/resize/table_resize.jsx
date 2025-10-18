@@ -367,7 +367,6 @@ const initResizeByMousedown = (
       typeof maxSize === "number" && maxSize < defaultMaxSize
         ? maxSize
         : defaultMaxSize;
-
     const isSticky =
       axis === "x"
         ? tableCell.hasAttribute("data-sticky-left")
@@ -376,14 +375,18 @@ const initResizeByMousedown = (
     if (axis === "x") {
       return {
         left: ({ leftAtGrab, scrollport }) => {
-          const minLeft = leftAtGrab + minCellSize;
+          // to get the cell position at grab we need to remove cell size because
+          // we place the resizer at the right of the cell
+          const cellLeftAtGrab = leftAtGrab - currentSize;
+          const minLeft = cellLeftAtGrab + minCellSize;
           if (isSticky && minLeft < scrollport.left) {
             return scrollport.left;
           }
           return minLeft;
         },
         right: ({ leftAtGrab, scrollport }) => {
-          const maxRight = leftAtGrab + maxCellSize;
+          const cellLeftAtGrab = leftAtGrab - currentSize;
+          const maxRight = cellLeftAtGrab + maxCellSize;
           if (isSticky && maxRight > scrollport.right) {
             return scrollport.right;
           }

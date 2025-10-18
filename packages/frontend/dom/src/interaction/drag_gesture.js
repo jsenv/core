@@ -97,6 +97,8 @@ export const createDragGestureController = (options = {}) => {
       grabX, // x grab coordinate (excluding scroll)
       grabY, // y grab coordinate (excluding scroll)
       grabLayout,
+      leftAtGrab,
+      topAtGrab,
 
       dragX: grabX, // coordinate of the last drag (excluding scroll of the scrollContainer)
       dragY: grabY, // coordinate of the last drag (excluding scroll of the scrollContainer)
@@ -115,9 +117,11 @@ export const createDragGestureController = (options = {}) => {
     definePropertyAsReadOnly(gestureInfo, "name");
     definePropertyAsReadOnly(gestureInfo, "direction");
     definePropertyAsReadOnly(gestureInfo, "scrollContainer");
-    definePropertyAsReadOnly(gestureInfo, "grabLayout");
     definePropertyAsReadOnly(gestureInfo, "grabX");
     definePropertyAsReadOnly(gestureInfo, "grabY");
+    definePropertyAsReadOnly(gestureInfo, "grabLayout");
+    definePropertyAsReadOnly(gestureInfo, "leftAtGrab");
+    definePropertyAsReadOnly(gestureInfo, "topAtGrab");
     definePropertyAsReadOnly(gestureInfo, "grabEvent");
 
     // Set up backdrop
