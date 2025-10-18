@@ -49,11 +49,7 @@
  */
 
 import { mergeOneStyle, mergeStyles } from "./style_composition.js";
-import {
-  normalizeStyle,
-  normalizeStyles,
-  parseCSSTransform,
-} from "./style_parsing.js";
+import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
 
 // Global registry to track all style controllers and their managed elements
 const elementStyleRegistry = new WeakMap(); // element -> Set<controller>
@@ -159,35 +155,7 @@ export const createStyleController = (name = "anonymous") => {
     const elementControllers = elementStyleRegistry.get(element);
 
     const normalizeValueForJs = (value) => {
-      // Handle dot notation for transform properties (e.g., "transform.translateX")
-      if (propertyName.startsWith("transform.")) {
-        const transformProperty = propertyName.slice(10); // Remove "transform." prefix
-
-        if (typeof value === "object" && value !== null) {
-          // Value is already a transform object from another controller
-          const transformValue = value[transformProperty];
-          return transformValue !== undefined
-            ? transformValue
-            : transformProperty.includes("scale")
-              ? 1
-              : 0;
-        }
-
-        // Value is a CSS transform string from computed styles
-        if (!value || value === "none") {
-          return transformProperty.includes("scale") ? 1 : 0;
-        }
-
-        const transformObj = parseCSSTransform(value);
-        const extractedValue = transformObj[transformProperty];
-        return extractedValue !== undefined
-          ? extractedValue
-          : transformProperty.includes("scale")
-            ? 1
-            : 0;
-      }
-
-      // For regular properties, normalize to JS context
+      // Use normalizeStyle to handle all property types including transform dot notation
       return normalizeStyle(value, propertyName, "js");
     };
 
@@ -237,16 +205,13 @@ export const createStyleController = (name = "anonymous") => {
       if (propertyName === "bottom") {
         return element.getBoundingClientRect().bottom;
       }
-
-      // For all other properties, use computed styles
-      const computedValue = getComputedStyle(element)[propertyName];
-
       // Handle transform dot notation
       if (propertyName.startsWith("transform.")) {
         const transformValue = getComputedStyle(element).transform;
         return normalizeValueForJs(transformValue);
       }
-
+      // For all other properties, use computed styles
+      const computedValue = getComputedStyle(element)[propertyName];
       return normalizeValueForJs(computedValue);
     };
 
