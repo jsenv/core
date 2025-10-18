@@ -8,6 +8,9 @@
  *    then restore original. With inline styles this is ugly and loses original info.
  * 2. **Multiple code parts**: When different parts of code want to touch styles simultaneously,
  *    they step on each other (rare but happens).
+ * 3. **Transform composition**: CSS transforms are especially painful - you want to keep
+ *    existing transforms but force specific parts (e.g., keep `rotate(45deg)` but override
+ *    `translateX`). Native CSS overwrites the entire transform property.
  *
  * ## Solution:
  * Controller pattern + Web Animations API to preserve inline styles. Code that sets
@@ -15,11 +18,33 @@
  *
  * ```js
  * const controller = createStyleController("myFeature");
- * controller.set(element, { transform: "translateX(10px)", opacity: 0.5 });
+ *
+ * // Smart value conversion (100 → "100px", 45 → "45deg")
+ * controller.set(element, {
+ *   transform: { translateX: 100 }, // Merged with existing transform
+ *   opacity: 0.5
+ * });
+ *
+ * // Magic properties for individual transform components
+ * controller.set(element, {
+ *   transform: { translateX: 50 },
+ *   rotate: 45
+ * });
+ *
+ * // Get underlying value without this controller's influence
+ * const originalOpacity = controller.getUnderlyingValue(element, "opacity");
+ * const originalTranslateX = controller.getUnderlyingValue(element, "transform.translateX"); // Works with magic properties!
+ *
  * controller.delete(element, "opacity"); // Only removes opacity, keeps transform
  * controller.clear(element); // Removes all styles from this controller only
  * controller.destroy(); // Cleanup when done
  * ```
+ *
+ * **Key features:**
+ * - **Transform composition**: Intelligently merges transform components instead of overwriting
+ * - **Magic properties**: Use `translateX`, `rotate`, `scale`, etc. as individual properties
+ * - **getUnderlyingValue()**: Read the "natural" value without this controller's influence
+ * - **Smart units**: Numeric values get appropriate units automatically (px, deg, unitless)
  *
  * Multiple controllers can safely manage the same element without conflicts.
  */
