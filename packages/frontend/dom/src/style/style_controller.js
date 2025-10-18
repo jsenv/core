@@ -1,11 +1,26 @@
 /**
- * Creates a style controller for managing CSS styles with animation support.
+ * Style Controller System
  *
- * Features:
- * - Multiple controllers can manage styles on the same element
- * - Automatic garbage collection via WeakMap when elements are garbage collected
- * - Web Animations API integration for smooth transitions
- * - Conflict resolution between controllers
+ * Solves CSS style manipulation problems in JavaScript:
+ *
+ * ## Problems:
+ * 1. **Conflict management**: When multiple libraries want to read current styles
+ *    and compose with them without actually overwriting via `element.style`
+ * 2. **Priority control**: No guarantee that inline styles will win over existing styles
+ * 3. **Transform composition**: CSS transforms get overwritten instead of being merged
+ *
+ * ## Solution:
+ * Uses Web Animations API pattern to provide safe style management:
+ *
+ * ```js
+ * const controller = createStyleController("myFeature");
+ * controller.set(element, { transform: "translateX(10px)", opacity: 0.5 });
+ * controller.delete(element, "opacity"); // Only removes opacity, keeps transform
+ * controller.clear(element); // Removes all styles from this controller only
+ * controller.destroy(); // Cleanup when done
+ * ```
+ *
+ * Multiple controllers can safely manage the same element without conflicts.
  */
 
 import { mergeOneStyle, mergeStyles } from "./style_composition.js";
@@ -56,7 +71,7 @@ export const createStyleController = (name = "anonymous") => {
     return controllerStyles ? { ...controllerStyles } : {};
   };
 
-  const remove = (element, propertyName) => {
+  const deleteMethod = (element, propertyName) => {
     const controllerStyles = controllerStylesRegistry.get(element);
 
     if (controllerStyles && propertyName in controllerStyles) {
@@ -133,7 +148,7 @@ export const createStyleController = (name = "anonymous") => {
     name,
     set,
     get,
-    remove,
+    delete: deleteMethod,
     commit,
     clear,
     destroy,
