@@ -195,6 +195,7 @@ export const Table = forwardRef((props, ref) => {
     {
       key: "enter",
       description: "Edit table cell content",
+      enabled: () => dragContextValue.grabTarget === null,
       handler: () => {
         // Find the currently focused cell
         const activeCell = document.activeElement.closest("td");
@@ -210,6 +211,7 @@ export const Table = forwardRef((props, ref) => {
     {
       key: "a-z",
       description: "Start editing table cell content",
+      enabled: () => dragContextValue.grabTarget === null,
       handler: (e) => {
         const activeCell = document.activeElement.closest("td");
         if (!activeCell) {
