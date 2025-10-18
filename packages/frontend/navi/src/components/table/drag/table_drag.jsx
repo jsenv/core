@@ -363,13 +363,8 @@ export const initDragTableColumnByMousedown = async (
     });
   }
 
-  // const tableRoot = table.closest(".navi_table_root");
   const colgroup = table.querySelector(".navi_colgroup");
   const colElements = Array.from(colgroup.children);
-  const col = colElements[columnIndex];
-  const colgroupClone = tableClone.querySelector(".navi_colgroup");
-  const colClone = colgroupClone.children[columnIndex];
-
   drop_preview: {
     const dropCandidateElements = colElements.filter(
       (col) =>
@@ -448,12 +443,15 @@ export const initDragTableColumnByMousedown = async (
   }
 
   init_drag_gesture: {
+    const col = colElements[columnIndex];
+    const colgroupClone = tableClone.querySelector(".navi_colgroup");
+    const colClone = colgroupClone.children[columnIndex];
+
     const dragToMoveGestureController = createDragToMoveGestureController({
       name: "move-column",
       direction: { x: true },
       threshold: 0,
       onGrab,
-      onDragStart: () => {},
       onDrag: (gestureInfo) => {
         triggerDrag(gestureInfo);
         onDrag?.(gestureInfo, dropColumnIndex);
