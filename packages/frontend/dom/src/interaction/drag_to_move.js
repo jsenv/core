@@ -25,11 +25,20 @@ export const createDragToMoveGestureController = ({
 } = {}) => {
   const initGrabToMoveElement = (
     dragGesture,
-    { element, referenceElement, convertScrollablePosition },
+    { element, referenceElement, elementToMove, convertScrollablePosition },
   ) => {
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+
+    let xOffsetWithElementToMove = 0;
+    let yOffsetWithElementToMove = 0;
+    if (elementToMove) {
+      const elementRect = element.getBoundingClientRect();
+      const elementToMoveRect = elementToMove.getBoundingClientRect();
+      xOffsetWithElementToMove = elementRect.left - elementToMoveRect.left;
+      yOffsetWithElementToMove = elementRect.top - elementToMoveRect.top;
+    }
 
     let elementWidth;
     let elementHeight;
@@ -210,7 +219,16 @@ export const createDragToMoveGestureController = ({
           const elementStart =
             axis === "x" ? elementPositionedLeft : elementPositionedTop;
           const elementPosition = elementStart;
-          element.style[styleProperty] = `${elementPosition}px`;
+          if (elementToMove) {
+            const offsetWithElementToMove =
+              axis === "x"
+                ? xOffsetWithElementToMove
+                : yOffsetWithElementToMove;
+            const positionAdjusted = elementPosition + offsetWithElementToMove;
+            elementToMove.style[styleProperty] = `${positionAdjusted}px`;
+          } else {
+            element.style[styleProperty] = `${elementPosition}px`;
+          }
         }
       };
 
@@ -229,6 +247,7 @@ export const createDragToMoveGestureController = ({
   dragGestureController.grab = ({
     element,
     referenceElement,
+    elementToMove,
     ...rest
   } = {}) => {
     if (!element) {
@@ -249,6 +268,7 @@ export const createDragToMoveGestureController = ({
     initGrabToMoveElement(dragGesture, {
       element,
       referenceElement,
+      elementToMove,
       convertScrollablePosition,
     });
     return dragGesture;

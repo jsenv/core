@@ -14,14 +14,12 @@ import { scrollableCoordsToViewport } from "../scroll/scrollable_rect.js";
  * @returns {Object|null} Drop target info with elementSide or null if no valid target found
  */
 export const getDropTargetInfo = (gestureInfo, targetElements) => {
-  const { scrollContainer } = gestureInfo;
-
   // Convert gesture coordinates to viewport coordinates for elementsFromPoint
   // gestureInfo.x/y are in scrollable-parent-relative coordinates
   const [mouseX, mouseY] = scrollableCoordsToViewport(
-    gestureInfo.x,
-    gestureInfo.y,
-    scrollContainer,
+    gestureInfo.layout.x,
+    gestureInfo.layout.y,
+    gestureInfo.scrollContainer,
   );
 
   // Get all elements under the mouse cursor (respects stacking order)
