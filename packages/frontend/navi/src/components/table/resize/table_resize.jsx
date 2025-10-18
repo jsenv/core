@@ -17,7 +17,6 @@ import.meta.css = /* css */ `
   body {
     --table-resizer-handle-color: #063b7c;
     --table-resizer-color: #387ec9;
-    --table-resizer-size: 5px;
   }
 
   .navi_table_cell {
