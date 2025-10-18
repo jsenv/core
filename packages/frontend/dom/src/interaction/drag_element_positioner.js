@@ -31,22 +31,29 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
  *
  */
 export const createDragElementPositioner = (element, referenceElement) => {
+  const scrollContainer = getScrollContainer(element);
+  const positionedParent = element.offsetParent;
+
   if (!referenceElement) {
-    return createStandardElementPositioner(element);
+    return createStandardElementPositioner(element, {
+      scrollContainer,
+      positionedParent,
+    });
   }
 
   // Analyze element positioning context relative to reference
   const referenceScrollContainer = getScrollContainer(referenceElement);
   const referencePositionedParent = referenceElement.offsetParent;
-  const scrollContainer = getScrollContainer(element);
-  const positionedParent = element.offsetParent;
 
   const sameScrollContainer = scrollContainer === referenceScrollContainer;
   const samePositionedParent = positionedParent === referencePositionedParent;
 
   if (sameScrollContainer && samePositionedParent) {
-    // Scenario 1: Same everything - use standard logic with element as effective element
-    return createStandardElementPositioner(element);
+    // Scenario 1: Same everything - use standard logic
+    return createStandardElementPositioner(element, {
+      scrollContainer,
+      positionedParent,
+    });
   }
 
   if (sameScrollContainer && !samePositionedParent) {
@@ -267,12 +274,13 @@ const createFullyDifferentPositioner = (
   return [scrollableLeft, scrollableTop, convertScrollablePosition];
 };
 
-const createStandardElementPositioner = (element) => {
+const createStandardElementPositioner = (
+  element,
+  { scrollContainer, positionedParent },
+) => {
   let scrollableLeft;
   let scrollableTop;
   let convertScrollablePosition;
-
-  const scrollContainer = getScrollContainer(element);
 
   scrollable_current: {
     [scrollableLeft, scrollableTop] = getScrollablePosition(
@@ -281,20 +289,21 @@ const createStandardElementPositioner = (element) => {
     );
   }
   scrollable_converter: {
-    const positionedParent = element.offsetParent;
-    const [
-      positionedParentLeftOffsetWithScrollContainer,
-      positionedParentTopOffsetWithScrollContainer,
-    ] = getPositionedParentOffsetWithScrollContainer(
-      positionedParent,
-      scrollContainer,
-    );
     convertScrollablePosition = (
       scrollableLeftToConvert,
       scrollableTopToConvert,
     ) => {
       let positionedLeft;
       let positionedTop;
+
+      const [
+        positionedParentLeftOffsetWithScrollContainer,
+        positionedParentTopOffsetWithScrollContainer,
+      ] = getPositionedParentOffsetWithScrollContainer(
+        positionedParent,
+        scrollContainer,
+      );
+
       left: {
         const positionedLeftWithoutScroll =
           scrollableLeftToConvert -
