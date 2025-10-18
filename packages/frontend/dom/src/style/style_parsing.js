@@ -4,7 +4,7 @@ export const normalizeStyles = (styles) => {
 
   for (const [key, value] of Object.entries(styles)) {
     if (key === "transform" && typeof value === "object" && value !== null) {
-      normalized[key] = transformObjectToString(value);
+      normalized[key] = stringifyCSSTransform(value);
     } else {
       normalized[key] = value;
     }
@@ -14,7 +14,7 @@ export const normalizeStyles = (styles) => {
 };
 
 // Convert transform object to CSS string
-const transformObjectToString = (transformObj) => {
+export const stringifyCSSTransform = (transformObj) => {
   const transforms = [];
 
   for (const [prop, value] of Object.entries(transformObj)) {
@@ -52,7 +52,7 @@ const transformObjectToString = (transformObj) => {
 };
 
 // Parse transform CSS string into object
-export const parseTransformString = (transformString) => {
+export const parseCSSTransform = (transformString) => {
   const transformObj = {};
 
   if (!transformString || transformString === "none") {
