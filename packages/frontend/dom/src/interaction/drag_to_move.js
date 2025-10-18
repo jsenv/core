@@ -7,6 +7,7 @@ import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
 /* Ensure we override any inline style using CSS variables */
 /* And that we can properly reset by just removing the CSS var */
+/* ideally we should use transform */
 import.meta.css = /* css */ `
   *[data-drag-x] {
     left: var(--drag-left, 0) !important;
