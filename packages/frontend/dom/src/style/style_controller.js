@@ -60,9 +60,9 @@ export const createStyleController = (name = "anonymous") => {
 
     if (controllerStyles && propertyName in controllerStyles) {
       delete controllerStyles[propertyName];
-
+      const isEmpty = Object.keys(controllerStyles).length === 0;
       // Clean up empty controller
-      if (Object.keys(controllerStyles).length === 0) {
+      if (isEmpty) {
         controllerStylesRegistry.delete(element);
         const elementControllers = elementStyleRegistry.get(element);
         if (elementControllers) {
@@ -83,10 +83,10 @@ export const createStyleController = (name = "anonymous") => {
   const commit = (element) => {
     const finalStyles = computeFinalStyles(element);
     const normalizedStyles = normalizeStyles(finalStyles);
-
-    // Apply styles directly as inline styles
-    for (const [property, value] of Object.entries(normalizedStyles)) {
-      element.style[property] = value;
+    for (const key of Object.keys(normalizedStyles)) {
+      const value = normalizedStyles[key];
+      s;
+      element.style[key] = value;
     }
   };
 
@@ -101,7 +101,6 @@ export const createStyleController = (name = "anonymous") => {
         elementStyleRegistry.delete(element);
       }
     }
-
     // Recompute and apply final styles
     applyFinalStyles(element);
   };
@@ -109,17 +108,18 @@ export const createStyleController = (name = "anonymous") => {
   const destroy = () => {
     // Remove this controller from all elements
     for (const [element, elementControllers] of elementStyleRegistry) {
-      if (elementControllers.has(controller)) {
-        elementControllers.delete(controller);
-        controllerStylesRegistry.delete(element);
+      if (!elementControllers.has(controller)) {
+        continue;
+      }
+      elementControllers.delete(controller);
+      controllerStylesRegistry.delete(element);
 
-        // Clean up empty element registry
-        if (elementControllers.size === 0) {
-          elementStyleRegistry.delete(element);
-        } else {
-          // Recompute styles for remaining controllers
-          applyFinalStyles(element);
-        }
+      // Clean up empty element registry
+      if (elementControllers.size === 0) {
+        elementStyleRegistry.delete(element);
+      } else {
+        // Recompute styles for remaining controllers
+        applyFinalStyles(element);
       }
     }
 
@@ -147,13 +147,11 @@ const computeFinalStyles = (element) => {
   if (!elementControllers) {
     return finalStyles;
   }
-
   // Merge styles from all controllers
   for (const controller of elementControllers) {
     const controllerStyles = controller.get(element);
     finalStyles = mergeStyles(finalStyles, controllerStyles);
   }
-
   return finalStyles;
 };
 
@@ -161,21 +159,19 @@ const computeFinalStyles = (element) => {
 const applyFinalStyles = (element) => {
   const finalStyles = computeFinalStyles(element);
   const normalizedStyles = normalizeStyles(finalStyles);
-
-  // Get or create animation for this element
-  let animation = animationRegistry.get(element);
-
-  if (!animation) {
-    // Create initial animation with empty keyframes
-    animation = element.animate([{}], {
+  const exisitingAnimation = animationRegistry.get(element);
+  const keyframes = [normalizedStyles];
+  if (!exisitingAnimation) {
+    const animation = element.animate(keyframes, {
       duration: 0,
       fill: "forwards",
     });
     animationRegistry.set(element, animation);
+    animation.play();
+    animation.pause();
+    return;
   }
-
-  // Update keyframes with new styles and play
-  animation.effect.setKeyframes([normalizedStyles]);
-  animation.play();
-  animation.pause();
+  exisitingAnimation.effect.setKeyframes(keyframes);
+  exisitingAnimation.play();
+  exisitingAnimation.pause();
 };
