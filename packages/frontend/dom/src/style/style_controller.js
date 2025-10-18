@@ -16,7 +16,7 @@
  * ```js
  * const controller = createStyleController("myFeature");
  * controller.set(element, { transform: "translateX(10px)", opacity: 0.5 });
- * controller.remove(element, "opacity"); // Only removes opacity, keeps transform
+ * controller.delete(element, "opacity"); // Only removes opacity, keeps transform
  * controller.clear(element); // Removes all styles from this controller only
  * controller.destroy(); // Cleanup when done
  * ```
@@ -124,6 +124,59 @@ export const createStyleController = (name = "anonymous") => {
     applyFinalStyles(element);
   };
 
+  const getUnderlyingStyle = (element, propertyName) => {
+    const elementControllers = elementStyleRegistry.get(element);
+
+    if (!elementControllers || !elementControllers.has(controller)) {
+      // This controller is not applied, just read current computed style
+      return getComputedStyle(element)[propertyName];
+    }
+
+    // Check if other controllers would provide this style
+    let styleFromOtherControllers = {};
+    if (elementControllers.size > 1) {
+      for (const otherController of elementControllers) {
+        if (otherController === controller) continue;
+        const otherStyles = otherController.get(element);
+        styleFromOtherControllers = mergeStyles(
+          styleFromOtherControllers,
+          otherStyles,
+        );
+      }
+
+      if (propertyName in styleFromOtherControllers) {
+        const normalizedStyles = normalizeStyles(
+          styleFromOtherControllers,
+          "css",
+        );
+        return normalizedStyles[propertyName];
+      }
+    }
+
+    // No other controllers provide this style, need to temporarily disable our animation
+    const currentAnimation = animationRegistry.get(element);
+    if (!currentAnimation) {
+      return getComputedStyle(element)[propertyName];
+    }
+
+    // Temporarily cancel our animation to read underlying value
+    currentAnimation.cancel();
+    const underlyingValue = getComputedStyle(element)[propertyName];
+
+    // Restore our animation
+    const finalStyles = computeFinalStyles(element);
+    const cssStyles = normalizeStyles(finalStyles, "css");
+    const newAnimation = element.animate([cssStyles], {
+      duration: 0,
+      fill: "forwards",
+    });
+    animationRegistry.set(element, newAnimation);
+    newAnimation.play();
+    newAnimation.pause();
+
+    return underlyingValue;
+  };
+
   const destroy = () => {
     // Remove this controller from all elements
     for (const [element, elementControllers] of elementStyleRegistry) {
@@ -150,6 +203,7 @@ export const createStyleController = (name = "anonymous") => {
     set,
     get,
     delete: deleteMethod,
+    getUnderlyingStyle,
     commit,
     clear,
     destroy,
