@@ -134,8 +134,6 @@ export const createStyleController = (name = "anonymous") => {
     commit,
     clear,
     destroy,
-    // Internal method to get styles for this controller
-    _getStyles: (element) => controllerStylesRegistry.get(element) || {},
   };
 
   activeControllers.add(controller);
@@ -152,7 +150,7 @@ const computeFinalStyles = (element) => {
 
   // Merge styles from all controllers
   for (const controller of elementControllers) {
-    const controllerStyles = controller._getStyles(element);
+    const controllerStyles = controller.get(element);
     finalStyles = mergeStyles(finalStyles, controllerStyles);
   }
 
@@ -176,6 +174,8 @@ const applyFinalStyles = (element) => {
     animationRegistry.set(element, animation);
   }
 
-  // Update keyframes with new styles
+  // Update keyframes with new styles and play
   animation.effect.setKeyframes([normalizedStyles]);
+  animation.play();
+  animation.pause();
 };
