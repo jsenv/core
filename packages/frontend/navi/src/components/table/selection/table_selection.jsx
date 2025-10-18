@@ -3,7 +3,7 @@ import { useLayoutEffect } from "preact/hooks";
 import { useSelectionController } from "../../selection/selection.jsx";
 
 import.meta.css = /* css */ `
-  .navi_table_container {
+  body {
     --selection-border-color: #0078d4;
     --selection-background-color: #eaf1fd;
   }

@@ -168,9 +168,29 @@ export const Table = forwardRef((props, ref) => {
     onStickyTopFrontierChange,
   });
 
+  // drag columns
+  const tableRootRef = useRef();
+  const setColumnOrder = (columnIdsNewOrder) => {
+    // the code below ensures we re-render the selection when column are re-ordered
+    // forcing each previously selected <td> to unselect and newly selected <td> to be selected
+    // (because the corresponding DOM node is now different)
+    onSelectionChange?.([...selection]);
+    onColumnOrderChange?.(columnIdsNewOrder);
+  };
+  const tableDragCloneContainerRef = useRef();
+  const tableColumnDropPreviewRef = useRef();
+  const dragContextValue = useTableDragContextValue({
+    tableDragCloneContainerRef,
+    tableColumnDropPreviewRef,
+    setColumnOrder,
+    columns,
+    canChangeColumnOrder: Boolean(onColumnOrderChange),
+  });
+
   useKeyboardShortcuts(innerRef, [
     ...createSelectionKeyboardShortcuts(selectionController, {
       toggleEnabled: true,
+      enabled: () => dragContextValue.grabTarget === null,
     }),
     {
       key: "enter",
@@ -216,26 +236,6 @@ export const Table = forwardRef((props, ref) => {
     rows,
     columnResizerRef,
     rowResizerRef,
-  });
-
-  const tableRootRef = useRef();
-  const setColumnOrder = (columnIdsNewOrder) => {
-    // the code below ensures we re-render the selection when column are re-ordered
-    // forcing each previously selected <td> to unselect and newly selected <td> to be selected
-    // (because the corresponding DOM node is now different)
-    onSelectionChange?.([...selection]);
-    onColumnOrderChange?.(columnIdsNewOrder);
-  };
-
-  // drag columns
-  const tableDragCloneContainerRef = useRef();
-  const tableColumnDropPreviewRef = useRef();
-  const dragContextValue = useTableDragContextValue({
-    tableDragCloneContainerRef,
-    tableColumnDropPreviewRef,
-    setColumnOrder,
-    columns,
-    canChangeColumnOrder: Boolean(onColumnOrderChange),
   });
 
   return (

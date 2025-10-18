@@ -1267,7 +1267,7 @@ const handleCrossTypeNavigation = (
 
 export const createSelectionKeyboardShortcuts = (
   selectionController,
-  { toggleEnabled, toggleKey = "space" } = {},
+  { toggleEnabled, enabled, toggleKey = "space" } = {},
 ) => {
   const getSelectableElement = (keydownEvent) => {
     return keydownEvent.target.closest("[data-selectable]");
@@ -1337,13 +1337,27 @@ export const createSelectionKeyboardShortcuts = (
     return true;
   };
 
+  if (enabled !== undefined && typeof enabled === "function") {
+    const v = enabled;
+    enabled = () => v;
+  }
+
   return [
     {
       description: "Add element above to selection",
       key: "command+shift+up",
-      enabled: () =>
-        selectionController.enabled &&
-        selectionController.axis !== "horizontal",
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (selectionController.axis !== "vertical") {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1351,9 +1365,18 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select element above",
       key: "up",
-      enabled: () =>
-        selectionController.enabled &&
-        selectionController.axis !== "horizontal",
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (selectionController.axis !== "vertical") {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) =>
           selectionController.getElementAbove(selectableElement),
@@ -1363,9 +1386,18 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Add element below to selection",
       key: "command+shift+down",
-      enabled: () =>
-        selectionController.enabled &&
-        selectionController.axis !== "horizontal",
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (selectionController.axis !== "vertical") {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1373,9 +1405,18 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select element below",
       key: "down",
-      enabled: () =>
-        selectionController.enabled &&
-        selectionController.axis !== "horizontal",
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (selectionController.axis !== "vertical") {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) => {
           return selectionController.getElementBelow(selectableElement);
@@ -1385,9 +1426,18 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Add left element to selection",
       key: "command+shift+left",
-      enabled: () =>
-        selectionController.enabled &&
-        selectionController.axis !== "horizontal",
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (selectionController.axis !== "horizontal") {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1395,8 +1445,18 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select left element",
       key: "left",
-      enabled: () =>
-        selectionController.enabled && selectionController.axis !== "vertical",
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (selectionController.axis !== "horizontal") {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) => {
           return selectionController.getElementBefore(selectableElement);
@@ -1406,8 +1466,18 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Add right element to selection",
       key: "command+shift+right",
-      enabled: () =>
-        selectionController.enabled && selectionController.axis !== "vertical",
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (selectionController.axis !== "horizontal") {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, getJumpToEndElement);
       },
@@ -1415,8 +1485,18 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select right element",
       key: "right",
-      enabled: () =>
-        selectionController.enabled && selectionController.axis !== "vertical",
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (selectionController.axis !== "horizontal") {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         return moveSelection(keyboardEvent, (selectableElement) => {
           return selectionController.getElementAfter(selectableElement);
@@ -1426,7 +1506,15 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Set element as anchor for shift selections",
       key: "shift",
-      enabled: () => selectionController.enabled,
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         const element = getSelectableElement(keyboardEvent);
         selectionController.setAnchorElement(element);
@@ -1436,7 +1524,15 @@ export const createSelectionKeyboardShortcuts = (
     {
       description: "Select all",
       key: "command+a",
-      enabled: () => selectionController.enabled,
+      enabled: () => {
+        if (!selectionController.enabled) {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
+      },
       handler: (keyboardEvent) => {
         selectionController.selectAll(keyboardEvent);
         return true;
@@ -1454,7 +1550,13 @@ export const createSelectionKeyboardShortcuts = (
         const elementWithToggleShortcut = keyboardEvent.target.closest(
           "[data-selection-keyboard-toggle]",
         );
-        return Boolean(elementWithToggleShortcut);
+        if (!elementWithToggleShortcut) {
+          return false;
+        }
+        if (enabled && !enabled()) {
+          return false;
+        }
+        return true;
       },
       key: toggleKey,
       handler: (keyboardEvent) => {
