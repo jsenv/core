@@ -34,7 +34,7 @@ export const createDragToMoveGestureController = ({
   // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = true,
   showDebugMarkers = false,
-  resetAfterRelease = false,
+  commitAfterRelease = false,
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
@@ -261,15 +261,16 @@ export const createDragToMoveGestureController = ({
     };
     dragGesture.addDragCallback(dragToMove);
 
-    if (resetAfterRelease) {
-      dragGesture.addReleaseCallback(() => {
-        const elementImpacted = elementToMove || element;
-        elementImpacted.removeAttribute("data-drag-x");
-        elementImpacted.removeAttribute("data-drag-y");
-        elementImpacted.style.removeProperty("--drag-left");
-        elementImpacted.style.removeProperty("--drag-top");
-      });
-    }
+    dragGesture.addReleaseCallback(() => {
+      if (commitAfterRelease) {
+        return;
+      }
+      const elementImpacted = elementToMove || element;
+      elementImpacted.removeAttribute("data-drag-x");
+      elementImpacted.removeAttribute("data-drag-y");
+      elementImpacted.style.removeProperty("--drag-left");
+      elementImpacted.style.removeProperty("--drag-top");
+    });
   };
 
   const dragGestureController = createDragGestureController(options);
