@@ -5,6 +5,18 @@ import { createDragElementPositioner } from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
+/* Ensure we override any inline style using CSS variables */
+/* And that we can properly reset by just removing the CSS var */
+import.meta.css = /* css */ `
+  *[data-drag-x] {
+    left: var(--drag-left, 0) !important;
+  }
+
+  *[data-drag-y] {
+    top: var(--drag-top, 0) !important;
+  }
+`;
+
 export const createDragToMoveGestureController = ({
   stickyFrontiers = true,
   // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
@@ -216,20 +228,26 @@ export const createDragToMoveGestureController = ({
           }
         }
         move: {
-          const styleProperty = axis === "x" ? "left" : "top";
+          const cssVarName = axis === "x" ? "--drag-left" : "--drag-top";
           const elementStart =
             axis === "x" ? elementPositionedLeft : elementPositionedTop;
           const elementPosition = elementStart;
+          const elementImpacted = elementToMove || element;
+
           if (elementToMove) {
             const offsetWithElementToMove =
               axis === "x"
                 ? xOffsetWithElementToMove
                 : yOffsetWithElementToMove;
             const positionAdjusted = elementPosition + offsetWithElementToMove;
-            elementToMove.style[styleProperty] = `${positionAdjusted}px`;
+            elementToMove.style.setProperty(
+              cssVarName,
+              `${positionAdjusted}px`,
+            );
           } else {
-            element.style[styleProperty] = `${elementPosition}px`;
+            element.style.setProperty(cssVarName, `${elementPosition}px`);
           }
+          elementImpacted.setAttribute(`data-drag-${axis}`, "");
         }
       };
 
@@ -244,13 +262,11 @@ export const createDragToMoveGestureController = ({
 
     if (resetAfterRelease) {
       dragGesture.addReleaseCallback(() => {
-        if (elementToMove) {
-          elementToMove.style.left = "";
-          elementToMove.style.top = "";
-        } else {
-          element.style.left = "";
-          element.style.top = "";
-        }
+        const elementImpacted = elementToMove || element;
+        elementImpacted.removeAttribute("data-drag-x");
+        elementImpacted.removeAttribute("data-drag-y");
+        elementImpacted.style.removeProperty("--drag-left");
+        elementImpacted.style.removeProperty("--drag-top");
       });
     }
   };
