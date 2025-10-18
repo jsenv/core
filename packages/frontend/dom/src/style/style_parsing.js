@@ -70,51 +70,39 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
     if (context === "js" && typeof value === "string") {
       // Convert string values to numbers in js context
       const numericValue = parseFloat(value);
-      if (!isNaN(numericValue)) {
-        return numericValue;
+      if (isNaN(numericValue)) {
+        return transformProperty.includes("scale") ? 1 : 0;
       }
-      // Return appropriate defaults if not a number
-      if (transformProperty.includes("translate")) return 0;
-      if (
-        transformProperty.includes("rotate") ||
-        transformProperty.includes("skew")
-      )
-        return 0;
-      if (transformProperty.includes("scale")) return 1;
-      return 0;
+      return numericValue;
     }
-
     if (context === "css" && typeof value === "number") {
-      // Add appropriate units for CSS context
-      if (transformProperty.includes("translate")) {
+      if (pxProperties.includes(transformProperty)) {
         return `${value}px`;
       }
-      if (
-        transformProperty.includes("rotate") ||
-        transformProperty.includes("skew")
-      ) {
+      if (degProperties.includes(transformProperty)) {
         return `${value}deg`;
       }
-      // scale properties remain unitless
+      // "scale" remain unitless
       return value;
     }
-
-    return value; // Pass through for other cases
+    return value;
   }
 
   // Handle regular CSS properties
   if (context === "css" && typeof value === "number") {
     // For CSS context, add appropriate units based on property name
     if (pxProperties.includes(propertyName)) {
-      value = `${value}px`;
-    } else if (degProperties.includes(propertyName)) {
-      value = `${value}deg`;
-    } else if (unitlessProperties.includes(propertyName)) {
-      // Keep as number for unitless properties
-    } else {
-      // Default: add px for numeric values (safe assumption for most CSS)
-      value = `${value}px`;
+      return `${value}px`;
     }
+    if (degProperties.includes(propertyName)) {
+      return `${value}deg`;
+    }
+    if (unitlessProperties.includes(propertyName)) {
+      return value;
+      // Keep as number for unitless properties
+    }
+    // Default: add px for numeric values (safe assumption for most CSS)
+    return `${value}px`;
   }
 
   // For "js" context with string values, try to convert to numbers when appropriate
