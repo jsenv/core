@@ -8,40 +8,8 @@
  * - Conflict resolution between controllers
  */
 
-import { mergeStyles } from "./style_composition.js";
-import { normalizeStyles, parseTransformString } from "./style_parsing.js";
-
-// Helper function to handle transform parsing in mergeStyles
-const parseTransformIfNeeded = (value) => {
-  if (typeof value === "string" && value !== "none") {
-    return parseTransformString(value);
-  }
-  return value;
-};
-
-// Enhanced mergeStyles that handles transform strings
-const mergeStylesWithTransformSupport = (target, source) => {
-  const processedSource = {};
-
-  for (const [key, value] of Object.entries(source)) {
-    if (key === "transform") {
-      processedSource[key] = parseTransformIfNeeded(value);
-    } else {
-      processedSource[key] = value;
-    }
-  }
-
-  const processedTarget = {};
-  for (const [key, value] of Object.entries(target)) {
-    if (key === "transform") {
-      processedTarget[key] = parseTransformIfNeeded(value);
-    } else {
-      processedTarget[key] = value;
-    }
-  }
-
-  return mergeStyles(processedTarget, processedSource);
-};
+import { mergeOneStyle, mergeStyles } from "./style_composition.js";
+import { normalizeStyles } from "./style_parsing.js";
 
 // Global registry to track all style controllers and their managed elements
 const elementStyleRegistry = new WeakMap(); // element -> Set<controller>
@@ -76,10 +44,7 @@ export const createStyleController = (name = "anonymous") => {
     const controllerStyles = controllerStylesRegistry.get(element);
 
     // Update styles for this controller using mergeStyles
-    const mergedStyles = mergeStylesWithTransformSupport(
-      controllerStyles,
-      styles,
-    );
+    const mergedStyles = mergeStyles(controllerStyles, styles);
     controllerStylesRegistry.set(element, mergedStyles);
 
     // Recompute and apply final styles
@@ -120,17 +85,12 @@ export const createStyleController = (name = "anonymous") => {
     const finalStyles = computeFinalStyles(element);
 
     // Read existing styles to compose with them
-    const existingStyles = getExistingStyles(element);
+    const computedStyles = getComputedStyle(element);
 
-    // Merge existing styles with new styles (composable properties like transform)
-    const composedStyles = mergeStylesWithTransformSupport(
-      existingStyles,
-      finalStyles,
-    );
-    const normalizedStyles = normalizeStyles(composedStyles);
-
-    for (const [key, value] of Object.entries(normalizedStyles)) {
-      element.style[key] = value;
+    for (const key of finalStyles) {
+      const value = finalStyles[key];
+      const existingValue = computedStyles[key];
+      element.style[key] = mergeOneStyle(existingValue, value, key);
     }
   };
 
@@ -184,29 +144,6 @@ export const createStyleController = (name = "anonymous") => {
   return controller;
 };
 
-// Get existing styles from element, parsing transform strings into objects
-const getExistingStyles = (element) => {
-  const computedStyles = getComputedStyle(element);
-  const existingStyles = {};
-
-  // Only consider properties that we might want to compose
-  const composableProperties = ["transform"];
-
-  for (const property of composableProperties) {
-    const value = computedStyles[property];
-    if (value && value !== "none") {
-      if (property === "transform") {
-        // Parse transform string into object
-        existingStyles[property] = parseTransformString(value);
-      } else {
-        existingStyles[property] = value;
-      }
-    }
-  }
-
-  return existingStyles;
-};
-
 // Compute final styles by merging all controllers' styles for an element
 const computeFinalStyles = (element) => {
   let finalStyles = {};
@@ -217,10 +154,7 @@ const computeFinalStyles = (element) => {
   // Merge styles from all controllers
   for (const controller of elementControllers) {
     const controllerStyles = controller.get(element);
-    finalStyles = mergeStylesWithTransformSupport(
-      finalStyles,
-      controllerStyles,
-    );
+    finalStyles = mergeStyles(finalStyles, controllerStyles);
   }
   return finalStyles;
 };
