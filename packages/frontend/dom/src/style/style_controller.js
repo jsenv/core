@@ -25,7 +25,11 @@
  */
 
 import { mergeOneStyle, mergeStyles } from "./style_composition.js";
-import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
+import {
+  normalizeStyle,
+  normalizeStyles,
+  parseCSSTransform,
+} from "./style_parsing.js";
 
 // Global registry to track all style controllers and their managed elements
 const elementStyleRegistry = new WeakMap(); // element -> Set<controller>
@@ -128,15 +132,74 @@ export const createStyleController = (name = "anonymous") => {
     const elementControllers = elementStyleRegistry.get(element);
 
     const getUnderlyingValue = () => {
+      // Handle conceptual transform properties
+      const transformProperties = [
+        "translateX",
+        "translateY",
+        "translateZ",
+        "rotateX",
+        "rotateY",
+        "rotateZ",
+        "rotate",
+        "scaleX",
+        "scaleY",
+        "scaleZ",
+        "scale",
+        "skewX",
+        "skewY",
+        "skew",
+      ];
+
+      if (transformProperties.includes(propertyName)) {
+        const transformValue = getComputedStyle(element).transform;
+        if (!transformValue || transformValue === "none") {
+          return propertyName.includes("scale") ? 1 : 0;
+        }
+        // Parse transform and extract the specific property
+        const transformObj = parseCSSTransform(transformValue);
+        const value = transformObj[propertyName];
+        if (value) {
+          const numericValue = parseFloat(value);
+          return isNaN(numericValue)
+            ? propertyName.includes("scale")
+              ? 1
+              : 0
+            : numericValue;
+        }
+        // Return defaults
+        return propertyName.includes("scale") ? 1 : 0;
+      }
+
+      // Handle dimensional properties - return numbers without units
       if (propertyName === "width") {
         return element.getBoundingClientRect().width;
       }
       if (propertyName === "height") {
         return element.getBoundingClientRect().height;
       }
+      if (propertyName === "left") {
+        return element.getBoundingClientRect().left;
+      }
+      if (propertyName === "top") {
+        return element.getBoundingClientRect().top;
+      }
+      if (propertyName === "right") {
+        return element.getBoundingClientRect().right;
+      }
+      if (propertyName === "bottom") {
+        return element.getBoundingClientRect().bottom;
+      }
+
+      // Handle special numeric properties
       if (propertyName === "opacity") {
         return parseFloat(getComputedStyle(element).opacity) || 1;
       }
+      if (propertyName === "zIndex") {
+        const zIndex = getComputedStyle(element).zIndex;
+        return zIndex === "auto" ? "auto" : parseInt(zIndex, 10) || 0;
+      }
+
+      // Default: return computed style
       return getComputedStyle(element)[propertyName];
     };
 
