@@ -1,22 +1,12 @@
 import { getScrollBox, getScrollport } from "../position/dom_coords.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
+import { createStyleController } from "../style/style_controller.js";
 import { initDragConstraints } from "./drag_constraint.js";
 import { createDragElementPositioner } from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
-/* Ensure we override any inline style using CSS variables */
-/* And that we can properly reset by just removing the CSS var */
-/* ideally we should use transform */
-import.meta.css = /* css */ `
-  *[data-drag-x] {
-    left: var(--drag-left, 0) !important;
-  }
-
-  *[data-drag-y] {
-    top: var(--drag-top, 0) !important;
-  }
-`;
+const dragStyleController = createStyleController("drag_to_move");
 
 export const createDragToMoveGestureController = ({
   stickyFrontiers = true,
@@ -34,7 +24,7 @@ export const createDragToMoveGestureController = ({
   // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = true,
   showDebugMarkers = false,
-  commitAfterRelease = false,
+  cleanupAfterRelease = false,
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
@@ -229,26 +219,24 @@ export const createDragToMoveGestureController = ({
           }
         }
         move: {
-          const cssVarName = axis === "x" ? "--drag-left" : "--drag-top";
+          const styleProperty = axis === "x" ? "translateX" : "translateY";
+
           const elementStart =
             axis === "x" ? elementPositionedLeft : elementPositionedTop;
-          const elementPosition = elementStart;
+          let elementPosition = elementStart;
           const elementImpacted = elementToMove || element;
-
           if (elementToMove) {
             const offsetWithElementToMove =
               axis === "x"
                 ? xOffsetWithElementToMove
                 : yOffsetWithElementToMove;
-            const positionAdjusted = elementPosition + offsetWithElementToMove;
-            elementToMove.style.setProperty(
-              cssVarName,
-              `${positionAdjusted}px`,
-            );
-          } else {
-            element.style.setProperty(cssVarName, `${elementPosition}px`);
+            elementPosition += offsetWithElementToMove;
           }
-          elementImpacted.setAttribute(`data-drag-${axis}`, "");
+          dragStyleController.set(elementImpacted, {
+            transform: {
+              [styleProperty]: `${elementPosition}px`,
+            },
+          });
         }
       };
 
@@ -262,14 +250,12 @@ export const createDragToMoveGestureController = ({
     dragGesture.addDragCallback(dragToMove);
 
     dragGesture.addReleaseCallback(() => {
-      if (commitAfterRelease) {
-        return;
+      if (cleanupAfterRelease) {
+        const elementImpacted = elementToMove || element;
+        dragStyleController.clear(elementImpacted);
+      } else {
+        dragStyleController.commit(elementImpacted);
       }
-      const elementImpacted = elementToMove || element;
-      elementImpacted.removeAttribute("data-drag-x");
-      elementImpacted.removeAttribute("data-drag-y");
-      elementImpacted.style.removeProperty("--drag-left");
-      elementImpacted.style.removeProperty("--drag-top");
     });
   };
 

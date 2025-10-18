@@ -2,6 +2,7 @@ export { createPubSub } from "./src/pub_sub.js";
 
 // style and attributes
 export { addAttributeEffect } from "./src/add_attribute_effect.js";
+export { createStyleController } from "./src/style/style_controller.js";
 export {
   addWillChange,
   getStyle,
