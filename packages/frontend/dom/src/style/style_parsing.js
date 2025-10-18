@@ -1,85 +1,84 @@
+// Properties that need px units
+const pxProperties = [
+  "width",
+  "height",
+  "top",
+  "left",
+  "right",
+  "bottom",
+  "margin",
+  "marginTop",
+  "marginRight",
+  "marginBottom",
+  "marginLeft",
+  "padding",
+  "paddingTop",
+  "paddingRight",
+  "paddingBottom",
+  "paddingLeft",
+  "border",
+  "borderWidth",
+  "borderTopWidth",
+  "borderRightWidth",
+  "borderBottomWidth",
+  "borderLeftWidth",
+  "fontSize",
+  "lineHeight",
+  "letterSpacing",
+  "wordSpacing",
+  "translateX",
+  "translateY",
+  "translateZ",
+  "borderRadius",
+  "borderTopLeftRadius",
+  "borderTopRightRadius",
+  "borderBottomLeftRadius",
+  "borderBottomRightRadius",
+];
+
+// Properties that need deg units
+const degProperties = [
+  "rotate",
+  "rotateX",
+  "rotateY",
+  "rotateZ",
+  "skew",
+  "skewX",
+  "skewY",
+];
+
+// Properties that should remain unitless
+const unitlessProperties = [
+  "opacity",
+  "zIndex",
+  "flexGrow",
+  "flexShrink",
+  "order",
+  "columnCount",
+  "scale",
+  "scaleX",
+  "scaleY",
+  "scaleZ",
+];
+
 // Normalize a single style value
 export const normalizeStyle = (value, propertyName, context = "js") => {
-  // Handle smart value conversion for numeric inputs
-  if (typeof value === "number") {
-    // Properties that need px units
-    const pxProperties = [
-      "width",
-      "height",
-      "top",
-      "left",
-      "right",
-      "bottom",
-      "margin",
-      "marginTop",
-      "marginRight",
-      "marginBottom",
-      "marginLeft",
-      "padding",
-      "paddingTop",
-      "paddingRight",
-      "paddingBottom",
-      "paddingLeft",
-      "border",
-      "borderWidth",
-      "borderTopWidth",
-      "borderRightWidth",
-      "borderBottomWidth",
-      "borderLeftWidth",
-      "fontSize",
-      "lineHeight",
-      "letterSpacing",
-      "wordSpacing",
-      "translateX",
-      "translateY",
-      "translateZ",
-      "borderRadius",
-      "borderTopLeftRadius",
-      "borderTopRightRadius",
-      "borderBottomLeftRadius",
-      "borderBottomRightRadius",
-    ];
-
-    // Properties that need deg units
-    const degProperties = [
-      "rotate",
-      "rotateX",
-      "rotateY",
-      "rotateZ",
-      "skew",
-      "skewX",
-      "skewY",
-    ];
-
-    // Properties that should remain unitless
-    const unitlessProperties = [
-      "opacity",
-      "zIndex",
-      "flexGrow",
-      "flexShrink",
-      "order",
-      "columnCount",
-      "scale",
-      "scaleX",
-      "scaleY",
-      "scaleZ",
-    ];
-
-    if (context === "css") {
-      // For CSS context, add appropriate units
-      if (pxProperties.includes(propertyName)) {
-        value = `${value}px`;
-      } else if (degProperties.includes(propertyName)) {
-        value = `${value}deg`;
-      } else if (unitlessProperties.includes(propertyName)) {
-        // Keep as number for unitless properties
-      } else {
-        // Default: add px for numeric values (safe assumption for most CSS)
-        value = `${value}px`;
-      }
+  // Handle smart value conversion based on property name and context
+  if (context === "css" && typeof value === "number") {
+    // For CSS context, add appropriate units based on property name
+    if (pxProperties.includes(propertyName)) {
+      value = `${value}px`;
+    } else if (degProperties.includes(propertyName)) {
+      value = `${value}deg`;
+    } else if (unitlessProperties.includes(propertyName)) {
+      // Keep as number for unitless properties
+    } else {
+      // Default: add px for numeric values (safe assumption for most CSS)
+      value = `${value}px`;
     }
-    // For "js" context, keep numbers as-is (preferred for internal representation)
   }
+  // For "js" context, keep numbers as-is (preferred for internal representation)
+  // For non-numeric values, pass through unchanged
 
   if (propertyName === "transform") {
     if (context === "css" && typeof value === "object" && value !== null) {
