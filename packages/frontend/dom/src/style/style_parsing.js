@@ -107,6 +107,11 @@ export const normalizeStyle = (value, propertyName, context = "js") => {
 
   // For "js" context with string values, try to convert to numbers when appropriate
   if (context === "js" && typeof value === "string") {
+    // Special handling for zIndex "auto" value
+    if (propertyName === "zIndex" && value === "auto") {
+      return "auto";
+    }
+
     // Try to parse numeric values for properties that should be numbers
     if (
       pxProperties.includes(propertyName) ||
@@ -151,7 +156,9 @@ export const stringifyCSSTransform = (transformObj) => {
 
   for (const [prop, value] of Object.entries(transformObj)) {
     if (value !== undefined && value !== null) {
-      transforms.push(`${prop}(${value})`);
+      // Normalize the value to CSS representation (add units when needed)
+      const normalizedValue = normalizeStyle(value, prop, "css");
+      transforms.push(`${prop}(${normalizedValue})`);
     }
   }
 
@@ -160,11 +167,11 @@ export const stringifyCSSTransform = (transformObj) => {
 
 // Parse transform CSS string into object
 export const parseCSSTransform = (transformString) => {
-  const transformObj = {};
-
   if (!transformString || transformString === "none") {
-    return transformObj;
+    return undefined;
   }
+
+  const transformObj = {};
 
   // Simple regex to parse transform functions
   const transformPattern = /(\w+)\(([^)]+)\)/g;
@@ -172,7 +179,12 @@ export const parseCSSTransform = (transformString) => {
 
   while ((match = transformPattern.exec(transformString)) !== null) {
     const [, functionName, value] = match;
-    transformObj[functionName] = value.trim();
+    // Normalize the value to JavaScript representation (numbers without units)
+    transformObj[functionName] = normalizeStyle(
+      value.trim(),
+      functionName,
+      "js",
+    );
   }
 
   return transformObj;
