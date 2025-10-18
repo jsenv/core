@@ -63,8 +63,11 @@ export const createStyleController = (name = "anonymous") => {
 
     const controllerStyles = controllerStylesRegistry.get(element);
 
+    // Apply smart normalization to incoming styles using normalizeStyles
+    const normalizedStyles = normalizeStyles(styles, "js");
+
     // Update styles for this controller using mergeStyles
-    const mergedStyles = mergeStyles(controllerStyles, styles);
+    const mergedStyles = mergeStyles(controllerStyles, normalizedStyles);
     controllerStylesRegistry.set(element, mergedStyles);
 
     // Recompute and apply final styles

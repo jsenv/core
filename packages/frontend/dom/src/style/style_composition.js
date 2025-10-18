@@ -18,7 +18,7 @@ export const mergeOneStyle = (
   existingValue,
   newValue,
   propertyName,
-  context = "object",
+  context = "js",
 ) => {
   if (propertyName === "transform") {
     // Determine the types early
