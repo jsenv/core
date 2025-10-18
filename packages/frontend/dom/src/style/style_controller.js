@@ -3,19 +3,20 @@
  *
  * Solves CSS style manipulation problems in JavaScript:
  *
- * ## Problems:
- * 1. **Conflict management**: When multiple libraries want to read current styles
- *    and compose with them without actually overwriting via `element.style`
- * 2. **Priority control**: No guarantee that inline styles will win over existing styles
- * 3. **Transform composition**: CSS transforms get overwritten instead of being merged
+ * ## Main problems:
+ * 1. **Temporary style override**: Code wants to read current style, force another style,
+ *    then restore original. With inline styles this is ugly and loses original info.
+ * 2. **Multiple code parts**: When different parts of code want to touch styles simultaneously,
+ *    they step on each other (rare but happens).
  *
  * ## Solution:
- * Uses Web Animations API pattern to provide safe style management:
+ * Controller pattern + Web Animations API to preserve inline styles. Code that sets
+ * inline styles expects to find them unchanged - we use animations for clean override:
  *
  * ```js
  * const controller = createStyleController("myFeature");
  * controller.set(element, { transform: "translateX(10px)", opacity: 0.5 });
- * controller.delete(element, "opacity"); // Only removes opacity, keeps transform
+ * controller.remove(element, "opacity"); // Only removes opacity, keeps transform
  * controller.clear(element); // Removes all styles from this controller only
  * controller.destroy(); // Cleanup when done
  * ```
