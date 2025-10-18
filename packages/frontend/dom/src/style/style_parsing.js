@@ -1,15 +1,25 @@
 // Normalize styles for DOM application
-export const normalizeStyles = (styles) => {
+export const normalizeStyles = (styles, context = "object") => {
   const normalized = {};
-
   for (const [key, value] of Object.entries(styles)) {
-    if (key === "transform" && typeof value === "object" && value !== null) {
-      normalized[key] = stringifyCSSTransform(value);
+    if (key === "transform") {
+      if (context === "css" && typeof value === "object" && value !== null) {
+        // For CSS context, ensure transform is a string
+        normalized[key] = stringifyCSSTransform(value);
+      } else if (
+        context === "object" &&
+        typeof value === "string" &&
+        value !== "none"
+      ) {
+        // For object context, prefer objects
+        normalized[key] = parseCSSTransform(value);
+      } else {
+        normalized[key] = value;
+      }
     } else {
       normalized[key] = value;
     }
   }
-
   return normalized;
 };
 
@@ -19,32 +29,7 @@ export const stringifyCSSTransform = (transformObj) => {
 
   for (const [prop, value] of Object.entries(transformObj)) {
     if (value !== undefined && value !== null) {
-      switch (prop) {
-        case "translateX":
-        case "translateY":
-        case "translateZ":
-          transforms.push(`${prop}(${value})`);
-          break;
-        case "rotate":
-        case "rotateX":
-        case "rotateY":
-        case "rotateZ":
-          transforms.push(`${prop}(${value})`);
-          break;
-        case "scale":
-        case "scaleX":
-        case "scaleY":
-        case "scaleZ":
-          transforms.push(`${prop}(${value})`);
-          break;
-        case "skew":
-        case "skewX":
-        case "skewY":
-          transforms.push(`${prop}(${value})`);
-          break;
-        default:
-          transforms.push(`${prop}(${value})`);
-      }
+      transforms.push(`${prop}(${value})`);
     }
   }
 

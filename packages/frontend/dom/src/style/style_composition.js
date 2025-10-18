@@ -14,25 +14,60 @@ export const mergeStyles = (stylesA, stylesB) => {
 };
 
 // Merge a single style property value with an existing value
-export const mergeOneStyle = (existingValue, newValue, propertyName) => {
+export const mergeOneStyle = (
+  existingValue,
+  newValue,
+  propertyName,
+  context = "object",
+) => {
   if (propertyName === "transform") {
-    // Parse transform strings automatically
-    const parsedNew =
-      typeof newValue === "string" && newValue !== "none"
-        ? parseCSSTransform(newValue)
-        : newValue;
-    const parsedExisting =
-      typeof existingValue === "string" && existingValue !== "none"
-        ? parseCSSTransform(existingValue)
-        : existingValue;
+    // Determine the types early
+    const existingIsString =
+      typeof existingValue === "string" && existingValue !== "none";
+    const newIsString = typeof newValue === "string" && newValue !== "none";
+    const existingIsObject =
+      typeof existingValue === "object" && existingValue !== null;
+    const newIsObject = typeof newValue === "object" && newValue !== null;
 
-    if (typeof parsedNew === "object" && parsedNew !== null) {
-      if (typeof parsedExisting === "object" && parsedExisting !== null) {
-        const merged = { ...parsedExisting, ...parsedNew };
-        // Return as string for CSS application
-        return stringifyCSSTransform(merged);
+    // Case 1: Both are objects - merge directly
+    if (existingIsObject && newIsObject) {
+      const merged = { ...existingValue, ...newValue };
+      return context === "css" ? stringifyCSSTransform(merged) : merged;
+    }
+
+    // Case 2: New is object, existing is string - parse existing and merge
+    if (newIsObject && existingIsString) {
+      const parsedExisting = parseCSSTransform(existingValue);
+      const merged = { ...parsedExisting, ...newValue };
+      return context === "css" ? stringifyCSSTransform(merged) : merged;
+    }
+
+    // Case 3: New is string, existing is object - parse new and merge
+    if (newIsString && existingIsObject) {
+      const parsedNew = parseCSSTransform(newValue);
+      const merged = { ...existingValue, ...parsedNew };
+      return context === "css" ? stringifyCSSTransform(merged) : merged;
+    }
+
+    // Case 4: Both are strings - parse both and merge
+    if (existingIsString && newIsString) {
+      const parsedExisting = parseCSSTransform(existingValue);
+      const parsedNew = parseCSSTransform(newValue);
+      const merged = { ...parsedExisting, ...parsedNew };
+      return context === "css" ? stringifyCSSTransform(merged) : merged;
+    }
+
+    // Case 5: New is object, no existing or existing is none/null
+    if (newIsObject) {
+      return context === "css" ? stringifyCSSTransform(newValue) : newValue;
+    }
+
+    // Case 6: New is string, no existing or existing is none/null
+    if (newIsString) {
+      if (context === "css") {
+        return newValue; // Already a string
       }
-      return stringifyCSSTransform(parsedNew);
+      return parseCSSTransform(newValue); // Convert to object
     }
   }
 

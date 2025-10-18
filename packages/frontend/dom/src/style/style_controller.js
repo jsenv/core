@@ -87,10 +87,9 @@ export const createStyleController = (name = "anonymous") => {
     // Read existing styles to compose with them
     const computedStyles = getComputedStyle(element);
 
-    for (const key of finalStyles) {
-      const value = finalStyles[key];
+    for (const [key, value] of Object.entries(finalStyles)) {
       const existingValue = computedStyles[key];
-      element.style[key] = mergeOneStyle(existingValue, value, key);
+      element.style[key] = mergeOneStyle(existingValue, value, key, "css");
     }
   };
 
@@ -162,9 +161,10 @@ const computeFinalStyles = (element) => {
 // Apply final computed styles with animation support
 const applyFinalStyles = (element) => {
   const finalStyles = computeFinalStyles(element);
-  const normalizedStyles = normalizeStyles(finalStyles);
+  const cssStyles = normalizeStyles(finalStyles, "css");
+
   const exisitingAnimation = animationRegistry.get(element);
-  const keyframes = [normalizedStyles];
+  const keyframes = [cssStyles];
   if (!exisitingAnimation) {
     const animation = element.animate(keyframes, {
       duration: 0,
