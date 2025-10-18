@@ -173,18 +173,11 @@ export const createStyleController = (name = "anonymous") => {
 
     // Temporarily cancel our animation to read underlying value
     currentAnimation.cancel();
+    animationRegistry.delete(element); // Remove cancelled animation from registry
     const underlyingValue = getUnderlyingValue();
 
     // Restore our animation
-    const finalStyles = computeFinalStyles(element);
-    const cssStyles = normalizeStyles(finalStyles, "css");
-    const newAnimation = element.animate([cssStyles], {
-      duration: 0,
-      fill: "forwards",
-    });
-    animationRegistry.set(element, newAnimation);
-    newAnimation.play();
-    newAnimation.pause();
+    applyFinalStyles(element);
 
     return underlyingValue;
   };
