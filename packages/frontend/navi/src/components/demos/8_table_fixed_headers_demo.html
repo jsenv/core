@@ -19,7 +19,7 @@
         max-width: 1000px;
         margin: 0 auto;
         background: white;
-        padding: 100px;
+        /* padding: 100px; */
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
@@ -309,7 +309,7 @@
                 maxWidth={useContainerScrolling ? 600 : undefined}
               >
                 <Colgroup>
-                  <RowNumberCol width={columnWidths[0]} />
+                  <RowNumberCol width={columnWidths[0]} immovable={false} />
                   {columns.map((column, columnIndex) => (
                     <Col
                       key={column.id}
@@ -320,7 +320,12 @@
                 </Colgroup>
                 <Thead>
                   <Tr id="head" height={rowHeights[0]}>
-                    <RowNumberTableCell />
+                    <RowNumberTableCell
+                      // just to help debugging column drag
+                      // in practice it won't work as it's purely visual
+                      // and column ordering works only for columns controlled by a state
+                      canDragColumn
+                    />
                     {columns.map((col) => (
                       <TableCell
                         key={col.id}

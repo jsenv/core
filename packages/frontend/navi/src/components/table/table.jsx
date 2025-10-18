@@ -687,6 +687,7 @@ export const RowNumberCol = ({
   width = 50,
   minWidth = 30,
   maxWidth = 100,
+  immovable = true,
   ...rest
 }) => {
   return (
@@ -695,7 +696,7 @@ export const RowNumberCol = ({
       width={width}
       minWidth={minWidth}
       maxWidth={maxWidth}
-      immovable
+      immovable={immovable}
       {...rest}
     />
   );
