@@ -8,6 +8,9 @@
  * - Conflict resolution between controllers
  */
 
+import { mergeStyles } from "./style_composition.js";
+import { normalizeStyles } from "./style_parsing.js";
+
 // Global registry to track all style controllers and their managed elements
 const elementStyleRegistry = new WeakMap(); // element -> Map<controllerName, styles>
 const activeControllers = new Set(); // Set of all active controllers
@@ -81,9 +84,10 @@ export const createStyleController = (name = "anonymous") => {
 
   const commit = (element) => {
     const finalStyles = computeFinalStyles(element);
+    const normalizedStyles = normalizeStyles(finalStyles);
 
     // Apply styles directly as inline styles
-    for (const [property, value] of Object.entries(finalStyles)) {
+    for (const [property, value] of Object.entries(normalizedStyles)) {
       element.style[property] = value;
     }
   };
@@ -139,138 +143,36 @@ export const createStyleController = (name = "anonymous") => {
 };
 
 // Compute final styles by merging all controllers' styles for an element
-function computeFinalStyles(element) {
-  if (!elementStyleRegistry.has(element)) {
-    return {};
-  }
-
+const computeFinalStyles = (element) => {
+  let finalStyles = {};
   const elementControllers = elementStyleRegistry.get(element);
-  const finalStyles = {};
-
+  if (!elementControllers) {
+    return finalStyles;
+  }
   // Merge styles from all controllers (later controllers override earlier ones)
   for (const [, styles] of elementControllers) {
-    Object.assign(finalStyles, styles);
+    finalStyles = mergeStyles(finalStyles, styles);
   }
-
   return finalStyles;
-}
+};
 
 // Apply final computed styles with animation support
-function applyFinalStyles(element) {
+const applyFinalStyles = (element) => {
   const finalStyles = computeFinalStyles(element);
-  const currentStyles = getCurrentStyles(element);
 
-  // Find properties that need to be animated
-  const animatableProperties = getAnimatableProperties(
-    currentStyles,
-    finalStyles,
-  );
-
-  if (animatableProperties.length > 0) {
-    animateStyleChanges(
-      element,
-      currentStyles,
-      finalStyles,
-      animatableProperties,
-    );
-  } else {
-    // Apply styles directly if no animation needed
-    for (const [property, value] of Object.entries(finalStyles)) {
-      element.style[property] = value;
-    }
-  }
-}
-
-// Get current computed styles for animatable properties
-function getCurrentStyles(element) {
-  const computed = getComputedStyle(element);
-  const styles = {};
-
-  // Only track properties that we're managing
-  if (elementStyleRegistry.has(element)) {
-    const finalStyles = computeFinalStyles(element);
-    for (const property of Object.keys(finalStyles)) {
-      styles[property] = computed[property];
-    }
-  }
-
-  return styles;
-}
-
-// Determine which properties can be animated
-function getAnimatableProperties(currentStyles, finalStyles) {
-  const animatableProps = new Set([
-    "opacity",
-    "transform",
-    "color",
-    "backgroundColor",
-    "borderColor",
-    "width",
-    "height",
-    "left",
-    "top",
-    "right",
-    "bottom",
-  ]);
-
-  const animatable = [];
-  for (const property of Object.keys(finalStyles)) {
-    if (
-      animatableProps.has(property) &&
-      currentStyles[property] !== finalStyles[property]
-    ) {
-      animatable.push(property);
-    }
-  }
-  return animatable;
-}
-
-// Animate style changes using Web Animations API
-function animateStyleChanges(
-  element,
-  currentStyles,
-  finalStyles,
-  animatableProperties,
-) {
   // Cancel existing animation
   if (animationRegistry.has(element)) {
     animationRegistry.get(element).cancel();
   }
 
-  // Create keyframes for animation
-  const startState = {};
-  const endState = {};
+  // Normalize styles for DOM application
+  const normalizedStyles = normalizeStyles(finalStyles);
 
-  for (const prop of animatableProperties) {
-    startState[prop] = currentStyles[prop];
-    endState[prop] = finalStyles[prop];
-  }
-
-  const keyframes = [startState, endState];
-
-  // Create and start animation
-  const animation = element.animate(keyframes, {
-    duration: 200,
-    easing: "ease-out",
+  // Create and start synchronous animation (duration: 0)
+  const animation = element.animate([normalizedStyles], {
+    duration: 0,
     fill: "forwards",
   });
 
   animationRegistry.set(element, animation);
-
-  // Clean up when animation completes
-  animation.addEventListener("finish", () => {
-    animationRegistry.delete(element);
-
-    // Apply final styles to ensure consistency
-    for (const [property, value] of Object.entries(finalStyles)) {
-      element.style[property] = value;
-    }
-  });
-
-  // Apply non-animatable styles immediately
-  for (const [property, value] of Object.entries(finalStyles)) {
-    if (!animatableProperties.includes(property)) {
-      element.style[property] = value;
-    }
-  }
-}
+};
