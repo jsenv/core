@@ -22,7 +22,10 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
   const { direction, scrollContainer } = dragGesture.gestureInfo;
 
   return {
-    onConstraints: (constraints, { left, top, right, bottom, visibleArea }) => {
+    onConstraints: (
+      constraints,
+      { left, top, right, bottom, scrollport, autoScrollArea },
+    ) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
       const previousConstraintMarkers = [...currentConstraintMarkers];
@@ -83,22 +86,18 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
       // Collect all markers to be created, then merge duplicates
       const markersToCreate = [];
 
-      visible_area_markers: {
+      scrollport_markers: {
         if (direction.x) {
           markersToCreate.push({
-            name: visibleArea.paddingLeft
-              ? `visibleArea.left + padding(${visibleArea.paddingLeft})`
-              : "visibleArea.left",
-            x: visibleArea.left,
+            name: "scrollport.left",
+            x: scrollport.left,
             y: 0,
             color: "0 128 0", // green
             side: "left",
           });
           markersToCreate.push({
-            name: visibleArea.paddingRight
-              ? `visibleArea.right + padding(${visibleArea.paddingRight})`
-              : "visibleArea.right",
-            x: visibleArea.right,
+            name: "scrollport.right",
+            x: scrollport.right,
             y: 0,
             color: "0 128 0", // green
             side: "right",
@@ -106,20 +105,59 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
         }
         if (direction.y) {
           markersToCreate.push({
-            name: visibleArea.paddingTop
-              ? `visibleArea.top + padding(${visibleArea.paddingTop})`
-              : "visibleArea.top",
+            name: "scrollport.top",
             x: 0,
-            y: visibleArea.top,
+            y: scrollport.top,
             color: "255 0 0", // red
             side: "top",
           });
           markersToCreate.push({
-            name: visibleArea.paddingBottom
-              ? `visibleArea.bottom + padding(${visibleArea.paddingBottom})`
-              : "visibleArea.bottom",
+            name: "scrollport.bottom",
             x: 0,
-            y: visibleArea.bottom,
+            y: scrollport.bottom,
+            color: "255 165 0", // orange
+            side: "bottom",
+          });
+        }
+      }
+
+      autoscroll_area_markers: {
+        if (direction.x) {
+          markersToCreate.push({
+            name: autoScrollArea.paddingLeft
+              ? `autoscroll.left + padding(${autoScrollArea.paddingLeft})`
+              : "autoscroll.left",
+            x: autoScrollArea.left,
+            y: 0,
+            color: "0 128 0", // green
+            side: "left",
+          });
+          markersToCreate.push({
+            name: autoScrollArea.paddingRight
+              ? `autoscroll.right + padding(${autoScrollArea.paddingRight})`
+              : "autoscroll.right",
+            x: autoScrollArea.right,
+            y: 0,
+            color: "0 128 0", // green
+            side: "right",
+          });
+        }
+        if (direction.y) {
+          markersToCreate.push({
+            name: autoScrollArea.paddingTop
+              ? `autoscroll.top + padding(${autoScrollArea.paddingTop})`
+              : "autoscroll.top",
+            x: 0,
+            y: autoScrollArea.top,
+            color: "255 0 0", // red
+            side: "top",
+          });
+          markersToCreate.push({
+            name: autoScrollArea.paddingBottom
+              ? `autoscroll.bottom + padding(${autoScrollArea.paddingBottom})`
+              : "autoscroll.bottom",
+            x: 0,
+            y: autoScrollArea.bottom,
             color: "255 165 0", // orange
             side: "bottom",
           });

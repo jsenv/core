@@ -1,7 +1,4 @@
-import {
-  createDragToMoveGestureController,
-  getDragCoordinates,
-} from "@jsenv/dom";
+import { createDragToMoveGestureController } from "@jsenv/dom";
 import { forwardRef } from "preact/compat";
 import { useContext } from "preact/hooks";
 
@@ -359,7 +356,7 @@ const initResizeByMousedown = (
 
   // Convert constraint bounds to scroll container coordinates
   // (Same as boundingClientRect + document scrolls but within the scroll container)
-  const { customAreaConstraint, areaConstraint } = (() => {
+  const areaConstraint = (() => {
     const defaultMinSize = axis === "x" ? COLUMN_MIN_WIDTH : ROW_MIN_HEIGHT;
     const defaultMaxSize = axis === "x" ? COLUMN_MAX_WIDTH : ROW_MAX_HEIGHT;
     const minCellSize =
@@ -371,11 +368,6 @@ const initResizeByMousedown = (
         ? maxSize
         : defaultMaxSize;
 
-    const tableCellDragCoordinates = getDragCoordinates(tableCell);
-    const cellStart =
-      axis === "x" ? tableCellDragCoordinates[0] : tableCellDragCoordinates[1];
-    const customStartBound = cellStart + minCellSize;
-    const customEndBound = cellStart + maxCellSize;
     const isSticky =
       axis === "x"
         ? tableCell.hasAttribute("data-sticky-left")
@@ -383,13 +375,38 @@ const initResizeByMousedown = (
 
     if (axis === "x") {
       return {
-        areaConstraint: isSticky ? "visible" : "none",
-        customAreaConstraint: { left: customStartBound, right: customEndBound },
+        left: ({ leftAtGrab, scrollport }) => {
+          const minLeft = leftAtGrab + minCellSize;
+          if (isSticky && minLeft < scrollport.left) {
+            return scrollport.left;
+          }
+          return minLeft;
+        },
+        right: ({ leftAtGrab, scrollport }) => {
+          const maxRight = leftAtGrab + maxCellSize;
+          if (isSticky && maxRight > scrollport.right) {
+            return scrollport.right;
+          }
+          return maxRight;
+        },
       };
     }
+
     return {
-      areaConstraint: isSticky ? "visible" : "none",
-      customAreaConstraint: { top: customStartBound, bottom: customEndBound },
+      top: ({ topAtGrab, scrollport }) => {
+        const minTop = topAtGrab + minCellSize;
+        if (isSticky && minTop < scrollport.top) {
+          return scrollport.top;
+        }
+        return minTop;
+      },
+      bottom: ({ topAtGrab, scrollport }) => {
+        const maxBottom = topAtGrab + maxCellSize;
+        if (isSticky && maxBottom > scrollport.bottom) {
+          return scrollport.bottom;
+        }
+        return maxBottom;
+      },
     };
   })();
 
@@ -403,8 +420,7 @@ const initResizeByMousedown = (
     direction,
     backdropZIndex: Z_INDEX_RESIZER_BACKDROP,
     areaConstraint,
-    customAreaConstraint,
-    visibleAreaPadding: 20,
+    autoScrollAreaPadding: 20,
     onGrab: () => {
       onGrab?.();
     },

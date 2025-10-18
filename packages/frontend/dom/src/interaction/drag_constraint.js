@@ -1,6 +1,5 @@
 import {
   addScrollToRect,
-  getScrollContainerVisibleArea,
   getScrollRelativeRect,
 } from "../position/dom_coords.js";
 import { setupConstraintFeedbackLine } from "./constraint_feedback_line.js";
@@ -13,9 +12,7 @@ const CONSOLE_DEBUG_OBSTACLES = false;
 export const initDragConstraints = (
   dragGesture,
   {
-    areaConstraintElement,
     areaConstraint,
-    customAreaConstraint,
     obstaclesContainer,
     obstacleAttributeName,
     showConstraintFeedbackLine,
@@ -25,6 +22,9 @@ export const initDragConstraints = (
 ) => {
   const dragGestureName = dragGesture.gestureInfo.name;
   const direction = dragGesture.gestureInfo.direction;
+  const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+  const leftAtGrab = dragGesture.gestureInfo.grabLayout.left;
+  const topAtGrab = dragGesture.gestureInfo.grabLayout.top;
 
   const constraintFunctions = [];
   const addConstraint = (constraint) => {
@@ -51,46 +51,11 @@ export const initDragConstraints = (
   }
 
   area: {
-    if (areaConstraint === "scroll") {
-      const scrollWidthAtStart = areaConstraintElement.scrollWidth;
-      const scrollHeightAtStart = areaConstraintElement.scrollHeight;
-      let left = 0;
-      let top = 0;
-      const scrollAreaConstraintFunction = () => {
-        const right = left + scrollWidthAtStart;
-        const bottom = top + scrollHeightAtStart;
-        return createBoundConstraint(
-          { left, top, right, bottom },
-          {
-            element: areaConstraintElement,
-            name: "scroll_area",
-          },
-        );
-      };
-      addConstraint(scrollAreaConstraintFunction);
-      break area;
-    }
-    if (areaConstraint === "visible") {
-      const visibleAreaConstraintFunction = () => {
-        const bounds = getScrollContainerVisibleArea(areaConstraintElement);
-        return createBoundConstraint(bounds, {
-          element: areaConstraintElement,
-          name: "visible_area",
-        });
-      };
-      addConstraint(visibleAreaConstraintFunction);
-      break area;
-    }
-  }
-  custom_area: {
-    if (customAreaConstraint) {
-      const customAreaConstraintFunction = () => {
-        return createBoundConstraint(customAreaConstraint, {
-          element: undefined,
-          name: "custom_area",
-        });
-      };
-      addConstraint(customAreaConstraintFunction);
+    const areaConstraintFunction = createAreaConstraint(areaConstraint, {
+      scrollContainer,
+    });
+    if (areaConstraintFunction) {
+      addConstraint(areaConstraintFunction);
     }
   }
   obstacles: {
@@ -116,9 +81,11 @@ export const initDragConstraints = (
     {
       elementWidth,
       elementHeight,
-      visibleArea,
-      hasCrossedVisibleAreaLeftOnce,
-      hasCrossedVisibleAreaTopOnce,
+      scrollArea,
+      scrollport,
+      hasCrossedScrollportLeftOnce,
+      hasCrossedScrollportTopOnce,
+      autoScrollArea,
       dragEvent,
     },
   ) => {
@@ -126,9 +93,28 @@ export const initDragConstraints = (
       return;
     }
 
+    const elementCurrentLeft = currentLayout.left;
+    const elementCurrentTop = currentLayout.top;
+    const elementLeftRequested = layoutRequested.left;
+    const elementTopRequested = layoutRequested.top;
+    let elementLeft = elementLeftRequested;
+    let elementTop = elementTopRequested;
+
     const constraintInitParams = {
+      leftAtGrab,
+      topAtGrab,
+      left: elementCurrentLeft,
+      top: elementCurrentTop,
+      right: elementCurrentLeft + elementWidth,
+      bottom: elementCurrentTop + elementHeight,
+      width: elementWidth,
+      height: elementHeight,
+      scrollContainer,
+      scrollArea,
+      scrollport,
+      autoScrollArea,
       dragGestureName,
-      visibleArea,
+      dragEvent,
     };
     const constraints = constraintFunctions.map((fn) =>
       fn(constraintInitParams),
@@ -137,11 +123,6 @@ export const initDragConstraints = (
     if (import.meta.dev) {
       validateConstraints(constraints, constraintInitParams);
     }
-
-    const elementLeftRequested = layoutRequested.left;
-    const elementTopRequested = layoutRequested.top;
-    let elementLeft = elementLeftRequested;
-    let elementTop = elementTopRequested;
 
     const logConstraintEnforcement = (axis, constraint) => {
       if (!CONSOLE_DEBUG_BOUNDS && constraint.type === "bounds") {
@@ -161,8 +142,6 @@ export const initDragConstraints = (
       );
     };
 
-    const elementCurrentLeft = currentLayout.left;
-    const elementCurrentTop = currentLayout.top;
     // Apply each constraint in sequence, accumulating their effects
     // This allows multiple constraints to work together (e.g., bounds + obstacles)
     for (const constraint of constraints) {
@@ -177,9 +156,9 @@ export const initDragConstraints = (
         height: elementHeight,
         currentLeft: elementCurrentLeft,
         currentTop: elementCurrentTop,
-        visibleArea,
-        hasCrossedVisibleAreaLeftOnce,
-        hasCrossedVisibleAreaTopOnce,
+        scrollport,
+        hasCrossedScrollportLeftOnce,
+        hasCrossedScrollportTopOnce,
       });
       if (!result) {
         continue;
@@ -203,7 +182,8 @@ export const initDragConstraints = (
         bottom: elementTop + elementHeight,
         elementWidth,
         elementHeight,
-        visibleArea,
+        scrollport,
+        autoScrollArea,
       });
     }
 
@@ -222,6 +202,76 @@ export const initDragConstraints = (
   };
 
   return { applyConstraints };
+};
+
+const createAreaConstraint = (areaConstraint, { scrollContainer }) => {
+  if (!areaConstraint || areaConstraint === "none") {
+    return null;
+  }
+  if (areaConstraint === "scrollport") {
+    const scrollportConstraintFunction = ({ scrollport }) => {
+      return createBoundConstraint(scrollport, {
+        element: scrollContainer,
+        name: "scrollport",
+      });
+    };
+    return scrollportConstraintFunction;
+  }
+  if (areaConstraint === "scroll_area") {
+    const scrollAreaConstraintFunction = ({ scrollArea }) => {
+      return createBoundConstraint(scrollArea, {
+        element: scrollContainer,
+        name: "scroll_area",
+      });
+    };
+    return scrollAreaConstraintFunction;
+  }
+  if (typeof areaConstraint === "function") {
+    const dynamicAreaConstraintFunction = (params) => {
+      const bounds = areaConstraint(params);
+      return createBoundConstraint(bounds, {
+        name: "dynamic_area",
+      });
+    };
+    return dynamicAreaConstraintFunction;
+  }
+  if (typeof areaConstraint === "object") {
+    const { left, top, right, bottom } = areaConstraint;
+    const turnSidePropertyInToGetter = (value, side) => {
+      if (value === "scrollport") {
+        return ({ scrollport }) => scrollport[side];
+      }
+      if (value === "scroll") {
+        return ({ scrollArea }) => scrollArea[side];
+      }
+      if (typeof value === "function") {
+        return value;
+      }
+      if (value === undefined) {
+        // defaults to scrollport
+        return ({ scrollport }) => scrollport[side];
+      }
+      return () => value;
+    };
+    const getLeft = turnSidePropertyInToGetter(left, "left");
+    const getRight = turnSidePropertyInToGetter(right, "right");
+    const getTop = turnSidePropertyInToGetter(top, "top");
+    const getBottom = turnSidePropertyInToGetter(bottom, "bottom");
+
+    const dynamicAreaConstraintFunction = (params) => {
+      const bounds = {
+        left: getLeft(params),
+        right: getRight(params),
+        top: getTop(params),
+        bottom: getBottom(params),
+      };
+      return createBoundConstraint(bounds, {
+        name: "dynamic_area",
+      });
+    };
+    return dynamicAreaConstraintFunction;
+  }
+  return null;
 };
 
 const createObstacleConstraintsFromQuerySelector = (

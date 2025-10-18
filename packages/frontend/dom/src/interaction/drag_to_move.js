@@ -1,19 +1,17 @@
-import { getScrollContainerVisibleArea } from "../position/dom_coords.js";
+import { getScrollBox, getScrollport } from "../position/dom_coords.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 import { initDragConstraints } from "./drag_constraint.js";
 import { createDragElementPositioner } from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";
-import { applyStickyFrontiersToVisibleArea } from "./sticky_frontiers.js";
+import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
 export const createDragToMoveGestureController = ({
   stickyFrontiers = true,
-  // Padding to reduce the visible area constraint by this amount (applied after sticky frontiers)
-  // This creates an invisible margin around the visible area where elements cannot be dragged
-  visibleAreaPadding = 0,
+  // Padding to reduce the area used to autoscroll by this amount (applied after sticky frontiers)
+  // This creates an invisible space around the area where elements cannot be dragged
+  autoscrollAreaPadding = 0,
   // constraints,
-  areaConstraintElement,
-  areaConstraint = "scroll",
-  customAreaConstraint,
+  areaConstraint = "scroll", // "scroll" | "scrollport" | "none" | {left,top,right,bottom} | function
   obstaclesContainer,
   obstacleAttributeName = "data-drag-obstacle",
   // Visual feedback line connecting mouse cursor to the moving grab point when constraints prevent following
@@ -45,14 +43,30 @@ export const createDragToMoveGestureController = ({
       dragGesture.addBeforeDragCallback(updateElementDimension);
     }
 
-    let visibleArea;
+    let scrollArea;
     {
-      const updateVisibleArea = () => {
-        const visibleAreaBase = getScrollContainerVisibleArea(scrollContainer);
-        let visibleAreaCurrent = visibleAreaBase;
+      // computed at start so that scrollWidth/scrollHeight are fixed
+      // even if the dragging side effects increases them afterwards
+      scrollArea = {
+        left: 0,
+        top: 0,
+        right: scrollContainer.scrollWidth,
+        bottom: scrollContainer.scrollHeight,
+      };
+    }
+
+    let scrollport;
+    let autoScrollArea;
+    {
+      // for visible are we also want to snapshot the widht/height
+      // and we'll add scrollContainer container scrolls during drag (getScrollport does that)
+      const scrollBox = getScrollBox(scrollContainer);
+      const updateScrollportAndAutoScrollArea = () => {
+        scrollport = getScrollport(scrollBox, scrollContainer);
+        autoScrollArea = scrollport;
         if (stickyFrontiers) {
-          visibleAreaCurrent = applyStickyFrontiersToVisibleArea(
-            visibleAreaCurrent,
+          autoScrollArea = applyStickyFrontiersToAutoScrollArea(
+            autoScrollArea,
             {
               scrollContainer,
               direction,
@@ -60,22 +74,21 @@ export const createDragToMoveGestureController = ({
             },
           );
         }
-        if (visibleAreaPadding > 0) {
-          visibleAreaCurrent = {
-            paddingLeft: visibleAreaPadding,
-            paddingTop: visibleAreaPadding,
-            paddingRight: visibleAreaPadding,
-            paddingBottom: visibleAreaPadding,
-            left: visibleAreaCurrent.left + visibleAreaPadding,
-            top: visibleAreaCurrent.top + visibleAreaPadding,
-            right: visibleAreaCurrent.right - visibleAreaPadding,
-            bottom: visibleAreaCurrent.bottom - visibleAreaPadding,
+        if (autoscrollAreaPadding > 0) {
+          autoScrollArea = {
+            paddingLeft: autoscrollAreaPadding,
+            paddingTop: autoscrollAreaPadding,
+            paddingRight: autoscrollAreaPadding,
+            paddingBottom: autoscrollAreaPadding,
+            left: autoScrollArea.left + autoscrollAreaPadding,
+            top: autoScrollArea.top + autoscrollAreaPadding,
+            right: autoScrollArea.right - autoscrollAreaPadding,
+            bottom: autoScrollArea.bottom - autoscrollAreaPadding,
           };
         }
-        visibleArea = visibleAreaCurrent;
       };
-      updateVisibleArea();
-      dragGesture.addBeforeDragCallback(updateVisibleArea);
+      updateScrollportAndAutoScrollArea();
+      dragGesture.addBeforeDragCallback(updateScrollportAndAutoScrollArea);
     }
 
     // Set up dragging attribute
@@ -85,12 +98,10 @@ export const createDragToMoveGestureController = ({
     });
 
     // Will be used for dynamic constraints on sticky elements
-    let hasCrossedVisibleAreaLeftOnce = false;
-    let hasCrossedVisibleAreaTopOnce = false;
+    let hasCrossedScrollportLeftOnce = false;
+    let hasCrossedScrollportTopOnce = false;
     const dragConstraints = initDragConstraints(dragGesture, {
-      areaConstraintElement: areaConstraintElement || scrollContainer,
       areaConstraint,
-      customAreaConstraint,
       obstaclesContainer: obstaclesContainer || scrollContainer,
       obstacleAttributeName,
       showConstraintFeedbackLine,
@@ -106,9 +117,11 @@ export const createDragToMoveGestureController = ({
           {
             elementWidth,
             elementHeight,
-            visibleArea,
-            hasCrossedVisibleAreaLeftOnce,
-            hasCrossedVisibleAreaTopOnce,
+            scrollArea,
+            scrollport,
+            hasCrossedScrollportLeftOnce,
+            hasCrossedScrollportTopOnce,
+            autoScrollArea,
             dragEvent,
           },
         );
@@ -141,10 +154,10 @@ export const createDragToMoveGestureController = ({
       //   elementTop,
       // });
 
-      hasCrossedVisibleAreaLeftOnce =
-        hasCrossedVisibleAreaLeftOnce || elementLeft < visibleArea.left;
-      hasCrossedVisibleAreaTopOnce =
-        hasCrossedVisibleAreaTopOnce || elementTop < visibleArea.top;
+      hasCrossedScrollportLeftOnce =
+        hasCrossedScrollportLeftOnce || elementLeft < scrollport.left;
+      hasCrossedScrollportTopOnce =
+        hasCrossedScrollportTopOnce || elementTop < scrollport.top;
 
       // Helper function to handle auto-scroll and element positioning for an axis
       const moveAndKeepIntoView = (axis) => {
@@ -159,11 +172,11 @@ export const createDragToMoveGestureController = ({
 
           if (isGoingPositive) {
             const elementEnd = axis === "x" ? elementRight : elementBottom;
-            const visibleAreaEnd =
-              axis === "x" ? visibleArea.right : visibleArea.bottom;
+            const autoScrollAreaEnd =
+              axis === "x" ? autoScrollArea.right : autoScrollArea.bottom;
 
-            if (elementEnd > visibleAreaEnd) {
-              const scrollAmountNeeded = elementEnd - visibleAreaEnd;
+            if (elementEnd > autoScrollAreaEnd) {
+              const scrollAmountNeeded = elementEnd - autoScrollAreaEnd;
               const scroll = currentScroll + scrollAmountNeeded;
               // console.log(
               //   `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,
@@ -172,18 +185,18 @@ export const createDragToMoveGestureController = ({
             }
           } else if (isGoingNegative) {
             const elementStart = axis === "x" ? elementLeft : elementTop;
-            const visibleAreaStart =
-              axis === "x" ? visibleArea.left : visibleArea.top;
+            const autoScrollAreaStart =
+              axis === "x" ? autoScrollArea.left : autoScrollArea.top;
             const referenceOrEl = referenceElement || element;
             const canAutoScrollNegative =
               axis === "x"
                 ? !referenceOrEl.hasAttribute("data-sticky-left") ||
-                  hasCrossedVisibleAreaLeftOnce
+                  hasCrossedScrollportLeftOnce
                 : !referenceOrEl.hasAttribute("data-sticky-top") ||
-                  hasCrossedVisibleAreaTopOnce;
+                  hasCrossedScrollportTopOnce;
 
-            if (canAutoScrollNegative && elementStart < visibleAreaStart) {
-              const scrollAmountNeeded = visibleAreaStart - elementStart;
+            if (canAutoScrollNegative && elementStart < autoScrollAreaStart) {
+              const scrollAmountNeeded = autoScrollAreaStart - elementStart;
               const scroll = Math.max(0, currentScroll - scrollAmountNeeded);
               // console.log(
               //   `Scrolling ${scrollProperty} from ${currentScroll} to ${scroll} (amount: ${scrollAmountNeeded})`,

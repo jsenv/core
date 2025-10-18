@@ -1,11 +1,11 @@
 import { getScrollRelativeRect } from "../position/dom_coords.js";
 import { getElementSelector } from "./element_log.js";
 
-export const applyStickyFrontiersToVisibleArea = (
-  initialVisibleArea,
+export const applyStickyFrontiersToAutoScrollArea = (
+  autoScrollArea,
   { direction, scrollContainer, dragName },
 ) => {
-  let { left, right, top, bottom } = initialVisibleArea;
+  let { left, right, top, bottom } = autoScrollArea;
 
   if (direction.x) {
     const horizontalStickyFrontiers = createStickyFrontierOnAxis(

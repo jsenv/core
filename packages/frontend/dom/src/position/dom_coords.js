@@ -581,8 +581,9 @@ export const getScrollBox = (scrollContainer) => {
     height: clientHeight,
   };
 };
-export const getScrollContainerVisibleArea = (scrollContainer) => {
-  const { left, top, width, height } = getScrollBox(scrollContainer);
+// https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container#scrollport
+export const getScrollport = (scrollBox, scrollContainer) => {
+  const { left, top, width, height } = scrollBox;
   const leftWithScroll = left + scrollContainer.scrollLeft;
   const topWithScroll = top + scrollContainer.scrollTop;
   const rightWithScroll = leftWithScroll + width;
