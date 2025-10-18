@@ -397,14 +397,16 @@ const initResizeByMousedown = (
 
     return {
       top: ({ topAtGrab, scrollport }) => {
-        const minTop = topAtGrab + minCellSize;
+        const cellTopAtGrab = topAtGrab - currentSize;
+        const minTop = cellTopAtGrab + minCellSize;
         if (isSticky && minTop < scrollport.top) {
           return scrollport.top;
         }
         return minTop;
       },
       bottom: ({ topAtGrab, scrollport }) => {
-        const maxBottom = topAtGrab + maxCellSize;
+        const cellTopAtGrab = topAtGrab - currentSize;
+        const maxBottom = cellTopAtGrab + maxCellSize;
         if (isSticky && maxBottom > scrollport.bottom) {
           return scrollport.bottom;
         }
