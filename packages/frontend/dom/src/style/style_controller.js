@@ -195,7 +195,7 @@ export const createStyleController = (name = "anonymous") => {
       return normalizeValueForJs(computedValue);
     };
 
-    const getComputedLayoutValue = () => {
+    const getFromDOMLayout = () => {
       // For rect.* properties that reflect actual layout, always read from DOM
       // These represent the actual rendered dimensions, bypassing any controller influence
       if (propertyName === "rect.width") {
@@ -219,48 +219,35 @@ export const createStyleController = (name = "anonymous") => {
       return undefined;
     };
 
-    // Handle computed layout properties (rect.*) - always read from DOM, bypass controllers
-    if (propertyName.startsWith("rect")) {
-      // For rect.* properties, we need to temporarily disable our animation to get true DOM values
+    const getWhileDisablingThisController = (fn) => {
       const currentAnimation = animationRegistry.get(element);
       if (!currentAnimation) {
-        return getComputedLayoutValue();
+        return fn();
       }
 
-      // Temporarily cancel our animation to read underlying layout value
+      // Temporarily cancel our animation to read underlying value
       currentAnimation.cancel();
       animationRegistry.delete(element); // Remove cancelled animation from registry
-      const layoutValue = getComputedLayoutValue();
-
+      const underlyingValue = fn();
       // Restore our animation
       applyFinalStyles(element);
-      return layoutValue;
-    }
+      return underlyingValue;
+    };
 
+    // Handle computed layout properties (rect.*) - always read from DOM, bypass controllers
+    if (propertyName.startsWith("rect")) {
+      return getWhileDisablingThisController(getFromDOMLayout);
+    }
     if (!elementControllers || !elementControllers.has(controller)) {
       // This controller is not applied, just read current value
       return getFromDOM();
     }
-
     // Check if other controllers would provide this style
     const valueFromOtherControllers = getFromOtherControllers();
     if (valueFromOtherControllers !== undefined) {
       return valueFromOtherControllers;
     }
-
-    // No other controllers provide this style, need to temporarily disable our animation
-    const currentAnimation = animationRegistry.get(element);
-    if (!currentAnimation) {
-      return getFromDOM();
-    }
-
-    // Temporarily cancel our animation to read underlying value
-    currentAnimation.cancel();
-    animationRegistry.delete(element); // Remove cancelled animation from registry
-    const underlyingValue = getFromDOM();
-    // Restore our animation
-    applyFinalStyles(element);
-    return underlyingValue;
+    return getWhileDisablingThisController(getFromDOM);
   };
 
   const destroy = () => {
