@@ -124,7 +124,7 @@ export const createStyleController = (name = "anonymous") => {
     applyFinalStyles(element);
   };
 
-  const getUnderlyingStyle = (element, propertyName) => {
+  const getUnderlyingValue = (element, propertyName) => {
     const elementControllers = elementStyleRegistry.get(element);
 
     if (!elementControllers || !elementControllers.has(controller)) {
@@ -133,23 +133,22 @@ export const createStyleController = (name = "anonymous") => {
     }
 
     // Check if other controllers would provide this style
-    let styleFromOtherControllers = {};
+    let resultValue;
     if (elementControllers.size > 1) {
       for (const otherController of elementControllers) {
         if (otherController === controller) continue;
         const otherStyles = otherController.get(element);
-        styleFromOtherControllers = mergeStyles(
-          styleFromOtherControllers,
-          otherStyles,
-        );
+        if (propertyName in otherStyles) {
+          resultValue = mergeOneStyle(
+            resultValue,
+            otherStyles[propertyName],
+            propertyName,
+          );
+        }
       }
 
-      if (propertyName in styleFromOtherControllers) {
-        return normalizeStyle(
-          styleFromOtherControllers[propertyName],
-          propertyName,
-          "css",
-        );
+      if (resultValue !== undefined) {
+        return normalizeStyle(resultValue, propertyName, "css");
       }
     }
 
@@ -203,7 +202,7 @@ export const createStyleController = (name = "anonymous") => {
     set,
     get,
     delete: deleteMethod,
-    getUnderlyingStyle,
+    getUnderlyingValue,
     commit,
     clear,
     destroy,
