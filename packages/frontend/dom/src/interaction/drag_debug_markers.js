@@ -24,7 +24,7 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
   return {
     onConstraints: (
       constraints,
-      { left, top, right, bottom, scrollport, autoScrollArea },
+      { left, top, right, bottom, autoScrollArea },
     ) => {
       // Schedule removal of previous markers if they exist
       const previousDebugMarkers = [...currentDebugMarkers];
@@ -85,41 +85,6 @@ export const setupDragDebugMarkers = (dragGesture, { referenceElement }) => {
 
       // Collect all markers to be created, then merge duplicates
       const markersToCreate = [];
-
-      scrollport_markers: {
-        if (direction.x) {
-          markersToCreate.push({
-            name: "scrollport.left",
-            x: scrollport.left,
-            y: 0,
-            color: "0 128 0", // green
-            side: "left",
-          });
-          markersToCreate.push({
-            name: "scrollport.right",
-            x: scrollport.right,
-            y: 0,
-            color: "0 128 0", // green
-            side: "right",
-          });
-        }
-        if (direction.y) {
-          markersToCreate.push({
-            name: "scrollport.top",
-            x: 0,
-            y: scrollport.top,
-            color: "255 0 0", // red
-            side: "top",
-          });
-          markersToCreate.push({
-            name: "scrollport.bottom",
-            x: 0,
-            y: scrollport.bottom,
-            color: "255 165 0", // orange
-            side: "bottom",
-          });
-        }
-      }
 
       autoscroll_area_markers: {
         if (direction.x) {
