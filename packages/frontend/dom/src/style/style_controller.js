@@ -158,35 +158,63 @@ export const createStyleController = (name = "anonymous") => {
   const getUnderlyingValue = (element, propertyName) => {
     const elementControllers = elementStyleRegistry.get(element);
 
-    const getFromOtherController = (resultValue) => {
-      return getIt(resultValue, "js");
-    };
-    const getFromDOM = () => {
-      return getIt(getComputedStyle(element)[propertyName], "css");
-    };
-
-    const getIt = () => {
+    const normalizeValueForJs = (value) => {
       // Handle dot notation for transform properties (e.g., "transform.translateX")
       if (propertyName.startsWith("transform.")) {
         const transformProperty = propertyName.slice(10); // Remove "transform." prefix
-        const transformValue = getComputedStyle(element).transform;
-        if (!transformValue || transformValue === "none") {
-          // Return default values and let normalizeStyle handle js context conversion
-          const defaultValue = transformProperty.includes("scale") ? "1" : "0";
-          return normalizeStyle(defaultValue, propertyName, "js");
+
+        if (typeof value === "object" && value !== null) {
+          // Value is already a transform object from another controller
+          const transformValue = value[transformProperty];
+          return transformValue !== undefined
+            ? transformValue
+            : transformProperty.includes("scale")
+              ? 1
+              : 0;
         }
-        // Parse transform and extract the specific property
-        const transformObj = parseCSSTransform(transformValue);
-        const value = transformObj[transformProperty];
-        if (value) {
-          return normalizeStyle(value, propertyName, "js");
+
+        // Value is a CSS transform string from computed styles
+        if (!value || value === "none") {
+          return transformProperty.includes("scale") ? 1 : 0;
         }
-        // Return defaults
-        const defaultValue = transformProperty.includes("scale") ? "1" : "0";
-        return normalizeStyle(defaultValue, propertyName, "js");
+
+        const transformObj = parseCSSTransform(value);
+        const extractedValue = transformObj[transformProperty];
+        return extractedValue !== undefined
+          ? extractedValue
+          : transformProperty.includes("scale")
+            ? 1
+            : 0;
       }
 
-      // Handle dimensional properties - return numbers without units
+      // For regular properties, normalize to JS context
+      return normalizeStyle(value, propertyName, "js");
+    };
+
+    const getFromOtherControllers = () => {
+      if (!elementControllers || elementControllers.size <= 1) {
+        return undefined;
+      }
+
+      let resultValue;
+      for (const otherController of elementControllers) {
+        if (otherController === controller) continue;
+        const otherStyles = otherController.get(element);
+        if (propertyName in otherStyles) {
+          resultValue = mergeOneStyle(
+            resultValue,
+            otherStyles[propertyName],
+            propertyName,
+          );
+        }
+      }
+
+      return resultValue;
+    };
+
+    const getFromDOM = () => {
+      // For dimensional properties that reflect layout, use getBoundingClientRect
+      // These represent the actual rendered dimensions, not CSS values
       if (propertyName === "width") {
         return element.getBoundingClientRect().width;
       }
@@ -206,48 +234,27 @@ export const createStyleController = (name = "anonymous") => {
         return element.getBoundingClientRect().bottom;
       }
 
-      // Handle special numeric properties
-      if (propertyName === "opacity") {
-        const value = getComputedStyle(element).opacity;
-        return normalizeStyle(value, propertyName, "js");
-      }
-      if (propertyName === "zIndex") {
-        const value = getComputedStyle(element).zIndex;
-        return value === "auto"
-          ? "auto"
-          : normalizeStyle(value, propertyName, "js");
+      // For all other properties, use computed styles
+      const computedValue = getComputedStyle(element)[propertyName];
+
+      // Handle transform dot notation
+      if (propertyName.startsWith("transform.")) {
+        const transformValue = getComputedStyle(element).transform;
+        return normalizeValueForJs(transformValue);
       }
 
-      // Default: return computed style and normalize for js context
-      const value = getComputedStyle(element)[propertyName];
-      return normalizeStyle(value, propertyName, "js");
+      return normalizeValueForJs(computedValue);
     };
 
     if (!elementControllers || !elementControllers.has(controller)) {
-      // This controller is not applied, just read current computed style
+      // This controller is not applied, just read current value
       return getFromDOM();
     }
 
     // Check if other controllers would provide this style
-    from_other_controller: {
-      if (elementControllers.size <= 1) {
-        break from_other_controller;
-      }
-      let resultValue;
-      for (const otherController of elementControllers) {
-        if (otherController === controller) continue;
-        const otherStyles = otherController.get(element);
-        if (propertyName in otherStyles) {
-          resultValue = mergeOneStyle(
-            resultValue,
-            otherStyles[propertyName],
-            propertyName,
-          );
-        }
-      }
-      if (resultValue !== undefined) {
-        return getFromOtherController(resultValue);
-      }
+    const valueFromOtherControllers = getFromOtherControllers();
+    if (valueFromOtherControllers !== undefined) {
+      return normalizeValueForJs(valueFromOtherControllers);
     }
 
     // No other controllers provide this style, need to temporarily disable our animation
