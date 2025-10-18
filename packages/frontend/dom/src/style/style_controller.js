@@ -127,9 +127,22 @@ export const createStyleController = (name = "anonymous") => {
   const getUnderlyingValue = (element, propertyName) => {
     const elementControllers = elementStyleRegistry.get(element);
 
+    const getUnderlyingValue = () => {
+      if (propertyName === "width") {
+        return element.getBoundingClientRect().width;
+      }
+      if (propertyName === "height") {
+        return element.getBoundingClientRect().height;
+      }
+      if (propertyName === "opacity") {
+        return parseFloat(getComputedStyle(element).opacity) || 1;
+      }
+      return getComputedStyle(element)[propertyName];
+    };
+
     if (!elementControllers || !elementControllers.has(controller)) {
       // This controller is not applied, just read current computed style
-      return getComputedStyle(element)[propertyName];
+      return getUnderlyingValue();
     }
 
     // Check if other controllers would provide this style
@@ -155,12 +168,12 @@ export const createStyleController = (name = "anonymous") => {
     // No other controllers provide this style, need to temporarily disable our animation
     const currentAnimation = animationRegistry.get(element);
     if (!currentAnimation) {
-      return getComputedStyle(element)[propertyName];
+      return getUnderlyingValue();
     }
 
     // Temporarily cancel our animation to read underlying value
     currentAnimation.cancel();
-    const underlyingValue = getComputedStyle(element)[propertyName];
+    const underlyingValue = getUnderlyingValue();
 
     // Restore our animation
     const finalStyles = computeFinalStyles(element);
