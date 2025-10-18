@@ -158,7 +158,14 @@ export const createStyleController = (name = "anonymous") => {
   const getUnderlyingValue = (element, propertyName) => {
     const elementControllers = elementStyleRegistry.get(element);
 
-    const getUnderlyingValue = () => {
+    const getFromOtherController = (resultValue) => {
+      return getIt(resultValue, "js");
+    };
+    const getFromDOM = () => {
+      return getIt(getComputedStyle(element)[propertyName], "css");
+    };
+
+    const getIt = () => {
       // Handle dot notation for transform properties (e.g., "transform.translateX")
       if (propertyName.startsWith("transform.")) {
         const transformProperty = propertyName.slice(10); // Remove "transform." prefix
@@ -218,12 +225,15 @@ export const createStyleController = (name = "anonymous") => {
 
     if (!elementControllers || !elementControllers.has(controller)) {
       // This controller is not applied, just read current computed style
-      return getUnderlyingValue();
+      return getFromDOM();
     }
 
     // Check if other controllers would provide this style
-    let resultValue;
-    if (elementControllers.size > 1) {
+    from_other_controller: {
+      if (elementControllers.size <= 1) {
+        break from_other_controller;
+      }
+      let resultValue;
       for (const otherController of elementControllers) {
         if (otherController === controller) continue;
         const otherStyles = otherController.get(element);
@@ -235,22 +245,21 @@ export const createStyleController = (name = "anonymous") => {
           );
         }
       }
-
       if (resultValue !== undefined) {
-        return normalizeStyle(resultValue, propertyName, "js");
+        return getFromOtherController(resultValue);
       }
     }
 
     // No other controllers provide this style, need to temporarily disable our animation
     const currentAnimation = animationRegistry.get(element);
     if (!currentAnimation) {
-      return getUnderlyingValue();
+      return getFromDOM();
     }
 
     // Temporarily cancel our animation to read underlying value
     currentAnimation.cancel();
     animationRegistry.delete(element); // Remove cancelled animation from registry
-    const underlyingValue = getUnderlyingValue();
+    const underlyingValue = getFromDOM();
 
     // Restore our animation
     applyFinalStyles(element);
