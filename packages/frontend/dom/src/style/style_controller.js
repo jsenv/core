@@ -47,21 +47,20 @@ export const createStyleController = (name = "anonymous") => {
   };
 
   const get = (element) => {
-    if (!elementStyleRegistry.has(element)) {
+    const elementControllers = elementStyleRegistry.get(element);
+    if (!elementControllers) {
       return {};
     }
-
-    const elementControllers = elementStyleRegistry.get(element);
     const controllerStyles = elementControllers.get(name);
     return controllerStyles ? { ...controllerStyles } : {};
   };
 
   const remove = (element, propertyName) => {
-    if (!elementStyleRegistry.has(element)) {
+    const elementControllers = elementStyleRegistry.get(element);
+    if (!elementControllers) {
       return;
     }
 
-    const elementControllers = elementStyleRegistry.get(element);
     const controllerStyles = elementControllers.get(name);
 
     if (controllerStyles && propertyName in controllerStyles) {
@@ -93,18 +92,15 @@ export const createStyleController = (name = "anonymous") => {
   };
 
   const clear = (element) => {
-    if (!elementStyleRegistry.has(element)) {
+    const elementControllers = elementStyleRegistry.get(element);
+    if (!elementControllers) {
       return;
     }
-
-    const elementControllers = elementStyleRegistry.get(element);
     elementControllers.delete(name);
-
     // Clean up empty element registry
     if (elementControllers.size === 0) {
       elementStyleRegistry.delete(element);
     }
-
     // Recompute and apply final styles
     applyFinalStyles(element);
   };
