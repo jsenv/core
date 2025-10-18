@@ -15,8 +15,9 @@ const COLUMN_MAX_WIDTH = 500;
 
 import.meta.css = /* css */ `
   body {
-    --resizer-handle-color: #063b7c;
-    --resizer-color: #387ec9;
+    --table-resizer-handle-color: #063b7c;
+    --table-resizer-color: #387ec9;
+    --table-resizer-size: 5px;
   }
 
   .navi_table_cell {
@@ -73,7 +74,7 @@ import.meta.css = /* css */ `
     top: 50%;
     transform: translateY(-50%);
     border-radius: 15px;
-    background: var(--resizer-handle-color);
+    background: var(--table-resizer-handle-color);
     /* opacity: 0.5; */
     width: 5px;
     height: 26px;
@@ -98,7 +99,7 @@ import.meta.css = /* css */ `
     bottom: 0;
     width: 5px;
     left: -3px;
-    background: var(--resizer-color);
+    background: var(--table-resizer-color);
     opacity: 0;
     transition: opacity 0.1s ease;
   }
@@ -128,7 +129,7 @@ import.meta.css = /* css */ `
     left: 50%;
     transform: translateX(-50%);
     border-radius: 15px;
-    background: var(--resizer-handle-color);
+    background: var(--table-resizer-handle-color);
     /* opacity: 0.5; */
     width: 26px;
     height: 5px;
@@ -153,7 +154,7 @@ import.meta.css = /* css */ `
     right: 0;
     height: 5px;
     top: -3px;
-    background: var(--resizer-color);
+    background: var(--table-resizer-color);
     opacity: 0;
     transition: opacity 0.1s ease;
   }
