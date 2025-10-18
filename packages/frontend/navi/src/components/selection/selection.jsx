@@ -55,7 +55,7 @@ export const useSelectionController = ({
     const getCurrentValue = () => currentValueRef.current;
 
     if (layout === "grid") {
-      return createGridSelection({
+      return createGridSelectionController({
         getCurrentValue,
         onChange: innerOnChange,
         enabled: Boolean(onChange),
@@ -63,10 +63,10 @@ export const useSelectionController = ({
         selectAllName,
       });
     }
-    return createLinearSelection({
+    return createLinearSelectionController({
       getCurrentValue,
       onChange: innerOnChange,
-      axis: layout,
+      layout,
       elementRef,
       multiple,
       enabled: Boolean(onChange),
@@ -97,7 +97,7 @@ export const useSelectionController = ({
   return selectionController;
 };
 // Base Selection - shared functionality between grid and linear
-const createBaseSelection = ({
+const createBaseSelectionController = ({
   getCurrentValue,
   registry,
   onChange,
@@ -390,7 +390,7 @@ const createBaseSelection = ({
   return baseSelection;
 };
 // Grid Selection Provider - for 2D layouts like tables
-const createGridSelection = ({ ...options }) => {
+const createGridSelectionController = ({ ...options }) => {
   const registry = new Set();
   const navigationMethods = {
     getElementRange: (fromElement, toElement) => {
@@ -551,24 +551,25 @@ const createGridSelection = ({ ...options }) => {
       return fallbackElement;
     },
   };
-  const gridSelection = createBaseSelection({
+  const gridSelectionController = createBaseSelectionController({
     ...options,
     registry,
     type: "grid",
     navigationMethods,
   });
+  gridSelectionController.axis = { x: true, y: true };
 
-  return gridSelection;
+  return gridSelectionController;
 };
 // Linear Selection Provider - for 1D layouts like lists
-const createLinearSelection = ({
-  axis = "vertical", // "horizontal" or "vertical"
+const createLinearSelectionController = ({
+  layout = "vertical", // "horizontal" or "vertical"
   elementRef, // Root element to scope DOM traversal
   ...options
 }) => {
-  if (!["horizontal", "vertical"].includes(axis)) {
+  if (!["horizontal", "vertical"].includes(layout)) {
     throw new Error(
-      `useLinearSelection: Invalid axis "${axis}". Must be "horizontal" or "vertical".`,
+      `useLinearSelection: Invalid axis "${layout}". Must be "horizontal" or "vertical".`,
     );
   }
 
@@ -700,13 +701,13 @@ const createLinearSelection = ({
     },
     // Add axis-dependent methods
     getElementBelow: (element) => {
-      if (axis === "vertical") {
+      if (layout === "vertical") {
         return navigationMethods.getElementAfter(element);
       }
       return null;
     },
     getElementAbove: (element) => {
-      if (axis === "vertical") {
+      if (layout === "vertical") {
         return navigationMethods.getElementBefore(element);
       }
       return null;
@@ -714,15 +715,18 @@ const createLinearSelection = ({
   };
 
   // Create base selection with navigation methods
-  const linearSelection = createBaseSelection({
+  const linearSelectionController = createBaseSelectionController({
     ...options,
     registry,
     type: "linear",
     navigationMethods,
   });
-  linearSelection.axis = axis;
+  linearSelectionController.axis = {
+    x: layout === "horizontal",
+    y: layout === "vertical",
+  };
 
-  return linearSelection;
+  return linearSelectionController;
 };
 // Helper function to extract value from an element
 const getElementValue = (element) => {
@@ -1350,7 +1354,7 @@ export const createSelectionKeyboardShortcuts = (
         if (!selectionController.enabled) {
           return false;
         }
-        if (selectionController.axis !== "vertical") {
+        if (!selectionController.axis.y) {
           return false;
         }
         if (enabled && !enabled()) {
@@ -1369,7 +1373,7 @@ export const createSelectionKeyboardShortcuts = (
         if (!selectionController.enabled) {
           return false;
         }
-        if (selectionController.axis !== "vertical") {
+        if (!selectionController.axis.y) {
           return false;
         }
         if (enabled && !enabled()) {
@@ -1390,7 +1394,7 @@ export const createSelectionKeyboardShortcuts = (
         if (!selectionController.enabled) {
           return false;
         }
-        if (selectionController.axis !== "vertical") {
+        if (!selectionController.axis.y) {
           return false;
         }
         if (enabled && !enabled()) {
@@ -1409,7 +1413,7 @@ export const createSelectionKeyboardShortcuts = (
         if (!selectionController.enabled) {
           return false;
         }
-        if (selectionController.axis !== "vertical") {
+        if (!selectionController.axis.y) {
           return false;
         }
         if (enabled && !enabled()) {
@@ -1430,7 +1434,7 @@ export const createSelectionKeyboardShortcuts = (
         if (!selectionController.enabled) {
           return false;
         }
-        if (selectionController.axis !== "horizontal") {
+        if (!selectionController.axis.x) {
           return false;
         }
         if (enabled && !enabled()) {
@@ -1449,7 +1453,7 @@ export const createSelectionKeyboardShortcuts = (
         if (!selectionController.enabled) {
           return false;
         }
-        if (selectionController.axis !== "horizontal") {
+        if (!selectionController.axis.x) {
           return false;
         }
         if (enabled && !enabled()) {
@@ -1470,7 +1474,7 @@ export const createSelectionKeyboardShortcuts = (
         if (!selectionController.enabled) {
           return false;
         }
-        if (selectionController.axis !== "horizontal") {
+        if (!selectionController.axis.x) {
           return false;
         }
         if (enabled && !enabled()) {
@@ -1489,7 +1493,7 @@ export const createSelectionKeyboardShortcuts = (
         if (!selectionController.enabled) {
           return false;
         }
-        if (selectionController.axis !== "horizontal") {
+        if (!selectionController.axis.x) {
           return false;
         }
         if (enabled && !enabled()) {
