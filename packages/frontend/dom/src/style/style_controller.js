@@ -181,39 +181,61 @@ export const createStyleController = (name = "anonymous") => {
       // because we assume box-sizing: border-box. If the element used content-box,
       // the CSS width/height would differ from getBoundingClientRect() due to padding/borders,
       // but since controllers set the final rendered size, the CSS value is what matters.
-      return resultValue;
+      return normalizeValueForJs(resultValue);
     };
 
     const getFromDOM = () => {
-      // For dimensional properties that reflect layout, use getBoundingClientRect
-      // These represent the actual rendered dimensions, not CSS values
-      if (propertyName === "width") {
-        return element.getBoundingClientRect().width;
-      }
-      if (propertyName === "height") {
-        return element.getBoundingClientRect().height;
-      }
-      if (propertyName === "left") {
-        return element.getBoundingClientRect().left;
-      }
-      if (propertyName === "top") {
-        return element.getBoundingClientRect().top;
-      }
-      if (propertyName === "right") {
-        return element.getBoundingClientRect().right;
-      }
-      if (propertyName === "bottom") {
-        return element.getBoundingClientRect().bottom;
-      }
       // Handle transform dot notation
       if (propertyName.startsWith("transform.")) {
         const transformValue = getComputedStyle(element).transform;
         return normalizeValueForJs(transformValue);
       }
-      // For all other properties, use computed styles
+      // For all other CSS properties, use computed styles
       const computedValue = getComputedStyle(element)[propertyName];
       return normalizeValueForJs(computedValue);
     };
+
+    const getComputedLayoutValue = () => {
+      // For rect.* properties that reflect actual layout, always read from DOM
+      // These represent the actual rendered dimensions, bypassing any controller influence
+      if (propertyName === "rect.width") {
+        return element.getBoundingClientRect().width;
+      }
+      if (propertyName === "rect.height") {
+        return element.getBoundingClientRect().height;
+      }
+      if (propertyName === "rect.left") {
+        return element.getBoundingClientRect().left;
+      }
+      if (propertyName === "rect.top") {
+        return element.getBoundingClientRect().top;
+      }
+      if (propertyName === "rect.right") {
+        return element.getBoundingClientRect().right;
+      }
+      if (propertyName === "rect.bottom") {
+        return element.getBoundingClientRect().bottom;
+      }
+      return undefined;
+    };
+
+    // Handle computed layout properties (rect.*) - always read from DOM, bypass controllers
+    if (propertyName.startsWith("rect")) {
+      // For rect.* properties, we need to temporarily disable our animation to get true DOM values
+      const currentAnimation = animationRegistry.get(element);
+      if (!currentAnimation) {
+        return getComputedLayoutValue();
+      }
+
+      // Temporarily cancel our animation to read underlying layout value
+      currentAnimation.cancel();
+      animationRegistry.delete(element); // Remove cancelled animation from registry
+      const layoutValue = getComputedLayoutValue();
+
+      // Restore our animation
+      applyFinalStyles(element);
+      return layoutValue;
+    }
 
     if (!elementControllers || !elementControllers.has(controller)) {
       // This controller is not applied, just read current value
@@ -223,7 +245,7 @@ export const createStyleController = (name = "anonymous") => {
     // Check if other controllers would provide this style
     const valueFromOtherControllers = getFromOtherControllers();
     if (valueFromOtherControllers !== undefined) {
-      return normalizeValueForJs(valueFromOtherControllers);
+      return valueFromOtherControllers;
     }
 
     // No other controllers provide this style, need to temporarily disable our animation
@@ -236,10 +258,8 @@ export const createStyleController = (name = "anonymous") => {
     currentAnimation.cancel();
     animationRegistry.delete(element); // Remove cancelled animation from registry
     const underlyingValue = getFromDOM();
-
     // Restore our animation
     applyFinalStyles(element);
-
     return underlyingValue;
   };
 
