@@ -33,6 +33,7 @@
  * // Get underlying value without this controller's influence
  * const originalOpacity = controller.getUnderlyingValue(element, "opacity");
  * const originalTranslateX = controller.getUnderlyingValue(element, "transform.translateX"); // Magic dot notation!
+ * const actualWidth = controller.getUnderlyingValue(element, "rect.width"); // Layout measurements
  *
  * controller.delete(element, "opacity"); // Only removes opacity, keeps transform
  * controller.clear(element); // Removes all styles from this controller only
@@ -42,6 +43,7 @@
  * **Key features:**
  * - **Transform composition**: Intelligently merges transform components instead of overwriting
  * - **Magic properties**: Access transform components with dot notation (e.g., "transform.translateX")
+ * - **Layout measurements**: Access actual rendered dimensions with rect.* (e.g., "rect.width")
  * - **getUnderlyingValue()**: Read the "natural" value without this controller's influence
  * - **Smart units**: Numeric values get appropriate units automatically (px, deg, unitless)
  *
@@ -177,10 +179,11 @@ export const createStyleController = (name = "anonymous") => {
         }
       }
 
-      // Note: For width/height properties, we can trust the CSS values from other controllers
+      // Note: For CSS width/height properties, we can trust the values from other controllers
       // because we assume box-sizing: border-box. If the element used content-box,
       // the CSS width/height would differ from getBoundingClientRect() due to padding/borders,
       // but since controllers set the final rendered size, the CSS value is what matters.
+      // For actual layout measurements, use rect.* properties instead.
       return normalizeValueForJs(resultValue);
     };
 
@@ -235,7 +238,7 @@ export const createStyleController = (name = "anonymous") => {
     };
 
     // Handle computed layout properties (rect.*) - always read from DOM, bypass controllers
-    if (propertyName.startsWith("rect")) {
+    if (propertyName.startsWith("rect.")) {
       return getWhileDisablingThisController(getFromDOMLayout);
     }
     if (!elementControllers || !elementControllers.has(controller)) {
