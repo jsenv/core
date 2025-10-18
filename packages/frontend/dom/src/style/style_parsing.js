@@ -1,24 +1,26 @@
+// Normalize a single style value
+export const normalizeStyle = (value, propertyName, context = "object") => {
+  if (propertyName === "transform") {
+    if (context === "css" && typeof value === "object" && value !== null) {
+      // For CSS context, ensure transform is a string
+      return stringifyCSSTransform(value);
+    } else if (
+      context === "object" &&
+      typeof value === "string" &&
+      value !== "none"
+    ) {
+      // For object context, prefer objects
+      return parseCSSTransform(value);
+    }
+  }
+  return value;
+};
+
 // Normalize styles for DOM application
 export const normalizeStyles = (styles, context = "object") => {
   const normalized = {};
   for (const [key, value] of Object.entries(styles)) {
-    if (key === "transform") {
-      if (context === "css" && typeof value === "object" && value !== null) {
-        // For CSS context, ensure transform is a string
-        normalized[key] = stringifyCSSTransform(value);
-      } else if (
-        context === "object" &&
-        typeof value === "string" &&
-        value !== "none"
-      ) {
-        // For object context, prefer objects
-        normalized[key] = parseCSSTransform(value);
-      } else {
-        normalized[key] = value;
-      }
-    } else {
-      normalized[key] = value;
-    }
+    normalized[key] = normalizeStyle(value, key, context);
   }
   return normalized;
 };

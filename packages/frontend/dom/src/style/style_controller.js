@@ -25,7 +25,7 @@
  */
 
 import { mergeOneStyle, mergeStyles } from "./style_composition.js";
-import { normalizeStyles } from "./style_parsing.js";
+import { normalizeStyle, normalizeStyles } from "./style_parsing.js";
 
 // Global registry to track all style controllers and their managed elements
 const elementStyleRegistry = new WeakMap(); // element -> Set<controller>
@@ -145,11 +145,11 @@ export const createStyleController = (name = "anonymous") => {
       }
 
       if (propertyName in styleFromOtherControllers) {
-        const normalizedStyles = normalizeStyles(
-          styleFromOtherControllers,
+        return normalizeStyle(
+          styleFromOtherControllers[propertyName],
+          propertyName,
           "css",
         );
-        return normalizedStyles[propertyName];
       }
     }
 
