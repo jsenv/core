@@ -209,6 +209,10 @@ export const createStyleController = (name = "anonymous") => {
         }
       }
 
+      // Note: For width/height properties, we can trust the CSS values from other controllers
+      // because we assume box-sizing: border-box. If the element used content-box,
+      // the CSS width/height would differ from getBoundingClientRect() due to padding/borders,
+      // but since controllers set the final rendered size, the CSS value is what matters.
       return resultValue;
     };
 
