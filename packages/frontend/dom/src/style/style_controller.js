@@ -164,20 +164,19 @@ export const createStyleController = (name = "anonymous") => {
         const transformProperty = propertyName.slice(10); // Remove "transform." prefix
         const transformValue = getComputedStyle(element).transform;
         if (!transformValue || transformValue === "none") {
-          return propertyName.includes("scale") ? 1 : 0;
+          // Return default values and let normalizeStyle handle js context conversion
+          const defaultValue = transformProperty.includes("scale") ? "1" : "0";
+          return normalizeStyle(defaultValue, propertyName, "js");
         }
+        // Parse transform and extract the specific property
         const transformObj = parseCSSTransform(transformValue);
         const value = transformObj[transformProperty];
         if (value) {
-          const numericValue = parseFloat(value);
-          return isNaN(numericValue)
-            ? transformProperty.includes("scale")
-              ? 1
-              : 0
-            : numericValue;
+          return normalizeStyle(value, propertyName, "js");
         }
         // Return defaults
-        return propertyName.includes("scale") ? 1 : 0;
+        const defaultValue = transformProperty.includes("scale") ? "1" : "0";
+        return normalizeStyle(defaultValue, propertyName, "js");
       }
 
       // Handle dimensional properties - return numbers without units
@@ -202,15 +201,19 @@ export const createStyleController = (name = "anonymous") => {
 
       // Handle special numeric properties
       if (propertyName === "opacity") {
-        return parseFloat(getComputedStyle(element).opacity) || 1;
+        const value = getComputedStyle(element).opacity;
+        return normalizeStyle(value, propertyName, "js");
       }
       if (propertyName === "zIndex") {
-        const zIndex = getComputedStyle(element).zIndex;
-        return zIndex === "auto" ? "auto" : parseInt(zIndex, 10) || 0;
+        const value = getComputedStyle(element).zIndex;
+        return value === "auto"
+          ? "auto"
+          : normalizeStyle(value, propertyName, "js");
       }
 
-      // Default: return computed style
-      return getComputedStyle(element)[propertyName];
+      // Default: return computed style and normalize for js context
+      const value = getComputedStyle(element)[propertyName];
+      return normalizeStyle(value, propertyName, "js");
     };
 
     if (!elementControllers || !elementControllers.has(controller)) {
@@ -234,7 +237,7 @@ export const createStyleController = (name = "anonymous") => {
       }
 
       if (resultValue !== undefined) {
-        return normalizeStyle(resultValue, propertyName, "css");
+        return normalizeStyle(resultValue, propertyName, "js");
       }
     }
 
