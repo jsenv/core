@@ -21,19 +21,18 @@
  *
  * // Smart value conversion (100 → "100px", 45 → "45deg")
  * controller.set(element, {
- *   transform: { translateX: 100 }, // Merged with existing transform
+ *   transform: { translateX: 100, rotate: 45 }, // Individual transform properties
  *   opacity: 0.5
  * });
  *
- * // Magic properties for individual transform components
+ * // Transform objects merged intelligently
  * controller.set(element, {
- *   transform: { translateX: 50 },
- *   rotate: 45
+ *   transform: { translateX: 50 } // Merges with existing transforms
  * });
  *
  * // Get underlying value without this controller's influence
  * const originalOpacity = controller.getUnderlyingValue(element, "opacity");
- * const originalTranslateX = controller.getUnderlyingValue(element, "transform.translateX"); // Works with magic properties!
+ * const originalTranslateX = controller.getUnderlyingValue(element, "transform.translateX"); // Magic dot notation!
  *
  * controller.delete(element, "opacity"); // Only removes opacity, keeps transform
  * controller.clear(element); // Removes all styles from this controller only
@@ -42,7 +41,7 @@
  *
  * **Key features:**
  * - **Transform composition**: Intelligently merges transform components instead of overwriting
- * - **Magic properties**: Use `translateX`, `rotate`, `scale`, etc. as individual properties
+ * - **Magic properties**: Access transform components with dot notation (e.g., "transform.translateX")
  * - **getUnderlyingValue()**: Read the "natural" value without this controller's influence
  * - **Smart units**: Numeric values get appropriate units automatically (px, deg, unitless)
  *
@@ -160,36 +159,19 @@ export const createStyleController = (name = "anonymous") => {
     const elementControllers = elementStyleRegistry.get(element);
 
     const getUnderlyingValue = () => {
-      // Handle conceptual transform properties
-      const transformProperties = [
-        "translateX",
-        "translateY",
-        "translateZ",
-        "rotateX",
-        "rotateY",
-        "rotateZ",
-        "rotate",
-        "scaleX",
-        "scaleY",
-        "scaleZ",
-        "scale",
-        "skewX",
-        "skewY",
-        "skew",
-      ];
-
-      if (transformProperties.includes(propertyName)) {
+      // Handle dot notation for transform properties (e.g., "transform.translateX")
+      if (propertyName.startsWith("transform.")) {
+        const transformProperty = propertyName.slice(10); // Remove "transform." prefix
         const transformValue = getComputedStyle(element).transform;
         if (!transformValue || transformValue === "none") {
           return propertyName.includes("scale") ? 1 : 0;
         }
-        // Parse transform and extract the specific property
         const transformObj = parseCSSTransform(transformValue);
-        const value = transformObj[propertyName];
+        const value = transformObj[transformProperty];
         if (value) {
           const numericValue = parseFloat(value);
           return isNaN(numericValue)
-            ? propertyName.includes("scale")
+            ? transformProperty.includes("scale")
               ? 1
               : 0
             : numericValue;
