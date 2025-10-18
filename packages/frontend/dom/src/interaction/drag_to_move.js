@@ -21,6 +21,7 @@ export const createDragToMoveGestureController = ({
   // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = true,
   showDebugMarkers = false,
+  resetAfterRelease = false,
   ...options
 } = {}) => {
   const initGrabToMoveElement = (
@@ -240,6 +241,18 @@ export const createDragToMoveGestureController = ({
       }
     };
     dragGesture.addDragCallback(dragToMove);
+
+    if (resetAfterRelease) {
+      dragGesture.addReleaseCallback(() => {
+        if (elementToMove) {
+          elementToMove.style.left = "";
+          elementToMove.style.top = "";
+        } else {
+          element.style.left = "";
+          element.style.top = "";
+        }
+      });
+    }
   };
 
   const dragGestureController = createDragGestureController(options);
@@ -258,7 +271,7 @@ export const createDragToMoveGestureController = ({
       elementScrollableLeft,
       elementScrollableTop,
       convertScrollablePosition,
-    ] = createDragElementPositioner(element, referenceElement);
+    ] = createDragElementPositioner(element, referenceElement, elementToMove);
     const dragGesture = grab({
       scrollContainer,
       layoutScrollableLeft: elementScrollableLeft,

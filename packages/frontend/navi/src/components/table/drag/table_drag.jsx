@@ -20,12 +20,11 @@ const DEBUG_VISUAL = false;
 import.meta.css = /* css */ `
   .navi_table_drag_clone_container {
     position: absolute;
-    pointer-events: none; /* Allow wheel events */
-    /* background: rgba(0, 0, 0, 0.5); */
     left: var(--table-visual-left);
     top: var(--table-visual-top);
     width: var(--table-visual-width);
     height: var(--table-visual-height);
+    /* background: rgba(0, 0, 0, 0.5); */
   }
 
   .navi_table_cell[data-grabbed]::before,
@@ -348,7 +347,7 @@ export const initDragTableColumnByMousedown = async (
   append_in_dom: {
     tableDragCloneContainer.appendChild(tableClone);
     addTeardown(() => {
-      // tableClone.remove();
+      tableClone.remove();
     });
   }
 

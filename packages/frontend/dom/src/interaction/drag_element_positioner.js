@@ -30,9 +30,15 @@ import { getScrollContainer } from "../scroll/scroll_container.js";
  *   scroll-relative coordinates to the element's offsetParent-relative coordinates.
  *
  */
-export const createDragElementPositioner = (element, referenceElement) => {
+export const createDragElementPositioner = (
+  element,
+  referenceElement,
+  elementToMove,
+) => {
   const scrollContainer = getScrollContainer(element);
-  const positionedParent = element.offsetParent;
+  const positionedParent = elementToMove
+    ? elementToMove.offsetParent
+    : element.offsetParent;
 
   if (!referenceElement) {
     return createStandardElementPositioner(element, {
@@ -104,27 +110,27 @@ const createSameScrollDifferentParentPositioner = (
     );
   }
   scrollable_converter: {
-    const [
-      positionedParentLeftOffsetWithScrollContainer,
-      positionedParentTopOffsetWithScrollContainer,
-    ] = getPositionedParentOffsetWithScrollContainer(
-      positionedParent,
-      scrollContainer,
-    );
-    const [
-      referencePositionedParentLeftOffsetWithScrollContainer,
-      referencePositionedParentTopOffsetWithScrollContainer,
-    ] = getPositionedParentOffsetWithScrollContainer(
-      referencePositionedParent,
-      scrollContainer,
-    );
-
     convertScrollablePosition = (
       referenceScrollableLeftToConvert,
       referenceScrollableTopToConvert,
     ) => {
       let positionedLeft;
       let positionedTop;
+
+      const [
+        positionedParentLeftOffsetWithScrollContainer,
+        positionedParentTopOffsetWithScrollContainer,
+      ] = getPositionedParentOffsetWithScrollContainer(
+        positionedParent,
+        scrollContainer,
+      );
+      const [
+        referencePositionedParentLeftOffsetWithScrollContainer,
+        referencePositionedParentTopOffsetWithScrollContainer,
+      ] = getPositionedParentOffsetWithScrollContainer(
+        referencePositionedParent,
+        scrollContainer,
+      );
 
       left: {
         // Step 1: Convert from reference scroll-relative to reference positioned-parent-relative

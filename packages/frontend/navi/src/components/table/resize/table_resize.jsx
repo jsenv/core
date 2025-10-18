@@ -430,9 +430,8 @@ const initResizeByMousedown = (
       onGrab?.();
     },
     onDrag,
+    resetAfterRelease: true,
     onRelease: (gestureInfo) => {
-      const styleProperty = axis === "x" ? "left" : "top";
-      resizer.style[styleProperty] = "";
       const sizeChange =
         axis === "x" ? gestureInfo.layout.xDelta : gestureInfo.layout.yDelta;
       const newSize = currentSize + sizeChange;
