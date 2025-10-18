@@ -121,7 +121,7 @@ export const createStyleController = (name = "anonymous") => {
         }
       }
 
-      // Recompute and apply final styles
+      // Recompute and apply final styles (or clean up animation if no styles left)
       applyFinalStyles(element);
     }
   };
@@ -265,10 +265,10 @@ export const createStyleController = (name = "anonymous") => {
       // Clean up empty element registry
       if (elementControllers.size === 0) {
         elementStyleRegistry.delete(element);
-      } else {
-        // Recompute styles for remaining controllers
-        applyFinalStyles(element);
       }
+
+      // Recompute styles for remaining controllers (or clean up animation if no styles left)
+      applyFinalStyles(element);
     }
 
     activeControllers.delete(controller);
@@ -308,8 +308,18 @@ const computeFinalStyles = (element) => {
 const applyFinalStyles = (element) => {
   const finalStyles = computeFinalStyles(element);
   const cssStyles = normalizeStyles(finalStyles, "css");
-
   const exisitingAnimation = animationRegistry.get(element);
+
+  // If no styles, clean up animation instead of applying empty styles
+  if (Object.keys(finalStyles).length === 0) {
+    // No styles left, clean up animation
+    if (exisitingAnimation) {
+      exisitingAnimation.cancel();
+      animationRegistry.delete(element);
+    }
+    return;
+  }
+
   const keyframes = [cssStyles];
   if (!exisitingAnimation) {
     const animation = element.animate(keyframes, {

@@ -430,6 +430,7 @@ const initResizeByMousedown = (
       onGrab?.();
     },
     onDrag,
+    cleanupAfterRelease: true,
     onRelease: (gestureInfo) => {
       const sizeChange =
         axis === "x" ? gestureInfo.layout.xDelta : gestureInfo.layout.yDelta;
