@@ -11,6 +11,38 @@
 import { mergeStyles } from "./style_composition.js";
 import { normalizeStyles } from "./style_parsing.js";
 
+// Helper function to handle transform parsing in mergeStyles
+const parseTransformIfNeeded = (value) => {
+  if (typeof value === "string" && value !== "none") {
+    return parseTransformString(value);
+  }
+  return value;
+};
+
+// Enhanced mergeStyles that handles transform strings
+const mergeStylesWithTransformSupport = (target, source) => {
+  const processedSource = {};
+
+  for (const [key, value] of Object.entries(source)) {
+    if (key === "transform") {
+      processedSource[key] = parseTransformIfNeeded(value);
+    } else {
+      processedSource[key] = value;
+    }
+  }
+
+  const processedTarget = {};
+  for (const [key, value] of Object.entries(target)) {
+    if (key === "transform") {
+      processedTarget[key] = parseTransformIfNeeded(value);
+    } else {
+      processedTarget[key] = value;
+    }
+  }
+
+  return mergeStyles(processedTarget, processedSource);
+};
+
 // Global registry to track all style controllers and their managed elements
 const elementStyleRegistry = new WeakMap(); // element -> Set<controller>
 const activeControllers = new Set(); // Set of all active controllers
@@ -43,8 +75,12 @@ export const createStyleController = (name = "anonymous") => {
 
     const controllerStyles = controllerStylesRegistry.get(element);
 
-    // Update styles for this controller
-    Object.assign(controllerStyles, styles);
+    // Update styles for this controller using mergeStyles
+    const mergedStyles = mergeStylesWithTransformSupport(
+      controllerStyles,
+      styles,
+    );
+    controllerStylesRegistry.set(element, mergedStyles);
 
     // Recompute and apply final styles
     applyFinalStyles(element);
@@ -82,10 +118,18 @@ export const createStyleController = (name = "anonymous") => {
 
   const commit = (element) => {
     const finalStyles = computeFinalStyles(element);
-    const normalizedStyles = normalizeStyles(finalStyles);
-    for (const key of Object.keys(normalizedStyles)) {
-      const value = normalizedStyles[key];
-      s;
+
+    // Read existing styles to compose with them
+    const existingStyles = getExistingStyles(element);
+
+    // Merge existing styles with new styles (composable properties like transform)
+    const composedStyles = mergeStylesWithTransformSupport(
+      existingStyles,
+      finalStyles,
+    );
+    const normalizedStyles = normalizeStyles(composedStyles);
+
+    for (const [key, value] of Object.entries(normalizedStyles)) {
       element.style[key] = value;
     }
   };
@@ -140,6 +184,49 @@ export const createStyleController = (name = "anonymous") => {
   return controller;
 };
 
+// Get existing styles from element, parsing transform strings into objects
+const getExistingStyles = (element) => {
+  const computedStyles = getComputedStyle(element);
+  const existingStyles = {};
+
+  // Only consider properties that we might want to compose
+  const composableProperties = ["transform"];
+
+  for (const property of composableProperties) {
+    const value = computedStyles[property];
+    if (value && value !== "none") {
+      if (property === "transform") {
+        // Parse transform string into object
+        existingStyles[property] = parseTransformString(value);
+      } else {
+        existingStyles[property] = value;
+      }
+    }
+  }
+
+  return existingStyles;
+};
+
+// Parse transform CSS string into object
+const parseTransformString = (transformString) => {
+  const transformObj = {};
+
+  if (!transformString || transformString === "none") {
+    return transformObj;
+  }
+
+  // Simple regex to parse transform functions
+  const transformPattern = /(\w+)\(([^)]+)\)/g;
+  let match;
+
+  while ((match = transformPattern.exec(transformString)) !== null) {
+    const [, functionName, value] = match;
+    transformObj[functionName] = value.trim();
+  }
+
+  return transformObj;
+};
+
 // Compute final styles by merging all controllers' styles for an element
 const computeFinalStyles = (element) => {
   let finalStyles = {};
@@ -150,7 +237,10 @@ const computeFinalStyles = (element) => {
   // Merge styles from all controllers
   for (const controller of elementControllers) {
     const controllerStyles = controller.get(element);
-    finalStyles = mergeStyles(finalStyles, controllerStyles);
+    finalStyles = mergeStylesWithTransformSupport(
+      finalStyles,
+      controllerStyles,
+    );
   }
   return finalStyles;
 };
