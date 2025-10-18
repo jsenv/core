@@ -4,11 +4,8 @@ export const normalizeStyle = (value, propertyName, context = "object") => {
     if (context === "css" && typeof value === "object" && value !== null) {
       // For CSS context, ensure transform is a string
       return stringifyCSSTransform(value);
-    } else if (
-      context === "object" &&
-      typeof value === "string" &&
-      value !== "none"
-    ) {
+    }
+    if (context === "object" && typeof value === "string" && value !== "none") {
       // For object context, prefer objects
       return parseCSSTransform(value);
     }
