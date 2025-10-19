@@ -110,8 +110,8 @@ export const createStyleController = (name = "anonymous") => {
     if (!elementControllerSetRegistry.has(element)) {
       elementControllerSetRegistry.set(element, new Set());
     }
-    const elementControllers = elementControllerSetRegistry.get(element);
-    elementControllers.add(controller);
+    const elementControllerSet = elementControllerSetRegistry.get(element);
+    elementControllerSet.add(controller);
     if (!controllerStylesRegistry.has(element)) {
       controllerStylesRegistry.set(element, {});
     }
@@ -136,12 +136,11 @@ export const createStyleController = (name = "anonymous") => {
       // Clean up empty controller
       if (isEmpty) {
         controllerStylesRegistry.delete(element);
-        const elementControllers = elementControllerSetRegistry.get(element);
-        if (elementControllers) {
-          elementControllers.delete(controller);
-
+        const elementControllerSet = elementControllerSetRegistry.get(element);
+        if (elementControllerSet) {
+          elementControllerSet.delete(controller);
           // Clean up empty element registry
-          if (elementControllers.size === 0) {
+          if (elementControllerSet.size === 0) {
             elementControllerSetRegistry.delete(element);
           }
         }
@@ -181,10 +180,10 @@ export const createStyleController = (name = "anonymous") => {
     controllerStylesRegistry.delete(element);
 
     // Clean up controller from element registry
-    const elementControllers = elementControllerSetRegistry.get(element);
-    if (elementControllers) {
-      elementControllers.delete(controller);
-      if (elementControllers.size === 0) {
+    const elementControllerSet = elementControllerSetRegistry.get(element);
+    if (elementControllerSet) {
+      elementControllerSet.delete(controller);
+      if (elementControllerSet.size === 0) {
         elementControllerSetRegistry.delete(element);
       }
     }
@@ -192,12 +191,12 @@ export const createStyleController = (name = "anonymous") => {
 
   const clear = (element) => {
     controllerStylesRegistry.delete(element);
-    const elementControllers = elementControllerSetRegistry.get(element);
-    if (elementControllers) {
-      elementControllers.delete(controller);
+    const elementControllerSet = elementControllerSetRegistry.get(element);
+    if (elementControllerSet) {
+      elementControllerSet.delete(controller);
 
       // Clean up empty element registry
-      if (elementControllers.size === 0) {
+      if (elementControllerSet.size === 0) {
         elementControllerSetRegistry.delete(element);
       }
     }
@@ -206,7 +205,7 @@ export const createStyleController = (name = "anonymous") => {
   };
 
   const getUnderlyingValue = (element, propertyName) => {
-    const elementControllers = elementControllerSetRegistry.get(element);
+    const elementControllerSet = elementControllerSetRegistry.get(element);
 
     const normalizeValueForJs = (value) => {
       // Use normalizeStyle to handle all property types including transform dot notation
@@ -297,7 +296,7 @@ export const createStyleController = (name = "anonymous") => {
     if (propertyName.startsWith("rect.")) {
       return getWhileDisablingThisController(getFromDOMLayout);
     }
-    if (!elementControllers || !elementControllers.has(controller)) {
+    if (!elementControllerSet || !elementControllerSet.has(controller)) {
       // This controller is not applied, just read current value
       return getFromDOM();
     }
@@ -311,11 +310,14 @@ export const createStyleController = (name = "anonymous") => {
 
   const destroy = () => {
     // Remove this controller from all elements and clean up animations
-    for (const [element, elementControllers] of elementControllerSetRegistry) {
-      if (!elementControllers.has(controller)) {
+    for (const [
+      element,
+      elementControllerSet,
+    ] of elementControllerSetRegistry) {
+      if (!elementControllerSet.has(controller)) {
         continue;
       }
-      elementControllers.delete(controller);
+      elementControllerSet.delete(controller);
       controllerStylesRegistry.delete(element);
 
       // Clean up this controller's animation
@@ -326,7 +328,7 @@ export const createStyleController = (name = "anonymous") => {
       }
 
       // Clean up empty element registry
-      if (elementControllers.size === 0) {
+      if (elementControllerSet.size === 0) {
         elementControllerSetRegistry.delete(element);
       }
     }
