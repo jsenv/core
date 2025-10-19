@@ -107,28 +107,18 @@ export const createStyleController = (name = "anonymous") => {
       throw new Error("Styles must be an object");
     }
 
-    // Initialize element registry if needed
     if (!elementStyleRegistry.has(element)) {
       elementStyleRegistry.set(element, new Set());
     }
-
     const elementControllers = elementStyleRegistry.get(element);
     elementControllers.add(controller);
-
-    // Initialize controller styles if needed
     if (!controllerStylesRegistry.has(element)) {
       controllerStylesRegistry.set(element, {});
     }
-
     const controllerStyles = controllerStylesRegistry.get(element);
-
-    // Apply smart normalization to incoming styles using normalizeStyles
     const normalizedStyles = normalizeStyles(styles, "js");
-
-    // Update styles for this controller using mergeStyles
     const mergedStyles = mergeStyles(controllerStyles, normalizedStyles);
     controllerStylesRegistry.set(element, mergedStyles);
-
     applyStyles(element);
   };
 
