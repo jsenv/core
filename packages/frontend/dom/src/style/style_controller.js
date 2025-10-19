@@ -157,13 +157,36 @@ export const createStyleController = (name = "anonymous") => {
     if (!controllerStyles) {
       return; // No styles to commit from this controller
     }
-    // Read existing styles to compose with them
+
+    // Cancel our animation permanently since we're committing styles to inline
+    const animation = controllerAnimationRegistry.get(element);
+    if (animation) {
+      animation.cancel();
+      controllerAnimationRegistry.delete(element);
+    }
+
+    // Now read the true underlying styles (without our animation influence)
     const computedStyles = getComputedStyle(element);
+
     // Convert controller styles to CSS and commit to inline styles
     const cssStyles = normalizeStyles(controllerStyles, "css");
+
     for (const [key, value] of Object.entries(cssStyles)) {
+      // Merge with existing computed styles for all properties
       const existingValue = computedStyles[key];
       element.style[key] = mergeOneStyle(existingValue, value, key, "css");
+    }
+
+    // Clear this controller's styles since they're now inline
+    controllerStylesRegistry.delete(element);
+
+    // Clean up controller from element registry
+    const elementControllers = elementStyleRegistry.get(element);
+    if (elementControllers) {
+      elementControllers.delete(controller);
+      if (elementControllers.size === 0) {
+        elementStyleRegistry.delete(element);
+      }
     }
   };
 

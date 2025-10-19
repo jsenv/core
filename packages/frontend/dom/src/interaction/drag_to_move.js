@@ -250,10 +250,11 @@ export const createDragToMoveGestureController = ({
 
     dragGesture.addReleaseCallback(() => {
       const elementImpacted = elementToMove || element;
-      if (!resetPositionAfterRelease) {
+      if (resetPositionAfterRelease) {
+        dragStyleController.clear(elementImpacted);
+      } else {
         dragStyleController.commit(elementImpacted);
       }
-      dragStyleController.clear(elementImpacted);
     });
   };
 
