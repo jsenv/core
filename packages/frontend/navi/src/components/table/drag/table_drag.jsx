@@ -455,7 +455,7 @@ export const initDragTableColumnByMousedown = async (
         triggerDrag(gestureInfo);
         onDrag?.(gestureInfo, dropColumnIndex);
       },
-      cleanupAfterRelease: true,
+      resetPositionAfterRelease: true,
       onRelease: (gestureInfo) => {
         if (!DEBUG_VISUAL) {
           teardown();
