@@ -15,7 +15,7 @@ import { useMemo, useState } from "preact/hooks";
 import { useStableCallback } from "../../use_stable_callback.js";
 import { Z_INDEX_CELL_FOREGROUND, Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
-const DEBUG_VISUAL = true;
+const DEBUG_VISUAL = false;
 
 import.meta.css = /* css */ `
   .navi_table_drag_clone_container {

@@ -217,7 +217,7 @@ export const createDragToMoveGestureController = ({
               axis === "x"
                 ? xOffsetWithElementToMove
                 : yOffsetWithElementToMove;
-            // elementPosition += offsetWithElementToMove;
+            elementPosition -= offsetWithElementToMove;
           }
 
           if (axis === "x") {
