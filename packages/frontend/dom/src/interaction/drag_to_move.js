@@ -2,7 +2,10 @@ import { getScrollBox, getScrollport } from "../position/dom_coords.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 import { createStyleController } from "../style/style_controller.js";
 import { initDragConstraints } from "./drag_constraint.js";
-import { createDragElementPositioner } from "./drag_element_positioner.js";
+import {
+  createDragElementPositioner,
+  getOffsetBetweenTwoElements,
+} from "./drag_element_positioner.js";
 import { createDragGestureController } from "./drag_gesture.js";
 import { applyStickyFrontiersToAutoScrollArea } from "./sticky_frontiers.js";
 
@@ -34,15 +37,6 @@ export const createDragToMoveGestureController = ({
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
-
-    let xOffsetWithElementToMove = 0;
-    let yOffsetWithElementToMove = 0;
-    if (elementToMove) {
-      const elementRect = element.getBoundingClientRect();
-      const elementToMoveRect = elementToMove.getBoundingClientRect();
-      xOffsetWithElementToMove = elementRect.left - elementToMoveRect.left;
-      yOffsetWithElementToMove = elementRect.top - elementToMoveRect.top;
-    }
 
     let elementWidth;
     let elementHeight;
@@ -213,10 +207,13 @@ export const createDragToMoveGestureController = ({
           let elementPosition = elementStart;
           const elementImpacted = elementToMove || element;
           if (elementToMove) {
-            const offsetWithElementToMove =
-              axis === "x"
-                ? xOffsetWithElementToMove
-                : yOffsetWithElementToMove;
+            // Calculate dynamic offset that accounts for scroll container position
+            const [xOffset, yOffset] = getOffsetBetweenTwoElements(
+              element,
+              elementToMove,
+              scrollContainer,
+            );
+            const offsetWithElementToMove = axis === "x" ? xOffset : yOffset;
             elementPosition -= offsetWithElementToMove;
           }
 
@@ -226,7 +223,6 @@ export const createDragToMoveGestureController = ({
               elementScrollableLeft,
               elementLeft,
               elementPositionedLeft,
-              xOffsetWithElementToMove,
               elementPosition,
             });
           }

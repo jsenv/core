@@ -342,6 +342,40 @@ export const getDragCoordinates = (
   return [leftRelativeToScrollContainer, topRelativeToScrollContainer];
 };
 
+// Calculate the offset between two elements accounting for scroll container position
+// This is useful when elementToMove is different from the drag element
+export const getOffsetBetweenTwoElements = (
+  elementA,
+  elementB,
+  scrollContainer,
+) => {
+  const elementARect = elementA.getBoundingClientRect();
+  const elementBRect = elementB.getBoundingClientRect();
+
+  // Basic offset in viewport coordinates
+  const basicXOffset = elementARect.left - elementBRect.left;
+  const basicYOffset = elementARect.top - elementBRect.top;
+
+  // Account for scroll container position
+  const scrollContainerIsDocument = scrollContainer === documentElement;
+
+  if (scrollContainerIsDocument) {
+    // Document case: getBoundingClientRect already includes document scroll effects
+    // Add current scroll position to get the static offset
+    return [
+      basicXOffset + scrollContainer.scrollLeft,
+      basicYOffset + scrollContainer.scrollTop,
+    ];
+  }
+
+  // Custom scroll container case: account for container's position and scroll
+  const scrollContainerRect = scrollContainer.getBoundingClientRect();
+  return [
+    basicXOffset + scrollContainer.scrollLeft - scrollContainerRect.left,
+    basicYOffset + scrollContainer.scrollTop - scrollContainerRect.top,
+  ];
+};
+
 const getScrollablePosition = (element, scrollContainer) => {
   const { left: elementViewportLeft, top: elementViewportTop } =
     element.getBoundingClientRect();
