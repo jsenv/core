@@ -15,7 +15,7 @@ import { useMemo, useState } from "preact/hooks";
 import { useStableCallback } from "../../use_stable_callback.js";
 import { Z_INDEX_CELL_FOREGROUND, Z_INDEX_DROP_PREVIEW } from "../z_indexes.js";
 
-const DEBUG_VISUAL = false;
+const DEBUG_VISUAL = true;
 
 import.meta.css = /* css */ `
   .navi_table_drag_clone_container {
@@ -455,7 +455,7 @@ export const initDragTableColumnByMousedown = async (
         triggerDrag(gestureInfo);
         onDrag?.(gestureInfo, dropColumnIndex);
       },
-      resetPositionAfterRelease: true,
+      resetPositionAfterRelease: !DEBUG_VISUAL,
       onRelease: (gestureInfo) => {
         if (!DEBUG_VISUAL) {
           teardown();

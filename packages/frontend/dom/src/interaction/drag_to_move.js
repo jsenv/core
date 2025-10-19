@@ -153,19 +153,6 @@ export const createDragToMoveGestureController = ({
       const elementScrollableTop = layout.scrollableTop;
       const [elementPositionedLeft, elementPositionedTop] =
         convertScrollablePosition(elementScrollableLeft, elementScrollableTop);
-      console.log({
-        layoutX: layout.x,
-        elementScrollableLeft,
-        elementLeft,
-        elementPositionedLeft,
-      });
-
-      // console.log({
-      //   layoutY: layout.y,
-      //   elementScrollableTop,
-      //   elementPositionedTop,
-      //   elementTop,
-      // });
 
       hasCrossedScrollportLeftOnce =
         hasCrossedScrollportLeftOnce || elementLeft < scrollport.left;
@@ -230,8 +217,20 @@ export const createDragToMoveGestureController = ({
               axis === "x"
                 ? xOffsetWithElementToMove
                 : yOffsetWithElementToMove;
-            elementPosition += offsetWithElementToMove;
+            // elementPosition += offsetWithElementToMove;
           }
+
+          if (axis === "x") {
+            console.log({
+              layoutX: layout.x,
+              elementScrollableLeft,
+              elementLeft,
+              elementPositionedLeft,
+              xOffsetWithElementToMove,
+              elementPosition,
+            });
+          }
+
           dragStyleController.set(elementImpacted, {
             transform: {
               [styleProperty]: `${elementPosition}px`,
