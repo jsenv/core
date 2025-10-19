@@ -26,7 +26,7 @@ export const createDragToMoveGestureController = ({
   // initially grabbed the element, but moves with the element to show the current anchor position.
   // It becomes visible when there's a significant distance between mouse and grab point.
   showConstraintFeedbackLine = true,
-  showDebugMarkers = false,
+  showDebugMarkers = true,
   resetPositionAfterRelease = false,
   ...options
 } = {}) => {
@@ -37,6 +37,17 @@ export const createDragToMoveGestureController = ({
     const direction = dragGesture.gestureInfo.direction;
     const dragGestureName = dragGesture.gestureInfo.name;
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+
+    let xOffset;
+    let yOffset;
+    if (elementToMove) {
+      // Calculate dynamic offset that accounts for scroll container position
+      [xOffset, yOffset] = getOffsetBetweenTwoElements(
+        element,
+        elementToMove,
+        scrollContainer,
+      );
+    }
 
     let elementWidth;
     let elementHeight;
@@ -207,12 +218,6 @@ export const createDragToMoveGestureController = ({
           let elementPosition = elementStart;
           const elementImpacted = elementToMove || element;
           if (elementToMove) {
-            // Calculate dynamic offset that accounts for scroll container position
-            const [xOffset, yOffset] = getOffsetBetweenTwoElements(
-              element,
-              elementToMove,
-              scrollContainer,
-            );
             const offsetWithElementToMove = axis === "x" ? xOffset : yOffset;
             elementPosition -= offsetWithElementToMove;
           }
