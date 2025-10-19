@@ -366,23 +366,31 @@ const getPositionedParentOffsetWithScrollContainer = (
   if (positionedParent === scrollContainer) {
     return [0, 0];
   }
+
   const scrollContainerIsDocument = scrollContainer === documentElement;
   const { left: positionedParentLeft, top: positionedParentTop } =
     positionedParent.getBoundingClientRect();
 
   if (scrollContainerIsDocument) {
-    // Document case
-    // When document is scrolled by 200px for instance
-    // document.documentElement.getBoundingClientRect().left // -200px
-    // So in this case
-    // positionedParent.getBoundingClientRect().left already include document scrolls
+    // Document scroll container case:
+    // When the document is scrolled, getBoundingClientRect() values are already affected
+    // For example: if document is scrolled 200px to the right:
+    //   - documentElement.getBoundingClientRect().left returns -200px
+    //   - positionedParent.getBoundingClientRect().left already includes this scroll effect
+    // To get the static offset (position as if no scroll), we add the current scroll position
     const offsetLeft = scrollContainer.scrollLeft + positionedParentLeft;
     const offsetTop = scrollContainer.scrollTop + positionedParentTop;
     return [offsetLeft, offsetTop];
   }
+
   // Custom scroll container case:
-  // getBoundingClientRect is affected by container scroll
-  // - Add scroll position to get static offset (position as if scroll was 0)
+  // getBoundingClientRect() values are affected by the container's scroll position
+  // We need to calculate the offset relative to the scroll container's coordinate system
+  // Steps:
+  // 1. Get positioned parent's position relative to viewport
+  // 2. Get scroll container's position relative to viewport
+  // 3. Calculate relative position: (parent position - container position)
+  // 4. Add scroll position to get static offset (unaffected by current scroll)
   const { left: scrollContainerLeft, top: scrollContainerTop } =
     scrollContainer.getBoundingClientRect();
   const offsetLeft =
