@@ -213,12 +213,12 @@ export const createStyleController = (name = "anonymous") => {
     };
 
     const getFromOtherControllers = () => {
-      if (!elementControllers || elementControllers.size <= 1) {
+      if (!elementControllerSet || elementControllerSet.size <= 1) {
         return undefined;
       }
 
       let resultValue;
-      for (const otherController of elementControllers) {
+      for (const otherController of elementControllerSet) {
         if (otherController === controller) continue;
         const otherStyles = otherController.get(element);
         if (propertyName in otherStyles) {
